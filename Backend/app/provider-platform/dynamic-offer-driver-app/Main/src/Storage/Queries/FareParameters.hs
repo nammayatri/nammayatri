@@ -15,7 +15,6 @@
 module Storage.Queries.FareParameters where
 
 import Domain.Types.FareParameters as DFP
-import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 -- import Storage.Queries.FareParameters.FareParametersProgressiveDetails (findById')

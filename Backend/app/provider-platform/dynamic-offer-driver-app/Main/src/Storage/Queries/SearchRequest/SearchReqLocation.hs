@@ -16,7 +16,6 @@
 module Storage.Queries.SearchRequest.SearchReqLocation where
 
 import Domain.Types.SearchRequest.SearchReqLocation
-import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L

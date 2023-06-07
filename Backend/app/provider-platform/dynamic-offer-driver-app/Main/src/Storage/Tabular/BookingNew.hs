@@ -49,7 +49,6 @@ import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 -- import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Booking as Domain
 import qualified Domain.Types.Vehicle.Variant as Veh
-import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types (KVConnector (..), MeshConfig (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import qualified EulerHS.Language as L

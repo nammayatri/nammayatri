@@ -1,7 +1,6 @@
 module Storage.Queries.FareParameters.FareParametersProgressiveDetails where
 
 import qualified Domain.Types.FareParameters as Domain
-import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT

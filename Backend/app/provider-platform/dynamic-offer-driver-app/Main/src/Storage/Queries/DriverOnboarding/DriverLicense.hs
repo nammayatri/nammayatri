@@ -16,7 +16,6 @@ module Storage.Queries.DriverOnboarding.DriverLicense where
 
 import Domain.Types.DriverOnboarding.DriverLicense
 import Domain.Types.Person (Person)
-import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L

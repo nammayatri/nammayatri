@@ -16,7 +16,6 @@ module Storage.Queries.DriverStats where
 
 import Domain.Types.DriverStats as Domain
 import Domain.Types.Person (Driver)
-import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L

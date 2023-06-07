@@ -19,7 +19,6 @@ import qualified Database.Beam as B
 import Database.Beam.Postgres
 import Domain.Types.QuoteSpecialZone
 import Domain.Types.SearchRequestSpecialZone
-import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L

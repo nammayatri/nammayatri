@@ -15,7 +15,6 @@
 module Storage.Queries.MediaFile where
 
 import Domain.Types.MediaFile as DMF
-import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L

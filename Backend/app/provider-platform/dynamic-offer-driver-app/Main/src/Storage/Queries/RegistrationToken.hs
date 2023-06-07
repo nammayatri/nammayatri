@@ -16,7 +16,6 @@ module Storage.Queries.RegistrationToken where
 
 import Domain.Types.Person
 import Domain.Types.RegistrationToken as DRT
-import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L

@@ -17,7 +17,6 @@ module Storage.Queries.DriverOnboarding.IdfyVerification where
 import Domain.Types.DriverOnboarding.IdfyVerification as DDIV
 import Domain.Types.DriverOnboarding.Image
 import Domain.Types.Person (Person)
-import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L

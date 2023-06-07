@@ -17,7 +17,6 @@ module Storage.Queries.FarePolicy.FarePolicyProgressiveDetails where
 import Data.List.NonEmpty (nonEmpty)
 import qualified Domain.Types.FarePolicy as Domain
 import Domain.Types.FarePolicy.Common as Common
-import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT

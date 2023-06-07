@@ -22,7 +22,6 @@ where
 import Domain.Types.Merchant as DOrg
 -- import Domain.Types.Merchant.MerchantMessage (MerchantMessage, MessageKey)
 import Domain.Types.Merchant.MerchantMessage
-import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT

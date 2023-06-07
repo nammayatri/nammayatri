@@ -2,7 +2,6 @@ module Storage.Queries.Issue.Comment where
 
 import Domain.Types.Issue.Comment as Comment
 import Domain.Types.Issue.IssueReport (IssueReport)
-import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L

@@ -16,7 +16,6 @@ module Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgres
 
 -- import Data.Text (pack)
 import qualified Domain.Types.FarePolicy as DFP
-import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT

@@ -22,7 +22,6 @@ import Database.Beam.Postgres
 import Domain.Types.DriverLocation
 import Domain.Types.Merchant
 import Domain.Types.Person
-import qualified EulerHS.Extra.EulerDB as Extra
 -- import qualified EulerHS.KVConnector.Flow as KV
 -- import EulerHS.KVConnector.Types
 import EulerHS.KVConnector.Utils (meshModelTableEntity)

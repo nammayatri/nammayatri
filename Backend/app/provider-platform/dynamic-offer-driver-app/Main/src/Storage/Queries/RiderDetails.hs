@@ -18,7 +18,6 @@ import Domain.Types.DriverReferral
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.RiderDetails as DRDD
-import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L

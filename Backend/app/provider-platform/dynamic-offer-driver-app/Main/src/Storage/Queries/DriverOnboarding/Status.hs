@@ -25,7 +25,6 @@ import qualified Domain.Types.DriverOnboarding.Image as Image
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate (VehicleRegistrationCertificate)
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person
-import qualified EulerHS.Extra.EulerDB as Extra
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT

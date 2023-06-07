@@ -16,7 +16,6 @@ module Storage.Queries.RideDetails where
 
 import qualified Domain.Types.Ride as SR
 import Domain.Types.RideDetails as DRD
-import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L

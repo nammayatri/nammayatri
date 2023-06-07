@@ -23,7 +23,6 @@ import Domain.Types.Merchant as DOrg
 -- import Domain.Types.Merchant.MerchantServiceConfig (MerchantServiceConfig, ServiceName)
 import Domain.Types.Merchant.MerchantServiceConfig
 import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
-import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT

@@ -4,7 +4,6 @@ import Domain.Types.Issue.IssueCategory
 import Domain.Types.Issue.IssueOption
 import Domain.Types.Issue.IssueReport as IssueReport
 import qualified Domain.Types.Person as SP
-import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L

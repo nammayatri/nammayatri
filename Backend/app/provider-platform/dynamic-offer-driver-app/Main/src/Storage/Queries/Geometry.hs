@@ -17,7 +17,6 @@ module Storage.Queries.Geometry where
 import qualified Database.Beam as B
 import Database.Beam.Postgres
 import Domain.Types.Geometry
-import qualified EulerHS.Extra.EulerDB as Extra
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT

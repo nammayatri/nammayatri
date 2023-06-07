@@ -18,7 +18,6 @@ module Storage.Queries.DriverOnboarding.OperatingCity where
 import Data.Text
 import Domain.Types.DriverOnboarding.OperatingCity
 import Domain.Types.Merchant
-import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L

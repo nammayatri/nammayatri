@@ -15,7 +15,6 @@
 module Storage.Queries.CancellationReason where
 
 import Domain.Types.CancellationReason
-import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT

@@ -37,7 +37,6 @@ import Data.List.NonEmpty
 import Domain.Types.FarePolicy as Domain
 import Domain.Types.Merchant
 import Domain.Types.Vehicle.Variant (Variant)
-import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
@@ -231,7 +230,7 @@ transformDomainFarePolicyToBeam FarePolicy {..} =
       BeamFP.updatedAt = updatedAt
     }
 
-transformBeamFarePolicyToDomain :: L.MonadFlow m => BeamFP.FarePolicy -> m (Domain.FarePolicy)
+transformBeamFarePolicyToDomain :: L.MonadFlow m => BeamFP.FarePolicy -> m Domain.FarePolicy
 transformBeamFarePolicyToDomain BeamFP.FarePolicyT {..} = do
   fullDEFB <- QueriesDEFB.findAll (KTI.Id id)
   let fDEFB = snd <$> fullDEFB

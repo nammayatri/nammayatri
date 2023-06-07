@@ -3,7 +3,6 @@ module Storage.Queries.Issue.IssueOption where
 import Domain.Types.Issue.IssueCategory
 import Domain.Types.Issue.IssueOption as DomainIO
 import Domain.Types.Issue.IssueTranslation
-import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
