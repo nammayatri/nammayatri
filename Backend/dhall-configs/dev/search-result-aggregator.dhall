@@ -42,4 +42,5 @@ in  { port = +8025
         //  { logFilePath = "/tmp/search-result-aggregator.log" }
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
+    , envPrefix = common.envPrefix
     }

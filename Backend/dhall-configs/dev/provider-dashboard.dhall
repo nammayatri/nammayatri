@@ -99,4 +99,5 @@ in  { esqDBCfg
     , dataServers = [ becknTransport, driverOfferBpp, appBackend, specialZone ]
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
+    , envPrefix = common.envPrefix
     }

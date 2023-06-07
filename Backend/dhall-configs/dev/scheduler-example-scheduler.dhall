@@ -54,4 +54,5 @@ in  { loggerConfig =
     , graceTerminationPeriod = +10
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
+    , envPrefix = common.envPrefix
     }

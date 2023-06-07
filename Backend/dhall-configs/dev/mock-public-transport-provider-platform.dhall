@@ -41,6 +41,7 @@ in  { port = +8091
       { signingKey = sec.signingKey
       , uniqueKeyId = "juspay-mobility-bpp-1-key1"
       , signatureExpiry = common.signatureExpiry
+      , envPrefix = common.envPrefix
       }
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True

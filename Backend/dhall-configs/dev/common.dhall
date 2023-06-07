@@ -46,4 +46,5 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , registryUrl = mockRegistryUrl
     , authServiceUrl = "http://localhost:8013/"
     , consumerType = globalCommon.consumerType
+    , envPrefix = globalCommon.envPrefix
     }

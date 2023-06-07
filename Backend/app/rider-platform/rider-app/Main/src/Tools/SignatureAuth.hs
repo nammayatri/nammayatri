@@ -104,7 +104,8 @@ instance
     HasField "enableRedisLatencyLogging" r Bool,
     HasLog r,
     HasCoreMetrics r,
-    HasCacheConfig r
+    HasCacheConfig r,
+    HasField "envPrefix" r Text
   ) =>
   HasServer (SignatureAuth req header :> api) ctx
   where

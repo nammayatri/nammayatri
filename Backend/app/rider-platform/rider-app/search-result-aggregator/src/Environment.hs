@@ -37,7 +37,8 @@ data AppCfg = AppCfg
     cutOffHedisCluster :: Bool,
     hedisClusterCfg :: HedisCfg,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    envPrefix :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -57,7 +58,8 @@ data AppEnv = AppEnv
     hedisClusterEnv :: HedisEnv,
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    envPrefix :: Text
   }
   deriving (Generic)
 

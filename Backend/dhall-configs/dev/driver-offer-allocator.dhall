@@ -28,8 +28,9 @@ let schedulerConfig =
       , waitBeforeRetry = +1
       , tasksPerIteration = +20
       , graceTerminationPeriod = +10
-      , enableRedisLatencyLogging = False
+      , enableRedisLatencyLogging = True
       , enablePrometheusMetricLogging = True
+      , envPrefix = common.envPrefix
       }
 
 in  { appCfg =

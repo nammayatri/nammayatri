@@ -39,7 +39,8 @@ healthCheck ::
     HasField "hedisMigrationStage" r Bool,
     HasField "driverAppName" r Text,
     HasField "enablePrometheusMetricLogging" r Bool,
-    HasField "enableRedisLatencyLogging" r Bool
+    HasField "enableRedisLatencyLogging" r Bool,
+    HasField "envPrefix" r Text
   ) =>
   FlowHandlerR r Text
 healthCheck = withFlowHandlerAPI do

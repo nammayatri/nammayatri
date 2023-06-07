@@ -187,7 +187,8 @@ in  { esqDBCfg
     , maxEmergencyNumberCount = +3
     , minTripDistanceForReferralCfg = Some +1000
     , registryMap
-    , enableRedisLatencyLogging = False
+    , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings
+    , envPrefix = common.envPrefix
     }

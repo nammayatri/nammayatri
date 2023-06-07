@@ -77,4 +77,5 @@ in  { esqDBCfg
     , kafkaProducerCfg
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
+    , envPrefix = common.envPrefix
     }

@@ -32,4 +32,5 @@ in  { esqLocationDBCfg = appCfg.esqLocationDBCfg
     , cacheConfig = appCfg.cacheConfig
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
+    , envPrefix = globalCommon.envPrefix
     }

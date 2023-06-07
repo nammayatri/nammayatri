@@ -89,7 +89,8 @@ data AppCfg = AppCfg
     cacheConfig :: CacheConfig,
     httpClientOptions :: HttpClientOptions,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    envPrefix :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -116,7 +117,8 @@ data AppEnv = AppEnv
     coreMetrics :: Metrics.CoreMetricsContainer,
     version :: Metrics.DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    envPrefix :: Text
   }
   deriving (Generic)
 

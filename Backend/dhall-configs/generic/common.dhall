@@ -60,6 +60,8 @@ let longDurationRetryCfg = { maxRetries = +3, baseCoefficient = +4 }
 let ServerName =
       < APP_BACKEND | BECKN_TRANSPORT | DRIVER_OFFER_BPP | SPECIAL_ZONE >
 
+let envPrefix = "dev"
+
 in  { smsSessionConfig
     , autoMigrate = False
     , loggerConfig
@@ -77,4 +79,5 @@ in  { smsSessionConfig
     , streamConfig
     , eventStreamNameType
     , eventType
+    , envPrefix
     }

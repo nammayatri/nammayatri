@@ -196,9 +196,10 @@ in  { esqDBCfg
     , snapToRoadSnippetThreshold = +300
     , minTripDistanceForReferralCfg = Some +1000
     , maxShards = +5
-    , enableRedisLatencyLogging = False
+    , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
     , enableAPILatencyLogging = True
     , enableAPIPrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings
+    , envPrefix = common.envPrefix
     }

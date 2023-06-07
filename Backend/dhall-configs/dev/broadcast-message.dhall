@@ -76,4 +76,5 @@ in  { hedisCfg
             }
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
+    , envPrefix = common.envPrefix
     }

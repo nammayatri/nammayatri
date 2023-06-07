@@ -58,7 +58,8 @@ data AppCfg = AppCfg
     hostName :: Text,
     kafkaProducerCfg :: KafkaProducerCfg,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    envPrefix :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -93,7 +94,8 @@ data AppEnv = AppEnv
     kafkaEnvs :: BAPKafkaEnvs,
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    envPrefix :: Text
   }
   deriving (Generic)
 

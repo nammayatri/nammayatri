@@ -75,7 +75,8 @@ data HandlerEnv = HandlerEnv
     maxShards :: Int,
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    envPrefix :: Text
   }
   deriving (Generic)
 

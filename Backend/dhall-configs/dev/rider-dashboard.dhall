@@ -81,4 +81,5 @@ in  { esqDBCfg
     , dataServers = [ appBackend ]
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
+    , envPrefix = common.envPrefix
     }

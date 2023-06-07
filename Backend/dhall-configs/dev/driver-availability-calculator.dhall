@@ -74,4 +74,5 @@ in  { hedisCfg
         //  { logFilePath = "/tmp/kafka-consumers.log", logRawSql = False }
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
+    , envPrefix = common.envPrefix
     }

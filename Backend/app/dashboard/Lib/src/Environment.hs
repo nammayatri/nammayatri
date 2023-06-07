@@ -55,7 +55,8 @@ data AppCfg = AppCfg
     exotelToken :: Text,
     dataServers :: [DataServer],
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    envPrefix :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -87,7 +88,8 @@ data AppEnv = AppEnv
     dataServers :: [DataServer],
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    envPrefix :: Text
   }
   deriving (Generic)
 

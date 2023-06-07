@@ -47,7 +47,8 @@ data SchedulerConfig = SchedulerConfig
     tasksPerIteration :: Int,
     graceTerminationPeriod :: Seconds,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    envPrefix :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -72,7 +73,8 @@ data SchedulerEnv = SchedulerEnv
     isShuttingDown :: Shutdown,
     version :: Metrics.DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    envPrefix :: Text
   }
   deriving (Generic)
 

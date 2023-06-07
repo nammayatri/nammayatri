@@ -108,7 +108,8 @@ data AppCfg = AppCfg
     registryMap :: M.Map Text BaseUrl,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
-    eventStreamMap :: [EventStreamMap]
+    eventStreamMap :: [EventStreamMap],
+    envPrefix :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -164,7 +165,8 @@ data AppEnv = AppEnv
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
-    eventStreamMap :: [EventStreamMap]
+    eventStreamMap :: [EventStreamMap],
+    envPrefix :: Text
   }
   deriving (Generic)
 

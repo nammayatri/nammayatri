@@ -41,7 +41,8 @@ data AppCfg = AppCfg
     loggerConfig :: LoggerConfig,
     authEntity :: AuthenticatingEntity',
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    envPrefix :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -63,7 +64,8 @@ data AppEnv = AppEnv
     loggerEnv :: LoggerEnv,
     authManager :: Manager,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    envPrefix :: Text
   }
   deriving (Generic)
 
