@@ -92,6 +92,23 @@ findAllActiveWithoutRespBySearchTryId searchTryId = do
         &&. Esq.isNothing (sReq ^. SearchRequestForDriverResponse)
     pure sReq
 
+findAllActiveWithoutRespBySearchTryId' :: (L.MonadFlow m, MonadTime m) => Id SearchTry -> m [SearchRequestForDriver]
+findAllActiveWithoutRespBySearchTryId' (Id searchTryId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      either (pure []) (transformBeamSearchRequestForDriverToDomain <$>)
+        <$> KV.findAllWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [ Se.And
+              ( [Se.Is BeamSRFD.searchTryId $ Se.Eq searchTryId]
+                  <> [Se.Is BeamSRFD.status $ Se.Eq Domain.Active]
+                  <> [Se.Is BeamSRFD.response $ Se.Eq Nothing]
+              )
+          ]
+    Nothing -> pure []
+
 findByDriverAndSearchTryId :: Transactionable m => Id Person -> Id SearchTry -> m (Maybe SearchRequestForDriver)
 findByDriverAndSearchTryId driverId searchTryId = Esq.findOne $ do
   sReq <- from $ table @SearchRequestForDriverT
@@ -100,6 +117,23 @@ findByDriverAndSearchTryId driverId searchTryId = Esq.findOne $ do
       &&. sReq ^. SearchRequestForDriverDriverId ==. val (toKey driverId)
       &&. sReq ^. SearchRequestForDriverStatus ==. val Domain.Active
   pure sReq
+
+findByDriverAndSearchTryId' :: L.MonadFlow m => Id Person -> Id SearchTry -> m (Maybe SearchRequestForDriver)
+findByDriverAndSearchTryId' (Id driverId) (Id searchTryId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      either (pure Nothing) (transformBeamSearchRequestForDriverToDomain <$>)
+        <$> KV.findWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [ Se.And
+              ( [Se.Is BeamSRFD.searchTryId $ Se.Eq searchTryId]
+                  <> [Se.Is BeamSRFD.status $ Se.Eq Domain.Active]
+                  <> [Se.Is BeamSRFD.driverId $ Se.Eq driverId]
+              )
+          ]
+    Nothing -> pure Nothing
 
 findByDriver :: (L.MonadFlow m, MonadTime m) => Id Person -> m [SearchRequestForDriver]
 findByDriver (Id driverId) = do
