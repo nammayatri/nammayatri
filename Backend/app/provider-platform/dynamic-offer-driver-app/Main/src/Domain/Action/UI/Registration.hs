@@ -70,6 +70,8 @@ import Tools.Metrics
 import Tools.SMS as Sms hiding (Success)
 import Tools.Whatsapp as Whatsapp
 
+-- import qualified Kernel.Storage.Esqueleto as Esq
+
 data AuthReq = AuthReq
   { mobileNumber :: Text,
     mobileCountryCode :: Text,
@@ -150,7 +152,6 @@ auth req mbBundleVersion mbClientVersion = do
       scfg = sessionConfig smsCfg
   let mkId = getId merchantId
   token <- makeSession scfg entityId mkId SR.USER (show <$> useFakeOtpM)
-  -- Esq.runTransaction do
   _ <- QR.create token
   QP.updatePersonVersions person mbBundleVersion mbClientVersion
   whenNothing_ useFakeOtpM $ do

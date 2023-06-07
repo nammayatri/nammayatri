@@ -123,6 +123,7 @@ instance ModelMeta DriverPoolConfigT where
   modelFieldModification = driverPoolConfigTMod
   modelTableName = "driver_pool_config"
   mkExprWithDefault _ = B.insertExpressions []
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type DriverPoolConfig = DriverPoolConfigT Identity
 

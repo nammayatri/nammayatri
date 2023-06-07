@@ -125,6 +125,7 @@ instance ModelMeta TransporterConfigT where
   modelFieldModification = transporterConfigTMod
   modelTableName = "transporter_config"
   mkExprWithDefault _ = B.insertExpressions []
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type TransporterConfig = TransporterConfigT Identity
 

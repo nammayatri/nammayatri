@@ -81,6 +81,7 @@ instance ModelMeta MerchantServiceConfigT where
   modelFieldModification = merchantServiceConfigTMod
   modelTableName = "merchant_service_config"
   mkExprWithDefault _ = B.insertExpressions []
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type MerchantServiceConfig = MerchantServiceConfigT Identity
 

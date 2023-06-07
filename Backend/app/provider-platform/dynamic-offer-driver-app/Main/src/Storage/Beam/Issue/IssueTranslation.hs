@@ -82,6 +82,7 @@ instance ModelMeta IssueTranslationT where
   modelFieldModification = issueTranslationTMod
   modelTableName = "issue_translation"
   mkExprWithDefault _ = B.insertExpressions []
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type IssueTranslation = IssueTranslationT Identity
 

@@ -126,6 +126,7 @@ instance ModelMeta FareParametersT where
   modelFieldModification = fareParametersTMod
   modelTableName = "fare_parameters"
   mkExprWithDefault _ = B.insertExpressions []
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type FareParameters = FareParametersT Identity
 

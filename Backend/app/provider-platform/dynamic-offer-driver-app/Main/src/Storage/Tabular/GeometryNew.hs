@@ -177,7 +177,6 @@ instance ModelMeta GeometryNewT where
   modelFieldModification = bookingTMod
   modelTableName = "geometry"
   modelSchemaName = Just "atlas_driver_offer_bpp"
-  mkExprWithDefault _ = B.insertExpressions []
 
 type GeometryNew = GeometryNewT Identity
 

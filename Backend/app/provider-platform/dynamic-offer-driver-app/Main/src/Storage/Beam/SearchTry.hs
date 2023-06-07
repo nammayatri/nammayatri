@@ -158,6 +158,7 @@ instance ModelMeta SearchTryT where
   modelFieldModification = searchTryTMod
   modelTableName = "search_request"
   mkExprWithDefault _ = B.insertExpressions []
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type SearchTry = SearchTryT Identity
 

@@ -60,6 +60,7 @@ instance ModelMeta DriverReferralT where
   modelFieldModification = driverReferralTMod
   modelTableName = "driver_referral"
   mkExprWithDefault _ = B.insertExpressions []
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type DriverReferral = DriverReferralT Identity
 

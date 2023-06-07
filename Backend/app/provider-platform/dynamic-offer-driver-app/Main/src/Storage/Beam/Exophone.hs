@@ -64,6 +64,7 @@ instance ModelMeta ExophoneT where
   modelFieldModification = exophoneTMod
   modelTableName = "exophone"
   mkExprWithDefault _ = B.insertExpressions []
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type Exophone = ExophoneT Identity
 

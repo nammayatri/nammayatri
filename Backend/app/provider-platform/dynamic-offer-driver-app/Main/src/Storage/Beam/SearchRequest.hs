@@ -147,6 +147,7 @@ instance ModelMeta SearchRequestT where
   modelFieldModification = searchRequestTMod
   modelTableName = "search_request"
   mkExprWithDefault _ = B.insertExpressions []
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type SearchRequest = SearchRequestT Identity
 

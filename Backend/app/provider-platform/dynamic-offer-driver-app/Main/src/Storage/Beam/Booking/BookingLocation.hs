@@ -72,6 +72,7 @@ instance ModelMeta BookingLocationT where
   modelFieldModification = bookingLocationTMod
   modelTableName = "booking_location"
   mkExprWithDefault _ = B.insertExpressions []
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type BookingLocation = BookingLocationT Identity
 

@@ -101,6 +101,7 @@ instance ModelMeta OnboardingDocumentConfigT where
   modelFieldModification = onboardingDocumentConfigTMod
   modelTableName = "onboarding_document_configs"
   mkExprWithDefault _ = B.insertExpressions []
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type OnboardingDocumentConfig = OnboardingDocumentConfigT Identity
 

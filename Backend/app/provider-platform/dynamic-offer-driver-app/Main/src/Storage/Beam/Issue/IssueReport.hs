@@ -98,6 +98,7 @@ instance ModelMeta IssueReportT where
   modelFieldModification = issueReportTMod
   modelTableName = "issue_report"
   mkExprWithDefault _ = B.insertExpressions []
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type IssueReport = IssueReportT Identity
 

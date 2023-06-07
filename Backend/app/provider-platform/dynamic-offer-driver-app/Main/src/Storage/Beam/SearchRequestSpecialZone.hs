@@ -105,6 +105,7 @@ instance ModelMeta SearchRequestSpecialZoneT where
   modelFieldModification = searchRequestSpecialZoneTMod
   modelTableName = "search_request_special_zone"
   mkExprWithDefault _ = B.insertExpressions []
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type SearchRequestSpecialZone = SearchRequestSpecialZoneT Identity
 

@@ -120,6 +120,7 @@ instance ModelMeta RegistrationTokenT where
   modelFieldModification = registrationTokenTMod
   modelTableName = "registration_token"
   mkExprWithDefault _ = B.insertExpressions []
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type RegistrationToken = RegistrationTokenT Identity
 

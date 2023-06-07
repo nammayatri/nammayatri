@@ -97,6 +97,7 @@ instance ModelMeta FarePolicySlabsDetailsSlabT where
   modelFieldModification = farePolicySlabsDetailsSlabTMod
   modelTableName = "fare_parameters_progressive_details"
   mkExprWithDefault _ = B.insertExpressions []
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type FarePolicySlabsDetailsSlab = FarePolicySlabsDetailsSlabT Identity
 

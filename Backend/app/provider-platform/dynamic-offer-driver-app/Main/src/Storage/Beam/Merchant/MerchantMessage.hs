@@ -81,6 +81,7 @@ instance ModelMeta MerchantMessageT where
   modelFieldModification = merchantMessageTMod
   modelTableName = "merchant_message"
   mkExprWithDefault _ = B.insertExpressions []
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type MerchantMessage = MerchantMessageT Identity
 

@@ -91,6 +91,7 @@ instance ModelMeta CallStatusT where
   modelFieldModification = callStatusTMod
   modelTableName = "call_status"
   mkExprWithDefault _ = B.insertExpressions []
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type CallStatus = CallStatusT Identity
 

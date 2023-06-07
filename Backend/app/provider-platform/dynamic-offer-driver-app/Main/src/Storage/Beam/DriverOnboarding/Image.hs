@@ -98,6 +98,7 @@ instance ModelMeta ImageT where
   modelFieldModification = imageTMod
   modelTableName = "image"
   mkExprWithDefault _ = B.insertExpressions []
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type Image = ImageT Identity
 

@@ -1229,7 +1229,7 @@ updatePersonVersions person mbBundleVersion mbClientVersion =
               dbConf'
               Mesh.meshConfig
               [ Se.Set BeamP.clientVersion mbClientVersionText,
-                Se.Set BeamP.clientVersion mbBundleVersionText,
+                Se.Set BeamP.bundleVersion mbBundleVersionText,
                 Se.Set BeamP.updatedAt now
               ]
               [Se.Is BeamP.id (Se.Eq $ getId person.id)]

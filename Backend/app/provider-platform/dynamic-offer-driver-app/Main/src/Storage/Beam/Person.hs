@@ -185,6 +185,7 @@ instance ModelMeta PersonT where
   modelFieldModification = personTMod
   modelTableName = "person"
   mkExprWithDefault _ = B.insertExpressions []
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type Person = PersonT Identity
 

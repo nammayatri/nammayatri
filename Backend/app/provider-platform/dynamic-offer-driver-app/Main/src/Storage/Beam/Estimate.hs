@@ -144,6 +144,7 @@ instance ModelMeta EstimateT where
   modelFieldModification = estimateTMod
   modelTableName = "estimate"
   mkExprWithDefault _ = B.insertExpressions []
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type Estimate = EstimateT Identity
 

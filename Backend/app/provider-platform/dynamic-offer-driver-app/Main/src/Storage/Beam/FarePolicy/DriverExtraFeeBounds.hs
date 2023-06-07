@@ -78,6 +78,7 @@ instance ModelMeta DriverExtraFeeBoundsT where
   modelFieldModification = driverExtraFeeBoundsTMod
   modelTableName = "fare_parameters_progressive_details"
   mkExprWithDefault _ = B.insertExpressions []
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type DriverExtraFeeBounds = DriverExtraFeeBoundsT Identity
 

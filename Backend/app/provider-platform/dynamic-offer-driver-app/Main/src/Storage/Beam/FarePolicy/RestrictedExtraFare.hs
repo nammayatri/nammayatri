@@ -105,6 +105,7 @@ instance ModelMeta RestrictedExtraFareT where
   modelFieldModification = restrictedExtraFareTMod
   modelTableName = "restricted_extra_fare"
   mkExprWithDefault _ = B.insertExpressions []
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type RestrictedExtraFare = RestrictedExtraFareT Identity
 

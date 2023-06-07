@@ -19,6 +19,11 @@ module Storage.Queries.DriverLocation where
 import qualified Database.Beam as B
 import Database.Beam.Postgres
 -- import qualified Database.Beam.Query as B
+
+-- import qualified EulerHS.KVConnector.Flow as KV
+-- import EulerHS.KVConnector.Types
+
+import qualified Database.Beam.Schema.Tables as B
 import Domain.Types.DriverLocation
 import Domain.Types.Merchant
 import Domain.Types.Person
@@ -34,6 +39,27 @@ import Kernel.Types.Id
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverLocation as BeamDL
 
+data AtlasDB f = AtlasDB
+  { driverLocation :: f (B.TableEntity BeamDL.DriverLocationT)
+  }
+  deriving (Generic, B.Database be)
+
+atlasDB :: B.DatabaseSettings be AtlasDB
+atlasDB =
+  B.defaultDbSettings
+    `B.withDbModification` B.dbModification
+      { driverLocation = dLocationTable
+      }
+
+dLocationTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity BeamDL.DriverLocationT)
+dLocationTable =
+  B.setEntitySchema (Just "atlas_driver_offer_bpp")
+    <> B.setEntityName "driver_location"
+    <> (B.modifyTableFields BeamDL.driverLocationTMod)
+
+-- driverLocationEMod :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity BeamDL.DriverLocationT)
+-- driverLocationEMod = B.modifyTableFields BeamDL.driverLocationTMod
+
 create :: (L.MonadFlow m, MonadTime m) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m ()
 create drLocationId latLong updateTime merchantId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -42,7 +68,8 @@ create drLocationId latLong updateTime merchantId = do
   case conn of
     Right c -> do
       let
-      void $ L.runDB c $ L.insertRows $ B.insert (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT)) $ B.insertExpressions [BeamDL.toRowExpression (getId drLocationId) latLong updateTime now (getId merchantId)]
+      -- void $ L.runDB c $ L.insertRows $ B.insert (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT)) $ B.insertExpressions [BeamDL.toRowExpression (getId drLocationId) latLong updateTime now (getId merchantId)]
+      void $ L.runDB c $ L.insertRows $ B.insert (driverLocation atlasDB) $ B.insertExpressions [BeamDL.toRowExpression (getId drLocationId) latLong updateTime now (getId merchantId)]
     Left _ -> pure ()
 
 findById :: L.MonadFlow m => Id Person -> m (Maybe DriverLocation)
@@ -57,7 +84,8 @@ findById (Id driverLocationId) = do
             B.select $
               B.limit_ 1 $
                 B.filter_' (\BeamDL.DriverLocationT {..} -> driverId B.==?. B.val_ driverLocationId) $
-                  B.all_ (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT))
+                  -- B.all_ (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT))
+                  B.all_ (driverLocation atlasDB)
       pure (either (const Nothing) (transformBeamDriverLocationToDomain <$>) geoms)
     Left _ -> pure Nothing
 
@@ -90,7 +118,8 @@ upsertGpsCoord drLocationId latLong calculationTime merchantId' = do
             L.runDB c $
               L.updateRows $
                 B.update
-                  (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT))
+                  -- (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT))
+                  (driverLocation atlasDB)
                   ( \BeamDL.DriverLocationT {..} ->
                       (driverId B.<-. B.val_ drLocationId') <> (lat B.<-. B.val_ latLong'.lat)
                         <> (lon B.<-. (B.val_ latLong'.lon))
@@ -110,7 +139,8 @@ deleteById (Id driverId') = do
         L.runDB c $
           L.deleteRows
             ( B.delete
-                (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT))
+                -- (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT))
+                (driverLocation atlasDB)
                 (\BeamDL.DriverLocationT {..} -> driverId B.==. B.val_ driverId')
             )
     Left _ -> pure ()
