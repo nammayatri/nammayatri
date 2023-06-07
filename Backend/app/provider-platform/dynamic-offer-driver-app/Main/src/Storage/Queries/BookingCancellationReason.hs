@@ -56,6 +56,21 @@ findAllCancelledByDriverId driverId = do
     mkCount [counter] = counter
     mkCount _ = 0
 
+findAllCancelledByDriverId' :: L.MonadFlow m => Id Person -> m Int
+findAllCancelledByDriverId' driverId = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      res <-
+        KV.findAllWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [ Se.And [Se.Is BeamBCR.driverId $ Se.Eq (Just $ getId driverId)],
+            Se.Is BeamBCR.source $ Se.Eq ByDriver
+          ]
+      pure $ either (const 0) length res
+    Nothing -> pure 0
+
 findByRideBookingId :: L.MonadFlow m => Id Booking -> m (Maybe BookingCancellationReason)
 findByRideBookingId (Id rideBookingId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
