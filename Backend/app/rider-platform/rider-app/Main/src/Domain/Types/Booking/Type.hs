@@ -76,6 +76,7 @@ data Booking = Booking
     bookingDetails :: BookingDetails,
     tripTerms :: Maybe DTripTerms.TripTerms,
     merchantId :: Id DMerchant.Merchant,
+    specialLocationTag :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

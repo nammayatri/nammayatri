@@ -48,6 +48,7 @@ mkPersist
       nightShiftEnd TimeOfDay Maybe
       waitingChargePerMin Money Maybe
       waitingOrPickupCharges Money Maybe
+      specialLocationTag Text Maybe
       createdAt UTCTime
 
       Primary id

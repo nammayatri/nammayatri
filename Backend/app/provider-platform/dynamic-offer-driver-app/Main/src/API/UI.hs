@@ -24,7 +24,6 @@ import qualified API.UI.Driver as Driver
 import qualified API.UI.DriverOnboarding as DriverOnboarding
 import qualified API.UI.DriverReferral as DriverReferral
 import qualified API.UI.ExotelEndRide as ExotelEndRide
-import qualified API.UI.FarePolicy as FarePolicy
 import qualified API.UI.Frontend as Frontend
 import qualified API.UI.Issue as Issue
 import qualified API.UI.LeaderBoard as LeaderBoard
@@ -55,7 +54,6 @@ type API =
            :<|> Vehicle.API
            :<|> Frontend.API
            :<|> Transporter.API
-           :<|> FarePolicy.API
            :<|> Location.API
            :<|> Route.API
            :<|> Ride.API
@@ -81,7 +79,6 @@ handler =
     :<|> Vehicle.handler
     :<|> Frontend.handler
     :<|> Transporter.handler
-    :<|> FarePolicy.handler
     :<|> Location.handler
     :<|> Route.handler
     :<|> Ride.handler

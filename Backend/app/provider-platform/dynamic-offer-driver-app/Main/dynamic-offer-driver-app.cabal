@@ -50,7 +50,6 @@ library
       API.UI.DriverOnboarding
       API.UI.DriverReferral
       API.UI.ExotelEndRide
-      API.UI.FarePolicy
       API.UI.Frontend
       API.UI.Issue
       API.UI.LeaderBoard
@@ -111,7 +110,6 @@ library
       Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
       Domain.Action.UI.DriverReferral
       Domain.Action.UI.ExotelEndRide
-      Domain.Action.UI.FarePolicy
       Domain.Action.UI.Frontend
       Domain.Action.UI.Issue
       Domain.Action.UI.LeaderBoard
@@ -163,6 +161,7 @@ library
       Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Domain.Types.FarePolicy.FarePolicySlabsDetails
       Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
+      Domain.Types.FareProduct
       Domain.Types.Geometry
       Domain.Types.Issue.Comment
       Domain.Types.Issue.IssueCategory
@@ -217,6 +216,8 @@ library
       SharedLogic.DriverPool.Types
       SharedLogic.Estimate
       SharedLogic.FareCalculator
+      SharedLogic.FarePolicy
+      SharedLogic.FareProduct
       SharedLogic.GoogleMaps
       SharedLogic.GoogleTranslate
       SharedLogic.Merchant
@@ -227,6 +228,7 @@ library
       Storage.CachedQueries.DriverInformation
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FarePolicy
+      Storage.CachedQueries.FareProduct
       Storage.CachedQueries.Issue.IssueCategory
       Storage.CachedQueries.Issue.IssueOption
       Storage.CachedQueries.Issue.IssueReport
@@ -265,6 +267,7 @@ library
       Storage.Queries.FarePolicy.DriverExtraFeeBounds
       Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
+      Storage.Queries.FareProduct
       Storage.Queries.FullEntityBuilders
       Storage.Queries.Geometry
       Storage.Queries.Issue.Comment
@@ -327,6 +330,7 @@ library
       Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Storage.Tabular.FarePolicy.Instances
       Storage.Tabular.FarePolicy.Table
+      Storage.Tabular.FareProduct
       Storage.Tabular.Geometry
       Storage.Tabular.Issue.Comment
       Storage.Tabular.Issue.IssueCategory

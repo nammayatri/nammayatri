@@ -130,7 +130,7 @@ pureFareSum fareParams = do
     + platformFee
 
 data CalculateFareParametersParams = CalculateFareParametersParams
-  { farePolicy :: FarePolicy,
+  { farePolicy :: FullFarePolicy,
     distance :: Meters,
     rideTime :: UTCTime,
     waitingTime :: Maybe Minutes,

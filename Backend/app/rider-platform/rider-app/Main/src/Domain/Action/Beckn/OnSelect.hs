@@ -69,7 +69,8 @@ data QuoteInfo = QuoteInfo
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
     quoteDetails :: DriverOfferQuoteDetails,
-    descriptions :: [Text]
+    descriptions :: [Text],
+    specialLocationTag :: Maybe Text
   }
 
 data DriverOfferQuoteDetails = DriverOfferQuoteDetails

@@ -46,6 +46,7 @@ data Quote = Quote
     tripTerms :: Maybe DTripTerms.TripTerms,
     quoteDetails :: QuoteDetails,
     merchantId :: Id DMerchant.Merchant,
+    specialLocationTag :: Maybe Text,
     createdAt :: UTCTime
   }
   deriving (Generic, Show, PrettyShow)
@@ -74,6 +75,7 @@ data QuoteAPIEntity = QuoteAPIEntity
     agencyCompletedRidesCount :: Int,
     tripTerms :: [Text],
     quoteDetails :: QuoteAPIDetails,
+    specialLocationTag :: Maybe Text,
     createdAt :: UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

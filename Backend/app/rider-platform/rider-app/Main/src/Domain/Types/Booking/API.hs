@@ -53,6 +53,7 @@ data BookingAPIEntity = BookingAPIEntity
     rideEndTime :: Maybe UTCTime,
     duration :: Maybe Seconds,
     merchantExoPhone :: Text,
+    specialLocationTag :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -108,6 +109,7 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone = do
       rideEndTime = activeRide >>= (.rideEndTime),
       duration = getRideDuration activeRide,
       merchantExoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone,
+      specialLocationTag = booking.specialLocationTag,
       createdAt = booking.createdAt,
       updatedAt = booking.updatedAt
     }

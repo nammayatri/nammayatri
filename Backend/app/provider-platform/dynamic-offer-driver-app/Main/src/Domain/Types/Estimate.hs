@@ -31,6 +31,7 @@ data Estimate = Estimate
     estimateBreakupList :: [EstimateBreakup],
     nightShiftInfo :: Maybe NightShiftInfo,
     waitingCharges :: WaitingCharges,
+    specialLocationTag :: Maybe Text,
     createdAt :: UTCTime
   }
   deriving (Generic)

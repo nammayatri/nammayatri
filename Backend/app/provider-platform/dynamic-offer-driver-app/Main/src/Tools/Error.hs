@@ -78,6 +78,21 @@ instance IsHTTPError FPDiscountError where
 
 instance IsAPIError FPDiscountError
 
+data FareProductError
+  = NoFareProduct
+  deriving (Generic, Eq, Show, FromJSON, ToJSON, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''FareProductError
+
+instance IsBaseError FareProductError where
+  toMessage NoFareProduct = Just "No fare product matches passed data."
+
+instance IsHTTPError FareProductError where
+  toErrorCode NoFareProduct = "NO_FARE_PRODUCT"
+  toHttpCode NoFareProduct = E500
+
+instance IsAPIError FareProductError
+
 data AllocationError
   = EmptyDriverPool
   deriving (Eq, Show, IsBecknAPIError)

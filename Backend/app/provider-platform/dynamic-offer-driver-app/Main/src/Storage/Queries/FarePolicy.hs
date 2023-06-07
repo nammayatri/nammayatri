@@ -20,8 +20,6 @@ module Storage.Queries.FarePolicy
 where
 
 import Domain.Types.FarePolicy
-import Domain.Types.Merchant
-import Domain.Types.Vehicle.Variant (Variant)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
@@ -34,32 +32,6 @@ import Storage.Tabular.FarePolicy
 import Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails
 import Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab ()
 import Storage.Tabular.FarePolicy.Instances
-
-findAllByMerchantId ::
-  Transactionable m =>
-  Id Merchant ->
-  m [FarePolicy]
-findAllByMerchantId merchantId = buildDType $ do
-  res <- Esq.findAll' $ do
-    farePolicy <- from $ table @FarePolicyT
-    where_ $
-      farePolicy ^. FarePolicyMerchantId ==. val (toKey merchantId)
-    return farePolicy
-  catMaybes <$> mapM buildFullFarePolicy res
-
-findByMerchantIdAndVariant ::
-  Transactionable m =>
-  Id Merchant ->
-  Variant ->
-  m (Maybe FarePolicy)
-findByMerchantIdAndVariant merchantId variant = buildDType $ do
-  res <- Esq.findOne' $ do
-    farePolicy <- from $ table @FarePolicyT
-    where_ $
-      farePolicy ^. FarePolicyMerchantId ==. val (toKey merchantId)
-        &&. farePolicy ^. FarePolicyVehicleVariant ==. val variant
-    return farePolicy
-  join <$> mapM buildFullFarePolicy res
 
 findById :: Transactionable m => Id FarePolicy -> m (Maybe FarePolicy)
 findById farePolicyId = buildDType $ do

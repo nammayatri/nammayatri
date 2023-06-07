@@ -46,6 +46,7 @@ mkPersist
       device Text Maybe
       autoAssignEnabled Bool
       customerLanguage Maps.Language Maybe
+      specialLocationTag Text Maybe
       createdAt UTCTime
 
       Primary id

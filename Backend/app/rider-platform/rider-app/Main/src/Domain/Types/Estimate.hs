@@ -55,6 +55,7 @@ data Estimate = Estimate
     status :: EstimateStatus,
     waitingCharges :: WaitingCharges,
     driversLocation :: [LatLong],
+    specialLocationTag :: Maybe Text,
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }
@@ -113,6 +114,7 @@ data EstimateAPIEntity = EstimateAPIEntity
     nightShiftInfo :: Maybe NightShiftInfo,
     waitingCharges :: WaitingCharges,
     driversLatLong :: [LatLong],
+    specialLocationTag :: Maybe Text,
     createdAt :: UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
