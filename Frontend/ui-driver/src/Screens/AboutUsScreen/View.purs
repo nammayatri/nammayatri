@@ -62,19 +62,24 @@ view push state =
         height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
-      ][
-         headerLayout  state push
-        , linearLayout
+      ][  headerLayout  state push
+        , scrollView
           [ width MATCH_PARENT
           , height MATCH_PARENT
-          , orientation VERTICAL
-          ][  applicationInformationLayout state push
-            , linearLayout
-                [ width MATCH_PARENT
-                , weight 1.0
-                , gravity BOTTOM
-                ][ footerView state ]
-          ]]
+          , scrollBarY false
+          ][ linearLayout
+              [ width MATCH_PARENT
+              , height MATCH_PARENT
+              , orientation VERTICAL
+              ][  applicationInformationLayout state push
+                , linearLayout
+                    [ width MATCH_PARENT
+                    , weight 1.0
+                    , gravity BOTTOM
+                    ][ footerView state ]
+              ]
+            ]
+          ]
       ]<> if state.props.demoModePopup then [demoModePopUpView push state] else [])
 
 demoModePopUpView :: forall w . (Action -> Effect Unit) -> ST.AboutUsScreenState -> PrestoDOM (Effect Unit) w

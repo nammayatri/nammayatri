@@ -1486,8 +1486,11 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                 Intent httpIntent = new Intent(Intent.ACTION_VIEW);
                 httpIntent.setData(Uri.parse(url));
                 activity.startActivity(httpIntent);
-            } catch (Exception e) {
-                Log.e(LOG_TAG, "Exception occurred while calling WebView", e);
+            } catch (ActivityNotFoundException e) {
+                Toast.makeText(context, context.getString(R.string.no_enabled_browser), Toast.LENGTH_LONG).show();
+                firebaseLogEvent("exception_no_activity_found_for_intent");
+            } catch (Exception e){
+                firebaseLogEvent("exception_in_openUrlInApp");
             }
         });
     }

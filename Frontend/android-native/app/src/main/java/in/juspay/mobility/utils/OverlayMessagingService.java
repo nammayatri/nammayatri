@@ -52,6 +52,7 @@
 package in.juspay.mobility.utils;
 
 import android.app.Service;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.graphics.PixelFormat;
@@ -65,6 +66,8 @@ import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
+
 import androidx.annotation.Nullable;
 import com.bumptech.glide.Glide;
 import com.google.android.material.button.MaterialButton;
@@ -73,6 +76,9 @@ import com.google.gson.JsonElement;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+
+import java.util.Objects;
+
 import in.juspay.mobility.R;
 
 public class OverlayMessagingService extends Service {
@@ -185,8 +191,11 @@ public class OverlayMessagingService extends Service {
                                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                                     try {
                                         startActivity(intent);
-                                    }catch (Exception e){
-                                        e.printStackTrace();
+                                    } catch (ActivityNotFoundException e){
+                                        Toast.makeText(this, getString(R.string.no_enabled_browser), Toast.LENGTH_LONG).show();
+                                        rideRequestUtils.firebaseLogEventWithParams("exception", "OPEN_LINK", "ActivityNotFoundException", this);
+                                    } catch (Exception e){
+                                        rideRequestUtils.firebaseLogEventWithParams("exception", "OPEN_LINK", Objects.requireNonNull(e.getMessage()).substring(0 ,40), this);
                                     }
                                 }
                                 break;
