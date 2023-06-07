@@ -83,17 +83,11 @@ data FullFarePolicy = FullFarePolicy
     govtCharges :: Maybe Double,
     farePolicyDetails :: FarePolicyDetails,
     description :: Maybe Text,
-    flow :: FlowType,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
   deriving (Generic, Show)
 
-data FlowType
-  = RIDE_OTP
-  | NORMAL
-  deriving (Show, Read, Generic, Eq, ToSchema, FromJSON, ToJSON)
-
-farePolicyToFullFarePolicy :: Id Merchant -> Variant -> FlowType -> FarePolicy -> FullFarePolicy
-farePolicyToFullFarePolicy merchantId vehicleVariant flow FarePolicy {..} =
+farePolicyToFullFarePolicy :: Id Merchant -> Variant -> FarePolicy -> FullFarePolicy
+farePolicyToFullFarePolicy merchantId vehicleVariant FarePolicy {..} =
   FullFarePolicy {..}

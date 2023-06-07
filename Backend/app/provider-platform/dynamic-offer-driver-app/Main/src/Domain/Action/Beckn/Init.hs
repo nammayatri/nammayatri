@@ -20,6 +20,7 @@ import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FareParameters as DFP
+import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.QuoteSpecialZone as DQSZ
 import qualified Domain.Types.SearchRequest as DSR
@@ -141,6 +142,7 @@ handler merchantId req eitherReq = do
         HasField "fromLocation" sr DLoc.SearchReqLocation,
         HasField "toLocation" sr DLoc.SearchReqLocation,
         HasField "estimatedDuration" sr Seconds,
+        HasField "area" sr FareProductD.Area,
         HasField "vehicleVariant" q Veh.Variant,
         HasField "distance" q Meters,
         HasField "estimatedFare" q Money,
@@ -179,6 +181,7 @@ handler merchantId req eitherReq = do
             estimatedDuration = searchRequest.estimatedDuration,
             fareParams = driverQuote.fareParams,
             specialZoneOtpCode = Nothing,
+            area = searchRequest.area,
             ..
           }
 

@@ -40,13 +40,13 @@ findAllFareProductForVariants merchantId area =
         &&. fareProduct ^. FareProductArea ==. val area
     return fareProduct
 
-findOneFareProductForVariant ::
+findByMerchantVariantArea ::
   Transactionable m =>
   Id Merchant ->
-  Area ->
   Variant ->
+  Area ->
   m (Maybe FareProduct)
-findOneFareProductForVariant merchantId area vehicleVariant =
+findByMerchantVariantArea merchantId vehicleVariant area =
   Esq.findOne $ do
     fareProduct <- from $ table @FareProductT
     where_ $

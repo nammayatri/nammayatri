@@ -30,6 +30,7 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverLocation as DrLoc
 import Domain.Types.FareParameters as Fare
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.TransporterConfig as DTConf
 import qualified Domain.Types.Person as DP
@@ -78,7 +79,7 @@ data ServiceHandle m = ServiceHandle
     getMerchant :: Id DM.Merchant -> m (Maybe DM.Merchant),
     endRideTransaction :: Id DP.Driver -> Id SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> Id DM.Merchant -> m (),
     notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> m (),
-    getFarePolicy :: Id DM.Merchant -> LatLong -> LatLong -> DVeh.Variant -> m DFP.FullFarePolicy,
+    getFarePolicy :: Id DM.Merchant -> DVeh.Variant -> DFareProduct.Area -> m DFP.FullFarePolicy,
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> Money -> Meters -> m (),
     findDriverLoc :: Id DM.Merchant -> Id DP.Person -> m (Maybe DrLoc.DriverLocation),
@@ -101,7 +102,7 @@ buildEndRideHandle merchantId = do
         getMerchant = MerchantS.findById,
         notifyCompleteToBAP = CallBAP.sendRideCompletedUpdateToBAP,
         endRideTransaction = RideEndInt.endRideTransaction,
-        getFarePolicy = FarePolicy.getFarePolicyForVariant,
+        getFarePolicy = FarePolicy.getFarePolicy,
         calculateFareParameters = Fare.calculateFareParameters,
         putDiffMetric = RideEndInt.putDiffMetric,
         findDriverLoc = DrLoc.findById,
@@ -222,7 +223,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance = do
 
   -- maybe compare only distance fare?
   let estimatedFare = Fare.fareSum booking.fareParams
-  farePolicy <- getFarePolicy merchantId (LatLong booking.fromLocation.lat booking.fromLocation.lon) (LatLong booking.toLocation.lat booking.toLocation.lon) booking.vehicleVariant
+  farePolicy <- getFarePolicy merchantId booking.vehicleVariant booking.area
   fareParams <-
     calculateFareParameters
       Fare.CalculateFareParametersParams

@@ -21,6 +21,7 @@
 module Storage.Tabular.Booking where
 
 import qualified Domain.Types.Booking as Domain
+import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Vehicle.Variant as Veh
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
@@ -35,6 +36,7 @@ import Storage.Tabular.Vehicle ()
 
 derivePersistField "Domain.BookingStatus"
 derivePersistField "Domain.BookingType"
+derivePersistField "FareProductD.Area"
 
 mkPersist
   defaultSqlSettings
@@ -46,6 +48,7 @@ mkPersist
       status Domain.BookingStatus
       bookingType Domain.BookingType
       specialZoneOtpCode Text Maybe
+      area FareProductD.Area
       providerId MerchantTId
       primaryExophone Text
       bapId Text

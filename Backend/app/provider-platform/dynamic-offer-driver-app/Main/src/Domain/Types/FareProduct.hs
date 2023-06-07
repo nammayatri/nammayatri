@@ -11,6 +11,8 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingVia #-}
+
 module Domain.Types.FareProduct where
 
 import qualified Data.List as List
@@ -20,6 +22,7 @@ import Domain.Types.Merchant
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Utils.GenericPretty
 import Lib.Types.SpecialLocation (SpecialLocation (..))
 import qualified Text.Show
 
@@ -33,6 +36,7 @@ data Area
   | Drop (Id SpecialLocation)
   | Default
   deriving (Generic, Eq, ToSchema, FromJSON, ToJSON)
+  deriving (PrettyShow) via Showable Area
 
 instance Read Area where
   readsPrec d' =

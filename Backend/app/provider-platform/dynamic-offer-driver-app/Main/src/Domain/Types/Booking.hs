@@ -22,6 +22,7 @@ import qualified Data.Text.Encoding as DT
 import Data.Time
 import qualified Domain.Types.Booking.BookingLocation as DLoc
 import Domain.Types.FareParameters (FareParameters)
+import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.Vehicle.Variant as DVeh
@@ -54,6 +55,7 @@ data Booking = Booking
     status :: BookingStatus,
     bookingType :: BookingType,
     specialZoneOtpCode :: Maybe Text,
+    area :: FareProductD.Area,
     providerId :: Id DM.Merchant, -- FIXME merchantId
     primaryExophone :: Text,
     bapId :: Text,
