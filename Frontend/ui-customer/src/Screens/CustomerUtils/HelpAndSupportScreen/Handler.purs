@@ -39,3 +39,4 @@ helpAndSupportScreen = do
     GoToTripDetails updatedState-> App.BackT $ App.BackPoint <$> (pure $ GO_TO_TRIP_DETAILS updatedState)
     GoToMyRides -> App.BackT $ App.BackPoint <$> (pure $ VIEW_RIDES)
     UpdateState updatedState -> App.BackT $ App.BackPoint <$> (pure $ UPDATE_STATE updatedState)
+    ConfirmDeleteAccount updatedState -> App.BackT $ App.NoBack <$> (pure $ DELETE_USER_ACCOUNT updatedState)
