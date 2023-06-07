@@ -260,6 +260,7 @@ setCancelledRidesCount (Id driverId') cancelledCount = do
         [Se.Is BeamDS.driverId (Se.Eq driverId')]
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
+
 -- getDriversSortedOrder :: Transactionable m => Maybe Integer -> m [DriverStats]
 -- getDriversSortedOrder mbLimitVal =
 --   Esq.findAll $ do
