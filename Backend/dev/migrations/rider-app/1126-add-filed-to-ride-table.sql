@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.ride ADD COLUMN traveled_distance numeric(30,2);

@@ -132,6 +132,7 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
   chargeableDistance <-
     realToFrac <$> req.ride.chargeableDistance
       & fromMaybeM (InternalError "Ride chargeable distance is not present.")
+  let traveledDistance = realToFrac req.ride.traveledDistance
   let currency = "INR"
       ride = req.ride
       price =
@@ -157,7 +158,8 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
             fulfillment =
               RideCompletedOU.FulfillmentInfo
                 { id = ride.id.getId,
-                  chargeable_distance = chargeableDistance
+                  chargeable_distance = chargeableDistance,
+                  traveled_distance = traveledDistance
                 }
           }
   where

@@ -129,7 +129,8 @@ instance ToSchema BreakupPrice where
 
 data FulfillmentInfo = FulfillmentInfo
   { id :: Text, -- bppRideId
-    chargeable_distance :: DecimalValue
+    chargeable_distance :: DecimalValue,
+    traveled_distance :: DecimalValue
   }
   deriving (Generic, Show)
 

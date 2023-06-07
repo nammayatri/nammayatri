@@ -66,6 +66,7 @@ data Ride = Ride
     fare :: Maybe Money,
     totalFare :: Maybe Money,
     chargeableDistance :: Maybe HighPrecMeters,
+    traveledDistance :: Maybe HighPrecMeters,
     driverArrivalTime :: Maybe UTCTime,
     rideStartTime :: Maybe UTCTime,
     rideEndTime :: Maybe UTCTime,
