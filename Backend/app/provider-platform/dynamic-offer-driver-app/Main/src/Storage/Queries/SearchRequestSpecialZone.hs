@@ -75,8 +75,8 @@ findById (Id searchRequestSpecialZoneId) = do
     Just dbCOnf' -> do
       sR <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSRSZ.id $ Se.Eq searchRequestSpecialZoneId]
       case sR of
-        Left _ -> pure Nothing
-        Right x -> traverse transformBeamSearchRequestSpecialZoneToDomain x
+        Right (Just x) -> transformBeamSearchRequestSpecialZoneToDomain x
+        _ -> pure Nothing
     Nothing -> pure Nothing
 
 -- fullSearchRequestTable ::
@@ -108,11 +108,11 @@ getRequestIdfromTransactionId (Id tId) = do
     Just dbCOnf' -> do
       srsz <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSRSZ.transactionId $ Se.Eq tId]
       case srsz of
-        Left _ -> pure Nothing
-        Right x -> do
-          srsz' <- mapM transformBeamSearchRequestSpecialZoneToDomain x
+        Right (Just x) -> do
+          srsz' <- transformBeamSearchRequestSpecialZoneToDomain x
           let vTill = Domain.id <$> srsz'
           pure vTill
+        _ -> pure Nothing
     Nothing -> pure Nothing
 
 -- findByMsgIdAndBapIdAndBppId :: Transactionable m => Text -> Text -> Id Merchant -> m (Maybe SearchRequestSpecialZone)
@@ -133,8 +133,8 @@ findByMsgIdAndBapIdAndBppId txnId bapId (Id merchantId) = do
     Just dbCOnf' -> do
       srsz <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamSRSZ.messageId $ Se.Eq txnId, Se.Is BeamSRSZ.providerId $ Se.Eq merchantId, Se.Is BeamSRSZ.bapId $ Se.Eq bapId]]
       case srsz of
-        Left _ -> pure Nothing
-        Right x -> mapM transformBeamSearchRequestSpecialZoneToDomain x
+        Right (Just x) -> transformBeamSearchRequestSpecialZoneToDomain x
+        _ -> pure Nothing
     Nothing -> pure Nothing
 
 -- getValidTill ::
@@ -165,35 +165,39 @@ getValidTill (Id searchRequestId) = do
     Just dbCOnf' -> do
       srsz <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSRSZ.id $ Se.Eq searchRequestId]
       case srsz of
-        Left _ -> pure Nothing
-        Right x -> do
-          srsz' <- mapM transformBeamSearchRequestSpecialZoneToDomain x
+        Right (Just x) -> do
+          srsz' <- transformBeamSearchRequestSpecialZoneToDomain x
           let vTill = Domain.validTill <$> srsz'
           pure vTill
+        _ -> pure Nothing
     Nothing -> pure Nothing
 
-transformBeamSearchRequestSpecialZoneToDomain :: L.MonadFlow m => BeamSRSZ.SearchRequestSpecialZone -> m SearchRequestSpecialZone
+transformBeamSearchRequestSpecialZoneToDomain :: L.MonadFlow m => BeamSRSZ.SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
 transformBeamSearchRequestSpecialZoneToDomain BeamSRSZ.SearchRequestSpecialZoneT {..} = do
   fl <- QSRL.findById (Id fromLocationId)
   tl <- QSRL.findById (Id toLocationId)
   pUrl <- parseBaseUrl bapUri
-  pure
-    SearchRequestSpecialZone
-      { id = Id id,
-        transactionId = transactionId,
-        messageId = messageId,
-        startTime = startTime,
-        validTill = validTill,
-        providerId = Id providerId,
-        fromLocation = fromJust fl,
-        toLocation = fromJust tl,
-        bapId = bapId,
-        bapUri = pUrl,
-        estimatedDistance = estimatedDistance,
-        estimatedDuration = estimatedDuration,
-        createdAt = createdAt,
-        updatedAt = updatedAt
-      }
+  if isJust fl && isJust tl
+    then
+      pure $
+        Just
+          SearchRequestSpecialZone
+            { id = Id id,
+              transactionId = transactionId,
+              messageId = messageId,
+              startTime = startTime,
+              validTill = validTill,
+              providerId = Id providerId,
+              fromLocation = fromJust fl,
+              toLocation = fromJust tl,
+              bapId = bapId,
+              bapUri = pUrl,
+              estimatedDistance = estimatedDistance,
+              estimatedDuration = estimatedDuration,
+              createdAt = createdAt,
+              updatedAt = updatedAt
+            }
+    else pure Nothing
 
 transformDomainSearchRequestSpecialZoneToBeam :: SearchRequestSpecialZone -> BeamSRSZ.SearchRequestSpecialZone
 transformDomainSearchRequestSpecialZoneToBeam SearchRequestSpecialZone {..} =
