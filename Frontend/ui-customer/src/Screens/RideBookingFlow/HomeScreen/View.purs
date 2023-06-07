@@ -61,6 +61,7 @@ import Font.Style as FontStyle
 import Helpers.Utils (decodeErrorMessage, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, consumingBackPress, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, waitingCountdownTimer)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getCurrentPosition, getExtendedPath, getHeightFromPercent, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, toast, updateRoute)
+import Helpers.Utils (adjustViewWithKeyboard) as HU
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -95,6 +96,7 @@ screen initialState =
             _ <- pure $ printLog "storeCallBackCustomer callbackInitiated" initialState.props.callbackInitiated
             -- push NewUser -- TODO :: Handle the functionality
             -- _ <- isMockLocation push IsMockLocation
+            _ <- pure $ HU.adjustViewWithKeyboard "true"
             _ <- launchAff $ flowRunner $ checkForLatLongInSavedLocations push UpdateSavedLoc initialState
             if (not initialState.props.callbackInitiated) then do
               _ <- pure $ printLog "storeCallBackCustomer initiateCallback" "."
