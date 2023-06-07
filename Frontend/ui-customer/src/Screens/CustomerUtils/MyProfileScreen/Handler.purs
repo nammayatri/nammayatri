@@ -32,5 +32,4 @@ myProfileScreen = do
   case action of
     GoToHomeScreen -> App.BackT $ pure App.GoBack
     UpdateProfile state -> App.BackT $ App.NoBack <$> (pure $ UPDATE_USER_PROFILE state)
-    DeleteAccount updatedState -> App.BackT $ App.NoBack <$> pure ( DELETE_ACCOUNT updatedState)
     GoToHome -> App.BackT $ App.NoBack <$> pure (GO_TO_HOME_)

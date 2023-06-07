@@ -47,29 +47,6 @@ instance loggableAction :: Loggable Action where
       PrimaryButton.OnClick -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "primary_button" "update"
       PrimaryButton.NoAction -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "primary_button" "no_action"
     UserProfile profile -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "in_screen" "user_profile"
-    PopUpModalAction act -> case act of
-      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "delete_account_cancel"
-      PopUpModal.OnButton2Click -> do
-        trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "delete_account_accept"
-        trackAppEndScreen appId (getScreen MY_PROFILE_SCREEN)
-      PopUpModal.NoAction -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "no_action"
-      PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "image"
-      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "primary_edit_text"
-      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "countdown_updated"
-      PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "tip_clicked"
-      PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "popup_dismissed"
-    AccountDeletedModalAction act -> case act of
-      PopUpModal.OnButton1Click -> do
-        trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "account_deleted"
-        trackAppEndScreen appId (getScreen MY_PROFILE_SCREEN)
-      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "button_2"
-      PopUpModal.NoAction -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "no_action"
-      PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "image"
-      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "primary_edit_text"
-      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "countdown_updated"
-      PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "tip_clicked"
-      PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "popup_dismissed"
-    ReqDelAccount -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "delete_account_request"
     ShowOptions -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "open_gender_options_drop_down"
     GenderSelected value -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "gender_selected"
     EmailIDEditTextAction (PrimaryEditText.TextChanged id value) -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "edit_email_text_changed" "primary_edit_text"
@@ -83,14 +60,11 @@ data Action = GenericHeaderActionController GenericHeader.Action
             | EmailIDEditTextAction PrimaryEditText.Action
             | UpdateButtonAction PrimaryButton.Action
             | UserProfile GetProfileRes
-            | PopUpModalAction PopUpModal.Action
-            | AccountDeletedModalAction PopUpModal.Action
-            | ReqDelAccount
             | ShowOptions
             | GenderSelected Gender
             | NoAction
             | AnimationEnd String
-data ScreenOutput = GoToHomeScreen | UpdateProfile MyProfileScreenState | DeleteAccount MyProfileScreenState | GoToHome
+data ScreenOutput = GoToHomeScreen | UpdateProfile MyProfileScreenState | GoToHome
 eval :: Action -> MyProfileScreenState -> Eval Action ScreenOutput MyProfileScreenState
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure $ BackPressed state]
 eval (BackPressed backpressState) state = do
@@ -100,10 +74,6 @@ eval (BackPressed backpressState) state = do
     else if state.props.updateProfile then do
       _ <- pure $ hideKeyboardOnNavigation true
       continue state { props { updateProfile = false, genderOptionExpanded = false , expandEnabled = false, isEmailValid = true} }
-      else if state.props.accountStatus == CONFIRM_REQ then
-        continue state{props{accountStatus = ACTIVE}}
-        else if state.props.accountStatus == DEL_REQUESTED then
-        continue state
         else exit $ GoToHomeScreen
 eval (EditProfile fieldType) state = do
   case fieldType of
@@ -148,8 +118,4 @@ eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
       pure unit
     else pure unit
   updateAndExit state $ UpdateProfile state
-eval ReqDelAccount state = continue state{props{accountStatus = CONFIRM_REQ}}
-eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state {props{ accountStatus= ACTIVE}}
-eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ DeleteAccount state
-eval (AccountDeletedModalAction (PopUpModal.OnButton1Click)) state =  updateAndExit (state {props{accountStatus = ACTIVE}} ) $ GoToHome
 eval _ state = continue state

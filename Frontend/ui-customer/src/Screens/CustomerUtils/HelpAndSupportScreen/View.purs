@@ -35,7 +35,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, map, pure, unit, ($), (-), (/=), (<<<), (<=), (<>), (==), (||))
 import Presto.Core.Types.Language.Flow (Flow, doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Shadow(..), Visibility(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, shadow, stroke, text, textSize, textView, visibility, width, imageWithFallback, weight, layoutGravity)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Shadow(..), Visibility(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, shadow, stroke, text, textSize, textView, visibility, width, imageWithFallback, weight, layoutGravity, clickable, alignParentBottom)
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.HelpAndSupportScreen.Controller (Action(..), ScreenOutput, eval)
@@ -46,6 +46,8 @@ import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
 import Common.Types.App
 import Screens.CustomerUtils.HelpAndSupportScreen.ComponentConfig
+import Components.PrimaryEditText as PrimaryEditText
+import Components.PrimaryButton as PrimaryButton
 
 screen :: ST.HelpAndSupportScreenState -> Screen Action ST.HelpAndSupportScreenState ScreenOutput
 screen initialState =
@@ -71,56 +73,63 @@ screen initialState =
 view :: forall w . (Action -> Effect Unit) -> ST.HelpAndSupportScreenState -> PrestoDOM (Effect Unit) w
 view push state =
   Anim.screenAnimation $
- relativeLayout
- [  height MATCH_PARENT
-  , width MATCH_PARENT
- ][ linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , background Color.white900
-    , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
-    , onBackPressed push $ const BackPressed state.props.isCallConfirmation
-    , afterRender push (const AfterRender)
-    ][  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
-      , linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation HORIZONTAL
-        , visibility if state.props.apiFailure || state.data.isNull then GONE else VISIBLE
-        , background Color.catskillWhite
-        ][  textView
-            [ text (getString YOUR_RECENT_RIDE)
-            , textSize FontSize.a_16
-            , color Color.darkDescriptionText
-            , width WRAP_CONTENT
-            , fontStyle $ FontStyle.medium LanguageStyle
-            , margin (Margin 16 12 0 12)
-            ]
-          , textView
-            [ text (getString VIEW_ALL_RIDES)
-            , alignParentRight "true,-1"
-            , textSize FontSize.a_14
-            , margin (Margin 0 14 16 14)
-            , width MATCH_PARENT
-            , gravity RIGHT
-            , fontStyle $ FontStyle.medium LanguageStyle
-            , color Color.blue900
-            , onClick push $ const ViewRides
-            ]
-          ]
-      , recentRideView state push
-      , headingView state (getString ALL_TOPICS)
-      , allTopicsView state push
-      , apiFailureView state push
-      ]
-    , linearLayout
-      [ width MATCH_PARENT
-      , height MATCH_PARENT
-      , visibility if state.props.isCallConfirmation then VISIBLE else GONE
-      ][PopUpModal.view (push <<< PopupModelActionController) (callConfirmationPopup state)]
-
-  ]
+  relativeLayout
+  [  height MATCH_PARENT
+   , width MATCH_PARENT
+  ]([ linearLayout
+     [ height MATCH_PARENT
+     , width MATCH_PARENT
+     , orientation VERTICAL
+     , background Color.white900
+     , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
+     , onBackPressed push $ const BackPressed state.props.isCallConfirmation
+     , afterRender push (const AfterRender)
+     ][  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
+       , linearLayout
+         [ height WRAP_CONTENT
+         , width MATCH_PARENT
+         , orientation HORIZONTAL
+         , visibility if state.props.apiFailure || state.data.isNull then GONE else VISIBLE
+         , background Color.catskillWhite
+         ][  textView
+             [ text (getString YOUR_RECENT_RIDE)
+             , textSize FontSize.a_16
+             , color Color.darkDescriptionText
+             , width WRAP_CONTENT
+             , fontStyle $ FontStyle.medium LanguageStyle
+             , margin (Margin 16 12 0 12)
+             ]
+           , textView
+             [ text (getString VIEW_ALL_RIDES)
+             , alignParentRight "true,-1"
+             , textSize FontSize.a_14
+             , margin (Margin 0 14 16 14)
+             , width MATCH_PARENT
+             , gravity RIGHT
+             , fontStyle $ FontStyle.medium LanguageStyle
+             , color Color.blue900
+             , onClick push $ const ViewRides
+             ]
+           ]
+       , recentRideView state push
+       , headingView state (getString ALL_TOPICS)
+       , allTopicsView state push
+       , apiFailureView state push 
+       ]
+     , linearLayout
+       [ width MATCH_PARENT
+       , height MATCH_PARENT
+       , visibility if state.props.isCallConfirmation then VISIBLE else GONE
+       ][PopUpModal.view (push <<< PopupModelActionController) (callConfirmationPopup state)]
+     , deleteAccountView state push
+   ] <> if state.data.accountStatus == ST.CONFIRM_REQ || state.data.accountStatus == ST.DEL_REQUESTED then 
+     [ linearLayout
+       [ width MATCH_PARENT
+       , height MATCH_PARENT
+       , background Color.lightBlack900
+       ]( [] <> if state.data.accountStatus == ST.CONFIRM_REQ then [PopUpModal.view (push <<<  PopUpModalAction) (requestDeletePopUp state )]
+           else if state.data.accountStatus == ST.DEL_REQUESTED then [PopUpModal.view (push <<< AccountDeletedModalAction) (accountDeletedPopUp state)]
+           else [])] else [])
 
 ------------------------------- recentRide --------------------------
 recentRideView :: ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
@@ -312,6 +321,56 @@ allTopicsView state push =
               ][]
           ]) (topicsList state))
 
+deleteAccountView :: ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+deleteAccountView state push=
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , visibility if state.props.showDeleteAccountView then VISIBLE else GONE
+  , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
+  , background Color.white900
+  , clickable true
+  ][
+    GenericHeader.view (push <<< DeleteGenericHeaderAC) (deleteGenericHeaderConfig state) 
+  , linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , padding (Padding 16 12 16 12)
+    , background Color.blue600
+    ][ 
+      textView
+      [ text (getString WE_WOULD_APPRECIATE_YOUR_FEEDBACK)
+      , textSize FontSize.a_12
+      , fontStyle $ FontStyle.regular LanguageStyle
+      , color Color.black650
+      ]
+    ]
+  , relativeLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    ][  editTextView state push
+      , linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , alignParentBottom "true,-1"
+        , weight 1.0 
+        ][PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfigSubmitRequest state)]
+      ]
+    ]
+
+editTextView :: ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+editTextView state push =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , padding (Padding 6 0 6 60)
+  , orientation VERTICAL
+  ][
+      PrimaryEditText.view (push <<< EmailEditTextAC) (primaryEditTextConfigEmail state)
+    , PrimaryEditText.view (push <<< DescriptionEditTextAC) (primaryEditTextConfigDescription state)
+  ]
+
 headingView :: ST.HelpAndSupportScreenState -> String -> forall w . PrestoDOM (Effect Unit) w
 headingView state title =
   textView
@@ -368,5 +427,9 @@ topicsList state = [
   { action : CallSupport
   , title : (getString CONTACT_SUPPORT)
   , image : "ny_ic_help,https://assets.juspay.in/nammayatri/images/user/ny_ic_help.png"
+  },
+  { action : DeleteAccount
+  , title : (getString REQUEST_TO_DELETE_ACCOUNT)
+  , image : "ny_ic_delete_account,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_delete_account.png"
   }
 ]

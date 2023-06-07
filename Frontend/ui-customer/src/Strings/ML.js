@@ -454,5 +454,9 @@ const malayalamStrings = {
   "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS": "ചുവടെയുള്ള ഏതെങ്കിലും കാരണത്താൽ നിങ്ങൾക്ക് അപ്‌ഡേറ്റ് ചെയ്‌ത അന്തിമ നിരക്ക് കണ്ടേക്കാം:",
   "REASON_CHANGE_IN_ROUTE_A": "1. റൂട്ടിലെ മാറ്റം: ",
   "REASON_CHANGE_IN_ROUTE_B": "റൂട്ടിലെ മാറ്റം കാരണം മൊത്തം നിരക്ക് മാറിയേക്കാം",
-  "RECOMMENDED" : "ശുപാർശ ചെയ്ത"
+  "RECOMMENDED" : "ശുപാർശ ചെയ്ത",
+  "WE_WOULD_APPRECIATE_YOUR_FEEDBACK" : "അക്കൗണ്ട് ഇല്ലാതാക്കുന്നതിന് പിന്നിലെ നിങ്ങളുടെ ന്യായവാദത്തെ ഞങ്ങൾ അഭിനന്ദിക്കുന്നു",
+  "REASON_FOR_DELETING_ACCOUNT" : "അക്കൗണ്ട് ഇല്ലാതാക്കാനുള്ള കാരണം*",
+  "SUBMIT_REQUEST" : "അഭ്യർത്ഥന സമർപ്പിക്കുക",
+  "PLEASE_ENTER_A_VALID_EMAIL" : "സാധുവായ ഒരു ഇമെയിൽ നൽകുക"
 }

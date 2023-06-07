@@ -68,6 +68,7 @@ data KeyStore
   | ENABLE_TIPS
   | ACCURACY_THRESHOLD
   | DEVICE_DETAILS
+  | USER_EMAIL
 
 derive instance genericKeyStore :: Generic KeyStore _
 
