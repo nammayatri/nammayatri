@@ -49,7 +49,7 @@ findAllByLanguage language = do
   where
     getIssueCategoryWithTranslations iTranslations dInfosWithTranslations iCategory =
       let iTranslations' = filter (\iTranslation -> iTranslation.sentence == iCategory.category) iTranslations
-       in dInfosWithTranslations <> if not (null iTranslations') then ((\iTranslation'' -> (iCategory, Just iTranslation'')) <$> iTranslations') else [(iCategory, Nothing)]
+       in dInfosWithTranslations <> if not (null iTranslations') then (\iTranslation'' -> (iCategory, Just iTranslation'')) <$> iTranslations' else [(iCategory, Nothing)]
 
 -- findById :: Transactionable m => Id IssueCategory -> m (Maybe IssueCategory)
 -- findById issueCategoryId = Esq.findOne $ do

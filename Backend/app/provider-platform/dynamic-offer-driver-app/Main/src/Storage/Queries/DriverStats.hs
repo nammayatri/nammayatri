@@ -195,7 +195,7 @@ getDriversSortedOrder mbLimitVal = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
-      srsz <- KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [] (Se.Desc BeamDS.totalRides) (Just $ fromMaybe 10 (fromInteger <$> mbLimitVal)) Nothing
+      srsz <- KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [] (Se.Desc BeamDS.totalRides) (Just $ maybe 10 fromInteger mbLimitVal) Nothing
       case srsz of
         Left _ -> pure []
         Right x -> pure $ transformBeamDriverStatsToDomain <$> x

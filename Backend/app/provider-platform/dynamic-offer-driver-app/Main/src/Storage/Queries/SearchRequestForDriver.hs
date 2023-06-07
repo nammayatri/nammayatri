@@ -32,7 +32,7 @@ import qualified Storage.Beam.SearchRequestForDriver as BeamSRFD
 import Storage.Tabular.SearchRequestForDriver
 
 createMany :: L.MonadFlow m => [SearchRequestForDriver] -> m ()
-createMany srfd = void $ traverse createOne srfd
+createMany = traverse_ createOne
   where
     createOne :: L.MonadFlow m => SearchRequestForDriver -> m ()
     createOne searchRequestForDriver = do
