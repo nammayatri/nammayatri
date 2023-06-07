@@ -60,6 +60,7 @@ import Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Rating as QR
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
@@ -229,7 +230,8 @@ otpRideCreate driver otpCode booking = do
   _ <- QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
   _ <- QRideD.create rideDetails
   QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
-  _ <- DLoc.updateOnRide (cast driver.id) True booking.providerId
+  _ <- QDI.updateOnRide (cast driver.id) True
+  _ <- DLoc.updateOnRideCache (cast driver.id)
   -- uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
   uBooking <- QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
   Notify.notifyDriver transporter.id notificationType notificationTitle (message uBooking) driver.id driver.deviceToken

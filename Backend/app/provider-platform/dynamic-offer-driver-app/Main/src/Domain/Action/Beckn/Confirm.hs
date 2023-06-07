@@ -126,7 +126,8 @@ handler transporter req quote = do
           -- Esq.runTransaction $
           _ <- QDQ.setInactiveBySTId driverQuote.searchTryId
           _ <- QSRD.setInactiveBySTId driverQuote.searchTryId
-          _ <- DLoc.updateOnRide (cast driver.id) True booking.providerId
+          _ <- QDI.updateOnRide (cast driver.id) True
+          DLoc.updateOnRideCache (cast driver.id)
 
           for_ driverSearchReqs $ \driverReq -> do
             let driverId = driverReq.driverId
