@@ -71,8 +71,8 @@ findById (Id driverQuoteId) = do
     Just dbCOnf' -> do
       driverQuote <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDQ.id $ Se.Eq driverQuoteId]
       case driverQuote of
-        Left _ -> pure Nothing
-        Right driverQuote' -> mapM transformBeamDriverQuoteToDomain driverQuote'
+        Right (Just driverQuote') -> transformBeamDriverQuoteToDomain driverQuote'
+        _ -> pure Nothing
     Nothing -> pure Nothing
 
 -- setInactiveByRequestId :: Id DSReq.SearchRequest -> SqlDB ()
@@ -103,12 +103,12 @@ findActiveQuotesByDriverId (Id driverId) driverUnlockDelay = do
   let delayToAvoidRaces = secondsToNominalDiffTime . negate $ driverUnlockDelay
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
-    Just dbCOnf' -> do
-      srsz <- KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamDQ.status $ Se.Eq Domain.Active, Se.Is BeamDQ.id $ Se.Eq driverId, Se.Is BeamDQ.validTill $ Se.GreaterThan (addUTCTime delayToAvoidRaces now)]]
-      case srsz of
-        Left _ -> pure []
-        Right x -> mapM transformBeamDriverQuoteToDomain x
-    Nothing -> pure []
+    Just dbConf' -> do
+      dQuote <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamDQ.status $ Se.Eq Domain.Active, Se.Is BeamDQ.id $ Se.Eq driverId, Se.Is BeamDQ.validTill $ Se.GreaterThan (addUTCTime delayToAvoidRaces now)]]
+      case dQuote of
+        Right dQuote' -> catMaybes <$> traverse transformBeamDriverQuoteToDomain dQuote'
+        _ -> pure []
+    _ -> pure []
 
 findDriverQuoteBySTId :: L.MonadFlow m => Id DST.SearchTry -> m (Maybe Domain.DriverQuote)
 findDriverQuoteBySTId (Id searchTryId) = do
@@ -117,8 +117,8 @@ findDriverQuoteBySTId (Id searchTryId) = do
     Just dbCOnf' -> do
       driverQuote <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId]
       case driverQuote of
-        Left _ -> pure Nothing
-        Right driverQuote' -> mapM transformBeamDriverQuoteToDomain driverQuote'
+        Right (Just driverQuote') -> transformBeamDriverQuoteToDomain driverQuote'
+        _ -> pure Nothing
     Nothing -> pure Nothing
 
 -- = Esq.findOne' $ do
@@ -131,8 +131,8 @@ findDriverQuoteBySTId (Id searchTryId) = do
 --   dbConf <- L.getOption KBT.PsqlDbCfg
 --   case dbConf of
 --     Just dbCOnf' -> do
---       srsz <- KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamDQ.status $ Se.Eq Domain.Active, Se.Is BeamDQ.id $ Se.Eq searchReqId]]
---       case srsz of
+--       dQuote <- KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamDQ.status $ Se.Eq Domain.Active, Se.Is BeamDQ.id $ Se.Eq searchReqId]]
+--       case dQuote of
 --         Left _ -> pure []
 --         Right x -> mapM transformBeamDriverQuoteToDomain x
 --     Nothing -> pure []
@@ -197,30 +197,34 @@ countAllBySTId searchTryId = do
           &&. dQuote ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
       pure (countRows @Int32)
 
-transformBeamDriverQuoteToDomain :: L.MonadFlow m => BeamDQ.DriverQuote -> m Domain.DriverQuote
+transformBeamDriverQuoteToDomain :: L.MonadFlow m => BeamDQ.DriverQuote -> m (Maybe Domain.DriverQuote)
 transformBeamDriverQuoteToDomain BeamDQ.DriverQuoteT {..} = do
   fp <- BeamQFP.findById (Id fareParametersId)
-  pure
-    Domain.DriverQuote
-      { id = Id id,
-        requestId = Id requestId,
-        searchTryId = Id searchTryId,
-        searchRequestForDriverId = Id <$> searchRequestForDriverId,
-        driverId = Id driverId,
-        driverName = driverName,
-        driverRating = driverRating,
-        status = status,
-        vehicleVariant = vehicleVariant,
-        distance = distance,
-        distanceToPickup = distanceToPickup,
-        durationToPickup = durationToPickup,
-        createdAt = createdAt,
-        updatedAt = updatedAt,
-        validTill = validTill,
-        estimatedFare = estimatedFare,
-        fareParams = fromJust fp, -- this should take a default value?
-        providerId = Id providerId
-      }
+  if isJust fp
+    then
+      pure $
+        Just
+          Domain.DriverQuote
+            { id = Id id,
+              requestId = Id requestId,
+              searchTryId = Id searchTryId,
+              searchRequestForDriverId = Id <$> searchRequestForDriverId,
+              driverId = Id driverId,
+              driverName = driverName,
+              driverRating = driverRating,
+              status = status,
+              vehicleVariant = vehicleVariant,
+              distance = distance,
+              distanceToPickup = distanceToPickup,
+              durationToPickup = durationToPickup,
+              createdAt = createdAt,
+              updatedAt = updatedAt,
+              validTill = validTill,
+              estimatedFare = estimatedFare,
+              fareParams = fromJust fp, -- this should take a default value?
+              providerId = Id providerId
+            }
+    else pure Nothing
 
 transformDomainDriverQuoteToBeam :: Domain.DriverQuote -> BeamDQ.DriverQuote
 transformDomainDriverQuoteToBeam Domain.DriverQuote {..} =

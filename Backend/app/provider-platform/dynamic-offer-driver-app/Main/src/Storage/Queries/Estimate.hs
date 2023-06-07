@@ -38,7 +38,7 @@ create estimate = do
     Nothing -> pure ()
 
 createMany :: L.MonadFlow m => [Estimate] -> m ()
-createMany est = void $ traverse create est
+createMany = traverse_ create
 
 -- createMany :: [Estimate] -> SqlDB ()
 -- createMany = Esq.createMany

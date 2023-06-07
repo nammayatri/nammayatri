@@ -59,11 +59,8 @@ findById (Id fareParametersId) = do
     Just dbCOnf' -> do
       fp <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]
       case fp of
-        Left _ -> pure Nothing
-        Right (Just fp') -> do
-          fp'' <- transformBeamFareParametersToDomain fp'
-          pure (Just fp'')
-        Right _ -> pure Nothing
+        Right (Just fp') -> transformBeamFareParametersToDomain fp'
+        _ -> pure Nothing
     -- either (pure Nothing) (transformBeamFareParametersToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]
     Nothing -> pure Nothing
 
@@ -97,25 +94,29 @@ findById (Id fareParametersId) = do
 --       govtChargesPerc = govtChargesPerc
 --     }
 
-transformBeamFareParametersToDomain :: L.MonadFlow m => BeamFP.FareParameters -> m FareParameters
+transformBeamFareParametersToDomain :: L.MonadFlow m => BeamFP.FareParameters -> m (Maybe FareParameters)
 transformBeamFareParametersToDomain BeamFP.FareParametersT {..} = do
   fullFPPD <- BeamFPPD.findById' (Id id)
   let fPPD = snd $ fromJust fullFPPD
-  pure
-    FareParameters
-      { id = Id id,
-        driverSelectedFare = driverSelectedFare,
-        customerExtraFee = customerExtraFee,
-        serviceCharge = serviceCharge,
-        nightShiftRateIfApplies = nightShiftRateIfApplies,
-        govtCharges = govtCharges,
-        baseFare = baseFare,
-        waitingCharge = waitingCharge,
-        nightShiftCharge = nightShiftCharge,
-        fareParametersDetails = case fareParametersType of
-          Progressive -> ProgressiveDetails fPPD
-          Slab -> SlabDetails FParamsSlabDetails
-      }
+  if isJust fullFPPD
+    then
+      pure $
+        Just
+          FareParameters
+            { id = Id id,
+              driverSelectedFare = driverSelectedFare,
+              customerExtraFee = customerExtraFee,
+              serviceCharge = serviceCharge,
+              nightShiftRateIfApplies = nightShiftRateIfApplies,
+              govtCharges = govtCharges,
+              baseFare = baseFare,
+              waitingCharge = waitingCharge,
+              nightShiftCharge = nightShiftCharge,
+              fareParametersDetails = case fareParametersType of
+                Progressive -> ProgressiveDetails fPPD
+                Slab -> SlabDetails FParamsSlabDetails
+            }
+    else pure Nothing
 
 transformDomainFareParametersToBeam :: FareParameters -> BeamFP.FareParameters
 transformDomainFareParametersToBeam FareParameters {..} =
