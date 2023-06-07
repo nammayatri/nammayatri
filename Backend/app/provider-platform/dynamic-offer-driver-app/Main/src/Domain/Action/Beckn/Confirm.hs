@@ -124,7 +124,8 @@ handler transporter req quote = do
             QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
             QDQ.setInactiveBySTId driverQuote.searchTryId
             QSRD.setInactiveBySTId driverQuote.searchTryId
-          DLoc.updateOnRide (cast driver.id) True booking.providerId
+            QDI.updateOnRide (cast driver.id) True
+          DLoc.updateOnRideCache (cast driver.id)
 
           for_ driverSearchReqs $ \driverReq -> do
             let driverId = driverReq.driverId

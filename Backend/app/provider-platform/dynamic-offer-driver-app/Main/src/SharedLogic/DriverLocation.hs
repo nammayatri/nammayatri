@@ -105,3 +105,9 @@ updateOnRide driverId onRide merchantId = do
         )
         mDriverLocatation
   CDI.updateOnRide driverId onRide
+
+updateOnRideCache :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> m ()
+updateOnRideCache driverId = do
+  driverLocation <- DLQueries.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  cacheDriverLocation driverLocation
+  CDI.clearDriverInfoCache driverId
