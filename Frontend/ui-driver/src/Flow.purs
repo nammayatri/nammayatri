@@ -56,8 +56,6 @@ import Services.Backend as Remote
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.ModifyScreenState (modifyScreenState, updateStage)
-import Screens.RideSelectionScreen.Handler (rideSelection) as UI
-import Screens.ReportIssueChatScreen.Handler (reportIssueChatScreen) as UI
 import Data.Functor (map)
 import Data.String.Common (joinWith, split, toUpper, trim)
 import Data.String (length) as STR

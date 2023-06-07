@@ -87,28 +87,28 @@ view notificationListItem push state =
     , background Color.white900
     , orientation VERTICAL
     , onBackPressed push $ const BackPressed
-    ] $ [ screenAnimationFadeInOut
-          $ linearLayout
-              [ height MATCH_PARENT
-              , width MATCH_PARENT
-              , orientation VERTICAL
-              ][ linearLayout
-                  [ height WRAP_CONTENT
-                  , width MATCH_PARENT
-                  , orientation VERTICAL
-                  , weight 1.0
-                  ][ linearLayout
-                      [ height WRAP_CONTENT
-                      , width MATCH_PARENT
-                      , orientation VERTICAL
-                      , weight 1.0
-                      ][ headerLayout state push
-                      ,  notificationListView notificationListItem push state
-                      ]
-                    , loadMoreView push state
-                  ]
-              , BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.ALERTS_SCREEN)
-              ]
+    ] $ [ linearLayout
+          [ height MATCH_PARENT
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          ][ screenAnimationFadeInOut $
+              linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , orientation VERTICAL
+                , weight 1.0
+                ][ linearLayout
+                    [ height WRAP_CONTENT
+                    , width MATCH_PARENT
+                    , orientation VERTICAL
+                    , weight 1.0
+                    ][ headerLayout state push
+                    ,  notificationListView notificationListItem push state
+                    ]
+                  , loadMoreView push state
+                ]
+          , BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.ALERTS_SCREEN)
+          ]
       ] <> (if (state.notifsDetailModelVisibility == VISIBLE) then [ notificationDetailModel push state ] else [])
 
 loadMoreView :: forall w . (Action -> Effect Unit) -> NotificationsScreenState -> PrestoDOM (Effect Unit) w

@@ -410,7 +410,7 @@ const englishStrings = {
   VOICE_NOTE_ADDED : "Voice Note Added",
   SUBMIT_ISSUE_DETAILS : "Submit Issue Details",
   IMAGE_PREVIEW : "Image Preview",
-  RIDE_REPORT_ISSUE : "Select a ride to report issue on",
+  RIDE_REPORT_ISSUE : "Select ride to report issue on",
   ADDED_IMAGES : "Added Images",
   NO_IMAGES_ADDED : "No Images Added",
   ASK_DETAILS_MESSAGE : "Please give some more details. You can also send images or voice notes to elaborate better.",
