@@ -26,16 +26,19 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Common (Meters, Seconds)
 import Kernel.Types.Id
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config (PoolSortingType)
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config (BatchSplitByPickupDistance (..), PoolSortingType)
 import Storage.Tabular.Merchant (MerchantTId)
 
 derivePersistField "PoolSortingType"
+
+derivePersistField "BatchSplitByPickupDistance"
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
     DriverPoolConfigT sql=driver_pool_config
       merchantId MerchantTId
+      distanceBasedBatchSplit (PostgresList BatchSplitByPickupDistance)
       minRadiusOfSearch Meters
       maxRadiusOfSearch Meters
       radiusStepSize Meters
@@ -69,6 +72,7 @@ instance FromTType DriverPoolConfigT Domain.DriverPoolConfig where
     return $
       Domain.DriverPoolConfig
         { merchantId = fromKey merchantId,
+          distanceBasedBatchSplit = unPostgresList distanceBasedBatchSplit,
           ..
         }
 
@@ -76,5 +80,6 @@ instance ToTType DriverPoolConfigT Domain.DriverPoolConfig where
   toTType Domain.DriverPoolConfig {..} =
     DriverPoolConfigT
       { merchantId = toKey merchantId,
+        distanceBasedBatchSplit = PostgresList distanceBasedBatchSplit,
         ..
       }
