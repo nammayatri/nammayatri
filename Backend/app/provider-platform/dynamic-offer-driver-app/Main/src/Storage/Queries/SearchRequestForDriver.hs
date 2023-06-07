@@ -136,6 +136,23 @@ findByDriverAndSearchTryId (Id driverId) (Id searchTryId) = do
           ]
     Nothing -> pure Nothing
 
+findByDriverAndSearchTryId' :: L.MonadFlow m => Id Person -> Id SearchTry -> m (Maybe SearchRequestForDriver)
+findByDriverAndSearchTryId' (Id driverId) (Id searchTryId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' ->
+      either (pure Nothing) (transformBeamSearchRequestForDriverToDomain <$>)
+        <$> KV.findWithKVConnector
+          dbConf'
+          Mesh.meshConfig
+          [ Se.And
+              ( [Se.Is BeamSRFD.searchTryId $ Se.Eq searchTryId]
+                  <> [Se.Is BeamSRFD.status $ Se.Eq Domain.Active]
+                  <> [Se.Is BeamSRFD.driverId $ Se.Eq driverId]
+              )
+          ]
+    Nothing -> pure Nothing
+
 findByDriver :: (L.MonadFlow m, MonadTime m) => Id Person -> m [SearchRequestForDriver]
 findByDriver (Id driverId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
