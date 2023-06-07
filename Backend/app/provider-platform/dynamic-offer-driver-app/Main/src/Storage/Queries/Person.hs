@@ -543,8 +543,10 @@ getBookingInfo' driverQuote = do
           [ Se.And [Se.Is BeamB.quoteId $ Se.In personsKeys, Se.Is BeamB.status $ Se.Eq Booking.TRIP_ASSIGNED]
           ]
       case res of
-        Left _ -> pure []
-        Right res' -> traverse QueriesB.transformBeamBookingToDomain res'
+        Right res' -> do
+          x <- mapM QueriesB.transformBeamBookingToDomain res'
+          pure $ catMaybes x
+        _ -> pure []
     Nothing -> pure []
   where
     personsKeys = fetchDriverIDsTextFromQuote driverQuote
@@ -1661,8 +1663,8 @@ getNearestDriversCurrentlyOnRide' mbVariant radiusMeters (Id merchantId') mbDriv
                 ] -- Se.Is Se.LessThan $ Utils.getPoint( BeamB.toLocation.lat, BeamB.toLocation.lon) <->. DDL. <$> dlList
             ]
         case bookingL of
-          Left _ -> pure []
-          Right x -> traverse QB.transformBeamBookingToDomain x
+          Right x -> catMaybes <$> traverse QB.transformBeamBookingToDomain x
+          _ -> pure []
 
       let pDl = foldl' (getPersonWithlocation dlList) [] personList
       let pDlInfo = foldl' (getPersonWithInfo driverInfoList) [] pDl
