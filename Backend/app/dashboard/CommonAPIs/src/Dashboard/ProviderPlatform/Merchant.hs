@@ -175,7 +175,8 @@ data DriverPoolConfigUpdateReq = DriverPoolConfigUpdateReq
     maxNumberOfBatches :: Maybe (MandatoryValue Int),
     maxParallelSearchRequests :: Maybe (MandatoryValue Int),
     poolSortingType :: Maybe (MandatoryValue PoolSortingType),
-    singleBatchProcessTime :: Maybe (MandatoryValue Seconds)
+    singleBatchProcessTime :: Maybe (MandatoryValue Seconds),
+    distanceBasedBatchSplit :: Maybe (MandatoryValue [BatchSplitByPickupDistance])
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -215,6 +216,13 @@ type DriverPoolConfigCreateAPI =
     :> ReqBody '[JSON] DriverPoolConfigCreateReq
     :> Post '[JSON] APISuccess
 
+data BatchSplitByPickupDistance = BatchSplitByPickupDistance
+  { batchSplitSize :: Int,
+    batchSplitDelay :: Seconds
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DriverPoolConfigCreateReq = DriverPoolConfigCreateReq
   { minRadiusOfSearch :: Meters,
     maxRadiusOfSearch :: Meters,
@@ -228,6 +236,7 @@ data DriverPoolConfigCreateReq = DriverPoolConfigCreateReq
     maxNumberOfBatches :: Int,
     maxParallelSearchRequests :: Int,
     poolSortingType :: PoolSortingType,
+    distanceBasedBatchSplit :: [BatchSplitByPickupDistance],
     singleBatchProcessTime :: Seconds,
     radiusShrinkValueForDriversOnRide :: Int,
     driverToDestinationDistanceThreshold :: Meters,

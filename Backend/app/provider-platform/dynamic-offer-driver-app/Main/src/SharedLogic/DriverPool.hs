@@ -613,8 +613,9 @@ calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage driverPoolCfg 
               { driverPoolResult = temp,
                 actualDistanceToPickup = distanceFromDriverToDestination,
                 actualDurationToPickup = time,
-                intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing defaultPopupDelay,
-                isPartOfIntelligentPool = False
+                intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing Nothing defaultPopupDelay,
+                isPartOfIntelligentPool = False,
+                keepHiddenForSeconds = Seconds 0
               }
         else computeActualDistanceOneToOne merchantId (LatLong destinationLat destinationLon) temp
     combine (DriverPoolWithActualDistResult {actualDistanceToPickup = x, actualDurationToPickup = y}, DriverPoolWithActualDistResult {..}) =
@@ -668,8 +669,9 @@ computeActualDistance orgId pickup driverPoolResults = do
         { driverPoolResult = distDur.origin,
           actualDistanceToPickup = distDur.distance,
           actualDurationToPickup = distDur.duration,
-          intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing defaultPopupDelay,
-          isPartOfIntelligentPool = False
+          intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing Nothing defaultPopupDelay,
+          isPartOfIntelligentPool = False,
+          keepHiddenForSeconds = Seconds 0
         }
 
 changeIntoDriverPoolResult :: DriverPoolResultCurrentlyOnRide -> DriverPoolResult

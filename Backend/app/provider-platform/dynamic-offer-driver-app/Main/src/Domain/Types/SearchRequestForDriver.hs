@@ -66,6 +66,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     driverAvailableTime :: Maybe Double,
     parallelSearchRequestCount :: Maybe Int,
     driverSpeed :: Maybe Double,
+    keepHiddenForSeconds :: Seconds,
     mode :: Maybe DI.DriverMode
   }
   deriving (Generic, Show, PrettyShow)
@@ -86,12 +87,13 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     driverMinExtraFee :: Maybe Money,
     driverMaxExtraFee :: Maybe Money,
     rideRequestPopupDelayDuration :: Seconds,
-    specialLocationTag :: Maybe Text
+    specialLocationTag :: Maybe Text,
+    keepHiddenForSeconds :: Seconds
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
 
-makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Seconds -> SearchRequestForDriverAPIEntity
-makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry delayDuration =
+makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Seconds -> Seconds -> SearchRequestForDriverAPIEntity
+makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry delayDuration keepHiddenForSeconds =
   SearchRequestForDriverAPIEntity
     { searchRequestId = nearbyReq.searchTryId,
       searchTryId = nearbyReq.searchTryId,
@@ -112,5 +114,6 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry delayDurat
       driverMinExtraFee = nearbyReq.driverMinExtraFee,
       driverMaxExtraFee = nearbyReq.driverMaxExtraFee,
       rideRequestPopupDelayDuration = delayDuration,
-      specialLocationTag = searchRequest.specialLocationTag
+      specialLocationTag = searchRequest.specialLocationTag,
+      keepHiddenForSeconds = keepHiddenForSeconds
     }
