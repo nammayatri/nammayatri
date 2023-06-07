@@ -113,19 +113,6 @@ view push state =
                 ][]
               , detailsView state push
             ]
-          , deleteAccountView state push
-          , linearLayout
-              [ width MATCH_PARENT
-              , height MATCH_PARENT
-              , background Color.lightBlack900
-              , visibility if (state.props.accountStatus == ST.CONFIRM_REQ) then VISIBLE else GONE
-              ][ PopUpModal.view (push <<<  PopUpModalAction) (requestDeletePopUp state ) ]
-          , linearLayout
-              [ width MATCH_PARENT
-              , height MATCH_PARENT
-              , background Color.lightBlack900
-              , visibility if (state.props.accountStatus == ST.DEL_REQUESTED )then VISIBLE else GONE
-              ][ PopUpModal.view (push <<< AccountDeletedModalAction) (accountDeletedPopUp state) ]
           ]
 
 detailsView :: forall w. ST.MyProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -471,51 +458,3 @@ genderOptionsArray state =
   , {text : (getString PREFER_NOT_TO_SAY) , value : ST.PREFER_NOT_TO_SAY}
   ]
 
-deleteAccountView :: forall w . ST.MyProfileScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
-deleteAccountView state push =
-  linearLayout
-        [ height MATCH_PARENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        , gravity BOTTOM
-        , padding (PaddingBottom EHC.safeMarginBottom)
-        , visibility if state.props.updateProfile then GONE else VISIBLE
-        ][  linearLayout
-            [ height $ V 1
-            , width MATCH_PARENT
-            , background Color.greySmoke
-            ][]
-          , linearLayout
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , orientation HORIZONTAL
-            , gravity CENTER_VERTICAL
-            , padding (Padding 15 21 15 21)
-            , onClick push (const $ ReqDelAccount)
-            ][  imageView
-                [ width $ V 20
-                , height $ V 20
-                , imageWithFallback "ny_ic_trash,https://assets.juspay.in/nammayatri/images/user/ny_ic_trash.png"
-                ]
-                , textView
-                [ height WRAP_CONTENT
-                , weight 1.0
-                , text (getString REQUEST_TO_DELETE_ACCOUNT)
-                , margin (MarginLeft 10)
-                , textSize FontSize.a_14
-                , color Color.red
-                , fontStyle $ FontStyle.medium LanguageStyle
-                ]
-                , linearLayout
-                [ width WRAP_CONTENT
-                , height WRAP_CONTENT
-                , orientation HORIZONTAL
-                , gravity CENTER_VERTICAL
-                ][ imageView
-                    [ width $ V 15
-                    , height $ V 15
-                    , imageWithFallback "ny_ic_chevron_right,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_right.png"
-                    ]
-                  ]
-              ]
-          ]

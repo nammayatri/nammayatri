@@ -156,7 +156,7 @@ const englishStrings = {
   "REQUEST_SUBMITTED": "Request Submitted",
   "WE_WILL_DELETE_YOUR_ACCOUNT": "We are sorry to see you leave our platform. We will delete your account within the next 30 days. Should you want to retain your account, please do call us on our support number",
   "YES_DELETE_IT": "Yes, Delete It",
-  "REQUEST_TO_DELETE_ACCOUNT": "Request To Delete Account",
+  "REQUEST_TO_DELETE_ACCOUNT": "Request to delete account",
   "CANCEL_STR": "Cancel",
   "LOADING": "Loading",
   "PLEASE_WAIT_WHILE_IN_PROGRESS": "Please wait while in progress",
@@ -458,5 +458,9 @@ const englishStrings = {
   "REGISTERED_ADDRESS" : "Registered Address",
   "REGISTERED_ADDRESS_DESCRIPTION" : "Juspay Technologies Private Limited <br> Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala Bengaluru, Karnataka- 560095, India.",
   "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "Website: <u>https://nammayatri.in/</u>",
-  "RECOMMENDED" : "Recommended"
+  "RECOMMENDED" : "Recommended",
+  "WE_WOULD_APPRECIATE_YOUR_FEEDBACK" : "We would appreciate your reasoning behind account deletion",
+  "REASON_FOR_DELETING_ACCOUNT" : "Reason for deleting account*",
+  "SUBMIT_REQUEST" : "Submit Request",
+  "PLEASE_ENTER_A_VALID_EMAIL" : "Please enter a valid email"
 }

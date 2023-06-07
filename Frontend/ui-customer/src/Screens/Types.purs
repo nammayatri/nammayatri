@@ -302,13 +302,18 @@ type HelpAndSupportScreenData =
     rideId :: String,
     vehicleNumber :: String,
     tripId :: String,
-    bookingId :: String
+    bookingId :: String,
+    email :: String,
+    description :: String,
+    accountStatus :: DeleteStatus
   }
 
 type HelpAndSuportScreenProps =
   {
     apiFailure :: Boolean
   , isCallConfirmation :: Boolean
+  , showDeleteAccountView :: Boolean
+  , btnActive :: Boolean
   }
 -- ################################################ MyRidesScreenState ##################################################
 data AnimationState
@@ -693,7 +698,6 @@ instance decodeDeleteStatus :: Decode DeleteStatus where decode = defaultEnumDec
 
 type MyProfileScreenProps = {
   updateProfile :: Boolean,
-  accountStatus :: DeleteStatus,
   genderOptionExpanded :: Boolean,
   expandEnabled :: Boolean,
   isEmailValid :: Boolean,
