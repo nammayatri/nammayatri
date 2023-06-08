@@ -65,15 +65,15 @@ findById (Id issueCategoryId) = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamIssueCategoryToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIC.id $ Se.Eq issueCategoryId]
     Nothing -> pure Nothing
 
-findByIdAndLanguage :: Transactionable m => Id IssueCategory -> Language -> m (Maybe (IssueCategory, Maybe IssueTranslation))
-findByIdAndLanguage issueCategoryId language = Esq.findOne $ do
-  (issueCategory :& mbIssueTranslation) <- from $ fullCategoryTable language
-  where_ $ issueCategory ^. IssueCategoryTId ==. val (toKey issueCategoryId)
-  return (issueCategory, mbIssueTranslation)
+-- findByIdAndLanguage :: Transactionable m => Id IssueCategory -> Language -> m (Maybe (IssueCategory, Maybe IssueTranslation))
+-- findByIdAndLanguage issueCategoryId language = Esq.findOne $ do
+--   (issueCategory :& mbIssueTranslation) <- from $ fullCategoryTable language
+--   where_ $ issueCategory ^. IssueCategoryTId ==. val (toKey issueCategoryId)
+--   return (issueCategory, mbIssueTranslation)
 
-findByIdAndLanguage' :: L.MonadFlow m => Id IssueCategory -> Language -> m (Maybe (IssueCategory, Maybe IssueTranslation))
-findByIdAndLanguage' (Id issueCategoryId) language = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
+findByIdAndLanguage :: L.MonadFlow m => Id IssueCategory -> Language -> m (Maybe (IssueCategory, Maybe IssueTranslation))
+findByIdAndLanguage (Id issueCategoryId) language = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       iCategory <- either (pure []) (transformBeamIssueCategoryToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIC.id $ Se.Eq issueCategoryId]

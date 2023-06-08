@@ -53,7 +53,8 @@ eventPayloadHandler DST.OnDriverAcceptingSearchRequest {..} = do
     SRD.Reject -> pure ()
     SRD.Pulled -> pure ()
 eventPayloadHandler DST.OnNewRideAssigned {..} = do
-  mbDriverStats <- Esq.runInReplica $ DSQ.findById (cast driverId)
+  -- mbDriverStats <- Esq.runInReplica $ DSQ.findById (cast driverId)
+  mbDriverStats <- DSQ.findById (cast driverId)
   void $ case mbDriverStats of
     Just driverStats -> incrementOrSetTotaRides driverId driverStats
     Nothing -> createDriverStat driverId
@@ -62,7 +63,8 @@ eventPayloadHandler DST.OnNewSearchRequestForDrivers {..} =
   forM_ driverPool $ \dPoolRes -> DP.incrementTotalQuotesCount searchReq.providerId (cast dPoolRes.driverPoolResult.driverId) searchReq validTill batchProcessTime
 eventPayloadHandler DST.OnDriverCancellation {..} = do
   merchantConfig <- CTCQ.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
-  mbDriverStats <- Esq.runInReplica $ DSQ.findById (cast driverId)
+  -- mbDriverStats <- Esq.runInReplica $ DSQ.findById (cast driverId)
+  mbDriverStats <- DSQ.findById (cast driverId)
   driverStats <-
     case mbDriverStats of
       Just driverStats ->
@@ -71,15 +73,17 @@ eventPayloadHandler DST.OnDriverCancellation {..} = do
           Just _ -> do
             cancelledCount <-
               case driverStats.ridesCancelled of
-                Nothing -> Esq.runInReplica $ BCRQ.findAllCancelledByDriverId driverId
+                -- Nothing -> Esq.runInReplica $ BCRQ.findAllCancelledByDriverId driverId
+                Nothing -> BCRQ.findAllCancelledByDriverId driverId
                 Just cancelledCount -> pure $ cancelledCount + 1
-            Esq.runNoTransaction $ DSQ.setCancelledRidesCount (cast driverId) cancelledCount
+            -- Esq.runNoTransaction $ DSQ.setCancelledRidesCount (cast driverId) cancelledCount
+            _ <- DSQ.setCancelledRidesCount (cast driverId) cancelledCount
             pure $ driverStats {DS.ridesCancelled = Just cancelledCount}
       Nothing -> createDriverStat driverId
   cancellationRateExcedded <- overallCancellationRate driverStats merchantConfig
   when (driverStats.totalRidesAssigned > merchantConfig.minRidesToUnlist && cancellationRateExcedded) $ do
     logDebug $ "Blocking Driver: " <> driverId.getId
-    void $ (CDI.updateBlockedState (cast driverId) True)
+    void $ CDI.updateBlockedState (cast driverId) True
   DP.incrementCancellationCount merchantId driverId
   where
     overallCancellationRate driverStats merchantConfig = do
@@ -95,9 +99,11 @@ eventPayloadHandler DST.OnDriverCancellation {..} = do
 createDriverStat :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> m DS.DriverStats
 createDriverStat driverId = do
   now <- getCurrentTime
-  allRides <- Esq.runInReplica $ RQ.findAllRidesByDriverId driverId
+  -- allRides <- Esq.runInReplica $ RQ.findAllRidesByDriverId driverId
+  allRides <- RQ.findAllRidesByDriverId driverId
   let completedRides = filter ((== DR.COMPLETED) . (.status)) allRides
-  cancelledRidesCount <- Esq.runInReplica $ BCRQ.findAllCancelledByDriverId driverId
+  -- cancelledRidesCount <- Esq.runInReplica $ BCRQ.findAllCancelledByDriverId driverId
+  cancelledRidesCount <- BCRQ.findAllCancelledByDriverId driverId
   let driverStat =
         DS.DriverStats
           { driverId = cast driverId,
@@ -107,7 +113,7 @@ createDriverStat driverId = do
             ridesCancelled = Just cancelledRidesCount,
             totalRidesAssigned = Just $ length allRides
           }
-  Esq.runNoTransaction $ DSQ.create driverStat
+  _ <- DSQ.create driverStat
   pure driverStat
 
 incrementOrSetTotaRides :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> DS.DriverStats -> m DS.DriverStats
@@ -115,10 +121,11 @@ incrementOrSetTotaRides driverId driverStats = do
   incrementTotaRidesBy <-
     maybe
       ( do
-          allRides <- Esq.runInReplica $ RQ.findAllRidesByDriverId driverId
+          -- allRides <- Esq.runInReplica $ RQ.findAllRidesByDriverId driverId
+          allRides <- RQ.findAllRidesByDriverId driverId
           pure $ length allRides
       )
       (\_ -> pure 1)
       driverStats.totalRidesAssigned
-  Esq.runNoTransaction $ DSQ.incrementTotalRidesAssigned (cast driverId) incrementTotaRidesBy
+  _ <- DSQ.incrementTotalRidesAssigned (cast driverId) incrementTotaRidesBy
   pure $ driverStats {DS.totalRidesAssigned = Just $ fromMaybe 0 driverStats.totalRidesAssigned + incrementTotaRidesBy}
