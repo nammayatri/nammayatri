@@ -19,6 +19,7 @@ import Components.LocationListItem.Controller (Action(..))
 import Debug (spy)
 import Common.Types.App
 import Effect (Effect)
+import Data.Maybe (Maybe(..), fromMaybe)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getLocationName)
@@ -48,7 +49,21 @@ view push config =
                             else do
                               _ <- push action
                               pure unit) (const $ OnClick config)
-        ]([  prefixImageView config
+        ]([  linearLayout
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , orientation VERTICAL
+            , gravity CENTER
+            ][  prefixImageView config
+              , textView
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text $ fromMaybe "" config.distance
+                , textSize FontSize.a_11
+                , gravity CENTER
+                , visibility $ if config.showDistance then VISIBLE else GONE
+                ]
+              ]
           , linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
@@ -68,7 +83,7 @@ prefixImageView config =
     [ height MATCH_PARENT
     , width $ V 20
     , orientation VERTICAL
-    , margin (Margin 16 22 12 22)
+    , margin (Margin 13 2 12 2)
     , gravity CENTER
     ][  imageView
         [ height $ V 20
