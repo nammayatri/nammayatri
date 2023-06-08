@@ -218,21 +218,6 @@ findAllBySTId (Id searchTryId) = do
 --           &&. dQuote ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
 --       pure (countRows @Int32)
 
--- countAllBySTId :: L.MonadFlow m => Id DST.SearchTry -> m Int
--- countAllBySTId searchTId = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
---   conn <- L.getOrInitSqlConn (fromJust dbConf)
---   case conn of
---     Right c -> do
---       resp <-
---         L.runDB c $
---           L.findRow $
---             B.select $
---               B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
---                 B.filter_' (\(BeamDQ.DriverQuoteT {..}) -> searchTryId B.==?. B.val_ (getId searchTId)) $
---                   B.all_ (meshModelTableEntity @BeamDQ.DriverQuoteT @Postgres @(DatabaseWith BeamDQ.DriverQuoteT))
---       pure (either (const 0) (fromMaybe 0) resp)
---     Left _ -> pure 0
 
 countAllBySTId :: L.MonadFlow m => Id DST.SearchTry -> m Int
 countAllBySTId searchTId = do

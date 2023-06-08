@@ -51,20 +51,6 @@ create driverStats = do
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverStatsToBeam driverStats)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-create' :: L.MonadFlow m => DriverStats -> m (MeshResult ())
-create' driverStats = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverStatsToBeam driverStats)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
-
-create' :: L.MonadFlow m => DriverStats -> m (MeshResult ())
-create' driverStats = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverStatsToBeam driverStats)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
-
 createInitialDriverStats :: (L.MonadFlow m, MonadTime m) => Id Driver -> m ()
 createInitialDriverStats driverId = do
   now <- getCurrentTime
