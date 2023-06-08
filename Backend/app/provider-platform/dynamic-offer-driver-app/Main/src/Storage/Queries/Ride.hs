@@ -199,6 +199,43 @@ findAllRidesBookingsByRideId merchantId rideIds = Esq.buildDType $ do
           return (extractSolidType @Ride rideT, booking)
       )
 
+findAllRidesBookingsByRideId' :: L.MonadFlow m => Id Merchant -> [Id Ride] -> m [(Ride, Booking)]
+findAllRidesBookingsByRideId' (Id merchantId) rideIds = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      rides <- do
+        res <-
+          KV.findAllWithKVConnector
+            dbConf'
+            Mesh.meshConfig
+            [Se.Is BeamR.id $ Se.In $ getId <$> rideIds]
+        case res of
+          Left _ -> pure []
+          Right x -> traverse transformBeamRideToDomain x
+
+      bookings <- do
+        res <-
+          KV.findAllWithKVConnector
+            dbConf'
+            Mesh.meshConfig
+            [ Se.And
+                [ Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <$> rides,
+                  Se.Is BeamB.providerId $ Se.Eq merchantId
+                ]
+            ]
+        case res of
+          Right x -> catMaybes <$> traverse QB.transformBeamBookingToDomain x
+          _ -> pure []
+
+      let rideBooking = foldl' (getRideWithBooking bookings) [] rides
+      pure rideBooking
+    Nothing -> pure []
+  where
+    getRideWithBooking bookings acc ride' =
+      let bookings' = filter (\x -> x.id == ride'.bookingId) bookings
+       in acc <> ((\x -> (ride', x)) <$> bookings')
+
 findAllByDriverId :: L.MonadFlow m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe Ride.RideStatus -> m [(Ride, Booking)]
 findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
