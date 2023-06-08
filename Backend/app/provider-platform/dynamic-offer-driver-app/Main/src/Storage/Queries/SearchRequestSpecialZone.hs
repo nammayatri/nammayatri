@@ -163,7 +163,7 @@ findByTransactionId' ::
   Id SearchRequestSpecialZone ->
   m (Maybe (Id SearchRequestSpecialZone))
 findByTransactionId' (Id tId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       srsz <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSRSZ.transactionId $ Se.Eq tId]

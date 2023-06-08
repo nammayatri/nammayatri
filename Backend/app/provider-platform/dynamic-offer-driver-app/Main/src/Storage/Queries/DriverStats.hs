@@ -40,12 +40,12 @@ import Storage.Tabular.DriverStats
 --         totalDistance = 0
 --       }
 
-create :: DriverStats -> SqlDB ()
-create = Esq.create
+-- create :: DriverStats -> SqlDB ()
+-- create = Esq.create
 
-create' :: L.MonadFlow m => DriverStats -> m (MeshResult ())
-create' driverStats = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+create :: L.MonadFlow m => DriverStats -> m (MeshResult ())
+create driverStats = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverStatsToBeam driverStats)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -128,12 +128,12 @@ fetchAll = do
     Just dbCOnf' -> either (pure []) (transformBeamDriverStatsToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig []
     Nothing -> pure []
 
-findById :: Transactionable m => Id Driver -> m (Maybe DriverStats)
-findById = Esq.findById
+-- findById :: Transactionable m => Id Driver -> m (Maybe DriverStats)
+-- findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id Driver -> m (Maybe DriverStats)
-findById' (Id driverId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+findById :: L.MonadFlow m => Id Driver -> m (Maybe DriverStats)
+findById (Id driverId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamDriverStatsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDS.driverId $ Se.Eq driverId]
     Nothing -> pure Nothing
@@ -178,18 +178,18 @@ incrementTotalRidesAndTotalDist (Id driverId') rideDist = do
         [Se.Is BeamDS.driverId (Se.Eq driverId')]
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-incrementTotalRidesAssigned :: Id Driver -> Int -> SqlDB ()
-incrementTotalRidesAssigned driverId number = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ DriverStatsTotalRidesAssigned =. just (Esq.coalesceDefault [tbl ^. DriverStatsTotalRidesAssigned] (val 0) +. val number)
-      ]
-    where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
+-- incrementTotalRidesAssigned :: Id Driver -> Int -> SqlDB ()
+-- incrementTotalRidesAssigned driverId number = do
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ DriverStatsTotalRidesAssigned =. just (Esq.coalesceDefault [tbl ^. DriverStatsTotalRidesAssigned] (val 0) +. val number)
+--       ]
+--     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
 
 findTotalRidesAssigned :: (L.MonadFlow m) => Id Driver -> m (Maybe Int)
 findTotalRidesAssigned (Id driverId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       res <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDS.driverId $ Se.Eq driverId]
@@ -202,9 +202,9 @@ findTotalRidesAssigned (Id driverId) = do
         Right Nothing -> pure Nothing
     Nothing -> pure Nothing
 
-incrementTotalRidesAssigned' :: (L.MonadFlow m) => Id Driver -> Int -> m (MeshResult ())
-incrementTotalRidesAssigned' (Id driverId') number = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+incrementTotalRidesAssigned :: (L.MonadFlow m) => Id Driver -> Int -> m (MeshResult ())
+incrementTotalRidesAssigned (Id driverId') number = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
   rideAssigned <- findTotalRidesAssigned (Id driverId')
   case dbConf of
     Just dbConf' ->
@@ -224,18 +224,18 @@ incrementTotalRidesAssigned' (Id driverId') number = do
             [Se.Is BeamDS.driverId (Se.Eq driverId')]
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-setCancelledRidesCount :: Id Driver -> Int -> SqlDB ()
-setCancelledRidesCount driverId cancelledCount = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ DriverStatsRidesCancelled =. val (Just cancelledCount)
-      ]
-    where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
+-- setCancelledRidesCount :: Id Driver -> Int -> SqlDB ()
+-- setCancelledRidesCount driverId cancelledCount = do
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ DriverStatsRidesCancelled =. val (Just cancelledCount)
+--       ]
+--     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
 
-setCancelledRidesCount' :: (L.MonadFlow m) => Id Driver -> Int -> m (MeshResult ())
-setCancelledRidesCount' (Id driverId') cancelledCount = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+setCancelledRidesCount :: (L.MonadFlow m) => Id Driver -> Int -> m (MeshResult ())
+setCancelledRidesCount (Id driverId') cancelledCount = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector

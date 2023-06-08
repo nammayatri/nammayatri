@@ -40,25 +40,25 @@ create bookingCancellationReason = do
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- TODO: Convert this function
-findAllCancelledByDriverId ::
-  Transactionable m =>
-  Id Person ->
-  m Int
-findAllCancelledByDriverId driverId = do
-  mkCount <$> do
-    Esq.findAll $ do
-      rideBookingCancellationReason <- from $ table @BookingCancellationReasonT
-      where_ $
-        rideBookingCancellationReason ^. BookingCancellationReasonDriverId ==. val (Just $ toKey driverId)
-          &&. rideBookingCancellationReason ^. BookingCancellationReasonSource ==. val ByDriver
-      return (countRows :: SqlExpr (Esq.Value Int))
-  where
-    mkCount [counter] = counter
-    mkCount _ = 0
+-- findAllCancelledByDriverId ::
+--   Transactionable m =>
+--   Id Person ->
+--   m Int
+-- findAllCancelledByDriverId driverId = do
+--   mkCount <$> do
+--     Esq.findAll $ do
+--       rideBookingCancellationReason <- from $ table @BookingCancellationReasonT
+--       where_ $
+--         rideBookingCancellationReason ^. BookingCancellationReasonDriverId ==. val (Just $ toKey driverId)
+--           &&. rideBookingCancellationReason ^. BookingCancellationReasonSource ==. val ByDriver
+--       return (countRows :: SqlExpr (Esq.Value Int))
+--   where
+--     mkCount [counter] = counter
+--     mkCount _ = 0
 
-findAllCancelledByDriverId' :: L.MonadFlow m => Id Person -> m Int
-findAllCancelledByDriverId' driverId = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+findAllCancelledByDriverId :: L.MonadFlow m => Id Person -> m Int
+findAllCancelledByDriverId driverId = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       res <-

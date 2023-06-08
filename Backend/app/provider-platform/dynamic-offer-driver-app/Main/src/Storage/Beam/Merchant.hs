@@ -26,8 +26,10 @@ import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres
-  ( Postgres,
-  )
+-- import Database.Beam.Postgres
+--   ( Postgres,
+--   )
+-- import Database.Beam.Postgres.Syntax
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Merchant as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
