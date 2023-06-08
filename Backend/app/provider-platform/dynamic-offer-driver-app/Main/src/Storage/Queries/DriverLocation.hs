@@ -17,7 +17,7 @@
 module Storage.Queries.DriverLocation where
 
 import qualified Database.Beam as B
--- import Database.Beam.Postgres
+import Database.Beam.Postgres
 -- import qualified Database.Beam.Query as B
 import Domain.Types.DriverLocation
 import Domain.Types.Merchant
@@ -25,13 +25,13 @@ import Domain.Types.Person
 import qualified EulerHS.Extra.EulerDB as Extra
 -- import qualified EulerHS.KVConnector.Flow as KV
 -- import EulerHS.KVConnector.Types
--- import EulerHS.KVConnector.Utils (meshModelTableEntity)
+import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
--- import qualified Sequelize as Se
+import qualified Sequelize as Se
 import qualified Storage.Beam.DriverLocation as BeamDL
 
 create :: (L.MonadFlow m, MonadTime m) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m ()

@@ -25,12 +25,13 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import EulerHS.Prelude as P hiding ((^.))
 import Kernel.External.Maps.Types (LatLong (..), lat, lon)
-import Kernel.Storage.Esqueleto as Esq
+-- import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.BookingCancellationReason as BeamBCR
-import Storage.Tabular.BookingCancellationReason
+
+-- import Storage.Tabular.BookingCancellationReason
 
 create :: L.MonadFlow m => DBCR.BookingCancellationReason -> m (MeshResult ())
 create bookingCancellationReason = do
@@ -58,7 +59,7 @@ create bookingCancellationReason = do
 
 findAllCancelledByDriverId :: L.MonadFlow m => Id Person -> m Int
 findAllCancelledByDriverId driverId = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       res <-

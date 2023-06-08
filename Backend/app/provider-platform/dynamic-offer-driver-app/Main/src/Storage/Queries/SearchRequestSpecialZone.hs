@@ -24,16 +24,17 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 -- import Kernel.Storage.Esqueleto as Esq
 
-import Kernel.Storage.Esqueleto as Esq
+-- import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequestSpecialZone as BeamSRSZ
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
+
 -- import Storage.Tabular.SearchRequestSpecialZone
 
 -- import Storage.Tabular.SearchRequest.SearchReqLocation
-import Storage.Tabular.SearchRequestSpecialZone
+-- import Storage.Tabular.SearchRequestSpecialZone
 
 -- create :: SearchRequestSpecialZone -> SqlDB ()
 -- create dsReq = Esq.runTransaction $
@@ -147,23 +148,23 @@ findByMsgIdAndBapIdAndBppId txnId bapId (Id merchantId) = do
 --     where_ $
 --       searchT ^. SearchRequestSpecialZoneTId ==. val (toKey searchRequestId)
 --     return $ searchT ^. SearchRequestSpecialZoneValidTill
-findByTransactionId ::
-  (Transactionable m) =>
-  Id SearchRequestSpecialZone ->
-  m (Maybe (Id SearchRequestSpecialZone))
-findByTransactionId tId = do
-  findOne $ do
-    searchT <- from $ table @SearchRequestSpecialZoneT
-    where_ $
-      searchT ^. SearchRequestSpecialZoneTransactionId ==. val (getId tId)
-    return $ searchT ^. SearchRequestSpecialZoneTId
+-- findByTransactionId ::
+--   (Transactionable m) =>
+--   Id SearchRequestSpecialZone ->
+--   m (Maybe (Id SearchRequestSpecialZone))
+-- findByTransactionId tId = do
+--   findOne $ do
+--     searchT <- from $ table @SearchRequestSpecialZoneT
+--     where_ $
+--       searchT ^. SearchRequestSpecialZoneTransactionId ==. val (getId tId)
+--     return $ searchT ^. SearchRequestSpecialZoneTId
 
-findByTransactionId' ::
+findByTransactionId ::
   (L.MonadFlow m) =>
   Id SearchRequestSpecialZone ->
   m (Maybe (Id SearchRequestSpecialZone))
-findByTransactionId' (Id tId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
+findByTransactionId (Id tId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       srsz <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSRSZ.transactionId $ Se.Eq tId]

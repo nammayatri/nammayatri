@@ -16,7 +16,7 @@ module Storage.Queries.DriverQuote where
 
 -- import Storage.Queries.FullEntityBuilders (buildFullDriverQuote)
 
-import Data.Int (Int32)
+-- import Data.Int (Int32)
 -- import qualified Database.Beam as B
 -- import Database.Beam.Postgres
 import qualified Database.Beam as B
@@ -39,7 +39,7 @@ import Sequelize (DatabaseWith)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverQuote as BeamDQ
 import Storage.Queries.FareParameters as BeamQFP
-import Storage.Queries.FullEntityBuilders (buildFullDriverQuote)
+-- import Storage.Queries.FullEntityBuilders (buildFullDriverQuote)
 import Storage.Tabular.DriverQuote
 import qualified Storage.Tabular.FareParameters as Fare
 
