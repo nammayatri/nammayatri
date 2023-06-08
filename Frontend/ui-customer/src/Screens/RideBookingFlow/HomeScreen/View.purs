@@ -1792,11 +1792,6 @@ getQuotesPolling pollingId action retryAction count duration push state = do
             if (resp.bookingId /= Nothing && resp.bookingId /= Just "") then do
                doAff do liftEffect $ push $ action response
             else if not (null ((fromMaybe dummySelectedQuotes resp.selectedQuotes)^._selectedQuotes)) then do
-              if (getValueToLocalStore GOT_ONE_QUOTE == "FALSE") then do
-                _ <- pure $ firebaseLogEvent "ny_user_received_quotes"
-                pure unit
-              else pure unit
-              _ <- pure $ setValueToLocalStore GOT_ONE_QUOTE "TRUE"
               doAff do liftEffect $ push $ action response
             else
               pure unit
