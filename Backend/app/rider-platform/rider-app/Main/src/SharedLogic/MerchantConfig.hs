@@ -154,7 +154,7 @@ checkFraudDetected riderId merchantId factors merchantConfigs = Redis.withCrossA
                   Just res -> return res
                   Nothing -> do
                     rideCount <- getRidesCountInWindow riderId value (fromIntegral timeInterval) actualTime
-                    Redis.setExp windowKey rideCount 2592000
+                    Redis.setExp windowKey rideCount 86400
                     return rideCount
               )
               list
