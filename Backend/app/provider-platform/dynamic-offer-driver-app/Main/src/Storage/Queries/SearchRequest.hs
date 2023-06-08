@@ -59,6 +59,6 @@ updateAutoAssign searchRequestId autoAssignedEnabled = do
   Esq.update $ \tbl -> do
     set
       tbl
-      [ SearchRequestAutoAssignEnabled =. val autoAssignedEnabled
+      [ SearchRequestAutoAssignEnabled =. val (Just autoAssignedEnabled)
       ]
     where_ $ tbl ^. SearchRequestTId ==. val (toKey searchRequestId)

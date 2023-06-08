@@ -101,9 +101,7 @@ token: {{app-token}}
           "lat": 14.441555,
           "lon": 75.922259
       }
-    },
-    "autoAssignEnabled" : false,
-    "autoAssignEnabledV2" : false
+    }
   }
 }
 

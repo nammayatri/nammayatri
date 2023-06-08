@@ -35,7 +35,7 @@ instance ToSchema FulfillmentInfo where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
 newtype Tags = Tags
-  { auto_assign_enabled :: Maybe Bool
+  { auto_assign_enabled :: Bool
   }
   deriving (Generic, Show)
 
