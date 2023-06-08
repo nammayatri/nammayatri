@@ -1597,3 +1597,34 @@ instance standardEncodeOTPRideRequest :: StandardEncode OTPRideRequest where sta
 instance showOTPRideRequest :: Show OTPRideRequest where show = genericShow
 instance decodeOTPRideRequest :: Decode OTPRideRequest where decode = defaultDecode
 instance encodeOTPRideRequest :: Encode OTPRideRequest where encode = defaultEncode
+
+----------------------------------------------------------------------- onCall api -------------------------------------------------------------------
+
+newtype OnCallReq = OnCallReq
+  {
+     rideId :: String
+  }
+
+newtype OnCallRes = OnCallRes
+  {
+    result :: String
+  }
+
+instance makeOnCallReq :: RestEndpoint OnCallReq OnCallRes where
+ makeRequest reqBody headers = defaultMakeRequest POST (EP.onCall "") headers reqBody
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericOnCallReq :: Generic OnCallReq _
+derive instance newtypeOnCallReq:: Newtype OnCallReq _
+instance standardEncodeOnCallReq :: StandardEncode OnCallReq where standardEncode (OnCallReq req) = standardEncode req
+instance showOnCallReq :: Show OnCallReq where show = genericShow
+instance decodeOnCallReq :: Decode OnCallReq where decode = defaultDecode
+instance encodeOnCallReq :: Encode OnCallReq where encode = defaultEncode
+
+derive instance genericOnCallRes :: Generic OnCallRes _
+derive instance newtypeOnCallRes :: Newtype OnCallRes _
+instance standardEncodeOnCallRes :: StandardEncode OnCallRes where standardEncode (OnCallRes res) = standardEncode res
+instance showOnCallRes :: Show OnCallRes where show = genericShow
+instance decodeOnCallRes :: Decode OnCallRes where decode = defaultDecode
+instance encodeOnCallRes :: Encode OnCallRes where encode = defaultEncode
