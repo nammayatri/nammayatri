@@ -56,7 +56,7 @@ import Screens.Types (DriverInfoCard)
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn)
 import Styles.Colors as Color
-import Merchant.Utils as MU
+import MerchantConfig.Utils as MU
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))

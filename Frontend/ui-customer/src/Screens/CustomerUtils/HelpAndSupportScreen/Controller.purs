@@ -37,7 +37,7 @@ import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
 import Screens.Types (HelpAndSupportScreenState)
 import Services.API (RideBookingRes(..), FareBreakupAPIEntity(..), RideAPIEntity(..), BookingLocationAPIEntity(..), RideBookingAPIDetails(..), RideBookingListRes(..))
 import Services.Config (getSupportNumber)
-import Config.DefaultConfig as DC
+import MerchantConfig.DefaultConfig as DC
 
 instance showAction :: Show Action where
     show _ = ""

@@ -19,7 +19,7 @@ import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
 import Screens.Types(Stage)
 import Data.Maybe(Maybe)
-import Config.Types
+import MerchantConfig.Types
 
 data Action = NoAction
             | Support 

@@ -31,6 +31,7 @@ import Services.APITypes (Route, Status, MediaType)
 import Styles.Types (FontSize)
 import Components.ChatView.Controller as ChatView
 import Components.RecordAudioModel.Controller as RecordAudioModel
+import MerchantConfig.Types (AppConfig)
 
 type EditTextInLabelState =
  {
@@ -100,7 +101,7 @@ type ChooseLanguageScreenState = {
 }
 
 type ChooseLanguageScreenData =  {
-  languages :: Array Language,
+  config :: AppConfig,
   isSelected :: Boolean
  }
 
@@ -152,12 +153,6 @@ type AddVehicleDetailsScreenProps =  {
  }
 
 data VehicalTypes = Sedan | Hatchback | SUV | Auto
-
-type Language =  {
-  name :: String,
-  value :: String,
-  subtitle :: String
- }
 
  -- ############################################################# UploadingDrivingLicenseScreen ################################################################################
 type UploadDrivingLicenseState = {
@@ -559,9 +554,8 @@ type SelectLanguageScreenState = {
 }
 
 type SelectLanguageScreenData = {
-  languages :: Array Language,
   isSelected :: Boolean
-
+, config :: AppConfig
 }
 
 type SelectLanguageScreenProps = {

@@ -1155,20 +1155,12 @@ export const requestKeyboardShow = function(id) {
   JBridge.requestKeyboardShow(id);
 }
 
-export const locateOnMap = function (str) {
-  return function (lat) {
-    return function (lon) {
-      return function (geoJson) {
-        return function (coodinates) {
-          try {
-            return JBridge.locateOnMap(str, lat, lon, geoJson, JSON.stringify(coodinates));
-          } catch (err) {
-            return JBridge.locateOnMap(str, lat, lon);
-          }s
-        };
-      };
-    };
-  };
+export const locateOnMap = function (str, lat, lon, geoJson, coodinates) {
+  try {
+    return JBridge.locateOnMap(str, lat, lon, geoJson, JSON.stringify(coodinates));
+  } catch (err) {
+    return JBridge.locateOnMap(str, lat, lon);
+  }
 };
 
 export const exitLocateOnMap = function(str){
@@ -1373,9 +1365,24 @@ export const emitJOSEvent = function (mapp,eventType,payload) {
   }
   JOS.emitEvent(mapp)(eventType)(JSON.stringify(resultPayload))()()
 }
-export const locationPermissionCallBack = function (cb,action) {
-  var locationRequestCallBack = function (){
-    cb(action)();
+
+export const getMerchantConfig = function (just) {
+  return function (nothing) {
+    return function () {
+      if (typeof window.appConfig !== "undefined") {
+        return just(window.appConfig);
+      }
+      return nothing;
+    }
   }
-  window.locationRequestCallBack = locationRequestCallBack;
 }
+
+export const storeLoaderFiber = function (fiber) {
+  window.loaderFiber.push(fiber);
+  return;
+}
+
+export const getLoaderFiber = function () {
+  return window.loaderFiber;
+}
+

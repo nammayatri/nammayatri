@@ -35,7 +35,7 @@ import Animation as Anim
 import Animation.Config as AnimConfig
 import Common.Types.App
 import Screens.EnterMobileNumberScreen.ComponentConfig
-import Merchant.Utils (getValueFromMerchant)
+import Merchant.Utils (getValueFromConfig)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
@@ -166,7 +166,7 @@ underlinedTextView state push =
       , orientation VERTICAL
       , onClick (\action -> do
                   _<- push action
-                  _ <- JB.openUrlInApp $ getValueFromMerchant "DOCUMENT_LINK" 
+                  _ <- JB.openUrlInApp $ getValueFromConfig "DOCUMENT_LINK" 
                   pure unit
                   ) (const NonDisclosureAgreementAction)
       ][ textView (

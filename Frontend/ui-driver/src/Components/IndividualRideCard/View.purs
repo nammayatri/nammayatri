@@ -15,7 +15,7 @@
 
 module Components.IndividualRideCard.View where
 
-import Prelude (Unit, ($), (<<<) , const, (==))
+import Prelude (Unit, ($), (<<<) , const, (==), (<>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..),PrestoDOM, linearLayout, clickable,frameLayout, height, width, text, textSize, textView, relativeLayout, orientation, gravity, padding, imageView, imageUrl, background, margin, cornerRadius, shimmerFrameLayout, color, fontStyle, maxLines, ellipsize, layoutGravity, visibility, weight, imageWithFallback)
 import Components.IndividualRideCard.Controller(Action(..)) 
 import Screens.RideSelectionScreen.Controller (Action(..)) as RideSelectionScreen
@@ -30,6 +30,7 @@ import Font.Style as FontStyle
 import Styles.Colors as Color
 import Common.Types.App
 import PrestoDOM.Properties (orientation, visibility, width)
+import Helpers.Utils (getCommonAssetStoreLink)
 
 view :: forall w .  (RideHistoryScreen.Action  -> Effect Unit)  -> PrestoDOM (Effect Unit) w
 view push =

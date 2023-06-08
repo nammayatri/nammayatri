@@ -17,8 +17,6 @@ module Font.Style where
 
 
 import Common.Types.App
-import Debug
-
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
@@ -41,7 +39,7 @@ import Foreign.Generic (Foreign, decode)
 foreign import getFontStyleFromConfig :: String -> Foreign
 
 getFontType :: String ->  FontType
-getFontType dummy = case spy "get Font Type "(decodeFont (getFontStyleFromConfig "")) of
+getFontType dummy = case (decodeFont (getFontStyleFromConfig "")) of
   Just font -> font
   Nothing -> Assets
 
@@ -49,81 +47,81 @@ decodeFont :: Foreign -> Maybe FontType
 decodeFont = hush <<< runExcept <<< decode
 
 italic :: FontStyle
-italic = fontByOS "Roboto-Italic" "Roboto-Italic" "Arial"
+italic = fontByOS "PlusJakartaSans-Italic" "PlusJakartaSans-Italic" "Arial"
 
 light :: LazyCheck -> FontStyle
 light style = do
   case (getValueToLocalStore LANGUAGE_KEY) of
-    "EN_US" -> fontByOS "Roboto-Light" "Roboto-Light" "Arial"
-    "KN_IN" -> fontByOS "Roboto-Light" "Roboto-Light" "Arial"
-    "HI_IN" -> fontByOS "Roboto-Light" "Roboto-Light" "Arial"
-    _ -> fontByOS "Roboto-Light" "Roboto-Light" "Arial"
+    "EN_US" -> fontByOS "PlusJakartaSans-Light" "PlusJakartaSans-Light" "Arial"
+    "KN_IN" -> fontByOS "PlusJakartaSans-Light" "PlusJakartaSans-Light" "Arial"
+    "HI_IN" -> fontByOS "PlusJakartaSans-Light" "PlusJakartaSans-Light" "Arial"
+    _ -> fontByOS "PlusJakartaSans-Light" "PlusJakartaSans-Light" "Arial"
 
 lightItalic :: FontStyle
-lightItalic = fontByOS "Roboto-LightItalic" "Roboto-LightItalic" "Arial"
+lightItalic = fontByOS "PlusJakartaSans-LightItalic" "PlusJakartaSans-LightItalic" "Arial"
 
 extraLight :: LazyCheck -> FontStyle
 extraLight style = do
   case (getValueToLocalStore LANGUAGE_KEY) of
-    "EN_US" -> fontByOS "Roboto-ExtraLight" "Roboto-ExtraLight" "Arial"
-    "KN_IN" -> fontByOS "Roboto-ExtraLight" "Roboto-ExtraLight" "Arial"
-    "HI_IN" -> fontByOS "Roboto-ExtraLight" "Roboto-ExtraLight" "Arial"
-    _ -> fontByOS "Roboto-ExtraLight" "Roboto-ExtraLight" "Arial"
+    "EN_US" -> fontByOS "PlusJakartaSans-ExtraLight" "PlusJakartaSans-ExtraLight" "Arial"
+    "KN_IN" -> fontByOS "PlusJakartaSans-ExtraLight" "PlusJakartaSans-ExtraLight" "Arial"
+    "HI_IN" -> fontByOS "PlusJakartaSans-ExtraLight" "PlusJakartaSans-ExtraLight" "Arial"
+    _ -> fontByOS "PlusJakartaSans-ExtraLight" "PlusJakartaSans-ExtraLight" "Arial"
 
 extraLightItalic :: FontStyle
-extraLightItalic = fontByOS "Roboto-ExtraLightItalic" "Roboto-ExtraLightItalic" "Arial"
+extraLightItalic = fontByOS "PlusJakartaSans-ExtraLightItalic" "PlusJakartaSans-ExtraLightItalic" "Arial"
 
 regular :: LazyCheck -> FontStyle
 regular style = do
   case (getValueToLocalStore LANGUAGE_KEY) of
-    "EN_US" -> fontByOS "Roboto-Regular" "Roboto-Regular" "Arial"
-    "KN_IN" -> fontByOS "Roboto-Regular" "Roboto-Regular" "Arial"
-    "HI_IN" -> fontByOS "Roboto-Regular" "Roboto-Regular" "Arial"
-    _ -> fontByOS "Roboto-Regular" "Roboto-Regular" "Arial"
+    "EN_US" -> fontByOS "PlusJakartaSans-Regular" "PlusJakartaSans-Regular" "Arial"
+    "KN_IN" -> fontByOS "PlusJakartaSans-Regular" "PlusJakartaSans-Regular" "Arial"
+    "HI_IN" -> fontByOS "PlusJakartaSans-Regular" "PlusJakartaSans-Regular" "Arial"
+    _ -> fontByOS "PlusJakartaSans-Regular" "PlusJakartaSans-Regular" "Arial"
 
 medium :: LazyCheck -> FontStyle
 medium style = do
   case (getValueToLocalStore LANGUAGE_KEY) of
-    "EN_US" -> fontByOS "Roboto-Medium" "Roboto-Medium" "Arial"
-    "KN_IN" -> fontByOS "Roboto-Medium" "Roboto-Medium" "Arial"
-    "HI_IN" -> fontByOS "Roboto-Medium" "Roboto-Medium" "Arial"
-    _ -> fontByOS "Roboto-Medium" "Roboto-Medium" "Arial"
+    "EN_US" -> fontByOS "PlusJakartaSans-Medium" "PlusJakartaSans-Medium" "Arial"
+    "KN_IN" -> fontByOS "PlusJakartaSans-Medium" "PlusJakartaSans-Medium" "Arial"
+    "HI_IN" -> fontByOS "PlusJakartaSans-Medium" "PlusJakartaSans-Medium" "Arial"
+    _ -> fontByOS "PlusJakartaSans-Medium" "PlusJakartaSans-Medium" "Arial"
 
 mediumItalic :: FontStyle
-mediumItalic = fontByOS "Roboto-MediumItalic" "Roboto-MediumItalic" "Arial"
+mediumItalic = fontByOS "PlusJakartaSans-MediumItalic" "PlusJakartaSans-MediumItalic" "Arial"
 
 semiBold :: LazyCheck -> FontStyle
 semiBold style = do
   case (getValueToLocalStore LANGUAGE_KEY) of
-    "EN_US" -> fontByOS "Roboto-Bold" "Roboto-Bold" "Arial"
-    "KN_IN" -> fontByOS "Roboto-Bold" "Roboto-Bold" "Arial"
-    "HI_IN" -> fontByOS "Roboto-Bold" "Roboto-Bold" "Arial"
-    _ -> fontByOS "Roboto-Bold" "Roboto-Bold" "Arial"
+    "EN_US" -> fontByOS "PlusJakartaSans-Bold" "PlusJakartaSans-Bold" "Arial"
+    "KN_IN" -> fontByOS "PlusJakartaSans-Bold" "PlusJakartaSans-Bold" "Arial"
+    "HI_IN" -> fontByOS "PlusJakartaSans-Bold" "PlusJakartaSans-Bold" "Arial"
+    _ -> fontByOS "PlusJakartaSans-Bold" "PlusJakartaSans-Bold" "Arial"
 
 semiBoldItalic :: FontStyle
-semiBoldItalic = fontByOS "Roboto-SemiBoldItalic" "Roboto-SemiBoldItalic" "Arial" 
+semiBoldItalic = fontByOS "PlusJakartaSans-SemiBoldItalic" "PlusJakartaSans-SemiBoldItalic" "Arial" 
 
 bold :: LazyCheck -> FontStyle
 bold style = do
   case (getValueToLocalStore LANGUAGE_KEY) of
-    "EN_US" -> fontByOS "Roboto-Bold" "Roboto-Bold" "Arial"
-    "KN_IN" -> fontByOS "Roboto-Bold" "Roboto-Bold" "Arial"
-    "HI_IN" -> fontByOS "Roboto-Bold" "Roboto-Bold" "Arial"
-    _ -> fontByOS "Roboto-Bold" "Roboto-Bold" "Arial"
+    "EN_US" -> fontByOS "PlusJakartaSans-Bold" "PlusJakartaSans-Bold" "Arial"
+    "KN_IN" -> fontByOS "PlusJakartaSans-Bold" "PlusJakartaSans-Bold" "Arial"
+    "HI_IN" -> fontByOS "PlusJakartaSans-Bold" "PlusJakartaSans-Bold" "Arial"
+    _ -> fontByOS "PlusJakartaSans-Bold" "PlusJakartaSans-Bold" "Arial"
 
 boldItalic :: FontStyle
-boldItalic = fontByOS "Roboto-BoldItalic" "Roboto-BoldItalic" "Arial"
+boldItalic = fontByOS "PlusJakartaSans-BoldItalic" "PlusJakartaSans-BoldItalic" "Arial"
 
 extraBold :: LazyCheck -> FontStyle
 extraBold style = do
   case (getValueToLocalStore LANGUAGE_KEY) of
-    "EN_US" -> fontByOS "Roboto-ExtraBold" "Roboto-ExtraBold" "Arial"
-    "KN_IN" -> fontByOS "Roboto-ExtraBold" "Roboto-ExtraBold" "Arial"
-    "HI_IN" -> fontByOS "Roboto-ExtraBold" "Roboto-ExtraBold" "Arial"
-    _ -> fontByOS "Roboto-ExtraBold" "Roboto-ExtraBold" "Arial"
+    "EN_US" -> fontByOS "PlusJakartaSans-ExtraBold" "PlusJakartaSans-ExtraBold" "Arial"
+    "KN_IN" -> fontByOS "PlusJakartaSans-ExtraBold" "PlusJakartaSans-ExtraBold" "Arial"
+    "HI_IN" -> fontByOS "PlusJakartaSans-ExtraBold" "PlusJakartaSans-ExtraBold" "Arial"
+    _ -> fontByOS "PlusJakartaSans-ExtraBold" "PlusJakartaSans-ExtraBold" "Arial"
 
 extraBoldItalic :: FontStyle
-extraBoldItalic = fontByOS "Roboto-ExtraBoldItalic" "Roboto-ExtraBoldItalic" "Arial"
+extraBoldItalic = fontByOS "PlusJakartaSans-ExtraBoldItalic" "PlusJakartaSans-ExtraBoldItalic" "Arial"
 
 h1 :: LazyCheck -> forall properties. (Array (Prop properties))
 h1 typography = [
@@ -206,9 +204,9 @@ priceFont_big typography = [
 fontByOS :: forall a. a -> a -> a -> a
 fontByOS android ios web
   = case os of
-      "IOS" -> spy "font by ios" ios
-      "WEB" -> spy "font by web" web
-      _ -> spy "font by android" android
+      "IOS" -> ios
+      "WEB" -> web
+      _ -> android
 
 body4 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body4 typography = [

@@ -20,16 +20,15 @@ import Prelude
 import Control.Monad.Trans.Class (lift)
 import Effect (Effect)
 import Effect.Class (liftEffect)
--- import JBridge as JBridge
 import Presto.Core.Flow (doAff)
 import Presto.Core.Types.Language.Flow as Flow
 import Types.App  (FlowBT, GlobalState)
 
 
-modifyState :: (GlobalState → GlobalState) -> FlowBT String Unit
+modifyState :: forall st. (GlobalState → GlobalState) -> FlowBT st Unit
 modifyState a = void $ lift $ lift $ Flow.modifyState a
 
-getState :: FlowBT String GlobalState
+getState :: forall st. FlowBT st GlobalState
 getState = lift $ lift $ Flow.getState
 
 -- toggleLoader :: Boolean -> FlowBT String Unit
@@ -44,7 +43,7 @@ getState = lift $ lift $ Flow.getState
 -- getTime :: FlowBT String String
 -- getTime = lift $ lift $ Utils.getTime
 
-liftFlowBT :: forall val . (Effect val)  -> FlowBT String val
+liftFlowBT :: forall st val . (Effect val)  -> FlowBT st val
 liftFlowBT effVal = lift $ lift $ doAff do liftEffect (effVal)
 
 -- getCurrentLatLong :: FlowBT String JBridge.LocationLatLong

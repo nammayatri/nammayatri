@@ -16,6 +16,7 @@
 module Screens.AddNewAddressScreen.Controller where
 
 import Accessor (_description, _place_id)
+import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Components.LocationListItem as LocationListItemController
 import Components.PrimaryButton as PrimaryButton
@@ -23,10 +24,13 @@ import Components.PrimaryEditText as PrimaryEditText
 import Data.Array ((!!), length, filter, any, sortBy, null) as DA
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, fromJust)
+import Data.Number (fromString) as Number
 import Data.String (trim, length, split, Pattern(..), drop, indexOf, toLower)
 import Effect (Effect)
+import Effect.Uncurried (runEffectFn5)
+import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (os, getNewIDWithTag)
-import Data.Number (fromString) as Number
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Helpers.Utils (getCurrentLocationMarker, getDistanceBwCordinates, getLocationName)
 import JBridge (animateCamera, currentPosition, exitLocateOnMap, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, removeAllPolylines, requestKeyboardShow, requestLocation, toast, toggleBtnLoader)
 import Language.Strings (getString)
@@ -41,8 +45,6 @@ import Screens.HomeScreen.ScreenData (dummyAddress)
 import Screens.Types (AddNewAddressScreenState, CardType(..), Location, LocationListItemState, DistInfo, LocItemType(..), LocationItemType(..))
 import Services.API (AddressComponents, Prediction, SavedReqLocationAPIEntity(..))
 import Storage (KeyStore(..), getValueToLocalStore)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Common.Types.App (LazyCheck(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -137,7 +139,7 @@ eval (AddressChanged input) state = do
     else continue state
 
 eval (MAPREADY key latitude longitude) state = do 
-  _ <- pure $ locateOnMap true 0.0 0.0 "" []
+  let _ = unsafePerformEffect $ runEffectFn5 locateOnMap true 0.0 0.0 "" []
   case key of 
     _ -> continueWithCmd state[ do
       _ <- checkPermissionAndUpdatePersonMarker state
@@ -149,7 +151,7 @@ eval (ClearEditText) state = do
   continue state{props{isSearchedLocationServiceable = true}}
 
 eval SetLocationOnMap state = do 
-  _ <- pure $ locateOnMap true 0.0 0.0 "" []
+  let _ = unsafePerformEffect $ runEffectFn5 locateOnMap true 0.0 0.0 "" []
   _ <- pure $ currentPosition ""
   _ <- pure $ removeAllPolylines ""
   _ <- pure $ hideKeyboardOnNavigation true

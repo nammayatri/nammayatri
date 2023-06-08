@@ -13,12 +13,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.DriverProfileScreen.ScreenData
-  ( MenuOptions(..)
-  , initData
-  , optionList
-  )
-  where
+module Screens.DriverProfileScreen.ScreenData where
 
 import Data.Maybe
 
@@ -26,7 +21,6 @@ import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
 import Language.Types (STR(..))
 import Screens.Types (DriverProfileScreenState, BottomNavBarState)
-import Merchant.Utils (getMerchant, Merchant(..))
 import Prelude (class Eq, unit, (<>), (==), (||), (/=))
 import Common.Types.App (LazyCheck(..))
 
@@ -63,6 +57,4 @@ type Listtype =
     { icon :: String,
       menuOptions :: MenuOptions
     }
-
-
 

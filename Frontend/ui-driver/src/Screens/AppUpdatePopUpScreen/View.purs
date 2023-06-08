@@ -31,7 +31,7 @@ import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
-import Merchant.Utils (getValueFromMerchant)
+import Merchant.Utils (getValueFromConfig)
 
 
 screen :: ST.AppUpdatePopUpScreenState -> ScopedScreen Action ST.AppUpdatePopUpScreenState ScreenOutput
@@ -141,7 +141,7 @@ view push state =
                   , color Color.yellowText
                   , onClick (\action -> do
                               _<- push action
-                              _ <- JB.openUrlInApp $ getValueFromMerchant "APP_LINK"
+                              _ <- JB.openUrlInApp $ getValueFromConfig "APP_LINK"
                               pure unit
                               ) (const OnAccept)
               ] <> FontStyle.body4 LanguageStyle

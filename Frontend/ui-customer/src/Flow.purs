@@ -15,9 +15,7 @@
 
 module Flow where
 
-import Config.Config
-import Config.Types
-
+import MerchantConfig.Utils (getAppConfig)
 import Accessor (_computedPrice, _contents, _formattedAddress, _id, _lat, _lon, _status, _toLocation, _signatureAuthData)
 import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..))
 import Common.Types.App (LazyCheck(..))
@@ -25,7 +23,7 @@ import Common.Types.App (LazyCheck(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Components.SavedLocationCard.Controller (getCardType)
 import Components.SettingSideBar.Controller as SettingSideBarController
-import Config.DefaultConfig as DC
+import MerchantConfig.DefaultConfig as DC
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
@@ -44,18 +42,20 @@ import Debug (spy)
 import Effect (Effect)
 import Effect (Effect)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (runEffectFn3)
+import Effect.Uncurried (runEffectFn3, runEffectFn5)
 import Engineering.Helpers.BackTrack (getState)
 import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, bundleVersion, getExpiryTime)
 import Foreign.Class (class Encode)
 import Foreign.Class (class Encode)
 import Foreign.Class (encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import Helpers.Utils (hideSplash, getDistanceBwCordinates, adjustViewWithKeyboard, decodeErrorCode, getObjFromLocal, convertUTCtoISC, differenceOfLocationLists, filterRecentSearches, setText', seperateByWhiteSpaces, getNewTrackingId, checkPrediction, getRecentSearches, addToRecentSearches, saveRecents, clearWaitingTimer, toString, parseFloat, getCurrentLocationsObjFromLocal, addToPrevCurrLoc, saveCurrentLocations, getCurrentDate, getPrediction, getCurrentLocationMarker, parseNewContacts, getCurrentUTC, getMerchant, Merchant(..), drawPolygon,requestKeyboardShow, removeLabelFromMarker, sortPredctionByDistance, getMobileNumber, getAssetStoreLink, getCommonAssetStoreLink)
-import JBridge (metaLogEvent, currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, loaderText, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, toggleLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker, generateSessionId, stopChatListenerService)
+import Engineering.Helpers.Utils (loaderText, toggleLoader)
+import Helpers.Utils (getDistanceBwCordinates, adjustViewWithKeyboard, decodeErrorCode, getObjFromLocal, convertUTCtoISC, differenceOfLocationLists, filterRecentSearches, setText', seperateByWhiteSpaces, getNewTrackingId, checkPrediction, getRecentSearches, addToRecentSearches, saveRecents, clearWaitingTimer, toString, parseFloat, getCurrentLocationsObjFromLocal, addToPrevCurrLoc, saveCurrentLocations, getCurrentDate, getPrediction, getCurrentLocationMarker, parseNewContacts, getCurrentUTC, drawPolygon, requestKeyboardShow, removeLabelFromMarker, sortPredctionByDistance, getMobileNumber, getAssetStoreLink, getCommonAssetStoreLink)
+import JBridge (addMarker, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, stopChatListenerService, toast, toggleBtnLoader, updateRoute)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 import ModifyScreenState (modifyScreenState, updateRideDetails)
 import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>))
 import Presto.Core.Types.Language.Flow (doAff, fork, setLogField, delay)
@@ -81,11 +81,9 @@ import Services.API (AuthType(..), AddressGeometry(..), BookingLocationAPIEntity
 import Services.Backend as Remote
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
 import Types.App (ABOUT_US_SCREEN_OUTPUT(..), ACCOUNT_SET_UP_SCREEN_OUTPUT(..), ADD_NEW_ADDRESS_SCREEN_OUTPUT(..), GlobalState(..), CONTACT_US_SCREEN_OUTPUT(..), FlowBT, HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREEN_OUTPUT(..), MY_PROFILE_SCREEN_OUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), PERMISSION_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUPUT(..), SAVED_LOCATION_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), EMERGECY_CONTACTS_SCREEN_OUTPUT(..))
-import Merchant.Utils (getMerchant, Merchant(..))
 
 baseAppFlow :: GlobalPayload ->  FlowBT String Unit
 baseAppFlow (GlobalPayload gPayload) = do
-  _ <- lift $ lift $ liftFlow $ loadConfig
   _ <- pure $ printLog "Global Payload" gPayload 
   (GlobalState state) <- getState
   let bundle = bundleVersion unit
@@ -170,12 +168,18 @@ getIosVersion merchant =
                      patchUpdateIndex : 0,
                      enableForceUpdateIOS : false
                     }
+    UNKNOWN -> { majorUpdateIndex : 0,
+                     minorUpdateIndex : 1,
+                     patchUpdateIndex : 0,
+                     enableForceUpdateIOS : false
+                    }                  
 
 
 checkVersion :: Int -> String -> FlowBT String Unit
 checkVersion versioncodeAndroid versionName= do
+  let updatedIOSversion = getIosVersion (getMerchant FunctionCall)
   if os /= "IOS" && versioncodeAndroid < (getLatestAndroidVersion (getMerchant FunctionCall)) then do
-    _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "event,event,hide_loader"
+    _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "event,hide_loader"
     _ <- UI.handleAppUpdatePopUp
     _ <- pure $ firebaseLogEvent "ny_user_app_update_pop_up_view"
     checkVersion versioncodeAndroid versionName
@@ -196,13 +200,13 @@ checkVersion versioncodeAndroid versionName= do
       else pure unit
 
 
-getLatestAndroidVersion :: Merchant -> Maybe Int 
+getLatestAndroidVersion :: Merchant -> Int 
 getLatestAndroidVersion merchant = 
   case merchant of 
-    NAMMAYATRI -> Just 31 
-    YATRI -> Just 45
-    JATRISAATHI -> Just 1
-    _ -> Nothing
+    NAMMAYATRI -> 31 
+    YATRI -> 45
+    JATRISAATHI -> 1
+    UNKNOWN -> 0
 
 forceIOSupdate :: Int -> Int -> Int -> IosVersion -> Boolean
 forceIOSupdate c_maj c_min c_patch updatedIOSversion=
@@ -1110,8 +1114,8 @@ rideSearchFlow flowType = do
     then do 
       case ((not finalState.props.isSpecialZone) && finalState.props.sourceSelectedOnMap) of
         false -> do
-          _ <- pure $ locateOnMap false finalState.props.sourceLat finalState.props.sourceLong (if (getMerchant FunctionCall == JATRISAATHI) then finalState.data.polygonCoordinates else "")  (if (getMerchant FunctionCall == JATRISAATHI) then finalState.data.nearByPickUpPoints else [])
-          _ <- pure $ removeAllPolylines ""
+          _ <- lift $ lift $ liftFlow $ runEffectFn5 locateOnMap false finalState.props.sourceLat finalState.props.sourceLong (if (getMerchant FunctionCall == JATRISAATHI) then finalState.data.polygonCoordinates else "")  (if (getMerchant FunctionCall == JATRISAATHI) then finalState.data.nearByPickUpPoints else [])
+          pure $ removeAllPolylines ""
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingLocation,rideRequestFlow = true}})
           _ <- pure $ updateLocalStage ConfirmingLocation
           void $ lift $ lift $ toggleLoader false
@@ -1503,6 +1507,7 @@ addNewAddressScreenFlow input = do
   flow <- UI.addNewAddressScreen
   case flow of
     SEARCH_ADDRESS input state -> do
+      (GlobalState newState) <- getState
       (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input ( newState.homeScreen.props.sourceLat) ( newState.homeScreen.props.sourceLong) getSearchRadius (case (getValueToLocalStore LANGUAGE_KEY) of
                                                                                                                                                                                                                                 "HI_IN" -> "HINDI"
                                                                                                                                                                                                                                 "KN_IN" -> "KANNADA"

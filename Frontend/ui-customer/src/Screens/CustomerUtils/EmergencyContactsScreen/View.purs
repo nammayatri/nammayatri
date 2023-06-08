@@ -7,7 +7,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import JBridge (openUrlInApp, loaderText)
+import JBridge (openUrlInApp)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, (/=), discard, (||), (&&))

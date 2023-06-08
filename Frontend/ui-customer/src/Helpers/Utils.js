@@ -589,17 +589,6 @@ export const removeLabelFromMarker = function(unit){
   }
 }
 
-export const getMerchantConfig = function (just) {
-  return function (nothing) {
-    return function () {
-      if (typeof window.appConfig !== "undefined") {
-        return just(window.appConfig);
-      }
-      return nothing;
-    }
-  }
-}
-
 export const getMobileNumber = function (signatureAuthData) {
   try {
     return JSON.parse(signatureAuthData).mobileNumber

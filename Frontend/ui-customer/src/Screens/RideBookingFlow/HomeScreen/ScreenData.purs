@@ -23,7 +23,7 @@ import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItem
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..))
 import Prelude (($))
 import Data.Array (head)
-import Config.DefaultConfig as DC
+import MerchantConfig.DefaultConfig as DC
 
 initData :: HomeScreenState
 initData = {

@@ -87,9 +87,10 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
         init(context);
     }
 
-    public MediaPlayerView(Context context, @Nullable AttributeSet attrs) {
+    public MediaPlayerView(Activity activity, Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
         this.context = context;
+        this.activity = activity;
 
         init(context);
     }
@@ -171,7 +172,7 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
             ProgressBar progressBar = view.findViewById(R.id.audio_loader);
             progressBar.setBackgroundColor(Color.TRANSPARENT);
             ((ViewGroup) loader.getParent()).removeView(loader);
-            LinearLayout linearLayout = MainActivity.getInstance().findViewById(frameID);
+            LinearLayout linearLayout = activity.findViewById(frameID);
             linearLayout.removeAllViews();
             linearLayout.addView(loader);
             actionButton.setImageDrawable(getDrawable(context, playIcon));
@@ -186,7 +187,7 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
         if (timerID != -1) {
             TextView timer = view.findViewById(R.id.vTimer);
             ((ViewGroup) timer.getParent()).removeView(timer);
-            LinearLayout linearLayout = MainActivity.getInstance().findViewById(timerID);
+            LinearLayout linearLayout = activity.findViewById(timerID);
             linearLayout.removeAllViews();
             linearLayout.addView(timer);
         } else {
@@ -199,10 +200,6 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
         actionButton.setOnClickListener(runner -> player.toggle());
     }
 
-    public void setTimerId (int viewId) {
-        View view = MainActivity.getInstance().findViewById(viewId);
-        TextView timer = view.findViewById(R.id.vTimer);
-    }
     public void setTimerColorAndSize (int color, float size) {
         timer.setTextSize(size);
         timer.setTextColor(color);
@@ -212,7 +209,7 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
         visualizerBar.setNonPlayedStateColor(color);
     }
 
-    public void inflateView (Activity activity, int id) throws IOException {
+    public void inflateView (int id) throws IOException {
         if (activity != null){
             LinearLayout linearLayout = activity.findViewById(id);
             if (linearLayout != null) {

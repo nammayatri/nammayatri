@@ -142,7 +142,7 @@ public class Utils {
             {
                 String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
                 for(int i = 0; i< callBack.size(); i++) {
-                    callBack.get(i).imageUploadCallBack(encImage, "IMG_" + timeStamp +".jpg");
+                    callBack.get(i).imageUploadCallBack(encImage, "IMG_" + timeStamp +".jpg", result.getUri().getPath());
                 }
             }
         } catch (Exception e) {
@@ -150,5 +150,11 @@ public class Utils {
             Bundle params = new Bundle();
             mFirebaseAnalytics.logEvent("exception_crop_image", params);
         }
+    }
+    public static void minimizeApp(Context context){
+        Intent startMain = new Intent(Intent.ACTION_MAIN);
+        startMain.addCategory(Intent.CATEGORY_HOME);
+        startMain.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        context.startActivity(startMain);
     }
 }

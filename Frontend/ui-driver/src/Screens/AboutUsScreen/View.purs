@@ -31,7 +31,7 @@ import JBridge as JB
 import Components.PopUpModal as PopUpModal
 import Common.Types.App
 import Screens.AboutUsScreen.ComponentConfig
-import Merchant.Utils (getValueFromMerchant)
+import Merchant.Utils (getValueFromConfig)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
@@ -173,8 +173,8 @@ underlinedTextView value push  =
   , orientation VERTICAL
   , onClick (\action -> do
               _<- push action
-              _ <- JB.openUrlInApp if (value == (getString T_C)) then (getValueFromMerchant "DOCUMENT_LINK") 
-                else (getValueFromMerchant "PRIVACY_POLICY_LINK")
+              _ <- JB.openUrlInApp if (value == (getString T_C)) then (getValueFromConfig "DOCUMENT_LINK") 
+                else (getValueFromConfig "PRIVACY_POLICY_LINK")
               pure unit
               ) (const TermsAndConditionAction)
   , margin (Margin 20 30 0 0)

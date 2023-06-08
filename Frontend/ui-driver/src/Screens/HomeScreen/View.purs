@@ -68,7 +68,7 @@ import Services.APITypes (Status(..))
 import Components.BottomNavBar.Controller (navData)
 import Screens.HomeScreen.ComponentConfig
 import Screens as ScreenNames
-import Merchant.Utils (getValueFromMerchant)
+import Merchant.Utils (getValueFromConfig)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 
@@ -262,7 +262,7 @@ alternateNumberOrOTPView state push =
       , orientation HORIZONTAL
       , gravity CENTER
       ][  addAlternateNumber push state
-        , if (getValueFromMerchant "SPECIAL_ZONE_OTP_VIEW") == "true"  then otpButtonView state push else dummyTextView
+        , if (getValueFromConfig "SPECIAL_ZONE_OTP_VIEW") == "true"  then otpButtonView state push else dummyTextView
         ]
       ]
 
@@ -963,7 +963,7 @@ updateButtonIconAndText push state =
     , imageWithFallback $ "ny_ic_refresh," <> (getAssetStoreLink FunctionCall) <> "ny_ic_refresh.png"
     , gravity RIGHT
     ],
-    textView
+    textView $
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , text (getString UPDATE)

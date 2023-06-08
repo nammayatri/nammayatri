@@ -1239,17 +1239,17 @@ public class MobilityCommonBridge extends HyperBridge {
     @JavascriptInterface
     public void showDialer(String phoneNum) {
         Intent intent = new Intent();
-        intent.setAction(Intent.ACTION_CALL);
+        intent.setAction(Intent.ACTION_DIAL);
         phoneNumber = phoneNum;
-        if (bridgeComponents.getActivity() != null && ContextCompat.checkSelfPermission(bridgeComponents.getActivity(), Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.CALL_PHONE}, REQUEST_CALL);
-        } else {
+//        if (bridgeComponents.getActivity() != null && ContextCompat.checkSelfPermission(bridgeComponents.getActivity(), Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+//            ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.CALL_PHONE}, REQUEST_CALL);
+//        } else {
             phoneNumber = "tel:" + phoneNum;
             intent.setData(Uri.parse(phoneNumber));
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             bridgeComponents.getContext().startActivity(intent);
 
-        }
+//        }
     }
 
     @JavascriptInterface

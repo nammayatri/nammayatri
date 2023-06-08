@@ -40,7 +40,7 @@ import Services.Backend as Remote
 import Types.App(FlowBT)
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
 import Debug(spy)
-import Config.DefaultConfig as DC
+import MerchantConfig.DefaultConfig as DC
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 

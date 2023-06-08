@@ -61,7 +61,7 @@ public class ChatService extends Service {
     private static final ArrayList<CallBack> callBack = new ArrayList<>();
     private Handler handler = new Handler();
     private String merchant = null;
-    String merchantType = BuildConfig.MERCHANT_TYPE;
+    String merchantType;
 
     public static void registerCallback(CallBack notificationCallback) {
         callBack.add(notificationCallback);
@@ -77,6 +77,7 @@ public class ChatService extends Service {
         firestoreInstance = FirebaseFirestore.getInstance();
         firebaseAuth = FirebaseAuth.getInstance();
         merchant = getApplicationContext().getResources().getString(R.string.service);
+        merchantType = merchant.contains("partner") || merchant.contains("driver") ? "DRIVER" : "USER";
         sharedPrefs = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         if(sharedPrefs != null) chatChannelID = sharedPrefs.getString("CHAT_CHANNEL_ID", "");
         isSessionCreated();

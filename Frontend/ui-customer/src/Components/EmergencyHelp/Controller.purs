@@ -20,11 +20,11 @@ import Styles.Types
 
 import Components.GenericHeader.Controller (Action(..)) as GenericHeaderController
 import Components.PopUpModal.Controller as PopUpModalController
-import Config.Types (AppConfig)
+import MerchantConfig.Types (AppConfig)
 import PrestoDOM (Eval, continue, exit, continueWithCmd)
 import Screens.Types (Contact)
 import Styles.Colors as Color
-import Config.DefaultConfig as DC
+import MerchantConfig.DefaultConfig as DC
 
 data Action = NoAction 
             | CallPolicePopup

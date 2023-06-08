@@ -8,19 +8,25 @@
 
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 
-  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+  or FITNESS FOR A PARTIEHULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
 module Screens.HelpAndSupportScreen.View where
 
+import Common.Types.App
+import Screens.CustomerUtils.HelpAndSupportScreen.ComponentConfig
+
 import Animation as Anim
-import Control.Monad (void)
+import Engineering.Helpers.Utils as EHU
 import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
 import Components.PopUpModal as PopUpModal
 import Components.SourceToDestination as SourceToDestination
+import Control.Monad (void)
+import Control.Monad.Except (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
 import Data.Array as DA
 import Data.Either (Either(..))
 import Debug (spy)
@@ -30,9 +36,12 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Prelude ((<>))
 import Prelude (Unit, bind, const, discard, map, pure, unit, ($), (-), (/=), (<<<), (<=), (<>), (==), (||))
 import Presto.Core.Types.Language.Flow (Flow, doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Shadow(..), Visibility(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, shadow, stroke, text, textSize, textView, visibility, width, imageWithFallback, weight, layoutGravity)
@@ -44,10 +53,6 @@ import Services.API (RideBookingListRes(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (GlobalState)
-import Common.Types.App
-import Screens.CustomerUtils.HelpAndSupportScreen.ComponentConfig
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Prelude ((<>))
 
 screen :: ST.HelpAndSupportScreenState -> Screen Action ST.HelpAndSupportScreenState ScreenOutput
 screen initialState =
@@ -310,19 +315,13 @@ headingView state title =
 
 getPastRides :: forall action.( RideBookingListRes -> String -> action) -> (action -> Effect Unit) -> ST.HelpAndSupportScreenState ->  Flow GlobalState Unit
 getPastRides action push state = do
-  _ <-  JB.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
-  _ <-  JB.toggleLoader true
+  void $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+  void $ EHU.toggleLoader true
   (rideBookingListResponse) <- Remote.rideBookingList "8" "0" "false"
-
+  void $ EHU.toggleLoader false
   case rideBookingListResponse of
-      Right (RideBookingListRes  listResp) -> do
-          doAff do liftEffect $ push $ action (RideBookingListRes listResp) "success"
-          _ <-  JB.toggleLoader false
-          pure unit
-      Left (err) -> do
-        doAff do liftEffect $ push $ action (RideBookingListRes dummyListResp ) "failure"
-        _ <-  JB.toggleLoader false
-        pure unit
+      Right (RideBookingListRes  listResp) -> doAff do liftEffect $ push $ action (RideBookingListRes listResp) "success"
+      Left (err) -> doAff do liftEffect $ push $ action (RideBookingListRes dummyListResp ) "failure"
 
 dummyListResp :: forall t127.
   { list :: Array t127

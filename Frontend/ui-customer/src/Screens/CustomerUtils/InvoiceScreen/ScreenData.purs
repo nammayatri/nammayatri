@@ -17,7 +17,7 @@ module Screens.InvoiceScreen.ScreenData where
 
 import Screens.Types (InvoiceScreenState)
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
-import Config.DefaultConfig as DC
+import MerchantConfig.DefaultConfig as DC
 
 initData :: InvoiceScreenState
 initData = {

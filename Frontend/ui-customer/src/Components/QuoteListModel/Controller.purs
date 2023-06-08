@@ -18,7 +18,7 @@ module Components.QuoteListModel.Controller where
 import Components.PrimaryButton as PrimaryButtonController
 import Components.QuoteListItem as QuoteListItemController
 import Data.Maybe (Maybe)
-import Config.Types (AppConfig)
+import MerchantConfig.Types (AppConfig)
 
 data Action = GoBack
             | NoAction

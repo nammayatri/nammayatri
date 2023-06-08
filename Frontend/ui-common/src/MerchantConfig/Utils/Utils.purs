@@ -1,4 +1,4 @@
-module Merchant.Utils where
+module MerchantConfig.Utils where
 
 import Prelude
 import Common.Types.App (LazyCheck(..))
@@ -10,59 +10,23 @@ import Data.Maybe (Maybe(..))
 import Foreign (Foreign)
 import Foreign.Generic (class Decode, class Encode, decode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
-import Screens.Types (Language)
 import Debug
+import Control.Monad.Except (runExcept)
+import Data.Either (Either(..))
+import Data.Maybe (Maybe(..))
+import Effect (Effect)
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Foreign.Generic (decode, encode)
+import JBridge (getConfig)
+import MerchantConfig.Types (AppConfig)
+import MerchantConfig.DefaultConfig as DefaultConfig
+import Types.App (FlowBT)
 
 foreign import getStringFromConfig :: String -> String
 
 foreign import getValueFromConfig :: String -> String
 
 foreign import getENStrings :: String -> String
-
-type LanguageData
-  = { languages :: Array Language
-    }
-
-getLanguagesList :: LazyCheck -> Array Language
-getLanguagesList lazy = case (getMerchant FunctionCall) of
-  JATRISAATHI ->
-    [ { name: "English"
-      , value: "EN_US"
-      , subTitle: ""
-      }
-    , { name: "বাংলা"
-      , value: "BN_IN"
-      , subTitle: "Bengali"
-      }
-    , { name: "हिंदी"
-      , value: "HI_IN"
-      , subTitle: "Hindi"
-      }
-    ]
-  YATRI ->
-    [ { name: "English"
-      , value: "EN_US"
-      , subTitle: ""
-      }
-    , { name: "മലയാളം"
-      , value: "ML_IN"
-      , subTitle: "Malayalam"
-      }
-    ]
-  _ ->
-    [ { name: "English"
-      , value: "EN_US"
-      , subTitle: ""
-      }
-    , { name: "ಕನ್ನಡ"
-      , value: "KN_IN"
-      , subTitle: "Kannada"
-      }
-    , { name: "हिंदी"
-      , value: "HI_IN"
-      , subTitle: "Hindi"
-      }
-    ]
 
 foreign import getMerchantId :: String -> Foreign
 
@@ -90,3 +54,18 @@ getMerchant lazy = case decodeMerchantId (getMerchantId "") of
 
 decodeMerchantId :: Foreign -> Maybe Merchant
 decodeMerchantId = hush <<< runExcept <<< decode
+
+getAppConfig :: FlowBT String AppConfig
+getAppConfig = liftFlowBT $ getAppConfigEff
+
+getAppConfigEff :: Effect AppConfig
+getAppConfigEff  = do
+  config' <- getConfig
+  pure $
+    case config' of
+      Just config -> do
+        case runExcept (decode (encode config )) of
+            Right (_ :: AppConfig) -> config
+            Left _ -> DefaultConfig.config
+      Nothing -> do
+            DefaultConfig.config

@@ -17,7 +17,7 @@ module Screens.AccountSetUpScreen.ScreenData where
 
 import Screens.Types (AccountSetUpScreenState)
 import Data.Maybe (Maybe(..))
-import Config.DefaultConfig as DC
+import MerchantConfig.DefaultConfig as DC
 
 initData :: AccountSetUpScreenState
 initData =

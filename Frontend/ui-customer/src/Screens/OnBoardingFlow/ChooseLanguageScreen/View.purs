@@ -132,4 +132,4 @@ listLanguageView state push =
       ](DA.mapWithIndex (\ index lang_data -> 
         PrestoAnim.animationSet 
           [ Anim.translateYAnimFromTopWithAlpha $ translateYAnimMapConfig index --{duration = 300 + (50 * index)} (300 + (50*index)) 10 0 0 true $ PrestoAnim.Bezier 0.37 0.0 0.63 1.0
-          ] $ MenuButton.view (push <<< MenuButtonActionController) (menuButtonConfig state lang_data)) state.data.languages)
+          ] $ MenuButton.view (push <<< MenuButtonActionController) (menuButtonConfig state lang_data)) state.data.config.languageList)

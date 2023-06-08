@@ -17,7 +17,7 @@ module Screens.SavedLocationScreen.ScreenData where
 
 import Screens.Types(SavedLocationScreenState)
 import Data.Maybe(Maybe(..))
-import Config.DefaultConfig as DC
+import MerchantConfig.DefaultConfig as DC
 
 initData :: SavedLocationScreenState
 initData = {

@@ -27,7 +27,6 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Merchant.Utils (getLanguage)
 import Prelude (Unit, const, unit, discard, ($), (<<<), (==), (<>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width)
 import PrestoDOM.Animation as PrestoAnim
@@ -146,5 +145,5 @@ menuButtonDriver state push =
       [ Anim.translateYAnimFromTopWithAlpha $ AnimConfig.translateYAnimMapConfig index
       ] $ MenuButton.view
           (push <<< (MenuButtonAction))
-          { text: {name: language.name, value: language.value, subtitle: language.subtitle}, isSelected: (state.props.selectedLanguage == language.value), index : index }) (getLanguage Language)
+          { text: {name: language.name, value: language.value, subtitle: language.subtitle}, isSelected: (state.props.selectedLanguage == language.value), index : index }) (state.data.config.languageList)
   )

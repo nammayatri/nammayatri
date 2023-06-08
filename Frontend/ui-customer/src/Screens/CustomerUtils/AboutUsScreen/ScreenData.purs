@@ -1,7 +1,7 @@
 module Screens.CustomerUtils.AboutUsScreen.ScreenData where
 
 import Screens.Types (AboutUsScreenState)
-import Config.DefaultConfig as DC
+import MerchantConfig.DefaultConfig as DC
 
 initData :: AboutUsScreenState
 initData = { 

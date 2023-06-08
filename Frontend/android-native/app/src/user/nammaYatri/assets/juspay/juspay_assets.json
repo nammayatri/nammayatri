@@ -1,17 +1,28 @@
 {
    "fonts" : {
-      "Roboto-Black" : true,
-      "Roboto-BlackItalic" : true,
-      "Roboto-Bold" : true,
-      "Roboto-BoldItalic" : true,
-      "Roboto-Italic" : true,
-      "Roboto-Light" : true,
-      "Roboto-LightItalic" : true,
-      "Roboto-Medium" : true,
-      "Roboto-MediumItalic" : true,
-      "Roboto-Regular" : true,
-      "Roboto-Thin" : true,
-      "Roboto-ThinItalic" : true
+      "NotoSansKannada-Black" : true,
+      "NotoSansKannada-Bold" : true,
+      "NotoSansKannada-ExtraBold" : true,
+      "NotoSansKannada-ExtraLight" : true,
+      "NotoSansKannada-Light" : true,
+      "NotoSansKannada-Medium" : true,
+      "NotoSansKannada-Regular" : true,
+      "NotoSansKannada-SemiBold" : true,
+      "NotoSansKannada-Thin" : true,
+      "PlusJakartaSans-Bold" : true,
+      "PlusJakartaSans-BoldItalic" : true,
+      "PlusJakartaSans-ExtraBold" : true,
+      "PlusJakartaSans-ExtraBoldItalic" : true,
+      "PlusJakartaSans-ExtraLight" : true,
+      "PlusJakartaSans-ExtraLightItalic" : true,
+      "PlusJakartaSans-Italic" : true,
+      "PlusJakartaSans-Light" : true,
+      "PlusJakartaSans-LightItalic" : true,
+      "PlusJakartaSans-Medium" : true,
+      "PlusJakartaSans-MediumItalic" : true,
+      "PlusJakartaSans-Regular" : true,
+      "PlusJakartaSans-SemiBold" : true,
+      "PlusJakartaSans-SemiBoldItalic" : true
    },
    "images" : {
       "app_notification_background" : true,
@@ -77,7 +88,6 @@
       "ic_transparent_logo" : true,
       "ic_vehicle_front" : true,
       "ic_vehicle_nav_on_map" : true,
-      "ny_ic_vehicle_nav_on_map" : true,
       "ic_vehicle_side" : true,
       "ic_waiting_image" : true,
       "label_shadow" : true,
@@ -218,6 +228,7 @@
       "rounded_corner_background" : true,
       "separator_silent_mode" : true,
       "silent_popup_background" : true,
-      "widget_close_gradient" : true
+      "widget_close_gradient" : true,
+      "ny_ic_loader" : true
    }
 }

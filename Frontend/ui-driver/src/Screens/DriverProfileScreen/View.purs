@@ -40,7 +40,7 @@ import Language.Types (STR(..))
 import Prelude (Unit, ($), const, map, (==), (||), (/), unit, bind, (-), (<>), (<<<), pure, discard, show, (&&), void)
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable)
-import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle, optionList)
+import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle)
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(..))
 import Screens.Types as ST
 import Services.APITypes (GetDriverInfoReq(..), GetDriverInfoResp(..))
@@ -51,7 +51,6 @@ import Screens as ScreenNames
 import Helpers.Utils (getVehicleType)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
-import Merchant.Utils (getMerchant, Merchant(..))
 
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
@@ -225,9 +224,9 @@ profileOptionsLayout state push =
                       ]
                   ]
               ]
-              , if (index == 2 || index == length (optionList "lazyEvaluation") - 2) then (horizontalLineView 7 0.5 0 20 0) else if(optionItem.menuOptions == DRIVER_LOGOUT) then dummyTextView else horizontalLineView 1 1.0 15 15 15
+              , if (index == 2 || index == length (optionList FunctionCall) - 2) then (horizontalLineView 7 0.5 0 20 0) else if(optionItem.menuOptions == DRIVER_LOGOUT) then dummyTextView else horizontalLineView 1 1.0 15 15 15
             ]
-          ) (optionList "lazyEvaluation")
+          ) (optionList FunctionCall)
     )
  ]
 

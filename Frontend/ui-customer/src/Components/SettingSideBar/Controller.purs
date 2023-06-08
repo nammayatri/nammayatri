@@ -19,7 +19,7 @@ import Prelude (class Eq)
 import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
 import Data.Maybe (Maybe(..))
-import Config.Types (AppConfig)
+import MerchantConfig.Types (AppConfig)
 
 data Action = ChangeLanguage
             | EditProfile

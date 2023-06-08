@@ -34,6 +34,7 @@ import Foreign.Generic (decodeJSON)
 import Presto.Core.Types.Language.Flow (Flow, checkPermissions, takePermissions)
 import Presto.Core.Types.Permission (Permission(..), PermissionResponse, PermissionStatus(..))
 import Types.App (GlobalState)
+import Debug
 
 foreign import getPermissionStatusImpl :: Array String -> (Effect String)
 foreign import requestPermissionImpl :: Fn3 (Error -> Effect Unit) (String -> Effect Unit) String (Effect Unit)
@@ -75,6 +76,7 @@ getPermissionStatus permission = do
 
 checkIfPermissionsGranted :: Array Permission -> Aff PermissionStatus
 checkIfPermissionsGranted permissions = do
+  _ <- pure $ spy "checkIfPermissionsGranted" permissions
   check <- allM getPermissionStatus $ fromFoldable permissions
   pure $ if check
     then PermissionGranted
@@ -87,6 +89,7 @@ _requestPermissions cb str = do
 
 requestPermissions :: Array Permission -> Aff (Array PermissionResponse)
 requestPermissions permissions = do
+  _ <- pure $ spy "checkIfPermissionsGranted" permissions
   response <- makeAff (\cb -> _requestPermissions cb $ show jPermission)
   case runExcept $ decodeJSON response of
     Right (statuses :: Array Boolean) -> pure $ zip permissions (map toResponse statuses)

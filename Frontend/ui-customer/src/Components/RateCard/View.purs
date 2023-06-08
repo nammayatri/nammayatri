@@ -24,7 +24,7 @@ import Animation (translateInXForwardAnim, translateInXBackwardAnim)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Merchant.Utils (Merchant(..), getMerchant)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), const, (<>), (>),(==), (||), (&&))
@@ -76,7 +76,7 @@ view push config =
               , fontStyle $ FontStyle.bold LanguageStyle
               , margin (MarginVertical 4 4)
               ]
-            , textView
+            , textView $
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , textSize FontSize.a_14

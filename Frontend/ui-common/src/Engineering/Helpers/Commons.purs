@@ -17,34 +17,37 @@ module Engineering.Helpers.Commons where
 
 import Prelude
 
+import Common.Types.Sdk (SDKRequest(..), SDKResponse(..))
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Control.Monad.State as S
+import Data.Array ((!!))
 import Data.Either (Either(..))
 import Data.Function.Uncurried (Fn2)
+import Data.Int as INT
 import Data.Maybe (fromMaybe, Maybe(..))
 import Data.Number.Format (toStringWith, fixed) as Number
+import Data.String as DS
 import Effect (Effect)
-import Effect.Aff (Aff, makeAff, nonCanceler, try)
+import Effect.Aff (Aff, makeAff, nonCanceler, try, launchAff)
+import Effect.Aff.AVar (new)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Effect.Class (liftEffect)
 import Effect.Exception (Error)
 import Effect.Ref (Ref, read, write)
-import Engineering.OS.Permission (checkIfPermissionsGranted, requestPermissions)
-import Common.Types.Sdk (SDKRequest(..), SDKResponse(..))
+import Effect.Uncurried (EffectFn2)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Generic.Class (class DecodeWithOptions, class EncodeWithOptions)
 import Presto.Core.Language.Runtime.API (APIRunner)
 import Presto.Core.Language.Runtime.Interpreter (PermissionCheckRunner, PermissionRunner(..), PermissionTakeRunner, Runtime(..), run)
-import Presto.Core.Types.API (Header(..), Headers(..), Request(..), URL,Response)
-import Presto.Core.Types.Language.Flow (Flow, doAff,defaultState)
+import Presto.Core.Types.API (Header(..), Headers(..), Request(..), URL, Response)
+import Presto.Core.Types.Language.Flow (Flow, doAff, defaultState, getState, modifyState)
+import Presto.Core.Types.Permission (PermissionStatus(..))
 import Presto.Core.Utils.Encoding (defaultDecodeJSON, defaultEncodeJSON)
-import Types.App (FlowBT, GlobalState, defaultGlobalState)
-import Effect.Aff.AVar (new)
-import Data.String as DS
-import Data.Int as INT
-import Data.Array ((!!))
+import PrestoDOM.Core (terminateUI)
+import Types.App (FlowBT, GlobalState(..), defaultGlobalState)
 
+-- import LoaderOverlay.Handler as UI
 
 foreign import showUIImpl :: Fn2 (String -> Effect  Unit) String (Effect Unit)
 showUI' :: Fn2 (String -> Effect  Unit) String (Effect Unit)
@@ -70,6 +73,7 @@ foreign import countDown :: forall action. Int -> String -> (action -> Effect Un
 foreign import clearTimer :: String -> Unit
 foreign import getExpiryTime :: String -> Boolean -> Int
 foreign import getCurrentUTC :: String -> String
+foreign import storeHideLoaderCallback :: forall action. EffectFn2 (action -> Effect Unit) action Unit
 
 os :: String
 os = getOs unit
@@ -140,14 +144,19 @@ flowRunner flow = do
   let freeFlow = S.evalStateT (run runtime flow)
   try $ new (defaultState defaultGlobalState) >>= freeFlow
 
-permissionCheckRunner :: PermissionCheckRunner
-permissionCheckRunner = checkIfPermissionsGranted
-
-permissionTakeRunner :: PermissionTakeRunner
-permissionTakeRunner = requestPermissions
+flowRunnerWithState :: forall a st. st -> (Flow st a) -> Aff (Either Error a)
+flowRunnerWithState state flow = do
+  let runtime  = Runtime pure permissionRunner apiRunner
+  let freeFlow = S.evalStateT (run runtime flow)
+  try $ new (defaultState state) >>= freeFlow
 
 permissionRunner :: PermissionRunner
-permissionRunner = PermissionRunner permissionCheckRunner permissionTakeRunner
+permissionRunner = PermissionRunner (const $ pure PermissionGranted) (const $ pure [])
+
+
+-- const $ pure "") 
+--                         (PermissionRunner (const $ pure PermissionGranted ) (const $ pure [])) 
+--                         (const $ liftAff $ liftEffect $ pure "")
 
 apiRunner :: APIRunner
 apiRunner request = makeAff (\cb -> do
@@ -191,3 +200,16 @@ numericVersion versionName = do
 
 parseFloat :: Number -> Int -> String
 parseFloat num prec = Number.toStringWith (Number.fixed prec) num
+
+-- toggleLoader :: Boolean -> Flow GlobalState Unit
+-- toggleLoader flag = if flag then do
+--   state <- getState
+--   _ <- liftFlow $ launchAff $ flowRunnerWithState state UI.loaderScreen
+--   pure unit
+--   else
+--     doAff $ liftEffect $ terminateUI $ Just "LoaderOverlay"
+
+-- loaderText :: String -> String -> Flow GlobalState Unit
+-- loaderText mainTxt subTxt = do 
+--   _ <- modifyState (\(GlobalState state) -> GlobalState state{loaderOverlay{data{title = mainTxt, subTitle = subTxt}}})
+--   pure unit
