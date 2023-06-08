@@ -29,7 +29,8 @@ import Data.Ord
 import Data.Eq
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), drop, indexOf, length, split, trim)
-import Helpers.Utils (convertUTCtoISC, getExpiryTime, parseFloat)
+import Helpers.Utils (parseFloat)
+import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime)
 import Data.Number (ceil)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -88,15 +89,15 @@ getQuote (QuoteAPIEntity quoteEntity) = do
     (SPECIAL_ZONE contents) -> dummyQuoteList
     (DRIVER_OFFER contents) -> let (DriverOfferAPIEntity quoteDetails) = contents
         in {
-      seconds : (getExpiryTime quoteDetails.validTill "" isForLostAndFound) -4
-    , id : quoteEntity.id 
-    , timer : show $ (getExpiryTime quoteDetails.validTill "" isForLostAndFound) -4
+      seconds : (getExpiryTime quoteDetails.validTill isForLostAndFound) -4
+    , id : quoteEntity.id
+    , timer : show $ (getExpiryTime quoteDetails.validTill isForLostAndFound) -4
     , timeLeft : if (quoteDetails.durationToPickup<60) then (quoteDetails.durationToPickup/60) else (quoteDetails.durationToPickup/60)
     , driverRating : fromMaybe 0.0 quoteDetails.rating
     , profile : ""
     , price :  show quoteEntity.estimatedTotalFare
     , vehicleType : "auto"
-    , driverName : quoteDetails.driverName 
+    , driverName : quoteDetails.driverName
     , selectedQuote : Nothing
     }
 
@@ -105,8 +106,8 @@ getDriverInfo (RideBookingRes resp) isSpecialZone =
   let (RideAPIEntity rideList) = fromMaybe  dummyRideAPIEntity ((resp.rideList) DA.!! 0)
   in  {
         otp : if isSpecialZone then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else rideList.rideOtp
-      , driverName : if length (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) < 4 then 
-                        (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) <> " " <> (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 1)) else 
+      , driverName : if length (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) < 4 then
+                        (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) <> " " <> (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 1)) else
                           (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0))
       , eta : 0
       , vehicleDetails : rideList.vehicleModel
@@ -134,7 +135,7 @@ getDriverInfo (RideBookingRes resp) isSpecialZone =
       , driverNumber : rideList.driverNumber
       , merchantExoPhone : resp.merchantExoPhone
         }
-  
+
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity
 encodeAddressDescription address tag placeId lat lon addressComponents = do
     let totalAddressComponents = DA.length $ split (Pattern ", ") address
@@ -297,11 +298,11 @@ getSpecialZoneQuotes :: Array OfferRes -> Array ChooseVehicle.Config
 getSpecialZoneQuotes quotes = mapWithIndex (\index item -> getSpecialZoneQuote item index) quotes
 
 getSpecialZoneQuote :: OfferRes -> Int -> ChooseVehicle.Config
-getSpecialZoneQuote quote index = 
+getSpecialZoneQuote quote index =
   case quote of
     Quotes body -> let (QuoteAPIEntity quoteEntity) = body.onDemandCab
-      in ChooseVehicle.config { 
-        vehicleImage = case quoteEntity.vehicleVariant of 
+      in ChooseVehicle.config {
+        vehicleImage = case quoteEntity.vehicleVariant of
           "TAXI" -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
           "TAXI_PLUS" -> "ic_sedan_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_ac.png"
           "SEDAN" -> "ic_sedan,https://assets.juspay.in/nammayatri/images/user/ic_sedan.png"
@@ -329,8 +330,8 @@ getEstimateList :: Array EstimateAPIEntity -> Array ChooseVehicle.Config
 getEstimateList quotes = mapWithIndex (\index item -> getEstimates item index) quotes
 
 getEstimates :: EstimateAPIEntity -> Int -> ChooseVehicle.Config
-getEstimates (EstimateAPIEntity estimate) index = ChooseVehicle.config { 
-        vehicleImage = case estimate.vehicleVariant of 
+getEstimates (EstimateAPIEntity estimate) index = ChooseVehicle.config {
+        vehicleImage = case estimate.vehicleVariant of
           "TAXI" -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
           "TAXI_PLUS" -> "ic_sedan_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_ac.png"
           "SEDAN" -> "ic_sedan,https://assets.juspay.in/nammayatri/images/user/ic_sedan.png"

@@ -98,8 +98,6 @@ foreign import getCurrentDate :: String -> String
 foreign import storeCallBackContacts :: forall action. (action -> Effect Unit) -> ((Array Contacts) -> action) -> Effect Unit
 foreign import parseNewContacts :: String -> (Array NewContacts)
 
-foreign import dateCompare :: Date -> Date -> Boolean
-
 foreign import secondsToHms :: Int -> String
 
 foreign import getTime :: Unit -> Int
@@ -109,8 +107,6 @@ foreign import drawPolygon :: String -> String -> Effect Unit
 foreign import removeLabelFromMarker :: Unit -> Effect Unit
 -- foreign import generateSessionToken :: String -> String
 foreign import requestKeyboardShow :: String -> Effect Unit
-
-foreign import addTimeToDate :: Date -> Number -> String -> Date
 
 foreign import factoryResetApp :: String -> Unit
 
@@ -134,8 +130,6 @@ foreign import waitingCountdownTimer :: forall action. Int -> (action -> Effect 
 
 foreign import zoneOtpExpiryTimer :: forall action. Int -> Int -> (action -> Effect Unit) -> (String -> String -> Int -> action) -> Effect Unit
 
-foreign import convertUTCtoISC :: String -> String -> String
-
 foreign import setRefreshing :: String -> Boolean -> Unit
 
 foreign import setEnabled :: String -> Boolean -> Unit
@@ -153,10 +147,6 @@ fetchFromLocalStoreTemp' :: String -> (String -> Maybe String) -> Maybe String -
 fetchFromLocalStoreTemp' = fetchFromLocalStoreTempImpl
 
 foreign import fetchAndUpdateCurrentLocation :: forall action. (action -> Effect Unit) -> (String -> String -> action) -> action -> Effect Unit
-
-foreign import getCurrentUTC :: String -> String
-
-foreign import getExpiryTime :: String -> String -> Boolean -> Int
 
 foreign import seperateByWhiteSpaces :: String -> String
 
@@ -337,14 +327,14 @@ toRad n = (n * pi) / 180.0
 getCurrentLocationMarker :: String -> String
 getCurrentLocationMarker currentVersion = if isPreviousVersion currentVersion (getPreviousVersion "") then "ic_customer_current_location" else "ny_ic_customer_current_location"
 
-getPreviousVersion :: String -> String 
-getPreviousVersion _ = 
-  if os == "IOS" then 
-    case getMerchant FunctionCall of 
+getPreviousVersion :: String -> String
+getPreviousVersion _ =
+  if os == "IOS" then
+    case getMerchant FunctionCall of
       NAMMAYATRI -> "1.2.5"
       JATRISAATHI -> "0.0.0"
       _ -> "1.0.0"
-    else case getMerchant FunctionCall of 
+    else case getMerchant FunctionCall of
         JATRISAATHI -> "0.0.0"
         _ -> "1.2.0"
 
@@ -380,7 +370,7 @@ instance encodeMerchant :: Encode Merchant where encode = defaultEnumEncode
 instance decodeMerchant:: Decode Merchant where decode = defaultEnumDecode
 
 getMerchant :: LazyCheck -> Merchant
-getMerchant lazy = case (decodeMerchantId (getMerchantId "")) of 
+getMerchant lazy = case (decodeMerchantId (getMerchantId "")) of
   Just merchant -> merchant
   Nothing -> NAMMAYATRI
 

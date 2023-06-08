@@ -74,7 +74,7 @@ import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 -- foreign import get5sTimer :: forall action. (action -> Effect Unit) -> (String -> action)  -> Effect Unit
 -- foreign import get10sTimer :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 -- -- foreign import getCurrentLatLongImpl  :: Effect String
-import Engineering.Helpers.Commons (parseFloat, setText', getCurrentUTC) as ReExport
+import Engineering.Helpers.Commons (parseFloat, setText', convertUTCtoISC, getCurrentUTC) as ReExport
 
 
 foreign import shuffle :: forall a. Array a -> Array a
@@ -85,7 +85,6 @@ foreign import countDown :: forall action. Int -> String -> (action -> Effect Un
 foreign import hideSplash :: Effect Unit
 foreign import startTimer :: forall action. Int -> Boolean -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import convertKmToM :: String -> String
-foreign import convertUTCtoISC :: String -> String -> String
 foreign import differenceBetweenTwoUTC :: String -> String -> Int
 foreign import clearTimer :: String -> Unit
 foreign import clearPopUpTimer :: String -> Unit
@@ -196,22 +195,22 @@ toRad n = (n * pi) / 180.0
 
 
 capitalizeFirstChar :: String -> String
-capitalizeFirstChar inputStr = 
+capitalizeFirstChar inputStr =
   let splitedArray = DS.split (DS.Pattern " ") (inputStr)
       output = map (\item -> (DS.toUpper (DS.take 1 item)) <> (DS.toLower (DS.drop 1 item))) splitedArray
     in DS.joinWith " " output
 
 getDowngradeOptions :: String -> Array String
-getDowngradeOptions vehicleType = case vehicleType of 
+getDowngradeOptions vehicleType = case vehicleType of
   "SEDAN" -> ["HATCHBACK"]
   "SUV" -> ["HATCHBACK", "SEDAN"]
   "TAXI_PLUS" -> ["TAXI"]
   _ -> []
 
-getVehicleType :: String -> String 
-getVehicleType vehicleType = 
-  case vehicleType of 
-    "SEDAN" -> "Sedan" 
+getVehicleType :: String -> String
+getVehicleType vehicleType =
+  case vehicleType of
+    "SEDAN" -> "Sedan"
     "SUV"   -> "Suv"
     "HATCHBACK" -> "Hatchback"
     "AUTO_RICKSHAW" -> "Auto Rickshaw"
