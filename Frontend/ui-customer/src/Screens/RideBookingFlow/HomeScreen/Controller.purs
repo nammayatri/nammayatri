@@ -1453,7 +1453,13 @@ eval (GetQuotesList (SelectListRes resp)) state = do
               let filteredQuoteList = filter (\a -> length (filter (\b -> a.id == b.id )state.data.quoteListModelState) == 0 ) selectedQuotes
               let removeExpired = filter (\a -> a.seconds > 0) filteredQuoteList
               _ <- pure $ spy "quotes" filteredQuoteList
-              let newState = state{data{quoteListModelState = state.data.quoteListModelState <> removeExpired },props{isSearchLocation = NoView, isSource = Nothing,currentStage = QuoteList}}
+              let quoteListModelState = state.data.quoteListModelState <> removeExpired
+              if (getValueToLocalStore GOT_ONE_QUOTE == "FALSE") && (length quoteListModelState > 0) then do
+                _ <- pure $ firebaseLogEvent "ny_user_received_quotes"
+                _ <- pure $ setValueToLocalStore GOT_ONE_QUOTE "TRUE"
+                pure unit
+              else pure unit
+              let newState = state{data{quoteListModelState = quoteListModelState },props{isSearchLocation = NoView, isSource = Nothing,currentStage = QuoteList}}
               if isLocalStageOn QuoteList then do
                 _ <- pure $ spy "checking " "state"
                 let updatedState = if newState.props.customerTip.enableTips then tipEnabledState newState{props{isPopUp = TipsPopUp}} else newState{props{isPopUp = ConfirmBack}}
