@@ -55,7 +55,7 @@ data Booking = Booking
     status :: BookingStatus,
     bookingType :: BookingType,
     specialZoneOtpCode :: Maybe Text,
-    area :: FareProductD.Area,
+    area :: Maybe FareProductD.Area,
     providerId :: Id DM.Merchant, -- FIXME merchantId
     primaryExophone :: Text,
     bapId :: Text,

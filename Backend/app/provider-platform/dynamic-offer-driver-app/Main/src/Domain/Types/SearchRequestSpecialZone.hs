@@ -32,7 +32,7 @@ data SearchRequestSpecialZone = SearchRequestSpecialZone
     providerId :: Id DM.Merchant,
     fromLocation :: DLoc.SearchReqLocation,
     toLocation :: DLoc.SearchReqLocation,
-    area :: FareProductD.Area,
+    area :: Maybe FareProductD.Area,
     bapId :: Text,
     bapUri :: BaseUrl,
     estimatedDistance :: Meters,

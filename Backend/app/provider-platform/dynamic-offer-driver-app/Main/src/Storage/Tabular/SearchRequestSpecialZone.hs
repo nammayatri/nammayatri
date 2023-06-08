@@ -44,7 +44,7 @@ mkPersist
       providerId MerchantTId
       fromLocationId SearchReqLocationTId
       toLocationId SearchReqLocationTId
-      area FareProductD.Area
+      area FareProductD.Area Maybe
       bapId Text
       bapUri Text
       estimatedDistance Meters

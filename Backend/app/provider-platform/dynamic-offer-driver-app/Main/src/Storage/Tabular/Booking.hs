@@ -48,7 +48,7 @@ mkPersist
       status Domain.BookingStatus
       bookingType Domain.BookingType
       specialZoneOtpCode Text Maybe
-      area FareProductD.Area
+      area FareProductD.Area Maybe
       providerId MerchantTId
       primaryExophone Text
       bapId Text
