@@ -22,6 +22,7 @@ module Storage.Tabular.Merchant.MerchantServiceUsageConfig where
 
 import qualified Domain.Types.Merchant as Domain
 import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as Domain
+import Kernel.External.AadhaarVerification.Types
 import Kernel.External.Call (CallService)
 import Kernel.External.Maps.Types
 import Kernel.External.SMS.Types
@@ -51,6 +52,7 @@ mkPersist
       smsProvidersPriorityList (PostgresList SmsService)
       whatsappProvidersPriorityList (PostgresList WhatsappService)
       verificationService VerificationService
+      aadhaarVerificationService AadhaarVerificationService
       updatedAt UTCTime
       createdAt UTCTime
       Primary merchantId

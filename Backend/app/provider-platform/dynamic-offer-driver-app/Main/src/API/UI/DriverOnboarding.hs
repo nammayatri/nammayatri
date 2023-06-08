@@ -14,6 +14,7 @@
 
 module API.UI.DriverOnboarding where
 
+import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AV
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DriverOnboarding
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DriverOnboarding
@@ -27,6 +28,7 @@ import Kernel.ServantMultipart
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Auth (TokenAuth)
 
 type API =
@@ -36,20 +38,28 @@ type API =
            :> ReqBody '[JSON] DriverOnboarding.DriverDLReq
            :> Post '[JSON] DriverOnboarding.DriverDLRes
            :<|> "rc"
-             :> TokenAuth
-             :> ReqBody '[JSON] DriverOnboarding.DriverRCReq
-             :> Post '[JSON] DriverOnboarding.DriverRCRes
+           :> TokenAuth
+           :> ReqBody '[JSON] DriverOnboarding.DriverRCReq
+           :> Post '[JSON] DriverOnboarding.DriverRCRes
            :<|> "status"
-             :> TokenAuth
-             :> Get '[JSON] DriverOnboarding.StatusRes
+           :> TokenAuth
+           :> Get '[JSON] DriverOnboarding.StatusRes
            :<|> "validateImage"
-             :> TokenAuth
-             :> ReqBody '[JSON] Image.ImageValidateRequest
-             :> Post '[JSON] Image.ImageValidateResponse
+           :> TokenAuth
+           :> ReqBody '[JSON] Image.ImageValidateRequest
+           :> Post '[JSON] Image.ImageValidateResponse
            :<|> "validateImageFile"
-             :> TokenAuth
-             :> MultipartForm Tmp Image.ImageValidateFileRequest
-             :> Post '[JSON] Image.ImageValidateResponse
+           :> TokenAuth
+           :> MultipartForm Tmp Image.ImageValidateFileRequest
+           :> Post '[JSON] Image.ImageValidateResponse
+           :<|> "generateAadhaarOtp"
+           :> TokenAuth
+           :> ReqBody '[JSON] AadhaarVerification.AadhaarOtpReq
+           :> Post '[JSON] AadhaarVerification.AadhaarVerificationResp
+           :<|> "verifyAadhaarOtp"
+           :> TokenAuth
+           :> ReqBody '[JSON] AV.VerifyOtpReq
+           :> Post '[JSON] AadhaarVerification.AadhaarOtpVerifyRes
        )
     :<|> "driver" :> "referral"
       :> TokenAuth
@@ -63,6 +73,8 @@ handler =
       :<|> statusHandler
       :<|> validateImage
       :<|> validateImageFile
+      :<|> generateAadhaarOtp
+      :<|> verifyAadhaarOtp
   )
     :<|> addReferral
 
@@ -80,6 +92,12 @@ validateImage (personId, merchantId) = withFlowHandlerAPI . Image.validateImage 
 
 validateImageFile :: (Id DP.Person, Id DM.Merchant) -> Image.ImageValidateFileRequest -> FlowHandler Image.ImageValidateResponse
 validateImageFile (personId, merchantId) = withFlowHandlerAPI . Image.validateImageFile False (personId, merchantId)
+
+generateAadhaarOtp :: (Id DP.Person, Id DM.Merchant) -> AadhaarVerification.AadhaarOtpReq -> FlowHandler AadhaarVerification.AadhaarVerificationResp
+generateAadhaarOtp (personId, merchantId) = withFlowHandlerAPI . AV.generateAadhaarOtp False Nothing (personId, merchantId)
+
+verifyAadhaarOtp :: (Id DP.Person, Id DM.Merchant) -> AV.VerifyOtpReq -> FlowHandler AadhaarVerification.AadhaarOtpVerifyRes
+verifyAadhaarOtp (personId, merchantId) = withFlowHandlerAPI . AV.verifyAadhaarOtp False Nothing (personId, merchantId)
 
 addReferral :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.ReferralReq -> FlowHandler DriverOnboarding.ReferralRes
 addReferral (personId, merchantId) = withFlowHandlerAPI . DriverOnboarding.addReferral (personId, merchantId)

@@ -16,6 +16,7 @@ module Domain.Types.Merchant.MerchantServiceUsageConfig where
 
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
+import Kernel.External.AadhaarVerification.Types (AadhaarVerificationService)
 import Kernel.External.Call (CallService)
 import Kernel.External.Maps.Types (MapsService)
 import Kernel.External.SMS.Types
@@ -40,6 +41,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     smsProvidersPriorityList :: [SmsService],
     whatsappProvidersPriorityList :: [WhatsappService],
     verificationService :: VerificationService,
+    aadhaarVerificationService :: AadhaarVerificationService,
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }

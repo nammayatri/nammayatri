@@ -102,6 +102,7 @@ library
       Domain.Action.UI.Call
       Domain.Action.UI.CancellationReason
       Domain.Action.UI.Driver
+      Domain.Action.UI.DriverOnboarding.AadhaarVerification
       Domain.Action.UI.DriverOnboarding.DriverLicense
       Domain.Action.UI.DriverOnboarding.IdfyWebhook
       Domain.Action.UI.DriverOnboarding.Image
@@ -141,6 +142,9 @@ library
       Domain.Types.Driver.DriverFlowStatus
       Domain.Types.DriverInformation
       Domain.Types.DriverLocation
+      Domain.Types.DriverOnboarding.AadhaarOtpReq
+      Domain.Types.DriverOnboarding.AadhaarOtpVerify
+      Domain.Types.DriverOnboarding.AadhaarVerification
       Domain.Types.DriverOnboarding.DriverLicense
       Domain.Types.DriverOnboarding.DriverRCAssociation
       Domain.Types.DriverOnboarding.Error
@@ -250,6 +254,9 @@ library
       Storage.Queries.Driver.DriverFlowStatus
       Storage.Queries.DriverInformation
       Storage.Queries.DriverLocation
+      Storage.Queries.DriverOnboarding.AadhaarOtpReq
+      Storage.Queries.DriverOnboarding.AadhaarOtpVerify
+      Storage.Queries.DriverOnboarding.AadhaarVerification
       Storage.Queries.DriverOnboarding.DriverLicense
       Storage.Queries.DriverOnboarding.DriverRCAssociation
       Storage.Queries.DriverOnboarding.IdfyVerification
@@ -307,6 +314,9 @@ library
       Storage.Tabular.Driver.DriverFlowStatus
       Storage.Tabular.DriverInformation
       Storage.Tabular.DriverLocation
+      Storage.Tabular.DriverOnboarding.AadhaarOtpReq
+      Storage.Tabular.DriverOnboarding.AadhaarOtpVerify
+      Storage.Tabular.DriverOnboarding.AadhaarVerification
       Storage.Tabular.DriverOnboarding.DriverLicense
       Storage.Tabular.DriverOnboarding.DriverRCAssociation
       Storage.Tabular.DriverOnboarding.IdfyVerification
@@ -365,6 +375,7 @@ library
       Storage.Tabular.SearchRequestSpecialZone
       Storage.Tabular.SearchTry
       Storage.Tabular.Vehicle
+      Tools.AadhaarVerification
       Tools.Auth
       Tools.Call
       Tools.Error
