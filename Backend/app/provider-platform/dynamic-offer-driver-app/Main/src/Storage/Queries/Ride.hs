@@ -131,12 +131,12 @@ findAllRidesByDriverId (Id driverId) = do
         Left _ -> pure []
     Nothing -> pure []
 
-findAllRidesByDriverId' ::
+findAllRidesByDriverId ::
   L.MonadFlow m =>
   Id Person ->
   m [Ride]
-findAllRidesByDriverId' (Id driverId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
+findAllRidesByDriverId (Id driverId) = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamR.driverId $ Se.Eq driverId]
