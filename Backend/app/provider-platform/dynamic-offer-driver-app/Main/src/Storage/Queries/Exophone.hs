@@ -107,7 +107,7 @@ updateAffectedPhones primaryPhones = do
 
 -- updateAffectedPhones' :: (L.MonadFlow m, MonadTime m) => [Text] -> m (MeshResult ())
 -- updateAffectedPhones' primaryPhones = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   dbConf <- L.getOption KBT.PsqlDbCfg
 --   now <- getCurrentTime
 --   let indianMobileCode = "+91"
 --   -- let isPrimaryDown = Se.Or [ Se.Is BeamE.primaryPhone $ Se.In primaryPhones, Se.Is (indianMobileCode ++ BeamE.primaryPhone) $ Se.In primaryPhones ]

@@ -122,7 +122,7 @@ findAllRidesByDriverId ::
   Id Person ->
   m [Ride]
 findAllRidesByDriverId (Id driverId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamR.driverId $ Se.Eq driverId]
@@ -204,7 +204,7 @@ findAllRidesBookingsByRideId merchantId rideIds = Esq.buildDType $ do
 
 findAllRidesBookingsByRideId' :: L.MonadFlow m => Id Merchant -> [Id Ride] -> m [(Ride, Booking)]
 findAllRidesBookingsByRideId' (Id merchantId) rideIds = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       rides <- do

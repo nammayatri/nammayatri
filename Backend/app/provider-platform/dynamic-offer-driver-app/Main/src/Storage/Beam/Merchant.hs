@@ -18,17 +18,15 @@
 module Storage.Beam.Merchant where
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
+import Data.ByteString.Internal (ByteString)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
-import qualified Data.Text as T
 import qualified Data.Time as Time
 import qualified Data.Vector as V
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
 import Database.Beam.Postgres
 -- import Database.Beam.Postgres
 --   ( Postgres,
@@ -52,7 +50,7 @@ fromFieldEnum' ::
   DPSF.Conversion GeoRestriction
 fromFieldEnum' f mbValue = case mbValue of
   Nothing -> pure Unrestricted
-  Just _ -> (Regions . V.toList) <$> (fromField f mbValue)
+  Just _ -> Regions . V.toList <$> fromField f mbValue
 
 instance FromField GeoRestriction where
   fromField = fromFieldEnum'

@@ -48,7 +48,6 @@ import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.Ride as Ride
 import Domain.Types.Vehicle as DV
-import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
@@ -69,7 +68,7 @@ import Kernel.Utils.GenericPretty
 import Kernel.Utils.Version
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
-import Servant
+-- import Servant
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Booking.BookingLocation as BeamBL
 import qualified Storage.Beam.DriverInformation as BeamDI
@@ -194,7 +193,7 @@ getDriversList ::
   [DriverInformation] ->
   m [Person]
 getDriversList driverInfos = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamP.id $ Se.In personsKeys]
@@ -210,7 +209,7 @@ getDriverInformations ::
   [DriverLocation] ->
   m [DriverInformation]
 getDriverInformations driverLocations = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <-
@@ -234,7 +233,7 @@ getDriverLocations ::
   UTCTime ->
   m [DriverLocation]
 getDriverLocations before = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamDL.updatedAt $ Se.LessThan before]
@@ -316,7 +315,7 @@ getDriverLocs' ::
   Id Merchant ->
   m [DriverLocation]
 getDriverLocs' driverIds (Id merchantId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       driverLocs <-
@@ -353,7 +352,7 @@ getDriverInfos' ::
   [DriverLocation] ->
   m [DriverInformation]
 getDriverInfos' driverLocs = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       driverInfos <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamDI.driverId $ Se.In personKeys]
@@ -382,7 +381,7 @@ getVehicles' ::
   [DriverInformation] ->
   m [Vehicle]
 getVehicles' driverInfo = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       vehicles <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamV.driverId $ Se.In personKeys]
@@ -412,7 +411,7 @@ getDrivers' ::
   [Vehicle] ->
   m [Person]
 getDrivers' vehicles = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       persons <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamP.id $ Se.In personKeys]
@@ -440,7 +439,7 @@ getDriversWithMerchID' ::
   Id Merchant ->
   m [Person]
 getDriversWithMerchID' (Id merchantId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       persons <-
@@ -479,7 +478,7 @@ getDriverQuote' ::
   [Person] ->
   m [DriverQuote]
 getDriverQuote' persons = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       do
@@ -533,7 +532,7 @@ getBookingInfo' ::
   [DriverQuote] ->
   m [Booking.Booking]
 getBookingInfo' driverQuote = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       res <-
@@ -569,7 +568,7 @@ getBookingLocs' ::
   [Booking.Booking] ->
   m [BookingLocation]
 getBookingLocs' bookings = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       res <-
@@ -611,7 +610,7 @@ getDriverLocsFromMerchId mbDriverPositionInfoExpiry LatLong {..} radiusMeters me
 --   Id Merchant ->
 --   m [DriverLocation]
 -- getDriverLocsFromMerchId' mbDriverPositionInfoExpiry LatLong {..} radiusMeters (Id merchantId) = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   dbConf <- L.getOption KBT.PsqlDbCfg
 --   case dbConf of
 --     Just dbConf' -> do
 --       res <- KV.findAllWithKVConnector
@@ -1730,7 +1729,20 @@ getNearestDriversCurrentlyOnRide' mbVariant radiusMeters (Id merchantId') mbDriv
           pure (either (const []) (QDL.transformBeamDriverLocationToDomain <$>) geoms)
         Left _ -> pure []
 
-    
+    makeNearestDriversResult :: (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double, Maybe DriverInfo.DriverMode) -> [NearestDriversResultCurrentlyOnRide]
+    makeNearestDriversResult (personId, mbDeviceToken, mblang, onRide, canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, dlat, dlon, variant, destinationEndLat, destinationEndLon, dist :: Double, distanceFromDriverToDestination :: Double, mode) =
+      case mbVariant of
+        Nothing -> do
+          let autoResult = getResult AUTO_RICKSHAW $ variant == AUTO_RICKSHAW
+              suvResult = getResult SUV $ variant == SUV
+              sedanResult = getResult SEDAN $ variant == SEDAN || (variant == SUV && canDowngradeToSedan)
+              hatchbackResult = getResult HATCHBACK $ variant == HATCHBACK || ((variant == SUV || variant == SEDAN) && canDowngradeToHatchback)
+              taxiPlusResult = getResult TAXI_PLUS $ variant == TAXI_PLUS
+              taxiResult = getResult TAXI $ variant == TAXI || (variant == TAXI_PLUS && canDowngradeToTaxi)
+          autoResult <> suvResult <> sedanResult <> hatchbackResult <> taxiResult <> taxiPlusResult
+        Just poolVariant -> getResult poolVariant True
+      where
+        getResult var cond = [NearestDriversResultCurrentlyOnRide (cast personId) mbDeviceToken mblang onRide dlat dlon var destinationEndLat destinationEndLon (roundToIntegral dist) (roundToIntegral distanceFromDriverToDestination) mode | cond]
 
 -- this query is incomplete and not being used currently -- don't forget to add argument LatLong {..} and datatype while completing the query -- TODO
 

@@ -24,7 +24,6 @@ import qualified EulerHS.Language as L
 
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
@@ -164,7 +163,7 @@ findByTransactionId ::
   Id SearchRequestSpecialZone ->
   m (Maybe (Id SearchRequestSpecialZone))
 findByTransactionId (Id tId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       srsz <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSRSZ.transactionId $ Se.Eq tId]

@@ -24,7 +24,6 @@ import Database.Beam.Postgres
 import qualified Domain.Types.DriverQuote as Domain
 import Domain.Types.Person
 import qualified Domain.Types.SearchTry as DST
-import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import EulerHS.KVConnector.Utils
@@ -90,7 +89,7 @@ findById (Id driverQuoteId) = do
 
 setInactiveBySTId :: L.MonadFlow m => Id DST.SearchTry -> m (MeshResult ())
 setInactiveBySTId (Id searchTryId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' ->
       KV.updateWoReturningWithKVConnector
@@ -192,7 +191,7 @@ deleteByDriverId (Id driverId) = do
 
 findAllBySTId :: L.MonadFlow m => Id DST.SearchTry -> m [Domain.DriverQuote]
 findAllBySTId (Id searchTryId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       do
@@ -219,7 +218,7 @@ findAllBySTId (Id searchTryId) = do
 
 countAllBySTId :: L.MonadFlow m => Id DST.SearchTry -> m Int
 countAllBySTId searchTId = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   conn <- L.getOrInitSqlConn (fromJust dbConf)
   case conn of
     Right c -> do

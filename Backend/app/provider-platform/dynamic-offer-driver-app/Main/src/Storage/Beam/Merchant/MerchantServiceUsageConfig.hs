@@ -18,7 +18,7 @@
 module Storage.Beam.Merchant.MerchantServiceUsageConfig where
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
+import Data.ByteString.Internal (ByteString)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -99,7 +99,7 @@ fromFieldSmsService ::
   DPSF.Conversion [SmsService]
 fromFieldSmsService f mbValue = case mbValue of
   Nothing -> DPSF.returnError UnexpectedNull f mempty
-  Just _ -> V.toList <$> (fromField f mbValue)
+  Just _ -> V.toList <$> fromField f mbValue
 
 -- Nothing -> pure Unrestricted
 -- Just _ -> (Regions . V.toList) <$> (fromField f mbValue)
@@ -111,7 +111,7 @@ fromFieldWhatsappService ::
   DPSF.Conversion [WhatsappService]
 fromFieldWhatsappService f mbValue = case mbValue of
   Nothing -> DPSF.returnError UnexpectedNull f mempty
-  Just _ -> V.toList <$> (fromField f mbValue)
+  Just _ -> V.toList <$> fromField f mbValue
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be [SmsService] where
   sqlValueSyntax = autoSqlValueSyntax

@@ -297,7 +297,7 @@ findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOf
 --   [DriverInformation] ->
 --   m [Person]
 -- getDrivers' driverInfos = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   dbConf <- L.getOption KBT.PsqlDbCfg
 --   case dbConf of
 --     Just dbConf' -> do
 --       result <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamP.id $ Se.In personsKeys]
@@ -327,7 +327,7 @@ findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOf
 --   [DriverLocation] ->
 --   m [DriverInformation]
 -- getDriverInfos' driverLocations = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   dbConf <- L.getOption KBT.PsqlDbCfg
 --   case dbConf of
 --     Just dbConf' -> do
 --       result <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.And([Se.Is BeamDI.active $ Se.Eq True]<>
@@ -355,7 +355,7 @@ findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOf
 --   UTCTime ->
 --   m [DriverLocation]
 -- getDriverLocs' before = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
+--   dbConf <- L.getOption KBT.PsqlDbCfg
 --   case dbConf of
 --     Just dbConf' -> do
 --       result <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamDL.updatedAt $ Se.LessThan before]

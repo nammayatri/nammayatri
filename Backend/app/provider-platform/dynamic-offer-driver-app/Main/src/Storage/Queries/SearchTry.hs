@@ -17,10 +17,10 @@ module Storage.Queries.SearchTry where
 import qualified Database.Beam.Query ()
 import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchTry as Domain
-import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -33,7 +33,7 @@ import qualified Storage.Beam.SearchTry as BeamST
 
 create :: L.MonadFlow m => SearchTry -> m (MeshResult ())
 create searchTry = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainSearchTryToBeam searchTry)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -43,7 +43,7 @@ create searchTry = do
 
 findById :: L.MonadFlow m => Id SearchTry -> m (Maybe SearchTry)
 findById (Id searchTry) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> either (pure Nothing) (transformBeamSearchTryToDomain <$>) <$> KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamST.id $ Se.Eq searchTry]
     Nothing -> pure Nothing
@@ -66,7 +66,7 @@ findLastByRequestId ::
   Id SearchRequest ->
   m (Maybe SearchTry)
 findLastByRequestId (Id searchRequest) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       _ <- do
@@ -102,7 +102,7 @@ cancelActiveTriesByRequestId ::
   Id SearchRequest ->
   m (MeshResult ())
 cancelActiveTriesByRequestId (Id searchId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -139,7 +139,7 @@ updateStatus ::
   SearchTryStatus ->
   m ()
 updateStatus (Id searchId) status_ = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -169,7 +169,7 @@ getSearchTryStatusAndValidTill ::
   Id SearchTry ->
   m (Maybe (UTCTime, SearchTryStatus))
 getSearchTryStatusAndValidTill (Id searchRequestId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamST.id $ Se.Eq searchRequestId]

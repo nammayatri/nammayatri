@@ -95,7 +95,7 @@ findAllActiveBySRId (Id searchReqId) = do
 
 findAllActiveWithoutRespBySearchTryId :: (L.MonadFlow m, MonadTime m) => Id SearchTry -> m [SearchRequestForDriver]
 findAllActiveWithoutRespBySearchTryId (Id searchTryId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       either (pure []) (transformBeamSearchRequestForDriverToDomain <$>)
@@ -121,7 +121,7 @@ findAllActiveWithoutRespBySearchTryId (Id searchTryId) = do
 
 findByDriverAndSearchTryId :: L.MonadFlow m => Id Person -> Id SearchTry -> m (Maybe SearchRequestForDriver)
 findByDriverAndSearchTryId (Id driverId) (Id searchTryId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' ->
       either (pure Nothing) (transformBeamSearchRequestForDriverToDomain <$>)

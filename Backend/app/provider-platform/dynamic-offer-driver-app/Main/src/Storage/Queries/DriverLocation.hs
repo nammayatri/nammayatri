@@ -17,7 +17,6 @@
 module Storage.Queries.DriverLocation where
 
 import qualified Database.Beam as B
-import Database.Beam.Postgres
 -- import qualified Database.Beam.Query as B
 
 -- import qualified EulerHS.KVConnector.Flow as KV
@@ -29,14 +28,12 @@ import Domain.Types.Merchant
 import Domain.Types.Person
 -- import qualified EulerHS.KVConnector.Flow as KV
 -- import EulerHS.KVConnector.Types
-import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
-import qualified Sequelize as Se
 import qualified Storage.Beam.DriverLocation as BeamDL
 
 data AtlasDB f = AtlasDB
@@ -55,7 +52,7 @@ dLocationTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntit
 dLocationTable =
   B.setEntitySchema (Just "atlas_driver_offer_bpp")
     <> B.setEntityName "driver_location"
-    <> (B.modifyTableFields BeamDL.driverLocationTMod)
+    <> B.modifyTableFields BeamDL.driverLocationTMod
 
 -- driverLocationEMod :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity BeamDL.DriverLocationT)
 -- driverLocationEMod = B.modifyTableFields BeamDL.driverLocationTMod
