@@ -87,7 +87,7 @@ let
     , name
     , version
     , artifacts
-    }:
+    }@dep:
     stdenv.mkDerivation {
       pname = "${mavenize "-" group}-${name}";
       inherit version;
@@ -159,7 +159,7 @@ let
   mkGradleRedirectionPoms = deps:
     let
       depsMissingPoms = filter
-        ({ artifacts, ... }@dep:
+        ({ artifacts, ... }:
           any (hasSuffix ".module") (attrNames artifacts) &&
           !(any (hasSuffix ".pom") (attrNames artifacts))
         )

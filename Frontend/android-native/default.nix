@@ -65,14 +65,14 @@
         platformVersion = "31";
         googleApis = true;
         playstore = true;
-        abiVersion = "arm64-v8a";
+        abiVersion = if pkgs.stdenv.isAarch64 then "arm64-v8a" else "x86_64";
         app = buildApp {
           variant = "ny_";
           env = "Dev";
           debug = true;
         };
-        package = "in.juspay.nammayatri";
-        activity = "MainActivity";
+        package = "in.juspay.nammayatri.debug";
+        activity = "in.juspay.mobility.MainActivity";
       };
 
       packages.gradle = gradle;

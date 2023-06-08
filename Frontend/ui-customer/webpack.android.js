@@ -5,7 +5,7 @@ const webpack = require('webpack');
 const packageJSON = require("./package.json");
 var path = require('path');
 
-const getOutputFileDir = (mode) => mode ==  "development" ? "" :"android/";
+const getOutputFileDir = (mode) => mode ==  "development" ? "dist/" :"android/";
 const outputFileName = "index_bundle.js";
 const getOutputFileLocation = (mode) => getOutputFileDir(mode) + outputFileName;
 

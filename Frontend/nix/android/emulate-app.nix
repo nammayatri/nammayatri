@@ -10,7 +10,7 @@
 , package ? null
 , activity ? null
 , androidAvdFlags ? ""
-, androidEmulatorFlags ? ""
+, androidEmulatorFlags ? "-skin \"1440x2560\" -dns-server \"8.8.8.8\""
 , androidUserHome ? null
 , androidAvdHome ? null
 , systemImageType ? (
@@ -32,7 +32,17 @@ writeShellApplication {
   text = ''
     # We need to specify the location of the Android SDK root folder
     export ANDROID_HOME=${androidSdkRoot}
+    export JAVA_HOME=${jdk17.home}
     export ANDROID_SDK_ROOT=${androidSdkRoot}
+
+    function cleanup() {
+      trap - SIGINT SIGTERM EXIT
+      ${lib.optionalString (androidUserHome == null) ''
+        rm -r "$ANDROID_USER_HOME"
+      ''}
+      kill 0
+    }
+    trap cleanup SIGINT SIGTERM EXIT
 
     # We need a TMPDIR
     if [ -z "''${TMPDIR:-}" ]
@@ -87,8 +97,7 @@ writeShellApplication {
     if ! avdmanager list avd | grep -q 'Name: device'
     then
         # Create a virtual android device
-        set -o xtrace
-        avdmanager create avd --force -n device -k "system-images;android-${platformVersion};${systemImageType};${abiVersion}" -p "$ANDROID_AVD_HOME"
+        avdmanager create avd --force -n device -k "system-images;android-${platformVersion};${systemImageType};${abiVersion}" -p "$ANDROID_AVD_HOME" --device "Nexus 5"
 
         ${lib.optionalString enableGPU ''
           # Enable GPU acceleration
@@ -101,7 +110,7 @@ writeShellApplication {
     fi
 
     # Launch the emulator
-    printf "\nLaunch the emulator"
+    printf "\nLaunch the emulator\n"
     emulator -avd device -no-boot-anim -port "$port" ${lib.optionalString (androidEmulatorFlags != null) androidEmulatorFlags} &
 
     # Wait until the device has completely booted
@@ -127,7 +136,7 @@ writeShellApplication {
       then
           if [ -d "${app}" ]
           then
-              appPath="$(echo ${app}/*.apk)"
+              appPath="$(find ${app} -name "*.apk")"
           else
               appPath="${app}"
           fi
@@ -136,9 +145,10 @@ writeShellApplication {
       fi
 
       # Start the application
-      ${lib.optionalString (activity != null) ''
-          adb -s "$ANDROID_SERIAL" shell am start -a android.intent.action.MAIN -n ${package}/${activity}
-      ''}
+      adb -s "$ANDROID_SERIAL" shell am start -a android.intent.action.MAIN ${if activity != null then "-n ${package}/${activity}" else package}
+      adb -s "$ANDROID_SERIAL" shell logcat chromium:D Beckn_JsInterface:D "*:S" -v color
     ''}
+
+    wait
   '';
 }
