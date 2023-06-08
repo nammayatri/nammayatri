@@ -178,20 +178,20 @@ deleteByDriverId (Id driverId) = do
           [Se.Is BeamDQ.driverId (Se.Eq driverId)]
     Nothing -> pure ()
 
-findAllBySTId :: Transactionable m => Id DST.SearchTry -> m [Domain.DriverQuote]
-findAllBySTId searchTryId = do
-  buildDType $ do
-    res <- Esq.findAll' $ do
-      (dQuote :& farePars) <-
-        from baseDriverQuoteQuery
-      where_ $
-        dQuote ^. DriverQuoteStatus ==. val Domain.Active
-          &&. dQuote ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
-      pure (dQuote, farePars)
-    catMaybes <$> mapM buildFullDriverQuote res
+-- findAllBySTId :: Transactionable m => Id DST.SearchTry -> m [Domain.DriverQuote]
+-- findAllBySTId searchTryId = do
+--   buildDType $ do
+--     res <- Esq.findAll' $ do
+--       (dQuote :& farePars) <-
+--         from baseDriverQuoteQuery
+--       where_ $
+--         dQuote ^. DriverQuoteStatus ==. val Domain.Active
+--           &&. dQuote ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
+--       pure (dQuote, farePars)
+--     catMaybes <$> mapM buildFullDriverQuote res
 
-findAllBySTId' :: L.MonadFlow m => Id DST.SearchTry -> m [Domain.DriverQuote]
-findAllBySTId' (Id searchTryId) = do
+findAllBySTId :: L.MonadFlow m => Id DST.SearchTry -> m [Domain.DriverQuote]
+findAllBySTId (Id searchTryId) = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> do
@@ -207,18 +207,18 @@ findAllBySTId' (Id searchTryId) = do
           _ -> pure []
     Nothing -> pure []
 
-countAllBySTId :: Transactionable m => Id DST.SearchTry -> m Int32
-countAllBySTId searchTryId = do
-  fmap (fromMaybe 0) $
-    Esq.findOne $ do
-      dQuote <- from $ table @DriverQuoteT
-      where_ $
-        dQuote ^. DriverQuoteStatus ==. val Domain.Active
-          &&. dQuote ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
-      pure (countRows @Int32)
+-- countAllBySTId :: Transactionable m => Id DST.SearchTry -> m Int32
+-- countAllBySTId searchTryId = do
+--   fmap (fromMaybe 0) $
+--     Esq.findOne $ do
+--       dQuote <- from $ table @DriverQuoteT
+--       where_ $
+--         dQuote ^. DriverQuoteStatus ==. val Domain.Active
+--           &&. dQuote ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
+--       pure (countRows @Int32)
 
-countAllBySTId' :: L.MonadFlow m => Id DST.SearchTry -> m Int
-countAllBySTId' searchTId = do
+countAllBySTId :: L.MonadFlow m => Id DST.SearchTry -> m Int
+countAllBySTId searchTId = do
   dbConf <- L.getOption Extra.EulerPsqlDbCfg
   conn <- L.getOrInitSqlConn (fromJust dbConf)
   case conn of

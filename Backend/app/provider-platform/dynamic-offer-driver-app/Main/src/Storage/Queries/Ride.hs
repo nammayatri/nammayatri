@@ -122,7 +122,7 @@ findAllRidesByDriverId' ::
   Id Person ->
   m [Ride]
 findAllRidesByDriverId' (Id driverId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       result <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamR.driverId $ Se.Eq driverId]

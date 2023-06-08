@@ -73,7 +73,7 @@ findByIdAndLanguage issueCategoryId language = Esq.findOne $ do
 
 findByIdAndLanguage' :: L.MonadFlow m => Id IssueCategory -> Language -> m (Maybe (IssueCategory, Maybe IssueTranslation))
 findByIdAndLanguage' (Id issueCategoryId) language = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       iCategory <- either (pure []) (transformBeamIssueCategoryToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIC.id $ Se.Eq issueCategoryId]

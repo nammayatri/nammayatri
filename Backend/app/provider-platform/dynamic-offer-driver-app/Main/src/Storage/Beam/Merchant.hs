@@ -30,9 +30,10 @@ import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres
 import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.Beam.Postgres.Syntax
+-- import Database.Beam.Postgres
+--   ( Postgres,
+--   )
+-- import Database.Beam.Postgres.Syntax
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Merchant as Domain
