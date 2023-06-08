@@ -25,8 +25,9 @@ import Components.SourceToDestination as SourceToDestination
 import Data.Array ((!!), null, filter)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Helpers.Utils (convertUTCtoISC, validateEmail)
+import Helpers.Utils (validateEmail)
 import JBridge (showDialer, hideKeyboardOnNavigation)
+import Engineering.Helpers.Commons (convertUTCtoISC)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, pure, bind, discard, show, unit, map, ($), (<>), (==), void, (&&), (>), (||), not)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
@@ -102,7 +103,7 @@ instance loggableAction :: Loggable Action where
       DeleteAccount -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "delete_account"
       EmailEditTextAC (PrimaryEditText.TextChanged id a) -> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "email_edit_text_changed" "primary_edit_text"
       DescriptionEditTextAC (PrimaryEditText.TextChanged id a) -> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "description_edit_text_changed" "primary_edit_text"
-      PrimaryButtonAC act -> case act of 
+      PrimaryButtonAC act -> case act of
         PrimaryButton.OnClick -> do
             trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "primary_button_action" "go_to_home/submit"
             trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
@@ -146,7 +147,7 @@ data Action = BackPressed Boolean
             | CallSupport
             | DeleteAccount
             | DeleteGenericHeaderAC GenericHeader.Action
-            | EmailEditTextAC PrimaryEditText.Action 
+            | EmailEditTextAC PrimaryEditText.Action
             | DescriptionEditTextAC PrimaryEditText.Action
             | PrimaryButtonAC PrimaryButton.Action
             | PopUpModalAction PopUpModal.Action
@@ -180,7 +181,7 @@ eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = c
 eval ViewRides state = exit $ GoToMyRides
 
 eval (RideBookingListAPIResponseAction rideList status) state = do
-  let email = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else "" 
+  let email = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else ""
       updatedState = state{data{email = email}}
   case status of
       "success" -> do
@@ -213,7 +214,7 @@ eval DeleteAccount state = continue state {props {showDeleteAccountView = true}}
 
 eval (DeleteGenericHeaderAC(GenericHeader.PrefixImgOnClick )) state = continue state {props {showDeleteAccountView = false}}
 
-eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do 
+eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
   continue state{ data { accountStatus = CONFIRM_REQ} }
 
@@ -225,8 +226,8 @@ eval (AccountDeletedModalAction (PopUpModal.OnButton2Click)) state =  updateAndE
 eval _ state = continue state
 
 myRideListTransform :: Array RideBookingRes -> Array HelpAndSupportScreenState
-myRideListTransform listRes = filter (\item -> (item.data.status == "COMPLETED")) (map(\(RideBookingRes ride) -> 
-    let 
+myRideListTransform listRes = filter (\item -> (item.data.status == "COMPLETED")) (map(\(RideBookingRes ride) ->
+    let
     (RideAPIEntity rideDetails) = (fromMaybe dummyRideAPIEntity (ride.rideList !!0))
     baseDistanceVal = (getKmMeter (fromMaybe 0 (rideDetails.chargeableRideDistance)))
     updatedFareList = getFaresList ride.fareBreakup baseDistanceVal
