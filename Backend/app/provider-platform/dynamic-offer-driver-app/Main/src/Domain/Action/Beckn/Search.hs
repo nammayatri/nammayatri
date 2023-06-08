@@ -289,6 +289,7 @@ buildSearchRequest DSearchReq {..} providerId fromLocation toLocation estimatedD
     DSR.SearchRequest
       { id = Id uuid,
         createdAt = now,
+        area = Just area,
         ..
       }
 
@@ -317,6 +318,7 @@ buildSearchRequestSpecialZone DSearchReq {..} providerId fromLocation toLocation
         startTime = pickupTime,
         createdAt = now,
         updatedAt = now,
+        area = Just area,
         ..
       }
 
