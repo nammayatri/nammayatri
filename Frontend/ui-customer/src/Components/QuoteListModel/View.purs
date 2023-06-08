@@ -224,10 +224,13 @@ selectRideAndConfirmView state push =
   , visibility if ( null state.quoteListModel ) then GONE else VISIBLE
   ][ linearLayout[
     height WRAP_CONTENT
+  , width WRAP_CONTENT
   , weight 1.0
   , padding (Padding 16 16 0 16)
+  , background state.appConfig.quoteListModel.backgroundColor
   ][textView (
     [ height WRAP_CONTENT
+    , width WRAP_CONTENT
     , color state.appConfig.quoteListModel.textColor
     , text case getValueToLocalStore AUTO_SELECTING of
        "CANCELLED_AUTO_ASSIGN" -> "Select a Ride"
@@ -240,7 +243,7 @@ selectRideAndConfirmView state push =
     [ height MATCH_PARENT
     , width WRAP_CONTENT
     , gravity CENTER
-    , padding (Padding 16 12 16 12)
+    , padding (Padding 64 12 16 12)
     , onClick push $ const CancelAutoAssigning
     ][ imageView
       [ height $ V 24

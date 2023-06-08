@@ -26,4 +26,5 @@ config =
   , nyBrandingVisibility: false
   , fontType: "Assets"
   , languageList : []
+  , confirmPickUpLocationBorder: "#101010"
   }

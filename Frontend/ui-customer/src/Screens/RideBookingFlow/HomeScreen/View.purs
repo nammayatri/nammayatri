@@ -58,9 +58,10 @@ import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (decodeErrorMessage, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, consumingBackPress, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, waitingCountdownTimer)
+import Helpers.Utils (decodeErrorMessage, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, waitingCountdownTimer)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getCurrentPosition, getExtendedPath, getHeightFromPercent, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, toast, updateRoute)
+import Helpers.Utils (adjustViewWithKeyboard) as HU
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -68,7 +69,7 @@ import MerchantConfig.Utils (Merchant(..), getValueFromConfig, getMerchant)
 import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<=), (<>), (==), (>), (||))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Gradient(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, gradient, adjustViewWithKeyboard)
+import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState)
@@ -107,7 +108,6 @@ screen initialState =
               pure unit
             else do
               pure unit
-            runEffectFn1 consumingBackPress true
             case initialState.props.currentStage of
               SearchLocationModel -> case initialState.props.isSearchLocation of
                 LocateOnMap -> do
@@ -1196,8 +1196,8 @@ suggestedPriceView push state =
                        , height WRAP_CONTENT
                        , orientation VERTICAL
                        , visibility if state.data.showPreferences then VISIBLE else GONE
-                       ][showMenuButtonView push (getString AUTO_ASSIGN_DRIVER) ("ny_ic_faster," <> (getAssetStoreLink FunctionCall) <> "ny_ic_faster.png") true,
-                         showMenuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) ("ny_ic_info," <> (getAssetStoreLink FunctionCall) <> "ny_ic_information_grey.png") false]
+                       ][showMenuButtonView push (getString AUTO_ASSIGN_DRIVER) ("ny_ic_faster," <> (getAssetStoreLink FunctionCall) <> "ny_ic_faster.png") true state,
+                         showMenuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) ("ny_ic_info_blue," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_info_blue.png") false state]
                   ]
 
               ]
@@ -1207,8 +1207,8 @@ suggestedPriceView push state =
   ]
 
 
-showMenuButtonView :: forall w. (Action -> Effect Unit) -> String -> String -> Boolean -> PrestoDOM (Effect Unit) w
-showMenuButtonView push menuText menuImage autoAssign =
+showMenuButtonView :: forall w. (Action -> Effect Unit) -> String -> String -> Boolean -> HomeScreenState -> PrestoDOM (Effect Unit) w
+showMenuButtonView push menuText menuImage autoAssign state =
   linearLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
@@ -1217,16 +1217,17 @@ showMenuButtonView push menuText menuImage autoAssign =
   ][ linearLayout
       [ height $ V 20
       , width $ V 20
-      , stroke if ( (flowWithoutOffers WithoutOffers) && autoAssign || not (flowWithoutOffers WithoutOffers) && not autoAssign ) then ("2," <> Color.black800) else ("2," <> Color.black600)
+      , stroke if ( (flowWithoutOffers WithoutOffers) && autoAssign || not (flowWithoutOffers WithoutOffers) && not autoAssign ) then ("2," <> state.data.config.primaryBackground) else ("2," <> Color.black600)
       , cornerRadius 10.0
       , gravity CENTER
       , onClick push (const $ CheckBoxClick autoAssign)
-      ][  imageView
+      ][  linearLayout
           [ width $ V 10
           , height $ V 10
-          , imageWithFallback $ "ny_ic_radio_button," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_radio_button.png"
+          , cornerRadius 5.0
+          , background $ state.data.config.primaryBackground
           , visibility if ( (flowWithoutOffers WithoutOffers) && autoAssign || not (flowWithoutOffers WithoutOffers) && not autoAssign ) then VISIBLE else GONE
-          ]
+          ][]
         ]
     , textView $
       [ text menuText
@@ -1238,8 +1239,8 @@ showMenuButtonView push menuText menuImage autoAssign =
       , onClick push (const $ CheckBoxClick autoAssign)
       ] <> FontStyle.paragraphText LanguageStyle
     , imageView
-      [ height $ if autoAssign then V 30 else V 18
-      , width $ if autoAssign then V 75 else V 18
+      [ height $ if autoAssign then V 30 else V 25
+      , width $ if autoAssign then V 75 else V 25
       , imageWithFallback menuImage
       , margin $ (MarginHorizontal 5 5)
       , onClick push (const $ OnIconClick autoAssign)
@@ -1575,8 +1576,8 @@ rideTrackingView push state =
                 , width MATCH_PARENT
                 , background Color.transparent
                 , sheetState COLLAPSED
-                , peakHeight if (state.props.currentStage == RideAccepted && state.data.config.nyBrandingVisibility == true) then getHeightFromPercent 63
-                             else if (state.props.currentStage == RideStarted && state.data.config.nyBrandingVisibility == true) then getHeightFromPercent 50
+                , peakHeight if (state.props.currentStage == RideAccepted && state.data.config.nyBrandingVisibility == true) then getHeightFromPercent 66
+                             else if (state.props.currentStage == RideStarted && state.data.config.nyBrandingVisibility == true) then getHeightFromPercent 52
                              else if (state.props.currentStage == RideAccepted) then getHeightFromPercent 59
                              else getHeightFromPercent 46
                 , visibility VISIBLE
@@ -1969,8 +1970,8 @@ notinPickUpZoneView push state =
                        , height WRAP_CONTENT
                        , orientation VERTICAL
                        , visibility if state.data.showPreferences then VISIBLE else GONE
-                       ][showMenuButtonView push (getString AUTO_ASSIGN_DRIVER) ("ny_ic_faster," <> (getAssetStoreLink FunctionCall) <> "ny_ic_faster.png") true,
-                         showMenuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) ("ny_ic_info," <> (getAssetStoreLink FunctionCall) <> "ny_ic_information_grey.png") false]
+                       ][showMenuButtonView push (getString AUTO_ASSIGN_DRIVER) ("ny_ic_faster," <> (getAssetStoreLink FunctionCall) <> "ny_ic_faster.png") true state,
+                         showMenuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) ("ny_ic_info," <> (getAssetStoreLink FunctionCall) <> "ny_ic_information_grey.png") false state ]
                   ]
 
               ]
@@ -1985,7 +1986,7 @@ currentLocationView push state =
             , margin $ MarginVertical 20 10
             , onClick push $ const GoBackToSearchLocationModal
             , padding $ PaddingHorizontal 15 15
-            , stroke $ "1," <> Color.grey900
+            , stroke $ "1," <> state.data.config.confirmPickUpLocationBorder
             , gravity CENTER_VERTICAL
             , cornerRadius 5.0
             ]
