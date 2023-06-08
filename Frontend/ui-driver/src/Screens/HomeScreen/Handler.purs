@@ -93,6 +93,9 @@ homeScreen = do
       App.BackT $ App.BackPoint <$> pure GO_TO_NOTIFICATIONS
     AddAlternateNumber state -> do
       App.BackT $ App.BackPoint <$> (pure $ ADD_ALTERNATE_HOME)
+    CallCustomer updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreen → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ ON_CALL updatedState)
     
 -- DTHS.GoToStart screenState -> do
 --       (Location startRideCurrentLat startRideCurrentLiong) <- spy "george2" <$> (lift $ lift $ doAff $ makeAff \cb -> getCurrentPosition (cb <<< Right) Location $> nonCanceler)
