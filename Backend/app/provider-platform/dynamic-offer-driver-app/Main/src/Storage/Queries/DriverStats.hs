@@ -46,7 +46,7 @@ import qualified Storage.Beam.DriverStats as BeamDS
 
 create :: L.MonadFlow m => DriverStats -> m (MeshResult ())
 create driverStats = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverStatsToBeam driverStats)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -134,7 +134,7 @@ fetchAll = do
 
 findById :: L.MonadFlow m => Id Driver -> m (Maybe DriverStats)
 findById (Id driverId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamDriverStatsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDS.driverId $ Se.Eq driverId]
     Nothing -> pure Nothing
@@ -190,7 +190,7 @@ incrementTotalRidesAndTotalDist (Id driverId') rideDist = do
 
 findTotalRidesAssigned :: (L.MonadFlow m) => Id Driver -> m (Maybe Int)
 findTotalRidesAssigned (Id driverId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       res <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDS.driverId $ Se.Eq driverId]
@@ -205,7 +205,7 @@ findTotalRidesAssigned (Id driverId) = do
 
 incrementTotalRidesAssigned :: (L.MonadFlow m) => Id Driver -> Int -> m (MeshResult ())
 incrementTotalRidesAssigned (Id driverId') number = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
   rideAssigned <- findTotalRidesAssigned (Id driverId')
   case dbConf of
     Just dbConf' ->
@@ -236,7 +236,7 @@ incrementTotalRidesAssigned (Id driverId') number = do
 
 setCancelledRidesCount :: (L.MonadFlow m) => Id Driver -> Int -> m (MeshResult ())
 setCancelledRidesCount (Id driverId') cancelledCount = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector

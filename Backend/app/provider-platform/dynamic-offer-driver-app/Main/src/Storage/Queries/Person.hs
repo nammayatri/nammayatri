@@ -248,7 +248,7 @@ getDriversWithOutdatedLocationsToMakeInactive before = do
   getDriversList driverInfos
 
 findAllDriversByIdsFirstNameAsc ::
-  (L.MonadFlow m, Log m) =>
+  (Transactionable m, Functor m) =>
   Id Merchant ->
   [Id Person] ->
   m [FullDriver]
@@ -293,22 +293,22 @@ buildFullDriver locationHashMap vehicleHashMap driverInfoHashMap person =
       info = HashMap.lookupDefault (error "Person not found") driverId' driverInfoHashMap
    in mkFullDriver (person, location, info, vehicle)
 
--- getDriverLocs ::
---   Transactionable m =>
---   [Id Person] ->
---   Id Merchant ->
---   m [DriverLocation]
--- getDriverLocs driverIds merchantId = do
---   Esq.findAll $ do
---     driverLocs <- from $ table @DriverLocationT
---     where_ $
---       driverLocs ^. DriverLocationDriverId `in_` valList personsKeys
---         &&. driverLocs ^. DriverLocationMerchantId ==. (val . toKey $ merchantId)
---     return driverLocs
---   where
---     personsKeys = toKey . cast <$> driverIds
-
 getDriverLocs ::
+  Transactionable m =>
+  [Id Person] ->
+  Id Merchant ->
+  m [DriverLocation]
+getDriverLocs driverIds merchantId = do
+  Esq.findAll $ do
+    driverLocs <- from $ table @DriverLocationT
+    where_ $
+      driverLocs ^. DriverLocationDriverId `in_` valList personsKeys
+        &&. driverLocs ^. DriverLocationMerchantId ==. (val . toKey $ merchantId)
+    return driverLocs
+  where
+    personsKeys = toKey . cast <$> driverIds
+
+getDriverLocs' ::
   L.MonadFlow m =>
   [Id Person] ->
   Id Merchant ->
@@ -333,21 +333,8 @@ getDriverLocs driverIds (Id merchantId) = do
   where
     personKeys = getId <$> driverIds
 
--- getDriverInfos ::
---   Transactionable m =>
---   [DriverLocation] ->
---   m [DriverInformation]
--- getDriverInfos driverLocs = do
---   Esq.findAll $ do
---     driverInfos <- from $ table @DriverInformationT
---     where_ $
---       driverInfos ^. DriverInformationDriverId `in_` valList personsKeys
---     return driverInfos
---   where
---     personsKeys = toKey . cast <$> fetchDriverIDsFromLocations driverLocs
-
 getDriverInfos ::
-  L.MonadFlow m =>
+  Transactionable m =>
   [DriverLocation] ->
   m [DriverInformation]
 getDriverInfos driverLocs = do
@@ -362,21 +349,8 @@ getDriverInfos driverLocs = do
   where
     personKeys = getId <$> fetchDriverIDsFromLocations driverLocs
 
--- getVehicles ::
---   Transactionable m =>
---   [DriverInformation] ->
---   m [Vehicle]
--- getVehicles driverInfo = do
---   Esq.findAll $ do
---     vehicles <- from $ table @VehicleT
---     where_ $
---       vehicles ^. VehicleDriverId `in_` valList personsKeys
---     return vehicles
---   where
---     personsKeys = toKey . cast <$> fetchDriverIDsFromInfo driverInfo
-
 getVehicles ::
-  L.MonadFlow m =>
+  Transactionable m =>
   [DriverInformation] ->
   m [Vehicle]
 getVehicles driverInfo = do
@@ -391,22 +365,8 @@ getVehicles driverInfo = do
   where
     personKeys = getId <$> fetchDriverIDsFromInfo driverInfo
 
--- getDrivers ::
---   Transactionable m =>
---   [Vehicle] ->
---   m [Person]
--- getDrivers vehicles = do
---   Esq.findAll $ do
---     persons <- from $ table @PersonT
---     where_ $
---       persons ^. PersonTId `in_` valList personsKeys
---         &&. persons ^. PersonRole ==. val Person.DRIVER
---     return persons
---   where
---     personsKeys = toKey . cast <$> fetchDriverIDsFromVehicle vehicles
-
 getDrivers ::
-  (L.MonadFlow m, Log m) =>
+  Transactionable m =>
   [Vehicle] ->
   m [Person]
 getDrivers vehicles = do
@@ -421,19 +381,19 @@ getDrivers vehicles = do
   where
     personKeys = getId <$> fetchDriverIDsFromVehicle vehicles
 
--- getDriversWithMerchID ::
---   Transactionable m =>
---   Id Merchant ->
---   m [Person]
--- getDriversWithMerchID merchantId = do
---   Esq.findAll $ do
---     persons <- from $ table @PersonT
---     where_ $
---       persons ^. PersonMerchantId ==. val (toKey merchantId)
---         &&. persons ^. PersonRole ==. val Person.DRIVER
---     return persons
-
 getDriversWithMerchID ::
+  Transactionable m =>
+  Id Merchant ->
+  m [Person]
+getDriversWithMerchID merchantId = do
+  Esq.findAll $ do
+    persons <- from $ table @PersonT
+    where_ $
+      persons ^. PersonMerchantId ==. val (toKey merchantId)
+        &&. persons ^. PersonRole ==. val Person.DRIVER
+    return persons
+
+getDriversWithMerchID' ::
   (L.MonadFlow m, Log m) =>
   Id Merchant ->
   m [Person]
@@ -455,24 +415,24 @@ getDriversWithMerchID (Id merchantId) = do
         Right persons' -> catMaybes <$> mapM transformBeamPersonToDomain persons'
     Nothing -> pure []
 
--- getDriverQuote ::
---   Transactionable m =>
---   [Person] ->
---   m [DriverQuote]
--- getDriverQuote persons =
---   buildDType $ do
---     res <- Esq.findAll' $ do
---       (dQuote :& farePars) <-
---         from QDQ.baseDriverQuoteQuery
---       where_ $
---         dQuote ^. DriverQuoteDriverId `in_` valList personsKeys
---           &&. dQuote ^. DriverQuoteStatus ==. val DriverQuote.Active
---       pure (dQuote, farePars)
---     catMaybes <$> mapM buildFullDriverQuote res
---   where
---     personsKeys = toKey . cast <$> fetchDriverIDsFromPersons persons
-
 getDriverQuote ::
+  Transactionable m =>
+  [Person] ->
+  m [DriverQuote]
+getDriverQuote persons =
+  buildDType $ do
+    res <- Esq.findAll' $ do
+      (dQuote :& farePars) <-
+        from QDQ.baseDriverQuoteQuery
+      where_ $
+        dQuote ^. DriverQuoteDriverId `in_` valList personsKeys
+          &&. dQuote ^. DriverQuoteStatus ==. val DriverQuote.Active
+      pure (dQuote, farePars)
+    catMaybes <$> mapM buildFullDriverQuote res
+  where
+    personsKeys = toKey . cast <$> fetchDriverIDsFromPersons persons
+
+getDriverQuote' ::
   (L.MonadFlow m, Log m) =>
   [Person] ->
   m [DriverQuote]
@@ -490,6 +450,18 @@ getDriverQuote persons = do
         case res of
           Right res' -> catMaybes <$> traverse QueriesDQ.transformBeamDriverQuoteToDomain res'
           _ -> pure []
+
+    -- fareParam <- do
+    --   res <- KV.findAllWithKVConnector
+    --       dbConf'
+    --       Mesh.meshConfig
+    --       [ Se.And [Se.Is BeamFP.id $ Se.In $ getId . DDQ.fareParams.id <$> driverQuotes ]
+    --       ]
+    --   case res of
+    --     Left _ -> pure []
+    --     Right res' -> traverse QueriesFP.transformBeamFareParametersToDomain res'
+    -- let dqWithFP = foldl' (getDriverQuoteWithFareParam fareParam) [] driverQuotes
+    -- pure dqWithFP
     Nothing -> pure []
   where
     personKeys = getId <$> fetchDriverIDsFromPersons persons
@@ -498,23 +470,23 @@ getDriverQuote persons = do
 --   let fareParams' = filter(\x -> x.id == dq'.fareParams.id) fareParams
 --    in acc <> dq' <$> fareParams'
 
--- getBookingInfo ::
---   Transactionable m =>
---   [DriverQuote] ->
---   m [Booking.Booking]
--- getBookingInfo driverQuote = buildDType $ do
---   res <-
---     Esq.findAll' $ do
---       booking <- from $ table @BookingT
---       where_ $
---         booking ^. BookingQuoteId `in_` valList personsKeys
---           &&. booking ^. BookingStatus ==. val Booking.TRIP_ASSIGNED
---       return booking
---   catMaybes <$> mapM buildFullBooking res
---   where
---     personsKeys = fetchDriverIDsTextFromQuote driverQuote
-
 getBookingInfo ::
+  Transactionable m =>
+  [DriverQuote] ->
+  m [Booking.Booking]
+getBookingInfo driverQuote = buildDType $ do
+  res <-
+    Esq.findAll' $ do
+      booking <- from $ table @BookingT
+      where_ $
+        booking ^. BookingQuoteId `in_` valList personsKeys
+          &&. booking ^. BookingStatus ==. val Booking.TRIP_ASSIGNED
+      return booking
+  catMaybes <$> mapM buildFullBooking res
+  where
+    personsKeys = fetchDriverIDsTextFromQuote driverQuote
+
+getBookingInfo' ::
   (L.MonadFlow m, Log m) =>
   [DriverQuote] ->
   m [Booking.Booking]
@@ -537,21 +509,8 @@ getBookingInfo driverQuote = do
   where
     personsKeys = fetchDriverIDsTextFromQuote driverQuote
 
--- getBookingLocs ::
---   Transactionable m =>
---   [Booking.Booking] ->
---   m [BookingLocation]
--- getBookingLocs bookings = do
---   Esq.findAll $ do
---     bookingLoc <- from $ table @BookingLocationT
---     where_ $
---       bookingLoc ^. BookingLocationTId `in_` valList toLocKeys
---     return bookingLoc
---   where
---     toLocKeys = toKey . cast <$> fetchToLocationIDFromBooking bookings
-
 getBookingLocs ::
-  (L.MonadFlow m, Log m) =>
+  Transactionable m =>
   [Booking.Booking] ->
   m [BookingLocation]
 getBookingLocs bookings = do

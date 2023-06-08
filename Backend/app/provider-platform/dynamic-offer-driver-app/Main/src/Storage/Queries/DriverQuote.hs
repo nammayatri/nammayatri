@@ -19,8 +19,6 @@ module Storage.Queries.DriverQuote where
 -- import Data.Int (Int32)
 -- import qualified Database.Beam as B
 -- import Database.Beam.Postgres
--- import qualified Database.Beam as B
--- import Database.Beam.Postgres
 import qualified Database.Beam as B
 import Database.Beam.Postgres
 import qualified Domain.Types.DriverQuote as Domain
