@@ -5,9 +5,14 @@ This is the frontend codebase for the Nammayatri app.
 
 ## Installation
 
-Our dependencies are managed via nix, to get access to the language servers and tooling just open the frontend development shell.
+Our dependencies are managed via nix, to get access to the language servers and tooling from the command line open the frontend development shell.
 ```bash
    nix develop .#frontend
+```
+or if you have direnv installed use the provided .envrc 
+```bash
+   ln .envrc.frontend .envrc
+   direnv allow .envrc
 ```
 This will give you access to all of the purescript tooling as well as the correct version of node and their corresponding language servers.
 
@@ -59,9 +64,15 @@ To update the `juspay_assets.json`, follow these steps:
    ex : bash driverJuspayAssets.sh nammaYatri
 ```
 
-**Starting the Server**
+**Starting the Dev Server**
 
-    nix run <customer, driver>:start:android:master
+There are a number of configurations for running the webpack devserver, they are all provided as mission control scripts. For example
+```bash
+  , ui-customer-start-android-master
+```
+will start a watch process that serves up the bundle from ui-customer compiled for android with the environment set to `master`.
+
+The full set of these scripts is listed in the mission control motd.
 
 ## IOS
 
@@ -69,4 +80,4 @@ To start the frontend app for IOS, follow these steps:
 
 **Starting the Server**
 
-    npm run start:ios:<master, sandbox, or prod>
+TODO: IOS is not currently supported in this repo
