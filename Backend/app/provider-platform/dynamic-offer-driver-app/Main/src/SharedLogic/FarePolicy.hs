@@ -31,8 +31,12 @@ data FarePoliciesProduct = FarePoliciesProduct
     specialLocationTag :: Maybe Text
   }
 
-getFarePolicy :: (CacheFlow m r, EsqDBFlow m r, MonadReader r m, EsqDBReplicaFlow m r) => Id Merchant -> Variant -> FareProductD.Area -> m FarePolicyD.FullFarePolicy
-getFarePolicy merchantId vehVariant area = do
+getFarePolicy :: (CacheFlow m r, EsqDBFlow m r, MonadReader r m, EsqDBReplicaFlow m r) => Id Merchant -> Variant -> Maybe FareProductD.Area -> m FarePolicyD.FullFarePolicy
+getFarePolicy merchantId vehVariant Nothing = do
+  fareProduct <- QFareProduct.findByMerchantVariantArea merchantId vehVariant FareProductD.Default >>= fromMaybeM NoFareProduct
+  farePolicy <- QFP.findById fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
+  return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleVariant farePolicy
+getFarePolicy merchantId vehVariant (Just area) = do
   mbFareProduct <- QFareProduct.findByMerchantVariantArea merchantId vehVariant area
   case mbFareProduct of
     Just fareProduct -> do
