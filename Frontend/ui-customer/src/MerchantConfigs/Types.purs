@@ -20,6 +20,7 @@ type AppConfig =
     nyBrandingVisibility :: Boolean,
     fontType :: String,
     languageList :: Array Language
+    confirmPickUpLocationBorder ::String
   } 
 
 type QuoteListConfig = {

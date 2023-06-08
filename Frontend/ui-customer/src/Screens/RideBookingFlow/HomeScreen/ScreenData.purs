@@ -71,9 +71,9 @@ initData = {
     , bannerViewState : {
         backgroundColor : Color.lightMintGreen
       , title : "Complete your profile for a personalised ride experience"
-      , titleColor : Color.elfGreen
+      , titleColor : "#21C179"
       , actionText : "Update now"
-      , actionTextColor : Color.elfGreen
+      , actionTextColor : "#27AE5F"
       , imageUrl : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
       }
     , nearByPickUpPoints : dummyPickUpPoints

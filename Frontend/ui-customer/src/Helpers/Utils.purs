@@ -40,7 +40,7 @@ import Data.Traversable (traverse)
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (error, killFiber, launchAff, launchAff_)
-import Effect.Aff.Compat (EffectFn1, EffectFnAff, fromEffectFnAff, runEffectFn1, runEffectFn2, runEffectFn3)
+import Effect.Aff.Compat (EffectFn1, EffectFnAff, fromEffectFnAff, runEffectFn1, runEffectFn2, runEffectFn3, EffectFn2)
 import Effect.Class (liftEffect)
 import Effect.Console (logShow)
 import Engineering.Helpers.Commons (flowRunnerWithState, isPreviousVersion, liftFlow, os)
@@ -171,8 +171,7 @@ foreign import adjustViewWithKeyboard :: String -> Effect Unit
 foreign import storeOnResumeCallback :: forall action. (action -> Effect Unit) -> action -> Effect Unit
 -- foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
 
-foreign import getMobileNumber :: String -> String
-foreign import consumingBackPress ::  EffectFn1 Boolean Unit
+foreign import getMobileNumber :: EffectFn2 String String String
 
 data TimeUnit
   = HOUR

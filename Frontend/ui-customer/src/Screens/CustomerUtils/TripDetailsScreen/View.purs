@@ -220,7 +220,7 @@ tripDetailsView state =
               -- , background Color.grey800
               , width (V 36)
               , height (V 36)
-              , imageWithFallback $ "ny_ic_user," <> (getAssetStoreLink FunctionCall) <> "ny_ic_user.png"
+              , imageWithFallback $ "ny_ic_profile_image," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_profile_image.png"
               ]
             , imageView
               [ imageWithFallback $ "ny_ic_auto," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_auto.png"

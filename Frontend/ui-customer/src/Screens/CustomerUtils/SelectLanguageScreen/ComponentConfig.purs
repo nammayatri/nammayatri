@@ -50,9 +50,7 @@ primaryButtonConfig state = let
   in primaryButtonConfig'
 
 menuButtonConfig :: ST.SelectLanguageScreenState -> Language -> MenuButton.Config
-menuButtonConfig state language = let  
-    config = MenuButton.config
-    menuButtonConfig' = config {
+menuButtonConfig state language = MenuButton.config {
       titleConfig{
           text = language.name
       }
@@ -62,8 +60,11 @@ menuButtonConfig state language = let
       }
       , id = language.value
       , isSelected = (language.value == state.props.selectedLanguage)
+      , radioButtonConfig {
+        activeStroke = "2," <> state.data.config.primaryBackground
+      , buttonColor = state.data.config.primaryBackground
+      }
     }
-    in menuButtonConfig'
 
 genericHeaderConfig :: ST.SelectLanguageScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 

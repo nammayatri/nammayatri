@@ -19,6 +19,7 @@ window.isObject = function (object) {
   return (typeof object == "object");
 }
 window.manualEventsName = ["onBackPressedEvent", "onNetworkChange", "onResume", "onPause", "onKeyboardHeightChange"];
+window.whitelistedNotification = ["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "TRIP_FINISHED", "TRIP_STARTED"];
 
 // setInterval(function () { JBridge.submitAllLogs(); }, 10000);
 
@@ -118,13 +119,18 @@ window.onMerchantEvent = function (event, payload) {
       window.merchantID = clientId.toUpperCase();
     }
     console.log(window.merchantID);
+    var header = {"x-client-id" : "nammayatri"};
+    console.log(JBridge.setAnalyticsHeader(JSON.stringify(header)));
     JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
   } else if (event == "process") {
     console.warn("Process called");
     window.__payload.sdkVersion = "2.0.1"
-    if (clientPaylod.action == "notification_event") {
-      if (clientPaylod.notification_content && clientPaylod.notification_content.type)
-      window.callNotificationCallBack(clientPaylod.notification_content.type);
+    if (clientPaylod.action == "notification") {
+      if (clientPaylod.notification_content && clientPaylod.notification_content.type) {
+        if (window.whitelistedNotification.includes(clientPaylod.notification_content.type)){
+          window.callNotificationCallBack(clientPaylod.notification_content.type);
+        }
+      }
     } else {
       window.__payload = JSON.parse(payload);
       console.log("window Payload: ", window.__payload);

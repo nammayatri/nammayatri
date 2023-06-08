@@ -589,9 +589,15 @@ export const removeLabelFromMarker = function(unit){
   }
 }
 
-export const getMobileNumber = function (signatureAuthData) {
+export const getMobileNumber = function (signatureAuthData, maskedNumber) {
   try {
-    return JSON.parse(signatureAuthData).mobileNumber
+    const re = /^[6-9][)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/;
+    var mobileNumber = JSON.parse(signatureAuthData).mobileNumber;
+    if (re.test(mobileNumber)) {
+      return mobileNumber;
+    } else {
+      return maskedNumber.replace("...", "****");
+    }
   } catch (err) {
     console.log("Decode mobileNumber from SignatureAuthData Error => " + err);
   }
