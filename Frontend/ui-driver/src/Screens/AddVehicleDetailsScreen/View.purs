@@ -293,7 +293,7 @@ vehicleRegistrationNumber state push =
             , fontStyle $ FontStyle.regular LanguageStyle
             , margin (MarginTop 10)
             , visibility if ((DS.length state.data.vehicle_registration_number >= 2) && (DS.take 2 state.data.vehicle_registration_number /= (getValueFromConfig "RC_VALIDATION_TEXT"))) then VISIBLE else GONE
-            ]
+            ] <> FontStyle.paragraphText TypoGraphy
           , linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT

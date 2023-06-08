@@ -19,18 +19,18 @@ module Helpers.Utils
     )
     where
 
-import Merchant.Utils
-
+import Accessor (_distance_meters)
 import Common.Types.App (LazyCheck(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Control.Monad.Except (runExcept)
-import Data.Array (length, filter, cons, deleteAt, sortWith, drop, head, tail, (!!), null)
+import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!))
 import Data.Array.NonEmpty (fromArray)
 import Data.Date (Date)
 import Data.Either (Either(..), hush)
 import Data.Eq.Generic (genericEq)
 import Data.Foldable (or)
 import Data.Generic.Rep (class Generic)
+import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Number (fromString, pi, sin, cos, sqrt, asin)
 import Data.Profunctor.Strong (first)
@@ -39,12 +39,11 @@ import Data.String as DS
 import Data.Traversable (traverse)
 import Debug (spy)
 import Effect (Effect)
-import Effect (Effect)
 import Effect.Aff (error, killFiber, launchAff, launchAff_)
 import Effect.Aff.Compat (EffectFn1, EffectFnAff, fromEffectFnAff, runEffectFn1, runEffectFn2, runEffectFn3)
 import Effect.Class (liftEffect)
 import Effect.Console (logShow)
-import Engineering.Helpers.Commons (liftFlow, os, isPreviousVersion)
+import Engineering.Helpers.Commons (flowRunnerWithState, isPreviousVersion, liftFlow, os)
 import Engineering.Helpers.Commons (parseFloat, setText') as ReExport
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
@@ -52,11 +51,15 @@ import Foreign.Generic (decode)
 import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
-import Prelude (class Show, class Ord, class Eq, Unit, bind, discard, pure, unit, void, identity, not, (<*>), (<#>), (<<<), (>>>), ($), (<>), (>), show, (==), (/=), (/), (*), (-), (+), map, compare, (<), (=<<), (<=), ($), (||))
+import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||))
 import Presto.Core.Flow (Flow, doAff)
+import Presto.Core.Types.Language.Flow (getState, modifyState)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
+import PrestoDOM.Core (terminateUI)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..))
-import Types.App (GlobalState)
+import Services.API (Prediction)
+import Types.App (GlobalState(..))
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
 -- shuffle' array = do
@@ -169,13 +172,8 @@ foreign import adjustViewWithKeyboard :: String -> Effect Unit
 foreign import storeOnResumeCallback :: forall action. (action -> Effect Unit) -> action -> Effect Unit
 -- foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
 
-foreign import getMerchantConfig :: forall a. (a -> Maybe a) -> (Maybe a) -> Effect (Maybe a)
-
 foreign import getMobileNumber :: String -> String
 foreign import consumingBackPress ::  EffectFn1 Boolean Unit
-
-getConfig :: forall  a. Effect (Maybe a)
-getConfig = getMerchantConfig Just Nothing
 
 data TimeUnit
   = HOUR
@@ -377,14 +375,14 @@ sortPredctionByDistance arr = sortBy (comparing (_^._distance_meters)) arr
 
 getAssetStoreLink :: LazyCheck -> String
 getAssetStoreLink lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/user/images/"
+  NAMMAYATRI -> "https://assets.juspay.in/beckn/mobilitypaytm/user/images/"
   JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/user/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/user/images/"
   UNKNOWN -> "https://assets.juspay.in/beckn/mobilitypaytm/user/"
 
 getCommonAssetStoreLink :: LazyCheck -> String
 getCommonAssetStoreLink lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/"
+  NAMMAYATRI -> "https://assets.juspay.in/beckn/mobilitypaytm/nammayatricommon/images/"
   JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/yatricommon/images/"
   UNKNOWN -> "https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/"

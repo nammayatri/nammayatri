@@ -581,3 +581,6 @@ export const getImageUrl = function (url) {
   }
 };
 
+export const getMerchantId = function(id) {
+  return window.merchantID;
+}

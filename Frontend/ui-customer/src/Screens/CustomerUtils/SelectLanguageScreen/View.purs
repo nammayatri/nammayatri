@@ -24,7 +24,6 @@ import Components.MenuButton as MenuButton
 import Components.PrimaryButton as PrimaryButton
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
-import Merchant.Utils (getLanguagesList)
 import Prelude (Unit, const, map, ($), (<<<), (==), not)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, background, gravity, height, linearLayout, margin, onBackPressed, orientation, padding, weight, width)
 import Screens.SelectLanguageScreen.Controller (Action(..), ScreenOutput, eval)
@@ -81,4 +80,4 @@ listLanguageView state push =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    ](map (\lang_data -> MenuButton.view (push <<< MenuButtonActionController) (menuButtonConfig state lang_data)) (getLanguagesList FunctionCall))
+    ](map (\lang_data -> MenuButton.view (push <<< MenuButtonActionController) (menuButtonConfig state lang_data)) (state.data.config.languageList))

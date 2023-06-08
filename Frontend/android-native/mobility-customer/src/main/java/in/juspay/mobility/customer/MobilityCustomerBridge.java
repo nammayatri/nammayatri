@@ -107,7 +107,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 }
 
                 @Override
-                public void imageUploadCallBack(String encImage, String filename) {
+                public void imageUploadCallBack(String encImage, String filename, String filePath) {
                     Log.i(CALLBACK, "No Required");
                 }
 
@@ -750,13 +750,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     @JavascriptInterface
     public void generatePDF(String str, String format) throws JSONException {
         invoice = str;
-        if (isStoragePermissionGiven()) {
-            JuspayLogger.d(OTHERS,"Storage Permission is already there");
-            downloadPDF(str, bridgeComponents.getContext());
-        } else {
-            JuspayLogger.d(OTHERS,"Storage Permission is not there. requesting permissions");
-            requestStoragePermission();
-        }
+        downloadPDF(str, bridgeComponents.getContext());
     }
 
     @SuppressLint("MissingPermission")

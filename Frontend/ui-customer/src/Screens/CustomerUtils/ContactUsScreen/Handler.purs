@@ -22,7 +22,7 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.ContactUsScreen.View as ContactUsScreen
-import Config.Config (getAppConfig)
+import MerchantConfig.Utils (getAppConfig)
 import Types.App (FlowBT, GlobalState(..),CONTACT_US_SCREEN_OUTPUT(..))
 
 

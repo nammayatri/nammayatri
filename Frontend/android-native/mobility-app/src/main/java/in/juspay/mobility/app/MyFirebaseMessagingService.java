@@ -43,7 +43,6 @@ import javax.net.ssl.HttpsURLConnection;
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
     private FirebaseAnalytics mFirebaseAnalytics;
-    String merchantType = BuildConfig.MERCHANT_TYPE;
 
     private RideRequestUtils rideRequestUtils = new RideRequestUtils();
 

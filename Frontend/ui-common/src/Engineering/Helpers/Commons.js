@@ -31,6 +31,7 @@ const getEncodedData = function(data) {
 }
 
 const makeRequest = function (headersRaw, method, url, payload, success) {
+  console.log("makeRequest",headersRaw, method, url, payload, success)
   var apiStartTIme = Date.now();
   var successResponse = {};
   var headers = {};
@@ -163,6 +164,7 @@ export const callAPIImpl = function () {
   return function (success) {
     return function (request) {
       return function () {
+        console.log("inside callAPi im",success, request)
         makeRequest(request.headers, request.method, request.url, request.payload, success);
       };
     };
@@ -351,3 +353,13 @@ export const getCurrentUTC = function (str) {
   console.log(result);
   return result;
 };
+
+export const storeHideLoaderCallback = function (cb,action) {
+  var callback = function (val) {
+    console.log("storeHideLoaderCallback");
+    cb(action(val))();
+  };
+  if (window.loaderCallBack) {
+    window.loaderCallBack.push(callback);
+  }
+}

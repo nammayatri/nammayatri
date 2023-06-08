@@ -30,7 +30,7 @@ import PrestoDOM (LetterSpacing)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route)
-import Config.Types
+import MerchantConfig.Types
 
 type Contacts = {
   name :: String,
@@ -117,21 +117,14 @@ type ChooseLanguageScreenState = {
 }
 
 type ChooseLanguageScreenData =  {
-  languages :: Array Language,
-  isSelected :: Boolean
+  isSelected :: Boolean,
+  config :: AppConfig
  }
 
 type ChooseLanguageScreenProps =  {
   selectedLanguage :: String,
   btnActive :: Boolean,
   exitAnimation :: Boolean
- }
-
-
-type Language =  {
-  name :: String,
-  value :: String,
-  subTitle :: String
  }
 
 

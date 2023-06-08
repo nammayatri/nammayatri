@@ -16,7 +16,7 @@
 module Screens.SelectLanguageScreen.ScreenData where
 
 import Screens.Types (SelectLanguageScreenState)
-import Config.DefaultConfig as DC
+import MerchantConfig.DefaultConfig as DC
 
 initData :: SelectLanguageScreenState
 initData = 

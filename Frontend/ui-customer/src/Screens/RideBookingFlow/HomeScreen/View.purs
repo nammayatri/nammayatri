@@ -64,7 +64,7 @@ import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseL
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
-import Merchant.Utils (Merchant(..), getValueFromConfig, getMerchant)
+import MerchantConfig.Utils (Merchant(..), getValueFromConfig, getMerchant)
 import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<=), (<>), (==), (>), (||))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
@@ -805,7 +805,7 @@ settingSideBarView push state =
     , height MATCH_PARENT
     , width MATCH_PARENT
     ]
-    [ SettingSideBar.view (push <<< SettingSideBarActionController) (state.data.settingSideBar) ]
+    [ SettingSideBar.view (push <<< SettingSideBarActionController) (state.data.settingSideBar{appConfig = state.data.config}) ]
 
 ------------------------------- homeScreenView --------------------------
 homeScreenView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w

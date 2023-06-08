@@ -16,7 +16,7 @@
 module Screens.HelpAndSupportScreen.ScreenData where
 
 import Screens.Types (HelpAndSupportScreenState)
-import Config.DefaultConfig as DC
+import MerchantConfig.DefaultConfig as DC
 
 initData :: HelpAndSupportScreenState
 initData = {

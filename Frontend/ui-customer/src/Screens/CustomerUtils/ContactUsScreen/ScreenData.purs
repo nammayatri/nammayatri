@@ -16,7 +16,7 @@
 module Screens.ContactUsScreen.ScreenData where
 
 import Screens.Types(ContactUsScreenState)
-import Config.DefaultConfig as DC
+import MerchantConfig.DefaultConfig as DC
 
 initData :: ContactUsScreenState
 initData = {

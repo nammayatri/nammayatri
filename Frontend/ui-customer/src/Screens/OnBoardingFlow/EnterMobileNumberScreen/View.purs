@@ -46,7 +46,7 @@ import Screens.EnterMobileNumberScreen.Controller (Action(..), ScreenOutput, eva
 import Screens.Types as ST
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
-import Merchant.Utils( getValueFromConfig )
+import MerchantConfig.Utils( getValueFromConfig )
 import Types.App (defaultGlobalState)
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput

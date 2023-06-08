@@ -8,23 +8,29 @@
 
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 
-  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+  or FITNESS FOR A PARTIEHULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
 module Screens.SavedLocationScreen.View where
 
+import Common.Types.App
+import Screens.CustomerUtils.SavedLocationScreen.ComponentConfig
+
 import Animation as Anim
+import Engineering.Helpers.Utils as EHU
 import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
+import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.SavedLocationCard as SavedLocationCard
-import Components.PopUpModal as PopUpModal
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array as DA
+import Data.Either (Either(..))
+import Data.Maybe (fromMaybe, Maybe(..))
 import Data.String as DS
 import Debug (spy)
 import Effect (Effect)
@@ -33,6 +39,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -181,13 +188,11 @@ savedLocationsView push state =
 
 getSavedLocationsList :: forall action. (SavedLocationsListRes -> action) -> (action -> Effect Unit) -> ST.SavedLocationScreenState -> Flow GlobalState Unit
 getSavedLocationsList action push state = do
-  _ <-  JB.toggleLoader true
+  _ <-  EHU.toggleLoader true
   (savedLocationResp ) <- Remote.getSavedLocationList ""
+  _ <-  EHU.toggleLoader false
   case savedLocationResp of
       Right (SavedLocationsListRes listResp) -> do
         doAff do liftEffect $ push $ action ( SavedLocationsListRes (listResp))
-        _ <-  JB.toggleLoader false
         pure unit
-      Left (err) -> do
-        _ <-  JB.toggleLoader false
-        pure unit
+      Left (err) -> pure unit

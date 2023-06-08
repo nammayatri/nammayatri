@@ -2,11 +2,12 @@ package in.juspay.mobility.driver;
 
 import static android.Manifest.permission.CAMERA;
 import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
+import static android.Manifest.permission.RECORD_AUDIO;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import static android.app.Activity.RESULT_OK;
 
-import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
@@ -67,23 +68,30 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
+import in.juspay.mobility.app.AudioRecorder;
 import in.juspay.mobility.app.CallBack;
 import in.juspay.mobility.app.CheckPermissionOverlay;
 import in.juspay.mobility.app.LocationUpdateService;
@@ -178,8 +186,8 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                 }
 
                 @Override
-                public void imageUploadCallBack(String encImage, String filename) {
-                    callImageUploadCallBack(encImage, filename);
+                public void imageUploadCallBack(String encImage, String filename, String filePath) {
+                    callImageUploadCallBack(encImage, filename, filePath);
                 }
 
                 @Override
@@ -349,25 +357,26 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
     @JavascriptInterface
     public void previewImage(String base64Image) {
-        if (bridgeComponents.getActivity() != null) {
+        Activity activity = bridgeComponents.getActivity();
+        if (activity != null) {
             ExecutorManager.runOnMainThread(() -> {
                 try {
-                    if (!base64Image.equals("") && base64Image != null) {
+                    if (!base64Image.equals("")) {
                         byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
                         Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
-    
+
                         AlertDialog.Builder builder = new AlertDialog.Builder(activity);
                         builder.setCancelable(true);
                         ImageView imagePreview = new ImageView(activity);
                         imagePreview.setImageBitmap(decodedByte);
-    
+
                         DisplayMetrics displayMetrics = new DisplayMetrics();
                         activity.getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
                         int screenHeight = displayMetrics.heightPixels;
                         int width = displayMetrics.widthPixels;
                         imagePreview.setMinimumHeight(screenHeight / 2);
                         imagePreview.setMinimumWidth(width);
-    
+
                         ViewGroup.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT);
                         imagePreview.setLayoutParams(layoutParams);
                         builder.setView(imagePreview);
@@ -386,7 +395,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         ExecutorManager.runOnMainThread(() -> {
             MediaPlayerView audioPlayer = new MediaPlayerView(bridgeComponents.getContext(), bridgeComponents.getActivity());
             try {
-                audioPlayer.inflateView(bridgeComponents.getActivity(),Integer.parseInt(viewID));
+                audioPlayer.inflateView(Integer.parseInt(viewID));
                 if (source.contains(".mp3")) {
                     audioPlayer.addAudioFileUrl(source);
                 } else {
@@ -423,13 +432,13 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
     @JavascriptInterface
     public void renderBase64ImageFile(String base64Image, String id, boolean fitCenter) {
-        activity.runOnUiThread(() -> {
+        ExecutorManager.runOnMainThread(() -> {
             try {
-                if (!base64Image.equals("") && base64Image != null && id != null) {
-                    LinearLayout layout = activity.findViewById(Integer.parseInt(id));
+                if (!base64Image.equals("") && id != null && bridgeComponents.getActivity() != null) {
+                    LinearLayout layout = bridgeComponents.getActivity().findViewById(Integer.parseInt(id));
                     byte[] decodedString = Base64.decode(base64Image, Base64.DEFAULT);
                     Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
-                    ImageView imageView = new ImageView(context);
+                    ImageView imageView = new ImageView(bridgeComponents.getContext());
                     imageView.setImageBitmap(decodedByte);
                     if (fitCenter) {
                         imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
@@ -438,8 +447,10 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                     }
                     imageView.setAdjustViewBounds(true);
                     imageView.setClipToOutline(true);
-                    layout.removeAllViews();
-                    layout.addView(imageView);
+                    if (layout != null) {
+                        layout.removeAllViews();
+                        layout.addView(imageView);
+                    }
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -491,29 +502,29 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     @JavascriptInterface
     public void uploadFile() {
         if (!isUploadPopupOpen) {
-        ExecutorManager.runOnMainThread(() -> {
-            Context context = bridgeComponents.getContext();
-            if ((ActivityCompat.checkSelfPermission(context.getApplicationContext(), CAMERA) == PackageManager.PERMISSION_GRANTED) && isStoragePermissionGiven()) {
-                if (bridgeComponents.getActivity() != null) {
-                    Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                    String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-                    setKeysInSharedPrefs(context.getResources().getString(in.juspay.mobility.app.R.string.TIME_STAMP_FILE_UPLOAD), timeStamp);
-                    Uri photoFile = FileProvider.getUriForFile(context, context.getPackageName() + ".fileProvider", new File(context.getFilesDir(), "IMG_" + timeStamp + ".jpg"));
-                    takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
-                    Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
-                    chooseFromFile.setType("image/*");
-                    Intent chooser = Intent.createChooser(takePicture, context.getString(in.juspay.mobility.app.R.string.upload_image));
-                    chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{chooseFromFile});
-                    isUploadPopupOpen = true;
-                    bridgeComponents.getActivity().startActivityForResult(chooser, IMAGE_CAPTURE_REQ_CODE, null);
+            ExecutorManager.runOnMainThread(() -> {
+                Context context = bridgeComponents.getContext();
+                if ((ActivityCompat.checkSelfPermission(context.getApplicationContext(), CAMERA) == PackageManager.PERMISSION_GRANTED) && isStoragePermissionGiven()) {
+                    if (bridgeComponents.getActivity() != null) {
+                        Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+                        setKeysInSharedPrefs(context.getResources().getString(in.juspay.mobility.app.R.string.TIME_STAMP_FILE_UPLOAD), timeStamp);
+                        Uri photoFile = FileProvider.getUriForFile(context, context.getPackageName() + ".fileProvider", new File(context.getFilesDir(), "IMG_" + timeStamp + ".jpg"));
+                        takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
+                        Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
+                        chooseFromFile.setType("image/*");
+                        Intent chooser = Intent.createChooser(takePicture, context.getString(in.juspay.mobility.app.R.string.upload_image));
+                        chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{chooseFromFile});
+                        isUploadPopupOpen = true;
+                        bridgeComponents.getActivity().startActivityForResult(chooser, IMAGE_CAPTURE_REQ_CODE, null);
+                    }
+                } else {
+                    if (bridgeComponents.getActivity() != null) {
+                        ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{CAMERA, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE}, IMAGE_PERMISSION_REQ_CODE);
+                    }
                 }
-            } else {
-                if (bridgeComponents.getActivity() != null) {
-                    ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{CAMERA, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE}, IMAGE_PERMISSION_REQ_CODE);
-                }
-            }
-        });
-    }
+            });
+        }
     }
 
     @JavascriptInterface
@@ -528,18 +539,19 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     }
 
     public boolean isMicrophonePermissionEnabled() {
-        return ActivityCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+        return ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
     }
 
     @JavascriptInterface
     public boolean startAudioRecording() {
         if (isMicrophonePermissionEnabled()) {
-            audioRecorder = new AudioRecorder();
+            audioRecorder = new AudioRecorder(bridgeComponents.getContext());
             audioRecorder.startRecording();
             return true;
         } else {
-            String[] permissions = {Manifest.permission.RECORD_AUDIO};
-            ActivityCompat.requestPermissions(activity, permissions, AudioRecorder.REQUEST_RECORD_AUDIO_PERMISSION);
+            if (bridgeComponents.getActivity() != null) {
+                ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{RECORD_AUDIO}, AudioRecorder.REQUEST_RECORD_AUDIO_PERMISSION);
+            }
             return false;
         }
     }
@@ -548,7 +560,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     public String saveAudioFile(String source) throws IOException {
         File sourceFile = new File(source);
         FileInputStream fis = new FileInputStream(sourceFile);
-        File destFile = new File(MainActivity.getInstance().getFilesDir().getAbsolutePath() + "final_audio_record.mp3");
+        File destFile = new File(bridgeComponents.getContext().getFilesDir().getAbsolutePath() + "final_audio_record.mp3");
         FileOutputStream fos = new FileOutputStream(destFile);
         int n;
         while ((n = fis.read()) != -1) {
@@ -560,14 +572,15 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     }
 
     @JavascriptInterface
-    public void addMediaFile(String viewID, String source, String actionPlayerID, String playIcon, String pauseIcon, String timerID) throws IOException {
+    public void addMediaFile(String viewID, String source, String actionPlayerID, String playIcon, String pauseIcon, String timerID) {
         Log.d(LOG_TAG, "addMediaFile: " + source);
-        activity.runOnUiThread(() -> {
+        Context context = bridgeComponents.getContext();
+        Activity activity = bridgeComponents.getActivity();
+        ExecutorManager.runOnMainThread(() -> {
             MediaPlayerView audioPlayer;
             if (Integer.parseInt(actionPlayerID) != -1) {
                 if (Integer.parseInt(timerID) != -1) {
                     audioPlayer = new MediaPlayerView(context, activity, Integer.parseInt(actionPlayerID), playIcon, pauseIcon, Integer.parseInt(timerID));
-                    audioPlayer.setTimerId(Integer.parseInt(timerID));
                     audioPlayer.setTimerColorAndSize(Color.WHITE, 14);
                     audioPlayer.setVisualizerBarPlayedColor(Color.WHITE);
                 } else {
@@ -583,7 +596,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                     Thread thread = new Thread(() -> {
                         try {
                             String base64 = getAPIResponse(source);
-                            byte decodedAudio[] = Base64.decode(base64, Base64.DEFAULT);
+                            byte[] decodedAudio = Base64.decode(base64, Base64.DEFAULT);
                             File tempMp3 = File.createTempFile("audio_cache", "mp3", context.getCacheDir());
                             tempMp3.deleteOnExit();
                             FileOutputStream fos = new FileOutputStream(tempMp3);
@@ -592,7 +605,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                             FileInputStream fis = new FileInputStream(tempMp3);
                             audioPlayer.addAudioFileInput(fis);
                         } catch (Exception e) {
-
+                            e.printStackTrace();
                         }
                     });
                     thread.start();
@@ -903,7 +916,9 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
     @JavascriptInterface
     public void clearFocus(String id) {
-        activity.runOnUiThread(() -> activity.findViewById(Integer.parseInt(id)).clearFocus());
+        if (bridgeComponents.getActivity() != null) {
+            ExecutorManager.runOnMainThread(() -> bridgeComponents.getActivity().findViewById(Integer.parseInt(id)).clearFocus());
+        }
     }
 
     @JavascriptInterface
@@ -964,11 +979,15 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                 s_buffer.append(inputLine);
             }
             res = s_buffer.toString();
-            JsonObject jsonObject = JsonParser.parseString(res).getAsJsonObject();
-            res = jsonObject.get("fileId").getAsString();
+            JSONObject jsonObject;
+            try {
+                jsonObject = new JSONObject(res);
+                res = jsonObject.getString("fileId");
+            } catch (JSONException e) {
+                throw new RuntimeException(e);
+            }
         } else {
-            BufferedReader br = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
-            Toast.makeText(MainActivity.getInstance(), "Unable to upload image", Toast.LENGTH_SHORT).show();
+            Toast.makeText(bridgeComponents.getContext(), "Unable to upload image", Toast.LENGTH_SHORT).show();
         }
         return res;
     }
@@ -1058,6 +1077,13 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                     Log.i(OVERRIDE, "Location Permission Granted");
                 } else {
                     toast("Permission Denied");
+                }
+                break;
+            case AudioRecorder.REQUEST_RECORD_AUDIO_PERMISSION:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    startAudioRecording();
+                } else {
+                    Toast.makeText(bridgeComponents.getContext(), "Permission Denied", Toast.LENGTH_SHORT).show();
                 }
                 break;
         }

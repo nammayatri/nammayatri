@@ -50,6 +50,7 @@ import Screens.DriverRideRatingScreen.ScreenData as DriverRideRatingScreenData
 import Screens.NotificationsScreen.ScreenData as NotificationsScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreenData
 import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
+import LoaderOverlay.ScreenData as LoaderOverlayScreenData
 import Screens.Types (HomeScreenStage(..))
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
@@ -88,6 +89,7 @@ newtype GlobalState = GlobalState {
   , notificationScreen :: NotificationsScreenState
   , referralScreen :: ReferralScreenState
   , bookingOptionsScreen :: BookingOptionsScreenState
+  , loaderOverlay :: LoaderOverlayScreenData.LoaderOverlayState
   }
 
 defaultGlobalState :: GlobalState
@@ -125,6 +127,7 @@ defaultGlobalState = GlobalState{
 , notificationScreen : NotificationsScreenData.initData
 , referralScreen : ReferralScreenData.initData
 , bookingOptionsScreen : BookingOptionsScreenData.initData
+, loaderOverlay : LoaderOverlayScreenData.initData
 }
 
 data ScreenType =

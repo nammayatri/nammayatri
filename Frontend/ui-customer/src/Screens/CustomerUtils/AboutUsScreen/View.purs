@@ -37,7 +37,7 @@ import Styles.Colors as Color
 import Common.Types.App
 import Screens.CustomerUtils.AboutUsScreen.ComponentConfig 
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Merchant.Utils(getValueFromConfig)
+import MerchantConfig.Utils(getValueFromConfig)
 
 screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOutput
 screen initialState =

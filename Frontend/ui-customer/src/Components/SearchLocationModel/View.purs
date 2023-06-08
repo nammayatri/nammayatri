@@ -40,11 +40,11 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants (getDelayForAutoComplete)
 import Screens.Types (SearchLocationModelType(..), LocationListItemState)
-import Storage (KeyStore(..), getValueToLocalStoreEff, getValueToLocalStore)
+import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
-import Merchant.Utils (Merchant(..), getMerchant)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude ((<>))
 
 view :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
@@ -434,13 +434,7 @@ primaryButtonView state push =
     , background Color.transparent
     , visibility if state.isSearchLocation == LocateOnMap then VISIBLE else GONE
     ][ recenterButtonView push state
-      , PrimaryButton.view
-        ( \action -> do
-            _ <- push $ PrimaryButtonActionController action
-            stage <- getValueToLocalStoreEff LOCAL_STAGE
-            pure unit
-        )
-        (primaryButtonConfig state)]
+      , PrimaryButton.view (push <<< PrimaryButtonActionController)(primaryButtonConfig state)]
 
 
 

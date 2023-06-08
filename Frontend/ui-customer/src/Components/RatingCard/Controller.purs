@@ -20,7 +20,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.FareBreakUp as FareBreakUp
 import Components.SourceToDestination as SourceToDestination
 import Data.Maybe
-import Config.Types
+import MerchantConfig.Types
 
 data Action = NoAction
             | BackPressed 

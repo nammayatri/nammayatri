@@ -17,27 +17,27 @@ module Components.RideActionModal.View where
 
 import Common.Types.App
 
+import Common.Types.App (LazyCheck(..))
 import Components.RideActionModal.Controller (Action(..), Config)
 import Effect (Effect)
 import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.Commons (screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (countDown)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import JBridge (getVersionCode)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Prelude ((<>))
 import Prelude (Unit, bind, const, not, pure, show, unit, ($), (/=), (<>), (&&), (==), (-), (>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), alpha, background, clickable, color, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, width, imageWithFallback)
 import PrestoDOM.Properties (cornerRadii, cornerRadius)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Storage (KeyStore(..), getValueToLocalStore)
-import Engineering.Helpers.Commons (screenWidth)
 import Screens.Types (HomeScreenStage(..))
-import JBridge (getVersionCode)
-import Merchant.Utils(getMerchant, Merchant(..))
+import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Common.Types.App (LazyCheck(..))
-import Prelude ((<>))
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -85,7 +85,7 @@ messageButton push config =
   , height WRAP_CONTENT
   , orientation HORIZONTAL
   , gravity CENTER
-  , visibility if config.currentStage == RideAccepted && checkVersionForChat (getCurrentAndroidVersion (getMerchant unit)) then VISIBLE else GONE
+  , visibility if config.currentStage == RideAccepted && checkVersionForChat (getCurrentAndroidVersion (getMerchant FunctionCall)) then VISIBLE else GONE
   , padding $ Padding 20 16 20 16
   , margin $ MarginLeft 16
   , background Color.white900
@@ -102,9 +102,10 @@ messageButton push config =
 getCurrentAndroidVersion :: Merchant -> Int 
 getCurrentAndroidVersion merchant = 
   case merchant of 
-    NAMMAYATRIPARTNER -> 54
-    YATRIPARTNER -> 47 
-    JATRISAATHIDRIVER -> 1
+    NAMMAYATRI -> 54
+    YATRI -> 47 
+    JATRISAATHI -> 1
+    UNKNOWN -> 1
 
 checkVersionForChat :: Int -> Boolean
 checkVersionForChat reqVersion =

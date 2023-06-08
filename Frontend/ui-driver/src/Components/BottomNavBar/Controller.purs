@@ -15,15 +15,15 @@
 
 module Components.BottomNavBar.Controller where
 
+import Common.Types.App (LazyCheck(..))
 import Data.Maybe as Maybe
-import Merchant.Utils (getMerchant, Merchant(..))
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Prelude ((<>))
 import Prelude (unit, (<>), (==), negate)
+import Screens as ScreenNames
 import Screens.Types (BottomNavBarState)
 import Storage (getValueToLocalNativeStore, KeyStore(..))
-import Screens as ScreenNames
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Common.Types.App (LazyCheck(..))
-import Prelude ((<>))
 
 data Action = OnNavigate String 
 
@@ -37,11 +37,11 @@ navData screenName = {
       text: "Home"
     },
     {
-      activeIcon: if (getMerchant unit == NAMMAYATRIPARTNER) then "ny_ic_rides_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_rides_active.png" else "ny_ic_cab_active,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_cab_active.png",
-      defaultIcon: if (getMerchant unit == NAMMAYATRIPARTNER) then "ny_ic_rides_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_rides_inactive.png" else "ny_ic_cab_inactive,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_cab_inactive.png",
+      activeIcon: if (getMerchant FunctionCall == NAMMAYATRI) then "ny_ic_rides_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_rides_active.png" else "ny_ic_cab_active,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_cab_active.png",
+      defaultIcon: if (getMerchant FunctionCall == NAMMAYATRI) then "ny_ic_rides_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_rides_inactive.png" else "ny_ic_cab_inactive,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_cab_inactive.png",
       text: "Rides"
     }] <> 
-    (if (getMerchant unit == NAMMAYATRIPARTNER) then [{
+    (if (getMerchant FunctionCall == NAMMAYATRI) then [{
       activeIcon: "ic_referral_active," <> (getCommonAssetStoreLink FunctionCall) <> "ic_referral_active.png",
       defaultIcon: if (getValueToLocalNativeStore REFERRAL_ACTIVATED) == "true" then  "ny_ic_contest_alert," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_contest_alert.png" else "ic_referral_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ic_referral_inactive.png",
       text: "Contest"
@@ -64,7 +64,7 @@ getActiveIndex :: ScreenNames.ScreenName -> Int
 getActiveIndex screenName = case screenName of
   ScreenNames.HOME_SCREEN -> 0
   ScreenNames.RIDE_HISTORY_SCREEN -> 1
-  ScreenNames.REFERRAL_SCREEN -> if (getMerchant unit == NAMMAYATRIPARTNER) then 2 else -1
-  ScreenNames.ALERTS_SCREEN -> if (getMerchant unit == NAMMAYATRIPARTNER) then 3 else 2
+  ScreenNames.REFERRAL_SCREEN -> if (getMerchant FunctionCall == NAMMAYATRI) then 2 else -1
+  ScreenNames.ALERTS_SCREEN -> if (getMerchant FunctionCall == NAMMAYATRI) then 3 else 2
   ScreenNames.DRIVER_PROFILE_SCREEN -> 4
   _ -> -1

@@ -18,8 +18,8 @@ module Components.CancelRide.Controller where
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Data.Maybe
 import Common.Types.App (CancellationReasons)
-import Config.DefaultConfig as DC
-import Config.Types (AppConfig)
+import MerchantConfig.DefaultConfig as DC
+import MerchantConfig.Types (AppConfig)
 
 
 data Action = Button1 PrimaryButtonController.Action

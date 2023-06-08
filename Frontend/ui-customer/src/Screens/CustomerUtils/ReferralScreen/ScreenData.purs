@@ -15,7 +15,7 @@
 
 module Screens.ReferralScreen.ScreenData where
 
-import Config.DefaultConfig as DC
+import MerchantConfig.DefaultConfig as DC
 import Screens.Types (ReferralScreenState)
 
 initData :: ReferralScreenState

@@ -18,7 +18,7 @@ module Screens.MyRidesScreen.ScreenData where
 import Data.Maybe (Maybe(..))
 import Screens.Types (AnimationState(..), MyRidesScreenState, IndividualRideCardState)
 import Services.API (BookingLocationAPIEntity(..))
-import Config.DefaultConfig as DC
+import MerchantConfig.DefaultConfig as DC
 import Prelude ((<>))
 
 initData :: MyRidesScreenState

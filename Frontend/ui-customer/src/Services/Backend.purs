@@ -8,7 +8,7 @@
 
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 
-  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+  or FITNESS FOR A PARTIcuLAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
@@ -22,11 +22,10 @@ import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
 import Common.Types.App (Version(..), SignatureAuthData(..))
 import Data.Either (Either(..), either)
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
-import Debug (spy)
 import Engineering.Helpers.Commons (liftFlow, os, bundleVersion)
 import Foreign.Generic (encode)
 import Helpers.Utils (decodeErrorCode, decodeErrorMessage, toString, getTime, getPreviousVersion)
-import JBridge (Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, toggleLoader, drawRoute, toggleBtnLoader)
+import JBridge (Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, drawRoute, toggleBtnLoader)
 import Juspay.OTP.Reader as Readers
 import Log (printLog)
 import ModifyScreenState (modifyScreenState)
@@ -37,7 +36,7 @@ import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
 -- import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPayload, Method(..), defaultDecodeResponse, defaultMakeRequest, standardEncode)
 import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
 import Screens.Types (Address, Stage(..))
-import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, toggleLoader, removeAllPolylines, stopChatListenerService)
+import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, removeAllPolylines, stopChatListenerService)
 import Prelude (Unit, bind, discard, map, pure, unit, void, ($), ($>), (&&), (*>), (<<<), (=<<), (==), (<=),(||), show, (<>))
 import Storage (getValueToLocalStore, deleteValueFromLocalStore, getValueToLocalNativeStore, KeyStore(..), setValueToLocalStore)
 import Tracker.Labels (Label(..))
@@ -49,7 +48,7 @@ import Data.Array ((!!), take)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Services.Config as SC
-import Debug (spy)
+import Engineering.Helpers.Utils as EHU
 
 getHeaders :: String -> Flow GlobalState Headers
 getHeaders _ = do
@@ -243,7 +242,7 @@ verifyTokenBT payload token = do
             pure $ toast (getString REQUEST_TIMED_OUT)
             else if ( errorPayload.code == 400 && codeMessage == "INVALID_AUTH_DATA") then do
                 modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber{props{wrongOTP = true}})
-                void $ lift $ lift $ toggleLoader false
+                void $ lift $ lift $ EHU.toggleLoader false
                 pure $ toast "INVALID_AUTH_DATA"
             else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then
                 pure $ toast (getString LIMIT_EXCEEDED)
@@ -310,7 +309,7 @@ placeDetailsBT (PlaceDetailsReq id) = do
     where
     errorHandler errorPayload  = do
         pure $ toast (getString ERROR_OCCURED)
-        _ <- lift $ lift $ toggleLoader false
+        _ <- lift $ lift $ EHU.toggleLoader false
         BackT $ pure GoBack
 
 -- ------------------------------------------------------------------------ GetCoordinatesBT Function --------------------------------------------------------------------------------------
@@ -326,7 +325,6 @@ placeDetailsBT (PlaceDetailsReq id) = do
 rideSearchBT :: SearchReq -> FlowBT String SearchRes
 rideSearchBT payload = do
         headers <- getHeaders' ""
-        _ <- pure $ spy "" "req for searchid"
         withAPIResultBT (EP.searchReq "") (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
     where
       errorHandler errorPayload = do

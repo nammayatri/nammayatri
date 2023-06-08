@@ -17,8 +17,6 @@ module Font.Style where
 
 
 import Common.Types.App
-import Debug
-
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
@@ -44,7 +42,7 @@ getLanguageFromLocalStore :: Unit -> String
 getLanguageFromLocalStore _ = JBridge.getKeyInSharedPrefKeys "LANGUAGE_KEY"
 
 getFontType :: String ->  FontType
-getFontType dummy = case spy "get Font Type "(decodeFont (getFontStyleFromConfig "")) of
+getFontType dummy = case (decodeFont (getFontStyleFromConfig "")) of
   Just font -> font
   Nothing -> Assets
 
@@ -52,7 +50,7 @@ decodeFont :: Foreign -> Maybe FontType
 decodeFont = hush <<< runExcept <<< decode
 
 italic :: FontStyle
-italic = fontByOS "Roboto-Italic" "Roboto-Italic" "Arial"
+italic = fontByOS "PlusJakartaSans-Italic" "PlusJakartaSans-Italic" "Arial"
 
 light :: LazyCheck -> FontStyle
 light style = do
@@ -63,7 +61,7 @@ light style = do
     _ -> fontByOS "PlusJakartaSans-Light" "PlusJakartaSans-Light" "Arial"
 
 lightItalic :: FontStyle
-lightItalic = fontByOS "Roboto-LightItalic" "Roboto-LightItalic" "Arial"
+lightItalic = fontByOS "PlusJakartaSans-LightItalic" "PlusJakartaSans-LightItalic" "Arial"
 
 extraLight :: LazyCheck -> FontStyle
 extraLight style = do
@@ -74,7 +72,7 @@ extraLight style = do
     _ -> fontByOS "PlusJakartaSans-ExtraLight" "PlusJakartaSans-ExtraLight" "Arial"
 
 extraLightItalic :: FontStyle
-extraLightItalic = fontByOS "Roboto-ExtraLightItalic" "Roboto-ExtraLightItalic" "Arial"
+extraLightItalic = fontByOS "PlusJakartaSans-ExtraLightItalic" "PlusJakartaSans-ExtraLightItalic" "Arial"
 
 regular :: LazyCheck -> FontStyle
 regular style = do
@@ -93,7 +91,7 @@ medium style = do
     _ -> fontByOS "PlusJakartaSans-Medium" "PlusJakartaSans-Medium" "Arial"
 
 mediumItalic :: FontStyle
-mediumItalic = fontByOS "Roboto-MediumItalic" "Roboto-MediumItalic" "Arial"
+mediumItalic = fontByOS "PlusJakartaSans-MediumItalic" "PlusJakartaSans-MediumItalic" "Arial"
 
 semiBold :: LazyCheck -> FontStyle
 semiBold style = do
@@ -115,7 +113,7 @@ bold style = do
     _ -> fontByOS "PlusJakartaSans-Bold" "PlusJakartaSans-Bold" "Arial"
 
 boldItalic :: FontStyle
-boldItalic = fontByOS "Roboto-BoldItalic" "Roboto-BoldItalic" "Arial"
+boldItalic = fontByOS "PlusJakartaSans-BoldItalic" "PlusJakartaSans-BoldItalic" "Arial"
 
 extraBold :: LazyCheck -> FontStyle
 extraBold style = do
@@ -126,7 +124,7 @@ extraBold style = do
     _ -> fontByOS "PlusJakartaSans-ExtraBold" "PlusJakartaSans-ExtraBold" "Arial"
 
 extraBoldItalic :: FontStyle
-extraBoldItalic = fontByOS "Roboto-ExtraBoldItalic" "Roboto-ExtraBoldItalic" "Arial"
+extraBoldItalic = fontByOS "PlusJakartaSans-ExtraBoldItalic" "PlusJakartaSans-ExtraBoldItalic" "Arial"
 
 h1 :: LazyCheck -> forall properties. (Array (Prop properties))
 h1 typography = [
@@ -209,9 +207,9 @@ priceFont_big typography = [
 fontByOS :: forall a. a -> a -> a -> a
 fontByOS android ios web
   = case os of
-      "IOS" -> spy "font by ios" ios
-      "WEB" -> spy "font by web" web
-      _ -> spy "font by android" android
+      "IOS" -> ios
+      "WEB" -> web
+      _ -> android
 
 body4 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body4 typography = [

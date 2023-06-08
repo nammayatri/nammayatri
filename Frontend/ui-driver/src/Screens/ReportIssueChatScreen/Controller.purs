@@ -17,37 +17,40 @@ module Screens.ReportIssueChatScreen.Controller where
 
 import Prelude
 
+import Components.AddAudioModel.Controller (Action(..)) as AudioModel
+import Components.AddAudioModel.Controller as AddAudioModel
+import Components.AddImagesModel.Controller (Action(..)) as ImageModel
+import Components.AddImagesModel.Controller as AddImagesModel
+import Components.ChatView (Action(..), ChatComponent) as ChatView
+import Components.ChatView.Controller (Action(EnableSuggestions, OnImageClick, SendSuggestion, SendMessage)) as ChatView
 import Components.ChatView.Controller (makeChatComponent, makeChatComponent')
+import Components.PrimaryButton.Controller (Action(..)) as PrimaryButton
+import Components.PrimaryEditText.Controller (Action(..)) as PrimaryEditText
+import Components.RecordAudioModel.Controller (Action(..)) as RecordAudioModel
+import Components.ViewImageModel.Controller as ViewImageModel
 import Data.Array (deleteAt, length, snoc)
+import Data.Either (Either(..))
+import Data.Foldable (find)
+import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.String.CodeUnits (stripSuffix)
+import Data.String.Common (joinWith)
+import Data.String.Pattern (Pattern(Pattern))
+import Data.TraversableWithIndex (forWithIndex)
+import Effect.Aff (makeAff, nonCanceler)
+import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Helpers.Utils (clearFocus, clearTimer, convertUTCtoISC, getCurrentUTC, removeMediaPlayer, renderBase64ImageFile, saveAudioFile, startAudioRecording, startTimer, stopAudioRecording, uploadMultiPartData)
 import JBridge (addMediaFile, hideKeyboardOnNavigation, scrollToBottom, startLottieProcess, toast, uploadFile)
+import Language.Strings (getString)
+import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender)
+import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM.Types.Core (class Loggable, Eval)
 import PrestoDOM.Utils (continue, continueWithCmd, exit)
 import Screens (ScreenName(REPORT_ISSUE_CHAT_SCREEN), getScreen)
 import Screens.Types (ReportIssueChatScreenState)
-import Components.AddAudioModel.Controller as AddAudioModel
-import Components.AddImagesModel.Controller as AddImagesModel
-import Components.ViewImageModel.Controller as ViewImageModel
-import Components.AddAudioModel.Controller (Action(..)) as AudioModel
-import Components.ChatView (Action(..), ChatComponent) as ChatView
-import Components.AddImagesModel.Controller (Action(..)) as ImageModel
-import Components.PrimaryButton.Controller (Action(..)) as PrimaryButton
-import Components.PrimaryEditText.Controller (Action(..)) as PrimaryEditText
-import Components.RecordAudioModel.Controller (Action(..)) as RecordAudioModel
-import Effect.Class (liftEffect)
 import Services.EndPoints (uploadFile) as EndPoint
-import Data.Foldable (find)
-import Data.TraversableWithIndex (forWithIndex)
-import Data.String.Common (joinWith)
-import Data.Int (fromString)
-import Data.String.Pattern (Pattern(Pattern))
-import Data.String.CodeUnits (stripSuffix)
-import Language.Strings (getString)
-import Language.Types (STR(..))
-import Components.ChatView.Controller (Action(EnableSuggestions, OnImageClick, SendSuggestion, SendMessage)) as ChatView
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
@@ -303,19 +306,18 @@ eval (ViewImageModelAction (ViewImageModel.BackPressed)) state = do
       then pure $ (AddImagesModelAction AddImagesModel.BackPressed)
       else pure $ BackPressed
     ]
-
 ---------------------------------------------------- Record Audio Model ----------------------------------------------------
 eval (RecordAudioModelAction (RecordAudioModel.OnClickRecord push)) state = do
   continueWithCmd state { data { recordAudioState { timer = "00:00" } } }  [do
-    cond <- startAudioRecording ""
-    if cond 
-    then do
-      _ <- pure $ clearTimer ""
-      _ <- removeMediaPlayer ""
-      _ <- startTimer 0 false push RecordAudioModel.TimerCallback
-      pure $ UpdateState state { data { recordAudioState { isRecording = true, timer = "00:00" } } }
-    else 
-      pure $ NoAction
+    -- (Result cond) <- doAff $ makeAff \cb -> startAudioRecording (cb <<< Right) Result $> nonCanceler
+    -- if cond 
+    -- then do
+    --   _ <- pure $ clearTimer ""
+    --   _ <- removeMediaPlayer ""
+    --   _ <- startTimer 0 false push RecordAudioModel.TimerCallback
+    --   pure $ UpdateState state { data { recordAudioState { isRecording = true, timer = "00:00" } } }
+    -- else 
+    pure $ NoAction
   ]
 
 eval (RecordAudioModelAction RecordAudioModel.OnClickStop) state =
@@ -442,3 +444,5 @@ eval (CancelCall (PrimaryButton.OnClick)) state =
 
 eval _ state =
   continue state
+
+data Result = Result Boolean

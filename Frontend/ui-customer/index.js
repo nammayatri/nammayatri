@@ -7,6 +7,7 @@ window.session_id = guid();
 window.version = __VERSION__;
 // JBridge.setSessionId(window.session_id);
 console.warn("Hello World MASTER ONE");
+loadConfig();
 
 let eventObject = {
   type : ""
@@ -124,8 +125,6 @@ window.onMerchantEvent = function (event, payload) {
       window.merchantID = clientId.toUpperCase();
     }
     console.log(window.merchantID);
-    var header = {"x-client-id" : "nammayatri"};
-    console.log(JBridge.setAnalyticsHeader(JSON.stringify(header)));
     JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
   } else if (event == "process") {
     console.warn("Process called");
@@ -220,17 +219,6 @@ window["onEvent'"] = function (event, args) {
   }
 }
 
-// if(__OS == "ANDROID") {
-//   // JBridge.trackEvent("app_id", "in.juspay.arya");
-//   // JBridge.trackEvent("app_version", window.version);
-// }
-
-function disableConsoleLogs() {
-  window.console["log"] = function () { };
-  window.console["error"] = function () { };
-  window.console["warn"] = function () { };
-}
-
 if (typeof window.JOS != "undefined") {
   window.JOS.addEventListener("onEvent'")();
   window.JOS.addEventListener("onMerchantEvent")();
@@ -272,3 +260,32 @@ if(sessionInfo.package_name.includes(".debug")){
 //     eventObject["type"] = "CHAT_MESSAGE";
 //    }
 //   purescript.main(eventObject)();
+function loadConfig() {
+  if (window.appConfig) {
+    return;
+  }
+  const headID = document.getElementsByTagName("head")[0];
+  console.log(headID)
+  const newScript = document.createElement("script");
+  newScript.type = "text/javascript";
+  newScript.id = "ny-customer-configuration";
+  newScript.innerHTML = window.JBridge.loadFileInDUI("v1-configuration.js");
+  headID.appendChild(newScript);
+  try {
+      const merchantConfig = (
+          function(){
+              try {
+                  return JSON.parse(window.getMerchantConfig());
+              } catch(e){
+                  return "{}";
+              }
+          }
+      )();
+      // console.log(merchantConfig)
+      // window.appConfig = mergeDeep(defaultConfig, merchantConfig);
+      window.appConfig = merchantConfig;
+  } catch(e){
+      console.error("config parse/merge failed", e);
+      // window.appConfig = defaultConfig;
+  }
+}

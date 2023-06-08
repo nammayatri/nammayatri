@@ -6,6 +6,7 @@ require('core-js');
 window.session_id = guid();
 window.version = __VERSION__;
 console.warn("Hello World");
+loadConfig();
 
 var jpConsumingBackpress = {
   event: "jp_consuming_backpress",
@@ -109,6 +110,8 @@ window.onMerchantEvent = function (event, payload) {
       window.merchantID = clientPaylod.payload.clientId.toUpperCase();
     }
     console.log(window.merchantID);
+    var header = {"x-client-id" : "nammayatri"};
+    JBridge.setAnalyticsHeader(JSON.stringify(header));
     JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
   } else if (event == "process") {
     window.__payload.sdkVersion = "2.0.1"
@@ -234,4 +237,34 @@ if(sessionInfo.package_name.includes("debug")){
   logger.enableLogger();
 }else{
   logger.disableLogger();
+}
+
+function loadConfig() {
+  if (window.appConfig) {
+    return;
+  }
+  const headID = document.getElementsByTagName("head")[0];
+  console.log(headID)
+  const newScript = document.createElement("script");
+  newScript.type = "text/javascript";
+  newScript.id = "ny-customer-configuration";
+  newScript.innerHTML = window.JBridge.loadFileInDUI("v1-configuration.js");
+  headID.appendChild(newScript);
+  try {
+      const merchantConfig = (
+          function(){
+              try {
+                  return JSON.parse(window.getMerchantConfig());
+              } catch(e){
+                  return "{}";
+              }
+          }
+      )();
+      // console.log(merchantConfig)
+      // window.appConfig = mergeDeep(defaultConfig, merchantConfig);
+      window.appConfig = merchantConfig;
+  } catch(e){
+      console.error("config parse/merge failed", e);
+      // window.appConfig = defaultConfig;
+  }
 }

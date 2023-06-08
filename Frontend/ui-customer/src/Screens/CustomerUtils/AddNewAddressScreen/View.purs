@@ -16,9 +16,13 @@
 module Screens.AddNewAddressScreen.View where
 
 import Common.Types.App
+import Common.Types.App
+import Debug
+import Screens.CustomerUtils.AddNewAddressScreen.ComponentConfig
 import Screens.CustomerUtils.AddNewAddressScreen.ComponentConfig
 
 import Animation as Anim
+import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Components.LocationListItem (dummyAddress)
 import Components.LocationListItem as LocationListItem
@@ -27,9 +31,11 @@ import Components.PrimaryEditText as PrimaryEditText
 import Data.Array as DA
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
+import Effect.Uncurried (runEffectFn5)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (LANGUAGE_KEY(..), getString, getKey)
@@ -38,13 +44,8 @@ import Prelude (Unit, bind, const, discard, not, pure, show, unit, ($), (&&), (*
 import PrestoDOM (Length(..), Margin(..), Orientation(..), Gravity(..), Visibility(..), Padding(..), PrestoDOM, Screen, height, width, color, background, orientation, padding, margin, onBackPressed, linearLayout, gravity, textView, text, textSize, fontStyle, scrollView, scrollBarY, relativeLayout, editText, hint, singleLine, hintColor, ellipsize, cornerRadius, lineHeight, stroke, onChange, id, visibility, maxLines, onClick, imageView, imageUrl, alignParentBottom, afterRender, adjustViewWithKeyboard, weight, alpha, frameLayout, clickable, onFocus, imageWithFallback)
 import Screens.AddNewAddressScreen.Controller (Action(..), ScreenOutput, eval, validTag)
 import Screens.Types as ST
-import Styles.Colors as Color
-import Common.Types.App
-import Screens.CustomerUtils.AddNewAddressScreen.ComponentConfig
 import Storage (KeyStore(..), getValueToLocalStore)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Common.Types.App (LazyCheck(..))
-import Debug
+import Styles.Colors as Color
 
 screen :: ST.AddNewAddressScreenState -> Screen Action ST.AddNewAddressScreenState ScreenOutput
 screen initialState =
@@ -76,7 +77,7 @@ view push state =
           _ <- (JB.showMap (EHC.getNewIDWithTag "AddNewAddressHomeScreenMap") true "satellite" (19.0) push MAPREADY)
           _ <- HU.setText' (EHC.getNewIDWithTag "SavedLocationEditText") (state.data.address)
           _ <- HU.setText' (EHC.getNewIDWithTag "SaveAsEditText") (state.data.addressSavedAs)
-          _ <- pure $ JB.locateOnMap true 0.0 0.0 "" []
+          _ <- runEffectFn5 JB.locateOnMap true 0.0 0.0 "" []
           _ <- if (state.data.activeIndex == Just 2 && state.props.showSavePlaceView) then JB.requestKeyboardShow (EHC.getNewIDWithTag ("SaveAsEditText")) else pure unit
           pure unit
           ) (const AfterRender)

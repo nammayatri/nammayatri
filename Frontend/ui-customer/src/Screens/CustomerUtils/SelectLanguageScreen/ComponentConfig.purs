@@ -30,6 +30,7 @@ import Styles.Colors as Color
 import Common.Types.App
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Prelude ((<>))
+import MerchantConfig.Types (Language)
 
 primaryButtonConfig :: ST.SelectLanguageScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -48,7 +49,7 @@ primaryButtonConfig state = let
       }
   in primaryButtonConfig'
 
-menuButtonConfig :: ST.SelectLanguageScreenState -> ST.Language -> MenuButton.Config
+menuButtonConfig :: ST.SelectLanguageScreenState -> Language -> MenuButton.Config
 menuButtonConfig state language = let  
     config = MenuButton.config
     menuButtonConfig' = config {

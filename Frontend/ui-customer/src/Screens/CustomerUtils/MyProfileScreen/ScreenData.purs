@@ -17,7 +17,7 @@ module Screens.MyProfileScreen.ScreenData where
 
 import Screens.Types (MyProfileScreenState, DeleteStatus(..))
 import Data.Maybe(Maybe(..))
-import Config.DefaultConfig as DC
+import MerchantConfig.DefaultConfig as DC
 
 initData :: MyProfileScreenState
 initData = {

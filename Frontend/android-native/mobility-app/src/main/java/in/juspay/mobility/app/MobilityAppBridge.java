@@ -64,7 +64,7 @@ public class MobilityAppBridge extends HyperBridge {
             }
 
             @Override
-            public void imageUploadCallBack(String encImage, String filename) {
+            public void imageUploadCallBack(String encImage, String filename, String filePath) {
                 Log.i(CALLBACK,"Not required");
             }
 

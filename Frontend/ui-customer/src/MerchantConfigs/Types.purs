@@ -1,14 +1,9 @@
-module Config.Types where
-
-import Prelude
-import Styles.Types (FontType)
-
+module MerchantConfig.Types where
 
 type AppConfig =
   {
     primaryTextColor :: String,
     primaryBackground :: String,
-    merchantId :: String,
     searchLocationTheme :: String,
     estimateConfirmText :: String,
     autoConfirmingLoaderColor :: String,
@@ -23,7 +18,8 @@ type AppConfig =
     otpTextColor :: String,
     rateCardColor :: String,
     nyBrandingVisibility :: Boolean,
-    fontType :: String
+    fontType :: String,
+    languageList :: Array Language
   } 
 
 type QuoteListConfig = {
@@ -31,3 +27,9 @@ type QuoteListConfig = {
   textColor :: String,
   loaderColor :: String
 }
+
+type Language =  {
+  name :: String,
+  value :: String,
+  subTitle :: String
+ }

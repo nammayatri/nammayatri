@@ -9,7 +9,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
-import JBridge (toast, loaderText, toggleLoader)
+import JBridge (toast)
 import Screens.Types (EmergencyContactsScreenState , ContactDetail, NewContacts)
 import Helpers.Utils (storeCallBackContacts, parseNewContacts, contactPermission, setText', toString)
 import Data.Array (length, filter, snoc, elem, null, unionBy, elem, head, tail, catMaybes, (!!), take, last)
@@ -34,6 +34,7 @@ import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.String (split, Pattern(..), Replacement(..), replaceAll)
+import Engineering.Helpers.Utils (loaderText, toggleLoader)
 
 instance showAction :: Show Action where
   show _ = ""
