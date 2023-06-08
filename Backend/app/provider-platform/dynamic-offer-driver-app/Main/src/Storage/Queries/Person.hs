@@ -1498,6 +1498,22 @@ getVehiclesWithCond driverInfo = do
   where
     personsKeys = toKey . cast <$> fetchDriverIDsFromInfo driverInfo
 
+getVehiclesWithCond' ::
+  L.MonadFlow m =>
+  [DriverInformation] ->
+  m [Vehicle]
+getVehiclesWithCond' driverInfo = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' -> do
+      vehicles <- KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamV.driverId $ Se.In personsKeys]
+      case vehicles of
+        Right val' -> pure $ QueriesV.transformBeamVehicleToDomain <$> val'
+        Left _ -> pure []
+    Nothing -> pure []
+  where
+    personsKeys = getId <$> fetchDriverIDsFromInfo driverInfo
+
 data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
   { driverId :: Id Driver,
     driverDeviceToken :: Maybe FCM.FCMRecipientToken,
