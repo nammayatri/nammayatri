@@ -1452,6 +1452,39 @@ getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide = do
   where
     personsKeys = toKey . cast <$> fetchDriverIDsFromLocations driverLocs
 
+getDriverInfosWithCond' :: L.MonadFlow m => [DriverLocation] -> Bool -> Bool -> m [DriverInformation]
+getDriverInfosWithCond' driverLocs onlyNotOnRide onlyOnRide = do
+  dbCOnf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbCOnf of
+    Just dbCOnf' -> do
+      either (pure []) (QueriesDI.transformBeamDriverInformationToDomain <$>)
+        <$> KV.findAllWithKVConnector
+          dbCOnf'
+          Mesh.meshConfig
+          [ Se.And
+              ( [ Se.Is BeamDI.driverId $ Se.In personsKeys,
+                  Se.Or
+                    [ Se.And
+                        [ Se.Is BeamDI.mode $ Se.Eq Nothing,
+                          Se.Is BeamDI.active $ Se.Eq True
+                        ],
+                      Se.And
+                        [ Se.Is BeamDI.mode $ Se.Not $ Se.Eq Nothing,
+                          Se.Or
+                            [ Se.Is BeamDI.mode $ Se.Eq $ Just DriverInfo.SILENT,
+                              Se.Is BeamDI.mode $ Se.Eq $ Just DriverInfo.ONLINE
+                            ]
+                        ]
+                    ],
+                  Se.Is BeamDI.blocked $ Se.Eq False
+                ]
+                  <> if onlyNotOnRide then [Se.Is BeamDI.onRide $ Se.Eq False] else ([Se.Is BeamDI.onRide $ Se.Eq True | onlyOnRide])
+              )
+          ]
+    Nothing -> pure []
+  where
+    personsKeys = getId . cast <$> fetchDriverIDsFromLocations driverLocs
+
 getVehiclesWithCond ::
   Transactionable m =>
   [DriverInformation] ->
