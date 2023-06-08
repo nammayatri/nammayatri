@@ -74,17 +74,15 @@ paymentView state =
   , alignParentBottom "true,-1"
   , background Color.white900
   , orientation VERTICAL
-  ][  if state.showProgress then
-        lottieAnimationView
+  ][  lottieAnimationView
           [ id (getNewIDWithTag "lottieLoaderAnimProgress")
           , afterRender (\action-> do
                         _ <- pure $ startLottieProcess "progress_loader_line" (getNewIDWithTag "lottieLoaderAnimProgress") true 0.6 "CENTER_CROP"
                         pure unit)(const NoAction)
           , height WRAP_CONTENT
           , width MATCH_PARENT
+          , visibility if state.showProgress then VISIBLE else GONE
           ]
-      else
-        linearLayout[][]
     , linearLayout
         [ background Color.grey900
         , height $ V 1
