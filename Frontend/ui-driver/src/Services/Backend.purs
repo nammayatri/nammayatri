@@ -862,3 +862,18 @@ makeOTPRideReq otp lat lon = OTPRideReq {
         lon : lon
         }
 }
+
+------------------------------------------------------------------------ OnCallBT Function ------------------------------------------------------------------------------------
+
+onCallBT :: OnCallReq -> FlowBT String OnCallRes
+onCallBT payload = do
+  headers <- getHeaders' ""
+  withAPIResultBT (EP.onCall "") (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
+  where
+    errorHandler errorPayload = BackT $ pure GoBack
+
+makeOnCallReq :: String -> OnCallReq
+makeOnCallReq rideID = OnCallReq {
+    "rideId" : rideID
+}
+
