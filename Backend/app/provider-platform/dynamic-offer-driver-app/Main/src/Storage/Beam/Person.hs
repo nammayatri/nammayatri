@@ -12,6 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -120,11 +121,18 @@ instance FromBackendRow Postgres Domain.Role
 instance IsString Domain.Role where
   fromString = show
 
-instance FromField FCMRecipientToken where
-  fromField = fromFieldEnum
+-- instance FromField FCMRecipientToken
+-- -- instance FromField FCMRecipientToken where
+-- --   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be FCMRecipientToken where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be FCMRecipientToken where
+--   sqlValueSyntax = autoSqlValueSyntax
+
+deriving newtype instance FromField FCMRecipientToken
+
+-- deriving newtype instance (BeamSqlBackend be => B.HasSqlEqualityCheck be FCMRecipientToken)
+instance HasSqlValueSyntax be Text => HasSqlValueSyntax be FCMRecipientToken where
+  sqlValueSyntax = sqlValueSyntax . getFCMRecipientToken
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be FCMRecipientToken
 
@@ -184,7 +192,6 @@ instance B.Table PersonT where
 instance ModelMeta PersonT where
   modelFieldModification = personTMod
   modelTableName = "person"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type Person = PersonT Identity

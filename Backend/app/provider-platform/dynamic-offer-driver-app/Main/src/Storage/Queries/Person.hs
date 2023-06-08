@@ -24,13 +24,25 @@ import qualified Data.Maybe as Mb
 import qualified Database.Beam as B
 import Database.Beam.Postgres hiding ((++.))
 import qualified Database.Beam.Query ()
-import qualified Domain.Types.Booking as Booking
 -- import Domain.Type.Booking
+
+-- import qualified Lib.Utils as Utils
+
+-- import qualified Storage.Beam.DriverLocation as BeamDL
+
+-- import Domain.Types.DriverQuote as DDQ
+
+-- import qualified Storage.Queries.FareParameters as QueriesFP
+-- import qualified Storage.Beam.FareParameters as BeamFP
+
+-- import qualified Kernel.Prelude
+
+import qualified Debug.Trace as T (trace, traceShowId)
+import qualified Domain.Types.Booking as Booking
 import Domain.Types.Booking.BookingLocation
 import Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverInformation as DDI
 import Domain.Types.DriverLocation as DriverLocation
--- import qualified Lib.Utils as Utils
 import Domain.Types.DriverQuote as DriverQuote
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
@@ -57,16 +69,10 @@ import Kernel.Utils.GenericPretty
 import Kernel.Utils.Version
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
+import Servant
 import qualified Storage.Beam.Booking as BeamB
--- import qualified Storage.Beam.DriverLocation as BeamDL
-
--- import Domain.Types.DriverQuote as DDQ
-
--- import qualified Storage.Queries.FareParameters as QueriesFP
--- import qualified Storage.Beam.FareParameters as BeamFP
 import qualified Storage.Beam.Booking.BookingLocation as BeamBL
 import qualified Storage.Beam.DriverInformation as BeamDI
--- import qualified Kernel.Prelude
 import qualified Storage.Beam.DriverLocation as BeamDL
 import qualified Storage.Beam.DriverQuote as BeamDQ
 import qualified Storage.Beam.Person as BeamP
@@ -99,12 +105,12 @@ import Storage.Tabular.Vehicle as Vehicle
 -- create :: Person -> SqlDB ()
 -- create = Esq.create
 
-create :: L.MonadFlow m => Person.Person -> m (MeshResult ())
+create :: L.MonadFlow m => Person.Person -> m (MeshResult BeamP.Person)
 create person = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainPersonToBeam person)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+    Just dbConf' -> T.trace "Rahul" (T.traceShowId <$> KV.createWithKVConnector dbConf' Mesh.meshConfig (transformDomainPersonToBeam person))
+    Nothing -> T.trace "RahulNothing" pure (Left $ MKeyNotFound "DB Config not found")
 
 -- findById ::
 --   Transactionable m =>

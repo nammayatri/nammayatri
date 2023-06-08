@@ -109,7 +109,6 @@ instance B.Table IdfyVerificationT where
 instance ModelMeta IdfyVerificationT where
   modelFieldModification = idfyVerificationTMod
   modelTableName = "idfy_verification"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type IdfyVerification = IdfyVerificationT Identity

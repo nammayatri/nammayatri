@@ -280,7 +280,7 @@ createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r) => AuthReq -> Maybe Vers
 createDriverWithDetails req mbBundleVersion mbClientVersion merchantId = do
   person <- makePerson req mbBundleVersion mbClientVersion merchantId
   -- DB.runTransaction $ do
-  _ <- QP.create person
+  _ <- (either (throwError . InvalidRequest . show) pure) =<< QP.create person
   _ <- QDFS.create $ makeIdleDriverFlowStatus person
   createDriverDetails (person.id) merchantId
   pure person

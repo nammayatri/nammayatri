@@ -66,7 +66,6 @@ instance B.Table MediaFileT where
 instance ModelMeta MediaFileT where
   modelFieldModification = mediaFileTMod
   modelTableName = "media_file"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type MediaFile = MediaFileT Identity

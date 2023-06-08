@@ -82,7 +82,6 @@ instance B.Table RiderDetailsT where
 instance ModelMeta RiderDetailsT where
   modelFieldModification = riderDetailsTMod
   modelTableName = "rider_details"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type RiderDetails = RiderDetailsT Identity

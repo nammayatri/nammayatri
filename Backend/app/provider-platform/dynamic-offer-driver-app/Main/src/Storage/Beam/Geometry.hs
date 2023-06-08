@@ -56,7 +56,6 @@ instance B.Table GeometryT where
 instance ModelMeta GeometryT where
   modelFieldModification = geometryTMod
   modelTableName = "geometry"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type Geometry = GeometryT Identity

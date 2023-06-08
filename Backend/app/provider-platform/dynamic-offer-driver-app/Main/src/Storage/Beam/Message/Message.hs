@@ -72,7 +72,6 @@ instance B.Table MessageT where
 instance ModelMeta MessageT where
   modelFieldModification = messageTMod
   modelTableName = "message"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type Message = MessageT Identity

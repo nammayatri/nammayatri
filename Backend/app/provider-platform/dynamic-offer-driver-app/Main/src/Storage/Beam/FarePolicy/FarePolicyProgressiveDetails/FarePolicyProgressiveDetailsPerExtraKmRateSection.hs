@@ -76,7 +76,6 @@ instance B.Table FarePolicyProgressiveDetailsPerExtraKmRateSectionT where
 instance ModelMeta FarePolicyProgressiveDetailsPerExtraKmRateSectionT where
   modelFieldModification = farePolicyProgressiveDetailsPerExtraKmRateSectionTMod
   modelTableName = "fare_parameters_progressive_details"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type FarePolicyProgressiveDetailsPerExtraKmRateSection = FarePolicyProgressiveDetailsPerExtraKmRateSectionT Identity

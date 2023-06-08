@@ -70,7 +70,6 @@ instance B.Table SearchReqLocationT where
 instance ModelMeta SearchReqLocationT where
   modelFieldModification = searchReqLocationTMod
   modelTableName = "search_request_location"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type SearchReqLocation = SearchReqLocationT Identity

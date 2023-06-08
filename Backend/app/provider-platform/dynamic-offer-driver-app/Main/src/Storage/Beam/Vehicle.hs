@@ -115,7 +115,6 @@ instance B.Table VehicleT where
 instance ModelMeta VehicleT where
   modelFieldModification = vehicleTMod
   modelTableName = "vehicle"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type Vehicle = VehicleT Identity

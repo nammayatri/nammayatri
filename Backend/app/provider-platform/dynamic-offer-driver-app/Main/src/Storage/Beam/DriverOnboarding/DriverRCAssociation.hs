@@ -62,7 +62,6 @@ instance B.Table DriverRCAssociationT where
 instance ModelMeta DriverRCAssociationT where
   modelFieldModification = driverRCAssociationTMod
   modelTableName = "driver_rc_association"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type DriverRCAssociation = DriverRCAssociationT Identity

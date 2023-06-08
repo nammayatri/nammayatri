@@ -87,7 +87,6 @@ instance B.Table DriverInformationT where
 instance ModelMeta DriverInformationT where
   modelFieldModification = driverInformationTMod
   modelTableName = "driver_information"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type DriverInformation = DriverInformationT Identity

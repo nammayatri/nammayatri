@@ -180,7 +180,6 @@ instance B.Table SearchRequestForDriverT where
 instance ModelMeta SearchRequestForDriverT where
   modelFieldModification = searchRequestForDriverTMod
   modelTableName = "search_request_for_driver"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type SearchRequestForDriver = SearchRequestForDriverT Identity

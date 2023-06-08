@@ -148,7 +148,7 @@ deleteByPersonIdExceptNew (Id personId) (Id newRT) = do
         KV.deleteWithKVConnector
           dbConf'
           Mesh.meshConfig
-          [Se.And [Se.Is BeamRT.entityId (Se.Eq personId), Se.Is BeamRT.id (Se.Eq newRT)]]
+          [Se.And [Se.Is BeamRT.entityId (Se.Eq personId), Se.Is BeamRT.id (Se.Not $ Se.Eq newRT)]]
     Nothing -> pure ()
 
 -- findAllByPersonId :: Transactionable m => Id Person -> m [RegistrationToken]

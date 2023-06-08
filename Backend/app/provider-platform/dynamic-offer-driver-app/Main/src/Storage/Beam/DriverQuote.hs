@@ -151,7 +151,6 @@ instance B.Table DriverQuoteT where
 instance ModelMeta DriverQuoteT where
   modelFieldModification = driverQuoteTMod
   modelTableName = "driver_quote"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type DriverQuote = DriverQuoteT Identity

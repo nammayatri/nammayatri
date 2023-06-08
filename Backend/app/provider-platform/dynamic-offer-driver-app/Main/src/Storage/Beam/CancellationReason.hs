@@ -58,7 +58,6 @@ instance B.Table CancellationReasonT where
 instance ModelMeta CancellationReasonT where
   modelFieldModification = cancellationReasonTMod
   modelTableName = "cancellation_reason"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type CancellationReason = CancellationReasonT Identity

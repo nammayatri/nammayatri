@@ -79,7 +79,6 @@ instance B.Table DriverFlowStatusT where
 instance ModelMeta DriverFlowStatusT where
   modelFieldModification = driverFlowStatusTMod
   modelTableName = "driver_flow_status"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type DriverFlowStatus = DriverFlowStatusT Identity

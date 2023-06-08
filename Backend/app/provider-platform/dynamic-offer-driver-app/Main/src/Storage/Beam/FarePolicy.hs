@@ -149,7 +149,6 @@ instance B.Table FarePolicyT where
 instance ModelMeta FarePolicyT where
   modelFieldModification = farePolicyTMod
   modelTableName = "fare_policy"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type FarePolicy = FarePolicyT Identity

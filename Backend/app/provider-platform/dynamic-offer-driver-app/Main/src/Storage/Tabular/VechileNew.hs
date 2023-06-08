@@ -191,7 +191,6 @@ instance B.Table VechileNewT where
 instance ModelMeta VechileNewT where
   modelFieldModification = bookingTMod
   modelTableName = "vehicle"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type VechileNew = VechileNewT Identity

@@ -117,7 +117,6 @@ instance B.Table VehicleRegistrationCertificateT where
 instance ModelMeta VehicleRegistrationCertificateT where
   modelFieldModification = vehicleRegistrationCertificateTMod
   modelTableName = "vehicle_registration_certificate"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type VehicleRegistrationCertificate = VehicleRegistrationCertificateT Identity

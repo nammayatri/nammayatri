@@ -110,7 +110,6 @@ instance B.Table QuoteSpecialZoneT where
 instance ModelMeta QuoteSpecialZoneT where
   modelFieldModification = quoteSpecialZoneTMod
   modelTableName = "quote_special_zone"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type QuoteSpecialZone = QuoteSpecialZoneT Identity

@@ -83,7 +83,6 @@ instance B.Table MessageTranslationT where
 instance ModelMeta MessageTranslationT where
   modelFieldModification = messageTranslationTMod
   modelTableName = "message_translation"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type MessageTranslation = MessageTranslationT Identity

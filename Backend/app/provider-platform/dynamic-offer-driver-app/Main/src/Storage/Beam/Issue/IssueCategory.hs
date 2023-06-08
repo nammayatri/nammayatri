@@ -57,7 +57,6 @@ instance B.Table IssueCategoryT where
 instance ModelMeta IssueCategoryT where
   modelFieldModification = issueCategoryTMod
   modelTableName = "issue_category"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type IssueCategory = IssueCategoryT Identity

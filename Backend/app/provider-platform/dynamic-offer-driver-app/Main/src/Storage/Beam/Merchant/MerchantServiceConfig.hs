@@ -80,7 +80,6 @@ instance B.Table MerchantServiceConfigT where
 instance ModelMeta MerchantServiceConfigT where
   modelFieldModification = merchantServiceConfigTMod
   modelTableName = "merchant_service_config"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type MerchantServiceConfig = MerchantServiceConfigT Identity
@@ -98,7 +97,7 @@ merchantServiceConfigTMod =
   B.tableModification
     { merchantId = B.fieldNamed "merchant_id",
       serviceName = B.fieldNamed "service_name",
-      configJSON = B.fieldNamed "config_j_s_o_n",
+      configJSON = B.fieldNamed "config_json",
       updatedAt = B.fieldNamed "updated_at",
       createdAt = B.fieldNamed "created_at"
     }

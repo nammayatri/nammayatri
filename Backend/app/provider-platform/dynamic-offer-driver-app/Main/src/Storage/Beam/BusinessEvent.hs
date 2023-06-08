@@ -103,7 +103,6 @@ instance B.Table BusinessEventT where
 instance ModelMeta BusinessEventT where
   modelFieldModification = businessEventTMod
   modelTableName = "business_event"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type BusinessEvent = BusinessEventT Identity

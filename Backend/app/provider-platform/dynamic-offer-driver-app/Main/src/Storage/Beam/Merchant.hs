@@ -24,6 +24,7 @@ import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Text as T
 import qualified Data.Time as Time
+import qualified Data.Vector as V
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
@@ -49,14 +50,8 @@ fromFieldEnum' ::
   Maybe ByteString ->
   DPSF.Conversion GeoRestriction
 fromFieldEnum' f mbValue = case mbValue of
-  Nothing -> DPSF.returnError UnexpectedNull f mempty
-  Just value' ->
-    case (readMaybe' (unpackChars value')) of
-      Just val -> pure val
-      _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
-  where
-    readMaybe' "Unrestricted" = Just Unrestricted
-    readMaybe' text' = Just (Regions [T.pack $ text'])
+  Nothing -> pure Unrestricted
+  Just _ -> (Regions . V.toList) <$> (fromField f mbValue)
 
 instance FromField GeoRestriction where
   fromField = fromFieldEnum'
@@ -119,7 +114,6 @@ instance B.Table MerchantT where
 instance ModelMeta MerchantT where
   modelFieldModification = merchantTMod
   modelTableName = "merchant"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type Merchant = MerchantT Identity

@@ -132,10 +132,10 @@ instance FromField Seconds where
   fromField = fromFieldEnum
 
 instance FromField DbHash where
-  fromField = fromFieldEnum
+  fromField = fromFieldEnumDbHash
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be DbHash where
-  sqlValueSyntax = autoSqlValueSyntax
+instance HasSqlValueSyntax be ByteString => HasSqlValueSyntax be DbHash where
+  sqlValueSyntax = sqlValueSyntax . unDbHash
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be DbHash
 
@@ -185,6 +185,15 @@ fromFieldEnum f mbValue = case mbValue of
     case readMaybe (unpackChars value') of
       Just val -> pure val
       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
+
+fromFieldEnumDbHash ::
+  -- (Typeable a, Read a) =>
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion DbHash
+fromFieldEnumDbHash f mbValue = case mbValue of
+  Nothing -> DPSF.returnError UnexpectedNull f mempty
+  Just value' -> pure $ DbHash value'
 
 -- writing shared kernel Esqueleto.Functions in utils
 

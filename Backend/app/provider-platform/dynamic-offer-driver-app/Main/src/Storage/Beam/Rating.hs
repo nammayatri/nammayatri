@@ -63,7 +63,6 @@ instance B.Table RatingT where
 instance ModelMeta RatingT where
   modelFieldModification = ratingTMod
   modelTableName = "rating"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type Rating = RatingT Identity

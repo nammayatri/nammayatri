@@ -62,7 +62,6 @@ instance B.Table OperatingCityT where
 instance ModelMeta OperatingCityT where
   modelFieldModification = operatingCityTMod
   modelTableName = "operating_city"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type OperatingCity = OperatingCityT Identity

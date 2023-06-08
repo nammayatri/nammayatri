@@ -61,7 +61,6 @@ instance B.Table CommentT where
 instance ModelMeta CommentT where
   modelFieldModification = commentTMod
   modelTableName = "comment"
-  mkExprWithDefault _ = B.insertExpressions []
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type Comment = CommentT Identity
