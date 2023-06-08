@@ -12,8 +12,8 @@
             android:elevation="10dp"
             android:textSize="12dp"
             android:lineHeight="16dp"
-            android:textColor="#454545"
-            android:textFontWeight="400"
+            android:textColor="#101010"
+            android:textFontWeight="500"
             android:background="@drawable/ic_grey_border"
             android:id="@+id/marker_text"/>
     <LinearLayout android:id="@+id/ll_marker_right"

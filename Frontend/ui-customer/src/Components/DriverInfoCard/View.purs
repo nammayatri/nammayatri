@@ -40,7 +40,7 @@ import Language.Types (STR(..))
 import Merchant.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, (&&), (||), (/=))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, alignParentLeft, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, alignParentLeft, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, alpha)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -422,27 +422,35 @@ driverInfoView push state =
                 height WRAP_CONTENT
               , width MATCH_PARENT
               , gravity CENTER
-              , margin (MarginTop 12)
+              , margin (Margin 16 12 16 0)
               , visibility if state.data.config.nyBrandingVisibility then VISIBLE else GONE
-            ][
-              imageView
-                [ height $ V 18
-                , width $ V 18
-                , cornerRadius 20.0
-                , imageWithFallback $ "ny_ic_launcher," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_launcher.png"
+            ][ imageView
+                [ height $ V 19
+                , width $ V 60
+                , margin $ MarginRight 29
+                , imageWithFallback $ "ny_ic_paytm_logo," <> (getAssetStoreLink FunctionCall) <> "ny_ic_paytm_logo.png" 
                 ]
-              , textView (
-                [ text $ "namma yatri"
-                , color Color.black
-                , margin $ Margin 3 0 0 2
-                , ellipsize true
-                , singleLine true
+              , linearLayout[
+                weight 1.0
+                ][]
+              , linearLayout
+                [ height $ V 20
+                , width $ V 2
+                , background Color.transparentGrey
                 , gravity CENTER
-                ] <> FontStyle.body4 TypoGraphy)
+                ][]
+              , linearLayout
+                [ weight 1.0
+                ][]
+              , imageView
+                [ height $ V 30
+                , width $ V 89
+                , imageWithFallback $ "ny_ic_nammayatri_logo," <> (getAssetStoreLink FunctionCall) <> "ny_ic_nammayatri_logo.png"
+                ]
             ]
             , if state.props.isSpecialZone  then headerTextView push state else contactView push state
             , otpAndWaitView push state
-            , separator (Margin 16 0 16 0) (V 1) Color.grey900 (state.props.currentStage == RideAccepted)
+            , separator (Margin 16 16 16 0) (V 1) Color.grey900 (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted)
             , driverDetailsView push state
             , separator (Margin 16 0 16 0) (V 1) Color.grey900 true
             , paymentMethodView push state (getString RIDE_FARE) true
@@ -478,8 +486,9 @@ cancelRideLayout push state =
      [ width WRAP_CONTENT
      , height WRAP_CONTENT
      , text $ getString CANCEL_RIDE
-     , color Color.red
-     ] <> FontStyle.paragraphText TypoGraphy)
+     , color state.data.config.confirmPickUpLocationBorder
+     , alpha 0.6
+     ] <> FontStyle.body1 TypoGraphy)
    ]
  ]
 
@@ -570,7 +579,7 @@ driverDetailsView push state =
               [ height $ V 50
               , width $ V 50
               , padding $ Padding 2 3 2 1
-              , imageWithFallback $ "ny_ic_user," <> (getAssetStoreLink FunctionCall) <> "ny_ic_user.png"
+              , imageWithFallback $ "ny_ic_profile_image," <> (getAssetStoreLink FunctionCall) <> "ny_ic_profile_image.png"
               ]  
           ]
         , textView $

@@ -297,10 +297,10 @@ redCircleColor :: Color
 redCircleColor = "#E94040"
 
 black800 :: Color
-black800 = "#454545"
+black800 = "#101010"
 
 black900 :: Color
-black900 = "#2C2F3A"
+black900 = "#101010"
 
 blackLightGrey :: Color
 blackLightGrey = "#949494"
@@ -366,7 +366,7 @@ pinkPantone :: Color
 pinkPantone = "#f5c6c6"
 
 red :: Color
-red = "#E55454"
+red = "#FD5154"
 
 yellow800 :: Color
 yellow800 = "#FEEBB9"

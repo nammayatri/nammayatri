@@ -41,7 +41,7 @@ import Debug (spy)
 import Effect (Effect)
 import Effect (Effect)
 import Effect.Aff (error, killFiber, launchAff, launchAff_)
-import Effect.Aff.Compat (EffectFn1, EffectFnAff, fromEffectFnAff, runEffectFn1, runEffectFn2, runEffectFn3)
+import Effect.Aff.Compat (EffectFn1, EffectFnAff, fromEffectFnAff, runEffectFn1, runEffectFn2, runEffectFn3, EffectFn2)
 import Effect.Class (liftEffect)
 import Effect.Console (logShow)
 import Engineering.Helpers.Commons (liftFlow, os, isPreviousVersion)
@@ -170,7 +170,7 @@ foreign import storeOnResumeCallback :: forall action. (action -> Effect Unit) -
 
 foreign import getMerchantConfig :: forall a. (a -> Maybe a) -> (Maybe a) -> Effect (Maybe a)
 
-foreign import getMobileNumber :: String -> String
+foreign import getMobileNumber :: EffectFn2 String String String
 foreign import consumingBackPress ::  EffectFn1 Boolean Unit
 
 getConfig :: forall  a. Effect (Maybe a)

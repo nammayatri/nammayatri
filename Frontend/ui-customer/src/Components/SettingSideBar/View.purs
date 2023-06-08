@@ -185,7 +185,7 @@ profileView state push =
               [ width $ V 22
               , height (V 22)
               , color state.appConfig.profileName
-              , imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
+              , imageWithFallback $ "ny_ic_chevron_right_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_white.png"
               ]
           ]
         , textView $
@@ -221,7 +221,7 @@ profileView state push =
         , textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , color Color.yellow900
+          , color state.appConfig.profileName
           , text $ (profileCompleteValue state) <> " %"
           ] <> FontStyle.body3 TypoGraphy
         ]
