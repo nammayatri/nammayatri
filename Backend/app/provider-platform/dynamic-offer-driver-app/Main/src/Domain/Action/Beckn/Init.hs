@@ -142,7 +142,7 @@ handler merchantId req eitherReq = do
         HasField "fromLocation" sr DLoc.SearchReqLocation,
         HasField "toLocation" sr DLoc.SearchReqLocation,
         HasField "estimatedDuration" sr Seconds,
-        HasField "area" sr FareProductD.Area,
+        HasField "area" sr (Maybe FareProductD.Area),
         HasField "vehicleVariant" q Veh.Variant,
         HasField "distance" q Meters,
         HasField "estimatedFare" q Money,
