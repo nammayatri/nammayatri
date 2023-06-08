@@ -21,21 +21,14 @@ module Storage.Queries.DriverQuote where
 -- import Database.Beam.Postgres
 -- import qualified Database.Beam as B
 -- import Database.Beam.Postgres
-
--- import EulerHS.KVConnector.Utils
-
--- import Sequelize
-
--- import Sequelize (DatabaseWith)
-
--- import Storage.Queries.FullEntityBuilders (buildFullDriverQuote)
-
-import qualified Data.Time as T
+import qualified Database.Beam as B
+import Database.Beam.Postgres
 import qualified Domain.Types.DriverQuote as Domain
 import Domain.Types.Person
 import qualified Domain.Types.SearchTry as DST
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
+import EulerHS.KVConnector.Utils
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
@@ -44,6 +37,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (addUTCTime, secondsToNominalDiffTime)
 import qualified Lib.Mesh as Mesh
+import Sequelize (DatabaseWith)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverQuote as BeamDQ
 import Storage.Queries.FareParameters as BeamQFP
