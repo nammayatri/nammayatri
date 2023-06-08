@@ -42,7 +42,6 @@ buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
     device
     (shortestRouteInfo >>= (.distance))
     (shortestRouteInfo >>= (.duration))
-    autoAssignEnabled
     customerLanguage
 
 buildRentalSearchReq ::
@@ -59,7 +58,6 @@ buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
     Nothing
     Nothing
     Nothing
-    False
     Nothing
 
 buildSearchReq ::
@@ -72,16 +70,15 @@ buildSearchReq ::
   Maybe Text ->
   Maybe Meters ->
   Maybe Seconds ->
-  Bool ->
   Maybe Maps.Language ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin mbDestination searchId startTime city device distance duration autoAssignEnabled customerLanguage = do
+buildSearchReq origin mbDestination searchId startTime city device distance duration customerLanguage = do
   let transactionId = getId searchId
       messageId = transactionId
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) bapIDs.cabs bapURIs.cabs Nothing Nothing city
-  let intent = mkIntent origin mbDestination startTime autoAssignEnabled customerLanguage
+  let intent = mkIntent origin mbDestination startTime customerLanguage
   let mbRouteInfo = Search.RouteInfo {distance, duration}
   let searchMessage = Search.SearchMessage intent (Just mbRouteInfo) device
 
@@ -91,10 +88,9 @@ mkIntent ::
   DSearchCommon.SearchReqLocation ->
   Maybe DSearchCommon.SearchReqLocation ->
   UTCTime ->
-  Bool ->
   Maybe Maps.Language ->
   Search.Intent
-mkIntent origin mbDestination startTime autoAssignEnabled customerLanguage = do
+mkIntent origin mbDestination startTime customerLanguage = do
   let startLocation =
         Search.StartInfo
           { location = mkLocation origin,
@@ -112,8 +108,7 @@ mkIntent origin mbDestination startTime autoAssignEnabled customerLanguage = do
             end = mbEndLocation,
             tags =
               Search.Tags
-                { auto_assign_enabled = autoAssignEnabled,
-                  customer_language = customerLanguage
+                { customer_language = customerLanguage
                 }
           }
   Search.Intent

@@ -43,8 +43,8 @@ data SearchRequest = SearchRequest
     clientVersion :: Maybe Version,
     language :: Maybe Maps.Language,
     customerExtraFee :: Maybe Money,
-    autoAssignEnabled :: Bool,
-    autoAssignEnabledV2 :: Bool,
+    autoAssignEnabled :: Maybe Bool,
+    autoAssignEnabledV2 :: Maybe Bool,
     createdAt :: UTCTime
   }
   deriving (Generic, Show)

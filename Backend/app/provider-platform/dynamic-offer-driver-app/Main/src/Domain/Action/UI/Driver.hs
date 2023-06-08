@@ -775,7 +775,7 @@ respondQuote (driverId, _) req = do
       case req.response of
         Pulled -> throwError UnexpectedResponseValue
         Accept -> do
-          when searchReq.autoAssignEnabled $ CS.incrementSearchRequestLockCounter searchReq.id
+          when (searchReq.autoAssignEnabled == Just True) $ CS.incrementSearchRequestLockCounter searchReq.id
           logDebug $ "offered fare: " <> show req.offeredFare
           whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
           when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
@@ -803,7 +803,7 @@ respondQuote (driverId, _) req = do
             QDrQt.create driverQuote
             QSRD.updateDriverResponse sReqFD.id req.response
             QDFS.updateStatus sReqFD.driverId DDFS.OFFERED_QUOTE {quoteId = driverQuote.id, validTill = driverQuote.validTill}
-          let shouldPullFCMForOthers = (quoteCount + 1) >= quoteLimit || searchReq.autoAssignEnabled
+          let shouldPullFCMForOthers = (quoteCount + 1) >= quoteLimit || (searchReq.autoAssignEnabled == Just True)
           driverFCMPulledList <- if shouldPullFCMForOthers then QSRD.findAllActiveWithoutRespBySearchTryId searchTryId else pure []
           -- Adding +1 in quoteCount because one more quote added above (QDrQt.create driverQuote)
           sendRemoveRideRequestNotification driverFCMPulledList organization.id driverQuote

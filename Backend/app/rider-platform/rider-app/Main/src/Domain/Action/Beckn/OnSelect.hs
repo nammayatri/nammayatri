@@ -106,7 +106,7 @@ onSelect OnSelectValidatedReq {..} = do
     QEstimate.updateStatus estimate.id DEstimate.GOT_DRIVER_QUOTE
   QPFS.clearCache searchRequest.riderId
 
-  if searchRequest.autoAssignEnabledV2
+  if searchRequest.autoAssignEnabledV2 == Just True
     then do
       let lowestFareQuote = selectLowestFareQuote quotes
       case lowestFareQuote of

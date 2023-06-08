@@ -48,7 +48,7 @@ mkPersist
       estimatedDistance Meters
       estimatedDuration Seconds
       device Text Maybe
-      autoAssignEnabled Bool
+      autoAssignEnabled Bool Maybe
       customerLanguage Maps.Language Maybe
       specialLocationTag Text Maybe
       createdAt UTCTime

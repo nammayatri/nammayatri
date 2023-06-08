@@ -50,8 +50,8 @@ mkPersist
       clientVersion Text Maybe
       language Language Maybe
       customerExtraFee Money Maybe
-      autoAssignEnabled Bool
-      autoAssignEnabledV2 Bool
+      autoAssignEnabled Bool Maybe
+      autoAssignEnabledV2 Bool Maybe
       createdAt UTCTime
       Primary id
       deriving Generic

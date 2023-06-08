@@ -55,6 +55,5 @@ buildSearchReq subscriber req = do
         routeDistance = (.distance) =<< req.message.routeInfo,
         routeDuration = (.duration) =<< req.message.routeInfo,
         device = req.message.device,
-        autoAssignEnabled = intent.fulfillment.tags.auto_assign_enabled,
         customerLanguage = intent.fulfillment.tags.customer_language
       }
