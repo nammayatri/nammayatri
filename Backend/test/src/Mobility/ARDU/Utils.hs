@@ -168,7 +168,7 @@ select bapToken quoteId =
   void . callBAP . selectQuote2 bapToken quoteId $
     AppSelect.DSelectReq
       { customerExtraFee = Just 10,
-        autoAssignEnabled = Just False,
+        autoAssignEnabled = False,
         autoAssignEnabledV2 = Nothing
       }
 

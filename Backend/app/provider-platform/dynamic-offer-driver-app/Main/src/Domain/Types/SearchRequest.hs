@@ -36,7 +36,7 @@ data SearchRequest = SearchRequest
     estimatedDistance :: Meters,
     estimatedDuration :: Seconds,
     specialLocationTag :: Maybe Text,
-    autoAssignEnabled :: Bool,
+    autoAssignEnabled :: Maybe Bool,
     device :: Maybe Text,
     customerLanguage :: Maybe Maps.Language,
     createdAt :: UTCTime

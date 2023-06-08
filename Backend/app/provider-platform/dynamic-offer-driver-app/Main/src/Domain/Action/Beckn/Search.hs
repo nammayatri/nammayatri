@@ -77,7 +77,6 @@ data DSearchReq = DSearchReq
     routeDistance :: Maybe Meters,
     routeDuration :: Maybe Seconds,
     device :: Maybe Text,
-    autoAssignEnabled :: Bool,
     customerLanguage :: Maybe Maps.Language
   }
 
@@ -290,6 +289,7 @@ buildSearchRequest DSearchReq {..} providerId fromLocation toLocation estimatedD
       { id = Id uuid,
         createdAt = now,
         area = Just area,
+        autoAssignEnabled = Nothing,
         ..
       }
 
