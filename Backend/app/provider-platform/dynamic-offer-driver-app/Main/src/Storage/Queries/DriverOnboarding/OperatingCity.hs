@@ -16,11 +16,14 @@
 module Storage.Queries.DriverOnboarding.OperatingCity where
 
 import Data.Text
+import qualified Database.Beam as B
+import Database.Beam.Postgres
 import Domain.Types.DriverOnboarding.OperatingCity
 import Domain.Types.Merchant
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
+import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -110,13 +113,20 @@ findEnabledCityByMerchantIdAndName merchantId city =
         &&. operatingCity ^. OperatingCityEnabled
     return operatingCity
 
--- findEnabledCityByMerchantIdAndName' :: L.MonadFlow m => Id Merchant -> Text ->  m [OperatingCity]
--- findEnabledCityByMerchantIdAndName'(Id merchantId) city = do
---   dbConf <- L.getOption Extra.EulerPsqlDbCfg
---   case dbConf of
---     Just dbConf' -> either (pure []) (transformBeamOperatingCityToDomain <$>) <$> KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.And
---       [Se.Is BeamOC.cityName  $ Se.Eq city, Se.Is BeamOC.enabled $ Se.Eq True, Se.Is BeamOC.merchantId $ Se.Eq merchantId]]
---     Nothing -> pure []
+findEnabledCityByMerchantIdAndName' :: L.MonadFlow m => Id Merchant -> Text -> m [OperatingCity]
+findEnabledCityByMerchantIdAndName' (Id mId) city = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  conn <- L.getOrInitSqlConn (fromJust dbConf)
+  case conn of
+    Right c -> do
+      operatingCities <-
+        L.runDB c $
+          L.findRows $
+            B.select $
+              B.filter_' (\BeamOC.OperatingCityT {..} -> (merchantId B.==?. B.val_ mId) B.&&?. (cityName B.==?. B.val_ city) B.&&?. (enabled B.==?. B.val_ True)) $
+                B.all_ (meshModelTableEntity @BeamOC.OperatingCityT @Postgres @(Se.DatabaseWith BeamOC.OperatingCityT))
+      pure (either (const []) (transformBeamOperatingCityToDomain <$>) operatingCities)
+    Left _ -> pure []
 
 transformBeamOperatingCityToDomain :: BeamOC.OperatingCity -> OperatingCity
 transformBeamOperatingCityToDomain BeamOC.OperatingCityT {..} = do

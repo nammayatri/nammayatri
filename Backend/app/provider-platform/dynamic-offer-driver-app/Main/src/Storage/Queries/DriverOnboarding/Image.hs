@@ -120,6 +120,30 @@ findRecentByPersonIdAndImageType personId imgtype = do
   where
     hoursAgo i now = negate (3600 * i) `DT.addUTCTime` now
 
+findRecentByPersonIdAndImageType' :: (L.MonadFlow m, Log m, MonadTime m, CacheFlow m r, EsqDBFlow m r) => Id Person -> ImageType -> m [Image]
+findRecentByPersonIdAndImageType' personId imgtype = do
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
+  let onboardingRetryTimeInHours = transporterConfig.onboardingRetryTimeInHours
+  let onBoardingRetryTimeInHours = intToNominalDiffTime onboardingRetryTimeInHours
+  now <- getCurrentTime
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbCOnf' ->
+      either (pure []) (transformBeamImageToDomain <$>)
+        <$> KV.findAllWithKVConnector
+          dbCOnf'
+          Mesh.meshConfig
+          [ Se.And
+              [ Se.Is BeamI.personId $ Se.Eq $ getId personId,
+                Se.Is BeamI.imageType $ Se.Eq imgtype,
+                Se.Is BeamI.createdAt $ Se.GreaterThanOrEq (hoursAgo onBoardingRetryTimeInHours now)
+              ]
+          ]
+    Nothing -> pure []
+  where
+    hoursAgo i now = negate (3600 * i) `DT.addUTCTime` now
+
 -- updateToValid :: Id Image -> SqlDB ()
 -- updateToValid id = do
 --   Esq.update $ \tbl -> do
