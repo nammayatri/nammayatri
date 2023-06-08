@@ -19,6 +19,8 @@ module Storage.Beam.Driver.DriverFlowStatus where
 
 import Data.Aeson
 import qualified Data.Aeson as A
+import Data.ByteString.Internal (ByteString, unpackChars)
+import Data.ByteString.Lazy (fromStrict, toStrict)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -29,7 +31,8 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+import Database.PostgreSQL.Simple.FromField (FromField, ResultError (..), fromField)
+import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Driver.DriverFlowStatus as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
@@ -38,23 +41,48 @@ import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
--- fromFieldEnum ::
---   (Typeable a, Read a) =>
+-- fromPersistValue (PersistByteString v) = case decode $ fromStrict v of
+--     Just res -> Right res
+--     Nothing -> Left "Unable to parse WaitingCharge."
+-- fromFieldFlowStatus ::
+--   -- (Typeable a, Read a) =>
 --   DPSF.Field ->
 --   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldEnum f mbValue = case mbValue of
+--   DPSF.Conversion Domain.FlowStatus
+-- fromFieldFlowStatus f mbValue = case mbValue of
 --   Nothing -> DPSF.returnError UnexpectedNull f mempty
 --   Just value' ->
---     case (readMaybe (unpackChars value')) of
+--     case (A.decode $ fromStrict value') of
 --       Just val -> pure val
 --       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
-instance FromField Domain.FlowStatus where
-  fromField = fromFieldEnum
+fromFieldFlowStatus ::
+  -- (Typeable a, Read a) =>
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion Domain.FlowStatus
+fromFieldFlowStatus f mbValue = do
+  value <- fromField f mbValue
+  case A.fromJSON value of
+    A.Success a -> pure a
+    _ -> DPSF.returnError ConversionFailed f "Conversion failed"
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.FlowStatus where
-  sqlValueSyntax = autoSqlValueSyntax
+-- fromFieldSWC ::
+--   -- (Typeable a, Read a) =>
+--   DPSF.Field ->
+--   Maybe ByteString ->
+--   DPSF.Conversion Domain.FlowStatus
+-- fromFieldSWC f mbValue = do
+--   value <- fromField f mbValue
+--   case A.fromJSON value of
+--     A.Success a -> pure a
+--     _           -> DPSF.returnError ConversionFailed f "Conversion failed"
+
+instance FromField Domain.FlowStatus where
+  fromField = fromFieldFlowStatus
+
+instance HasSqlValueSyntax be Value => HasSqlValueSyntax be Domain.FlowStatus where
+  sqlValueSyntax = sqlValueSyntax . A.toJSON
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.FlowStatus
 

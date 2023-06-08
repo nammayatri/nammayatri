@@ -18,6 +18,8 @@
 module Storage.Beam.Merchant.DriverIntelligentPoolConfig where
 
 import qualified Data.Aeson as A
+import Data.ByteString.Internal (ByteString, unpackChars)
+import Data.ByteString.Lazy (fromStrict, toStrict)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -29,6 +31,7 @@ import Database.Beam.Postgres
   ( Postgres,
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
@@ -61,14 +64,28 @@ import Sequelize
 
 -- instance FromBackendRow Postgres Minutes
 
+fromFieldSWC ::
+  -- (Typeable a, Read a) =>
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion SWC.SlidingWindowOptions
+fromFieldSWC f mbValue = do
+  value <- fromField f mbValue
+  case A.fromJSON value of
+    A.Success a -> pure a
+    _ -> DPSF.returnError DPSF.ConversionFailed f "Conversion failed"
+
 instance IsString Minutes where
   fromString = show
 
 instance FromField SWC.SlidingWindowOptions where
-  fromField = fromFieldEnum
+  fromField = fromFieldSWC
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be SWC.SlidingWindowOptions where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be SWC.SlidingWindowOptions where
+--   sqlValueSyntax = autoSqlValueSyntax
+
+instance HasSqlValueSyntax be ByteString => HasSqlValueSyntax be SWC.SlidingWindowOptions where
+  sqlValueSyntax = sqlValueSyntax . toStrict . A.encode
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be SWC.SlidingWindowOptions
 

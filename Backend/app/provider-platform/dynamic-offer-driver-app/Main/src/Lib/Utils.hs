@@ -51,8 +51,11 @@ defaultTimeOfDay =
 defaultUTCDate :: UTCTime
 defaultUTCDate = localTimeToUTC utc defaultDate
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
+--   sqlValueSyntax = autoSqlValueSyntax
+
+instance HasSqlValueSyntax be Int => HasSqlValueSyntax be Money where
+  sqlValueSyntax = sqlValueSyntax . getMoney
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
 
@@ -164,11 +167,24 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainFP.WaitingChargeInf
 
 instance FromBackendRow Postgres DomainFP.WaitingChargeInfo
 
+-- fromFieldEnumNSC ::
+--   -- (Typeable a, Read a) =>
+--   DPSF.Field ->
+--   Maybe ByteString ->
+--   DPSF.Conversion DomainFP.NightShiftCharge
+-- fromFieldEnumNSC f mbValue = case mbValue of
+--   Nothing -> DPSF.returnError UnexpectedNull f mempty
+--   Just value' -> case decode $ fromStrict value' of
+--     Just res -> pure res
+--     Nothing -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
+
 instance FromField DomainFP.NightShiftCharge where
   fromField = fromFieldEnum
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be DomainFP.NightShiftCharge where
   sqlValueSyntax = autoSqlValueSyntax
+
+-- sqlValueSyntax = sqlValueSyntax . encodeToText
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainFP.NightShiftCharge
 
@@ -209,5 +225,6 @@ buildRadiusWithin' pnt (lat, lon) rad =
   where
     getPoint' = "(SRID=4326;POINT(" <> show lon <> " " <> show lat <> "))"
 
--- (<->.) :: Point -> Point -> Double
--- (<->.) = " <-> "
+-- (<->.) :: Point -> Point -> BQ.QGenExpr context Postgres s Double
+-- (<->.) p1 p2 = BQ.QExpr (\_ -> PgExpressionSyntax (emit $ show p1 <> " <-> " <> show p2))
+-- " <-> "

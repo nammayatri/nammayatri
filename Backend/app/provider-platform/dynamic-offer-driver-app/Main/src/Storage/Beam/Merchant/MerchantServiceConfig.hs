@@ -65,7 +65,7 @@ instance IsString Domain.ServiceName where
 data MerchantServiceConfigT f = MerchantServiceConfigT
   { merchantId :: B.C f Text,
     serviceName :: B.C f Domain.ServiceName,
-    configJSON :: B.C f Text,
+    configJSON :: B.C f A.Value,
     updatedAt :: B.C f Time.UTCTime,
     createdAt :: B.C f Time.UTCTime
   }

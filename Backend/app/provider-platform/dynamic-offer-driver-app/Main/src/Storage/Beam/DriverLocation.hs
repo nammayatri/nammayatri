@@ -19,6 +19,10 @@
 module Storage.Beam.DriverLocation where
 
 import qualified Data.Aeson as A
+-- import Database.Beam.Postgres.Syntax
+-- import qualified Database.Beam.Query as BQ
+
+import Data.ByteString.Internal (ByteString, unpackChars)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -27,9 +31,8 @@ import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres (Postgres)
--- import Database.Beam.Postgres.Syntax
--- import qualified Database.Beam.Query as BQ
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
@@ -38,20 +41,21 @@ import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
--- fromFieldEnum ::
---   (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldEnum f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' ->
---     case readMaybe (unpackChars value') of
---       Just val -> pure val
---       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
+fromFieldPoint ::
+  -- (Typeable a, Read a) =>
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion Point
+fromFieldPoint f mbValue = case mbValue of
+  Nothing -> DPSF.returnError DPSF.UnexpectedNull f mempty
+  Just _ -> pure Point
+
+-- case readMaybe (unpackChars value') of
+--   Just val -> pure val
+--   _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
 instance FromField Point where
-  fromField = fromFieldEnum
+  fromField = fromFieldPoint
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Point where
   sqlValueSyntax = autoSqlValueSyntax

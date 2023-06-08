@@ -19,12 +19,15 @@ module Storage.Queries.Merchant.MerchantServiceConfig
     #-}
 where
 
-import Domain.Types.Merchant as DOrg
 -- import Domain.Types.Merchant.MerchantServiceConfig (MerchantServiceConfig, ServiceName)
+
+import qualified Data.Aeson as A
+import Domain.Types.Merchant as DOrg
 import Domain.Types.Merchant.MerchantServiceConfig
 import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
+import qualified EulerHS.Prelude as EHP
 import qualified Kernel.Beam.Types as KBT
 import qualified Kernel.External.Call as Call
 import qualified Kernel.External.Maps.Interface.Types as Maps
@@ -32,7 +35,7 @@ import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.SMS.Interface as Sms
 import qualified Kernel.External.Verification.Interface as Verification
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
-import Kernel.Prelude
+import Kernel.Prelude as P
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (decodeFromText)
@@ -97,7 +100,7 @@ upsertMerchantServiceConfig :: (L.MonadFlow m, Log m, MonadTime m) => MerchantSe
 upsertMerchantServiceConfig merchantServiceConfig = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
-  let (_serviceName, configJSON) = getServiceNameConfigJSON merchantServiceConfig.serviceConfig
+  let (_serviceName, configJSON) = getServiceNameConfigJSON' merchantServiceConfig.serviceConfig
   case dbConf of
     Just dbCOnf' -> do
       res <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamMSC.merchantId $ Se.Eq (getId merchantServiceConfig.merchantId)]
@@ -109,7 +112,7 @@ upsertMerchantServiceConfig merchantServiceConfig = do
                 KV.updateWoReturningWithKVConnector
                   dbCOnf'
                   Mesh.meshConfig
-                  [ Se.Set BeamMSC.configJSON configJSON,
+                  [ Se.Set BeamMSC.configJSON (configJSON),
                     Se.Set BeamMSC.updatedAt now
                   ]
                   [Se.Is BeamMSC.merchantId (Se.Eq $ getId merchantServiceConfig.merchantId)]
@@ -120,14 +123,14 @@ upsertMerchantServiceConfig merchantServiceConfig = do
 transformBeamMerchantServiceConfigToDomain :: (L.MonadFlow m, Log m) => BeamMSC.MerchantServiceConfig -> m MerchantServiceConfig
 transformBeamMerchantServiceConfigToDomain BeamMSC.MerchantServiceConfigT {..} = do
   serviceConfigData <- maybe (throwError $ InternalError "Unable to decode MerchantServiceConfigT.configJSON") return $ case serviceName of
-    Domain.MapsService Maps.Google -> Domain.MapsServiceConfig . Maps.GoogleConfig <$> decodeFromText configJSON
-    Domain.MapsService Maps.OSRM -> Domain.MapsServiceConfig . Maps.OSRMConfig <$> decodeFromText configJSON
-    Domain.MapsService Maps.MMI -> Domain.MapsServiceConfig . Maps.MMIConfig <$> decodeFromText configJSON
-    Domain.SmsService Sms.ExotelSms -> Domain.SmsServiceConfig . Sms.ExotelSmsConfig <$> decodeFromText configJSON
-    Domain.SmsService Sms.MyValueFirst -> Domain.SmsServiceConfig . Sms.MyValueFirstConfig <$> decodeFromText configJSON
-    Domain.WhatsappService Whatsapp.GupShup -> Domain.WhatsappServiceConfig . Whatsapp.GupShupConfig <$> decodeFromText configJSON
-    Domain.VerificationService Verification.Idfy -> Domain.VerificationServiceConfig . Verification.IdfyConfig <$> decodeFromText configJSON
-    Domain.CallService Call.Exotel -> Domain.CallServiceConfig . Call.ExotelConfig <$> decodeFromText configJSON
+    Domain.MapsService Maps.Google -> Domain.MapsServiceConfig . Maps.GoogleConfig <$> valueToMaybe configJSON
+    Domain.MapsService Maps.OSRM -> Domain.MapsServiceConfig . Maps.OSRMConfig <$> valueToMaybe configJSON
+    Domain.MapsService Maps.MMI -> Domain.MapsServiceConfig . Maps.MMIConfig <$> valueToMaybe configJSON
+    Domain.SmsService Sms.ExotelSms -> Domain.SmsServiceConfig . Sms.ExotelSmsConfig <$> valueToMaybe configJSON
+    Domain.SmsService Sms.MyValueFirst -> Domain.SmsServiceConfig . Sms.MyValueFirstConfig <$> valueToMaybe configJSON
+    Domain.WhatsappService Whatsapp.GupShup -> Domain.WhatsappServiceConfig . Whatsapp.GupShupConfig <$> valueToMaybe configJSON
+    Domain.VerificationService Verification.Idfy -> Domain.VerificationServiceConfig . Verification.IdfyConfig <$> valueToMaybe configJSON
+    Domain.CallService Call.Exotel -> Domain.CallServiceConfig . Call.ExotelConfig <$> valueToMaybe configJSON
   pure
     MerchantServiceConfig
       { merchantId = Id merchantId,
@@ -135,13 +138,18 @@ transformBeamMerchantServiceConfigToDomain BeamMSC.MerchantServiceConfigT {..} =
         updatedAt = updatedAt,
         createdAt = createdAt
       }
+  where
+    valueToMaybe :: FromJSON a => A.Value -> Maybe a
+    valueToMaybe value = case A.fromJSON value of
+      A.Success a -> Just a
+      _ -> Nothing
 
 transformDomainMerchantServiceConfigToBeam :: MerchantServiceConfig -> BeamMSC.MerchantServiceConfig
 transformDomainMerchantServiceConfigToBeam MerchantServiceConfig {..} =
   BeamMSC.MerchantServiceConfigT
     { BeamMSC.merchantId = getId merchantId,
-      BeamMSC.serviceName = fst $ getServiceNameConfigJSON serviceConfig,
-      BeamMSC.configJSON = snd $ getServiceNameConfigJSON serviceConfig,
+      BeamMSC.serviceName = fst $ getServiceNameConfigJSON' serviceConfig,
+      BeamMSC.configJSON = snd $ getServiceNameConfigJSON' serviceConfig,
       BeamMSC.updatedAt = updatedAt,
       BeamMSC.createdAt = createdAt
     }
