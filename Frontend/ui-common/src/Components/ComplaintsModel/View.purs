@@ -11,10 +11,9 @@ import Effect (Effect)
 import Font.Style as FontStyle
 import JBridge (getWidthFromPercent, openUrlInMailApp)
 import JBridge as JB
-import Merchant.Utils (getValueFromConfig)
 import Prelude (Unit, bind, const, map, pure, unit, ($), (+), (<>))
 import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, color, cornerRadius, height, horizontalScrollView, linearLayout, margin, onClick, orientation, padding, scrollBarX, stroke, text, textFromHtml, textView, width)
-import Styles.Colors as Color
+import Common.Styles.Colors as Color
 
 view :: forall w. Config -> PrestoDOM (Effect Unit) w
 view config =
