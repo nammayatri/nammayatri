@@ -146,7 +146,8 @@ handler merchantId req eitherReq = do
         HasField "vehicleVariant" q Veh.Variant,
         HasField "distance" q Meters,
         HasField "estimatedFare" q Money,
-        HasField "fareParams" q DFP.FareParameters
+        HasField "fareParams" q DFP.FareParameters,
+        HasField "specialLocationTag" q (Maybe Text)
       ) =>
       sr ->
       q ->
@@ -180,6 +181,7 @@ handler merchantId req eitherReq = do
             riderName = Nothing,
             estimatedDuration = searchRequest.estimatedDuration,
             fareParams = driverQuote.fareParams,
+            specialLocationTag = driverQuote.specialLocationTag,
             specialZoneOtpCode = Nothing,
             area = searchRequest.area,
             ..
