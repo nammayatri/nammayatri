@@ -19,13 +19,15 @@ module Storage.Queries.DriverQuote where
 import Data.Int (Int32)
 -- import qualified Database.Beam as B
 -- import Database.Beam.Postgres
+import qualified Database.Beam as B
+import Database.Beam.Postgres
 import qualified Domain.Types.DriverQuote as Domain
 import Domain.Types.Person
 import qualified Domain.Types.SearchTry as DST
 import qualified EulerHS.Extra.EulerDB as Extra
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
--- import EulerHS.KVConnector.Utils (meshModelTableEntity)
+import EulerHS.KVConnector.Utils
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -33,7 +35,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (addUTCTime, secondsToNominalDiffTime)
 import qualified Lib.Mesh as Mesh
--- import Sequelize
+import Sequelize (DatabaseWith)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverQuote as BeamDQ
 import Storage.Queries.FareParameters as BeamQFP
@@ -211,6 +213,22 @@ countAllBySTId searchTryId = do
         dQuote ^. DriverQuoteStatus ==. val Domain.Active
           &&. dQuote ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
       pure (countRows @Int32)
+
+countAllBySTId' :: L.MonadFlow m => Id DST.SearchTry -> m Int
+countAllBySTId' searchTId = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  conn <- L.getOrInitSqlConn (fromJust dbConf)
+  case conn of
+    Right c -> do
+      resp <-
+        L.runDB c $
+          L.findRow $
+            B.select $
+              B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+                B.filter_' (\(BeamDQ.DriverQuoteT {..}) -> searchTryId B.==?. B.val_ (getId searchTId)) $
+                  B.all_ (meshModelTableEntity @BeamDQ.DriverQuoteT @Postgres @(DatabaseWith BeamDQ.DriverQuoteT))
+      pure (either (const 0) (fromMaybe 0) resp)
+    Left _ -> pure 0
 
 transformBeamDriverQuoteToDomain :: L.MonadFlow m => BeamDQ.DriverQuote -> m (Maybe Domain.DriverQuote)
 transformBeamDriverQuoteToDomain BeamDQ.DriverQuoteT {..} = do
