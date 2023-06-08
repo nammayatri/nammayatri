@@ -33,7 +33,8 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime,stringToVersion)
 import Foreign.Class (class Encode, encode, decode)
-import Helpers.Utils (getCurrentUTC, hideSplash, getTime, convertUTCtoISC, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions)
+import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions)
+import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
 import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, loaderText, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, toggleLoader, generateSessionId, stopChatListenerService, hideKeyboardOnNavigation, metaLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -1255,7 +1256,7 @@ homeScreenFlow = do
             },
             rideStartTime = convertUTCtoISC (fromMaybe " " response.tripStartTime) "h:mm a",
             rideEndTime = convertUTCtoISC (fromMaybe " " response.tripEndTime) "h:mm a",
-            bookingDateAndTime = convertUTCtoISC response.createdAt  "DD/MM/yyyy  hh:mm a",
+            bookingDateAndTime = convertUTCtoISC response.createdAt  "DD/MM/YYYY  hh:mm a",
             totalAmount = fromMaybe response.estimatedBaseFare response.computedFare}})
       void $ lift $ lift $ toggleLoader false
       _ <- updateStage $ HomeScreenStage RideCompleted

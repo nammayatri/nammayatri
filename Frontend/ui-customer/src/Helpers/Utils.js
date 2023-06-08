@@ -1,6 +1,4 @@
 import { callbackMapper } from 'presto-ui';
-import moment from 'moment';
-
 
 var timerIdDebounce = null;
 var driverWaitingTimerId = null;
@@ -59,27 +57,9 @@ export const validateEmail = function (email){
     return re.test(String(email).toLowerCase());
 }
 
-export const addTimeToDate = function(date){
-    return function(num){
-        return function(timeunit){
-            return moment(date).add(num,timeunit).toDate();
-        }
-    }
-}
-
 export const factoryResetApp = function (str) {
     console.log("HERE IN RESET ===--->>")
     window.JBridge.factoryResetApp()
-}
-
-export const dateCompare = function (currentDate) {
-    return function (validDate) {
-        console.log (moment(currentDate).isBefore(validDate), currentDate, validDate);
-        if(!moment(currentDate).isBefore(validDate)){
-            window.JBridge.toast("Invalid Date/Time");
-        }
-        return moment(currentDate).isBefore(validDate);
-    }
 }
 
 export const secondsToHms = function (d) {
@@ -311,46 +291,6 @@ export const setEnabled = function (id){
     }
   }
 }
-
-export const convertUTCtoISC = function (str) {
-  return function (format) {
-    var localTime1 = moment.utc(str).toDate();
-    localTime1 = moment(localTime1).format(format);
-    return localTime1;
-  };
-};
-
-
-export const getExpiryTime = function (str1) {
-  return function (str2){
-    return function (forLostAndFound) {
-      var expiry = new Date(str1);
-      var d = new Date();
-      var result =  moment(d).utc().format();
-      var current = new Date(result);
-      console.log(current + " , " + expiry + "STR");
-      var diff = (expiry.getTime() - current.getTime())/ 1000;
-      if (forLostAndFound)
-        {
-          diff = (current.getTime() - expiry.getTime())/ 1000;
-        }
-      diff = (Math.round(diff));
-      console.log("STR ->>>> expiry time "+diff);
-      if (diff >= 0)
-          return (diff);
-        else
-          return 0;
-    };
-  };
-};
-
-
-export const getCurrentUTC = function (str) {
-  var d = new Date();
-  var result =  moment(d).utc().format();
-  console.log(result);
-  return result;
-};
 
   // exports ["debounceFunction"] = function (delay) { NEED TO HANDLE DEBOUNCING IN LOCATEONMAP
   //   return function (cb){

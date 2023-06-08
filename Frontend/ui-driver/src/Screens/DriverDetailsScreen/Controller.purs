@@ -25,10 +25,10 @@ import Common.Types.App (LazyCheck(..))
 import Screens.DriverDetailsScreen.ComponentConfig (ListOptions(..))
 import Effect.Class (liftEffect)
 import JBridge (renderBase64Image, toast)
-import Engineering.Helpers.Commons (getNewIDWithTag)
+import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress,trackAppScreenEvent)
-import Helpers.Utils (getTime,getCurrentUTC,differenceBetweenTwoUTC)
+import Helpers.Utils (getTime,differenceBetweenTwoUTC)
 import Types.App (GlobalState(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), FlowBT,  ScreenType(..))
 import Storage (KeyStore(..),getValueToLocalStore)
 import Screens (ScreenName(..), getScreen)
@@ -160,7 +160,7 @@ eval ClickRemoveAlternateNumber state = do
 eval (InAppKeyboardModalMobile (InAppKeyboardModal.BackPressed)) state = do
   continue state { data = state.data {driverAlternateMobile = (if (state.props.isEditAlternateMobile == false) then (Nothing) else state.data.driverAlternateMobile), driverEditAlternateMobile = Nothing}, props = state.props {keyboardModalType = NONE, checkAlternateNumber = (state.props.isEditAlternateMobile == false),numberExistError= false ,isEditAlternateMobile = false}}
 
-eval (InAppKeyboardModalMobile (InAppKeyboardModal.OnClickTextCross)) state = do 
+eval (InAppKeyboardModalMobile (InAppKeyboardModal.OnClickTextCross)) state = do
   continue state {data {driverEditAlternateMobile = Nothing, driverAlternateMobile = (if (state.props.isEditAlternateMobile == false) then (Nothing) else state.data.driverAlternateMobile)},props {numberExistError= false, checkAlternateNumber = true}}
 
 eval (InAppKeyboardModalMobile (InAppKeyboardModal.OnSelection key index)) state = do

@@ -26,7 +26,8 @@ import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (strToBool)
-import Helpers.Utils (convertUTCtoISC, parseFloat, rotateArray, setEnabled, setRefreshing, toString, isHaveFare, withinTimeRange)
+import Helpers.Utils (parseFloat, rotateArray, setEnabled, setRefreshing, toString, isHaveFare, withinTimeRange)
+import Engineering.Helpers.Commons (convertUTCtoISC)
 import JBridge (firebaseLogEvent)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Prelude (class Show, pure, unit, bind, map, discard, show, ($), (==), (&&), (+), (/=), (<>), (||), (-), (<), (/), (*), negate, (<<<), not)
@@ -38,7 +39,7 @@ import Screens.Types (AnimationState(..), FareComponent, Fares, IndividualRideCa
 import Services.API (FareBreakupAPIEntity(..), RideAPIEntity(..), RideBookingListRes, RideBookingRes(..))
 import Storage (isLocalStageOn)
 import Language.Strings (getString, getEN)
-import Language.Types (STR(..)) 
+import Language.Types (STR(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getFilteredFares, getKmMeter)
 
 instance showAction :: Show Action where
@@ -194,9 +195,9 @@ myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropVal
 
 
 myRideListTransformer :: MyRidesScreenState -> Array RideBookingRes -> Array IndividualRideCardState
-myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETED" || item.status == "CANCELLED")) (map (\(RideBookingRes ride) -> 
-  let 
-    fares = getFares ride.fareBreakup 
+myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETED" || item.status == "CANCELLED")) (map (\(RideBookingRes ride) ->
+  let
+    fares = getFares ride.fareBreakup
     (RideAPIEntity rideDetails) = (fromMaybe dummyRideAPIEntity (ride.rideList !!0))
     baseDistanceVal = (getKmMeter (fromMaybe 0 (rideDetails.chargeableRideDistance)))
     timeVal = (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "HH:mm:ss")
