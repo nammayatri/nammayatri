@@ -290,6 +290,21 @@ makeSearchLocationReq input lat lng radius language components = SearchLocationR
             }
     }
 
+------------------------------------------------------------------------ OnCallBT Function ------------------------------------------------------------------------------------
+
+onCallBT :: OnCallReq -> FlowBT String OnCallRes
+onCallBT payload = do
+  headers <- getHeaders' ""
+  withAPIResultBT (EP.onCall "") (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
+  where
+    errorHandler errorPayload = BackT $ pure GoBack
+
+makeOnCallReq :: String -> String -> OnCallReq
+makeOnCallReq rideID callType = OnCallReq {
+    "rideId" : rideID,
+    "callType" : callType
+}
+
 ------------------------------------------------------------------------ PlaceDetailsBT Function --------------------------------------------------------------------------------------
 placeDetailsBT :: PlaceDetailsReq -> FlowBT String PlaceDetailsResp
 placeDetailsBT (PlaceDetailsReq id) = do

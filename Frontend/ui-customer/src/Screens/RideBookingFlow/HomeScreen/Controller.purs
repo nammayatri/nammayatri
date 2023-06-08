@@ -69,7 +69,7 @@ import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackA
 import Merchant.Utils (getValueFromConfig)
 import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/))
 import Presto.Core.Types.API (ErrorResponse)
-import PrestoDOM (Eval, Visibility(..), continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, Visibility(..), continue, continueWithCmd, exit, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resources.Constants (encodeAddress)
 import Screens (ScreenName(..), getScreen)
@@ -481,6 +481,7 @@ data ScreenOutput = LogoutUser
                   | CheckFavDistance HomeScreenState
                   | SaveFavourite HomeScreenState
                   | GoToReferral HomeScreenState
+                  | CallDriver HomeScreenState CallType
                   | CallContact HomeScreenState
                   | CallSupport HomeScreenState
                   | CallPolice HomeScreenState
@@ -1381,21 +1382,22 @@ eval CloseLocationTracking state = continue state { props { isLocationTracking =
 eval CloseShowCallDialer state = continue state { props { showCallPopUp = false } }
 
 eval (ShowCallDialer item) state = do
+  let newState = state { props { showCallPopUp = false } }
   case item of
     ANONYMOUS_CALLER -> do
-      continueWithCmd state
+      updateWithCmdAndExit newState 
         [ do
             _ <- pure $ showDialer (if (STR.take 1 state.data.driverInfoCardState.merchantExoPhone) == "0" then state.data.driverInfoCardState.merchantExoPhone else "0" <> state.data.driverInfoCardState.merchantExoPhone)
             _ <- (firebaseLogEventWithTwoParams "ny_user_anonymous_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
             pure NoAction
-        ]
+        ] $ CallDriver newState ANONYMOUS_CALLER
     DIRECT_CALLER -> do
-      continueWithCmd state
+      updateWithCmdAndExit newState
         [ do
             _ <- pure $ showDialer $ fromMaybe state.data.driverInfoCardState.merchantExoPhone state.data.driverInfoCardState.driverNumber
             _ <- (firebaseLogEventWithTwoParams "ny_user_direct_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
             pure NoAction
-        ]
+        ] $ CallDriver newState DIRECT_CALLER
     _ -> continue state
 
 eval (StartLocationTracking item) state = do

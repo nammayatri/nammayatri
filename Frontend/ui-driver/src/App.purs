@@ -249,6 +249,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | GO_TO_NOTIFICATIONS
                           | ADD_ALTERNATE_HOME
                           | GO_TO_START_ZONE_RIDE {otp :: String, lat :: String, lon :: String}
+                          | ON_CALL HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 

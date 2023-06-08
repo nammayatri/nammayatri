@@ -151,5 +151,8 @@ homeScreen = do
     RetryFindingQuotes updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure RETRY_FINDING_QUOTES)
+    CallDriver updatedState callType-> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ ON_CALL updatedState callType)
 
 
