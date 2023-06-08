@@ -67,6 +67,7 @@ data KeyStore = USER_NAME
                 | SET_ALTERNATE_TIME
                 | TRIGGER_MAPS
                 | DEVICE_DETAILS
+                | HAS_TAKEN_FIRST_RIDE
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

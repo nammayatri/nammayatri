@@ -1061,6 +1061,9 @@ homeScreenFlow = do
   let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
   setValueToLocalStore USER_NAME getDriverInfoResp.firstName
   _ <- pure $ spy "response for mode zxc" getDriverInfoResp
+  if (isJust getDriverInfoResp.numberOfRides) then do
+    setValueToLocalStore HAS_TAKEN_FIRST_RIDE $ show $ fromMaybe 0 getDriverInfoResp.numberOfRides == 0
+    else setValueToLocalStore HAS_TAKEN_FIRST_RIDE "false"
   case getDriverInfoResp.mode of
     Just currentMode -> case currentMode of
                           "OFFLINE" -> do
@@ -1201,7 +1204,17 @@ homeScreenFlow = do
       _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
       _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
       (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
-      _ <- pure $ firebaseLogEvent "ny_user_ride_completed"
+      _ <- pure $ firebaseLogEvent "ny_user_ride_completed" 
+
+      if getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "true" then do
+        getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
+        let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
+        if (isJust getDriverInfoResp.numberOfRides && (fromMaybe 0 getDriverInfoResp.numberOfRides == 1)) 
+          then pure $ firebaseLogEvent "ny_driver_first_ride_completed"
+          else pure unit
+        setValueToLocalStore HAS_TAKEN_FIRST_RIDE "false"
+        else pure unit
+
       (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "false" "null"
       case (head rideHistoryResponse.list) of
         Nothing -> pure unit
