@@ -34,6 +34,8 @@ import Foreign.Generic (decodeJSON)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Data.Either (Either(..))
 import Engineering.Helpers.Commons (screenHeight, screenWidth)
+import Helpers.Utils (parseFloat)
+import Data.Int (toNumber)
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
 -- -- foreign import _createKeyStoreEntry :: String -> String -> (Effect Unit) -> (String -> Effect Unit) -> Effect Unit
@@ -343,3 +345,8 @@ getWidthFromPercent :: Int -> Int
 getWidthFromPercent percent =
   let scrWidth = (screenWidth unit)
     in ((scrWidth / 100) * percent)
+
+fromMetersToKm :: Int -> String
+fromMetersToKm distanceInMeters
+  | distanceInMeters >= 1000 = parseFloat (toNumber distanceInMeters / 1000.0) 1 <> " km"
+  | otherwise = show distanceInMeters <> " m"

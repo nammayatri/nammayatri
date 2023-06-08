@@ -31,6 +31,9 @@ _description = lens (unwrap >>> _.description) (\oldRec newVal -> wrap ((unwrap 
 _place_id :: forall a b c. Newtype a {placeId :: c | b} => Lens' a c
 _place_id = lens (unwrap >>> _.placeId) (\oldRec newVal -> wrap ((unwrap oldRec) {placeId = newVal}))
 
+_distance :: forall a b c. Newtype a {distance :: c | b} => Lens' a c
+_distance = lens (unwrap >>> _.distance) (\oldRec newVal -> wrap ((unwrap oldRec) {distance = newVal}))
+
 _result :: forall a b c. Newtype a {result :: c | b} => Lens' a c
 _result = lens (unwrap >>> _.result) (\oldRec newVal -> wrap ((unwrap oldRec) {result = newVal}))
 
