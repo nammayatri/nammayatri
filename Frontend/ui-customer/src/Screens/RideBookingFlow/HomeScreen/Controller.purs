@@ -1072,7 +1072,7 @@ eval (TagClick savedAddressType arrItem) state = tagClickEvent savedAddressType 
 eval (SearchLocationModelActionController (SearchLocationModelController.LocationListItemActionController (LocationListItemController.OnClick item))) state = do
   _ <- pure $ firebaseLogEvent "ny_user_location_list_item"
   let condition = state.props.isSource == Just true && item.locationItemType == Just RECENTS
-  locationSelected item{tag=if condition then "" else item.tag} true state{ props { sourceSelectedOnMap = if condition then false else state.props.sourceSelectedOnMap }}
+  locationSelected item {tag = if condition then "" else item.tag, showDistance = false} true state{ props { sourceSelectedOnMap = if condition then false else state.props.sourceSelectedOnMap }}
 
 eval (ExitLocationSelected item addToRecents)state = exit $ LocationSelected item  addToRecents state
 
@@ -1084,7 +1084,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Primary
                     _,_,_                                 -> continue state
 
 eval (SearchLocationModelActionController (SearchLocationModelController.DebounceCallBack searchString)) state = do
-  if (STR.length searchString > 3) then
+  if (STR.length searchString > 2) then
     validateSearchInput state searchString
   else
     continue state
@@ -1658,6 +1658,8 @@ dummyListItem = {
   , alpha : 1.0
   , fullAddress : dummyAddress
   , locationItemType : Nothing
+  , distance : Nothing
+  , showDistance : false
 }
 
 tagClickEvent :: CardType -> (Maybe LocationListItemState) -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState

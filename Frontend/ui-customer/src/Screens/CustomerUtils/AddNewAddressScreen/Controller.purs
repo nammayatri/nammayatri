@@ -15,13 +15,18 @@
 
 module Screens.AddNewAddressScreen.Controller where
 
-import Accessor (_description, _place_id)
+import Prelude
+import Accessor (_description, _place_id, _distance)
 import Components.GenericHeader as GenericHeader
 import Components.LocationListItem as LocationListItemController
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Data.Array ((!!), length, filter, any, sortBy, null) as DA
 import Data.Lens ((^.))
+import Data.Ord
+import Data.Eq
+import Helpers.Utils (parseFloat)
+import Data.Int (toNumber)
 import Data.Maybe (Maybe(..), fromMaybe, fromJust)
 import Data.String (trim, length, split, Pattern(..), drop, indexOf, toLower)
 import Effect (Effect)
@@ -38,9 +43,11 @@ import PrestoDOM.Types.Core (class Loggable)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromSaved, getValueByComponent, getWard)
 import Screens (ScreenName(..), getScreen)
 import Screens.HomeScreen.ScreenData (dummyAddress)
+import Screens.HomeScreen.Transformer (checkShowDistance)
 import Screens.Types (AddNewAddressScreenState, CardType(..), Location, LocationListItemState, DistInfo, LocItemType(..), LocationItemType(..))
 import Services.API (AddressComponents, Prediction, SavedReqLocationAPIEntity(..))
 import Storage (KeyStore(..), getValueToLocalStore)
+import JBridge (fromMetersToKm)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -303,6 +310,8 @@ getLocation prediction = {
   , alpha : 1.0
   , fullAddress : dummyAddress
   , locationItemType : Just PREDICTION
+  , distance : Just (fromMetersToKm (fromMaybe 0 (prediction ^. _distance)))
+  , showDistance : checkShowDistance (fromMaybe 0 (prediction ^. _distance))
 }
 
 encodeAddressDescription :: AddNewAddressScreenState -> SavedReqLocationAPIEntity
@@ -360,6 +369,8 @@ getSavedLocations savedLocation =  (map (\ (SavedReqLocationAPIEntity item) ->
 , alpha : 1.0
 , fullAddress : getAddressFromSaved (SavedReqLocationAPIEntity item)
 , locationItemType : Just SAVED_LOCATION
+, distance : Nothing
+, showDistance : false
 }) savedLocation )
 
 getSavedTags :: (Array SavedReqLocationAPIEntity) -> Array String

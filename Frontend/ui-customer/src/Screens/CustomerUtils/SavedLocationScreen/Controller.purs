@@ -154,6 +154,8 @@ getSavedLocation (savedLocation) = (map (\(SavedReqLocationAPIEntity item) ->
   , alpha : 1.0
   , fullAddress : getAddressFromSaved (SavedReqLocationAPIEntity item)
   , locationItemType : Just SAVED_LOCATION
+  , distance : Nothing
+  , showDistance : false
   }
   )savedLocation)
 
@@ -180,6 +182,8 @@ getSavedLocationForAddNewAddressScreen (savedLocation) = (map (\ (item) ->
   , alpha : 1.0
   , fullAddress : item.fullAddress
   , locationItemType :Just SAVED_LOCATION
+  , distance : Nothing
+  , showDistance : false
   }
   ) (savedLocation) ) 
 

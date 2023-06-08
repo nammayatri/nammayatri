@@ -17,7 +17,7 @@ module Screens.HomeScreen.Transformer where
 
 import Prelude
 
-import Accessor (_contents, _description, _estimatedDistance, _lat, _lon, _place_id, _toLocation, _otpCode)
+import Accessor (_contents, _description, _estimatedDistance, _lat, _lon, _place_id, _distance, _toLocation, _otpCode)
 import Components.ChooseVehicle (Config, config) as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
@@ -25,6 +25,8 @@ import Data.Array (mapWithIndex)
 import Data.Array as DA
 import Data.Int (toNumber)
 import Data.Lens ((^.))
+import Data.Ord
+import Data.Eq
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), drop, indexOf, length, split, trim)
 import Helpers.Utils (convertUTCtoISC, getExpiryTime, parseFloat)
@@ -40,22 +42,23 @@ import Services.Backend as Remote
 import Types.App(FlowBT)
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
 import Debug(spy)
+import JBridge (fromMetersToKm)
 
 
 getLocationList :: Array Prediction -> Array LocationListItemState
-getLocationList predcition = map (\x -> getLocation x) predcition
+getLocationList prediction = map (\x -> getLocation x) prediction
 
 getLocation :: Prediction -> LocationListItemState
-getLocation predcition = {
+getLocation prediction = {
     prefixImageUrl : "ny_ic_loc_grey,https://assets.juspay.in/nammayatri/images/user/ny_ic_loc_grey.png"
   , postfixImageUrl : "ny_ic_fav,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav.png"
   , postfixImageVisibility : true
-  , title : (fromMaybe "" ((split (Pattern ",") (predcition ^. _description)) DA.!! 0))
-  , subTitle : (drop ((fromMaybe 0 (indexOf (Pattern ",") (predcition ^. _description))) + 2) (predcition ^. _description))
-  , placeId : predcition ^._place_id
+  , title : (fromMaybe "" ((split (Pattern ",") (prediction ^. _description)) DA.!! 0))
+  , subTitle : (drop ((fromMaybe 0 (indexOf (Pattern ",") (prediction ^. _description))) + 2) (prediction ^. _description))
+  , placeId : prediction ^._place_id
   , lat : Nothing
   , lon : Nothing
-  , description : predcition ^. _description
+  , description : prediction ^. _description
   , tag : ""
   , tagType : Just $ show LOC_LIST
   , cardType : Nothing
@@ -68,7 +71,12 @@ getLocation predcition = {
   , alpha : 1.0
   , fullAddress : dummyAddress
   , locationItemType : Just PREDICTION
+  , distance : Just (fromMetersToKm (fromMaybe 0 (prediction ^._distance)))
+  , showDistance : checkShowDistance (fromMaybe 0 (prediction ^._distance))
 }
+
+checkShowDistance :: Int ->  Boolean
+checkShowDistance distance = (distance > 0 && distance <= 50000)
 
 getQuoteList :: Array QuoteAPIEntity -> Array QuoteListItemState
 getQuoteList quotesEntity = (map (\x -> (getQuote x)) quotesEntity)

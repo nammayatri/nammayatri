@@ -213,4 +213,6 @@ getFavouritesItem item = {
   , alpha : 1.0
   , fullAddress : item.fullAddress
   , locationItemType : Just SAVED_LOCATION
+  , distance : item.distance
+  , showDistance: false
 }
