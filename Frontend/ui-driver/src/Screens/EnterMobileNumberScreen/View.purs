@@ -35,7 +35,7 @@ import Animation as Anim
 import Animation.Config as AnimConfig
 import Common.Types.App
 import Screens.EnterMobileNumberScreen.ComponentConfig
-import MerchantConfigs.Utils (getValueFromMerchant)
+import Merchant.Utils (getValueFromMerchant)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))

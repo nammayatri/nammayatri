@@ -51,7 +51,7 @@ import Screens as ScreenNames
 import Helpers.Utils (getVehicleType)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
-import MerchantConfigs.Utils (getMerchant, Merchant(..))
+import Merchant.Utils (getMerchant, Merchant(..))
 
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput

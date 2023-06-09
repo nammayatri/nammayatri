@@ -26,7 +26,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfigs.Utils (getLanguage)
+import Merchant.Utils (getLanguage)
 import Prelude (Unit, const, ($), (<<<), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alpha, background, color, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width)
 import Screens.SelectLanguageScreen.Controller (Action(..), ScreenOutput, eval)

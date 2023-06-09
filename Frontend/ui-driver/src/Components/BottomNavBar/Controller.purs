@@ -16,7 +16,7 @@
 module Components.BottomNavBar.Controller where
 
 import Data.Maybe as Maybe
-import MerchantConfigs.Utils (getMerchant, Merchant(..))
+import Merchant.Utils (getMerchant, Merchant(..))
 import Prelude (unit, (<>), (==), negate)
 import Screens.Types (BottomNavBarState)
 import Storage (getValueToLocalNativeStore, KeyStore(..))

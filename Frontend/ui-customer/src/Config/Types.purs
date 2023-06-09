@@ -2,7 +2,6 @@ module Config.Types where
 
 import Prelude
 
-
 type AppConfig =
   {
     primaryTextColor :: String,
@@ -20,7 +19,8 @@ type AppConfig =
     otpBackground :: String,
     otpTextColor :: String,
     rateCardColor :: String,
-    nyBrandingVisibility :: Boolean
+    nyBrandingVisibility :: Boolean,
+    logs :: Array String
   } 
 
 type QuoteListConfig = {

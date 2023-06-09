@@ -21,9 +21,10 @@ import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
 import Language.Types (STR(..))
 import Screens.Types (DriverProfileScreenState, BottomNavBarState)
-import MerchantConfigs.Utils (getMerchant, Merchant(..))
+import Merchant.Utils (getMerchant, Merchant(..))
 import Prelude (class Eq, unit, (<>), (==), (||), (/=))
 import Common.Types.App (LazyCheck(..))
+import Foreign.Object (empty)
 
 initData :: DriverProfileScreenState
 initData = {
@@ -38,6 +39,7 @@ initData = {
     vehicleModelName : "",
     vehicleColor : "",
     driverAlternateNumber : Nothing,
+    logField : empty ,
 
     capacity : 0,
     vehicleSelected: [],

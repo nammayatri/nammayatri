@@ -33,7 +33,7 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Engineering.Helpers.Commons (screenWidth)
 import Screens.Types (HomeScreenStage(..))
 import JBridge (getVersionCode)
-import MerchantConfigs.Utils(getMerchant, Merchant(..))
+import Merchant.Utils(getMerchant, Merchant(..))
 import Styles.Colors as Color
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))

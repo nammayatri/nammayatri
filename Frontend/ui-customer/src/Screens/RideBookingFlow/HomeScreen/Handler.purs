@@ -25,11 +25,13 @@ import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.HomeScreen.Controller (ScreenOutput(..))
 import Screens.HomeScreen.View as HomeScreen
 import Types.App (FlowBT, GlobalState(..), ScreenType(..), HOME_SCREEN_OUTPUT(..))
+import Presto.Core.Types.Language.Flow (getLogFields)
 
 homeScreen ::FlowBT String HOME_SCREEN_OUTPUT
 homeScreen = do
   (GlobalState state) <- getState
-  act <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen
+  logField_ <- lift $ lift $ getLogFields
+  act <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen{data{logField = logField_}}
   void $ lift $ lift $ toggleLoader false
   case act of
     UpdateLocationName updatedState lat lng-> do

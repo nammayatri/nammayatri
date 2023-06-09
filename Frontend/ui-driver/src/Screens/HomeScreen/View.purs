@@ -38,7 +38,7 @@ import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils as HU
-import MerchantConfigs.Utils as MU
+import Merchant.Utils as MU
 import JBridge as JB
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
@@ -67,7 +67,7 @@ import Services.APITypes (Status(..))
 import Components.BottomNavBar.Controller (navData)
 import Screens.HomeScreen.ComponentConfig
 import Screens as ScreenNames
-import MerchantConfigs.Utils (getValueFromMerchant)
+import Merchant.Utils (getValueFromMerchant)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 

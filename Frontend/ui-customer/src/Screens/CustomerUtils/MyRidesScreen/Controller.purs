@@ -42,6 +42,8 @@ import Language.Strings (getString, getEN)
 import Language.Types (STR(..)) 
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
+import Engineering.Helpers.LogEvent (logEvent)
+import Effect.Unsafe
 
 instance showAction :: Show Action where
   show _ = ""
@@ -142,7 +144,7 @@ eval (IndividualRideCardActionController (IndividualRideCardController.OnClick i
     Nothing -> continue state
 
 eval (IndividualRideCardActionController (IndividualRideCardController.RepeatRide index)) state = do
-  _ <- pure $ firebaseLogEvent "ny_user_repeat_ride_btn_click"
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_repeat_ride_btn_click"
   let selectedCard = state.itemsRides !! index
   case selectedCard of
     Just selectedRide -> do

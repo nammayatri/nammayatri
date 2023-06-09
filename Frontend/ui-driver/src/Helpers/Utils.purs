@@ -50,7 +50,7 @@ import Prelude (map, (*), (-), (/))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import Screens.Types (AllocationData, YoutubeData)
 import Common.Types.App (LazyCheck(..))
-import MerchantConfigs.Utils (getMerchant, Merchant(..))
+import Merchant.Utils (getMerchant, Merchant(..))
 
 
 -- import Control.Monad.Except (runExcept)

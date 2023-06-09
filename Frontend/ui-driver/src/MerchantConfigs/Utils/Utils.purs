@@ -1,4 +1,4 @@
-module  MerchantConfigs.Utils where
+module  Merchant.Utils where
 
 import Prelude(unit, (/=))
 import Common.Types.App (LazyCheck)
@@ -18,6 +18,8 @@ import Control.Monad.Except (runExcept)
 foreign import getStringFromConfig :: String -> String
 
 foreign import getValueFromMerchant :: String -> String
+
+foreign import getValueFromConfig :: String -> String
 
 foreign import getENStrings :: String -> String
 

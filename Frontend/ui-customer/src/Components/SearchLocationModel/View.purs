@@ -45,6 +45,7 @@ import Styles.Colors as Color
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import Engineering.Helpers.LogEvent (logEvent)
 
 view :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -465,8 +466,8 @@ recenterButtonView push state =
         , onClick (\action -> do
             _ <- push action
             _ <- getCurrentPosition push UpdateCurrentLocation
-            _ <- pure $ firebaseLogEvent "ny_user_recenter_btn_click"
-            pure unit
+            _ <- logEvent state.logField "ny_user_recenter_btn_click"
+            pure unit 
         ) (const $ RecenterCurrentLocation)
         , height $ V 40
         , width $ V 40

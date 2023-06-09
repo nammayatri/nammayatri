@@ -33,7 +33,7 @@ import Font.Style as FontStyle
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfigs.Utils (getValueFromMerchant)
+import Merchant.Utils (getValueFromMerchant)
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (==), not, (>=), (&&), (/=))
 import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), editText, frameLayout, imageView, linearLayout, onBackPressed, onChange, onClick, scrollView, textView, afterRender, alignParentRight, relativeLayout, alignParentBottom, maxLines, ellipsize, layoutGravity, inputTypeI, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, hint, id, imageUrl, margin, orientation, padding, pattern, stroke, text, textSize, visibility, weight, width, textFromHtml, imageWithFallback)
 import PrestoDOM.Properties as PP

@@ -25,5 +25,6 @@ config =
     otpBackground : "#F5F9FE",
     otpTextColor : "#101010",
     rateCardColor : "#00B8F5",
-    nyBrandingVisibility : true
+    nyBrandingVisibility : true,
+    logs : ["JUSPAY", "FIREBASE"]
   } 

@@ -48,6 +48,23 @@ export const getValueFromMerchant = function (constructorKey){
       }
 }
 
+export const getValueFromConfig = function (constructorKey){
+    let key = constructorKey.trim(); 
+    switch(window.merchantID) {
+        case "JATRISAATHI" :
+            return JatriConfig.getMerchantConfig(key);
+        case "NAMMAYATRI" :
+            return NammaYatriConfig.getMerchantConfig(key);
+        case "YATRI" :
+            return YatriConfig.getMerchantConfig(key);
+        case "UNKNOWN" :
+            return UnknownMerchant.getMerchantConfig(key);
+        default:
+            console.error("no value found for key "+ key);
+            return "";
+      }
+  }
+
 function getStringFromCommon(key){
     var selectedLanguage = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
     switch(selectedLanguage) {
