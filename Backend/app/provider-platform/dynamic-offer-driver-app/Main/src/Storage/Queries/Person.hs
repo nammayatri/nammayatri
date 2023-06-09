@@ -1876,39 +1876,36 @@ transformBeamPersonToDomain :: (L.MonadFlow m, Log m) => BeamP.Person -> m (Mayb
 transformBeamPersonToDomain BeamP.PersonT {..} = do
   bundleVersion' <- forM bundleVersion readVersion
   clientVersion' <- forM clientVersion readVersion
-  if isJust bundleVersion && isJust clientVersion
-    then
-      pure $
-        Just
-          Person
-            { id = Id id,
-              firstName = firstName,
-              middleName = middleName,
-              lastName = lastName,
-              role = role,
-              gender = gender,
-              identifierType = identifierType,
-              email = email,
-              unencryptedMobileNumber = unencryptedMobileNumber,
-              mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
-              mobileCountryCode = mobileCountryCode,
-              passwordHash = passwordHash,
-              identifier = identifier,
-              rating = rating,
-              isNew = isNew,
-              merchantId = Id merchantId,
-              deviceToken = deviceToken,
-              whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
-              language = language,
-              description = description,
-              createdAt = createdAt,
-              updatedAt = updatedAt,
-              bundleVersion = bundleVersion',
-              clientVersion = clientVersion',
-              unencryptedAlternateMobileNumber = unencryptedAlternateMobileNumber,
-              alternateMobileNumber = EncryptedHashed <$> (Encrypted <$> alternateMobileNumberEncrypted) <*> alternateMobileNumberHash
-            }
-    else pure Nothing
+  pure $
+    Just
+      Person
+        { id = Id id,
+          firstName = firstName,
+          middleName = middleName,
+          lastName = lastName,
+          role = role,
+          gender = gender,
+          identifierType = identifierType,
+          email = email,
+          unencryptedMobileNumber = unencryptedMobileNumber,
+          mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
+          mobileCountryCode = mobileCountryCode,
+          passwordHash = passwordHash,
+          identifier = identifier,
+          rating = rating,
+          isNew = isNew,
+          merchantId = Id merchantId,
+          deviceToken = deviceToken,
+          whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
+          language = language,
+          description = description,
+          createdAt = createdAt,
+          updatedAt = updatedAt,
+          bundleVersion = bundleVersion',
+          clientVersion = clientVersion',
+          unencryptedAlternateMobileNumber = unencryptedAlternateMobileNumber,
+          alternateMobileNumber = EncryptedHashed <$> (Encrypted <$> alternateMobileNumberEncrypted) <*> alternateMobileNumberHash
+        }
 
 transformDomainPersonToBeam :: Person -> BeamP.Person
 transformDomainPersonToBeam Person {..} =
