@@ -50,10 +50,6 @@ fromFieldPoint f mbValue = case mbValue of
   Nothing -> DPSF.returnError DPSF.UnexpectedNull f mempty
   Just _ -> pure Point
 
--- case readMaybe (unpackChars value') of
---   Just val -> pure val
---   _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
-
 instance FromField Point where
   fromField = fromFieldPoint
 

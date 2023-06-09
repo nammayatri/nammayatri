@@ -38,26 +38,6 @@ import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Vehicle ()
 
--- fromFieldEnum ::
---   (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldEnum f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' ->
---     case (readMaybe (unpackChars value')) of
---       Just val -> pure val
---       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
-
--- instance FromField Centesimal where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Centesimal where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centesimal
-
 instance IsString Centesimal where
   fromString = show
 
@@ -75,29 +55,6 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.FareParamete
   sqlValueSyntax = autoSqlValueSyntax
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.FareParametersType
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
-
--- instance FromBackendRow Postgres Money
-
--- data FareParametersT f = FareParametersT
---   { id :: B.C f Text,
---     baseFare :: B.C f Money,
---     deadKmFare :: B.C f (Maybe Money),
---     extraKmFare :: B.C f (Maybe Money),
---     driverSelectedFare :: B.C f (Maybe Money),
---     customerExtraFee :: B.C f (Maybe Money),
---     nightShiftRate :: B.C f (Maybe Centesimal),
---     nightCoefIncluded :: B.C f Bool,
---     waitingChargePerMin :: B.C f (Maybe Money),
---     waitingOrPickupCharges :: B.C f (Maybe Money),
---     serviceCharge :: B.C f (Maybe Money),
---     govtChargesPerc :: B.C f (Maybe Int)
---   }
---   deriving (Generic, B.Beamable)
 
 data FareParametersT f = FareParametersT
   { id :: B.C f Text,

@@ -3,12 +3,16 @@
 
 module Lib.Utils where
 
-import Data.ByteString.Internal (ByteString, unpackChars)
 -- import qualified Data.Text.Lazy as TL
 -- import qualified Data.Text.Lazy.Builder as TL
-import Data.Time
+
 -- import Database.Esqueleto.Internal.Internal hiding (rand)
 
+import qualified Data.Aeson as A
+import Data.ByteString.Internal (ByteString, unpackChars)
+import Data.ByteString.Lazy (fromStrict, toStrict)
+import Data.Fixed (Centi)
+import Data.Time
 import Database.Beam
 import qualified Database.Beam as B
 import Database.Beam.Backend
@@ -24,6 +28,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Types
 import Kernel.Types.Common
+import Kernel.Utils.Common (encodeToText)
 
 -- import Kernel.Types.Time (Seconds (..))
 
@@ -54,6 +59,17 @@ defaultUTCDate = localTimeToUTC utc defaultDate
 -- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
 --   sqlValueSyntax = autoSqlValueSyntax
 
+-- fromFieldJSON ::
+--   (Typeable a, Read a) =>
+--   DPSF.Field ->
+--   Maybe ByteString ->
+--   DPSF.Conversion a
+-- fromFieldJSON f mbValue = do
+--   value <- fromField f mbValue
+--   case A.fromJSON value of
+--     A.Success a -> pure a
+--     _ -> DPSF.returnError DPSF.ConversionFailed f "Conversion failed"
+
 instance HasSqlValueSyntax be Int => HasSqlValueSyntax be Money where
   sqlValueSyntax = sqlValueSyntax . getMoney
 
@@ -62,7 +78,10 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
 instance FromBackendRow Postgres Money
 
 instance FromField Money where
-  fromField = fromFieldEnum
+  fromField = fromFieldMoney
+
+instance FromField Centi where
+  fromField = fromFieldCenti
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Minutes where
   sqlValueSyntax = autoSqlValueSyntax
@@ -71,10 +90,85 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Minutes
 
 instance FromBackendRow Postgres Minutes
 
-instance FromField Minutes where
-  fromField = fromFieldEnum
+fromFieldMoney ::
+  -- (Typeable a, Read a) =>
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion Money
+fromFieldMoney f mbValue = case mbValue of
+  Nothing -> DPSF.returnError UnexpectedNull f mempty
+  Just _ -> Money <$> (fromField f mbValue)
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Centesimal where
+fromFieldCenti ::
+  -- (Typeable a, Read a) =>
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion Centi
+fromFieldCenti f mbValue = case mbValue of
+  Nothing -> DPSF.returnError UnexpectedNull f mempty
+  Just value' ->
+    case readMaybe (unpackChars value') of
+      Just val -> pure val
+      _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
+
+fromFieldCentesimal ::
+  -- (Typeable a, Read a) =>
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion Centesimal
+fromFieldCentesimal f mbValue = case mbValue of
+  Nothing -> DPSF.returnError UnexpectedNull f mempty
+  Just _ -> Centesimal <$> (fromField f mbValue)
+
+fromFieldMinutes ::
+  -- (Typeable a, Read a) =>
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion Minutes
+fromFieldMinutes f mbValue = case mbValue of
+  Nothing -> DPSF.returnError UnexpectedNull f mempty
+  Just _ -> Minutes <$> (fromField f mbValue)
+
+fromFieldMeters ::
+  -- (Typeable a, Read a) =>
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion Meters
+fromFieldMeters f mbValue = case mbValue of
+  Nothing -> DPSF.returnError UnexpectedNull f mempty
+  Just _ -> Meters <$> (fromField f mbValue)
+
+fromFieldHighPrecMeters ::
+  -- (Typeable a, Read a) =>
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion HighPrecMeters
+fromFieldHighPrecMeters f mbValue = case mbValue of
+  Nothing -> DPSF.returnError UnexpectedNull f mempty
+  Just _ -> HighPrecMeters <$> (fromField f mbValue)
+
+fromFieldHighPrecMoney ::
+  -- (Typeable a, Read a) =>
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion HighPrecMoney
+fromFieldHighPrecMoney f mbValue = case mbValue of
+  Nothing -> DPSF.returnError UnexpectedNull f mempty
+  Just _ -> HighPrecMoney <$> (fromField f mbValue)
+
+fromFieldSeconds ::
+  -- (Typeable a, Read a) =>
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion Seconds
+fromFieldSeconds f mbValue = case mbValue of
+  Nothing -> DPSF.returnError UnexpectedNull f mempty
+  Just _ -> Seconds <$> (fromField f mbValue)
+
+instance FromField Minutes where
+  fromField = fromFieldMinutes
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Centi where
   sqlValueSyntax = autoSqlValueSyntax
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centesimal
@@ -83,6 +177,13 @@ instance FromBackendRow Postgres Centesimal
 
 instance FromField Centesimal where
   fromField = fromFieldEnum
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centi
+
+instance FromBackendRow Postgres Centi
+
+instance HasSqlValueSyntax be Centi => HasSqlValueSyntax be Centesimal where
+  sqlValueSyntax = sqlValueSyntax . getCenti
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Variant where
   sqlValueSyntax = autoSqlValueSyntax
@@ -94,37 +195,40 @@ instance FromBackendRow Postgres Variant
 instance FromField Variant where
   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be HighPrecMeters where
-  sqlValueSyntax = autoSqlValueSyntax
+instance HasSqlValueSyntax be Centesimal => HasSqlValueSyntax be HighPrecMeters where
+  sqlValueSyntax = sqlValueSyntax . getHighPrecMeters
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be HighPrecMeters
 
 instance FromBackendRow Postgres HighPrecMeters
 
 instance FromField HighPrecMeters where
-  fromField = fromFieldEnum
+  fromField = fromFieldHighPrecMeters
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
-  sqlValueSyntax = autoSqlValueSyntax
+instance HasSqlValueSyntax be Int => HasSqlValueSyntax be Meters where
+  sqlValueSyntax = sqlValueSyntax . getMeters
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
 
 instance FromBackendRow Postgres Meters
 
 instance FromField Meters where
-  fromField = fromFieldEnum
+  fromField = fromFieldMeters
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Seconds where
-  sqlValueSyntax = autoSqlValueSyntax
+instance HasSqlValueSyntax be Int => HasSqlValueSyntax be Seconds where
+  sqlValueSyntax = sqlValueSyntax . getSeconds
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Seconds
 
 instance FromBackendRow Postgres Seconds
 
 instance FromField HighPrecMoney where
-  fromField = fromFieldEnum
+  fromField = fromFieldHighPrecMoney
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be HighPrecMoney where
+instance HasSqlValueSyntax be Rational => HasSqlValueSyntax be HighPrecMoney where
+  sqlValueSyntax = sqlValueSyntax . getHighPrecMoney
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Rational where
   sqlValueSyntax = autoSqlValueSyntax
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be HighPrecMoney
@@ -132,7 +236,7 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be HighPrecMoney
 instance FromBackendRow Postgres HighPrecMoney
 
 instance FromField Seconds where
-  fromField = fromFieldEnum
+  fromField = fromFieldSeconds
 
 instance FromField DbHash where
   fromField = fromFieldEnumDbHash
@@ -150,15 +254,15 @@ instance IsString DbHash where
 instance FromField DomainFP.WaitingCharge where
   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be DomainFP.WaitingCharge where
-  sqlValueSyntax = autoSqlValueSyntax
+instance HasSqlValueSyntax be Text => HasSqlValueSyntax be DomainFP.WaitingCharge where
+  sqlValueSyntax = sqlValueSyntax . encodeToText
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainFP.WaitingCharge
 
 instance FromBackendRow Postgres DomainFP.WaitingCharge
 
 instance FromField DomainFP.WaitingChargeInfo where
-  fromField = fromFieldEnum
+  fromField = fromFieldJSON
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be DomainFP.WaitingChargeInfo where
   sqlValueSyntax = autoSqlValueSyntax
@@ -167,22 +271,22 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainFP.WaitingChargeInf
 
 instance FromBackendRow Postgres DomainFP.WaitingChargeInfo
 
--- fromFieldEnumNSC ::
---   -- (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion DomainFP.NightShiftCharge
--- fromFieldEnumNSC f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' -> case decode $ fromStrict value' of
---     Just res -> pure res
---     Nothing -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
+fromFieldJSON ::
+  (Typeable a, Read a, FromJSON a) =>
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion a
+fromFieldJSON f mbValue = case mbValue of
+  Nothing -> DPSF.returnError UnexpectedNull f mempty
+  Just value' -> case A.decode $ fromStrict value' of
+    Just res -> pure res
+    Nothing -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
 instance FromField DomainFP.NightShiftCharge where
-  fromField = fromFieldEnum
+  fromField = fromFieldJSON
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be DomainFP.NightShiftCharge where
-  sqlValueSyntax = autoSqlValueSyntax
+instance HasSqlValueSyntax be Text => HasSqlValueSyntax be DomainFP.NightShiftCharge where
+  sqlValueSyntax = sqlValueSyntax . encodeToText
 
 -- sqlValueSyntax = sqlValueSyntax . encodeToText
 
@@ -225,6 +329,7 @@ buildRadiusWithin' pnt (lat, lon) rad =
   where
     getPoint' = "(SRID=4326;POINT(" <> show lon <> " " <> show lat <> "))"
 
--- (<->.) :: Point -> Point -> BQ.QGenExpr context Postgres s Double
--- (<->.) p1 p2 = BQ.QExpr (\_ -> PgExpressionSyntax (emit $ show p1 <> " <-> " <> show p2))
+(<->.) :: Point -> Point -> BQ.QGenExpr context Postgres s Double
+(<->.) p1 p2 = BQ.QExpr (\_ -> PgExpressionSyntax (emit $ show p1 <> " <-> " <> show p2))
+
 -- " <-> "

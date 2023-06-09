@@ -41,38 +41,6 @@ import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Vehicle ()
 
--- fromFieldEnum ::
---   (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldEnum f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' ->
---     case (readMaybe (unpackChars value')) of
---       Just val -> pure val
---       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
-
--- instance FromField Variant.Variant where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Variant.Variant where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Variant.Variant
-
--- instance FromBackendRow Postgres Variant.Variant
-
--- instance FromField Seconds where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Seconds where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Seconds
-
--- instance FromBackendRow Postgres Seconds
-
 instance FromField D.DriverMode where
   fromField = fromFieldEnum
 
@@ -93,16 +61,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.DriverSearchReques
 
 instance FromBackendRow Postgres Domain.DriverSearchRequestStatus
 
--- instance FromField Meters where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
-
--- instance FromBackendRow Postgres Meters
-
 instance FromField Domain.SearchRequestForDriverResponse where
   fromField = fromFieldEnum
 
@@ -112,16 +70,6 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.SearchReques
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.SearchRequestForDriverResponse
 
 instance FromBackendRow Postgres Domain.SearchRequestForDriverResponse
-
--- instance FromField Money where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
-
--- instance FromBackendRow Postgres Money
 
 data SearchRequestForDriverT f = SearchRequestForDriverT
   { id :: B.C f Text,
@@ -208,7 +156,7 @@ searchRequestForDriverTMod :: SearchRequestForDriverT (B.FieldModification (B.Ta
 searchRequestForDriverTMod =
   B.tableModification
     { id = B.fieldNamed "id",
-      requestId = B.fieldNamed "request_id",
+      requestId = B.fieldNamed "search_request_id",
       searchTryId = B.fieldNamed "search_try_id",
       startTime = B.fieldNamed "start_time",
       actualDistanceToPickup = B.fieldNamed "actual_distance_to_pickup",

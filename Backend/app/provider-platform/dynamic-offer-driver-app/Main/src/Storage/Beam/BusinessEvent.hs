@@ -60,16 +60,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.EventType
 
 instance FromBackendRow Postgres Domain.EventType
 
--- instance FromField Variant where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Variant where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Variant
-
--- instance FromBackendRow Postgres Variant
-
 instance FromField Domain.WhenPoolWasComputed where
   fromField = fromFieldEnum
 

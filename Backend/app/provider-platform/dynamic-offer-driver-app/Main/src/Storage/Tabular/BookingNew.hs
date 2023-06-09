@@ -99,58 +99,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.BookingType
 
 instance FromBackendRow Postgres Domain.BookingType
 
--- deriving stock instance Read GeoRestriction
-
--- instance FromField Veh.Variant where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Veh.Variant where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Veh.Variant
-
--- instance FromBackendRow Postgres Veh.Variant
-
--- instance FromField Meters where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
-
--- instance FromBackendRow Postgres Meters
-
--- instance FromField Centesimal where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Centesimal where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centesimal
-
--- instance FromBackendRow Postgres Centesimal
-
--- instance FromField Money where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
-
--- instance FromBackendRow Postgres Money
-
--- instance FromField Seconds where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Seconds where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Seconds
-
--- instance FromBackendRow Postgres Seconds
-
 data BookingNewT f = BookingNew
   { id :: B.C f Text,
     transactionId :: B.C f Text,

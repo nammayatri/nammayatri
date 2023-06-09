@@ -22,6 +22,7 @@ import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
+import qualified Data.Vector as V
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
@@ -37,18 +38,6 @@ import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
--- fromFieldEnum ::
---   (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldEnum f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' ->
---     case (readMaybe (unpackChars value')) of
---       Just val -> pure val
---       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
-
 instance FromField Domain.VehicleClassCheckType where
   fromField = fromFieldEnum
 
@@ -60,7 +49,7 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.VehicleClassCheckT
 instance FromBackendRow Postgres Domain.VehicleClassCheckType
 
 instance FromField [Text] where
-  fromField = fromFieldEnum
+  fromField f mbValue = V.toList <$> (fromField f mbValue)
 
 instance FromBackendRow Postgres [Text]
 
@@ -70,8 +59,8 @@ instance FromField Domain.DocumentType where
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.DocumentType where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be [Text] where
-  sqlValueSyntax = autoSqlValueSyntax
+instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [Text] where
+  sqlValueSyntax x = sqlValueSyntax (V.fromList x)
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.DocumentType
 

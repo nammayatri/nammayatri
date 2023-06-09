@@ -38,38 +38,6 @@ import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Vehicle ()
 
--- fromFieldEnum ::
---   (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldEnum f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' ->
---     case readMaybe (unpackChars value') of
---       Just val -> pure val
---       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
-
--- instance FromField Centesimal where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Centesimal where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centesimal
-
--- instance FromBackendRow Postgres Centesimal
-
--- instance FromField Seconds where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Seconds where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Seconds
-
--- instance FromBackendRow Postgres Seconds
-
 instance FromField Domain.BookingStatus where
   fromField = fromFieldEnum
 
@@ -79,16 +47,6 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.BookingStatu
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.BookingStatus
 
 instance FromBackendRow Postgres Domain.BookingStatus
-
--- instance FromField Meters where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
-
--- instance FromBackendRow Postgres Meters
 
 instance FromField Domain.BookingType where
   fromField = fromFieldEnum
@@ -206,34 +164,6 @@ bookingToHSModifiers =
 bookingToPSModifiers :: M.Map Text (A.Value -> A.Value)
 bookingToPSModifiers =
   M.empty
-
-defaultBooking :: Booking
-defaultBooking =
-  BookingT
-    { id = "",
-      transactionId = "",
-      quoteId = "",
-      status = "",
-      bookingType = "",
-      specialZoneOtpCode = Nothing,
-      providerId = "",
-      primaryExophone = "",
-      bapId = "",
-      bapUri = "",
-      startTime = defaultUTCDate,
-      riderId = Nothing,
-      fromLocationId = "",
-      toLocationId = "",
-      vehicleVariant = "",
-      estimatedDistance = "",
-      maxEstimatedDistance = Nothing,
-      estimatedFare = "",
-      estimatedDuration = "",
-      fareParametersId = "",
-      riderName = Nothing,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
 
 instance Serialize Booking where
   put = error "undefined"

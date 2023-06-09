@@ -18,10 +18,14 @@
 module Storage.Beam.Estimate where
 
 import qualified Data.Aeson as A
+import Data.ByteString.Internal (ByteString, unpackChars)
+import Data.ByteString.Lazy (fromStrict, toStrict)
+import Data.Coerce (coerce)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
+import qualified Data.Vector as V
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
@@ -29,83 +33,50 @@ import Database.Beam.Postgres
   ( Postgres,
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+import qualified Database.PostgreSQL.Simple.FromField as DPSF
+import Domain.Types.Common
 import qualified Domain.Types.Estimate as Domain
 import qualified Domain.Types.Vehicle as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Kernel.Utils.Common (encodeToText)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Vehicle ()
 
--- fromFieldEnum ::
---   (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldEnum f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' ->
---     case (readMaybe (unpackChars value')) of
---       Just val -> pure val
---       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
-
--- instance FromField Variant.Variant where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Variant.Variant where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Variant.Variant
-
--- instance FromBackendRow Postgres Variant.Variant
-
--- instance FromField Centesimal where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Centesimal where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centesimal
-
--- instance FromBackendRow Postgres Centesimal
-
--- instance FromField TimeOfDay where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be TimeOfDay where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be TimeOfDay
-
--- instance FromBackendRow Postgres TimeOfDay
-
--- instance FromField Seconds where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Seconds where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Seconds
-
 instance FromBackendRow Postgres [Domain.EstimateBreakup]
 
 instance FromField [Domain.EstimateBreakup] where
-  fromField = fromFieldEnum
+  fromField = fromFieldEstimateBreakUp
 
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
+fromFieldEstimateBreakUp ::
+  -- (Typeable a, Read a) =>
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion [Domain.EstimateBreakup]
+fromFieldEstimateBreakUp f mbValue = case mbValue of
+  Nothing -> DPSF.returnError DPSF.UnexpectedNull f mempty
+  Just value' -> case A.decode $ fromStrict value' of
+    Just res -> pure res
+    Nothing -> DPSF.returnError DPSF.ConversionFailed f "Could not 'read' value for 'Rule'."
+
+-- Nothing -> pure Unrestricted
+-- -- Just _ -> (Regions . V.toList) <$> (fromField f mbValue)
+-- Just _ -> (Regions . V.toList) <$> (fromField f mbValue)
+
+instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [Domain.EstimateBreakup] where
+  sqlValueSyntax estimateBreakupList =
+    let unsafeEstimateBreakupList = coerce @[Domain.EstimateBreakup] @[Domain.EstimateBreakupD 'Unsafe] $ estimateBreakupList
+        x = encodeToText <$> unsafeEstimateBreakupList
+     in sqlValueSyntax (V.fromList x)
+
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be [Domain.EstimateBreakup] where
 --   sqlValueSyntax = autoSqlValueSyntax
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be [Domain.EstimateBreakup] where
-  sqlValueSyntax = autoSqlValueSyntax
-
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Domain.EstimateBreakup]
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
-
--- instance FromBackendRow Postgres Money
 
 data EstimateT f = EstimateT
   { id :: B.C f Text,
