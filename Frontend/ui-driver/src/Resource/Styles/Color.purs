@@ -429,3 +429,6 @@ transparent = "#00FFFFFF"
 
 green200 :: Color
 green200 = "#2053BB6F"
+
+green600 :: Color
+green600 = "#269574"

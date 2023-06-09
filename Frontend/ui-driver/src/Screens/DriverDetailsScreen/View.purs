@@ -19,7 +19,7 @@ import Prelude
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, afterRender, id, visibility, imageWithFallback, clickable, relativeLayout)
 import Effect (Effect)
 import Screens.DriverDetailsScreen.Controller (Action(..), ScreenOutput, eval, getTitle, getValue)
-import Screens.DriverDetailsScreen.ScreenData (ListOptions(..), optionList)
+import Screens.DriverDetailsScreen.ComponentConfig (ListOptions(..),optionList)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Font.Style as FontStyle
@@ -34,6 +34,8 @@ import Components.InAppKeyboardModal.View as InAppKeyboardModal
 import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Debug (spy)
+import Components.SelectListModal.View as SelectListModal
+import Components.SelectListModal.Controller as CancelRideConfig
 import Components.PopUpModal.View as PopUpModal
 import Components.PopUpModal.Controller as PopUpModalConfig
 import Screens.DriverDetailsScreen.ComponentConfig
@@ -76,6 +78,7 @@ view push state =
       profilePictureLayout state push
      , driverDetailsView push state
     ]
+  , if state.props.genderSelectionModalShow then selectYourGender push state else textView[]
   , if state.props.keyboardModalType == ST.MOBILE__NUMBER then enterMobileNumberModal push state else textView[height $ V 0,
   width $ V 0]
  , if state.props.keyboardModalType == ST.OTP then enterOtpModal push state else textView[height $ V 0,
@@ -214,19 +217,19 @@ driverDetailsView push state =
                   , fontStyle $ FontStyle.medium LanguageStyle
                   , textSize FontSize.a_14
                   , alpha 0.9
-                  ], driverSubsection push state optionItem.title
+                  ], driverSubsection push state optionItem
                   , if(optionItem.title == DRIVER_MOBILE_INFO && state.props.checkAlternateNumber == true && state.props.keyboardModalType == ST.NONE && state.data.driverAlternateMobile == Nothing) then addAlternateNumber push state else dummyTextView
                   , horizontalLineView 0 0
               ]
 
 
             ]
-          ) optionList
+          ) (optionList state)
     )
  ]
 
-driverSubsection :: (Action ->Effect Unit) -> ST.DriverDetailsScreenState -> ListOptions -> forall w . PrestoDOM (Effect Unit) w
-driverSubsection push state title =
+driverSubsection :: (Action ->Effect Unit) -> ST.DriverDetailsScreenState -> Listtype -> forall w . PrestoDOM (Effect Unit) w
+driverSubsection push state option =
   linearLayout[
     height WRAP_CONTENT
   , width MATCH_PARENT
@@ -236,8 +239,17 @@ driverSubsection push state title =
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , margin (MarginTop 10)
-  , color Color.black900
-  , text (getValue title state)
+  , color case option.title of
+              GENDER_INFO -> case state.data.driverGender of
+                        Just _ -> Color.black800
+                        _ -> Color.blue900
+              _ -> Color.black800
+  , text (getValue option.title state)
+  , onClick push case option.title of
+              GENDER_INFO -> case state.data.driverGender of
+                        Just _ -> (const NoAction)
+                        _ -> (const GenderSelectionOpen)
+              _ -> (const NoAction)
   ] <> FontStyle.body1 TypoGraphy
   ),
   linearLayout[
@@ -249,12 +261,22 @@ driverSubsection push state title =
   , height WRAP_CONTENT
   , text (getString EDIT)
   , gravity RIGHT
-  , visibility if(title == DRIVER_ALTERNATE_MOBILE_INFO) then VISIBLE else GONE
+  , visibility if option.editButtonReq then VISIBLE else GONE
+                -- DRIVER_ALTERNATE_MOBILE_INFO -> case state.data.driverAlternateMobile of
+                --                                 Just _ -> VISIBLE
+                --                                 _ -> GONE
+                -- GENDER_INFO -> case state.data.driverGender of
+                --                                 Just _ -> VISIBLE
+                --                                 _ -> GONE
+                -- _ -> GONE
   , textSize FontSize.a_14
   , fontStyle $ FontStyle.medium LanguageStyle
   , color Color.blue900
   , margin (Margin 0 10 20 0)
-  , onClick push (const ClickEditAlternateNumber)
+  , onClick push case option.title of
+                GENDER_INFO -> (const GenderSelectionOpen)
+                DRIVER_ALTERNATE_MOBILE_INFO -> (const ClickEditAlternateNumber)
+                _ -> (const NoAction)
   ] <> FontStyle.body1 TypoGraphy
   ),
   textView(
@@ -262,7 +284,7 @@ driverSubsection push state title =
   , height WRAP_CONTENT
   , text (getString REMOVE)
   , gravity RIGHT
-  , visibility if(title == DRIVER_ALTERNATE_MOBILE_INFO) then VISIBLE else GONE
+  , visibility if(option.title == DRIVER_ALTERNATE_MOBILE_INFO) then VISIBLE else GONE
   , textSize FontSize.a_14
   , fontStyle $ FontStyle.medium LanguageStyle
   , color Color.blue900
@@ -308,6 +330,10 @@ addAlternateNumber push state =
 removeAlternateNumber :: forall w . (Action -> Effect Unit) -> ST.DriverDetailsScreenState -> PrestoDOM (Effect Unit) w
 removeAlternateNumber push state =
   PopUpModal.view (push <<< PopUpModalAction) (removeAlternateNumberConfig state)
+
+selectYourGender :: forall w . (Action -> Effect Unit) -> ST.DriverDetailsScreenState -> PrestoDOM (Effect Unit) w
+selectYourGender push state =
+  SelectListModal.view (push <<< GenderSelectionModalAction) (selectYourGenderConfig state)
 
 
 

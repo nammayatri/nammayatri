@@ -111,9 +111,10 @@ derive instance genericPayload :: Generic Payload _
 instance decodePayload :: Decode Payload where decode = defaultDecode
 instance encodePayload :: Encode Payload where encode = defaultEncode
 
-type CancellationReasons = {
+type OptionButtonList = {
     reasonCode :: String,
-    description :: String
+    description :: String,
+    textBoxRequired :: Boolean
 }
 
 newtype Version = Version

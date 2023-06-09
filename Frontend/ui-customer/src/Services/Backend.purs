@@ -489,30 +489,8 @@ updateProfile (UpdateProfileReq payload) = do
     where
         unwrapResponse (x) = x
 
-makeUpdateProfileRequest :: Maybe String -> Maybe String -> Maybe String -> UpdateProfileReq
-makeUpdateProfileRequest name gender referralCode =
-    UpdateProfileReq{
-          middleName : Nothing
-        , lastName : Nothing
-        , deviceToken : Just (getValueToLocalNativeStore FCM_TOKEN)
-        , firstName : name
-        , email : Nothing
-        , referralCode : referralCode
-        , gender : gender
-        , language : Just case getValueToLocalNativeStore LANGUAGE_KEY of
-            "EN_US" -> "ENGLISH"
-            "KN_IN" -> "KANNADA"
-            "HI_IN" -> "HINDI"
-            "ML_IN" -> "MALAYALAM"
-            "BN_IN" -> "BENGALI"
-            "TA_IN" -> "TAMIL"
-            _       -> "ENGLISH"
-        , clientVersion : Nothing
-        , bundleVersion : Nothing
-    }
-
-makeUpdateVersionRequest :: Version -> Version -> UpdateProfileReq
-makeUpdateVersionRequest clientVersion bundleVersion =
+mkUpdateProfileRequest :: UpdateProfileReq
+mkUpdateProfileRequest =
     UpdateProfileReq{
           middleName : Nothing
         , lastName : Nothing
@@ -526,10 +504,11 @@ makeUpdateVersionRequest clientVersion bundleVersion =
             "KN_IN" -> "KANNADA"
             "HI_IN" -> "HINDI"
             "ML_IN" -> "MALAYALAM"
+            "BN_IN" -> "BENGALI"
             "TA_IN" -> "TAMIL"
             _       -> "ENGLISH"
-        , clientVersion : Just clientVersion
-        , bundleVersion : Just bundleVersion
+        , clientVersion : Nothing
+        , bundleVersion : Nothing
     }
 
 editProfileRequest :: Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> UpdateProfileReq
@@ -542,27 +521,6 @@ editProfileRequest firstName middleName lastName emailID gender =
         , email : emailID
         , referralCode : Nothing
         , gender : gender
-        , language : Just case getValueToLocalNativeStore LANGUAGE_KEY of
-            "EN_US" -> "ENGLISH"
-            "KN_IN" -> "KANNADA"
-            "HI_IN" -> "HINDI"
-            "ML_IN" -> "MALAYALAM"
-            "BN_IN" -> "BENGALI"
-            "TA_IN" -> "TAMIL"
-            _       -> "ENGLISH"
-        , clientVersion : Nothing
-        , bundleVersion : Nothing
-    }
-
-makeUpdateLanguageRequest :: String -> UpdateProfileReq
-makeUpdateLanguageRequest _ = UpdateProfileReq{
-          middleName : Nothing
-        , lastName : Nothing
-        , deviceToken : Just (getValueToLocalNativeStore FCM_TOKEN)
-        , firstName : Nothing
-        , email : Nothing
-        , referralCode : Nothing
-        , gender : Nothing
         , language : Just case getValueToLocalNativeStore LANGUAGE_KEY of
             "EN_US" -> "ENGLISH"
             "KN_IN" -> "KANNADA"

@@ -15,9 +15,10 @@
 
 module Screens.HomeScreen.Controller where
 
-import Common.Types.App (CancellationReasons)
+import Common.Types.App (OptionButtonList)
 import Components.BottomNavBar as BottomNavBar
-import Components.CancelRide as CancelRide
+import Components.SelectListModal as SelectListModal
+import Components.Banner as Banner
 import Components.InAppKeyboardModal as InAppKeyboardModal
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButtonController
@@ -75,7 +76,7 @@ instance loggableAction :: Loggable Action where
     RideActionModalAction act -> pure unit-- case act of
       -- RideActionModal.StartRide -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_action_modal" "start_ride"
       -- RideActionModal.EndRide -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_action_modal" "end_ride"
-      -- RideActionModal.CancelRide -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_action_modal" "cancel_ride"
+      -- RideActionModal.SelectListModal -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_action_modal" "cancel_ride"
       -- RideActionModal.OnNavigate -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_action_modal" "on_navigate"
       -- RideActionModal.CallCustomer -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_action_modal" "call_customer"
       -- RideActionModal.LocationTracking -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_action_modal" "location_tracking"
@@ -112,17 +113,18 @@ instance loggableAction :: Loggable Action where
       -- PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "tip_clicked"
       -- PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
     CancelRideModalAction act -> pure unit -- case act of
-      -- CancelRide.Button1 act -> case act of
+      -- SelectListModal.Button1 act -> case act of
       --   PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride" "primary_btn_go_back_onclick"
       --   PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride" "primary_btn_go_back_no_action"
-      -- CancelRide.Button2 act -> case act of
+      -- SelectListModal.Button2 act -> case act of
       --   PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride" "primary_btn_cancel_ride_onclick"
       --   PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride" "primary_btn_cancel_ride_no_action"
-      -- CancelRide.UpdateIndex indexValue -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride" "update_index_onclick"
-      -- CancelRide.TextChanged  valId newVal -> trackAppTextInput appId (getScreen HOME_SCREEN) "reason_text_changed" "cancel_ride"
-      -- CancelRide.OnGoBack -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride" "go_back_onclick"
-      -- CancelRide.ClearOptions -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride" "clear_options_onclick"
-      -- CancelRide.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride" "no_action"
+      -- SelectListModal.UpdateIndex indexValue -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride" "update_index_onclick"
+      -- SelectListModal.TextChanged  valId newVal -> trackAppTextInput appId (getScreen HOME_SCREEN) "reason_text_changed" "cancel_ride"
+      -- SelectListModal.OnGoBack -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride" "go_back_onclick"
+      -- SelectListModal.ClearOptions -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride" "clear_options_onclick"
+      -- SelectListModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride" "no_action"
+    GenderBannerModal act -> pure unit
     RetryTimeUpdate -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "retry_time_update_onclick"
     RideActiveAction activeRide -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "ride_active_action"
     StatsModelAction act -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "stats_model_action"
@@ -164,6 +166,8 @@ instance loggableAction :: Loggable Action where
     ClickAddAlternateButton -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "add-alternate_btn"
     ZoneOtpAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "zone_otp"
     TriggerMaps -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "trigger_maps"
+    RemoveGenderBanner -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "gender_banner"
+
 
 
 
@@ -174,7 +178,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToReferralScreen
                     | StartRide ST.HomeScreenState
                     | EndRide ST.HomeScreenState
-                    | CancelRide ST.HomeScreenState
+                    | SelectListModal ST.HomeScreenState
                     | DriverAvailabilityStatus ST.HomeScreenState ST.DriverStatus
                     | UpdatedState ST.HomeScreenState
                     | UpdateRoute ST.HomeScreenState
@@ -185,7 +189,8 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | AddAlternateNumber ST.HomeScreenState
                     | StartZoneRide ST.HomeScreenState 
                     | CallCustomer ST.HomeScreenState
-                    
+                    | GotoEditGenderScreen
+
 data Action = NoAction
             | BackPressed
             | ScreenClick
@@ -203,7 +208,7 @@ data Action = NoAction
             | ActiveRideAPIResponseAction (Array RidesInfo)
             | PopUpModalAction PopUpModal.Action
             | PopUpModalCancelConfirmationAction PopUpModal.Action
-            | CancelRideModalAction CancelRide.Action
+            | CancelRideModalAction SelectListModal.Action
             | Cancel
             | SetToken String
             | ModifyRoute String String
@@ -225,6 +230,8 @@ data Action = NoAction
             | ClickAddAlternateButton
             | ZoneOtpAction
             | TriggerMaps
+            | GenderBannerModal Banner.Action
+            | RemoveGenderBanner
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -365,25 +372,25 @@ eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
   _ <- pure $ removeAllPolylines ""
   updateAndExit state {props {endRidePopUp = false, rideActionModal = false}} $ EndRide state {props {endRidePopUp = false, rideActionModal = false, zoneRideBooking = true}}
 
-eval (CancelRideModalAction (CancelRide.UpdateIndex indexValue)) state = continue state { data = state.data { cancelRideModal  { activeIndex = Just indexValue, selectedReasonCode =  (fromMaybe {reasonCode : "", description : ""} (((state.data.cancelRideModal).cancelRideReasons)Array.!!indexValue) ).reasonCode } } }
-eval (CancelRideModalAction (CancelRide.TextChanged  valId newVal)) state = continue state { data {cancelRideModal { selectedReasonDescription = newVal, selectedReasonCode = "OTHER"}}}
-eval (CancelRideModalAction (CancelRide.Button1 PrimaryButtonController.OnClick)) state = do
+eval (CancelRideModalAction (SelectListModal.UpdateIndex indexValue)) state = continue state { data = state.data { cancelRideModal  { activeIndex = Just indexValue, selectedReasonCode =  (fromMaybe {reasonCode : "", description : "",textBoxRequired:false} (((state.data.cancelRideModal).selectionOptions)Array.!!indexValue) ).reasonCode } } }
+eval (CancelRideModalAction (SelectListModal.TextChanged  valId newVal)) state = continue state { data {cancelRideModal { selectedReasonDescription = newVal, selectedReasonCode = "OTHER"}}}
+eval (CancelRideModalAction (SelectListModal.Button1 PrimaryButtonController.OnClick)) state = do
   pure $ hideKeyboardOnNavigation true
   continue state { data{cancelRideModal {activeIndex = Nothing, selectedReasonCode = "", selectedReasonDescription = ""}} ,props {cancelRideModalShow = false, cancelConfirmationPopup=false } }
-eval (CancelRideModalAction (CancelRide.OnGoBack)) state = continue state { data { cancelRideModal {activeIndex = Nothing, selectedReasonCode = "", selectedReasonDescription = ""}} ,props{ cancelRideModalShow = false, cancelConfirmationPopup = false}}
-eval (CancelRideModalAction (CancelRide.ClearOptions)) state = continue state {data {cancelRideModal {activeIndex = Nothing, selectedReasonCode = "", selectedReasonDescription = ""}}}
-eval (CancelRideModalAction (CancelRide.Button2 PrimaryButtonController.OnClick)) state = do
+eval (CancelRideModalAction (SelectListModal.OnGoBack)) state = continue state { data { cancelRideModal {activeIndex = Nothing, selectedReasonCode = "", selectedReasonDescription = ""}} ,props{ cancelRideModalShow = false, cancelConfirmationPopup = false}}
+eval (CancelRideModalAction (SelectListModal.ClearOptions)) state = continue state {data {cancelRideModal {activeIndex = Nothing, selectedReasonCode = "", selectedReasonDescription = ""}}}
+eval (CancelRideModalAction (SelectListModal.Button2 PrimaryButtonController.OnClick)) state = do
     pure $ hideKeyboardOnNavigation true
     let cancelReasonSelected = case state.data.cancelRideModal.activeIndex of
-                                  Just index -> (state.data.cancelRideModal.cancelRideReasons Array.!! (index))
+                                  Just index -> (state.data.cancelRideModal.selectionOptions Array.!! (index))
                                   Nothing    -> Nothing
     _ <- pure $ printLog "cancelReasonSelected" cancelReasonSelected
     case cancelReasonSelected of
       Just reason -> do
         _ <- pure $ printLog "inside Just" reason.reasonCode
-        if (reason.reasonCode == "OTHER") then exit $ CancelRide state { props = state.props { cancelRideModalShow = false , cancelConfirmationPopup = false, zoneRideBooking = true} } else do
+        if (reason.reasonCode == "OTHER") then exit $ SelectListModal state { props = state.props { cancelRideModalShow = false , cancelConfirmationPopup = false, zoneRideBooking = true} } else do
           let newState = state { data = state.data {cancelRideModal = state.data.cancelRideModal { selectedReasonCode = reason.reasonCode , selectedReasonDescription = reason.description  } }, props = state.props { cancelRideModalShow = false, otpAttemptsExceeded = false, cancelConfirmationPopup = false, zoneRideBooking = true } }
-          exit $ CancelRide newState
+          exit $ SelectListModal newState
       Nothing -> do
         _ <- pure $ printLog "inside Nothing" "."
         continue state
@@ -393,7 +400,7 @@ eval (PopUpModalCancelConfirmationAction (PopUpModal.OnButton2Click)) state = do
   _ <- pure $ clearTimer state.data.cancelRideConfirmationPopUp.timerID
   continue state {props{cancelConfirmationPopup = false}, data{cancelRideConfirmationPopUp{timerID = "" , continueEnabled=false, enableTimer=false}}}
 
-eval (PopUpModalCancelConfirmationAction (PopUpModal.OnButton1Click)) state = continue state {props {cancelRideModalShow = true},data {cancelRideConfirmationPopUp{enableTimer = false}, cancelRideModal {activeIndex=Nothing, selectedReasonCode="", cancelRideReasons = cancellationReasons "" }}}
+eval (PopUpModalCancelConfirmationAction (PopUpModal.OnButton1Click)) state = continue state {props {cancelRideModalShow = true},data {cancelRideConfirmationPopUp{enableTimer = false}, cancelRideModal {activeIndex=Nothing, selectedReasonCode="", selectionOptions = cancellationReasons "" }}}
 
 eval (PopUpModalCancelConfirmationAction (PopUpModal.CountDown seconds id status timerID)) state = do
   if status == "EXPIRED" && seconds == 0 then do
@@ -401,8 +408,8 @@ eval (PopUpModalCancelConfirmationAction (PopUpModal.CountDown seconds id status
     continue state { data { cancelRideConfirmationPopUp{delayInSeconds = 0, timerID = "", continueEnabled = true}}}
     else continue state { data {cancelRideConfirmationPopUp{delayInSeconds = (seconds+1), timerID = timerID, continueEnabled = false}}}
 
-eval (CancelRideModalAction CancelRide.NoAction) state = do
-  _ <- pure $ printLog "CancelRideModalAction NoAction" state.data.cancelRideModal.cancelRideReasons
+eval (CancelRideModalAction SelectListModal.NoAction) state = do
+  _ <- pure $ printLog "CancelRideModalAction NoAction" state.data.cancelRideModal.selectionOptions
   continue state
 eval (SetToken id )state = do
   _ <-  pure $ setValueToLocalNativeStore FCM_TOKEN  id
@@ -540,8 +547,13 @@ eval ZoneOtpAction state = do
   continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false } }
 
 eval HelpAndSupportScreen state = exit $ GoToHelpAndSupportScreen
-eval _ state = continue state 
 
+eval (GenderBannerModal (Banner.OnClick)) state = exit $ GotoEditGenderScreen
+
+eval RemoveGenderBanner state = do
+  continue state { props = state.props{showGenderBanner = false,notRemoveBanner = false}}
+
+eval _ state = continue state 
 
 checkPermissionAndUpdateDriverMarker :: ST.HomeScreenState -> Effect Unit
 checkPermissionAndUpdateDriverMarker state = do
@@ -604,38 +616,45 @@ activeRideDetail state (RidesInfo ride) = {
   exoPhone : ride.exoPhone
 }
 
-cancellationReasons :: String -> Array CancellationReasons
+cancellationReasons :: String -> Array OptionButtonList
 cancellationReasons dummy = [
         {
           reasonCode: "VEHICLE_ISSUE"
         , description: (getString VEHICLE_ISSUE)
+        , textBoxRequired : false
         },
         {
           reasonCode: "PICKUP_TOO_FAR"
         , description: (getString PICKUP_TOO_FAR)
+        , textBoxRequired : false
         },
         {
           reasonCode: "CUSTOMER_NOT_PICKING_CALL"
         , description: (getString CUSTOMER_NOT_PICKING_CALL)
+        , textBoxRequired : false
         },
         {
           reasonCode: "TRAFFIC_JAM"
         , description: (getString TRAFFIC_JAM)
+        , textBoxRequired : false
         },
         {
           reasonCode: "CUSTOMER_WAS_RUDE"
         , description: (getString CUSTOMER_WAS_RUDE)
+        , textBoxRequired : false
         },
         {
           reasonCode: "OTHER"
         , description: (getString OTHER)
+        , textBoxRequired : true
         }
 ]
 
-dummyCancelReason :: CancellationReasons
+dummyCancelReason :: OptionButtonList
 dummyCancelReason =  {
         reasonCode : ""
         , description :""
+        , textBoxRequired : false
         }
 
 getValueFromRange :: Int -> Int -> Int -> Int -> Int  -> Int

@@ -21,7 +21,8 @@ import Prelude
 import PrestoDOM
 
 import Animation.Config as AnimConfig
-import Components.CancelRide as CancelRidePopUpConfig
+import Components.Banner as Banner
+import Components.SelectListModal as CancelRidePopUpConfig
 import Components.DriverInfoCard (DriverInfoCardData)
 import Components.DriverInfoCard as DriverInfoCard
 import Components.EmergencyHelp as EmergencyHelp
@@ -314,7 +315,7 @@ cancelRidePopUpConfig state =
     lastIndex = ((DA.length state.props.cancellationReasons) - 1)
     cancelRideconfig' =
       cancelRideconfig
-        { cancelRideReasons = state.props.cancellationReasons
+        { selectionOptions = state.props.cancellationReasons
         , primaryButtonTextConfig
           { firstText = (getString GO_BACK_)
           , secondText = (getString CANCEL_RIDE)
@@ -322,13 +323,17 @@ cancelRidePopUpConfig state =
         , activeIndex = state.props.cancelRideActiveIndex
         , activeReasonCode = Just state.props.cancelReasonCode
         , isLimitExceeded = ((DS.length (state.props.cancelDescription)) >= 100)
-        , isCancelButtonActive =
+        , isSelectButtonActive =
           ( case state.props.cancelRideActiveIndex of
               Just cancelRideIndex -> true
               Nothing -> false
           )
-        , headingText = ((getString CANCEL_RIDE) <> "?")
-        , subHeadingText = (getString PLEASE_TELL_US_WHY_YOU_WANT_TO_CANCEL)
+        , headingTextConfig{
+          text = ((getString CANCEL_RIDE) <> "?")
+        }
+        , subHeadingTextConfig{
+          text = (getString PLEASE_TELL_US_WHY_YOU_WANT_TO_CANCEL)
+        }
         , hint = (getString HELP_US_WITH_YOUR_REASON)
         , strings
           { mandatory = (getString MANDATORY)
@@ -337,6 +342,22 @@ cancelRidePopUpConfig state =
         }
   in
     cancelRideconfig'
+  
+genderBannerConfig :: ST.HomeScreenState -> Banner.Config
+genderBannerConfig state = 
+  let 
+    config = Banner.config
+    config' = config
+      { 
+        backgroundColor = Color.lightMintGreen
+      , title = (getString COMPLETE_YOUR_PROFILE_FOR_A_PERSONALISED_RIDE_EXPERIENCE)
+      , titleColor = Color.elfGreen
+      , actionText = (getString UPDATE_NOW)
+      , actionTextColor = Color.elfGreen
+      , imageUrl = "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
+      , isBanner = state.props.isBanner
+      }
+  in config'
 
 logOutPopUpModelConfig :: ST.HomeScreenState -> PopUpModal.Config
 logOutPopUpModelConfig state =

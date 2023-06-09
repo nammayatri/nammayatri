@@ -390,6 +390,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , canDowngradeToTaxi :: Boolean
     , clientVersion         :: Maybe Version
     , bundleVersion         :: Maybe Version
+    , gender                :: Maybe String
     , numberOfRides :: Maybe Int
     }
 
@@ -603,6 +604,7 @@ newtype UpdateDriverInfoReq = UpdateDriverInfoReq
     ,   language                :: Maybe String
     ,   clientVersion           :: Maybe Version
     ,   bundleVersion           :: Maybe Version
+    ,   gender                  :: Maybe String
     }
 
 newtype UpdateDriverInfoResp = UpdateDriverInfoResp GetDriverInfoResp
