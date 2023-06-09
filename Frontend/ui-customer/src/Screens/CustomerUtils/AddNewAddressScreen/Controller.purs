@@ -28,7 +28,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (os, getNewIDWithTag)
 import Data.Number (fromString) as Number
 import Helpers.Utils (getCurrentLocationMarker, getDistanceBwCordinates, getLocationName)
-import JBridge (animateCamera, currentPosition, exitLocateOnMap, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, removeAllPolylines, requestKeyboardShow, requestLocation, toast, toggleBtnLoader)
+import JBridge (animateCamera, currentPosition, exitLocateOnMap, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, removeAllPolylines, requestKeyboardShow, requestLocation, toast, toggleBtnLoader, firebaseLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -152,6 +152,7 @@ eval SetLocationOnMap state = do
   _ <- pure $ removeAllPolylines ""
   _ <- pure $ hideKeyboardOnNavigation true
   _ <- pure $ toggleBtnLoader "" false
+  _ <- pure $ firebaseLogEvent "ny_user_favourite_select_on_map"
   let newState = state{props{isLocateOnMap = true}}
   continue newState
 
