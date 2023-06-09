@@ -495,7 +495,7 @@ savePlaceView state push =
               ] <> (if EHC.os == "IOS" then [width $ V (4 * (EHC.screenWidth unit / 5) - 75)] else [weight 1.0]) )
             , linearLayout[
               height WRAP_CONTENT
-            , width WRAP_CONTENT
+            , weight 1.0
             , gravity RIGHT 
             ][  textView
                 [ text (getString EDIT)

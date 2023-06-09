@@ -1604,7 +1604,7 @@ rideTrackingView push state =
                 , width MATCH_PARENT
                 , background Color.transparent
                 , sheetState COLLAPSED
-                , peakHeight if state.props.currentStage == RideAccepted then getHeightFromPercent 64 else getHeightFromPercent 51
+                , peakHeight $ getPeakHeight state.props.currentStage
                 , visibility VISIBLE
                 , halfExpandedRatio 0.75
                 ]
@@ -1622,6 +1622,15 @@ rideTrackingView push state =
             ]
         ]
     ]
+
+
+getPeakHeight :: Stage -> Int
+getPeakHeight stage = case getValueFromConfig "enableShareRide" , stage of
+                      "true" , RideAccepted -> getHeightFromPercent 65
+                      "false" , RideAccepted -> getHeightFromPercent 60
+                      "true" , _ ->  getHeightFromPercent 52
+                      "false" , _ ->  getHeightFromPercent 47
+                      _ , _ -> getHeightFromPercent 47
 
 previousRideRatingView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 previousRideRatingView push state =
