@@ -213,7 +213,7 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
 instance FromBackendRow Postgres Meters
 
 instance FromField Meters where
-  fromField = fromFieldMeters
+  fromField = fromFieldJSON
 
 instance HasSqlValueSyntax be Int => HasSqlValueSyntax be Seconds where
   sqlValueSyntax = sqlValueSyntax . getSeconds
