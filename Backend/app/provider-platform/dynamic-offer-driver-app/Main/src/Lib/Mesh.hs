@@ -8,7 +8,7 @@ meshConfig =
   MeshConfig
     { meshEnabled = False,
       memcacheEnabled = False,
-      meshDBName = "ECRDB",
+      meshDBName = "postgres",
       ecRedisDBStream = "db-sync-stream",
       kvRedis = "KVRedis",
       redisTtl = 43200,

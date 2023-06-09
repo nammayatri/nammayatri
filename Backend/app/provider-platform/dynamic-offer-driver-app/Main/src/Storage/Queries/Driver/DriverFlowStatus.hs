@@ -14,11 +14,13 @@
 
 module Storage.Queries.Driver.DriverFlowStatus where
 
+import qualified Debug.Trace as T
 import Domain.Types.Driver.DriverFlowStatus
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.Person
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
+import EulerHS.KVConnector.Types (MeshConfig (..))
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
@@ -28,11 +30,14 @@ import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Driver.DriverFlowStatus as BeamDFS
 
+updatedMeshCfg :: MeshConfig
+updatedMeshCfg = Mesh.meshConfig {meshEnabled = True, kvHardKilled = False}
+
 create :: L.MonadFlow m => DDFS.DriverFlowStatus -> m (MeshResult ())
 create driverFlowStatus = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverFlowStatusToBeam driverFlowStatus)
+    Just dbConf' -> T.trace ("Create started here") $ KV.createWoReturingKVConnector dbConf' updatedMeshCfg (transformDomainDriverFlowStatusToBeam driverFlowStatus)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 deleteById :: L.MonadFlow m => Id Person -> m ()
@@ -43,7 +48,7 @@ deleteById (Id driverId) = do
       void $
         KV.deleteWithKVConnector
           dbConf'
-          Mesh.meshConfig
+          updatedMeshCfg
           [Se.Is BeamDFS.personId (Se.Eq driverId)]
     Nothing -> pure ()
 
@@ -52,7 +57,7 @@ getStatus (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
-      dfsData <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamDFS.personId $ Se.Eq personId]
+      dfsData <- KV.findWithKVConnector dbConf' updatedMeshCfg [Se.Is BeamDFS.personId $ Se.Eq personId]
       case dfsData of
         Left _ -> pure Nothing
         Right x -> do
@@ -70,7 +75,7 @@ updateStatus (Id personId) flowStatus = do
       void $
         KV.updateWoReturningWithKVConnector
           dbConf'
-          Mesh.meshConfig
+          updatedMeshCfg
           [ Se.Set BeamDFS.flowStatus flowStatus,
             Se.Set BeamDFS.updatedAt now
           ]

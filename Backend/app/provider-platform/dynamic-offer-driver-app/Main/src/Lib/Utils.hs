@@ -24,11 +24,14 @@ import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.FarePolicy as DomainFP
 import Domain.Types.Vehicle.Variant (Variant (..))
+import EulerHS.KVConnector.Types (MeshConfig (..))
+import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Types
 import Kernel.Types.Common
 import Kernel.Utils.Common (encodeToText)
+import Lib.Mesh as Mesh
 
 -- import Kernel.Types.Time (Seconds (..))
 
@@ -317,11 +320,17 @@ fromFieldEnumDbHash f mbValue = case mbValue of
 
 -- writing shared kernel Esqueleto.Functions in utils
 
+-- getPoint :: (SqlExpr (Value Double), SqlExpr (Value Double)) -> SqlExpr (Value Point)
+-- getPoint (lat, long) = unsafeSqlFunction "ST_SetSRID" (buildSTPoint (long, lat), val (4326 :: Int))
+
 getPoint :: (Double, Double) -> BQ.QGenExpr context Postgres s Point
 getPoint (lat, lon) = BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "ST_SetSRID (ST_Point (" <> show lon <> " , " <> show lat <> "),4326)"))
 
+containsPoint'' :: (Double, Double) -> BQ.QGenExpr context Postgres s BQ.SqlBool
+containsPoint'' (lon, lat) = B.sqlBool_ (BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "st_contains (" <> show lon <> " , " <> show lat <> ")")))
+
 containsPoint' :: (Double, Double) -> BQ.QGenExpr context Postgres s BQ.SqlBool
-containsPoint' (lon, lat) = B.sqlBool_ (BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "st_contains (" <> show lon <> " , " <> show lat <> ")")))
+containsPoint' (lon, lat) = B.sqlBool_ (BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "st_contains (geom, ST_GeomFromText('POINT (" <> show lon <> " " <> show lat <> "))")))
 
 buildRadiusWithin' :: Point -> (Double, Double) -> Int -> BQ.QGenExpr context Postgres s BQ.SqlBool
 buildRadiusWithin' pnt (lat, lon) rad =
@@ -331,5 +340,14 @@ buildRadiusWithin' pnt (lat, lon) rad =
 
 (<->.) :: Point -> Point -> BQ.QGenExpr context Postgres s Double
 (<->.) p1 p2 = BQ.QExpr (\_ -> PgExpressionSyntax (emit $ show p1 <> " <-> " <> show p2))
+
+setFlagsInMeshConfig :: (L.MonadFlow m) => MeshConfig -> Text -> m MeshConfig
+setFlagsInMeshConfig meshCfg modelName = do
+  let isMeshEnabled = isKVEnabled modelName
+      isKVHardKilled = isHardKillEnabled modelName
+  pure $ meshCfg {meshEnabled = isMeshEnabled, kvHardKilled = isKVHardKilled}
+  where
+    isKVEnabled _ = False
+    isHardKillEnabled _ = True
 
 -- " <-> "

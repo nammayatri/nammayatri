@@ -16,6 +16,7 @@ module Storage.Queries.Geometry where
 
 import qualified Database.Beam as B
 import Database.Beam.Postgres
+import qualified Database.Beam.Schema.Tables as B
 import Domain.Types.Geometry
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
@@ -26,6 +27,24 @@ import Kernel.Types.Id
 import Lib.Utils
 import Sequelize
 import qualified Storage.Beam.Geometry as BeamG
+
+data AtlasDB f = AtlasDB
+  { geometry :: f (B.TableEntity BeamG.GeometryT)
+  }
+  deriving (Generic, B.Database be)
+
+atlasDB :: B.DatabaseSettings be AtlasDB
+atlasDB =
+  B.defaultDbSettings
+    `B.withDbModification` B.dbModification
+      { geometry = geometryTable
+      }
+
+geometryTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity BeamG.GeometryT)
+geometryTable =
+  B.setEntitySchema (Just "atlas_driver_offer_bpp")
+    <> B.setEntityName "geometry"
+    <> B.modifyTableFields BeamG.geometryTMod
 
 -- findGeometriesContaining :: Transactionable m => LatLong -> [Text] -> m [Geometry]
 -- findGeometriesContaining gps regions =
@@ -43,48 +62,9 @@ findGeometriesContaining gps regions = do
   conn <- L.getOrInitSqlConn (fromJust dbConf)
   case conn of
     Right c -> do
-      geoms <- L.runDB c $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lat, gps.lon) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (meshModelTableEntity @BeamG.GeometryT @Postgres @(DatabaseWith BeamG.GeometryT))
+      geoms <- L.runDB c $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lat, gps.lon) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (geometry atlasDB)
       pure (either (const []) (transformBeamGeometryToDomain <$>) geoms)
     Left _ -> pure []
-
--- meshModelTableEntity ::
---   (B.Database be db, be ~ Postgres, Model Postgres BeamG.GeometryT, MeshMeta Postgres BeamG.GeometryT) =>
---   B.DatabaseEntity Postgres db (B.TableEntity BeamG.GeometryT)
--- meshModelTableEntity =
---   -- let B.EntityModification modification = B.modifyTableFields (meshModelFieldModification @table)
---   let B.EntityModification modification =
---         B.modifyTableFields BeamG.geometryTMod
---           <> B.setEntityName "geometry"
---   --in appEndo modification $ B.DatabaseEntity $ B.dbEntityAuto (modelTableName @table)
---   in appEndo modification $ B.DatabaseEntity $ B.dbEntityAuto "geometry"
-
--- modelTableEntity' ::
---   forall table be db.
---   Model be table =>
---   B.DatabaseEntity be db (B.TableEntity table)
--- modelTableEntity' =
---   let B.EntityModification modification =
---         B.modifyTableFields (modelFieldModification @table)
---           <> B.setEntityName (modelTableName @table)
---           <> B.setEntitySchema (modelSchemaName @table)
---    in appEndo modification $ B.DatabaseEntity $ B.dbEntityAuto (modelTableName @table)
--- geometryEMod :: B.EntityModification
---   (B.DatabaseEntity Postgres db) be (B.TableEntity GeometryT)
--- geometryEMod = B.modifyTableFields geometryTMod
-
--- membersEMod :: B.EntityModification
---   (B.DatabaseEntity be db) be (B.TableEntity MemberT)
--- membersEMod = B.modifyTableFields
---   B.tableModification
---     { memberId = B.fieldNamed "memid"
---     , surName = B.fieldNamed "surname"
---     , firstName = B.fieldNamed "firstname"
---     , address = B.fieldNamed "address"
---     , zipCode = B.fieldNamed "zipcode"
---     , telephone = B.fieldNamed "telephone"
---     , recommendedBy = B.fieldNamed "recommendedby"
---     , joinDate = B.fieldNamed "joindate"
---     }
 
 someGeometriesContain :: forall m. (L.MonadFlow m) => LatLong -> [Text] -> m Bool
 someGeometriesContain gps regions = do
