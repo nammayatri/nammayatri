@@ -23,6 +23,7 @@ import Domain.Types.Person as Person
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config (EsqLocRepDBFlow)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (logDebug)
@@ -174,7 +175,7 @@ deleteById :: Id Person.Driver -> SqlDB ()
 deleteById = Esq.deleteByKey @DriverInformationT . cast
 
 findAllWithLimitOffsetByMerchantId ::
-  Transactionable m =>
+  (Transactionable m, EsqDBReplicaFlow m r) =>
   Maybe Text ->
   Maybe DbHash ->
   Maybe Integer ->
@@ -182,22 +183,23 @@ findAllWithLimitOffsetByMerchantId ::
   Id Merchant ->
   m [(Person, DriverInformation)]
 findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOffset merchantId = do
-  findAll $ do
-    (person :& driverInformation) <-
-      from $
-        table @PersonT
-          `innerJoin` table @DriverInformationT
-            `Esq.on` ( \(person :& driverInformation) ->
-                         driverInformation ^. DriverInformationDriverId ==. person ^. PersonTId
-                     )
-    where_ $
-      person ^. PersonRole ==. val Person.DRIVER
-        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
-        &&. Esq.whenJust_ (liftA2 (,) mbSearchString mbSearchStrDBHash) (filterBySearchString person)
-    orderBy [desc $ driverInformation ^. DriverInformationCreatedAt]
-    limit limitVal
-    offset offsetVal
-    return (person, driverInformation)
+  runInReplica $
+    findAll $ do
+      (person :& driverInformation) <-
+        from $
+          table @PersonT
+            `innerJoin` table @DriverInformationT
+              `Esq.on` ( \(person :& driverInformation) ->
+                           driverInformation ^. DriverInformationDriverId ==. person ^. PersonTId
+                       )
+      where_ $
+        person ^. PersonRole ==. val Person.DRIVER
+          &&. person ^. PersonMerchantId ==. val (toKey merchantId)
+          &&. Esq.whenJust_ (liftA2 (,) mbSearchString mbSearchStrDBHash) (filterBySearchString person)
+      orderBy [desc $ driverInformation ^. DriverInformationCreatedAt]
+      limit limitVal
+      offset offsetVal
+      return (person, driverInformation)
   where
     limitVal = maybe 100 fromIntegral mbLimit
     offsetVal = maybe 0 fromIntegral mbOffset
@@ -210,7 +212,7 @@ findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOf
         ||. person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)
     unMaybe = maybe_ (val "") identity
 
-getDriversWithOutdatedLocationsToMakeInactive :: Transactionable m => UTCTime -> m [Person]
+getDriversWithOutdatedLocationsToMakeInactive :: (Transactionable m, EsqLocRepDBFlow m r) => UTCTime -> m [Person]
 getDriversWithOutdatedLocationsToMakeInactive before = do
   driverLocations <- getDriverLocs before
   driverInfos <- getDriverInfos driverLocations
@@ -246,15 +248,16 @@ getDriverInfos driverLocations = do
     personsKeys = toKey . cast <$> fetchDriverIDsFromLocations driverLocations
 
 getDriverLocs ::
-  Transactionable m =>
+  (Transactionable m, EsqLocRepDBFlow m r) =>
   UTCTime ->
   m [DriverLocation]
 getDriverLocs before = do
-  Esq.findAll $ do
-    driverLocs <- from $ table @DriverLocationT
-    where_ $
-      driverLocs ^. DriverLocationUpdatedAt <. val before
-    return driverLocs
+  runInLocReplica $
+    Esq.findAll $ do
+      driverLocs <- from $ table @DriverLocationT
+      where_ $
+        driverLocs ^. DriverLocationUpdatedAt <. val before
+      return driverLocs
 
 fetchDriverIDsFromLocations :: [DriverLocation] -> [Id Person]
 fetchDriverIDsFromLocations = map DriverLocation.driverId

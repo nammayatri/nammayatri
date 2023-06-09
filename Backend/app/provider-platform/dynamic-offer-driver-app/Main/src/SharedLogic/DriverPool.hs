@@ -56,6 +56,7 @@ import Domain.Types.Vehicle.Variant (Variant)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config (EsqLocRepDBFlow)
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
@@ -429,6 +430,7 @@ calculateDriverPool ::
     CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
+    EsqLocRepDBFlow m r,
     CoreMetrics m,
     HasCoordinates a
   ) =>
@@ -446,14 +448,13 @@ calculateDriverPool poolStage driverPoolCfg mbVariant pickup merchantId onlyNotO
   now <- getCurrentTime
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
-      Esq.runInReplica $
-        QP.getNearestDrivers
-          mbVariant
-          coord
-          radius
-          merchantId
-          onlyNotOnRide
-          driverPoolCfg.driverPositionInfoExpiry
+      QP.getNearestDrivers
+        mbVariant
+        coord
+        radius
+        merchantId
+        onlyNotOnRide
+        driverPoolCfg.driverPositionInfoExpiry
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount now) approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
@@ -481,6 +482,7 @@ calculateDriverPoolWithActualDist ::
     CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
+    EsqLocRepDBFlow m r,
     CoreMetrics m,
     HasCoordinates a
   ) =>
@@ -510,6 +512,7 @@ calculateDriverPoolCurrentlyOnRide ::
   ( EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
+    EsqLocRepDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     CoreMetrics m,
     HasCoordinates a
@@ -528,14 +531,13 @@ calculateDriverPoolCurrentlyOnRide poolStage driverPoolCfg mbVariant pickup merc
   now <- getCurrentTime
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPoolCurrentlyOnRide" $
-      Esq.runInReplica $
-        QP.getNearestDriversCurrentlyOnRide
-          mbVariant
-          coord
-          radius
-          merchantId
-          driverPoolCfg.driverPositionInfoExpiry
-          reduceRadiusValue
+      QP.getNearestDriversCurrentlyOnRide
+        mbVariant
+        coord
+        radius
+        merchantId
+        driverPoolCfg.driverPositionInfoExpiry
+        reduceRadiusValue
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount now) approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
@@ -562,6 +564,7 @@ calculateDriverCurrentlyOnRideWithActualDist ::
     CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
+    EsqLocRepDBFlow m r,
     CoreMetrics m,
     HasCoordinates a
   ) =>

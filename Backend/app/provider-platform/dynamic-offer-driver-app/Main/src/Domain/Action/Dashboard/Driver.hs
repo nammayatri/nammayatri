@@ -293,7 +293,7 @@ driverLocation :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Common.Driver
 driverLocation merchantShortId mbLimit mbOffset req = do
   merchant <- findMerchantByShortId merchantShortId
   let driverIds = coerce req.driverIds
-  allDrivers <- Esq.runInReplica $ QPerson.findAllDriversByIdsFirstNameAsc merchant.id driverIds
+  allDrivers <- QPerson.findAllDriversByIdsFirstNameAsc merchant.id driverIds
   let driversNotFound =
         filter (not . (`elem` map ((.id) . (.person)) allDrivers)) driverIds
       limitedDrivers = limitOffset mbLimit mbOffset allDrivers

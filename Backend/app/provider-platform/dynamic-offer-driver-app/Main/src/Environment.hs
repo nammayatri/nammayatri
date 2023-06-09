@@ -48,6 +48,8 @@ import Tools.Metrics
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,
+    esqLocationDBCfg :: EsqDBConfig,
+    esqLocationDBRepCfg :: EsqDBConfig,
     hedisMigrationStage :: Bool, -- TODO: remove once data migration is done.
     cutOffHedisCluster :: Bool,
     hedisCfg :: HedisCfg,
@@ -115,6 +117,8 @@ data AppEnv = AppEnv
     disableSignatureAuth :: Bool,
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
+    esqLocationDBEnv :: EsqDBEnv,
+    esqLocationDBRepEnv :: EsqDBEnv,
     clickhouseEnv :: ClickhouseEnv,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
@@ -174,6 +178,8 @@ buildAppEnv cfg@AppCfg {..} = do
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
+  esqLocationDBEnv <- prepareEsqDBEnv esqLocationDBCfg loggerEnv
+  esqLocationDBRepEnv <- prepareEsqDBEnv esqLocationDBRepCfg loggerEnv
   let modifierFunc = ("dynamic-offer-driver-app:" <>)
   hedisEnv <- connectHedis hedisCfg modifierFunc -- will be depreciated once data is migrated to cluster
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg modifierFunc

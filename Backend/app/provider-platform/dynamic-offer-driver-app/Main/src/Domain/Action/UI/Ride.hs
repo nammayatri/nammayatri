@@ -41,7 +41,7 @@ import Kernel.External.Maps.Types
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocDBFlow)
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Storage.Hedis as Redis (HedisFlow)
 import Kernel.Tools.Metrics.CoreMetrics
@@ -199,6 +199,7 @@ otpRideCreate ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
+    EsqLocDBFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],

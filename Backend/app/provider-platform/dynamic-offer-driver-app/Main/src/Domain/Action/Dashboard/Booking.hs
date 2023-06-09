@@ -30,6 +30,7 @@ import Environment
 import Kernel.External.Maps (LatLong (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverLocation as SDrLoc
@@ -70,14 +71,14 @@ stuckBookingsCancel merchantShortId req = do
     QRide.updateStatusByIds (stuckRideItems <&> (.rideId)) DRide.CANCELLED
     QBooking.cancelBookings allStuckBookingIds now
     for_ (bcReasons <> bcReasonsWithRides) QBCR.upsert
-    for_ driverLocations $ \location -> do
-      let latLong = LatLong location.lat location.lon
-      QDrLoc.upsertGpsCoord location.driverId latLong location.coordinatesCalculatedAt merchant.id
     CQDrInfo.updateNotOnRideMultiple stuckDriverIds
     for_ stuckRideItems $ \item -> do
       if item.driverActive
         then QDFS.updateStatus item.driverId DDFS.ACTIVE
         else QDFS.updateStatus item.driverId DDFS.IDLE
+  for_ driverLocations $ \location -> do
+    let latLong = LatLong location.lat location.lon
+    runInLocationDB $ QDrLoc.upsertGpsCoord location.driverId latLong location.coordinatesCalculatedAt merchant.id
   for_ stuckDriverIds CQDrInfo.clearDriverInfoCache
   for_ stuckPersonIds SRide.clearCache
   logTagInfo "dashboard -> stuckBookingsCancel: " $ show allStuckBookingIds

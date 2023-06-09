@@ -32,6 +32,7 @@ import Environment (Flow)
 import EulerHS.Prelude
 import Kernel.External.Maps.HasCoordinates
 import Kernel.External.Maps.Types
+import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -84,7 +85,7 @@ buildStartRideHandle merchantId = do
       }
 
 driverStartRide ::
-  (MonadThrow m, Log m) =>
+  (MonadThrow m, Log m, EsqLocDBFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverStartRideReq ->
@@ -95,7 +96,7 @@ driverStartRide handle rideId req =
     $ DriverReq req
 
 dashboardStartRide ::
-  (MonadThrow m, Log m) =>
+  (MonadThrow m, Log m, EsqLocDBFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardStartRideReq ->
@@ -106,7 +107,7 @@ dashboardStartRide handle rideId req =
     $ DashboardReq req
 
 startRide ::
-  (MonadThrow m, Log m) =>
+  (MonadThrow m, Log m, EsqLocDBFlow m r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   StartRideReq ->
