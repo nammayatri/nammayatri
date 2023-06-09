@@ -338,6 +338,19 @@ getDriverInfos ::
   Transactionable m =>
   [DriverLocation] ->
   m [DriverInformation]
+getDriverInfos driverLocs = do
+  Esq.findAll $ do
+    driverInfos <- from $ table @DriverInformationT
+    where_ $
+      driverInfos ^. DriverInformationDriverId `in_` valList personsKeys
+    return driverInfos
+  where
+    personsKeys = toKey . cast <$> fetchDriverIDsFromLocations driverLocs
+
+getDriverInfos' ::
+  L.MonadFlow m =>
+  [DriverLocation] ->
+  m [DriverInformation]
 getDriverInfos' driverLocs = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
@@ -354,6 +367,19 @@ getVehicles ::
   Transactionable m =>
   [DriverInformation] ->
   m [Vehicle]
+getVehicles driverInfo = do
+  Esq.findAll $ do
+    vehicles <- from $ table @VehicleT
+    where_ $
+      vehicles ^. VehicleDriverId `in_` valList personsKeys
+    return vehicles
+  where
+    personsKeys = toKey . cast <$> fetchDriverIDsFromInfo driverInfo
+
+getVehicles' ::
+  L.MonadFlow m =>
+  [DriverInformation] ->
+  m [Vehicle]
 getVehicles' driverInfo = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
@@ -368,6 +394,20 @@ getVehicles' driverInfo = do
 
 getDrivers ::
   Transactionable m =>
+  [Vehicle] ->
+  m [Person]
+getDrivers vehicles = do
+  Esq.findAll $ do
+    persons <- from $ table @PersonT
+    where_ $
+      persons ^. PersonTId `in_` valList personsKeys
+        &&. persons ^. PersonRole ==. val Person.DRIVER
+    return persons
+  where
+    personsKeys = toKey . cast <$> fetchDriverIDsFromVehicle vehicles
+
+getDrivers' ::
+  (L.MonadFlow m, Log m) =>
   [Vehicle] ->
   m [Person]
 getDrivers' vehicles = do
@@ -512,6 +552,19 @@ getBookingInfo' driverQuote = do
 
 getBookingLocs ::
   Transactionable m =>
+  [Booking.Booking] ->
+  m [BookingLocation]
+getBookingLocs bookings = do
+  Esq.findAll $ do
+    bookingLoc <- from $ table @BookingLocationT
+    where_ $
+      bookingLoc ^. BookingLocationTId `in_` valList toLocKeys
+    return bookingLoc
+  where
+    toLocKeys = toKey . cast <$> fetchToLocationIDFromBooking bookings
+
+getBookingLocs' ::
+  L.MonadFlow m =>
   [Booking.Booking] ->
   m [BookingLocation]
 getBookingLocs' bookings = do
@@ -1454,7 +1507,7 @@ getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide = do
 
 getDriverInfosWithCond' :: L.MonadFlow m => [DriverLocation] -> Bool -> Bool -> m [DriverInformation]
 getDriverInfosWithCond' driverLocs onlyNotOnRide onlyOnRide = do
-  dbCOnf <- L.getOption Extra.EulerPsqlDbCfg
+  dbCOnf <- L.getOption KBT.PsqlDbCfg
   case dbCOnf of
     Just dbCOnf' -> do
       either (pure []) (QueriesDI.transformBeamDriverInformationToDomain <$>)
@@ -1503,7 +1556,7 @@ getVehiclesWithCond' ::
   [DriverInformation] ->
   m [Vehicle]
 getVehiclesWithCond' driverInfo = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       vehicles <- KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamV.driverId $ Se.In personsKeys]

@@ -18,8 +18,8 @@
 module Storage.Beam.Estimate where
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
-import Data.ByteString.Lazy (fromStrict, toStrict)
+import Data.ByteString.Internal (ByteString)
+import Data.ByteString.Lazy (fromStrict)
 import Data.Coerce (coerce)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
@@ -42,7 +42,7 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Kernel.Utils.Common (encodeToText)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Vehicle ()

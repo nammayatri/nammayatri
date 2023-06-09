@@ -10,7 +10,7 @@ module Lib.Utils where
 
 import qualified Data.Aeson as A
 import Data.ByteString.Internal (ByteString, unpackChars)
-import Data.ByteString.Lazy (fromStrict, toStrict)
+import Data.ByteString.Lazy (fromStrict)
 import Data.Fixed (Centi)
 import Data.Time
 import Database.Beam

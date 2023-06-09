@@ -131,20 +131,6 @@ findAllRidesByDriverId (Id driverId) = do
         Left _ -> pure []
     Nothing -> pure []
 
-findAllRidesByDriverId ::
-  L.MonadFlow m =>
-  Id Person ->
-  m [Ride]
-findAllRidesByDriverId (Id driverId) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamR.driverId $ Se.Eq driverId]
-      case result of
-        Right ride -> mapM transformBeamRideToDomain ride
-        Left _ -> pure []
-    Nothing -> pure []
-
 findActiveByRBId :: L.MonadFlow m => Id Booking -> m (Maybe Ride)
 findActiveByRBId (Id rbId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg

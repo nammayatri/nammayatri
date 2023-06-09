@@ -127,7 +127,7 @@ findRecentByPersonIdAndImageType' personId imgtype = do
   let onboardingRetryTimeInHours = transporterConfig.onboardingRetryTimeInHours
   let onBoardingRetryTimeInHours = intToNominalDiffTime onboardingRetryTimeInHours
   now <- getCurrentTime
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' ->
       either (pure []) (transformBeamImageToDomain <$>)

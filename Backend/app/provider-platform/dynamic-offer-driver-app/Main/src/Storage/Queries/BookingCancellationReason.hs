@@ -59,7 +59,7 @@ create bookingCancellationReason = do
 
 findAllCancelledByDriverId :: L.MonadFlow m => Id Person -> m Int
 findAllCancelledByDriverId driverId = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       res <-
@@ -74,7 +74,7 @@ findAllCancelledByDriverId driverId = do
 
 findAllCancelledByDriverId' :: L.MonadFlow m => Id Person -> m Int
 findAllCancelledByDriverId' driverId = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       res <-

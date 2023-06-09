@@ -234,7 +234,7 @@ countAllBySTId searchTId = do
 
 countAllBySTId' :: L.MonadFlow m => Id DST.SearchTry -> m Int
 countAllBySTId' searchTId = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   conn <- L.getOrInitSqlConn (fromJust dbConf)
   case conn of
     Right c -> do

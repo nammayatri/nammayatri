@@ -63,7 +63,7 @@ findById (Id searchTry) = do
 
 findById' :: L.MonadFlow m => Id SearchTry -> m (Maybe SearchTry)
 findById' (Id searchTry) = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> either (pure Nothing) (transformBeamSearchTryToDomain <$>) <$> KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamST.id $ Se.Eq searchTry]
     Nothing -> pure Nothing
