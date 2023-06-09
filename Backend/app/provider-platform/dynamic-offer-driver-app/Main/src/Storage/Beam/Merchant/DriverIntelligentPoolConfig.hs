@@ -18,8 +18,8 @@
 module Storage.Beam.Merchant.DriverIntelligentPoolConfig where
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
-import Data.ByteString.Lazy (fromStrict, toStrict)
+import Data.ByteString.Internal (ByteString)
+import Data.ByteString.Lazy (toStrict)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -38,7 +38,7 @@ import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common
 import Kernel.Types.SlidingWindowCounters (PeriodType)
 import qualified Kernel.Types.SlidingWindowCounters as SWC
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 

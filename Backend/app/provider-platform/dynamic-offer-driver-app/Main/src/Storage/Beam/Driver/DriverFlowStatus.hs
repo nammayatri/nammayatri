@@ -19,8 +19,7 @@ module Storage.Beam.Driver.DriverFlowStatus where
 
 import Data.Aeson
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString, unpackChars)
-import Data.ByteString.Lazy (fromStrict, toStrict)
+import Data.ByteString.Internal (ByteString)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize

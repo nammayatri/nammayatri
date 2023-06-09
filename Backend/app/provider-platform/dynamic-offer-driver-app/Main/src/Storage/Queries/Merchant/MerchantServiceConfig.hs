@@ -27,7 +27,7 @@ import Domain.Types.Merchant.MerchantServiceConfig
 import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
-import qualified EulerHS.Prelude as EHP
+-- import qualified EulerHS.Prelude as EHP
 import qualified Kernel.Beam.Types as KBT
 import qualified Kernel.External.Call as Call
 import qualified Kernel.External.Maps.Interface.Types as Maps
@@ -38,7 +38,6 @@ import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude as P
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common (decodeFromText)
 import Kernel.Utils.Error
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
@@ -112,7 +111,7 @@ upsertMerchantServiceConfig merchantServiceConfig = do
                 KV.updateWoReturningWithKVConnector
                   dbCOnf'
                   Mesh.meshConfig
-                  [ Se.Set BeamMSC.configJSON (configJSON),
+                  [ Se.Set BeamMSC.configJSON configJSON,
                     Se.Set BeamMSC.updatedAt now
                   ]
                   [Se.Is BeamMSC.merchantId (Se.Eq $ getId merchantServiceConfig.merchantId)]

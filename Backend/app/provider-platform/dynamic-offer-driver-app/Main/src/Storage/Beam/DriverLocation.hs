@@ -22,7 +22,7 @@ import qualified Data.Aeson as A
 -- import Database.Beam.Postgres.Syntax
 -- import qualified Database.Beam.Query as BQ
 
-import Data.ByteString.Internal (ByteString, unpackChars)
+import Data.ByteString.Internal (ByteString)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
