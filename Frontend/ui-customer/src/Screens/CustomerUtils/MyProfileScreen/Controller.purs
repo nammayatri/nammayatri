@@ -119,7 +119,15 @@ eval ( AnimationEnd _ )state = continue state{props{showOptions = false}}
 eval (GenderSelected value) state = do 
     continue state{data{editedGender = Just value}, props{genderOptionExpanded = false , isBtnEnabled = true}}
 eval (UserProfile (GetProfileRes profile)) state = do
-  let name = (fromMaybe "" profile.firstName) <> " " <> (fromMaybe "" profile.middleName) <> " " <> (fromMaybe "" profile.lastName)
+  let middleName = case profile.middleName of 
+                    Just ""  -> ""
+                    Just name -> (" " <> name)
+                    Nothing -> ""
+      lastName   = case profile.lastName of 
+                    Just "" -> ""
+                    Just name -> (" " <> name)
+                    Nothing -> ""
+      name = (fromMaybe "" profile.firstName) <> middleName <> lastName
       gender = case (profile.gender) of
         Just "MALE" -> Just MALE
         Just "FEMALE" -> Just FEMALE
@@ -129,7 +137,7 @@ eval (UserProfile (GetProfileRes profile)) state = do
   continue state { data { name = name, editedName = name, gender = gender, emailId = profile.email} }
 eval (NameEditTextAction (PrimaryEditText.TextChanged id value)) state = do
   _ <- pure $ spy "Value changed"  value
-  continue state { data { editedName = value }, props{isBtnEnabled = ((not state.props.fromHomeScreen) && (length value >=3) && state.props.isEmailValid )} }
+  continue state { data { editedName = value }, props{isBtnEnabled = ((length value >=3) && state.props.isEmailValid )} }
 eval (EmailIDEditTextAction (PrimaryEditText.TextChanged id value)) state = do
   if (value == "" && state.data.errorMessage == Just EMAIL_EXISTS) then continue state {props{isEmailValid = false, isBtnEnabled = false, genderOptionExpanded = state.props.fromHomeScreen, expandEnabled = state.props.fromHomeScreen}}
     else continue state {data {editedEmailId = Just value , errorMessage = if (length value == 0) then Nothing else if ( validateEmail value) then Nothing else Just INVALID_EMAIL },props{isEmailValid = if (length value == 0) then true else validateEmail value, isBtnEnabled = ((length state.data.editedName >=3)  && (if (length value == 0) then true else validateEmail value)), genderOptionExpanded = false}}

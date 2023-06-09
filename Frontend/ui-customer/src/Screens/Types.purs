@@ -267,7 +267,8 @@ type ContactUsScreenData =
     email :: String,
     subject :: String,
     description :: String,
-    bookingId :: String
+    bookingId :: String,
+    errorMessage :: Maybe EmailErrorType
   }
 
 type ContactUsScreenProps =
