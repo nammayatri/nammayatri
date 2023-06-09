@@ -74,12 +74,9 @@ buildSearchRequest person pickup mbDrop mbMaxDistance mbDistance now bundleVersi
       }
   where
     getSearchRequestExpiry :: (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]) => UTCTime -> m UTCTime
-    getSearchRequestExpiry startTime = do
-      searchRequestExpiry <- maybe 7200 fromIntegral <$> asks (.searchRequestExpiry)
-      let minExpiry = 300 -- 5 minutes
-          timeToRide = startTime `diffUTCTime` now
-          validTill = addUTCTime (min (fromInteger searchRequestExpiry) (max minExpiry timeToRide)) now
-      pure validTill
+    getSearchRequestExpiry _ = do
+      searchRequestExpiry <- maybe 1800 fromIntegral <$> asks (.searchRequestExpiry)
+      pure $ addUTCTime (fromInteger searchRequestExpiry) now
 
 data SearchReqLocation = SearchReqLocation
   { gps :: LatLong,
