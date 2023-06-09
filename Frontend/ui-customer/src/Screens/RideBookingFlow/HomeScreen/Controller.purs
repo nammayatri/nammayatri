@@ -491,7 +491,6 @@ data ScreenOutput = LogoutUser
                   | CallPolice HomeScreenState
                   | UpdateSosStatus HomeScreenState
                   | FetchContacts HomeScreenState
-                  | OnResumeApp HomeScreenState
                   | CheckCurrentStatus
                   | CheckFlowStatus HomeScreenState
                   | ExitToPermissionFlow String
@@ -600,6 +599,7 @@ data Action = NoAction
             | IssueReportPopUpAC CancelRidePopUp.Action
             | IssueReportIndex Int
             | RideDetails
+            | UpdateData
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -607,6 +607,11 @@ eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval SearchForSelectedLocation state = do
   let currentStage = if state.props.searchAfterEstimate then TryAgain else FindingEstimate
   updateAndExit state{props{isPopUp = NoPopUp}} $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = currentStage, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
+
+eval UpdateData state = do
+  if (isLocalStageOn InitialStage) then do
+    exit $ CheckFlowStatus state
+  else continue state
 
 eval CheckFlowStatusAction state = exit $ CheckFlowStatus state
 
@@ -628,7 +633,7 @@ eval (UpdateCurrentStage stage) state = do
 
 eval OnResumeCallback state =
   if (isLocalStageOn FindingQuotes) && flowWithoutOffers WithoutOffers then
-    exit $ OnResumeApp state
+    exit $ CheckFlowStatus state
   else continue state
 
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
@@ -651,8 +656,8 @@ eval (RateClick index) state = do
         }
       }
 
-eval (IssueReportIndex index) state = 
-  case index of 
+eval (IssueReportIndex index) state =
+  case index of
     0 -> continue state { data { ratingViewState { openReportIssue = true }}}
     1 -> exit $ ReportIssue state { data {  ratingViewState { issueReason = Nothing }}}
     _ -> continue state
@@ -982,7 +987,7 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
 
 
 eval (SkipButtonActionController (PrimaryButtonController.OnClick)) state =
-  case state.data.ratingViewState.issueFacedView of 
+  case state.data.ratingViewState.issueFacedView of
     true -> do
             _ <- pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
             continue
@@ -995,9 +1000,9 @@ eval (SkipButtonActionController (PrimaryButtonController.OnClick)) state =
                       , rideId = state.data.driverInfoCardState.rideId
                       }
                   }
-                }    
+                }
     _ ->  if state.data.ratingViewState.selectedRating > 0 then updateAndExit state $ SubmitRating state{ data {rideRatingState {rating = state.data.ratingViewState.selectedRating }}}
-          else do 
+          else do
             _ <- pure $ firebaseLogEvent "ny_user_ride_skip_feedback"
             _ <- pure $ setValueToLocalStore RATING_SKIPPED "true"
             updateAndExit state GoToHome
@@ -1166,7 +1171,7 @@ eval (IssueReportPopUpAC (CancelRidePopUp.UpdateIndex index)) state = continue s
 eval (IssueReportPopUpAC (CancelRidePopUp.Button2 PrimaryButtonController.OnClick)) state = do
   let issue = reportIssueOptions!!(fromMaybe 1 state.data.ratingViewState.issueReportActiveIndex)
   let reason = (fromMaybe dummyCancelReason issue).description
-  exit $ ReportIssue state { data { 
+  exit $ ReportIssue state { data {
     ratingViewState { issueReason = Just reason, issueDescription = reason},
     rideRatingState {rideId = state.data.driverInfoCardState.rideId, feedback = ""}
     }}
@@ -1731,8 +1736,8 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
   continue $ if state.props.isSpecialZone then newState{data{specialZoneSelectedQuote = Just config.id }}
               else newState{props{estimateId = config.id }, data {selectedEstimatesObject = config}}
 
-eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard vehicleType))) state = 
-  continue state{ props { showRateCard = true } 
+eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard vehicleType))) state =
+  continue state{ props { showRateCard = true }
                 , data {  rateCard {  rateCardArray = getRateCardValue vehicleType state
                                     , title = getVehicleTitle vehicleType
                                     , onFirstPage = false
@@ -2077,15 +2082,15 @@ estimatesFlow estimatedQuotes state = do
     exit
       $ SelectEstimate
           state
-            { data  { suggestedAmount = estimatedPrice, 
+            { data  { suggestedAmount = estimatedPrice,
                       rateCard =  { additionalFare: additionalFare
                                   , nightShiftMultiplier: nightShiftMultiplier
                                   , nightCharges: nightCharges
                                   , currentRateCardType: DefaultRateCard
                                   , onFirstPage: false
-                                  , rateCardArray : getRateCardArray nightCharges lang baseFare extraFare additionalFare 
-                                  , driverAdditionsImage : "ny_ic_driver_addition_table2,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_addition_table2.png" 
-                                  , driverAdditionsLogic : (getString DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE) , title : (getString RATE_CARD) 
+                                  , rateCardArray : getRateCardArray nightCharges lang baseFare extraFare additionalFare
+                                  , driverAdditionsImage : "ny_ic_driver_addition_table2,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_addition_table2.png"
+                                  , driverAdditionsLogic : (getString DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE) , title : (getString RATE_CARD)
                                   },
                       showPreferences = getPreferenceValue "" }
             , props { estimateId = estimateId, currentStage = SettingPrice, showRateCardIcon = showRateCardIcon, zoneType = zoneType}
@@ -2102,9 +2107,9 @@ estimatesFlow estimatedQuotes state = do
                             , nightCharges: nightCharges
                             , currentRateCardType: DefaultRateCard
                             , onFirstPage: false
-                            , rateCardArray : getRateCardArray nightCharges lang baseFare extraFare additionalFare 
-                            , driverAdditionsImage : "ny_ic_driver_addition_table2,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_addition_table2.png" 
-                            , driverAdditionsLogic : (getString DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE) , title : (getString RATE_CARD) 
+                            , rateCardArray : getRateCardArray nightCharges lang baseFare extraFare additionalFare
+                            , driverAdditionsImage : "ny_ic_driver_addition_table2,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_addition_table2.png"
+                            , driverAdditionsLogic : (getString DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE) , title : (getString RATE_CARD)
                             }
                 }
         }
@@ -2221,9 +2226,9 @@ getZoneType tag =
     Just "SureMetro" -> METRO
     _                -> NOZONE
 
-getVehicleTitle :: String -> String 
-getVehicleTitle vehicle = 
-  (case vehicle of 
+getVehicleTitle :: String -> String
+getVehicleTitle vehicle =
+  (case vehicle of
     "HATCHBACK" -> (getString HATCHBACK)
     "SUV" -> (getString SUV)
     "SEDAN" -> (getString SEDAN)
@@ -2231,7 +2236,7 @@ getVehicleTitle vehicle =
 getRateCardValue :: String -> HomeScreenState -> Array RateCardDetails
 getRateCardValue vehicleVariant state = do
   let lang = getValueToLocalStore LANGUAGE_KEY
-  case vehicleVariant of 
+  case vehicleVariant of
     "HATCHBACK" -> [ { title : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 4 km" else "4 km " <> (getString MIN_FARE_UPTO) , description : "₹122"}
                    , { title : "4 km - 13 km" , description : "₹18 / km"}
                    , { title : "13 km - 30 km" , description : "₹25 / km"}
@@ -2256,5 +2261,5 @@ getRateCardValue vehicleVariant state = do
 
 getRateCardArray :: Boolean -> String -> Int -> Int -> Int -> Array {title :: String , description :: String}
 getRateCardArray nightCharges lang baseFare extraFare additionalFare = ([ { title :( if (lang == "EN_US") then (getString MIN_FARE_UPTO) <> " 2 km" else "2 km " <> (getString MIN_FARE_UPTO) ) <> if nightCharges then " 🌙" else "" , description : "₹" <> toString (baseFare) }
-                      , { title : (getString RATE_ABOVE_MIN_FARE) <> if nightCharges then " 🌙" else "", description : "₹" <> toString (extraFare) <> " / km"} ] 
+                      , { title : (getString RATE_ABOVE_MIN_FARE) <> if nightCharges then " 🌙" else "", description : "₹" <> toString (extraFare) <> " / km"} ]
                       <> if (getMerchant FunctionCall) == NAMMAYATRI && additionalFare > 0 then [ {title : (getString DRIVER_ADDITIONS) , description : (getString PERCENTAGE_OF_NOMINAL_FARE)}] else [])

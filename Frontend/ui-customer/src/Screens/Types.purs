@@ -490,6 +490,7 @@ data Stage = HomeScreen
            | ChatWithDriver
            | FindEstimateAndSearch
            | RetryFindingQuote
+           | InitialStage
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq

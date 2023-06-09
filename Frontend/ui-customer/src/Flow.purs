@@ -118,7 +118,9 @@ baseAppFlow gPayload refreshFlow = do
   _ <- lift $ lift $ setLogField "platform" $ encode (os)
   when (not refreshFlow) $ void $ UI.splashScreen state.splashScreen
   _ <- lift $ lift $ liftFlow $(firebaseLogEventWithParams "ny_user_app_version" "version" (versionName))
-  if getValueToLocalStore REGISTERATION_TOKEN /= "__failed" && getValueToLocalStore REGISTERATION_TOKEN /= "(null)" then currentFlowStatus
+  if getValueToLocalStore REGISTERATION_TOKEN /= "__failed" && getValueToLocalStore REGISTERATION_TOKEN /= "(null)" then do
+    updateLocalStage InitialStage
+    homeScreenFlow
     else if (MU.showCarouselScreen FunctionCall) then welcomeScreenFlow else enterMobileNumberScreenFlow
 
 
@@ -590,7 +592,6 @@ homeScreenFlow = do
   flow <- UI.homeScreen
   case flow of
     CHECK_FLOW_STATUS -> currentFlowStatus
-    ON_RESUME_APP -> currentFlowStatus
     GO_TO_MY_RIDES -> do
       modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen{data{offsetValue = 0}})
       _ <- pure $ firebaseLogEvent "ny_user_myrides_click"
@@ -1823,7 +1824,7 @@ isForLostAndFound = true
 
 checkAndUpdateSavedLocations :: HomeScreenState -> FlowBT String Unit
 checkAndUpdateSavedLocations state = do
-  if (getValueToLocalStore RELOAD_SAVED_LOCATION == "true") || (state.props.currentStage == HomeScreen)
+  if ((getValueToLocalStore RELOAD_SAVED_LOCATION == "true") || (state.props.currentStage == HomeScreen)) && not (isLocalStageOn InitialStage)
     then do
       recentPredictionsObject <- lift $ lift $ getObjFromLocal state
       (savedLocationResp )<- lift $ lift $ Remote.getSavedLocationList ""

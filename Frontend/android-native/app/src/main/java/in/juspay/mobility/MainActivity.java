@@ -183,6 +183,8 @@ public class MainActivity extends AppCompatActivity {
     private boolean isHideSplashEventCalled = false;
     private boolean isSystemAnimEnabled = true;
     private static InAppNotification inAppNotification ;
+    public boolean animationCycleCompleted = false;
+    public boolean showToggleLoader = false;
     public static MainActivity getInstance() {
         return instance;
     }
@@ -465,6 +467,7 @@ public class MainActivity extends AppCompatActivity {
 
                         @Override
                         public void onAnimationEnd(Animator animation) {
+                            animationCycleCompleted = true;
                             if (isHideSplashEventCalled) {
                                 hideSplash();
                             } else {
@@ -775,9 +778,8 @@ public class MainActivity extends AppCompatActivity {
                     hyperServices.process(json);
                 } else if (jsonObject.optString("event").equals("hide_splash")) {
                     String key = getResources().getString(R.string.service);
-                    if (key != null && key.equals("nammayatri") && isSystemAnimEnabled) {
-                            isHideSplashEventCalled = true;
-                    } else {
+                    isHideSplashEventCalled = true;
+                    if ((key != null && key.equals("nammayatri") && (animationCycleCompleted || !isSystemAnimEnabled)) || (key != null && !key.equals("nammayatri"))) {
                         hideSplash();
                     }
                 } else if (jsonObject.optString("event").equals("show_splash")) {
@@ -1250,16 +1252,19 @@ public class MainActivity extends AppCompatActivity {
         return juspayServicesGlobal;
     }
 
-    public void hideSplash (){
-        View v = findViewById(R.id.cl_dui_container);
-        if (v != null) {
-            findViewById(R.id.cl_dui_container).setVisibility(View.VISIBLE);
-        }
-        View splashView = findViewById(R.id.splash);
-        if (splashView != null) {
-            splashView.setVisibility(View.GONE);
-        }
-    }
+  public void hideSplash (){
+      View v = findViewById(R.id.cl_dui_container);
+      if (v != null) {
+          findViewById(R.id.cl_dui_container).setVisibility(View.VISIBLE);
+      }
+      View splashView = findViewById(R.id.splash);
+      if (splashView != null) {
+          if (showToggleLoader) {
+              toggleLoader(true);
+          }
+          splashView.setVisibility(View.GONE);
+      }
+  }
 
     private void countAppUsageDays() {
         Date currentDate = new Date();
@@ -1386,5 +1391,29 @@ public class MainActivity extends AppCompatActivity {
         }
         key.append(getResources().getString(R.string.service));
         return key.toString();
+    }
+
+    public void toggleLoader(final boolean visible) {
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                View loader = findViewById(R.id.loaderLayout);
+                if (visible) {
+                    showToggleLoader = true;
+                    if (isHideSplashEventCalled) {
+                    loader.setVisibility(View.VISIBLE);
+                    loader.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) { // Added this to prevent invisible touches through the loader
+                            System.out.println("LOADER CLICKED");
+                        }
+                    });
+                }
+                } else {
+                    showToggleLoader = false;
+                    loader.setVisibility(View.GONE);
+                }
+            }
+        });
     }
 }
