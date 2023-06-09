@@ -22,6 +22,7 @@ import Domain.Types.Person as Person
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocRepDBFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Storage.CachedQueries.CacheConfig
@@ -91,7 +92,7 @@ deleteById driverId = do
   Esq.runTransaction $ Queries.deleteById driverId
 
 findAllWithLimitOffsetByMerchantId ::
-  Esq.Transactionable m =>
+  (Esq.Transactionable m, EsqDBReplicaFlow m r) =>
   Maybe Text ->
   Maybe DbHash ->
   Maybe Integer ->
@@ -100,7 +101,7 @@ findAllWithLimitOffsetByMerchantId ::
   m [(Person, DriverInformation)]
 findAllWithLimitOffsetByMerchantId = Queries.findAllWithLimitOffsetByMerchantId
 
-getDriversWithOutdatedLocationsToMakeInactive :: Esq.Transactionable m => UTCTime -> m [Person]
+getDriversWithOutdatedLocationsToMakeInactive :: (Esq.Transactionable m, EsqLocRepDBFlow m r) => UTCTime -> m [Person]
 getDriversWithOutdatedLocationsToMakeInactive = Queries.getDriversWithOutdatedLocationsToMakeInactive
 
 addReferralCode :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person -> EncryptedHashedField 'AsEncrypted Text -> m ()

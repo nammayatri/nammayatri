@@ -22,6 +22,7 @@ import Domain.Types.Person
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Storage.Tabular.DriverLocation
@@ -43,10 +44,16 @@ create drLocationId latLong updateTime merchantId = do
         <#> val (toKey merchantId)
 
 findById ::
-  Transactionable m =>
+  (Transactionable m, EsqLocDBFlow m r) =>
   Id Person ->
   m (Maybe DriverLocation)
-findById = Esq.findById
+findById id = runInLocationDB $ Esq.findById id
+
+findByIdInReplica ::
+  (Transactionable m, EsqLocRepDBFlow m r) =>
+  Id Person ->
+  m (Maybe DriverLocation)
+findByIdInReplica id = runInLocReplica $ Esq.findById id
 
 upsertGpsCoord :: Id Person -> LatLong -> UTCTime -> Id Merchant -> SqlDB DriverLocation
 upsertGpsCoord drLocationId latLong calculationTime merchantId = do

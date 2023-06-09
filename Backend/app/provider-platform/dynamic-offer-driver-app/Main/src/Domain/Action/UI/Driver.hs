@@ -92,8 +92,8 @@ import qualified Kernel.External.SMS.MyValueFirst.Types as SMS
 import Kernel.Prelude (NominalDiffTime)
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocDBFlow)
+import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB, runInReplica)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -368,6 +368,7 @@ createDriver ::
   ( HasCacheConfig r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
+    EsqLocDBFlow m r,
     EncFlow m r,
     Redis.HedisFlow m r,
     CoreMetrics m
@@ -391,8 +392,10 @@ createDriver admin req = do
   Esq.runTransaction $ do
     QPerson.create person
     QDFS.create $ makeIdleDriverFlowStatus person
-    createDriverDetails person.id admin.id admin.merchantId
+    createDriverDetails person.id admin.id merchantId
     QVehicle.create vehicle
+  now <- getCurrentTime
+  runInLocationDB $ QDriverLocation.create person.id initLatLong now admin.merchantId
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> createDriver : ") (show person.id)
   org <-
     CQM.findById merchantId
@@ -412,7 +415,7 @@ createDriver admin req = do
   return $ OnboardDriverRes personAPIEntity
   where
     duplicateCheck cond err = whenM (isJust <$> cond) $ throwError $ InvalidRequest err
-
+    initLatLong = LatLong 0 0
     makeIdleDriverFlowStatus person =
       DDFS.DriverFlowStatus
         { personId = person.id,
@@ -448,9 +451,7 @@ createDriverDetails personId adminId merchantId = do
           }
   QDriverStats.createInitialDriverStats driverId
   QDriverInformation.create driverInfo
-  QDriverLocation.create personId initLatLong now merchantId
   where
-    initLatLong = LatLong 0 0
     driverId = cast personId
 
 getInformation ::
@@ -491,10 +492,10 @@ setActivity (personId, _) isActive mode = do
     Esq.runNoTransaction $ QDFS.updateStatus personId (DMode.getDriverStatus mode isActive)
   pure APISuccess.Success
 
-listDriver :: (EsqDBReplicaFlow m r, EncFlow m r) => SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> m ListDriverRes
+listDriver :: (EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r) => SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> m ListDriverRes
 listDriver admin mbSearchString mbLimit mbOffset = do
   mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
-  personList <- Esq.runInReplica $ QDriverInformation.findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOffset admin.merchantId
+  personList <- QDriverInformation.findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOffset admin.merchantId
   respPersonList <- traverse buildDriverEntityRes personList
   return $ ListDriverRes respPersonList
 
@@ -558,7 +559,7 @@ changeDriverEnableState admin personId isEnabled = do
     notificationTitle = "Account is disabled."
     notificationMessage = "Your account has been disabled. Contact support for more info."
 
-deleteDriver :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r) => SP.Person -> Id SP.Person -> m APISuccess
+deleteDriver :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, EsqLocDBFlow m r) => SP.Person -> Id SP.Person -> m APISuccess
 deleteDriver admin driverId = do
   driver <-
     QPerson.findById driverId
@@ -571,10 +572,9 @@ deleteDriver admin driverId = do
     QDriverStats.deleteById (cast driverId)
     QR.deleteByPersonId driverId
     QVehicle.deleteById driverId
-    QDriverLocation.deleteById driverId
     QDFS.deleteById driverId
     QPerson.deleteById driverId
-
+  runInLocationDB $ QDriverLocation.deleteById driverId
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> deleteDriver : ") (show driverId)
   return Success
 

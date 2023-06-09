@@ -60,6 +60,45 @@ let
         };
       };
 
+      location-db.service = {
+        image = "bitnami/postgresql:14.7.0";
+        container_name = "atlas-dev-location";
+        ports = [ "5454:5432" ];
+        volumes = [
+          "${../dev/sql-seed/pre-init.sql}:/docker-entrypoint-initdb.d/0-pre-init.sql:Z"
+          "${../dev/sql-seed/driver-location-seed.sql}:/docker-entrypoint-initdb.d/1-driver-location-seed.sql:Z"
+          "${../dev/local-testing-data/person-location.sql}:/docker-entrypoint-initdb.d/2-person-location.sql:Z"
+        ];
+        environment = {
+          BITNAMI_DEBUG = "true";
+          POSTGRESQL_INITSCRIPTS_USERNAME = "postgres";
+          POSTGRESQL_INITSCRIPTS_PASSWORD = "root";
+          POSTGRESQL_REPLICATION_MODE = "master";
+          POSTGRESQL_REPLICATION_USER = "repl_user";
+          POSTGRESQL_REPLICATION_PASSWORD = "repl_password";
+          POSTGRESQL_USERNAME = "atlas";
+          POSTGRESQL_PASSWORD = "atlas";
+          POSTGRESQL_DATABASE = "atlas_dev_loc";
+          POSTGRESQL_POSTGRES_PASSWORD = "root";
+        };
+      };
+
+      location-db-replica.service = {
+        image = "bitnami/postgresql:14.7.0";
+        container_name = "atlas-dev-loc-replica";
+        ports = [ "5456:5432" ];
+        depends_on = [ "location-db" ];
+        environment = {
+          BITNAMI_DEBUG = "true";
+          POSTGRESQL_REPLICATION_MODE = "slave";
+          POSTGRESQL_REPLICATION_USER = "repl_user";
+          POSTGRESQL_REPLICATION_PASSWORD = "repl_password";
+          POSTGRESQL_MASTER_HOST = "location-db";
+          POSTGRESQL_PASSWORD = "atlas";
+          POSTGRESQL_MASTER_PORT_NUMBER = "5432";
+        };
+      };
+
       redis.service = {
         image = "redis:5";
         ports = [ "6379:6379" ];

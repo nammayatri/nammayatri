@@ -21,6 +21,7 @@ import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchTry (SearchTry)
 import Kernel.Prelude hiding (handle)
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Error
 import Kernel.Utils.Common
@@ -46,6 +47,8 @@ sendSearchRequestToDrivers ::
     HasCacheConfig r,
     HedisFlow m r,
     EsqDBFlow m r,
+    EsqLocDBFlow m r,
+    EsqLocRepDBFlow m r,
     Log m
   ) =>
   Job 'SendSearchRequestToDriver ->
@@ -67,6 +70,8 @@ sendSearchRequestToDrivers' ::
     Metrics.CoreMetrics m,
     CacheFlow m r,
     EsqDBFlow m r,
+    EsqLocDBFlow m r,
+    EsqLocRepDBFlow m r,
     Log m
   ) =>
   DriverPoolConfig ->

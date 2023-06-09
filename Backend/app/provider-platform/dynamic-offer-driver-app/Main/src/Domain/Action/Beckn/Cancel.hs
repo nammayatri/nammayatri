@@ -30,6 +30,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import EulerHS.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -70,6 +71,8 @@ cancel ::
     HedisFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
+    EsqLocDBFlow m r,
+    EsqLocRepDBFlow m r,
     HedisFlow m r,
     CacheFlow m r,
     HasHttpClientOptions r c,

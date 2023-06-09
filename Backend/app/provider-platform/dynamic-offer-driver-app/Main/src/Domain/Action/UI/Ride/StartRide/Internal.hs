@@ -22,6 +22,8 @@ import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps.Types (LatLong)
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow)
+import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified SharedLogic.Ride as CQRide
@@ -31,13 +33,13 @@ import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.Ride as QRide
 
-startRideTransaction :: (CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> Id SRide.Ride -> Id SRB.Booking -> LatLong -> Id Dmerch.Merchant -> m ()
+startRideTransaction :: (CacheFlow m r, EsqDBFlow m r, EsqLocDBFlow m r) => Id SP.Person -> Id SRide.Ride -> Id SRB.Booking -> LatLong -> Id Dmerch.Merchant -> m ()
 startRideTransaction driverId rideId bookingId firstPoint merchantId = do
   Esq.runTransaction $ do
     QRide.updateStatus rideId SRide.INPROGRESS
     QRide.updateStartTimeAndLoc rideId firstPoint
     QBE.logRideCommencedEvent (cast driverId) bookingId rideId
     QDFS.updateStatus driverId DDFS.ON_RIDE {rideId}
-    now <- getCurrentTime
-    void $ DrLoc.upsertGpsCoord driverId firstPoint now merchantId
+  now <- getCurrentTime
+  void $ runInLocationDB $ DrLoc.upsertGpsCoord driverId firstPoint now merchantId
   CQRide.clearCache driverId
