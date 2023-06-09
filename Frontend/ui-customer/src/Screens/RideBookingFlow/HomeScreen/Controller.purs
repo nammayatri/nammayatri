@@ -770,7 +770,8 @@ eval (UpdateSource lat lng name) state = do
 
 eval (HideLiveDashboard val) state = continue state {props {showLiveDashboard =false}}
 
-eval LiveDashboardAction state =
+eval LiveDashboardAction state = do
+  _ <- pure $ firebaseLogEvent "ny_user_on_ride_live_stats"
   if os == "IOS" then do
       continueWithCmd state [do
         _ <- openUrlInApp "https://nammayatri.in/open?source=in-app"
@@ -1231,7 +1232,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetLoca
   _ <- pure $ locateOnMap true 0.0 0.0 "" []
   _ <- pure $ removeAllPolylines ""
   _ <- pure $ hideKeyboardOnNavigation true
-  _ <- pure $ firebaseLogEvent "ny_user_click_set_location_on_map"
+  if (state.props.isSource == Just true) then pure $ firebaseLogEvent "ny_user_src_set_location_on_map" else pure $ firebaseLogEvent "ny_user_dest_set_location_on_map"
   let newState = state{props{isSearchLocation = LocateOnMap, currentStage = SearchLocationModel, locateOnMap = true, isRideServiceable = true, showlocUnserviceablePopUp = false}}
   (updateAndExit newState) $ UpdatedState newState false
 
