@@ -1398,21 +1398,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 View loader = findViewById(R.id.loaderLayout);
-                if (visible) {
-                    showToggleLoader = true;
-                    if (isHideSplashEventCalled) {
-                    loader.setVisibility(View.VISIBLE);
-                    loader.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) { // Added this to prevent invisible touches through the loader
-                            System.out.println("LOADER CLICKED");
-                        }
-                    });
-                }
-                } else {
-                    showToggleLoader = false;
-                    loader.setVisibility(View.GONE);
-                }
+                loader.setVisibility(visible && isHideSplashEventCalled ? View.VISIBLE : View.GONE);
+                showToggleLoader = visible;
             }
         });
     }
