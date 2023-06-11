@@ -18,10 +18,13 @@ module Domain.Action.Dashboard.Driver.Registration
     uploadDocument,
     registerDL,
     registerRC,
+    generateAadhaarOtp,
+    verifyAadhaarOtp,
   )
 where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Common
+import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AV
 import Domain.Action.UI.DriverOnboarding.DriverLicense
 import Domain.Action.UI.DriverOnboarding.Image
 import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
@@ -29,12 +32,14 @@ import Domain.Types.DriverOnboarding.Image
 import qualified Domain.Types.DriverOnboarding.Image as Domain
 import qualified Domain.Types.Merchant as DM
 import Environment
+import Kernel.External.AadhaarVerification.Interface.Types
 import Kernel.Prelude
 -- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Queries.DriverOnboarding.Image as QImage
+import qualified Tools.AadhaarVerification as AadhaarVerification
 
 documentsList :: ShortId DM.Merchant -> Id Common.Driver -> Flow Common.DocumentsListResponse
 documentsList merchantShortId driverId = do
@@ -96,3 +101,36 @@ registerRC merchantShortId driverId_ Common.RegisterRCReq {..} = do
       { imageId = cast imageId,
         ..
       }
+
+generateAadhaarOtp :: ShortId DM.Merchant -> Id Common.Driver -> Common.GenerateAadhaarOtpReq -> Flow Common.GenerateAadhaarOtpRes
+generateAadhaarOtp merchantShortId driverId_ req = do
+  merchant <- findMerchantByShortId merchantShortId
+  res <-
+    AV.generateAadhaarOtp
+      True
+      (Just merchant)
+      (cast driverId_)
+      AadhaarVerification.AadhaarOtpReq
+        { aadhaarNumber = req.aadhaarNumber,
+          consent = req.consent
+        }
+  pure (convertVerifyOtp res)
+
+verifyAadhaarOtp :: ShortId DM.Merchant -> Id Common.Driver -> Common.VerifyAadhaarOtpReq -> Flow Common.VerifyAadhaarOtpRes
+verifyAadhaarOtp merchantShortId driverId_ req = do
+  merchant <- findMerchantByShortId merchantShortId
+  res <-
+    AV.verifyAadhaarOtp
+      (Just merchant)
+      (cast driverId_)
+      AV.VerifyAadhaarOtpReq
+        { otp = req.otp,
+          shareCode = req.shareCode
+        }
+  pure (convertSubmitOtp res)
+
+convertVerifyOtp :: AadhaarVerificationResp -> Common.GenerateAadhaarOtpRes
+convertVerifyOtp AadhaarVerificationResp {..} = Common.GenerateAadhaarOtpRes {..}
+
+convertSubmitOtp :: AadhaarOtpVerifyRes -> Common.VerifyAadhaarOtpRes
+convertSubmitOtp AadhaarOtpVerifyRes {..} = Common.VerifyAadhaarOtpRes {..}
