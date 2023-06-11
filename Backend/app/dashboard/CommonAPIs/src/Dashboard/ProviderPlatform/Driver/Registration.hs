@@ -31,6 +31,8 @@ data DriverRegistrationEndpoint
   = UploadDocumentEndpoint
   | RegisterDLEndpoint
   | RegisterRCEndpoint
+  | GenerateAadhaarOtpEndpoint
+  | VerifyAadhaarOtpEndpoint
   deriving (Show, Read)
 
 derivePersistField "DriverRegistrationEndpoint"
@@ -143,4 +145,65 @@ data RegisterRCReq = RegisterRCReq
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets RegisterRCReq where
+  hideSecrets = identity
+
+-- generate AadhaarOtp  API ------------------------
+-- ----------------------------------------
+
+type GenerateAadhaarOtpAPI =
+  Capture "driverId" (Id Driver)
+    :> "register"
+    :> "generateAadhaarOtp"
+    :> ReqBody '[JSON] GenerateAadhaarOtpReq
+    :> Post '[JSON] GenerateAadhaarOtpRes
+
+data GenerateAadhaarOtpReq = GenerateAadhaarOtpReq
+  { aadhaarNumber :: Text,
+    consent :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets GenerateAadhaarOtpReq where
+  hideSecrets = identity
+
+data GenerateAadhaarOtpRes = GenerateAadhaarOtpRes
+  { message :: Text,
+    transactionId :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets GenerateAadhaarOtpRes where
+  hideSecrets = identity
+
+-- verify AadhaarOtp  API ------------------------
+-- ----------------------------------------
+
+type VerifyAadhaarOtpAPI =
+  Capture "driverId" (Id Driver)
+    :> "register"
+    :> "verifyAadhaarOtp"
+    :> ReqBody '[JSON] VerifyAadhaarOtpReq
+    :> Post '[JSON] VerifyAadhaarOtpRes
+
+data VerifyAadhaarOtpReq = VerifyAadhaarOtpReq
+  { otp :: Int,
+    shareCode :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets VerifyAadhaarOtpReq where
+  hideSecrets = identity
+
+data VerifyAadhaarOtpRes = VerifyAadhaarOtpRes
+  { message :: Text,
+    code :: Text,
+    name :: Text,
+    gender :: Text,
+    date_of_birth :: Text,
+    share_code :: Text,
+    image :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets VerifyAadhaarOtpRes where
   hideSecrets = identity
