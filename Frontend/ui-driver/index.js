@@ -101,10 +101,12 @@ window.onMerchantEvent = function (event, payload) {
       , errorMessage: ""
       , errorCode: ""
     }
-    if (clientPaylod.payload.clientId == "open-kochi") {
+    if (clientPaylod.payload.clientId == "open-kochi" || clientPaylod.payload.clientId == "yatriprovider" ) {
       window.merchantID = "YATRIPARTNER"
     } else if(clientPaylod.payload.clientId == "jatrisaathiprovider" || clientPaylod.payload.clientId == "jatrisaathidriver"){
       window.merchantID = "JATRISAATHIDRIVER"
+    }else if(clientPaylod.payload.clientId == "nammayatriprovider" || clientPaylod.payload.clientId == "nammayatripartner"){
+      window.merchantID = "NAMMAYATRIPARTNER"
     }else {
       window.merchantID = clientPaylod.payload.clientId.toUpperCase();
     }

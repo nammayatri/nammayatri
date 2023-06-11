@@ -1343,13 +1343,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
     public String getService () {
-        StringBuilder key = new StringBuilder();
-        if (in.juspay.mobility.BuildConfig.MERCHANT.equals("KL")) {
-            key.append("net.openkochi.");
-        } else {
-            key.append("in.juspay.");
-        }
-        key.append(getResources().getString(R.string.service));
-        return key.toString();
+        return getResources().getString(R.string.service);
     }
 }
