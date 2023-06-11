@@ -34,6 +34,8 @@ type API =
     :<|> UploadDocumentAPI
     :<|> RegisterDLAPI
     :<|> RegisterRCAPI
+    :<|> GenerateAadhaarOtpAPI
+    :<|> VerifyAadhaarOtpAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
@@ -42,6 +44,8 @@ handler merchantId =
     :<|> uploadDocument merchantId
     :<|> registerDL merchantId
     :<|> registerRC merchantId
+    :<|> generateAadhaarOtp merchantId
+    :<|> verifyAadhaarOtp merchantId
 
 type DocumentsListAPI = ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'DOCUMENT_LIST :> Common.DocumentsListAPI
 
@@ -52,6 +56,10 @@ type UploadDocumentAPI = ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UPLOAD_DOCUMENT :> 
 type RegisterDLAPI = ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'REGISTER_DL :> Common.RegisterDLAPI
 
 type RegisterRCAPI = ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'REGISTER_RC :> Common.RegisterRCAPI
+
+type GenerateAadhaarOtpAPI = ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'GENERATE_AADHAAR_OTP :> Common.GenerateAadhaarOtpAPI
+
+type VerifyAadhaarOtpAPI = ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'VERIFY_AADHAAR_OTP :> Common.VerifyAadhaarOtpAPI
 
 buildTransaction ::
   ( MonadFlow m,
@@ -100,3 +108,19 @@ registerRC merchantShortId apiTokenInfo driverId req =
     transaction <- buildTransaction Common.RegisterRCEndpoint apiTokenInfo driverId (Just req)
     T.withTransactionStoring transaction $
       Client.callDriverOfferBPP checkedMerchantId (.drivers.registerRC) driverId req
+
+generateAadhaarOtp :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.GenerateAadhaarOtpReq -> FlowHandler Common.GenerateAadhaarOtpRes
+generateAadhaarOtp merchantShortId apiTokenInfo driverId req =
+  withFlowHandlerAPI $ do
+    checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+    transaction <- buildTransaction Common.GenerateAadhaarOtpEndpoint apiTokenInfo driverId (Nothing :: Maybe Common.GenerateAadhaarOtpReq)
+    T.withTransactionStoring transaction $
+      Client.callDriverOfferBPP checkedMerchantId (.drivers.generateAadhaarOtp) driverId req
+
+verifyAadhaarOtp :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.VerifyAadhaarOtpReq -> FlowHandler Common.VerifyAadhaarOtpRes
+verifyAadhaarOtp merchantShortId apiTokenInfo driverId req =
+  withFlowHandlerAPI $ do
+    checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+    transaction <- buildTransaction Common.VerifyAadhaarOtpEndpoint apiTokenInfo driverId (Nothing :: Maybe Common.VerifyAadhaarOtpReq)
+    T.withTransactionStoring transaction $
+      Client.callDriverOfferBPP checkedMerchantId (.drivers.verifyAadhaarOtp) driverId req

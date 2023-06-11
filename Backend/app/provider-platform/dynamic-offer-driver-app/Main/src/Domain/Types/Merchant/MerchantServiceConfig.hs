@@ -18,6 +18,8 @@ module Domain.Types.Merchant.MerchantServiceConfig where
 import qualified Data.List as List
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
+import qualified Kernel.External.AadhaarVerification as AadhaarVerification
+import Kernel.External.AadhaarVerification.Interface.Types
 import qualified Kernel.External.Call as Call
 import Kernel.External.Call.Interface.Types
 import qualified Kernel.External.Maps as Maps
@@ -37,6 +39,7 @@ data ServiceName
   | SmsService Sms.SmsService
   | WhatsappService Whatsapp.WhatsappService
   | VerificationService Verification.VerificationService
+  | AadhaarVerificationService AadhaarVerification.AadhaarVerificationService
   | CallService Call.CallService
   | PaymentService Payment.PaymentService
   deriving stock (Eq, Ord, Generic)
@@ -47,6 +50,7 @@ instance Show ServiceName where
   show (SmsService s) = "Sms_" <> show s
   show (WhatsappService s) = "Whatsapp_" <> show s
   show (VerificationService s) = "Verification_" <> show s
+  show (AadhaarVerificationService s) = "AadhaarVerification_" <> show s
   show (CallService s) = "Call_" <> show s
   show (PaymentService s) = "Payment_" <> show s
 
@@ -71,6 +75,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Verification_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (AadhaarVerificationService v1, r2)
+                 | r1 <- stripPrefix "AadhaarVerification_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
             ++ [ (CallService v1, r2)
                  | r1 <- stripPrefix "Call_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
@@ -89,6 +97,7 @@ data ServiceConfigD (s :: UsageSafety)
   | SmsServiceConfig !SmsServiceConfig
   | WhatsappServiceConfig !WhatsappServiceConfig
   | VerificationServiceConfig !VerificationServiceConfig
+  | AadhaarVerificationServiceConfig !AadhaarVerificationServiceConfig
   | CallServiceConfig !CallServiceConfig
   | PaymentServiceConfig !PaymentServiceConfig
   deriving (Generic, Eq)
@@ -126,6 +135,8 @@ getServiceName osc = case osc.serviceConfig of
     Whatsapp.GupShupConfig _ -> WhatsappService Whatsapp.GupShup
   VerificationServiceConfig verifictaionCfg -> case verifictaionCfg of
     Verification.IdfyConfig _ -> VerificationService Verification.Idfy
+  AadhaarVerificationServiceConfig aadhaarVerifictaionCfg -> case aadhaarVerifictaionCfg of
+    AadhaarVerification.GridlineConfig _ -> AadhaarVerificationService AadhaarVerification.Gridline
   CallServiceConfig callCfg -> case callCfg of
     Call.ExotelConfig _ -> CallService Call.Exotel
   PaymentServiceConfig paymentCfg -> case paymentCfg of
