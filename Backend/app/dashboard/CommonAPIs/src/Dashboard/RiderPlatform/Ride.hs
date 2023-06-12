@@ -147,6 +147,8 @@ type RideListAPI =
     :> QueryParam "rideShortId" (ShortId Ride)
     :> QueryParam "customerPhoneNo" Text
     :> QueryParam "driverPhoneNo" Text
+    :> QueryParam "from" UTCTime
+    :> QueryParam "to" UTCTime
     :> Get '[JSON] RideListRes
 
 data RideListRes = RideListRes

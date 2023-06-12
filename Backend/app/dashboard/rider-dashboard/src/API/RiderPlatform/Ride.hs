@@ -101,11 +101,13 @@ rideList ::
   Maybe (ShortId Common.Ride) ->
   Maybe Text ->
   Maybe Text ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
   FlowHandler Common.RideListRes
-rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone =
+rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo =
   withFlowHandlerAPI $ do
     checkedMerchantId <- merchantAccessCheck merchantShortId merchantShortId
-    Client.callRiderApp checkedMerchantId (.rides.rideList) mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone
+    Client.callRiderApp checkedMerchantId (.rides.rideList) mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo
 
 tripRoute ::
   ShortId DM.Merchant ->
