@@ -59,3 +59,9 @@ updateMessageLikeCount messageId value = do
   Esq.update $ \msg -> do
     set msg [MessageLikeCount =. (msg ^. MessageLikeCount) +. val value]
     where_ $ msg ^. MessageId ==. val (getId messageId)
+
+updateMessageViewCount :: Id Message -> Int -> SqlDB ()
+updateMessageViewCount messageId value = do
+  Esq.update $ \msg -> do
+    set msg [MessageViewCount =. (msg ^. MessageViewCount) +. val value]
+    where_ $ msg ^. MessageId ==. val (getId messageId)

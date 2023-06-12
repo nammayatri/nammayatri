@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.message ADD COLUMN view_count Int  NOT NULL  DEFAULT 0;
