@@ -75,7 +75,7 @@ instance B.Table FarePolicyProgressiveDetailsPerExtraKmRateSectionT where
 
 instance ModelMeta FarePolicyProgressiveDetailsPerExtraKmRateSectionT where
   modelFieldModification = farePolicyProgressiveDetailsPerExtraKmRateSectionTMod
-  modelTableName = "fare_parameters_progressive_details"
+  modelTableName = "fare_policy_progressive_details_per_extra_km_rate_section"
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type FarePolicyProgressiveDetailsPerExtraKmRateSection = FarePolicyProgressiveDetailsPerExtraKmRateSectionT Identity
@@ -108,7 +108,7 @@ farePolicyProgressiveDetailsPerExtraKmRateSectionTMod =
     { -- id = B.fieldNamed "id",
       farePolicyId = B.fieldNamed "fare_policy_id",
       startDistance = B.fieldNamed "start_distance",
-      perExtraKmRate = B.fieldNamed "per_km_extra_fee"
+      perExtraKmRate = B.fieldNamed "per_extra_km_rate"
     }
 
 instance Serialize FarePolicyProgressiveDetailsPerExtraKmRateSection where

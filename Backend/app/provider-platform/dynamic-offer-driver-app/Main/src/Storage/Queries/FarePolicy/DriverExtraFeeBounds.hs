@@ -79,7 +79,7 @@ transformBeamDriverExtraFeeBoundsToDomain BeamDEFB.DriverExtraFeeBoundsT {..} = 
 transformDomainDriverExtraFeeBoundsToBeam :: Domain.FullDriverExtraFeeBounds -> BeamDEFB.DriverExtraFeeBounds
 transformDomainDriverExtraFeeBoundsToBeam (KTI.Id farePolicyId, DFP.DriverExtraFeeBounds {..}) =
   BeamDEFB.DriverExtraFeeBoundsT
-    { -- id = id,
+    { id = Nothing,
       farePolicyId = farePolicyId,
       startDistance = startDistance,
       minFee = minFee,

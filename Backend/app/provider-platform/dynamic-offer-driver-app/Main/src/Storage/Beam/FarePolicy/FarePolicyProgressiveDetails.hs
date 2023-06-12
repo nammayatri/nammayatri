@@ -63,7 +63,6 @@ data FarePolicyProgressiveDetailsT f = FarePolicyProgressiveDetailsT
   { farePolicyId :: B.C f Text,
     baseDistance :: B.C f Meters,
     baseFare :: B.C f Money,
-    -- perExtraKmFare :: B.C f HighPrecMoney,
     deadKmFare :: B.C f Money,
     waitingCharge :: B.C f (Maybe Domain.WaitingCharge),
     freeWatingTime :: B.C f (Maybe Minutes),
@@ -79,7 +78,7 @@ instance B.Table FarePolicyProgressiveDetailsT where
 
 instance ModelMeta FarePolicyProgressiveDetailsT where
   modelFieldModification = farePolicyProgressiveDetailsTMod
-  modelTableName = "fare_parameters_progressive_details"
+  modelTableName = "fare_policy_progressive_details"
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type FarePolicyProgressiveDetails = FarePolicyProgressiveDetailsT Identity
@@ -119,7 +118,7 @@ farePolicyProgressiveDetailsTMod =
       -- perExtraKmFare = B.fieldNamed "per_km_extra_fare",
       deadKmFare = B.fieldNamed "dead_km_fare",
       waitingCharge = B.fieldNamed "waiting_charge",
-      freeWatingTime = B.fieldNamed "free_waiting_time",
+      freeWatingTime = B.fieldNamed "free_wating_time",
       nightShiftCharge = B.fieldNamed "night_shift_charge"
     }
 

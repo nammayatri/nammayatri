@@ -162,18 +162,18 @@ update farePolicy = do
       dbConf <- L.getOption KBT.PsqlDbCfg
       case dbConf of
         Just dbConf' ->
-          void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainFarePolicyProgressiveDetailsToBeam' (id', slab))
+          void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (QueriesFPSDS.transformDomainFarePolicySlabsDetailsSlabToBeam (id', slab))
         Nothing -> pure ()
 
-    transformDomainFarePolicyProgressiveDetailsToBeam' :: (Id farePolicyId, FPSlabsDetailsSlab) -> BeamFPSS.FarePolicySlabsDetailsSlab
-    transformDomainFarePolicyProgressiveDetailsToBeam' (Id farePolicyId, FPSlabsDetailsSlab {..}) =
-      BeamFPSS.FarePolicySlabsDetailsSlabT
-        { farePolicyId = farePolicyId,
-          startDistance = startDistance,
-          baseFare = baseFare,
-          waitingChargeInfo = waitingChargeInfo,
-          nightShiftCharge = nightShiftCharge
-        }
+-- transformDomainFarePolicyProgressiveDetailsToBeam' :: (Id farePolicyId, FPSlabsDetailsSlab) -> BeamFPSS.FarePolicySlabsDetailsSlab
+-- transformDomainFarePolicyProgressiveDetailsToBeam' (Id farePolicyId, FPSlabsDetailsSlab {..}) =
+--   BeamFPSS.FarePolicySlabsDetailsSlabT
+--     { farePolicyId = farePolicyId,
+--       startDistance = startDistance,
+--       baseFare = baseFare,
+--       waitingChargeInfo = waitingChargeInfo,
+--       nightShiftCharge = nightShiftCharge
+--     }
 
 -- update :: FarePolicy -> SqlDB ()
 -- update farePolicy = do
@@ -252,13 +252,9 @@ transformBeamFarePolicyToDomain BeamFP.FarePolicyT {..} = do
             Domain.AllowedTripDistanceBounds
               { minAllowedTripDistance = minAllowedTripDistance',
                 maxAllowedTripDistance = maxAllowedTripDistance'
-              }, -- AllowedTripDistanceBounds maxAllowedTripDistance minAllowedTripDistance,
-              -- maxAllowedTripDistance = maxAllowedTripDistance,
-              -- minAllowedTripDistance = minAllowedTripDistance,
+              },
         govtCharges = govtCharges,
-        -- waitingChargePerMin = waitingChargePerMin,
-        -- waitingTimeEstimatedThreshold = waitingTimeEstimatedThreshold,
-        driverExtraFeeBounds = nonEmpty fDEFB, -- maybe [] (fmap (toTType . (id,)) . toList) driverExtraFeeBounds,
+        driverExtraFeeBounds = nonEmpty fDEFB,
         farePolicyDetails = case farePolicyType of
           Progressive -> ProgressiveDetails fPPD
           Slabs -> SlabsDetails (FPSlabsDetails (fromJust $ nonEmpty slabs)),

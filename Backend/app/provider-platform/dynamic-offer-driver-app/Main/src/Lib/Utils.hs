@@ -255,7 +255,7 @@ instance IsString DbHash where
   fromString = show
 
 instance FromField DomainFP.WaitingCharge where
-  fromField = fromFieldEnum
+  fromField = fromFieldJSON
 
 instance HasSqlValueSyntax be Text => HasSqlValueSyntax be DomainFP.WaitingCharge where
   sqlValueSyntax = sqlValueSyntax . encodeToText
@@ -330,7 +330,7 @@ containsPoint'' :: (Double, Double) -> BQ.QGenExpr context Postgres s BQ.SqlBool
 containsPoint'' (lon, lat) = B.sqlBool_ (BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "st_contains (" <> show lon <> " , " <> show lat <> ")")))
 
 containsPoint' :: (Double, Double) -> BQ.QGenExpr context Postgres s BQ.SqlBool
-containsPoint' (lon, lat) = B.sqlBool_ (BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "st_contains (geom, ST_GeomFromText('POINT (" <> show lon <> " " <> show lat <> "))")))
+containsPoint' (lon, lat) = B.sqlBool_ (BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "st_contains (geom, ST_GeomFromText('POINT (" <> show lon <> " " <> show lat <> ")'))")))
 
 buildRadiusWithin' :: Point -> (Double, Double) -> Int -> BQ.QGenExpr context Postgres s BQ.SqlBool
 buildRadiusWithin' pnt (lat, lon) rad =

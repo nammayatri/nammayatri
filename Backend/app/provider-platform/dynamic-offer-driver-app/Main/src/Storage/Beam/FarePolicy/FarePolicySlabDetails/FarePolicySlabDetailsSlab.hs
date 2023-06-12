@@ -24,10 +24,6 @@ import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.Backend ()
 import Database.Beam.MySQL ()
--- import Database.Beam.Postgres (Postgres)
--- import Database.PostgreSQL.Simple.FromField (FromField, fromField)
--- import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Domain
-
 import qualified Domain.Types.FarePolicy as Domain
 import qualified Domain.Types.Vehicle.Variant as Vehicle
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
@@ -79,23 +75,25 @@ instance IsString Money where
 -- instance FromBackendRow Postgres Domain.NightShiftCharge
 
 data FarePolicySlabsDetailsSlabT f = FarePolicySlabsDetailsSlabT
-  { farePolicyId :: B.C f Text,
+  { id :: B.C f (Maybe Int),
+    farePolicyId :: B.C f Text,
     startDistance :: B.C f Meters,
     baseFare :: B.C f Money,
-    waitingChargeInfo :: B.C f (Maybe Domain.WaitingChargeInfo),
+    waitingCharge :: B.C f (Maybe Domain.WaitingCharge),
+    freeWatingTime :: B.C f (Maybe Minutes),
     nightShiftCharge :: B.C f (Maybe Domain.NightShiftCharge)
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table FarePolicySlabsDetailsSlabT where
   data PrimaryKey FarePolicySlabsDetailsSlabT f
-    = Id (B.C f Text)
+    = Id (B.C f (Maybe Int))
     deriving (Generic, B.Beamable)
-  primaryKey = Id . farePolicyId
+  primaryKey = Id . id
 
 instance ModelMeta FarePolicySlabsDetailsSlabT where
   modelFieldModification = farePolicySlabsDetailsSlabTMod
-  modelTableName = "fare_parameters_progressive_details"
+  modelTableName = "fare_policy_slabs_details_slab"
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type FarePolicySlabsDetailsSlab = FarePolicySlabsDetailsSlabT Identity
@@ -121,10 +119,12 @@ deriving stock instance Ord Domain.NightShiftCharge
 farePolicySlabsDetailsSlabTMod :: FarePolicySlabsDetailsSlabT (B.FieldModification (B.TableField FarePolicySlabsDetailsSlabT))
 farePolicySlabsDetailsSlabTMod =
   B.tableModification
-    { farePolicyId = B.fieldNamed "fare_policy_id",
+    { id = B.fieldNamed "id",
+      farePolicyId = B.fieldNamed "fare_policy_id",
       startDistance = B.fieldNamed "start_distance",
       baseFare = B.fieldNamed "base_fare",
-      waitingChargeInfo = B.fieldNamed "waiting_charge_info",
+      freeWatingTime = B.fieldNamed "free_wating_time",
+      waitingCharge = B.fieldNamed "waiting_charge",
       nightShiftCharge = B.fieldNamed "night_shift_charge"
     }
 
@@ -143,4 +143,4 @@ farePolicySlabsDetailsSlabToPSModifiers :: M.Map Text (A.Value -> A.Value)
 farePolicySlabsDetailsSlabToPSModifiers =
   M.empty
 
-$(enableKVPG ''FarePolicySlabsDetailsSlabT ['farePolicyId] [])
+$(enableKVPG ''FarePolicySlabsDetailsSlabT ['id] [])

@@ -60,7 +60,7 @@ instance IsString Money where
   fromString = show
 
 data DriverExtraFeeBoundsT f = DriverExtraFeeBoundsT
-  { -- id :: B.C f Text,
+  { id :: B.C f (Maybe Int),
     farePolicyId :: B.C f Text,
     startDistance :: B.C f Meters,
     minFee :: B.C f Money,
@@ -70,13 +70,13 @@ data DriverExtraFeeBoundsT f = DriverExtraFeeBoundsT
 
 instance B.Table DriverExtraFeeBoundsT where
   data PrimaryKey DriverExtraFeeBoundsT f
-    = Id (B.C f Text)
+    = Id (B.C f (Maybe Int))
     deriving (Generic, B.Beamable)
-  primaryKey = Id . farePolicyId
+  primaryKey = Id . id
 
 instance ModelMeta DriverExtraFeeBoundsT where
   modelFieldModification = driverExtraFeeBoundsTMod
-  modelTableName = "fare_parameters_progressive_details"
+  modelTableName = "fare_policy_driver_extra_fee_bounds"
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type DriverExtraFeeBounds = DriverExtraFeeBoundsT Identity
@@ -128,4 +128,4 @@ driverExtraFeeBoundsToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverExtraFeeBoundsToPSModifiers =
   M.empty
 
-$(enableKVPG ''DriverExtraFeeBoundsT ['farePolicyId] [])
+$(enableKVPG ''DriverExtraFeeBoundsT ['id] [])

@@ -51,9 +51,6 @@ transformBeamFarePolicyProgressiveDetailsToDomain BeamFPPD.FarePolicyProgressive
         { baseDistance = baseDistance,
           baseFare = baseFare,
           perExtraKmRateSections = fromJust $ nonEmpty fPPDP,
-          -- perExtraKmFare = perExtraKmFare,
-          -- freeWatingTime = freeWatingTime,
-          -- FPProgressiveDetailsD
           deadKmFare = deadKmFare,
           -- waitingCharge = waitingCharge,
           waitingChargeInfo =

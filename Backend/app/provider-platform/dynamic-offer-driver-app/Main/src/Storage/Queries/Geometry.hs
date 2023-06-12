@@ -62,7 +62,8 @@ findGeometriesContaining gps regions = do
   conn <- L.getOrInitSqlConn (fromJust dbConf)
   case conn of
     Right c -> do
-      geoms <- L.runDB c $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lat, gps.lon) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (geometry atlasDB)
+      geoms <- L.runDB c $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lon, gps.lat) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (geometry atlasDB)
+      -- geoms <- L.runDB c $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (geometry atlasDB)
       pure (either (const []) (transformBeamGeometryToDomain <$>) geoms)
     Left _ -> pure []
 

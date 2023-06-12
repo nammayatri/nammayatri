@@ -84,25 +84,24 @@ transformBeamFarePolicyProgressiveDetailsToDomain BeamFPSS.FarePolicySlabsDetail
     DFP.FPSlabsDetailsSlab
       { startDistance = startDistance,
         baseFare = baseFare,
-        waitingChargeInfo = waitingChargeInfo,
+        waitingChargeInfo =
+          ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
+            DFP.WaitingChargeInfo
+              { waitingCharge = waitingCharge',
+                freeWaitingTime = freeWaitingTime'
+              },
         nightShiftCharge = nightShiftCharge
       }
     )
 
-transformDomainFarePolicyProgressiveDetailsToBeam :: FullFarePolicySlabsDetailsSlab -> BeamFPSS.FarePolicySlabsDetailsSlab
-transformDomainFarePolicyProgressiveDetailsToBeam (KTI.Id farePolicyId, DFP.FPSlabsDetailsSlab {..}) =
+transformDomainFarePolicySlabsDetailsSlabToBeam :: FullFarePolicySlabsDetailsSlab -> BeamFPSS.FarePolicySlabsDetailsSlab
+transformDomainFarePolicySlabsDetailsSlabToBeam (KTI.Id farePolicyId, DFP.FPSlabsDetailsSlab {..}) =
   BeamFPSS.FarePolicySlabsDetailsSlabT
-    { farePolicyId = farePolicyId,
+    { id = Nothing,
+      farePolicyId = farePolicyId,
       startDistance = startDistance,
       baseFare = baseFare,
-      waitingChargeInfo = waitingChargeInfo,
-      nightShiftCharge = nightShiftCharge
+      waitingCharge = DFP.waitingCharge <$> waitingChargeInfo,
+      nightShiftCharge = nightShiftCharge,
+      freeWatingTime = DFP.freeWaitingTime <$> waitingChargeInfo
     }
-
--- transformDomainFareParametersProgressiveDetailsToBeam :: DomainFPPD.FullFareParametersProgressiveDetails -> FareParametersProgressiveDetails
--- transformDomainFareParametersProgressiveDetailsToBeam (KTI.Id fareParametersId, Domain.FParamsProgressiveDetails {..}) =
---   FareParametersProgressiveDetailsT
---     { fareParametersId = fareParametersId,
---       deadKmFare = deadKmFare,
---       extraKmFare = extraKmFare
---     }
