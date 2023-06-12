@@ -72,7 +72,8 @@ data OnUpdateReq
         otp :: Text,
         vehicleNumber :: Text,
         vehicleColor :: Text,
-        vehicleModel :: Text
+        vehicleModel :: Text,
+        driverLastDropLocation :: Maybe LatLong
       }
   | RideStartedReq
       { bppBookingId :: Id SRB.BPPBooking,

@@ -21,6 +21,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Booking.Type as DRB
 import Domain.Types.VehicleVariant (VehicleVariant)
+import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -69,7 +70,8 @@ data Ride = Ride
     rideEndTime :: Maybe UTCTime,
     rideRating :: Maybe Int,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    driverLastDropLocation :: Maybe LatLong
   }
   deriving (Generic, Show)
 

@@ -24,6 +24,7 @@ import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, name, tags)
 import GHC.Exts (fromList)
+import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
 import Kernel.Utils.JSON (stripPrefixUnderscoreIfAny)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
@@ -127,7 +128,8 @@ data Agent = Agent
   { name :: Text,
     phone :: Text,
     rating :: Maybe DecimalValue,
-    tags :: AgentTags
+    tags :: AgentTags,
+    driverLastDropLocation :: Maybe LatLong
   }
   deriving (Eq, Generic, Show, FromJSON, ToJSON)
 

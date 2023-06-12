@@ -36,10 +36,13 @@ import qualified Domain.Types.Person as SP
 import Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as SVeh
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FareCalculator
+import Storage.Queries.Booking as SQB
+import qualified Storage.Queries.Ride as Ride
 import Tools.Error
 
 data OnUpdateBuildReq
@@ -75,18 +78,23 @@ data OnUpdateBuildReq
       }
 
 buildOnUpdateMessage ::
-  (EsqDBFlow m r, EncFlow m r) =>
+  (EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r) =>
   OnUpdateBuildReq ->
   m OnUpdate.OnUpdateMessage
 buildOnUpdateMessage RideAssignedBuildReq {..} = do
   mobileNumber <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present.")
   name <- SP.getPersonFullName driver >>= fromMaybeM (PersonFieldNotPresent "firstName")
+  inProgressRide <- Ride.getInProgressByDriverId driver.id
+  driverLastDropLocation <- case inProgressRide of
+    Just _ -> Esq.runInReplica (SQB.findByDriverIdTripEndLatLonIfRideStatusInProgress driver.id)
+    Nothing -> pure Nothing
   let agent =
         RideAssignedOU.Agent
           { name = name,
             phone = mobileNumber,
             rating = realToFrac <$> driver.rating,
-            tags = RideAssignedOU.AgentTags {registered_at = driver.createdAt}
+            tags = RideAssignedOU.AgentTags {registered_at = driver.createdAt},
+            driverLastDropLocation = driverLastDropLocation
           }
       veh =
         RideAssignedOU.Vehicle

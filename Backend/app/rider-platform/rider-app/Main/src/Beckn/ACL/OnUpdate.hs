@@ -65,7 +65,8 @@ parseEvent _ (OnUpdate.RideAssigned taEvent) =
         driverRegisteredAt = taEvent.fulfillment.agent.tags.registered_at,
         vehicleNumber = taEvent.fulfillment.vehicle.registration,
         vehicleColor = taEvent.fulfillment.vehicle.color,
-        vehicleModel = taEvent.fulfillment.vehicle.model
+        vehicleModel = taEvent.fulfillment.vehicle.model,
+        driverLastDropLocation = taEvent.fulfillment.agent.driverLastDropLocation
       }
 parseEvent _ (OnUpdate.RideStarted rsEvent) =
   return $

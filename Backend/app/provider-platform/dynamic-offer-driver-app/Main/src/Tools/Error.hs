@@ -207,6 +207,7 @@ instance IsAPIError SearchRequestErrorARDU
 data DriverQuoteError
   = FoundActiveQuotes
   | DriverOnRide
+  | DriverOnRideButNoInprogressRide
   | DriverQuoteExpired
   | NoSearchRequestForDriver
   | QuoteAlreadyRejected
@@ -218,6 +219,7 @@ instanceExceptionWithParent 'HTTPException ''DriverQuoteError
 instance IsBaseError DriverQuoteError where
   toMessage FoundActiveQuotes = Just "Failed to offer quote, there are other active quotes from this driver"
   toMessage DriverOnRide = Just "Unable to offer a quote while being on ride"
+  toMessage DriverOnRideButNoInprogressRide = Just "Unable to offer a quote while driver on ride but no ride with ride status inprogress"
   toMessage DriverQuoteExpired = Just "Driver quote expired"
   toMessage NoSearchRequestForDriver = Just "No search request for this driver"
   toMessage QuoteAlreadyRejected = Just "Quote Already Rejected"
@@ -227,6 +229,7 @@ instance IsHTTPError DriverQuoteError where
   toErrorCode = \case
     FoundActiveQuotes -> "FOUND_ACTIVE_QUOTES"
     DriverOnRide -> "DRIVER_ON_RIDE"
+    DriverOnRideButNoInprogressRide -> "DRIVER_ON_RIDE_BUT_NO_INPROGRESS_RIDE"
     DriverQuoteExpired -> "QUOTE_EXPIRED"
     NoSearchRequestForDriver -> "NO_SEARCH_REQUEST_FOR_DRIVER"
     QuoteAlreadyRejected -> "QUOTE_ALREADY_REJECTED"
@@ -235,6 +238,7 @@ instance IsHTTPError DriverQuoteError where
     FoundActiveQuotes -> E400
     DriverOnRide -> E400
     DriverQuoteExpired -> E400
+    DriverOnRideButNoInprogressRide -> E400
     NoSearchRequestForDriver -> E400
     QuoteAlreadyRejected -> E400
     UnexpectedResponseValue -> E400

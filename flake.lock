@@ -973,11 +973,11 @@
     "hedis": {
       "flake": false,
       "locked": {
-        "lastModified": 1685620412,
-        "narHash": "sha256-cPRZRbR76M7fBNSXcrSOqLlIcs2KSj/Ynf0AdZ46qrE=",
+        "lastModified": 1681138785,
+        "narHash": "sha256-e3JLqLMtIYUoRMbt4E9SHfIok1WkrQqzn11OOi8JfUM=",
         "owner": "juspay",
         "repo": "hedis",
-        "rev": "92a3d5ab73dcb0ea11139a01d6f2950a8b8e7e0e",
+        "rev": "22d814672d8476a6f8fb43047af2897afbf77ac6",
         "type": "github"
       },
       "original": {
@@ -2092,11 +2092,11 @@
         "prometheus-haskell": "prometheus-haskell"
       },
       "locked": {
-        "lastModified": 1686065254,
-        "narHash": "sha256-Qdh8CDL0CUV+Jxio70iRpm5YTnDI1Utf/zb0qAfWKek=",
+        "lastModified": 1685958369,
+        "narHash": "sha256-lvQwDEFcvl5VG4whJO2kpl5oL968FBDLn+pWS73jSoU=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "860e0e1528fb34e2064c30f54b24baa4332f13ff",
+        "rev": "1c62746c2e38b306a47a2f1d14055bb98c59c49c",
         "type": "github"
       },
       "original": {

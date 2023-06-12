@@ -18,7 +18,10 @@ module Storage.Queries.Booking where
 import Domain.Types.Booking
 import Domain.Types.DriverQuote (DriverQuote)
 import Domain.Types.Merchant
+import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Ride as Ride
 import Domain.Types.RiderDetails (RiderDetails)
+import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (findById, isNothing)
@@ -27,7 +30,9 @@ import Kernel.Types.Time
 import qualified Storage.Queries.DriverQuote as QDQuote
 import Storage.Queries.FullEntityBuilders
 import Storage.Tabular.Booking
+import Storage.Tabular.BookingLocation
 import Storage.Tabular.DriverQuote as DriverQuote
+import Storage.Tabular.Ride
 
 -- fareParams already created with driverQuote
 create :: Booking -> SqlDB ()
@@ -145,3 +150,27 @@ cancelBookings bookingIds now = do
         BookingUpdatedAt =. val now
       ]
     where_ $ tbl ^. BookingTId `in_` valList (toKey <$> bookingIds)
+
+findByDriverIdTripEndLatLonIfRideStatusInProgress :: (Transactionable m, MonadTime m) => Id Person.Person -> m (Maybe MT.LatLong)
+findByDriverIdTripEndLatLonIfRideStatusInProgress driverId = do
+  res <- Esq.findOne $ do
+    (_ :& _ :& _ :& bookingLocationInfo) <-
+      from $
+        table @RideT
+          `innerJoin` table @BookingT
+          `Esq.on` ( \(rideInfo :& bookingInfo) ->
+                       rideInfo ^. RideBookingId ==. bookingInfo ^. BookingTId
+                         &&. rideInfo ^. RideDriverId ==. val (toKey driverId)
+                         &&. rideInfo ^. RideStatus ==. val Ride.INPROGRESS
+                   )
+          `innerJoin` table @DriverQuoteT
+          `Esq.on` ( \(_ :& bookingInfo :& driverQuoteInfo) ->
+                       driverQuoteInfo ^. DriverQuoteId ==. bookingInfo ^. BookingQuoteId
+                         &&. bookingInfo ^. BookingStatus ==. val Booking.TRIP_ASSIGNED
+                   )
+          `innerJoin` table @BookingLocationT
+          `Esq.on` ( \(_ :& bookingInfo :& _ :& bookingLocationInfo) ->
+                       bookingInfo ^. BookingToLocationId ==. bookingLocationInfo ^. BookingLocationTId
+                   )
+    pure (bookingLocationInfo ^. BookingLocationLat, bookingLocationInfo ^. BookingLocationLon)
+  pure $ uncurry MT.LatLong <$> res

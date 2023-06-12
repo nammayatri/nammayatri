@@ -22,6 +22,7 @@ module Storage.Tabular.Ride where
 
 import qualified Domain.Types.Ride as Domain
 import qualified Domain.Types.VehicleVariant as VehVar (VehicleVariant)
+import Kernel.External.Maps (LatLong (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Common (Centesimal, HighPrecMeters, HighPrecMoney)
@@ -56,6 +57,8 @@ mkPersist
       rideStartTime UTCTime Maybe
       rideEndTime UTCTime Maybe
       rideRating Int Maybe
+      driverLastDropLocationLat Double Maybe
+      driverLastDropLocationLon Double Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
@@ -71,6 +74,7 @@ instance TEntityKey RideT where
 instance FromTType RideT Domain.Ride where
   fromTType RideT {..} = do
     tUrl <- parseBaseUrl `mapM` trackingUrl
+    let mbdriverLastDropLocation = LatLong <$> driverLastDropLocationLat <*> driverLastDropLocationLon
     return $
       Domain.Ride
         { id = Id id,
@@ -80,6 +84,7 @@ instance FromTType RideT Domain.Ride where
           trackingUrl = tUrl,
           fare = roundToIntegral <$> fare,
           totalFare = roundToIntegral <$> totalFare,
+          driverLastDropLocation = mbdriverLastDropLocation,
           ..
         }
 
@@ -93,5 +98,7 @@ instance ToTType RideT Domain.Ride where
         trackingUrl = showBaseUrl <$> trackingUrl,
         fare = realToFrac <$> fare,
         totalFare = realToFrac <$> totalFare,
+        driverLastDropLocationLat = driverLastDropLocation <&> (.lat),
+        driverLastDropLocationLon = driverLastDropLocation <&> (.lon),
         ..
       }
