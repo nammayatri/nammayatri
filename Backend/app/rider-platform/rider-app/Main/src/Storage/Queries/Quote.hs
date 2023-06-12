@@ -124,16 +124,16 @@ findAllByEstimateId estimateId = buildDType $ do
       quoteDetailsT <- case fareProductType quoteT of
         ONE_WAY -> pure OneWayDetailsT
         RENTAL -> do
-          rentalSlabId <- MaybeT $ pure (fromKey <$> rentalSlabId quoteT)
+          rentalSlabId <- hoistMaybe (rentalSlabId quoteT)
           rentalSlab <- MaybeT $ Esq.findById' @RentalSlabT rentalSlabId
           pure $ RentalDetailsT rentalSlab
         DRIVER_OFFER -> do
           pure (DriverOfferDetailsT driverOfferT)
         ONE_WAY_SPECIAL_ZONE -> do
-          specialZoneQuoteId <- MaybeT $ pure (fromKey <$> specialZoneQuoteId quoteT)
+          specialZoneQuoteId <- hoistMaybe (specialZoneQuoteId quoteT)
           specialZoneQuoteT <- MaybeT $ Esq.findById' @SpecialZoneQuoteT specialZoneQuoteId
           pure (OneWaySpecialZoneDetailsT specialZoneQuoteT)
-      mbTripTermsT <- forM (fromKey <$> tripTermsId quoteT) $ \tripTermsId -> do
+      mbTripTermsT <- forM (tripTermsId quoteT) $ \tripTermsId -> do
         MaybeT $ Esq.findById' @TripTermsT tripTermsId
       return $ extractSolidType @Quote (quoteT, mbTripTermsT, quoteDetailsT)
 
