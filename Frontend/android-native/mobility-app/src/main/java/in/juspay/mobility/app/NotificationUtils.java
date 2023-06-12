@@ -9,6 +9,7 @@
 
 package in.juspay.mobility.app;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.app.AlarmManager;
@@ -39,9 +40,12 @@ import android.provider.Settings;
 import android.util.Log;
 
 import androidx.annotation.RequiresApi;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
@@ -66,6 +70,8 @@ import java.util.concurrent.Executors;
 
 import javax.net.ssl.HttpsURLConnection;
 
+import in.juspay.mobility.app.callbacks.CallBack;
+
 
 public class NotificationUtils extends AppCompatActivity {
 
@@ -79,7 +85,7 @@ public class NotificationUtils extends AppCompatActivity {
     public static String TRIP_CHANNEL_ID = "TRIP_STARTED";
     public static String CANCELLED_PRODUCT = "CANCELLED_PRODUCT";
     public static String DRIVER_ASSIGNMENT = "DRIVER_ASSIGNMENT";
-    public static String TRIP_FINISHED = "TRIP_FINISHED" ;
+    public static String TRIP_FINISHED = "TRIP_FINISHED";
     public static String RINGING_CHANNEL_ID = "RINGING_ALERT";
     public static String REALLOCATE_PRODUCT = "REALLOCATE_PRODUCT";
     public static String DRIVER_REACHED = "DRIVER_REACHED";
@@ -100,16 +106,17 @@ public class NotificationUtils extends AppCompatActivity {
 //    public static  String versionName = BuildConfig.VERSION_NAME;
 
     private static ArrayList<CallBack> callBack = new ArrayList<>();
-    public static void registerCallback(CallBack notificationCallback)
-    {
+
+    public static void registerCallback(CallBack notificationCallback) {
         callBack.add(notificationCallback);
     }
-    public static void deRegisterCallback(CallBack notificationCallback)
-    {
+
+    public static void deRegisterCallback(CallBack notificationCallback) {
         callBack.remove(notificationCallback);
     }
-    public static void scheduleNotification (Context context, Notification notification , int delay) {
-        Intent notificationIntent = new Intent(context, NotificationReciever.class );
+
+    public static void scheduleNotification(Context context, Notification notification, int delay) {
+        Intent notificationIntent = new Intent(context, NotificationReciever.class);
         notificationIntent.putExtra(NotificationReciever.NOTIFICATION_ID, notificationId);
         notificationId++;
         notificationIntent.putExtra(NotificationReciever.NOTIFICATION, notification);
@@ -120,31 +127,31 @@ public class NotificationUtils extends AppCompatActivity {
         alarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, futureInMillis, pendingIntent);
     }
 
-    public static Notification createNotification (Context context, String title, String msg, JSONObject data) throws JSONException {
+    public static Notification createNotification(Context context, String title, String msg, JSONObject data) throws JSONException {
         Bitmap bigIcon = BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher);
         Intent intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
-        System.out.println("Create notification"+data.toString());
+        System.out.println("Create notification" + data.toString());
         intent.putExtra("NOTIFICATION_DATA", data.toString());
 //        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        PendingIntent pendingIntent = PendingIntent.getActivity(context, notificationId , intent,PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, notificationId, intent, PendingIntent.FLAG_IMMUTABLE);
         String channelId = FLOATING_NOTIFICATION;
         Uri notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.allocation_request);
-        if (data.has("notification_type")){
+        if (data.has("notification_type")) {
             String notificationType = new String(data.getString("notification_type"));
-            if (ALLOCATION_TYPE.equals(notificationType)){
-                System.out.println("created:- "+ notificationType);
+            if (ALLOCATION_TYPE.equals(notificationType)) {
+                System.out.println("created:- " + notificationType);
                 channelId = RINGING_CHANNEL_ID;
-            } else if (TRIP_CHANNEL_ID.equals(notificationType) ) {
-                System.out.println("created:- "+ notificationType);
+            } else if (TRIP_CHANNEL_ID.equals(notificationType)) {
+                System.out.println("created:- " + notificationType);
                 channelId = notificationType;
-            }else if(DRIVER_HAS_REACHED.equals(notificationType) ){
-                System.out.println("created:- "+ notificationType);
+            } else if (DRIVER_HAS_REACHED.equals(notificationType)) {
+                System.out.println("created:- " + notificationType);
                 channelId = notificationType;
             }
         }
-        System.out.println("created:- "+ channelId);
-        Log.e("Beckn_LOG","CRETENOTIFICTION");
+        System.out.println("created:- " + channelId);
+        Log.e("Beckn_LOG", "CRETENOTIFICTION");
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, channelId)
                 .setLargeIcon(bigIcon)
                 .setSmallIcon(smallIcon)
@@ -154,25 +161,26 @@ public class NotificationUtils extends AppCompatActivity {
                 .setContentIntent(pendingIntent)
                 .setChannelId(channelId)
                 .setPriority(NotificationManager.IMPORTANCE_MAX);
-        if (data.has("notification_type")){
+        if (data.has("notification_type")) {
             String notificationType = new String(data.getString("notification_type"));
             int calculatedTime = 20;
-            if(data.has("calculated_time")){
+            if (data.has("calculated_time")) {
                 calculatedTime = data.getInt("calculated_time");
-                if (calculatedTime < 0){
+                if (calculatedTime < 0) {
                     calculatedTime = 0;
                 }
             }
-            if (ALLOCATION_TYPE.equals(notificationType)){
+            if (ALLOCATION_TYPE.equals(notificationType)) {
                 builder.setSound(notificationSound);
-                builder.setTimeoutAfter(calculatedTime*1000);
+                builder.setTimeoutAfter(calculatedTime * 1000);
             }
         }
 
-        notificationId ++;
-        return builder.build() ;
+        notificationId++;
+        return builder.build();
     }
-    private static void updateStorage(String key, String value, Context context){
+
+    private static void updateStorage(String key, String value, Context context) {
         SharedPreferences sharedPref = context.getSharedPreferences(
                 context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
@@ -180,18 +188,17 @@ public class NotificationUtils extends AppCompatActivity {
         editor.apply();
     }
 
-     public static  void updateDriverStatus(Boolean status, String mode, Context context) {
+    public static void updateDriverStatus(Boolean status, String mode, Context context) {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() ->
         {
             StringBuilder result = new StringBuilder();
             SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
-            String bundle_version = sharedPref.getString("BUNDLE_VERSION","null");
+            String bundle_version = sharedPref.getString("BUNDLE_VERSION", "null");
             String baseUrl = sharedPref.getString("BASE_URL", "null");
             String deviceDetails = sharedPref.getString("DEVICE_DETAILS", "null");
-            try
-            {
+            try {
                 //endPoint for driver status
                 String orderUrl = baseUrl + "/driver/setActivity?active=" + status + "&mode=\"" + mode + "\"";
                 Log.d(LOG_TAG, "orderUrl " + orderUrl);
@@ -211,14 +218,14 @@ public class NotificationUtils extends AppCompatActivity {
                 // validating the response code
                 int respCode = connection.getResponseCode();
                 InputStreamReader respReader;
-                Log.d(LOG_TAG, "respCode "+ respCode);
+                Log.d(LOG_TAG, "respCode " + respCode);
 
                 if ((respCode < 200 || respCode >= 300) && respCode != 302) {
                     respReader = new InputStreamReader(connection.getErrorStream());
-                    Log.d(LOG_TAG, "in error "+ respReader);
+                    Log.d(LOG_TAG, "in error " + respReader);
                 } else {
                     respReader = new InputStreamReader(connection.getInputStream());
-                    Log.d(LOG_TAG, "in 200 "+ respReader);
+                    Log.d(LOG_TAG, "in 200 " + respReader);
                 }
 
                 BufferedReader in = new BufferedReader(respReader);
@@ -226,29 +233,27 @@ public class NotificationUtils extends AppCompatActivity {
                 while ((inputLine = in.readLine()) != null) {
                     result.append(inputLine);
                 }
-                updateStorage("DRIVER_STATUS","__failed", context);
-                Log.d(LOG_TAG, "in result "+ result);
-            }
-            catch (Exception error)
-            {
-                Log.d(LOG_TAG, "Catch in updateDriverStatus : "+error);
+                updateStorage("DRIVER_STATUS", "__failed", context);
+                Log.d(LOG_TAG, "in result " + result);
+            } catch (Exception error) {
+                Log.d(LOG_TAG, "Catch in updateDriverStatus : " + error);
             }
         });
     }
 
-    public static void showAllocationNotification (Context context, String title, String msg, JSONObject data, String imageUrl, JSONObject entity_payload){
-        try{
+    public static void showAllocationNotification(Context context, String title, String msg, JSONObject data, String imageUrl, JSONObject entity_payload) {
+        try {
             String notificationType = new String(data.getString("notification_type"));
             String channelId;
             if (ALLOCATION_TYPE.equals(notificationType)) {
-                System.out.println("showNotification:- "+ notificationType);
+                System.out.println("showNotification:- " + notificationType);
                 channelId = RINGING_CHANNEL_ID;
             }
             if (ALLOCATION_TYPE.equals(notificationType)) {
                 System.out.println("In_if_in_notification before");
                 Bundle params = new Bundle();
                 mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-                mFirebaseAnalytics.logEvent("ride_request_received",params);
+                mFirebaseAnalytics.logEvent("ride_request_received", params);
                 //Recieved Notification && checking for permission if overlay permission is given, if not then it will redirect to give permission
 
                 Intent svcT = new Intent(context, OverlaySheetService.class);
@@ -261,7 +266,7 @@ public class NotificationUtils extends AppCompatActivity {
                 Bundle sheetData = new Bundle();
                 String expiryTime = "";
                 String searchRequestId = "";
-                try{
+                try {
                     JSONObject addressPickUp = new JSONObject(entity_payload.get("fromLocation").toString());
                     JSONObject addressDrop = new JSONObject(entity_payload.get("toLocation").toString());
                     sheetData.putString("searchRequestId", entity_payload.getString("searchRequestId"));
@@ -274,39 +279,39 @@ public class NotificationUtils extends AppCompatActivity {
                     sheetData.putString("destinationArea", addressDrop.getString("area"));
                     sheetData.putString("addressPickUp", addressPickUp.getString("full_address"));
                     sheetData.putString("addressDrop", addressDrop.getString("full_address"));
-                    sheetData.putInt("driverMinExtraFee", entity_payload.has("driverMinExtraFee")?entity_payload.getInt("driverMinExtraFee"):10);
-                    sheetData.putInt("driverMaxExtraFee", entity_payload.has("driverMaxExtraFee")?entity_payload.getInt("driverMaxExtraFee"):20);
-                    sheetData.putInt("rideRequestPopupDelayDuration",entity_payload.has("rideRequestPopupDelayDuration")?entity_payload.getInt("rideRequestPopupDelayDuration"):0);
-                    sheetData.putInt("customerExtraFee",(entity_payload.has("customerExtraFee") && !entity_payload.isNull("customerExtraFee") ? entity_payload.getInt("customerExtraFee") : 0));
+                    sheetData.putInt("driverMinExtraFee", entity_payload.has("driverMinExtraFee") ? entity_payload.getInt("driverMinExtraFee") : 10);
+                    sheetData.putInt("driverMaxExtraFee", entity_payload.has("driverMaxExtraFee") ? entity_payload.getInt("driverMaxExtraFee") : 20);
+                    sheetData.putInt("rideRequestPopupDelayDuration", entity_payload.has("rideRequestPopupDelayDuration") ? entity_payload.getInt("rideRequestPopupDelayDuration") : 0);
+                    sheetData.putInt("customerExtraFee", (entity_payload.has("customerExtraFee") && !entity_payload.isNull("customerExtraFee") ? entity_payload.getInt("customerExtraFee") : 0));
                     expiryTime = entity_payload.getString("searchRequestValidTill");
                     searchRequestId = entity_payload.getString("searchRequestId");
                     System.out.println(String.valueOf(entity_payload));
-                }catch (Exception e){
-                    System.out.println("exception_parsing_overlay_data" + " <> " + searchRequestId + " <> " + sharedPref.getString("DRIVER_ID","null"));
+                } catch (Exception e) {
+                    System.out.println("exception_parsing_overlay_data" + " <> " + searchRequestId + " <> " + sharedPref.getString("DRIVER_ID", "null"));
                     Bundle overlayExceptionParams = new Bundle();
                     overlayExceptionParams.putString("search_request_id", searchRequestId);
-                    overlayExceptionParams.putString("driver_id", sharedPref.getString("DRIVER_ID","null"));
+                    overlayExceptionParams.putString("driver_id", sharedPref.getString("DRIVER_ID", "null"));
                     mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
                     mFirebaseAnalytics.logEvent("exception_parsing_overlay_data", overlayExceptionParams);
-                    Log.e(TAG,"Exception" + e);
+                    Log.e(TAG, "Exception" + e);
 
                 }
-                final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
+                final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
                 f.setTimeZone(TimeZone.getTimeZone("IST"));
                 String currTime = f.format(new Date());
-                boolean rideReqExpired = (calculateTimeDifference(expiryTime, currTime))<=1;
+                boolean rideReqExpired = (calculateTimeDifference(expiryTime, currTime)) <= 1;
                 System.out.println("TimeDifference : " + (calculateTimeDifference(expiryTime, currTime)));
-                if (calculateTimeDifference(expiryTime, currTime)>0){
-                    if(checkPermission(context)){
+                if (calculateTimeDifference(expiryTime, currTime) > 0) {
+                    if (checkPermission(context)) {
                         //Starting OverlaySheetService
-                        if(binder == null) {
+                        if (binder == null) {
                             context.startService(svcT);
                             listData.add(sheetData);
                         } else {
                             new Handler(Looper.getMainLooper()).post(new Runnable() {
                                 @Override
                                 public void run() {
-                                    if (binder !=null){
+                                    if (binder != null) {
                                         binder.getService().addToList(sheetData);
                                     }
                                 }
@@ -337,15 +342,15 @@ public class NotificationUtils extends AppCompatActivity {
                             }
                         }, BIND_AUTO_CREATE);
                     } else {
-                        if (overlayFeatureNotAvailable(context)){
-                            try{
-                                mFirebaseAnalytics.logEvent("low_ram_device",params);
-                                if (RideRequestActivity.getInstance() == null){
+                        if (overlayFeatureNotAvailable(context)) {
+                            try {
+                                mFirebaseAnalytics.logEvent("low_ram_device", params);
+                                if (RideRequestActivity.getInstance() == null) {
                                     Intent intent = new Intent(context.getApplicationContext(), RideRequestActivity.class);
                                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
                                     intent.putExtras(sheetData);
                                     context.getApplicationContext().startActivity(intent);
-                                }else {
+                                } else {
                                     RideRequestActivity.getInstance().addToList(sheetData);
                                 }
                                 lastRideReq = new Bundle();
@@ -353,93 +358,92 @@ public class NotificationUtils extends AppCompatActivity {
                                 lastRideReq.putBoolean("rideReqExpired", rideReqExpired);
                                 startMediaPlayer(context, R.raw.allocation_request, true);
                                 rideRequestUtils.createRideRequestNotification(context);
-                            }catch (Exception e){
+                            } catch (Exception e) {
                                 params.putString("exception", e.toString());
-                                mFirebaseAnalytics.logEvent("exception_in_opening_ride_req_activity",params);
+                                mFirebaseAnalytics.logEvent("exception_in_opening_ride_req_activity", params);
                             }
                         }
 
 //                        Log.i("notificationCallback_size", Integer.toString(notificationCallback.size()));
-                        System.out.println("no_overlay_permission" + " <> " + searchRequestId + " <> " + sharedPref.getString("DRIVER_ID","null"));
+                        System.out.println("no_overlay_permission" + " <> " + searchRequestId + " <> " + sharedPref.getString("DRIVER_ID", "null"));
                         Bundle overlayPermissionParams = new Bundle();
                         overlayPermissionParams.putString("search_request_id", searchRequestId);
-                        overlayPermissionParams.putString("driver_id", sharedPref.getString("DRIVER_ID","null"));
+                        overlayPermissionParams.putString("driver_id", sharedPref.getString("DRIVER_ID", "null"));
                         mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
                         mFirebaseAnalytics.logEvent("no_overlay_permission", overlayPermissionParams);
-                        if(ALLOCATION_TYPE.equals(notificationType)){
+                        if (ALLOCATION_TYPE.equals(notificationType)) {
 //                            for(int i =0;i<notificationCallback.size();i++){
 //                                notificationCallback.get(i).triggerAllocationPopUp(data.getString("entity_ids"), data.getString("notification_type"), entity_payload);
 //                            }
                         }
                     }
-                }else {
-                    System.out.println("expired notification" + " <> " + currTime + " <> " + expiryTime + " <> " + String.valueOf(calculateTimeDifference(expiryTime, currTime)) + " <> " + searchRequestId + " <> " + sharedPref.getString("DRIVER_ID","null"));
+                } else {
+                    System.out.println("expired notification" + " <> " + currTime + " <> " + expiryTime + " <> " + String.valueOf(calculateTimeDifference(expiryTime, currTime)) + " <> " + searchRequestId + " <> " + sharedPref.getString("DRIVER_ID", "null"));
                     Bundle overlayParams = new Bundle();
                     overlayParams.putString("current_time", currTime);
                     overlayParams.putString("expiry_time", expiryTime);
                     overlayParams.putString("time_difference", String.valueOf(calculateTimeDifference(expiryTime, currTime)));
                     overlayParams.putString("search_request_id", searchRequestId);
-                    overlayParams.putString("driver_id", sharedPref.getString("DRIVER_ID","null"));
+                    overlayParams.putString("driver_id", sharedPref.getString("DRIVER_ID", "null"));
                     mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
                     mFirebaseAnalytics.logEvent("overlay_popup_expired", overlayParams);
                 }
-                notificationId ++;
+                notificationId++;
             }
 
-            if (notificationType.equals(context.getString(R.string.CLEARED_FARE)) || notificationType.equals(context.getString(R.string.CANCELLED_SEARCH_REQUEST))){
-                if (binder !=null){
+            if (notificationType.equals(context.getString(R.string.CLEARED_FARE)) || notificationType.equals(context.getString(R.string.CANCELLED_SEARCH_REQUEST))) {
+                if (binder != null) {
                     binder.getService().removeCardById(data.getString(context.getString(R.string.entity_ids)));
                 }
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     @SuppressLint("MissingPermission")
     @RequiresApi(api = Build.VERSION_CODES.M)
-    public static void showNotification(Context context, String title, String msg, JSONObject data, String imageUrl ) throws JSONException{
-            Log.e(TAG, "SHOWNOTIFICATION MESSAGE");
-            Bitmap bigIcon = BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher);
-            Bitmap bitmap = null;
-            if (imageUrl != null)
-            {
-                bitmap = getBitmapfromUrl(imageUrl);
-            }
-            final PackageManager pm = context.getPackageManager();
-            Intent intent= pm.getLaunchIntentForPackage(context.getPackageName());
-            System.out.println("Notificationn Utils Data"+ data.toString());
-            System.out.println("Notificationn111"+data.getString("notification_type"));
-            System.out.println("Notificationn222"+(data.getString("entity_ids")));
-            System.out.println("imageUrl"+imageUrl);
-            intent.putExtra("NOTIFICATION_DATA", data.toString());
-    //            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            PendingIntent pendingIntent = PendingIntent.getActivity(context, notificationId , intent, PendingIntent.FLAG_IMMUTABLE);
-            String notificationType = new String(data.getString("notification_type"));
-            String channelId;
-            String merchantType = context.getString(R.string.service);
-            String key = merchantType.contains("partner") || merchantType.contains("driver") ? "DRIVER" : "USER";
-            System.out.println("key"+key);
-            if (ALLOCATION_TYPE.equals(notificationType)) {
-                System.out.println("showNotification:- "+ notificationType);
-                channelId = RINGING_CHANNEL_ID;
-            } else if (TRIP_CHANNEL_ID.equals(notificationType) ) {
-                System.out.println("showNotification:- "+ notificationType);
-                channelId = notificationType;
-            }else if (CANCELLED_PRODUCT.equals(notificationType) ) {
-                System.out.println("showNotification:- "+ notificationType);
-                channelId = notificationType;
-            } else if(DRIVER_HAS_REACHED.equals(notificationType)){
-                System.out.println("showNotification:- "+ notificationType);
-                channelId = notificationType;
-            }else{
-                System.out.println("showNotification:- "+ notificationType);
-                channelId = FLOATING_NOTIFICATION;
-            }
+    public static void showNotification(Context context, String title, String msg, JSONObject data, String imageUrl) throws JSONException {
+        Log.e(TAG, "SHOWNOTIFICATION MESSAGE");
+        Bitmap bigIcon = BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher);
+        Bitmap bitmap = null;
+        if (imageUrl != null) {
+            bitmap = getBitmapfromUrl(imageUrl);
+        }
+        final PackageManager pm = context.getPackageManager();
+        Intent intent = pm.getLaunchIntentForPackage(context.getPackageName());
+        System.out.println("Notificationn Utils Data" + data.toString());
+        System.out.println("Notificationn111" + data.getString("notification_type"));
+        System.out.println("Notificationn222" + (data.getString("entity_ids")));
+        System.out.println("imageUrl" + imageUrl);
+        intent.putExtra("NOTIFICATION_DATA", data.toString());
+        //            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, notificationId, intent, PendingIntent.FLAG_IMMUTABLE);
+        String notificationType = new String(data.getString("notification_type"));
+        String channelId;
+        String merchantType = context.getString(R.string.service);
+        String key = merchantType.contains("partner") || merchantType.contains("driver") ? "DRIVER" : "USER";
+        System.out.println("key" + key);
+        if (ALLOCATION_TYPE.equals(notificationType)) {
+            System.out.println("showNotification:- " + notificationType);
+            channelId = RINGING_CHANNEL_ID;
+        } else if (TRIP_CHANNEL_ID.equals(notificationType)) {
+            System.out.println("showNotification:- " + notificationType);
+            channelId = notificationType;
+        } else if (CANCELLED_PRODUCT.equals(notificationType)) {
+            System.out.println("showNotification:- " + notificationType);
+            channelId = notificationType;
+        } else if (DRIVER_HAS_REACHED.equals(notificationType)) {
+            System.out.println("showNotification:- " + notificationType);
+            channelId = notificationType;
+        } else {
+            System.out.println("showNotification:- " + notificationType);
+            channelId = FLOATING_NOTIFICATION;
+        }
 
         NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, channelId);
-        if (imageUrl != null){
+        if (imageUrl != null) {
             mBuilder.setLargeIcon(bitmap)
                     .setSmallIcon(smallIcon)
                     .setContentTitle(title)
@@ -452,8 +456,7 @@ public class NotificationUtils extends AppCompatActivity {
                             new NotificationCompat.BigPictureStyle()
                                     .bigPicture(bitmap)
                                     .bigLargeIcon(null));
-        }
-        else {
+        } else {
             mBuilder.setSmallIcon(smallIcon)
                     .setContentTitle(title)
                     .setContentText(msg)
@@ -463,82 +466,81 @@ public class NotificationUtils extends AppCompatActivity {
                     .setChannelId(channelId);
         }
 
-        if(Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             System.out.println("Default sound");
             Uri notificationSound;
             if (notificationType.equals(ALLOCATION_TYPE)) {
                 notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.allocation_request);
-            } else if (notificationType.equals(TRIP_CHANNEL_ID)){
+            } else if (notificationType.equals(TRIP_CHANNEL_ID)) {
                 notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.notify_otp_sound);
                 mBuilder.setSound(notificationSound);
-            }else if (notificationType.equals(CANCELLED_PRODUCT)){
+            } else if (notificationType.equals(CANCELLED_PRODUCT)) {
                 notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.cancel_notification_sound);
                 mBuilder.setSound(notificationSound);
-            }else{
+            } else {
                 notificationSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
             }
-            System.out.println("Default sound"+ notificationSound);
+            System.out.println("Default sound" + notificationSound);
         }
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
         System.out.println("In clean notification before notify");
 
-        if (notificationType.equals(ALLOCATION_TYPE))
-        {
+        if (notificationType.equals(ALLOCATION_TYPE)) {
 //                    mBuilder.setTimeoutAfter(20000);
             System.out.println("In clean notification if");
         }
         notificationManager.notify(notificationId, mBuilder.build());
 
 
-            if (TRIP_CHANNEL_ID.equals(notificationType) ) {
-                Bundle params = new Bundle();
-                mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-                if (key.equals("USER"))
-                    mFirebaseAnalytics.logEvent("ny_user_ride_started",params);
-                else
-                    mFirebaseAnalytics.logEvent("ride_started",params);
+        if (TRIP_CHANNEL_ID.equals(notificationType)) {
+            Bundle params = new Bundle();
+            mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
+            if (key.equals("USER"))
+                mFirebaseAnalytics.logEvent("ny_user_ride_started", params);
+            else
+                mFirebaseAnalytics.logEvent("ride_started", params);
+        }
+        if (TRIP_FINISHED.equals(notificationType)) {
+            Bundle params = new Bundle();
+            mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
+            if (key.equals("USER"))
+                mFirebaseAnalytics.logEvent("ny_user_ride_completed", params);
+            else
+                mFirebaseAnalytics.logEvent("ride_completed", params);
+        }
+        if (CANCELLED_PRODUCT.equals(notificationType)) {
+            Bundle params = new Bundle();
+            mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
+            if (key.equals("USER"))
+                mFirebaseAnalytics.logEvent("ny_user_ride_cancelled", params);
+            else
+                mFirebaseAnalytics.logEvent("ride_cancelled", params);
+            if (key.equals("DRIVER") && msg.contains("Customer had to cancel your ride")) {
+                startMediaPlayer(context, R.raw.ride_cancelled_media, true);
+            } else {
+                startMediaPlayer(context, R.raw.cancel_notification_sound, false);
             }
-            if (TRIP_FINISHED.equals(notificationType) ) {
-                Bundle params = new Bundle();
-                mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-                if (key.equals("USER"))
-                    mFirebaseAnalytics.logEvent("ny_user_ride_completed",params);
-                else
-                    mFirebaseAnalytics.logEvent("ride_completed",params);
+        }
+        if (DRIVER_ASSIGNMENT.equals(notificationType)) {
+            Bundle params = new Bundle();
+            mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
+            if (key.equals("USER"))
+                mFirebaseAnalytics.logEvent("ny_user_ride_assigned", params);
+            else
+                mFirebaseAnalytics.logEvent("driver_assigned", params);
+            if (key.equals("DRIVER")) {
+                startMediaPlayer(context, R.raw.ride_assigned, true);
             }
-            if (CANCELLED_PRODUCT.equals(notificationType) ) {
-                Bundle params = new Bundle();
-                mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-                if (key.equals("USER"))
-                    mFirebaseAnalytics.logEvent("ny_user_ride_cancelled",params);
-                else
-                    mFirebaseAnalytics.logEvent("ride_cancelled",params);
-                if (key.equals("DRIVER") && msg.contains("Customer had to cancel your ride")){
-                    startMediaPlayer(context, R.raw.ride_cancelled_media,true);
-                }else{
-                    startMediaPlayer(context, R.raw.cancel_notification_sound, false);
-                }
+        }
+        notificationId++;
+        if (DRIVER_ASSIGNMENT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || DRIVER_REACHED.equals(notificationType)) {
+            for (int i = 0; i < callBack.size(); i++) {
+                callBack.get(i).driverCallBack(notificationType);
             }
-            if (DRIVER_ASSIGNMENT.equals(notificationType) ) {
-                Bundle params = new Bundle();
-                mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-                if (key.equals("USER"))
-                    mFirebaseAnalytics.logEvent("ny_user_ride_assigned",params);
-                else
-                    mFirebaseAnalytics.logEvent("driver_assigned",params);
-                if (key.equals("DRIVER")) {
-                    startMediaPlayer(context, R.raw.ride_assigned, true);
-                }
-            }
-            notificationId ++;
-            if (DRIVER_ASSIGNMENT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || DRIVER_REACHED.equals(notificationType)) {
-                for(int i = 0; i< callBack.size(); i++) {
-                    callBack.get(i).driverCallBack(notificationType);
-            }
-            }
-            if ((TRIP_FINISHED.equals(notificationType) || DRIVER_ASSIGNMENT.equals(notificationType) || REALLOCATE_PRODUCT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || TRIP_CHANNEL_ID.equals(notificationType)) && (key.equals("USER"))) {
-                for(int i = 0; i< callBack.size(); i++) {
-                    callBack.get(i).customerCallBack(notificationType);
+        }
+        if ((TRIP_FINISHED.equals(notificationType) || DRIVER_ASSIGNMENT.equals(notificationType) || REALLOCATE_PRODUCT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || TRIP_CHANNEL_ID.equals(notificationType)) && (key.equals("USER"))) {
+            for (int i = 0; i < callBack.size(); i++) {
+                callBack.get(i).customerCallBack(notificationType);
             }
         }
     }
@@ -561,34 +563,34 @@ public class NotificationUtils extends AppCompatActivity {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
-    private static boolean checkPermission(Context context){
+    private static boolean checkPermission(Context context) {
         return Settings.canDrawOverlays(context);
     }
 
-    public static void createNotificationChannel(Context context, String channel_Id){
+    public static void createNotificationChannel(Context context, String channel_Id) {
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 CharSequence name = channel_Id;
                 String description = "Important Notification";
                 int importance = NotificationManager.IMPORTANCE_HIGH;
-                if(channel_Id.equals("FLOATING_NOTIFICATION")){
+                if (channel_Id.equals("FLOATING_NOTIFICATION")) {
                     importance = NotificationManager.IMPORTANCE_DEFAULT;
                 }
                 NotificationChannel channel = new NotificationChannel(channel_Id, name, importance);
                 channel.setDescription(description);
-                System.out.println("Channel"+ channel_Id);
+                System.out.println("Channel" + channel_Id);
                 if (channel_Id.equals(RINGING_CHANNEL_ID)) {
                     soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.allocation_request);
-                } else if (channel_Id.equals(TRIP_CHANNEL_ID)){
+                } else if (channel_Id.equals(TRIP_CHANNEL_ID)) {
                     soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.notify_otp_sound);
-                }else if (channel_Id.equals(CANCELLED_PRODUCT)){
+                } else if (channel_Id.equals(CANCELLED_PRODUCT)) {
                     soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.cancel_notification_sound);
-                }else if(channel_Id.equals(DRIVER_HAS_REACHED)){
+                } else if (channel_Id.equals(DRIVER_HAS_REACHED)) {
                     soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.driver_arrived);
-                }else{
+                } else {
                     soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
                 }
-                System.out.println("Channel"+ soundUri);
+                System.out.println("Channel" + soundUri);
                 AudioAttributes attributes = new AudioAttributes.Builder()
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                         .setUsage(AudioAttributes.USAGE_NOTIFICATION)
@@ -596,7 +598,7 @@ public class NotificationUtils extends AppCompatActivity {
                 channel.setSound(soundUri, attributes);
 
                 NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
-                if(notificationManager != null){
+                if (notificationManager != null) {
                     notificationManager.createNotificationChannel(channel);
                 }
             }
@@ -620,22 +622,22 @@ public class NotificationUtils extends AppCompatActivity {
         }
     }
 
-    public static String decodeAddress(JSONObject object){
+    public static String decodeAddress(JSONObject object) {
         try {
-            String add1 = object.get("door").toString()+ ", "+ object.get("building").toString()+ ", "+ object.get("street").toString()+ ", "+ object.get("city").toString()+ ", "+ object.get("state").toString()+ ", "+ object.get("country").toString(); // + object.get("locality").toString()
-            String add2 = object.get("building").toString()+ ", "+ object.get("street").toString()+ ", "+ object.get("city").toString()+ ", "+ object.get("state").toString()+ ", "+ object.get("country").toString(); // after street ", "+ object.get("locality").toString()+
-            String add3 = object.get("street").toString()+ ", "+ object.get("city").toString()+ ", "+ object.get("state").toString()+ ", "+ object.get("country").toString();
-            String add4 = object.get("city").toString()+ ", "+ object.get("state").toString()+ ", "+ object.get("country").toString();
-            String add5 = object.get("city").toString()+ ", "+ object.get("state").toString()+ ", "+ object.get("country").toString();
-            if(object.get("door").toString().equals("")  && object.get("building").toString().equals(" ") && object.get("street").toString().equals("")){ //&& object.get("locality").toString().equals(" ")
+            String add1 = object.get("door").toString() + ", " + object.get("building").toString() + ", " + object.get("street").toString() + ", " + object.get("city").toString() + ", " + object.get("state").toString() + ", " + object.get("country").toString(); // + object.get("locality").toString()
+            String add2 = object.get("building").toString() + ", " + object.get("street").toString() + ", " + object.get("city").toString() + ", " + object.get("state").toString() + ", " + object.get("country").toString(); // after street ", "+ object.get("locality").toString()+
+            String add3 = object.get("street").toString() + ", " + object.get("city").toString() + ", " + object.get("state").toString() + ", " + object.get("country").toString();
+            String add4 = object.get("city").toString() + ", " + object.get("state").toString() + ", " + object.get("country").toString();
+            String add5 = object.get("city").toString() + ", " + object.get("state").toString() + ", " + object.get("country").toString();
+            if (object.get("door").toString().equals("") && object.get("building").toString().equals(" ") && object.get("street").toString().equals("")) { //&& object.get("locality").toString().equals(" ")
                 return add5;
-            }else if(object.get("door").toString().equals("")  && object.get("building").toString().equals(" ") && object.get("street").toString().equals("")){
+            } else if (object.get("door").toString().equals("") && object.get("building").toString().equals(" ") && object.get("street").toString().equals("")) {
                 return add4;
-            }else if(object.get("door").toString().equals("")  && object.get("building").toString().equals(" ")){
+            } else if (object.get("door").toString().equals("") && object.get("building").toString().equals(" ")) {
                 return add3;
-            }else if(object.get("door").toString().equals("")){
+            } else if (object.get("door").toString().equals("")) {
                 return add2;
-            }else{
+            } else {
                 return add1;
             }
         } catch (JSONException e) {
@@ -644,40 +646,41 @@ public class NotificationUtils extends AppCompatActivity {
         return "ERROR DECODING";
     }
 
-    public static int calculateTimeDifference(String expireTimeTemp, String currTimeTemp){
+    public static int calculateTimeDifference(String expireTimeTemp, String currTimeTemp) {
         String[] arrOfA = expireTimeTemp.split("T");
         String[] arrOfB = currTimeTemp.split("T");
-        if(!arrOfA[0].equals(arrOfB[0])){
+        if (!arrOfA[0].equals(arrOfB[0])) {
             return -1;
         }
         String[] timeTempExpire = arrOfA[1].split(":");
         String[] timeTempCurrent = arrOfB[1].split(":");
-        timeTempExpire[2] = timeTempExpire[2].substring(0,2);
-        timeTempCurrent[2] = timeTempCurrent[2].substring(0,2);
+        timeTempExpire[2] = timeTempExpire[2].substring(0, 2);
+        timeTempCurrent[2] = timeTempCurrent[2].substring(0, 2);
         int currTime = 0, expireTime = 0, calculate = 3600;
-        for(int i = 0 ; i < timeTempCurrent.length;i++){
-            currTime+= (Integer.parseInt(timeTempCurrent[i])*calculate);
-            expireTime+= (Integer.parseInt(timeTempExpire[i])*calculate);
-            calculate = calculate/60;
+        for (int i = 0; i < timeTempCurrent.length; i++) {
+            currTime += (Integer.parseInt(timeTempCurrent[i]) * calculate);
+            expireTime += (Integer.parseInt(timeTempExpire[i]) * calculate);
+            calculate = calculate / 60;
         }
-        if ((expireTime-currTime) >= 5) {
-            return expireTime-currTime - 5 ;
+        if ((expireTime - currTime) >= 5) {
+            return expireTime - currTime - 5;
         }
         return 0;
     }
 
-    public static void startMediaPlayer(Context context, int mediaFile, boolean increaseVolume){
-        if (mediaPlayer != null){
+    public static void startMediaPlayer(Context context, int mediaFile, boolean increaseVolume) {
+        if (mediaPlayer != null) {
             mediaPlayer.stop();
             mediaPlayer = null;
         }
         audio = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
-        if (increaseVolume) audio.setStreamVolume(AudioManager.STREAM_MUSIC, (int) audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC), AudioManager.ADJUST_SAME);
+        if (increaseVolume)
+            audio.setStreamVolume(AudioManager.STREAM_MUSIC, (int) audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC), AudioManager.ADJUST_SAME);
         mediaPlayer = MediaPlayer.create(context, mediaFile);
         mediaPlayer.start();
     }
 
-    public static boolean overlayFeatureNotAvailable(Context context){
+    public static boolean overlayFeatureNotAvailable(Context context) {
         ActivityManager activityManager = (ActivityManager) context.getSystemService(ACTIVITY_SERVICE);
         return activityManager.isLowRamDevice();
     }
@@ -685,15 +688,15 @@ public class NotificationUtils extends AppCompatActivity {
     public static void createChatNotification(String sentBy, String message, Context context) {
         final int chatNotificationId = 18012023;
         createChatNotificationChannel(context);
-        Intent notificationIntent = new Intent(context, MainActivity.class);
+        Intent notificationIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
         JSONObject payload = new JSONObject();
-        try{
+        try {
             payload.put("notification_type", "CHAT_MESSAGE");
         } catch (JSONException e) {
-            Log.e(LOG_TAG,"Error in adding data to jsonObject");
+            Log.e(LOG_TAG, "Error in adding data to jsonObject");
         }
         notificationIntent.putExtra("NOTIFICATION_DATA", payload.toString());
-        notificationIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        notificationIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, chatNotificationId, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
         Notification notification =
                 new NotificationCompat.Builder(context, "MessageUpdates")
@@ -708,6 +711,10 @@ public class NotificationUtils extends AppCompatActivity {
                         .build();
 
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            Log.e(LOG_TAG,"no notification permission");
+            return;
+        }
         notificationManager.notify(chatNotificationId, notification);
     }
 

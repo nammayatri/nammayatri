@@ -5,6 +5,7 @@ import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.RECORD_AUDIO;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import static android.app.Activity.RESULT_OK;
+import static android.content.Context.WINDOW_SERVICE;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -19,6 +20,7 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.PowerManager;
 import android.provider.MediaStore;
 import android.provider.Settings;
@@ -28,7 +30,9 @@ import android.util.Log;
 import android.view.ActionMode;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -80,8 +84,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -92,7 +94,7 @@ import java.util.concurrent.TimeUnit;
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.mobility.app.AudioRecorder;
-import in.juspay.mobility.app.CallBack;
+import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.app.CheckPermissionOverlay;
 import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.LocationUpdateWorker;
@@ -173,7 +175,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     }
 
     public void registerCallBacks() {
-        if (isClassAvailable("in.juspay.mobility.app.CallBack")) {
+        if (isClassAvailable("in.juspay.mobility.app.callbacks.CallBack")) {
             MobilityDriverBridge.callBack = new CallBack() {
                 @Override
                 public void customerCallBack(String notificationType) {
@@ -196,7 +198,17 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                 }
 
                 @Override
-                public void chatCallBack(String message, String sentBy, String time) {
+                public void chatCallBack(String message, String sentBy, String time, String len) {
+                    Log.i(OTHERS, "No Required");
+                }
+
+                @Override
+                public void openChatCallBack() {
+                    Log.i(OTHERS, "No Required");
+                }
+
+                @Override
+                public void inAppCallBack(String onTapAction) {
                     Log.i(OTHERS, "No Required");
                 }
             };
@@ -945,7 +957,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
             outputStream.writeBytes("Content-Type: audio/mpeg\r\n");
         outputStream.writeBytes("\r\n");
 
-        FileInputStream fileInputStream = new FileInputStream(filePath);
+        FileInputStream fileInputStream = new FileInputStream(file);
         int bytesAvailable = fileInputStream.available();
         int maxBufferSize = 1024 * 1024;
         int bufferSize = Math.min(bytesAvailable, maxBufferSize);
@@ -994,8 +1006,9 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
     @JavascriptInterface
     public void setScaleType (String id, String imageUrl, String scaleType){
+        Activity activity = bridgeComponents.getActivity();
         if (activity == null) return;
-        if (id != null || imageUrl != null){
+        if (id != null){
             ImageView imageView = activity.findViewById(Integer.parseInt(id));
             try {
                 URL url = new URL(imageUrl);
@@ -1003,8 +1016,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                 Handler mainLooper = new Handler(Looper.getMainLooper());
                 mainLooper.post(() -> {
                     if (bitmap == null) return;
-                    int calcHeight = (getScreenWidth() * bitmap.getHeight())/bitmap.getWidth();
-                    imageView.getLayoutParams().height = calcHeight;
+                    imageView.getLayoutParams().height = (getScreenWidth() * bitmap.getHeight())/bitmap.getWidth();
                     imageView.setScaleType(getScaleTypes(scaleType));
                     imageView.setImageBitmap(bitmap);
                     LinearLayout linearLayout = (LinearLayout) imageView.getParent();
@@ -1016,6 +1028,11 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                 throw new RuntimeException(e);
             }
         }
+    }
+    public int getScreenWidth(){
+        DisplayMetrics dm = new DisplayMetrics();
+        ((WindowManager)bridgeComponents.getContext().getSystemService(WINDOW_SERVICE)).getDefaultDisplay().getRealMetrics(dm);
+        return dm.widthPixels;
     }
     // endregion
 

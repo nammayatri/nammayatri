@@ -9,6 +9,7 @@
 
 package in.juspay.mobility.app;
 
+import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -19,6 +20,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.BitmapFactory;
 import android.location.LocationManager;
 import android.os.Build;
@@ -26,6 +28,7 @@ import android.os.IBinder;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
@@ -40,12 +43,12 @@ import javax.net.ssl.HttpsURLConnection;
 public class GpsListeningService extends Service {
     private static final String channelId = "GPS_LISTENER";
     final int alertNotificationId = 27081999;
-    final int gpsForegroundServiceId = 01112022;
-    private final String TAG = "GpsListeningService";
+    final int gpsForegroundServiceId = 1112022;
+    private final String LOG_TAG = "GpsListeningService";
     private BroadcastReceiver gpsReceiver;
 
     public void startLocationService() {
-        Log.i(TAG, "able to access service");
+        Log.i(LOG_TAG, "able to access service");
         Intent locationUpdateService = new Intent(this, LocationUpdateService.class);
         locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -107,7 +110,7 @@ public class GpsListeningService extends Service {
                 if (isGpsEnabled) { //LocationEnabled
                     ExecutorService executor = Executors.newSingleThreadExecutor();
                     executor.execute(() -> {
-                        boolean isApiSuccess = updateDriverStatus(true);
+                        boolean isApiSuccess = updateDriverStatus();
                         if (isApiSuccess) {
                             startLocationService();
                             showAlertNotification();
@@ -123,7 +126,7 @@ public class GpsListeningService extends Service {
                         .setContentTitle("GPS")
                         .setContentText(getString(R.string.waiting_for_gps_signal))
                         .setSmallIcon(R.drawable.ny_ic_launcher)
-                        .setProgress(100, 0 , true)
+                        .setProgress(100, 0, true)
                         .setPriority(NotificationCompat.PRIORITY_MIN)
                         .setOngoing(true)
                         .setContentIntent(pendingIntent);
@@ -133,7 +136,7 @@ public class GpsListeningService extends Service {
     private void showAlertNotification() {
         Intent notificationIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
         PendingIntent pendingIntent = PendingIntent.getActivity(this, alertNotificationId, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
-        NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(this,"General") ;
+        NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(this, "General");
         mBuilder.setLargeIcon(BitmapFactory.decodeResource(this.getResources(), R.drawable.ny_ic_launcher));
         mBuilder.setContentTitle(getString(R.string.we_made_you_online))
                 .setSmallIcon((R.drawable.ny_ic_launcher))
@@ -142,23 +145,28 @@ public class GpsListeningService extends Service {
                 .setPriority(NotificationCompat.PRIORITY_MAX);
         mBuilder.setContentIntent(pendingIntent);
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            Log.e(LOG_TAG,"no notification permission");
+            return;
+        }
         notificationManager.notify(alertNotificationId, mBuilder.build());
     }
 
-    private boolean updateDriverStatus(Boolean status) {
+    private boolean updateDriverStatus() {
         SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
         String bundle_version = sharedPref.getString("BUNDLE_VERSION", "null");
+        String version = sharedPref.getString("VERSION_NAME", "null");
         String baseUrl = sharedPref.getString("BASE_URL", "null");
         String deviceDetails = sharedPref.getString("DEVICE_DETAILS", "null");
         try {
-            String orderUrl = baseUrl + "/driver/setActivity?active=" + status;
+            String orderUrl = baseUrl + "/driver/setActivity?active=" + true;
             HttpURLConnection connection = (HttpURLConnection) (new URL(orderUrl).openConnection());
             if (connection instanceof HttpsURLConnection)
                 ((HttpsURLConnection) connection).setSSLSocketFactory(new TLSSocketFactory());
             connection.setRequestMethod("POST");
             connection.setRequestProperty("Content-Type", "application/json");
-            connection.setRequestProperty("x-client-version", BuildConfig.VERSION_NAME);
+            connection.setRequestProperty("x-client-version", version);
             connection.setRequestProperty("token", token);
             connection.setRequestProperty("x-bundle-version", bundle_version);
             connection.setRequestProperty("x-device",deviceDetails);
@@ -175,7 +183,7 @@ public class GpsListeningService extends Service {
                 return true; //Api Success
             }
         } catch (Exception error) {
-            Log.d(TAG, "Exception in updateDriverStatus : " + error);
+            Log.d(LOG_TAG, "Exception in updateDriverStatus : " + error);
             return false;
         }
     }

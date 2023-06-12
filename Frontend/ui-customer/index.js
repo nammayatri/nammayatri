@@ -139,26 +139,18 @@ window.onMerchantEvent = function (event, payload) {
         }
       }
     } else {
+      eventObject["type"] = "";
+      eventObject["data"] = "";
+      if(clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "CHAT_MESSAGE"){
+        eventObject["type"] = "CHAT_MESSAGE";
+       }
       window.__payload = JSON.parse(payload);
       console.log("window Payload: ", window.__payload);
-      purescript.main();
+      purescript.main(eventObject)();
     }
   }
 }
 
-window.callPopUp = function(id, type){
-  console.log("in call pop up",arguments);
-  if (type == "LOCATION_DISABLED" || "INTERNET_ACTION" )
-  {
-    purescript.onConnectivityEvent(type)();
-  }
-  else
-  {
-    eventObject["type"] = "";
-    eventObject["data"] = "";
-    purescript.main(eventObject)();
-  }
-}
 window.callUICallback = function () {
   var args = (arguments.length === 1 ? [arguments[0]] : Array.apply(null, arguments));
   var fName = args[0]
@@ -242,30 +234,6 @@ if(sessionInfo.package_name.includes(".debug")){
   logger.disableLogger();
 }
 
-// var parsedPayload = JSON.parse(payload);
-// if (parsedPayload && parsedPayload.payload && parsedPayload.payload.action == "OpenChatScreen") {
-//   window.JBridge.openChatScreen();
-// }
-// else if (parsedPayload && parsedPayload.payload && parsedPayload.payload.action == "showPopup" && parsedPayload.payload.id && parsedPayload.payload.popType)
-// {
-//     // window.__payload = Nothing;
-//     window.callPopUp(parsedPayload.payload.id,parsedPayload.payload.popType);
-
-// }
-// else {
-//   window.__payload = parsedPayload;
-//   console.log("window Payload: ", window.__payload);
-//   var jpConsumingBackpress = {
-//     event: "jp_consuming_backpress",
-//     payload: { jp_consuming_backpress: true }
-//   }
-//   JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
-//   eventObject["type"] = "";
-//   eventObject["data"] = "";
-//   if(parsedPayload.payload.notificationData && parsedPayload.payload.notificationData.notification_type == "CHAT_MESSAGE"){
-//     eventObject["type"] = "CHAT_MESSAGE";
-//    }
-//   purescript.main(eventObject)();
 function loadConfig() {
   if (window.appConfig) {
     return;

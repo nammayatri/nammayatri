@@ -22,6 +22,7 @@ window.getMerchantConfig = function () {
     "estimateConfirmText": "Request a NammaYatri Ride",
     "autoConfirmingLoaderColor": "#80B2FF",
     "quoteListModelBackground": "#2C2F3A",
+    "confirmPickUpLocationBorder": "#E5E7EB",
     "quoteListModel": {
       "backgroundColor": "#2C2F3A",
       "textColor": "#FFFFFF",
@@ -37,6 +38,9 @@ window.getMerchantConfig = function () {
     "rateCardColor": "#2C2F3A",
     "nyBrandingVisibility": false,
     "fontType": "Assets",
+    "black900": "#2C2F3A",
+    "black800": "#454545",
+    "red" : "#E55454",
     "englishStrings": {
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "Your location helps our system to map down all the near by autos and get you the quickest ride possible.",
       "REQUEST_RIDE": "Request a NammaYatri Ride"
@@ -61,7 +65,15 @@ window.getMerchantConfig = function () {
       "name": "हिंदी",
       "value": "HI_IN",
       "subTitle": "Hindi"
-    }]
+    }],
+    "bannerConfig" : {
+      "backgroundColor" : "#F0FAF0"
+    , "title" : "Complete your profile for a personalised ride experience"
+    , "titleColor" : "#21C179"
+    , "actionText" : "Update now"
+    , "actionTextColor" : "#27AE5F"
+    , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
+    }
   })
 }
 

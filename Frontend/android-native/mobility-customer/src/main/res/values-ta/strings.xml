@@ -42,4 +42,6 @@
     <string name="new_ride_req">புதிய சவாரி</string>
     <string name="new_ride_available_for_offering">புதிய சவாரி உள்ளது</string>
     <string name="and">மற்றும்</string>
+    <string name="tip_included">" டிப் சேர்க்கப்பட்டுள்ளது!"</string>
+    <string name="no_enabled_browser">உங்கள் சாதனத்தில் இயக்கப்பட்ட உலாவி இல்லை, உலாவியை இயக்கவும் அல்லது நிறுவவும்</string>
 </resources>

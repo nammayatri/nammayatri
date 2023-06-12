@@ -17,6 +17,8 @@ import android.net.NetworkInfo;
 
 import java.util.ArrayList;
 
+import in.juspay.mobility.app.callbacks.CallBack;
+
 public class NetworkBroadcastReceiver extends BroadcastReceiver {
     Context context;
     private static final ArrayList<CallBack> callBack = new ArrayList<>();

@@ -15,15 +15,13 @@
 
 module Flow where
 
-import MerchantConfig.Utils (getAppConfig)
 import Accessor (_computedPrice, _contents, _formattedAddress, _id, _lat, _lon, _status, _toLocation, _signatureAuthData)
-import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..))
+import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..))
 import Common.Types.App (LazyCheck(..))
 import Common.Types.App (LazyCheck(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Components.SavedLocationCard.Controller (getCardType)
 import Components.SettingSideBar.Controller as SettingSideBarController
-import MerchantConfig.DefaultConfig as DC
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
@@ -45,17 +43,19 @@ import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn3, runEffectFn5, runEffectFn2)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, bundleVersion, getExpiryTime, stringToVersion)
+import Engineering.Helpers.Utils (loaderText, toggleLoader)
 import Foreign.Class (class Encode)
 import Foreign.Class (class Encode)
 import Foreign.Class (encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import Engineering.Helpers.Utils (loaderText, toggleLoader)
 import Helpers.Utils (getDistanceBwCordinates, adjustViewWithKeyboard, decodeErrorCode, getObjFromLocal, convertUTCtoISC, differenceOfLocationLists, filterRecentSearches, setText', seperateByWhiteSpaces, getNewTrackingId, checkPrediction, getRecentSearches, addToRecentSearches, saveRecents, clearWaitingTimer, toString, parseFloat, getCurrentLocationsObjFromLocal, addToPrevCurrLoc, saveCurrentLocations, getCurrentDate, getPrediction, getCurrentLocationMarker, parseNewContacts, getCurrentUTC, drawPolygon, requestKeyboardShow, removeLabelFromMarker, sortPredctionByDistance, getMobileNumber, getAssetStoreLink, getCommonAssetStoreLink)
 import JBridge (addMarker, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, stopChatListenerService, toast, toggleBtnLoader, updateRoute)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
+import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Utils (Merchant(..), getMerchant)
+import MerchantConfig.Utils (getAppConfig)
 import ModifyScreenState (modifyScreenState, updateRideDetails)
 import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>))
 import Presto.Core.Types.Language.Flow (doAff, fork, setLogField, delay)
@@ -120,12 +120,10 @@ baseAppFlow (GlobalPayload gPayload) = do
           response <- lift $ lift $ Remote.triggerSignatureBasedOTP (SignatureAuthData signatureAuth)
           case response of
             Right (TriggerSignatureOTPResp triggerSignatureOtpResp) -> do
-              let person = triggerSignatureOtpResp.person
               case triggerSignatureOtpResp.person of
                 Just (User person) -> do
-                  let customerId = person.id
-                  lift $ lift $ setLogField "customer_id" $ encode (customerId)
-                  setValueToLocalStore CUSTOMER_ID customerId
+                  lift $ lift $ setLogField "customer_id" $ encode (person.id)
+                  setValueToLocalStore CUSTOMER_ID person.id
                   mobileNumber <- liftFlowBT $ runEffectFn2 getMobileNumber signatureAuth.authData (fromMaybe "" person.maskedMobileNumber)
                   setValueToLocalStore MOBILE_NUMBER mobileNumber
                 _ -> pure unit

@@ -1,4 +1,4 @@
-package in.juspay.mobility.utils;
+package in.juspay.mobility.app;
 
 import android.app.Activity;
 import android.content.Context;
@@ -18,24 +18,32 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import org.json.JSONException;
 import org.json.JSONObject;
 import java.util.ArrayList;
-import java.util.Locale;
-import in.juspay.hypersdk.core.DuiCallback;
-import in.juspay.mobility.MainActivity;
-import in.juspay.mobility.R;
+
+import in.juspay.mobility.app.callbacks.CallBack;
 
 public class InAppNotification extends AppCompatActivity {
     private ConstraintLayout mainLayout ;
     private ArrayList<String> notificationStack = new ArrayList<String>();
-    private JSONObject notificationChannels = new JSONObject();
-    private  Activity activity;
+    private final JSONObject notificationChannels = new JSONObject();
+    private final Activity activity;
     private Context context;
-    private String LOG_TAG = "in.mobility.utils.InAppNotification";
+    private final String LOG_TAG = "InAppNotification";
+    private static final ArrayList<CallBack> callBack = new ArrayList<>();
 
     public InAppNotification(Activity activity) {
         this.activity =  activity;
         this.context = activity.getApplicationContext();
         mainLayout = (ConstraintLayout) activity.findViewById(R.id.main_layout);
     }
+
+    public static void registerCallback (CallBack notificationCallBack){
+        callBack.add(notificationCallBack);
+    }
+
+    public static void deRegisterCallBack (CallBack notificationCallBack){
+        callBack.remove(notificationCallBack);
+    }
+
     public  void generateNotification(String title , String message , String onTapAction, String action1Text , String action2Text , String action1Image , String action2Image , String channelId , int durationInMilliSeconds) throws JSONException {
         Notification notification;
         // if channel id is not in our channels then we will create new channelId and attach layout for this channelId
@@ -51,36 +59,34 @@ public class InAppNotification extends AppCompatActivity {
             notification = (Notification) notificationChannels.get(channelId);
         }
 
-        if(!notification.equals(null)){
-            notification.bringToFront();
-            // if stack of notification is empty or the notification ( channelId ) which is visible on the front is not equals to new channelId then we will start animation else we will just change the content .
-            if(notificationStack.isEmpty() || !notificationStack.get(notificationStack.size()-1).equals(channelId)){
-                notification.view.startAnimation(AnimationUtils.loadAnimation(context, R.anim.top_to_bottom));
-                notificationStack.remove(channelId);
-                notificationStack.add(channelId);
-                notification.view.getAnimation().setAnimationListener(new Animation.AnimationListener() {
-                    @Override
-                    public void onAnimationStart(Animation animation) {
+        notification.bringToFront();
+        // if stack of notification is empty or the notification ( channelId ) which is visible on the front is not equals to new channelId then we will start animation else we will just change the content .
+        if(notificationStack.isEmpty() || !notificationStack.get(notificationStack.size()-1).equals(channelId)){
+            notification.view.startAnimation(AnimationUtils.loadAnimation(context, R.anim.top_to_bottom));
+            notificationStack.remove(channelId);
+            notificationStack.add(channelId);
+            notification.view.getAnimation().setAnimationListener(new Animation.AnimationListener() {
+                @Override
+                public void onAnimationStart(Animation animation) {
 
+                }
+                @Override
+                public void onAnimationEnd(Animation animation)  {
+                    try {
+                        refreshView();
+                    } catch (JSONException e) {
+                        Log.e(LOG_TAG, "Error in onAnimationEnd " + e);
                     }
-                    @Override
-                    public void onAnimationEnd(Animation animation)  {
-                        try {
-                            refreshView();
-                        } catch (JSONException e) {
-                            Log.e(LOG_TAG, "Error in onAnimationEnd " + e);
-                        }
-                    }
-                    @Override
-                    public void onAnimationRepeat(Animation animation) {
+                }
+                @Override
+                public void onAnimationRepeat(Animation animation) {
 
-                    }
-                });
-            }
-            notification.setContent(title,message,onTapAction,action1Text,action2Text, action1Image,action2Image);
-            notification.handleNotificationHandler(durationInMilliSeconds);
-            notification.ring();
+                }
+            });
         }
+        notification.setContent(title,message,onTapAction,action1Text,action2Text, action1Image,action2Image);
+        notification.handleNotificationHandler(durationInMilliSeconds);
+        notification.ring();
     }
 
     private void refreshView() throws JSONException {
@@ -168,10 +174,8 @@ public class InAppNotification extends AppCompatActivity {
                 @Override
                 public void onClick(View view) {
                     dismissNotification();
-                    DuiCallback dynamicUII = MainActivity.getInstance().getJuspayServices().getDuiCallback();
-                    if (dynamicUII != null && onTapAction != null) {
-                        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s');", onTapAction);
-                        dynamicUII.addJsToWebView(javascript);
+                    for (CallBack cb : callBack) {
+                        cb.inAppCallBack(onTapAction);
                     }
                 }
             });

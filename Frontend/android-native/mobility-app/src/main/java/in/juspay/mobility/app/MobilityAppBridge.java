@@ -1,27 +1,15 @@
 package in.juspay.mobility.app;
 
-import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
-import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
-import android.webkit.WebChromeClient;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
-import android.widget.Toast;
-
-import androidx.browser.customtabs.CustomTabsIntent;
 
 import com.facebook.appevents.AppEventsLogger;
 import com.google.android.gms.tasks.Task;
@@ -31,13 +19,14 @@ import com.google.android.play.core.review.ReviewManagerFactory;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.messaging.FirebaseMessaging;
 
-import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Locale;
 
 import in.juspay.hyper.bridge.HyperBridge;
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hypersdk.data.KeyValueStore;
+import in.juspay.mobility.app.callbacks.CallBack;
 
 public class MobilityAppBridge extends HyperBridge {
 
@@ -48,37 +37,48 @@ public class MobilityAppBridge extends HyperBridge {
 
     private static FirebaseAnalytics mFirebaseAnalytics;
     protected static String storeChatMessageCallBack = null;
+    public static String storeCallBackOpenChatScreen = null;
+    private static final ArrayList<SendMessageCallBack> sendMessageCallBacks = new ArrayList<>();
+    CallBack callBack = new CallBack() {
+        @Override
+        public void customerCallBack(String notificationType) {
+            Log.i(CALLBACK,"Not required");
+        }
+
+        @Override
+        public void driverCallBack(String notificationType) {
+            Log.i(CALLBACK,"Not required");
+        }
+
+        @Override
+        public void imageUploadCallBack(String encImage, String filename, String filePath) {
+            Log.i(CALLBACK,"Not required");
+        }
+
+        @Override
+        public void internetCallBack(String isPermission) {
+            Log.i(CALLBACK,"Not required");
+        }
+
+        @Override
+        public void chatCallBack(String message, String sentBy, String dateFormatted, String len) {
+            callChatMessageCallBack(message,sentBy,dateFormatted,len);
+        }
+        @Override
+        public void openChatCallBack() {
+            openChatScreen();
+        }
+        @Override
+        public void inAppCallBack(String inAppCallBack) {
+            callInAppNotificationCallBack(inAppCallBack);
+        }
+    };
 
     public MobilityAppBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(bridgeComponents.getContext());
-        CallBack callBack = new CallBack() {
-            @Override
-            public void customerCallBack(String notificationType) {
-                Log.i(CALLBACK,"Not required");
-            }
-
-            @Override
-            public void driverCallBack(String notificationType) {
-                Log.i(CALLBACK,"Not required");
-            }
-
-            @Override
-            public void imageUploadCallBack(String encImage, String filename, String filePath) {
-                Log.i(CALLBACK,"Not required");
-            }
-
-            @Override
-            public void internetCallBack(String isPermission) {
-                Log.i(CALLBACK,"Not required");
-            }
-
-            @Override
-            public void chatCallBack(String message, String sentBy, String dateFormatted) {
-                callChatMessageCallBack(message,sentBy,dateFormatted);
-            }
-        };
         ChatService.registerCallback(callBack);
+        InAppNotification.registerCallback(callBack);
     }
 
     @JavascriptInterface
@@ -93,7 +93,8 @@ public class MobilityAppBridge extends HyperBridge {
 
     @Override
     public void reset() {
-
+        ChatService.deRegisterCallback(callBack);
+        InAppNotification.deRegisterCallBack(callBack);
     }
 
     // region Store And Trigger CallBack
@@ -105,11 +106,15 @@ public class MobilityAppBridge extends HyperBridge {
         ChatService.chatUserId = uuid;
     }
 
-    public void callChatMessageCallBack(String message, String sentBy, String dateFormatted) {
+    public void callChatMessageCallBack(String message, String sentBy, String dateFormatted, String len) {
         if (storeChatMessageCallBack != null) {
-            String javascript = String.format("window.callUICallback(\"%s\",\"%s\",\"%s\",\"%s\");", storeChatMessageCallBack, message, sentBy, dateFormatted);
+            String javascript = String.format("window.callUICallback(\"%s\",\"%s\",\"%s\",\"%s\",\"%s\");", storeChatMessageCallBack, message, sentBy, dateFormatted,len);
             bridgeComponents.getJsCallback().addJsToWebView(javascript);
         }
+    }
+    public void callInAppNotificationCallBack(String onTapAction) {
+            String javascript = String.format(Locale.ENGLISH, "window.callUICallback(\"%s\");", onTapAction);
+            bridgeComponents.getJsCallback().addJsToWebView(javascript);
     }
     // endregion
 
@@ -188,21 +193,21 @@ public class MobilityAppBridge extends HyperBridge {
     //region Chat Utiils
     @JavascriptInterface
     public static void sendMessage(final String message) {
-        ChatService.sendMessage(message);
+        for (SendMessageCallBack sendMessageCallBack : sendMessageCallBacks) {
+            sendMessageCallBack.sendMessage(message);
+        }
     }
 
-    public static String storeCallBackOpenChatScreen = null;
     @JavascriptInterface
     public void storeCallBackOpenChatScreen(final String callback){
         storeCallBackOpenChatScreen = callback;
     }
 
     @JavascriptInterface
-    public static void openChatScreen() {
-        DuiCallback dynamicUII = MainActivity.getInstance().getJuspayServices().getDuiCallback();
-        if (dynamicUII != null && storeCallBackOpenChatScreen != null) {
+    public void openChatScreen() {
+        if (storeCallBackOpenChatScreen != null) {
             String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s');", storeCallBackOpenChatScreen);
-            dynamicUII.addJsToWebView(javascript);
+            bridgeComponents.getJsCallback().addJsToWebView(javascript);
         }
     }
 
@@ -236,6 +241,18 @@ public class MobilityAppBridge extends HyperBridge {
         } catch (Exception e) {
             Log.e(CHATS, "Failed to stop ChatService : " + e);
         }
+    }
+
+    public interface SendMessageCallBack {
+        void sendMessage(String message);
+    }
+
+    public static void registerSendMessageCallBack(SendMessageCallBack callBack){
+        sendMessageCallBacks.add(callBack);
+    }
+
+    public static void deRegisterSendMessageCallBack(SendMessageCallBack callBack){
+        sendMessageCallBacks.remove(callBack);
     }
     // endregion
 }

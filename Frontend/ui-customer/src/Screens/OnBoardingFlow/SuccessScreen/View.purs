@@ -36,7 +36,7 @@ import Screens.SuccessScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (SuccessScreenState)
 import Styles.Colors as Color
 import Storage (getValueToLocalStore, KeyStore(..))
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getAssetsBaseUrl)
 import Common.Types.App (LazyCheck(..))
 
 screen :: SuccessScreenState -> ScopedScreen Action SuccessScreenState ScreenOutput
@@ -107,10 +107,10 @@ view push state =
 lottieLoaderView :: forall w. SuccessScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 lottieLoaderView state push =
   lottieAnimationView
-    [ id (EHC.getNewIDWithTag "SuccessLottieView")
+    [ id "1234567894"
     , afterRender
         ( \action -> do
-            _ <- pure $ startLottieProcess ((getAssetStoreLink FunctionCall) <> "lottie/success_lottie.json") (EHC.getNewIDWithTag "SuccessLottieView") true 1.0 "default"
+            _ <- pure $ startLottieProcess ((getAssetsBaseUrl FunctionCall) <> "lottie/success_lottie.json") "1234567894" true 1.0 "default"
             pure unit
         )
         (const CountDown)

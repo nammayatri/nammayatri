@@ -8,4 +8,5 @@
     <string name="tap_on">3. Tap on </string>
     <string name="location">Location</string>
     <string name="phone">Phone</string>
+    <string name="no_enabled_browser">உங்கள் சாதனத்தில் இயக்கப்பட்ட உலாவி இல்லை, உலாவியை இயக்கவும் அல்லது நிறுவவும்</string>
 </resources>

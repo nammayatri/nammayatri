@@ -27,4 +27,12 @@ config =
   , fontType: "Assets"
   , languageList : []
   , confirmPickUpLocationBorder: "#101010"
+  , bannerConfig : {
+        backgroundColor : "#F0FAF0"
+      , title : "Complete your profile for a personalised ride experience"
+      , titleColor :"#269574"
+      , actionText : "Update now"
+      , actionTextColor : "#269574"
+      , imageUrl : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
+      }
   }

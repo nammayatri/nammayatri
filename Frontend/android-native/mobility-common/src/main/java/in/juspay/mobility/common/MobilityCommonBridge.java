@@ -11,6 +11,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
+import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -40,6 +41,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Base64;
@@ -721,8 +724,6 @@ public class MobilityCommonBridge extends HyperBridge {
                     }
 
                     polyline = setRouteCustomTheme(polylineOptions, color, style, polylineWidth);
-                    LatLng sourceLatLng = new LatLng(sourceLat, sourceLong);
-                    LatLng destLatLng = new LatLng(destLat, destLong);
 
                     if (destMarker != null && !destMarker.equals("")) {
                         List<LatLng> points = polylineOptions.getPoints();
@@ -1261,10 +1262,10 @@ public class MobilityCommonBridge extends HyperBridge {
                 bridgeComponents.getContext().startActivity(httpIntent);
             } catch (ActivityNotFoundException e) {
                 toast(bridgeComponents.getContext().getString(R.string.no_enabled_browser));
-                firebaseLogEvent("exception_no_activity_found_for_intent");
+//                firebaseLogEvent("exception_no_activity_found_for_intent");
                 Log.e(UTILS, "Exception occurred while calling WebView", e);
             } catch (Exception e){
-                firebaseLogEvent("exception_in_openUrlInApp");
+//                firebaseLogEvent("exception_in_openUrlInApp");
                 Log.e(UTILS, "Exception occurred while calling WebView", e);
             }
         });
@@ -1323,7 +1324,8 @@ public class MobilityCommonBridge extends HyperBridge {
         if (bridgeComponents.getActivity() != null) {
             ExecutorManager.runOnMainThread(() -> {
                 try {
-                    animationView = bridgeComponents.getActivity().findViewById(Integer.parseInt(id));
+                    int viewId = Integer.parseInt(id);
+                    animationView = bridgeComponents.getActivity().findViewById(viewId);
                     if (rawJson.contains("https") || rawJson.contains("http")) {
                         animationView.setAnimationFromUrl(rawJson);
                     } else {
@@ -1543,13 +1545,6 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    protected void requestStoragePermission() {
-        if (bridgeComponents.getActivity() != null) {
-            JuspayLogger.d(OTHERS,"Requesting Storage Permission for API less than 29");
-            ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE}, STORAGE_PERMISSION);
-        }
-    }
-
     private static class DatePickerLabels {
         private static final String MAXIMUM_PRESENT_DATE = "MAXIMUM_PRESENT_DATE";
         private static final String MINIMUM_EIGHTEEN_YEARS = "MINIMUM_EIGHTEEN_YEARS";
@@ -1586,11 +1581,14 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public void performHapticFeedback() {
-        Vibrator vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+        Vibrator vibrator = (Vibrator) bridgeComponents.getContext().getSystemService(Context.VIBRATOR_SERVICE);
 
         if (vibrator != null && vibrator.hasVibrator()) {
-            VibrationEffect effect = VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE);
-            vibrator.vibrate(effect);
+            VibrationEffect effect = null;
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                effect = VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE);
+                vibrator.vibrate(effect);
+            }
         }
     }
     // endregion

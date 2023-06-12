@@ -48,8 +48,8 @@ import Components.SavedLocationCard.Controller as SavedLocationCardController
 import Components.SearchLocationModel.Controller as SearchLocationModelController
 import Components.SettingSideBar.Controller as SettingSideBarController
 import Components.SourceToDestination.Controller as SourceToDestinationController
-import MerchantConfig.DefaultConfig as DC
 import Control.Monad.Except.Trans (runExceptT)
+import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array ((!!), filter, null, snoc, length, head, last, sortBy, union)
 import Data.Int (toNumber, round, fromString)
@@ -60,24 +60,28 @@ import Data.String as STR
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
+import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn3, runEffectFn5)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os)
-import Helpers.Utils (addToRecentSearches, consumingBackPress, getCurrentLocationMarker, getDistanceBwCordinates, getExpiryTime, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, convertUTCtoISC, getCurrentUTC)
-import JBridge (addMarker, animateCamera, currentPosition, emitJOSEvent, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, goBackPrevWebPage, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, sendMessage, shareTextMessage, showDialer, stopChatListenerService, toast, toggleBtnLoader)
+import Helpers.Utils (addToRecentSearches, convertUTCtoISC, getCurrentLocationMarker, getCurrentUTC, getDistanceBwCordinates, getExpiryTime, getLocationName, parseNewContacts, performHapticFeedback, saveRecents, setText', updateInputString, withinTimeRange)
+import JBridge (addMarker, animateCamera, currentPosition, emitJOSEvent, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentLatLong, getCurrentPosition, goBackPrevWebPage, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, sendMessage, shareTextMessage, showDialer, stopChatListenerService, toast, toggleBtnLoader)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
+import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import MerchantConfig.Utils (getMerchant, getValueFromConfig)
 import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/))
 import Presto.Core.Types.API (ErrorResponse)
+import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Eval, Visibility(..), continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resources.Constants (encodeAddress)
 import Screens (ScreenName(..), getScreen)
 import Screens.AddNewAddressScreen.Controller (validTag, getSavedTagsFromHome)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity)
+import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList)
 import Screens.SuccessScreen.Handler as UI
 import Screens.Types (HomeScreenState, Location, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), RateCardType(..), CallType(..))
@@ -85,11 +89,6 @@ import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, Ge
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
--- import Data.Array ((!!))
-import Control.Monad.Trans.Class (lift)
-import Presto.Core.Types.Language.Flow (doAff)
-import Effect.Class (liftEffect)
-import Screens.HomeScreen.ScreenData as HomeScreenData
 import Types.App (defaultGlobalState)
 
 instance showAction :: Show Action where

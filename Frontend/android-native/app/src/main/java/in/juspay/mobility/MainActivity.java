@@ -16,30 +16,24 @@ import android.Manifest;
 import android.animation.Animator;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.app.AlertDialog;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.media.Ringtone;
-import android.media.RingtoneManager;
-import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.Settings;
-import android.system.Os;
-import android.util.Base64;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
-import android.view.animation.AnimationUtils;
 import android.webkit.WebView;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -65,8 +59,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Date;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -74,12 +66,15 @@ import in.juspay.hypersdk.core.PaymentConstants;
 import in.juspay.hypersdk.data.JuspayResponseHandler;
 import in.juspay.hypersdk.ui.HyperPaymentsCallbackAdapter;
 import in.juspay.mobility.app.BootUpReceiver;
+import in.juspay.mobility.app.ChatService;
+import in.juspay.mobility.app.InAppNotification;
 import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.MyFirebaseMessagingService;
 import in.juspay.mobility.app.NotificationUtils;
 import in.juspay.mobility.app.RideRequestActivity;
 import in.juspay.mobility.app.Utils;
 import in.juspay.mobility.app.WidgetService;
+import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
 import in.juspay.services.HyperServices;
 
 
@@ -94,6 +89,8 @@ public class MainActivity extends AppCompatActivity {
     private Activity activity;
     @Nullable
     private SharedPreferences sharedPref;
+    private InAppNotification inAppNotification;
+    ShowNotificationCallBack inappCallBack;
     SharedPreferences.OnSharedPreferenceChangeListener mListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
         @Override
         public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
@@ -152,33 +149,38 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public String getDeviceRAM()
-    {
-        String deviceRAM = sharedPref.getString("DEVICE_RAM", "__failed");
-        if(deviceRAM != "__failed")
+    public String getDeviceRAM() {
+        String deviceRAM = "__failed";
+        if (sharedPref != null) {
+            deviceRAM = sharedPref.getString("DEVICE_RAM", "__failed");
+        }
+        if (!deviceRAM.equals("__failed"))
             return deviceRAM;
-        long memory=0;
+        long memory;
         try {
             ActivityManager activityManager = (ActivityManager) getApplicationContext().getSystemService(Context.ACTIVITY_SERVICE);
             ActivityManager.MemoryInfo memInfo = new ActivityManager.MemoryInfo();
             activityManager.getMemoryInfo(memInfo);
             memory = 1 + memInfo.totalMem / (1024 * 1024 * 1024);
-            deviceRAM = memory == 0 ? "null" : memory+" GB" ;
+            deviceRAM = memory == 0 ? "null" : memory + " GB";
             sharedPref.edit().putString("DEVICE_RAM", deviceRAM).apply();
-        } catch(Exception e){
+        } catch (Exception e) {
             System.out.println("In getDeviceRAM error: ");
             e.printStackTrace();
         }
         return deviceRAM;
     }
-    public String[] getScreenDimensions()
-    {
-        String[] res= {sharedPref.getString("DEVICE_RESOLUTION", "__failed"),sharedPref.getString("DEVICE_SIZE", "__failed")};
-        if(res[0] != "__failed" && res[1] != "__failed")
+
+    public String[] getScreenDimensions() {
+        String[] res = new String[0];
+        if (sharedPref != null) {
+            res = new String[]{sharedPref.getString("DEVICE_RESOLUTION", "__failed"), sharedPref.getString("DEVICE_SIZE", "__failed")};
+        }
+        if (!res[0].equals("__failed") && !res[1].equals("__failed"))
             return res;
-        int height = 0;
-        int width  = 0;
-        float size = 0;
+        int height;
+        int width;
+        float size;
         try {
             DisplayMetrics displayMetrics = new DisplayMetrics();
             getWindowManager().getDefaultDisplay().getRealMetrics(displayMetrics);
@@ -187,20 +189,19 @@ public class MainActivity extends AppCompatActivity {
             float x = height / displayMetrics.ydpi;
             float y = width / displayMetrics.xdpi;
             size = (float) Math.sqrt(x * x + y * y);
-            size = Math.round(size * 100) / 100;
-            res[0] = height != 0 && width != 0 ? height+"x"+width+"px" : "null" ;
-            res[1] = size!=0 ? size + " Inches" : "null" ;
+            size = (float) Math.round(size * 100) / 100;
+            res[0] = height != 0 && width != 0 ? height + "x" + width + "px" : "null";
+            res[1] = size != 0 ? size + " Inches" : "null";
             sharedPref.edit().putString("DEVICE_RESOLUTION", res[0]).apply();
             sharedPref.edit().putString("DEVICE_SIZE", res[1]).apply();
-        }catch(Exception e){
+        } catch (Exception e) {
             System.out.println("In getScreenDimensions error: ");
             e.printStackTrace();
         }
         return res;
     }
 
-    public String getDeviceDetails()
-    {
+    public String getDeviceDetails() {
         String deviceDetails = "";
         try {
             String bVersion = Build.VERSION.RELEASE;
@@ -208,12 +209,12 @@ public class MainActivity extends AppCompatActivity {
             String bBrand = Build.BRAND;
             String[] dim = getScreenDimensions();
             String deviceRAM = getDeviceRAM();
-            if(bModel == null || bModel == "")
-                bModel="null";
-            if(bBrand == null || bBrand == "")
-                bBrand="null";
-            bVersion = bVersion == null || bVersion == "" ? "null" : "Android v"+bVersion ;
-            deviceDetails = bBrand+"/" + bModel+"/" + bVersion+"/" + deviceRAM + "/" + dim[1]+"/" + dim[0];
+            if (bModel == null || bModel.equals(""))
+                bModel = "null";
+            if (bBrand == null || bBrand.equals(""))
+                bBrand = "null";
+            bVersion = bVersion == null || bVersion.equals("") ? "null" : "Android v" + bVersion;
+            deviceDetails = bBrand + "/" + bModel + "/" + bVersion + "/" + deviceRAM + "/" + dim[1] + "/" + dim[0];
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -250,9 +251,9 @@ public class MainActivity extends AppCompatActivity {
                     }
                 })
                 .addOnFailureListener(this, e -> Log.w(LOG_TAG, "getDynamicLink:onFailure", e));
-
-
         WebView.setWebContentsDebuggingEnabled(true);
+        inappCallBack = this::showInAppNotification;
+        ChatService.registerInAppCallback(inappCallBack);
         setContentView(R.layout.activity_main);
         if (MERCHANT_TYPE.equals("DRIVER")) {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -294,6 +295,7 @@ public class MainActivity extends AppCompatActivity {
         }
         bundleUpdateCallBack = this::showAlertForUpdate;
         MyFirebaseMessagingService.registerBundleUpdateCallback(bundleUpdateCallBack);
+        MyFirebaseMessagingService.registerShowNotificationCallBack(inappCallBack);
         appUpdateManager = AppUpdateManagerFactory.create(this);
         // Returns an intent object that you use to check for an update.
         Task<AppUpdateInfo> appUpdateInfoTask = appUpdateManager.getAppUpdateInfo();
@@ -404,6 +406,7 @@ public class MainActivity extends AppCompatActivity {
                             try {
                                 JSONObject innerPayload = json.getJSONObject(PaymentConstants.PAYLOAD);
                                 innerPayload.put("action", "process");
+                                innerPayload.put("notificationData", getNotificationDataFromIntent());
                                 json.put(PaymentConstants.PAYLOAD, innerPayload);
                             } catch (JSONException e) {
                                 Log.e(LOG_TAG, e.toString());
@@ -436,13 +439,13 @@ public class MainActivity extends AppCompatActivity {
                         String title = jsonObject.optString("title");
                         String message = jsonObject.optString("message");
                         String channelId = jsonObject.optString("channelId");
-                        String action1Text = jsonObject.optString("action1Text") ;
+                        String action1Text = jsonObject.optString("action1Text");
                         String action2Text = jsonObject.optString("action2Text");
-                        String action1Image = jsonObject.optString("action1Image") ;
+                        String action1Image = jsonObject.optString("action1Image");
                         String action2Image = jsonObject.optString("action2Image");
                         String onTapAction = jsonObject.optString("onTapAction");
                         int durationInMilliSeconds = Integer.parseInt(jsonObject.optString("durationInMilliSeconds"));
-                        showInAppNotification(title, message, onTapAction, action1Text,action2Text , action1Image,action2Image , channelId , durationInMilliSeconds, context);
+                        showInAppNotification(title, message, onTapAction, action1Text, action2Text, action1Image, action2Image, channelId, durationInMilliSeconds, context);
                         break;
                     case "process_result":
                         try {
@@ -452,62 +455,12 @@ public class MainActivity extends AppCompatActivity {
                             }
                         } catch (Exception ignored) {
                         }
-                    }
-                    Log.e(LOG_TAG, "json_payload" + json);
-                    hyperServices.process(json);
-                } else if (event.equals("hide_loader") || event.equals("hide_splash")) {
-                    String key = getResources().getString(R.string.service);
-                    if (key.equals("nammayatri") && isSystemAnimEnabled) {
-                        isHideSplashEventCalled = true;
-                    } else {
-                        hideSplash();
-                    }
-                } else if (event.equals("show_splash")) {
-                    View v = findViewById(in.juspay.mobility.app.R.id.splash);
-                    if (v != null) {
-                        findViewById(in.juspay.mobility.app.R.id.splash).setVisibility(View.VISIBLE);
-                    }
-                } else if (event.equals("reboot")) {
-                    Log.i(LOG_TAG, "event reboot");
-                    hyperServices.terminate();
-                    hyperServices = null;
-                    initApp();
-                } else if(jsonObject.optString("event").equals("in_app_notification")){
-                    String title = jsonObject.optString("title");
-                    String message = jsonObject.optString("message");
-                    String channelId = jsonObject.optString("channelId");
-                    String action1Text = jsonObject.optString("action1Text") ;
-                    String action2Text = jsonObject.optString("action2Text");
-                    String action1Image = jsonObject.optString("action1Image") ;
-                    String action2Image = jsonObject.optString("action2Image");
-                    String onTapAction = jsonObject.optString("onTapAction");
-                    int durationInMilliSeconds = Integer.parseInt(jsonObject.optString("durationInMilliSeconds"));
-                    showInAppNotification(title, message, onTapAction, action1Text,action2Text , action1Image,action2Image , channelId , durationInMilliSeconds, context);
-                } else if (event.equals("in_app_notification")) {
-                    showInAppNotifiation(jsonObject.optString("title"), jsonObject.optString("message"));
-                } else if (event.equals("location_permission")) {
-                    try {
-                        JSONObject payload1 = json.getJSONObject(PaymentConstants.PAYLOAD);
-                        payload1.put("action", "location_permission_result");
-                        json.put(PaymentConstants.PAYLOAD, payload1);
-                    } catch (Exception e) {
-                        Log.e(LOG_TAG,"Exception in location_permission");
-                    }
-                    hyperServices.process(json);
-                } else if (event.equals("process_result")) {
-                    try {
-                        JSONObject payload1 = json.getJSONObject(PaymentConstants.PAYLOAD);
-                        if (payload1.getString("action").equals("terminate")) {
-                            Intent startMain = new Intent(Intent.ACTION_MAIN);
-                            startMain.addCategory(Intent.CATEGORY_HOME);
-                            startMain.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                            context.startActivity(startMain);
-                        }
-                    } catch (Exception ignored) {
-                    }
+                    default:
+                        Log.e(LOG_TAG, "json_payload" + json);
+                        hyperServices.process(json);
                 }
-            });
-        }
+            }
+        });
     }
 
     public void showAlertForUpdate() {
@@ -537,19 +490,27 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onNewIntent(Intent intent) {
         if (intent != null && intent.hasExtra("NOTIFICATION_DATA")) {
-            String data = intent.getExtras().getString("NOTIFICATION_DATA");
             try {
+                String data = intent.getExtras().getString("NOTIFICATION_DATA");
+                JSONObject proccessPayload = new JSONObject().put("service", getService())
+                        .put("requestId", UUID.randomUUID());
+                JSONObject innerPayload = new JSONObject();
                 JSONObject jsonData = new JSONObject(data);
-                if(jsonData.has("notification_type") && jsonData.getString("notification_type").equals("CHAT_MESSAGE")){
-                    hyperServices.process(new JSONObject().put("service", "in.juspay." + getResources().getString(R.string.service)).put("requestId", UUID.randomUUID()).put("payload", new JSONObject().put("action", "OpenChatScreen").put("notification_type", "CHAT_MESSAGE")));
+                if (jsonData.has("notification_type") && jsonData.getString("notification_type").equals("CHAT_MESSAGE")) {
+                    innerPayload.put("action", "OpenChatScreen")
+                            .put("notification_type", "CHAT_MESSAGE");
                 }
                 if (jsonData.has("notification_type") && jsonData.has("entity_ids")) {
                     String id = jsonData.getString("entity_ids");
                     String type = jsonData.getString("notification_type");
                     if (type.equals("NEW_MESSAGE")) {
-                        hyperServices.process(new JSONObject().put("service", getService()).put("requestId", UUID.randomUUID()).put("payload", new JSONObject().put("action", "callDriverAlert").put("id", id).put("popType", type)));
+                        innerPayload.put("action", "callDriverAlert")
+                                .put("id", id)
+                                .put("popType", type);
                     }
                 }
+                proccessPayload.put("payload", innerPayload);
+                hyperServices.process(proccessPayload);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -602,6 +563,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onStop() {
+        if (sharedPref != null) {
+            sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onStop").apply();
+        }
+        super.onStop();
+    }
+
+    @Override
     protected void onDestroy() {
         if (sharedPref != null) {
             sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onDestroy").apply();
@@ -618,7 +587,10 @@ public class MainActivity extends AppCompatActivity {
         if (hyperServices != null) {
             hyperServices.terminate();
         }
+        ChatService.deRegisterInAppCallback(inappCallBack);
+        inAppNotification = null;
         MyFirebaseMessagingService.deRegisterBundleUpdateCallback(bundleUpdateCallBack);
+        MyFirebaseMessagingService.deRegisterShowNotificationCallBack(inappCallBack);
         super.onDestroy();
     }
 
@@ -656,43 +628,18 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-public static void showInAppNotification(String title, String message, String onTapAction, String action1Text, String action2Text, String action1Image, String action2Image, String channelId, int durationInMilliSeconds, Context context) {
-        // getting the main Layout as a Container to add the notification .
-        ConstraintLayout mainLayout = findViewById(in.juspay.mobility.app.R.id.main_layout);
-
-        // inflating the app_notification as view to append in main layout .
-        @SuppressLint("InflateParams") View notification = getLayoutInflater().inflate(in.juspay.mobility.app.R.layout.app_notification, null);
-        notification.setLayoutParams(new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.WRAP_CONTENT, ConstraintLayout.LayoutParams.WRAP_CONTENT));
-        notification.bringToFront();
-
-
-        // adding animation to the notification
-        notification.startAnimation(AnimationUtils.loadAnimation(this, in.juspay.mobility.app.R.anim.top_to_bottom));
-
-        // setting the title and description to the notification
-        TextView Title = notification.findViewById(in.juspay.mobility.app.R.id.title);
-        TextView Desc = notification.findViewById(in.juspay.mobility.app.R.id.desc);
-        Title.setText(title);
-        Desc.setText(desc);
-
-        // adding the evenListener to the cross button
-        notification.findViewById(in.juspay.mobility.app.R.id.cross).setOnClickListener(view -> {
-            notification.startAnimation(AnimationUtils.loadAnimation(getApplicationContext(), in.juspay.mobility.app.R.anim.bottom_to_top));
-            mainLayout.removeView(notification);
-        });
-
-        // ring the notification bell
+    public void showInAppNotification(String title, String message, String onTapAction, String action1Text, String action2Text, String action1Image, String action2Image, String channelId, int durationInMilliSeconds, Context context) {
         try {
             Handler handler = new Handler(context.getMainLooper());
             handler.postDelayed(() -> {
                 try {
                     inAppNotification.generateNotification(title, message, onTapAction, action1Text, action2Text, action1Image, action2Image, channelId, durationInMilliSeconds);
                 } catch (JSONException e) {
-                    Log.e(TAG, "Error in In App Notification Handler " + e);
+                    Log.e(LOG_TAG, "Error in In App Notification Handler " + e);
                 }
             }, 0);
         } catch (Exception e) {
-            Log.e(TAG, "Error in In App Notification " + e);
+            Log.e(LOG_TAG, "Error in In App Notification " + e);
         }
     }
 
@@ -709,11 +656,23 @@ public static void showInAppNotification(String title, String message, String on
         }
     }
 
-    static class NotificationListener extends BroadcastReceiver {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            Log.e("In Main activity", context.toString());
+    private JSONObject getNotificationDataFromIntent() throws JSONException {
+        Bundle bundle = getIntent().getExtras();
+        JSONObject data;
+        //Handling local and foreground notifications
+        if (getIntent().hasExtra("NOTIFICATION_DATA")) {
+            data = new JSONObject(bundle.getString("NOTIFICATION_DATA"));
         }
+        //Handling background notifications
+        else if (getIntent().hasExtra("notification_type") && getIntent().hasExtra("entity_ids") && getIntent().hasExtra("entity_type")) {
+            data = new JSONObject();
+            data.put("notification_type", bundle.getString("notification_type"));
+            data.put("entity_ids", bundle.getString("entity_ids"));
+            data.put("entity_type", bundle.getString("entity_type"));
+        } else {
+            data = new JSONObject();
+        }
+        return data;
     }
 
     public String getService() {

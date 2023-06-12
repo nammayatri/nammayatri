@@ -41,7 +41,7 @@ import Effect.Uncurried (EffectFn2)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Generic.Class (class DecodeWithOptions, class EncodeWithOptions)
 import Presto.Core.Language.Runtime.API (APIRunner)
-import Presto.Core.Language.Runtime.Interpreter (PermissionCheckRunner, PermissionRunner(..), PermissionTakeRunner, Runtime(..), run)
+import Presto.Core.Language.Runtime.Interpreter (PermissionCheckRunner, PermissionRunner(..), PermissionTakeRunner, Runtime(..), run,UIRunner(..))
 import Presto.Core.Types.API (Header(..), Headers(..), Request(..), URL, Response)
 import Presto.Core.Types.Language.Flow (Flow, doAff, defaultState, getState, modifyState)
 import Presto.Core.Types.Permission (PermissionStatus(..))
@@ -52,8 +52,8 @@ import Data.String as DS
 import Data.Int as INT
 import Data.Array ((!!))
 import Data.Number.Format as Number
-
--- import LoaderOverlay.Handler as UI
+import Engineering.OS.Permission (checkIfPermissionsGranted, requestPermissions)
+import Data.Function.Uncurried (runFn2)
 
 foreign import showUIImpl :: Fn2 (String -> Effect  Unit) String (Effect Unit)
 showUI' :: Fn2 (String -> Effect  Unit) String (Effect Unit)
@@ -152,12 +152,21 @@ flowRunner initialState flow = do
 
 flowRunnerWithState :: forall a st. st -> (Flow st a) -> Aff (Either Error a)
 flowRunnerWithState state flow = do
-  let runtime  = Runtime pure permissionRunner apiRunner
+  let runtime  = Runtime uiRunner permissionRunner apiRunner
   let freeFlow = S.evalStateT (run runtime flow)
   try $ new (defaultState state) >>= freeFlow
+    where 
+      uiRunner :: UIRunner
+      uiRunner a = makeAff (\callback -> runFn2 showUI' (Right >>> callback) a *> pure nonCanceler)
+
+permissionCheckRunner :: PermissionCheckRunner
+permissionCheckRunner = checkIfPermissionsGranted
+
+permissionTakeRunner :: PermissionTakeRunner
+permissionTakeRunner = requestPermissions
 
 permissionRunner :: PermissionRunner
-permissionRunner = PermissionRunner (const $ pure PermissionGranted) (const $ pure [])
+permissionRunner = PermissionRunner permissionCheckRunner permissionTakeRunner
 
 
 -- const $ pure "") 

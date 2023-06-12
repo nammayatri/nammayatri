@@ -30,12 +30,16 @@ window.getMerchantConfig = function () {
     "profileName": "#FFFFFF",
     "profileImage": "#012A72",
     "feedbackBackground": "#2C2F3A",
+    "confirmPickUpLocationBorder": "#E5E7EB",
     "sideBarList": ["MyRides", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "Separator", "ShareApp", "About", "Logout"],
     "otpBackground": "#F1F1F1",
     "otpTextColor": "#FFFFFF",
     "rateCardColor": "#2C2F3A",
     "nyBrandingVisibility": false,
     "fontType": "Assets",
+    "black900": "#2C2F3A",
+    "black800": "#454545",
+    "red" : "#E55454",
     "englishStrings": {
       "ABOUT_APP_DESCRIPTION": "Yatri is an open platform to connect commuters with transport providers. The app makes it convenient for travellers to find available means of transport, and avail these options by connecting them with service providers ",
       "WELCOME_TEXT": "Welcome to Yatri",
@@ -68,7 +72,15 @@ window.getMerchantConfig = function () {
       "name": "മലയാളം",
       "value": "ML_IN",
       "subTitle": "Malayalam"
-    }]
+    }],
+    "bannerConfig" : {
+      "backgroundColor" : "#F0FAF0"
+    , "title" : "Complete your profile for a personalised ride experience"
+    , "titleColor" : "#21C179"
+    , "actionText" : "Update now"
+    , "actionTextColor" : "#27AE5F"
+    , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
+    }
   })
 }
 

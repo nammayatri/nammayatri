@@ -1,4 +1,4 @@
-/* 
+/*
  *  Copyright 2022-23, Juspay India Pvt Ltd
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
  *  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
@@ -9,6 +9,7 @@
 
 package in.juspay.mobility.app;
 
+import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -16,13 +17,16 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.widget.Toast;
 
+import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
@@ -37,6 +41,8 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.SocketTimeoutException;
 import java.net.URL;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -44,7 +50,7 @@ public class RideRequestUtils {
     private final static int rideReqNotificationId = 5032023;
     private final static String RIDE_REQUEST_CHANNEL = "in.juspay.mobility.riderequest";
     private final static int rideReqNotificationReqCode = 6032023;
-    private static FirebaseAnalytics mFirebaseAnalytics;
+    private static final String LOG_TAG = "RideRequestUtils";
 
     public static Boolean driverRespondApi(String searchRequestId, int offeredPrice, boolean isAccept, Context context, int slotNumber) {
         Handler mainLooper = new Handler(Looper.getMainLooper());
@@ -52,7 +58,7 @@ public class RideRequestUtils {
         SharedPreferences sharedPref = context.getApplicationContext().getSharedPreferences(context.getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         String bundle_version = sharedPref.getString("BUNDLE_VERSION", "null");
         String version = sharedPref.getString("VERSION_NAME", "null");
-        String deviceDetails = sharedPref.getString("DEVICE_DETAILS","null");
+        String deviceDetails = sharedPref.getString("DEVICE_DETAILS", "null");
         try {
             String orderUrl = sharedPref.getString("BASE_URL", "null") + "/driver/searchRequest/quote/respond";
             HttpURLConnection connection = (HttpURLConnection) (new URL(orderUrl).openConnection());
@@ -90,30 +96,22 @@ public class RideRequestUtils {
                     result.append(inputLine);
                 }
                 JSONObject errorPayload = new JSONObject(result.toString());
-                if (errorPayload.has(context.getResources().getString(R.string.ERROR_MESSAGE))){
-                    mainLooper.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                Toast.makeText(context.getApplicationContext(), errorPayload.getString(context.getResources().getString(R.string.ERROR_MESSAGE)) , Toast.LENGTH_SHORT).show();
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                            }
+                if (errorPayload.has(context.getResources().getString(R.string.ERROR_MESSAGE))) {
+                    mainLooper.post(() -> {
+                        try {
+                            Toast.makeText(context.getApplicationContext(), errorPayload.getString(context.getResources().getString(R.string.ERROR_MESSAGE)), Toast.LENGTH_SHORT).show();
+                        } catch (JSONException e) {
+                            e.printStackTrace();
                         }
                     });
                 }
             } else {
                 //API Success
-                return  true;
+                return true;
             }
             return false;
-        } catch (SocketTimeoutException e){
-            mainLooper.post(new Runnable() {
-                @Override
-                public void run() {
-                    Toast.makeText(context.getApplicationContext(), "Request Timeout" , Toast.LENGTH_SHORT).show();
-                }
-            });
+        } catch (SocketTimeoutException e) {
+            mainLooper.post(() -> Toast.makeText(context.getApplicationContext(), "Request Timeout", Toast.LENGTH_SHORT).show());
             return false;
         } catch (Exception e) {
             return false;
@@ -121,27 +119,27 @@ public class RideRequestUtils {
     }
 
 
-    public static int calculateExpireTimer(String expireTimeTemp, String currTimeTemp){
+    public static int calculateExpireTimer(String expireTimeTemp, String currTimeTemp) {
         if (expireTimeTemp == null || currTimeTemp == null) return 0;
         String[] arrOfA = expireTimeTemp.split("T");
         String[] arrOfB = currTimeTemp.split("T");
-        if(!arrOfA[0].equals(arrOfB[0])) return -1;
+        if (!arrOfA[0].equals(arrOfB[0])) return -1;
 
         String[] timeTempExpire = arrOfA[1].split(":");
         String[] timeTempCurrent = arrOfB[1].split(":");
-        timeTempExpire[2] = timeTempExpire[2].substring(0,2);
-        timeTempCurrent[2] = timeTempCurrent[2].substring(0,2);
+        timeTempExpire[2] = timeTempExpire[2].substring(0, 2);
+        timeTempCurrent[2] = timeTempCurrent[2].substring(0, 2);
         int currTime = 0, expireTime = 0, calculate = 3600;
-        for(int i = 0 ; i < timeTempCurrent.length;i++){
-            currTime+= (Integer.parseInt(timeTempCurrent[i])*calculate);
-            expireTime+= (Integer.parseInt(timeTempExpire[i])*calculate);
-            calculate = calculate/60;
+        for (int i = 0; i < timeTempCurrent.length; i++) {
+            currTime += (Integer.parseInt(timeTempCurrent[i]) * calculate);
+            expireTime += (Integer.parseInt(timeTempExpire[i]) * calculate);
+            calculate = calculate / 60;
         }
-        if ((expireTime-currTime) >= 2) return expireTime-currTime - 2 ;
+        if ((expireTime - currTime) >= 2) return expireTime - currTime - 2;
         return 0;
     }
 
-    public static void createRideRequestNotification(Context context){
+    public static void createRideRequestNotification(Context context) {
         long[] vibrationPattern = {1000, 1000, 1000, 800, 800, 800, 800, 800, 800, 800, 800, 800};
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(RIDE_REQUEST_CHANNEL, "RideRequestChannel", NotificationManager.IMPORTANCE_HIGH);
@@ -153,14 +151,14 @@ public class RideRequestUtils {
             notificationManager.createNotificationChannel(channel);
         }
         Intent notificationIntent;
-        if (RideRequestActivity.getInstance() == null){
+        if (RideRequestActivity.getInstance() == null) {
             notificationIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
-        }else {
+        } else {
             notificationIntent = new Intent(context, RideRequestActivity.class);
         }
         notificationIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, rideReqNotificationReqCode, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
-        NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context,RIDE_REQUEST_CHANNEL) ;
+        NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, RIDE_REQUEST_CHANNEL);
         mBuilder.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher));
         mBuilder.setContentTitle(context.getString(R.string.new_ride_req))
                 .setContentText(context.getString(R.string.new_ride_available_for_offering))
@@ -171,6 +169,9 @@ public class RideRequestUtils {
                 .setPriority(NotificationCompat.PRIORITY_HIGH);
         mBuilder.setContentIntent(pendingIntent);
         NotificationManagerCompat managerCompat = NotificationManagerCompat.from(context.getApplicationContext());
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            Log.e(LOG_TAG, "no notification permission");
+        }
         managerCompat.notify(rideReqNotificationId, mBuilder.build());
     }
 
@@ -181,26 +182,25 @@ public class RideRequestUtils {
         notificationManager.cancel(rideReqNotificationId);
     }
 
-    public static void firebaseLogEventWithParams(String event,String paramKey,String paramValue, Context context) {
+    public static void firebaseLogEventWithParams(String event, String paramKey, String paramValue, Context context) {
         Bundle params = new Bundle();
-        params.putString(paramKey,paramValue);
-        mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
+        params.putString(paramKey, paramValue);
+        FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
         mFirebaseAnalytics.logEvent(event, params);
     }
 
-    public void restartLocationService(Context context)
-    {
+    public static void restartLocationService(Context context) {
         Intent locationService = new Intent(context, LocationUpdateService.class);
-        locationService.putExtra("StartingSource","TRIGGER_SERVICE");
+        locationService.putExtra("StartingSource", "TRIGGER_SERVICE");
         locationService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.startForegroundService(locationService);
-        }else{
+        } else {
             context.startService(locationService);
         }
     }
 
-    public void callAPIViaFCM(String orderUrl, JSONObject requestBody, String method, Context context){
+    public static void callAPIViaFCM(String orderUrl, JSONObject requestBody, String method, Context context) {
         SharedPreferences sharedPref = context.getSharedPreferences(
                 context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
@@ -221,7 +221,7 @@ public class RideRequestUtils {
                 connection.setDoOutput(true);
 
                 OutputStream stream = connection.getOutputStream();
-                if(requestBody!=null){
+                if (requestBody != null) {
                     stream.write(requestBody.toString().getBytes());
                 }
                 connection.connect();
@@ -230,11 +230,11 @@ public class RideRequestUtils {
 
                 if ((respCode < 200 || respCode >= 300) && respCode != 302) {
                     respReader = new InputStreamReader(connection.getErrorStream());
-                    firebaseLogEventWithParams("ny_fcm_error_calling_api","status_code", String.valueOf(respCode), context);
+                    firebaseLogEventWithParams("ny_fcm_error_calling_api", "status_code", String.valueOf(respCode), context);
                     System.out.println("in error : " + respReader);
                 } else {
                     respReader = new InputStreamReader(connection.getInputStream());
-                    firebaseLogEventWithParams("ny_fcm_success_calling_api","status_code", String.valueOf(respCode), context);
+                    firebaseLogEventWithParams("ny_fcm_success_calling_api", "status_code", String.valueOf(respCode), context);
                     System.out.println("in 200 : " + respReader);
                 }
 
@@ -244,21 +244,23 @@ public class RideRequestUtils {
                 while ((inputLine = in.readLine()) != null) {
                     result.append(inputLine);
                 }
-                System.out.println("in result : " + result.toString());
+                Log.i(LOG_TAG, "in result : " + result);
 
             } catch (Exception e) {
-                System.out.println("Catch in callAPIViaFCM : " +e);
+                Log.i(LOG_TAG, "Catch in callAPIViaFCM : " + e);
             }
             handler.post(executor::shutdown);
         });
     }
 
-    public void openApplication(Context context){
-        Intent intent = new Intent(context.getApplicationContext(), MainActivity.class);
+    public static void openApplication(Context context) {
+        Intent intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
         try {
-            context.getApplicationContext().startActivity(intent);
-        }catch (Exception ignored){}
+            context.startActivity(intent);
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Exception in openApplication");
+        }
     }
 
 }

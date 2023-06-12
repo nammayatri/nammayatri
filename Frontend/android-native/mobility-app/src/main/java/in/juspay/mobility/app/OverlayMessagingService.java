@@ -49,7 +49,7 @@
  */
 
 
-package in.juspay.mobility.utils;
+package in.juspay.mobility.app;
 
 import android.app.Service;
 import android.content.ActivityNotFoundException;
@@ -69,30 +69,21 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
+
 import com.bumptech.glide.Glide;
 import com.google.android.material.button.MaterialButton;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.Objects;
 
-import in.juspay.mobility.R;
-
 public class OverlayMessagingService extends Service {
     private WindowManager windowManager;
     private View messageView;
-    private WindowManager.LayoutParams params;
-    private TextView title, description, buttonCancel;
-    private ImageView imageView;
-    private LinearLayout buttonLayout;
-    private MaterialButton buttonOk;
     private String link, endPoint, method;
     private JSONArray actions;
     private JSONObject reqBody;
-    private RideRequestUtils rideRequestUtils = new RideRequestUtils();
 
     @Nullable
     @Override
@@ -109,7 +100,7 @@ public class OverlayMessagingService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        String intentMessage = intent !=null && intent.hasExtra("payload") ? intent.getStringExtra("payload") : null;
+        String intentMessage = intent != null && intent.hasExtra("payload") ? intent.getStringExtra("payload") : null;
         if (!Settings.canDrawOverlays(this) || intentMessage == null) return START_STICKY;
         int layoutParamsType = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE;
         if (windowManager != null) {
@@ -117,7 +108,7 @@ public class OverlayMessagingService extends Service {
             return START_STICKY;
         }
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
-        params = new WindowManager.LayoutParams(
+        WindowManager.LayoutParams params = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.MATCH_PARENT,
                 layoutParamsType,
@@ -128,7 +119,7 @@ public class OverlayMessagingService extends Service {
         params.screenOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
         messageView = LayoutInflater.from(this).inflate(R.layout.message_overlay, null);
         setViewListeners(messageView);
-        windowManager.addView(messageView,params);
+        windowManager.addView(messageView, params);
         setDataToViews(intentMessage);
         return START_STICKY;
     }
@@ -136,96 +127,90 @@ public class OverlayMessagingService extends Service {
     private void setDataToViews(String bundle) {
         try {
             JSONObject data = new JSONObject(bundle);
-            title = messageView.findViewById(R.id.title);
-            description = messageView.findViewById(R.id.description);
-            imageView = messageView.findViewById(R.id.image);
-            buttonLayout = messageView.findViewById(R.id.button_view);
-            buttonOk = messageView.findViewById(R.id.button_ok);
-            buttonCancel = messageView.findViewById(R.id.button_cancel);
+            TextView title = messageView.findViewById(R.id.title);
+            TextView description = messageView.findViewById(R.id.description);
+            ImageView imageView = messageView.findViewById(R.id.image);
+            LinearLayout buttonLayout = messageView.findViewById(R.id.button_view);
+            MaterialButton buttonOk = messageView.findViewById(R.id.button_ok);
+            TextView buttonCancel = messageView.findViewById(R.id.button_cancel);
             title.setText(data.has("title") ? data.getString("title") : "");
-            buttonOk.setText(data.has("okButtonText")?data.getString("okButtonText"):"Cancel");
-            buttonCancel.setText(data.has("cancelButtonText")?data.getString("cancelButtonText"):"Ok");
+            buttonOk.setText(data.has("okButtonText") ? data.getString("okButtonText") : "Cancel");
+            buttonCancel.setText(data.has("cancelButtonText") ? data.getString("cancelButtonText") : "Ok");
             description.setText(data.has("description") ? data.getString("description") : "");
             link = data.has("link") ? data.getString("link") : null;
             endPoint = data.has("endPoint") ? data.getString("endPoint") : null;
             method = data.has("method") ? data.getString("method") : null;
             reqBody = data.has("reqBody") ? (JSONObject) data.get("reqBody") : null;
-            actions = data.has("actions") ? (JSONArray) data.getJSONArray("actions") : null;
+            actions = data.has("actions") ? data.getJSONArray("actions") : null;
             Glide.with(this).load(data.getString("imageUrl")).into(imageView);
-            boolean titleVisibility = data.has("titleVisibility") ? data.getBoolean("titleVisibility") : false;
-            boolean descriptionVisibility = data.has("descriptionVisibility") ? data.getBoolean("descriptionVisibility") : false;
-            boolean buttonOkVisibility = data.has("buttonOkVisibility") ? data.getBoolean("buttonOkVisibility") : false;
-            boolean buttonCancelVisibility = data.has("buttonCancelVisibility") ? data.getBoolean("buttonCancelVisibility") : false;
-            boolean buttonLayoutVisibility = data.has("buttonLayoutVisibility") ? data.getBoolean("buttonLayoutVisibility") : false;
-            boolean imageVisibility = data.has("imageVisibility") ? data.getBoolean("imageVisibility") : false;
-            title.setVisibility(titleVisibility?View.VISIBLE:View.GONE);
-            description.setVisibility(descriptionVisibility?View.VISIBLE:View.GONE);
-            buttonLayout.setVisibility(buttonLayoutVisibility?View.VISIBLE:View.GONE);
-            buttonOk.setVisibility(buttonOkVisibility?View.VISIBLE:View.GONE);
-            buttonCancel.setVisibility(buttonCancelVisibility?View.VISIBLE:View.GONE);
-            imageView.setVisibility(imageVisibility?View.VISIBLE:View.GONE);
-        }catch (Exception e){
+            boolean titleVisibility = data.has("titleVisibility") && data.getBoolean("titleVisibility");
+            boolean descriptionVisibility = data.has("descriptionVisibility") && data.getBoolean("descriptionVisibility");
+            boolean buttonOkVisibility = data.has("buttonOkVisibility") && data.getBoolean("buttonOkVisibility");
+            boolean buttonCancelVisibility = data.has("buttonCancelVisibility") && data.getBoolean("buttonCancelVisibility");
+            boolean buttonLayoutVisibility = data.has("buttonLayoutVisibility") && data.getBoolean("buttonLayoutVisibility");
+            boolean imageVisibility = data.has("imageVisibility") && data.getBoolean("imageVisibility");
+            title.setVisibility(titleVisibility ? View.VISIBLE : View.GONE);
+            description.setVisibility(descriptionVisibility ? View.VISIBLE : View.GONE);
+            buttonLayout.setVisibility(buttonLayoutVisibility ? View.VISIBLE : View.GONE);
+            buttonOk.setVisibility(buttonOkVisibility ? View.VISIBLE : View.GONE);
+            buttonCancel.setVisibility(buttonCancelVisibility ? View.VISIBLE : View.GONE);
+            imageView.setVisibility(imageVisibility ? View.VISIBLE : View.GONE);
+        } catch (Exception e) {
             stopSelf();
         }
     }
 
     private void setViewListeners(View messageView) {
-        messageView.findViewById(R.id.dismiss_message).setOnClickListener(view -> {
-            stopSelf();
-        });
-
+        messageView.findViewById(R.id.dismiss_message).setOnClickListener(view -> stopSelf());
         messageView.findViewById(R.id.button_ok).setOnClickListener(view -> {
             try {
-                for (int i=0 ; i<actions.length(); i++){
+                for (int i = 0; i < actions.length(); i++) {
                     String action = String.valueOf(actions.get(i));
-                    if (action != null){
-                        switch (action){
-                            case "SET_DRIVER_ONLINE" :
-                                NotificationUtils.updateDriverStatus(true,"ONLINE", this);
-                                rideRequestUtils.restartLocationService(this);
-                                break;
-                            case "OPEN_LINK" :
-                                if (link!=null){
-                                    Uri uri = Uri.parse(link); // missing 'http://' will cause crash
-                                    Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                    try {
-                                        startActivity(intent);
-                                    } catch (ActivityNotFoundException e){
-                                        Toast.makeText(this, getString(R.string.no_enabled_browser), Toast.LENGTH_LONG).show();
-                                        rideRequestUtils.firebaseLogEventWithParams("exception", "OPEN_LINK", "ActivityNotFoundException", this);
-                                    } catch (Exception e){
-                                        rideRequestUtils.firebaseLogEventWithParams("exception", "OPEN_LINK", Objects.requireNonNull(e.getMessage()).substring(0 ,40), this);
-                                    }
+                    switch (action) {
+                        case "SET_DRIVER_ONLINE":
+                            NotificationUtils.updateDriverStatus(true, "ONLINE", this);
+                            RideRequestUtils.restartLocationService(this);
+                            break;
+                        case "OPEN_LINK":
+                            if (link != null) {
+                                Uri uri = Uri.parse(link); // missing 'http://' will cause crash
+                                Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                try {
+                                    startActivity(intent);
+                                } catch (ActivityNotFoundException e) {
+                                    String message = this.getResources().getString(this.getResources().getIdentifier("no_enabled_browser", "string", this.getPackageName()));
+                                    Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+                                    RideRequestUtils.firebaseLogEventWithParams("exception", "OPEN_LINK", "ActivityNotFoundException", this);
+                                } catch (Exception e) {
+                                    RideRequestUtils.firebaseLogEventWithParams("exception", "OPEN_LINK", Objects.requireNonNull(e.getMessage()).substring(0, 40), this);
                                 }
-                                break;
-                            case "CALL_API" :
-                                if (endPoint!=null && reqBody !=null && method!=null){
-                                    rideRequestUtils.callAPIViaFCM(endPoint, reqBody, method, this);
-                                }
-                                break;
-                            case "OPEN_APP" :
-                                rideRequestUtils.openApplication(this);
-                                break;
-                        }
+                            }
+                            break;
+                        case "CALL_API":
+                            if (endPoint != null && reqBody != null && method != null) {
+                                RideRequestUtils.callAPIViaFCM(endPoint, reqBody, method, this);
+                            }
+                            break;
+                        case "OPEN_APP":
+                            RideRequestUtils.openApplication(this);
+                            break;
                     }
                 }
-            }catch (Exception e){
+            } catch (Exception e) {
                 e.printStackTrace();
             }
-          stopSelf();
-        });
-
-        messageView.findViewById(R.id.button_cancel).setOnClickListener(view -> {
             stopSelf();
         });
+
+        messageView.findViewById(R.id.button_cancel).setOnClickListener(view -> stopSelf());
     }
 
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        if (messageView!=null){
+        if (messageView != null) {
             windowManager.removeView(messageView);
             messageView = null;
         }

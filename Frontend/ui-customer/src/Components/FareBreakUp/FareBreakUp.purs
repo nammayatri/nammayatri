@@ -13,39 +13,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-<<<<<<<< HEAD:Frontend/ui-customer/src/Components/FareBreakUp/FareBreakUp.purs
 module Components.FareBreakUp(module Reexport) where
 
 import Components.FareBreakUp.View as Reexport
 import Components.FareBreakUp.Controller as Reexport
-========
-module Styles.Types
- ( Color
- , FontSize
- , FontStyle
- , Dimension
- , FontType(..)
- ) where
-
-import Data.Eq.Generic (genericEq)
-import Data.Generic.Rep (class Generic)
-import Data.Show.Generic (genericShow)
-import Foreign.Generic (class Decode, class Encode)
-import Prelude (class Eq, class Show)
-import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
-
-type Color = String
-
-type FontSize = Int
-
-type FontStyle = String
-
-type Dimension = Int
-
-data FontType = System | Assets
-
-derive instance genericFontType :: Generic FontType _
-instance decodeFontType :: Decode FontType where decode = defaultEnumDecode
-instance encodeFontType :: Encode FontType where encode = defaultEnumEncode
-instance eqFontType :: Eq FontType where eq = genericEq
->>>>>>>> 7b6fcd9bb (frontend/feat #523 Module splitting):Frontend/ui-common/src/Font/Types.purs

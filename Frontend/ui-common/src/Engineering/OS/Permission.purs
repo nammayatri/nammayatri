@@ -74,7 +74,6 @@ getPermissionStatus permission = do
 
 checkIfPermissionsGranted :: Array Permission -> Aff PermissionStatus
 checkIfPermissionsGranted permissions = do
-  _ <- pure $ spy "checkIfPermissionsGranted" permissions
   check <- allM getPermissionStatus $ fromFoldable permissions
   pure $ if check
     then PermissionGranted
@@ -87,7 +86,6 @@ _requestPermissions cb str = do
 
 requestPermissions :: Array Permission -> Aff (Array PermissionResponse)
 requestPermissions permissions = do
-  _ <- pure $ spy "checkIfPermissionsGranted" permissions
   response <- makeAff (\cb -> _requestPermissions cb $ show jPermission)
   case runExcept $ decodeJSON response of
     Right (statuses :: Array Boolean) -> pure $ zip permissions (map toResponse statuses)

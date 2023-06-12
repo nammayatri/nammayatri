@@ -26,7 +26,7 @@ import Font.Size as FontSize
 import Foreign.Generic (class Decode, class Encode)
 import Foreign.Generic.EnumEncoding (decodeEnum)
 import Halogen.VDom.DOM.Prop (Prop)
-import Prelude (class Eq, class Show, ($), (/=), (==), (<>), (<<<))
+import Prelude (class Eq, class Show, Unit, unit, ($), (/=), (==), (<>), (<<<))
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import PrestoDOM (FontWeight(..), fontStyle, lineHeight, textSize, fontWeight)
 import Storage (getValueToLocalStore, KeyStore(..))
@@ -35,6 +35,7 @@ import Data.Maybe (Maybe(..))
 import Data.Either (Either(..), hush)
 import Control.Monad.Except (runExcept)
 import Foreign.Generic (Foreign, decode)
+import JBridge as JBridge
 
 foreign import getFontStyleFromConfig :: String -> Foreign
 

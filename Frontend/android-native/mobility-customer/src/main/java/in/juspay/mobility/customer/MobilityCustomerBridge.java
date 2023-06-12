@@ -8,27 +8,21 @@ import android.annotation.SuppressLint;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Color;
-import android.graphics.Typeface;
 import android.graphics.pdf.PdfDocument;
 import android.location.Location;
-import android.location.LocationManager;
 import android.media.AudioAttributes;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.ContactsContract;
-import android.util.Base64;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -36,7 +30,6 @@ import android.view.animation.LinearInterpolator;
 import android.webkit.JavascriptInterface;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
@@ -79,7 +72,7 @@ import java.util.Locale;
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JuspayLogger;
-import in.juspay.mobility.app.CallBack;
+import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.app.NetworkBroadcastReceiver;
 import in.juspay.mobility.app.NotificationUtils;
 import in.juspay.mobility.common.MobilityCommonBridge;
@@ -94,7 +87,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
 
     public MobilityCustomerBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
-        if (isClassAvailable("in.juspay.mobility.app.CallBack")) {
+        if (isClassAvailable("in.juspay.mobility.app.callbacks.CallBack")) {
             CallBack callBack = new CallBack() {
                 @Override
                 public void customerCallBack(String notificationType) {
@@ -117,7 +110,17 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 }
 
                 @Override
-                public void chatCallBack(String message, String sentBy, String time) {
+                public void chatCallBack(String message, String sentBy, String time, String len) {
+                    Log.i(CALLBACK, "No Required");
+                }
+
+                @Override
+                public void openChatCallBack() {
+                    Log.i(CALLBACK, "No Required");
+                }
+
+                @Override
+                public void inAppCallBack(String onTapAction) {
                     Log.i(CALLBACK, "No Required");
                 }
             };

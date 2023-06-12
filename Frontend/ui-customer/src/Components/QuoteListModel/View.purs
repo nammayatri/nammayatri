@@ -36,7 +36,7 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Helpers.Utils (getPreviousVersion)
 import Styles.Colors as Color
 import Common.Types.App
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getAssetsBaseUrl)
 import Prelude ((<>))
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
@@ -77,9 +77,9 @@ paymentView state =
   , orientation VERTICAL
   ][  if state.showProgress then
         lottieAnimationView
-          [ id (getNewIDWithTag "lottieLoaderAnimProgress")
+          [ id "1234567892"
           , afterRender (\action-> do
-                        _ <- pure $ startLottieProcess "progress_loader_line" (getNewIDWithTag "lottieLoaderAnimProgress") true 0.6 "CENTER_CROP"
+                        _ <- pure $ startLottieProcess ((getAssetsBaseUrl FunctionCall) <> "lottie/progress_loader_line.json") "1234567892" true 0.6 "CENTER_CROP"
                         pure unit)(const NoAction)
           , height WRAP_CONTENT
           , width MATCH_PARENT
@@ -205,9 +205,9 @@ findingRidesView state push =
   , clickable true
   ][
     lottieAnimationView
-      [ id (getNewIDWithTag "lottieLoaderAnim")
+      [ id "1234567893"
       , afterRender (\action-> do
-                    _ <- pure $ startLottieProcess ((getAssetStoreLink FunctionCall) <> "lottie/finding_rides_loader_with_text.json") (getNewIDWithTag "lottieLoaderAnim") true 0.6 "Default"
+                    _ <- pure $ startLottieProcess ((getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_with_text.json") "1234567893" true 0.6 "Default"
                     pure unit)(const NoAction)
       , height $ V 300
       , width $ V 300

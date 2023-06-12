@@ -1,7 +1,5 @@
 package in.juspay.mobility.app;
 
-import static in.juspay.hyper.core.JuspayCoreLib.getApplicationContext;
-
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -13,7 +11,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.util.Base64;
 import android.util.Log;
-import android.util.StatsLog;
 
 import androidx.annotation.Nullable;
 import androidx.core.content.FileProvider;
@@ -28,7 +25,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
-import java.util.ResourceBundle;
+
+import in.juspay.mobility.app.callbacks.CallBack;
 
 public class Utils {
 

@@ -190,8 +190,6 @@ foreign import initialWebViewSetUp :: forall action. (action -> Effect Unit) -> 
 foreign import goBackPrevWebPage ::  String -> Effect Unit
 
 foreign import emitJOSEvent ::  EffectFn3 String String String Unit
-foreign import storeLoaderFiber ::  forall a. EffectFn1 (Control a) Unit
-foreign import getLoaderFiber ::  forall a. Effect (Control a)
 
 foreign import getMerchantConfig :: forall a. (a -> Maybe a) -> (Maybe a) -> Effect (Maybe a)
 

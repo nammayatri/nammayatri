@@ -489,7 +489,6 @@ sourceUnserviceableConfig state =
         { height = MATCH_PARENT
         , background = Color.white900
         , stroke = ("1," <> Color.borderGreyColor)
-        , corners = (Corners 20.0 true true false false)
         , imageConfig
           { imageUrl = "ny_ic_location_unserviceable," <> (getAssetStoreLink FunctionCall) <> "ny_ic_location_unserviceable.png"
           , height = V 99

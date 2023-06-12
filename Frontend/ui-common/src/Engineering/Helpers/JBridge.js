@@ -1421,13 +1421,3 @@ export const getMerchantConfig = function (just) {
     }
   }
 }
-
-export const storeLoaderFiber = function (fiber) {
-  window.loaderFiber.push(fiber);
-  return;
-}
-
-export const getLoaderFiber = function () {
-  return window.loaderFiber;
-}
-

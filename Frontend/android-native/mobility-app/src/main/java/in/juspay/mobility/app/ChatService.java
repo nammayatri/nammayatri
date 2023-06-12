@@ -1,5 +1,7 @@
 package in.juspay.mobility.app;
 
+import static in.juspay.mobility.app.NotificationUtils.startMediaPlayer;
+
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -13,8 +15,10 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.provider.Settings;
 import android.util.Log;
+
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
+
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -22,7 +26,9 @@ import com.google.firebase.firestore.DocumentChange;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
+
 import org.json.JSONObject;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -36,30 +42,34 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
+
 import javax.net.ssl.HttpsURLConnection;
-import in.juspay.hypersdk.core.DuiCallback;
+
+import in.juspay.mobility.app.callbacks.CallBack;
+import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
 
 public class ChatService extends Service {
-    private static Context context;
+    private Context context;
+    private static final ArrayList<CallBack> callBack = new ArrayList<>();
+    private static final ArrayList<ShowNotificationCallBack> inAppCallBacks = new ArrayList<>();
     private ListenerRegistration chatListener;
     final int serviceNotificationID = 19012023;
     private static boolean isChatServiceRunning = false;
-    private static SharedPreferences sharedPrefs;
-    public static FirebaseFirestore firestoreInstance;
-    public static FirebaseAuth firebaseAuth;
-    public static DuiCallback chatDynamicUI;
+    private SharedPreferences sharedPrefs;
+    public FirebaseFirestore firestoreInstance;
+    public FirebaseAuth firebaseAuth;
     private static final String LOG_TAG = "mobility_ChatService";
     public static String chatChannelID;
     public static String chatUserId;
-    public static String storeCallBackMessage;
-    public static boolean sessionCreated = false;
-    public static boolean shouldNotify = true;
-    private static final ArrayList<Message> messages = new ArrayList<>();
+    public boolean sessionCreated = false;
+    public boolean shouldNotify = true;
+    private final ArrayList<Message> messages = new ArrayList<>();
     private final Handler handler = new Handler();
-    private static String merchant = null;
-    private static String baseUrl;
+    private String merchant = null;
+    private String baseUrl;
     static Random random = new Random();
     String merchantType;
+    MobilityAppBridge.SendMessageCallBack sendMessageCallBack;
 
     public static void registerCallback(CallBack notificationCallback) {
         callBack.add(notificationCallback);
@@ -68,6 +78,15 @@ public class ChatService extends Service {
     public static void deRegisterCallback(CallBack notificationCallback) {
         callBack.remove(notificationCallback);
     }
+
+    public static void registerInAppCallback(ShowNotificationCallBack notificationCallback) {
+        inAppCallBacks.add(notificationCallback);
+    }
+
+    public static void deRegisterInAppCallback(ShowNotificationCallBack notificationCallback) {
+        inAppCallBacks.remove(notificationCallback);
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -77,15 +96,17 @@ public class ChatService extends Service {
         merchant = getApplicationContext().getResources().getString(R.string.service);
         merchantType = merchant.contains("partner") || merchant.contains("driver") ? "DRIVER" : "USER";
         sharedPrefs = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        if(sharedPrefs != null) {
+        if (sharedPrefs != null) {
             chatChannelID = sharedPrefs.getString("CHAT_CHANNEL_ID", "");
             baseUrl = sharedPrefs.getString("BASE_URL", "null");
         }
         isSessionCreated();
-        if (!isChatServiceRunning){
+        sendMessageCallBack = this::sendMessages;
+        MobilityAppBridge.registerSendMessageCallBack(sendMessageCallBack);
+        if (!isChatServiceRunning) {
             this.startForeground(serviceNotificationID, createNotification());
             FirebaseUser user = firebaseAuth.getCurrentUser();
-            if(user != null) {
+            if (user != null) {
                 startChatService();
             } else {
                 signInAnonymously();
@@ -97,31 +118,31 @@ public class ChatService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         handleMessages();
-        return  START_STICKY;
+        return START_STICKY;
     }
 
     private void isSessionCreated() {
-        try{
+        try {
             firestoreInstance.collection("Chats").document(chatChannelID).get().addOnCompleteListener(
                     (task -> {
-                        if(task.isSuccessful()){
-                            if(task.getResult().exists()){
+                        if (task.isSuccessful()) {
+                            if (task.getResult().exists()) {
                                 sessionCreated = true;
                             }
                         }
                     })
             );
-        } catch (Exception error){
-            Log.e(LOG_TAG,"Error in isSessionCreated :: " + error);
+        } catch (Exception error) {
+            Log.e(LOG_TAG, "Error in isSessionCreated :: " + error);
         }
 
-   }
+    }
 
-   private void startChatService() {
-       handler.postDelayed(() -> addChatListener(), 1000);
-   }
+    private void startChatService() {
+        handler.postDelayed(this::addChatListener, 1000);
+    }
 
-    private void signInAnonymously(){
+    private void signInAnonymously() {
         try {
             firebaseAuth.signInAnonymously()
                     .addOnCompleteListener(task -> {
@@ -132,8 +153,8 @@ public class ChatService extends Service {
                             Log.w(LOG_TAG, "signInAnonymously:failure", task.getException());
                         }
                     });
-        } catch (Exception e){
-            Log.e(LOG_TAG,"Error in signInAnonymously" + e);
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error in signInAnonymously" + e);
         }
     }
 
@@ -141,11 +162,11 @@ public class ChatService extends Service {
         int count = 1;
         isChatServiceRunning = false;
         int messageSize = messages.size();
-        for (Message message: messages) {
+        for (Message message : messages) {
             shouldNotify = true;
-            if(count == messageSize && !isChatServiceRunning){
+            if (count == messageSize && !isChatServiceRunning) {
                 isChatServiceRunning = true;
-                if(count == messageSize && count != 1){
+                if (count != 1) {
                     shouldNotify = false;
                 }
             }
@@ -155,17 +176,16 @@ public class ChatService extends Service {
     }
 
     private void addChatListener() {
-        if(chatListener != null) return;
+        if (chatListener != null) return;
         try {
             if (FirebaseApp.getApps(context).size() == 0) {
                 FirebaseApp.initializeApp(context);
             }
-        }
-        catch (Exception e){
-            Log.e(LOG_TAG,"Exception in Firebase Initialization" + e);
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Exception in Firebase Initialization" + e);
         }
         try {
-            if(firestoreInstance != null && chatChannelID != null){
+            if (firestoreInstance != null && chatChannelID != null) {
                 chatListener = firestoreInstance.collection("Chats").document(chatChannelID).collection("messages").orderBy("timestamp", Query.Direction.ASCENDING).addSnapshotListener(
                         (snapshots, e) -> {
                             if (e != null) {
@@ -173,7 +193,7 @@ public class ChatService extends Service {
                                 return;
                             }
                             int count = 1;
-                            if(snapshots == null) return;
+                            if (snapshots == null) return;
                             for (DocumentChange dc : snapshots.getDocumentChanges()) {
                                 switch (dc.getType()) {
                                     case ADDED:
@@ -181,9 +201,9 @@ public class ChatService extends Service {
                                         Message newMessage = createMessageObj(newMessageMap);
                                         messages.add(newMessage);
                                         shouldNotify = true;
-                                        if(count == (snapshots.getDocumentChanges()).size() && !isChatServiceRunning){
+                                        if (count == (snapshots.getDocumentChanges()).size() && !isChatServiceRunning) {
                                             isChatServiceRunning = true;
-                                            if(count == (snapshots.getDocumentChanges()).size() && count != 1){
+                                            if (count == (snapshots.getDocumentChanges()).size() && count != 1) {
                                                 shouldNotify = false;
                                             }
                                         }
@@ -197,8 +217,8 @@ public class ChatService extends Service {
                             }
                         }
                 );
-            }else{
-                Log.d(LOG_TAG,"Document path cannot be empty, chatChannelId is empty");
+            } else {
+                Log.d(LOG_TAG, "Document path cannot be empty, chatChannelId is empty");
             }
         } catch (Exception e) {
             Log.e(LOG_TAG, "Error in listening to messages");
@@ -206,93 +226,93 @@ public class ChatService extends Service {
 
     }
 
-    public static void sendMessage(final String message) {
-        HashMap<String,Object> _newMessage = new HashMap<>();
+    private void sendMessages(final String message) {
+        HashMap<String, Object> _newMessage = new HashMap<>();
         _newMessage.put("message", message);
         _newMessage.put("sentBy", chatUserId);
-        _newMessage.put("timestamp",System.currentTimeMillis());
-        if(sharedPrefs !=  null) chatChannelID = sharedPrefs.getString("CHAT_CHANNEL_ID", null);
-        if(chatChannelID != null){
+        _newMessage.put("timestamp", System.currentTimeMillis());
+        if (sharedPrefs != null) chatChannelID = sharedPrefs.getString("CHAT_CHANNEL_ID", null);
+        if (chatChannelID != null) {
             try {
-                if (!sessionCreated){
+                if (!sessionCreated) {
                     HashMap<String, Object> _timestamp = new HashMap<>();
                     _timestamp.put("timestamp", System.currentTimeMillis());
                     firestoreInstance.collection("Chats").document(chatChannelID).set(_timestamp).addOnCompleteListener(
                             (res) -> {
-                                if(res.isSuccessful()){
+                                if (res.isSuccessful()) {
                                     sessionCreated = true;
                                 }
                             }
                     );
                 }
                 firestoreInstance.collection("Chats").document(chatChannelID).collection("messages").add(_newMessage);
-                if(BuildConfig.MERCHANT_TYPE.equals("DRIVER")) sendFCM(message);
-            } catch (Exception e){
+                if (merchant.equals("DRIVER")) sendFCM(message);
+            } catch (Exception e) {
                 Log.e(LOG_TAG, "Error in sending a message" + e);
             }
-        }else{
-            Log.d(LOG_TAG,"Document path cannot be empty, chatChannelId is empty");
+        } else {
+            Log.d(LOG_TAG, "Document path cannot be empty, chatChannelId is empty");
         }
     }
 
     private void handleMessage(Message newMessage, String len) {
-        try  {
+        try {
             String _dateFormatted = newMessage.timestamp;
             String _message = newMessage.message;
             String _sentBy = newMessage.sentBy;
-            String appState = null;
+            String appState = "";
             String stage = "HomeScreen";
-            if(sharedPrefs != null) appState = sharedPrefs.getString("ACTIVITY_STATUS", "null");
-            if(sharedPrefs != null) stage = sharedPrefs.getString("LOCAL_STAGE", "null");
+            if (sharedPrefs != null) appState = sharedPrefs.getString("ACTIVITY_STATUS", "null");
+            if (sharedPrefs != null) stage = sharedPrefs.getString("LOCAL_STAGE", "null");
             String sentBy;
+            String appName = getApplicationContext().getResources().getString(R.string.app_name);
             if (_sentBy.equals("Driver")) {
-                String appName = getApplicationContext().getResources().getString(R.string.app_name);
                 if (appName.equals("Yatri Partner"))
                     sentBy = "yatripartner";
-                else if(appName.equals("Jatri Sathi Driver"))
+                else if (appName.equals("Jatri Sathi Driver"))
                     sentBy = "jatrisaathidriver";
                 else
                     sentBy = "nammayatripartner";
             } else {
-                String appName = getApplicationContext().getResources().getString(R.string.app_name);
                 if (appName.equals("Yatri"))
                     sentBy = "yatri";
-                else if(appName.equals("Jatri Sathi"))
+                else if (appName.equals("Jatri Sathi"))
                     sentBy = "jatrisaathi";
                 else
                     sentBy = "nammayatri";
             }
-        if(appState.equals("onPause") || appState.equals("onResume")){
-            try{
-                for (int i =0 ;i < callBack.size();i++) {
-                    callBack.get(i).chatCallBack(_message,_sentBy,_dateFormatted,len);
+            if (appState.equals("onPause") || appState.equals("onResume")) {
+                try {
+                    for (int i = 0; i < callBack.size(); i++) {
+                        callBack.get(i).chatCallBack(_message, _sentBy, _dateFormatted, len);
+                    }
+                } catch (Exception err) {
+                    Log.e(LOG_TAG, "Error sending the message to jbridge : " + err);
                 }
-            } catch (Exception err) {
-                Log.e(LOG_TAG,"Error sending the message to jbridge : " + err);
             }
-            if(!(merchant.equals(sentBy)) && isChatServiceRunning && shouldNotify){
-                if(appState.equals("onDestroy") || appState.equals("onPause")){
-                    if(merchantType.equals("DRIVER")) startWidgetService(_message, _sentBy);
+            if (!(merchant.equals(sentBy)) && isChatServiceRunning && shouldNotify) {
+                if (appState.equals("onDestroy") || appState.equals("onPause")) {
+                    if (merchantType.equals("DRIVER")) startWidgetService(_message, _sentBy);
                 } else if (appState.equals("onResume") && merchantType.equals("DRIVER") && !(stage.equals("ChatWithCustomer"))) {
                     String notificationId = String.valueOf(random.nextInt(1000000));
-                    MainActivity.showInAppNotification(_sentBy, _message, CommonJsInterface.storeCallBackOpenChatScreen,"", "", "", "", notificationId, 5000, context);
+                    for (ShowNotificationCallBack inAppCallBack : inAppCallBacks)
+                        inAppCallBack.showInAppNotification(_sentBy, _message, MobilityAppBridge.storeCallBackOpenChatScreen, "", "", "", "", notificationId, 5000, context);
                 }
             }
-        }
-     } catch (Exception e) {
-            Log.e(LOG_TAG,"Error in handleMessage : " + e);
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error in handleMessage : " + e);
         }
     }
 
-    private void startWidgetService(String widgetMessage, String sentBy){
+    private void startWidgetService(String widgetMessage, String sentBy) {
         Intent widgetService = new Intent(getApplicationContext(), WidgetService.class);
-        if ((merchantType.equals("DRIVER")) && Settings.canDrawOverlays(getApplicationContext())  && !sharedPrefs.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPrefs.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPrefs.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
-            widgetService.putExtra(getResources().getString(R.string.WIDGET_MESSAGE),widgetMessage);
-            widgetService.putExtra("sentBy",(sentBy + " :-"));
-            try{
+        if ((merchantType.equals("DRIVER")) && Settings.canDrawOverlays(getApplicationContext()) && !sharedPrefs.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPrefs.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPrefs.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
+            widgetService.putExtra(getResources().getString(R.string.WIDGET_MESSAGE), widgetMessage);
+            widgetService.putExtra("sentBy", (sentBy + " :-"));
+            try {
                 startService(widgetService);
                 startMediaPlayer(context, R.raw.new_message, false);
-            }catch (Exception e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
@@ -303,7 +323,7 @@ public class ChatService extends Service {
         Intent notificationIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 10, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
         String contentText;
-        if(merchantType.equals("DRIVER")){
+        if (merchantType.equals("DRIVER")) {
             contentText = getString(R.string.you_can_now_chat_with_customer);
         } else {
             contentText = getString(R.string.you_can_now_chat_with_driver);
@@ -321,7 +341,7 @@ public class ChatService extends Service {
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            CharSequence name = "Message" ;
+            CharSequence name = "Message";
             String description = "Service Notification Channel";
             NotificationChannel channel = new NotificationChannel("Message", name, NotificationManager.IMPORTANCE_MIN);
             channel.setDescription(description);
@@ -329,11 +349,12 @@ public class ChatService extends Service {
             notificationManager.createNotificationChannel(channel);
         }
     }
-    private String getChatDate(Long time){
+
+    private String getChatDate(Long time) {
         Date date;
         try {
             date = new Date(time);
-        } catch (Exception error){
+        } catch (Exception error) {
             date = new Date(System.currentTimeMillis());
         }
         /*   add this to date format if date is needed ---> dd MMM yyyy   */
@@ -347,19 +368,20 @@ public class ChatService extends Service {
             this.sentBy = sentBy;
             this.timestamp = timestamp;
         }
+
         String message;
         String sentBy;
         String timestamp;
     }
 
-    private Message createMessageObj(Map<String, Object> map){
+    private Message createMessageObj(Map<String, Object> map) {
         String timestamp = getChatDate((Long) map.get("timestamp"));
         String message = (String) map.get("message");
         String sentBy = (String) map.get("sentBy");
         return new Message(message, sentBy, timestamp);
     }
 
-    private static void sendFCM(String message) {
+    private void sendFCM(String message) {
         try {
             String url = baseUrl + "/onMessage";
             StringBuilder result = new StringBuilder();
@@ -396,24 +418,26 @@ public class ChatService extends Service {
                 while ((inputLine = in.readLine()) != null) {
                     result.append(inputLine);
                 }
-                Log.e(LOG_TAG,"Error in calling send FCM API" + result);
+                Log.e(LOG_TAG, "Error in calling send FCM API" + result);
             }
-        } catch (Exception e){
-            Log.e(LOG_TAG,"Error in sending FCM" + e);
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error in sending FCM" + e);
         }
     }
-    
+
     @Override
     public void onDestroy() {
         isChatServiceRunning = false;
         shouldNotify = true;
         sessionCreated = false;
+        MobilityAppBridge.deRegisterSendMessageCallBack(sendMessageCallBack);
         stopForeground(true);
-        if(chatListener != null) chatListener.remove();
+        if (chatListener != null) chatListener.remove();
         messages.clear();
         stopSelf();
         super.onDestroy();
     }
+
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {

@@ -112,37 +112,37 @@ android {
             resValue "string", "fb_login_protocol_scheme", properties.getProperty("FB_LOGIN_PROTOCOL_SCHEMA","")
             dimension "mode"
         }
-        ny_ {
+        nyUser {
             applicationId  "in.juspay.nammayatri"
             buildConfigField "String", "MERCHANT_TYPE", "\"USER\""
             buildConfigField "String", "MERCHANT", "\"KA\""
             dimension "app"
         }
-        ny_p_ {
+        nyDriver {
             applicationId "in.juspay.nammayatripartner"
             buildConfigField "String", "MERCHANT_TYPE", "\"DRIVER\""
             buildConfigField "String", "MERCHANT", "\"KA\""
             dimension "app"
         }
-        js_kl_ {
+        jsUser {
             applicationId  "in.juspay.jatrisaathi"
             buildConfigField "String", "MERCHANT_TYPE", "\"USER\""
             buildConfigField "String", "MERCHANT", "\"WB\""
             dimension "app"
         }
-        js_d_kl_ {
+        jsDriver {
             applicationId "in.juspay.jatrisaathidriver"
             buildConfigField "String", "MERCHANT_TYPE", "\"DRIVER\""
             buildConfigField "String", "MERCHANT", "\"WB\""
             dimension "app"
         }
-        yatri {
+        yatriUser {
             applicationId  "net.openkochi.yatri"
             buildConfigField "String", "MERCHANT_TYPE", "\"USER\""
             buildConfigField "String", "MERCHANT", "\"KL\""
             dimension "app"
         }
-        yp_ {
+        yatriDriver {
             applicationId "net.openkochi.yatripartner"
             buildConfigField "String", "MERCHANT_TYPE", "\"DRIVER\""
             buildConfigField "String", "MERCHANT", "\"KL\""
@@ -153,12 +153,18 @@ android {
         abortOnError false
     }
     sourceSets {
-        ny_.setRoot('src/user/nammaYatri')
-        ny_p_.setRoot('src/driver/nammaYatriPartner')
-        js_kl_.setRoot('src/user/jatriSaathi')
-        js_d_kl_.setRoot('src/driver/jatriSaathiDriver')
-        yatri.setRoot('src/user/yatri')
-        yp_.setRoot('src/driver/yatriPartner')
+        nyUser.setRoot('src/user/nammaYatri')
+        nyDriver.setRoot('src/driver/nammaYatriPartner')
+        jsUser.setRoot('src/user/jatriSaathi')
+        jsDriver.setRoot('src/driver/jatriSaathiDriver')
+        yatriUser.setRoot('src/user/yatri')
+        yatriDriver.setRoot('src/driver/yatriPartner')
+        nyUser.res.srcDir('src/user/common')
+        jsUser.res.srcDir('src/user/common')
+        yatriUser.res.srcDir('src/user/common')
+        nyDriver.res.srcDir('src/driver/common')
+        jsDriver.res.srcDir('src/driver/common')
+        yatriDriver.res.srcDir('src/driver/common')
     }
     sourceSets {
         dev.res.srcDir 'src/dev/res'
@@ -186,12 +192,16 @@ android {
 }
 
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation 'in.juspay:hypersdk:2.1.13-nammayatri.14'
+    implementation fileTree(dir: 'libs', include: ['*.jar','*.aar'])
+    implementation 'in.juspay:hypersdk:2.1.13-nammayatri.23'
     implementation project(path: ':mobility-app')
     implementation platform('com.google.firebase:firebase-bom:31.1.1')
-    implementation project(path: ':mobility-driver')
-    implementation project(path: ':mobility-customer')
+    nyDriverImplementation project(path: ':mobility-driver')
+    jsDriverImplementation project(path: ':mobility-driver')
+    yatriDriverImplementation project(path: ':mobility-driver')
+    nyUserImplementation project(path: ':mobility-customer')
+    jsUserImplementation project(path: ':mobility-customer')
+    yatriUserImplementation project(path: ':mobility-customer')
     implementation 'com.google.firebase:firebase-dynamic-links'
     implementation 'com.google.firebase:firebase-analytics'
 
@@ -223,7 +233,7 @@ dependencies {
     implementation 'com.google.android.play:review:2.0.1'
     implementation 'com.pierfrancescosoffritti.androidyoutubeplayer:core:11.1.0'
     implementation 'com.facebook.android:facebook-android-sdk:14.0.0'
-    api 'com.theartofdev.edmodo:android-image-cropper:2.8.+'
+    api 'com.theartofdev.edmodo:android-image-cropper:2.8.0'
     implementation 'com.github.bumptech.glide:glide:4.15.1'
 }
 

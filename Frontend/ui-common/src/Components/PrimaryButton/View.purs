@@ -42,7 +42,7 @@ view push config =
         , onClick
             ( \action -> do
                 _ <- pure $ toggleBtnLoader config.id true
-                _ <- pure $ startLottieProcess (getValueFromConfig "apiLoaderLottie") (getNewIDWithTag config.id) true 0.6 "Default"
+                _ <- pure $ startLottieProcess "1234567895" (getNewIDWithTag config.id) true 0.6 "Default"
                 push action
             )
             (const OnClick)
@@ -81,7 +81,7 @@ view push config =
         , gravity CENTER
         ]
         [ lottieAnimationView
-            [ id (getNewIDWithTag config.id)
+            [ id "1234567895"
             , visibility if config.enableLoader then VISIBLE else GONE
             , height $ V 30
             , width $ V 150

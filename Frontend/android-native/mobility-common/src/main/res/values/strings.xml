@@ -8,4 +8,5 @@
     <string name="tap_on">3. Tap on </string>
     <string name="location">Location</string>
     <string name="phone">Phone</string>
+    <string name="no_enabled_browser">No enabled browser found in your device, please enable or install a browser</string>
 </resources>

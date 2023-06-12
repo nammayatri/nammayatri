@@ -493,7 +493,6 @@ type HomeScreenStateData =
   , messagesSize :: String
   , suggestionsList :: Array String
   , messageToBeSent :: String
-  , bannerViewState :: BannerViewState
   , nearByPickUpPoints :: Array Location
   , polygonCoordinates :: String
   , specialZoneQuoteList :: Array ChooseVehicle.Config
@@ -573,15 +572,6 @@ type CustomerTipProps = {
   , tipActiveIndex :: Int
   , tipForDriver :: Int
   , isTipSelected :: Boolean
-}
-
-type BannerViewState = {
-  backgroundColor :: String,
-  title :: String,
-  titleColor :: String,
-  actionText :: String,
-  actionTextColor :: String,
-  imageUrl :: String
 }
 
 type Contact = {

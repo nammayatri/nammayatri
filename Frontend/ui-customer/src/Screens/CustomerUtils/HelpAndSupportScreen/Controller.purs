@@ -203,7 +203,7 @@ dummyState = {
     rideId : "",
     tripId : "",
     bookingId : "",
-    faresList : []
+    faresList : [],
     config : DC.config
   },
   props:{

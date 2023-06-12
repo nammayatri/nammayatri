@@ -47,6 +47,7 @@ import Screens.Types as ST
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
+import Types.App (defaultGlobalState)
 
 screen :: ST.MyProfileScreenState -> Screen Action ST.MyProfileScreenState ScreenOutput
 screen initialState =

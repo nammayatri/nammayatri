@@ -12,27 +12,27 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-module LoaderOverlay.View where
+module LoaderOverlay.Views where
 
 import Common.Types.App (LazyCheck(..))
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink)
+import Helpers.Utils (getAssetStoreLink, getAssetsBaseUrl)
 import JBridge (startLottieProcess)
 import LoaderOverlay.Controller (Action, ScreenOutput, eval)
 import LoaderOverlay.ScreenData (LoaderOverlayState)
 import Prelude (Unit, const, pure, unit, ($), (<>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, Screen, afterRender, background, cornerRadius, gravity, height, id, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, orientation, padding, text, textView, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, afterRender, background, cornerRadius, gravity, height, id, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, orientation, padding, text, textView, width)
 import Styles.Colors as Color
 
-screen :: LoaderOverlayState -> Screen Action LoaderOverlayState ScreenOutput
+screen :: LoaderOverlayState -> ScopedScreen Action LoaderOverlayState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name: "LoaderOverlay"
-  -- , parent : Just "LoaderOverlay"
+  , parent : Just "LoaderOverlay"
   , globalEvents: []
   , eval
   }
@@ -57,8 +57,8 @@ view _ state =
     ][ lottieAnimationView
       [ height $ V 100
       , width $ V 100
-      , id (getNewIDWithTag "lottieAnimationLoaderOverlay")
-      , afterRender (\_ -> pure $ startLottieProcess "ny_ic_loader" (getNewIDWithTag "lottieAnimationLoaderOverlay") true 0.6 "CENTER_CROP") (const unit)
+      , id "1234567891"
+      , afterRender (\_ -> pure $ startLottieProcess ((getAssetsBaseUrl FunctionCall) <> "ny_ic_loader") "1234567891" true 0.6 "CENTER_CROP") (const unit)
       ]
     , textView $ 
       [ height WRAP_CONTENT

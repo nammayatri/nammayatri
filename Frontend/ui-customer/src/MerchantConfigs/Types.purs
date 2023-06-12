@@ -19,8 +19,9 @@ type AppConfig =
     rateCardColor :: String,
     nyBrandingVisibility :: Boolean,
     fontType :: String,
-    languageList :: Array Language
-    confirmPickUpLocationBorder ::String
+    languageList :: Array Language,
+    confirmPickUpLocationBorder ::String,
+    bannerConfig :: BannerViewState
   } 
 
 type QuoteListConfig = {
@@ -34,3 +35,12 @@ type Language =  {
   value :: String,
   subTitle :: String
  }
+
+type BannerViewState = {
+  backgroundColor :: String,
+  title :: String,
+  titleColor :: String,
+  actionText :: String,
+  actionTextColor :: String,
+  imageUrl :: String
+}

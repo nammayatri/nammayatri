@@ -41,6 +41,7 @@ import Components.SaveFavouriteCard as SaveFavouriteCard
 import Components.SearchLocationModel as SearchLocationModel
 import Components.SettingSideBar as SettingSideBar
 import Control.Monad.Except (runExceptT)
+import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (any, length, mapWithIndex, null, (!!))
 import Data.Either (Either(..))
@@ -58,10 +59,10 @@ import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (decodeErrorMessage, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, waitingCountdownTimer)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getCurrentPosition, getExtendedPath, getHeightFromPercent, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, toast, updateRoute)
 import Helpers.Utils (adjustViewWithKeyboard) as HU
+import Helpers.Utils (decodeErrorMessage, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, waitingCountdownTimer)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getAssetsBaseUrl)
+import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getCurrentPosition, getExtendedPath, getHeightFromPercent, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, toast, updateRoute)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -76,16 +77,15 @@ import PrestoDOM.Properties (cornerRadii, sheetState)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.AddNewAddressScreen.Controller as AddNewAddress
 import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval, flowWithoutOffers, getCurrentCustomerLocation)
+import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (transformSavedLocations)
 import Screens.RideBookingFlow.HomeScreen.Config (autoAnimConfig, chooseYourRideConfig, menuButtonConfig, cancelRidePopUpConfig, distanceOusideLimitsConfig, driverInfoCardViewState, emergencyHelpModelViewState, estimateChangedPopupConfig, fareBreakUpConfig, logOutPopUpModelConfig, previousRideRatingViewState, primaryButtonConfirmPickupConfig, primaryButtonRequestRideConfig, quoteListModelViewState, rateCardConfig, rateRideButtonConfig, ratingCardViewState, searchLocationModelViewState, shareAppConfig, shortDistanceConfig, skipButtonConfig, sourceUnserviceableConfig, whereToButtonConfig, chatViewConfig, metersToKm, callSupportConfig)
 import Screens.Types (CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..))
-import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..))
+import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, driverTracking, rideTracking, walkCoordinates, walkCoordinate, getSavedLocationList)
+import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage)
 import Styles.Colors as Color
-import Services.Backend as Remote
-import Screens.HomeScreen.ScreenData as HomeScreenData
-import Control.Monad.Trans.Class (lift)
 import Types.App (GlobalState, defaultGlobalState)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
@@ -683,7 +683,7 @@ bannerView state push =
     , width MATCH_PARENT
     , cornerRadius 12.0
     , margin $ MarginTop 15
-    , background state.data.bannerViewState.backgroundColor
+    , background state.data.config.bannerConfig.backgroundColor
     , visibility if (state.props.isbanner) then VISIBLE else GONE
     , onClick push $ const GoToEditProfile
     ]
@@ -698,8 +698,8 @@ bannerView state push =
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , gravity LEFT
-          , text state.data.bannerViewState.title
-          , color state.data.bannerViewState.titleColor
+          , text state.data.config.bannerConfig.title
+          , color state.data.config.bannerConfig.titleColor
           ] <> FontStyle.body4 TypoGraphy
         , linearLayout
           [ height WRAP_CONTENT
@@ -711,15 +711,15 @@ bannerView state push =
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , gravity LEFT
-            , text state.data.bannerViewState.actionText
-            , color state.data.bannerViewState.actionTextColor
+            , text state.data.config.bannerConfig.actionText
+            , color state.data.config.bannerConfig.actionTextColor
             ] <> FontStyle.body3 TypoGraphy
           , textView $
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , gravity LEFT
             , text "→"
-            , color state.data.bannerViewState.actionTextColor
+            , color state.data.config.bannerConfig.actionTextColor
             , padding $ PaddingBottom 3
             , margin  $ MarginLeft 5
             ] <> FontStyle.body3 TypoGraphy
@@ -737,7 +737,7 @@ bannerView state push =
           height $ V 80
         , width $ V 118
         , margin $ MarginRight 5
-        , imageWithFallback state.data.bannerViewState.imageUrl
+        , imageWithFallback state.data.config.bannerConfig.imageUrl
         ]
     ]
 
@@ -1665,13 +1665,11 @@ separator lineHeight lineColor currentStage =
 lottieLoaderView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 lottieLoaderView state push =
   lottieAnimationView
-    [ id (getNewIDWithTag "lottieLoader")
-    , afterRender
-        ( \action -> do
-            _ <- pure $ startLottieProcess ((getAssetStoreLink FunctionCall) <> "lottie/auto_rickshaw_processing.json") (getNewIDWithTag "lottieLoader") true 0.6 "Default"
-            pure unit
-        )
-        (const LottieLoaderAction)
+    [ id "1234567890"
+    , afterRender ( \action -> do 
+          push action 
+          _ <- pure $ startLottieProcess "ic_vehicle_processing" "1234567890" true 0.6 "Default"
+          pure unit) (const LottieLoaderAction)
     , height $ V 96
     , width $ V 96
     ]
