@@ -19,6 +19,7 @@ module Storage.CachedQueries.FarePolicy
   ( findById,
     clearCache,
     update,
+    clearCacheById,
   )
 where
 
@@ -54,6 +55,10 @@ makeIdKey id = "driver-offer:CachedQueries:FarePolicy:Id-" <> id.getId
 clearCache :: HedisFlow m r => FarePolicy -> m ()
 clearCache fp = Hedis.withCrossAppRedis $ do
   Hedis.del (makeIdKey fp.id)
+
+clearCacheById :: HedisFlow m r => Id FarePolicy -> m ()
+clearCacheById fid = Hedis.withCrossAppRedis $ do
+  Hedis.del (makeIdKey fid)
 
 update :: FarePolicy -> Esq.SqlDB ()
 update = Queries.update

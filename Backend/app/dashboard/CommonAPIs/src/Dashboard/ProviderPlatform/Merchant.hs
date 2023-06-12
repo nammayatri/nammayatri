@@ -19,6 +19,7 @@ module Dashboard.ProviderPlatform.Merchant
   )
 where
 
+import qualified Dashboard.Common as Common
 import Dashboard.Common.Merchant as Reexport
 import Data.Aeson
 import qualified Data.Bifunctor as BF
@@ -28,6 +29,7 @@ import Data.Text.Encoding as DT
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Common
+import Kernel.Types.Id
 import Kernel.Types.Predicate
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Types.Value
@@ -387,3 +389,39 @@ instance HideSecrets OnboardingDocumentConfigCreateReq where
 validateOnboardingDocumentConfigCreateReq :: Validate OnboardingDocumentConfigCreateReq
 validateOnboardingDocumentConfigCreateReq OnboardingDocumentConfigCreateReq {..} =
   validateField "validVehicleClasses" validVehicleClasses $ InList $ MinLength 1
+
+---------------------------------------------------------
+-- Create Fare Policy -----------------------------------
+
+type CreateFPDriverExtraFee =
+  "config"
+    :> "farePolicy"
+    :> Capture "farePolicyId" (Id Common.FarePolicy)
+    :> "driverExtraFeeBounds"
+    :> "create"
+    :> MandatoryQueryParam "startDistance" Meters
+    :> ReqBody '[JSON] CreateFPDriverExtraFeeReq
+    :> Post '[JSON] APISuccess
+
+data CreateFPDriverExtraFeeReq = CreateFPDriverExtraFeeReq
+  { minFee :: Money,
+    maxFee :: Money
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets CreateFPDriverExtraFeeReq where
+  hideSecrets = identity
+
+---------------------------------------------------------
+-- Update Fare Policy -----------------------------------
+
+type UpdateFPDriverExtraFee =
+  "config"
+    :> "farePolicy"
+    :> Capture "farePolicyId" (Id Common.FarePolicy)
+    :> "driverExtraFeeBounds"
+    :> "update"
+    :> MandatoryQueryParam "startDistance" Meters
+    :> ReqBody '[JSON] CreateFPDriverExtraFeeReq
+    :> Post '[JSON] APISuccess

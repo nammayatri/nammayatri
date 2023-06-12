@@ -44,6 +44,7 @@ type API =
            :<|> Common.AddVehicleAPI
            :<|> Common.UpdateDriverNameAPI
            :<|> Reg.API
+           :<|> Common.ClearOnRideStuckDrivers
        )
 
 handler :: ShortId DM.Merchant -> FlowServer API
@@ -65,6 +66,7 @@ handler merchantId =
     :<|> addVehicle merchantId
     :<|> updateDriverName merchantId
     :<|> Reg.handler merchantId
+    :<|> clearOnRideStuckDrivers merchantId
 
 driverDocumentsInfo :: ShortId DM.Merchant -> FlowHandler Common.DriverDocumentsInfoRes
 driverDocumentsInfo = withFlowHandlerAPI . DDriver.driverDocumentsInfo
@@ -114,3 +116,6 @@ addVehicle merchantShortId driverId = withFlowHandlerAPI . DDriver.addVehicle me
 
 updateDriverName :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdateDriverNameReq -> FlowHandler APISuccess
 updateDriverName merchantShortId driverId = withFlowHandlerAPI . DDriver.updateDriverName merchantShortId driverId
+
+clearOnRideStuckDrivers :: ShortId DM.Merchant -> FlowHandler Common.ClearOnRideStuckDriversRes
+clearOnRideStuckDrivers = withFlowHandlerAPI . DDriver.clearOnRideStuckDrivers

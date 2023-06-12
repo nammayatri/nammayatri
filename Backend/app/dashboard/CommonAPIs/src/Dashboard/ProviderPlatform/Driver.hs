@@ -482,3 +482,17 @@ validateUpdateDriverNameReq UpdateDriverNameReq {..} =
 
 instance HideSecrets UpdateDriverNameReq where
   hideSecrets = identity
+
+---------------------------------------------------------
+-- Get Route driver ids ---------------------------------------
+
+type ClearOnRideStuckDrivers =
+  "clearStuck"
+    :> "onRide"
+    :> Get '[JSON] ClearOnRideStuckDriversRes
+
+newtype ClearOnRideStuckDriversRes = ClearOnRideStuckDriversRes
+  { driverIds :: [Id Driver]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
