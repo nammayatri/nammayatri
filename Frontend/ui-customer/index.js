@@ -6,7 +6,7 @@ require('core-js');
 window.session_id = guid();
 window.version = __VERSION__;
 // JBridge.setSessionId(window.session_id);
-console.warn("Hello World MASTER ONE");
+console.warn("Hello World MASTER ONE ");
 
 let eventObject = {
   type : ""
