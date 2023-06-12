@@ -34,6 +34,7 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
+import Lib.Utils
 import qualified Storage.Beam.DriverLocation as BeamDL
 
 data AtlasDB f = AtlasDB
@@ -121,6 +122,7 @@ upsertGpsCoord drLocationId latLong calculationTime merchantId' = do
                       (driverId B.<-. B.val_ drLocationId') <> (lat B.<-. B.val_ latLong'.lat)
                         <> (lon B.<-. (B.val_ latLong'.lon))
                         <> (coordinatesCalculatedAt B.<-. B.val_ calculationTime')
+                        <> (point B.<-. getPoint (latLong'.lat, latLong'.lon))
                         <> (updatedAt B.<-. B.val_ now')
                   )
                   (\BeamDL.DriverLocationT {..} -> driverId B.==. B.val_ drLocationId')

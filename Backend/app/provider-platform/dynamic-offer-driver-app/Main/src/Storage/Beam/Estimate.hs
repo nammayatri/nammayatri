@@ -42,7 +42,7 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Kernel.Utils.Common (encodeToText)
-import Lib.Utils ()
+import Lib.Utils (fromFieldJSON)
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Vehicle ()
@@ -50,7 +50,10 @@ import Storage.Tabular.Vehicle ()
 instance FromBackendRow Postgres [Domain.EstimateBreakup]
 
 instance FromField [Domain.EstimateBreakup] where
-  fromField = fromFieldEstimateBreakUp
+  fromField f mbValue = V.toList <$> fromField f mbValue
+
+instance FromField Domain.EstimateBreakup where
+  fromField = fromFieldJSON
 
 fromFieldEstimateBreakUp ::
   -- (Typeable a, Read a) =>
@@ -132,13 +135,13 @@ estimateTMod :: EstimateT (B.FieldModification (B.TableField EstimateT))
 estimateTMod =
   B.tableModification
     { id = B.fieldNamed "id",
-      requestId = B.fieldNamed "transaction_id",
+      requestId = B.fieldNamed "request_id",
       vehicleVariant = B.fieldNamed "vehicle_variant",
       minFare = B.fieldNamed "min_fare",
       maxFare = B.fieldNamed "max_fare",
       estimateBreakupList = B.fieldNamed "estimate_breakup_list",
       nightShiftCharge = B.fieldNamed "night_shift_charge",
-      oldNightShiftCharge = B.fieldNamed "old_night_shift_charge",
+      oldNightShiftCharge = B.fieldNamed "night_shift_multiplier",
       nightShiftStart = B.fieldNamed "night_shift_start",
       nightShiftEnd = B.fieldNamed "night_shift_end",
       -- waitingTimeEstimatedThreshold = B.fieldNamed "waiting_time_estimated_threshold",

@@ -126,19 +126,6 @@ driverLocationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverLocationToPSModifiers =
   M.empty
 
-defaultDriverLocation :: DriverLocation
-defaultDriverLocation =
-  DriverLocationT
-    { driverId = "",
-      lat = 0.0,
-      lon = 0.0,
-      point = "",
-      coordinatesCalculatedAt = defaultUTCDate,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate,
-      merchantId = ""
-    }
-
 toRowExpression personId latLong updateTime now merchantId =
   DriverLocationT
     (B.val_ personId)
