@@ -54,6 +54,7 @@ type API =
            :<|> AddVehicleAPI
            :<|> UpdateDriverNameAPI
            :<|> Reg.API
+           :<|> ClearOnRideStuckDrivers
        )
 
 type DriverDocumentsInfoAPI =
@@ -120,6 +121,10 @@ type UpdateDriverNameAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UPDATE_DRIVER_NAME
     :> Common.UpdateDriverNameAPI
 
+type ClearOnRideStuckDrivers =
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'CLEAR_ON_RIDE_STUCK_DRIVER_IDS
+    :> Common.ClearOnRideStuckDrivers
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   driverDocuments merchantId
@@ -139,6 +144,7 @@ handler merchantId =
     :<|> addVehicle merchantId
     :<|> updateDriverName merchantId
     :<|> Reg.handler merchantId
+    :<|> clearOnRideStuckDrivers merchantId
 
 buildTransaction ::
   ( MonadFlow m,
@@ -268,3 +274,8 @@ endRCAssociation merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
   transaction <- buildTransaction Common.EndRCAssociationEndpoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.drivers.endRCAssociation) driverId
+
+clearOnRideStuckDrivers :: ShortId DM.Merchant -> ApiTokenInfo -> FlowHandler Common.ClearOnRideStuckDriversRes
+clearOnRideStuckDrivers merchantShortId apiTokenInfo = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.clearOnRideStuckDrivers)

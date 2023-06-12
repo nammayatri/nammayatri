@@ -56,6 +56,8 @@ data MerchantEndpoint
   | SmsServiceConfigUpdateEndpoint
   | SmsServiceConfigUsageUpdateEndpoint
   | VerificationServiceConfigUpdateEndpoint
+  | CreateFPDriverExtraFeeEndpoint
+  | UpdateFPDriverExtraFeeEndpoint
   deriving (Show, Read)
 
 derivePersistField "MerchantEndpoint"
