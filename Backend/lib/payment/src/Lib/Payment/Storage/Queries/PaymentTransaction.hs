@@ -59,6 +59,5 @@ findNewTransactionByOrderId orderId =
     where_ $
       Esq.isNothing (transaction ^. PaymentTransactionTxnUUID)
         &&. transaction ^. PaymentTransactionOrderId ==. val (toKey orderId)
-    orderBy [desc $ transaction ^. PaymentTransactionCreatedAt]
     limit 1
     return transaction

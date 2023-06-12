@@ -36,10 +36,12 @@ import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySla
 import Storage.Tabular.Booking
 import Storage.Tabular.Booking.BookingLocation
 import qualified Storage.Tabular.DriverQuote as DriverQuote
+import Storage.Tabular.FareParameters
 import qualified Storage.Tabular.FareParameters as FareParams
 import qualified Storage.Tabular.FareParameters.FareParametersProgressiveDetails as FareParametersProgressiveDetails
 import qualified Storage.Tabular.FareParameters.FareParametersSlabDetails as FareParametersSlabDetails
 import qualified Storage.Tabular.FareParameters.Instances as FareParams
+import Storage.Tabular.FarePolicy
 import qualified Storage.Tabular.FarePolicy as FarePolicy
 import qualified Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails as FarePolicyProgressiveDetails
 import qualified Storage.Tabular.FarePolicy.Instances as FarePolicy
@@ -50,9 +52,9 @@ buildFullBooking ::
   BookingT ->
   DTypeBuilder m (Maybe (SolidType FullBookingT))
 buildFullBooking bookingT@BookingT {..} = runMaybeT $ do
-  fromLocationT <- MaybeT $ Esq.findById' @BookingLocationT (fromKey fromLocationId)
-  toLocationT <- MaybeT $ Esq.findById' @BookingLocationT (fromKey toLocationId)
-  fareParamsT <- MaybeT $ Esq.findById' @FareParams.FareParametersT (fromKey fareParametersId)
+  fromLocationT <- Esq.findByIdM @BookingLocationT fromLocationId
+  toLocationT <- Esq.findByIdM @BookingLocationT toLocationId
+  fareParamsT <- Esq.findByIdM @FareParams.FareParametersT fareParametersId
   fullFareParamsData <- MaybeT $ getFullFareParamsData fareParamsT
   return $ extractSolidType @Booking (bookingT, fromLocationT, toLocationT, fullFareParamsData)
 
@@ -66,11 +68,11 @@ getFullFareParamsData fareParamsT@FareParams.FareParametersT {..} = do
       FareParams.Progressive ->
         MaybeT $
           fmap FareParams.ProgressiveDetailsT
-            <$> Esq.findById' @FareParametersProgressiveDetails.FareParametersProgressiveDetailsT (Id id)
+            <$> Esq.findById' @FareParametersProgressiveDetails.FareParametersProgressiveDetailsT (toKey $ Id id)
       FareParams.Slab ->
         MaybeT $
           fmap FareParams.SlabDetailsT
-            <$> Esq.findById' @FareParametersSlabDetails.FareParametersSlabDetailsT (Id id)
+            <$> Esq.findById' @FareParametersSlabDetails.FareParametersSlabDetailsT (toKey $ Id id)
     return (fareParamsT, fareParamsDet)
 
 buildFullFareParameters ::
@@ -89,7 +91,7 @@ buildFullFarePolicy farePolicyT@FarePolicy.FarePolicyT {..} = do
   runMaybeT $ do
     farePolicyDet <- case farePolicyType of
       FarePolicy.Progressive -> do
-        fpDetT <- MaybeT $ Esq.findById' @FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsT (Id id)
+        fpDetT <- MaybeT $ Esq.findById' @FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsT (toKey $ Id id)
         fpDetPerExtraKmRateT <- MaybeT $ Just <$> QFarePolicyProgressiveDetailsPerExtraKmRateSection.findAll' (Id id)
         return $ FarePolicy.ProgressiveDetailsT (fpDetT, fpDetPerExtraKmRateT)
       FarePolicy.Slabs -> MaybeT $ Just . FarePolicy.SlabsDetailsT <$> FarePolicySlabsDetailsSlab.findAll' (Id id)
