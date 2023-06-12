@@ -197,6 +197,7 @@ library
       Environment
       Lib.DriverScore
       Lib.DriverScore.Types
+      Lib.HelperFunction
       Lib.LocationUpdates
       SharedLogic.Allocator
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers
