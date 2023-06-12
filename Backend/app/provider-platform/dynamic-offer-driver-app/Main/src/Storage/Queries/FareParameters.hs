@@ -32,7 +32,7 @@ create fareParams =
 
 findById :: Transactionable m => Id FareParameters -> m (Maybe FareParameters)
 findById fareParametersId = buildDType $ do
-  res <- Esq.findById' @FareParametersT fareParametersId
+  res <- Esq.findById' @FareParametersT (toKey fareParametersId)
   join <$> mapM buildFullFareParameters res
 
 findAllIn :: Transactionable m => [Id FareParameters] -> m [FareParameters]

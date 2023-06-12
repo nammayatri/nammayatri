@@ -35,7 +35,7 @@ import Storage.Tabular.FarePolicy.Instances
 
 findById :: Transactionable m => Id FarePolicy -> m (Maybe FarePolicy)
 findById farePolicyId = buildDType $ do
-  res <- Esq.findById' farePolicyId
+  res <- Esq.findById' (toKey farePolicyId)
   join <$> mapM buildFullFarePolicy res
 
 update :: FarePolicy -> SqlDB ()
