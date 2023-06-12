@@ -74,8 +74,8 @@ findAllByMerchantId (Id merchantId) = do
     Just dbCOnf' -> do
       result <- KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFP.merchantId $ Se.Eq merchantId]
       case result of
-        Right x -> traverse transformBeamFarePolicyToDomain x
-        Left _ -> pure []
+        Right x -> catMaybes <$> traverse transformBeamFarePolicyToDomain x
+        _ -> pure []
     Nothing -> pure []
 
 -- findByMerchantIdAndVariant ::
@@ -99,8 +99,8 @@ findByMerchantIdAndVariant (Id merchantId) variant = do
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamFP.merchantId $ Se.Eq merchantId, Se.Is BeamFP.vehicleVariant $ Se.Eq variant]
       case result of
-        Left _ -> pure Nothing
-        Right x -> mapM transformBeamFarePolicyToDomain x
+        Right (Just x) -> transformBeamFarePolicyToDomain x
+        _ -> pure Nothing
     Nothing -> pure Nothing
 
 -- findById :: Transactionable m => Id FarePolicy -> m (Maybe FarePolicy)
@@ -115,8 +115,8 @@ findById (Id farePolicyId) = do
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamFP.id $ Se.Eq farePolicyId]
       case result of
-        Left _ -> pure Nothing
-        Right x -> mapM transformBeamFarePolicyToDomain x
+        Right (Just x) -> transformBeamFarePolicyToDomain x
+        _ -> pure Nothing
     Nothing -> pure Nothing
 
 update :: (L.MonadFlow m, MonadTime m) => FarePolicy -> m ()
@@ -230,34 +230,38 @@ transformDomainFarePolicyToBeam FarePolicy {..} =
       BeamFP.updatedAt = updatedAt
     }
 
-transformBeamFarePolicyToDomain :: L.MonadFlow m => BeamFP.FarePolicy -> m Domain.FarePolicy
+transformBeamFarePolicyToDomain :: L.MonadFlow m => BeamFP.FarePolicy -> m (Maybe Domain.FarePolicy)
 transformBeamFarePolicyToDomain BeamFP.FarePolicyT {..} = do
   fullDEFB <- QueriesDEFB.findAll (KTI.Id id)
   let fDEFB = snd <$> fullDEFB
   fullFPPD <- QueriesFPPD.findById' (Id id)
-  let fPPD = snd $ fromJust fullFPPD
-  -- fullslabs <- QueriesFPSDS.findById'' (Id id)
-  -- let slabs = snd $ fromJust fullslabs
-  fullslabs <- QueriesFPSDS.findAll'' (Id id)
-  let slabs = snd <$> fullslabs
-  pure $
-    Domain.FarePolicy
-      { id = Id id,
-        merchantId = Id merchantId,
-        vehicleVariant = vehicleVariant,
-        serviceCharge = serviceCharge,
-        nightShiftBounds = NightShiftBounds <$> nightShiftStart <*> nightShiftEnd,
-        allowedTripDistanceBounds =
-          ((,) <$> minAllowedTripDistance <*> maxAllowedTripDistance) <&> \(minAllowedTripDistance', maxAllowedTripDistance') ->
-            Domain.AllowedTripDistanceBounds
-              { minAllowedTripDistance = minAllowedTripDistance',
-                maxAllowedTripDistance = maxAllowedTripDistance'
-              },
-        govtCharges = govtCharges,
-        driverExtraFeeBounds = nonEmpty fDEFB,
-        farePolicyDetails = case farePolicyType of
-          Progressive -> ProgressiveDetails fPPD
-          Slabs -> SlabsDetails (FPSlabsDetails (fromJust $ nonEmpty slabs)),
-        createdAt = createdAt,
-        updatedAt = updatedAt
-      }
+  if isJust fullFPPD
+    then do
+      fullslabs <- QueriesFPSDS.findAll'' (Id id)
+      let fPPD = snd $ fromJust fullFPPD
+      -- fullslabs <- QueriesFPSDS.findById'' (Id id)
+      -- let slabs = snd $ fromJust fullslabs
+      let slabs = snd <$> fullslabs
+      pure $
+        Just
+          Domain.FarePolicy
+            { id = Id id,
+              merchantId = Id merchantId,
+              vehicleVariant = vehicleVariant,
+              serviceCharge = serviceCharge,
+              nightShiftBounds = NightShiftBounds <$> nightShiftStart <*> nightShiftEnd,
+              allowedTripDistanceBounds =
+                ((,) <$> minAllowedTripDistance <*> maxAllowedTripDistance) <&> \(minAllowedTripDistance', maxAllowedTripDistance') ->
+                  Domain.AllowedTripDistanceBounds
+                    { minAllowedTripDistance = minAllowedTripDistance',
+                      maxAllowedTripDistance = maxAllowedTripDistance'
+                    },
+              govtCharges = govtCharges,
+              driverExtraFeeBounds = nonEmpty fDEFB,
+              farePolicyDetails = case farePolicyType of
+                Progressive -> ProgressiveDetails fPPD
+                Slabs -> SlabsDetails (FPSlabsDetails (fromJust $ nonEmpty slabs)),
+              createdAt = createdAt,
+              updatedAt = updatedAt
+            }
+    else pure Nothing
