@@ -59,6 +59,7 @@ import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverReferral as DR
 import Domain.Types.DriverStats
+import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as Fare
 import Domain.Types.FarePolicy (DriverExtraFeeBounds (..))
 import qualified Domain.Types.FarePolicy as DFarePolicy
@@ -75,7 +76,7 @@ import qualified Domain.Types.Vehicle as Veh
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Environment
 import EulerHS.Prelude hiding (id, state)
-import qualified GHC.List as L
+import qualified GHC.List as GHCL
 import GHC.Records.Extra
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
@@ -87,10 +88,7 @@ import qualified Kernel.External.SMS.MyValueFirst.Types as SMS
 import Kernel.Prelude (NominalDiffTime)
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Config
-  ( EsqDBEnv,
-    EsqDBReplicaFlow,
-  )
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -879,30 +877,33 @@ respondQuote (driverId, _) req = do
         Notify.notifyDriverClearedFare orgId driverReq.driverId driverReq.searchTryId driverQuote.estimatedFare driver_.deviceToken
 
 getStats ::
-  (EsqDBReplicaFlow m r, EncFlow m r, HasField "esqDBEnv" r EsqDBEnv) =>
+  (EsqDBReplicaFlow m r, EncFlow m r) =>
   (Id SP.Person, Id DM.Merchant) ->
   Day ->
   m DriverStatsRes
 getStats (driverId, _) date = do
   rides <- runInReplica $ QRide.getRidesForDate driverId date
-  fareParameters' <-
-    mapM
-      ( \ride ->
-          case ride.fareParametersId of
-            Just id -> QFP.findById id
-            _ -> pure Nothing
-      )
-      rides
+  let fareParamId = mapMaybe (.fareParametersId) rides
+  fareParameters' <- mapM (runInReplica . QFP.findById) fareParamId
   let fareParameters = catMaybes fareParameters'
   return $
     DriverStatsRes
       { totalRidesOfDay = length rides,
-        totalEarningsOfDay = sum . catMaybes $ rides <&> (.fare),
+        totalEarningsOfDay = sum (mapMaybe (.fare) rides),
         bonusEarning =
-          let (driverSelFares, customerExtFees) = (catMaybes $ fareParameters <&> (.driverSelectedFare), catMaybes $ fareParameters <&> (.customerExtraFee))
+          let (driverSelFares, customerExtFees) = (mapMaybe (.driverSelectedFare) fareParameters, mapMaybe (.customerExtraFee) fareParameters)
               driverSelFares' = getMoney <$> driverSelFares
               customerExtFees' = getMoney <$> customerExtFees
-           in Money $ L.sum driverSelFares' + L.sum customerExtFees' + length driverSelFares' * 10
+              deadKmFare' =
+                ( (getMoney <$>)
+                    . mapMaybe
+                      ( \x -> case fareParametersDetails x of
+                          ProgressiveDetails det -> Just (deadKmFare det)
+                          SlabDetails _ -> Nothing
+                      )
+                )
+                  fareParameters
+           in Money $ GHCL.sum driverSelFares' + GHCL.sum customerExtFees' + GHCL.sum deadKmFare'
       }
 
 makeAlternatePhoneNumberKey :: Id SP.Person -> Text
