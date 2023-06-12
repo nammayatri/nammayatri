@@ -47,6 +47,8 @@ type API =
            :<|> SmsServiceConfigUpdateAPI
            :<|> SmsServiceUsageConfigUpdateAPI
            :<|> VerificationServiceConfigUpdateAPI
+           :<|> CreateFPDriverExtraFee
+           :<|> UpdateFPDriverExtraFee
        )
 
 type MerchantUpdateAPI =
@@ -97,6 +99,14 @@ type VerificationServiceConfigUpdateAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'VERIFICATION_SERVICE_CONFIG_UPDATE
     :> Common.VerificationServiceConfigUpdateAPI
 
+type CreateFPDriverExtraFee =
+  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'CREATE_FP_DRIVER_EXTRA_FEE
+    :> Common.CreateFPDriverExtraFee
+
+type UpdateFPDriverExtraFee =
+  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'UPDATE_FP_DRIVER_EXTRA_FEE
+    :> Common.UpdateFPDriverExtraFee
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   merchantUpdate merchantId
@@ -111,6 +121,8 @@ handler merchantId =
     :<|> smsServiceConfigUpdate merchantId
     :<|> smsServiceUsageConfigUpdate merchantId
     :<|> verificationServiceConfigUpdate merchantId
+    :<|> createFPDriverExtraFee merchantId
+    :<|> updateFPDriverExtraFee merchantId
 
 buildTransaction ::
   ( MonadFlow m,
@@ -267,3 +279,15 @@ verificationServiceConfigUpdate merchantShortId apiTokenInfo req = withFlowHandl
   transaction <- buildTransaction Common.VerificationServiceConfigUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.merchant.verificationServiceConfigUpdate) req
+
+createFPDriverExtraFee :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.FarePolicy -> Meters -> Common.CreateFPDriverExtraFeeReq -> FlowHandler APISuccess
+createFPDriverExtraFee merchantShortId apiTokenInfo farePolicyId startDistance req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.CreateFPDriverExtraFeeEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callDriverOfferBPP checkedMerchantId (.merchant.createFPDriverExtraFee) farePolicyId startDistance req
+
+updateFPDriverExtraFee :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.FarePolicy -> Meters -> Common.CreateFPDriverExtraFeeReq -> FlowHandler APISuccess
+updateFPDriverExtraFee merchantShortId apiTokenInfo farePolicyId startDistance req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.UpdateFPDriverExtraFeeEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callDriverOfferBPP checkedMerchantId (.merchant.updateFPDriverExtraFee) farePolicyId startDistance req

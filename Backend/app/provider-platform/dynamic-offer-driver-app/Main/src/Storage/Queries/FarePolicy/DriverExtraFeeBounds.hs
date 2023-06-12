@@ -16,11 +16,13 @@
 module Storage.Queries.FarePolicy.DriverExtraFeeBounds where
 
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.FarePolicy as FarePolicy
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Tabular.FarePolicy.DriverExtraFeeBounds
+import qualified Storage.Tabular.FarePolicy.DriverExtraFeeBounds as DFP
 
 findAll' ::
   ( Transactionable m,
@@ -44,3 +46,26 @@ deleteAll' farePolicyId =
     driverExtraFeeBounds <- from $ table @DriverExtraFeeBoundsT
     where_ $
       driverExtraFeeBounds ^. DriverExtraFeeBoundsFarePolicyId ==. val (toKey farePolicyId)
+
+create :: DFP.FullDriverExtraFeeBounds -> SqlDB ()
+create = Esq.create
+
+findByFarePolicyIdAndStartDistance :: Transactionable m => Id FarePolicy.FarePolicy -> Meters -> m (Maybe DFP.FullDriverExtraFeeBounds)
+findByFarePolicyIdAndStartDistance farePolicyId startDistance = Esq.findOne $ do
+  farePolicy <- from $ table @DFP.DriverExtraFeeBoundsT
+  where_ $
+    farePolicy ^. DFP.DriverExtraFeeBoundsFarePolicyId ==. val (toKey farePolicyId)
+      &&. farePolicy ^. DFP.DriverExtraFeeBoundsStartDistance ==. val startDistance
+  pure farePolicy
+
+update :: Id FarePolicy.FarePolicy -> Meters -> Money -> Money -> SqlDB ()
+update farePolicyId startDistace minFee maxFee = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DFP.DriverExtraFeeBoundsMinFee =. val minFee,
+        DFP.DriverExtraFeeBoundsMaxFee =. val maxFee
+      ]
+    where_ $
+      tbl ^. DFP.DriverExtraFeeBoundsFarePolicyId ==. val (toKey farePolicyId)
+        &&. tbl ^. DFP.DriverExtraFeeBoundsStartDistance ==. val startDistace

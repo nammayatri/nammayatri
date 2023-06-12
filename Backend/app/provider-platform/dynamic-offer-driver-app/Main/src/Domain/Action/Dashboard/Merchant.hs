@@ -25,12 +25,16 @@ module Domain.Action.Dashboard.Merchant
     smsServiceConfigUpdate,
     smsServiceUsageConfigUpdate,
     verificationServiceConfigUpdate,
+    createFPDriverExtraFee,
+    updateFPDriverExtraFee,
   )
 where
 
 import Control.Applicative
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as Common
 import qualified Domain.Types.Exophone as DExophone
+import qualified Domain.Types.FarePolicy as FarePolicy
+import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as DFPEFB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.DriverPoolConfig as DDPC
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
@@ -47,6 +51,7 @@ import Kernel.Utils.Validation
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Exophone as CQExophone
+import qualified Storage.CachedQueries.FarePolicy as CQFP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as CQDIPC
 import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CQDPC
@@ -54,6 +59,8 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.OnboardingDocumentConfig as CQODC
+import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPEFB
+-- import qualified Storage.Tabular.FarePolicy.DriverExtraFeeBounds as DFP
 import Tools.Error
 
 ---------------------------------------------------------------------
@@ -433,4 +440,32 @@ verificationServiceConfigUpdate merchantShortId req = do
     CQMSC.upsertMerchantServiceConfig merchantServiceConfig
   CQMSC.clearCache merchant.id serviceName
   logTagInfo "dashboard -> verificationServiceConfigUpdate : " (show merchant.id)
+  pure Success
+
+---------------------------------------------------------------------
+
+createFPDriverExtraFee :: ShortId DM.Merchant -> Id FarePolicy.FarePolicy -> Meters -> Common.CreateFPDriverExtraFeeReq -> Flow APISuccess
+createFPDriverExtraFee _ farePolicyId startDistance req = do
+  mbFarePolicy <- QFPEFB.findByFarePolicyIdAndStartDistance farePolicyId startDistance
+  whenJust mbFarePolicy $ \_ -> throwError $ InvalidRequest "Fare policy with the same id and startDistance already exists"
+  farePolicyDetails <- buildFarePolicy farePolicyId startDistance req
+  Esq.runTransaction $ QFPEFB.create farePolicyDetails
+  CQFP.clearCacheById farePolicyId
+  pure Success
+  where
+    buildFarePolicy fpId strtDistance request = do
+      let driverExtraFeeBounds =
+            DFPEFB.DriverExtraFeeBounds
+              { startDistance = strtDistance,
+                minFee = request.minFee,
+                maxFee = request.maxFee
+              }
+      return (fpId, driverExtraFeeBounds)
+
+---------------------------------------------------------------------
+updateFPDriverExtraFee :: ShortId DM.Merchant -> Id FarePolicy.FarePolicy -> Meters -> Common.CreateFPDriverExtraFeeReq -> Flow APISuccess
+updateFPDriverExtraFee _ farePolicyId startDistance req = do
+  _ <- QFPEFB.findByFarePolicyIdAndStartDistance farePolicyId startDistance >>= fromMaybeM (InvalidRequest "Fare Policy with given id and startDistance not found")
+  Esq.runTransaction $ QFPEFB.update farePolicyId startDistance req.minFee req.maxFee
+  CQFP.clearCacheById farePolicyId
   pure Success

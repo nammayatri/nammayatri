@@ -124,6 +124,9 @@ data UserActionType
   | LIST_ISSUE
   | TRIP_ROUTE
   | RIDE_INFO_CUSTOMER
+  | CLEAR_ON_RIDE_STUCK_DRIVER_IDS
+  | CREATE_FP_DRIVER_EXTRA_FEE
+  | UPDATE_FP_DRIVER_EXTRA_FEE
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''UserActionType]

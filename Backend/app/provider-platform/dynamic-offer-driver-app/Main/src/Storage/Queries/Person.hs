@@ -196,6 +196,20 @@ getDriverInfos driverLocs = do
   where
     personsKeys = toKey . cast <$> fetchDriverIDsFromLocations driverLocs
 
+getOnRideStuckDriverIds :: Transactionable m => m [DriverInformation]
+getOnRideStuckDriverIds = do
+  Esq.findAll $ do
+    driverInfos <- from $ table @DriverInformationT
+    where_ $
+      driverInfos ^. DriverInformationOnRide ==. val True
+        &&. not_ (driverInfos ^. DriverInformationDriverId `in_` rideSubQuery)
+    return driverInfos
+  where
+    rideSubQuery = subList_select $ do
+      r <- from $ table @RideT
+      where_ (r ^. RideStatus `in_` valList [Ride.INPROGRESS, Ride.NEW])
+      pure (r ^. RideDriverId)
+
 getVehicles ::
   Transactionable m =>
   [DriverInformation] ->
