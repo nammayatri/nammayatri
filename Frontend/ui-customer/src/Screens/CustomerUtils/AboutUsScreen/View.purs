@@ -97,6 +97,7 @@ topTextView state =
         , width WRAP_CONTENT
         , height WRAP_CONTENT
         , orientation VERTICAL
+        , visibility if state.appConfig.nyBrandingVisibility then GONE else VISIBLE
         ][  softwareLicenseView
           , termsAndConditionsView state
           , privacyPolicyView state
@@ -113,6 +114,13 @@ logoView state =
         , gravity CENTER
         , cornerRadius 10.0
         ][  imageView
+              [ height $ V 48
+              , width $ V 60
+              , imageWithFallback $ "ny_ic_paytm_logo," <> (getAssetStoreLink FunctionCall) <> "ny_ic_paytm_logo.png"
+              , margin $ MarginRight 40
+              , visibility if state.appConfig.nyBrandingVisibility then VISIBLE else GONE
+              ]
+          , imageView
               [ height $ V 48
               , width $ V 48
               , imageWithFallback $ "ic_launcher," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_launcher.png"
