@@ -50,7 +50,7 @@ export function getMerchantString(key) {
   }
   
   const config = {
-    "StringKeys": ["YOUR_LOCATION_HELPS_OUR_SYSTEM", "REQUEST_RIDE", "ABOUT_APP_DESCRIPTION", "GETTING_ESTIMATES_FOR_YOU"],
+    "StringKeys": ["YOUR_LOCATION_HELPS_OUR_SYSTEM", "ABOUT_APP_DESCRIPTION"],
     "isReferralEnabled" : "true",
     "showBookingPreference" : "true",
     "showRateCard" : "true",
@@ -71,7 +71,7 @@ export function getMerchantString(key) {
     "YOUR_LOCATION_HELPS_OUR_SYSTEM" : "ನಿಮ್ಮ ಸ್ಥಳವು ನಮ್ಮ ಸಿಸ್ಟಂ ಅನ್ನು ಆಟೋಗಳ ಮೂಲಕ ನಕ್ಷೆ ಮಾಡಲು ಸಹಾಯ ಮಾಡುತ್ತದೆ ಮತ್ತು ನಿಮಗೆ ಸಾಧ್ಯವಿರುವ ವೇಗದ ಸವಾರಿಯನ್ನು ನೀಡುತ್ತದೆ.",
     "REQUEST_RIDE" : "ನಮ್ಮಯಾತ್ರಿ ಸವಾರಿಗೆ ವಿನಂತಿಸಿ",
     "ABOUT_APP_DESCRIPTION" : "ಒಂದು ಕ್ಲಿಕ್‌ನ ಅನುಕೂಲಕ್ಕಾಗಿ ನಿಮ್ಮ ಆಟೋ ರೈಡ್‌ಗಳನ್ನು ಬುಕ್ ಮಾಡಲು Paytm ನಿಮಗೆ ವೈಶಿಷ್ಟ್ಯವನ್ನು ಒದಗಿಸುತ್ತದೆ. ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಸ್ವಯಂ ಬುಕಿಂಗ್‌ಗಾಗಿ ನಮ್ಮ ಯಾತ್ರಿ ಓಪನ್ ಸೋರ್ಸ್ ಕೋಡ್ ಅನ್ನು ಆಧರಿಸಿದೆ ಮತ್ತು ಇದು ವೆಚ್ಚ ಪರಿಣಾಮಕಾರಿ ಮತ್ತು ಬಳಸಲು ಸುಲಭವಾಗಿದೆ. ನಿಮ್ಮ ಹತ್ತಿರವಿರುವ ಡ್ರೈವರ್‌ಗಳೊಂದಿಗೆ ಸಂಪರ್ಕಿಸಲು ನಿಮ್ಮ ಪಿಕಪ್ ಮತ್ತು ಡ್ರಾಪ್ ಸ್ಥಳಗಳನ್ನು ಸರಳವಾಗಿ ಇರಿಸಿ. ಬುಕ್ ಮಾಡಿ ಮತ್ತು ಈಗಲೇ ಹೋಗಿ!",
-    "GETTING_ESTIMATES_FOR_YOU" : "ನಮ್ಮ ಯಾತ್ರಿ ನಿಮ್ಮ ಬಳಿ ಸವಾರಿಗಳನ್ನು ಹುಡುಕುತ್ತಿದೆ...Namma Yatri is finding rides near you..."
+    "GETTING_ESTIMATES_FOR_YOU" : "ನಮ್ಮ ಯಾತ್ರಿ ನಿಮ್ಮ ಬಳಿ ಸವಾರಿಗಳನ್ನು ಹುಡುಕುತ್ತಿದೆ..."
   }
   
   const hindiStrings = {

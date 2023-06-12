@@ -253,7 +253,7 @@ const englishStrings = {
   "RIDE_DETAILS": "Ride Details",
   "RIDE_ID": "Ride ID",
   "SELECT_A_RIDE": "Select a ride for more details",
-  "CONFIRM_RIDE_": "Confirm this NammaYatri Ride",
+  "CONFIRM_RIDE_": "Confirm Ride",
   "YOU_CAN_CANCEL_RIDE": "You can cancel once you get offers from drivers",
   "ESTIMATES_CHANGED": "The estimate for your ride has changed now",
   "ESTIMATES_REVISED_TO": "The revised estimate is",
