@@ -51,6 +51,7 @@ data MessageAPIEntityResponse = MessageAPIEntityResponse
     readStatus :: Bool,
     likeStatus :: Bool,
     likeCount :: Int,
+    viewCount :: Int,
     messageId :: Id Domain.Message,
     mediaFiles :: [MediaFileApiResponse]
   }
@@ -81,6 +82,7 @@ messageList (driverId, _) mbLimit mbOffset = do
             readStatus = messageReport.readStatus,
             likeStatus = messageReport.likeStatus,
             likeCount = rawMessage.likeCount,
+            viewCount = rawMessage.viewCount,
             messageId = rawMessage.id,
             mediaFiles = mediaFilesApiType
           }
@@ -107,6 +109,7 @@ getMessage (driverId, _) messageId = do
             readStatus = messageReport.readStatus,
             likeStatus = messageReport.likeStatus,
             likeCount = rawMessage.likeCount,
+            viewCount = rawMessage.viewCount,
             messageId = rawMessage.id,
             mediaFiles = mediaFilesApiType
           }
@@ -118,9 +121,10 @@ fetchMedia (driverId, _) filePath = do
 
 messageSeen :: (Id SP.Person, Id DM.Merchant) -> Id Domain.Message -> Flow APISuccess
 messageSeen (driverId, _) messageId = do
-  _ <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  Esq.runTransaction $ MRQ.updateSeenAndReplyByMessageIdAndDriverId messageId (cast driverId) True Nothing
-
+  messageDetails <- Esq.runInReplica $ MRQ.findByMessageIdAndDriverId messageId (cast driverId) >>= fromMaybeM (InvalidRequest "Message not found")
+  Esq.runTransaction $ do
+    when (not messageDetails.readStatus) $ MQ.updateMessageViewCount messageId 1
+    MRQ.updateSeenAndReplyByMessageIdAndDriverId messageId (cast driverId) True Nothing
   return Success
 
 messageLiked :: (Id SP.Person, Id DM.Merchant) -> Id Domain.Message -> Flow APISuccess
