@@ -36,6 +36,7 @@ import Kernel.Types.Id
 import Storage.Tabular.Booking
 import Storage.Tabular.Booking.BookingLocation
 import qualified Storage.Tabular.DriverQuote as DriverQuote
+import Storage.Tabular.FareParameters
 import qualified Storage.Tabular.FareParameters as FareParams
 import qualified Storage.Tabular.FareParameters.FareParametersProgressiveDetails as FareParametersProgressiveDetails
 import qualified Storage.Tabular.FareParameters.FareParametersSlabDetails as FareParametersSlabDetails
@@ -50,9 +51,9 @@ buildFullBooking ::
   BookingT ->
   DTypeBuilder m (Maybe (SolidType FullBookingT))
 buildFullBooking bookingT@BookingT {..} = runMaybeT $ do
-  fromLocationT <- MaybeT $ Esq.findById' @BookingLocationT (fromKey fromLocationId)
-  toLocationT <- MaybeT $ Esq.findById' @BookingLocationT (fromKey toLocationId)
-  fareParamsT <- MaybeT $ Esq.findById' @FareParams.FareParametersT (fromKey fareParametersId)
+  fromLocationT <- Esq.findByIdM @BookingLocationT fromLocationId
+  toLocationT <- Esq.findByIdM @BookingLocationT toLocationId
+  fareParamsT <- Esq.findByIdM @FareParams.FareParametersT fareParametersId
   fullFareParamsData <- MaybeT $ getFullFareParamsData fareParamsT
   return $ extractSolidType @Booking (bookingT, fromLocationT, toLocationT, fullFareParamsData)
 
@@ -66,11 +67,11 @@ getFullFareParamsData fareParamsT@FareParams.FareParametersT {..} = do
       FareParams.Progressive ->
         MaybeT $
           fmap FareParams.ProgressiveDetailsT
-            <$> Esq.findById' @FareParametersProgressiveDetails.FareParametersProgressiveDetailsT (Id id)
+            <$> Esq.findById' @FareParametersProgressiveDetails.FareParametersProgressiveDetailsT (toKey $ Id id)
       FareParams.Slab ->
         MaybeT $
           fmap FareParams.SlabDetailsT
-            <$> Esq.findById' @FareParametersSlabDetails.FareParametersSlabDetailsT (Id id)
+            <$> Esq.findById' @FareParametersSlabDetails.FareParametersSlabDetailsT (toKey $ Id id)
     return (fareParamsT, fareParamsDet)
 
 buildFullFareParameters ::

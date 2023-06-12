@@ -24,6 +24,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Storage.Tabular.Estimate as TEstimate
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.EstimateBreakup as BeamEB
@@ -38,21 +39,24 @@ create estimate = do
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainEstimateBreakupToBeam estimate)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-findAllByEstimateId :: (Transactionable m) => Id Estimate -> DTypeBuilder m [EstimateBreakupT]
-findAllByEstimateId estimateId =
-  Esq.findAll' $ do
-    estimateBreakup <- from $ table @SEB.EstimateBreakupT
-    where_ $ estimateBreakup ^. EstimateBreakupEstimateId ==. val (toKey estimateId)
-    return estimateBreakup
+findAllByEstimateIdT :: (Transactionable m) => EstimateTId -> MaybeT (DTypeBuilder m) [EstimateBreakupT]
+findAllByEstimateIdT = lift . findAllByEstimateId'
 
-findAllByEstimateId' :: L.MonadFlow m => Id Estimate -> m [EstimateBreakup]
-findAllByEstimateId' (Id estimateId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamEB.EstimateBreakupT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> either (pure []) (transformBeamEstimateBreakupToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamEB.estimateId $ Se.Eq estimateId]
-    Nothing -> pure []
+findAllByEstimateId' :: (Transactionable m) => EstimateTId -> DTypeBuilder m [EstimateBreakupT]
+findAllByEstimateId' estimateTId = Esq.findAll' $ do
+  estimateBreakup <- from $ table @SEB.EstimateBreakupT
+  where_ $ estimateBreakup ^. EstimateBreakupEstimateId ==. val estimateTId
+  return estimateBreakup
+
+-- TODO: @Abhishek, update the following function
+-- findAllByEstimateId' :: L.MonadFlow m => Id Estimate -> m [EstimateBreakup]
+-- findAllByEstimateId' (Id estimateId) = do
+--   dbConf <- L.getOption KBT.PsqlDbCfg
+--   let modelName = Se.modelTableName @BeamEB.EstimateBreakupT
+--   let updatedMeshConfig = setMeshConfig modelName
+--   case dbConf of
+--     Just dbConf' -> either (pure []) (transformBeamEstimateBreakupToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamEB.estimateId $ Se.Eq estimateId]
+--     Nothing -> pure []
 
 transformBeamEstimateBreakupToDomain :: BeamEB.EstimateBreakup -> EstimateBreakup
 transformBeamEstimateBreakupToDomain BeamEB.EstimateBreakupT {..} = do
