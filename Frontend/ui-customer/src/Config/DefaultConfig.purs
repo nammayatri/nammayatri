@@ -28,4 +28,5 @@ config =
   , nyBrandingVisibility: true
   , fontType: "System"
   , confirmPickUpLocationBorder: "#101010"
+  , logs : ["JUSPAY", "FIREBASE"]
   }

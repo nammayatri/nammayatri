@@ -20,6 +20,8 @@ foreign import getValueFromConfig :: String -> String
 
 foreign import getValueFromMerchant :: String -> String
 
+foreign import getValueFromConfig :: String -> String
+
 foreign import getENStrings :: String -> String
 
 getLanguage :: LazyCheck -> Array Language

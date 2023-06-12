@@ -3,7 +3,6 @@ module Config.Types where
 import Prelude
 import Styles.Types (FontType)
 
-
 type AppConfig =
   {
     primaryTextColor :: String,
@@ -24,7 +23,8 @@ type AppConfig =
     rateCardColor :: String,
     nyBrandingVisibility :: Boolean,
     fontType :: String,
-    confirmPickUpLocationBorder ::String
+    confirmPickUpLocationBorder ::String,
+    logs :: Array String
   } 
 
 type QuoteListConfig = {

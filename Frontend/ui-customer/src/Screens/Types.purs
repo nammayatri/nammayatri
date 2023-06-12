@@ -31,6 +31,8 @@ import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route)
 import Config.Types
+import Foreign.Object (Object)
+import Foreign (Foreign)
 
 type Contacts = {
   name :: String,
@@ -161,7 +163,8 @@ type EnterMobileNumberScreenStateData = {
   , otp :: String
   , timer :: String
   , timerID :: String
-  , config :: AppConfig
+  , config :: AppConfig,
+  logField :: Object Foreign
 }
 -- ################################################ AccountSetUpScreenState ##################################################
 
@@ -341,7 +344,8 @@ type MyRideScreenData = {
     selectedItem :: IndividualRideCardState,
     offsetValue :: Int,
     loadMoreText :: String,
-    config :: AppConfig
+    config :: AppConfig,
+    logField :: Object Foreign
   }
 
 type MyRideScreenProps = {
@@ -416,7 +420,8 @@ type ItemState =
 -- ################################################ PermissionScreenState ##################################################
 
 type PermissionScreenState = {
-    appConfig :: AppConfig
+    appConfig :: AppConfig,
+    logField :: Object Foreign
 }
 -- ######################################  HomeScreenState   ######################################
 
@@ -502,6 +507,7 @@ type HomeScreenStateData =
   , specialZoneSelectedQuote :: Maybe String
   , selectedEstimatesObject :: ChooseVehicle.Config
   , config :: AppConfig
+  , logField :: Object Foreign
   }
 
 type HomeScreenStateProps =
@@ -625,6 +631,7 @@ type ReferralScreenState =
     , isInvalidCode :: Boolean
     , isExpandReference :: Boolean
     , config :: AppConfig
+    , logField :: Object Foreign
   }
 
 -- ################################## SelectLanguageScreenState ###############################
@@ -717,7 +724,8 @@ type MyProfileScreenData = {
   editedEmailId :: Maybe String,
   editedGender :: Maybe Gender,
   errorMessage :: Maybe EmailErrorType,
-  config :: AppConfig
+  config :: AppConfig,
+  logField :: Object Foreign
 }
 
 data EmailErrorType = INVALID_EMAIL | EMAIL_EXISTS
@@ -897,7 +905,9 @@ type AddNewAddressScreenProps =
   }
 
 type AppUpdatePopUpState =
- { version :: Int }
+ { version :: Int ,
+   logField :: Object Foreign
+ }
 
 
 data NotifyFlowEventType = RATE_DRIVER_SKIPPED | SEARCH_CANCELLED

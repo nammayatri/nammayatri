@@ -151,7 +151,7 @@ foreign import storeCallBackMessageUpdated :: forall action. (action -> Effect U
 foreign import sendMessage :: String -> Unit
 foreign import scrollToBottom :: String -> Effect Unit
 foreign import metaLogEvent :: String -> Unit
-foreign import firebaseLogEvent :: String -> Unit
+foreign import firebaseLogEvent :: String -> Effect Unit
 foreign import firebaseLogEventWithParams :: String -> String -> String -> Effect Unit
 foreign import firebaseLogEventWithTwoParams :: String -> String -> String -> String -> String -> Effect Unit
 foreign import firebaseScreenNameLog :: String  -> Effect Unit

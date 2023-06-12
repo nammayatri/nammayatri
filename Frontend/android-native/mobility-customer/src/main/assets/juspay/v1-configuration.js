@@ -22,6 +22,7 @@ window.getMerchantConfig = function () {
         rateCardColor : "#00B8F5",
         nyBrandingVisibility: true,
         fontType : "System",
-        confirmPickUpLocationBorder : "#101010"
+        confirmPickUpLocationBorder : "#101010",
+        logs: ["FIREBASE", "JUSPAY"]
     })
 }
