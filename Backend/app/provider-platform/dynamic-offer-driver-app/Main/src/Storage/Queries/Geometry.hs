@@ -15,17 +15,17 @@
 module Storage.Queries.Geometry where
 
 import qualified Database.Beam as B
-import Database.Beam.Postgres
+-- import Database.Beam.Postgres
 import qualified Database.Beam.Schema.Tables as B
 import Domain.Types.Geometry
-import EulerHS.KVConnector.Utils (meshModelTableEntity)
+-- import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Lib.Utils
-import Sequelize
+-- import Sequelize
 import qualified Storage.Beam.Geometry as BeamG
 
 data AtlasDB f = AtlasDB
