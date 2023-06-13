@@ -57,6 +57,7 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Data.Int as INT
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn)
+import Resources.Constants (getKmMeter)
 
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
@@ -64,20 +65,20 @@ shareAppConfig state = let
   config' = PopUpModal.config
   popUpConfig' = config'{
       gravity = CENTER,
-      margin = (MarginHorizontal 24 24),
-      buttonLayoutMargin = (Margin 16 0 16 20),
+      margin = MarginHorizontal 24 24,
+      buttonLayoutMargin = Margin 16 0 16 20,
       primaryText {
-        text = getString(YOUR_RIDE_HAS_STARTED)
-      , margin = (MarginHorizontal 16 16)},
+        text = getString YOUR_RIDE_HAS_STARTED
+      , margin = MarginHorizontal 16 16},
       secondaryText {
-        text = getString(ENJOY_RIDING_WITH_US)
+        text = getString ENJOY_RIDING_WITH_US
       , margin = MarginVertical 12 24
       , fontSize = FontSize.a_14
       , color = Color.black700},
       option1 {
         text = getString(MAYBE_LATER)
       , fontSize = FontSize.a_16
-      , width = V $ (((EHC.screenWidth unit)-92)/2)
+      , width = V $ (EHC.screenWidth unit-92)/2
       , background = Color.white900
       , strokeColor = Color.black500
       , color = Color.black700
@@ -86,14 +87,14 @@ shareAppConfig state = let
       option2 {
         text = getString(SHARE_APP)
       , fontSize = FontSize.a_16
-      , width = V $ (((EHC.screenWidth unit)-92)/2)
+      , width = V $ (EHC.screenWidth unit-92)/2
       , color = Color.yellow900
       , strokeColor = Color.black900
       , background = Color.black900
       , margin = MarginLeft 12
       ,fontStyle = FontStyle.semiBold LanguageStyle
       },
-      cornerRadius = (Corners 15.0 true true true true),
+      cornerRadius = Corners 15.0 true true true true,
       coverImageConfig {
         imageUrl = "ic_share_app,https://assets.juspay.in/nammayatri/images/user/ny_ic_share_app.png"
       , visibility = VISIBLE
@@ -104,6 +105,62 @@ shareAppConfig state = let
   }
   in popUpConfig'
 
+cancelAppConfig :: ST.HomeScreenState -> PopUpModal.Config
+cancelAppConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+      gravity = BOTTOM,
+      dismissPopup =true,
+      optionButtonOrientation = "VERTICAL",
+      buttonLayoutMargin = Margin 16 0 16 20,
+      primaryText {
+        text = case distanceString of
+                  Just distanceString  -> distanceString <> getString PLEASE_CONTACT_THE_DRIVER_BEFORE_CANCELLING
+                  Nothing -> getString DRIVER_IS_NOT_MOVING_Q <> getString WOULD_YOU_LIKE_TO_CHECK_WITH_THE_DRIVER_BEFORE_CANCELLING
+      , margin = Margin 16 20 16 20
+      , fontSize = FontSize.a_18},
+      secondaryText { visibility = GONE },
+      option1 {
+        text = getString CALL_DRIVER
+      , fontSize = FontSize.a_16
+      , color = Color.yellow900
+      , background = Color.black900
+      , strokeColor = Color.transparent
+      , fontStyle = FontStyle.semiBold LanguageStyle
+      , width = MATCH_PARENT
+      },
+      option2 {
+        text = getString CANCEL_RIDE
+      , fontSize = FontSize.a_16
+      , color = Color.black700
+      , background = Color.white900
+      , strokeColor = Color.transparent
+      , fontStyle = FontStyle.semiBold LanguageStyle
+      , width = MATCH_PARENT
+      , margin = Margin 0 0 0 0
+      },
+      cornerRadius = Corners 15.0 true true false false,
+      coverImageConfig {
+        imageUrl = if state.data.driverInfoCardState.distance <= 500 
+                    then "ny_ic_driver_near,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png" 
+                    else "ny_ic_driver_started,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_started.png"
+      , visibility = VISIBLE
+      , margin = Margin 16 20 16 24
+      , width = MATCH_PARENT
+      , height = V 200
+      }
+  }
+  in popUpConfig'
+      where distanceString = getDistanceString state.data.driverInfoCardState.distance $ fromMaybe 0 state.data.driverInfoCardState.initDistance
+
+
+getDistanceString :: Int -> Int -> Maybe String
+getDistanceString currDistance initDistance
+  | currDistance <= 15 = Just $ getString DRIVER_IS_NEAR_YOUR_LOCATION
+  | currDistance <= 500 = Just $ getString YOUR_DRIVER_IS_JUST <> show currDistance <> getString M_AWAY
+  | currDistance > initDistance = Just $ getString DRIVER_MIGHT_BE_TAKING_ALTERNATE_ROUTE
+  | currDistance < initDistance = Just $ getString DRIVER_HAS_ALREADY_TRAVELLED <> getKmMeter (initDistance - currDistance) <> if (getValueToLocalStore LANGUAGE_KEY) == "EN_US" then "." else getString HAS_TRAVELLED
+  | otherwise =  Nothing
 
 skipButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 skipButtonConfig state =
@@ -312,32 +369,32 @@ cancelRidePopUpConfig :: ST.HomeScreenState -> CancelRidePopUpConfig.Config
 cancelRidePopUpConfig state =
   let
     cancelRideconfig = CancelRidePopUpConfig.config
-    lastIndex = ((DA.length state.props.cancellationReasons) - 1)
+    lastIndex = (DA.length state.props.cancellationReasons) - 1
     cancelRideconfig' =
       cancelRideconfig
         { selectionOptions = state.props.cancellationReasons
         , primaryButtonTextConfig
-          { firstText = (getString GO_BACK_)
-          , secondText = (getString CANCEL_RIDE)
+          { firstText = getString WAIT_FOR_DRIVER
+          , secondText = getString CANCEL_RIDE
           }
         , activeIndex = state.props.cancelRideActiveIndex
         , activeReasonCode = Just state.props.cancelReasonCode
-        , isLimitExceeded = ((DS.length (state.props.cancelDescription)) >= 100)
+        , isLimitExceeded = DS.length state.props.cancelDescription >= 100
         , isSelectButtonActive =
           ( case state.props.cancelRideActiveIndex of
               Just cancelRideIndex -> true
               Nothing -> false
           )
         , headingTextConfig{
-          text = ((getString CANCEL_RIDE) <> "?")
+          text = getString CANCEL_RIDE <> "?"
         }
         , subHeadingTextConfig{
-          text = (getString PLEASE_TELL_US_WHY_YOU_WANT_TO_CANCEL)
+          text = getString PLEASE_TELL_US_WHY_YOU_WANT_TO_CANCEL
         }
-        , hint = (getString HELP_US_WITH_YOUR_REASON)
+        , hint = getString HELP_US_WITH_YOUR_REASON
         , strings
-          { mandatory = (getString MANDATORY)
-          , limitReached = ((getString MAX_CHAR_LIMIT_REACHED) <> " 100 " <> (getString OF) <> " 100")
+          { mandatory = getString MANDATORY
+          , limitReached = getString MAX_CHAR_LIMIT_REACHED <> " 100 " <> getString OF <> " 100"
           }
         }
   in

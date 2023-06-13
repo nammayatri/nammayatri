@@ -457,7 +457,6 @@ const bengaliStrings = {
   "REASON_CHANGE_IN_ROUTE_B": "রুট পরিবর্তনের কারণে মোট ভাড়া পরিবর্তন হতে পারে",
   "RECOMMENDED" : "প্রস্তাবিত",
   "COMPLETE_YOUR_PROFILE_FOR_A_PERSONALISED_RIDE_EXPERIENCE" : "ব্যক্তিগতকৃত রাইড অভিজ্ঞতার জন্য আপনার প্রোফাইল সম্পূর্ণ করুন",
-,
   "WE_WOULD_APPRECIATE_YOUR_FEEDBACK" : "আমরা অ্যাকাউন্ট মুছে ফেলার পিছনে আপনার যুক্তির প্রশংসা করব",
   "REASON_FOR_DELETING_ACCOUNT" : "অ্যাকাউন্ট মুছে ফেলার কারণ*",
   "SUBMIT_REQUEST" : "অনুরোধ জমা দিন",

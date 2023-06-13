@@ -69,6 +69,7 @@ data KeyStore
   | ACCURACY_THRESHOLD
   | DEVICE_DETAILS
   | USER_EMAIL
+  | PICKUP_DISTANCE
 
 derive instance genericKeyStore :: Generic KeyStore _
 

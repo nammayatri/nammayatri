@@ -231,7 +231,7 @@ eval (GenderSelectionModalAction (SelectListModal.Button2 PrimaryButtonControlle
                                   Just index -> (state.data.genderSelectionModal.selectionOptions Array.!! (index))
                                   Nothing    -> Nothing
     _ <- pure $ spy "Gender Selected " genderSelected
-    exit (UpdateGender state {data = state.data{driverGender = Just (fromMaybe {description:"",reasonCode:"",textBoxRequired:false} genderSelected).reasonCode},props = state.props{genderSelectionModalShow = false}})
+    exit (UpdateGender state {data = state.data{driverGender = Just (fromMaybe dummyCancelReason genderSelected).reasonCode},props = state.props{genderSelectionModalShow = false}})
 
 eval _ state = continue state
 
@@ -240,18 +240,22 @@ genders dummy =
   [ { reasonCode: "MALE"
     , description: (getString MALE)
     , textBoxRequired : false
+    , subtext : Nothing
     }
   , { reasonCode: "FEMALE"
     , description: (getString FEMALE)
     , textBoxRequired : false
+    , subtext : Nothing
     }
   , { reasonCode: "OTHER"
     , description: (getString OTHER)
     , textBoxRequired : false
+    , subtext : Nothing
     }
   , { reasonCode: "PREFER_NOT_TO_SAY"
     , description: (getString PREFER_NOT_TO_SAY)
     , textBoxRequired : false
+    , subtext : Nothing
     }
   ]
 
@@ -272,6 +276,14 @@ getValue listOptions state =
     DRIVER_LICENCE_INFO -> state.data.drivingLicenseNo
     DRIVER_ALTERNATE_MOBILE_INFO -> (fromMaybe "" state.data.driverAlternateMobile)
     GENDER_INFO -> (fromMaybe (getString SET_NOW) ( state.data.driverGender))
+
+dummyCancelReason :: OptionButtonList
+dummyCancelReason = 
+  { reasonCode: ""
+    , description: ""
+    , textBoxRequired : false
+    , subtext : Nothing
+  }
 
 getGenderValue :: Maybe String -> Maybe String
 getGenderValue gender =

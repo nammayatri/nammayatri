@@ -585,7 +585,7 @@ data Action = NoAction
             | ChooseYourRideAction ChooseYourRideController.Action
             | SearchForSelectedLocation
             | GenderBannerModal Banner.Action
-
+            | CancelSearchAction PopUpModal.Action        
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -744,7 +744,8 @@ eval BackPressed state = do
                             continue state {props {currentStage = RideAccepted}}
     _               -> do
                         if state.props.isLocationTracking then continue state{props{isLocationTracking = false}}
-                          else if state.props.isSaveFavourite then continueWithCmd state [pure $ (SaveFavouriteCardAction (SaveFavouriteCardController.OnClose))]
+                          else if state.props.cancelSearchCallDriver then continue state{props{cancelSearchCallDriver = false}}
+                          else if state.props.isSaveFavourite then continueWithCmd state [pure $ SaveFavouriteCardAction SaveFavouriteCardController.OnClose]
                           else if state.props.showShareAppPopUp then continue state{props{showShareAppPopUp=false}}
                           else if state.props.showMultipleRideInfo then continue state{props{showMultipleRideInfo=false}}
                           else if state.props.emergencyHelpModelState.showContactSupportPopUp then continue state {props {emergencyHelpModelState{showContactSupportPopUp = false}}}
@@ -998,9 +999,15 @@ eval (DriverInfoCardActionController (DriverInfoCardController.Support)) state =
   _ <- pure $ performHapticFeedback unit
   continue state{props{callSupportPopUp = true}}
 
+eval (CancelSearchAction PopUpModal.DismissPopup) state = do continue state {props { cancelSearchCallDriver = false }}
+
+eval (CancelSearchAction PopUpModal.OnButton1Click) state = do continue state {props {showCallPopUp = true, cancelSearchCallDriver = false}}
+
+eval (CancelSearchAction PopUpModal.OnButton2Click) state = do
+  continue state { props { isCancelRide = true, cancellationReasons = cancelReasons "", cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "", cancelSearchCallDriver = false } }
+
 eval (DriverInfoCardActionController (DriverInfoCardController.CancelRide infoCard)) state = do
-  _ <- pure $ performHapticFeedback unit
-  continue state { props { isCancelRide = true, cancellationReasons = cancelReasons "", cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "" } }
+  continue state { props { cancelSearchCallDriver = true } }
 
 eval (DriverInfoCardActionController (DriverInfoCardController.LocationTracking)) state = do
   _ <- pure $ performHapticFeedback unit
@@ -1557,8 +1564,17 @@ eval (CallSupportAction PopUpModal.OnButton2Click) state= do
   continue state{props{callSupportPopUp=false}}
 
 eval (UpdateETA currentETA currentDistance) state = do
+  let initDistance = state.data.driverInfoCardState.initDistance
+  distance <- case initDistance of
+                      Just initDistance -> pure initDistance
+                      Nothing -> do 
+                                    let storedDistance = getValueToLocalStore PICKUP_DISTANCE
+                                    if storedDistance == "0" || storedDistance == "__failed" || storedDistance == "(null)" then do 
+                                      _ <- pure $ setValueToLocalStore PICKUP_DISTANCE (show currentDistance)
+                                      pure currentDistance
+                                      else pure $ fromMaybe 0 (fromString storedDistance)
   let
-    newState = state { data { driverInfoCardState { eta = currentETA, distance = currentDistance } } }
+    newState = state { data { driverInfoCardState { eta = currentETA, distance = currentDistance, initDistance = Just distance } } }
   continue newState
 
 eval (ReferralFlowAction) state = exit $ GoToReferral state
@@ -1684,32 +1700,34 @@ dummyEstimateEntity =
 
 cancelReasons :: String -> Array OptionButtonList
 cancelReasons dummy =
-  [ { reasonCode: "GOT_ANOTHER_RIDE"
-    , description: getString GOT_ANOTHER_RIDE_ELSE_WHERE
+  [ { reasonCode: "CHANGE_OF_PLANS"
+    , description: getString CHANGE_OF_PLANS
+    , subtext: Just $ getString NO_LONGER_REQUIRE_A_RIDE_DUE_TO_CHANGE_IN_PLANS
     , textBoxRequired : false
     }
-  , { reasonCode: "HIGH_FARE"
-    , description: getString FARE_WAS_HIGH
+  , { reasonCode: "GOT_ANOTHER_RIDE"
+    , description: getString GOT_ANOTHER_RIDE_ELSE_WHERE
+    , subtext: Just $ getString CANCELLING_AS_I_GOT_A_RIDE_ON_ANOTHER_APP
+    , textBoxRequired : false
+    }
+  , { reasonCode: "DRIVER_NOT_MOVING"
+    , description: getString DRIVER_IS_NOT_MOVING
+    , subtext: Just $ getString DRIVER_LOCATION_WASNT_CHANGING_ON_THE_MAP
     , textBoxRequired : false
     }
   , { reasonCode: "WAIT_TIME_TOO_LONG"
     , description: getString WAIT_TIME_TOO_LONG
+    , subtext: Just $ getString DRIVER_WAS_TAKING_TOO_LONG_TO_REACH_THE_PICKUP_LOCATION
     , textBoxRequired : false
     }
-  , { reasonCode: "DRIVER_UNREACHABLE"
-    , description: getString DRIVER_WAS_NOT_REACHABLE
-    , textBoxRequired : false
-    }
-  , { reasonCode: "DRIVER_WAS_RUDE"
-    , description: getString DRIVER_WAS_RUDE
-    , textBoxRequired : false
-    }
-  , { reasonCode: "FORCED_BY_DRIVER"
-    , description: getString DRIVER_REQUESTED_TO_CANCEL
+  , { reasonCode: "WRONG_PICKUP_LOCATION"
+    , description: getString WRONG_PICKUP_LOCATION
+    , subtext: Just $ getString THE_PICKUP_LOCATION_ENTERED_WAS_WRONG
     , textBoxRequired : false
     }
   , { reasonCode: "OTHER"
     , description: getString OTHER
+    , subtext: Just $ getString SOME_OTHER_REASON
     , textBoxRequired : true
     }
   ]
@@ -1718,7 +1736,8 @@ dummyCancelReason :: OptionButtonList
 dummyCancelReason =
   { reasonCode: ""
   , description: ""
-  , textBoxRequired : false
+  , textBoxRequired: false
+  , subtext: Nothing
   }
 
 dummyRideRatingState :: RatingCard
