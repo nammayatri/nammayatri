@@ -68,7 +68,9 @@ buildSearchRequest person pickup mbDrop mbMaxDistance mbDistance now bundleVersi
         language = person.language,
         customerExtraFee = Nothing,
         autoAssignEnabled = Nothing,
-        autoAssignEnabledV2 = Nothing
+        autoAssignEnabledV2 = Nothing,
+        availablePaymentMethods = [],
+        selectedPaymentMethodId = Nothing
       }
   where
     getSearchRequestExpiry :: (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]) => UTCTime -> m UTCTime

@@ -17,4 +17,4 @@ module Beckn.Types.Core.Taxi.OnConfirm.Payment
   )
 where
 
-import Beckn.Types.Core.Taxi.OnInit.Payment as Reexport
+import Beckn.Types.Core.Taxi.Confirm.Payment as Reexport

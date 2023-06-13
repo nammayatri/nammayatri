@@ -76,7 +76,7 @@ handler merchantId = callSelect merchantId :<|> callSelectList merchantId :<|> c
 callSelect :: ShortId DM.Merchant -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
 callSelect merchantId personId estimateId = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  US.select2 (personId, m.id) estimateId $ US.DSelectReq {customerExtraFee = Nothing, autoAssignEnabled = False, autoAssignEnabledV2 = Nothing}
+  US.select2 (personId, m.id) estimateId $ US.DSelectReq {customerExtraFee = Nothing, autoAssignEnabled = False, autoAssignEnabledV2 = Nothing, paymentMethodId = Nothing}
 
 callSelectList :: ShortId DM.Merchant -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
 callSelectList merchantId personId estimate = do

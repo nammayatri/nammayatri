@@ -15,6 +15,7 @@
 module Beckn.ACL.Init (buildInitReq) where
 
 import qualified Beckn.Types.Core.Taxi.Init as Init
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.VehicleVariant as VehVar
 import Environment
 import Kernel.External.Maps.Types (LatLong)
@@ -60,7 +61,7 @@ buildInitMessage res = do
           Init.Order
             { items = [mkOrderItem mbBppItemId itemCode],
               fulfillment = mkFulfillmentInfo res.fromLoc res.toLoc res.startTime res.maxEstimatedDistance,
-              payment = mkPayment
+              payment = mkPayment <$> res.paymentMethodInfo
             }
       }
   where
@@ -118,10 +119,26 @@ mkFulfillmentInfo fromLoc mbToLoc startTime maxDistance =
               }
     }
 
-mkPayment :: Init.Payment
-mkPayment =
+mkPayment :: DMPM.PaymentMethodInfo -> Init.Payment
+mkPayment DMPM.PaymentMethodInfo {..} =
   Init.Payment
-    { collected_by = "BAP",
-      _type = Init.ON_FULFILLMENT,
-      time = Init.TimeDuration "P2D"
+    { collected_by = castPaymentCollector collectedBy,
+      _type = castPaymentType paymentType,
+      instrument = castPaymentInstrument paymentInstrument,
+      time = Init.TimeDuration "P2A" -- FIXME: what is this?
     }
+
+castPaymentCollector :: DMPM.PaymentCollector -> Init.PaymentCollector
+castPaymentCollector DMPM.BAP = Init.BAP
+castPaymentCollector DMPM.BPP = Init.BPP
+
+castPaymentType :: DMPM.PaymentType -> Init.PaymentType
+castPaymentType DMPM.PREPAID = Init.ON_ORDER
+castPaymentType DMPM.POSTPAID = Init.ON_FULFILLMENT
+
+castPaymentInstrument :: DMPM.PaymentInstrument -> Init.PaymentInstrument
+castPaymentInstrument (DMPM.Card DMPM.DefaultCardType) = Init.Card Init.DefaultCardType
+castPaymentInstrument (DMPM.Wallet DMPM.DefaultWalletType) = Init.Wallet Init.DefaultWalletType
+castPaymentInstrument DMPM.UPI = Init.UPI
+castPaymentInstrument DMPM.NetBanking = Init.NetBanking
+castPaymentInstrument DMPM.Cash = Init.Cash

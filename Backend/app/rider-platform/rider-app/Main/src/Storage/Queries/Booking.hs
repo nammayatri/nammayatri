@@ -244,8 +244,8 @@ findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus =
     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
   catMaybes <$> mapM buildFullBooking fullBookingsT
 
-updatePaymentInfo :: Id Booking -> Money -> Maybe Money -> Money -> SqlDB ()
-updatePaymentInfo rbId estimatedFare discount estimatedTotalFare = do
+updatePaymentInfo :: Id Booking -> Money -> Maybe Money -> Money -> Maybe Text -> SqlDB ()
+updatePaymentInfo rbId estimatedFare discount estimatedTotalFare mbPaymentUrl = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
@@ -253,7 +253,8 @@ updatePaymentInfo rbId estimatedFare discount estimatedTotalFare = do
       [ RB.BookingUpdatedAt =. val now,
         RB.BookingEstimatedFare =. val (realToFrac estimatedFare),
         RB.BookingDiscount =. val (realToFrac <$> discount),
-        RB.BookingEstimatedTotalFare =. val (realToFrac estimatedTotalFare)
+        RB.BookingEstimatedTotalFare =. val (realToFrac estimatedTotalFare),
+        RB.BookingPaymentUrl =. val mbPaymentUrl
       ]
     where_ $ tbl ^. RB.BookingId ==. val (getId rbId)
 

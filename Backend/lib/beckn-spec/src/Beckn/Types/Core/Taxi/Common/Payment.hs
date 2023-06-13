@@ -12,12 +12,14 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnSearch.Payment
-  ( module Beckn.Types.Core.Taxi.OnSearch.Payment,
+module Beckn.Types.Core.Taxi.Common.Payment
+  ( module Beckn.Types.Core.Taxi.Common.Payment,
     module Reexport,
   )
 where
 
+import Beckn.Types.Core.Taxi.Common.PaymentCollector as Reexport
+import Beckn.Types.Core.Taxi.Common.PaymentInstrument as Reexport
 import Beckn.Types.Core.Taxi.Common.PaymentType as Reexport
 import Beckn.Types.Core.Taxi.Common.TimeDuration as Reexport
 import Data.OpenApi (ToSchema)
@@ -25,9 +27,10 @@ import EulerHS.Prelude hiding (State, (.=))
 import Kernel.Utils.JSON
 
 data Payment = Payment
-  { collected_by :: Text,
+  { collected_by :: PaymentCollector,
     _type :: PaymentType,
-    time :: TimeDuration
+    instrument :: PaymentInstrument, -- FIXME find proper fields
+    time :: TimeDuration -- FIXME: what is this?
   }
   deriving (Generic, Show, ToSchema)
 

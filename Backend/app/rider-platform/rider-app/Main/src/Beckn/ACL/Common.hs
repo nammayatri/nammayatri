@@ -14,6 +14,8 @@
 
 module Beckn.ACL.Common where
 
+import qualified Beckn.Types.Core.Taxi.Common.Payment as Common
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Kernel.Prelude
 import Kernel.Utils.Common
 import Tools.Error
@@ -23,3 +25,18 @@ validatePrices price priceWithDiscount = do
   when (price < 0) $ throwError $ InvalidRequest "price is less than zero"
   when (priceWithDiscount < 0) $ throwError $ InvalidRequest "discounted price is less than zero"
   when (priceWithDiscount > price) $ throwError $ InvalidRequest "price is lesser than discounted price"
+
+castPaymentCollector :: Common.PaymentCollector -> DMPM.PaymentCollector
+castPaymentCollector Common.BAP = DMPM.BAP
+castPaymentCollector Common.BPP = DMPM.BPP
+
+castPaymentType :: Common.PaymentType -> DMPM.PaymentType
+castPaymentType Common.ON_ORDER = DMPM.PREPAID
+castPaymentType Common.ON_FULFILLMENT = DMPM.POSTPAID
+
+castPaymentInstrument :: Common.PaymentInstrument -> DMPM.PaymentInstrument
+castPaymentInstrument (Common.Card Common.DefaultCardType) = DMPM.Card DMPM.DefaultCardType
+castPaymentInstrument (Common.Wallet Common.DefaultWalletType) = DMPM.Wallet DMPM.DefaultWalletType
+castPaymentInstrument Common.UPI = DMPM.UPI
+castPaymentInstrument Common.NetBanking = DMPM.NetBanking
+castPaymentInstrument Common.Cash = DMPM.Cash

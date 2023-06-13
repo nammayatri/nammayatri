@@ -18,6 +18,7 @@ module Beckn.Types.Core.Taxi.OnSearch
   )
 where
 
+import Beckn.Types.Core.Taxi.Common.Payment as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.Addon as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.Catalog as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.Category as Reexport
@@ -26,7 +27,6 @@ import Beckn.Types.Core.Taxi.OnSearch.Fulfillment as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.Item as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.Location as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.Offer as Reexport
-import Beckn.Types.Core.Taxi.OnSearch.Payment as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.Price as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.Provider as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.ProviderLocation as Reexport

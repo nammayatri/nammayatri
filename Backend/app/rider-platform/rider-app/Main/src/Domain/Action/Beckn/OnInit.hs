@@ -35,7 +35,8 @@ data OnInitReq = OnInitReq
     bppBookingId :: Id BPPBooking,
     estimatedFare :: Money,
     discount :: Maybe Money,
-    estimatedTotalFare :: Money
+    estimatedTotalFare :: Money,
+    paymentUrl :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -59,7 +60,7 @@ onInit :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HedisFlow m r) => OnInitRe
 onInit req = do
   DB.runTransaction $ do
     QRideB.updateBPPBookingId req.bookingId req.bppBookingId
-    QRideB.updatePaymentInfo req.bookingId req.estimatedFare req.discount req.estimatedTotalFare
+    QRideB.updatePaymentInfo req.bookingId req.estimatedFare req.discount req.estimatedTotalFare req.paymentUrl
   booking <- QRideB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   decRider <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId) >>= decrypt

@@ -30,6 +30,7 @@ import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
 import Domain.Types.Booking.Type
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import Domain.Types.Quote (QuoteAPIEntity (..))
@@ -57,7 +58,8 @@ import Tools.Error
 data DSelectReq = DSelectReq
   { customerExtraFee :: Maybe Money,
     autoAssignEnabled :: Bool,
-    autoAssignEnabledV2 :: Maybe Bool
+    autoAssignEnabledV2 :: Maybe Bool,
+    paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod)
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -126,7 +128,7 @@ select personId estimateId req@DSelectReq {..} = do
     QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, validTill = searchRequest.validTill}
     QEstimate.updateStatus estimateId DEstimate.DRIVER_QUOTE_REQUESTED
     when (isJust req.customerExtraFee) $ do
-      QSearchRequest.updateCustomerExtraFee searchRequest.id req.customerExtraFee
+      QSearchRequest.updateCustomerExtraFeeAndPaymentMethod searchRequest.id req.customerExtraFee req.paymentMethodId
   QPFS.clearCache searchRequest.riderId
   pure
     DSelectRes

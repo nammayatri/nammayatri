@@ -119,6 +119,11 @@ token: {{app-token}}
 # @name select
 @estimateId = {{quotes.response.body.estimates[0].id}}
 
+@paymentMethodId = {{quotes.response.body.paymentMethods[0].id}}
+
+# paymentMethodId will work only if autoAssignEnabledV2 is true
+# else paymentMethodId should be specified in confirm API
+
 POST {{app-host}}/estimate/{{estimateId}}/select2 HTTP/1.1
 content-type: application/json
 token: {{app-token}}
@@ -126,7 +131,8 @@ token: {{app-token}}
 {
   "customerExtraFee" : 10,
   "autoAssignEnabled" : false,
-  "autoAssignEnabledV2" : false
+  "autoAssignEnabledV2" : false,
+  "paymentMethodId" : "{{paymentMethodId}}"
 }
 
 ###
@@ -160,21 +166,12 @@ token: {{app-token}}
 
 # @name confirmQuote
 
-POST {{app-host}}/rideSearch/quotes/{{selectedQuoteId}}/confirm
+POST {{app-host}}/rideSearch/quotes/{{selectedQuoteId}}/confirm?paymentMethodId={{paymentMethodId}}
 content-type: application/json
 token: {{app-token}}
 
-{
-  "selected": true,
-  "fromLocation": {
-    "door": "2"
-  },
-  "toLocation": {
-    "door": "3"
-  }
-}
-
 ###
+
 @bookingId = {{confirmQuote.response.body.bookingId}}
 
 # @name list2

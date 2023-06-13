@@ -14,7 +14,9 @@
 
 module Beckn.ACL.Common where
 
+import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
 import qualified Beckn.Types.Core.Taxi.Common.VehicleVariant as Common
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Vehicle.Variant as Variant
 
 castVariant :: Variant.Variant -> Common.VehicleVariant
@@ -24,3 +26,18 @@ castVariant Variant.SUV = Common.SUV
 castVariant Variant.AUTO_RICKSHAW = Common.AUTO_RICKSHAW
 castVariant Variant.TAXI = Common.TAXI
 castVariant Variant.TAXI_PLUS = Common.TAXI_PLUS
+
+castPaymentCollector :: DMPM.PaymentCollector -> Payment.PaymentCollector
+castPaymentCollector DMPM.BAP = Payment.BAP
+castPaymentCollector DMPM.BPP = Payment.BPP
+
+castPaymentType :: DMPM.PaymentType -> Payment.PaymentType
+castPaymentType DMPM.PREPAID = Payment.ON_ORDER
+castPaymentType DMPM.POSTPAID = Payment.ON_FULFILLMENT
+
+castPaymentInstrument :: DMPM.PaymentInstrument -> Payment.PaymentInstrument
+castPaymentInstrument (DMPM.Card DMPM.DefaultCardType) = Payment.Card Payment.DefaultCardType
+castPaymentInstrument (DMPM.Wallet DMPM.DefaultWalletType) = Payment.Wallet Payment.DefaultWalletType
+castPaymentInstrument DMPM.UPI = Payment.UPI
+castPaymentInstrument DMPM.NetBanking = Payment.NetBanking
+castPaymentInstrument DMPM.Cash = Payment.Cash
