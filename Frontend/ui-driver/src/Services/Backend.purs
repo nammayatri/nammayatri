@@ -863,3 +863,50 @@ makeOTPRideReq otp lat lon = OTPRideReq {
         lon : lon
         }
 }
+
+-- Response for the session API call
+
+makePayloadFromState :: String -> PPPayloadReq
+makePayloadFromState _ =
+    PPPayloadReq $ {
+      amount : "1"
+    }
+
+
+getPaymentPagePayload :: PPPayloadReq -> FlowBT String PaymentPagePayload
+getPaymentPagePayload req = do
+    headers <- getHeaders' ""
+    pure payload1
+
+    {-
+    UNCOMMENT FOR HITTING SERVER TO GET PAYLOAD
+    withAPIResultBT EP.getPayload (\x → x) errorHandler (lift $ lift $ callAPI headers req)
+    where
+    errorHandler (errorPayload) =  do
+            BackT $ pure GoBack
+    -}
+
+
+payload2 = PayPayload {
+        clientId:"nammayatri",
+        amount:"1.18",
+        merchantId:"nammayatri",
+        clientAuthToken:"tkn_af6829dd77694e1796cf73ee0e9be2a7",
+        clientAuthTokenExpiry:"2023-06-13T12:48:49Z",
+        environment:"prod",
+        lastName:"wick",
+        action:"paymentPage",
+        customerId:"9876543210",
+        currency:"INR",
+        firstName:"john",
+        customerPhone:"9876543201",
+        customerEmail:"test@mail.com",
+        orderId:"test-179759896405",
+        description:"Order Description"
+      }
+      
+payload1 = PaymentPagePayload {
+    requestId:"9b1c7150c1eb42a1b86c2339e74716fb",
+    service:"in.juspay.hyperpay",
+    payload : payload2
+    }

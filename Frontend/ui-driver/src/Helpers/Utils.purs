@@ -26,7 +26,7 @@ import Common.Types.App (LazyCheck(..))
 import Control.Monad.Except (runExcept)
 import Data.Array ((!!)) as DA
 import Data.Array.NonEmpty (fromArray)
-import Data.Either (hush)
+import Data.Either (hush, Either(..))
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
@@ -36,7 +36,7 @@ import Data.String (Pattern(..), split) as DS
 import Data.String as DS
 import Data.Traversable (traverse)
 import Effect (Effect)
-import Effect.Aff (error, killFiber, launchAff, launchAff_)
+import Effect.Aff (error, killFiber, launchAff, launchAff_, makeAff, nonCanceler)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (parseFloat, setText', getCurrentUTC) as ReExport
 import Foreign (Foreign)
@@ -46,11 +46,16 @@ import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>))
+import Prelude (Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>))
 import Prelude (class Eq, class Show, (<<<))
 import Prelude (map, (*), (-), (/))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import Screens.Types (AllocationData, YoutubeData)
+import Services.APITypes (PaymentPagePayload)
+import Presto.Core.Types.Language.Flow (Flow, doAff)
+import Types.App (FlowBT)
+import Control.Monad.Except.Trans (lift)
+import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
 
 foreign import shuffle :: forall a. Array a -> Array a
 foreign import generateUniqueId :: Unit -> String
@@ -213,3 +218,21 @@ getCommonAssetStoreLink lazy = case (getMerchant lazy) of
   JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/yatricommon/images/"
   PAYTM -> "https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/"
+  UNKNOWN -> "https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/"
+
+type AffSuccess s = (s -> Effect Unit)
+type MicroAPPInvokeSignature = String -> (AffSuccess String) ->  Effect Unit
+
+
+foreign import startPP1 :: MicroAPPInvokeSignature
+
+startPP'' :: forall a. PaymentPagePayload -> Flow a String
+startPP'' payload = do
+  response <- doAff $ makeAff (\cb -> (startPP1 (encodeJSON payload) (Right >>> cb) ) *> pure nonCanceler)
+  pure $ response
+
+
+startPP :: PaymentPagePayload -> FlowBT String String
+startPP payload = do
+  action <- lift $ lift $ startPP'' payload
+  pure action

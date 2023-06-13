@@ -144,3 +144,6 @@ deleteIssue issueId = (getBaseUrl "") <> "/issue/"<> issueId <> "/delete"
 
 otpRide :: String -> String
 otpRide dummyRideOtp = (getBaseUrl "") <> "/driver/otpRide/start"
+
+getPayload :: String
+getPayload = (getBaseUrl "10") <> "/payments"
