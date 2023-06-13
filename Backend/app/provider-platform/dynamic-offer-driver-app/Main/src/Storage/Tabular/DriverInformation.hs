@@ -41,6 +41,7 @@ mkPersist
       onRide Bool
       enabled Bool
       blocked Bool
+      numOfLocks Int
       verified Bool
       lastEnabledOn UTCTime Maybe
       referralCode Text Maybe

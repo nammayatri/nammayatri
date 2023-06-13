@@ -238,8 +238,8 @@ blockDriver merchantShortId reqDriverId = do
   -- merchant access checking
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
-
-  CQDriverInfo.updateBlockedState driverId True
+  driverInf <- CQDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
+  when (not driverInf.blocked) (CQDriverInfo.updateBlockedState driverId True)
   logTagInfo "dashboard -> blockDriver : " (show personId)
   pure Success
 
@@ -258,7 +258,8 @@ unblockDriver merchantShortId reqDriverId = do
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  CQDriverInfo.updateBlockedState driverId False
+  driverInf <- CQDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
+  when driverInf.blocked (CQDriverInfo.updateBlockedState driverId False)
   logTagInfo "dashboard -> unblockDriver : " (show personId)
   pure Success
 

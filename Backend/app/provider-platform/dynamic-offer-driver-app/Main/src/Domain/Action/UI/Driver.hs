@@ -388,6 +388,7 @@ createDriverDetails personId adminId merchantId = do
             onRide = False,
             enabled = True,
             blocked = False,
+            numOfLocks = 0,
             verified = False,
             referralCode = Nothing,
             canDowngradeToSedan = False,
