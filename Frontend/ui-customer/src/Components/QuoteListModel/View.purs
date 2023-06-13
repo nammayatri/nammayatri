@@ -15,6 +15,8 @@
 
 module Components.QuoteListModel.View where
 
+import Common.Types.App
+
 import Animation (translateYAnimFromTop)
 import Animation.Config (translateFullYAnimWithDurationConfig)
 import Components.PrimaryButton as PrimaryButton
@@ -23,21 +25,20 @@ import Components.QuoteListModel.Controller (Action(..), QuoteListModelState)
 import Data.Array (filter, head, null, (!!))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Effect (Effect)
-import Engineering.Helpers.Commons (getNewIDWithTag, os, safeMarginTop, screenWidth,safeMarginBottom, isPreviousVersion)
+import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getAssetsBaseUrl)
+import Helpers.Utils (getPreviousVersion)
 import JBridge (getBtnLoader, startLottieProcess)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Prelude ((<>))
 import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, clickable, color, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, text, textSize, textView, visibility, weight, width, imageWithFallback)
 import PrestoDOM.Animation as PrestoAnim
 import Storage (KeyStore(..), getValueToLocalStore)
-import Helpers.Utils (getPreviousVersion)
 import Styles.Colors as Color
-import Common.Types.App
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getAssetsBaseUrl)
-import Prelude ((<>))
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -77,9 +78,9 @@ paymentView state =
   , orientation VERTICAL
   ][  if state.showProgress then
         lottieAnimationView
-          [ id "1234567892"
+          [ id (getNewIDWithTag "1234567892")
           , afterRender (\action-> do
-                        _ <- pure $ startLottieProcess ((getAssetsBaseUrl FunctionCall) <> "lottie/progress_loader_line.json") "1234567892" true 0.6 "CENTER_CROP"
+                        _ <- pure $ startLottieProcess ((getAssetsBaseUrl FunctionCall) <> "lottie/progress_loader_line.json") (getNewIDWithTag "1234567892") true 0.6 "CENTER_CROP"
                         pure unit)(const NoAction)
           , height WRAP_CONTENT
           , width MATCH_PARENT
@@ -205,9 +206,9 @@ findingRidesView state push =
   , clickable true
   ][
     lottieAnimationView
-      [ id "1234567893"
+      [ id $ getNewIDWithTag "1234567893"
       , afterRender (\action-> do
-                    _ <- pure $ startLottieProcess ((getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_with_text.json") "1234567893" true 0.6 "Default"
+                    _ <- pure $ startLottieProcess ((getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_with_text.json") (getNewIDWithTag "1234567893") true 0.6 "Default"
                     pure unit)(const NoAction)
       , height $ V 300
       , width $ V 300

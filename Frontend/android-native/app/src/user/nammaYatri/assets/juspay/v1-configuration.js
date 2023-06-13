@@ -13,7 +13,7 @@ window.getMerchantConfig = function () {
     "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F",
     "CUSTOMER_TIP": "true",
     "isShareAppEnabled": "true",
-    "apiLoaderLottie": "primary_button_loader",
+    "apiLoaderLottie": "primary_button_loader.json",
     "isEmergencyContacts": "true",
     "isChatEnabled": "true",
     "primaryTextColor": "#FCC32C",
@@ -41,6 +41,7 @@ window.getMerchantConfig = function () {
     "black900": "#2C2F3A",
     "black800": "#454545",
     "red" : "#E55454",
+    "popupBackground" : "#FFFFFF",
     "englishStrings": {
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "Your location helps our system to map down all the near by autos and get you the quickest ride possible.",
       "REQUEST_RIDE": "Request a NammaYatri Ride"

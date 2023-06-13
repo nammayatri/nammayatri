@@ -252,8 +252,7 @@ public class MainActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(this, e -> Log.w(LOG_TAG, "getDynamicLink:onFailure", e));
         WebView.setWebContentsDebuggingEnabled(true);
-        inappCallBack = this::showInAppNotification;
-        ChatService.registerInAppCallback(inappCallBack);
+        registerCallBack();
         setContentView(R.layout.activity_main);
         if (MERCHANT_TYPE.equals("DRIVER")) {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -293,9 +292,6 @@ public class MainActivity extends AppCompatActivity {
                 isSystemAnimEnabled = false;
             }
         }
-        bundleUpdateCallBack = this::showAlertForUpdate;
-        MyFirebaseMessagingService.registerBundleUpdateCallback(bundleUpdateCallBack);
-        MyFirebaseMessagingService.registerShowNotificationCallBack(inappCallBack);
         appUpdateManager = AppUpdateManagerFactory.create(this);
         // Returns an intent object that you use to check for an update.
         Task<AppUpdateInfo> appUpdateInfoTask = appUpdateManager.getAppUpdateInfo();
@@ -335,6 +331,14 @@ public class MainActivity extends AppCompatActivity {
         window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
         window.setStatusBarColor(this.getResources().getColor(R.color.colorPrimaryDark, getTheme()));
         countAppUsageDays();
+    }
+
+    private void registerCallBack() {
+        inappCallBack = this::showInAppNotification;
+        ChatService.registerInAppCallback(inappCallBack);
+        bundleUpdateCallBack = this::showAlertForUpdate;
+        MyFirebaseMessagingService.registerBundleUpdateCallback(bundleUpdateCallBack);
+        MyFirebaseMessagingService.registerShowNotificationCallBack(inappCallBack);
     }
 
     private void initNotificationChannel() {

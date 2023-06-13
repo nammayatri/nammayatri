@@ -246,7 +246,7 @@ public class ChatService extends Service {
                     );
                 }
                 firestoreInstance.collection("Chats").document(chatChannelID).collection("messages").add(_newMessage);
-                if (merchant.equals("DRIVER")) sendFCM(message);
+                if (merchantType.equals("DRIVER")) sendFCM(message);
             } catch (Exception e) {
                 Log.e(LOG_TAG, "Error in sending a message" + e);
             }

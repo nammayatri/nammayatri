@@ -44,7 +44,6 @@ import android.os.Environment;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.MediaStore;
-import android.provider.Settings;
 import android.util.Base64;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -70,7 +69,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.core.location.LocationManagerCompat;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
@@ -522,7 +520,7 @@ public class MobilityCommonBridge extends HyperBridge {
     public void openNavigation(double slat, double slong, double dlat, double dlong) {
         try {
             if (bridgeComponents.getActivity() != null) {
-                setKeysInSharedPrefs("MAPS_OPENED","true");
+                setKeysInSharedPrefs("MAPS_OPENED", "true");
                 Uri googleMapsURI = Uri.parse("google.navigation:q=" + dlat + "," + dlong);
                 Intent mapIntent = new Intent(Intent.ACTION_VIEW, googleMapsURI);
                 mapIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -530,7 +528,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 bridgeComponents.getActivity().startActivity(mapIntent);
             }
         } catch (Exception e) {
-            setKeysInSharedPrefs("MAPS_OPENED","null");
+            setKeysInSharedPrefs("MAPS_OPENED", "null");
             Log.e(MAPS, "Can't open google maps", e);
         }
     }
@@ -1264,7 +1262,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 toast(bridgeComponents.getContext().getString(R.string.no_enabled_browser));
 //                firebaseLogEvent("exception_no_activity_found_for_intent");
                 Log.e(UTILS, "Exception occurred while calling WebView", e);
-            } catch (Exception e){
+            } catch (Exception e) {
 //                firebaseLogEvent("exception_in_openUrlInApp");
                 Log.e(UTILS, "Exception occurred while calling WebView", e);
             }
@@ -1345,28 +1343,52 @@ public class MobilityCommonBridge extends HyperBridge {
     @SuppressLint("DiscouragedApi")
     private String getJsonFromResources(String rawJson) throws IOException {
         Writer writer = new StringWriter();
-        if (bridgeComponents.getActivity() != null) {
-            InputStream inputStreams = (bridgeComponents.getActivity().getResources().getIdentifier(rawJson, "raw", bridgeComponents.getActivity().getPackageName()) == 0) ?
-                    bridgeComponents.getContext().getAssets().open(rawJson + ".json") :
-                    bridgeComponents.getActivity().getResources().openRawResource(bridgeComponents.getActivity().getResources().getIdentifier(rawJson, "raw", bridgeComponents.getActivity().getPackageName()));
-            char[] buffer = new char[1024];
+        Context context = bridgeComponents.getContext();
+        InputStream inputStreams;
+        boolean isCheckAssets = (context.getResources().getIdentifier(rawJson, "raw", context.getPackageName()) == 0);
+        if (isCheckAssets) {
+            inputStreams = context.getAssets().open(rawJson + ".json");
+            if (inputStreams == null) {
+                inputStreams = context.getAssets().open("juspay/" + rawJson + ".json");
+            }
+        } else {
+            inputStreams = context.getResources().openRawResource(context.getResources().getIdentifier(rawJson, "raw", context.getPackageName()));
+        }
+        char[] buffer = new char[1024];
+        try {
+            Reader reader = new BufferedReader(new InputStreamReader(inputStreams, StandardCharsets.UTF_8));
+            int n;
+            while ((n = reader.read(buffer)) != -1) {
+                writer.write(buffer, 0, n);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
             try {
-                Reader reader = new BufferedReader(new InputStreamReader(inputStreams, StandardCharsets.UTF_8));
-                int n;
-                while ((n = reader.read(buffer)) != -1) {
-                    writer.write(buffer, 0, n);
-                }
-            } catch (Exception e) {
+                inputStreams.close();
+            } catch (IOException e) {
                 e.printStackTrace();
-            } finally {
-                try {
-                    inputStreams.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
             }
         }
         return writer.toString();
+    }
+
+    @JavascriptInterface
+    @SuppressLint("DiscouragedApi")
+    public boolean isFilePresentDeep(String fileName) throws IOException {
+        Context context = bridgeComponents.getContext();
+        InputStream inputStreams;
+        fileName = fileName.substring(0,fileName.lastIndexOf("."));
+        boolean isCheckAssets = (context.getResources().getIdentifier(fileName, "raw", context.getPackageName()) == 0);
+        if (isCheckAssets) {
+            inputStreams = context.getAssets().open(fileName);
+            if (inputStreams == null) {
+                inputStreams = context.getAssets().open("juspay/" + fileName);
+            }
+            return (inputStreams != null);
+        } else {
+            return true;
+        }
     }
 
     @JavascriptInterface
@@ -1537,10 +1559,10 @@ public class MobilityCommonBridge extends HyperBridge {
 
     protected boolean isStoragePermissionGiven() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            JuspayLogger.d(OTHERS,"Storage Permission is required for API less than 29");
+            JuspayLogger.d(OTHERS, "Storage Permission is required for API less than 29");
             return (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED);
         } else {
-            JuspayLogger.d(OTHERS,"Storage Permission is not required for API greater than 29");
+            JuspayLogger.d(OTHERS, "Storage Permission is not required for API greater than 29");
             return true;
         }
     }
@@ -1556,26 +1578,34 @@ public class MobilityCommonBridge extends HyperBridge {
         File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName + ".pdf");
         int i = 1;
         while (file.exists()) {
-            JuspayLogger.d(UTILS,"file already exists " + file.getName());
+            JuspayLogger.d(UTILS, "file already exists " + file.getName());
             String updatedFile = fileName + "_(" + i + ")" + ".pdf";
             file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), updatedFile);
             i++;
 
         }
-        JuspayLogger.d(UTILS,"final File name " + file.getName());
+        JuspayLogger.d(UTILS, "final File name " + file.getName());
         return file;
     }
 
-    public ImageView.ScaleType getScaleTypes(String scale){
+    public ImageView.ScaleType getScaleTypes(String scale) {
         switch (scale) {
-            case "MATRIX" : return ImageView.ScaleType.MATRIX;
-            case "FIT_XY" : return ImageView.ScaleType.FIT_XY;
-            case "FIT_START" : return ImageView.ScaleType.FIT_START;
-            case "FIT_END" : return ImageView.ScaleType.FIT_END;
-            case "CENTER" : return ImageView.ScaleType.CENTER;
-            case "CENTER_CROP" : return ImageView.ScaleType.CENTER_CROP;
-            case "CENTER_INSIDE" : return ImageView.ScaleType.CENTER_INSIDE;
-            default: return ImageView.ScaleType.FIT_CENTER;
+            case "MATRIX":
+                return ImageView.ScaleType.MATRIX;
+            case "FIT_XY":
+                return ImageView.ScaleType.FIT_XY;
+            case "FIT_START":
+                return ImageView.ScaleType.FIT_START;
+            case "FIT_END":
+                return ImageView.ScaleType.FIT_END;
+            case "CENTER":
+                return ImageView.ScaleType.CENTER;
+            case "CENTER_CROP":
+                return ImageView.ScaleType.CENTER_CROP;
+            case "CENTER_INSIDE":
+                return ImageView.ScaleType.CENTER_INSIDE;
+            default:
+                return ImageView.ScaleType.FIT_CENTER;
         }
     }
 
@@ -1595,7 +1625,7 @@ public class MobilityCommonBridge extends HyperBridge {
 
     protected static class Receivers {
         BridgeComponents bridgeComponents;
-        BroadcastReceiver gpsReceiver ;
+        BroadcastReceiver gpsReceiver;
         BroadcastReceiver internetActionReceiver;
         String storeInternetActionCallBack;
 
@@ -1624,17 +1654,20 @@ public class MobilityCommonBridge extends HyperBridge {
             bridgeComponents.getContext().registerReceiver(gpsReceiver, new IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION));
             bridgeComponents.getContext().registerReceiver(internetActionReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
         }
+
         protected void invokeOnEvent(String event, String payload) {
             String encoded = Base64.encodeToString(payload.getBytes(), Base64.NO_WRAP);
             String command = String.format("window[\"onEvent'\"]('%s',atob('%s'))", event, encoded);
             bridgeComponents.getJsCallback().addJsToWebView(command);
         }
+
         private boolean isNetworkAvailable() {
             ConnectivityManager connectivityManager
                     = (ConnectivityManager) bridgeComponents.getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
             NetworkInfo activeNetworkInfo = connectivityManager != null ? connectivityManager.getActiveNetworkInfo() : null;
             return activeNetworkInfo != null && activeNetworkInfo.isConnected();
         }
+
         public void callInternetActionCallBack(String isPermission) {
             if (storeInternetActionCallBack != null) {
                 String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",

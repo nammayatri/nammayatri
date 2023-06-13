@@ -21,7 +21,8 @@ type AppConfig =
     fontType :: String,
     languageList :: Array Language,
     confirmPickUpLocationBorder ::String,
-    bannerConfig :: BannerViewState
+    bannerConfig :: BannerViewState,
+    popupBackground :: String
   } 
 
 type QuoteListConfig = {

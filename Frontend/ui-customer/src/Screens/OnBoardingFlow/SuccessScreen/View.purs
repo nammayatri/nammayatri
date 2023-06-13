@@ -16,8 +16,9 @@
 module Screens.SuccessScreen.View where
 
 import Prelude
+
 import Common.Types.App (LazyCheck(..))
-import Types.App (defaultGlobalState)
+import Common.Types.App (LazyCheck(..))
 import Control.Monad.Except.Trans (lift, runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Maybe (Maybe(..))
@@ -25,8 +26,10 @@ import Data.Time.Duration (Milliseconds(..))
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
+import Engineering.Helpers.Commons (getNewIDWithTag)
 import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getAssetsBaseUrl)
 import JBridge (startLottieProcess)
 import Presto.Core.Types.Language.Flow (delay, doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, afterRender, background, color, gravity, height, id, linearLayout, lottieAnimationView, margin, orientation, padding, text, textView, width, imageView, imageUrl)
@@ -34,10 +37,9 @@ import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.SuccessScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (SuccessScreenState)
-import Styles.Colors as Color
 import Storage (getValueToLocalStore, KeyStore(..))
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getAssetsBaseUrl)
-import Common.Types.App (LazyCheck(..))
+import Styles.Colors as Color
+import Types.App (defaultGlobalState)
 
 screen :: SuccessScreenState -> ScopedScreen Action SuccessScreenState ScreenOutput
 screen initialState =
@@ -107,10 +109,10 @@ view push state =
 lottieLoaderView :: forall w. SuccessScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 lottieLoaderView state push =
   lottieAnimationView
-    [ id "1234567894"
+    [ id (getNewIDWithTag "1234567894")
     , afterRender
         ( \action -> do
-            _ <- pure $ startLottieProcess ((getAssetsBaseUrl FunctionCall) <> "lottie/success_lottie.json") "1234567894" true 1.0 "default"
+            _ <- pure $ startLottieProcess ((getAssetsBaseUrl FunctionCall) <> "lottie/success_lottie.json") (getNewIDWithTag "1234567894") true 1.0 "default"
             pure unit
         )
         (const CountDown)

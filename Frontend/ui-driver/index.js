@@ -103,14 +103,15 @@ window.onMerchantEvent = function (event, payload) {
       , errorCode: ""
     }
     if (clientPaylod.payload.clientId == "open-kochi") {
-      window.merchantID = "YATRIPARTNER"
+      window.merchantID = "YATRI"
     } else if(clientPaylod.payload.clientId == "jatrisaathiprovider" || clientPaylod.payload.clientId == "jatrisaathidriver"){
-      window.merchantID = "JATRISAATHIDRIVER"
+      window.merchantID = "JATRISAATHI"
     }else {
-      window.merchantID = clientPaylod.payload.clientId.toUpperCase();
+      // window.merchantID = clientPaylod.payload.clientId.toUpperCase();
+      window.merchantID = "NAMMAYATRI";
     }
     console.log(window.merchantID);
-    var header = {"x-client-id" : "nammayatri"};
+    var header = {"x-client-id" : "nammayatripartner"};
     JBridge.setAnalyticsHeader(JSON.stringify(header));
     JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
   } else if (event == "process") {

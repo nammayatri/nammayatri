@@ -60,7 +60,7 @@ import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, lift
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (adjustViewWithKeyboard) as HU
-import Helpers.Utils (decodeErrorMessage, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, waitingCountdownTimer)
+import Helpers.Utils (decodeErrorMessage, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, waitingCountdownTimer)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getAssetsBaseUrl)
 import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getCurrentPosition, getExtendedPath, getHeightFromPercent, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, toast, updateRoute)
 import Language.Strings (getString)
@@ -1665,11 +1665,8 @@ separator lineHeight lineColor currentStage =
 lottieLoaderView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 lottieLoaderView state push =
   lottieAnimationView
-    [ id "1234567890"
-    , afterRender ( \action -> do 
-          push action 
-          _ <- pure $ startLottieProcess "ic_vehicle_processing" "1234567890" true 0.6 "Default"
-          pure unit) (const LottieLoaderAction)
+    [ id $ getNewIDWithTag "1234567890"
+    , afterRender (\_ -> pure $ startLottieProcess ((getAssetsBaseUrl FunctionCall) <> "lottie/ic_vehicle_processing.json") (getNewIDWithTag "1234567890") true 0.6 "Default") (const unit)
     , height $ V 96
     , width $ V 96
     ]

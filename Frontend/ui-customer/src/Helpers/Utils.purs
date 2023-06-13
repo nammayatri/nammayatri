@@ -23,6 +23,7 @@ import Accessor (_distance_meters)
 import Common.Types.App (LazyCheck(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Control.Monad.Except (runExcept)
+import Control.Monad.Free (resume)
 import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!))
 import Data.Array.NonEmpty (fromArray)
 import Data.Date (Date)
@@ -54,12 +55,13 @@ import Juspay.OTP.Reader.Flow as Reader
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||))
 import Presto.Core.Flow (Flow, doAff)
-import Presto.Core.Types.Language.Flow (getState, modifyState)
+import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..))
 import Services.API (Prediction)
 import Types.App (GlobalState(..))
+import Unsafe.Coerce (unsafeCoerce)
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
 -- shuffle' array = do
@@ -392,3 +394,6 @@ getAssetsBaseUrl lazy = case (getMerchant lazy) of
   JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/user/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/user/"
   UNKNOWN -> "https://assets.juspay.in/beckn/mobilitypaytm/user/"
+
+unLiftFlow :: forall a st . Flow st a -> Maybe a
+unLiftFlow = unsafeCoerce

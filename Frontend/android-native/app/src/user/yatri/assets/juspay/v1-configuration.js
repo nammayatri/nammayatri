@@ -13,7 +13,7 @@ window.getMerchantConfig = function () {
     "APP_LINK": getAppLink(window.__OS),
     "CUSTOMER_TIP": "false",
     "isShareAppEnabled": "true",
-    "apiLoaderLottie": "primary_button_loader",
+    "apiLoaderLottie": "primary_button_loader.json",
     "isChatEnabled": "true",
     "primaryTextColor": "#FCC32C",
     "primaryBackground": "#2C2F3A",
@@ -40,6 +40,7 @@ window.getMerchantConfig = function () {
     "black900": "#2C2F3A",
     "black800": "#454545",
     "red" : "#E55454",
+    "popupBackground" : "#FFFFFF",
     "englishStrings": {
       "ABOUT_APP_DESCRIPTION": "Yatri is an open platform to connect commuters with transport providers. The app makes it convenient for travellers to find available means of transport, and avail these options by connecting them with service providers ",
       "WELCOME_TEXT": "Welcome to Yatri",

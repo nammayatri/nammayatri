@@ -1285,9 +1285,19 @@ export const startLottieProcess = function (rawJson) {
     return function (loop) {
       return function (speed) {
         return function (scaleType){
+          console.log("rawJson ",rawJson);
           if (JBridge.startLottieProcess) {
+            var lottieName = "";
             var fileName = rawJson.substr(rawJson.lastIndexOf("/") + 1);
-            var lottieName = JBridge.isFilePresent(fileName) ? (fileName.slice(0,fileName.lastIndexOf("."))) : rawJson;
+            console.log("fileName ",fileName);
+            if (JBridge.isFilePresentDeep) {
+              console.log("isFilePresentDeep ",JBridge.isFilePresentDeep(fileName));
+              lottieName = JBridge.isFilePresentDeep(fileName) ? (fileName.slice(0,fileName.lastIndexOf("."))) : rawJson;
+            } else {
+              console.log("isFilePresent ",JBridge.isFilePresent(fileName));
+              lottieName = JBridge.isFilePresent(fileName) ? (fileName.slice(0,fileName.lastIndexOf("."))) : rawJson;
+            }
+            console.log("rawJson ",lottieName);
             return JBridge.startLottieProcess(lottieName,lottieId, loop, speed, scaleType);
           }
         };

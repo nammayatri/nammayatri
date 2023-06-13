@@ -336,7 +336,7 @@ logOutPopUpModelConfig state =
               , text = (getString GO_BACK_)
               }
             , option2 { 
-                background = state.data.config.primaryTextColor
+                background = state.data.config.popupBackground
               , strokeColor = state.data.config.primaryBackground
               , color = state.data.config.primaryBackground
               , text = (getString LOGOUT_)

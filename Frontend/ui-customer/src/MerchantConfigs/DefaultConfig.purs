@@ -35,4 +35,5 @@ config =
       , actionTextColor : "#269574"
       , imageUrl : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
       }
+  , popupBackground : "#FFFFFF"
   }

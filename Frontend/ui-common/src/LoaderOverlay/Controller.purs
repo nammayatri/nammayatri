@@ -28,14 +28,10 @@ instance showAction :: Show Action where
 instance loggableAction :: Loggable Action where
   performLog = defaultPerformLog
 data Action
-  = BackPressed
-  | NoAction
-  | AfterRender
+  = AfterRender
 
 data ScreenOutput
-  = GoBack
+  = Exit
 
 eval :: forall a. Action -> a -> Eval Action ScreenOutput a
-eval BackPressed state = exit GoBack
-
-eval _ state = continue state
+eval AfterRender state = exit Exit

@@ -40,6 +40,8 @@ window.getMerchantConfig = function () {
     "black900": "#101010",
     "black800": "#101010",
     "red" : "#FD5154",
+    "popupBackground" : "#03B9F5",
+    "popupTextColor" : "#FFFFFF",
     "confirmPickUpLocationBorder" : "#101010",
     "englishStrings": {
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "Your location helps our system to map down all the near by autos and get you the quickest ride possible.",

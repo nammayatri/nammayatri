@@ -13,7 +13,7 @@ window.getMerchantConfig = function () {
     "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1-bcjLOZ_gR0Rda2BNmkKnqVds8Pm23v1e7JbSDdM70E",
     "CUSTOMER_TIP": "false",
     "isShareAppEnabled": "true",
-    "apiLoaderLottie": "primary_button_loader",
+    "apiLoaderLottie": "primary_button_loader.json",
     "isEmergencyContacts": "true",
     "isChatEnabled": "true",
     "primaryTextColor": "#FCC32C",
@@ -41,6 +41,7 @@ window.getMerchantConfig = function () {
     "black900": "#2C2F3A",
     "black800": "#454545",
     "red" : "#E55454",
+    "popupBackground" : "#FFFFFF",
     "englishStrings": {
       "ABOUT_APP_DESCRIPTION": "Jatri Sathi is an open platform to connect riders with drivers. The app makes it convenient for riders to book a ride with meter rate hence minimal fare.",
       "WELCOME_TEXT": "Welcome to Jatri Sathi",

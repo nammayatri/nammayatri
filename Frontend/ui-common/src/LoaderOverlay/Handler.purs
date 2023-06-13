@@ -19,7 +19,7 @@ import Effect.Class (liftEffect)
 import Prelude (Unit, bind, discard, pure, unit, ($))
 import Presto.Core.Flow (Flow)
 import Presto.Core.Types.Language.Flow (doAff, getState)
-import PrestoDOM.Core.Types.Language.Flow (initUIWithNameSpace, showScreenWithNameSpace, showScreen)
+import PrestoDOM.Core.Types.Language.Flow (initUIWithNameSpace, showScreenWithNameSpace, initUIWithScreen)
 import LoaderOverlay.View as LoaderScreen
 import Types.App (GlobalState(..))
 
@@ -27,5 +27,5 @@ loaderScreen :: Flow GlobalState Unit
 loaderScreen  = do
   (GlobalState state) <- getState
   doAff $ liftEffect $ initUIWithNameSpace "LoaderOverlay" Nothing
-  _ <- showScreen ( LoaderScreen.screen state.loaderOverlay)
+  _ <- showScreenWithNameSpace ( LoaderScreen.screen state.loaderOverlay)
   pure unit
