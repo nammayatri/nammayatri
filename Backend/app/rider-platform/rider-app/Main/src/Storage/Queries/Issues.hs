@@ -15,6 +15,7 @@
 module Storage.Queries.Issues where
 
 import Domain.Types.Issue
+import Domain.Types.Merchant
 import Domain.Types.Person (Person)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -47,8 +48,8 @@ findByCustomerId customerId mbLimit mbOffset fromDate toDate = Esq.findAll $ do
     limitVal = min (maybe 10 fromIntegral mbLimit) 10
     offsetVal = maybe 0 fromIntegral mbOffset
 
-findAllIssue :: Transactionable m => Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [(Issue, Person)]
-findAllIssue mbLimit mbOffset fromDate toDate = Esq.findAll $ do
+findAllIssue :: Transactionable m => Id Merchant -> Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [(Issue, Person)]
+findAllIssue merchantId mbLimit mbOffset fromDate toDate = Esq.findAll $ do
   (issues :& person) <-
     from $
       table @IssueT
@@ -57,7 +58,8 @@ findAllIssue mbLimit mbOffset fromDate toDate = Esq.findAll $ do
                      issues ^. IssueCustomerId ==. person ^. PersonTId
                  )
   where_ $
-    issues ^. IssueCreatedAt >=. val fromDate
+    person ^. PersonMerchantId ==. val (toKey merchantId)
+      &&. issues ^. IssueCreatedAt >=. val fromDate
       &&. issues ^. IssueCreatedAt <=. val toDate
   limit limitVal
   offset offsetVal

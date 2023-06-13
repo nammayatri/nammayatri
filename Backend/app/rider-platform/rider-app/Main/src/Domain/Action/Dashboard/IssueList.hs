@@ -78,7 +78,7 @@ getIssueList merchantShortId mbLimit mbOffset mbmobileCountryCode mbMobileNumber
       let summary = Summary {totalCount = count, count}
       return $ IssueListRes {list = issueList, summary = summary}
     Nothing -> do
-      issues <- runInReplica $ QIssue.findAllIssue mbLimit mbOffset fromDate toDate
+      issues <- runInReplica $ QIssue.findAllIssue merchant.id mbLimit mbOffset fromDate toDate
       issueList <- mapM buildIssueList issues
       let count = length issueList
       let summary = Summary {totalCount = count, count}
