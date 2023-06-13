@@ -21,6 +21,7 @@ import Domain.Types.Booking.Type
 import qualified Domain.Types.Exophone as DExophone
 import Domain.Types.FarePolicy.FareBreakup
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import Domain.Types.Ride (Ride, RideAPIEntity, makeRideAPIEntity)
 import qualified Domain.Types.Ride as DRide
@@ -31,8 +32,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Exophone as CQExophone
+import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Ride as QRide
+import Tools.Error
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S
 
@@ -54,6 +57,8 @@ data BookingAPIEntity = BookingAPIEntity
     duration :: Maybe Seconds,
     merchantExoPhone :: Text,
     specialLocationTag :: Maybe Text,
+    paymentMethod :: Maybe DMPM.PaymentMethodAPIEntity,
+    paymentUrl :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -89,8 +94,15 @@ data OneWaySpecialZoneBookingAPIDetails = OneWaySpecialZoneBookingAPIDetails
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-makeBookingAPIEntity :: Booking -> Maybe Ride -> [Ride] -> [FareBreakup] -> Maybe DExophone.Exophone -> BookingAPIEntity
-makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone = do
+makeBookingAPIEntity ::
+  Booking ->
+  Maybe Ride ->
+  [Ride] ->
+  [FareBreakup] ->
+  Maybe DExophone.Exophone ->
+  Maybe DMPM.MerchantPaymentMethod ->
+  BookingAPIEntity
+makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPaymentMethod = do
   let bookingDetails = mkBookingAPIDetails booking.bookingDetails
   BookingAPIEntity
     { id = booking.id,
@@ -110,6 +122,8 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone = do
       duration = getRideDuration activeRide,
       merchantExoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone,
       specialLocationTag = booking.specialLocationTag,
+      paymentMethod = DMPM.mkPaymentMethodAPIEntity <$> mbPaymentMethod,
+      paymentUrl = booking.paymentUrl,
       createdAt = booking.createdAt,
       updatedAt = booking.updatedAt
     }
@@ -146,4 +160,7 @@ buildBookingAPIEntity booking = do
   rideList <- runInReplica $ QRide.findAllByRBId booking.id
   fareBreakups <- runInReplica $ QFareBreakup.findAllByBookingId booking.id
   mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
-  return $ makeBookingAPIEntity booking mbRide rideList fareBreakups mbExoPhone
+  mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
+    CQMPM.findByIdAndMerchantId paymentMethodId booking.merchantId
+      >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+  return $ makeBookingAPIEntity booking mbRide rideList fareBreakups mbExoPhone mbPaymentMethod

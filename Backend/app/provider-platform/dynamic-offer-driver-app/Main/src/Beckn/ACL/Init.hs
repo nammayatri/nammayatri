@@ -17,6 +17,7 @@ module Beckn.ACL.Init where
 import qualified Beckn.Types.Core.Taxi.API.Init as Init
 import qualified Beckn.Types.Core.Taxi.Init as Init
 import qualified Domain.Action.Beckn.Init as DInit
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Kernel.Prelude
 import qualified Kernel.Product.Validation.Context as Context
 import Kernel.Types.App
@@ -54,6 +55,7 @@ buildInitReq subscriber req = do
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
         maxEstimatedDistance = order.fulfillment.tags.max_estimated_distance,
+        paymentMethodInfo = mkPaymentMethodInfo <$> order.payment,
         ..
       }
   where
@@ -62,3 +64,26 @@ buildInitReq subscriber req = do
       case itemCode.fareProductType of
         Init.ONE_WAY_SPECIAL_ZONE -> DInit.InitSpecialZoneReq
         _ -> DInit.InitNormalReq
+
+mkPaymentMethodInfo :: Init.Payment -> DMPM.PaymentMethodInfo
+mkPaymentMethodInfo Init.Payment {..} =
+  DMPM.PaymentMethodInfo
+    { collectedBy = castPaymentCollector collected_by,
+      paymentType = castPaymentType _type,
+      paymentInstrument = castPaymentInstrument instrument
+    }
+
+castPaymentCollector :: Init.PaymentCollector -> DMPM.PaymentCollector
+castPaymentCollector Init.BAP = DMPM.BAP
+castPaymentCollector Init.BPP = DMPM.BPP
+
+castPaymentType :: Init.PaymentType -> DMPM.PaymentType
+castPaymentType Init.ON_ORDER = DMPM.PREPAID
+castPaymentType Init.ON_FULFILLMENT = DMPM.POSTPAID
+
+castPaymentInstrument :: Init.PaymentInstrument -> DMPM.PaymentInstrument
+castPaymentInstrument (Init.Card Init.DefaultCardType) = DMPM.Card DMPM.DefaultCardType
+castPaymentInstrument (Init.Wallet Init.DefaultWalletType) = DMPM.Wallet DMPM.DefaultWalletType
+castPaymentInstrument Init.UPI = DMPM.UPI
+castPaymentInstrument Init.NetBanking = DMPM.NetBanking
+castPaymentInstrument Init.Cash = DMPM.Cash

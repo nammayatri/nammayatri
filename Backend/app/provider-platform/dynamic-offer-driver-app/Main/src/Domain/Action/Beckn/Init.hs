@@ -22,6 +22,7 @@ import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FareParameters as DFP
 import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.QuoteSpecialZone as DQSZ
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
@@ -40,6 +41,7 @@ import qualified SharedLogic.CallBAP as BP
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverQuote as QDQuote
@@ -54,14 +56,23 @@ data InitReq = InitReq
     bapId :: Text,
     bapUri :: BaseUrl,
     initTypeReq :: InitTypeReq,
-    maxEstimatedDistance :: Maybe HighPrecMeters
+    maxEstimatedDistance :: Maybe HighPrecMeters,
+    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
   }
 
 data InitTypeReq = InitSpecialZoneReq | InitNormalReq
 
 data InitRes = InitRes
   { booking :: DRB.Booking,
-    transporter :: DM.Merchant
+    transporter :: DM.Merchant,
+    paymentMethodInfo :: Maybe PaymentInfo
+  }
+
+data PaymentInfo = PaymentInfo
+  { paymentType :: DMPM.PaymentType,
+    paymentInstrument :: DMPM.PaymentInstrument,
+    collectedBy :: DMPM.PaymentCollector,
+    paymentUrl :: Maybe Text
   }
 
 buildBookingLocation :: (MonadGuid m) => DLoc.SearchReqLocation -> m DLoc.BookingLocation
@@ -118,23 +129,29 @@ handler :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> Either
 handler merchantId req eitherReq = do
   transporter <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   now <- getCurrentTime
-  case req.initTypeReq of
+
+  mbPaymentMethod <- forM req.paymentMethodInfo $ \paymentMethodInfo -> do
+    allPaymentMethods <-
+      CQMPM.findAllByMerchantId merchantId
+    let mbPaymentMethod = find (compareMerchantPaymentMethod paymentMethodInfo) allPaymentMethods
+    mbPaymentMethod & fromMaybeM (InvalidRequest "Payment method not allowed")
+
+  booking <- case req.initTypeReq of
     InitNormalReq -> do
       case eitherReq of
         Left (driverQuote, searchRequest, searchTry) -> do
-          booking <- buildBooking searchRequest driverQuote searchTry.startTime DRB.NormalBooking now
-          Esq.runTransaction $
-            QRB.create booking
-          pure InitRes {..}
+          buildBooking searchRequest driverQuote searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id))
         Right _ -> throwError $ InvalidRequest "Can't have specialZoneQuote in normal booking"
     InitSpecialZoneReq -> do
       case eitherReq of
         Right (specialZoneQuote, searchRequest) -> do
-          booking <- buildBooking searchRequest specialZoneQuote searchRequest.startTime DRB.SpecialZoneBooking now
-          Esq.runTransaction $
-            QRB.create booking
-          pure InitRes {..}
+          buildBooking searchRequest specialZoneQuote searchRequest.startTime DRB.SpecialZoneBooking now (mbPaymentMethod <&> (.id))
         Left _ -> throwError $ InvalidRequest "Can't have driverQuote in specialZone booking"
+
+  let paymentMethodInfo = mkPaymentInfo <$> mbPaymentMethod
+  Esq.runTransaction $
+    QRB.create booking
+  pure InitRes {..}
   where
     buildBooking ::
       ( CacheFlow m r,
@@ -155,8 +172,9 @@ handler merchantId req eitherReq = do
       UTCTime ->
       DRB.BookingType ->
       UTCTime ->
+      Maybe (Id DMPM.MerchantPaymentMethod) ->
       m DRB.Booking
-    buildBooking searchRequest driverQuote startTime bookingType now = do
+    buildBooking searchRequest driverQuote startTime bookingType now mbPaymentMethodId = do
       id <- Id <$> generateGUID
       fromLocation <- buildBookingLocation searchRequest.fromLocation
       toLocation <- buildBookingLocation searchRequest.toLocation
@@ -185,6 +203,7 @@ handler merchantId req eitherReq = do
             specialLocationTag = driverQuote.specialLocationTag,
             specialZoneOtpCode = Nothing,
             area = searchRequest.area,
+            paymentMethodId = mbPaymentMethodId,
             ..
           }
 
@@ -214,3 +233,17 @@ validateRequest merchantId req = do
         throwError $ QuoteExpired specialZoneQuote.id.getId
       searchRequest <- QSRSpecialZone.findById specialZoneQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound specialZoneQuote.searchRequestId.getId)
       return $ Right (specialZoneQuote, searchRequest)
+
+mkPaymentInfo :: DMPM.MerchantPaymentMethod -> PaymentInfo
+mkPaymentInfo DMPM.MerchantPaymentMethod {..} = do
+  let paymentUrl =
+        if paymentType == DMPM.PREPAID && collectedBy == DMPM.BPP && paymentInstrument /= DMPM.Cash
+          then Just $ "payment_link_for_payment_instrument_" <> show paymentInstrument
+          else Nothing
+  PaymentInfo {..}
+
+compareMerchantPaymentMethod :: DMPM.PaymentMethodInfo -> DMPM.MerchantPaymentMethod -> Bool
+compareMerchantPaymentMethod providerPaymentMethod DMPM.MerchantPaymentMethod {..} =
+  paymentType == providerPaymentMethod.paymentType
+    && paymentInstrument == providerPaymentMethod.paymentInstrument
+    && collectedBy == providerPaymentMethod.collectedBy

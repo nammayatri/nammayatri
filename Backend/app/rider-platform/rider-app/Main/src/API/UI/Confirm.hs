@@ -25,6 +25,7 @@ import qualified Beckn.ACL.Init as ACL
 import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Quote as Quote
 import Environment
@@ -43,6 +44,7 @@ type API =
     :> "quotes"
     :> Capture "quoteId" (Id Quote.Quote)
     :> "confirm"
+    :> QueryParam "paymentMethodId" (Id DMPM.MerchantPaymentMethod)
     :> Post '[JSON] ConfirmRes
 
 newtype ConfirmRes = ConfirmRes
@@ -60,10 +62,11 @@ handler =
 confirm ::
   (Id SP.Person, Id Merchant.Merchant) ->
   Id Quote.Quote ->
+  Maybe (Id DMPM.MerchantPaymentMethod) ->
   FlowHandler ConfirmRes
-confirm (personId, _) quoteId =
+confirm (personId, _) quoteId mbPaymentMethodId =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
-    dConfirmRes <- DConfirm.confirm personId quoteId
+    dConfirmRes <- DConfirm.confirm personId quoteId mbPaymentMethodId
     becknInitReq <- ACL.buildInitReq dConfirmRes
     handle (errHandler dConfirmRes.booking) $
       void $ withShortRetry $ CallBPP.init dConfirmRes.providerUrl becknInitReq

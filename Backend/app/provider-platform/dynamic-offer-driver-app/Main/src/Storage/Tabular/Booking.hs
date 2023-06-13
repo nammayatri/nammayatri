@@ -31,6 +31,7 @@ import Storage.Tabular.Booking.BookingLocation hiding (createdAt, id, updatedAt)
 import qualified Storage.Tabular.FareParameters as Fare
 import qualified Storage.Tabular.FareParameters.Instances as Fare
 import Storage.Tabular.Merchant (MerchantTId)
+import qualified Storage.Tabular.Merchant.MerchantPaymentMethod as SMPM
 import Storage.Tabular.RiderDetails (RiderDetailsTId)
 import Storage.Tabular.Vehicle ()
 
@@ -65,6 +66,7 @@ mkPersist
       estimatedDuration Seconds
       fareParametersId Fare.FareParametersTId
       riderName Text Maybe
+      paymentMethodId SMPM.MerchantPaymentMethodTId Maybe
       createdAt UTCTime
       updatedAt UTCTime
 
@@ -94,6 +96,7 @@ instance FromTType FullBookingT Domain.Booking where
           bapUri = pUrl,
           maxEstimatedDistance = HighPrecMeters <$> maxEstimatedDistance,
           riderId = fromKey <$> riderId,
+          paymentMethodId = fromKey <$> paymentMethodId,
           ..
         }
 
@@ -108,6 +111,7 @@ instance ToTType FullBookingT Domain.Booking where
           riderId = toKey <$> riderId,
           maxEstimatedDistance = getHighPrecMeters <$> maxEstimatedDistance,
           fareParametersId = toKey fareParams.id,
+          paymentMethodId = toKey <$> paymentMethodId,
           ..
         },
       mkTabularBookingLocation fromLocation,

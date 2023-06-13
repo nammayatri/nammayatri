@@ -19,6 +19,8 @@ module Beckn.Types.Core.Taxi.OnInit.Payment
 where
 
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
+import Beckn.Types.Core.Taxi.Common.PaymentCollector as Reexport
+import Beckn.Types.Core.Taxi.Common.PaymentInstrument as Reexport
 import Beckn.Types.Core.Taxi.Common.PaymentType as Reexport
 import Beckn.Types.Core.Taxi.Common.TimeDuration as Reexport
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions, fromAesonOptions)
@@ -27,10 +29,12 @@ import Kernel.Utils.JSON as JSON
 import Kernel.Utils.Schema
 
 data Payment = Payment
-  { collected_by :: Text,
+  { collected_by :: Maybe PaymentCollector,
     params :: PaymentParams,
-    _type :: PaymentType,
-    time :: TimeDuration
+    _type :: Maybe PaymentType,
+    instrument :: Maybe PaymentInstrument, -- FIXME find proper fields
+    time :: TimeDuration, -- FIXME: what is this?
+    uri :: Maybe Text
   }
   deriving (Generic, Show)
 

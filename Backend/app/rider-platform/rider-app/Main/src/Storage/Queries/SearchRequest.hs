@@ -15,6 +15,8 @@
 
 module Storage.Queries.SearchRequest where
 
+import Domain.Types.Merchant.MerchantPaymentMethod (MerchantPaymentMethod)
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Domain.Types.Person (Person)
 import Domain.Types.SearchRequest
 import Kernel.Prelude
@@ -75,12 +77,13 @@ findAllByPerson perId = Esq.buildDType $ do
     return (searchRequest, sFromLoc, mbSToLoc)
   pure $ extractSolidType @SearchRequest <$> fullSearchRequestsT
 
-updateCustomerExtraFee :: Id SearchRequest -> Maybe Money -> SqlDB ()
-updateCustomerExtraFee searchReqId customerExtraFee = do
+updateCustomerExtraFeeAndPaymentMethod :: Id SearchRequest -> Maybe Money -> Maybe (Id DMPM.MerchantPaymentMethod) -> SqlDB ()
+updateCustomerExtraFeeAndPaymentMethod searchReqId customerExtraFee paymentMethodId =
   Esq.update $ \tbl -> do
     set
       tbl
-      [ SearchRequestCustomerExtraFee =. val customerExtraFee
+      [ SearchRequestCustomerExtraFee =. val customerExtraFee,
+        SearchRequestSelectedPaymentMethodId =. val (toKey <$> paymentMethodId)
       ]
     where_ $ tbl ^. SearchRequestId ==. val (getId searchReqId)
 
@@ -89,7 +92,7 @@ updateAutoAssign ::
   Bool ->
   Bool ->
   SqlDB ()
-updateAutoAssign searchRequestId autoAssignedEnabled autoAssignedEnabledV2 = do
+updateAutoAssign searchRequestId autoAssignedEnabled autoAssignedEnabledV2 =
   Esq.update $ \tbl -> do
     set
       tbl
@@ -97,3 +100,12 @@ updateAutoAssign searchRequestId autoAssignedEnabled autoAssignedEnabledV2 = do
         SearchRequestAutoAssignEnabledV2 =. val (Just autoAssignedEnabledV2)
       ]
     where_ $ tbl ^. SearchRequestTId ==. val (toKey searchRequestId)
+
+updatePaymentMethods :: Id SearchRequest -> [Id MerchantPaymentMethod] -> SqlDB ()
+updatePaymentMethods searchReqId availablePaymentMethods =
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ SearchRequestAvailablePaymentMethods =. val (PostgresList $ toKey <$> availablePaymentMethods)
+      ]
+    where_ $ tbl ^. SearchRequestId ==. val (getId searchReqId)

@@ -33,6 +33,7 @@ where
 
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RentalSlab as DRentalSlab
@@ -50,6 +51,7 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
@@ -61,7 +63,8 @@ data DOnSearchReq = DOnSearchReq
   { requestId :: Id DSearchReq.SearchRequest,
     providerInfo :: ProviderInfo,
     estimatesInfo :: [EstimateInfo],
-    quotesInfo :: [QuoteInfo]
+    quotesInfo :: [QuoteInfo],
+    paymentMethodsInfo :: [DMPM.PaymentMethodInfo]
   }
 
 data ValidatedOnSearchReq = ValidatedOnSearchReq
@@ -70,7 +73,8 @@ data ValidatedOnSearchReq = ValidatedOnSearchReq
     estimatesInfo :: [EstimateInfo],
     quotesInfo :: [QuoteInfo],
     _searchRequest :: SearchRequest,
-    merchant :: DMerchant.Merchant
+    merchant :: DMerchant.Merchant,
+    paymentMethodsInfo :: [DMPM.PaymentMethodInfo]
   }
 
 data ProviderInfo = ProviderInfo
@@ -158,12 +162,16 @@ onSearch ::
 onSearch transactionId ValidatedOnSearchReq {..} = do
   Metrics.finishSearchMetrics merchant.name transactionId
   now <- getCurrentTime
+
   estimates <- traverse (buildEstimate providerInfo now _searchRequest) estimatesInfo
   quotes <- traverse (buildQuote requestId providerInfo now _searchRequest.merchantId) quotesInfo
+  merchantPaymentMethods <- CQMPM.findAllByMerchantId merchant.id
+  let paymentMethods = intersectPaymentMethods paymentMethodsInfo merchantPaymentMethods
   DB.runTransaction do
     QEstimate.createMany estimates
     QQuote.createMany quotes
     QPFS.updateStatus _searchRequest.riderId DPFS.GOT_ESTIMATE {requestId = _searchRequest.id, validTill = _searchRequest.validTill}
+    QSearchReq.updatePaymentMethods _searchRequest.id (paymentMethods <&> (.id))
   QPFS.clearCache _searchRequest.riderId
 
 buildEstimate ::
@@ -287,3 +295,12 @@ mkEstimatePrice ::
   BreakupPriceInfo ->
   m DEstimate.EstimateBreakupPrice
 mkEstimatePrice BreakupPriceInfo {..} = pure DEstimate.EstimateBreakupPrice {..}
+
+intersectPaymentMethods :: [DMPM.PaymentMethodInfo] -> [DMPM.MerchantPaymentMethod] -> [DMPM.MerchantPaymentMethod]
+intersectPaymentMethods providerPaymentMethods = filter (\mpm -> any (compareMerchantPaymentMethod mpm) providerPaymentMethods)
+
+compareMerchantPaymentMethod :: DMPM.MerchantPaymentMethod -> DMPM.PaymentMethodInfo -> Bool
+compareMerchantPaymentMethod DMPM.MerchantPaymentMethod {..} providerPaymentMethod =
+  paymentType == providerPaymentMethod.paymentType
+    && paymentInstrument == providerPaymentMethod.paymentInstrument
+    && collectedBy == providerPaymentMethod.collectedBy

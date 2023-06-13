@@ -41,6 +41,7 @@ import qualified "rider-app" Domain.Types.Booking as SRB
 import qualified "rider-app" Domain.Types.Booking.API as DB
 import qualified "rider-app" Domain.Types.Estimate as DEstimate
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
+import qualified "rider-app" Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified "rider-app" Domain.Types.Person as DP
 import qualified "rider-app" Domain.Types.Quote as Quote
 import qualified "rider-app" Domain.Types.RegistrationToken as DTR
@@ -135,7 +136,7 @@ data SelectAPIs = SelectAPIs
   }
 
 newtype ConfirmAPIs = ConfirmAPIs
-  { rconfirm :: Id DP.Person -> Id Quote.Quote -> Euler.EulerClient UC.ConfirmRes
+  { rconfirm :: Id DP.Person -> Id Quote.Quote -> Maybe (Id DMPM.MerchantPaymentMethod) -> Euler.EulerClient UC.ConfirmRes
   }
 
 data BookingAPIs = BookingAPIs

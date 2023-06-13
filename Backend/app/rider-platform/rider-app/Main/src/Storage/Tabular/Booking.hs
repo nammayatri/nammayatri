@@ -30,6 +30,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Error
 import qualified Storage.Tabular.Booking.BookingLocation as SLoc
 import qualified Storage.Tabular.Merchant as SMerchant
+import qualified Storage.Tabular.Merchant.MerchantPaymentMethod as SMPM
 import qualified Storage.Tabular.Person as SPerson
 import qualified Storage.Tabular.Quote as SQuote
 import qualified Storage.Tabular.RentalSlab as SRentalSlab
@@ -48,6 +49,8 @@ mkPersist
       bppBookingId Text Maybe sql=bpp_ride_booking_id
       quoteId SQuote.QuoteTId Maybe
       riderId SPerson.PersonTId
+      paymentMethodId SMPM.MerchantPaymentMethodTId Maybe
+      paymentUrl Text Maybe
       status Domain.BookingStatus
       providerId Text
       providerUrl Text
@@ -96,6 +99,7 @@ instance FromTType FullBookingT Domain.Booking where
       Domain.Booking
         { id = Id id,
           bppBookingId = Id <$> bppBookingId,
+          paymentMethodId = fromKey <$> paymentMethodId,
           riderId = fromKey riderId,
           quoteId = fromKey <$> quoteId,
           providerUrl = pUrl,
@@ -143,6 +147,7 @@ instance ToTType FullBookingT Domain.Booking where
           BookingT
             { id = getId id,
               bppBookingId = getId <$> bppBookingId,
+              paymentMethodId = toKey <$> paymentMethodId,
               riderId = toKey riderId,
               quoteId = toKey <$> quoteId,
               fromLocationId = toKey fromLocation.id,
