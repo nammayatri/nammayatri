@@ -258,7 +258,7 @@ type DriverProfileScreenData = {
 type VehicleP = {
   vehicleName :: String,
   isSelected :: Boolean
-} 
+}
 
 type DriverProfileScreenProps = {
   logoutModalView :: Boolean,
@@ -674,7 +674,7 @@ type HomeScreenProps =  {
   zoneRideBooking :: Boolean
  }
 
-data DriverStatus = Online | Offline | Silent 
+data DriverStatus = Online | Offline | Silent
 
 type PillButtonState = {
   status :: DriverStatus,
@@ -1065,7 +1065,9 @@ type NotificationsScreenState = {
   recievedResponse :: Boolean,
   notificationDetailModelState :: NotificationDetailModelState,
   notifsDetailModelVisibility :: Visibility,
-  loadMore :: Boolean
+  loadMore :: Boolean,
+  selectedNotification :: Maybe String,
+  deepLinkActivated :: Boolean
 }
 
 type NotificationCardState = {
