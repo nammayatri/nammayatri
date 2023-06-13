@@ -470,8 +470,6 @@ public class MainActivity extends AppCompatActivity {
                             animationCycleCompleted = true;
                             if (isHideSplashEventCalled) {
                                 hideSplash();
-                            } else {
-                                splashLottieView.playAnimation();
                             }
                         }
                         @Override
