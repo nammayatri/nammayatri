@@ -436,9 +436,9 @@ const englishStrings = {
   "PLACE_CALL": "Place Call",
   "DIRECT_CALL": "Direct Call",
   "ANONYMOUS_CALL": "Anonymous Call",
-  "YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER": "Your number will not be shown to the driver",
-  "YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER": "Your number will be visible to the driver. Use if not calling from registered number",
-  "CALL_DRIVER_USING": "Call Driver using:",
+  "YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER_THE_CALL_WILL_BE_RECORDED_FOR_COMPLIANCE": "Your number will not be shown to the driver. The call will be recorded for compliance.",
+  "YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER": "Your number will be visible to the driver. Use if not calling from registered number.",
+  "CALL_DRIVER_USING": "Call Driver using",
   "WAS_YOUR_CALL_SUCCESSFUL": "Was Your Call Successful",
   "DRIVER_ADDITIONS": "Driver Additions*",
   "FARE_UPDATE_POLICY": "Fare Update Policy",
@@ -457,5 +457,6 @@ const englishStrings = {
   "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" :  "Website: <u>https://nammayatri.in/</u>",
   "REGISTERED_ADDRESS" : "Registered Address",
   "REGISTERED_ADDRESS_DESCRIPTION" : "Juspay Technologies Private Limited <br> Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala Bengaluru, Karnataka- 560095, India.",
-  "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "Website: <u>https://nammayatri.in/</u>"
+  "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "Website: <u>https://nammayatri.in/</u>",
+  "RECOMMENDED" : "Recommended"
 }

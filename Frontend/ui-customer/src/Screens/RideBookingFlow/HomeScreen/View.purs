@@ -385,6 +385,8 @@ driverCallPopUp push state =
               [ text (getString CALL_DRIVER_USING)
               , height WRAP_CONTENT
               , color Color.black700
+              , textSize FontSize.a_18
+              , margin (MarginBottom 4)
               ]
             <> FontStyle.subHeading2 TypoGraphy
         , linearLayout
@@ -400,12 +402,13 @@ driverCallPopUp push state =
                       , orientation VERTICAL
                       ]
                       [ trackingCardCallView push state item
-                      , linearLayout
+                      , if(item.type == ANONYMOUS_CALLER) then linearLayout
                           [ height $ V 1
                           , width MATCH_PARENT
                           , background Color.grey900
                           ]
                           []
+                        else linearLayout[][]
                       ]
                 )
                 (driverCallPopUpData state)
@@ -417,12 +420,12 @@ driverCallPopUp push state =
 driverCallPopUpData :: HomeScreenState -> Array { text :: String, imageWithFallback :: String, type :: CallType, data :: String }
 driverCallPopUpData state =
   [ { text: (getString ANONYMOUS_CALL)
-    , imageWithFallback: "ic_anonymous_call ,https://assets.juspay.in/beckn/merchantcommon/images/ic_anonymous_call.png"
+    , imageWithFallback: "ny_ic_anonymous_call,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_anonymous_call.png"
     , type: ANONYMOUS_CALLER
-    , data: (getString YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER)
+    , data: (getString YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER_THE_CALL_WILL_BE_RECORDED_FOR_COMPLIANCE)
     }
   , { text: (getString DIRECT_CALL)
-    , imageWithFallback: "ic_direct_call,https://assets.juspay.in/beckn/merchantcommon/images/ic_direct_call.png"
+    , imageWithFallback: "ny_ic_direct_call,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_direct_call.png"
     , type: DIRECT_CALLER
     , data: (getString YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER)
     }
@@ -450,14 +453,25 @@ trackingCardCallView push state item =
       , weight 1.0
       , orientation VERTICAL]
     [
-      textView
+      linearLayout
+      [
+        height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , gravity CENTER
+      , orientation HORIZONTAL
+      , margin (MarginBottom 2) 
+      ][
+        textView
         $
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
+          , textSize FontSize.a_16
           , text item.text
           , gravity CENTER_VERTICAL
           , color Color.black800
           ]
+        , if(item.type == ANONYMOUS_CALLER) then labelView push state else linearLayout[][]
+      ]     
       , textView
         $
           [ height WRAP_CONTENT
@@ -473,6 +487,27 @@ trackingCardCallView push state item =
         , padding (Padding 3 3 3 3)
         ]
     ]
+
+labelView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+labelView push state =
+  linearLayout[
+    height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , cornerRadii $ Corners 24.0 true true true true
+  , background Color.green900
+  , margin (MarginHorizontal 10 10)
+  , gravity BOTTOM
+  ][
+    textView $ [
+      width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , color Color.white900
+    , gravity CENTER
+    , padding (Padding 8 1 8 1)
+    , textSize FontSize.a_13
+    , text (getString RECOMMENDED)
+    ]
+  ]
 
 searchLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 searchLocationView push state =
