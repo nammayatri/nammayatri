@@ -258,6 +258,17 @@ updatePaymentInfo rbId estimatedFare discount estimatedTotalFare mbPaymentUrl = 
       ]
     where_ $ tbl ^. RB.BookingId ==. val (getId rbId)
 
+updatePaymentUrl :: Id Booking -> Text -> SqlDB ()
+updatePaymentUrl bookingId paymentUrl = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ RB.BookingPaymentUrl =. val (Just paymentUrl),
+        RB.BookingUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. RB.BookingId ==. val (getId bookingId)
+
 findAllByPersonIdLimitOffset ::
   Transactionable m =>
   Id Person ->

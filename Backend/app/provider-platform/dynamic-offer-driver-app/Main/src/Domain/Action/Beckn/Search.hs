@@ -177,7 +177,7 @@ handler merchant sReq = do
       DFareProduct.NORMAL -> buildEstimates farePolicies result fromLocation toLocation allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area
 
   merchantPaymentMethods <- CQMPM.findAllByMerchantId merchantId
-  let paymentMethodsInfo = DMPM.mkPaymentMethodsInfo <$> merchantPaymentMethods
+  let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
   buildSearchRes merchant fromLocationLatLong toLocationLatLong mbEstimateInfos quotes searchMetricsMVar paymentMethodsInfo
   where
     listVehicleVariantHelper farePolicy = catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleVariant)) farePolicy

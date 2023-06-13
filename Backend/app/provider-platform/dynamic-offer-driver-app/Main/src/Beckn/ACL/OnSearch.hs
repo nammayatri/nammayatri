@@ -253,8 +253,8 @@ castVariant Variant.TAXI_PLUS = Common.TAXI_PLUS
 mkPayment :: DMPM.PaymentMethodInfo -> OS.Payment
 mkPayment DMPM.PaymentMethodInfo {..} =
   OS.Payment
-    { collected_by = Common.castPaymentCollector collectedBy,
-      _type = Common.castPaymentType paymentType,
-      instrument = Just $ Common.castPaymentInstrument paymentInstrument,
+    { collected_by = Common.castDPaymentCollector collectedBy,
+      _type = Common.castDPaymentType paymentType,
+      instrument = Just $ Common.castDPaymentInstrument paymentInstrument,
       time = OS.TimeDuration "P2A" -- FIXME: what is this?
     }

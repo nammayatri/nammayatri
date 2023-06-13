@@ -65,13 +65,7 @@ data InitTypeReq = InitSpecialZoneReq | InitNormalReq
 data InitRes = InitRes
   { booking :: DRB.Booking,
     transporter :: DM.Merchant,
-    paymentMethodInfo :: Maybe PaymentInfo
-  }
-
-data PaymentInfo = PaymentInfo
-  { paymentType :: DMPM.PaymentType,
-    paymentInstrument :: DMPM.PaymentInstrument,
-    collectedBy :: DMPM.PaymentCollector,
+    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
     paymentUrl :: Maybe Text
   }
 
@@ -148,7 +142,8 @@ handler merchantId req eitherReq = do
           buildBooking searchRequest specialZoneQuote searchRequest.startTime DRB.SpecialZoneBooking now (mbPaymentMethod <&> (.id))
         Left _ -> throwError $ InvalidRequest "Can't have driverQuote in specialZone booking"
 
-  let paymentMethodInfo = mkPaymentInfo <$> mbPaymentMethod
+  let paymentUrl = DMPM.getPrepaidPaymentUrl =<< mbPaymentMethod
+  let paymentMethodInfo = req.paymentMethodInfo
   Esq.runTransaction $
     QRB.create booking
   pure InitRes {..}
@@ -233,14 +228,6 @@ validateRequest merchantId req = do
         throwError $ QuoteExpired specialZoneQuote.id.getId
       searchRequest <- QSRSpecialZone.findById specialZoneQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound specialZoneQuote.searchRequestId.getId)
       return $ Right (specialZoneQuote, searchRequest)
-
-mkPaymentInfo :: DMPM.MerchantPaymentMethod -> PaymentInfo
-mkPaymentInfo DMPM.MerchantPaymentMethod {..} = do
-  let paymentUrl =
-        if paymentType == DMPM.PREPAID && collectedBy == DMPM.BPP && paymentInstrument /= DMPM.Cash
-          then Just $ "payment_link_for_payment_instrument_" <> show paymentInstrument
-          else Nothing
-  PaymentInfo {..}
 
 compareMerchantPaymentMethod :: DMPM.PaymentMethodInfo -> DMPM.MerchantPaymentMethod -> Bool
 compareMerchantPaymentMethod providerPaymentMethod DMPM.MerchantPaymentMethod {..} =
