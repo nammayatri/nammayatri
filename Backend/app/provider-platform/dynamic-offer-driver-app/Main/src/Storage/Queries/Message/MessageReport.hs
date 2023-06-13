@@ -99,7 +99,7 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
 
 findByDriverIdAndLanguage' :: (L.MonadFlow m, HasField "id" (Maybe MTD.MessageTranslation) (Id Message)) => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
 findByDriverIdAndLanguage' driverId language mbLimit mbOffset = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       let limitVal = min (fromMaybe 10 mbLimit) 10
@@ -237,7 +237,7 @@ findByMessageIdAndStatusWithLimitAndOffset' ::
   Maybe DeliveryStatus ->
   m [(MessageReport, P.Person)]
 findByMessageIdAndStatusWithLimitAndOffset' mbLimit mbOffset (Id messageID) mbDeliveryStatus = do
-  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
       let limitVal = min (maybe 10 fromIntegral mbLimit) 20

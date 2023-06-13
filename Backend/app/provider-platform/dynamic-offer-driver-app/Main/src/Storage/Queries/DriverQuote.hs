@@ -14,19 +14,12 @@
 
 module Storage.Queries.DriverQuote where
 
--- import Storage.Queries.FullEntityBuilders (buildFullDriverQuote)
-
--- import Data.Int (Int32)
--- import qualified Database.Beam as B
--- import Database.Beam.Postgres
-import qualified Database.Beam as B
-import Database.Beam.Postgres
+import qualified Data.Time as T
 import qualified Domain.Types.DriverQuote as Domain
 import Domain.Types.Person
 import qualified Domain.Types.SearchTry as DST
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
-import EulerHS.KVConnector.Utils
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
@@ -35,15 +28,12 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (addUTCTime, secondsToNominalDiffTime)
 import qualified Lib.Mesh as Mesh
-import Sequelize (DatabaseWith)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverQuote as BeamDQ
 import Storage.Queries.FareParameters as BeamQFP
 import qualified Storage.Queries.FareParameters as SQFP
 import Storage.Tabular.DriverQuote
 import qualified Storage.Tabular.FareParameters as Fare
-
--- import qualified Storage.Tabular.FareParameters.Instances as FareParamsT
 
 create :: L.MonadFlow m => Domain.DriverQuote -> m (MeshResult ())
 create dQuote = do
@@ -76,16 +66,6 @@ findById (Id driverQuoteId) = do
         Right (Just driverQuote') -> transformBeamDriverQuoteToDomain driverQuote'
         _ -> pure Nothing
     Nothing -> pure Nothing
-
--- setInactiveByRequestId :: Id DSReq.SearchRequest -> SqlDB ()
--- setInactiveByRequestId searchReqId = Esq.update $ \p -> do
---   set p [DriverQuoteStatus =. val Domain.Inactive]
---   where_ $ p ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
-
--- setInactiveBySTId :: Id DST.SearchTry -> SqlDB ()
--- setInactiveBySTId searchTryId = Esq.update $ \p -> do
---   set p [DriverQuoteStatus =. val Domain.Inactive]
---   where_ $ p ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
 
 setInactiveBySTId :: L.MonadFlow m => Id DST.SearchTry -> m (MeshResult ())
 setInactiveBySTId (Id searchTryId) = do
@@ -123,48 +103,6 @@ findDriverQuoteBySTId (Id searchTryId) = do
         _ -> pure Nothing
     Nothing -> pure Nothing
 
--- = Esq.findOne' $ do
---   driverQuote <- from $ table @DriverQuoteT
---   where_ $ driverQuote ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
---   pure driverQuote
-
--- findAllByRequestId :: L.MonadFlow m => Id DSReq.SearchRequest -> m [Domain.DriverQuote]
--- findAllByRequestId (Id searchReqId) = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
---   case dbConf of
---     Just dbCOnf' -> do
---       dQuote <- KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamDQ.status $ Se.Eq Domain.Active, Se.Is BeamDQ.id $ Se.Eq searchReqId]]
---       case dQuote of
---         Left _ -> pure []
---         Right x -> mapM transformBeamDriverQuoteToDomain x
---     Nothing -> pure []
-
--- countAllByRequestId :: Transactionable m => Id DSReq.SearchRequest -> m Int32
--- countAllByRequestId searchReqId = do
---   fmap (fromMaybe 0) $
---     Esq.findOne $ do
---       dQuote <- from $ table @DriverQuoteT
---       where_ $
---         dQuote ^. DriverQuoteStatus ==. val Domain.Active
---           &&. dQuote ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
---       pure (countRows @Int32)
-
--- countAllByRequestId :: L.MonadFlow m => Id DSReq.SearchRequest -> m Int
--- countAllByRequestId searchReqID = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
---   conn <- L.getOrInitSqlConn (fromJust dbConf)
---   case conn of
---     Right c -> do
---       resp <-
---         L.runDB c $
---           L.findRow $
---             B.select $
---               B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
---                 B.filter_' (\(BeamDQ.DriverQuoteT {..}) -> searchRequestId B.==?. B.val_ (getId searchReqID)) $
---                   B.all_ (meshModelTableEntity @BeamDQ.DriverQuoteT @Postgres @(DatabaseWith BeamDQ.DriverQuoteT))
---       pure (either (const 0) (fromMaybe 0) resp)
---     Left _ -> pure 0
-
 deleteByDriverId :: L.MonadFlow m => Id Person -> m ()
 deleteByDriverId (Id driverId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -176,18 +114,6 @@ deleteByDriverId (Id driverId) = do
           Mesh.meshConfig
           [Se.Is BeamDQ.driverId (Se.Eq driverId)]
     Nothing -> pure ()
-
--- findAllBySTId :: Transactionable m => Id DST.SearchTry -> m [Domain.DriverQuote]
--- findAllBySTId searchTryId = do
---   buildDType $ do
---     res <- Esq.findAll' $ do
---       (dQuote :& farePars) <-
---         from baseDriverQuoteQuery
---       where_ $
---         dQuote ^. DriverQuoteStatus ==. val Domain.Active
---           &&. dQuote ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
---       pure (dQuote, farePars)
---     catMaybes <$> mapM buildFullDriverQuote res
 
 findAllBySTId :: L.MonadFlow m => Id DST.SearchTry -> m [Domain.DriverQuote]
 findAllBySTId (Id searchTryId) = do
@@ -205,17 +131,6 @@ findAllBySTId (Id searchTryId) = do
           Right res' -> catMaybes <$> traverse transformBeamDriverQuoteToDomain res'
           _ -> pure []
     Nothing -> pure []
-
--- countAllBySTId :: Transactionable m => Id DST.SearchTry -> m Int32
--- countAllBySTId searchTryId = do
---   fmap (fromMaybe 0) $
---     Esq.findOne $ do
---       dQuote <- from $ table @DriverQuoteT
---       where_ $
---         dQuote ^. DriverQuoteStatus ==. val Domain.Active
---           &&. dQuote ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
---       pure (countRows @Int32)
-
 
 countAllBySTId :: L.MonadFlow m => Id DST.SearchTry -> m Int
 countAllBySTId searchTId = do
