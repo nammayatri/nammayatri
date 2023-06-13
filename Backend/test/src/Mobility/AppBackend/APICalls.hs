@@ -26,6 +26,7 @@ import qualified "rider-app" Domain.Types.Booking as AbeBooking
 import qualified "rider-app" Domain.Types.Booking as BRB
 import qualified "rider-app" Domain.Types.CancellationReason as AbeCRC
 import qualified "rider-app" Domain.Types.Estimate as AbeEstimate
+import qualified "rider-app" Domain.Types.Merchant.MerchantPaymentMethod as AppMPM
 import qualified "rider-app" Domain.Types.Quote as AbeQuote
 import qualified "rider-app" Domain.Types.RegistrationToken as AppSRT
 import qualified "rider-app" Domain.Types.Ride as BRide
@@ -52,7 +53,7 @@ mkAppCancelReq :: AbeCRC.CancellationStage -> CancelAPI.CancelReq
 mkAppCancelReq stage =
   CancelAPI.CancelReq (AbeCRC.CancellationReasonCode "OTHER") stage Nothing
 
-appConfirmRide :: Text -> Id AbeQuote.Quote -> ClientM ConfirmAPI.ConfirmRes
+appConfirmRide :: Text -> Id AbeQuote.Quote -> Maybe (Id AppMPM.MerchantPaymentMethod) -> ClientM ConfirmAPI.ConfirmRes
 appConfirmRide = client (Proxy :: Proxy ConfirmAPI.API)
 
 appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM APISuccess

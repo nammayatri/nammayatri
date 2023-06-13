@@ -15,11 +15,13 @@
 module Beckn.ACL.OnSearch where
 
 import Beckn.ACL.Common (validatePrices)
+import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
 import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..))
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Domain.Types.OnSearchEvent
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (id, state, unpack)
@@ -67,6 +69,7 @@ searchCbService context catalog = do
             mobileNumber = provider.contacts,
             ridesCompleted = provider.tags.rides_completed
           }
+  let paymentMethodsInfo = mkPayment <$> provider.payments
   pure
     DOnSearch.DOnSearchReq
       { requestId = Id context.message_id,
@@ -202,4 +205,12 @@ buildWaitingChargeInfo ::
 buildWaitingChargeInfo itemTags = do
   DOnSearch.WaitingChargesInfo
     { waitingChargePerMin = itemTags.waiting_charge_per_min
+    }
+
+mkPayment :: OnSearch.Payment -> DMPM.PaymentMethodInfo
+mkPayment OnSearch.Payment {..} =
+  DMPM.PaymentMethodInfo
+    { collectedBy = Common.castPaymentCollector collected_by,
+      paymentType = Common.castPaymentType _type,
+      paymentInstrument = Common.castPaymentInstrument instrument
     }

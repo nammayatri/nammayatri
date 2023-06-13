@@ -86,3 +86,26 @@ instance IsHTTPError TrackUrlError where
     BPPServerUnavailable -> E503
 
 instance IsAPIError TrackUrlError
+
+-- TODO move to lib
+data MerchantPaymentMethodError
+  = MerchantPaymentMethodNotFound Text
+  | MerchantPaymentMethodDoesNotExist Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''MerchantPaymentMethodError
+
+instance IsBaseError MerchantPaymentMethodError where
+  toMessage = \case
+    MerchantPaymentMethodNotFound merchantPaymentMethodId -> Just $ "Merchant payment method with id \"" <> show merchantPaymentMethodId <> "\" not found."
+    MerchantPaymentMethodDoesNotExist merchantPaymentMethodId -> Just $ "No merchant payment method matches passed data \"<>" <> show merchantPaymentMethodId <> "\"."
+
+instance IsHTTPError MerchantPaymentMethodError where
+  toErrorCode = \case
+    MerchantPaymentMethodNotFound _ -> "MERCHANT_PAYMENT_METHOD_NOT_FOUND"
+    MerchantPaymentMethodDoesNotExist _ -> "MERCHANT_PAYMENT_METHOD_DOES_NOT_EXIST"
+  toHttpCode = \case
+    MerchantPaymentMethodNotFound _ -> E500
+    MerchantPaymentMethodDoesNotExist _ -> E400
+
+instance IsAPIError MerchantPaymentMethodError

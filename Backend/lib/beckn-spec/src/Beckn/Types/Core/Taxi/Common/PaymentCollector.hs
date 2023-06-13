@@ -12,9 +12,9 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Init.Payment
-  ( module Reexport,
-  )
-where
+module Beckn.Types.Core.Taxi.Common.PaymentCollector where
 
-import Beckn.Types.Core.Taxi.OnSearch.Payment as Reexport
+import Kernel.Prelude
+
+data PaymentCollector = BAP | BPP
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)

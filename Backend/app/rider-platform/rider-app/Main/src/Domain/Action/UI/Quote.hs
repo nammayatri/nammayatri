@@ -24,6 +24,7 @@ import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Types.Booking as DRB
 import Domain.Types.Estimate (EstimateAPIEntity)
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Domain.Types.Quote (QuoteAPIEntity)
 import qualified Domain.Types.Quote as SQuote
 import qualified Domain.Types.SearchRequest as SSR
@@ -41,6 +42,8 @@ import qualified Kernel.Utils.Schema as S
 import SharedLogic.MetroOffer (MetroOffer)
 import qualified SharedLogic.MetroOffer as Metro
 import qualified SharedLogic.PublicTransport as PublicTransport
+import Storage.CachedQueries.CacheConfig (CacheFlow)
+import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CDMPM
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
@@ -52,7 +55,8 @@ data GetQuotesRes = GetQuotesRes
   { fromLocation :: SearchReqLocationAPIEntity,
     toLocation :: Maybe SearchReqLocationAPIEntity,
     quotes :: [OfferRes],
-    estimates :: [EstimateAPIEntity]
+    estimates :: [EstimateAPIEntity],
+    paymentMethods :: [DMPM.PaymentMethodAPIEntity]
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -71,7 +75,7 @@ instance FromJSON OfferRes where
 instance ToSchema OfferRes where
   declareNamedSchema = genericDeclareNamedSchema $ S.objectWithSingleFieldParsing \(f : rest) -> toLower f : rest
 
-getQuotes :: (HedisFlow m r, EsqDBReplicaFlow m r) => Id SSR.SearchRequest -> m GetQuotesRes
+getQuotes :: (CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) => Id SSR.SearchRequest -> m GetQuotesRes
 getQuotes searchRequestId = do
   searchRequest <- runInReplica $ QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
   activeBooking <- runInReplica $ QBooking.findLatestByRiderIdAndStatus searchRequest.riderId DRB.activeBookingStatus
@@ -79,12 +83,14 @@ getQuotes searchRequestId = do
   logDebug $ "search Request is : " <> show searchRequest
   offers <- getOffers searchRequest
   estimates <- getEstimates searchRequestId
+  paymentMethods <- getPaymentMethods searchRequest
   return $
     GetQuotesRes
       { fromLocation = Location.makeSearchReqLocationAPIEntity searchRequest.fromLocation,
         toLocation = Location.makeSearchReqLocationAPIEntity <$> searchRequest.toLocation,
         quotes = offers,
-        estimates
+        estimates,
+        paymentMethods
       }
 
 getOffers :: (HedisFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m [OfferRes]
@@ -127,3 +133,9 @@ sortByEstimatedFare :: (HasField "estimatedFare" r Money) => [r] -> [r]
 sortByEstimatedFare resultList = do
   let sortFunc = compare `on` (.estimatedFare)
   sortBy sortFunc resultList
+
+getPaymentMethods :: (CacheFlow m r, EsqDBFlow m r) => SSR.SearchRequest -> m [DMPM.PaymentMethodAPIEntity]
+getPaymentMethods searchRequest = do
+  allMerchantPaymentMethods <- CDMPM.findAllByMerchantId searchRequest.merchantId
+  let availablePaymentMethods = filter (\mpm -> mpm.id `elem` searchRequest.availablePaymentMethods) allMerchantPaymentMethods
+  pure $ DMPM.mkPaymentMethodAPIEntity <$> availablePaymentMethods

@@ -32,6 +32,7 @@ import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.DriverPoolConfig (DriverPoolConfig)
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.QuoteSpecialZone as DQuoteSpecialZone
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
@@ -53,6 +54,7 @@ import SharedLogic.FarePolicy
 import SharedLogic.GoogleMaps
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import Storage.CachedQueries.Merchant.TransporterConfig as CTC
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.Geometry as QGeometry
@@ -97,7 +99,8 @@ data DSearchRes = DSearchRes
     now :: UTCTime,
     estimateList :: Maybe [EstimateInfo],
     specialQuoteList :: Maybe [SpecialZoneQuoteInfo],
-    searchMetricsMVar :: Metrics.SearchMetricsMVar
+    searchMetricsMVar :: Metrics.SearchMetricsMVar,
+    paymentMethodsInfo :: [DMPM.PaymentMethodInfo]
   }
 
 data EstimateInfo = EstimateInfo
@@ -172,7 +175,10 @@ handler merchant sReq = do
           for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
         return (Just (mkQuoteInfo fromLocation toLocation now <$> listOfSpecialZoneQuotes), Nothing)
       DFareProduct.NORMAL -> buildEstimates farePolicies result fromLocation toLocation allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area
-  buildSearchRes merchant fromLocationLatLong toLocationLatLong mbEstimateInfos quotes searchMetricsMVar
+  
+  merchantPaymentMethods <- CQMPM.findAllByMerchantId merchantId
+  let paymentMethodsInfo = DMPM.mkPaymentMethodsInfo <$> merchantPaymentMethods
+  buildSearchRes merchant fromLocationLatLong toLocationLatLong mbEstimateInfos quotes searchMetricsMVar paymentMethodsInfo
   where
     listVehicleVariantHelper farePolicy = catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleVariant)) farePolicy
 
@@ -255,8 +261,9 @@ buildSearchRes ::
   Maybe [EstimateInfo] ->
   Maybe [SpecialZoneQuoteInfo] ->
   Metrics.SearchMetricsMVar ->
+  [DMPM.PaymentMethodInfo] ->
   m DSearchRes
-buildSearchRes org fromLocation toLocation estimateList specialQuoteList searchMetricsMVar = do
+buildSearchRes org fromLocation toLocation estimateList specialQuoteList searchMetricsMVar paymentMethodsInfo = do
   now <- getCurrentTime
   pure $
     DSearchRes
@@ -266,7 +273,8 @@ buildSearchRes org fromLocation toLocation estimateList specialQuoteList searchM
         toLocation,
         estimateList,
         specialQuoteList,
-        searchMetricsMVar
+        searchMetricsMVar,
+        paymentMethodsInfo
       }
 
 buildSearchRequest ::

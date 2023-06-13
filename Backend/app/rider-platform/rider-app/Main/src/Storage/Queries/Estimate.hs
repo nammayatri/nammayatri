@@ -105,11 +105,11 @@ getStatus estimateId = do
       estimateT ^. EstimateId ==. val (getId estimateId)
     return $ estimateT ^. EstimateStatus
 
-updateStatusbyRequestId ::
+updateStatusByRequestId ::
   Id SearchRequest ->
   EstimateStatus ->
   SqlDB ()
-updateStatusbyRequestId searchId status_ = do
+updateStatusByRequestId searchId status_ = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
