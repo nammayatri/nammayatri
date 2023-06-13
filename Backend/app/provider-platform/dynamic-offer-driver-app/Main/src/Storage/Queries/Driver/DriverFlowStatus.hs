@@ -14,7 +14,6 @@
 
 module Storage.Queries.Driver.DriverFlowStatus where
 
-import qualified Debug.Trace as T
 import Domain.Types.Driver.DriverFlowStatus
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.Person
@@ -31,13 +30,13 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Driver.DriverFlowStatus as BeamDFS
 
 updatedMeshCfg :: MeshConfig
-updatedMeshCfg = Mesh.meshConfig {meshEnabled = True, kvHardKilled = False}
+updatedMeshCfg = Mesh.meshConfig
 
-create :: L.MonadFlow m => DDFS.DriverFlowStatus -> m (MeshResult ())
+create :: (L.MonadFlow m, Log m) => DDFS.DriverFlowStatus -> m (MeshResult ())
 create driverFlowStatus = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
-    Just dbConf' -> T.trace ("Create started here") $ KV.createWoReturingKVConnector dbConf' updatedMeshCfg (transformDomainDriverFlowStatusToBeam driverFlowStatus)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshCfg (transformDomainDriverFlowStatusToBeam driverFlowStatus)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 deleteById :: L.MonadFlow m => Id Person -> m ()
