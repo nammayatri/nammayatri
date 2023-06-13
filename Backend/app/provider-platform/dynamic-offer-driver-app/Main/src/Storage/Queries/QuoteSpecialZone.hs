@@ -46,8 +46,8 @@ create quote = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
+      SQFP.create quote.fareParams
       void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainQuoteSpecialZoneToBeam quote)
-      void $ SQFP.create quote.fareParams
     Nothing -> pure ()
 
 -- countAllByRequestId :: Transactionable m => Id SearchRequestSpecialZone -> m Int32

@@ -19,17 +19,24 @@ module Storage.Queries.DriverQuote where
 -- import Data.Int (Int32)
 -- import qualified Database.Beam as B
 -- import Database.Beam.Postgres
-import qualified Database.Beam as B
-import Database.Beam.Postgres
+-- import qualified Database.Beam as B
+-- import Database.Beam.Postgres
+
+-- import EulerHS.KVConnector.Utils
+
+-- import Sequelize
+
+-- import Sequelize (DatabaseWith)
+
+-- import Storage.Queries.FullEntityBuilders (buildFullDriverQuote)
+
+import qualified Data.Time as T
 import qualified Domain.Types.DriverQuote as Domain
 import Domain.Types.Person
 import qualified Domain.Types.SearchTry as DST
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
-import EulerHS.KVConnector.Utils
 import qualified EulerHS.Language as L
--- import Sequelize
-
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -37,11 +44,10 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (addUTCTime, secondsToNominalDiffTime)
 import qualified Lib.Mesh as Mesh
-import Sequelize (DatabaseWith)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverQuote as BeamDQ
 import Storage.Queries.FareParameters as BeamQFP
--- import Storage.Queries.FullEntityBuilders (buildFullDriverQuote)
+import qualified Storage.Queries.FareParameters as SQFP
 import Storage.Tabular.DriverQuote
 import qualified Storage.Tabular.FareParameters as Fare
 
@@ -51,7 +57,9 @@ create :: L.MonadFlow m => Domain.DriverQuote -> m (MeshResult ())
 create dQuote = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverQuoteToBeam dQuote)
+    Just dbConf' -> do
+      SQFP.create dQuote.fareParams
+      KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverQuoteToBeam dQuote)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 baseDriverQuoteQuery ::
@@ -106,7 +114,7 @@ findActiveQuotesByDriverId (Id driverId) driverUnlockDelay = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
-      dQuote <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamDQ.status $ Se.Eq Domain.Active, Se.Is BeamDQ.id $ Se.Eq driverId, Se.Is BeamDQ.validTill $ Se.GreaterThan (addUTCTime delayToAvoidRaces now)]]
+      dQuote <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamDQ.status $ Se.Eq Domain.Active, Se.Is BeamDQ.id $ Se.Eq driverId, Se.Is BeamDQ.validTill $ Se.GreaterThan (T.utcToLocalTime (T.TimeZone (5 * 60 + 30) False "IST") $ addUTCTime delayToAvoidRaces now)]]
       case dQuote of
         Right dQuote' -> catMaybes <$> traverse transformBeamDriverQuoteToDomain dQuote'
         _ -> pure []
@@ -216,37 +224,32 @@ findAllBySTId (Id searchTryId) = do
 --           &&. dQuote ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
 --       pure (countRows @Int32)
 
+-- countAllBySTId :: L.MonadFlow m => Id DST.SearchTry -> m Int
+-- countAllBySTId searchTId = do
+--   dbConf <- L.getOption KBT.PsqlDbCfg
+--   conn <- L.getOrInitSqlConn (fromJust dbConf)
+--   case conn of
+--     Right c -> do
+--       resp <-
+--         L.runDB c $
+--           L.findRow $
+--             B.select $
+--               B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+--                 B.filter_' (\(BeamDQ.DriverQuoteT {..}) -> searchTryId B.==?. B.val_ (getId searchTId)) $
+--                   B.all_ (meshModelTableEntity @BeamDQ.DriverQuoteT @Postgres @(DatabaseWith BeamDQ.DriverQuoteT))
+--       pure (either (const 0) (fromMaybe 0) resp)
+--     Left _ -> pure 0
+
 countAllBySTId :: L.MonadFlow m => Id DST.SearchTry -> m Int
 countAllBySTId searchTId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
-  conn <- L.getOrInitSqlConn (fromJust dbConf)
-  case conn of
-    Right c -> do
-      resp <-
-        L.runDB c $
-          L.findRow $
-            B.select $
-              B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
-                B.filter_' (\(BeamDQ.DriverQuoteT {..}) -> searchTryId B.==?. B.val_ (getId searchTId)) $
-                  B.all_ (meshModelTableEntity @BeamDQ.DriverQuoteT @Postgres @(DatabaseWith BeamDQ.DriverQuoteT))
-      pure (either (const 0) (fromMaybe 0) resp)
-    Left _ -> pure 0
-
-countAllBySTId' :: L.MonadFlow m => Id DST.SearchTry -> m Int
-countAllBySTId' searchTId = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  conn <- L.getOrInitSqlConn (fromJust dbConf)
-  case conn of
-    Right c -> do
-      resp <-
-        L.runDB c $
-          L.findRow $
-            B.select $
-              B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
-                B.filter_' (\(BeamDQ.DriverQuoteT {..}) -> searchTryId B.==?. B.val_ (getId searchTId)) $
-                  B.all_ (meshModelTableEntity @BeamDQ.DriverQuoteT @Postgres @(DatabaseWith BeamDQ.DriverQuoteT))
-      pure (either (const 0) (fromMaybe 0) resp)
-    Left _ -> pure 0
+  case dbConf of
+    Just dbConf' -> do
+      res <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamDQ.searchTryId $ Se.Eq (getId searchTId)]]
+      case res of
+        Right res' -> pure $ length res'
+        _ -> pure 0
+    Nothing -> pure 0
 
 transformBeamDriverQuoteToDomain :: L.MonadFlow m => BeamDQ.DriverQuote -> m (Maybe Domain.DriverQuote)
 transformBeamDriverQuoteToDomain BeamDQ.DriverQuoteT {..} = do
@@ -268,9 +271,9 @@ transformBeamDriverQuoteToDomain BeamDQ.DriverQuoteT {..} = do
               distance = distance,
               distanceToPickup = distanceToPickup,
               durationToPickup = durationToPickup,
-              createdAt = createdAt,
-              updatedAt = updatedAt,
-              validTill = validTill,
+              createdAt = T.localTimeToUTC T.utc createdAt,
+              updatedAt = T.localTimeToUTC T.utc updatedAt,
+              validTill = T.localTimeToUTC T.utc validTill,
               estimatedFare = estimatedFare,
               fareParams = fromJust fp, -- this should take a default value?
               providerId = Id providerId
@@ -292,9 +295,9 @@ transformDomainDriverQuoteToBeam Domain.DriverQuote {..} =
       BeamDQ.distance = distance,
       BeamDQ.distanceToPickup = distanceToPickup,
       BeamDQ.durationToPickup = durationToPickup,
-      BeamDQ.createdAt = createdAt,
-      BeamDQ.updatedAt = updatedAt,
-      BeamDQ.validTill = validTill,
+      BeamDQ.createdAt = T.utcToLocalTime (T.TimeZone (5 * 60 + 30) False "IST") createdAt,
+      BeamDQ.updatedAt = T.utcToLocalTime (T.TimeZone (5 * 60 + 30) False "IST") updatedAt,
+      BeamDQ.validTill = T.utcToLocalTime (T.TimeZone (5 * 60 + 30) False "IST") validTill,
       BeamDQ.estimatedFare = estimatedFare,
       BeamDQ.fareParametersId = getId fareParams.id,
       BeamDQ.providerId = getId providerId

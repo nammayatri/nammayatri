@@ -111,18 +111,14 @@ fareParametersTMod =
   B.tableModification
     { id = B.fieldNamed "id",
       baseFare = B.fieldNamed "base_fare",
-      -- deadKmFare = B.fieldNamed "dead_km_fare",
-      -- extraKmFare = B.fieldNamed "extra_km_fare",
       driverSelectedFare = B.fieldNamed "driver_selected_fare",
       customerExtraFee = B.fieldNamed "customer_extra_fee",
       nightShiftRateIfApplies = B.fieldNamed "night_shift_rate_if_applies",
-      -- nightShiftRate = B.fieldNamed "night_shift_rate",
-      -- nightCoefIncluded = B.fieldNamed "night_coef_included",
-      -- waitingChargePerMin = B.fieldNamed "waiting_charge_per_min",
-      -- waitingOrPickupCharges = B.fieldNamed "waiting_or_pickup_charges",
       serviceCharge = B.fieldNamed "service_charge",
       fareParametersType = B.fieldNamed "fare_parameters_type",
-      govtCharges = B.fieldNamed "govt_charges"
+      govtCharges = B.fieldNamed "govt_charges",
+      waitingCharge = B.fieldNamed "waiting_charge",
+      nightShiftCharge = B.fieldNamed "night_shift_charge"
     }
 
 psToHs :: HM.HashMap Text Text

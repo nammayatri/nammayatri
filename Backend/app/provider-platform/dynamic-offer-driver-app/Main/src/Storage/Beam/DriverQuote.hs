@@ -64,12 +64,12 @@ data DriverQuoteT f = DriverQuoteT
     distance :: B.C f Meters,
     distanceToPickup :: B.C f Meters,
     durationToPickup :: B.C f Seconds,
-    validTill :: B.C f Time.UTCTime,
+    validTill :: B.C f Time.LocalTime,
     estimatedFare :: B.C f Common.Money,
     fareParametersId :: B.C f Text,
     providerId :: B.C f Text,
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    createdAt :: B.C f Time.LocalTime,
+    updatedAt :: B.C f Time.LocalTime
   }
   deriving (Generic, B.Beamable)
 
