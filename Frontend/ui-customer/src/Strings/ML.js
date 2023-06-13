@@ -432,9 +432,9 @@ const malayalamStrings = {
   "PLACE_CALL" : "ഒരു കാൾ ചെയ്യുക",
   "DIRECT_CALL" : "നേരിട്ടുള്ള കോൾ",
   "ANONYMOUS_CALL" : "അജ്ഞാത കോൾ",
-  "YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER" : "നിങ്ങളുടെ നമ്പർ ഡ്രൈവർക്ക് കാണിക്കില്ല",
+  "YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER_THE_CALL_WILL_BE_RECORDED_FOR_COMPLIANCE" : "നിങ്ങളുടെ നമ്പർ ഡ്രൈവർക്ക് കാണിക്കില്ല. കോൾ പാലിക്കുന്നതിനായി റെക്കോർഡ് ചെയ്യും.",
   "YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER" : "നിങ്ങളുടെ നമ്പർ ഡ്രൈവർക്ക് ദൃശ്യമാകും. രജിസ്റ്റർ ചെയ്ത നമ്പറിൽ നിന്ന് വിളിക്കുന്നില്ലെങ്കിൽ ഉപയോഗിക്കുക",
-  "CALL_DRIVER_USING" : "ഇതുപയോഗിച്ച് ഡ്രൈവറെ വിളിക്കുക:",
+  "CALL_DRIVER_USING" : "ഇതുപയോഗിച്ച് ഡ്രൈവറെ വിളിക്കുക",
   "WAS_YOUR_CALL_SUCCESSFUL" : "നിങ്ങളുടെ കോൾ വിജയിച്ചോ",
   "NAVIGATE_TO_PICKUP" : "പിക്കപ്പിലേക്ക് നാവിഗേറ്റ് ചെയ്യുക",
   "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "അഭ്യർത്ഥന ലഭിച്ചു. ഞങ്ങൾ നിങ്ങളെ ഉടൻ ബന്ധപ്പെടും",
@@ -453,5 +453,6 @@ const malayalamStrings = {
   "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE" : "ശ്രദ്ധിക്കുക: ഡ്രൈവർ ഈ അധിക നിരക്ക് ഈടാക്കാം/അല്ലായിരിക്കാം",
   "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS": "ചുവടെയുള്ള ഏതെങ്കിലും കാരണത്താൽ നിങ്ങൾക്ക് അപ്‌ഡേറ്റ് ചെയ്‌ത അന്തിമ നിരക്ക് കണ്ടേക്കാം:",
   "REASON_CHANGE_IN_ROUTE_A": "1. റൂട്ടിലെ മാറ്റം: ",
-  "REASON_CHANGE_IN_ROUTE_B": "റൂട്ടിലെ മാറ്റം കാരണം മൊത്തം നിരക്ക് മാറിയേക്കാം"
+  "REASON_CHANGE_IN_ROUTE_B": "റൂട്ടിലെ മാറ്റം കാരണം മൊത്തം നിരക്ക് മാറിയേക്കാം",
+  "RECOMMENDED" : "ശുപാർശ ചെയ്ത"
 }

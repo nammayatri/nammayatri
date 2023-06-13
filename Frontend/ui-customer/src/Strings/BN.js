@@ -432,9 +432,9 @@ const bengaliStrings = {
   "REQUEST_CALLBACK" : "কলব্যাকের অনুরোধ করুন",
   "DIRECT_CALL" : "সরাসরি কল",
   "ANONYMOUS_CALL" : "বেনামী কল",
-  "YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER" : "আপনার নম্বর ড্রাইভারকে দেখানো হবে না",
+  "YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER_THE_CALL_WILL_BE_RECORDED_FOR_COMPLIANCE" : "আপনার নম্বর ড্রাইভারকে দেখানো হবে না। সম্মতির জন্য কল রেকর্ড করা হবে।",
   "YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER" : "আপনার নম্বরটি ড্রাইভারের কাছে দৃশ্যমান হবে। নিবন্ধিত নম্বর থেকে কল না করলে ব্যবহার করুন",
-  "CALL_DRIVER_USING" : "ব্যবহার করে ড্রাইভারকে কল করুন:",
+  "CALL_DRIVER_USING" : "ব্যবহার করে ড্রাইভারকে কল করুন",
   "WAS_YOUR_CALL_SUCCESSFUL" : "আপনার কল সফল ছিল" ,
   "NAVIGATE_TO_PICKUP" : "পিকআপে নেভিগেট করুন",
   "REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON" : "অনুরোধ পেয়েছি. আমরা তোমার সাথে শীঘ্রই যোগাযোগ করবো",
@@ -453,5 +453,6 @@ const bengaliStrings = {
   "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE" : "দ্রষ্টব্য: ড্রাইভার এই অতিরিক্ত ভাড়া নিতে পারে/নাও পারে",
   "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS": "নিচের যেকোনো কারণে আপনি একটি আপডেট করা চূড়ান্ত ভাড়া দেখতে পারেন:",
   "REASON_CHANGE_IN_ROUTE_A": "1. রুটে পরিবর্তন: ",
-  "REASON_CHANGE_IN_ROUTE_B": "রুট পরিবর্তনের কারণে মোট ভাড়া পরিবর্তন হতে পারে"
+  "REASON_CHANGE_IN_ROUTE_B": "রুট পরিবর্তনের কারণে মোট ভাড়া পরিবর্তন হতে পারে",
+  "RECOMMENDED" : "প্রস্তাবিত"
 }

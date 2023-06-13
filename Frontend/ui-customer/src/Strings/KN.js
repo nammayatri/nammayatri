@@ -429,9 +429,9 @@ const kannadaStrings = {
   "PLACE_CALL": "ಕರೆ ಮಾಡಿ",
   "DIRECT_CALL": "ನೇರ ಕರೆ",
   "ANONYMOUS_CALL": "ಅನಾಮಧೇಯ ಕರೆ",
-  "YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER": "ನಿಮ್ಮ ಸಂಖ್ಯೆಯನ್ನು ಚಾಲಕನಿಗೆ ತೋರಿಸಲಾಗುವುದಿಲ್ಲ",
+  "YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER_THE_CALL_WILL_BE_RECORDED_FOR_COMPLIANCE": "ನಿಮ್ಮ ಸಂಖ್ಯೆಯನ್ನು ಚಾಲಕನಿಗೆ ತೋರಿಸಲಾಗುವುದಿಲ್ಲ. ಅನುಸರಣೆಗಾಗಿ ಕರೆಯನ್ನು ರೆಕಾರ್ಡ್ ಮಾಡಲಾಗುತ್ತದೆ.",
   "YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER": "ನಿಮ್ಮ ಸಂಖ್ಯೆ ಚಾಲಕನಿಗೆ ಗೋಚರಿಸುತ್ತದೆ. ನೋಂದಾಯಿತ ಸಂಖ್ಯೆಯಿಂದ ಕರೆ ಮಾಡದಿದ್ದರೆ ಬಳಸಿ",
-  "CALL_DRIVER_USING": "ಇದನ್ನು ಬಳಸಿಕೊಂಡು ಚಾಲಕಕ್ಕೆ ಕರೆ ಮಾಡಿ:",
+  "CALL_DRIVER_USING": "ಇದನ್ನು ಬಳಸಿಕೊಂಡು ಚಾಲಕಕ್ಕೆ ಕರೆ ಮಾಡಿ",
   "WAS_YOUR_CALL_SUCCESSFUL": "ನಿಮ್ಮ ಕರೆ ಯಶಸ್ವಿಯಾಗಿದೆಯೇ",
   "DRIVER_ADDITIONS": "ಚಾಲಕ ಸೇರ್ಪಡೆ*",
   "FARE_UPDATE_POLICY": "ದರ ನವೀಕರಣ ನೀತಿ",
@@ -450,5 +450,6 @@ const kannadaStrings = {
   "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "Website: <u>https://nammayatri.in/</u>",
   "REGISTERED_ADDRESS" : "ನೋಂದಾಯಿಸಿದ ವಿಳಾಸ",
   "REGISTERED_ADDRESS_DESCRIPTION" : "Juspay Technologies Private Limited <br> Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala Bengaluru, Karnataka- 560095, India.",
-  "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "Website: <u>https://nammayatri.in/</u>"
+  "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "Website: <u>https://nammayatri.in/</u>",
+  "RECOMMENDED" : "ಶಿಫಾರಸು ಮಾಡಲಾಗಿದೆ"
 }

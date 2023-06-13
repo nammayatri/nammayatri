@@ -435,9 +435,9 @@ const hindiStrings = {
   "PLACE_CALL": "फोन करें",
   "DIRECT_CALL": "प्रत्यक्ष कॉल",
   "ANONYMOUS_CALL": "अनाम कॉल",
-  "YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER": "आपका नंबर ड्राइवर पार्टनर को नहीं दिखाया जाएगा",
+  "YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER_THE_CALL_WILL_BE_RECORDED_FOR_COMPLIANCE": "आपका नंबर ड्राइवर पार्टनर को नहीं दिखाया जाएगा। अनुपालन के लिए कॉल रिकॉर्ड की जाएगी।",
   "YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER": "आपका नंबर ड्राइवर को दिखाई देगा। अगर रजिस्टर्ड नंबर से कॉल नहीं कर रहे हैं तो इस्तेमाल करें",
-  "CALL_DRIVER_USING": "ड्राइवर को कॉल करें:",
+  "CALL_DRIVER_USING": "ड्राइवर को कॉल करें",
   "WAS_YOUR_CALL_SUCCESSFUL": "क्या आपका कॉल सक्सेसफुल था",
   "DRIVER_ADDITIONS": "चालक जोड़*",
   "FARE_UPDATE_POLICY": "किराया अपडेट नीति",
@@ -456,5 +456,6 @@ const hindiStrings = {
   "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "वेबसाइट: <u>https://nammayatri.in/</u>",
   "REGISTERED_ADDRESS" : "पंजीकृत पता",
   "REGISTERED_ADDRESS_DESCRIPTION" : "जस्पे टेक्नोलॉजीज प्राइवेट लिमिटेड <br> स्टैलियन बिजनेस सेंटर, नंबर 444, तीसरी और चौथी मंजिल, 18वीं मेन, 6वां ब्लॉक, कोरमंगला बेंगलुरु, कर्नाटक- 560095, भारत।",
-  "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "वेबसाइट: <u>https://nammayatri.in/</u>"
+  "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "वेबसाइट: <u>https://nammayatri.in/</u>",
+  "RECOMMENDED" : "अनुशंसित"
 }
