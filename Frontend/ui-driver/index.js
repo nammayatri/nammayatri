@@ -29,7 +29,7 @@ var logger = function()
     var oldConsoleLog = null;
     var pub = {};
 
-    pub.enableLogger =  function enableLogger() 
+    pub.enableLogger =  function enableLogger()
                         {
                             if(oldConsoleLog == null)
                                 return;
@@ -114,7 +114,10 @@ window.onMerchantEvent = function (event, payload) {
     window.__payload.sdkVersion = "2.0.1"
     console.warn("Process called");
     var parsedPayload = JSON.parse(payload);
-    if (parsedPayload && parsedPayload.payload && parsedPayload.payload.action == "showPopup" && parsedPayload.payload.id && parsedPayload.payload.popType){
+    if (parsedPayload && parsedPayload.payload && parsedPayload.payload.action == "callDriverAlert" && parsedPayload.payload.id && parsedPayload.payload.popType) {
+      // purescript.alertNotification(parsedPayload.payload.id)();
+      console.log('alert notification called');
+    }else if (parsedPayload && parsedPayload.payload && parsedPayload.payload.action == "showPopup" && parsedPayload.payload.id && parsedPayload.payload.popType){
       window.callPopUp(parsedPayload.payload.popType, parsedPayload.payload.entityPayload);
     }
     else {
@@ -125,8 +128,11 @@ window.onMerchantEvent = function (event, payload) {
         payload: { jp_consuming_backpress: true }
       }
       JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
-      // var purescript = require("./output/Main");
-      purescript.main();
+      if (parsedPayload.payload.notificationData && parsedPayload.payload.notificationData.notification_type == "NEW_MESSAGE" && parsedPayload.payload.notificationData.entity_ids) {
+        purescript.main(makeEvent("NEW_MESSAGE", parsedPayload.payload.notificationData.entity_ids))();
+      }else {
+        purescript.main(makeEvent("", ""))();
+      }
     }
   } else {
     console.error("unknown event: ", event);
@@ -184,7 +190,7 @@ window.callPopUp = function(type, entityPayload){
   } else if(type == "NEW_RIDE_AVAILABLE"){
     purescript.mainAllocationPop(type)(entityPayload)();}
   else{
-    purescript.main(); 
+    purescript.main(makeEvent("", ""))();
   }
 }
 
@@ -204,7 +210,6 @@ window.onActivityResult = function (requestCode, resultCode, bundle) {
 window["onEvent'"] = function (event, args) {
   console.log(event, args);
   if (event == "onBackPressed") {
-    // var purescript = require("./output/Main");
     purescript.onEvent(event)();
   } else if (event == "onPause") {
     window.onPause();
@@ -236,4 +241,8 @@ if(sessionInfo.package_name.includes("debug")){
   logger.enableLogger();
 }else{
   logger.disableLogger();
+}
+
+function makeEvent(_type, _data) {
+  return { type : _type, data : _data };
 }
