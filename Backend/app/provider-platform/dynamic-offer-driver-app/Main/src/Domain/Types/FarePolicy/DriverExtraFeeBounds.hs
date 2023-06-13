@@ -28,6 +28,6 @@ data DriverExtraFeeBounds = DriverExtraFeeBounds
 
 findDriverExtraFeeBoundsByDistance :: Meters -> NonEmpty DriverExtraFeeBounds -> DriverExtraFeeBounds
 findDriverExtraFeeBoundsByDistance dist driverExtraFeeBoundsList = do
-  case NE.filter (\driverExtraFeeBounds -> driverExtraFeeBounds.startDistance < dist) $ NE.sortBy (comparing (.startDistance)) driverExtraFeeBoundsList of
+  case NE.filter (\driverExtraFeeBounds -> driverExtraFeeBounds.startDistance <= dist) $ NE.sortBy (comparing (.startDistance)) driverExtraFeeBoundsList of
     [] -> error $ "DriverExtraFeeBounds for dist = " <> show dist <> " not found. Non-emptiness supposed to be guaranteed by app logic."
     a -> last a
