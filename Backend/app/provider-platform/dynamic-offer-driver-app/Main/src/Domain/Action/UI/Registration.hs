@@ -176,6 +176,7 @@ createDriverDetails personId merchantId = do
             onRide = False,
             enabled = False,
             blocked = False,
+            numOfLocks = 0,
             verified = False,
             referralCode = Nothing,
             lastEnabledOn = Nothing,

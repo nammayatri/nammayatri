@@ -59,6 +59,7 @@ data DriverInformationE e = DriverInformation
     onRide :: Bool,
     enabled :: Bool,
     blocked :: Bool,
+    numOfLocks :: Int,
     verified :: Bool,
     referralCode :: Maybe (EncryptedHashedField e Text),
     lastEnabledOn :: Maybe UTCTime,

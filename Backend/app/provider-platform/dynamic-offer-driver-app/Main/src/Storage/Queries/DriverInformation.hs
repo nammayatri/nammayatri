@@ -107,9 +107,11 @@ updateBlockedState driverId isBlocked = do
   Esq.update $ \tbl -> do
     set
       tbl
-      [ DriverInformationBlocked =. val isBlocked,
-        DriverInformationUpdatedAt =. val now
-      ]
+      ( [ DriverInformationBlocked =. val isBlocked,
+          DriverInformationUpdatedAt =. val now
+        ]
+          <> [DriverInformationNumOfLocks +=. val 1 | isBlocked]
+      )
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
 verifyAndEnableDriver :: Id Person -> SqlDB ()
