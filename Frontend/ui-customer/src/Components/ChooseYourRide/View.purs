@@ -1,7 +1,6 @@
 module Components.ChooseYourRide.View where
 
 import Common.Types.App
-
 import Components.ChooseVehicle as ChooseVehicle
 import Components.ChooseYourRide.Controller (Action(..), Config)
 import Components.PrimaryButton as PrimaryButton
@@ -52,12 +51,12 @@ estimatedTimeAndDistanceView push config =
     , gravity CENTER
     , margin $ MarginTop 4
     ]
-    [ textView $
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , text config.rideDistance
-        , color Color.black650
-        ]
+    [ textView
+        $ [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text config.rideDistance
+          , color Color.black650
+          ]
         <> FontStyle.paragraphText TypoGraphy
     , linearLayout
         [ height $ V 4
@@ -67,12 +66,12 @@ estimatedTimeAndDistanceView push config =
         , margin (Margin 6 2 6 0)
         ]
         []
-    , textView $
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , text config.rideDuration
-        , color Color.black650
-        ]
+    , textView
+        $ [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text config.rideDuration
+          , color Color.black650
+          ]
         <> FontStyle.paragraphText TypoGraphy
     ]
 
@@ -87,16 +86,18 @@ quoteListView push config =
     ( mapWithIndex
         ( \index item ->
             ChooseVehicle.view (push <<< ChooseVehicleAC) (item)
-        ) config.quoteList
+        )
+        config.quoteList
     )
 
 primaryButtonRequestRideConfig :: Config -> PrimaryButton.Config
-primaryButtonRequestRideConfig config = PrimaryButton.config
-  { textConfig
-    { text = (getString CONFIRM_AND_BOOK)
-    , color = Color.yellow900
-    , textSize = FontSize.a_16
+primaryButtonRequestRideConfig config =
+  PrimaryButton.config
+    { textConfig
+      { text = (getString CONFIRM_AND_BOOK)
+      , color = Color.yellow900
+      , textSize = FontSize.a_16
+      }
+    , background = Color.black900
+    , margin = Margin 16 32 16 15
     }
-  , background = Color.black900
-  , margin = Margin 16 32 16 15
-  }

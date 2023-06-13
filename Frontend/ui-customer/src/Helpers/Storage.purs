@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Storage where
 
 import Prelude
@@ -50,7 +49,7 @@ data KeyStore
   | REGISTRATION_APPROVED
   | PREVIOUS_CURRENT_LOCATION
   | READ_MESSAGES
-  | CHAT_CHANNEL_ID 
+  | CHAT_CHANNEL_ID
   | MERCHANT_ID
   | BASE_URL
   | CONTACTS

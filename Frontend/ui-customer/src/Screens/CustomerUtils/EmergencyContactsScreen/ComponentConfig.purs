@@ -1,7 +1,6 @@
 module Screens.CustomerUtils.EmergencyContactsScreen.ComponentConfig where
 
 import Common.Types.App
-
 import Components.GenericHeader as GenericHeader
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
@@ -64,7 +63,6 @@ primaryButtonConfig state =
         }
   in
     primaryButtonConfig'
-
 
 --------------------------------------------------- removeContactPopUpModelConfig -----------------------------------------------------
 removeContactPopUpModelConfig :: EmergencyContactsScreenState -> PopUpModal.Config

@@ -12,14 +12,12 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.RideBookingFlow.HomeScreen.Config where
 
 import Common.Types.App
 import Language.Strings
 import Prelude
 import PrestoDOM
-
 import Animation.Config as AnimConfig
 import Components.CancelRide as CancelRidePopUpConfig
 import Components.DriverInfoCard (DriverInfoCardData)
@@ -57,57 +55,62 @@ import Styles.Colors as Color
 import Data.Int as INT
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn)
 
-
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
-shareAppConfig state = let
-  config' = PopUpModal.config
-  popUpConfig' = config'{
-      gravity = CENTER,
-      margin = (MarginHorizontal 24 24),
-      buttonLayoutMargin = (Margin 16 0 16 20),
-      primaryText {
-        text = getString(YOUR_RIDE_HAS_STARTED)
-      , margin = (MarginHorizontal 16 16)},
-      secondaryText {
-        text = getString(ENJOY_RIDING_WITH_US)
-      , margin = MarginVertical 12 24
-      , fontSize = FontSize.a_14
-      , color = Color.black700},
-      option1 {
-        text = getString(MAYBE_LATER)
-      , fontSize = FontSize.a_16
-      , width = V $ (((EHC.screenWidth unit)-92)/2)
-      , background = Color.white900
-      , strokeColor = Color.black500
-      , color = Color.black700
-      , fontStyle = FontStyle.semiBold LanguageStyle
-      },
-      option2 {
-        text = getString(SHARE_APP)
-      , fontSize = FontSize.a_16
-      , width = V $ (((EHC.screenWidth unit)-92)/2)
-      , color = Color.yellow900
-      , strokeColor = Color.black900
-      , background = Color.black900
-      , margin = MarginLeft 12
-      ,fontStyle = FontStyle.semiBold LanguageStyle
-      },
-      cornerRadius = (Corners 15.0 true true true true),
-      coverImageConfig {
-        imageUrl = "ic_share_app,https://assets.juspay.in/nammayatri/images/user/ny_ic_share_app.png"
-      , visibility = VISIBLE
-      , margin = Margin 16 20 16 24
-      , width = MATCH_PARENT
-      , height = V 200
-      }
-  }
-  in popUpConfig'
+shareAppConfig state =
+  let
+    config' = PopUpModal.config
 
+    popUpConfig' =
+      config'
+        { gravity = CENTER
+        , margin = (MarginHorizontal 24 24)
+        , buttonLayoutMargin = (Margin 16 0 16 20)
+        , primaryText
+          { text = getString (YOUR_RIDE_HAS_STARTED)
+          , margin = (MarginHorizontal 16 16)
+          }
+        , secondaryText
+          { text = getString (ENJOY_RIDING_WITH_US)
+          , margin = MarginVertical 12 24
+          , fontSize = FontSize.a_14
+          , color = Color.black700
+          }
+        , option1
+          { text = getString (MAYBE_LATER)
+          , fontSize = FontSize.a_16
+          , width = V $ (((EHC.screenWidth unit) - 92) / 2)
+          , background = Color.white900
+          , strokeColor = Color.black500
+          , color = Color.black700
+          , fontStyle = FontStyle.semiBold LanguageStyle
+          }
+        , option2
+          { text = getString (SHARE_APP)
+          , fontSize = FontSize.a_16
+          , width = V $ (((EHC.screenWidth unit) - 92) / 2)
+          , color = Color.yellow900
+          , strokeColor = Color.black900
+          , background = Color.black900
+          , margin = MarginLeft 12
+          , fontStyle = FontStyle.semiBold LanguageStyle
+          }
+        , cornerRadius = (Corners 15.0 true true true true)
+        , coverImageConfig
+          { imageUrl = "ic_share_app,https://assets.juspay.in/nammayatri/images/user/ny_ic_share_app.png"
+          , visibility = VISIBLE
+          , margin = Margin 16 20 16 24
+          , width = MATCH_PARENT
+          , height = V 200
+          }
+        }
+  in
+    popUpConfig'
 
 skipButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 skipButtonConfig state =
   let
     config = PrimaryButton.config
+
     skipButtonConfig' =
       config
         { textConfig
@@ -130,6 +133,7 @@ sourceToDestinationConfig :: ST.HomeScreenState -> SourceToDestination.Config
 sourceToDestinationConfig state =
   let
     config = SourceToDestination.config
+
     sourceToDestinationConfig' =
       config
         { margin = (Margin 0 0 0 0)
@@ -188,6 +192,7 @@ fareBreakUpConfig :: ST.HomeScreenState -> FareBreakUp.Config
 fareBreakUpConfig state =
   let
     config = FareBreakUp.config
+
     fareBreakUpConfig' =
       config
         { fareDetails = []
@@ -224,35 +229,39 @@ whereToButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 whereToButtonConfig state =
   let
     config = PrimaryButton.config
-    primaryButtonConfig' = config
-      { textConfig
-        { text = (getString WHERE_TO)
-        , color = Color.yellow900
-        , textSize = FontSize.a_16
-        , width = MATCH_PARENT
-        , gravity = LEFT
+
+    primaryButtonConfig' =
+      config
+        { textConfig
+          { text = (getString WHERE_TO)
+          , color = Color.yellow900
+          , textSize = FontSize.a_16
+          , width = MATCH_PARENT
+          , gravity = LEFT
+          }
+        , height = V 60
+        , gravity = CENTER
+        , cornerRadius = 8.0
+        , background = Color.black900
+        , margin = (MarginHorizontal 16 16)
+        , isClickable = true
+        , isPrefixImage = true
+        , prefixImageConfig
+          { imageUrl = "ny_ic_bent_right_arrow,https://assets.juspay.in/nammayatri/images/user/ny_ic_bent_right_arrow.png"
+          , height = V 16
+          , width = V 21
+          , margin = (Margin 17 0 17 0)
+          }
+        , id = "WheretoButton"
         }
-      , height = V 60
-      , gravity = CENTER
-      , cornerRadius = 8.0
-      , background = Color.black900
-      , margin = (MarginHorizontal 16 16)
-      , isClickable = true
-      , isPrefixImage = true
-      , prefixImageConfig
-        { imageUrl = "ny_ic_bent_right_arrow,https://assets.juspay.in/nammayatri/images/user/ny_ic_bent_right_arrow.png"
-        , height = V 16
-        , width = V 21
-        , margin = (Margin 17 0 17 0)
-        }
-      , id = "WheretoButton"
-      }
-  in primaryButtonConfig'
+  in
+    primaryButtonConfig'
 
 primaryButtonRequestRideConfig :: ST.HomeScreenState -> PrimaryButton.Config
 primaryButtonRequestRideConfig state =
   let
     config = PrimaryButton.config
+
     primaryButtonConfig' =
       config
         { textConfig
@@ -272,6 +281,7 @@ primaryButtonConfirmPickupConfig :: ST.HomeScreenState -> PrimaryButton.Config
 primaryButtonConfirmPickupConfig state =
   let
     config = PrimaryButton.config
+
     primaryButtonConfig' =
       config
         { textConfig
@@ -291,6 +301,7 @@ rateRideButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 rateRideButtonConfig state =
   let
     config = PrimaryButton.config
+
     primaryButtonConfig' =
       config
         { textConfig
@@ -311,7 +322,9 @@ cancelRidePopUpConfig :: ST.HomeScreenState -> CancelRidePopUpConfig.Config
 cancelRidePopUpConfig state =
   let
     cancelRideconfig = CancelRidePopUpConfig.config
+
     lastIndex = ((DA.length state.props.cancellationReasons) - 1)
+
     cancelRideconfig' =
       cancelRideconfig
         { cancelRideReasons = state.props.cancellationReasons
@@ -339,80 +352,82 @@ cancelRidePopUpConfig state =
     cancelRideconfig'
 
 logOutPopUpModelConfig :: ST.HomeScreenState -> PopUpModal.Config
-logOutPopUpModelConfig state =
-  case state.props.isPopUp of
-    ST.Logout ->
-      let
-        config' = PopUpModal.config
-        popUpConfig' =
-          config'
-            { primaryText { text = (getString LOGOUT_) }
-            , secondaryText { text = (getString ARE_YOU_SURE_YOU_WANT_TO_LOGOUT) }
-            , option1 { text = (getString GO_BACK_) }
-            , option2 { text = (getString LOGOUT_) }
-            }
-      in
-        popUpConfig'
-    ST.TipsPopUp -> PopUpModal.config{
-          optionButtonOrientation = "VERTICAL"
-          , backgroundClickable = true
-          , customerTipAvailable = true
-          , dismissPopup = true
-          , customerTipArray = [(getString NO_TIP), "₹10 🙂", "₹20 😄", "₹30 🤩"]
-          , customerTipArrayWithValues = [0,10, 20, 30]
-          , primaryText {
-              text =  if(isLocalStageOn ST.QuoteList)then (getString TRY_AGAIN_WITH_A_TIP) else (getString SEARCH_AGAIN_WITH_A_TIP)
-            , fontSize = FontSize.a_22
-            },
-          secondaryText {
-            text = (getString BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS)
-          , fontSize = FontSize.a_14
-          , color = Color.black650}
-          , tipLayoutMargin = (Margin 22 0 22 22)
-          , buttonLayoutMargin = (MarginHorizontal 16 16)
-          , activeIndex = state.props.customerTip.tipActiveIndex
-          , tipButton {
-                background = Color.white900
-              , color = Color.black800
-              , strokeColor = Color.grey900
-              , padding = (Padding 16 12 16 12)
-            },
-          option1 {
-            text = if (state.props.customerTip.tipForDriver == 0) then ( if(isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITHOUT_TIP)else (getString SEARCH_AGAIN_WITHOUT_A_TIP)) else ((if (isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITH)else(getString SEARCH_AGAIN_WITH) ) <> " + ₹"<> (fromMaybe "" (["0", "10", "20", "30"] DA.!! state.props.customerTip.tipActiveIndex))) <>" "<>(getString TIP)
-          , fontSize = FontSize.a_16
-          , width = MATCH_PARENT
-          , color = Color.yellow900
-          , strokeColor = Color.black900
-          , background = Color.black900
-          , padding = (Padding 0 10 0 10)
-          , fontStyle = FontStyle.semiBold LanguageStyle
-          },
-          option2 {
-            text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else  (getString CANCEL_SEARCH)
-          , fontSize = FontSize.a_16
-          , width = MATCH_PARENT
-          , background = Color.white900
-          , strokeColor = Color.white900
-          , margin = MarginTop 14
-          , padding = PaddingBottom $ getBottomMargin
-          , color = Color.black650
-          , fontStyle = FontStyle.semiBold LanguageStyle
-          },
-          cornerRadius = (Corners 15.0 true true false false)
+logOutPopUpModelConfig state = case state.props.isPopUp of
+  ST.Logout ->
+    let
+      config' = PopUpModal.config
 
+      popUpConfig' =
+        config'
+          { primaryText { text = (getString LOGOUT_) }
+          , secondaryText { text = (getString ARE_YOU_SURE_YOU_WANT_TO_LOGOUT) }
+          , option1 { text = (getString GO_BACK_) }
+          , option2 { text = (getString LOGOUT_) }
+          }
+    in
+      popUpConfig'
+  ST.TipsPopUp ->
+    PopUpModal.config
+      { optionButtonOrientation = "VERTICAL"
+      , backgroundClickable = true
+      , customerTipAvailable = true
+      , dismissPopup = true
+      , customerTipArray = [ (getString NO_TIP), "₹10 🙂", "₹20 😄", "₹30 🤩" ]
+      , customerTipArrayWithValues = [ 0, 10, 20, 30 ]
+      , primaryText
+        { text = if (isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITH_A_TIP) else (getString SEARCH_AGAIN_WITH_A_TIP)
+        , fontSize = FontSize.a_22
+        }
+      , secondaryText
+        { text = (getString BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS)
+        , fontSize = FontSize.a_14
+        , color = Color.black650
+        }
+      , tipLayoutMargin = (Margin 22 0 22 22)
+      , buttonLayoutMargin = (MarginHorizontal 16 16)
+      , activeIndex = state.props.customerTip.tipActiveIndex
+      , tipButton
+        { background = Color.white900
+        , color = Color.black800
+        , strokeColor = Color.grey900
+        , padding = (Padding 16 12 16 12)
+        }
+      , option1
+        { text = if (state.props.customerTip.tipForDriver == 0) then (if (isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITHOUT_TIP) else (getString SEARCH_AGAIN_WITHOUT_A_TIP)) else ((if (isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITH) else (getString SEARCH_AGAIN_WITH)) <> " + ₹" <> (fromMaybe "" ([ "0", "10", "20", "30" ] DA.!! state.props.customerTip.tipActiveIndex))) <> " " <> (getString TIP)
+        , fontSize = FontSize.a_16
+        , width = MATCH_PARENT
+        , color = Color.yellow900
+        , strokeColor = Color.black900
+        , background = Color.black900
+        , padding = (Padding 0 10 0 10)
+        , fontStyle = FontStyle.semiBold LanguageStyle
+        }
+      , option2
+        { text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else (getString CANCEL_SEARCH)
+        , fontSize = FontSize.a_16
+        , width = MATCH_PARENT
+        , background = Color.white900
+        , strokeColor = Color.white900
+        , margin = MarginTop 14
+        , padding = PaddingBottom $ getBottomMargin
+        , color = Color.black650
+        , fontStyle = FontStyle.semiBold LanguageStyle
+        }
+      , cornerRadius = (Corners 15.0 true true false false)
       }
-    _ ->
-      let
-        config' = PopUpModal.config
-        popUpConfig' =
-          config'
-            { primaryText { text = if (isLocalStageOn ST.QuoteList) then ((getString TRY_AGAIN) <> "?") else ((getString CANCEL_SEARCH) <> "?")}
-            , buttonLayoutMargin = (MarginHorizontal 16 16)
-            , dismissPopup = true
-            , optionButtonOrientation = if(isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then  "VERTICAL" else "HORIZONTAL"
-            , secondaryText { text = if (isLocalStageOn ST.QuoteList) then (getString TRY_LOOKING_FOR_RIDES_AGAIN) else (getString CANCEL_ONGOING_SEARCH)}
-            , option1 {
-              text = if (isLocalStageOn ST.QuoteList) then (getString YES_TRY_AGAIN) else (getString YES_CANCEL_SEARCH)
+  _ ->
+    let
+      config' = PopUpModal.config
+
+      popUpConfig' =
+        config'
+          { primaryText { text = if (isLocalStageOn ST.QuoteList) then ((getString TRY_AGAIN) <> "?") else ((getString CANCEL_SEARCH) <> "?") }
+          , buttonLayoutMargin = (MarginHorizontal 16 16)
+          , dismissPopup = true
+          , optionButtonOrientation = if (isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then "VERTICAL" else "HORIZONTAL"
+          , secondaryText { text = if (isLocalStageOn ST.QuoteList) then (getString TRY_LOOKING_FOR_RIDES_AGAIN) else (getString CANCEL_ONGOING_SEARCH) }
+          , option1
+            { text = if (isLocalStageOn ST.QuoteList) then (getString YES_TRY_AGAIN) else (getString YES_CANCEL_SEARCH)
             , fontSize = FontSize.a_16
             , width = MATCH_PARENT
             , color = Color.yellow900
@@ -421,21 +436,20 @@ logOutPopUpModelConfig state =
             , padding = (Padding 0 10 0 10)
             , fontStyle = FontStyle.semiBold LanguageStyle
             }
-            , option2 {
-               text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else (getString NO_DONT)
-              , fontSize = FontSize.a_16
-              , width = MATCH_PARENT
-              , background = Color.white900
-              , strokeColor = Color.white900
-              , margin = MarginTop $ if (isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then 14 else 3
-              , color = Color.black650
-              , padding = if (isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then (PaddingBottom getBottomMargin) else (Padding 0 0 0 0)
-              , fontStyle = FontStyle.semiBold LanguageStyle
-             }
+          , option2
+            { text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else (getString NO_DONT)
+            , fontSize = FontSize.a_16
+            , width = MATCH_PARENT
+            , background = Color.white900
+            , strokeColor = Color.white900
+            , margin = MarginTop $ if (isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then 14 else 3
+            , color = Color.black650
+            , padding = if (isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then (PaddingBottom getBottomMargin) else (Padding 0 0 0 0)
+            , fontStyle = FontStyle.semiBold LanguageStyle
             }
-      in
-        popUpConfig'
-
+          }
+    in
+      popUpConfig'
 
 getBottomMargin :: Int
 getBottomMargin = if EHC.safeMarginBottom == 0 then 24 else (EHC.safeMarginBottom)
@@ -444,6 +458,7 @@ distanceOusideLimitsConfig :: ST.HomeScreenState -> PopUpModal.Config
 distanceOusideLimitsConfig state =
   let
     config' = PopUpModal.config
+
     popUpConfig' =
       config'
         { backgroundClickable = false
@@ -469,6 +484,7 @@ shortDistanceConfig :: ST.HomeScreenState -> PopUpModal.Config
 shortDistanceConfig state =
   let
     config' = PopUpModal.config
+
     popUpConfig' =
       config'
         { backgroundClickable = false
@@ -491,6 +507,7 @@ sourceUnserviceableConfig :: ST.HomeScreenState -> ErrorModal.Config
 sourceUnserviceableConfig state =
   let
     config = ErrorModal.config
+
     errorModalConfig' =
       config
         { height = MATCH_PARENT
@@ -534,6 +551,7 @@ rateCardConfig :: ST.HomeScreenState -> RateCard.Config
 rateCardConfig state =
   let
     config' = RateCard.config
+
     rateCardConfig' =
       config'
         { baseFare = "₹" <> HU.toString (state.data.rateCard.baseFare)
@@ -552,6 +570,7 @@ estimateChangedPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
 estimateChangedPopupConfig state =
   let
     config' = PopUpModal.config
+
     popUpConfig' =
       config'
         { primaryText { text = (getString ESTIMATES_CHANGED) }
@@ -563,66 +582,67 @@ estimateChangedPopupConfig state =
     popUpConfig'
 
 driverInfoCardViewState :: ST.HomeScreenState -> DriverInfoCard.DriverInfoCardState
-driverInfoCardViewState state = { props:
-                                  { currentStage: state.props.currentStage
-                                  , trackingEnabled: state.props.isInApp
-                                  , unReadMessages : state.props.unReadMessages
-                                  , showCallPopUp: state.props.showCallPopUp
-                                  , isSpecialZone: state.props.isSpecialZone
-                                  , estimatedTime : state.data.rideDuration
-                                  }
-                              , data: driverInfoTransformer state
-                            }
+driverInfoCardViewState state =
+  { props:
+      { currentStage: state.props.currentStage
+      , trackingEnabled: state.props.isInApp
+      , unReadMessages: state.props.unReadMessages
+      , showCallPopUp: state.props.showCallPopUp
+      , isSpecialZone: state.props.isSpecialZone
+      , estimatedTime: state.data.rideDuration
+      }
+  , data: driverInfoTransformer state
+  }
 
 chatViewConfig :: ST.HomeScreenState -> ChatView.Config
-chatViewConfig state = let
-  config = ChatView.config
-  chatViewConfig' = config {
-    userConfig
-        {
-          userName = state.data.driverInfoCardState.driverName
-        , appType = "Customer"
+chatViewConfig state =
+  let
+    config = ChatView.config
+
+    chatViewConfig' =
+      config
+        { userConfig
+          { userName = state.data.driverInfoCardState.driverName
+          , appType = "Customer"
+          }
+        , messages = state.data.messages
+        , messagesSize = state.data.messagesSize
+        , sendMessageActive = state.props.sendMessageActive
+        , distance = metersToKm state.data.driverInfoCardState.distance state
+        , suggestionsList = if (metersToKm state.data.driverInfoCardState.distance state) == (getString AT_PICKUP) then pickupSuggestions "" else initialSuggestions ""
+        , hint = (getString MESSAGE)
+        , suggestionHeader = (getString START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS)
+        , emptyChatHeader = (getString START_YOUR_CHAT_WITH_THE_DRIVER)
+        , languageKey = (getValueToLocalStore LANGUAGE_KEY)
+        , mapsText = "Maps"
+        , grey700 = Color.grey700
+        , blue600 = Color.blue600
+        , blue900 = Color.blue900
+        , transparentGrey = Color.transparentGrey
+        , green200 = Color.green200
+        , grey900 = Color.grey900
+        , grey800 = Color.grey800
+        , blue800 = Color.blue800
+        , white900 = Color.white900
+        , black800 = Color.black800
+        , black700 = Color.black700
         }
-      , messages = state.data.messages
-      , messagesSize = state.data.messagesSize
-      , sendMessageActive = state.props.sendMessageActive
-      , distance = metersToKm state.data.driverInfoCardState.distance state
-      , suggestionsList = if (metersToKm state.data.driverInfoCardState.distance state) == (getString AT_PICKUP) then pickupSuggestions ""  else initialSuggestions ""
-      , hint = (getString MESSAGE)
-      , suggestionHeader = (getString START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS)
-      , emptyChatHeader = (getString START_YOUR_CHAT_WITH_THE_DRIVER)
-      , languageKey = (getValueToLocalStore LANGUAGE_KEY)
-      , mapsText = "Maps"
-      , grey700 = Color.grey700
-      , blue600 = Color.blue600
-      , blue900 = Color.blue900
-      , transparentGrey = Color.transparentGrey
-      , green200 = Color.green200
-      , grey900 = Color.grey900
-      , grey800 = Color.grey800
-      , blue800 = Color.blue800
-      , white900 = Color.white900
-      , black800 = Color.black800
-      , black700 = Color.black700
-  }
-  in chatViewConfig'
+  in
+    chatViewConfig'
 
 initialSuggestions :: String -> Array String
 initialSuggestions _ =
-  [
-    (getString ARE_YOU_STARING),
-    (getString PLEASE_COME_SOON),
-    (getString OK_I_WILL_WAIT)
+  [ (getString ARE_YOU_STARING)
+  , (getString PLEASE_COME_SOON)
+  , (getString OK_I_WILL_WAIT)
   ]
 
 pickupSuggestions :: String -> Array String
 pickupSuggestions _ =
-  [
-    (getString PLEASE_WAIT_I_WILL_BE_THERE),
-    (getString LOOKING_FOR_YOU_AT_PICKUP),
-    (getString UNREACHABLE_PLEASE_CALL_BACK)
+  [ (getString PLEASE_WAIT_I_WILL_BE_THERE)
+  , (getString LOOKING_FOR_YOU_AT_PICKUP)
+  , (getString UNREACHABLE_PLEASE_CALL_BACK)
   ]
-
 
 metersToKm :: Int -> ST.HomeScreenState -> String
 metersToKm distance state =
@@ -630,98 +650,104 @@ metersToKm distance state =
     (if (state.props.currentStage == ST.RideStarted) then (getString AT_DROP) else (getString AT_PICKUP))
   else if (distance < 1000) then (HU.toString distance <> " m " <> (getString AWAY_C)) else (HU.parseFloat ((INT.toNumber distance) / 1000.0)) 2 <> " km " <> (getString AWAY_C)
 
-
 driverInfoTransformer :: ST.HomeScreenState -> DriverInfoCardData
 driverInfoTransformer state =
-  let cardState = state.data.driverInfoCardState
+  let
+    cardState = state.data.driverInfoCardState
   in
-    { otp : cardState.otp
-    , driverName : cardState.driverName
-    , eta : cardState.eta
-    , vehicleDetails : cardState.vehicleDetails
-    , registrationNumber : cardState.registrationNumber
-    , rating : cardState.rating
-    , startedAt : cardState.startedAt
-    , endedAt : cardState.endedAt
-    , source : cardState.source
-    , destination : cardState.destination
-    , rideId : cardState.rideId
-    , price : cardState.price
-    , sourceLat : cardState.sourceLat
-    , sourceLng : cardState.sourceLng
-    , destinationLat : cardState.destinationLat
-    , destinationLng : cardState.destinationLng
-    , driverLat : cardState.driverLat
-    , driverLng : cardState.driverLng
-    , distance : cardState.distance
-    , waitingTime : cardState.waitingTime
-    , driverArrived : cardState.driverArrived
-    , estimatedDistance : cardState.estimatedDistance
-    , driverArrivalTime : cardState.driverArrivalTime
-    , estimatedDropTime : ""
-    , isSpecialZone : state.props.isSpecialZone
-    , isLocationTracking : state.props.isLocationTracking
-    , bookingCreatedAt : cardState.createdAt
-    , bppRideId : ""
-    , driverNumber : cardState.driverNumber
-    , merchantExoPhone : cardState.merchantExoPhone
+    { otp: cardState.otp
+    , driverName: cardState.driverName
+    , eta: cardState.eta
+    , vehicleDetails: cardState.vehicleDetails
+    , registrationNumber: cardState.registrationNumber
+    , rating: cardState.rating
+    , startedAt: cardState.startedAt
+    , endedAt: cardState.endedAt
+    , source: cardState.source
+    , destination: cardState.destination
+    , rideId: cardState.rideId
+    , price: cardState.price
+    , sourceLat: cardState.sourceLat
+    , sourceLng: cardState.sourceLng
+    , destinationLat: cardState.destinationLat
+    , destinationLng: cardState.destinationLng
+    , driverLat: cardState.driverLat
+    , driverLng: cardState.driverLng
+    , distance: cardState.distance
+    , waitingTime: cardState.waitingTime
+    , driverArrived: cardState.driverArrived
+    , estimatedDistance: cardState.estimatedDistance
+    , driverArrivalTime: cardState.driverArrivalTime
+    , estimatedDropTime: ""
+    , isSpecialZone: state.props.isSpecialZone
+    , isLocationTracking: state.props.isLocationTracking
+    , bookingCreatedAt: cardState.createdAt
+    , bppRideId: ""
+    , driverNumber: cardState.driverNumber
+    , merchantExoPhone: cardState.merchantExoPhone
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
-emergencyHelpModelViewState state = { showContactSupportPopUp: state.props.emergencyHelpModelState.showContactSupportPopUp
-                                , showCallPolicePopUp: state.props.emergencyHelpModelState.showCallPolicePopUp
-                                , showCallContactPopUp: state.props.emergencyHelpModelState.showCallContactPopUp
-                                , emergencyContactData: state.props.emergencyHelpModelState.emergencyContactData
-                                , currentlySelectedContact: state.props.emergencyHelpModelState.currentlySelectedContact
-                                , showCallSuccessfulPopUp : state.props.emergencyHelpModelState.showCallSuccessfulPopUp
-                                }
+emergencyHelpModelViewState state =
+  { showContactSupportPopUp: state.props.emergencyHelpModelState.showContactSupportPopUp
+  , showCallPolicePopUp: state.props.emergencyHelpModelState.showCallPolicePopUp
+  , showCallContactPopUp: state.props.emergencyHelpModelState.showCallContactPopUp
+  , emergencyContactData: state.props.emergencyHelpModelState.emergencyContactData
+  , currentlySelectedContact: state.props.emergencyHelpModelState.currentlySelectedContact
+  , showCallSuccessfulPopUp: state.props.emergencyHelpModelState.showCallSuccessfulPopUp
+  }
 
 ratingCardViewState :: ST.HomeScreenState -> RatingCard.RatingCardState
-ratingCardViewState state = { props:
-                            { currentStage: state.props.currentStage
-                            , estimatedDistance: state.props.estimatedDistance
-                            , showFareBreakUp: false
-                            , enableFeedback: true
-                            }
-                        , data: state.data.previousRideRatingState
-                        }
+ratingCardViewState state =
+  { props:
+      { currentStage: state.props.currentStage
+      , estimatedDistance: state.props.estimatedDistance
+      , showFareBreakUp: false
+      , enableFeedback: true
+      }
+  , data: state.data.previousRideRatingState
+  }
 
 searchLocationModelViewState :: ST.HomeScreenState -> SearchLocationModel.SearchLocationModelState
-searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLocation
-                                    , locationList: state.data.locationList
-                                    , source: state.data.source
-                                    , destination: state.data.destination
-                                    , isSource: state.props.isSource
-                                    , isSrcServiceable: state.props.isSrcServiceable
-                                    , isDestServiceable: state.props.isDestServiceable
-                                    , isRideServiceable: state.props.isRideServiceable
-                                    , savedlocationList: state.data.savedLocations
-                                    }
+searchLocationModelViewState state =
+  { isSearchLocation: state.props.isSearchLocation
+  , locationList: state.data.locationList
+  , source: state.data.source
+  , destination: state.data.destination
+  , isSource: state.props.isSource
+  , isSrcServiceable: state.props.isSrcServiceable
+  , isDestServiceable: state.props.isDestServiceable
+  , isRideServiceable: state.props.isRideServiceable
+  , savedlocationList: state.data.savedLocations
+  }
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState
-quoteListModelViewState state = { source: state.data.source
-                            , destination: state.data.destination
-                            , quoteListModel: state.data.quoteListModelState
-                            , selectedQuote: state.props.selectedQuote
-                            , autoSelecting: state.props.autoSelecting
-                            , searchExpire: state.props.searchExpire
-                            , showProgress : (DA.null state.data.quoteListModelState) && isLocalStageOn FindingQuotes && state.props.currentStage /= TryAgain
-                            }
+quoteListModelViewState state =
+  { source: state.data.source
+  , destination: state.data.destination
+  , quoteListModel: state.data.quoteListModelState
+  , selectedQuote: state.props.selectedQuote
+  , autoSelecting: state.props.autoSelecting
+  , searchExpire: state.props.searchExpire
+  , showProgress: (DA.null state.data.quoteListModelState) && isLocalStageOn FindingQuotes && state.props.currentStage /= TryAgain
+  }
 
 previousRideRatingViewState :: ST.HomeScreenState -> RatingCard.RatingCardState
-previousRideRatingViewState state = { props:
-                                        { currentStage: state.props.currentStage
-                                        , estimatedDistance: state.props.estimatedDistance
-                                        , enableFeedback: false
-                                        , showFareBreakUp: true
-                                        }
-                                    , data: state.data.previousRideRatingState
-                                    }
+previousRideRatingViewState state =
+  { props:
+      { currentStage: state.props.currentStage
+      , estimatedDistance: state.props.estimatedDistance
+      , enableFeedback: false
+      , showFareBreakUp: true
+      }
+  , data: state.data.previousRideRatingState
+  }
 
 rideRequestAnimConfig :: AnimConfig.AnimConfig
 rideRequestAnimConfig =
   let
     config = AnimConfig.animConfig
+
     rideRequestAnimConfig' =
       config
         { duration = 300
@@ -734,6 +760,7 @@ rideCompletedAnimConfig :: AnimConfig.AnimConfig
 rideCompletedAnimConfig =
   let
     config = AnimConfig.animConfig
+
     rideCompletedAnimConfig' =
       config
         { duration = 400
@@ -749,6 +776,7 @@ autoAnimConfig :: AnimConfig.AnimConfig
 autoAnimConfig =
   let
     config = AnimConfig.animConfig
+
     autoAnimConfig' =
       config
         { duration = 400
@@ -758,68 +786,77 @@ autoAnimConfig =
   in
     autoAnimConfig'
 
-callSupportConfig :: ST.HomeScreenState ->  PopUpModal.Config
-callSupportConfig state = let
-  config' = PopUpModal.config
-  popUpConfig' = config'{
-    gravity = CENTER
-  , cornerRadius = (Corners 15.0 true true true true)
-  , margin = (MarginHorizontal 16 16)
-  , primaryText {
-      text = getString CONTACT_SUPPORT <>"?"
-    , fontStyle = FontStyle.semiBold LanguageStyle
-    }
-  , secondaryText {
-      text = getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT
-    , margin = (Margin 24 12 24 32)
-    , color = Color.black700
-    }
-  , option1 {
-      text =  getString CANCEL_
-    , fontSize = FontSize.a_16
-    , color = Color.black700
-    , strokeColor = Color.black700
-    }
-  , option2 {
-      text =  getString CALL_SUPPORT
-    , fontSize = FontSize.a_16
-    , margin = (MarginLeft 12)
-    }
-  }
-  in popUpConfig'
+callSupportConfig :: ST.HomeScreenState -> PopUpModal.Config
+callSupportConfig state =
+  let
+    config' = PopUpModal.config
+
+    popUpConfig' =
+      config'
+        { gravity = CENTER
+        , cornerRadius = (Corners 15.0 true true true true)
+        , margin = (MarginHorizontal 16 16)
+        , primaryText
+          { text = getString CONTACT_SUPPORT <> "?"
+          , fontStyle = FontStyle.semiBold LanguageStyle
+          }
+        , secondaryText
+          { text = getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT
+          , margin = (Margin 24 12 24 32)
+          , color = Color.black700
+          }
+        , option1
+          { text = getString CANCEL_
+          , fontSize = FontSize.a_16
+          , color = Color.black700
+          , strokeColor = Color.black700
+          }
+        , option2
+          { text = getString CALL_SUPPORT
+          , fontSize = FontSize.a_16
+          , margin = (MarginLeft 12)
+          }
+        }
+  in
+    popUpConfig'
+
 menuButtonConfig :: ST.HomeScreenState -> ST.Location -> MenuButton.Config
-menuButtonConfig state item = let
+menuButtonConfig state item =
+  let
     config = MenuButton.config
-    menuButtonConfig' = config {
-      titleConfig{
-          text = item.place
-          ,selectedFontStyle = FontStyle.bold LanguageStyle
-          ,unselectedFontStyle = FontStyle.regular LanguageStyle
-      }
-      , radioButtonConfig {
-        height = V 16
-        , width = V 16
-        , imageHeight = V 10
-        , imageWidth = V 10
-        , imageUrl = "ny_ic_pickup"
-        , cornerRadius = 10.0
-        , buttonMargin = (MarginRight 15)
-        , activeStroke = ("2," <> Color.positive)
-      }
-      , height = V 40
-      , id = item.place
-      , lat = item.lat
-      , lng = item.lng
-      , leftsidebutton = true
-      , padding = PaddingBottom 10
-      , isSelected = item.place == state.props.defaultPickUpPoint
-    }
-    in menuButtonConfig'
+
+    menuButtonConfig' =
+      config
+        { titleConfig
+          { text = item.place
+          , selectedFontStyle = FontStyle.bold LanguageStyle
+          , unselectedFontStyle = FontStyle.regular LanguageStyle
+          }
+        , radioButtonConfig
+          { height = V 16
+          , width = V 16
+          , imageHeight = V 10
+          , imageWidth = V 10
+          , imageUrl = "ny_ic_pickup"
+          , cornerRadius = 10.0
+          , buttonMargin = (MarginRight 15)
+          , activeStroke = ("2," <> Color.positive)
+          }
+        , height = V 40
+        , id = item.place
+        , lat = item.lat
+        , lng = item.lng
+        , leftsidebutton = true
+        , padding = PaddingBottom 10
+        , isSelected = item.place == state.props.defaultPickUpPoint
+        }
+  in
+    menuButtonConfig'
 
 chooseYourRideConfig :: ST.HomeScreenState -> ChooseYourRide.Config
-chooseYourRideConfig state = ChooseYourRide.config
-  {
-    rideDistance = state.data.rideDistance,
-    rideDuration = state.data.rideDuration,
-    quoteList = state.data.specialZoneQuoteList
-  }
+chooseYourRideConfig state =
+  ChooseYourRide.config
+    { rideDistance = state.data.rideDistance
+    , rideDuration = state.data.rideDuration
+    , quoteList = state.data.specialZoneQuoteList
+    }

@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.SplashScreen.View where
 
 import Prelude (Unit, bind, pure, unit, const)
@@ -27,16 +26,18 @@ screen :: SplashScreenState -> Screen Action SplashScreenState Unit
 screen initialState =
   { initialState
   , view
-  , name : "SplashScreen" -- _ <- getCurrentPosition push CurrentLocation
-  , globalEvents : [getCordinateAndLocation initialState]
+  , name: "SplashScreen" -- _ <- getCurrentPosition push CurrentLocation
+  , globalEvents: [ getCordinateAndLocation initialState ]
   , eval
   }
-view
-  :: forall w
-  . (Action -> Effect Unit)
-  -> SplashScreenState
-  -> PrestoDOM (Effect Unit) w
+
+view ::
+  forall w.
+  (Action -> Effect Unit) ->
+  SplashScreenState ->
+  PrestoDOM (Effect Unit) w
 view push state =
   linearLayout
-  [ afterRender push  (const AfterRender)
-  ][]
+    [ afterRender push (const AfterRender)
+    ]
+    []

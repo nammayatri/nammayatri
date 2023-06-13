@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.ReferralScreen.View where
 
 import Common.Types.App (LazyCheck(..))
@@ -20,7 +19,7 @@ import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Effect (Effect)
-import Engineering.Helpers.Commons  as EHC
+import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
 import Helpers.Utils (adjustViewWithKeyboard, getPreviousVersion)
 import Language.Strings (getString)
@@ -179,7 +178,7 @@ referenceView push state =
             [ imageView
                 [ height $ V 15
                 , width $ V 20
-                , imageUrl if state.isExpandReference then (if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_chevron_up" else "ny_ic_chevron_up")  else (if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_chevron_down" else "ny_ic_chevron_down")
+                , imageUrl if state.isExpandReference then (if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_chevron_up" else "ny_ic_chevron_up") else (if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_chevron_down" else "ny_ic_chevron_down")
                 ]
             ]
         ]

@@ -12,11 +12,9 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.SearchLocationModel.View where
 
 import Common.Types.App
-
 import Animation (translateYAnimFromTop)
 import Animation.Config (translateFullYAnimWithDurationConfig, translateYAnimHomeConfig, Direction(..))
 import Components.LocationListItem as LocationListItem
@@ -46,97 +44,106 @@ import Styles.Colors as Color
 view :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
 view push state =
   relativeLayout
-      [ height MATCH_PARENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , background case state.isSearchLocation of
-                    LocateOnMap -> Color.transparent
-                    SearchLocation -> if (state.isRideServiceable) then Color.grey800 else Color.white900
-                    _           -> Color.white900 --"#FFFFFF"
-      , margin $ MarginBottom (if state.isSearchLocation == LocateOnMap then bottomSpacing else 0)
-      , onBackPressed push (const $ GoBack)
-      ]([PrestoAnim.animationSet [translateYAnimFromTop $ translateFullYAnimWithDurationConfig 400 ] $
-          linearLayout
-          [ height $ V ((screenHeight unit)/ 7)
-          , width MATCH_PARENT
-          , background Color.black900
-          , clickable case state.isSearchLocation of
-              LocateOnMap -> false
-              _ -> true
-          , onClick push (const NoAction)
-          , padding (Padding 0 safeMarginTop 0 0)
-          ][]
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , background case state.isSearchLocation of
+        LocateOnMap -> Color.transparent
+        SearchLocation -> if (state.isRideServiceable) then Color.grey800 else Color.white900
+        _ -> Color.white900 --"#FFFFFF"
+    , margin $ MarginBottom (if state.isSearchLocation == LocateOnMap then bottomSpacing else 0)
+    , onBackPressed push (const $ GoBack)
+    ]
+    ( [ PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 400 ]
+          $ linearLayout
+              [ height $ V ((screenHeight unit) / 7)
+              , width MATCH_PARENT
+              , background Color.black900
+              , clickable case state.isSearchLocation of
+                  LocateOnMap -> false
+                  _ -> true
+              , onClick push (const NoAction)
+              , padding (Padding 0 safeMarginTop 0 0)
+              ]
+              []
       , PrestoAnim.animationSet
-          [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 450 ] $
-            linearLayout
-            [ height MATCH_PARENT
-            , clickable case state.isSearchLocation of
-                LocateOnMap -> false
-                _ -> true
-            , onClick push (const NoAction)
-            , width MATCH_PARENT
-            , margin (MarginTop ((screenHeight unit) / 7))
-            , padding (Padding 0 safeMarginTop 0 0)
-            ]
-            []
-    , PrestoAnim.animationSet
-        (if os == "IOS" then [] else [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ])
-        $ linearLayout
-         -- Temporary fix for iOS.
-            [ height MATCH_PARENT
-            , width MATCH_PARENT
-            , orientation VERTICAL
-            , padding (Padding 0 safeMarginTop 0 safeMarginBottom)
-            ]
-            ( [ linearLayout
-                  [ height $ V 35
-                  , width $ V 35
-                  , onClick push (const GoBack)
-                  , disableClickFeedback true
-                  , margin (Margin 16 10 16 0)
-                  , gravity CENTER
-                  ]
-                  [ imageView
-                      [ height $ V 25
-                      , width $ V 25
-                      , imageWithFallback "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png"
-                      ]
-                  ]
-              , linearLayout
-                [ height WRAP_CONTENT -- $ V 136
-                , width MATCH_PARENT
-                , background Color.white900
-                , orientation HORIZONTAL
-                , cornerRadius 8.0
-                , clickable true
-                , margin (Margin 16 20 16 10)
-                , stroke "1,#E5E7EB"
-                ][  sourceDestinationImageView
-                  , sourceDestinationEditTextView state push
-                  ]
-            ]<> if state.isSearchLocation == SearchLocation && state.isRideServiceable then [(searchResultsParentView state push )] else  [] )
-            , linearLayout
-              [ width MATCH_PARENT
-              , height MATCH_PARENT
-              , margin (Margin 16 ((screenHeight unit)/2 - 70) 16 0)
-              , visibility if (not state.isRideServiceable) then VISIBLE else GONE
-              ][locationUnserviceableView state push]
-            , bottomBtnsView state push
-            , primaryButtonView state push
-        ] )
-    where
-      bottomSpacing = if safeMarginBottom == 0 then 16 else safeMarginBottom
+          [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 450 ]
+          $ linearLayout
+              [ height MATCH_PARENT
+              , clickable case state.isSearchLocation of
+                  LocateOnMap -> false
+                  _ -> true
+              , onClick push (const NoAction)
+              , width MATCH_PARENT
+              , margin (MarginTop ((screenHeight unit) / 7))
+              , padding (Padding 0 safeMarginTop 0 0)
+              ]
+              []
+      , PrestoAnim.animationSet
+          (if os == "IOS" then [] else [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ])
+          $ linearLayout
+              -- Temporary fix for iOS.
+              [ height MATCH_PARENT
+              , width MATCH_PARENT
+              , orientation VERTICAL
+              , padding (Padding 0 safeMarginTop 0 safeMarginBottom)
+              ]
+              ( [ linearLayout
+                    [ height $ V 35
+                    , width $ V 35
+                    , onClick push (const GoBack)
+                    , disableClickFeedback true
+                    , margin (Margin 16 10 16 0)
+                    , gravity CENTER
+                    ]
+                    [ imageView
+                        [ height $ V 25
+                        , width $ V 25
+                        , imageWithFallback "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png"
+                        ]
+                    ]
+                , linearLayout
+                    [ height WRAP_CONTENT -- $ V 136
+                    , width MATCH_PARENT
+                    , background Color.white900
+                    , orientation HORIZONTAL
+                    , cornerRadius 8.0
+                    , clickable true
+                    , margin (Margin 16 20 16 10)
+                    , stroke "1,#E5E7EB"
+                    ]
+                    [ sourceDestinationImageView
+                    , sourceDestinationEditTextView state push
+                    ]
+                ]
+                  <> if state.isSearchLocation == SearchLocation && state.isRideServiceable then [ (searchResultsParentView state push) ] else []
+              )
+      , linearLayout
+          [ width MATCH_PARENT
+          , height MATCH_PARENT
+          , margin (Margin 16 ((screenHeight unit) / 2 - 70) 16 0)
+          , visibility if (not state.isRideServiceable) then VISIBLE else GONE
+          ]
+          [ locationUnserviceableView state push ]
+      , bottomBtnsView state push
+      , primaryButtonView state push
+      ]
+    )
+  where
+  bottomSpacing = if safeMarginBottom == 0 then 16 else safeMarginBottom
 
 searchResultsParentView :: forall w. SearchLocationModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 searchResultsParentView state push =
   linearLayout
-  [ width MATCH_PARENT
-  , height MATCH_PARENT
-  , margin $ MarginHorizontal 16 16
-  , orientation VERTICAL
-  , visibility if state.isSearchLocation == SearchLocation && state.isRideServiceable then VISIBLE else GONE
-  ][ savedLocationBar state push
-   , searchResultsView state push ]
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , margin $ MarginHorizontal 16 16
+    , orientation VERTICAL
+    , visibility if state.isSearchLocation == SearchLocation && state.isRideServiceable then VISIBLE else GONE
+    ]
+    [ savedLocationBar state push
+    , searchResultsView state push
+    ]
 
 locationUnserviceableView :: forall w. SearchLocationModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 locationUnserviceableView state push =
@@ -191,21 +198,23 @@ sourceDestinationImageView =
     , width $ V 50
     , margin (Margin 5 15 0 0)
     , gravity CENTER
-    ][ linearLayout
+    ]
+    [ linearLayout
         [ height WRAP_CONTENT
         , width $ V 50
         , gravity CENTER
         , margin $ Margin 0 10 2 0
-        ][  imageView
+        ]
+        [ imageView
             [ height $ V 25
             , width $ V 25
             , imageWithFallback "ny_ic_source_dot,https://assets.juspay.in/nammayatri/images/common/ny_ic_source_dot.png"
             ]
-          ]
-      , imageView
+        ]
+    , imageView
         [ height $ V 45
         , width $ V 20
-        , imageUrl if os == "IOS" then ( if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then  "ic_line_img" else "ny_ic_line_img") else "ic_line"
+        , imageUrl if os == "IOS" then (if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_line_img" else "ny_ic_line_img") else "ic_line"
         , margin if os == "IOS" then (Margin 0 35 0 0) else (Margin 24 35 0 0)
         ]
     , linearLayout
@@ -213,7 +222,8 @@ sourceDestinationImageView =
         , width $ V 50
         , gravity CENTER
         , margin (Margin 0 80 2 0)
-        ][  imageView
+        ]
+        [ imageView
             [ height $ V 25
             , width $ V 25
             , imageWithFallback "ny_ic_loc_red,https://assets.juspay.in/nammayatri/images/common/ny_ic_loc_red.png"
@@ -229,19 +239,24 @@ sourceDestinationEditTextView state push =
     , orientation VERTICAL
     , margin if os == "IOS" then (Margin 0 18 15 0) else (Margin 0 15 15 0)
     , height $ V 136
-    , afterRender (\action -> do
-      _ <- push action
-      _ <- requestKeyboardShow case state.isSource of
-                                Just true  -> (getNewIDWithTag "SourceEditText")
-                                Just false -> (getNewIDWithTag "DestinationEditText")
-                                Nothing    -> ""
-      pure unit
-      ) (const NoAction)
-    ][linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , orientation HORIZONTAL
-      ][ editText
+    , afterRender
+        ( \action -> do
+            _ <- push action
+            _ <-
+              requestKeyboardShow case state.isSource of
+                Just true -> (getNewIDWithTag "SourceEditText")
+                Just false -> (getNewIDWithTag "DestinationEditText")
+                Nothing -> ""
+            pure unit
+        )
+        (const NoAction)
+    ]
+    [ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation HORIZONTAL
+        ]
+        [ editText
             [ height $ V 45
             , weight 1.0
             , text state.source
@@ -357,73 +372,92 @@ sourceDestinationEditTextView state push =
     ]
 
 ---------------------------- searchResultsView ---------------------------------
-searchResultsView :: forall w . SearchLocationModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
+searchResultsView :: forall w. SearchLocationModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 searchResultsView state push =
-  PrestoAnim.animationSet [
-    translateYAnimFromTop $ translateFullYAnimWithDurationConfig 550] $
-    scrollView
-    [ height  MATCH_PARENT
-    , width MATCH_PARENT
-    , cornerRadius 20.0
-    , padding (PaddingVertical 10 60)
-    , stroke "1,#E5E7EB"
-    , background Color.white900
-    , scrollBarY false
-    ][  linearLayout
+  PrestoAnim.animationSet
+    [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 550
+    ]
+    $ scrollView
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , cornerRadius 20.0
-        , orientation VERTICAL
-        ](mapWithIndex (\index item ->
-              linearLayout
-              [ width MATCH_PARENT
-              , height WRAP_CONTENT
-              , orientation VERTICAL
-              ]([ LocationListItem.view (push <<< LocationListItemActionController) item
-               , linearLayout
-                  [ height $ V 1
-                  , width MATCH_PARENT
-                  , background Color.lightGreyShade
-                  ][]
-              ] <> (if (index == length state.locationList - 1)
-                      then [  linearLayout
-                              [ height $ V 100
-                              , width MATCH_PARENT  ][]
+        , padding (PaddingVertical 10 60)
+        , stroke "1,#E5E7EB"
+        , background Color.white900
+        , scrollBarY false
+        ]
+        [ linearLayout
+            [ height MATCH_PARENT
+            , width MATCH_PARENT
+            , cornerRadius 20.0
+            , orientation VERTICAL
+            ]
+            ( mapWithIndex
+                ( \index item ->
+                    linearLayout
+                      [ width MATCH_PARENT
+                      , height WRAP_CONTENT
+                      , orientation VERTICAL
+                      ]
+                      ( [ LocationListItem.view (push <<< LocationListItemActionController) item
+                        , linearLayout
+                            [ height $ V 1
+                            , width MATCH_PARENT
+                            , background Color.lightGreyShade
                             ]
-                      else []) )
-            ) state.locationList)
-      ]
+                            []
+                        ]
+                          <> ( if (index == length state.locationList - 1) then
+                                [ linearLayout
+                                    [ height $ V 100
+                                    , width MATCH_PARENT
+                                    ]
+                                    []
+                                ]
+                              else
+                                []
+                            )
+                      )
+                )
+                state.locationList
+            )
+        ]
 
 primaryButtonConfig :: SearchLocationModelState -> PrimaryButton.Config
 primaryButtonConfig state =
   let
     config = PrimaryButton.config
-    primaryButtonConfig' = config
-      { textConfig
-        { text = if state.isSearchLocation == LocateOnMap then if state.isSource == Just true then (getString CONFIRM_PICKUP_LOCATION) else (getString CONFIRM_DROP_LOCATION) else ""
-        , color = Color.yellow900
-        , textSize = FontSize.a_16
+
+    primaryButtonConfig' =
+      config
+        { textConfig
+          { text = if state.isSearchLocation == LocateOnMap then if state.isSource == Just true then (getString CONFIRM_PICKUP_LOCATION) else (getString CONFIRM_DROP_LOCATION) else ""
+          , color = Color.yellow900
+          , textSize = FontSize.a_16
+          }
+        , height = V 60
+        , gravity = CENTER
+        , cornerRadius = 8.0
+        , background = Color.black900
+        , margin = (MarginHorizontal 16 16)
+        , isClickable = true
+        , id = "SelectLocationFromMap"
         }
-      , height = V 60
-      , gravity = CENTER
-      , cornerRadius = 8.0
-      , background = Color.black900
-      , margin = (MarginHorizontal 16 16)
-      , isClickable = true
-      , id = "SelectLocationFromMap"
-      }
-  in primaryButtonConfig'
+  in
+    primaryButtonConfig'
 
 savedLocationBar :: forall w. SearchLocationModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 savedLocationBar state push =
   linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , margin $ MarginBottom 10
-  ][ linearLayout
-     [ width MATCH_PARENT
-     , height WRAP_CONTENT
-     ][ LocationTagBar.view (push <<< SavedAddressClicked) {savedLocations:state.savedlocationList}]
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , margin $ MarginBottom 10
+    ]
+    [ linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        ]
+        [ LocationTagBar.view (push <<< SavedAddressClicked) { savedLocations: state.savedlocationList } ]
     ]
 
 ---------------------------- primaryButtonView ---------------------------------
@@ -436,41 +470,43 @@ primaryButtonView state push =
     , alignParentBottom "true,-1"
     , background Color.transparent
     , visibility if state.isSearchLocation == LocateOnMap then VISIBLE else GONE
-    ][ recenterButtonView push state
-      , PrimaryButton.view
+    ]
+    [ recenterButtonView push state
+    , PrimaryButton.view
         ( \action -> do
             _ <- push $ PrimaryButtonActionController action
             stage <- getValueToLocalStoreEff LOCAL_STAGE
             pure unit
         )
-        (primaryButtonConfig state)]
+        (primaryButtonConfig state)
+    ]
 
-
-
-recenterButtonView :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM ( Effect Unit) w
+recenterButtonView :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
 recenterButtonView push state =
   linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , background Color.transparent
-  , gravity RIGHT
-  , padding $ Padding 0 0 16 14
-  , disableClickFeedback true
-  ][
-      imageView
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , background Color.transparent
+    , gravity RIGHT
+    , padding $ Padding 0 0 16 14
+    , disableClickFeedback true
+    ]
+    [ imageView
         [ imageWithFallback "ny_ic_recenter_btn,https://assets.juspay.in/nammayatri/images/common/ny_ic_recenter_btn.png"
-        , onClick (\action -> do
-            _ <- push action
-            _ <- getCurrentPosition push UpdateCurrentLocation
-            _ <- pure $ firebaseLogEvent "ny_user_recenter_btn_click"
-            pure unit
-        ) (const $ RecenterCurrentLocation)
+        , onClick
+            ( \action -> do
+                _ <- push action
+                _ <- getCurrentPosition push UpdateCurrentLocation
+                _ <- pure $ firebaseLogEvent "ny_user_recenter_btn_click"
+                pure unit
+            )
+            (const $ RecenterCurrentLocation)
         , height $ V 40
         , width $ V 40
         ]
-  ]
+    ]
 
-bottomBtnsView :: forall w . SearchLocationModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
+bottomBtnsView :: forall w. SearchLocationModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 bottomBtnsView state push =
   linearLayout
     [ height WRAP_CONTENT
@@ -481,12 +517,14 @@ bottomBtnsView state push =
     , background Color.white900
     , visibility if state.isSearchLocation == LocateOnMap || (not state.isRideServiceable) then GONE else VISIBLE
     , adjustViewWithKeyboard "true"
-    ][  linearLayout
+    ]
+    [ linearLayout
         [ height $ V 1
         , width MATCH_PARENT
         , background Color.grey900
-        ][]
-      , linearLayout
+        ]
+        []
+    , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation HORIZONTAL
@@ -543,11 +581,11 @@ bottomBtnsView state push =
                   ]
             )
             $ btnData state
-        )]
+        )
+    ]
 
 btnData :: SearchLocationModelState -> Array { text :: String, imageUrl :: String, action :: Action, buttonType :: String }
-btnData state =
-  [ { text: (getString SET_LOCATION_ON_MAP), imageUrl: "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png", action: SetLocationOnMap, buttonType: "LocateOnMap" }]
-  -- , { text: (getString CURRENT_LOCATION), imageUrl: "ny_ic_current_location,https://assets.juspay.in/nammayatri/images/user/ny_ic_current_location.png", action: SetCurrentLocation, buttonType: "CurrentLocation" }
-  -- ]
+btnData state = [ { text: (getString SET_LOCATION_ON_MAP), imageUrl: "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png", action: SetLocationOnMap, buttonType: "LocateOnMap" } ]
 
+-- , { text: (getString CURRENT_LOCATION), imageUrl: "ny_ic_current_location,https://assets.juspay.in/nammayatri/images/user/ny_ic_current_location.png", action: SetCurrentLocation, buttonType: "CurrentLocation" }
+-- ]

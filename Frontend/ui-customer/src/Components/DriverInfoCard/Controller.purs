@@ -12,70 +12,69 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.DriverInfoCard.Controller where
 
 import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
-import Screens.Types(Stage)
-import Data.Maybe(Maybe)
+import Screens.Types (Stage)
+import Data.Maybe (Maybe)
 
-data Action = NoAction
-            | Support 
-            | PrimaryButtonAC PrimaryButtonController.Action
-            | SourceToDestinationAC SourceToDestinationController.Action
-            | CancelRide DriverInfoCardState
-            | LocationTracking
-            | OpenEmergencyHelp
-            | MessageDriver
-            | ShareRide
-            | ZoneOTPExpiryAction String String Int
-            | OnNavigate
+data Action
+  = NoAction
+  | Support
+  | PrimaryButtonAC PrimaryButtonController.Action
+  | SourceToDestinationAC SourceToDestinationController.Action
+  | CancelRide DriverInfoCardState
+  | LocationTracking
+  | OpenEmergencyHelp
+  | MessageDriver
+  | ShareRide
+  | ZoneOTPExpiryAction String String Int
+  | OnNavigate
 
-type DriverInfoCardState = 
-  { props :: DriverInfoCardProps
-  , data :: DriverInfoCardData
-  }
+type DriverInfoCardState
+  = { props :: DriverInfoCardProps
+    , data :: DriverInfoCardData
+    }
 
-type DriverInfoCardProps = 
-  {
-    currentStage :: Stage,
-    trackingEnabled :: Boolean,
-    unReadMessages :: Boolean,
-    showCallPopUp :: Boolean,
-    isSpecialZone :: Boolean,
-    estimatedTime :: String
-  }
+type DriverInfoCardProps
+  = { currentStage :: Stage
+    , trackingEnabled :: Boolean
+    , unReadMessages :: Boolean
+    , showCallPopUp :: Boolean
+    , isSpecialZone :: Boolean
+    , estimatedTime :: String
+    }
 
-type DriverInfoCardData = 
-  { otp :: String
-  , driverName :: String
-  , eta :: Int
-  , vehicleDetails :: String 
-  , registrationNumber :: String 
-  , rating :: Number
-  , startedAt :: String 
-  , endedAt :: String
-  , source :: String 
-  , destination :: String
-  , rideId :: String
-  , price :: Int
-  , sourceLat :: Number
-  , sourceLng :: Number
-  , destinationLat :: Number
-  , destinationLng :: Number
-  , driverLat :: Number
-  , driverLng :: Number
-  , distance :: Int
-  , waitingTime :: String
-  , driverArrived :: Boolean
-  , estimatedDistance :: String
-  , driverArrivalTime :: Int
-  , bppRideId :: String
-  , driverNumber :: Maybe String
-  , merchantExoPhone :: String
-  , estimatedDropTime :: String
-  , isSpecialZone :: Boolean
-  , isLocationTracking :: Boolean
-  , bookingCreatedAt :: String
-  }
+type DriverInfoCardData
+  = { otp :: String
+    , driverName :: String
+    , eta :: Int
+    , vehicleDetails :: String
+    , registrationNumber :: String
+    , rating :: Number
+    , startedAt :: String
+    , endedAt :: String
+    , source :: String
+    , destination :: String
+    , rideId :: String
+    , price :: Int
+    , sourceLat :: Number
+    , sourceLng :: Number
+    , destinationLat :: Number
+    , destinationLng :: Number
+    , driverLat :: Number
+    , driverLng :: Number
+    , distance :: Int
+    , waitingTime :: String
+    , driverArrived :: Boolean
+    , estimatedDistance :: String
+    , driverArrivalTime :: Int
+    , bppRideId :: String
+    , driverNumber :: Maybe String
+    , merchantExoPhone :: String
+    , estimatedDropTime :: String
+    , isSpecialZone :: Boolean
+    , isLocationTracking :: Boolean
+    , bookingCreatedAt :: String
+    }

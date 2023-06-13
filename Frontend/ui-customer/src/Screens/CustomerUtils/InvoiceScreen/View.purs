@@ -103,7 +103,7 @@ view push state =
 referenceList :: ST.InvoiceScreenState -> Array String
 referenceList state =
   (if (state.data.selectedItem.nightCharges) then [ "1.5" <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT) ] else [])
-    <> (if (isHaveFare "DRIVER_SELECTED_FARE" state.data.selectedItem.faresList) then [(getString DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) ] else [])
+    <> (if (isHaveFare "DRIVER_SELECTED_FARE" state.data.selectedItem.faresList) then [ (getString DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) ] else [])
     <> (if (isHaveFare "WAITING_CHARGES" state.data.selectedItem.faresList) then [ (getString WAITING_CHARGE_DESCRIPTION) ] else [])
     <> (if (isHaveFare "EARLY_END_RIDE_PENALTY" state.data.selectedItem.faresList) then [ (getString EARLY_END_RIDE_CHARGES_DESCRIPTION) ] else [])
     <> (if (isHaveFare "CUSTOMER_SELECTED_FARE" state.data.selectedItem.faresList) then [ (getString CUSTOMER_TIP_DESCRIPTION) ] else [])
@@ -138,7 +138,7 @@ amountBreakupView state =
                       "CUSTOMER_SELECTED_FARE" -> getString CUSTOMER_SELECTED_FARE
                       "SERVICE_CHARGE" -> getString SERVICE_CHARGES
                       "FIXED_GOVERNMENT_RATE" -> getString GOVERNMENT_CHAGRES
-                      "WAITING_OR_PICKUP_CHARGES"  -> getString PICKUP_CHARGE
+                      "WAITING_OR_PICKUP_CHARGES" -> getString PICKUP_CHARGE
                       _ -> "BASE_FARE"
                   , textSize FontSize.a_14
                   , color Color.black800
@@ -231,4 +231,3 @@ localTextView textValue colorValue =
     , width MATCH_PARENT
     , lineHeight "16"
     ]
-

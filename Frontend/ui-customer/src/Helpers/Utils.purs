@@ -12,12 +12,10 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Helpers.Utils
-    ( module Helpers.Utils
-    , module ReExport
-    )
-    where
+  ( module Helpers.Utils
+  , module ReExport
+  ) where
 
 import Common.Types.App (LazyCheck(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
@@ -95,7 +93,9 @@ foreign import storeCallBackCustomer :: forall action. (action -> Effect Unit) -
 foreign import getLocationName :: forall action. (action -> Effect Unit) -> Number -> Number -> String -> (Number -> Number -> String -> action) -> Effect Unit
 
 foreign import getCurrentDate :: String -> String
+
 foreign import storeCallBackContacts :: forall action. (action -> Effect Unit) -> ((Array Contacts) -> action) -> Effect Unit
+
 foreign import parseNewContacts :: String -> (Array NewContacts)
 
 foreign import dateCompare :: Date -> Date -> Boolean
@@ -107,6 +107,7 @@ foreign import getTime :: Unit -> Int
 foreign import drawPolygon :: String -> String -> Effect Unit
 
 foreign import removeLabelFromMarker :: Unit -> Effect Unit
+
 -- foreign import generateSessionToken :: String -> String
 foreign import requestKeyboardShow :: String -> Effect Unit
 
@@ -141,14 +142,17 @@ foreign import setRefreshing :: String -> Boolean -> Unit
 foreign import setEnabled :: String -> Boolean -> Unit
 
 foreign import saveToLocalStoreImpl :: String -> String -> EffectFnAff Unit
+
 saveToLocalStore' :: String -> String -> EffectFnAff Unit
 saveToLocalStore' = saveToLocalStoreImpl
 
 foreign import fetchFromLocalStoreImpl :: String -> (String -> Maybe String) -> Maybe String -> Effect (Maybe String)
+
 fetchFromLocalStore' :: String -> (String -> Maybe String) -> Maybe String -> Effect (Maybe String)
 fetchFromLocalStore' = fetchFromLocalStoreImpl
 
 foreign import fetchFromLocalStoreTempImpl :: String -> (String -> Maybe String) -> Maybe String -> Effect (Maybe String)
+
 fetchFromLocalStoreTemp' :: String -> (String -> Maybe String) -> Maybe String -> Effect (Maybe String)
 fetchFromLocalStoreTemp' = fetchFromLocalStoreTempImpl
 
@@ -167,10 +171,15 @@ foreign import updateInputString :: String -> Unit
 foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
 
 foreign import clearWaitingTimer :: String -> Unit
+
 foreign import contactPermission :: Unit -> Effect Unit
+
 foreign import performHapticFeedback :: Unit -> Effect Unit
+
 foreign import adjustViewWithKeyboard :: String -> Effect Unit
+
 foreign import storeOnResumeCallback :: forall action. (action -> Effect Unit) -> action -> Effect Unit
+
 -- foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
 data TimeUnit
   = HOUR
@@ -182,7 +191,7 @@ otpRule =
   Reader.OtpRule
     { matches:
         { sender: []
-        , message : "is your OTP for login to Namma Yatri App"
+        , message: "is your OTP for login to Namma Yatri App"
         }
     , otp: "\\d{4}"
     , group: Nothing
@@ -247,18 +256,17 @@ getObjFromLocal :: HomeScreenState -> Flow GlobalState RecentlySearchedObject
 getObjFromLocal homeScreenState = do
   (recentlySearched :: Maybe RecentlySearchedObject) <- (fetchRecents "RECENT_SEARCHES")
   case recentlySearched of
-    Just recents -> pure $ recents{predictionArray =  map (\item -> item{prefixImageUrl = "ny_ic_recent_search,https://assets.juspay.in/nammayatri/images/user/ny_ic_recent_search.png"}) (recents.predictionArray)}
+    Just recents -> pure $ recents { predictionArray = map (\item -> item { prefixImageUrl = "ny_ic_recent_search,https://assets.juspay.in/nammayatri/images/user/ny_ic_recent_search.png" }) (recents.predictionArray) }
     Nothing -> pure homeScreenState.data.recentSearchs
 
 getRecentSearches :: AddNewAddressScreenState -> Flow GlobalState RecentlySearchedObject
 getRecentSearches addNewAddressScreenState = do
-      (recentlySearched :: Maybe RecentlySearchedObject) <- (fetchRecents "RECENT_SEARCHES")
-      case recentlySearched of
-        Just recents  -> pure recents
-        Nothing -> pure addNewAddressScreenState.data.recentSearchs
+  (recentlySearched :: Maybe RecentlySearchedObject) <- (fetchRecents "RECENT_SEARCHES")
+  case recentlySearched of
+    Just recents -> pure recents
+    Nothing -> pure addNewAddressScreenState.data.recentSearchs
 
 --------------------------------------------------------------------------------------------------
-
 saveCurrentLocations :: forall s. Serializable s => String -> s -> Flow GlobalState Unit
 saveCurrentLocations objName obj =
   doAff do
@@ -284,51 +292,69 @@ getCurrentLocationsObjFromLocal homeScreenState = do
     Nothing -> pure homeScreenState.data.previousCurrentLocations
 
 checkCurrLoc :: CurrentLocationDetails -> Array CurrentLocationDetails -> Boolean
-checkCurrLoc currLoc currLocArr = or ( map (\item -> (getDistanceBwCordinates currLoc.lat currLoc.lon item.lat item.lon < 0.05)) currLocArr)
+checkCurrLoc currLoc currLocArr = or (map (\item -> (getDistanceBwCordinates currLoc.lat currLoc.lon item.lat item.lon < 0.05)) currLocArr)
 
 addToPrevCurrLoc :: CurrentLocationDetails -> Array CurrentLocationDetails -> Array CurrentLocationDetails
 addToPrevCurrLoc currLoc currLocArr =
-  if (not (checkCurrLoc currLoc currLocArr))
-    then if (length currLocArr == 10)
-            then (fromMaybe [] (deleteAt 10 (cons currLoc currLocArr)))
-            else (cons currLoc currLocArr)
-    else currLocArr
+  if (not (checkCurrLoc currLoc currLocArr)) then
+    if (length currLocArr == 10) then
+      (fromMaybe [] (deleteAt 10 (cons currLoc currLocArr)))
+    else
+      (cons currLoc currLocArr)
+  else
+    currLocArr
 
- --------------------------------------------------------------------------------------------------
-
+--------------------------------------------------------------------------------------------------
 checkPrediction :: LocationListItemState -> Array LocationListItemState -> Boolean
-checkPrediction prediction predictionArr = if (length (filter (\ ( item) -> (item.placeId) == (prediction.placeId))(predictionArr)) > 0) then false else true
+checkPrediction prediction predictionArr = if (length (filter (\(item) -> (item.placeId) == (prediction.placeId)) (predictionArr)) > 0) then false else true
 
 getPrediction :: LocationListItemState -> Array LocationListItemState -> LocationListItemState
-getPrediction prediction predictionArr = (fromMaybe dummyLocationListState ((filter (\ ( item) -> (item.placeId) == (prediction.placeId))(predictionArr)) !! 0))
+getPrediction prediction predictionArr = (fromMaybe dummyLocationListState ((filter (\(item) -> (item.placeId) == (prediction.placeId)) (predictionArr)) !! 0))
 
 addSearchOnTop :: LocationListItemState -> Array LocationListItemState -> Array LocationListItemState
-addSearchOnTop prediction predictionArr = cons prediction (filter (\ ( item) -> (item.placeId) /= (prediction.placeId))(predictionArr))
+addSearchOnTop prediction predictionArr = cons prediction (filter (\(item) -> (item.placeId) /= (prediction.placeId)) (predictionArr))
 
 addToRecentSearches :: LocationListItemState -> Array LocationListItemState -> Array LocationListItemState
 addToRecentSearches prediction predictionArr =
-    let prediction' = prediction {prefixImageUrl = "ny_ic_recent_search,https://assets.juspay.in/nammayatri/images/user/ny_ic_recent_search.png", locationItemType = Just RECENTS}
-      in (if (checkPrediction prediction' predictionArr)
-           then (if length predictionArr == 30 then (fromMaybe [] (deleteAt 30 (cons prediction' predictionArr)))
-          else (cons  prediction' predictionArr)) else addSearchOnTop prediction' predictionArr)
+  let
+    prediction' = prediction { prefixImageUrl = "ny_ic_recent_search,https://assets.juspay.in/nammayatri/images/user/ny_ic_recent_search.png", locationItemType = Just RECENTS }
+  in
+    ( if (checkPrediction prediction' predictionArr) then
+        ( if length predictionArr == 30 then
+            (fromMaybe [] (deleteAt 30 (cons prediction' predictionArr)))
+          else
+            (cons prediction' predictionArr)
+        )
+      else
+        addSearchOnTop prediction' predictionArr
+    )
 
 differenceOfLocationLists :: Array LocationListItemState -> Array LocationListItemState -> Array LocationListItemState
-differenceOfLocationLists arr1 arr2 = filter ( \item1 -> length (filter( \ (item2) -> (item2.placeId == item1.placeId)) arr2) == 0) arr1
+differenceOfLocationLists arr1 arr2 = filter (\item1 -> length (filter (\(item2) -> (item2.placeId == item1.placeId)) arr2) == 0) arr1
 
 filterRecentSearches :: Array LocationListItemState -> Array LocationListItemState -> Array LocationListItemState
-filterRecentSearches arr1 arr2 = filter ( \item1 -> length (filter( \ (item2) -> (item2.placeId /= item1.placeId)) arr2) /= (length arr2)) arr1
+filterRecentSearches arr1 arr2 = filter (\item1 -> length (filter (\(item2) -> (item2.placeId /= item1.placeId)) arr2) /= (length arr2)) arr1
 
 getDistanceBwCordinates :: Number -> Number -> Number -> Number -> Number
 getDistanceBwCordinates lat1 long1 lat2 long2 = do
-  let latPoint1 = toRad (lat1)
-  let lngPoint1 = toRad (long1)
-  let latPoint2 = toRad (lat2)
-  let lngPoint2 = toRad (long2)
-  let dlong = toRad (long2 -  (long1))
-  let lati1 = toRad (lat1)
-  let lati2 = toRad (lat2)
-  let dist =  sin ((latPoint2 - latPoint1) / 2.0 ) * sin ((latPoint2 - latPoint1) / 2.0 ) + cos(latPoint1) * cos(latPoint2) * sin ((lngPoint2 - lngPoint1) / 2.0 ) * sin ((lngPoint2 - lngPoint1) / 2.0 )
-  let dist1 = (2.0 * 6371.0 * asin ( sqrt dist))
+  let
+    latPoint1 = toRad (lat1)
+  let
+    lngPoint1 = toRad (long1)
+  let
+    latPoint2 = toRad (lat2)
+  let
+    lngPoint2 = toRad (long2)
+  let
+    dlong = toRad (long2 - (long1))
+  let
+    lati1 = toRad (lat1)
+  let
+    lati2 = toRad (lat2)
+  let
+    dist = sin ((latPoint2 - latPoint1) / 2.0) * sin ((latPoint2 - latPoint1) / 2.0) + cos (latPoint1) * cos (latPoint2) * sin ((lngPoint2 - lngPoint1) / 2.0) * sin ((lngPoint2 - lngPoint1) / 2.0)
+  let
+    dist1 = (2.0 * 6371.0 * asin (sqrt dist))
   dist1
 
 toRad :: Number -> Number
@@ -337,16 +363,15 @@ toRad n = (n * pi) / 180.0
 getCurrentLocationMarker :: String -> String
 getCurrentLocationMarker currentVersion = if isPreviousVersion currentVersion (getPreviousVersion "") then "ic_customer_current_location" else "ny_ic_customer_current_location"
 
-getPreviousVersion :: String -> String 
-getPreviousVersion _ = 
-  if os == "IOS" then 
-    case getMerchant FunctionCall of 
-      NAMMAYATRI -> "1.2.5"
-      JATRISAATHI -> "0.0.0"
-      _ -> "1.0.0"
-    else case getMerchant FunctionCall of 
-        JATRISAATHI -> "0.0.0"
-        _ -> "1.2.0"
+getPreviousVersion :: String -> String
+getPreviousVersion _ =
+  if os == "IOS" then case getMerchant FunctionCall of
+    NAMMAYATRI -> "1.2.5"
+    JATRISAATHI -> "0.0.0"
+    _ -> "1.0.0"
+  else case getMerchant FunctionCall of
+    JATRISAATHI -> "0.0.0"
+    _ -> "1.2.0"
 
 rotateArray :: forall a. Array a -> Int -> Array a
 rotateArray arr times =
@@ -368,19 +393,28 @@ isHaveFare :: String -> Array FareComponent -> Boolean
 isHaveFare fare = not null <<< filter (\item -> item.fareType == fare)
 
 sortPredctionByDistance :: Array Prediction -> Array Prediction
-sortPredctionByDistance arr = sortBy (comparing (_^._distance_meters)) arr
+sortPredctionByDistance arr = sortBy (comparing (_ ^. _distance_meters)) arr
 
 foreign import getMerchantId :: String -> Foreign
 
-data Merchant = NAMMAYATRI | JATRISAATHI | YATRI
+data Merchant
+  = NAMMAYATRI
+  | JATRISAATHI
+  | YATRI
 
 derive instance genericMerchant :: Generic Merchant _
-instance eqMerchant :: Eq Merchant where eq = genericEq
-instance encodeMerchant :: Encode Merchant where encode = defaultEnumEncode
-instance decodeMerchant:: Decode Merchant where decode = defaultEnumDecode
+
+instance eqMerchant :: Eq Merchant where
+  eq = genericEq
+
+instance encodeMerchant :: Encode Merchant where
+  encode = defaultEnumEncode
+
+instance decodeMerchant :: Decode Merchant where
+  decode = defaultEnumDecode
 
 getMerchant :: LazyCheck -> Merchant
-getMerchant lazy = case (decodeMerchantId (getMerchantId "")) of 
+getMerchant lazy = case (decodeMerchantId (getMerchantId "")) of
   Just merchant -> merchant
   Nothing -> NAMMAYATRI
 

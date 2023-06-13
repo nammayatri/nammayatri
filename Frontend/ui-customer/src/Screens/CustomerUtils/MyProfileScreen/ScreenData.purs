@@ -12,32 +12,31 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.MyProfileScreen.ScreenData where
 
 import Screens.Types (MyProfileScreenState, DeleteStatus(..))
-import Data.Maybe(Maybe(..))
+import Data.Maybe (Maybe(..))
 
 initData :: MyProfileScreenState
-initData = {
-    props : {
-        updateProfile : false,
-        accountStatus : ACTIVE,
-        genderOptionExpanded : false,
-        expandEnabled : false,
-        isEmailValid : true,
-        isBtnEnabled : true,
-        showOptions : false,
-        fromHomeScreen : false
-    },
-    data : {
-        name : "",
-        mobileNumber : "",
-        editedName : "",
-        emailId : Nothing ,
-        gender : Nothing,
-        editedGender : Nothing,
-        editedEmailId  : Nothing,
-        errorMessage : Nothing
-    }
-}
+initData =
+  { props:
+      { updateProfile: false
+      , accountStatus: ACTIVE
+      , genderOptionExpanded: false
+      , expandEnabled: false
+      , isEmailValid: true
+      , isBtnEnabled: true
+      , showOptions: false
+      , fromHomeScreen: false
+      }
+  , data:
+      { name: ""
+      , mobileNumber: ""
+      , editedName: ""
+      , emailId: Nothing
+      , gender: Nothing
+      , editedGender: Nothing
+      , editedEmailId: Nothing
+      , errorMessage: Nothing
+      }
+  }

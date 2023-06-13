@@ -12,21 +12,20 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.ContactUsScreen.ScreenData where
 
-import Screens.Types(ContactUsScreenState)
+import Screens.Types (ContactUsScreenState)
 
 initData :: ContactUsScreenState
-initData = {
-  data: {
-    email : "",
-    subject : "",
-    description : "",
-    bookingId : ""
-  },
-  props: {
-    btnActive : false,
-    isSubmitted : false
+initData =
+  { data:
+      { email: ""
+      , subject: ""
+      , description: ""
+      , bookingId: ""
+      }
+  , props:
+      { btnActive: false
+      , isSubmitted: false
+      }
   }
-}

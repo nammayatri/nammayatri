@@ -1,0 +1,13 @@
+{
+    "indentWidth": 2,
+    "commaSeparatedRecordFields": false,
+    "removeTrailingWhitespace": true,
+    "removeLeadingWhitespace": false,
+    "removeBlankLines": true,
+    "replaceRecordWildcards": true,
+    "replaceTypeSynonyms": true,
+    "neverUsed": [],
+    "groupImports": false,
+    "maximumLineLength": 80
+  }
+  

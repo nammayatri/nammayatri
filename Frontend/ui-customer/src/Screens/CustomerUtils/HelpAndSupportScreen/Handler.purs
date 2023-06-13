@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.HelpAndSupportScreen.Handler where
 
 import Prelude (bind, discard, ($), pure, (<$>))
@@ -32,10 +31,10 @@ helpAndSupportScreen = do
   act <- lift $ lift $ runScreen $ HelpAndSupportScreen.screen state.helpAndSupportScreen
   case act of
     GoBack -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_HOME_FROM_HELP)
-    GoHome -> do 
-      modifyScreenState $ HomeScreenStateType (\homeScreenState -> homeScreenState{data{settingSideBar{opened = SettingSideBar.CLOSED}}}) 
+    GoHome -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> homeScreenState { data { settingSideBar { opened = SettingSideBar.CLOSED } } })
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_HOME_FROM_HELP)
-    GoToSupportScreen bookingId-> App.BackT $ App.BackPoint <$> (pure $ GO_TO_SUPPORT_SCREEN bookingId)
-    GoToTripDetails updatedState-> App.BackT $ App.BackPoint <$> (pure $ GO_TO_TRIP_DETAILS updatedState)
+    GoToSupportScreen bookingId -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_SUPPORT_SCREEN bookingId)
+    GoToTripDetails updatedState -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_TRIP_DETAILS updatedState)
     GoToMyRides -> App.BackT $ App.BackPoint <$> (pure $ VIEW_RIDES)
     UpdateState updatedState -> App.BackT $ App.BackPoint <$> (pure $ UPDATE_STATE updatedState)

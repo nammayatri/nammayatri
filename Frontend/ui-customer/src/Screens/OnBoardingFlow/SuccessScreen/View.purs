@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.SuccessScreen.View where
 
 import Prelude
@@ -45,11 +44,12 @@ screen initialState =
   , parent: Just "SuccessScreen"
   , globalEvents:
       [ ( \push -> do
-            _ <- launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
-              $ do
-                  lift $ lift $ void $ delay $ Milliseconds 3500.0
-                  lift $ lift $ doAff do liftEffect $ push CountDown
-                  pure unit
+            _ <-
+              launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
+                $ do
+                    lift $ lift $ void $ delay $ Milliseconds 3500.0
+                    lift $ lift $ doAff do liftEffect $ push CountDown
+                    pure unit
             pure $ pure unit
         )
       ]
@@ -76,12 +76,14 @@ view push state =
         , cornerRadii $ Corners 16.0 true true true true
         , padding (Padding 16 24 16 24)
         ]
-        [ if EHC.os == "IOS" && (getValueToLocalStore VERSION_NAME == "1.2.4" ) then
+        [ if EHC.os == "IOS" && (getValueToLocalStore VERSION_NAME == "1.2.4") then
             imageView
-            [ height $ V 160
-            , width $ V 280
-            , imageUrl "https://assets.juspay.in/nammayatri/images/user/ny_ic_success_lottie_placeholder.png"]
-            else lottieLoaderView state push
+              [ height $ V 160
+              , width $ V 280
+              , imageUrl "https://assets.juspay.in/nammayatri/images/user/ny_ic_success_lottie_placeholder.png"
+              ]
+          else
+            lottieLoaderView state push
         , textView
             $ [ width MATCH_PARENT
               , height WRAP_CONTENT

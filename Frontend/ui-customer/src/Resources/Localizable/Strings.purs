@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Language.Strings where
 
 import Language.Types (STR, getKeyString)
@@ -20,17 +19,23 @@ import Merchant.Utils (getStringFromConfig, getENStrings)
 import Prelude (($))
 import Data.String.Common (trim)
 
-data LANGUAGE_KEY = EN_US | KN_IN | HI_IN | BN_IN | ML_IN
+data LANGUAGE_KEY
+  = EN_US
+  | KN_IN
+  | HI_IN
+  | BN_IN
+  | ML_IN
 
 getKey :: String -> LANGUAGE_KEY
 getKey key = do
-    case key of 
-        "EN_US" -> EN_US
-        "KN_IN" -> KN_IN
-        "HI_IN" -> HI_IN
-        "BN_IN" -> BN_IN
-        "ML_IN" -> ML_IN
-        _ -> EN_US
+  case key of
+    "EN_US" -> EN_US
+    "KN_IN" -> KN_IN
+    "HI_IN" -> HI_IN
+    "BN_IN" -> BN_IN
+    "ML_IN" -> ML_IN
+    _ -> EN_US
+
 --TODO: Translate in OR AS
 getString :: STR -> String
 getString key = getStringFromConfig $ trim $ getKeyString key

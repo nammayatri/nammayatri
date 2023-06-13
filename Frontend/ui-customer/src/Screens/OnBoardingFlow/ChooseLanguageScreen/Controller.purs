@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.ChooseLanguageScreen.Controller where
 
 import Components.MenuButton.Controller (Action(..)) as MenuButtonController
@@ -28,28 +27,31 @@ instance showAction :: Show Action where
   show _ = ""
 
 instance loggableAction :: Loggable Action where
-  performLog action appId  = case action of
+  performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen CHOOSE_LANGUAGE_SCREEN)
-    BackPressed -> do 
+    BackPressed -> do
       trackAppBackPress appId (getScreen CHOOSE_LANGUAGE_SCREEN)
     MenuButtonActionController (MenuButtonController.OnClick config) -> trackAppActionClick appId (getScreen CHOOSE_LANGUAGE_SCREEN) "menu_button_action" config.id
-    PrimaryButtonActionController act -> case act of 
+    PrimaryButtonActionController act -> case act of
       PrimaryButtonController.OnClick -> do
-        trackAppActionClick appId  (getScreen CHOOSE_LANGUAGE_SCREEN) "primary_button_action" "Continue"
+        trackAppActionClick appId (getScreen CHOOSE_LANGUAGE_SCREEN) "primary_button_action" "Continue"
         trackAppEndScreen appId (getScreen CHOOSE_LANGUAGE_SCREEN)
       PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen CHOOSE_LANGUAGE_SCREEN) "primary_button" "no_action"
-    
-data Action = PrimaryButtonActionController PrimaryButtonController.Action 
-            | MenuButtonActionController MenuButtonController.Action
-            | BackPressed
-            | AfterRender
 
-data ScreenOutput = NextScreen String | Refresh ChooseLanguageScreenState
+data Action
+  = PrimaryButtonActionController PrimaryButtonController.Action
+  | MenuButtonActionController MenuButtonController.Action
+  | BackPressed
+  | AfterRender
+
+data ScreenOutput
+  = NextScreen String
+  | Refresh ChooseLanguageScreenState
+
 eval :: Action -> ChooseLanguageScreenState -> Eval Action ScreenOutput ChooseLanguageScreenState
+eval (MenuButtonActionController (MenuButtonController.OnClick config)) state = exit $ Refresh state { props { selectedLanguage = config.id } }
 
-eval (MenuButtonActionController (MenuButtonController.OnClick config)) state = exit $ Refresh state{props{selectedLanguage = config.id}}
-
-eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = updateAndExit state{props{exitAnimation = true}} $ NextScreen state.props.selectedLanguage
+eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = updateAndExit state { props { exitAnimation = true } } $ NextScreen state.props.selectedLanguage
 
 eval (PrimaryButtonActionController PrimaryButtonController.NoAction) state = continue state
 

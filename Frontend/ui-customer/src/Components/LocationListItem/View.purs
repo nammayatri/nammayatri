@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.LocationListItem.View where
 
 import Components.LocationListItem.Controller (Action(..))
@@ -27,42 +26,51 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import Screens.Types (LocationListItemState)
 import Styles.Colors as Color
 
-view :: forall w . (Action  -> Effect Unit) -> LocationListItemState -> PrestoDOM (Effect Unit) w
+view :: forall w. (Action -> Effect Unit) -> LocationListItemState -> PrestoDOM (Effect Unit) w
 view push config =
   linearLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  , gravity CENTER
-  , cornerRadius 20.0
-  ][  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , gravity CENTER
+    , cornerRadius 20.0
+    ]
+    [ linearLayout
         [ height $ V 70
         , width MATCH_PARENT
         , cornerRadius 20.0
         , orientation HORIZONTAL
         , gravity CENTER
         , disableClickFeedback true
-        , onClick ( \action -> if config.tag == "Current_Location" then do
-                            _ <- push action
-                            getLocationName push 9.9 9.9 "Current Location" SelectedCurrentLocation
-                            else do
-                              _ <- push action
-                              pure unit) (const $ OnClick config)
-        ]([  prefixImageView config
+        , onClick
+            ( \action ->
+                if config.tag == "Current_Location" then do
+                  _ <- push action
+                  getLocationName push 9.9 9.9 "Current Location" SelectedCurrentLocation
+                else do
+                  _ <- push action
+                  pure unit
+            )
+            (const $ OnClick config)
+        ]
+        ( [ prefixImageView config
           , linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , orientation VERTICAL
-            , gravity CENTER
-            , weight 1.0
-            , alpha config.alpha
-            ][  titleView config
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , orientation VERTICAL
+              , gravity CENTER
+              , weight 1.0
+              , alpha config.alpha
+              ]
+              [ titleView config
               , subTitleView config
-            ]
-          ] <> if config.postfixImageVisibility then [postfixImageView push config] else [])
-      ]
+              ]
+          ]
+            <> if config.postfixImageVisibility then [ postfixImageView push config ] else []
+        )
+    ]
 
-prefixImageView :: forall w . LocationListItemState -> PrestoDOM (Effect Unit) w
+prefixImageView :: forall w. LocationListItemState -> PrestoDOM (Effect Unit) w
 prefixImageView config =
   linearLayout
     [ height MATCH_PARENT
@@ -70,14 +78,15 @@ prefixImageView config =
     , orientation VERTICAL
     , margin (Margin 16 22 12 22)
     , gravity CENTER
-    ][  imageView
+    ]
+    [ imageView
         [ height $ V 20
         , width $ V 20
         , imageWithFallback config.prefixImageUrl
         ]
-      ]
+    ]
 
-postfixImageView :: forall w . (Action  -> Effect Unit) -> LocationListItemState -> PrestoDOM (Effect Unit) w
+postfixImageView :: forall w. (Action -> Effect Unit) -> LocationListItemState -> PrestoDOM (Effect Unit) w
 postfixImageView push config =
   linearLayout
     [ height MATCH_PARENT
@@ -87,15 +96,16 @@ postfixImageView push config =
     , padding (Padding 12 22 16 22)
     , onClick push $ const $ FavClick config
     , clickable (if config.postfixImageUrl == "ny_ic_fav_red,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav_red.png" then false else true)
-    ][  imageView
+    ]
+    [ imageView
         [ height $ V 20
         , width $ V 20
         , imageWithFallback config.postfixImageUrl
         , visibility if config.postfixImageVisibility then VISIBLE else GONE
         ]
-      ]
+    ]
 
-titleView :: forall w . LocationListItemState -> PrestoDOM (Effect Unit) w
+titleView :: forall w. LocationListItemState -> PrestoDOM (Effect Unit) w
 titleView config =
   textView
     [ height WRAP_CONTENT
@@ -109,16 +119,18 @@ titleView config =
     , padding (PaddingRight 20)
     , margin (MarginBottom 4)
     , fontStyle $ FontStyle.semiBold LanguageStyle
-    ]-- <> FontStyle.body1 TypoGraphy)
+    ] -- <> FontStyle.body1 TypoGraphy)
 
-subTitleView :: forall w . LocationListItemState -> PrestoDOM (Effect Unit) w
+subTitleView :: forall w. LocationListItemState -> PrestoDOM (Effect Unit) w
 subTitleView config =
   textView
-    ([ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , text config.subTitle
-    , color Color.black700
-    , padding (PaddingRight 20)
-    , maxLines 1
-    , ellipsize true
-    ] <> FontStyle.body3 TypoGraphy)
+    ( [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , text config.subTitle
+      , color Color.black700
+      , padding (PaddingRight 20)
+      , maxLines 1
+      , ellipsize true
+      ]
+        <> FontStyle.body3 TypoGraphy
+    )

@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.AccountSetUpScreen.ScreenData where
 
 import Screens.Types (AccountSetUpScreenState)
@@ -30,7 +29,7 @@ initData =
       , backPressed: false
       , genderSelected: Nothing
       , genderOptionExpanded: false
-      , expandEnabled : false
-      , showOptions : false
+      , expandEnabled: false
+      , showOptions: false
       }
   }

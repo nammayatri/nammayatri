@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.SplashScreen.Handler where
 
 import Prelude (Unit, pure, unit, discard, ($), bind, void)

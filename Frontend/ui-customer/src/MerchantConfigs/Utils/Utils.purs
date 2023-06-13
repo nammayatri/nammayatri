@@ -3,7 +3,7 @@ module Merchant.Utils where
 import Common.Types.App (LazyCheck(..))
 import Helpers.Utils (Merchant(..), getMerchant)
 import Prelude ((<>))
-import Screens.Types ( Language)
+import Screens.Types (Language)
 
 foreign import getStringFromConfig :: String -> String
 

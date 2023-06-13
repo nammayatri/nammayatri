@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.AboutUsScreen.View where
 
 import Animation as Anim
@@ -40,56 +39,62 @@ screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOut
 screen initialState =
   { initialState
   , view
-  , name : "AboutUsScreen"
-  , globalEvents : []
+  , name: "AboutUsScreen"
+  , globalEvents: []
   , eval
   }
 
-view :: forall w . (Action -> Effect Unit) -> ST.AboutUsScreenState -> PrestoDOM (Effect Unit) w
+view :: forall w. (Action -> Effect Unit) -> ST.AboutUsScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  Anim.screenAnimation $
-    linearLayout 
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , onBackPressed push (const BackPressed) 
-    , background Color.white900
-    , padding if EHC.os == "IOS" then (Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom) else (Padding 0 0 0 10)
-    , gravity CENTER_HORIZONTAL
-    , afterRender push (const AfterRender)
-    ][  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
-      , linearLayout
-        [ height $ V 1
+  Anim.screenAnimation
+    $ linearLayout
+        [ height MATCH_PARENT
         , width MATCH_PARENT
-        , background Color.greySmoke
-        ][]
-      , scrollView
-        [ width MATCH_PARENT
-        , scrollBarY false
-        ][  linearLayout
-            [ height WRAP_CONTENT
+        , orientation VERTICAL
+        , onBackPressed push (const BackPressed)
+        , background Color.white900
+        , padding if EHC.os == "IOS" then (Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom) else (Padding 0 0 0 10)
+        , gravity CENTER_HORIZONTAL
+        , afterRender push (const AfterRender)
+        ]
+        [ GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
+        , linearLayout
+            [ height $ V 1
             , width MATCH_PARENT
-            , orientation VERTICAL
-            ][ topTextView push state
-              , linearLayout
-                [ orientation VERTICAL
-                , weight 1.0
-                ][]
-              , bottomLinksView state
-              ]
-          ]
-      ]
+            , background Color.greySmoke
+            ]
+            []
+        , scrollView
+            [ width MATCH_PARENT
+            , scrollBarY false
+            ]
+            [ linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , orientation VERTICAL
+                ]
+                [ topTextView push state
+                , linearLayout
+                    [ orientation VERTICAL
+                    , weight 1.0
+                    ]
+                    []
+                , bottomLinksView state
+                ]
+            ]
+        ]
 
 --------------------------------------------------- topTextView -----------------------------------------------------
-topTextView :: (Action -> Effect Unit)  -> ST.AboutUsScreenState -> forall w . PrestoDOM (Effect Unit) w
+topTextView :: (Action -> Effect Unit) -> ST.AboutUsScreenState -> forall w. PrestoDOM (Effect Unit) w
 topTextView push state =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , padding (Padding 20 0 20 10)
-    ][  logoView state
-      , textView
+    ]
+    [ logoView state
+    , textView
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , textSize FontSize.a_16
@@ -100,66 +105,71 @@ topTextView push state =
         , lineHeight "22"
         , margin (Margin 0 40 0 32)
         ]
-      , ComplaintsModel.view (ComplaintsModel.config{cardData = contactUsData state})
-      , linearLayout
+    , ComplaintsModel.view (ComplaintsModel.config { cardData = contactUsData state })
+    , linearLayout
         [ gravity LEFT
         , width WRAP_CONTENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        ][  softwareLicenseView
-          , termsAndConditionsView state
-          , privacyPolicyView state
-          ]
-      ]
+        ]
+        [ softwareLicenseView
+        , termsAndConditionsView state
+        , privacyPolicyView state
+        ]
+    ]
 
 --------------------------------------------------- logoView -----------------------------------------------------
-logoView :: forall w . ST.AboutUsScreenState -> PrestoDOM (Effect Unit) w
-logoView state = 
+logoView :: forall w. ST.AboutUsScreenState -> PrestoDOM (Effect Unit) w
+logoView state =
   linearLayout
+    [ height $ V 48
+    , width MATCH_PARENT
+    , margin (MarginTop 48)
+    , gravity CENTER
+    , cornerRadius 10.0
+    ]
+    [ imageView
         [ height $ V 48
-        , width MATCH_PARENT
-        , margin (MarginTop 48)
-        , gravity CENTER
-        , cornerRadius 10.0
-        ][  imageView
-              [ height $ V 48
-              , width $ V 48
-              , imageWithFallback "ic_launcher,https://assets.juspay.in/nammayatri/images/common/ny_ic_launcher.png"
-              ]
-          ]
+        , width $ V 48
+        , imageWithFallback "ic_launcher,https://assets.juspay.in/nammayatri/images/common/ny_ic_launcher.png"
+        ]
+    ]
 
 --------------------------------------------------- bottomLinksView -----------------------------------------------------
-bottomLinksView :: ST.AboutUsScreenState -> forall w . PrestoDOM (Effect Unit) w
-bottomLinksView state = 
-   linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , gravity CENTER
-        , orientation VERTICAL
-        , margin (Margin 0 10 0 10)
-        ][  textView
-            [ width WRAP_CONTENT
-            , height WRAP_CONTENT
-            , text $ "v" <> (getValueToLocalStore VERSION_NAME) <> " [ " <> (getValueToLocalStore BUNDLE_VERSION) <> " ]"
-            , textSize FontSize.a_14
-            , fontStyle $ FontStyle.semiBold LanguageStyle
-            , color "#354052"
-            ]
-          ]
-  
+bottomLinksView :: ST.AboutUsScreenState -> forall w. PrestoDOM (Effect Unit) w
+bottomLinksView state =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER
+    , orientation VERTICAL
+    , margin (Margin 0 10 0 10)
+    ]
+    [ textView
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , text $ "v" <> (getValueToLocalStore VERSION_NAME) <> " [ " <> (getValueToLocalStore BUNDLE_VERSION) <> " ]"
+        , textSize FontSize.a_14
+        , fontStyle $ FontStyle.semiBold LanguageStyle
+        , color "#354052"
+        ]
+    ]
+
 --------------------------------------------------- softwareLicenseView -----------------------------------------------------
-softwareLicenseView :: forall w . PrestoDOM (Effect Unit) w
-softwareLicenseView = 
+softwareLicenseView :: forall w. PrestoDOM (Effect Unit) w
+softwareLicenseView =
   linearLayout
     [ height WRAP_CONTENT
     , orientation VERTICAL
     , width WRAP_CONTENT
-    ][  linearLayout
+    ]
+    [ linearLayout
         [ height WRAP_CONTENT
         , orientation VERTICAL
         , width WRAP_CONTENT
         , visibility GONE
-        ][  textView
+        ]
+        [ textView
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , text (getString SOFTWARE_LICENSE)
@@ -168,50 +178,56 @@ softwareLicenseView =
             , color Color.blue900
             , margin (Margin 0 0 0 0)
             ]
-          , linearLayout
+        , linearLayout
             [ width MATCH_PARENT
             , height (V 1)
             , background Color.blue900
-            ][]
-          ]
+            ]
+            []
         ]
-      
+    ]
+
 --------------------------------------------------- termsAndConditionsView -----------------------------------------------------      
-termsAndConditionsView :: ST.AboutUsScreenState -> forall w . PrestoDOM (Effect Unit) w
+termsAndConditionsView :: ST.AboutUsScreenState -> forall w. PrestoDOM (Effect Unit) w
 termsAndConditionsView state =
   linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , orientation VERTICAL
-    ][  textView
+    ]
+    [ textView
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text (getString TERMS_AND_CONDITIONS)
         , textSize FontSize.a_14
         , fontStyle $ FontStyle.regular LanguageStyle
         , color Color.blue900
-        , onClick (\action -> do
-            _ <- pure action
-            _ <- JB.openUrlInApp $ getValueFromConfig "DOCUMENT_LINK" 
-            pure unit
-          ) (const TermsAndConditions)
+        , onClick
+            ( \action -> do
+                _ <- pure action
+                _ <- JB.openUrlInApp $ getValueFromConfig "DOCUMENT_LINK"
+                pure unit
+            )
+            (const TermsAndConditions)
         , margin (Margin 0 20 0 0)
         ]
-      , linearLayout
-              [ width MATCH_PARENT
-              , height (V 1)
-              , background Color.blue900
-              ][]
+    , linearLayout
+        [ width MATCH_PARENT
+        , height (V 1)
+        , background Color.blue900
         ]
+        []
+    ]
 
 --------------------------------------------------- privacyPolicyView -----------------------------------------------------
-privacyPolicyView :: forall w .ST.AboutUsScreenState -> PrestoDOM (Effect Unit) w
+privacyPolicyView :: forall w. ST.AboutUsScreenState -> PrestoDOM (Effect Unit) w
 privacyPolicyView state =
   linearLayout
     [ height WRAP_CONTENT
     , orientation VERTICAL
     , width WRAP_CONTENT
-    ][  textView
+    ]
+    [ textView
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text (getString PRIVACY_POLICY)
@@ -219,27 +235,30 @@ privacyPolicyView state =
         , fontStyle $ FontStyle.regular LanguageStyle
         , color Color.blue900
         , margin (Margin 0 20 0 0)
-        , onClick (\action -> do
-            _ <- pure action
-            _ <- JB.openUrlInApp $ getValueFromConfig "PRIVACY_POLICY_LINK" 
-            pure unit
-          ) (const PrivacyPolicy)
+        , onClick
+            ( \action -> do
+                _ <- pure action
+                _ <- JB.openUrlInApp $ getValueFromConfig "PRIVACY_POLICY_LINK"
+                pure unit
+            )
+            (const PrivacyPolicy)
         ]
-      , linearLayout
+    , linearLayout
         [ width MATCH_PARENT
         , height (V 1)
         , background Color.blue900
-        ][]
-      ]
+        ]
+        []
+    ]
 
 contactUsData :: ST.AboutUsScreenState -> Array ComplaintsModel.CardData
-contactUsData state = [
-  { title : (getString CORPORATE_ADDRESS)
-  , subTitle : (getString CORPORATE_ADDRESS_DESCRIPTION)
-  , addtionalData : Just (getString CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL)
-  }
-, { title : (getString REGISTERED_ADDRESS)
-  , subTitle : (getString REGISTERED_ADDRESS_DESCRIPTION)
-  , addtionalData : Just (getString REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL)
-  }
-]
+contactUsData state =
+  [ { title: (getString CORPORATE_ADDRESS)
+    , subTitle: (getString CORPORATE_ADDRESS_DESCRIPTION)
+    , addtionalData: Just (getString CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL)
+    }
+  , { title: (getString REGISTERED_ADDRESS)
+    , subTitle: (getString REGISTERED_ADDRESS_DESCRIPTION)
+    , addtionalData: Just (getString REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL)
+    }
+  ]

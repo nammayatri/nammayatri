@@ -12,13 +12,11 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Styles.Colors where
 
 import Styles.Types
 
 -- Text Color
-
 textListItemTitle :: Color
 textListItemTitle = "#666666"
 
@@ -72,6 +70,7 @@ whiteBlue = "#3f2172FF"
 
 blackBlurColor :: Color
 blackBlurColor = "#8B8B8B"
+
 -- Component Background
 landingDisableBG :: Color
 landingDisableBG = "#1A2d2d2d"
@@ -84,7 +83,6 @@ primaryBG = "#204480"
 
 primaryBGDisable :: Color
 primaryBGDisable = "#BAC5D8"
-
 
 black :: Color
 black = "#000000"
@@ -126,7 +124,7 @@ paymentPageBack :: Color
 paymentPageBack = "#f8f9f9"
 
 loanOffersBack :: Color
-loanOffersBack  = "#7FBCFF"
+loanOffersBack = "#7FBCFF"
 
 activeLoansBack :: Color
 activeLoansBack = "#89EBA5"
@@ -168,7 +166,7 @@ lightGreen :: Color
 lightGreen = "#68D08D"
 
 incorrectAlert :: Color
-incorrectAlert  = "#F76F6F"
+incorrectAlert = "#F76F6F"
 
 darkMint :: Color
 darkMint = "#53bb6f"
@@ -249,7 +247,7 @@ charcoalReyBorder :: Color
 charcoalReyBorder = "#1e323643"
 
 warningRed :: Color
-warningRed  = "#f04c31"
+warningRed = "#f04c31"
 
 leftSizeBlack :: Color
 leftSizeBlack = "#212121"
@@ -321,7 +319,7 @@ lightGreyShade :: Color
 lightGreyShade = "#DDDDDD"
 
 greyShade :: Color
-greyShade =  "#777777"
+greyShade = "#777777"
 
 greyishBlue :: Color
 greyishBlue = "#738299"
@@ -379,8 +377,8 @@ lightWhite = "#f7f5f5"
 
 grey92 :: Color
 grey92 = "#EBEBEB"
--- ================================================================================
 
+-- ================================================================================
 mainPrimary :: Color
 mainPrimary = "#3D64F4"
 
@@ -418,7 +416,7 @@ inactiveButtonTextPrimary :: Color
 inactiveButtonTextPrimary = "#FEF2BD"
 
 hintText :: Color
-hintText =  "#E5E7E8"
+hintText = "#E5E7E8"
 
 transparent :: Color
 transparent = "#00FFFFFF"
@@ -446,6 +444,7 @@ mint = "#1A53BB6F"
 
 lightMaroon :: Color
 lightMaroon = "#E45454"
+
 blue700' :: Color
 blue700' = "#80B2FF"
 
@@ -457,6 +456,7 @@ grey = "#D0D5DD"
 
 orange800 :: Color
 orange800 = "#FFA666"
+
 grey700 :: Color
 grey700 = "#F4F4F6"
 
@@ -467,17 +467,18 @@ green200 :: Color
 green200 = "#2053BB6F"
 
 linearGradient :: Array (Array Color)
-linearGradient = [
-  ["#26FE2D" , "#79F400", "#A6E900", "#C8DD00", "#E6CF00", "#FFBF00", "#FFAE00", "#FF9C05", "#FF8A37", "#FF7755", "#FF6670", "#FF598B", "#FF51A5", "#FF51BE", "#FF57D6", "#FF62EC", "#F66EFF"]
-  , ["#26FE2D" , "#2AFE58", "#2FFE81", "#33FEA8", "#38FECE", "#3CFEF3", "#41E7FE", "#45C6FF", "#4AA7FF", "#4E89FF", "#536DFF", "#5C57FF", "#7E5CFF",          "#9F60FF", "#BD65FF", "#DB69FF", "#F66EFF"]
-  , ["#26FE2D", "#33F53A", "#40EC47" , "#4DE354", "#5ADA62", "#67D16F", "#74C87C", "#81BF89", "#8EB696", "#9BADA3", "#A8A4B0", "#B59BBD", "#C292CB", "#CF89D8", "#DC80E5", "#E977F2", "#F66EFF"]
-  , ["#FE4F95", "#F2529C", "#E654A2", "#DA57A9", "#CE59B0", "#C25CB6", "#B65EBD", "#AA61C3", "#9E63CA", "#9166D1", "#8568D7", "#796BDE", "#6D6DE5", "#6170EB" , "#5572F2" , "#4975F8", "#3D77FF"]
-  , ["#D075FE", "#D17EF5", "#D286EB", "#D38FE2", "#D498D8", "#D5A0CF", "#D6A9C5", "#D7B1BC", "#D8BAB2", "#D9C3A9", "#DACB9F", "#DBD496", "#DCDD8C", "#DDE583" , "#DEEE79", "#DFF670", "#E0FF66"]
-  , ["#ADB2FE", "#9CBAFF", "#87C3FF", "#6DCCFF", "#4DD4FF", "#18DCFF", "#00E3FF" , "#00EAFF", "#00EFF4", "#00F5E4", "#00F9D2", "#33FDBF", "#5FFFAB", "#82FF97", "#A2FF85", "#C1FF74", "#E0FF66"]
-]
+linearGradient =
+  [ [ "#26FE2D", "#79F400", "#A6E900", "#C8DD00", "#E6CF00", "#FFBF00", "#FFAE00", "#FF9C05", "#FF8A37", "#FF7755", "#FF6670", "#FF598B", "#FF51A5", "#FF51BE", "#FF57D6", "#FF62EC", "#F66EFF" ]
+  , [ "#26FE2D", "#2AFE58", "#2FFE81", "#33FEA8", "#38FECE", "#3CFEF3", "#41E7FE", "#45C6FF", "#4AA7FF", "#4E89FF", "#536DFF", "#5C57FF", "#7E5CFF", "#9F60FF", "#BD65FF", "#DB69FF", "#F66EFF" ]
+  , [ "#26FE2D", "#33F53A", "#40EC47", "#4DE354", "#5ADA62", "#67D16F", "#74C87C", "#81BF89", "#8EB696", "#9BADA3", "#A8A4B0", "#B59BBD", "#C292CB", "#CF89D8", "#DC80E5", "#E977F2", "#F66EFF" ]
+  , [ "#FE4F95", "#F2529C", "#E654A2", "#DA57A9", "#CE59B0", "#C25CB6", "#B65EBD", "#AA61C3", "#9E63CA", "#9166D1", "#8568D7", "#796BDE", "#6D6DE5", "#6170EB", "#5572F2", "#4975F8", "#3D77FF" ]
+  , [ "#D075FE", "#D17EF5", "#D286EB", "#D38FE2", "#D498D8", "#D5A0CF", "#D6A9C5", "#D7B1BC", "#D8BAB2", "#D9C3A9", "#DACB9F", "#DBD496", "#DCDD8C", "#DDE583", "#DEEE79", "#DFF670", "#E0FF66" ]
+  , [ "#ADB2FE", "#9CBAFF", "#87C3FF", "#6DCCFF", "#4DD4FF", "#18DCFF", "#00E3FF", "#00EAFF", "#00EFF4", "#00F5E4", "#00F9D2", "#33FDBF", "#5FFFAB", "#82FF97", "#A2FF85", "#C1FF74", "#E0FF66" ]
+  ]
+
 green900 :: Color
 green900 = "#53BB6F"
- 
+
 lightMintGreen :: Color
 lightMintGreen = "#F0FAF0"
 

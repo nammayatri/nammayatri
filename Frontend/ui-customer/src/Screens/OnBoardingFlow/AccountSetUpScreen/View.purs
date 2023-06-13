@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.AccountSetUpScreen.View where
 
 import Animation as Anim
@@ -39,7 +38,6 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Array (mapWithIndex)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants as RSRC
-
 
 screen :: ST.AccountSetUpScreenState -> Screen Action ST.AccountSetUpScreenState ScreenOutput
 screen initialState =
@@ -136,46 +134,44 @@ nameEditTextView state push =
     , margin $ MarginTop 30
     ]
     [ textView
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , text (getString HOW_SHOULD_WE_ADDRESS_YOU)
-      , textSize FontSize.a_12
-      , singleLine true
-      , color Color.greyTextColor
-      , gravity LEFT
-      , fontStyle $ FontStyle.regular LanguageStyle
-      , margin $ MarginBottom 12
-      ]
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , text (getString HOW_SHOULD_WE_ADDRESS_YOU)
+        , textSize FontSize.a_12
+        , singleLine true
+        , color Color.greyTextColor
+        , gravity LEFT
+        , fontStyle $ FontStyle.regular LanguageStyle
+        , margin $ MarginBottom 12
+        ]
     , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , cornerRadius 8.0
         , gravity CENTER_VERTICAL
-        , stroke $ "1,"<> Color.borderColorLight
+        , stroke $ "1," <> Color.borderColorLight
         ]
         [ editText
-          [ height MATCH_PARENT
-          , width WRAP_CONTENT
-          , weight 1.0
-          , textSize FontSize.a_16
-          , padding $ Padding 20 15 20 15
-          , color Color.black800
-          , onChange push $ TextChanged
-          , onFocus push $ const $ EditTextFocusChanged
-          , gravity LEFT
-          , cornerRadius 8.0
-          , fontStyle $ FontStyle.semiBold LanguageStyle
-          , hint $ getString ENTER_YOUR_NAME
-          , hintColor Color.black600
-          , pattern "[a-zA-Z ]*,30"
-          , id $ EHC.getNewIDWithTag "NameEditText"
-          ]
+            [ height MATCH_PARENT
+            , width WRAP_CONTENT
+            , weight 1.0
+            , textSize FontSize.a_16
+            , padding $ Padding 20 15 20 15
+            , color Color.black800
+            , onChange push $ TextChanged
+            , onFocus push $ const $ EditTextFocusChanged
+            , gravity LEFT
+            , cornerRadius 8.0
+            , fontStyle $ FontStyle.semiBold LanguageStyle
+            , hint $ getString ENTER_YOUR_NAME
+            , hintColor Color.black600
+            , pattern "[a-zA-Z ]*,30"
+            , id $ EHC.getNewIDWithTag "NameEditText"
+            ]
         ]
     ]
 
-
 ------------------------ genderCaptureView ---------------------------
-
 genderCaptureView :: forall w. ST.AccountSetUpScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 genderCaptureView state push =
   linearLayout
@@ -183,104 +179,104 @@ genderCaptureView state push =
     , width MATCH_PARENT
     , margin $ MarginTop 32
     , orientation VERTICAL
-    ] $
-    [ textView
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , text $ getString HOW_DO_YOU_IDENTIFY_YOURSELF
-      , color Color.black800
-      , gravity LEFT
-      , fontStyle $ FontStyle.regular LanguageStyle
-      , singleLine true
-      , textSize FontSize.a_12
-      , margin $ MarginBottom 12
-      ]
-    , linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , padding $ Padding 20 15 20 15
-        , cornerRadius 8.0
-        , onClick push (const ShowOptions)
-        , stroke $ "1,"<> Color.borderColorLight
-        , gravity CENTER_VERTICAL
-        ]
-        [ textView
-          [ text $ RSRC.getGender state.data.gender (getString SELECT_YOUR_GENDER)
-          , textSize FontSize.a_16
-          , fontStyle $ FontStyle.semiBold LanguageStyle
-          , height WRAP_CONTENT
-          , width WRAP_CONTENT
-          , color if state.data.gender == Nothing then Color.black600 else Color.black800
+    ]
+    $ [ textView
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , text $ getString HOW_DO_YOU_IDENTIFY_YOURSELF
+          , color Color.black800
+          , gravity LEFT
+          , fontStyle $ FontStyle.regular LanguageStyle
+          , singleLine true
+          , textSize FontSize.a_12
+          , margin $ MarginBottom 12
           ]
-        , linearLayout
-            [ height WRAP_CONTENT
-            , weight 1.0
-            , gravity RIGHT
-            ]
-            [ imageView
-              [ imageWithFallback if state.props.genderOptionExpanded then "ny_ic_chevron_up,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_up.png" else "ny_ic_chevron_down,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_down.png"
-              , height $ V 24
-              , width $ V 15
+      , linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , padding $ Padding 20 15 20 15
+          , cornerRadius 8.0
+          , onClick push (const ShowOptions)
+          , stroke $ "1," <> Color.borderColorLight
+          , gravity CENTER_VERTICAL
+          ]
+          [ textView
+              [ text $ RSRC.getGender state.data.gender (getString SELECT_YOUR_GENDER)
+              , textSize FontSize.a_16
+              , fontStyle $ FontStyle.semiBold LanguageStyle
+              , height WRAP_CONTENT
+              , width WRAP_CONTENT
+              , color if state.data.gender == Nothing then Color.black600 else Color.black800
               ]
-            ]
-
-        ]
-
-    ] <> (if state.props.expandEnabled then [ genderOptionsView state push] else [])
-
-
+          , linearLayout
+              [ height WRAP_CONTENT
+              , weight 1.0
+              , gravity RIGHT
+              ]
+              [ imageView
+                  [ imageWithFallback if state.props.genderOptionExpanded then "ny_ic_chevron_up,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_up.png" else "ny_ic_chevron_down,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_down.png"
+                  , height $ V 24
+                  , width $ V 15
+                  ]
+              ]
+          ]
+      ]
+    <> (if state.props.expandEnabled then [ genderOptionsView state push ] else [])
 
 genderOptionsView :: forall w. ST.AccountSetUpScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 genderOptionsView state push =
   PrestoAnim.animationSet
-  ([] <> if EHC.os == "IOS" then
-        [Anim.fadeIn state.props.genderOptionExpanded
-        , Anim.fadeOut  (not state.props.genderOptionExpanded)]
-        else
-          [Anim.listExpandingAnimation $  translateFullYAnimWithDurationConfigs state] )
-            $
-  linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , margin $ MarginTop 8
-    , background Color.grey700
-    , orientation VERTICAL
-    , visibility $ if (state.props.genderOptionExpanded || state.props.showOptions) then VISIBLE else GONE
-    , onAnimationEnd push AnimationEnd
-    , stroke $ "1,"<>Color.grey900
-    , cornerRadius 8.0
-    ]
-    (mapWithIndex(\index item ->
-       linearLayout
+    ( []
+        <> if EHC.os == "IOS" then
+            [ Anim.fadeIn state.props.genderOptionExpanded
+            , Anim.fadeOut (not state.props.genderOptionExpanded)
+            ]
+          else
+            [ Anim.listExpandingAnimation $ translateFullYAnimWithDurationConfigs state ]
+    )
+    $ linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , onClick push $ const $ GenderSelected item.value
+        , margin $ MarginTop 8
+        , background Color.grey700
         , orientation VERTICAL
+        , visibility $ if (state.props.genderOptionExpanded || state.props.showOptions) then VISIBLE else GONE
+        , onAnimationEnd push AnimationEnd
+        , stroke $ "1," <> Color.grey900
+        , cornerRadius 8.0
         ]
-        [ textView
-          [ text item.text
-          , textSize FontSize.a_14
-          , fontStyle $ FontStyle.regular LanguageStyle
-          , color Color.black900
-          , margin $ Margin 16 15 16 15
-          ]
-        , linearLayout
-          [ height $ V 1
-          , width MATCH_PARENT
-          , background Color.grey900
-          , visibility if index == 3 then GONE else VISIBLE
-          , margin $ MarginHorizontal 16 16
-          ][]
-        ]
-       )(genderOptionsArray state)
+        ( mapWithIndex
+            ( \index item ->
+                linearLayout
+                  [ height WRAP_CONTENT
+                  , width MATCH_PARENT
+                  , onClick push $ const $ GenderSelected item.value
+                  , orientation VERTICAL
+                  ]
+                  [ textView
+                      [ text item.text
+                      , textSize FontSize.a_14
+                      , fontStyle $ FontStyle.regular LanguageStyle
+                      , color Color.black900
+                      , margin $ Margin 16 15 16 15
+                      ]
+                  , linearLayout
+                      [ height $ V 1
+                      , width MATCH_PARENT
+                      , background Color.grey900
+                      , visibility if index == 3 then GONE else VISIBLE
+                      , margin $ MarginHorizontal 16 16
+                      ]
+                      []
+                  ]
+            )
+            (genderOptionsArray state)
+        )
 
-    )
-
-genderOptionsArray :: ST.AccountSetUpScreenState ->  Array {text :: String , value :: ST.Gender}
+genderOptionsArray :: ST.AccountSetUpScreenState -> Array { text :: String, value :: ST.Gender }
 genderOptionsArray _ =
-  [ {text : (getString FEMALE) , value : ST.FEMALE}
-  , {text : (getString MALE) , value : ST.MALE}
-  , {text : (getString OTHER) , value : ST.OTHER}
-  , {text : (getString PREFER_NOT_TO_SAY) , value : ST.PREFER_NOT_TO_SAY}
+  [ { text: (getString FEMALE), value: ST.FEMALE }
+  , { text: (getString MALE), value: ST.MALE }
+  , { text: (getString OTHER), value: ST.OTHER }
+  , { text: (getString PREFER_NOT_TO_SAY), value: ST.PREFER_NOT_TO_SAY }
   ]
-

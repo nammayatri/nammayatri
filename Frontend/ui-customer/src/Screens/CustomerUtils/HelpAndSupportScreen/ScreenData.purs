@@ -12,35 +12,33 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.HelpAndSupportScreen.ScreenData where
 
 import Screens.Types (HelpAndSupportScreenState)
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 
 initData :: HelpAndSupportScreenState
-initData = {
-  data: {
-    source : "",
-    destination : "",
-    date : "",
-    time : "",
-    rating : 0,
-    driverName : "",
-    totalAmount : "",
-    isNull : true,
-    status : "",
-    rideStartTime : "",
-    rideEndTime : "",
-    vehicleNumber : "",
-    rideId : "",
-    tripId : "",
-    bookingId : "",
-    faresList : []
-  },
-  props:{
-    apiFailure : false
-  , isCallConfirmation : false
+initData =
+  { data:
+      { source: ""
+      , destination: ""
+      , date: ""
+      , time: ""
+      , rating: 0
+      , driverName: ""
+      , totalAmount: ""
+      , isNull: true
+      , status: ""
+      , rideStartTime: ""
+      , rideEndTime: ""
+      , vehicleNumber: ""
+      , rideId: ""
+      , tripId: ""
+      , bookingId: ""
+      , faresList: []
+      }
+  , props:
+      { apiFailure: false
+      , isCallConfirmation: false
+      }
   }
-
-}

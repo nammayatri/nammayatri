@@ -12,14 +12,13 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Resources.Constants where
 
 import Data.Array (filter, length, null, reverse, (!!), head, all)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), Replacement(..), contains, joinWith, replaceAll, split, trim)
 import Prelude (map, (&&), (-), (<>), (==), (>), ($), (+), (/=), (<), (/))
-import Screens.Types as ST 
+import Screens.Types as ST
 import Data.Lens ((^.))
 import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), SavedReqLocationAPIEntity(..), FareBreakupAPIEntity(..))
 import Language.Strings (getString, getEN)
@@ -169,57 +168,57 @@ getWard ward area street building =
     if isJust actualWard then actualWard else (actualArea <> actualStreet <> actualBuilding)
 
 getKeyByLanguage :: String -> String
-getKeyByLanguage language = case language of 
+getKeyByLanguage language = case language of
   "ENGLISH" -> "EN_US"
-  "KANNADA" -> "KN_IN" 
-  "HINDI"   -> "HI_IN" 
-  "MALAYALAM" -> "ML_IN" 
-  "TAMIL"   ->"TA_IN"
+  "KANNADA" -> "KN_IN"
+  "HINDI" -> "HI_IN"
+  "MALAYALAM" -> "ML_IN"
+  "TAMIL" -> "TA_IN"
   "BENGALI" -> "BN_IN"
-  _ -> "EN_US" 
+  _ -> "EN_US"
 
-getGender :: Maybe ST.Gender -> String -> String 
-getGender gender placeHolderText = 
-  case gender of 
-    Just value -> case value of 
-      ST.MALE -> (getString MALE)
-      ST.FEMALE -> (getString FEMALE)
-      ST.OTHER ->  (getString OTHER)
-      _ -> (getString PREFER_NOT_TO_SAY)
-    Nothing -> placeHolderText
+getGender :: Maybe ST.Gender -> String -> String
+getGender gender placeHolderText = case gender of
+  Just value -> case value of
+    ST.MALE -> (getString MALE)
+    ST.FEMALE -> (getString FEMALE)
+    ST.OTHER -> (getString OTHER)
+    _ -> (getString PREFER_NOT_TO_SAY)
+  Nothing -> placeHolderText
 
 getFaresList :: Array FareBreakupAPIEntity -> String -> Array ST.FareComponent
 getFaresList fares baseDistance =
   map
     ( \(FareBreakupAPIEntity item) ->
-          { fareType : item.description
-          , price : if item.description == "BASE_FARE" then (item.amount + getFareFromArray fares "EXTRA_DISTANCE_FARE") else item.amount
-          , title : case item.description of
-                      "BASE_FARE" -> (getEN BASE_FARES) <> " (" <> baseDistance <> ")"
-                      "EXTRA_DISTANCE_FARE" -> getEN NOMINAL_FARE
-                      "DRIVER_SELECTED_FARE" -> getEN DRIVER_ADDITIONS
-                      "TOTAL_FARE" -> getEN TOTAL_PAID
-                      "DEAD_KILOMETER_FARE" -> getEN PICKUP_CHARGE
-                      "PICKUP_CHARGES" -> getEN PICKUP_CHARGE
-                      "CUSTOMER_SELECTED_FARE" -> getEN CUSTOMER_SELECTED_FARE
-                      "WAITING_CHARGES" -> getEN WAITING_CHARGE
-                      "EARLY_END_RIDE_PENALTY" -> getEN EARLY_END_RIDE_CHARGES
-                      "WAITING_OR_PICKUP_CHARGES" -> getEN PICKUP_CHARGE 
-                      "SERVICE_CHARGE" -> getEN SERVICE_CHARGES
-                      "FIXED_GOVERNMENT_RATE" -> getEN GOVERNMENT_CHAGRES
-                      _ -> getEN BASE_FARES
-          }
+        { fareType: item.description
+        , price: if item.description == "BASE_FARE" then (item.amount + getFareFromArray fares "EXTRA_DISTANCE_FARE") else item.amount
+        , title:
+            case item.description of
+              "BASE_FARE" -> (getEN BASE_FARES) <> " (" <> baseDistance <> ")"
+              "EXTRA_DISTANCE_FARE" -> getEN NOMINAL_FARE
+              "DRIVER_SELECTED_FARE" -> getEN DRIVER_ADDITIONS
+              "TOTAL_FARE" -> getEN TOTAL_PAID
+              "DEAD_KILOMETER_FARE" -> getEN PICKUP_CHARGE
+              "PICKUP_CHARGES" -> getEN PICKUP_CHARGE
+              "CUSTOMER_SELECTED_FARE" -> getEN CUSTOMER_SELECTED_FARE
+              "WAITING_CHARGES" -> getEN WAITING_CHARGE
+              "EARLY_END_RIDE_PENALTY" -> getEN EARLY_END_RIDE_CHARGES
+              "WAITING_OR_PICKUP_CHARGES" -> getEN PICKUP_CHARGE
+              "SERVICE_CHARGE" -> getEN SERVICE_CHARGES
+              "FIXED_GOVERNMENT_RATE" -> getEN GOVERNMENT_CHAGRES
+              _ -> getEN BASE_FARES
+        }
     )
     (getFilteredFares fares)
 
 getFareFromArray :: Array FareBreakupAPIEntity -> String -> Int
-getFareFromArray fareBreakUp fareType = (fromMaybe dummyFareBreakUp (head (filter (\fare -> fare^._description == (fareType)) fareBreakUp)))^._amount
+getFareFromArray fareBreakUp fareType = (fromMaybe dummyFareBreakUp (head (filter (\fare -> fare ^. _description == (fareType)) fareBreakUp))) ^. _amount
 
 dummyFareBreakUp :: FareBreakupAPIEntity
-dummyFareBreakUp = FareBreakupAPIEntity{amount: 0,description: ""}
+dummyFareBreakUp = FareBreakupAPIEntity { amount: 0, description: "" }
 
 getFilteredFares :: Array FareBreakupAPIEntity -> Array FareBreakupAPIEntity
-getFilteredFares = filter (\(FareBreakupAPIEntity item) -> (all (_ /=  item.description) ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE"]) )
+getFilteredFares = filter (\(FareBreakupAPIEntity item) -> (all (_ /= item.description) [ "EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE" ]))
 
 getKmMeter :: Int -> String
-getKmMeter distance = if (distance < 1000) then toString distance <> " m" else (parseFloat ((toNumber distance)/ 1000.0)) 2 <> " km"
+getKmMeter distance = if (distance < 1000) then toString distance <> " m" else (parseFloat ((toNumber distance) / 1000.0)) 2 <> " km"

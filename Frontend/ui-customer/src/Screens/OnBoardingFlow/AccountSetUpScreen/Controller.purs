@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.AccountSetUpScreen.Controller where
 
 import Components.GenericHeader as GenericHeaderController
@@ -28,14 +27,14 @@ import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (AccountSetUpScreenState, Gender(..))
-import Engineering.Helpers.Commons(getNewIDWithTag)
-import Data.Maybe(Maybe(..))
+import Engineering.Helpers.Commons (getNewIDWithTag)
+import Data.Maybe (Maybe(..))
 
 instance showAction :: Show Action where
   show _ = ""
 
 instance loggableAction :: Loggable Action where
-  performLog action appId  = case action of
+  performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen ACCOUNT_SET_UP_SCREEN)
     BackPressed -> do
       trackAppBackPress appId (getScreen ACCOUNT_SET_UP_SCREEN)
@@ -66,8 +65,6 @@ instance loggableAction :: Loggable Action where
     TextChanged value -> trackAppTextInput appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_text_changed" "edit_text"
     GenderSelected value -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "gender_selected" "edit_text"
     AnimationEnd _ -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "show_options" "animation_end"
-      
-
 
 data ScreenOutput
   = GoHome AccountSetUpScreenState
@@ -97,20 +94,20 @@ eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick)) 
         pure $ BackPressed
     ]
 
-eval EditTextFocusChanged state = continue state {props{genderOptionExpanded = false}}
+eval EditTextFocusChanged state = continue state { props { genderOptionExpanded = false } }
 
-eval (GenderSelected value) state = continue state{data{gender = Just value}, props{genderOptionExpanded = false, btnActive = (state.data.name /= "") && (length state.data.name >= 3) }}
+eval (GenderSelected value) state = continue state { data { gender = Just value }, props { genderOptionExpanded = false, btnActive = (state.data.name /= "") && (length state.data.name >= 3) } }
 
 eval (TextChanged value) state = do
   let
     newState = state { data { name = trim value } }
-  continue newState { props { expandEnabled = false, genderOptionExpanded = false, btnActive = (newState.data.name /= "") && (length newState.data.name >= 3) && (newState.data.gender /= Nothing)} }
+  continue newState { props { expandEnabled = false, genderOptionExpanded = false, btnActive = (newState.data.name /= "") && (length newState.data.name >= 3) && (newState.data.gender /= Nothing) } }
 
 eval (ShowOptions) state = do
   _ <- pure $ hideKeyboardOnNavigation true
-  continue state{props{genderOptionExpanded = not state.props.genderOptionExpanded, expandEnabled = true}}
+  continue state { props { genderOptionExpanded = not state.props.genderOptionExpanded, expandEnabled = true } }
 
-eval (AnimationEnd _)  state = continue state{props{showOptions = false}}
+eval (AnimationEnd _) state = continue state { props { showOptions = false } }
 
 eval BackPressed state = do
   _ <- pure $ hideKeyboardOnNavigation true
@@ -121,4 +118,3 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state { pro
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ ChangeMobileNumber
 
 eval _ state = continue state
-

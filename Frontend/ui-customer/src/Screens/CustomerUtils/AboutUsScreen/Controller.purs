@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.AboutUsScreen.Controller where
 
 import Prelude (class Show, pure, unit, ($), discard)
@@ -40,16 +39,18 @@ instance loggableAction :: Loggable Action where
     TermsAndConditions -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "in_screen" "t_&_c"
     PrivacyPolicy -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "in_screen" "privacy_policy"
 
-data Action = GenericHeaderActionController GenericHeaderController.Action
-            | BackPressed
-            | TermsAndConditions
-            | AfterRender
-            | PrivacyPolicy
+data Action
+  = GenericHeaderActionController GenericHeaderController.Action
+  | BackPressed
+  | TermsAndConditions
+  | AfterRender
+  | PrivacyPolicy
 
-data ScreenOutput = GoToHomeScreen
+data ScreenOutput
+  = GoToHomeScreen
+
 eval :: Action -> AboutUsScreenState -> Eval Action ScreenOutput AboutUsScreenState
-
-eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick)) state = continueWithCmd state [do pure BackPressed]
+eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick)) state = continueWithCmd state [ do pure BackPressed ]
 
 eval BackPressed state = exit $ GoToHomeScreen
 

@@ -12,31 +12,30 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.EnterMobileNumberScreen.ScreenData where
 
 import Screens.Types (EnterMobileNumberScreenState)
 import PrestoDOM (LetterSpacing(..))
 
 initData :: EnterMobileNumberScreenState
-initData = {
-    data: {
-      mobileNumber: ""
-    , tokenId : ""
-    , attempts : 0
-    , otp : ""
-    , timer : ""
-    , timerID : ""
-    },
-    props: {
-        enterOTP : false,
-        btnActiveMobileNumber : false,
-        btnActiveOTP :false,
-        isValidMobileNumber : true,
-        wrongOTP : false,
-        resendEnable : true,
-        capturedOtp : "",
-        isReadingOTP : true,
-        letterSpacing : PX 1.0
-    }
-}
+initData =
+  { data:
+      { mobileNumber: ""
+      , tokenId: ""
+      , attempts: 0
+      , otp: ""
+      , timer: ""
+      , timerID: ""
+      }
+  , props:
+      { enterOTP: false
+      , btnActiveMobileNumber: false
+      , btnActiveOTP: false
+      , isValidMobileNumber: true
+      , wrongOTP: false
+      , resendEnable: true
+      , capturedOtp: ""
+      , isReadingOTP: true
+      , letterSpacing: PX 1.0
+      }
+  }

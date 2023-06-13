@@ -112,7 +112,7 @@ contactListView push state =
 
 --------------------------------------------------- emergencyContactsView -----------------------------------------------------
 emergencyContactsView :: forall w. (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
-emergencyContactsView push state = 
+emergencyContactsView push state =
   linearLayout
     [ width $ MATCH_PARENT
     , orientation VERTICAL

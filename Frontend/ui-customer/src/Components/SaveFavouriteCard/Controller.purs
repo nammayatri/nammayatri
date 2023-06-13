@@ -12,13 +12,13 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.SaveFavouriteCard.Controller where
 
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 
-data Action = SaveFavourite 
-            | PrimayEditTA PrimaryEditTextController.Action 
-            | OnClose
-            | TagSelected String
-            | NoAction
+data Action
+  = SaveFavourite
+  | PrimayEditTA PrimaryEditTextController.Action
+  | OnClose
+  | TagSelected String
+  | NoAction

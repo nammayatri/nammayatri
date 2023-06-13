@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.SelectLanguageScreen.Controller where
 
 import Components.GenericHeader.Controller (Action(..)) as GenericHeaderController
@@ -36,7 +35,7 @@ instance loggableAction :: Loggable Action where
     BackPressed -> do
       trackAppBackPress appId (getScreen SELECT_LANGUAGE_SCREEN)
       trackAppEndScreen appId (getScreen SELECT_LANGUAGE_SCREEN)
-    PrimaryButtonActionController act -> case act of 
+    PrimaryButtonActionController act -> case act of
       PrimaryButtonController.OnClick -> do
         trackAppActionClick appId (getScreen SELECT_LANGUAGE_SCREEN) "primary_button" "update"
         trackAppEndScreen appId (getScreen SELECT_LANGUAGE_SCREEN)
@@ -48,27 +47,31 @@ instance loggableAction :: Loggable Action where
         trackAppEndScreen appId (getScreen SELECT_LANGUAGE_SCREEN)
       GenericHeaderController.SuffixImgOnClick -> trackAppActionClick appId (getScreen SELECT_LANGUAGE_SCREEN) "generic_header_action" "forward_icon"
 
-data Action = PrimaryButtonActionController PrimaryButtonController.Action 
-            | MenuButtonActionController MenuButtonController.Action
-            | GenericHeaderActionController GenericHeaderController.Action
-            | BackPressed
-            | AfterRender
+data Action
+  = PrimaryButtonActionController PrimaryButtonController.Action
+  | MenuButtonActionController MenuButtonController.Action
+  | GenericHeaderActionController GenericHeaderController.Action
+  | BackPressed
+  | AfterRender
 
-data ScreenOutput = UpdateLanguage SelectLanguageScreenState 
-                  | GoToHomeScreen
+data ScreenOutput
+  = UpdateLanguage SelectLanguageScreenState
+  | GoToHomeScreen
+
 eval :: Action -> SelectLanguageScreenState -> Eval Action ScreenOutput SelectLanguageScreenState
-
 eval (MenuButtonActionController (MenuButtonController.OnClick config)) state = do
-  let language = (getValueToLocalStore LANGUAGE_KEY)
+  let
+    language = (getValueToLocalStore LANGUAGE_KEY)
   _ <- pure $ printLog "SelectLanguage Screen" language
-  let isBtnActive = if config.id /= language then true else false
-  continue state{props{selectedLanguage = config.id,btnActive = isBtnActive}}
+  let
+    isBtnActive = if config.id /= language then true else false
+  continue state { props { selectedLanguage = config.id, btnActive = isBtnActive } }
 
-eval AfterRender state = continue state {props {selectedLanguage = if getValueToLocalStore LANGUAGE_KEY == "__failed" then "EN_US" else getValueToLocalStore LANGUAGE_KEY}}
+eval AfterRender state = continue state { props { selectedLanguage = if getValueToLocalStore LANGUAGE_KEY == "__failed" then "EN_US" else getValueToLocalStore LANGUAGE_KEY } }
 
 eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = updateAndExit state $ UpdateLanguage state
 
-eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick )) state = continueWithCmd state [do pure BackPressed]
+eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick)) state = continueWithCmd state [ do pure BackPressed ]
 
 eval BackPressed state = exit $ GoToHomeScreen
 

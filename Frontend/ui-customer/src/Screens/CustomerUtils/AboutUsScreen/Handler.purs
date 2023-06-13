@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.AboutUsScreen.Handler where
 
 import Prelude (Unit, bind, pure, ($), (<$>))
@@ -23,7 +22,6 @@ import Control.Transformers.Back.Trans as App
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.AboutUsScreen.View as AboutUsScreen
 import Types.App (FlowBT, GlobalState(..), ABOUT_US_SCREEN_OUTPUT(..))
-
 
 aboutUsScreen :: FlowBT String ABOUT_US_SCREEN_OUTPUT
 aboutUsScreen = do

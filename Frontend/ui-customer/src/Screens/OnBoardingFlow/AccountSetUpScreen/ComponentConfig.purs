@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.AccountSetUpScreen.ComponentConfig where
 
 import Components.GenericHeader as GenericHeader
@@ -114,12 +113,13 @@ goBackPopUpModelConfig =
     popUpConfig
 
 translateFullYAnimWithDurationConfigs :: ST.AccountSetUpScreenState -> AnimConfig
-translateFullYAnimWithDurationConfigs state = animConfig {
-  fromScaleY = if state.props.genderOptionExpanded then 0.0 else 1.0
-, toScaleY =if state.props.genderOptionExpanded then 1.0 else 0.0
-, fromY = if state.props.genderOptionExpanded then -100 else  0
-, toY = if state.props.genderOptionExpanded then 0 else -100
-, repeatCount = (PrestoAnim.Repeat 0)
-, ifAnim = state.props.expandEnabled
-, duration = 200
-}
+translateFullYAnimWithDurationConfigs state =
+  animConfig
+    { fromScaleY = if state.props.genderOptionExpanded then 0.0 else 1.0
+    , toScaleY = if state.props.genderOptionExpanded then 1.0 else 0.0
+    , fromY = if state.props.genderOptionExpanded then -100 else 0
+    , toY = if state.props.genderOptionExpanded then 0 else -100
+    , repeatCount = (PrestoAnim.Repeat 0)
+    , ifAnim = state.props.expandEnabled
+    , duration = 200
+    }

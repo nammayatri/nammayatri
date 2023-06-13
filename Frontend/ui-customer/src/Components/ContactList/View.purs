@@ -140,7 +140,8 @@ horizontalLine =
     [ height $ V 1
     , width MATCH_PARENT
     , background Color.grey900
-    ][]
+    ]
+    []
 
 showEmergencyContact :: forall w. (Action -> Effect Unit) -> ContactsState -> PrestoDOM (Effect Unit) w
 showEmergencyContact push config =
@@ -158,13 +159,10 @@ showEmergencyContact push config =
         , margin (Margin 0 0 0 0)
         -- , visibility if (config.contactsData /= []) then VISIBLE else GONE
         ]
-        (
-          
-          -- if (config.contactsData == []) then 
+        ( -- if (config.contactsData == []) then 
           --   []
           -- else showEmergencyContactData push config
           showEmergencyContactData push config
-          
         )
     ]
 
@@ -268,7 +266,6 @@ showEmergencyContactData push config =
       )
       aToz
   )
-
 
 primaryButtonConfig :: Int -> PrimaryButtonConfig.Config
 primaryButtonConfig count =

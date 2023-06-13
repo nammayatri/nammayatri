@@ -12,7 +12,6 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.RequestInfoCard (module Reexport) where
 
 import Components.RequestInfoCard.View as Reexport

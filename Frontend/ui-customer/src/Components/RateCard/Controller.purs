@@ -12,32 +12,37 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.RateCard.Controller where
-import Screens.Types(RateCardType(..))
 
-data Action = Close | BackPressed | NoAction | GoToDefaultStart | GoToDriverAddition | GoToFareUpdate
+import Screens.Types (RateCardType(..))
 
+data Action
+  = Close
+  | BackPressed
+  | NoAction
+  | GoToDefaultStart
+  | GoToDriverAddition
+  | GoToFareUpdate
 
-type Config = {
-    baseFare :: String,
-    extraFare :: String,
-    pickUpCharges :: String,
-    additionalFare :: String,
-    nightCharges :: Boolean,
-    nightShiftMultiplier :: String, 
-    currentRateCardType :: RateCardType,
-    onFirstPage :: Boolean
-}
+type Config
+  = { baseFare :: String
+    , extraFare :: String
+    , pickUpCharges :: String
+    , additionalFare :: String
+    , nightCharges :: Boolean
+    , nightShiftMultiplier :: String
+    , currentRateCardType :: RateCardType
+    , onFirstPage :: Boolean
+    }
 
-config :: Config 
-config = {
-    baseFare : "₹45",
-    extraFare : "₹23",
-    pickUpCharges : "₹10", 
-    additionalFare : "₹30",
-    nightCharges : false,
-    nightShiftMultiplier : "1.5",
-    currentRateCardType : DefaultRateCard,
-    onFirstPage : false
-}
+config :: Config
+config =
+  { baseFare: "₹45"
+  , extraFare: "₹23"
+  , pickUpCharges: "₹10"
+  , additionalFare: "₹30"
+  , nightCharges: false
+  , nightShiftMultiplier: "1.5"
+  , currentRateCardType: DefaultRateCard
+  , onFirstPage: false
+  }

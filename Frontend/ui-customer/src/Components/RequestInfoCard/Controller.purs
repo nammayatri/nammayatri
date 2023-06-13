@@ -12,11 +12,11 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Components.RequestInfoCard.Controller where
 
 import Prelude
 
-data Action = Close 
-            | BackPressed 
-            | NoAction
+data Action
+  = Close
+  | BackPressed
+  | NoAction

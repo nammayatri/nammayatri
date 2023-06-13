@@ -12,8 +12,7 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
-module Components.FareBreakUp(module Reexport) where
+module Components.FareBreakUp (module Reexport) where
 
 import Components.FareBreakUp.View as Reexport
 import Components.FareBreakUp.Controller as Reexport

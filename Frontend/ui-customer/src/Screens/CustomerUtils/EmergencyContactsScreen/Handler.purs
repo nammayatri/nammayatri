@@ -8,10 +8,9 @@ import Control.Transformers.Back.Trans as App
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.EmergencyContactsScreen.View as EmergencyContactsScreen
 import ModifyScreenState (modifyScreenState)
-import Types.App (FlowBT, GlobalState(..), EMERGECY_CONTACTS_SCREEN_OUTPUT(..),ScreenType(..))
+import Types.App (FlowBT, GlobalState(..), EMERGECY_CONTACTS_SCREEN_OUTPUT(..), ScreenType(..))
 
-
-emergencyContactsScreen:: FlowBT String EMERGECY_CONTACTS_SCREEN_OUTPUT
+emergencyContactsScreen :: FlowBT String EMERGECY_CONTACTS_SCREEN_OUTPUT
 emergencyContactsScreen = do
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ EmergencyContactsScreen.screen state.emergencyContactsScreen

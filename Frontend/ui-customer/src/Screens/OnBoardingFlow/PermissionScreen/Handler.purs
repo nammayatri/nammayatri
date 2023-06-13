@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.PermissionScreen.Handler where
 
 import Prelude (bind, ($), pure, (<$>))
@@ -23,13 +22,13 @@ import PrestoDOM.Core.Types.Language.Flow (runScreenWithNameSpace, initUIWithNam
 import Screens.PermissionScreen.View as PermissionScreen
 import Presto.Core.Types.Language.Flow (doAff)
 import Data.Maybe
-import PrestoDOM.Core(terminateUI)
+import PrestoDOM.Core (terminateUI)
 import Effect.Class (liftEffect)
 import Screens.PermissionScreen.Controller (ScreenOutput(..))
 import Types.App (FlowBT, GlobalState(..), PERMISSION_SCREEN_OUTPUT(..))
 
 permissionScreen :: String -> FlowBT String PERMISSION_SCREEN_OUTPUT
-permissionScreen triggertype= do
+permissionScreen triggertype = do
   (GlobalState state) <- getState
   _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "PermissionScreen" Nothing
   act <- lift $ lift $ runScreenWithNameSpace $ PermissionScreen.screen state.permissionScreen triggertype

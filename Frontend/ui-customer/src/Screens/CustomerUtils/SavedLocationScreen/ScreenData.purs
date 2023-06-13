@@ -12,20 +12,19 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.SavedLocationScreen.ScreenData where
 
-import Screens.Types(SavedLocationScreenState)
-import Data.Maybe(Maybe(..))
+import Screens.Types (SavedLocationScreenState)
+import Data.Maybe (Maybe(..))
 
 initData :: SavedLocationScreenState
-initData = {
-  data: {
-    savedLocations : []
-  , deleteTag : Nothing
+initData =
+  { data:
+      { savedLocations: []
+      , deleteTag: Nothing
+      }
+  , props:
+      { showDeleteLocationModel: false
+      , apiRespReceived: false
+      }
   }
-  , props : {
-      showDeleteLocationModel : false
-    , apiRespReceived : false
-  }
-}
