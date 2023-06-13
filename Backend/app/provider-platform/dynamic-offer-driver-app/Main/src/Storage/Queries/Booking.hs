@@ -79,9 +79,9 @@ createBooking booking = do
 
 create :: L.MonadFlow m => Booking -> m (MeshResult ())
 create dBooking = do
-  _ <- createBooking dBooking
   _ <- QBBL.create dBooking.fromLocation
-  QBBL.create dBooking.toLocation
+  _ <- QBBL.create dBooking.toLocation
+  createBooking dBooking
 
 findById :: L.MonadFlow m => Id Booking -> m (Maybe Booking)
 findById (Id bookingId) = do
