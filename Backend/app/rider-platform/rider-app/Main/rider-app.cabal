@@ -92,6 +92,7 @@ library
       Beckn.ACL.Search
       Beckn.ACL.Select
       Beckn.ACL.Track
+      Beckn.ACL.Update
       Beckn.Core
       Domain.Action.Beckn.OnConfirm
       Domain.Action.Beckn.OnInit

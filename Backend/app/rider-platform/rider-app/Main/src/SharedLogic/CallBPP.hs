@@ -24,6 +24,7 @@ import Beckn.Types.Core.Taxi.API.Rating as API
 import qualified Beckn.Types.Core.Taxi.API.Search as API
 import Beckn.Types.Core.Taxi.API.Select as API
 import Beckn.Types.Core.Taxi.API.Track as API
+import Beckn.Types.Core.Taxi.API.Update as API
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Ride as DRide
 import Environment
@@ -105,6 +106,16 @@ cancel ::
   CancelReq ->
   m CancelRes
 cancel = callBecknAPIWithSignature "cancel" API.cancelAPI
+
+update ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasBapInfo r m
+  ) =>
+  BaseUrl ->
+  UpdateReq ->
+  m UpdateRes
+update = callBecknAPIWithSignature "update" API.updateAPI
 
 callTrack ::
   ( MonadFlow m,

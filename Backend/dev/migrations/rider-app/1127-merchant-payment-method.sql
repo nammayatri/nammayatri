@@ -32,9 +32,9 @@ INSERT INTO atlas_app.merchant_payment_method (id, merchant_id, payment_type, pa
     (SELECT
         atlas_app.uuid_generate_v4(),
         T1.id,
-        'PREPAID',
+        'POSTPAID',
         'Wallet_DefaultWalletType',
-        'BPP',
+        'BAP',
         10
     FROM atlas_app.merchant AS T1)
     ON CONFLICT DO NOTHING;
