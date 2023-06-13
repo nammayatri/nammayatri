@@ -281,7 +281,7 @@ createDriverWithDetails req mbBundleVersion mbClientVersion merchantId = do
   person <- makePerson req mbBundleVersion mbClientVersion merchantId
   -- DB.runTransaction $ do
   _ <- either (throwError . InvalidRequest . show) pure =<< QP.create person
-  _ <- T.trace ("Create started here1") $ QDFS.create $ makeIdleDriverFlowStatus person
+  _ <- QDFS.create $ makeIdleDriverFlowStatus person
   createDriverDetails (person.id) merchantId
   pure person
   where

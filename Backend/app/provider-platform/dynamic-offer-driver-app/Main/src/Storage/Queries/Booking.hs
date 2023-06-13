@@ -14,7 +14,6 @@
 
 module Storage.Queries.Booking where
 
-import Data.Text (pack)
 import Domain.Types.Booking
 -- import Domain.Types.DriverQuote (DriverQuote)
 import Domain.Types.DriverQuote as DDQ
@@ -312,7 +311,7 @@ transformDomainBookingToBeam Booking {..} =
       BeamB.providerId = getId providerId,
       BeamB.primaryExophone = primaryExophone,
       BeamB.bapId = bapId,
-      BeamB.bapUri = pack $ show bapUri,
+      BeamB.bapUri = showBaseUrl bapUri,
       BeamB.startTime = startTime,
       BeamB.riderId = getId <$> riderId,
       BeamB.fromLocationId = getId fromLocation.id,

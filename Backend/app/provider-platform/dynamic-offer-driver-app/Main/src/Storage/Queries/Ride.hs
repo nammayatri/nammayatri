@@ -21,7 +21,6 @@ module Storage.Queries.Ride where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
 import Data.Int
-import Data.Text (pack)
 import Data.Time hiding (getCurrentTime)
 import qualified Database.Beam as B
 import Database.Beam.Postgres
@@ -239,13 +238,13 @@ findAllRidesBookingsByRideId' (Id merchantId) rideIds = do
       let bookings' = filter (\x -> x.id == ride'.bookingId) bookings
        in acc <> ((\x -> (ride', x)) <$> bookings')
 
-findAllByDriverId :: L.MonadFlow m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe Ride.RideStatus -> m [(Ride, Booking)]
+findAllByDriverId :: (L.MonadFlow m, Log m) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe Ride.RideStatus -> m [(Ride, Booking)]
 findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbCOnf' -> do
       let limitVal = maybe 10 fromInteger mbLimit
-          offsetVal = maybe 10 fromInteger mbOffset
+          offsetVal = maybe 0 fromInteger mbOffset
           isOnlyActive = Just True == mbOnlyActive
       rides <- do
         ride' <-
@@ -902,7 +901,7 @@ transformDomainRideToBeam Ride {..} =
       BeamR.status = status,
       BeamR.driverId = getId driverId,
       BeamR.otp = otp,
-      BeamR.trackingUrl = pack $ show trackingUrl,
+      BeamR.trackingUrl = showBaseUrl trackingUrl,
       BeamR.fare = fare,
       BeamR.traveledDistance = traveledDistance,
       BeamR.chargeableDistance = chargeableDistance,
