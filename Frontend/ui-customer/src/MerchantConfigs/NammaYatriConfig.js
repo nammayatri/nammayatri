@@ -1,5 +1,5 @@
 export function getMerchantString(key) {
-  var selectedLanguage = JBridge.getKeysInSharedPrefs("LANGUAGE_KEY");
+  const selectedLanguage = JBridge.getKeysInSharedPrefs("LANGUAGE_KEY");
   switch (selectedLanguage) {
     case "HI_IN":
       return getStringHIValue(key);
@@ -16,7 +16,7 @@ export function isMerchantString(key) {
 
 export function getMerchantConfig(key){
   if (key in config){
-      return config[key];
+    return config[key];
   }
   console.error("no value found for key "+ key);
   return "";
@@ -45,7 +45,7 @@ export function getStringKNValue(key) {
 
 export function getAppLink(os) {
   if (os == "ANDROID"){
-      return "https://play.google.com/store/apps/details?id=in.juspay.nammayatri"
+    return "https://play.google.com/store/apps/details?id=in.juspay.nammayatri"
   }else {return "https://apps.apple.com/in/app/namma-yatri/id1637429831"}
 }
 

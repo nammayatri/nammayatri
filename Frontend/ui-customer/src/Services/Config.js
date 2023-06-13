@@ -1,9 +1,9 @@
-import { callbackMapper } from 'presto-ui';
+import { callbackMapper } from "presto-ui";
 
 export const environment = function () {
-    return window.configEnv
+  return window.configEnv
 };
 
 export const getMerchant = function () {
-    return window.merchantID;
+  return window.merchantID;
 }

@@ -25,7 +25,9 @@
     "start:android:master": "npm-run-all -p dev webpack-dev-master",
     "start:android:prod": "npm-run-all -p dev webpack-dev-prod",
     "repl": "spago repl",
-    "clean": "sh cleanSpago.sh"
+    "clean": "sh cleanSpago.sh",
+    "eslint": "eslint src && eslint index.js",
+    "eslint:fix": "eslint src --fix && eslint index.js --fix"
   },
   "author": "juspay",
   "license": "ISC",
@@ -44,6 +46,7 @@
     "commitlint-config-jira": "^1.6.4",
     "commitlint-plugin-jira-rules": "^1.6.4",
     "cz-conventional-changelog": "^3.3.0",
+    "eslint": "^8.42.0",
     "filemanager-webpack-plugin": "^2.0.5",
     "husky": "^8.0.1",
     "node-notifier": "^10.0.1",

@@ -1,0 +1,37 @@
+{
+    "globals" : {
+      "__VERSION__" : "readonly"
+    },
+    "env": { "browser": true, "es2015": true },
+    "extends": "eslint:recommended",
+    "parserOptions": { "ecmaVersion": 2015, "sourceType": "module" },
+    "ignorePatterns": ["output","node_modules","dist",".spago","webpack.*"],
+    "rules": {
+      "no-invalid-this": ["error", { "capIsConstructor": false }], // this in strict mode
+      "block-scoped-var": "error", // C style code instead of JS magic
+      "no-caller": "error", // deprecated from JS
+      "no-extend-native": "error",
+      "no-loop-func": "error",
+      "no-new": "error",
+      "no-return-assign": "error",
+      "no-sequences": "error",
+      "no-shadow": ["error", { "builtinGlobals": true }],
+      "no-unused-expressions": "error",
+      "no-eq-null": "error",
+      "indent": ["error", 2, { "SwitchCase": 1 }],
+      "quotes": ["error", "double"],
+      "strict": ["error", "global"],
+      "prefer-const": "error", 
+      "no-var" : "error",
+      "no-inner-declarations": ["error", "functions"],
+      "no-use-before-define": "error",
+      "no-useless-call": "error",
+      "no-useless-concat": "error",
+      "no-useless-return": "error",
+      "no-void": "error",
+      "no-unused-vars": "off",
+      "radix": "off",
+      "eqeqeq": "off",
+      "no-param-reassign": "off"
+    }
+  }

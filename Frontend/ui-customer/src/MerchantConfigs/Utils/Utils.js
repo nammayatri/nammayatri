@@ -32,22 +32,22 @@ export const getStringFromConfig = function (key) {
 }
 
 export const getValueFromConfig = function (constructorKey){
-  let key = constructorKey.trim(); 
+  const key = constructorKey.trim(); 
   switch(window.merchantID) {
-      case "JATRISAATHI" :
-          return JatriConfig.getMerchantConfig(key);
-      case "NAMMAYATRI" :
-          return NammaYatriConfig.getMerchantConfig(key);
-      case "YATRI" :
-          return YatriConfig.getMerchantConfig(key);
-      default:
-          console.error("no value found for key "+ key);
-          return "";
-    }
+    case "JATRISAATHI" :
+      return JatriConfig.getMerchantConfig(key);
+    case "NAMMAYATRI" :
+      return NammaYatriConfig.getMerchantConfig(key);
+    case "YATRI" :
+      return YatriConfig.getMerchantConfig(key);
+    default:
+      console.error("no value found for key "+ key);
+      return "";
+  }
 }
 
 function getStringFromCommon(key) {
-  var selectedLanguage = JBridge.getKeysInSharedPrefs("LANGUAGE_KEY");
+  const selectedLanguage = JBridge.getKeysInSharedPrefs("LANGUAGE_KEY");
   switch (selectedLanguage) {
     case "HI_IN":
       return HindiStrings.getStringValue(key);
