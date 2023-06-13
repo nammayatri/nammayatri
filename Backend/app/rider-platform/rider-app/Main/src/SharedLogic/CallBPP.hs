@@ -23,6 +23,7 @@ import qualified Beckn.Types.Core.Taxi.API.Init as API
 import Beckn.Types.Core.Taxi.API.Rating as API
 import qualified Beckn.Types.Core.Taxi.API.Search as API
 import Beckn.Types.Core.Taxi.API.Select as API
+import Beckn.Types.Core.Taxi.API.Status as API
 import Beckn.Types.Core.Taxi.API.Track as API
 import Beckn.Types.Core.Taxi.API.Update as API
 import qualified Domain.Types.Booking as DB
@@ -171,6 +172,16 @@ feedback ::
   RatingReq ->
   m RatingRes
 feedback = callBecknAPIWithSignature "feedback" API.ratingAPI
+
+callStatus ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasBapInfo r m
+  ) =>
+  BaseUrl ->
+  StatusReq ->
+  m StatusRes
+callStatus = callBecknAPIWithSignature "status" API.statusAPI
 
 callBecknAPIWithSignature,
   callBecknAPIWithSignatureMetro ::

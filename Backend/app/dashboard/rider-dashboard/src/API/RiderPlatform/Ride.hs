@@ -45,6 +45,7 @@ type API =
            :<|> TripRouteAPI
            :<|> RideInfoAPI
            :<|> MultipleRideCancelAPI
+           :<|> RideForceSyncAPI
        )
 
 type RideListAPI = Common.RideListAPI
@@ -61,6 +62,10 @@ type MultipleRideCancelAPI =
   ApiAuth 'APP_BACKEND 'RIDES 'MULTIPLE_RIDE_CANCEL
     :> BAP.MultipleRideCancelAPI
 
+type RideForceSyncAPI =
+  ApiAuth 'APP_BACKEND 'RIDES 'RIDE_FORCE_SYNC
+    :> Common.RideForceSyncAPI
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   shareRideInfo merchantId
@@ -68,6 +73,7 @@ handler merchantId =
     :<|> tripRoute merchantId
     :<|> rideInfo merchantId
     :<|> multipleRideCancel merchantId
+    :<|> rideForceSync merchantId
 
 rideInfoHitsCountKey :: Id Common.Ride -> Text
 rideInfoHitsCountKey rideId = "RideInfoHits:" <> getId rideId <> ":hitsCount"
@@ -134,3 +140,14 @@ multipleRideCancel merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
   transaction <- buildTransaction Common.MultipleRideCancelEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
     Client.callRiderApp checkedMerchantId (.rides.multipleRideCancel) req
+
+rideForceSync ::
+  ShortId DM.Merchant ->
+  ApiTokenInfo ->
+  Id Common.Ride ->
+  FlowHandler APISuccess
+rideForceSync merchantShortId apiTokenInfo rideId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.RideForceSyncEndpoint apiTokenInfo T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callRiderApp checkedMerchantId (.rides.rideForceSync) rideId

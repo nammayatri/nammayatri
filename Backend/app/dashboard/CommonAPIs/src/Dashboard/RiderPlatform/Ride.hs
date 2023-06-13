@@ -31,6 +31,7 @@ import Kernel.External.Maps
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Centesimal
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -200,3 +201,10 @@ type TripRouteAPI =
     :> MandatoryQueryParam "lat" Double
     :> MandatoryQueryParam "lon" Double
     :> Get '[JSON] Maps.GetRoutesResp
+
+-- ride force sync ---------------------------------------------
+
+type RideForceSyncAPI =
+  Capture "rideId" (Id Ride)
+    :> "forceSync"
+    :> Post '[JSON] APISuccess

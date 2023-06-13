@@ -24,7 +24,6 @@ module SharedLogic.CallBAP
     sendDriverOffer,
     callOnConfirm,
     buildBppUrl,
-    ACL.UpdateType (..),
   )
 where
 
@@ -145,11 +144,10 @@ sendRideAssignedUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
-  ACL.UpdateType ->
   DRB.Booking ->
   SRide.Ride ->
   m ()
-sendRideAssignedUpdateToBAP updateType booking ride = do
+sendRideAssignedUpdateToBAP booking ride = do
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
@@ -172,11 +170,10 @@ sendRideStartedUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
-  ACL.UpdateType ->
   DRB.Booking ->
   SRide.Ride ->
   m ()
-sendRideStartedUpdateToBAP updateType booking ride = do
+sendRideStartedUpdateToBAP booking ride = do
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
@@ -197,18 +194,17 @@ sendRideCompletedUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
-  ACL.UpdateType ->
   DRB.Booking ->
   SRide.Ride ->
   Fare.FareParameters ->
   Maybe DMPM.PaymentMethodInfo ->
   Maybe Text ->
   m ()
-sendRideCompletedUpdateToBAP updateType booking ride fareParams paymentMethodInfo paymentUrl = do
+sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl = do
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  let rideCompletedBuildReq = ACL.RideCompletedBuildReq {ride, fareParams, paymentMethodInfo, paymentUrl, updateType}
+  let rideCompletedBuildReq = ACL.RideCompletedBuildReq {ride, fareParams, paymentMethodInfo, paymentUrl}
   rideCompletedMsg <- ACL.buildOnUpdateMessage rideCompletedBuildReq
 
   retryConfig <- asks (.longDurationRetryCfg)
@@ -223,12 +219,11 @@ sendBookingCancelledUpdateToBAP ::
     HasLongDurationRetryCfg r c,
     CoreMetrics m
   ) =>
-  ACL.UpdateType ->
   DRB.Booking ->
   DM.Merchant ->
   SRBCR.CancellationSource ->
   m ()
-sendBookingCancelledUpdateToBAP updateType booking transporter cancellationSource = do
+sendBookingCancelledUpdateToBAP booking transporter cancellationSource = do
   let bookingCancelledBuildReq = ACL.BookingCancelledBuildReq {..}
   bookingCancelledMsg <- ACL.buildOnUpdateMessage bookingCancelledBuildReq
 

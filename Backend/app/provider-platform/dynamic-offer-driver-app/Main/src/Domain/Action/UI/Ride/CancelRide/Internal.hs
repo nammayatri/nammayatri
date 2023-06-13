@@ -112,8 +112,8 @@ cancelRideImpl rideId bookingCReason = do
         driverPool <- calculateDriverPool DP.Estimate driverPoolCfg (Just searchTry.vehicleVariant) searchReq.fromLocation merchant.id True Nothing
         if not (null driverPool)
           then repeatSearch merchant farePolicy searchReq searchTry booking ride SBCR.ByDriver now driverPoolCfg
-          else BP.sendBookingCancelledUpdateToBAP BP.SIMPLE booking merchant bookingCReason.source
-      else BP.sendBookingCancelledUpdateToBAP BP.SIMPLE booking merchant bookingCReason.source
+          else BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
+      else BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
 
 cancelRideTransaction ::
   ( EsqDBFlow m r,

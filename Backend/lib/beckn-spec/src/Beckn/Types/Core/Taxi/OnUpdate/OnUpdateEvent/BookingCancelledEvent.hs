@@ -20,32 +20,28 @@ where
 
 import Beckn.Types.Core.Taxi.Common.CancellationSource as Reexport
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_BOOKING_CANCELLED))
-import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.Tags
 import qualified Control.Lens as L
 import Data.Aeson as A
-import Data.OpenApi hiding (Example, example, name, tags)
+import Data.OpenApi hiding (Example, example, name)
 import GHC.Exts (fromList)
 import Kernel.Prelude
-import Kernel.Utils.Schema
 
 data BookingCancelledEvent = BookingCancelledEvent
   { id :: Text,
     update_target :: Text,
     state :: Text,
-    cancellation_reason :: CancellationSource,
-    fulfillment :: FulfillmentInfo
+    cancellation_reason :: CancellationSource
   }
   deriving (Generic, Show)
 
 instance ToJSON BookingCancelledEvent where
-  toJSON BookingCancelledEvent {..} = do
-    let (A.Object fulfJSON) = toJSON fulfillment
+  toJSON BookingCancelledEvent {..} =
     A.Object $
       "id" .= id
         <> "./komn/update_target" .= update_target
         <> "state" .= state
         <> "./komn/cancellation_reason" .= cancellation_reason
-        <> "fulfillment" .= (fulfJSON <> ("state" .= (("code" .= RIDE_BOOKING_CANCELLED) :: A.Object)))
+        <> "fulfillment" .= (("state" .= (("code" .= RIDE_BOOKING_CANCELLED) :: A.Object)) :: A.Object)
 
 instance FromJSON BookingCancelledEvent where
   parseJSON = withObject "BookingCancelledEvent" $ \obj -> do
@@ -56,7 +52,6 @@ instance FromJSON BookingCancelledEvent where
       <*> obj .: "./komn/update_target"
       <*> obj .: "state"
       <*> obj .: "./komn/cancellation_reason"
-      <*> obj .: "fulfillment"
 
 instance ToSchema BookingCancelledEvent where
   declareNamedSchema _ = do
@@ -71,10 +66,12 @@ instance ToSchema BookingCancelledEvent where
                 [("code", update_type)]
             & required L..~ ["code"]
         fulfillment =
-          toInlinedSchema (Proxy :: Proxy FulfillmentInfo)
+          mempty
+            & type_ L.?~ OpenApiObject
             & properties
-              L.<>~ fromList [("state", Inline st)]
-            & required L.<>~ ["state"]
+              L..~ fromList
+                [("state", Inline st)]
+            & required L..~ ["state"]
     return $
       NamedSchema (Just "BookingCancelledEvent") $
         mempty
@@ -94,11 +91,3 @@ instance ToSchema BookingCancelledEvent where
                    "./komn/cancellation_reason",
                    "fulfillment"
                  ]
-
-newtype FulfillmentInfo = FulfillmentInfo
-  { tags :: Maybe Tags
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-instance ToSchema FulfillmentInfo where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

@@ -35,24 +35,6 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Servant hiding (Summary)
 
--- we need to save endpoint transactions only for POST, PUT, DELETE APIs
--- data RideEndpoint
---   = RideStartEndpoint
---   | RideEndEndpoint
---   | RideCancelEndpoint
---   | RideSyncEndpoint
---   | MultipleRideSyncEndpoint
---   deriving (Show, Read)
--- data RideEndpoint я
---   = RideStartEndpoint
---   | RideEndEndpoint
---   | RideCancelEndpoint
---   | RideSyncEndpoint
---   | RideForceSyncEndpoint
---   deriving (Show, Read)
-
--- derivePersistField "RideEndpoint"
-
 ---------------------------------------------------------
 -- ride list --------------------------------------------
 
@@ -338,14 +320,6 @@ data MultipleRideData = MultipleRideData
 
 instance HideSecrets MultipleRideSyncRes where
   hideSecrets = identity
-
----------------------------------------------------------
--- ride force sync ---------------------------------------------
-
-type RideForceSyncAPI =
-  Capture "rideId" (Id Ride)
-    :> "forceSync"
-    :> Post '[JSON] RideSyncRes
 
 ---------------------------------------------------------
 -- ride route -------------------------------------------

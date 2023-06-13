@@ -63,11 +63,13 @@ library
       Beckn.Types.Core.Taxi.API.OnInit
       Beckn.Types.Core.Taxi.API.OnSearch
       Beckn.Types.Core.Taxi.API.OnSelect
+      Beckn.Types.Core.Taxi.API.OnStatus
       Beckn.Types.Core.Taxi.API.OnTrack
       Beckn.Types.Core.Taxi.API.OnUpdate
       Beckn.Types.Core.Taxi.API.Rating
       Beckn.Types.Core.Taxi.API.Search
       Beckn.Types.Core.Taxi.API.Select
+      Beckn.Types.Core.Taxi.API.Status
       Beckn.Types.Core.Taxi.API.Track
       Beckn.Types.Core.Taxi.API.Update
       Beckn.Types.Core.Taxi.Cancel.Req
@@ -145,6 +147,9 @@ library
       Beckn.Types.Core.Taxi.OnSelect.ProviderLocation
       Beckn.Types.Core.Taxi.OnSelect.StartInfo
       Beckn.Types.Core.Taxi.OnSelect.StopInfo
+      Beckn.Types.Core.Taxi.OnStatus
+      Beckn.Types.Core.Taxi.OnStatus.Fulfillment
+      Beckn.Types.Core.Taxi.OnStatus.Order
       Beckn.Types.Core.Taxi.OnTrack
       Beckn.Types.Core.Taxi.OnTrack.Tracking
       Beckn.Types.Core.Taxi.OnUpdate
@@ -159,7 +164,6 @@ library
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent.Payment
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent
-      Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.Tags
       Beckn.Types.Core.Taxi.Rating
       Beckn.Types.Core.Taxi.Rating.FeedbackForm
       Beckn.Types.Core.Taxi.Search
@@ -175,6 +179,7 @@ library
       Beckn.Types.Core.Taxi.Select.Order
       Beckn.Types.Core.Taxi.Select.Quote
       Beckn.Types.Core.Taxi.Select.StartInfo
+      Beckn.Types.Core.Taxi.Status
       Beckn.Types.Core.Taxi.Track
       Beckn.Types.Core.Taxi.Track.Order
       Beckn.Types.Core.Taxi.Update

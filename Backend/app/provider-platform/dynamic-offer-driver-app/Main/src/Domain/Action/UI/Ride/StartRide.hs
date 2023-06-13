@@ -41,7 +41,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import qualified Lib.LocationUpdates as LocUpd
-import SharedLogic.CallBAP (UpdateType (SIMPLE), sendRideStartedUpdateToBAP)
+import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverLocation as QDrLoc
 import qualified Storage.Queries.Ride as QRide
@@ -80,7 +80,7 @@ buildStartRideHandle merchantId = do
         findBookingById = QRB.findById,
         findLocationByDriverId = QDrLoc.findById,
         startRideAndUpdateLocation = SInternal.startRideTransaction,
-        notifyBAPRideStarted = sendRideStartedUpdateToBAP SIMPLE,
+        notifyBAPRideStarted = sendRideStartedUpdateToBAP,
         rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId'),
         initializeDistanceCalculation = LocUpd.initializeDistanceCalculation defaultRideInterpolationHandler,
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock

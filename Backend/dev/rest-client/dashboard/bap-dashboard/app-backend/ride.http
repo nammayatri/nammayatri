@@ -1,0 +1,24 @@
+# access tokens with different roles
+@customer_service = {{bap-dashboard/token/YATRI/customer_service}}
+
+# @name healthcheck
+GET {{bap-dashboard-host}}
+
+###
+
+# @name rideList
+
+GET {{bap-dashboard-host}}/bap/YATRI/ride/list
+?bookingStatus="COMPLETED"
+&customerPhoneNo=9999999999
+&limit=10
+&offset=0
+
+###
+
+# @name rideForceSync
+
+@rideId = {{rideList.response.body.rides[0].rideId}}
+
+POST {{bap-dashboard-host}}/bap/YATRI/ride/{{rideId}}/forceSync
+token: {{customer_service}}

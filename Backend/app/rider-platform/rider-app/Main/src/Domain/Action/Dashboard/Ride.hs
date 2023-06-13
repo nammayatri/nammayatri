@@ -19,9 +19,11 @@ module Domain.Action.Dashboard.Ride
     rideInfo,
     multipleRideCancel,
     MultipleRideCancelReq,
+    rideForceSync,
   )
 where
 
+import Beckn.ACL.Status (buildStatusReq)
 import qualified "dashboard-helper-api" Dashboard.Common as Common
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import Data.Coerce (coerce)
@@ -42,6 +44,7 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.CachedQueries.Merchant (findByShortId)
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -133,6 +136,7 @@ shareRideInfo merchantId rideId = do
       }
 
 ---------------------------------------------------------------------
+
 rideList ::
   ShortId DM.Merchant ->
   Maybe Int ->
@@ -297,4 +301,21 @@ multipleRideCancel ::
   Flow APISuccess
 multipleRideCancel req = do
   mapM_ bookingCancel req.multipleRideCancelInfo
+  pure Success
+
+---------------------------------------------------------------------
+
+rideForceSync ::
+  ShortId DM.Merchant ->
+  Id Common.Ride ->
+  Flow APISuccess
+rideForceSync merchantShortId rideId = do
+  ride <- runInReplica $ QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+
+  merchant <- findMerchantByShortId merchantShortId
+
+  becknStatusReq <- buildStatusReq ride.bppRideId booking merchant
+  void $ withShortRetry $ CallBPP.callStatus booking.providerUrl becknStatusReq
+
   pure Success

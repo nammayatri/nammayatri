@@ -23,7 +23,6 @@ module Domain.Action.Beckn.OnUpdate
     DEstimate.FareRange (..),
     EstimateBreakupInfo (..),
     BreakupPriceInfo (..),
-    UpdateType (..),
   )
 where
 
@@ -68,8 +67,6 @@ import qualified Tools.Notifications as Notify
 -- import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM -- uncomment for update api test
 -- import qualified Storage.CachedQueries.Merchant as CQM -- uncomment for update api test
 
-data UpdateType = SIMPLE | FORCED deriving (Eq)
-
 data OnUpdateReq
   = RideAssignedReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -81,13 +78,11 @@ data OnUpdateReq
         otp :: Text,
         vehicleNumber :: Text,
         vehicleColor :: Text,
-        vehicleModel :: Text,
-        updateType :: UpdateType
+        vehicleModel :: Text
       }
   | RideStartedReq
       { bppBookingId :: Id SRB.BPPBooking,
-        bppRideId :: Id SRide.BPPRide,
-        updateType :: UpdateType
+        bppRideId :: Id SRide.BPPRide
       }
   | RideCompletedReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -97,13 +92,11 @@ data OnUpdateReq
         fareBreakups :: [OnUpdateFareBreakup],
         chargeableDistance :: HighPrecMeters,
         traveledDistance :: HighPrecMeters,
-        paymentUrl :: Maybe Text,
-        updateType :: UpdateType
+        paymentUrl :: Maybe Text
       }
   | BookingCancelledReq
       { bppBookingId :: Id SRB.BPPBooking,
-        cancellationSource :: SBCR.CancellationSource,
-        updateType :: UpdateType
+        cancellationSource :: SBCR.CancellationSource
       }
   | BookingReallocationReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -140,15 +133,13 @@ data ValidatedOnUpdateReq
         vehicleNumber :: Text,
         vehicleColor :: Text,
         vehicleModel :: Text,
-        booking :: SRB.Booking,
-        updateType :: UpdateType
+        booking :: SRB.Booking
       }
   | ValidatedRideStartedReq
       { bppBookingId :: Id SRB.BPPBooking,
         bppRideId :: Id SRide.BPPRide,
         booking :: SRB.Booking,
-        ride :: SRide.Ride,
-        updateType :: UpdateType
+        ride :: SRide.Ride
       }
   | ValidatedRideCompletedReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -160,14 +151,13 @@ data ValidatedOnUpdateReq
         booking :: SRB.Booking,
         ride :: SRide.Ride,
         person :: DP.Person,
-        paymentUrl :: Maybe Text,
-        updateType :: UpdateType
+        paymentUrl :: Maybe Text
       }
   | ValidatedBookingCancelledReq
       { bppBookingId :: Id SRB.BPPBooking,
         cancellationSource :: SBCR.CancellationSource,
         booking :: SRB.Booking,
-        updateType :: UpdateType
+        mbRide :: Maybe SRide.Ride
       }
   | ValidatedBookingReallocationReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -261,7 +251,6 @@ onUpdate ::
   ValidatedOnUpdateReq ->
   m ()
 onUpdate ValidatedRideAssignedReq {..} = do
-  unless (isBookingAssignable || updateType == FORCED) $ throwError (BookingInvalidStatus $ show booking.status)
   ride <- buildRide
   DB.runTransaction $ do
     QRB.updateStatus booking.id SRB.TRIP_ASSIGNED
@@ -296,10 +285,7 @@ onUpdate ValidatedRideAssignedReq {..} = do
             rideRating = Nothing,
             ..
           }
-    isBookingAssignable = booking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT]
 onUpdate ValidatedRideStartedReq {..} = do
-  unless (booking.status == SRB.TRIP_ASSIGNED || updateType == FORCED) $ throwError (BookingInvalidStatus $ show booking.status)
-  unless (ride.status == SRide.NEW || updateType == FORCED) $ throwError (RideInvalidStatus $ show ride.status)
   rideStartTime <- getCurrentTime
   let updRideForStartReq =
         ride{status = SRide.INPROGRESS,
@@ -315,16 +301,6 @@ onUpdate ValidatedRideCompletedReq {..} = do
   SMC.updateTotalRidesCounters booking.riderId
   merchantConfigs <- CMC.findAllByMerchantId person.merchantId
   SMC.updateTotalRidesInWindowCounters booking.riderId merchantConfigs
-
-  let bookingCanBeCompleted = booking.status == SRB.TRIP_ASSIGNED
-      rideCanBeCompleted = ride.status == SRide.INPROGRESS
-      bookingAlreadyCompleted = booking.status == SRB.COMPLETED
-      rideAlreadyCompleted = ride.status == SRide.COMPLETED
-  unless (updateType == FORCED) $ do
-    unless (bookingCanBeCompleted || (bookingAlreadyCompleted && rideCanBeCompleted)) $
-      throwError (BookingInvalidStatus $ show booking.status)
-    unless (rideCanBeCompleted || (rideAlreadyCompleted && bookingCanBeCompleted)) $
-      throwError (RideInvalidStatus $ show ride.status)
 
   rideEndTime <- getCurrentTime
   let updRide =
@@ -343,7 +319,7 @@ onUpdate ValidatedRideCompletedReq {..} = do
   DB.runTransaction $ do
     when shouldUpdateRideComplete $
       QP.updateHasTakenValidRide booking.riderId
-    unless bookingAlreadyCompleted $ QRB.updateStatus booking.id SRB.COMPLETED
+    unless (booking.status == SRB.COMPLETED) $ QRB.updateStatus booking.id SRB.COMPLETED
     whenJust paymentUrl $ QRB.updatePaymentUrl booking.id
     QRide.updateMultiple updRide.id updRide
     QFareBreakup.createMany breakups
@@ -378,15 +354,6 @@ onUpdate ValidatedRideCompletedReq {..} = do
             ..
           }
 onUpdate ValidatedBookingCancelledReq {..} = do
-  mbRide <- QRide.findActiveByRBId booking.id
-
-  let isBookingCancellable =
-        booking.status `elem` [SRB.NEW, SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT, SRB.TRIP_ASSIGNED]
-      isRideCancellable = maybe False (\ride -> ride.status /= SRide.CANCELLED) mbRide
-      bookingAlreadyCancelled = booking.status == SRB.CANCELLED
-  unless (updateType == FORCED) $ do
-    unless (isBookingCancellable || (bookingAlreadyCancelled && isRideCancellable)) $
-      throwError (BookingInvalidStatus $ show booking.status)
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show cancellationSource)
   bookingCancellationReason <- buildBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource booking.merchantId
   merchantConfigs <- CMC.findAllByMerchantId booking.merchantId
@@ -398,7 +365,7 @@ onUpdate ValidatedBookingCancelledReq {..} = do
     mFraudDetected <- SMC.anyFraudDetected booking.riderId booking.merchantId merchantConfigs
     whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id)
   DB.runTransaction $ do
-    unless bookingAlreadyCancelled $ QRB.updateStatus booking.id SRB.CANCELLED
+    unless (booking.status == SRB.CANCELLED) $ QRB.updateStatus booking.id SRB.CANCELLED
     whenJust mbRide $ \ride -> do
       unless (ride.status == SRide.CANCELLED) $ QRide.updateStatus ride.id SRide.CANCELLED
     unless (cancellationSource == SBCR.ByUser) $
@@ -470,13 +437,22 @@ validateRequest RideStartedReq {..} = do
 validateRequest RideCompletedReq {..} = do
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
-  unless (booking.status == SRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
-  unless (ride.status == SRide.INPROGRESS) $ throwError (RideInvalidStatus $ show ride.status)
+  let bookingCanBeCompleted = booking.status == SRB.TRIP_ASSIGNED
+      rideCanBeCompleted = ride.status == SRide.INPROGRESS
+      bookingAlreadyCompleted = booking.status == SRB.COMPLETED
+      rideAlreadyCompleted = ride.status == SRide.COMPLETED
+  unless (bookingCanBeCompleted || (bookingAlreadyCompleted && rideCanBeCompleted)) $
+    throwError (BookingInvalidStatus $ show booking.status)
+  unless (rideCanBeCompleted || (rideAlreadyCompleted && bookingCanBeCompleted)) $
+    throwError (RideInvalidStatus $ show ride.status)
   person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   return $ ValidatedRideCompletedReq {..}
 validateRequest BookingCancelledReq {..} = do
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
-  unless (isBookingCancellable booking) $
+  mbRide <- QRide.findActiveByRBId booking.id
+  let isRideCancellable = maybe False (\ride -> ride.status `notElem` [SRide.INPROGRESS, SRide.CANCELLED]) mbRide
+      bookingAlreadyCancelled = booking.status == SRB.CANCELLED
+  unless (isBookingCancellable booking || (isRideCancellable && bookingAlreadyCancelled)) $
     throwError (BookingInvalidStatus (show booking.status))
   return $ ValidatedBookingCancelledReq {..}
   where

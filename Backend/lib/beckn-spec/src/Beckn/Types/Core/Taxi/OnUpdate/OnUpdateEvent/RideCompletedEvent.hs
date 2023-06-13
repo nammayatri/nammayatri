@@ -21,11 +21,10 @@ where
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_COMPLETED))
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent.Payment as Reexport
-import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.Tags
 import qualified Control.Lens as L
 import Data.Aeson as A
-import Data.OpenApi hiding (Example, example, tags, title, value)
-import EulerHS.Prelude hiding (force, id, (.=))
+import Data.OpenApi hiding (Example, example, title, value)
+import EulerHS.Prelude hiding (id, (.=))
 import GHC.Exts (fromList)
 import Kernel.Utils.GenericPretty (PrettyShow)
 import Kernel.Utils.Schema
@@ -138,8 +137,7 @@ instance ToSchema BreakupPrice where
 data FulfillmentInfo = FulfillmentInfo
   { id :: Text, -- bppRideId
     chargeable_distance :: DecimalValue,
-    traveled_distance :: DecimalValue,
-    tags :: Maybe Tags
+    traveled_distance :: DecimalValue
   }
   deriving (Generic, Show)
 
