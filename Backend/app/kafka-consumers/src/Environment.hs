@@ -95,6 +95,7 @@ data AppEnv = AppEnv
     dumpEvery :: Seconds,
     hostname :: Maybe Text,
     hedisEnv :: HedisEnv,
+    hedisNonCriticaEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
     cutOffHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
@@ -117,6 +118,7 @@ buildAppEnv AppCfg {..} consumerType = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   version <- lookupDeploymentVersion
   hedisEnv <- connectHedis hedisCfg id
+  hedisNonCriticaEnv <- connectHedis hedisCfg id
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv

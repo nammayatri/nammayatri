@@ -59,6 +59,7 @@ data AppEnv = AppEnv
   { esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
     hedisEnv :: HedisEnv,
+    hedisNonCriticaEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
@@ -93,6 +94,7 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   let modifierFunc = ("dashboard:" <>)
   hedisEnv <- connectHedis hedisCfg modifierFunc
+  hedisNonCriticaEnv <- connectHedis hedisCfg modifierFunc
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv

@@ -59,6 +59,7 @@ data HandlerEnv = HandlerEnv
     esqDBReplicaEnv :: EsqDBEnv,
     encTools :: EncTools,
     hedisEnv :: HedisEnv,
+    hedisNonCriticaEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
     cutOffHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
@@ -82,6 +83,7 @@ buildHandlerEnv HandlerCfg {..} = do
   esqDBEnv <- prepareEsqDBEnv appCfg.esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv appCfg.esqDBReplicaCfg loggerEnv
   hedisEnv <- connectHedis appCfg.hedisCfg ("driver-offer-allocator:" <>)
+  hedisNonCriticaEnv <- connectHedis appCfg.hedisCfg ("driver-offer-allocator:" <>)
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv

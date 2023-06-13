@@ -46,6 +46,7 @@ data AppEnv = AppEnv
     coreMetrics :: CoreMetricsContainer,
     kafkaConsumerEnv :: KafkaConsumerEnv,
     hedisEnv :: HedisEnv,
+    hedisNonCriticaEnv :: HedisEnv,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     hedisClusterEnv :: HedisEnv,
@@ -62,6 +63,7 @@ buildAppEnv AppCfg {..} = do
   isShuttingDown <- mkShutdown
   kafkaConsumerEnv <- buildKafkaConsumerEnv kafkaConsumerCfgs
   hedisEnv <- connectHedis hedisCfg riderAppPrefix
+  hedisNonCriticaEnv <- connectHedis hedisCfg riderAppPrefix
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv

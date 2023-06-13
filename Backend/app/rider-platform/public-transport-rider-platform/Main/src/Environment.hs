@@ -77,6 +77,7 @@ data AppEnv = AppEnv
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
     hedisEnv :: HedisEnv,
+    hedisNonCriticaEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
     cutOffHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
@@ -101,6 +102,7 @@ buildAppEnv AppCfg {..} = do
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBAPKafkaEnvs
   hedisEnv <- connectHedis hedisCfg publicTransportBapPrefix
+  hedisNonCriticaEnv <- connectHedis hedisCfg publicTransportBapPrefix
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv

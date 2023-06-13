@@ -39,6 +39,7 @@ data AppEnv = AppEnv
   { loggerConfig :: LoggerConfig,
     loggerEnv :: LoggerEnv,
     hedisEnv :: HedisEnv,
+    hedisNonCriticaEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,

@@ -115,6 +115,7 @@ data AppEnv = AppEnv
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     hedisEnv :: HedisEnv,
+    hedisNonCriticaEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
     isShuttingDown :: TMVar (),
     loggerEnv :: LoggerEnv,
@@ -168,6 +169,7 @@ buildAppEnv cfg@AppCfg {..} = do
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   let modifierFunc = ("dynamic-offer-driver-app:" <>)
   hedisEnv <- connectHedis hedisCfg modifierFunc -- will be depreciated once data is migrated to cluster
+  hedisNonCriticaEnv <- connectHedis hedisCfg modifierFunc
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv

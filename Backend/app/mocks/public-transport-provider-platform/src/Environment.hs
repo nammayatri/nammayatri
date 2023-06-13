@@ -51,6 +51,7 @@ data AppEnv = AppEnv
     coreMetrics :: CoreMetricsContainer,
     authEntity :: AuthenticatingEntity',
     hedisEnv :: HedisEnv,
+    hedisNonCriticaEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
@@ -62,6 +63,7 @@ data AppEnv = AppEnv
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv config@AppCfg {..} = do
   hedisEnv <- connectHedis hedisCfg ("mock_public_transport_provider_platform" <>)
+  hedisNonCriticaEnv <- connectHedis hedisCfg ("mock_public_transport_provider_platform" <>)
   coreMetrics <- registerCoreMetricsContainer
   hedisClusterEnv <-
     if cutOffHedisCluster

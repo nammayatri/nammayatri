@@ -72,6 +72,7 @@ data AppEnv = AppEnv
     driverInactiveSmsTemplate :: Text,
     esqDBEnv :: EsqDBEnv,
     hedisEnv :: Redis.HedisEnv,
+    hedisNonCriticaEnv :: Redis.HedisEnv,
     hedisClusterEnv :: Redis.HedisEnv,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
@@ -93,6 +94,7 @@ buildAppEnv AppCfg {..} = do
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   let modifierFunc = (driverAppName <>)
   hedisEnv <- Redis.connectHedis hedisCfg modifierFunc
+  hedisNonCriticaEnv <- Redis.connectHedis hedisCfg modifierFunc
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv

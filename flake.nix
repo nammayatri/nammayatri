@@ -3,10 +3,9 @@
     common.url = "github:nammayatri/common";
 
     # Backend inputs
-    shared-kernel.url = "github:nammayatri/shared-kernel";
+    shared-kernel.url = "github:nammayatri/shared-kernel/3c73b7e23b52f9746aa7961bebc01eda47b6e74b";
     beckn-gateway.url = "github:nammayatri/beckn-gateway";
     beckn-gateway.inputs.common.follows = "common";
-    beckn-gateway.inputs.shared-kernel.follows = "shared-kernel";
 
     easy-purescript-nix.url = "github:justinwoo/easy-purescript-nix";
     easy-purescript-nix.flake = false;

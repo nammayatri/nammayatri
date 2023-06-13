@@ -134,6 +134,7 @@ data AppEnv = AppEnv
     encTools :: EncTools,
     selfUIUrl :: BaseUrl,
     hedisEnv :: HedisEnv,
+    hedisNonCriticaEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
     cutOffHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
@@ -169,6 +170,7 @@ buildAppEnv AppCfg {..} = do
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBAPKafkaEnvs
   hedisEnv <- connectHedis hedisCfg riderAppPrefix
+  hedisNonCriticaEnv <- connectHedis hedisCfg riderAppPrefix
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv

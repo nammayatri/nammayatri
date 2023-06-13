@@ -47,6 +47,7 @@ runSchedulerService SchedulerConfig {..} handle_ = do
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   coreMetrics <- Metrics.registerCoreMetricsContainer
   hedisEnv <- connectHedis hedisCfg (\k -> hedisPrefix <> ":" <> k)
+  hedisNonCriticaEnv <- connectHedis hedisCfg (\k -> hedisPrefix <> ":" <> k)
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
