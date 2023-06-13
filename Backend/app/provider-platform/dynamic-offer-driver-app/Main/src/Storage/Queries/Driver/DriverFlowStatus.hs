@@ -92,7 +92,7 @@ transformBeamDriverFlowStatusToDomain BeamDFS.DriverFlowStatusT {..} = do
 
 transformDomainDriverFlowStatusToBeam :: DriverFlowStatus -> BeamDFS.DriverFlowStatus
 transformDomainDriverFlowStatusToBeam DriverFlowStatus {..} =
-  BeamDFS.defaultDriverFlowStatus
+  BeamDFS.DriverFlowStatusT
     { BeamDFS.personId = getId personId,
       BeamDFS.flowStatus = flowStatus,
       BeamDFS.updatedAt = updatedAt

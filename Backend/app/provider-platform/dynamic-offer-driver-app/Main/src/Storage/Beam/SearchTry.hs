@@ -106,7 +106,7 @@ instance B.Table SearchTryT where
 
 instance ModelMeta SearchTryT where
   modelFieldModification = searchTryTMod
-  modelTableName = "search_request"
+  modelTableName = "search_try"
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type SearchTry = SearchTryT Identity

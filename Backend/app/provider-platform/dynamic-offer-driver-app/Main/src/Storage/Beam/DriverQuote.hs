@@ -120,7 +120,7 @@ driverQuoteTMod :: DriverQuoteT (B.FieldModification (B.TableField DriverQuoteT)
 driverQuoteTMod =
   B.tableModification
     { id = B.fieldNamed "id",
-      requestId = B.fieldNamed "request_id",
+      requestId = B.fieldNamed "search_request_id",
       searchTryId = B.fieldNamed "search_try_id",
       searchRequestForDriverId = B.fieldNamed "search_request_for_driver_id",
       driverId = B.fieldNamed "driver_id",

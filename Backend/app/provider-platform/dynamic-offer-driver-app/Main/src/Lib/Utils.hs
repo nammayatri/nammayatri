@@ -82,7 +82,7 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
 instance FromBackendRow Postgres Money
 
 instance FromField Money where
-  fromField = fromFieldMoney
+  fromField = fromFieldJSON
 
 instance FromField Centi where
   fromField = fromFieldCenti

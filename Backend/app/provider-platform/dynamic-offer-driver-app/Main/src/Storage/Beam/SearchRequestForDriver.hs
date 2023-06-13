@@ -83,7 +83,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     batchNumber :: B.C f Int,
     lat :: B.C f (Maybe Double),
     lon :: B.C f (Maybe Double),
-    searchRequestValidTill :: B.C f Time.UTCTime,
+    searchRequestValidTill :: B.C f Time.LocalTime,
     driverId :: B.C f Text,
     status :: B.C f Domain.DriverSearchRequestStatus,
     response :: B.C f (Maybe Domain.SearchRequestForDriverResponse),
@@ -97,7 +97,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     parallelSearchRequestCount :: B.C f (Maybe Int),
     driverSpeed :: B.C f (Maybe Double),
     mode :: B.C f (Maybe D.DriverMode),
-    createdAt :: B.C f Time.UTCTime
+    createdAt :: B.C f Time.LocalTime
   }
   deriving (Generic, B.Beamable)
 
@@ -193,37 +193,6 @@ searchRequestForDriverToHSModifiers =
 searchRequestForDriverToPSModifiers :: M.Map Text (A.Value -> A.Value)
 searchRequestForDriverToPSModifiers =
   M.empty
-
-defaultSearchRequestForDriver :: SearchRequestForDriver
-defaultSearchRequestForDriver =
-  SearchRequestForDriverT
-    { id = "",
-      requestId = "",
-      searchTryId = "",
-      startTime = defaultUTCDate,
-      actualDistanceToPickup = "",
-      straightLineDistanceToPickup = "",
-      durationToPickup = "",
-      vehicleVariant = "",
-      batchNumber = 0,
-      lat = Nothing,
-      lon = Nothing,
-      searchRequestValidTill = defaultUTCDate,
-      driverId = "",
-      status = "",
-      createdAt = defaultUTCDate,
-      response = Nothing,
-      driverMinExtraFee = Nothing,
-      driverMaxExtraFee = Nothing,
-      rideRequestPopupDelayDuration = "",
-      isPartOfIntelligentPool = False,
-      cancellationRatio = Nothing,
-      acceptanceRatio = Nothing,
-      driverAvailableTime = Nothing,
-      parallelSearchRequestCount = Nothing,
-      driverSpeed = Nothing,
-      mode = Nothing
-    }
 
 instance Serialize SearchRequestForDriver where
   put = error "undefined"

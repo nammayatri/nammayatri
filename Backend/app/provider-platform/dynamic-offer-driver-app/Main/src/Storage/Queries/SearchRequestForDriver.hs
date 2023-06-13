@@ -14,6 +14,9 @@
 
 module Storage.Queries.SearchRequestForDriver where
 
+-- import Kernel.Storage.Esqueleto as Esq
+
+import qualified Data.Time as T
 import Domain.Types.Person
 import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchRequestForDriver as Domain
@@ -23,7 +26,6 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
--- import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
@@ -163,7 +165,7 @@ findByDriver (Id driverId) = do
         <$> KV.findAllWithKVConnector
           dbCOnf'
           Mesh.meshConfig
-          [Se.And [Se.Is BeamSRFD.driverId $ Se.Eq driverId, Se.Is BeamSRFD.status $ Se.Eq Domain.Active, Se.Is BeamSRFD.searchRequestValidTill $ Se.GreaterThan now]]
+          [Se.And [Se.Is BeamSRFD.driverId $ Se.Eq driverId, Se.Is BeamSRFD.status $ Se.Eq Domain.Active, Se.Is BeamSRFD.searchRequestValidTill $ Se.GreaterThan (T.utcToLocalTime (T.TimeZone (5 * 60 + 30) False "IST") now)]]
     Nothing -> pure []
 
 deleteByDriverId :: L.MonadFlow m => Id Person -> m ()
@@ -226,7 +228,7 @@ transformBeamSearchRequestForDriverToDomain BeamSRFD.SearchRequestForDriverT {..
       requestId = Id requestId,
       searchTryId = Id searchTryId,
       startTime = startTime,
-      searchRequestValidTill = searchRequestValidTill,
+      searchRequestValidTill = T.localTimeToUTC T.utc searchRequestValidTill,
       driverId = Id driverId,
       actualDistanceToPickup = actualDistanceToPickup,
       straightLineDistanceToPickup = straightLineDistanceToPickup,
@@ -236,7 +238,7 @@ transformBeamSearchRequestForDriverToDomain BeamSRFD.SearchRequestForDriverT {..
       batchNumber = batchNumber,
       lat = lat,
       lon = lon,
-      createdAt = createdAt,
+      createdAt = T.localTimeToUTC T.utc createdAt,
       response = response,
       driverMinExtraFee = driverMinExtraFee,
       driverMaxExtraFee = driverMaxExtraFee,
@@ -257,7 +259,7 @@ transformDomainSearchRequestForDriverToBeam SearchRequestForDriver {..} =
       BeamSRFD.requestId = getId requestId,
       BeamSRFD.searchTryId = getId searchTryId,
       BeamSRFD.startTime = startTime,
-      BeamSRFD.searchRequestValidTill = searchRequestValidTill,
+      BeamSRFD.searchRequestValidTill = T.utcToLocalTime (T.TimeZone (5 * 60 + 30) False "IST") searchRequestValidTill,
       BeamSRFD.driverId = getId driverId,
       BeamSRFD.actualDistanceToPickup = actualDistanceToPickup,
       BeamSRFD.straightLineDistanceToPickup = straightLineDistanceToPickup,
@@ -267,7 +269,7 @@ transformDomainSearchRequestForDriverToBeam SearchRequestForDriver {..} =
       BeamSRFD.batchNumber = batchNumber,
       BeamSRFD.lat = lat,
       BeamSRFD.lon = lon,
-      BeamSRFD.createdAt = createdAt,
+      BeamSRFD.createdAt = T.utcToLocalTime (T.TimeZone (5 * 60 + 30) False "IST") createdAt,
       BeamSRFD.response = response,
       BeamSRFD.driverMinExtraFee = driverMinExtraFee,
       BeamSRFD.driverMaxExtraFee = driverMaxExtraFee,
