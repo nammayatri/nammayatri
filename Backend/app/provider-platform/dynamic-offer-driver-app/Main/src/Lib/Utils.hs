@@ -27,6 +27,7 @@ import Domain.Types.Vehicle.Variant (Variant (..))
 import EulerHS.KVConnector.Types (MeshConfig (..))
 import qualified EulerHS.Language as L
 import Kernel.External.Encryption
+import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Types
 import Kernel.Types.Common
@@ -297,6 +298,16 @@ instance HasSqlValueSyntax be Text => HasSqlValueSyntax be DomainFP.NightShiftCh
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainFP.NightShiftCharge
 
 instance FromBackendRow Postgres DomainFP.NightShiftCharge
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Language where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance FromField Language => FromBackendRow Postgres Language
+
+instance FromField Language where
+  fromField = fromFieldEnum
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Language
 
 fromFieldEnum ::
   (Typeable a, Read a) =>

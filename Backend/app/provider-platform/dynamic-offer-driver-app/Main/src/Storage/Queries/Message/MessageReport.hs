@@ -12,13 +12,15 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-identities #-}
 
 module Storage.Queries.Message.MessageReport where
 
 import qualified Database.Beam as B
 import Database.Beam.Postgres
-import qualified Domain.Types.Message.Message as Msg
-import Domain.Types.Message.MessageReport
+import Domain.Types.Message.Message
+import qualified Domain.Types.Message.Message as Msg (Message (id))
+import Domain.Types.Message.MessageReport as DTMR
 import qualified Domain.Types.Message.MessageTranslation as MTD
 import qualified Domain.Types.Person as P
 import qualified EulerHS.KVConnector.Flow as KV
@@ -32,12 +34,17 @@ import Kernel.Storage.Esqueleto hiding (create)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
+import Kernel.Types.Logging
 import qualified Lib.Mesh as Mesh
 import Sequelize
 import qualified Sequelize as Se
+import qualified Storage.Beam.Message.Message as BeamM
 import qualified Storage.Beam.Message.MessageReport as BeamMR
+import qualified Storage.Beam.Message.MessageTranslation as BeamMT
+import Storage.Beam.Person as BeamP (PersonT (createdAt, id))
 import Storage.Queries.Message.Message as QMM hiding (create)
 import Storage.Queries.Message.MessageTranslation as QMMT hiding (create)
+import qualified Storage.Queries.Person as QP
 import Storage.Tabular.Message.Instances ()
 import qualified Storage.Tabular.Message.Message as M
 import Storage.Tabular.Message.MessageReport
@@ -77,7 +84,7 @@ fullMessage lang =
                      &&. messageTranslation ?. MT.MessageTranslationLanguage ==. val (Just lang)
                )
 
-findByDriverIdAndLanguage :: Transactionable m => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, Msg.RawMessage, Maybe MTD.MessageTranslation)]
+findByDriverIdAndLanguage :: Transactionable m => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
 findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
   let limitVal = min (fromMaybe 10 mbLimit) 10
       offsetVal = fromMaybe 0 mbOffset
@@ -90,6 +97,71 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
     offset $ fromIntegral offsetVal
     return (messageReport, message, mbMessageTranslation)
 
+findByDriverIdAndLanguage' :: (L.MonadFlow m, HasField "id" (Maybe MTD.MessageTranslation) (Id Message)) => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
+findByDriverIdAndLanguage' driverId language mbLimit mbOffset = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      let limitVal = min (fromMaybe 10 mbLimit) 10
+          offsetVal = fromMaybe 0 mbOffset
+      messageReport <- do
+        messageReport' <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]
+        case messageReport' of
+          Left _ -> pure []
+          Right result -> pure $ transformBeamMessageReportToDomain <$> result
+      message <- do
+        message' <-
+          KV.findAllWithOptionsKVConnector
+            dbConf'
+            Mesh.meshConfig
+            [Se.Is BeamM.id $ Se.In $ getId . DTMR.messageId <$> messageReport]
+            (Se.Desc BeamM.createdAt)
+            Nothing
+            Nothing
+        case message' of
+          Left _ -> pure []
+          Right result -> traverse QMM.transformBeamMessageToDomain result
+      let rawMessageFromMessage Message {..} =
+            RawMessage
+              { id = id,
+                _type = _type,
+                title = title,
+                description = description,
+                shortDescription = shortDescription,
+                label = label,
+                likeCount = likeCount,
+                mediaFiles = mediaFiles,
+                merchantId = merchantId,
+                createdAt = createdAt
+              }
+      messageTranslation <- do
+        messageTranslation' <-
+          KV.findAllWithOptionsKVConnector
+            dbConf'
+            Mesh.meshConfig
+            [ Se.And
+                [Se.Is BeamMT.messageId $ Se.In $ getId . Msg.id <$> message, Se.Is BeamMT.language $ Se.Eq language]
+            ]
+            (Se.Desc BeamMT.createdAt)
+            Nothing
+            Nothing
+        case messageTranslation' of
+          Left _ -> pure []
+          Right result -> pure $ map Just $ QMMT.transformBeamMessageTranslationToDomain <$> result
+      let messageReportAndMessage = foldl' (getMessageReportAndMessage messageReport) [] message
+      let finalResult = foldl' (getMessageTranslationAndMessage messageTranslation rawMessageFromMessage) [] messageReportAndMessage
+
+      pure $ take limitVal (drop offsetVal finalResult)
+    Nothing -> pure []
+  where
+    getMessageReportAndMessage messageReports acc message' =
+      let messageeReports' = filter (\messageReport -> messageReport.messageId == message'.id) messageReports
+       in acc <> ((\messageReport' -> (messageReport', message')) <$> messageeReports')
+
+    getMessageTranslationAndMessage messageTranslations rawMessageFromMessage acc (msgRep, msg) =
+      let messageTranslations' = filter (\messageTranslation' -> messageTranslation'.id == msg.id) messageTranslations
+       in acc <> ((\messageTranslation' -> (msgRep, rawMessageFromMessage msg, messageTranslation')) <$> messageTranslations')
+
 -- findByDriverIdMessageIdAndLanguage :: Transactionable m => Id P.Driver -> Id Msg.Message -> Language -> m (Maybe (MessageReport, Msg.RawMessage, Maybe MTD.MessageTranslation))
 -- findByDriverIdMessageIdAndLanguage driverId messageId language = do
 --   Esq.findOne $ do
@@ -98,7 +170,7 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
 --       messageReport ^. MessageReportTId ==. val (toKey (messageId, driverId))
 --     return (messageReport, message, mbMessageTranslation)
 
-findByDriverIdMessageIdAndLanguage :: L.MonadFlow m => Id P.Driver -> Id Msg.Message -> Language -> m (Maybe (MessageReport, Msg.RawMessage, Maybe MTD.MessageTranslation))
+findByDriverIdMessageIdAndLanguage :: L.MonadFlow m => Id P.Driver -> Id Msg.Message -> Language -> m (Maybe (MessageReport, RawMessage, Maybe MTD.MessageTranslation))
 findByDriverIdMessageIdAndLanguage driverId messageId language = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
@@ -114,8 +186,6 @@ findByDriverIdMessageIdAndLanguage driverId messageId language = do
             Nothing -> pure Nothing
         Nothing -> pure Nothing
     Nothing -> pure Nothing
-
--- either (pure Nothing) ((transformBeamMessageReportToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamMR.messageId $ Se.Eq messageId, Se.Is BeamMR.driverId $ Se.Eq driverId]],)
 
 -- findByMessageIdAndDriverId :: Transactionable m => Id Msg.Message -> Id P.Driver -> m (Maybe MessageReport)
 -- findByMessageIdAndDriverId messageId driverId =
@@ -158,6 +228,56 @@ findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset messageId mbDelivery
   where
     limitVal = min (maybe 10 fromIntegral mbLimit) 20
     offsetVal = maybe 0 fromIntegral mbOffset
+
+findByMessageIdAndStatusWithLimitAndOffset' ::
+  (L.MonadFlow m, Log m) =>
+  Maybe Int ->
+  Maybe Int ->
+  Id Msg.Message ->
+  Maybe DeliveryStatus ->
+  m [(MessageReport, P.Person)]
+findByMessageIdAndStatusWithLimitAndOffset' mbLimit mbOffset (Id messageID) mbDeliveryStatus = do
+  dbConf <- L.getOption Extra.EulerPsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      let limitVal = min (maybe 10 fromIntegral mbLimit) 20
+          offsetVal = maybe 0 fromIntegral mbOffset
+      messageReport <- do
+        messageReport' <-
+          KV.findAllWithOptionsKVConnector
+            dbConf'
+            Mesh.meshConfig
+            [ Se.And
+                ( [Se.Is BeamMR.messageId $ Se.Eq messageID]
+                    <> ([Se.Is BeamMR.deliveryStatus $ Se.Eq (fromJust mbDeliveryStatus) | isJust mbDeliveryStatus])
+                )
+            ]
+            (Se.Desc BeamMR.createdAt)
+            Nothing
+            Nothing
+        case messageReport' of
+          Left _ -> pure []
+          Right result -> pure $ transformBeamMessageReportToDomain <$> result
+      person <- do
+        person' <-
+          KV.findAllWithOptionsKVConnector
+            dbConf'
+            Mesh.meshConfig
+            [Se.Is BeamP.id $ Se.In $ getId . DTMR.driverId <$> messageReport]
+            (Se.Desc BeamP.createdAt)
+            Nothing
+            Nothing
+        case person' of
+          Left _ -> pure []
+          Right result -> mapM QP.transformBeamPersonToDomain result
+      let personValues = catMaybes person
+      let messageOfPerson = foldl' (getMessageOfPerson messageReport) [] personValues
+      pure $ take limitVal (drop offsetVal messageOfPerson)
+    Nothing -> pure []
+  where
+    getMessageOfPerson messageReports acc person' =
+      let messageReports' = filter (\messageReport -> getId messageReport.driverId == getId person'.id) messageReports
+       in acc <> ((\messageReport -> (messageReport, person')) <$> messageReports')
 
 -- getMessageCountByStatus :: Transactionable m => Id Msg.Message -> DeliveryStatus -> m Int
 -- getMessageCountByStatus messageId status =

@@ -24,10 +24,7 @@ import qualified Data.Map.Strict as M
 import Data.Serialize
 -- import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres (Postgres)
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 -- import qualified Database.PostgreSQL.Simple.FromField as DPSF
 -- import qualified Domain.Types.Issue.IssueTranslation as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
@@ -35,7 +32,7 @@ import GHC.Generics (Generic)
 import Kernel.External.Types (Language)
 import Kernel.Prelude hiding (Generic)
 -- import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -50,16 +47,6 @@ import Sequelize
 --     case (readMaybe (unpackChars value')) of
 --       Just val -> pure val
 --       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
-
-instance FromField Language where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Language where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Language
-
-instance FromBackendRow Postgres Language
 
 instance IsString Language where
   fromString = show

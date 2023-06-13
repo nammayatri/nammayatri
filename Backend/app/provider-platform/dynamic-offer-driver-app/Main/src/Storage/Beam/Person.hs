@@ -65,16 +65,6 @@ import Sequelize
 
 -- instance FromBackendRow Postgres Centesimal
 
-instance FromField Language where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Language where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Language
-
-instance FromBackendRow Postgres Language
-
 instance FromField OptApiMethods where
   fromField = fromFieldEnum
 

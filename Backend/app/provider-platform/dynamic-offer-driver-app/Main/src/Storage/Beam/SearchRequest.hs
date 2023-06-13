@@ -25,17 +25,13 @@ import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 -- import qualified Domain.Types.SearchRequest as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant (Variant)
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Vehicle ()
@@ -97,16 +93,6 @@ instance ToJSON SearchRequest where
   toJSON = A.genericToJSON A.defaultOptions
 
 deriving stock instance Show SearchRequest
-
-instance FromField Maps.Language where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Maps.Language where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Maps.Language
-
-instance FromBackendRow Postgres Maps.Language
 
 -- deriving stock instance Read Money
 

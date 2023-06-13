@@ -142,6 +142,29 @@ findActiveByRBId (Id rbId) = do
         Left _ -> pure Nothing
     Nothing -> pure Nothing
 
+findAllRidesBookingsByRideId :: Transactionable m => Id Merchant -> [Id Ride] -> m [(Ride, Booking)]
+findAllRidesBookingsByRideId merchantId rideIds = Esq.buildDType $ do
+  res <- Esq.findAll' $ do
+    (booking :& ride) <-
+      from $
+        table @BookingT
+          `innerJoin` table @RideT
+            `Esq.on` ( \(booking :& ride) ->
+                         ride ^. Ride.RideBookingId ==. booking ^. BookingTId
+                     )
+    where_ $
+      booking ^. BookingProviderId ==. val (toKey merchantId)
+        &&. ride ^. RideTId `Esq.in_` valList (map toKey rideIds)
+    pure (booking, ride)
+
+  catMaybes
+    <$> forM
+      res
+      ( \(bookingT, rideT) -> runMaybeT do
+          booking <- MaybeT $ buildFullBooking bookingT
+          return (extractSolidType @Ride rideT, booking)
+      )
+
 -- findAllByDriverId ::
 --   Transactionable m =>
 --   Id Person ->
@@ -178,29 +201,6 @@ findActiveByRBId (Id rbId) = do
 --           booking <- MaybeT $ buildFullBooking bookingT
 --           return (extractSolidType @Ride rideT, booking)
 --       )
-
-findAllRidesBookingsByRideId :: Transactionable m => Id Merchant -> [Id Ride] -> m [(Ride, Booking)]
-findAllRidesBookingsByRideId merchantId rideIds = Esq.buildDType $ do
-  res <- Esq.findAll' $ do
-    (booking :& ride) <-
-      from $
-        table @BookingT
-          `innerJoin` table @RideT
-            `Esq.on` ( \(booking :& ride) ->
-                         ride ^. Ride.RideBookingId ==. booking ^. BookingTId
-                     )
-    where_ $
-      booking ^. BookingProviderId ==. val (toKey merchantId)
-        &&. ride ^. RideTId `Esq.in_` valList (map toKey rideIds)
-    pure (booking, ride)
-
-  catMaybes
-    <$> forM
-      res
-      ( \(bookingT, rideT) -> runMaybeT do
-          booking <- MaybeT $ buildFullBooking bookingT
-          return (extractSolidType @Ride rideT, booking)
-      )
 
 findAllRidesBookingsByRideId' :: L.MonadFlow m => Id Merchant -> [Id Ride] -> m [(Ride, Booking)]
 findAllRidesBookingsByRideId' (Id merchantId) rideIds = do
