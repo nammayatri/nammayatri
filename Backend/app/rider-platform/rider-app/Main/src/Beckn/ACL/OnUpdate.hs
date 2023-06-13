@@ -49,7 +49,7 @@ handleError etr action =
     Right msg -> do
       Just <$> action msg
     Left err -> do
-      logTagError "on_init req" $ "on_init error: " <> show err
+      logTagError "on_update req" $ "on_update error: " <> show err
       pure Nothing
 
 parseEvent :: (MonadFlow m) => Text -> OnUpdate.OnUpdateEvent -> m DOnUpdate.OnUpdateReq
@@ -82,7 +82,8 @@ parseEvent _ (OnUpdate.RideCompleted rcEvent) = do
         totalFare = roundToIntegral rcEvent.quote.price.computed_value,
         chargeableDistance = realToFrac rcEvent.fulfillment.chargeable_distance,
         traveledDistance = realToFrac rcEvent.fulfillment.traveled_distance,
-        fareBreakups = mkOnUpdateFareBreakup <$> rcEvent.quote.breakup
+        fareBreakups = mkOnUpdateFareBreakup <$> rcEvent.quote.breakup,
+        paymentUrl = rcEvent.payment.uri
       }
   where
     mkOnUpdateFareBreakup breakup =

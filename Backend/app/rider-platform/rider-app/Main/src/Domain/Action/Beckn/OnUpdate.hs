@@ -62,6 +62,11 @@ import Tools.Maps (LatLong)
 import Tools.Metrics (CoreMetrics)
 import qualified Tools.Notifications as Notify
 
+-- import qualified Beckn.ACL.Update as ACL -- uncomment for update api test
+-- import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM -- uncomment for update api test
+-- import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM -- uncomment for update api test
+-- import qualified Storage.CachedQueries.Merchant as CQM -- uncomment for update api test
+
 data OnUpdateReq
   = RideAssignedReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -86,7 +91,8 @@ data OnUpdateReq
         totalFare :: Money,
         fareBreakups :: [OnUpdateFareBreakup],
         chargeableDistance :: HighPrecMeters,
-        traveledDistance :: HighPrecMeters
+        traveledDistance :: HighPrecMeters,
+        paymentUrl :: Maybe Text
       }
   | BookingCancelledReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -144,7 +150,8 @@ data ValidatedOnUpdateReq
         chargeableDistance :: HighPrecMeters,
         booking :: SRB.Booking,
         ride :: SRide.Ride,
-        person :: DP.Person
+        person :: DP.Person,
+        paymentUrl :: Maybe Text
       }
   | ValidatedBookingCancelledReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -232,6 +239,7 @@ onUpdate ::
     HasBapInfo r m,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
+    -- HasShortDurationRetryCfg r c, -- uncomment for test update api
     HasFlowEnv
       m
       r
@@ -310,10 +318,29 @@ onUpdate ValidatedRideCompletedReq {..} = do
     when shouldUpdateRideComplete $
       QP.updateHasTakenValidRide booking.riderId
     QRB.updateStatus booking.id SRB.COMPLETED
+    whenJust paymentUrl $ QRB.updatePaymentUrl booking.id
     QRide.updateMultiple updRide.id updRide
     QFareBreakup.createMany breakups
     QPFS.updateStatus booking.riderId DPFS.PENDING_RATING {rideId = ride.id}
   QPFS.clearCache booking.riderId
+  -- uncomment for update api test; booking.paymentMethodId should be present
+  -- whenJust booking.paymentMethodId $ \paymentMethodId -> do
+  --   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
+  --   paymentMethod <-
+  --     CQMPM.findByIdAndMerchantId paymentMethodId booking.merchantId
+  --       >>= fromMaybeM (MerchantPaymentMethodDoesNotExist paymentMethodId.getId)
+  --   let dUpdateReq = ACL.PaymentCompletedBuildReq
+  --         { bppBookingId,
+  --           bppRideId = ride.bppRideId,
+  --           paymentMethodInfo = DMPM.mkPaymentMethodInfo paymentMethod,
+  --           bppId = booking.providerId,
+  --           bppUrl = booking.providerUrl,
+  --           transactionId = booking.transactionId,
+  --           city = merchant.city
+  --         }
+  --   becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
+  --   void . withShortRetry $ CallBPP.update booking.providerUrl becknUpdateReq
+
   Notify.notifyOnRideCompleted booking updRide
   where
     buildFareBreakup :: MonadFlow m => Id SRB.Booking -> OnUpdateFareBreakup -> m DFareBreakup.FareBreakup

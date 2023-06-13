@@ -18,6 +18,7 @@ module Beckn.ACL.OnUpdate
   )
 where
 
+import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as BookingCancelledOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.DriverArrivedEvent as DriverArrivedOU
@@ -32,6 +33,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.FareParameters as Fare
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as SP
 import Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as SVeh
@@ -53,7 +55,9 @@ data OnUpdateBuildReq
       }
   | RideCompletedBuildReq
       { ride :: DRide.Ride,
-        fareParams :: Fare.FareParameters
+        fareParams :: Fare.FareParameters,
+        paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
+        paymentUrl :: Maybe Text
       }
   | BookingCancelledBuildReq
       { booking :: DRB.Booking,
@@ -149,11 +153,19 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
       OnUpdate.RideCompleted
         RideCompletedOU.RideCompletedEvent
           { id = ride.bookingId.getId,
-            update_target = "fulfillment.state.code,quote.price,quote.breakup",
+            update_target = "fulfillment.state.code,quote.price,quote.breakup,payment.uri",
             quote =
               RideCompletedOU.RideCompletedQuote
                 { price,
                   breakup
+                },
+            payment =
+              RideCompletedOU.Payment
+                { collected_by = Common.castDPaymentCollector . (.collectedBy) <$> req.paymentMethodInfo,
+                  _type = Common.castDPaymentType . (.paymentType) <$> req.paymentMethodInfo,
+                  instrument = Common.castDPaymentInstrument . (.paymentInstrument) <$> req.paymentMethodInfo,
+                  time = RideCompletedOU.TimeDuration "FIXME",
+                  uri = req.paymentUrl
                 },
             fulfillment =
               RideCompletedOU.FulfillmentInfo

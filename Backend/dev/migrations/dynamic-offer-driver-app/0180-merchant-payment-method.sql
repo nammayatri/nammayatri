@@ -33,9 +33,9 @@ INSERT INTO atlas_driver_offer_bpp.merchant_payment_method (id, merchant_id, pay
     (SELECT
         atlas_driver_offer_bpp.uuid_generate_v4(),
         T1.id,
-        'PREPAID',
+        'POSTPAID',
         'Wallet_DefaultWalletType',
-        'BPP',
+        'BAP',
         10
     FROM atlas_driver_offer_bpp.merchant AS T1)
     ON CONFLICT DO NOTHING;

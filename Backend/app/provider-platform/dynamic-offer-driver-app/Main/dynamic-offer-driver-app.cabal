@@ -30,6 +30,7 @@ library
       API.Beckn.Search
       API.Beckn.Select
       API.Beckn.Track
+      API.Beckn.Update
       API.Dashboard
       API.Dashboard.Booking
       API.Dashboard.Driver
@@ -80,6 +81,7 @@ library
       Beckn.ACL.Search
       Beckn.ACL.Select
       Beckn.ACL.Track
+      Beckn.ACL.Update
       Beckn.Core
       Domain.Action.Beckn.Cancel
       Domain.Action.Beckn.Confirm
@@ -88,6 +90,7 @@ library
       Domain.Action.Beckn.Search
       Domain.Action.Beckn.Select
       Domain.Action.Beckn.Track
+      Domain.Action.Beckn.Update
       Domain.Action.Dashboard.Booking
       Domain.Action.Dashboard.Driver
       Domain.Action.Dashboard.Driver.Registration

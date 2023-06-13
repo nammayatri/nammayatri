@@ -14,6 +14,7 @@
 
 module Beckn.ACL.Init where
 
+import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.API.Init as Init
 import qualified Beckn.Types.Core.Taxi.Init as Init
 import qualified Domain.Action.Beckn.Init as DInit
@@ -69,22 +70,7 @@ mkPaymentMethodInfo :: Init.Payment -> Maybe DMPM.PaymentMethodInfo
 mkPaymentMethodInfo Init.Payment {..} =
   instrument <&> \instrument' -> do
     DMPM.PaymentMethodInfo
-      { collectedBy = castPaymentCollector collected_by,
-        paymentType = castPaymentType _type,
-        paymentInstrument = castPaymentInstrument instrument'
+      { collectedBy = Common.castPaymentCollector collected_by,
+        paymentType = Common.castPaymentType _type,
+        paymentInstrument = Common.castPaymentInstrument instrument'
       }
-
-castPaymentCollector :: Init.PaymentCollector -> DMPM.PaymentCollector
-castPaymentCollector Init.BAP = DMPM.BAP
-castPaymentCollector Init.BPP = DMPM.BPP
-
-castPaymentType :: Init.PaymentType -> DMPM.PaymentType
-castPaymentType Init.ON_ORDER = DMPM.PREPAID
-castPaymentType Init.ON_FULFILLMENT = DMPM.POSTPAID
-
-castPaymentInstrument :: Init.PaymentInstrument -> DMPM.PaymentInstrument
-castPaymentInstrument (Init.Card Init.DefaultCardType) = DMPM.Card DMPM.DefaultCardType
-castPaymentInstrument (Init.Wallet Init.DefaultWalletType) = DMPM.Wallet DMPM.DefaultWalletType
-castPaymentInstrument Init.UPI = DMPM.UPI
-castPaymentInstrument Init.NetBanking = DMPM.NetBanking
-castPaymentInstrument Init.Cash = DMPM.Cash
