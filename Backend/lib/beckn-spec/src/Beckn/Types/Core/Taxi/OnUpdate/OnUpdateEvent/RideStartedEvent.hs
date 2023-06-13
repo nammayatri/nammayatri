@@ -15,11 +15,10 @@
 module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent where
 
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_STARTED))
-import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.Tags
 import qualified Control.Lens as L
 import Data.Aeson as A
-import Data.OpenApi hiding (Example, example, tags)
-import EulerHS.Prelude hiding (force, id, (.=))
+import Data.OpenApi hiding (Example, example)
+import EulerHS.Prelude hiding (id, (.=))
 import GHC.Exts (fromList)
 import Kernel.Utils.Schema
 
@@ -75,9 +74,8 @@ instance ToSchema RideStartedEvent where
               ]
           & required L..~ ["id", "./komn/update_target", "fulfillment"]
 
-data FulfillmentInfo = FulfillmentInfo
-  { id :: Text, -- bppRideId
-    tags :: Maybe Tags
+newtype FulfillmentInfo = FulfillmentInfo
+  { id :: Text -- bppRideId
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 

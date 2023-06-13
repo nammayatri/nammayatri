@@ -12,31 +12,24 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.Tags where
+module Beckn.Types.Core.Taxi.OnStatus.Fulfillment where
 
-import Data.Aeson
-import Data.OpenApi hiding (Example, example, name, tags)
-import Kernel.Prelude
+import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
+import EulerHS.Prelude hiding (id)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
-newtype Tags = Tags
-  { force :: Bool
+data FulfillmentInfo = FulfillmentInfo
+  { id :: Text, -- BPP ride id
+    status :: RideStatus
   }
-  deriving (Generic, Show)
+  deriving (Generic, FromJSON, ToJSON, Show)
 
-instance ToJSON Tags where
-  toJSON = genericToJSON tagsJSONOptions
+instance ToSchema FulfillmentInfo where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
-instance FromJSON Tags where
-  parseJSON = genericParseJSON tagsJSONOptions
-
-instance ToSchema Tags where
-  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions tagsJSONOptions
-
-tagsJSONOptions :: Options
-tagsJSONOptions =
-  defaultOptions
-    { fieldLabelModifier = \case
-        "force" -> "./komn/force"
-        a -> a
-    }
+data RideStatus
+  = NEW
+  | INPROGRESS
+  | COMPLETED
+  | CANCELLED
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

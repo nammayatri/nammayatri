@@ -15,7 +15,6 @@
 module Beckn.ACL.OnUpdate
   ( buildOnUpdateMessage,
     OnUpdateBuildReq (..),
-    UpdateType (..),
   )
 where
 
@@ -29,7 +28,6 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent 
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as RideCompletedOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent as RideStartedOU
-import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.Tags as OnUpdate
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Estimate as DEst
@@ -46,30 +44,24 @@ import Kernel.Utils.Common
 import SharedLogic.FareCalculator
 import Tools.Error
 
-data UpdateType = SIMPLE | FORCED
-
 data OnUpdateBuildReq
   = RideAssignedBuildReq
       { driver :: SP.Person,
         vehicle :: SVeh.Vehicle,
-        ride :: DRide.Ride,
-        updateType :: UpdateType
+        ride :: DRide.Ride
       }
   | RideStartedBuildReq
-      { ride :: DRide.Ride,
-        updateType :: UpdateType
+      { ride :: DRide.Ride
       }
   | RideCompletedBuildReq
       { ride :: DRide.Ride,
         fareParams :: Fare.FareParameters,
         paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
-        paymentUrl :: Maybe Text,
-        updateType :: UpdateType
+        paymentUrl :: Maybe Text
       }
   | BookingCancelledBuildReq
       { booking :: DRB.Booking,
-        cancellationSource :: SBCR.CancellationSource,
-        updateType :: UpdateType
+        cancellationSource :: SBCR.CancellationSource
       }
   | DriverArrivedBuildReq
       { ride :: DRide.Ride,
@@ -120,7 +112,7 @@ buildOnUpdateMessage RideAssignedBuildReq {..} = do
                 },
             agent,
             vehicle = veh,
-            tags = Just $ mkTags updateType
+            ..
           }
   return $
     OnUpdate.OnUpdateMessage $
@@ -129,7 +121,7 @@ buildOnUpdateMessage RideAssignedBuildReq {..} = do
           { id = ride.bookingId.getId,
             state = "ACTIVE",
             update_target = "state,fufillment.state.code,fulfillment.start.authorization,fulfillment.agent,fulfillment.vehicle",
-            fulfillment
+            ..
           }
 buildOnUpdateMessage RideStartedBuildReq {..} = do
   return $
@@ -138,11 +130,7 @@ buildOnUpdateMessage RideStartedBuildReq {..} = do
         RideStartedOU.RideStartedEvent
           { id = ride.bookingId.getId,
             update_target = "fufillment.state.code",
-            fulfillment =
-              RideStartedOU.FulfillmentInfo
-                { id = ride.id.getId,
-                  tags = Just $ mkTags updateType
-                }
+            fulfillment = RideStartedOU.FulfillmentInfo ride.id.getId
           }
 buildOnUpdateMessage req@RideCompletedBuildReq {} = do
   fare <- realToFrac <$> req.ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
@@ -185,8 +173,7 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
               RideCompletedOU.FulfillmentInfo
                 { id = ride.id.getId,
                   chargeable_distance = chargeableDistance,
-                  traveled_distance = traveledDistance,
-                  tags = Just $ mkTags req.updateType
+                  traveled_distance = traveledDistance
                 }
           }
   where
@@ -216,11 +203,7 @@ buildOnUpdateMessage BookingCancelledBuildReq {..} = do
           { id = booking.id.getId,
             state = "CANCELLED",
             update_target = "state,fufillment.state.code",
-            cancellation_reason = castCancellationSource cancellationSource,
-            fulfillment =
-              BookingCancelledOU.FulfillmentInfo
-                { tags = Just $ mkTags updateType
-                }
+            cancellation_reason = castCancellationSource cancellationSource
           }
 buildOnUpdateMessage DriverArrivedBuildReq {..} = do
   return $
@@ -262,7 +245,3 @@ castCancellationSource = \case
   SBCR.ByMerchant -> BookingCancelledOU.ByMerchant
   SBCR.ByAllocator -> BookingCancelledOU.ByAllocator
   SBCR.ByApplication -> BookingCancelledOU.ByApplication
-
-mkTags :: UpdateType -> OnUpdate.Tags
-mkTags SIMPLE = OnUpdate.Tags {force = False}
-mkTags FORCED = OnUpdate.Tags {force = True}

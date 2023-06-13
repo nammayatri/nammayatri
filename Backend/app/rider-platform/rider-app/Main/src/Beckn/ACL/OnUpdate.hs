@@ -65,15 +65,13 @@ parseEvent _ (OnUpdate.RideAssigned taEvent) =
         driverRegisteredAt = taEvent.fulfillment.agent.tags.registered_at,
         vehicleNumber = taEvent.fulfillment.vehicle.registration,
         vehicleColor = taEvent.fulfillment.vehicle.color,
-        vehicleModel = taEvent.fulfillment.vehicle.model,
-        updateType = castUpdateType $ taEvent.fulfillment.tags <&> (.force)
+        vehicleModel = taEvent.fulfillment.vehicle.model
       }
 parseEvent _ (OnUpdate.RideStarted rsEvent) =
   return $
     DOnUpdate.RideStartedReq
       { bppBookingId = Id rsEvent.id,
-        bppRideId = Id rsEvent.fulfillment.id,
-        updateType = castUpdateType $ rsEvent.fulfillment.tags <&> (.force)
+        bppRideId = Id rsEvent.fulfillment.id
       }
 parseEvent _ (OnUpdate.RideCompleted rcEvent) =
   return $
@@ -85,8 +83,7 @@ parseEvent _ (OnUpdate.RideCompleted rcEvent) =
         chargeableDistance = realToFrac rcEvent.fulfillment.chargeable_distance,
         traveledDistance = realToFrac rcEvent.fulfillment.traveled_distance,
         fareBreakups = mkOnUpdateFareBreakup <$> rcEvent.quote.breakup,
-        paymentUrl = rcEvent.payment >>= (.uri),
-        updateType = castUpdateType $ rcEvent.fulfillment.tags <&> (.force)
+        paymentUrl = rcEvent.payment >>= (.uri)
       }
   where
     mkOnUpdateFareBreakup breakup =
@@ -98,8 +95,7 @@ parseEvent _ (OnUpdate.BookingCancelled tcEvent) =
   return $
     DOnUpdate.BookingCancelledReq
       { bppBookingId = Id $ tcEvent.id,
-        cancellationSource = castCancellationSource tcEvent.cancellation_reason,
-        updateType = castUpdateType $ tcEvent.fulfillment.tags <&> (.force)
+        cancellationSource = castCancellationSource tcEvent.cancellation_reason
       }
 parseEvent _ (OnUpdate.BookingReallocation rbrEvent) =
   return $
@@ -139,7 +135,3 @@ castCancellationSource = \case
   OnUpdate.ByMerchant -> SBCR.ByMerchant
   OnUpdate.ByAllocator -> SBCR.ByAllocator
   OnUpdate.ByApplication -> SBCR.ByApplication
-
-castUpdateType :: Maybe Bool -> DOnUpdate.UpdateType
-castUpdateType (Just True) = DOnUpdate.FORCED
-castUpdateType _ = DOnUpdate.SIMPLE

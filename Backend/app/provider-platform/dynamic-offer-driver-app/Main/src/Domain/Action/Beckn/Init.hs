@@ -102,7 +102,7 @@ cancelBooking booking transporterId = do
     QBCR.upsert bookingCancellationReason
     QRB.updateStatus booking.id DRB.CANCELLED
   fork "cancelBooking - Notify BAP" $ do
-    BP.sendBookingCancelledUpdateToBAP BP.SIMPLE booking transporter bookingCancellationReason.source
+    BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source
   pure Ack
   where
     buildBookingCancellationReason = do

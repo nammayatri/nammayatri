@@ -18,7 +18,6 @@ module Domain.Action.Dashboard.Ride
     rideInfo,
     rideSync,
     multipleRideSync,
-    rideForceSync,
     rideRoute,
   )
 where
@@ -256,10 +255,7 @@ mkBookingStatus ride now = do
 
 ---------------------------------------------------------------------
 rideSync :: ShortId DM.Merchant -> Id Common.Ride -> Flow Common.RideSyncRes
-rideSync = rideSync' "rideSync" CallBAP.SIMPLE
-
-rideSync' :: Text -> CallBAP.UpdateType -> ShortId DM.Merchant -> Id Common.Ride -> Flow Common.RideSyncRes
-rideSync' apiName updateType merchantShortId reqRideId = do
+rideSync merchantShortId reqRideId = do
   merchant <- findMerchantByShortId merchantShortId
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
@@ -268,28 +264,28 @@ rideSync' apiName updateType merchantShortId reqRideId = do
   -- merchant access checking
   unless (merchant.id == booking.providerId) $ throwError (RideDoesNotExist rideId.getId)
 
-  logTagInfo ("dashboard -> " <> apiName <> " : ") $ show rideId <> "; status: " <> show ride.status
+  logTagInfo "dashboard -> syncRide : " $ show rideId <> "; status: " <> show ride.status
 
   case ride.status of
-    DRide.NEW -> syncNewRide updateType ride booking
-    DRide.INPROGRESS -> syncInProgressRide updateType ride booking
-    DRide.COMPLETED -> syncCompletedRide updateType ride booking
-    DRide.CANCELLED -> syncCancelledRide updateType ride booking merchant
+    DRide.NEW -> syncNewRide ride booking
+    DRide.INPROGRESS -> syncInProgressRide ride booking
+    DRide.COMPLETED -> syncCompletedRide ride booking
+    DRide.CANCELLED -> syncCancelledRide ride booking merchant
 
-syncNewRide :: CallBAP.UpdateType -> DRide.Ride -> DBooking.Booking -> Flow Common.RideSyncRes
-syncNewRide updateType ride booking = do
+syncNewRide :: DRide.Ride -> DBooking.Booking -> Flow Common.RideSyncRes
+syncNewRide ride booking = do
   handle (errHandler ride.status booking.status "ride assigned") $
-    CallBAP.sendRideAssignedUpdateToBAP updateType booking ride
+    CallBAP.sendRideAssignedUpdateToBAP booking ride
   pure $ Common.RideSyncRes Common.RIDE_NEW "Success. Sent ride started update to bap"
 
-syncInProgressRide :: CallBAP.UpdateType -> DRide.Ride -> DBooking.Booking -> Flow Common.RideSyncRes
-syncInProgressRide updateType ride booking = do
+syncInProgressRide :: DRide.Ride -> DBooking.Booking -> Flow Common.RideSyncRes
+syncInProgressRide ride booking = do
   handle (errHandler ride.status booking.status "ride started") $
-    CallBAP.sendRideStartedUpdateToBAP updateType booking ride
+    CallBAP.sendRideStartedUpdateToBAP booking ride
   pure $ Common.RideSyncRes Common.RIDE_INPROGRESS "Success. Sent ride started update to bap"
 
-syncCancelledRide :: CallBAP.UpdateType -> DRide.Ride -> DBooking.Booking -> DM.Merchant -> Flow Common.RideSyncRes
-syncCancelledRide updateType ride booking merchant = do
+syncCancelledRide :: DRide.Ride -> DBooking.Booking -> DM.Merchant -> Flow Common.RideSyncRes
+syncCancelledRide ride booking merchant = do
   mbBookingCReason <- runInReplica $ QBCReason.findByRideId ride.id
   source <- case mbBookingCReason of
     Just bookingCReason -> pure bookingCReason.source
@@ -306,11 +302,11 @@ syncCancelledRide updateType ride booking merchant = do
               <> "; Using ByMerchant as cancellation source"
           pure DBCReason.ByMerchant
   handle (errHandler ride.status booking.status "booking cancellation") $
-    CallBAP.sendBookingCancelledUpdateToBAP updateType booking merchant source
+    CallBAP.sendBookingCancelledUpdateToBAP booking merchant source
   pure $ Common.RideSyncRes Common.RIDE_CANCELLED "Success. Sent booking cancellation update to bap"
 
-syncCompletedRide :: CallBAP.UpdateType -> DRide.Ride -> DBooking.Booking -> Flow Common.RideSyncRes
-syncCompletedRide updateType ride booking = do
+syncCompletedRide :: DRide.Ride -> DBooking.Booking -> Flow Common.RideSyncRes
+syncCompletedRide ride booking = do
   whenNothing_ ride.fareParametersId $ do
     -- only for old rides
     logWarning "No fare params linked to ride. Using fare params linked to booking, they may be not actual"
@@ -324,7 +320,7 @@ syncCompletedRide updateType ride booking = do
   let mbPaymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
 
   handle (errHandler ride.status booking.status "ride completed") $
-    CallBAP.sendRideCompletedUpdateToBAP updateType booking ride fareParameters mbPaymentMethodInfo mbPaymentUrl
+    CallBAP.sendRideCompletedUpdateToBAP booking ride fareParameters mbPaymentMethodInfo mbPaymentUrl
   pure $ Common.RideSyncRes Common.RIDE_COMPLETED "Success. Sent ride completed update to bap"
 
 ---------------------------------------------------------------------
@@ -360,13 +356,13 @@ multipleRideSync merchantShortId rideSyncReq = do
 syncNewMultipleRide :: DRide.Ride -> DBooking.Booking -> Flow Common.MultipleRideData
 syncNewMultipleRide ride booking = do
   handle (errHandler ride.status booking.status "ride assigned") $
-    CallBAP.sendRideAssignedUpdateToBAP CallBAP.SIMPLE booking ride
+    CallBAP.sendRideAssignedUpdateToBAP booking ride
   pure $ Common.MultipleRideData {newStatus = Common.RIDE_NEW, message = "Success. Sent ride started update to bap", rideId = cast @DRide.Ride @Common.Ride ride.id}
 
 syncInProgressMultipleRide :: DRide.Ride -> DBooking.Booking -> Flow Common.MultipleRideData
 syncInProgressMultipleRide ride booking = do
   handle (errHandler ride.status booking.status "ride started") $
-    CallBAP.sendRideStartedUpdateToBAP CallBAP.SIMPLE booking ride
+    CallBAP.sendRideStartedUpdateToBAP booking ride
   pure $ Common.MultipleRideData {newStatus = Common.RIDE_INPROGRESS, message = "Success. Sent ride started update to bap", rideId = cast @DRide.Ride @Common.Ride ride.id}
 
 syncCancelledMultipleRide :: DRide.Ride -> DBooking.Booking -> DM.Merchant -> Flow Common.MultipleRideData
@@ -380,7 +376,7 @@ syncCancelledMultipleRide ride booking merchant = do
         DBCReason.ByUser -> pure $ Common.MultipleRideData {newStatus = Common.RIDE_CANCELLED, message = "Ride canceled by customer. Nothing to sync, ignoring", rideId = cast @DRide.Ride @Common.Ride ride.id}
         source -> do
           handle (errHandler ride.status booking.status "booking cancellation") $
-            CallBAP.sendBookingCancelledUpdateToBAP CallBAP.SIMPLE booking merchant source
+            CallBAP.sendBookingCancelledUpdateToBAP booking merchant source
           pure $ Common.MultipleRideData {newStatus = Common.RIDE_CANCELLED, message = "Success. Sent booking cancellation update to bap", rideId = cast @DRide.Ride @Common.Ride ride.id}
 
 syncCompletedMultipleRide :: DRide.Ride -> DBooking.Booking -> Flow Common.MultipleRideData
@@ -398,7 +394,7 @@ syncCompletedMultipleRide ride booking = do
   let mbPaymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
 
   handle (errHandler ride.status booking.status "ride completed") $
-    CallBAP.sendRideCompletedUpdateToBAP CallBAP.SIMPLE booking ride fareParameters mbPaymentMethodInfo mbPaymentUrl
+    CallBAP.sendRideCompletedUpdateToBAP booking ride fareParameters mbPaymentMethodInfo mbPaymentUrl
   pure $ Common.MultipleRideData {newStatus = Common.RIDE_COMPLETED, message = "Success. Sent ride completed update to bap", rideId = cast @DRide.Ride @Common.Ride ride.id}
 
 errHandler :: DRide.RideStatus -> DBooking.BookingStatus -> Text -> SomeException -> Flow ()
@@ -414,7 +410,3 @@ errHandler rideStatus bookingStatus desc exc
   where
     bookingErrMessage = "Fail to send " <> desc <> " update. Bpp booking status: " <> show bookingStatus <> "."
     rideErrMessage = "Fail to send " <> desc <> " update. Bpp ride status: " <> show rideStatus <> "."
-
----------------------------------------------------------------------
-rideForceSync :: ShortId DM.Merchant -> Id Common.Ride -> Flow Common.RideSyncRes
-rideForceSync = rideSync' "rideForceSync" CallBAP.FORCED

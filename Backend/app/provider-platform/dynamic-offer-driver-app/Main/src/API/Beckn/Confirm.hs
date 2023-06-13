@@ -73,7 +73,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
                   void $
                     BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
                   void $
-                    BP.sendRideAssignedUpdateToBAP BP.SIMPLE dConfirmRes.booking ride
+                    BP.sendRideAssignedUpdateToBAP dConfirmRes.booking ride
               DS.driverScoreEventHandler DST.OnNewRideAssigned {merchantId = transporterId, driverId = driverQuote.driverId}
             DBooking.SpecialZoneBooking -> do
               fork "on_confirm/on_update" $ do
