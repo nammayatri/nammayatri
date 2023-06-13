@@ -34,17 +34,27 @@ import Effect.Class (liftEffect)
 import Control.Monad.Except (runExcept)
 import Data.Maybe (fromMaybe, Maybe(..))
 import Screens.Types (AllocationData)
+import Types.ModifyScreenState (modifyScreenState)
+import Types.App (FlowBT, ScreenType(..))
 
-main :: Effect Unit
-main = do
+main :: Event -> Effect Unit
+main event = do
   void $ launchAff $ flowRunner defaultGlobalState $ do
+    _ <- runExceptT $ runBackT $ updateEventData event
     _ <- pure $ printLog "printLog " "in main"
     resp ← runExceptT $ runBackT $ Flow.baseAppFlow
     case resp of
       Right _ -> pure $ printLog "printLog " "Success in main"
       Left error -> do
         _ <- pure $ printLog "printLog error in main" error
-        liftFlow $ main
+        liftFlow $ main event
+
+updateEventData :: Event -> FlowBT String Unit
+updateEventData event =
+    case event.type of
+      "NEW_MESSAGE" -> do
+        modifyScreenState $ NotificationsScreenStateType (\notificationScreen -> notificationScreen{ selectedNotification = Just event.data, deepLinkActivated = true })
+      _ -> pure unit
 
 mainAllocationPop :: String -> AllocationData -> Effect Unit
 mainAllocationPop payload_type entityPayload = do
@@ -61,6 +71,15 @@ mainAllocationPop payload_type entityPayload = do
       _ <- pure $ printLog "payload type mismatch " ""
       throwErr $ show e
 
+-- TODO :: use this case when on click of notification we want to go to alert section from app itself
+-- alertNotification :: String -> Effect Unit
+-- alertNotification id = do
+--   void $ launchAff $ flowRunner $ do
+--     resp ← runExceptT $ runBackT $ Flow.alertNotification id
+--     case resp of
+--       Right x -> pure $ printLog "Event" "alertNotification"
+--       Left error -> throwErr $ show error
+
 onEvent :: String -> Effect Unit
 onEvent "onBackPressed" = PrestoDom.processEvent "onBackPressedEvent" unit
 onEvent _ = pure unit
@@ -72,3 +91,8 @@ onConnectivityEvent triggertype = do
     case resp of
       Right _ -> pure $ printLog "Event" "onConnectivityEvent"
       Left error -> throwErr $ show error
+
+type Event = {
+    type :: String
+  , data :: String
+}
