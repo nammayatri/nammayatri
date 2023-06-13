@@ -61,7 +61,7 @@ buildInitMessage res = do
           Init.Order
             { items = [mkOrderItem mbBppItemId itemCode],
               fulfillment = mkFulfillmentInfo res.fromLoc res.toLoc res.startTime res.maxEstimatedDistance,
-              payment = mkPayment <$> res.paymentMethodInfo
+              payment = mkPayment res.paymentMethodInfo
             }
       }
   where
@@ -119,12 +119,20 @@ mkFulfillmentInfo fromLoc mbToLoc startTime maxDistance =
               }
     }
 
-mkPayment :: DMPM.PaymentMethodInfo -> Init.Payment
-mkPayment DMPM.PaymentMethodInfo {..} =
+mkPayment :: Maybe DMPM.PaymentMethodInfo -> Init.Payment
+mkPayment (Just DMPM.PaymentMethodInfo {..}) =
   Init.Payment
     { collected_by = castPaymentCollector collectedBy,
       _type = castPaymentType paymentType,
-      instrument = castPaymentInstrument paymentInstrument,
+      instrument = Just $ castPaymentInstrument paymentInstrument,
+      time = Init.TimeDuration "P2A" -- FIXME: what is this?
+    }
+-- for backward compatibility
+mkPayment Nothing =
+  Init.Payment
+    { collected_by = Init.BAP,
+      _type = Init.ON_FULFILLMENT,
+      instrument = Nothing,
       time = Init.TimeDuration "P2A" -- FIXME: what is this?
     }
 

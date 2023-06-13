@@ -127,7 +127,7 @@ select personId estimateId req@DSelectReq {..} = do
     QSearchRequest.updateAutoAssign searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2)
     QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, validTill = searchRequest.validTill}
     QEstimate.updateStatus estimateId DEstimate.DRIVER_QUOTE_REQUESTED
-    when (isJust req.customerExtraFee) $ do
+    when (isJust req.customerExtraFee || isJust req.paymentMethodId) $ do
       QSearchRequest.updateCustomerExtraFeeAndPaymentMethod searchRequest.id req.customerExtraFee req.paymentMethodId
   QPFS.clearCache searchRequest.riderId
   pure

@@ -29,9 +29,9 @@ import Kernel.Utils.JSON as JSON
 import Kernel.Utils.Schema
 
 data Payment = Payment
-  { collected_by :: Maybe PaymentCollector,
+  { collected_by :: PaymentCollector,
     params :: PaymentParams,
-    _type :: Maybe PaymentType,
+    _type :: PaymentType,
     instrument :: Maybe PaymentInstrument, -- FIXME find proper fields
     time :: TimeDuration, -- FIXME: what is this?
     uri :: Maybe Text

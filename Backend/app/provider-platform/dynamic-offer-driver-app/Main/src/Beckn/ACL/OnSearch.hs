@@ -63,7 +63,15 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
             rides_completed = 0, --FIXME
             rides_confirmed = 0 --FIXME
           }
-      payments = mkPayment <$> paymentMethodsInfo
+      payments = Just $ mkPayment <$> paymentMethodsInfo
+      -- TODO For backwards compatibility, remove it. Only payments field used in logic.
+      payment =
+        OS.Payment
+          { collected_by = OS.BPP,
+            _type = OS.ON_FULFILLMENT,
+            time = OS.TimeDuration "P2A", -- FIXME: what is this?
+            instrument = Nothing
+          }
   let providerSpec =
         OS.Provider
           { id = provider.subscriberId.getShortId,
@@ -76,6 +84,7 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
             fulfillments,
             contacts,
             tags,
+            payment,
             payments
           }
   OS.OnSearchMessage $
@@ -246,6 +255,6 @@ mkPayment DMPM.PaymentMethodInfo {..} =
   OS.Payment
     { collected_by = Common.castPaymentCollector collectedBy,
       _type = Common.castPaymentType paymentType,
-      instrument = Common.castPaymentInstrument paymentInstrument,
+      instrument = Just $ Common.castPaymentInstrument paymentInstrument,
       time = OS.TimeDuration "P2A" -- FIXME: what is this?
     }

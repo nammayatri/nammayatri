@@ -24,7 +24,7 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 data Order = Order
   { items :: [OrderItem],
     fulfillment :: FulfillmentInfo,
-    payment :: Maybe Payment
+    payment :: Payment
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
