@@ -134,6 +134,7 @@ getDriverInfo (RideBookingRes resp) isSpecialZone =
       , bppRideId : rideList.bppRideId
       , driverNumber : rideList.driverNumber
       , merchantExoPhone : resp.merchantExoPhone
+      , initDistance : Nothing
         }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity

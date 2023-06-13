@@ -114,7 +114,8 @@ instance encodePayload :: Encode Payload where encode = defaultEncode
 type OptionButtonList = {
     reasonCode :: String,
     description :: String,
-    textBoxRequired :: Boolean
+    textBoxRequired :: Boolean,
+    subtext :: Maybe String
 }
 
 newtype Version = Version

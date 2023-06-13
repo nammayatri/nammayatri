@@ -568,6 +568,7 @@ type HomeScreenStateProps =
   , callSupportPopUp :: Boolean
   , defaultPickUpPoint :: String
   , isSpecialZone :: Boolean
+  , cancelSearchCallDriver :: Boolean
   }
 
 type CustomerTipProps = {
@@ -760,6 +761,7 @@ type DriverInfoCard =
   , driverNumber :: Maybe String
   , merchantExoPhone :: String
   , createdAt :: String
+  , initDistance :: Maybe Int
   }
 
 type RatingCard =

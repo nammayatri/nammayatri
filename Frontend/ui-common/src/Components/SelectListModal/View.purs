@@ -41,6 +41,7 @@ import Data.Array (length,(!!))
 import Data.Maybe
 import Common.Types.App
 import JBridge(requestKeyboardShow, hideKeyboardOnNavigation)
+import Styles.Types (FontStyle)
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -334,24 +335,44 @@ radioButton config push index item =
  linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  , gravity CENTER_VERTICAL
-  , padding (Padding 0 12 0 12)
+  , padding $ PaddingVertical 12 12
   ][ imageView
-      [ width (V 24)
-      , height (V 24)
-      , imageWithFallback case config.activeIndex of
-                    Just activeIndex' -> if ( index == activeIndex') then "ny_ic_radio_selected,https://assets.juspay.in/nammayatri/images/common/ny_ic_radio_selected.png" else "ny_ic_radio_unselected,https://assets.juspay.in/nammayatri/images/common/ny_ic_radio_unselected.png"
-                    Nothing           -> "ny_ic_radio_unselected,https://assets.juspay.in/nammayatri/images/common/ny_ic_radio_unselected.png"
+      [ width $ V 24
+      , height $ V 24
+      , imageWithFallback cancelValues.imageString
       ],
-      textView
-      [ text item.description
-      , margin (MarginLeft 10)
-      , fontStyle case config.activeIndex of
-                    Just activeIndex' -> if index == activeIndex' then FontStyle.bold LanguageStyle else FontStyle.regular LanguageStyle
-                    Nothing           -> FontStyle.regular LanguageStyle
-      , color Color.black900
+
+      linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , orientation VERTICAL
+      , margin $ MarginLeft 10
+      ][ textView
+          [ text item.description
+          , padding $ PaddingBottom 5
+          , fontStyle cancelValues.font
+          , color Color.black900
+          ],
+          textView
+          [ text $ fromMaybe "" item.subtext
+          , color Color.black650
+          , visibility cancelValues.visibility
+          ]
       ]
-  ]
+  ] where cancelValues = getCancelValues config.activeIndex item index
+
+getCancelValues :: Maybe Int -> OptionButtonList -> Int -> {imageString :: String , font :: FontStyle , visibility :: Visibility}
+getCancelValues index item index' = if isJust index && index' == (fromMaybe 0 index) 
+                                        then {  imageString : "ny_ic_radio_selected,https://assets.juspay.in/nammayatri/images/common/ny_ic_radio_selected.png",
+                                                font : FontStyle.bold LanguageStyle,
+                                                visibility : if item.subtext == Nothing then GONE else VISIBLE
+                                          }
+                                        else {  imageString : "ny_ic_radio_unselected,https://assets.juspay.in/nammayatri/images/common/ny_ic_radio_unselected.png",
+                                                font : FontStyle.regular LanguageStyle,
+                                                visibility : GONE
+                                          }
+
+
 primaryButtonConfig :: Config -> PrimaryButtonConfig.Config
 primaryButtonConfig config = let
   config' = PrimaryButtonConfig.config
@@ -406,4 +427,5 @@ dummyReason = {
   reasonCode : ""
 , description : ""
 , textBoxRequired : false
+, subtext : Nothing
 }
