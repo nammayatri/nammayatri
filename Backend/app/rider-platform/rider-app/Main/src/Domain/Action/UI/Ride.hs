@@ -44,7 +44,12 @@ import qualified Tools.Maps as MapSearch
 import Tools.Metrics
 import qualified Tools.Notifications as Notify
 
-type GetDriverLocResp = MapSearch.LatLong
+data GetDriverLocResp = GetDriverLocResp
+  { lat :: Double,
+    lon :: Double,
+    lastUpdate :: UTCTime
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 data GetRideStatusResp = GetRideStatusResp
   { fromLocation :: BookingLocationAPIEntity,
@@ -91,7 +96,12 @@ getDriverLoc rideId personId = do
         when (isNothing mbHasReachedNotified && distance <= driverReachedDistance) $ do
           Notify.notifyDriverHasReached personId ride.otp ride.vehicleNumber
           Redis.setExp driverHasReached () 1500
-  return res.currPoint
+  return $
+    GetDriverLocResp
+      { lat = res.currPoint.lat,
+        lon = res.currPoint.lon,
+        lastUpdate = res.lastUpdate
+      }
   where
     distanceUpdates = "Ride:GetDriverLoc:DriverDistance " <> rideId.getId
     driverOnTheWay = "Ride:GetDriverLoc:DriverIsOnTheWay " <> rideId.getId
