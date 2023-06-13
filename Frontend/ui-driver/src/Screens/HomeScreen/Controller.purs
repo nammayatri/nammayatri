@@ -371,7 +371,7 @@ eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
   _ <- pure $ removeAllPolylines ""
   updateAndExit state {props {endRidePopUp = false, rideActionModal = false}} $ EndRide state {props {endRidePopUp = false, rideActionModal = false, zoneRideBooking = true}}
 
-eval (CancelRideModalAction (SelectListModal.UpdateIndex indexValue)) state = continue state { data = state.data { cancelRideModal  { activeIndex = Just indexValue, selectedReasonCode =  (fromMaybe {reasonCode : "", description : "",textBoxRequired:false} (((state.data.cancelRideModal).selectionOptions)Array.!!indexValue) ).reasonCode } } }
+eval (CancelRideModalAction (SelectListModal.UpdateIndex indexValue)) state = continue state { data = state.data { cancelRideModal  { activeIndex = Just indexValue, selectedReasonCode = (fromMaybe dummyCancelReason $ state.data.cancelRideModal.selectionOptions Array.!!indexValue).reasonCode } } }
 eval (CancelRideModalAction (SelectListModal.TextChanged  valId newVal)) state = continue state { data {cancelRideModal { selectedReasonDescription = newVal, selectedReasonCode = "OTHER"}}}
 eval (CancelRideModalAction (SelectListModal.Button1 PrimaryButtonController.OnClick)) state = do
   pure $ hideKeyboardOnNavigation true
@@ -622,31 +622,37 @@ cancellationReasons dummy = [
           reasonCode: "VEHICLE_ISSUE"
         , description: (getString VEHICLE_ISSUE)
         , textBoxRequired : false
+        , subtext: Nothing
         },
         {
           reasonCode: "PICKUP_TOO_FAR"
         , description: (getString PICKUP_TOO_FAR)
         , textBoxRequired : false
+        , subtext: Nothing
         },
         {
           reasonCode: "CUSTOMER_NOT_PICKING_CALL"
         , description: (getString CUSTOMER_NOT_PICKING_CALL)
         , textBoxRequired : false
+        , subtext: Nothing
         },
         {
           reasonCode: "TRAFFIC_JAM"
         , description: (getString TRAFFIC_JAM)
         , textBoxRequired : false
+        , subtext: Nothing
         },
         {
           reasonCode: "CUSTOMER_WAS_RUDE"
         , description: (getString CUSTOMER_WAS_RUDE)
         , textBoxRequired : false
+        , subtext: Nothing
         },
         {
           reasonCode: "OTHER"
         , description: (getString OTHER)
         , textBoxRequired : true
+        , subtext: Nothing
         }
 ]
 
@@ -655,6 +661,7 @@ dummyCancelReason =  {
         reasonCode : ""
         , description :""
         , textBoxRequired : false
+        , subtext : Nothing
         }
 
 getValueFromRange :: Int -> Int -> Int -> Int -> Int  -> Int

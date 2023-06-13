@@ -155,6 +155,7 @@ initData = {
     , isMockLocation: false
     , isSpecialZone : false
     , defaultPickUpPoint : ""
+    , cancelSearchCallDriver : false
     }
 }
     
@@ -273,6 +274,7 @@ dummyDriverInfo =
   , driverNumber : Nothing
   , merchantExoPhone : ""
   , createdAt : ""
+  , initDistance : Nothing
   }
 
 dummySettingBar :: SettingSideBarState
