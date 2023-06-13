@@ -21,6 +21,7 @@ import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.FarePolicy as DomainFP
 import Domain.Types.Vehicle.Variant (Variant (..))
 import Kernel.External.Encryption
+import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Types
 import Kernel.Types.Common
@@ -173,6 +174,16 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be DomainFP.NightShift
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainFP.NightShiftCharge
 
 instance FromBackendRow Postgres DomainFP.NightShiftCharge
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Language where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance FromField Language => FromBackendRow Postgres Language
+
+instance FromField Language where
+  fromField = fromFieldEnum
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Language
 
 fromFieldEnum ::
   (Typeable a, Read a) =>

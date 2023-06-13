@@ -39,7 +39,6 @@ import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Vehicle ()
-import qualified Tools.Maps as Maps
 
 -- fromFieldEnum ::
 --   (Typeable a, Read a) =>
@@ -168,16 +167,6 @@ instance ToJSON SearchTry where
   toJSON = A.genericToJSON A.defaultOptions
 
 deriving stock instance Show SearchTry
-
-instance FromField Maps.Language where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Maps.Language where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Maps.Language
-
-instance FromBackendRow Postgres Maps.Language
 
 -- deriving stock instance Read Money
 
