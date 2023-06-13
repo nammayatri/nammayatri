@@ -107,7 +107,7 @@ verifyRC isDashboard mbMerchant (personId, _) req@DriverRCReq {..} = do
       image <- getImage imageId
       resp <-
         Verification.extractRCImage person.merchantId $
-          Verification.ExtractImageReq {image1 = image, image2 = Nothing}
+          Verification.ExtractImageReq {image1 = image, image2 = Nothing, driverId = person.id.getId}
       case resp.extractedRC of
         Just extractedRC -> do
           let extractRCNumber = removeSpaceAndDash <$> extractedRC.rcNumber
@@ -158,7 +158,7 @@ verifyRCFlow person imageExtraction rcNumber imageId dateOfRegistration = do
           else Domain.Skipped
   verifyRes <-
     Verification.verifyRCAsync person.merchantId $
-      Verification.VerifyRCAsyncReq {rcNumber}
+      Verification.VerifyRCAsyncReq {rcNumber = rcNumber, driverId = person.id.getId}
   idfyVerificationEntity <- mkIdfyVerificationEntity verifyRes.requestId now imageExtractionValidation encryptedRC
   runTransaction $ IVQuery.create idfyVerificationEntity
   where

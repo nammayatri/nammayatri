@@ -117,7 +117,7 @@ verifyDL isDashboard mbMerchant (personId, _) req@DriverDLReq {..} = do
       image2 <- getImage `mapM` imageId2
       resp <-
         Verification.extractDLImage person.merchantId $
-          Verification.ExtractImageReq {image1, image2}
+          Verification.ExtractImageReq {image1, image2, driverId = person.id.getId}
       case resp.extractedDL of
         Just extractedDL -> do
           let extractDLNumber = removeSpaceAndDash <$> extractedDL.dlNumber
@@ -157,7 +157,7 @@ verifyDLFlow person onboardingDocumentConfig dlNumber driverDateOfBirth imageId1
           else Domain.Skipped
   verifyRes <-
     Verification.verifyDLAsync person.merchantId $
-      Verification.VerifyDLAsyncReq {dlNumber, dateOfBirth = driverDateOfBirth}
+      Verification.VerifyDLAsyncReq {dlNumber, dateOfBirth = driverDateOfBirth, driverId = person.id.getId}
   encryptedDL <- encrypt dlNumber
   idfyVerificationEntity <- mkIdfyVerificationEntity verifyRes.requestId now imageExtractionValidation encryptedDL
   runTransaction $ IVQuery.create idfyVerificationEntity

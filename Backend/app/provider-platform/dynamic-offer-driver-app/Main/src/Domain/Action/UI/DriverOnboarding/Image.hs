@@ -124,7 +124,7 @@ validateImage isDashboard mbMerchant (personId, _) ImageValidateRequest {..} = d
   -- skipping validation for rc as validation not available in idfy
   validationOutput <-
     Verification.validateImage merchantId $
-      Verification.ValidateImageReq {image, imageType = castImageType imageType}
+      Verification.ValidateImageReq {image, imageType = castImageType imageType, driverId = person.id.getId}
   when validationOutput.validationAvailable $ do
     checkErrors imageEntity.id imageType validationOutput.detectedImage
   runTransaction $ Query.updateToValid imageEntity.id
