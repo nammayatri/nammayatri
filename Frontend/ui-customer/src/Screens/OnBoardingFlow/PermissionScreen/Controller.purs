@@ -26,6 +26,8 @@ import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (PermissionScreenState)
+import Effect.Unsafe 
+import Engineering.Helpers.LogEvent (logEvent)
 
 instance showAction :: Show Action where 
     show _ = ""
@@ -86,7 +88,7 @@ eval (InternetCallBackCustomer isInternetAvailable) state = do
 
 eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = do
   let _ = unsafePerformEffect $ requestLocation unit
-      _ = firebaseLogEvent "ny_user_grant_location_permission"
+      _ = unsafePerformEffect $ logEvent state.logField "ny_user_grant_location_permission"
   continue state
 
 eval RequestLocation state = do 

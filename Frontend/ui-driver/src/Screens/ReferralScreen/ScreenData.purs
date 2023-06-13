@@ -18,6 +18,7 @@ module Screens.ReferralScreen.ScreenData where
 import Screens.Types (ReferralScreenState, BottomNavBarState, ReferralType(..))
 import PrestoDOM.Types.Core (toPropValue)
 import Data.Maybe (Maybe(..))
+import Foreign.Object (empty)
 
 initData :: ReferralScreenState
 initData =  {
@@ -37,6 +38,7 @@ initData =  {
         totalReferredCustomers : 0
     }
 }
+  , logField : empty
   }
 ,  props: {
     primarybtnActive :false,

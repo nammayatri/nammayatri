@@ -20,6 +20,7 @@ import Screens.Types (AnimationState(..), MyRidesScreenState, IndividualRideCard
 import Services.API (BookingLocationAPIEntity(..))
 import MerchantConfig.DefaultConfig as DC
 import Prelude ((<>))
+import Foreign.Object (empty)
 
 initData :: MyRidesScreenState
 initData =
@@ -37,6 +38,7 @@ initData =
       , offsetValue: 0
       , loadMoreText: "LoadMore"
       , config: DC.config
+      , logField : empty
       }
   , prestoListArrayItems: []
   }

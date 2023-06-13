@@ -71,6 +71,11 @@ import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREENOUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), defaultGlobalState)
 import Types.ModifyScreenState (modifyScreenState, updateStage)
+import Screens.DriverProfileScreen.Controller (getDowngradeOptionsSelected)
+import MerchantConfig.Utils(getMerchant, Merchant(..))
+import Presto.Core.Types.Language.Flow (getLogFields)
+import Control.Monad.Trans.Class (lift)
+import Engineering.Helpers.LogEvent (logEvent)
 
 baseAppFlow :: FlowBT String Unit
 baseAppFlow = do
@@ -151,12 +156,13 @@ loginFlow = do
 enterOTPFlow :: FlowBT String Unit
 enterOTPFlow = do
   action <- UI.enterOTP
+  logField_ <- lift $ lift $ getLogFields
   case action of
     DRIVER_INFO_API_CALL updatedState -> do
       void $ lift $ lift $ loaderText (getString SENDING_OTP) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
       void $ lift $ lift $ toggleLoader true
       (VerifyTokenResp resp) <- Remote.verifyTokenBT (makeVerifyOTPReq updatedState.data.otp) updatedState.data.tokenId
-      _ <- pure $ firebaseLogEvent "ny_driver_verify_otp"
+      _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_driver_verify_otp"
       _ <- pure $ metaLogEvent "ny_driver_verify_otp"
       let driverId = ((resp.person)^. _id)
       _ <- lift $ lift $ setLogField "driver_id" $ encode (driverId)
@@ -264,6 +270,7 @@ onBoardingFlow = do
 uploadDrivingLicenseFlow :: FlowBT String Unit
 uploadDrivingLicenseFlow = do
   (GlobalState state) <- getState
+  logField_ <- lift $ lift $ getLogFields
   flow <- UI.uploadDrivingLicense
   case flow of
     ADD_VEHICLE_DETAILS_SCREEN state -> do
@@ -303,7 +310,7 @@ uploadDrivingLicenseFlow = do
       deleteValueFromLocalStore SET_ALTERNATE_TIME
 
       pure $ factoryResetApp ""
-      _ <- pure $ firebaseLogEvent "logout"
+      _ <- lift $ lift $ liftFlow $ logEvent logField_ "logout"
       loginFlow
 
     VALIDATE_IMAGE_API state -> do
@@ -339,6 +346,7 @@ uploadDrivingLicenseFlow = do
 
 addVehicleDetailsflow :: FlowBT String Unit
 addVehicleDetailsflow = do
+  logField_ <- lift $ lift $ getLogFields
   flow <- UI.addVehicleDetails
   case flow of
     GO_TO_APPLICATION_SCREEN state -> do
@@ -401,7 +409,7 @@ addVehicleDetailsflow = do
       deleteValueFromLocalStore DRIVER_ID
       deleteValueFromLocalStore SET_ALTERNATE_TIME
       pure $ factoryResetApp ""
-      _ <- pure $ firebaseLogEvent "logout"
+      _ <- lift $ lift $ liftFlow $ logEvent logField_  "logout"
       loginFlow
 
     REFER_API_CALL state -> do
@@ -423,6 +431,7 @@ addVehicleDetailsflow = do
 applicationSubmittedFlow :: String -> FlowBT String Unit
 applicationSubmittedFlow screenType = do
   lift $ lift $ doAff do liftEffect hideSplash
+  logField_ <- lift $ lift $ getLogFields 
   action <- UI.applicationStatus screenType
   setValueToLocalStore TEST_FLOW_FOR_REGISTRATOION "COMPLETED"
   case action of
@@ -495,11 +504,12 @@ applicationSubmittedFlow screenType = do
       deleteValueFromLocalStore DRIVER_ID
       deleteValueFromLocalStore SET_ALTERNATE_TIME
       pure $ factoryResetApp ""
-      _ <- pure $ firebaseLogEvent "logout"
+      _ <- lift $ lift $ liftFlow $ logEvent logField_ "logout"
       loginFlow
 
 driverProfileFlow :: FlowBT String Unit
 driverProfileFlow = do
+  logField_ <- lift $ lift $ getLogFields
   _ <- pure $ delay $ Milliseconds 1.0
   _ <- pure $ printLog "Registration token" (getValueToLocalStore REGISTERATION_TOKEN)
   action <- UI.driverProfileScreen
@@ -526,7 +536,7 @@ driverProfileFlow = do
       deleteValueFromLocalStore DRIVER_ID
       deleteValueFromLocalStore SET_ALTERNATE_TIME
       pure $ factoryResetApp ""
-      _ <- pure $ firebaseLogEvent "logout"
+      _ <- lift $ lift $ liftFlow $ logEvent logField_ "logout"
       loginFlow
     HELP_AND_SUPPORT_SCREEN -> do
       let language = ( case getValueToLocalStore LANGUAGE_KEY of
@@ -1028,6 +1038,7 @@ updateDriverStatus status = do
 
 homeScreenFlow :: FlowBT String Unit
 homeScreenFlow = do
+  logField_ <- lift $ lift $ getLogFields
   _ <- pure $ printLog "HOME_SCREEN_FLOW" "."
   _ <- pure $ delay $ Milliseconds 1.0
   _ <- pure $ printLog "Registration token" (getValueToLocalStore REGISTERATION_TOKEN)
@@ -1179,7 +1190,7 @@ homeScreenFlow = do
       _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
       _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
       (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
-      _ <- pure $ firebaseLogEvent "ny_user_ride_completed"
+      _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_ride_completed"
       (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "false" "null"
       case (head rideHistoryResponse.list) of
         Nothing -> pure unit
@@ -1243,7 +1254,7 @@ homeScreenFlow = do
         "lat" : state.data.currentDriverLat
       , "lon" : state.data.currentDriverLon
       })
-      _ <- pure $ firebaseLogEvent "i_have_arrived_clicked"
+      _ <- lift $ lift $ liftFlow $ logEvent logField_ "i_have_arrived_clicked"
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{activeRide{notifiedCustomer = true}}, props{currentStage = ChatWithCustomer}})
       homeScreenFlow
     UPDATE_ROUTE state -> do

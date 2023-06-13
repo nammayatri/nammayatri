@@ -32,6 +32,8 @@ import Styles.Types (FontSize)
 import Components.ChatView.Controller as ChatView
 import Components.RecordAudioModel.Controller as RecordAudioModel
 import MerchantConfig.Types (AppConfig)
+import Foreign.Object (Object)
+import Foreign (Foreign)
 
 type EditTextInLabelState =
  {
@@ -247,7 +249,8 @@ type DriverProfileScreenData = {
   driverAlternateNumber :: Maybe String,
   capacity :: Int,
   downgradeOptions :: Array String,
-  vehicleSelected :: Array VehicleP
+  vehicleSelected :: Array VehicleP,
+  logField :: Object Foreign
 }
 
 type VehicleP = {
@@ -371,7 +374,8 @@ type RideHistoryScreenState =
     offsetValue :: Int,
     loaderButtonVisibility :: Boolean,
     loadMoreDisabled :: Boolean,
-    recievedResponse :: Boolean
+    recievedResponse :: Boolean,
+    logField :: Object Foreign
   }
 
 type RideSelectionScreenState =
@@ -409,6 +413,7 @@ type ReferralScreenStateData = {
         totalReferredCustomers :: Int
       }
     }
+  , logField :: Object Foreign
 }
 
 type ReferralScreenStateProps = {
@@ -585,7 +590,8 @@ type HomeScreenData =  {
   messages :: Array ChatView.ChatComponent,
   suggestionsList :: Array String,
   messageToBeSent :: String,
-  driverAlternateMobile :: Maybe String
+  driverAlternateMobile :: Maybe String,
+  logField :: Object Foreign
  }
 
 type CancelRidePopUpData = {
@@ -846,6 +852,7 @@ type PermissionsScreenState = {
 }
 
 type PermissionsScreenData = {
+  logField :: Object Foreign
 
 }
 

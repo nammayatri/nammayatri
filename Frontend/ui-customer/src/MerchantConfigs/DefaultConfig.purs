@@ -27,4 +27,5 @@ config =
   , fontType: "Assets"
   , languageList : []
   , confirmPickUpLocationBorder: "#101010"
+  , logs : ["JUSPAY", "FIREBASE"]
   }

@@ -63,7 +63,7 @@ import Effect.Aff (launchAff)
 import Effect.Uncurried (runEffectFn1, runEffectFn3, runEffectFn5)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os)
-import Helpers.Utils (addToRecentSearches, consumingBackPress, getCurrentLocationMarker, getDistanceBwCordinates, getExpiryTime, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, convertUTCtoISC, getCurrentUTC)
+import Helpers.Utils (addToRecentSearches,  getCurrentLocationMarker, getDistanceBwCordinates, getExpiryTime, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, convertUTCtoISC, getCurrentUTC)
 import JBridge (addMarker, animateCamera, currentPosition, emitJOSEvent, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, goBackPrevWebPage, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, sendMessage, shareTextMessage, showDialer, stopChatListenerService, toast, toggleBtnLoader)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
@@ -85,6 +85,11 @@ import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, Ge
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
+import Control.Monad.Except.Trans (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
+import MerchantConfig.DefaultConfig as DC
+import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.LogEvent (logEvent,logEventWithTwoParams)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -585,7 +590,7 @@ eval CheckFlowStatusAction state = exit $ CheckFlowStatus state
 
 eval (IsMockLocation isMock) state = do
   let val = isMock == "true"
-  _ <- pure if val then firebaseLogEvent "ny_fakeGPS_enabled" else unit 
+      _ = unsafePerformEffect $ if val then  logEvent (state.data.logField) "ny_fakeGPS_enabled" else pure unit 
   continue state{props{isMockLocation = val}}
 
 eval (UpdateCurrentStage stage) state = do
@@ -643,7 +648,7 @@ eval (ChatViewActionController (ChatView.SendSuggestion chatSuggestion)) state =
   let messageArr = map (\item -> (getEN item)) suggestions
   let message = fromMaybe "" (messageArr !! 0)
   _ <- pure $ sendMessage message
-  _ <- pure $ firebaseLogEvent $ "ny_" <> STR.toLower (STR.replaceAll (STR.Pattern "'") (STR.Replacement "") (STR.replaceAll (STR.Pattern ",") (STR.Replacement "") (STR.replaceAll (STR.Pattern " ") (STR.Replacement "_") message)))
+  let _ = unsafePerformEffect $ logEvent (state.data.logField) $ "ny_" <> STR.toLower (STR.replaceAll (STR.Pattern "'") (STR.Replacement "") (STR.replaceAll (STR.Pattern ",") (STR.Replacement "") (STR.replaceAll (STR.Pattern " ") (STR.Replacement "_") message)))
   continue state
 
 eval (ChatViewActionController (ChatView.BackPressed)) state = do
@@ -782,7 +787,7 @@ eval (UpdatePickupLocation  key lat lon) state =
 
 eval (CheckBoxClick autoAssign) state = do
   let event = if autoAssign then "ny_user_pref_autoassigned" else "ny_user_pref_driveroffers"
-  _ <- pure $ firebaseLogEvent event
+  let _ = unsafePerformEffect $ logEvent state.data.logField event
   _ <- pure $ setValueToLocalStore FLOW_WITHOUT_OFFERS (show autoAssign)
   continue state
 
@@ -795,13 +800,13 @@ eval PreferencesDropDown state = do
 eval (RatingCardAC (RatingCard.Rating index)) state = continue state { data { previousRideRatingState { rating = index } } }
 
 eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = do
-  _ <- pure $ firebaseLogEvent "ny_user_ride_give_feedback"
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_ride_give_feedback"
   updateAndExit state $ SubmitRating state
 
 eval (RatingCardAC (RatingCard.FareBreakUpAC FareBreakUp.ShowInvoice)) state = exit $ GoToInvoice state
 
 eval (RatingCardAC (RatingCard.SkipButtonAC PrimaryButtonController.OnClick)) state = do
-  _ <- pure $ firebaseLogEvent "ny_user_ride_skip_feedback"
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_ride_skip_feedback"
   updateAndExit state GoToHome
 
 eval (RatingCardAC (RatingCard.FeedbackChanged value)) state = continue state { data { previousRideRatingState { feedback = value } } }
@@ -867,12 +872,12 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
     _ <- pure $ spy "state homeScreen" state
     case state.props.currentStage of
       HomeScreen   -> do
-        _ <- pure $ firebaseLogEvent "ny_user_where_to_btn"
-        exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel}}
+        let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
+        exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel}} 
       ConfirmingLocation -> do
         _ <- pure $ exitLocateOnMap ""
         _ <- pure $ updateLocalStage FindingEstimate
-        _ <- pure $ firebaseLogEvent "ny_user_confirm_pickup"
+        let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_confirm_pickup"
         let updatedState = state{props{currentStage = FindingEstimate, locateOnMap = false}}
         -- updateAndExit (updatedState) (UpdatedSource updatedState)
         updateAndExit updatedState $  (UpdatedSource updatedState)
@@ -915,7 +920,7 @@ eval (SearchExpireCountDown seconds id status timerID) state = do
 eval CancelSearch state = case state.props.currentStage of
   FindingEstimate -> do
     _ <- pure $ updateLocalStage SearchLocationModel
-    _ <- pure $ firebaseLogEvent "ny_user_estimate_cancel_search"
+    let _ = unsafePerformEffect $ logEvent state.data.logField  "ny_user_estimate_cancel_search"
     continue state { props { currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation } }
   ConfirmingRide -> continue state { props { currentStage = SettingPrice, isSearchLocation = NoView } }
   _ -> continue state
@@ -930,7 +935,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.PrimaryButtonAC P
   continueWithCmd state
     [ do
         _ <- pure $ showDialer (getDriverNumber "")
-        _ <- (firebaseLogEventWithTwoParams "ny_user_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
+        _ <- (logEventWithTwoParams state.data.logField "ny_user_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
         pure NoAction
     ]
 eval (DriverArrivedAction driverArrivalTime) state = do
@@ -1031,7 +1036,7 @@ eval (CancelRidePopUpAction (CancelRidePopUp.Button2 PrimaryButtonController.OnC
       Nothing    -> continue state
 
 eval (PredictionClickedAction (LocationListItemController.OnClick item)) state = do
-  _ <- pure $ firebaseLogEvent "ny_user_prediction_list_item"
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_prediction_list_item"
   locationSelected item false state{data{source = "Current Location"}, props{isSource = Just false}}
 
 eval (PredictionClickedAction (LocationListItemController.FavClick item)) state = do
@@ -1076,7 +1081,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SavedAd
 eval (TagClick savedAddressType arrItem) state = tagClickEvent savedAddressType arrItem state
 
 eval (SearchLocationModelActionController (SearchLocationModelController.LocationListItemActionController (LocationListItemController.OnClick item))) state = do
-  _ <- pure $ firebaseLogEvent "ny_user_location_list_item"
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_location_list_item"
   let condition = state.props.isSource == Just true && item.locationItemType == Just RECENTS
   locationSelected item{tag=if condition then "" else item.tag} true state{ props { sourceSelectedOnMap = if condition then false else state.props.sourceSelectedOnMap }}
 
@@ -1175,14 +1180,14 @@ eval (SearchLocationModelActionController (SearchLocationModelController.GoBack)
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SetCurrentLocation)) state = do
   _ <- pure $ currentPosition ""
-  _ <- pure $ firebaseLogEvent "ny_user_currentlocation_click"
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_currentlocation_click"
   continue state{props{ sourceSelectedOnMap = if (state.props.isSource == Just true) then false else state.props.sourceSelectedOnMap}}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SetLocationOnMap)) state = do
   let _ = unsafePerformEffect $ runEffectFn5 locateOnMap true 0.0 0.0 "" []
   _ <- pure $ removeAllPolylines ""
   _ <- pure $ hideKeyboardOnNavigation true
-  _ <- pure $ firebaseLogEvent "ny_user_click_set_location_on_map"
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_clic k_set_location_on_map"
   let newState = state{props{isSearchLocation = LocateOnMap, currentStage = SearchLocationModel, locateOnMap = true, isRideServiceable = true, showlocUnserviceablePopUp = false}}
   (updateAndExit newState) $ UpdatedState newState false
 
@@ -1211,7 +1216,7 @@ eval (QuoteListModelActionController (QuoteListModelController.CancelAutoAssigni
   continue state
 
 eval (QuoteListModelActionController (QuoteListModelController.QuoteListItemActionController QuoteListItemController.ConfirmRide)) state = do
-  _ <- pure $ firebaseLogEvent "ny_user_quote_confirm"
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote_confirm"
   exit $ ConfirmRide state
 
 eval (QuoteListModelActionController (QuoteListModelController.QuoteListItemActionController (QuoteListItemController.CountDown seconds id status timerID))) state = do
@@ -1220,7 +1225,7 @@ eval (QuoteListModelActionController (QuoteListModelController.QuoteListItemActi
     let
       autoSelecting = (getValueToLocalStore AUTO_SELECTING) == id
     if (id == fromMaybe "" state.props.selectedQuote && autoSelecting && state.props.currentStage == QuoteList) then do
-      _ <- pure $ firebaseLogEvent "ny_user_auto_assign"
+      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_auto_assign"
       continueWithCmd state [ pure $ (QuoteListModelActionController (QuoteListModelController.PrimaryButtonActionController PrimaryButtonController.OnClick)) ]
     else do
       let
@@ -1250,11 +1255,11 @@ eval (Restart err) state = exit $ (LocationSelected (fromMaybe dummyListItem sta
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.isPopUp of
   TipsPopUp -> do
-    _ <- pure $ firebaseLogEvent if state.props.customerTip.isTipSelected then ("ny_added_tip_for_" <> (show state.props.currentStage)) else "ny_no_tip_added"
+    let _ = unsafePerformEffect $ logEvent state.data.logField if state.props.customerTip.isTipSelected then ("ny_added_tip_for_" <> (show state.props.currentStage)) else "ny_no_tip_added"
     updateAndExit state{props{isPopUp = NoPopUp}} $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = TryAgain, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
   Logout -> continue state{props{isPopUp = NoPopUp}}
   _ -> do
-    _ <- pure $ firebaseLogEvent "ny_tip_not_applicable"
+    let _ = unsafePerformEffect $ logEvent state.data.logField "ny_tip_not_applicable"
     if (isLocalStageOn FindingQuotes ) then exit $ CheckCurrentStatus else updateAndExit state{props{isPopUp = NoPopUp}} $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = TryAgain, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
 
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isPopUp of
@@ -1264,7 +1269,7 @@ eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isP
     _ -> continue state
   Logout -> exit LogoutUser
   ConfirmBack -> do
-    _ <- pure $ firebaseLogEvent "ny_no_retry"
+    let _ = unsafePerformEffect $ logEvent state.data.logField "ny_no_retry"
     case (getValueToLocalStore LOCAL_STAGE) of
       "QuoteList" -> do 
         exit $ CheckCurrentStatus
@@ -1312,14 +1317,14 @@ eval (ShowCallDialer item) state = do
       continueWithCmd state
         [ do
             _ <- pure $ showDialer (if (STR.take 1 state.data.driverInfoCardState.merchantExoPhone) == "0" then state.data.driverInfoCardState.merchantExoPhone else "0" <> state.data.driverInfoCardState.merchantExoPhone)
-            _ <- (firebaseLogEventWithTwoParams "ny_user_anonymous_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
+            let _ = unsafePerformEffect $ logEventWithTwoParams state.data.logField "ny_user_anonymous_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID)
             pure NoAction
         ]
     DIRECT_CALLER -> do
       continueWithCmd state
         [ do
             _ <- pure $ showDialer $ fromMaybe state.data.driverInfoCardState.merchantExoPhone state.data.driverInfoCardState.driverNumber
-            _ <- (firebaseLogEventWithTwoParams "ny_user_direct_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
+            let _ = unsafePerformEffect $ logEventWithTwoParams state.data.logField "ny_user_direct_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID)
             pure NoAction
         ]
     
@@ -1348,7 +1353,7 @@ eval (EstimatesTryAgain (GetQuotesRes quotesRes)) state = do
     YATRI -> estimatesListTryAgainFlow (GetQuotesRes quotesRes) state
     JATRISAATHI -> estimatesListTryAgainFlow (GetQuotesRes quotesRes) state
     _ -> do
-      _ <- pure $ firebaseLogEvent "ny_user_estimate_try_again"
+      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_estimate_try_again"
       let
         estimatedQuotes = quotesRes.estimates
 
@@ -1464,7 +1469,7 @@ eval (CallSupportAction PopUpModal.OnButton1Click) state= continue state{props{c
 
 eval (CallSupportAction PopUpModal.OnButton2Click) state= do
   _ <- pure $ showDialer (getSupportNumber "")
-  _ <- pure $ firebaseLogEvent "ny_user_ride_support_click"
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_ride_support_click"
   continue state{props{callSupportPopUp=false}}
 
 eval (UpdateETA currentETA currentDistance) state = do
@@ -1854,7 +1859,7 @@ estimatesFlow estimatedQuotes state = do
         Nothing -> 0
       showRateCardIcon = if (null estimateFareBreakup) then false else true
   if ((not (null estimatedVarient)) && (isLocalStageOn FindingEstimate)) then do
-    _ <- pure $ firebaseLogEvent "ny_user_estimate"
+    let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_estimate"
     exit
       $ SelectEstimate
           state
@@ -1875,7 +1880,7 @@ specialZoneFlow estimatedQuotes state = do
   let quoteList = getSpecialZoneQuotes estimatedQuotes
       defaultQuote = fromMaybe ChooseVehicleController.config (quoteList !! 0)
   if ((not (null quoteList)) && (isLocalStageOn FindingEstimate)) then do
-    _ <- pure $ firebaseLogEvent "ny_user_quote"
+    let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote"
     _ <- pure $ updateLocalStage SettingPrice
     continue state { data {specialZoneQuoteList = quoteList, specialZoneSelectedQuote = Just defaultQuote.id}, props {currentStage = SettingPrice}}
   else do
@@ -1889,7 +1894,7 @@ estimatesListFlow estimates state = do
   let quoteList = getEstimateList estimates
       defaultQuote = fromMaybe ChooseVehicleController.config (quoteList !! 0)
   if ((not (null quoteList)) && (isLocalStageOn FindingEstimate)) then do
-    _ <- pure $ firebaseLogEvent "ny_user_quote"
+    let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote"
     _ <- pure $ updateLocalStage SettingPrice
     continue state { data {specialZoneQuoteList = quoteList, selectedEstimatesObject = defaultQuote}, props {currentStage = SettingPrice, estimateId = defaultQuote.id}}
   else do

@@ -39,7 +39,11 @@ import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
 import Screens.EmergencyContactsScreen.ScreenData as EmergencyContactsScreenData
 import Screens.OnBoardingFlow.PermissionScreen.ScreenData as PermissionScreenData
 import Screens.CustomerUtils.AboutUsScreen.ScreenData as AboutUsScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EmergencyContactsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, ReferralScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState)
+import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState)
+import Services.API (GetDriverLocationResp)
+import Foreign.Object ( Object(..), empty)
+import Foreign (Foreign)
+
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
 newtype GlobalState = GlobalState { 
@@ -83,7 +87,7 @@ defaultGlobalState = GlobalState {
   , myProfileScreen : MyProfileScreenData.initData
   , savedLocationScreen : SavedLocationScreenData.initData
   , addNewAddressScreen : AddNewAddressScreenData.initData
-  , appUpdatePopUpScreen : {version : 1}
+  , appUpdatePopUpScreen : {version : 1 , logField : empty}
   , referralScreen : ReferralScreenData.initData
   , emergencyContactsScreen : EmergencyContactsScreenData.initData
   , loaderOverlay : LoaderScreenScreenData.initData

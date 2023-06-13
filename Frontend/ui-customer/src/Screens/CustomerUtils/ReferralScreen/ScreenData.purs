@@ -17,6 +17,7 @@ module Screens.ReferralScreen.ScreenData where
 
 import MerchantConfig.DefaultConfig as DC
 import Screens.Types (ReferralScreenState)
+import Foreign.Object (empty)
 
 initData :: ReferralScreenState
 initData =
@@ -26,4 +27,5 @@ initData =
   , isInvalidCode: false
   , isExpandReference: false
   , config : DC.config
+  , logField : empty 
   }

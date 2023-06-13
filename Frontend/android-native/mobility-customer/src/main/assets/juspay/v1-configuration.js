@@ -37,6 +37,7 @@ window.getMerchantConfig = function () {
     "nyBrandingVisibility": true,
     "fontType": "Assets",
     "confirmPickUpLocationBorder" : "#101010",
+    "logs": ["FIREBASE", "JUSPAY"],
     "englishStrings": {
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "Your location helps our system to map down all the near by autos and get you the quickest ride possible.",
       "REQUEST_RIDE" : "Request a NammaYatri Ride",

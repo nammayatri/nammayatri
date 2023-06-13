@@ -1,4 +1,6 @@
 module MerchantConfig.Types where
+import Prelude
+import Styles.Types (FontType)
 
 type AppConfig =
   {
@@ -19,8 +21,9 @@ type AppConfig =
     rateCardColor :: String,
     nyBrandingVisibility :: Boolean,
     fontType :: String,
-    languageList :: Array Language
-    confirmPickUpLocationBorder ::String
+    languageList :: Array Language,
+    confirmPickUpLocationBorder ::String,
+    logs :: Array String
   } 
 
 type QuoteListConfig = {
