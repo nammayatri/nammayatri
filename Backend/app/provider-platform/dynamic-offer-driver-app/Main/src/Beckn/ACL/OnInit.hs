@@ -46,13 +46,13 @@ mkOnInitMessage res = do
                 },
             payment =
               OnInit.Payment
-                { collected_by = Common.castPaymentCollector . (.collectedBy) <$> res.paymentMethodInfo,
+                { collected_by = maybe OnInit.BPP (Common.castPaymentCollector . (.collectedBy)) res.paymentMethodInfo,
                   params =
                     OnInit.PaymentParams
                       { currency = currency,
                         amount = fareDecimalValue
                       },
-                  _type = Common.castPaymentType . (.paymentType) <$> res.paymentMethodInfo,
+                  _type = maybe OnInit.ON_FULFILLMENT (Common.castPaymentType . (.paymentType)) res.paymentMethodInfo,
                   instrument = Common.castPaymentInstrument . (.paymentInstrument) <$> res.paymentMethodInfo,
                   time = OnInit.TimeDuration "FIXME",
                   uri = res.paymentMethodInfo >>= (.paymentUrl)

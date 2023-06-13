@@ -16,6 +16,7 @@ module Domain.Types.Merchant.MerchantPaymentMethod where
 
 import Data.Aeson.Types
 import qualified Data.List as List
+import Data.OpenApi
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
 import Kernel.Prelude
@@ -43,9 +44,11 @@ instance ToJSON (MerchantPaymentMethodD 'Unsafe)
 data PaymentType = PREPAID | POSTPAID
   deriving (Generic, FromJSON, ToJSON, Show, Read, Eq, ToSchema)
 
--- TODO check ToSchema instance
 data PaymentInstrument = Card CardType | Wallet WalletType | UPI | NetBanking | Cash
-  deriving (Generic, Eq, ToSchema)
+  deriving (Generic, Eq)
+
+instance ToSchema PaymentInstrument where
+  declareNamedSchema = genericDeclareNamedSchema $ fromAesonOptions paymentInstrumentOptions
 
 instance ToJSON PaymentInstrument where
   toJSON = genericToJSON paymentInstrumentOptions

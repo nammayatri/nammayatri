@@ -42,7 +42,8 @@ data Provider = Provider
     fulfillments :: [FulfillmentInfo],
     contacts :: Text,
     tags :: ProviderTags,
-    payments :: [Payment]
+    payment :: Payment, -- TODO For backwards compatibility, remove it. Only payments field used in logic.
+    payments :: Maybe [Payment]
   }
   deriving (Generic, Show)
 

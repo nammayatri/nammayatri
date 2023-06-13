@@ -55,7 +55,7 @@ buildInitReq subscriber req = do
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
         maxEstimatedDistance = order.fulfillment.tags.max_estimated_distance,
-        paymentMethodInfo = mkPaymentMethodInfo <$> order.payment,
+        paymentMethodInfo = mkPaymentMethodInfo order.payment,
         ..
       }
   where
@@ -65,13 +65,14 @@ buildInitReq subscriber req = do
         Init.ONE_WAY_SPECIAL_ZONE -> DInit.InitSpecialZoneReq
         _ -> DInit.InitNormalReq
 
-mkPaymentMethodInfo :: Init.Payment -> DMPM.PaymentMethodInfo
+mkPaymentMethodInfo :: Init.Payment -> Maybe DMPM.PaymentMethodInfo
 mkPaymentMethodInfo Init.Payment {..} =
-  DMPM.PaymentMethodInfo
-    { collectedBy = castPaymentCollector collected_by,
-      paymentType = castPaymentType _type,
-      paymentInstrument = castPaymentInstrument instrument
-    }
+  instrument <&> \instrument' -> do
+    DMPM.PaymentMethodInfo
+      { collectedBy = castPaymentCollector collected_by,
+        paymentType = castPaymentType _type,
+        paymentInstrument = castPaymentInstrument instrument'
+      }
 
 castPaymentCollector :: Init.PaymentCollector -> DMPM.PaymentCollector
 castPaymentCollector Init.BAP = DMPM.BAP

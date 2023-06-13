@@ -15,16 +15,20 @@
 module Beckn.Types.Core.Taxi.Common.PaymentInstrument where
 
 import Data.Aeson.Types
+import Data.OpenApi
 import Kernel.Prelude
 
 data PaymentInstrument = Card CardType | Wallet WalletType | UPI | NetBanking | Cash
-  deriving (Generic, Show, ToSchema)
+  deriving (Generic, Show)
 
 instance ToJSON PaymentInstrument where
   toJSON = genericToJSON paymentInstrumentOptions
 
 instance FromJSON PaymentInstrument where
   parseJSON = genericParseJSON paymentInstrumentOptions
+
+instance ToSchema PaymentInstrument where
+  declareNamedSchema = genericDeclareNamedSchema $ fromAesonOptions paymentInstrumentOptions
 
 paymentInstrumentOptions :: Options
 paymentInstrumentOptions =
