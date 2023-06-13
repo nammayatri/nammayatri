@@ -69,7 +69,7 @@ searchCbService context catalog = do
             mobileNumber = provider.contacts,
             ridesCompleted = provider.tags.rides_completed
           }
-  let paymentMethodsInfo = mkPayment <$> provider.payments
+  let paymentMethodsInfo = mkPayment `mapMaybe` (fromMaybe [] provider.payments)
   pure
     DOnSearch.DOnSearchReq
       { requestId = Id context.message_id,
@@ -207,10 +207,11 @@ buildWaitingChargeInfo itemTags = do
     { waitingChargePerMin = itemTags.waiting_charge_per_min
     }
 
-mkPayment :: OnSearch.Payment -> DMPM.PaymentMethodInfo
+mkPayment :: OnSearch.Payment -> Maybe DMPM.PaymentMethodInfo
 mkPayment OnSearch.Payment {..} =
-  DMPM.PaymentMethodInfo
-    { collectedBy = Common.castPaymentCollector collected_by,
-      paymentType = Common.castPaymentType _type,
-      paymentInstrument = Common.castPaymentInstrument instrument
-    }
+  instrument <&> \instrument' -> do
+    DMPM.PaymentMethodInfo
+      { collectedBy = Common.castPaymentCollector collected_by,
+        paymentType = Common.castPaymentType _type,
+        paymentInstrument = Common.castPaymentInstrument instrument'
+      }

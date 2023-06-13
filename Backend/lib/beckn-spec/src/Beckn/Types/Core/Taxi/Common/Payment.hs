@@ -29,7 +29,7 @@ import Kernel.Utils.JSON
 data Payment = Payment
   { collected_by :: PaymentCollector,
     _type :: PaymentType,
-    instrument :: PaymentInstrument, -- FIXME find proper fields
+    instrument :: Maybe PaymentInstrument, -- FIXME find proper fields
     time :: TimeDuration -- FIXME: what is this?
   }
   deriving (Generic, Show, ToSchema)

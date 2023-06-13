@@ -175,7 +175,7 @@ handler merchant sReq = do
           for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
         return (Just (mkQuoteInfo fromLocation toLocation now <$> listOfSpecialZoneQuotes), Nothing)
       DFareProduct.NORMAL -> buildEstimates farePolicies result fromLocation toLocation allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area
-  
+
   merchantPaymentMethods <- CQMPM.findAllByMerchantId merchantId
   let paymentMethodsInfo = DMPM.mkPaymentMethodsInfo <$> merchantPaymentMethods
   buildSearchRes merchant fromLocationLatLong toLocationLatLong mbEstimateInfos quotes searchMetricsMVar paymentMethodsInfo
