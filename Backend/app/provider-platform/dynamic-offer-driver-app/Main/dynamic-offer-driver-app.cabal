@@ -187,6 +187,7 @@ library
       Domain.Types.RegistrationToken
       Domain.Types.Ride
       Domain.Types.RideDetails
+      Domain.Types.RideDeviations
       Domain.Types.RiderDetails
       Domain.Types.SearchRequest
       Domain.Types.SearchRequest.SearchReqLocation
@@ -289,6 +290,7 @@ library
       Storage.Queries.RegistrationToken
       Storage.Queries.Ride
       Storage.Queries.RideDetails
+      Storage.Queries.RideDeviations
       Storage.Queries.RiderDetails
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequestForDriver
@@ -354,6 +356,7 @@ library
       Storage.Tabular.Ride.Instances
       Storage.Tabular.Ride.Table
       Storage.Tabular.RideDetails
+      Storage.Tabular.RideDeviations
       Storage.Tabular.RiderDetails
       Storage.Tabular.SearchRequest
       Storage.Tabular.SearchRequest.SearchReqLocation

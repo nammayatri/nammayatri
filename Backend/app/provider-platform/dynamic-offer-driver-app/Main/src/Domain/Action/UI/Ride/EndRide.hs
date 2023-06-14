@@ -22,6 +22,7 @@ module Domain.Action.UI.Ride.EndRide
     buildEndRideHandle,
     driverEndRide,
     dashboardEndRide,
+    updateDeviations,
   )
 where
 
@@ -34,12 +35,14 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.TransporterConfig as DTConf
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideDeviations as RDT
 import qualified Domain.Types.RiderDetails as RD
 import qualified Domain.Types.Vehicle as DVeh
 import Environment (Flow)
 import EulerHS.Prelude hiding (pi)
 import Kernel.External.Maps
 import Kernel.Prelude (roundToIntegral)
+import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -54,6 +57,7 @@ import qualified Storage.CachedQueries.Merchant as MerchantS
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RideDeviations as RDev
 import Tools.Error
 
 data EndRideReq = DriverReq DriverEndRideReq | DashboardReq DashboardEndRideReq | CallBasedReq CallBasedEndRideReq
@@ -115,12 +119,12 @@ buildEndRideHandle merchantId = do
       }
 
 driverEndRide ::
-  (MonadThrow m, Log m, MonadTime m, MonadGuid m) =>
+  (MonadThrow m, Log m, MonadTime m, MonadGuid m, MonadReader r0 m, MonadIO m) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverEndRideReq ->
   m APISuccess.APISuccess
-driverEndRide handle rideId req =
+driverEndRide handle rideId req = do
   withLogTag ("requestorId-" <> req.requestor.id.getId)
     . endRide handle rideId
     $ DriverReq req
@@ -321,3 +325,13 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
                 else do
                   logTagInfo "Inaccurate Location Updates and Pickup/Drop Deviated." ("DistanceDiff: " <> show distanceDiff)
                   recalculateFareForDistance handle booking ride (booking.estimatedDistance + highPrecMetersToMeters thresholdConfig.upwardsRecomputeBuffer)
+
+updateDeviations :: EsqDBFlow m r => Id DRide.Ride -> Maybe Double -> m ()
+updateDeviations rideId numberOfDeviation = do
+  let rideDeviation =
+        RDT.RideDeviations
+          { id = rideId,
+            numberOfDeviation
+          }
+  Esq.runTransaction $ RDev.create rideDeviation
+  return ()
