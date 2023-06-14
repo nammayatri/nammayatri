@@ -25,7 +25,8 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils
+import Sequelize as Se
 import qualified Storage.Beam.BusinessEvent as BeamBE
 import Storage.Tabular.BusinessEvent ()
 
@@ -57,8 +58,10 @@ logBusinessEvent driverId eventType bookingId whenPoolWasComputed variant distan
             rideId = rideId
           }
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamBE.BusinessEventT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainBusinessEventToBeam bE)
+    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainBusinessEventToBeam bE)
     Nothing -> pure ()
 
 logDriverAssignedEvent :: (L.MonadFlow m, MonadGuid m, MonadTime m) => Id Driver -> Id Booking -> Id Ride -> m ()

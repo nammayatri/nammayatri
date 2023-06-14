@@ -32,8 +32,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Types
 import Kernel.Types.Common
 import Kernel.Utils.Common (encodeToText)
-
--- import Lib.Mesh as Mesh
+import Lib.Mesh as Mesh
 
 -- import Kernel.Types.Time (Seconds (..))
 
@@ -102,7 +101,7 @@ fromFieldMoney ::
   DPSF.Conversion Money
 fromFieldMoney f mbValue = case mbValue of
   Nothing -> DPSF.returnError UnexpectedNull f mempty
-  Just _ -> Money <$> (fromField f mbValue)
+  Just _ -> Money <$> fromField f mbValue
 
 fromFieldCenti ::
   -- (Typeable a, Read a) =>
@@ -123,7 +122,7 @@ fromFieldCentesimal ::
   DPSF.Conversion Centesimal
 fromFieldCentesimal f mbValue = case mbValue of
   Nothing -> DPSF.returnError UnexpectedNull f mempty
-  Just _ -> Centesimal <$> (fromField f mbValue)
+  Just _ -> Centesimal <$> fromField f mbValue
 
 fromFieldMinutes ::
   -- (Typeable a, Read a) =>
@@ -132,7 +131,7 @@ fromFieldMinutes ::
   DPSF.Conversion Minutes
 fromFieldMinutes f mbValue = case mbValue of
   Nothing -> DPSF.returnError UnexpectedNull f mempty
-  Just _ -> Minutes <$> (fromField f mbValue)
+  Just _ -> Minutes <$> fromField f mbValue
 
 fromFieldMeters ::
   -- (Typeable a, Read a) =>
@@ -141,7 +140,7 @@ fromFieldMeters ::
   DPSF.Conversion Meters
 fromFieldMeters f mbValue = case mbValue of
   Nothing -> DPSF.returnError UnexpectedNull f mempty
-  Just _ -> Meters <$> (fromField f mbValue)
+  Just _ -> Meters <$> fromField f mbValue
 
 fromFieldHighPrecMeters ::
   -- (Typeable a, Read a) =>
@@ -150,7 +149,7 @@ fromFieldHighPrecMeters ::
   DPSF.Conversion HighPrecMeters
 fromFieldHighPrecMeters f mbValue = case mbValue of
   Nothing -> DPSF.returnError UnexpectedNull f mempty
-  Just _ -> HighPrecMeters <$> (fromField f mbValue)
+  Just _ -> HighPrecMeters <$> fromField f mbValue
 
 fromFieldHighPrecMoney ::
   -- (Typeable a, Read a) =>
@@ -159,7 +158,7 @@ fromFieldHighPrecMoney ::
   DPSF.Conversion HighPrecMoney
 fromFieldHighPrecMoney f mbValue = case mbValue of
   Nothing -> DPSF.returnError UnexpectedNull f mempty
-  Just _ -> HighPrecMoney <$> (fromField f mbValue)
+  Just _ -> HighPrecMoney <$> fromField f mbValue
 
 fromFieldSeconds ::
   -- (Typeable a, Read a) =>
@@ -168,7 +167,7 @@ fromFieldSeconds ::
   DPSF.Conversion Seconds
 fromFieldSeconds f mbValue = case mbValue of
   Nothing -> DPSF.returnError UnexpectedNull f mempty
-  Just _ -> Seconds <$> (fromField f mbValue)
+  Just _ -> Seconds <$> fromField f mbValue
 
 instance FromField Minutes where
   fromField = fromFieldMinutes
@@ -361,3 +360,12 @@ setFlagsInMeshConfig meshCfg modelName = do
   where
     isKVEnabled _ = False
     isHardKillEnabled _ = True
+
+kvTables :: [Text]
+kvTables = []
+
+kvHardKilledTables :: [Text]
+kvHardKilledTables = []
+
+setMeshConfig :: Text -> MeshConfig
+setMeshConfig modelTableName = meshConfig {meshEnabled = modelTableName `elem` kvTables, kvHardKilled = modelTableName `notElem` kvHardKilledTables}

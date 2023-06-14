@@ -27,7 +27,7 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (addUTCTime, secondsToNominalDiffTime)
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverQuote as BeamDQ
 import Storage.Queries.FareParameters as BeamQFP
@@ -38,10 +38,12 @@ import qualified Storage.Tabular.FareParameters as Fare
 create :: L.MonadFlow m => Domain.DriverQuote -> m (MeshResult ())
 create dQuote = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDQ.DriverQuoteT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       SQFP.create dQuote.fareParams
-      KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverQuoteToBeam dQuote)
+      KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainDriverQuoteToBeam dQuote)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 baseDriverQuoteQuery ::
@@ -59,9 +61,11 @@ baseDriverQuoteQuery =
 findById :: (L.MonadFlow m) => Id Domain.DriverQuote -> m (Maybe Domain.DriverQuote)
 findById (Id driverQuoteId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDQ.DriverQuoteT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
-      driverQuote <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDQ.id $ Se.Eq driverQuoteId]
+      driverQuote <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDQ.id $ Se.Eq driverQuoteId]
       case driverQuote of
         Right (Just driverQuote') -> transformBeamDriverQuoteToDomain driverQuote'
         _ -> pure Nothing
@@ -70,11 +74,13 @@ findById (Id driverQuoteId) = do
 setInactiveBySTId :: L.MonadFlow m => Id DST.SearchTry -> m (MeshResult ())
 setInactiveBySTId (Id searchTryId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDQ.DriverQuoteT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' ->
       KV.updateWoReturningWithKVConnector
         dbCOnf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [Se.Set BeamDQ.status Domain.Inactive]
         [Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
@@ -84,9 +90,11 @@ findActiveQuotesByDriverId (Id driverId) driverUnlockDelay = do
   now <- getCurrentTime
   let delayToAvoidRaces = secondsToNominalDiffTime . negate $ driverUnlockDelay
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDQ.DriverQuoteT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
-      dQuote <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamDQ.status $ Se.Eq Domain.Active, Se.Is BeamDQ.id $ Se.Eq driverId, Se.Is BeamDQ.validTill $ Se.GreaterThan (T.utcToLocalTime (T.TimeZone (5 * 60 + 30) False "IST") $ addUTCTime delayToAvoidRaces now)]]
+      dQuote <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamDQ.status $ Se.Eq Domain.Active, Se.Is BeamDQ.id $ Se.Eq driverId, Se.Is BeamDQ.validTill $ Se.GreaterThan (T.utcToLocalTime (T.TimeZone (5 * 60 + 30) False "IST") $ addUTCTime delayToAvoidRaces now)]]
       case dQuote of
         Right dQuote' -> catMaybes <$> traverse transformBeamDriverQuoteToDomain dQuote'
         _ -> pure []
@@ -95,9 +103,11 @@ findActiveQuotesByDriverId (Id driverId) driverUnlockDelay = do
 findDriverQuoteBySTId :: L.MonadFlow m => Id DST.SearchTry -> m (Maybe Domain.DriverQuote)
 findDriverQuoteBySTId (Id searchTryId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDQ.DriverQuoteT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
-      driverQuote <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId]
+      driverQuote <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId]
       case driverQuote of
         Right (Just driverQuote') -> transformBeamDriverQuoteToDomain driverQuote'
         _ -> pure Nothing
@@ -106,25 +116,29 @@ findDriverQuoteBySTId (Id searchTryId) = do
 deleteByDriverId :: L.MonadFlow m => Id Person -> m ()
 deleteByDriverId (Id driverId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDQ.DriverQuoteT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       void $
         KV.deleteWithKVConnector
           dbConf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [Se.Is BeamDQ.driverId (Se.Eq driverId)]
     Nothing -> pure ()
 
 findAllBySTId :: L.MonadFlow m => Id DST.SearchTry -> m [Domain.DriverQuote]
 findAllBySTId (Id searchTryId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDQ.DriverQuoteT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       do
         res <-
           KV.findAllWithKVConnector
             dbConf'
-            Mesh.meshConfig
+            updatedMeshConfig
             [ Se.And [Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId, Se.Is BeamDQ.status $ Se.Eq Domain.Active]
             ]
         case res of
@@ -135,9 +149,11 @@ findAllBySTId (Id searchTryId) = do
 countAllBySTId :: L.MonadFlow m => Id DST.SearchTry -> m Int
 countAllBySTId searchTId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDQ.DriverQuoteT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
-      res <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamDQ.searchTryId $ Se.Eq (getId searchTId)]]
+      res <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamDQ.searchTryId $ Se.Eq (getId searchTId)]]
       case res of
         Right res' -> pure $ length res'
         _ -> pure 0

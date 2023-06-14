@@ -25,38 +25,41 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Driver.DriverFlowStatus as BeamDFS
-
-updatedMeshCfg :: MeshConfig
-updatedMeshCfg = Mesh.meshConfig
 
 create :: (L.MonadFlow m, Log m) => DDFS.DriverFlowStatus -> m (MeshResult ())
 create driverFlowStatus = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDFS.DriverFlowStatusT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshCfg (transformDomainDriverFlowStatusToBeam driverFlowStatus)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainDriverFlowStatusToBeam driverFlowStatus)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 deleteById :: L.MonadFlow m => Id Person -> m ()
 deleteById (Id driverId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDFS.DriverFlowStatusT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       void $
         KV.deleteWithKVConnector
           dbConf'
-          updatedMeshCfg
+          updatedMeshConfig
           [Se.Is BeamDFS.personId (Se.Eq driverId)]
     Nothing -> pure ()
 
 getStatus :: L.MonadFlow m => Id Person -> m (Maybe DDFS.FlowStatus)
 getStatus (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDFS.DriverFlowStatusT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
-      dfsData <- KV.findWithKVConnector dbConf' updatedMeshCfg [Se.Is BeamDFS.personId $ Se.Eq personId]
+      dfsData <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamDFS.personId $ Se.Eq personId]
       case dfsData of
         Left _ -> pure Nothing
         Right x -> do
@@ -68,13 +71,15 @@ getStatus (Id personId) = do
 updateStatus :: (L.MonadFlow m, MonadTime m) => Id Person -> DDFS.FlowStatus -> m ()
 updateStatus (Id personId) flowStatus = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDFS.DriverFlowStatusT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       void $
         KV.updateWoReturningWithKVConnector
           dbConf'
-          updatedMeshCfg
+          updatedMeshConfig
           [ Se.Set BeamDFS.flowStatus flowStatus,
             Se.Set BeamDFS.updatedAt now
           ]

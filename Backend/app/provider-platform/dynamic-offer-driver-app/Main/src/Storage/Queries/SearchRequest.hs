@@ -26,7 +26,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest as BeamSR
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
@@ -43,8 +43,10 @@ import Storage.Tabular.SearchRequest.SearchReqLocation ()
 createDSReq :: L.MonadFlow m => SearchRequest -> m (MeshResult ())
 createDSReq sReq = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSR.SearchRequestT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainSearchRequestToBeam sReq)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainSearchRequestToBeam sReq)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 create :: L.MonadFlow m => SearchRequest -> m (MeshResult ())
@@ -69,9 +71,11 @@ create dsReq = do
 findById :: L.MonadFlow m => Id SearchRequest -> m (Maybe SearchRequest)
 findById (Id searchRequestId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSR.SearchRequestT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
-      sR <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSR.id $ Se.Eq searchRequestId]
+      sR <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSR.id $ Se.Eq searchRequestId]
       case sR of
         Right (Just x) -> transformBeamSearchRequestToDomain x
         _ -> pure Nothing
@@ -108,12 +112,14 @@ findById (Id searchRequestId) = do
 -- updateStatus :: (L.MonadFlow m, MonadTime m) => Id SearchRequest -> SearchRequestStatus -> m (MeshResult ())
 -- updateStatus (Id searchId) status_ = do
 --   dbConf <- L.getOption KBT.PsqlDbCfg
+-- let modelName = Se.modelTableName @BeamSR.SearchRequestT
+-- let updatedMeshConfig = setMeshConfig modelName
 --   now <- getCurrentTime
 --   case dbConf of
 --     Just dbConf' ->
 --       KV.updateWoReturningWithKVConnector
 --         dbConf'
---         Mesh.meshConfig
+--         updatedMeshConfig
 --         [ Se.Set BeamSR.status status_,
 --           Se.Set BeamSR.updatedAt now
 --         ]
@@ -134,9 +140,11 @@ findById (Id searchRequestId) = do
 getRequestIdfromTransactionId :: L.MonadFlow m => Id SearchRequest -> m (Maybe (Id SearchRequest))
 getRequestIdfromTransactionId (Id tId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSR.SearchRequestT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
-      sr <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSR.transactionId $ Se.Eq tId]
+      sr <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSR.transactionId $ Se.Eq tId]
       case sr of
         Right (Just x) -> do
           sr' <- transformBeamSearchRequestToDomain x
@@ -159,9 +167,11 @@ getRequestIdfromTransactionId (Id tId) = do
 -- getSearchRequestStatusOrValidTill :: L.MonadFlow m => Id SearchRequest -> m (Maybe (UTCTime, SearchRequestStatus))
 -- getSearchRequestStatusOrValidTill (Id searchReqId) = do
 --   dbConf <- L.getOption KBT.PsqlDbCfg
+-- let modelName = Se.modelTableName @BeamSR.SearchRequestT
+-- let updatedMeshConfig = setMeshConfig modelName
 --   case dbConf of
 --     Just dbCOnf' -> do
---       sr <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSR.id $ Se.Eq searchReqId]
+--       sr <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSR.id $ Se.Eq searchReqId]
 --       case sr of
 --         Left _ -> pure Nothing
 --         Right x -> do
@@ -185,9 +195,11 @@ getRequestIdfromTransactionId (Id tId) = do
 findByTransactionId :: L.MonadFlow m => Text -> m (Maybe (Id SearchRequest))
 findByTransactionId transactionId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSR.SearchRequestT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
-      sr <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamSR.transactionId $ Se.Eq transactionId]]
+      sr <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamSR.transactionId $ Se.Eq transactionId]]
       case sr of
         Right (Just x) -> do
           sr' <- transformBeamSearchRequestToDomain x

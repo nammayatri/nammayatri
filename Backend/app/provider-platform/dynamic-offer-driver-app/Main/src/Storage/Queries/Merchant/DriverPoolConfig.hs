@@ -28,7 +28,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, MonadTime (getCurrentTime))
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.DriverPoolConfig as BeamDPC
 
@@ -38,8 +38,10 @@ import qualified Storage.Beam.Merchant.DriverPoolConfig as BeamDPC
 create :: L.MonadFlow m => DriverPoolConfig -> m (MeshResult ())
 create driverPoolConfig = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDPC.DriverPoolConfigT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverPoolConfigToBeam driverPoolConfig)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainDriverPoolConfigToBeam driverPoolConfig)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- findAllByMerchantId :: Transactionable m => Id Merchant -> m [DriverPoolConfig]
@@ -54,8 +56,10 @@ create driverPoolConfig = do
 findAllByMerchantId :: L.MonadFlow m => Id Merchant -> m [DriverPoolConfig]
 findAllByMerchantId (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDPC.DriverPoolConfigT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamDriverPoolConfigToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDPC.merchantId $ Se.Eq merchantId]
+    Just dbCOnf' -> either (pure []) (transformBeamDriverPoolConfigToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDPC.merchantId $ Se.Eq merchantId]
     Nothing -> pure []
 
 -- findByMerchantIdAndTripDistance :: Transactionable m => Id Merchant -> Meters -> m (Maybe DriverPoolConfig)
@@ -69,8 +73,10 @@ findAllByMerchantId (Id merchantId) = do
 findByMerchantIdAndTripDistance :: L.MonadFlow m => Id Merchant -> Meters -> m (Maybe DriverPoolConfig)
 findByMerchantIdAndTripDistance (Id merchantId) tripDistance = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDPC.DriverPoolConfigT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverPoolConfigToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamDPC.merchantId $ Se.Eq merchantId, Se.Is BeamDPC.tripDistance $ Se.Eq tripDistance]]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverPoolConfigToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamDPC.merchantId $ Se.Eq merchantId, Se.Is BeamDPC.tripDistance $ Se.Eq tripDistance]]
     Nothing -> pure Nothing
 
 -- update :: DriverPoolConfig -> SqlDB ()
@@ -99,12 +105,14 @@ findByMerchantIdAndTripDistance (Id merchantId) tripDistance = do
 update :: (L.MonadFlow m, MonadTime m) => DriverPoolConfig -> m (MeshResult ())
 update config = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDPC.DriverPoolConfigT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamDPC.minRadiusOfSearch config.minRadiusOfSearch,
           Se.Set BeamDPC.maxRadiusOfSearch config.maxRadiusOfSearch,
           Se.Set BeamDPC.radiusStepSize config.radiusStepSize,

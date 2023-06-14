@@ -11,7 +11,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common (MonadTime (..), getCurrentTime)
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.IssueReport as BeamIR
 
@@ -21,8 +21,10 @@ import qualified Storage.Beam.Issue.IssueReport as BeamIR
 create :: L.MonadFlow m => IssueReport.IssueReport -> m (MeshResult ())
 create issueReport = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamIR.IssueReportT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainIssueReportToBeam issueReport)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainIssueReportToBeam issueReport)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- findAllWithOptions :: Transactionable m => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> m [IssueReport]
@@ -43,9 +45,11 @@ create issueReport = do
 findAllWithOptions :: L.MonadFlow m => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> m [IssueReport]
 findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamIR.IssueReportT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findAllWithOptionsKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamIR.status $ Se.Eq (fromJust mbStatus), Se.Is BeamIR.categoryId $ Se.Eq (getId (fromJust mbCategoryId)), Se.Is BeamIR.assignee $ Se.Eq mbAssignee]] (Se.Desc BeamIR.createdAt) (Just limitVal) (Just offsetVal)
+      result <- KV.findAllWithOptionsKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamIR.status $ Se.Eq (fromJust mbStatus), Se.Is BeamIR.categoryId $ Se.Eq (getId (fromJust mbCategoryId)), Se.Is BeamIR.assignee $ Se.Eq mbAssignee]] (Se.Desc BeamIR.createdAt) (Just limitVal) (Just offsetVal)
       case result of
         Left _ -> pure []
         Right issueReport -> pure $ transformBeamIssueReportToDomain <$> issueReport
@@ -65,8 +69,10 @@ findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee = do
 findById :: L.MonadFlow m => Id IssueReport -> m (Maybe IssueReport)
 findById (Id issueReportId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamIR.IssueReportT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> either (pure Nothing) (transformBeamIssueReportToDomain <$>) <$> KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamIR.id $ Se.Eq issueReportId]
+    Just dbConf' -> either (pure Nothing) (transformBeamIssueReportToDomain <$>) <$> KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamIR.id $ Se.Eq issueReportId]
     Nothing -> pure Nothing
 
 -- findAllByDriver :: Id SP.Person -> Transactionable m => m [IssueReport]
@@ -80,8 +86,10 @@ findById (Id issueReportId) = do
 findAllByDriver :: L.MonadFlow m => Id SP.Person -> m [IssueReport]
 findAllByDriver (Id driverId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamIR.IssueReportT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> either (pure []) (transformBeamIssueReportToDomain <$>) <$> KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamIR.driverId $ Se.Eq driverId]
+    Just dbConf' -> either (pure []) (transformBeamIssueReportToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamIR.driverId $ Se.Eq driverId]
     Nothing -> pure []
 
 -- safeToDelete :: Transactionable m => Id IssueReport -> Id SP.Person -> m (Maybe IssueReport)
@@ -96,9 +104,11 @@ findAllByDriver (Id driverId) = do
 safeToDelete :: L.MonadFlow m => Id IssueReport -> Id SP.Person -> m (Maybe IssueReport)
 safeToDelete (Id issueReportId) (Id driverId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamIR.IssueReportT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamIR.id $ Se.Eq issueReportId, Se.Is BeamIR.driverId $ Se.Eq driverId]]
+      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamIR.id $ Se.Eq issueReportId, Se.Is BeamIR.driverId $ Se.Eq driverId]]
       case result of
         Right issueReport -> pure $ transformBeamIssueReportToDomain <$> issueReport
         Left _ -> pure Nothing
@@ -123,12 +133,14 @@ isSafeToDelete issueReportId driverId = do
 deleteByPersonId :: L.MonadFlow m => Id SP.Person -> m ()
 deleteByPersonId (Id driverId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamIR.IssueReportT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       void $
         KV.deleteWithKVConnector
           dbConf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [Se.Is BeamIR.driverId (Se.Eq driverId)]
     Nothing -> pure ()
 
@@ -148,12 +160,14 @@ updateAsDeleted :: (L.MonadFlow m, MonadTime m) => Id IssueReport -> m ()
 updateAsDeleted issueReportId = do
   now <- getCurrentTime
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamIR.IssueReportT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       void $
         KV.updateWoReturningWithKVConnector
           dbConf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [ Se.Set BeamIR.deleted True,
             Se.Set BeamIR.updatedAt now
           ]
@@ -178,12 +192,14 @@ updateStatusAssignee :: (L.MonadFlow m, MonadTime m) => Id IssueReport -> Maybe 
 updateStatusAssignee issueReportId status assignee = do
   now <- getCurrentTime
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamIR.IssueReportT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       void $
         KV.updateWoReturningWithKVConnector
           dbConf'
-          Mesh.meshConfig
+          updatedMeshConfig
           ([Se.Set BeamIR.updatedAt now] <> if isJust status then [Se.Set BeamIR.status (fromJust status)] else [] <> ([Se.Set BeamIR.assignee assignee | isJust assignee]))
           [Se.Is BeamIR.id (Se.Eq $ getId issueReportId)]
     Nothing -> pure ()
@@ -205,12 +221,14 @@ updateOption :: (L.MonadFlow m, MonadTime m) => Id IssueReport -> Id IssueOption
 updateOption issueReportId (Id optionId) = do
   now <- getCurrentTime
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamIR.IssueReportT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       void $
         KV.updateWoReturningWithKVConnector
           dbConf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [Se.Set BeamIR.optionId (Just optionId), Se.Set BeamIR.updatedAt now]
           [Se.Is BeamIR.id (Se.Eq $ getId issueReportId)]
     Nothing -> pure ()

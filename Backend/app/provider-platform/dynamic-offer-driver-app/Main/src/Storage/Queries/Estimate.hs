@@ -22,7 +22,7 @@ import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as BeamE
 import Storage.Tabular.Estimate ()
@@ -33,8 +33,10 @@ import Storage.Tabular.Estimate ()
 create :: L.MonadFlow m => Domain.Estimate -> m ()
 create estimate = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamE.EstimateT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainEstimateToBeam estimate)
+    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainEstimateToBeam estimate)
     Nothing -> pure ()
 
 createMany :: L.MonadFlow m => [Estimate] -> m ()
@@ -49,8 +51,10 @@ createMany = traverse_ create
 findById :: L.MonadFlow m => Id Estimate -> m (Maybe Estimate)
 findById (Id estimateId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamE.EstimateT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamEstimateToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamE.id $ Se.Eq estimateId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamEstimateToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamE.id $ Se.Eq estimateId]
     Nothing -> pure Nothing
 
 transformBeamEstimateToDomain :: BeamE.Estimate -> Estimate

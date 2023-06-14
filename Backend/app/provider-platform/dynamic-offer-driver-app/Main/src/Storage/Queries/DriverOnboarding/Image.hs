@@ -30,7 +30,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Error.Throwing
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.Image as BeamI
 import Storage.CachedQueries.CacheConfig
@@ -45,8 +45,10 @@ import qualified Storage.Queries.Person as QP
 create :: L.MonadFlow m => Image -> m (MeshResult ())
 create image = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamI.ImageT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainImageToBeam image)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainImageToBeam image)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- findById ::
@@ -58,8 +60,10 @@ create image = do
 findById :: L.MonadFlow m => Id Image -> m (Maybe Image)
 findById (Id imageid) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamI.ImageT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamImageToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamI.id $ Se.Eq imageid]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamImageToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamI.id $ Se.Eq imageid]
     Nothing -> pure Nothing
 
 -- findImagesByPersonAndType ::
@@ -80,12 +84,14 @@ findById (Id imageid) = do
 findImagesByPersonAndType :: L.MonadFlow m => Id Merchant -> Id Person -> ImageType -> m [Image]
 findImagesByPersonAndType (Id merchantId) (Id personId) imgType = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamI.ImageT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' ->
       either (pure []) (transformBeamImageToDomain <$>)
         <$> KV.findAllWithKVConnector
           dbCOnf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [ Se.And
               [ Se.Is BeamI.personId $ Se.Eq personId,
                 Se.Is BeamI.merchantId $ Se.Eq merchantId,
@@ -129,12 +135,14 @@ findRecentByPersonIdAndImageType personId imgtype = do
   let onBoardingRetryTimeInHours = intToNominalDiffTime onboardingRetryTimeInHours
   now <- getCurrentTime
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamI.ImageT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' ->
       either (pure []) (transformBeamImageToDomain <$>)
         <$> KV.findAllWithKVConnector
           dbCOnf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [ Se.And
               [ Se.Is BeamI.personId $ Se.Eq $ getId personId,
                 Se.Is BeamI.imageType $ Se.Eq imgtype,
@@ -156,11 +164,13 @@ findRecentByPersonIdAndImageType personId imgtype = do
 updateToValid :: L.MonadFlow m => Id Image -> m (MeshResult ())
 updateToValid (Id id) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamI.ImageT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamI.isValid True
         ]
         [Se.Is BeamI.id (Se.Eq id)]
@@ -179,12 +189,14 @@ updateToValid (Id id) = do
 findByMerchantId :: L.MonadFlow m => Id Merchant -> m [Image]
 findByMerchantId (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamI.ImageT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' ->
       either (pure []) (transformBeamImageToDomain <$>)
         <$> KV.findAllWithKVConnector
           dbCOnf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [ Se.Is BeamI.merchantId $ Se.Eq merchantId
           ]
     Nothing -> pure []
@@ -200,11 +212,13 @@ findByMerchantId (Id merchantId) = do
 addFailureReason :: L.MonadFlow m => Id Image -> DriverOnboardingError -> m (MeshResult ())
 addFailureReason (Id id) reason = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamI.ImageT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamI.failureReason $ Just reason
         ]
         [Se.Is BeamI.id (Se.Eq id)]
@@ -219,12 +233,14 @@ addFailureReason (Id id) reason = do
 deleteByPersonId :: L.MonadFlow m => Id Person -> m ()
 deleteByPersonId (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamI.ImageT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       void $
         KV.deleteWithKVConnector
           dbConf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [Se.Is BeamI.personId (Se.Eq personId)]
     Nothing -> pure ()
 

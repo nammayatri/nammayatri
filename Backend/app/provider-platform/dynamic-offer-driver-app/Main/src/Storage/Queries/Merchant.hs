@@ -28,7 +28,7 @@ import Kernel.Prelude
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant as BeamM
 
@@ -38,8 +38,10 @@ import qualified Storage.Beam.Merchant as BeamM
 findById :: L.MonadFlow m => Id Merchant -> m (Maybe Merchant)
 findById (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamM.MerchantT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamM.id $ Se.Eq merchantId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamM.id $ Se.Eq merchantId]
     Nothing -> pure Nothing
 
 -- findBySubscriberId :: Transactionable m => ShortId Subscriber -> m (Maybe Merchant)
@@ -52,8 +54,10 @@ findById (Id merchantId) = do
 findBySubscriberId :: L.MonadFlow m => ShortId Subscriber -> m (Maybe Merchant)
 findBySubscriberId (ShortId subscriberId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamM.MerchantT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamM.subscriberId $ Se.Eq subscriberId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamM.subscriberId $ Se.Eq subscriberId]
     Nothing -> pure Nothing
 
 -- findByShortId :: Transactionable m => ShortId Merchant -> m (Maybe Merchant)
@@ -66,8 +70,10 @@ findBySubscriberId (ShortId subscriberId) = do
 findByShortId :: L.MonadFlow m => ShortId Merchant -> m (Maybe Merchant)
 findByShortId (ShortId shortId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamM.MerchantT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamM.shortId $ Se.Eq shortId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamM.shortId $ Se.Eq shortId]
     Nothing -> pure Nothing
 
 -- loadAllProviders :: Transactionable m => m [Merchant]
@@ -82,8 +88,10 @@ findByShortId (ShortId shortId) = do
 loadAllProviders :: L.MonadFlow m => m [Merchant]
 loadAllProviders = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamM.MerchantT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamMerchantToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamM.status $ Se.Eq DM.APPROVED, Se.Is BeamM.enabled $ Se.Eq True]]
+    Just dbCOnf' -> either (pure []) (transformBeamMerchantToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamM.status $ Se.Eq DM.APPROVED, Se.Is BeamM.enabled $ Se.Eq True]]
     Nothing -> pure []
 
 -- findAll :: Transactionable m => m [Merchant]
@@ -93,8 +101,10 @@ loadAllProviders = do
 findAll :: L.MonadFlow m => m [Merchant]
 findAll = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamM.MerchantT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamMerchantToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig []
+    Just dbCOnf' -> either (pure []) (transformBeamMerchantToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig []
     Nothing -> pure []
 
 -- update :: Merchant -> SqlDB ()
@@ -115,12 +125,14 @@ findAll = do
 update :: (L.MonadFlow m, MonadTime m) => Merchant -> m (MeshResult ())
 update org = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamM.MerchantT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamM.name org.name,
           Se.Set BeamM.description org.description,
           Se.Set BeamM.headCount org.headCount,

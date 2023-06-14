@@ -23,7 +23,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.RideDetails as BeamRD
 import Storage.Tabular.RideDetails ()
@@ -36,8 +36,10 @@ import Storage.Tabular.RideDetails ()
 create :: L.MonadFlow m => DRD.RideDetails -> m (MeshResult ())
 create rideDetails = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamRD.RideDetailsT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainRideDetailsToBeam rideDetails)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRideDetailsToBeam rideDetails)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- findById ::
@@ -49,8 +51,10 @@ create rideDetails = do
 findById :: L.MonadFlow m => Id SR.Ride -> m (Maybe RideDetails)
 findById (Id rideDetailsId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamRD.RideDetailsT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamRideDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamRD.id $ Se.Eq rideDetailsId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamRideDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamRD.id $ Se.Eq rideDetailsId]
     Nothing -> pure Nothing
 
 transformBeamRideDetailsToDomain :: BeamRD.RideDetails -> RideDetails

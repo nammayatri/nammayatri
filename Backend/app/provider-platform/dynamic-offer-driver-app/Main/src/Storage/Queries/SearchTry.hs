@@ -24,7 +24,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchTry as BeamST
 
@@ -34,8 +34,10 @@ import qualified Storage.Beam.SearchTry as BeamST
 create :: L.MonadFlow m => SearchTry -> m (MeshResult ())
 create searchTry = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamST.SearchTryT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainSearchTryToBeam searchTry)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainSearchTryToBeam searchTry)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- findById :: Transactionable m => Id SearchTry -> m (Maybe SearchTry)
@@ -44,8 +46,10 @@ create searchTry = do
 findById :: L.MonadFlow m => Id SearchTry -> m (Maybe SearchTry)
 findById (Id searchTry) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamST.SearchTryT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> either (pure Nothing) (transformBeamSearchTryToDomain <$>) <$> KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamST.id $ Se.Eq searchTry]
+    Just dbConf' -> either (pure Nothing) (transformBeamSearchTryToDomain <$>) <$> KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamST.id $ Se.Eq searchTry]
     Nothing -> pure Nothing
 
 findLastByRequestId ::
@@ -54,10 +58,12 @@ findLastByRequestId ::
   m (Maybe SearchTry)
 findLastByRequestId (Id searchRequest) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamST.SearchTryT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       _ <- do
-        result <- KV.findAllWithOptionsKVConnector dbConf' Mesh.meshConfig [Se.Is BeamST.id $ Se.Eq searchRequest] (Se.Desc BeamST.searchRepeatCounter) (Just 1) Nothing
+        result <- KV.findAllWithOptionsKVConnector dbConf' updatedMeshConfig [Se.Is BeamST.id $ Se.Eq searchRequest] (Se.Desc BeamST.searchRepeatCounter) (Just 1) Nothing
         case result of
           Left _ -> pure Nothing
           Right val' ->
@@ -90,12 +96,14 @@ cancelActiveTriesByRequestId ::
   m (MeshResult ())
 cancelActiveTriesByRequestId (Id searchId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamST.SearchTryT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamST.status CANCELLED,
           Se.Set BeamST.updatedAt now
         ]
@@ -155,13 +163,15 @@ updateStatus ::
   m ()
 updateStatus (Id searchId) status_ = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamST.SearchTryT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       void $
         KV.updateWoReturningWithKVConnector
           dbConf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [ Se.Set BeamST.status status_,
             Se.Set BeamST.updatedAt now
           ]
@@ -185,9 +195,11 @@ getSearchTryStatusAndValidTill ::
   m (Maybe (UTCTime, SearchTryStatus))
 getSearchTryStatusAndValidTill (Id searchRequestId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamST.SearchTryT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamST.id $ Se.Eq searchRequestId]
+      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamST.id $ Se.Eq searchRequestId]
       case result of
         Left _ -> pure Nothing
         Right val' -> do

@@ -25,7 +25,7 @@ import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequestSpecialZone as BeamSRSZ
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
@@ -45,8 +45,10 @@ import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
 createSearchRequestSpecialZone :: L.MonadFlow m => SearchRequestSpecialZone -> m (MeshResult ())
 createSearchRequestSpecialZone srsz = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSRSZ.SearchRequestSpecialZoneT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainSearchRequestSpecialZoneToBeam srsz)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainSearchRequestSpecialZoneToBeam srsz)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 create :: L.MonadFlow m => SearchRequestSpecialZone -> m (MeshResult ())
@@ -71,9 +73,11 @@ create srsz = do
 findById :: L.MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
 findById (Id searchRequestSpecialZoneId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSRSZ.SearchRequestSpecialZoneT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
-      sR <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSRSZ.id $ Se.Eq searchRequestSpecialZoneId]
+      sR <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSRSZ.id $ Se.Eq searchRequestSpecialZoneId]
       case sR of
         Right (Just x) -> transformBeamSearchRequestSpecialZoneToDomain x
         _ -> pure Nothing
@@ -104,9 +108,11 @@ findById (Id searchRequestSpecialZoneId) = do
 getRequestIdfromTransactionId :: L.MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe (Id SearchRequestSpecialZone))
 getRequestIdfromTransactionId (Id tId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSRSZ.SearchRequestSpecialZoneT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
-      srsz <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSRSZ.transactionId $ Se.Eq tId]
+      srsz <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSRSZ.transactionId $ Se.Eq tId]
       case srsz of
         Right (Just x) -> do
           srsz' <- transformBeamSearchRequestSpecialZoneToDomain x
@@ -129,9 +135,11 @@ getRequestIdfromTransactionId (Id tId) = do
 findByMsgIdAndBapIdAndBppId :: L.MonadFlow m => Text -> Text -> Id Merchant -> m (Maybe SearchRequestSpecialZone)
 findByMsgIdAndBapIdAndBppId txnId bapId (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSRSZ.SearchRequestSpecialZoneT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
-      srsz <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamSRSZ.messageId $ Se.Eq txnId, Se.Is BeamSRSZ.providerId $ Se.Eq merchantId, Se.Is BeamSRSZ.bapId $ Se.Eq bapId]]
+      srsz <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamSRSZ.messageId $ Se.Eq txnId, Se.Is BeamSRSZ.providerId $ Se.Eq merchantId, Se.Is BeamSRSZ.bapId $ Se.Eq bapId]]
       case srsz of
         Right (Just x) -> transformBeamSearchRequestSpecialZoneToDomain x
         _ -> pure Nothing
@@ -164,9 +172,11 @@ findByTransactionId ::
   m (Maybe (Id SearchRequestSpecialZone))
 findByTransactionId (Id tId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSRSZ.SearchRequestSpecialZoneT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
-      srsz <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSRSZ.transactionId $ Se.Eq tId]
+      srsz <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSRSZ.transactionId $ Se.Eq tId]
       case srsz of
         Right (Just x) -> do
           srsz' <- transformBeamSearchRequestSpecialZoneToDomain x
@@ -179,9 +189,11 @@ findByTransactionId (Id tId) = do
 getValidTill :: L.MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe UTCTime)
 getValidTill (Id searchRequestId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSRSZ.SearchRequestSpecialZoneT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
-      srsz <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSRSZ.id $ Se.Eq searchRequestId]
+      srsz <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSRSZ.id $ Se.Eq searchRequestId]
       case srsz of
         Right (Just x) -> do
           srsz' <- transformBeamSearchRequestSpecialZoneToDomain x

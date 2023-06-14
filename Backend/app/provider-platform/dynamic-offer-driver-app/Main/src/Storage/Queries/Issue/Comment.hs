@@ -8,7 +8,7 @@ import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.Comment as BeamC
 
@@ -18,8 +18,10 @@ import qualified Storage.Beam.Issue.Comment as BeamC
 create :: L.MonadFlow m => Comment.Comment -> m (MeshResult ())
 create comment = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamC.CommentT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainCommentToBeam comment)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainCommentToBeam comment)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- findAllByIssueReportId :: Transactionable m => Id IssueReport -> m [Comment]
@@ -32,8 +34,10 @@ create comment = do
 findAllByIssueReportId :: L.MonadFlow m => Id IssueReport -> m [Comment]
 findAllByIssueReportId (Id issueReportId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamC.CommentT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamCommentToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamC.issueReportId $ Se.Eq issueReportId] (Se.Desc BeamC.createdAt) Nothing Nothing
+    Just dbCOnf' -> either (pure []) (transformBeamCommentToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamC.issueReportId $ Se.Eq issueReportId] (Se.Desc BeamC.createdAt) Nothing Nothing
     Nothing -> pure []
 
 transformBeamCommentToDomain :: BeamC.Comment -> Comment

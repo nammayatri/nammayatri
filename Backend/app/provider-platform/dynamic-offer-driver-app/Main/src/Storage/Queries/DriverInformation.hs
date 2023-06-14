@@ -34,7 +34,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.Person as BeamP
@@ -51,28 +51,34 @@ data DatabaseWith2 table1 table2 f = DatabaseWith2
 create :: L.MonadFlow m => DriverInfo.DriverInformation -> m ()
 create driverInformation = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDI.DriverInformationT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverInformationToBeam driverInformation)
+    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainDriverInformationToBeam driverInformation)
     Nothing -> pure ()
 
 findById :: L.MonadFlow m => Id Person.Driver -> m (Maybe DriverInformation)
 findById (Id driverInformationId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDI.DriverInformationT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverInformationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDI.driverId $ Se.Eq driverInformationId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverInformationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDI.driverId $ Se.Eq driverInformationId]
     Nothing -> pure Nothing
 
 fetchAllByIds :: L.MonadFlow m => Id Merchant -> [Id Driver] -> m [DriverInformation]
 fetchAllByIds merchantId driversIds = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDI.DriverInformationT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
-      dInfos <- either (pure []) (transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDI.driverId $ Se.In (getId <$> driversIds)]
-      foldM (fn' dbCOnf') [] dInfos
+      dInfos <- either (pure []) (transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDI.driverId $ Se.In (getId <$> driversIds)]
+      foldM (fn' dbCOnf' updatedMeshConfig) [] dInfos
     Nothing -> pure []
   where
-    fn' dbCOnf' b a = do
-      id' <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamP.id $ Se.Eq (getId a.driverId), Se.Is BeamP.merchantId $ Se.Eq (getId merchantId)]]
+    fn' dbCOnf' updatedMeshConfig b a = do
+      id' <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamP.id $ Se.Eq (getId a.driverId), Se.Is BeamP.merchantId $ Se.Eq (getId merchantId)]]
       case id' of
         Right (Just _) -> pure (a : b)
         _ -> pure b
@@ -80,19 +86,23 @@ fetchAllByIds merchantId driversIds = do
 fetchAllAvailableByIds :: L.MonadFlow m => [Id Person.Driver] -> m [DriverInformation]
 fetchAllAvailableByIds driversIds = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDI.DriverInformationT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDI.driverId $ Se.In (getId <$> driversIds)]
+    Just dbCOnf' -> either (pure []) (transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDI.driverId $ Se.In (getId <$> driversIds)]
     Nothing -> pure []
 
 updateActivity :: (L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> Maybe DriverMode -> m (MeshResult ())
 updateActivity (Id driverId) isActive mode = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDI.DriverInformationT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamDI.active isActive,
           Se.Set BeamDI.mode mode,
           Se.Set BeamDI.updatedAt now
@@ -103,12 +113,14 @@ updateActivity (Id driverId) isActive mode = do
 updateEnabledState :: (L.MonadFlow m, MonadTime m) => Id Driver -> Bool -> m (MeshResult ())
 updateEnabledState (Id driverId) isEnabled = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDI.DriverInformationT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         ( [ Se.Set BeamDI.enabled isEnabled,
             Se.Set BeamDI.updatedAt now
           ]
@@ -120,12 +132,14 @@ updateEnabledState (Id driverId) isEnabled = do
 updateEnabledVerifiedState :: (L.MonadFlow m, MonadTime m) => Id Driver -> Bool -> Bool -> m (MeshResult ())
 updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDI.DriverInformationT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         ( [ Se.Set BeamDI.enabled isEnabled,
             Se.Set BeamDI.verified isVerified,
             Se.Set BeamDI.updatedAt now
@@ -138,12 +152,14 @@ updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
 updateBlockedState :: (L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> m (MeshResult ())
 updateBlockedState (Id driverId) isBlocked = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDI.DriverInformationT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamDI.blocked isBlocked,
           Se.Set BeamDI.updatedAt now
         ]
@@ -153,12 +169,14 @@ updateBlockedState (Id driverId) isBlocked = do
 verifyAndEnableDriver :: (L.MonadFlow m, MonadTime m) => Id Person -> m (MeshResult ())
 verifyAndEnableDriver (Id driverId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDI.DriverInformationT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamDI.enabled True,
           Se.Set BeamDI.verified True,
           Se.Set BeamDI.lastEnabledOn $ Just now,
@@ -177,13 +195,15 @@ updateEnabledStateReturningIds merchantId driverIds isEnabled = do
     updateEnabledStateForIds :: (L.MonadFlow m, MonadTime m) => [Id Driver] -> m ()
     updateEnabledStateForIds present = do
       dbConf <- L.getOption KBT.PsqlDbCfg
+      let modelName = Se.modelTableName @BeamDI.DriverInformationT
+      let updatedMeshConfig = setMeshConfig modelName
       now <- getCurrentTime
       case dbConf of
         Just dbConf' ->
           void $
             KV.updateWoReturningWithKVConnector
               dbConf'
-              Mesh.meshConfig
+              updatedMeshConfig
               ( [ Se.Set BeamDI.enabled isEnabled,
                   Se.Set BeamDI.updatedAt now,
                   Se.Set BeamDI.lastEnabledOn (Just now)
@@ -196,12 +216,14 @@ updateEnabledStateReturningIds merchantId driverIds isEnabled = do
 updateOnRide :: (L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> m (MeshResult ())
 updateOnRide (Id driverId) onRide = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDI.DriverInformationT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamDI.onRide onRide,
           Se.Set BeamDI.updatedAt now
         ]
@@ -211,12 +233,14 @@ updateOnRide (Id driverId) onRide = do
 updateNotOnRideMultiple :: (L.MonadFlow m, MonadTime m) => [Id Person.Driver] -> m (MeshResult ())
 updateNotOnRideMultiple driverIds = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDI.DriverInformationT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamDI.onRide False,
           Se.Set BeamDI.updatedAt now
         ]
@@ -226,12 +250,14 @@ updateNotOnRideMultiple driverIds = do
 deleteById :: L.MonadFlow m => Id Person.Driver -> m ()
 deleteById (Id driverId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDI.DriverInformationT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       void $
         KV.deleteWithKVConnector
           dbConf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [Se.Is BeamDI.driverId (Se.Eq driverId)]
     Nothing -> pure ()
 
@@ -281,11 +307,13 @@ fetchDriverIDsFromInfo = map DriverInfo.driverId
 addReferralCode :: (L.MonadFlow m) => Id Person -> EncryptedHashedField 'AsEncrypted Text -> m (MeshResult ())
 addReferralCode (Id personId) code = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDI.DriverInformationT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamDI.referralCode (Just (code & unEncrypted . (.encrypted)))
         ]
         [Se.Is BeamDI.driverId (Se.Eq personId)]
@@ -319,12 +347,14 @@ countDrivers merchantID =
 updateDowngradingOptions :: (L.MonadFlow m, MonadTime m) => Id Person -> Bool -> Bool -> Bool -> m (MeshResult ())
 updateDowngradingOptions (Id driverId) canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDI.DriverInformationT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamDI.canDowngradeToSedan canDowngradeToSedan,
           Se.Set BeamDI.canDowngradeToHatchback canDowngradeToHatchback,
           Se.Set BeamDI.canDowngradeToTaxi canDowngradeToTaxi,

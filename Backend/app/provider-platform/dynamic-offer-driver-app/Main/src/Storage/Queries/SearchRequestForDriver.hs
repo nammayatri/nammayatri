@@ -28,7 +28,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequestForDriver as BeamSRFD
 
@@ -40,19 +40,23 @@ createMany = traverse_ createOne
     createOne :: L.MonadFlow m => SearchRequestForDriver -> m ()
     createOne searchRequestForDriver = do
       dbConf <- L.getOption KBT.PsqlDbCfg
+      let modelName = Se.modelTableName @BeamSRFD.SearchRequestForDriverT
+      let updatedMeshConfig = setMeshConfig modelName
       case dbConf of
-        Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainSearchRequestForDriverToBeam searchRequestForDriver)
+        Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainSearchRequestForDriverToBeam searchRequestForDriver)
         Nothing -> pure ()
 
 findAllActiveBySTId :: L.MonadFlow m => Id SearchTry -> m [SearchRequestForDriver]
 findAllActiveBySTId (Id searchTryId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSRFD.SearchRequestForDriverT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' ->
       either (pure []) (transformBeamSearchRequestForDriverToDomain <$>)
         <$> KV.findAllWithKVConnector
           dbCOnf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [ Se.And
               [ Se.Is BeamSRFD.id $ Se.Eq searchTryId,
                 Se.Is BeamSRFD.status $ Se.Eq Domain.Active
@@ -63,12 +67,14 @@ findAllActiveBySTId (Id searchTryId) = do
 findAllActiveBySRId :: L.MonadFlow m => Id SearchRequest -> m [SearchRequestForDriver]
 findAllActiveBySRId (Id searchReqId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSRFD.SearchRequestForDriverT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' ->
       either (pure []) (transformBeamSearchRequestForDriverToDomain <$>)
         <$> KV.findAllWithKVConnector
           dbCOnf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [ Se.And
               [ Se.Is BeamSRFD.requestId $ Se.Eq searchReqId,
                 Se.Is BeamSRFD.status $ Se.Eq Domain.Active
@@ -98,12 +104,14 @@ findAllActiveBySRId (Id searchReqId) = do
 findAllActiveWithoutRespBySearchTryId :: (L.MonadFlow m, MonadTime m) => Id SearchTry -> m [SearchRequestForDriver]
 findAllActiveWithoutRespBySearchTryId (Id searchTryId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSRFD.SearchRequestForDriverT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       either (pure []) (transformBeamSearchRequestForDriverToDomain <$>)
         <$> KV.findAllWithKVConnector
           dbConf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [ Se.And
               ( [Se.Is BeamSRFD.searchTryId $ Se.Eq searchTryId]
                   <> [Se.Is BeamSRFD.status $ Se.Eq Domain.Active]
@@ -124,12 +132,14 @@ findAllActiveWithoutRespBySearchTryId (Id searchTryId) = do
 findByDriverAndSearchTryId :: L.MonadFlow m => Id Person -> Id SearchTry -> m (Maybe SearchRequestForDriver)
 findByDriverAndSearchTryId (Id driverId) (Id searchTryId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSRFD.SearchRequestForDriverT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       either (pure Nothing) (transformBeamSearchRequestForDriverToDomain <$>)
         <$> KV.findWithKVConnector
           dbConf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [ Se.And
               ( [Se.Is BeamSRFD.searchTryId $ Se.Eq searchTryId]
                   <> [Se.Is BeamSRFD.status $ Se.Eq Domain.Active]
@@ -141,25 +151,29 @@ findByDriverAndSearchTryId (Id driverId) (Id searchTryId) = do
 findByDriver :: (L.MonadFlow m, MonadTime m) => Id Person -> m [SearchRequestForDriver]
 findByDriver (Id driverId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSRFD.SearchRequestForDriverT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbCOnf' ->
       either (pure []) (transformBeamSearchRequestForDriverToDomain <$>)
         <$> KV.findAllWithKVConnector
           dbCOnf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [Se.And [Se.Is BeamSRFD.driverId $ Se.Eq driverId, Se.Is BeamSRFD.status $ Se.Eq Domain.Active, Se.Is BeamSRFD.searchRequestValidTill $ Se.GreaterThan (T.utcToLocalTime (T.TimeZone (5 * 60 + 30) False "IST") now)]]
     Nothing -> pure []
 
 deleteByDriverId :: L.MonadFlow m => Id Person -> m ()
 deleteByDriverId (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSRFD.SearchRequestForDriverT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       void $
         KV.deleteWithKVConnector
           dbConf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [Se.Is BeamSRFD.driverId (Se.Eq personId)]
     Nothing -> pure ()
 
@@ -171,11 +185,13 @@ deleteByDriverId (Id personId) = do
 setInactiveBySTId :: L.MonadFlow m => Id SearchTry -> m (MeshResult ())
 setInactiveBySTId (Id searchTryId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSRFD.SearchRequestForDriverT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [Se.Set BeamSRFD.status Domain.Inactive]
         [Se.Is BeamSRFD.searchTryId (Se.Eq searchTryId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
@@ -183,11 +199,13 @@ setInactiveBySTId (Id searchTryId) = do
 setInactiveBySRId :: L.MonadFlow m => Id SearchRequest -> m (MeshResult ())
 setInactiveBySRId (Id searchReqId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSRFD.SearchRequestForDriverT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [Se.Set BeamSRFD.status Domain.Inactive]
         [Se.Is BeamSRFD.requestId (Se.Eq searchReqId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
@@ -195,11 +213,13 @@ setInactiveBySRId (Id searchReqId) = do
 updateDriverResponse :: L.MonadFlow m => Id SearchRequestForDriver -> SearchRequestForDriverResponse -> m (MeshResult ())
 updateDriverResponse (Id id) response = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSRFD.SearchRequestForDriverT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [Se.Set BeamSRFD.response (Just response)]
         [Se.Is BeamSRFD.id (Se.Eq id)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))

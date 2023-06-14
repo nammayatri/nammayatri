@@ -116,12 +116,14 @@ baseDriverDocumentsInfoQuery licenseImagesAggTable vehicleRegistrationImagesAggT
 
 -- fetchDriverDocsInfo' :: (L.MonadFlow m) => Id Merchant -> Maybe (NonEmpty (Id Driver)) -> m [DriverDocsInfo]
 -- fetchDriverDocsInfo' merchantId mbDriverIds = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
+-- dbConf <- L.getOption KmeBT.PsqlDbCfg
+-- let modelName = Se.modelTableName @BeamS.StatusT
+-- let updatedMeshConfig = setMeshConfig modelNa
 --   case dbConf of
 --     Just dbCOnf' -> do
---       persons <- either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIT.language $ Se.Eq language]
---       dLicenses <- either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIT.language $ Se.Eq language]
---       iCategorys <- either (pure []) (transformBeamIssueCategoryToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIC.category $ Se.In (DomainIT.sentence <$> iTranslations)]
+--       persons <- either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamIT.language $ Se.Eq language]
+--       dLicenses <- either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamIT.language $ Se.Eq language]
+--       iCategorys <- either (pure []) (transformBeamIssueCategoryToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamIC.category $ Se.In (DomainIT.sentence <$> iTranslations)]
 --       let dCategoriesWithTranslations = foldl' (getIssueCategoryWithTranslations iTranslations) [] iCategorys
 --       pure dCategoriesWithTranslations
 --     Nothing -> pure []

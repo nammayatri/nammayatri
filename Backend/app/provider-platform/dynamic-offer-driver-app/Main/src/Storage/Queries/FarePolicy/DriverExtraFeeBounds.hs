@@ -23,7 +23,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.DriverExtraFeeBounds as BeamDEFB
 import Storage.Tabular.FarePolicy.DriverExtraFeeBounds
@@ -53,8 +53,10 @@ findAll ::
   m [Domain.FullDriverExtraFeeBounds]
 findAll farePolicyId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDEFB.DriverExtraFeeBoundsT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamDriverExtraFeeBoundsToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDEFB.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamDEFB.startDistance) Nothing Nothing
+    Just dbCOnf' -> either (pure []) (transformBeamDriverExtraFeeBoundsToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDEFB.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamDEFB.startDistance) Nothing Nothing
     Nothing -> pure []
 
 deleteAll' :: Id DFP.FarePolicy -> FullEntitySqlDB ()

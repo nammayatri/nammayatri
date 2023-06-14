@@ -29,7 +29,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.OnboardingDocumentConfig as BeamODC
 
@@ -39,8 +39,10 @@ import qualified Storage.Beam.OnboardingDocumentConfig as BeamODC
 create :: L.MonadFlow m => DODC.OnboardingDocumentConfig -> m (MeshResult ())
 create onboardingDocumentConfig = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamODC.OnboardingDocumentConfigT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainOnboardingDocumentConfigToBeam onboardingDocumentConfig)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainOnboardingDocumentConfigToBeam onboardingDocumentConfig)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- findByMerchantIdAndDocumentType :: Transactionable m => Id Merchant -> DocumentType -> m (Maybe OnboardingDocumentConfig)
@@ -55,8 +57,10 @@ create onboardingDocumentConfig = do
 findByMerchantIdAndDocumentType :: L.MonadFlow m => Id Merchant -> DocumentType -> m (Maybe OnboardingDocumentConfig)
 findByMerchantIdAndDocumentType merchantId documentType = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamODC.OnboardingDocumentConfigT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamOnboardingDocumentConfigToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamODC.merchantId $ Se.Eq $ getId merchantId, Se.Is BeamODC.documentType $ Se.Eq documentType]]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamOnboardingDocumentConfigToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamODC.merchantId $ Se.Eq $ getId merchantId, Se.Is BeamODC.documentType $ Se.Eq documentType]]
     Nothing -> pure Nothing
 
 -- update :: OnboardingDocumentConfig -> SqlDB ()
@@ -76,12 +80,14 @@ findByMerchantIdAndDocumentType merchantId documentType = do
 update :: (L.MonadFlow m, MonadTime m) => OnboardingDocumentConfig -> m (MeshResult ())
 update config = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamODC.OnboardingDocumentConfigT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamODC.checkExtraction config.checkExtraction,
           Se.Set BeamODC.checkExpiry config.checkExpiry,
           Se.Set BeamODC.validVehicleClasses config.validVehicleClasses,

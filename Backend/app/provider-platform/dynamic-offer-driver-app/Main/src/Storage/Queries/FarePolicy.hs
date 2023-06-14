@@ -43,7 +43,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude hiding (toList)
 import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy as BeamFP
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as BeamFPPD
@@ -53,7 +53,6 @@ import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as Quer
 import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as QFPSlabDetSlabs
 import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as QueriesFPSDS
 import Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab ()
-import qualified Storage.Tabular.VechileNew as VN
 
 -- findAllByMerchantId ::
 --   Transactionable m =>
@@ -70,9 +69,11 @@ import qualified Storage.Tabular.VechileNew as VN
 findAllByMerchantId :: (L.MonadFlow m) => Id Merchant -> m [FarePolicy]
 findAllByMerchantId (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamFP.FarePolicyT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
-      result <- KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFP.merchantId $ Se.Eq merchantId]
+      result <- KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamFP.merchantId $ Se.Eq merchantId]
       case result of
         Right x -> catMaybes <$> traverse transformBeamFarePolicyToDomain x
         _ -> pure []
@@ -95,9 +96,11 @@ findAllByMerchantId (Id merchantId) = do
 findByMerchantIdAndVariant :: (L.MonadFlow m) => Id Merchant -> Variant -> m (Maybe FarePolicy)
 findByMerchantIdAndVariant (Id merchantId) variant = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamFP.FarePolicyT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamFP.merchantId $ Se.Eq merchantId, Se.Is BeamFP.vehicleVariant $ Se.Eq variant]
+      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamFP.merchantId $ Se.Eq merchantId, Se.Is BeamFP.vehicleVariant $ Se.Eq variant]
       case result of
         Right (Just x) -> transformBeamFarePolicyToDomain x
         _ -> pure Nothing
@@ -111,9 +114,11 @@ findByMerchantIdAndVariant (Id merchantId) variant = do
 findById :: (L.MonadFlow m) => Id FarePolicy -> m (Maybe FarePolicy)
 findById (Id farePolicyId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamFP.FarePolicyT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamFP.id $ Se.Eq farePolicyId]
+      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamFP.id $ Se.Eq farePolicyId]
       case result of
         Right (Just x) -> transformBeamFarePolicyToDomain x
         _ -> pure Nothing
@@ -123,12 +128,14 @@ update :: (L.MonadFlow m, MonadTime m) => FarePolicy -> m ()
 update farePolicy = do
   now <- getCurrentTime
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamFP.FarePolicyT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       _ <-
         KV.updateWoReturningWithKVConnector
           dbConf'
-          VN.meshConfig
+          updatedMeshConfig
           [ -- Se.Set BeamFP.driverMinExtraFee $ Domain.minFee <$> farePolicy.driverExtraFeeBounds,
             -- Se.Set BeamFP.driverMaxExtraFee $ Domain.maxFee <$> farePolicy.driverExtraFeeBounds,
             Se.Set BeamFP.nightShiftStart $ Domain.nightShiftStart <$> farePolicy.nightShiftBounds,
@@ -141,7 +148,7 @@ update farePolicy = do
           void $
             KV.updateWoReturningWithKVConnector
               dbConf'
-              VN.meshConfig
+              updatedMeshConfig
               [ Se.Set BeamFPPD.baseFare $ fPPD.baseFare,
                 Se.Set BeamFPPD.baseDistance $ fPPD.baseDistance,
                 -- Se.Set BeamFPPD.perExtraKmFare $ fPPD.perExtraKmFare,
@@ -160,9 +167,11 @@ update farePolicy = do
     create'' :: L.MonadFlow m => Id FarePolicy -> FPSlabsDetailsSlab -> m ()
     create'' id' slab = do
       dbConf <- L.getOption KBT.PsqlDbCfg
+      let modelName = Se.modelTableName @BeamFP.FarePolicyT
+      let updatedMeshConfig = setMeshConfig modelName
       case dbConf of
         Just dbConf' ->
-          void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (QueriesFPSDS.transformDomainFarePolicySlabsDetailsSlabToBeam (id', slab))
+          void $ KV.createWoReturingKVConnector dbConf' updatedMeshConfig (QueriesFPSDS.transformDomainFarePolicySlabsDetailsSlabToBeam (id', slab))
         Nothing -> pure ()
 
 -- transformDomainFarePolicyProgressiveDetailsToBeam' :: (Id farePolicyId, FPSlabsDetailsSlab) -> BeamFPSS.FarePolicySlabsDetailsSlab

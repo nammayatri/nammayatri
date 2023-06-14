@@ -22,7 +22,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as BeamVRC
 import Storage.Tabular.Person ()
@@ -33,8 +33,10 @@ import Storage.Tabular.Person ()
 create :: L.MonadFlow m => VehicleRegistrationCertificate -> m (MeshResult ())
 create vehicleRegistrationCertificate = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamVRC.VehicleRegistrationCertificateT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainVehicleRegistrationCertificateToBeam vehicleRegistrationCertificate)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainVehicleRegistrationCertificateToBeam vehicleRegistrationCertificate)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- upsert :: VehicleRegistrationCertificate -> SqlDB ()
@@ -58,15 +60,17 @@ create vehicleRegistrationCertificate = do
 upsert :: L.MonadFlow m => VehicleRegistrationCertificate -> m ()
 upsert a@VehicleRegistrationCertificate {..} = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamVRC.VehicleRegistrationCertificateT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
-      res <- either (pure Nothing) (transformBeamVehicleRegistrationCertificateToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamVRC.id $ Se.Eq (getId a.id)]
+      res <- either (pure Nothing) (transformBeamVehicleRegistrationCertificateToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamVRC.id $ Se.Eq (getId a.id)]
       if isJust res
         then
           void $
             KV.updateWoReturningWithKVConnector
               dbCOnf'
-              Mesh.meshConfig
+              updatedMeshConfig
               [ Se.Set BeamVRC.permitExpiry permitExpiry,
                 Se.Set BeamVRC.pucExpiry pucExpiry,
                 Se.Set BeamVRC.insuranceValidity insuranceValidity,
@@ -81,7 +85,7 @@ upsert a@VehicleRegistrationCertificate {..} = do
                 Se.Set BeamVRC.updatedAt updatedAt
               ]
               [Se.Is BeamVRC.id (Se.Eq $ getId a.id)]
-        else void $ KV.createWoReturingKVConnector dbCOnf' Mesh.meshConfig (transformDomainVehicleRegistrationCertificateToBeam a)
+        else void $ KV.createWoReturingKVConnector dbCOnf' updatedMeshConfig (transformDomainVehicleRegistrationCertificateToBeam a)
     Nothing -> pure ()
 
 -- findById ::
@@ -93,8 +97,10 @@ upsert a@VehicleRegistrationCertificate {..} = do
 findById :: L.MonadFlow m => Id VehicleRegistrationCertificate -> m (Maybe VehicleRegistrationCertificate)
 findById (Id vrcID) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamVRC.VehicleRegistrationCertificateT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamVehicleRegistrationCertificateToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamVRC.id $ Se.Eq vrcID]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamVehicleRegistrationCertificateToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamVRC.id $ Se.Eq vrcID]
     Nothing -> pure Nothing
 
 -- findLastVehicleRC ::
@@ -116,10 +122,12 @@ findById (Id vrcID) = do
 findLastVehicleRC :: (L.MonadFlow m, EncFlow m r) => Text -> m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRC certNumber = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamVRC.VehicleRegistrationCertificateT
+  let updatedMeshConfig = setMeshConfig modelName
   certNumberHash <- getDbHash certNumber
   case dbConf of
     Just dbConf' -> do
-      vrcData <- KV.findAllWithOptionsKVConnector dbConf' Mesh.meshConfig [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash] (Se.Desc BeamVRC.fitnessExpiry) Nothing Nothing
+      vrcData <- KV.findAllWithOptionsKVConnector dbConf' updatedMeshConfig [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash] (Se.Desc BeamVRC.fitnessExpiry) Nothing Nothing
       case vrcData of
         Left _ -> pure Nothing
         Right x -> pure $ transformBeamVehicleRegistrationCertificateToDomain <$> headMaybe x
@@ -145,13 +153,15 @@ findLastVehicleRC certNumber = do
 findByRCAndExpiry :: L.MonadFlow m => EncryptedHashedField 'AsEncrypted Text -> UTCTime -> m (Maybe VehicleRegistrationCertificate)
 findByRCAndExpiry certNumber expiry = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamVRC.VehicleRegistrationCertificateT
+  let updatedMeshConfig = setMeshConfig modelName
   let certNumberHash = certNumber & (.hash)
   case dbConf of
     Just dbCOnf' ->
       either (pure Nothing) (transformBeamVehicleRegistrationCertificateToDomain <$>)
         <$> KV.findWithKVConnector
           dbCOnf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [Se.And [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash, Se.Is BeamVRC.fitnessExpiry $ Se.Eq expiry]]
     Nothing -> pure Nothing
 

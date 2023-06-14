@@ -28,7 +28,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantServiceUsageConfig as BeamMSUC
 
@@ -43,8 +43,10 @@ import qualified Storage.Beam.Merchant.MerchantServiceUsageConfig as BeamMSUC
 findByMerchantId :: L.MonadFlow m => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
 findByMerchantId (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMSUC.MerchantServiceUsageConfigT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantServiceUsageConfigToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamMSUC.merchantId $ Se.Eq merchantId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantServiceUsageConfigToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamMSUC.merchantId $ Se.Eq merchantId]
     Nothing -> pure Nothing
 
 -- updateMerchantServiceUsageConfig ::
@@ -71,12 +73,14 @@ findByMerchantId (Id merchantId) = do
 updateMerchantServiceUsageConfig :: (L.MonadFlow m, MonadTime m) => MerchantServiceUsageConfig -> m (MeshResult ())
 updateMerchantServiceUsageConfig MerchantServiceUsageConfig {..} = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMSUC.MerchantServiceUsageConfigT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamMSUC.getDistances getDistances,
           Se.Set BeamMSUC.getEstimatedPickupDistances getEstimatedPickupDistances,
           Se.Set BeamMSUC.getRoutes getRoutes,

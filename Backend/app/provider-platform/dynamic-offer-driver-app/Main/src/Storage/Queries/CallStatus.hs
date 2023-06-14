@@ -26,39 +26,47 @@ import qualified Kernel.Beam.Types as KBT
 import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.Prelude
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import Sequelize as Se
 import qualified Storage.Beam.CallStatus as BeamCT
 
 create :: L.MonadFlow m => CallStatus -> m (MeshResult ())
 create callStatus = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamCT.CallStatusT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainCallStatusToBeam callStatus)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainCallStatusToBeam callStatus)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById :: L.MonadFlow m => Id CallStatus -> m (Maybe CallStatus)
 findById (Id callStatusId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamCT.CallStatusT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamCT.id $ Se.Eq callStatusId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamCT.id $ Se.Eq callStatusId]
     Nothing -> pure Nothing
 
 findByCallSid :: L.MonadFlow m => Text -> m (Maybe CallStatus)
 findByCallSid callSid = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamCT.CallStatusT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamCT.callId $ Se.Eq callSid]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamCT.callId $ Se.Eq callSid]
     Nothing -> pure Nothing
 
 updateCallStatus :: L.MonadFlow m => Id CallStatus -> Call.CallStatus -> Int -> Maybe BaseUrl -> m (MeshResult ())
 updateCallStatus (Id callId) status conversationDuration recordingUrl = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamCT.CallStatusT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Set BeamCT.conversationDuration conversationDuration,
           Set BeamCT.recordingUrl $ showBaseUrl <$> recordingUrl,
           Set BeamCT.status status

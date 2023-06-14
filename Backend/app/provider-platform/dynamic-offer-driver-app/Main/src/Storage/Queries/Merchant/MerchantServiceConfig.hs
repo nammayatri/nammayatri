@@ -39,7 +39,7 @@ import Kernel.Prelude as P
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Error
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantServiceConfig as BeamMSC
 import Storage.Tabular.Merchant.MerchantServiceConfig
@@ -56,9 +56,11 @@ import Tools.Error
 findByMerchantIdAndService :: (L.MonadFlow m, Log m) => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)
 findByMerchantIdAndService (Id merchantId) serviceName = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMSC.MerchantServiceConfigT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamMSC.merchantId $ Se.Eq merchantId, Se.Is BeamMSC.serviceName $ Se.Eq serviceName]]
+      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamMSC.merchantId $ Se.Eq merchantId, Se.Is BeamMSC.serviceName $ Se.Eq serviceName]]
       case result of
         Left _ -> pure Nothing
         Right msc -> mapM transformBeamMerchantServiceConfigToDomain msc
@@ -77,9 +79,11 @@ findByMerchantIdAndService (Id merchantId) serviceName = do
 findOne :: (L.MonadFlow m, Log m) => ServiceName -> m (Maybe MerchantServiceConfig)
 findOne serviceName = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMSC.MerchantServiceConfigT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamMSC.serviceName $ Se.Eq serviceName]
+      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamMSC.serviceName $ Se.Eq serviceName]
       case result of
         Right msc -> mapM transformBeamMerchantServiceConfigToDomain msc
         Left _ -> pure Nothing
@@ -98,11 +102,13 @@ findOne serviceName = do
 upsertMerchantServiceConfig :: (L.MonadFlow m, Log m, MonadTime m) => MerchantServiceConfig -> m ()
 upsertMerchantServiceConfig merchantServiceConfig = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMSC.MerchantServiceConfigT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   let (_serviceName, configJSON) = getServiceNameConfigJSON' merchantServiceConfig.serviceConfig
   case dbConf of
     Just dbCOnf' -> do
-      res <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamMSC.merchantId $ Se.Eq (getId merchantServiceConfig.merchantId)]
+      res <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamMSC.merchantId $ Se.Eq (getId merchantServiceConfig.merchantId)]
       case res of
         Right res' -> do
           if isJust res'
@@ -110,12 +116,12 @@ upsertMerchantServiceConfig merchantServiceConfig = do
               void $
                 KV.updateWoReturningWithKVConnector
                   dbCOnf'
-                  Mesh.meshConfig
+                  updatedMeshConfig
                   [ Se.Set BeamMSC.configJSON configJSON,
                     Se.Set BeamMSC.updatedAt now
                   ]
                   [Se.Is BeamMSC.merchantId (Se.Eq $ getId merchantServiceConfig.merchantId)]
-            else void $ KV.createWoReturingKVConnector dbCOnf' Mesh.meshConfig (transformDomainMerchantServiceConfigToBeam merchantServiceConfig)
+            else void $ KV.createWoReturingKVConnector dbCOnf' updatedMeshConfig (transformDomainMerchantServiceConfigToBeam merchantServiceConfig)
         Left _ -> pure ()
     Nothing -> pure ()
 

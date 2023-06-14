@@ -21,7 +21,7 @@ import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.MediaFile as BeamMF
 
@@ -31,8 +31,10 @@ import qualified Storage.Beam.MediaFile as BeamMF
 create :: L.MonadFlow m => DMF.MediaFile -> m (MeshResult ())
 create mediaFile = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMF.MediaFileT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainMediaFileToBeam mediaFile)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainMediaFileToBeam mediaFile)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- findById :: Transactionable m => Id MediaFile -> m (Maybe MediaFile)
@@ -41,8 +43,10 @@ create mediaFile = do
 findById :: L.MonadFlow m => Id MediaFile -> m (Maybe MediaFile)
 findById (Id mediaFileId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMF.MediaFileT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamMediaFileToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamMF.id $ Se.Eq mediaFileId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamMediaFileToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamMF.id $ Se.Eq mediaFileId]
     Nothing -> pure Nothing
 
 -- findAllIn :: Transactionable m => [Id MediaFile] -> m [MediaFile]
@@ -55,8 +59,10 @@ findById (Id mediaFileId) = do
 findAllIn :: L.MonadFlow m => [Id MediaFile] -> m [MediaFile]
 findAllIn mfList = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMF.MediaFileT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamMediaFileToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamMF.id $ Se.In $ getId <$> mfList]
+    Just dbCOnf' -> either (pure []) (transformBeamMediaFileToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamMF.id $ Se.In $ getId <$> mfList]
     Nothing -> pure []
 
 transformBeamMediaFileToDomain :: BeamMF.MediaFile -> MediaFile

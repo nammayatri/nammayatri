@@ -22,22 +22,26 @@ import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest.SearchReqLocation as BeamSRL
 
 create :: L.MonadFlow m => SearchReqLocation -> m (MeshResult ())
 create bl = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSRL.SearchReqLocationT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainSearchReqLocationToBeam bl)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainSearchReqLocationToBeam bl)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById :: L.MonadFlow m => Id SearchReqLocation -> m (Maybe SearchReqLocation)
 findById (Id searchReqLocationId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSRL.SearchReqLocationT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamSearchReqLocationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamSRL.id $ Se.Eq searchReqLocationId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamSearchReqLocationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSRL.id $ Se.Eq searchReqLocationId]
     Nothing -> pure Nothing
 
 transformBeamSearchReqLocationToDomain :: BeamSRL.SearchReqLocation -> SearchReqLocation

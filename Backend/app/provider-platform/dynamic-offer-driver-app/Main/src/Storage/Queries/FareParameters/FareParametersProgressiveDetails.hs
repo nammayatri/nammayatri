@@ -6,16 +6,18 @@ import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import qualified Kernel.Types.Id as KTI
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import Sequelize as Se
-import Storage.Beam.FareParameters.FareParametersProgressiveDetails
+import Storage.Beam.FareParameters.FareParametersProgressiveDetails as BeamFPPD
 import qualified Storage.Tabular.FareParameters.FareParametersProgressiveDetails as DomainFPPD
 
 findById' :: L.MonadFlow m => KTI.Id Domain.FareParameters -> m (Maybe DomainFPPD.FullFareParametersProgressiveDetails)
 findById' (KTI.Id fareParametersId') = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamFPPD.FareParametersProgressiveDetailsT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamFareParametersProgressiveDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is fareParametersId $ Se.Eq fareParametersId']
+    Just dbCOnf' -> either (pure Nothing) (transformBeamFareParametersProgressiveDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is fareParametersId $ Se.Eq fareParametersId']
     Nothing -> pure Nothing
 
 transformBeamFareParametersProgressiveDetailsToDomain :: FareParametersProgressiveDetails -> DomainFPPD.FullFareParametersProgressiveDetails

@@ -25,37 +25,45 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.IdfyVerification as BeamIV
 
 create :: L.MonadFlow m => IdfyVerification -> m ()
 create idfyVerification = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamIV.IdfyVerificationT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainIdfyVerificationToBeam idfyVerification)
+    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainIdfyVerificationToBeam idfyVerification)
     Nothing -> pure ()
 
 findById :: L.MonadFlow m => Id IdfyVerification -> m (Maybe IdfyVerification)
 findById (Id idfvId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamIV.IdfyVerificationT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamIdfyVerificationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIV.id $ Se.Eq idfvId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamIdfyVerificationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamIV.id $ Se.Eq idfvId]
     Nothing -> pure Nothing
 
 findAllByDriverId :: L.MonadFlow m => Id Person -> m [IdfyVerification]
 findAllByDriverId (Id driverId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamIV.IdfyVerificationT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamIdfyVerificationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIV.driverId $ Se.Eq driverId]
+    Just dbCOnf' -> either (pure []) (transformBeamIdfyVerificationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamIV.driverId $ Se.Eq driverId]
     Nothing -> pure []
 
 findLatestByDriverIdAndDocType :: L.MonadFlow m => Id Person -> ImageType -> m (Maybe IdfyVerification)
 findLatestByDriverIdAndDocType (Id driverId) imgType = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamIV.IdfyVerificationT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
-      idvData <- KV.findAllWithOptionsKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamIV.driverId $ Se.Eq driverId, Se.Is BeamIV.docType $ Se.Eq imgType]] (Se.Desc BeamIV.createdAt) Nothing Nothing
+      idvData <- KV.findAllWithOptionsKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamIV.driverId $ Se.Eq driverId, Se.Is BeamIV.docType $ Se.Eq imgType]] (Se.Desc BeamIV.createdAt) Nothing Nothing
       case idvData of
         Left _ -> pure Nothing
         Right x -> pure $ transformBeamIdfyVerificationToDomain <$> headMaybe x
@@ -67,19 +75,23 @@ findLatestByDriverIdAndDocType (Id driverId) imgType = do
 findByRequestId :: L.MonadFlow m => Text -> m (Maybe IdfyVerification)
 findByRequestId requestId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamIV.IdfyVerificationT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamIdfyVerificationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIV.requestId $ Se.Eq requestId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamIdfyVerificationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamIV.requestId $ Se.Eq requestId]
     Nothing -> pure Nothing
 
 updateResponse :: (L.MonadFlow m, MonadTime m) => Text -> Text -> Text -> m (MeshResult ())
 updateResponse requestId status resp = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamIV.IdfyVerificationT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamIV.status status,
           Se.Set BeamIV.idfyResponse $ Just resp,
           Se.Set BeamIV.updatedAt now
@@ -90,12 +102,14 @@ updateResponse requestId status resp = do
 updateExtractValidationStatus :: (L.MonadFlow m, MonadTime m) => Text -> ImageExtractionValidation -> m (MeshResult ())
 updateExtractValidationStatus requestId status = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamIV.IdfyVerificationT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamIV.imageExtractionValidation status,
           Se.Set BeamIV.updatedAt now
         ]
@@ -105,12 +119,14 @@ updateExtractValidationStatus requestId status = do
 deleteByPersonId :: L.MonadFlow m => Id Person -> m ()
 deleteByPersonId (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamIV.IdfyVerificationT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       void $
         KV.deleteWithKVConnector
           dbConf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [Se.Is BeamIV.driverId (Se.Eq personId)]
     Nothing -> pure ()
 

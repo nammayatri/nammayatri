@@ -28,7 +28,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 -- import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.OperatingCity as BeamOC
 
@@ -40,8 +40,10 @@ import qualified Storage.Beam.DriverOnboarding.OperatingCity as BeamOC
 create :: L.MonadFlow m => OperatingCity -> m (MeshResult ())
 create operatingCity = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamOC.OperatingCityT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainOperatingCityToBeam operatingCity)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainOperatingCityToBeam operatingCity)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- findById ::
@@ -53,8 +55,10 @@ create operatingCity = do
 findById :: L.MonadFlow m => Id OperatingCity -> m (Maybe OperatingCity)
 findById (Id ocId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamOC.OperatingCityT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamOperatingCityToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamOC.id $ Se.Eq ocId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamOperatingCityToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamOC.id $ Se.Eq ocId]
     Nothing -> pure Nothing
 
 -- findByMerchantId ::
@@ -70,8 +74,10 @@ findById (Id ocId) = do
 findByMerchantId :: L.MonadFlow m => Id Merchant -> m (Maybe OperatingCity)
 findByMerchantId (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamOC.OperatingCityT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamOperatingCityToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamOC.merchantId $ Se.Eq merchantId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamOperatingCityToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamOC.merchantId $ Se.Eq merchantId]
     Nothing -> pure Nothing
 
 -- findEnabledCityByName ::
@@ -89,12 +95,14 @@ findByMerchantId (Id merchantId) = do
 findEnabledCityByName :: L.MonadFlow m => Text -> m [OperatingCity]
 findEnabledCityByName city = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamOC.OperatingCityT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       either (pure []) (transformBeamOperatingCityToDomain <$>)
         <$> KV.findAllWithKVConnector
           dbConf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [ Se.And
               [Se.Is BeamOC.cityName $ Se.Eq city, Se.Is BeamOC.enabled $ Se.Eq True]
           ]

@@ -23,33 +23,39 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Mesh as Mesh
+import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking.BookingLocation as BeamBL
 
 create :: L.MonadFlow m => BookingLocation -> m (MeshResult ())
 create bl = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamBL.BookingLocationT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainBookingLocationToBeam bl)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainBookingLocationToBeam bl)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById :: L.MonadFlow m => Id BookingLocation -> m (Maybe BookingLocation)
 findById (Id bookingLocationId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamBL.BookingLocationT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamBookingLocationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamBL.id $ Se.Eq bookingLocationId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamBookingLocationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamBL.id $ Se.Eq bookingLocationId]
     Nothing -> pure Nothing
 
 updateAddress :: (L.MonadFlow m, MonadTime m) => Id BookingLocation -> LocationAddress -> m (MeshResult ())
 updateAddress (Id blId) LocationAddress {..} = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamBL.BookingLocationT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamBL.street street,
           Se.Set BeamBL.city city,
           Se.Set BeamBL.state state,

@@ -19,15 +19,17 @@ import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude hiding (isNothing)
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.CancellationReason as BeamCR
 
 findAll :: L.MonadFlow m => m [CancellationReason]
 findAll = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamCR.CancellationReasonT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamCancellationReasonToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamCR.enabled $ Se.Eq True] (Se.Desc BeamCR.priority) Nothing Nothing
+    Just dbCOnf' -> either (pure []) (transformBeamCancellationReasonToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamCR.enabled $ Se.Eq True] (Se.Desc BeamCR.priority) Nothing Nothing
     Nothing -> pure []
 
 transformBeamCancellationReasonToDomain :: BeamCR.CancellationReason -> CancellationReason

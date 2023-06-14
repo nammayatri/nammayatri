@@ -28,7 +28,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.DriverIntelligentPoolConfig as BeamDIPC
 
@@ -43,8 +43,10 @@ import qualified Storage.Beam.Merchant.DriverIntelligentPoolConfig as BeamDIPC
 findByMerchantId :: L.MonadFlow m => Id Merchant -> m (Maybe DriverIntelligentPoolConfig)
 findByMerchantId (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDIPC.DriverIntelligentPoolConfigT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverIntelligentPoolConfigToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDIPC.merchantId $ Se.Eq merchantId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverIntelligentPoolConfigToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDIPC.merchantId $ Se.Eq merchantId]
     Nothing -> pure Nothing
 
 -- update :: DriverIntelligentPoolConfig -> SqlDB ()
@@ -74,12 +76,14 @@ findByMerchantId (Id merchantId) = do
 update :: (L.MonadFlow m, MonadTime m) => DriverIntelligentPoolConfig -> m (MeshResult ())
 update config = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDIPC.DriverIntelligentPoolConfigT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamDIPC.availabilityTimeWeightage config.availabilityTimeWeightage,
           Se.Set BeamDIPC.availabilityTimeWindowOption config.availabilityTimeWindowOption,
           Se.Set BeamDIPC.acceptanceRatioWeightage config.acceptanceRatioWeightage,

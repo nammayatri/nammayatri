@@ -23,7 +23,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.RegistrationToken as BeamRT
 
@@ -33,8 +33,10 @@ import qualified Storage.Beam.RegistrationToken as BeamRT
 create :: L.MonadFlow m => DRT.RegistrationToken -> m (MeshResult ())
 create registrationToken = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainRegistrationTokenToBeam registrationToken)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRegistrationTokenToBeam registrationToken)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- findById :: Transactionable m => Id RegistrationToken -> m (Maybe RegistrationToken)
@@ -43,8 +45,10 @@ create registrationToken = do
 findById :: L.MonadFlow m => Id RegistrationToken -> m (Maybe RegistrationToken)
 findById (Id registrationTokenId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamRT.id $ Se.Eq registrationTokenId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamRT.id $ Se.Eq registrationTokenId]
     Nothing -> pure Nothing
 
 -- setVerified :: Id RegistrationToken -> SqlDB ()
@@ -61,12 +65,14 @@ findById (Id registrationTokenId) = do
 setVerified :: (L.MonadFlow m, MonadTime m) => Id RegistrationToken -> m (MeshResult ())
 setVerified (Id rtId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamRT.verified True,
           Se.Set BeamRT.updatedAt now
         ]
@@ -83,8 +89,10 @@ setVerified (Id rtId) = do
 findByToken :: L.MonadFlow m => RegToken -> m (Maybe RegistrationToken)
 findByToken token = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamRT.token $ Se.Eq token]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamRT.token $ Se.Eq token]
     Nothing -> pure Nothing
 
 -- updateAttempts :: Int -> Id RegistrationToken -> SqlDB ()
@@ -101,12 +109,14 @@ findByToken token = do
 updateAttempts :: (L.MonadFlow m, MonadTime m) => Int -> Id RegistrationToken -> m (MeshResult ())
 updateAttempts attempts (Id rtId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamRT.attempts attempts,
           Se.Set BeamRT.updatedAt now
         ]
@@ -122,12 +132,14 @@ updateAttempts attempts (Id rtId) = do
 deleteByPersonId :: L.MonadFlow m => Id Person -> m ()
 deleteByPersonId (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       void $
         KV.deleteWithKVConnector
           dbConf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [Se.Is BeamRT.entityId (Se.Eq personId)]
     Nothing -> pure ()
 
@@ -142,12 +154,14 @@ deleteByPersonId (Id personId) = do
 deleteByPersonIdExceptNew :: L.MonadFlow m => Id Person -> Id RegistrationToken -> m ()
 deleteByPersonIdExceptNew (Id personId) (Id newRT) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       void $
         KV.deleteWithKVConnector
           dbConf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [Se.And [Se.Is BeamRT.entityId (Se.Eq personId), Se.Is BeamRT.id (Se.Not $ Se.Eq newRT)]]
     Nothing -> pure ()
 
@@ -161,8 +175,10 @@ deleteByPersonIdExceptNew (Id personId) (Id newRT) = do
 findAllByPersonId :: L.MonadFlow m => Id Person -> m [RegistrationToken]
 findAllByPersonId personId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamRT.entityId $ Se.Eq $ getId personId]
+    Just dbCOnf' -> either (pure []) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamRT.entityId $ Se.Eq $ getId personId]
     Nothing -> pure []
 
 -- getAlternateNumberAttempts :: Transactionable m => Id Person -> m Int
@@ -176,9 +192,11 @@ findAllByPersonId personId = do
 getAlternateNumberAttempts :: L.MonadFlow m => Id Person -> m Int
 getAlternateNumberAttempts (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
-      rt <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamRT.entityId $ Se.Eq personId]
+      rt <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamRT.entityId $ Se.Eq personId]
       case rt of
         Left _ -> pure 0
         Right Nothing -> pure 0

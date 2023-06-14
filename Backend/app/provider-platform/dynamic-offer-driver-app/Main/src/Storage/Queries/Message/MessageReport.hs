@@ -33,7 +33,7 @@ import Kernel.Prelude
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Kernel.Types.Logging
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import Sequelize
 import qualified Sequelize as Se
 import qualified Storage.Beam.Message.Message as BeamM
@@ -51,8 +51,10 @@ createMany = traverse_ create
 create :: L.MonadFlow m => MessageReport -> m (MeshResult ())
 create messageReport = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMR.MessageReportT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainMessageReportToBeam messageReport)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainMessageReportToBeam messageReport)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- fullMessage ::
@@ -91,12 +93,14 @@ create messageReport = do
 findByDriverIdAndLanguage :: (L.MonadFlow m) => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
 findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMR.MessageReportT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       let limitVal = min (fromMaybe 10 mbLimit) 10
           offsetVal = fromMaybe 0 mbOffset
       messageReport <- do
-        messageReport' <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]
+        messageReport' <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]
         case messageReport' of
           Left _ -> pure []
           Right result -> pure $ transformBeamMessageReportToDomain <$> result
@@ -104,7 +108,7 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
         message' <-
           KV.findAllWithOptionsKVConnector
             dbConf'
-            Mesh.meshConfig
+            updatedMeshConfig
             [Se.Is BeamM.id $ Se.In $ getId . DTMR.messageId <$> messageReport]
             (Se.Desc BeamM.createdAt)
             Nothing
@@ -129,7 +133,7 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
         messageTranslation' <-
           KV.findAllWithOptionsKVConnector
             dbConf'
-            Mesh.meshConfig
+            updatedMeshConfig
             [ Se.And
                 [Se.Is BeamMT.messageId $ Se.In $ getId . Msg.id <$> message, Se.Is BeamMT.language $ Se.Eq language]
             ]
@@ -189,8 +193,10 @@ findByDriverIdMessageIdAndLanguage driverId messageId language = do
 findByMessageIdAndDriverId :: L.MonadFlow m => Id Msg.Message -> Id P.Driver -> m (Maybe MessageReport)
 findByMessageIdAndDriverId (Id messageId) (Id driverId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMR.MessageReportT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamMessageReportToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamMR.messageId $ Se.Eq messageId, Se.Is BeamMR.driverId $ Se.Eq driverId]]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamMessageReportToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamMR.messageId $ Se.Eq messageId, Se.Is BeamMR.driverId $ Se.Eq driverId]]
     Nothing -> pure Nothing
 
 -- findByMessageIdAndStatusWithLimitAndOffset ::
@@ -229,6 +235,8 @@ findByMessageIdAndStatusWithLimitAndOffset ::
   m [(MessageReport, P.Person)]
 findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset (Id messageID) mbDeliveryStatus = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMR.MessageReportT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       let limitVal = min (maybe 10 fromIntegral mbLimit) 20
@@ -237,7 +245,7 @@ findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset (Id messageID) mbDel
         messageReport' <-
           KV.findAllWithOptionsKVConnector
             dbConf'
-            Mesh.meshConfig
+            updatedMeshConfig
             [ Se.And
                 ( [Se.Is BeamMR.messageId $ Se.Eq messageID]
                     <> ([Se.Is BeamMR.deliveryStatus $ Se.Eq (fromJust mbDeliveryStatus) | isJust mbDeliveryStatus])
@@ -253,7 +261,7 @@ findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset (Id messageID) mbDel
         person' <-
           KV.findAllWithOptionsKVConnector
             dbConf'
-            Mesh.meshConfig
+            updatedMeshConfig
             [Se.Is BeamP.id $ Se.In $ getId . DTMR.driverId <$> messageReport]
             (Se.Desc BeamP.createdAt)
             Nothing
@@ -345,12 +353,14 @@ getMessageCountByReadStatus (Id messageID) = do
 updateSeenAndReplyByMessageIdAndDriverId :: (L.MonadFlow m, MonadTime m) => Id Msg.Message -> Id P.Driver -> Bool -> Maybe Text -> m (MeshResult ())
 updateSeenAndReplyByMessageIdAndDriverId messageId driverId readStatus reply = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMR.MessageReportT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamMR.readStatus readStatus,
           Se.Set BeamMR.reply reply,
           Se.Set BeamMR.updatedAt now
@@ -379,13 +389,15 @@ updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId driverId = do
     Just report -> do
       let likeStatus = not report.likeStatus
       dbConf <- L.getOption KBT.PsqlDbCfg
+      let modelName = Se.modelTableName @BeamMR.MessageReportT
+      let updatedMeshConfig = setMeshConfig modelName
       now <- getCurrentTime
       case dbConf of
         Just dbConf' ->
           void $
             KV.updateWoReturningWithKVConnector
               dbConf'
-              Mesh.meshConfig
+              updatedMeshConfig
               [ Se.Set BeamMR.likeStatus likeStatus,
                 Se.Set BeamMR.updatedAt now
               ]
@@ -409,12 +421,14 @@ updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId driverId = do
 updateDeliveryStatusByMessageIdAndDriverId :: (L.MonadFlow m, MonadTime m) => Id Msg.Message -> Id P.Driver -> DeliveryStatus -> m (MeshResult ())
 updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMR.MessageReportT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamMR.deliveryStatus deliveryStatus,
           Se.Set BeamMR.updatedAt now
         ]
@@ -430,12 +444,14 @@ updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = d
 deleteByPersonId :: L.MonadFlow m => Id P.Person -> m ()
 deleteByPersonId (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMR.MessageReportT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       void $
         KV.deleteWithKVConnector
           dbConf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [Se.Is BeamMR.driverId (Se.Eq personId)]
     Nothing -> pure ()
 

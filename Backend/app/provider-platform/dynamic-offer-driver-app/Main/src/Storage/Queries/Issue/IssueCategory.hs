@@ -9,7 +9,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.IssueCategory as BeamIC
 import qualified Storage.Beam.Issue.IssueTranslation as BeamIT
@@ -37,10 +37,12 @@ import qualified Storage.Queries.Issue.IssueTranslation as QueriesIT
 findAllByLanguage :: L.MonadFlow m => Language -> m [(IssueCategory, Maybe IssueTranslation)]
 findAllByLanguage language = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamIC.IssueCategoryT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
-      iTranslations <- either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIT.language $ Se.Eq language]
-      iCategorys <- either (pure []) (transformBeamIssueCategoryToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIC.category $ Se.In (DomainIT.sentence <$> iTranslations)]
+      iTranslations <- either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamIT.language $ Se.Eq language]
+      iCategorys <- either (pure []) (transformBeamIssueCategoryToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamIC.category $ Se.In (DomainIT.sentence <$> iTranslations)]
       let dCategoriesWithTranslations = foldl' (getIssueCategoryWithTranslations iTranslations) [] iCategorys
       pure dCategoriesWithTranslations
     Nothing -> pure []
@@ -58,8 +60,10 @@ findAllByLanguage language = do
 findById :: L.MonadFlow m => Id IssueCategory -> m (Maybe IssueCategory)
 findById (Id issueCategoryId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamIC.IssueCategoryT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamIssueCategoryToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIC.id $ Se.Eq issueCategoryId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamIssueCategoryToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamIC.id $ Se.Eq issueCategoryId]
     Nothing -> pure Nothing
 
 -- findByIdAndLanguage :: Transactionable m => Id IssueCategory -> Language -> m (Maybe (IssueCategory, Maybe IssueTranslation))
@@ -71,10 +75,12 @@ findById (Id issueCategoryId) = do
 findByIdAndLanguage :: L.MonadFlow m => Id IssueCategory -> Language -> m (Maybe (IssueCategory, Maybe IssueTranslation))
 findByIdAndLanguage (Id issueCategoryId) language = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamIC.IssueCategoryT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
-      iCategory <- either (pure []) (transformBeamIssueCategoryToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamIC.id $ Se.Eq issueCategoryId]
-      iTranslations <- either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamIT.language $ Se.Eq language, Se.Is BeamIT.sentence $ Se.In (DomainIC.category <$> iCategory)]]
+      iCategory <- either (pure []) (transformBeamIssueCategoryToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamIC.id $ Se.Eq issueCategoryId]
+      iTranslations <- either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamIT.language $ Se.Eq language, Se.Is BeamIT.sentence $ Se.In (DomainIC.category <$> iCategory)]]
       let dInfosWithTranslations' = foldl' (getIssueOptionsWithTranslations iTranslations) [] iCategory
           dInfosWithTranslations = headMaybe dInfosWithTranslations'
       pure dInfosWithTranslations

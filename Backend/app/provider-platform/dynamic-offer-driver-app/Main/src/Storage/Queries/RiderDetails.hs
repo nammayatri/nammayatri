@@ -26,7 +26,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.RiderDetails as BeamRD
 
@@ -36,8 +36,10 @@ import qualified Storage.Beam.RiderDetails as BeamRD
 create :: L.MonadFlow m => DRDD.RiderDetails -> m (MeshResult ())
 create riderDetails = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamRD.RiderDetailsT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainRiderDetailsToBeam riderDetails)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRiderDetailsToBeam riderDetails)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- TODO :: write cached query for this
@@ -50,8 +52,10 @@ create riderDetails = do
 findById :: L.MonadFlow m => Id RiderDetails -> m (Maybe RiderDetails)
 findById (Id riderDetailsId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamRD.RiderDetailsT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamRiderDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamRD.id $ Se.Eq riderDetailsId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamRiderDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamRD.id $ Se.Eq riderDetailsId]
     Nothing -> pure Nothing
 
 -- findByMobileNumberAndMerchant ::
@@ -71,9 +75,11 @@ findById (Id riderDetailsId) = do
 findByMobileNumberAndMerchant :: (L.MonadFlow m, EncFlow m r) => Text -> Id Merchant -> m (Maybe RiderDetails)
 findByMobileNumberAndMerchant mobileNumber_ merchantId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamRD.RiderDetailsT
+  let updatedMeshConfig = setMeshConfig modelName
   mobileNumberDbHash <- getDbHash mobileNumber_
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamRiderDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamRD.mobileNumberHash $ Se.Eq mobileNumberDbHash, Se.Is BeamRD.merchantId $ Se.Eq (getId merchantId)]]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamRiderDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamRD.mobileNumberHash $ Se.Eq mobileNumberDbHash, Se.Is BeamRD.merchantId $ Se.Eq (getId merchantId)]]
     Nothing -> pure Nothing
 
 -- updateHasTakenValidRide :: Id RiderDetails -> SqlDB ()
@@ -91,12 +97,14 @@ findByMobileNumberAndMerchant mobileNumber_ merchantId = do
 updateHasTakenValidRide :: (L.MonadFlow m, MonadTime m) => Id RiderDetails -> m (MeshResult ())
 updateHasTakenValidRide (Id riderId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamRD.RiderDetailsT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamRD.hasTakenValidRide True,
           Se.Set BeamRD.hasTakenValidRideAt (Just now),
           Se.Set BeamRD.updatedAt now
@@ -114,8 +122,10 @@ updateHasTakenValidRide (Id riderId) = do
 findAllReferredByDriverId :: L.MonadFlow m => Id Person -> m [RiderDetails]
 findAllReferredByDriverId (Id driverId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamRD.RiderDetailsT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamRiderDetailsToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamRD.referredByDriver $ Se.Eq (Just driverId)]
+    Just dbCOnf' -> either (pure []) (transformBeamRiderDetailsToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamRD.referredByDriver $ Se.Eq (Just driverId)]
     Nothing -> pure []
 
 -- findByMobileNumberHashAndMerchant :: Transactionable m => DbHash -> Id Merchant -> m (Maybe RiderDetails)
@@ -130,8 +140,10 @@ findAllReferredByDriverId (Id driverId) = do
 findByMobileNumberHashAndMerchant :: L.MonadFlow m => DbHash -> Id Merchant -> m (Maybe RiderDetails)
 findByMobileNumberHashAndMerchant mobileNumberDbHash (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamRD.RiderDetailsT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamRiderDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamRD.mobileNumberHash $ Se.Eq mobileNumberDbHash, Se.Is BeamRD.id $ Se.Eq merchantId]]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamRiderDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamRD.mobileNumberHash $ Se.Eq mobileNumberDbHash, Se.Is BeamRD.id $ Se.Eq merchantId]]
     Nothing -> pure Nothing
 
 -- updateReferralInfo ::
@@ -156,12 +168,14 @@ findByMobileNumberHashAndMerchant mobileNumberDbHash (Id merchantId) = do
 updateReferralInfo :: (L.MonadFlow m, MonadTime m) => DbHash -> Id Merchant -> Id DriverReferral -> Id Person -> m (MeshResult ())
 updateReferralInfo customerNumberHash merchantId referralId driverId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamRD.RiderDetailsT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamRD.referralCode (Just $ getId referralId),
           Se.Set BeamRD.referredByDriver (Just $ getId driverId),
           Se.Set BeamRD.referredAt (Just now)

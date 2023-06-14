@@ -25,7 +25,7 @@ import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Message.Message as BeamM
 import qualified Storage.Queries.Message.MessageTranslation as MT
@@ -34,8 +34,10 @@ import Storage.Tabular.Message.Instances ()
 createMessage :: L.MonadFlow m => Message -> m (MeshResult ())
 createMessage message = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamM.MessageT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainMessageToBeam message)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainMessageToBeam message)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 create :: L.MonadFlow m => Message -> m ()
@@ -50,9 +52,11 @@ create msg = do
 findById :: L.MonadFlow m => Id Message -> m (Maybe RawMessage)
 findById (Id messageId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamM.MessageT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamM.id $ Se.Eq messageId]
+      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamM.id $ Se.Eq messageId]
       case result of
         Right msg -> do
           msg' <- traverse transformBeamMessageToDomain msg
@@ -78,9 +82,11 @@ findById (Id messageId) = do
 findAllWithLimitOffset :: L.MonadFlow m => Maybe Int -> Maybe Int -> Id Merchant -> m [RawMessage]
 findAllWithLimitOffset mbLimit mbOffset merchantIdParam = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamM.MessageT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
-      srsz <- KV.findAllWithOptionsKVConnector dbConf' Mesh.meshConfig [Se.Is BeamM.merchantId $ Se.Eq (getId merchantIdParam)] (Se.Asc BeamM.createdAt) (Just limitVal) (Just offsetVal)
+      srsz <- KV.findAllWithOptionsKVConnector dbConf' updatedMeshConfig [Se.Is BeamM.merchantId $ Se.Eq (getId merchantIdParam)] (Se.Asc BeamM.createdAt) (Just limitVal) (Just offsetVal)
       case srsz of
         Left _ -> pure []
         Right x -> do
@@ -126,12 +132,14 @@ updateMessageLikeCount messageId value = do
     Just msg -> do
       let likeCount = msg.likeCount
       dbConf <- L.getOption KBT.PsqlDbCfg
+      let modelName = Se.modelTableName @BeamM.MessageT
+      let updatedMeshConfig = setMeshConfig modelName
       case dbConf of
         Just dbConf' ->
           void $
             KV.updateWoReturningWithKVConnector
               dbConf'
-              Mesh.meshConfig
+              updatedMeshConfig
               [Se.Set BeamM.likeCount $ likeCount + value]
               [Se.Is BeamM.id (Se.Eq $ getId messageId)]
         Nothing -> pure ()

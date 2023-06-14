@@ -161,7 +161,7 @@ fareParametersProgressiveDetailsToPSModifiers =
 -- findById' (KTI.Id fareParametersId') = do
 --   dbConf <- L.getOption KBT.PsqlDbCfg
 --   case dbConf of
---     Just dbCOnf' -> either (pure Nothing) (transformBeamFareParametersProgressiveDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is fareParametersId $ Se.Eq fareParametersId']
+--     Just dbCOnf' -> either (pure Nothing) (transformBeamFareParametersProgressiveDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is fareParametersId $ Se.Eq fareParametersId']
 --     Nothing -> pure Nothing
 
 $(enableKVPG ''FareParametersProgressiveDetailsT ['fareParametersId] [])

@@ -23,7 +23,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as BeamFPPDP
 import Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
@@ -47,8 +47,10 @@ findAll' farePolicyId = do
 findById' :: L.MonadFlow m => KTI.Id DFP.FarePolicy -> m (Maybe FullFarePolicyProgressiveDetailsPerExtraKmRateSection)
 findById' farePolicyId' = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSectionT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamFarePolicyProgressiveDetailsPerExtraKmRateSectionToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId')]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamFarePolicyProgressiveDetailsPerExtraKmRateSectionToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId')]
     Nothing -> pure Nothing
 
 findAll ::
@@ -59,8 +61,10 @@ findAll ::
   m [FullFarePolicyProgressiveDetailsPerExtraKmRateSection]
 findAll farePolicyId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSectionT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamFarePolicyProgressiveDetailsPerExtraKmRateSectionToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamFPPDP.startDistance) Nothing Nothing
+    Just dbCOnf' -> either (pure []) (transformBeamFarePolicyProgressiveDetailsPerExtraKmRateSectionToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamFPPDP.startDistance) Nothing Nothing
     Nothing -> pure []
 
 deleteAll' :: Id DFP.FarePolicy -> FullEntitySqlDB ()

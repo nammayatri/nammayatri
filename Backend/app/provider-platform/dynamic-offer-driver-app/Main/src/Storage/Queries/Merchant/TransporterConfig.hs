@@ -29,7 +29,7 @@ import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.TransporterConfig as BeamTC
 
@@ -44,9 +44,11 @@ import qualified Storage.Beam.Merchant.TransporterConfig as BeamTC
 findByMerchantId :: L.MonadFlow m => Id Merchant -> m (Maybe TransporterConfig)
 findByMerchantId (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamTC.TransporterConfigT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamTC.merchantId $ Se.Eq merchantId]
+      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamTC.merchantId $ Se.Eq merchantId]
       case result of
         Left _ -> pure Nothing
         Right tc -> mapM transformBeamTransporterConfigToDomain tc
@@ -67,13 +69,15 @@ findByMerchantId (Id merchantId) = do
 updateFCMConfig :: (L.MonadFlow m, MonadTime m) => Id Merchant -> BaseUrl -> Text -> m ()
 updateFCMConfig (Id merchantId) fcmUrl fcmServiceAccount = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamTC.TransporterConfigT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       void $
         KV.updateWoReturningWithKVConnector
           dbConf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [ Se.Set BeamTC.fcmUrl $ showBaseUrl fcmUrl,
             Se.Set BeamTC.fcmServiceAccount fcmServiceAccount,
             Se.Set BeamTC.updatedAt now
@@ -95,12 +99,14 @@ updateFCMConfig (Id merchantId) fcmUrl fcmServiceAccount = do
 updateReferralLinkPassword :: (L.MonadFlow m, MonadTime m) => Id Merchant -> Text -> m (MeshResult ())
 updateReferralLinkPassword (Id merchantId) newPassword = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamTC.TransporterConfigT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamTC.referralLinkPassword newPassword,
           Se.Set BeamTC.updatedAt now
         ]
@@ -134,12 +140,14 @@ updateReferralLinkPassword (Id merchantId) newPassword = do
 update :: (L.MonadFlow m, MonadTime m) => TransporterConfig -> m (MeshResult ())
 update config = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamTC.TransporterConfigT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamTC.pickupLocThreshold config.pickupLocThreshold,
           Se.Set BeamTC.dropLocThreshold config.dropLocThreshold,
           Se.Set BeamTC.rideTimeEstimatedThreshold config.rideTimeEstimatedThreshold,

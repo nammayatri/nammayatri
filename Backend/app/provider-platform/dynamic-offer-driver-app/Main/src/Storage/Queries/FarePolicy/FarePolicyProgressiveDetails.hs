@@ -22,7 +22,7 @@ import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import qualified Kernel.Types.Id as KTI
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import Sequelize as Se
 import Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as BeamFPPD
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QueriesFPPDP
@@ -31,9 +31,11 @@ import qualified Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails as Doma
 findById' :: L.MonadFlow m => KTI.Id Domain.FarePolicy -> m (Maybe DomainFPPD.FullFarePolicyProgressiveDetails)
 findById' (KTI.Id farePolicyId') = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamFPPD.FarePolicyProgressiveDetailsT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
-      res <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFPPD.farePolicyId $ Se.Eq farePolicyId']
+      res <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamFPPD.farePolicyId $ Se.Eq farePolicyId']
       case res of
         Left _ -> pure Nothing
         Right x -> mapM transformBeamFarePolicyProgressiveDetailsToDomain x

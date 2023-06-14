@@ -25,7 +25,7 @@ import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import Sequelize
 import qualified Sequelize as Se
 import qualified Storage.Beam.QuoteSpecialZone as BeamQSZ
@@ -44,10 +44,12 @@ import qualified Storage.Queries.FareParameters as SQFP
 create :: L.MonadFlow m => QuoteSpecialZone -> m ()
 create quote = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamQSZ.QuoteSpecialZoneT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       SQFP.create quote.fareParams
-      void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainQuoteSpecialZoneToBeam quote)
+      void $ KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainQuoteSpecialZoneToBeam quote)
     Nothing -> pure ()
 
 -- countAllByRequestId :: Transactionable m => Id SearchRequestSpecialZone -> m Int32
@@ -90,9 +92,11 @@ countAllByRequestId searchReqID = do
 findById :: (L.MonadFlow m) => Id QuoteSpecialZone -> m (Maybe QuoteSpecialZone)
 findById (Id dQuoteId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamQSZ.QuoteSpecialZoneT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
-      sR <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamQSZ.id $ Se.Eq dQuoteId]
+      sR <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamQSZ.id $ Se.Eq dQuoteId]
       case sR of
         Right (Just x) -> transformBeamQuoteSpecialZoneToDomain x
         _ -> pure Nothing

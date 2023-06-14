@@ -23,23 +23,27 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Message.MessageTranslation as BeamMT
 
 create :: L.MonadFlow m => MessageTranslation -> m (MeshResult ())
 create messageTranslation = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMT.MessageTranslationT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainMessageTranslationToBeam messageTranslation)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainMessageTranslationToBeam messageTranslation)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findByMessageIdAndLanguage :: L.MonadFlow m => Id Msg.Message -> Language -> m (Maybe MessageTranslation)
 findByMessageIdAndLanguage (Id messageId) language = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMT.MessageTranslationT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamMT.messageId $ Se.Eq messageId, Se.Is BeamMT.language $ Se.Eq language]]
+      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamMT.messageId $ Se.Eq messageId, Se.Is BeamMT.language $ Se.Eq language]]
       case result of
         Right mt -> pure $ transformBeamMessageTranslationToDomain <$> mt
         Left _ -> pure Nothing
@@ -48,8 +52,10 @@ findByMessageIdAndLanguage (Id messageId) language = do
 findByMessageId :: L.MonadFlow m => Id Msg.Message -> m [MessageTranslation]
 findByMessageId (Id messageId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMT.MessageTranslationT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamMessageTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamMT.messageId $ Se.Eq messageId]
+    Just dbCOnf' -> either (pure []) (transformBeamMessageTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamMT.messageId $ Se.Eq messageId]
     Nothing -> pure []
 
 transformBeamMessageTranslationToDomain :: BeamMT.MessageTranslation -> MessageTranslation

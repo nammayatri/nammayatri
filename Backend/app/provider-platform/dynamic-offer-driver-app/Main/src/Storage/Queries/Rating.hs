@@ -24,7 +24,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Rating as BeamR
 
@@ -34,8 +34,10 @@ import qualified Storage.Beam.Rating as BeamR
 create :: L.MonadFlow m => DR.Rating -> m (MeshResult ())
 create rating = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamR.RatingT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainRatingToBeam rating)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRatingToBeam rating)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- updateRating :: Id Rating -> Id Person -> Int -> Maybe Text -> SqlDB ()
@@ -55,12 +57,14 @@ create rating = do
 updateRating :: (L.MonadFlow m, MonadTime m) => Id Rating -> Id Person -> Int -> Maybe Text -> m (MeshResult ())
 updateRating (Id ratingId) (Id driverId) newRatingValue newFeedbackDetails = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamR.RatingT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamR.ratingValue newRatingValue,
           Se.Set BeamR.feedbackDetails newFeedbackDetails,
           Se.Set BeamR.updatedAt now
@@ -78,8 +82,10 @@ updateRating (Id ratingId) (Id driverId) newRatingValue newFeedbackDetails = do
 findAllRatingsForPerson :: L.MonadFlow m => Id Person -> m [Rating]
 findAllRatingsForPerson driverId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamR.RatingT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamRatingToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamR.driverId $ Se.Eq $ getId driverId]
+    Just dbCOnf' -> either (pure []) (transformBeamRatingToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamR.driverId $ Se.Eq $ getId driverId]
     Nothing -> pure []
 
 -- findRatingForRide :: Transactionable m => Id Ride -> m (Maybe Rating)
@@ -91,8 +97,10 @@ findAllRatingsForPerson driverId = do
 findRatingForRide :: L.MonadFlow m => Id Ride -> m (Maybe Rating)
 findRatingForRide (Id rideId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamR.RatingT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamRatingToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamR.id $ Se.Eq rideId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamRatingToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamR.id $ Se.Eq rideId]
     Nothing -> pure Nothing
 
 transformBeamRatingToDomain :: BeamR.Rating -> Rating

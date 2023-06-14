@@ -22,7 +22,7 @@ import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FareParameters as BeamFP
 import qualified Storage.Queries.FareParameters.FareParametersProgressiveDetails as BeamFPPD
@@ -38,12 +38,14 @@ import qualified Storage.Queries.FareParameters.FareParametersProgressiveDetails
 create :: L.MonadFlow m => DFP.FareParameters -> m ()
 create fareParameters = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamFP.FareParametersT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
-      void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainFareParametersToBeam fareParameters)
+      void $ KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainFareParametersToBeam fareParameters)
       case fareParameters.fareParametersDetails of
         ProgressiveDetails fppdt -> do
-          void $ KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (BeamFPPD.transformDomainFareParametersProgressiveDetailsToBeam (fareParameters.id, fppdt))
+          void $ KV.createWoReturingKVConnector dbConf' updatedMeshConfig (BeamFPPD.transformDomainFareParametersProgressiveDetailsToBeam (fareParameters.id, fppdt))
         _ -> pure ()
     Nothing -> pure ()
 
@@ -55,22 +57,26 @@ create fareParameters = do
 findById :: L.MonadFlow m => Id FareParameters -> m (Maybe FareParameters)
 findById (Id fareParametersId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamFP.FareParametersT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
-      fp <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]
+      fp <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]
       case fp of
         Right (Just fp') -> transformBeamFareParametersToDomain fp'
         _ -> pure Nothing
-    -- either (pure Nothing) (transformBeamFareParametersToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]
+    -- either (pure Nothing) (transformBeamFareParametersToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]
     Nothing -> pure Nothing
 
 -- findById'' :: L.MonadFlow m => Id FareParameters -> m (Maybe FareParameters)
 -- findById'' (Id fareParametersId) = do
 --   dbConf <- L.getOption KBT.PsqlDbCfg
+-- let modelName = Se.modelTableName @BeamFP.FareParametersT
+-- let updatedMeshConfig = setMeshConfig modelName
 --   case dbConf of
 --     Just dbCOnf' -> do
---       -- either (pure Nothing) (transformBeamFareParametersToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]
---       fp <- KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]
+--       -- either (pure Nothing) (transformBeamFareParametersToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]
+--       fp <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]
 --       either (\_ -> pure Nothing) (sequence (transformBeamFareParametersToDomain <$>)) fp
 --     Nothing -> pure Nothing
 

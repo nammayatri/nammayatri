@@ -8,7 +8,7 @@ import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverReferral as BeamDR
 
@@ -18,8 +18,10 @@ import qualified Storage.Beam.DriverReferral as BeamDR
 create :: L.MonadFlow m => DDR.DriverReferral -> m (MeshResult ())
 create driverReferral = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDR.DriverReferralT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverReferralToBeam driverReferral)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainDriverReferralToBeam driverReferral)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 -- findByRefferalCode :: Transactionable m => Id DriverReferral -> m (Maybe DriverReferral)
@@ -31,8 +33,10 @@ findByRefferalCode ::
   m (Maybe DriverReferral)
 findByRefferalCode (Id referralId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDR.DriverReferralT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverReferralToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDR.referralCode $ Se.Eq referralId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverReferralToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDR.referralCode $ Se.Eq referralId]
     Nothing -> pure Nothing
 
 -- findById ::
@@ -51,8 +55,10 @@ findById ::
   m (Maybe DriverReferral)
 findById (Id driverId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDR.DriverReferralT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverReferralToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDR.driverId $ Se.Eq driverId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverReferralToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDR.driverId $ Se.Eq driverId]
     Nothing -> pure Nothing
 
 transformBeamDriverReferralToDomain :: BeamDR.DriverReferral -> DriverReferral

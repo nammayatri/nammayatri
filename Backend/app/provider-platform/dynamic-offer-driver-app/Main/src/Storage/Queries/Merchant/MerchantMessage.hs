@@ -27,7 +27,7 @@ import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantMessage as BeamMM
 import Storage.Tabular.Merchant.MerchantMessage ()
@@ -39,8 +39,10 @@ import Storage.Tabular.Merchant.MerchantMessage ()
 findByMerchantIdAndMessageKey :: L.MonadFlow m => Id Merchant -> MessageKey -> m (Maybe MerchantMessage)
 findByMerchantIdAndMessageKey (Id merchantId) messageKey = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMM.MerchantMessageT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantMessageToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamMM.merchantId $ Se.Eq merchantId, Se.Is BeamMM.messageKey $ Se.Eq messageKey]]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantMessageToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamMM.merchantId $ Se.Eq merchantId, Se.Is BeamMM.messageKey $ Se.Eq messageKey]]
     Nothing -> pure Nothing
 
 transformBeamMerchantMessageToDomain :: BeamMM.MerchantMessage -> MerchantMessage

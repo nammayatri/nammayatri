@@ -23,7 +23,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.DriverLicense as BeamDL
 import Storage.Tabular.Person ()
@@ -31,22 +31,26 @@ import Storage.Tabular.Person ()
 create :: L.MonadFlow m => DriverLicense -> m (MeshResult ())
 create driverLicense = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDL.DriverLicenseT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainDriverLicenseToBeam driverLicense)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainDriverLicenseToBeam driverLicense)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 upsert :: L.MonadFlow m => DriverLicense -> m ()
 upsert a@DriverLicense {..} = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDL.DriverLicenseT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
-      res <- either (pure Nothing) (transformBeamDriverLicenseToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDL.id $ Se.Eq (getId a.id)]
+      res <- either (pure Nothing) (transformBeamDriverLicenseToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDL.id $ Se.Eq (getId a.id)]
       if isJust res
         then
           void $
             KV.updateWoReturningWithKVConnector
               dbCOnf'
-              Mesh.meshConfig
+              updatedMeshConfig
               [ Se.Set BeamDL.driverDob driverDob,
                 Se.Set BeamDL.driverName driverName,
                 Se.Set BeamDL.licenseExpiry licenseExpiry,
@@ -56,40 +60,48 @@ upsert a@DriverLicense {..} = do
                 Se.Set BeamDL.updatedAt updatedAt
               ]
               [Se.Is BeamDL.id (Se.Eq $ getId a.id)]
-        else void $ KV.createWoReturingKVConnector dbCOnf' Mesh.meshConfig (transformDomainDriverLicenseToBeam a)
+        else void $ KV.createWoReturingKVConnector dbCOnf' updatedMeshConfig (transformDomainDriverLicenseToBeam a)
     Nothing -> pure ()
 
 findById :: L.MonadFlow m => Id DriverLicense -> m (Maybe DriverLicense)
 findById (Id dlId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDL.DriverLicenseT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverLicenseToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDL.id $ Se.Eq dlId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverLicenseToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDL.id $ Se.Eq dlId]
     Nothing -> pure Nothing
 
 findByDriverId :: L.MonadFlow m => Id Person -> m (Maybe DriverLicense)
 findByDriverId (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDL.DriverLicenseT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverLicenseToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDL.driverId $ Se.Eq personId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverLicenseToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDL.driverId $ Se.Eq personId]
     Nothing -> pure Nothing
 
 findByDLNumber :: (L.MonadFlow m, EncFlow m r) => Text -> m (Maybe DriverLicense)
 findByDLNumber dlNumber = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDL.DriverLicenseT
+  let updatedMeshConfig = setMeshConfig modelName
   dlNumberHash <- getDbHash dlNumber
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverLicenseToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDL.licenseNumberHash $ Se.Eq dlNumberHash]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverLicenseToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDL.licenseNumberHash $ Se.Eq dlNumberHash]
     Nothing -> pure Nothing
 
 deleteByDriverId :: L.MonadFlow m => Id Person -> m ()
 deleteByDriverId (Id driverId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDL.DriverLicenseT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       void $
         KV.deleteWithKVConnector
           dbConf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [Se.Is BeamDL.driverId (Se.Eq driverId)]
     Nothing -> pure ()
 

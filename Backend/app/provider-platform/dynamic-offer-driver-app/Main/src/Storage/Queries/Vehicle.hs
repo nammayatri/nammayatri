@@ -25,29 +25,33 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Mesh as Mesh
+import Lib.Utils (setMeshConfig)
 import Sequelize as Se
 import qualified Storage.Beam.Vehicle as BeamV
 
 create :: L.MonadFlow m => Vehicle -> m (MeshResult ())
 create vehicle = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamV.VehicleT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainVehicleToBeam vehicle)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainVehicleToBeam vehicle)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 upsert :: L.MonadFlow m => Vehicle -> m ()
 upsert a@Vehicle {..} = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamV.VehicleT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
-      res <- either (pure Nothing) (transformBeamVehicleToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamV.driverId $ Se.Eq (getId a.driverId)]
+      res <- either (pure Nothing) (transformBeamVehicleToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamV.driverId $ Se.Eq (getId a.driverId)]
       if isJust res
         then
           void $
             KV.updateWoReturningWithKVConnector
               dbCOnf'
-              Mesh.meshConfig
+              updatedMeshConfig
               [ Se.Set BeamV.capacity capacity,
                 Se.Set BeamV.category category,
                 Se.Set BeamV.make make,
@@ -60,25 +64,29 @@ upsert a@Vehicle {..} = do
                 Se.Set BeamV.updatedAt updatedAt
               ]
               [Se.Is BeamV.driverId (Se.Eq $ getId a.driverId)]
-        else void $ KV.createWoReturingKVConnector dbCOnf' Mesh.meshConfig (transformDomainVehicleToBeam a)
+        else void $ KV.createWoReturingKVConnector dbCOnf' updatedMeshConfig (transformDomainVehicleToBeam a)
     Nothing -> pure ()
 
 findById :: (MonadFlow m) => Id Person -> m (Maybe Vehicle)
 findById (Id driverId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamV.VehicleT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamVehicleToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamV.driverId $ Se.Eq driverId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamVehicleToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamV.driverId $ Se.Eq driverId]
     Nothing -> pure Nothing
 
 updateVehicleRec :: (L.MonadFlow m, MonadTime m) => Vehicle -> m (MeshResult ())
 updateVehicleRec vehicle = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamV.VehicleT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
-        Mesh.meshConfig
+        updatedMeshConfig
         [ Se.Set BeamV.capacity vehicle.capacity,
           Se.Set BeamV.category vehicle.category,
           Se.Set BeamV.make vehicle.make,
@@ -97,24 +105,28 @@ updateVehicleRec vehicle = do
 deleteById :: L.MonadFlow m => Id Person -> m ()
 deleteById (Id driverId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamV.VehicleT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       void $
         KV.deleteWithKVConnector
           dbConf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [Se.Is BeamV.driverId (Se.Eq driverId)]
     Nothing -> pure ()
 
 findByAnyOf :: L.MonadFlow m => Maybe Text -> Maybe (Id Person) -> m (Maybe Vehicle)
 findByAnyOf registrationNoM vehicleIdM = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamV.VehicleT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' ->
       either (pure Nothing) (transformBeamVehicleToDomain <$>)
         <$> KV.findWithKVConnector
           dbCOnf'
-          Mesh.meshConfig
+          updatedMeshConfig
           -- [Se.And [whenJust vehicleIdM (\vehicleId -> Se.Is BeamV.driverId $ Se.Eq vehicleId), whenJust registrationNoM (\regNum -> Se.Is BeamV.registrationNo $ Se.Eq regNum)]]
           [ Se.And
               ( []
@@ -152,6 +164,8 @@ findByAnyOf registrationNoM vehicleIdM = do
 findAllByVariantRegNumMerchantId :: L.MonadFlow m => Maybe Variant.Variant -> Maybe Text -> Integer -> Integer -> Id Merchant -> m [Vehicle]
 findAllByVariantRegNumMerchantId variantM mbRegNum limit' offset' (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamV.VehicleT
+  let updatedMeshConfig = setMeshConfig modelName
   let limitVal = fromIntegral limit'
       offsetVal = fromIntegral offset'
   case dbConf of
@@ -159,7 +173,7 @@ findAllByVariantRegNumMerchantId variantM mbRegNum limit' offset' (Id merchantId
       either (pure []) (transformBeamVehicleToDomain <$>)
         <$> KV.findAllWithOptionsKVConnector
           dbCOnf'
-          Mesh.meshConfig
+          updatedMeshConfig
           [Se.And ([Se.Is BeamV.merchantId $ Se.Eq merchantId] <> if isJust variantM then [Se.Is BeamV.variant $ Se.Eq (fromJust variantM)] else [] <> ([Se.Is BeamV.registrationNo $ Se.Eq (fromJust mbRegNum) | isJust mbRegNum]))]
           (Se.Desc BeamV.createdAt)
           (Just limitVal)
@@ -169,8 +183,10 @@ findAllByVariantRegNumMerchantId variantM mbRegNum limit' offset' (Id merchantId
 findByRegistrationNo :: (MonadFlow m) => Text -> m (Maybe Vehicle)
 findByRegistrationNo registrationNo = do
   dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamV.VehicleT
+  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamVehicleToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamV.registrationNo $ Se.Eq registrationNo]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamVehicleToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamV.registrationNo $ Se.Eq registrationNo]
     Nothing -> pure Nothing
 
 transformBeamVehicleToDomain :: BeamV.Vehicle -> Vehicle
