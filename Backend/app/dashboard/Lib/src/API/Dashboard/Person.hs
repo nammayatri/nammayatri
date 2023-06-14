@@ -35,6 +35,7 @@ type API =
            :> QueryParam "searchString" Text
            :> QueryParam "limit" Integer
            :> QueryParam "offset" Integer
+           :> QueryParam "personId" (Id DP.Person)
            :> Get '[JSON] DPerson.ListPersonRes
            :<|> DashboardAuth 'DASHBOARD_ADMIN
              :> Capture "personId" (Id DP.Person)
@@ -86,9 +87,9 @@ handler =
              :<|> getAccessMatrix
          )
 
-listPerson :: TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DPerson.ListPersonRes
-listPerson tokenInfo mbSearchString mbLimit =
-  withFlowHandlerAPI . DPerson.listPerson tokenInfo mbSearchString mbLimit
+listPerson :: TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> Maybe (Id DP.Person) -> FlowHandler DPerson.ListPersonRes
+listPerson tokenInfo mbSearchString mbLimit mbPersonId =
+  withFlowHandlerAPI . DPerson.listPerson tokenInfo mbSearchString mbLimit mbPersonId
 
 createPerson :: TokenInfo -> DPerson.CreatePersonReq -> FlowHandler DPerson.CreatePersonRes
 createPerson tokenInfo = withFlowHandlerAPI . DPerson.createPerson tokenInfo
