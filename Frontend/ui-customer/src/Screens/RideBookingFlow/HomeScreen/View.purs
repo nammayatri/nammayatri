@@ -190,20 +190,9 @@ screen initialState =
                     if src == "" || src == "Current Location" then do
                         if (checkCurrentLocation initialState.props.sourceLat initialState.props.sourceLong initialState.data.previousCurrentLocations.pastCurrentLocations  && initialState.props.storeCurrentLocs )|| checkSavedLocations initialState.props.sourceLat initialState.props.sourceLong initialState.data.savedLocations
                           then push $ UpdateSourceFromPastLocations
-                        else do
-                          _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-                            (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq initialState.props.sourceLat initialState.props.sourceLong (case (getValueToLocalStore LANGUAGE_KEY) of
-                                                                                                                            "HI_IN" -> "HINDI"
-                                                                                                                            "KN_IN" -> "KANNADA"
-                                                                                                                            "BN_IN" -> "BENGALI"
-                                                                                                                            "ML_IN" -> "MALAYALAM"
-                                                                                                                            _      -> "ENGLISH"))
-
-                            let (PlaceName address) = (fromMaybe HomeScreenData.dummyLocationName (locationName !! 0))
-
-                            if src == "Current Location" then lift $ lift $ doAff do liftEffect $ push $ UpdateSourceName initialState.props.sourceLat initialState.props.sourceLong address.formattedAddress
-                              else lift $ lift $ doAff do liftEffect $ push $ UpdateSource initialState.props.sourceLat initialState.props.sourceLong address.formattedAddress
-                          pure unit
+                          else 
+                            if src == "Current Location" then push $ UpdateSourceName initialState.props.sourceLat initialState.props.sourceLong (getString CURRENT_LOCATION)
+                              else push $ UpdateSource initialState.props.sourceLat initialState.props.sourceLong (getString CURRENT_LOCATION)
                         pure (pure unit)
                     else  pure (pure unit)
             else
