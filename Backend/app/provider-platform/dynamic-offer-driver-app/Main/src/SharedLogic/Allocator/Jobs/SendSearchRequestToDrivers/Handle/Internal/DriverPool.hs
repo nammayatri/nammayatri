@@ -61,8 +61,8 @@ isBatchNumExceedLimit driverPoolConfig searchTryId = do
   currentBatchNum <- getPoolBatchNum searchTryId
   return $ currentBatchNum >= maxNumberOfBatches
 
-driverPoolKey :: Id DSR.SearchRequest -> Text
-driverPoolKey searchReqId = "Driver-Offer:DriverPool:SearchReqId-" <> searchReqId.getId
+previouslyAttemptedDriversKey :: Id DSR.SearchRequest -> Text
+previouslyAttemptedDriversKey searchReqId = "Driver-Offer:PreviouslyAttemptedDrivers:SearchReqId-" <> searchReqId.getId
 
 prepareDriverPoolBatch ::
   ( EncFlow m r,
@@ -196,8 +196,8 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
           Random -> pure $ take fillSize driversWithValidReqAmount
     cacheBatch batch = do
       logDebug $ "Caching batch-" <> show batch
-      batches <- getDriverPoolBatch searchReq.id
-      Redis.withCrossAppRedis $ Redis.setExp (driverPoolKey searchReq.id) (batches <> batch) (60 * 30)
+      batches <- previouslyAttemptedDrivers searchReq.id
+      Redis.withCrossAppRedis $ Redis.setExp (previouslyAttemptedDriversKey searchReq.id) (batches <> batch) (60 * 30)
     -- splitDriverPoolForSorting :: minQuotes Int -> [DriverPool Array] -> ([GreaterThanMinQuotesDP], [LessThanMinQuotesDP])
     splitDriverPoolForSorting merchantId minQuotes =
       foldrM
@@ -217,7 +217,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
       let maxRadiusStep = ceiling $ (maxRadiusOfSearch - minRadiusOfSearch) / radiusStepSize
       return $ maxRadiusStep <= radiusStep
     getPreviousBatchesDrivers = do
-      batches <- getDriverPoolBatch searchReq.id
+      batches <- previouslyAttemptedDrivers searchReq.id
       return $ (.driverPoolResult.driverId) <$> batches
     -- util function
     bimapM fna fnb (a, b) = (,) <$> fna a <*> fnb b
@@ -227,14 +227,14 @@ splitSilentDriversAndSortWithDistance drivers = do
   let (silentDrivers, activeDrivers) = bimap (sortOn (.driverPoolResult.distanceToPickup)) (sortOn (.driverPoolResult.distanceToPickup)) $ DL.partition ((== Just DriverInfo.SILENT) . (.driverPoolResult.mode)) drivers
   activeDrivers <> silentDrivers
 
-getDriverPoolBatch ::
+previouslyAttemptedDrivers ::
   ( Redis.HedisFlow m r
   ) =>
   Id DSR.SearchRequest ->
   m [DriverPoolWithActualDistResult]
-getDriverPoolBatch searchReqId = do
+previouslyAttemptedDrivers searchReqId = do
   Redis.withCrossAppRedis $
-    Redis.safeGet (driverPoolKey searchReqId)
+    Redis.safeGet (previouslyAttemptedDriversKey searchReqId)
       >>= maybe whenFoundNothing whenFoundSomething
   where
     whenFoundNothing = do
@@ -383,7 +383,7 @@ poolRadiusStepKey searchReqId = "Driver-Offer:Allocator:PoolRadiusStep:SearchReq
 --   m ()
 -- cleanupDriverPoolBatches searchReqId = do
 --   Redis.withCrossAppRedis $ do
---     Redis.delByPattern (driverPoolKey searchReqId <> "*")
+--     Redis.delByPattern (previouslyAttemptedDriversKey searchReqId <> "*")
 --     Redis.del (poolRadiusStepKey searchReqId)
 --     Redis.del (poolBatchNumKey searchReqId)
 --   logInfo "Cleanup redis."
