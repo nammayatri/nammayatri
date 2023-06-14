@@ -49,7 +49,6 @@ import Storage.Tabular.Message.Instances ()
 import qualified Storage.Tabular.Message.Message as M
 import Storage.Tabular.Message.MessageReport
 import qualified Storage.Tabular.Message.MessageTranslation as MT
-import qualified Storage.Tabular.Person as PT
 
 -- createMany :: [MessageReport] -> SqlDB ()
 -- createMany = Esq.createMany
@@ -84,21 +83,21 @@ fullMessage lang =
                      &&. messageTranslation ?. MT.MessageTranslationLanguage ==. val (Just lang)
                )
 
-findByDriverIdAndLanguage :: Transactionable m => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
-findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
-  let limitVal = min (fromMaybe 10 mbLimit) 10
-      offsetVal = fromMaybe 0 mbOffset
-  Esq.findAll $ do
-    (messageReport :& message :& mbMessageTranslation) <- from (fullMessage language)
-    where_ $
-      messageReport ^. MessageReportDriverId ==. val (toKey $ cast driverId)
-    orderBy [desc $ messageReport ^. MessageReportCreatedAt]
-    limit $ fromIntegral limitVal
-    offset $ fromIntegral offsetVal
-    return (messageReport, message, mbMessageTranslation)
+-- findByDriverIdAndLanguage :: Transactionable m => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
+-- findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
+--   let limitVal = min (fromMaybe 10 mbLimit) 10
+--       offsetVal = fromMaybe 0 mbOffset
+--   Esq.findAll $ do
+--     (messageReport :& message :& mbMessageTranslation) <- from (fullMessage language)
+--     where_ $
+--       messageReport ^. MessageReportDriverId ==. val (toKey $ cast driverId)
+--     orderBy [desc $ messageReport ^. MessageReportCreatedAt]
+--     limit $ fromIntegral limitVal
+--     offset $ fromIntegral offsetVal
+--     return (messageReport, message, mbMessageTranslation)
 
-findByDriverIdAndLanguage' :: (L.MonadFlow m, HasField "id" (Maybe MTD.MessageTranslation) (Id Message)) => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
-findByDriverIdAndLanguage' driverId language mbLimit mbOffset = do
+findByDriverIdAndLanguage :: (L.MonadFlow m) => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
+findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
@@ -147,10 +146,10 @@ findByDriverIdAndLanguage' driverId language mbLimit mbOffset = do
             Nothing
         case messageTranslation' of
           Left _ -> pure []
-          Right result -> pure $ map Just $ QMMT.transformBeamMessageTranslationToDomain <$> result
+          Right result -> pure $ QMMT.transformBeamMessageTranslationToDomain <$> result
       let messageReportAndMessage = foldl' (getMessageReportAndMessage messageReport) [] message
-      let finalResult = foldl' (getMessageTranslationAndMessage messageTranslation rawMessageFromMessage) [] messageReportAndMessage
-
+      let finalResult' = foldl' (getMessageTranslationAndMessage messageTranslation rawMessageFromMessage) [] messageReportAndMessage
+      let finalResult = map (\(mr, rm, mt) -> (mr, rm, Just mt)) finalResult'
       pure $ take limitVal (drop offsetVal finalResult)
     Nothing -> pure []
   where
@@ -159,7 +158,7 @@ findByDriverIdAndLanguage' driverId language mbLimit mbOffset = do
        in acc <> ((\messageReport' -> (messageReport', message')) <$> messageeReports')
 
     getMessageTranslationAndMessage messageTranslations rawMessageFromMessage acc (msgRep, msg) =
-      let messageTranslations' = filter (\messageTranslation' -> messageTranslation'.id == msg.id) messageTranslations
+      let messageTranslations' = filter (\messageTranslation' -> messageTranslation'.messageId == msg.id) messageTranslations
        in acc <> ((\messageTranslation' -> (msgRep, rawMessageFromMessage msg, messageTranslation')) <$> messageTranslations')
 
 -- findByDriverIdMessageIdAndLanguage :: Transactionable m => Id P.Driver -> Id Msg.Message -> Language -> m (Maybe (MessageReport, Msg.RawMessage, Maybe MTD.MessageTranslation))
@@ -202,41 +201,41 @@ findByMessageIdAndDriverId (Id messageId) (Id driverId) = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamMessageReportToDomain <$>) <$> KV.findWithKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamMR.messageId $ Se.Eq messageId, Se.Is BeamMR.driverId $ Se.Eq driverId]]
     Nothing -> pure Nothing
 
-findByMessageIdAndStatusWithLimitAndOffset ::
-  Transactionable m =>
-  Maybe Int ->
-  Maybe Int ->
-  Id Msg.Message ->
-  Maybe DeliveryStatus ->
-  m [(MessageReport, P.Person)]
-findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset messageId mbDeliveryStatus = do
-  findAll $ do
-    (messageReport :& person) <-
-      from $
-        table @MessageReportT
-          `innerJoin` table @PT.PersonT
-            `Esq.on` ( \(messageReport :& person) ->
-                         messageReport ^. MessageReportDriverId ==. person ^. PT.PersonTId
-                     )
-    where_ $
-      messageReport ^. MessageReportMessageId ==. val (toKey messageId)
-        &&. if isJust mbDeliveryStatus then messageReport ^. MessageReportDeliveryStatus ==. val (fromMaybe Success mbDeliveryStatus) else val True
-    orderBy [desc $ messageReport ^. MessageReportCreatedAt]
-    limit limitVal
-    offset offsetVal
-    return (messageReport, person)
-  where
-    limitVal = min (maybe 10 fromIntegral mbLimit) 20
-    offsetVal = maybe 0 fromIntegral mbOffset
+-- findByMessageIdAndStatusWithLimitAndOffset ::
+--   Transactionable m =>
+--   Maybe Int ->
+--   Maybe Int ->
+--   Id Msg.Message ->
+--   Maybe DeliveryStatus ->
+--   m [(MessageReport, P.Person)]
+-- findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset messageId mbDeliveryStatus = do
+--   findAll $ do
+--     (messageReport :& person) <-
+--       from $
+--         table @MessageReportT
+--           `innerJoin` table @PT.PersonT
+--             `Esq.on` ( \(messageReport :& person) ->
+--                          messageReport ^. MessageReportDriverId ==. person ^. PT.PersonTId
+--                      )
+--     where_ $
+--       messageReport ^. MessageReportMessageId ==. val (toKey messageId)
+--         &&. if isJust mbDeliveryStatus then messageReport ^. MessageReportDeliveryStatus ==. val (fromMaybe Success mbDeliveryStatus) else val True
+--     orderBy [desc $ messageReport ^. MessageReportCreatedAt]
+--     limit limitVal
+--     offset offsetVal
+--     return (messageReport, person)
+--   where
+--     limitVal = min (maybe 10 fromIntegral mbLimit) 20
+--     offsetVal = maybe 0 fromIntegral mbOffset
 
-findByMessageIdAndStatusWithLimitAndOffset' ::
+findByMessageIdAndStatusWithLimitAndOffset ::
   (L.MonadFlow m, Log m) =>
   Maybe Int ->
   Maybe Int ->
   Id Msg.Message ->
   Maybe DeliveryStatus ->
   m [(MessageReport, P.Person)]
-findByMessageIdAndStatusWithLimitAndOffset' mbLimit mbOffset (Id messageID) mbDeliveryStatus = do
+findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset (Id messageID) mbDeliveryStatus = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do

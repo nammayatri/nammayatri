@@ -36,7 +36,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Types (base64Encode)
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
+-- import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Common (Forkable (fork), GuidLike (generateGUID), MonadTime (getCurrentTime))
@@ -196,11 +196,13 @@ sendMessage merchantShortId Common.SendMessageRequest {..} = do
   -- message <- Esq.runInReplica $ MQuery.findById (Id messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
   message <- MQuery.findById (Id messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
   allDriverIds <- case _type of
-    AllEnabled -> Esq.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) []
+    -- AllEnabled -> Esq.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) []
+    AllEnabled -> QP.findAllDriverIdExceptProvided (merchant.id) []
     Include -> readCsv
     Exclude -> do
       driverIds <- readCsv
-      Esq.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) driverIds
+      -- Esq.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) driverIds
+      QP.findAllDriverIdExceptProvided (merchant.id) driverIds
   logDebug $ "DriverId to which the message is sent" <> show allDriverIds
   fork "Adding messages to kafka queue" $ mapM_ (addToKafka message) allDriverIds
   return Success
@@ -296,7 +298,8 @@ messageDeliveryInfo merchantShortId messageId = do
 messageReceiverList :: ShortId DM.Merchant -> Id Domain.Message -> Maybe Text -> Maybe Common.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> Flow Common.MessageReceiverListResponse
 messageReceiverList merchantShortId msgId _ mbStatus mbLimit mbOffset = do
   _ <- findMerchantByShortId merchantShortId
-  encMesageReports <- Esq.runInReplica $ MRQuery.findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset msgId $ toDomainDeliveryStatusType <$> mbStatus
+  -- encMesageReports <- Esq.runInReplica $ MRQuery.findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset msgId $ toDomainDeliveryStatusType <$> mbStatus
+  encMesageReports <- MRQuery.findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset msgId $ toDomainDeliveryStatusType <$> mbStatus
   messageReports <- mapM (secondM decrypt) encMesageReports
   let count = length messageReports
   let summary = Common.Summary {totalCount = count, count}

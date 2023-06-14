@@ -20,6 +20,7 @@ import qualified Data.Text as T
 import qualified Domain.Types.MediaFile as MF
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Message.Message as Domain
+-- import qualified Domain.Types.Message.MessageTranslation as MTD
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)

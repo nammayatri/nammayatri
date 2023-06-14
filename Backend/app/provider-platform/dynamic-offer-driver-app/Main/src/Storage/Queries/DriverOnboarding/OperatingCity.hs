@@ -26,12 +26,13 @@ import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+-- import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.OperatingCity as BeamOC
-import Storage.Tabular.DriverOnboarding.OperatingCity
+
+-- import Storage.Tabular.DriverOnboarding.OperatingCity
 
 -- create :: OperatingCity -> SqlDB ()
 -- create = Esq.create
@@ -99,22 +100,22 @@ findEnabledCityByName city = do
           ]
     Nothing -> pure []
 
-findEnabledCityByMerchantIdAndName ::
-  Transactionable m =>
-  Id Merchant ->
-  Text ->
-  m [OperatingCity]
-findEnabledCityByMerchantIdAndName merchantId city =
-  Esq.findAll $ do
-    operatingCity <- from $ table @OperatingCityT
-    where_ $
-      lower_ (operatingCity ^. OperatingCityCityName) ==. val city
-        &&. operatingCity ^. OperatingCityMerchantId ==. val (toKey merchantId)
-        &&. operatingCity ^. OperatingCityEnabled
-    return operatingCity
+-- findEnabledCityByMerchantIdAndName ::
+--   Transactionable m =>
+--   Id Merchant ->
+--   Text ->
+--   m [OperatingCity]
+-- findEnabledCityByMerchantIdAndName merchantId city =
+--   Esq.findAll $ do
+--     operatingCity <- from $ table @OperatingCityT
+--     where_ $
+--       lower_ (operatingCity ^. OperatingCityCityName) ==. val city
+--         &&. operatingCity ^. OperatingCityMerchantId ==. val (toKey merchantId)
+--         &&. operatingCity ^. OperatingCityEnabled
+--     return operatingCity
 
-findEnabledCityByMerchantIdAndName' :: L.MonadFlow m => Id Merchant -> Text -> m [OperatingCity]
-findEnabledCityByMerchantIdAndName' (Id mId) city = do
+findEnabledCityByMerchantIdAndName :: L.MonadFlow m => Id Merchant -> Text -> m [OperatingCity]
+findEnabledCityByMerchantIdAndName (Id mId) city = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   conn <- L.getOrInitSqlConn (fromJust dbConf)
   case conn of

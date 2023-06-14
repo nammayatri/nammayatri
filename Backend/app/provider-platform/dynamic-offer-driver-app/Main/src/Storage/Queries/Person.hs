@@ -1007,26 +1007,26 @@ personDriverTable =
                    &&. Esq.not_ (driver ^. DriverInformationBlocked)
              )
 
-findAllDriverIdExceptProvided :: Transactionable m => Id Merchant -> [Id Driver] -> m [Id Driver]
-findAllDriverIdExceptProvided merchantId driverIdsToBeExcluded = do
-  res <- Esq.findAll $ do
-    (person :& driver) <- from personDriverTable
-    where_ $
-      person ^. PersonMerchantId ==. val (toKey merchantId)
-        &&. not_ ((driver ^. DriverInformationDriverId) `Esq.in_` valList (map (toKey . driverIdToPersonId) driverIdsToBeExcluded))
-        &&. driver ^. DriverInformationVerified
-        &&. driver ^. DriverInformationEnabled
-    return $ driver ^. DriverInformationDriverId
-  pure $ personIdToDrivrId <$> res
-  where
-    personIdToDrivrId :: Id Person -> Id Driver
-    personIdToDrivrId = cast
+-- findAllDriverIdExceptProvided :: Transactionable m => Id Merchant -> [Id Driver] -> m [Id Driver]
+-- findAllDriverIdExceptProvided merchantId driverIdsToBeExcluded = do
+--   res <- Esq.findAll $ do
+--     (person :& driver) <- from personDriverTable
+--     where_ $
+--       person ^. PersonMerchantId ==. val (toKey merchantId)
+--         &&. not_ ((driver ^. DriverInformationDriverId) `Esq.in_` valList (map (toKey . driverIdToPersonId) driverIdsToBeExcluded))
+--         &&. driver ^. DriverInformationVerified
+--         &&. driver ^. DriverInformationEnabled
+--     return $ driver ^. DriverInformationDriverId
+--   pure $ personIdToDrivrId <$> res
+--   where
+--     personIdToDrivrId :: Id Person -> Id Driver
+--     personIdToDrivrId = cast
 
-    driverIdToPersonId :: Id Driver -> Id Person
-    driverIdToPersonId = cast
+--     driverIdToPersonId :: Id Driver -> Id Person
+--     driverIdToPersonId = cast
 
-findAllDriverIdExceptProvided' :: (L.MonadFlow m, Log m) => Id Merchant -> [Id Driver] -> m [Id Driver]
-findAllDriverIdExceptProvided' (Id merchantId) driverIdsToBeExcluded = do
+findAllDriverIdExceptProvided :: (L.MonadFlow m, Log m) => Id Merchant -> [Id Driver] -> m [Id Driver]
+findAllDriverIdExceptProvided (Id merchantId) driverIdsToBeExcluded = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do

@@ -36,7 +36,8 @@ import qualified Storage.Beam.DriverOnboarding.Image as BeamI
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.Person as QP
-import Storage.Tabular.DriverOnboarding.Image
+
+-- import Storage.Tabular.DriverOnboarding.Image
 
 -- create :: Image -> SqlDB ()
 -- create = Esq.create
@@ -93,35 +94,35 @@ findImagesByPersonAndType (Id merchantId) (Id personId) imgType = do
           ]
     Nothing -> pure []
 
-findRecentByPersonIdAndImageType ::
-  ( Transactionable m,
-    MonadFlow m,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    EsqDBReplicaFlow m r
-  ) =>
-  Id Person ->
-  ImageType ->
-  m [Image]
-findRecentByPersonIdAndImageType personId imgtype = do
-  -- person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
-  let onboardingRetryTimeInHours = transporterConfig.onboardingRetryTimeInHours
-  let onBoardingRetryTimeInHours = intToNominalDiffTime onboardingRetryTimeInHours
-  now <- getCurrentTime
-  findAll $ do
-    images <- from $ table @ImageT
-    where_ $
-      images ^. ImagePersonId ==. val (toKey personId)
-        &&. images ^. ImageImageType ==. val imgtype
-        &&. images ^. ImageCreatedAt >. val (hoursAgo onBoardingRetryTimeInHours now)
-    return images
-  where
-    hoursAgo i now = negate (3600 * i) `DT.addUTCTime` now
+-- findRecentByPersonIdAndImageType ::
+--   ( Transactionable m,
+--     MonadFlow m,
+--     CacheFlow m r,
+--     EsqDBFlow m r,
+--     EsqDBReplicaFlow m r
+--   ) =>
+--   Id Person ->
+--   ImageType ->
+--   m [Image]
+-- findRecentByPersonIdAndImageType personId imgtype = do
+--   -- person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+--   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+--   transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
+--   let onboardingRetryTimeInHours = transporterConfig.onboardingRetryTimeInHours
+--   let onBoardingRetryTimeInHours = intToNominalDiffTime onboardingRetryTimeInHours
+--   now <- getCurrentTime
+--   findAll $ do
+--     images <- from $ table @ImageT
+--     where_ $
+--       images ^. ImagePersonId ==. val (toKey personId)
+--         &&. images ^. ImageImageType ==. val imgtype
+--         &&. images ^. ImageCreatedAt >. val (hoursAgo onBoardingRetryTimeInHours now)
+--     return images
+--   where
+--     hoursAgo i now = negate (3600 * i) `DT.addUTCTime` now
 
-findRecentByPersonIdAndImageType' :: (L.MonadFlow m, Log m, MonadTime m, CacheFlow m r, EsqDBFlow m r) => Id Person -> ImageType -> m [Image]
-findRecentByPersonIdAndImageType' personId imgtype = do
+findRecentByPersonIdAndImageType :: (L.MonadFlow m, Log m, MonadTime m, CacheFlow m r, EsqDBFlow m r) => Id Person -> ImageType -> m [Image]
+findRecentByPersonIdAndImageType personId imgtype = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
   let onboardingRetryTimeInHours = transporterConfig.onboardingRetryTimeInHours

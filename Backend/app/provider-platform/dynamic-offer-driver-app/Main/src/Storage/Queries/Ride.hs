@@ -58,7 +58,7 @@ import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.Ride.Table as BeamR
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.DriverInformation as QDI
-import Storage.Queries.FullEntityBuilders (buildFullBooking)
+-- import Storage.Queries.FullEntityBuilders (buildFullBooking)
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.Ride as Ride
 import Storage.Tabular.RideDetails as RideDetails
@@ -141,28 +141,28 @@ findActiveByRBId (Id rbId) = do
         Left _ -> pure Nothing
     Nothing -> pure Nothing
 
-findAllRidesBookingsByRideId :: Transactionable m => Id Merchant -> [Id Ride] -> m [(Ride, Booking)]
-findAllRidesBookingsByRideId merchantId rideIds = Esq.buildDType $ do
-  res <- Esq.findAll' $ do
-    (booking :& ride) <-
-      from $
-        table @BookingT
-          `innerJoin` table @RideT
-            `Esq.on` ( \(booking :& ride) ->
-                         ride ^. Ride.RideBookingId ==. booking ^. BookingTId
-                     )
-    where_ $
-      booking ^. BookingProviderId ==. val (toKey merchantId)
-        &&. ride ^. RideTId `Esq.in_` valList (map toKey rideIds)
-    pure (booking, ride)
+-- findAllRidesBookingsByRideId :: Transactionable m => Id Merchant -> [Id Ride] -> m [(Ride, Booking)]
+-- findAllRidesBookingsByRideId merchantId rideIds = Esq.buildDType $ do
+--   res <- Esq.findAll' $ do
+--     (booking :& ride) <-
+--       from $
+--         table @BookingT
+--           `innerJoin` table @RideT
+--             `Esq.on` ( \(booking :& ride) ->
+--                          ride ^. Ride.RideBookingId ==. booking ^. BookingTId
+--                      )
+--     where_ $
+--       booking ^. BookingProviderId ==. val (toKey merchantId)
+--         &&. ride ^. RideTId `Esq.in_` valList (map toKey rideIds)
+--     pure (booking, ride)
 
-  catMaybes
-    <$> forM
-      res
-      ( \(bookingT, rideT) -> runMaybeT do
-          booking <- MaybeT $ buildFullBooking bookingT
-          return (extractSolidType @Ride rideT, booking)
-      )
+--   catMaybes
+--     <$> forM
+--       res
+--       ( \(bookingT, rideT) -> runMaybeT do
+--           booking <- MaybeT $ buildFullBooking bookingT
+--           return (extractSolidType @Ride rideT, booking)
+--       )
 
 -- findAllByDriverId ::
 --   Transactionable m =>
@@ -201,8 +201,8 @@ findAllRidesBookingsByRideId merchantId rideIds = Esq.buildDType $ do
 --           return (extractSolidType @Ride rideT, booking)
 --       )
 
-findAllRidesBookingsByRideId' :: L.MonadFlow m => Id Merchant -> [Id Ride] -> m [(Ride, Booking)]
-findAllRidesBookingsByRideId' (Id merchantId) rideIds = do
+findAllRidesBookingsByRideId :: L.MonadFlow m => Id Merchant -> [Id Ride] -> m [(Ride, Booking)]
+findAllRidesBookingsByRideId (Id merchantId) rideIds = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
