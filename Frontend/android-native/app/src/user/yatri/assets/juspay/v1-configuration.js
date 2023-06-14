@@ -21,6 +21,7 @@ window.getMerchantConfig = function () {
     "estimateConfirmText": "Request a NammaYatri Ride",
     "autoConfirmingLoaderColor": "#80B2FF",
     "quoteListModelBackground": "#2C2F3A",
+    "logs": ["JUSPAY","FIREBASE"],
     "quoteListModel": {
       "backgroundColor": "#2C2F3A",
       "textColor": "#FFFFFF",

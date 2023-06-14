@@ -50,6 +50,7 @@ window.getMerchantConfig = function () {
     "profileEditGravity" : "bottom",
     "merchantLogo" : "ny_ic_paytm_logo,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_paytm_logo.png",
     "confirmPickUpLocationBorder" : "#101010",
+    "logs": ["JUSPAY"],
     "englishStrings": {
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "Your location helps our system to map down all the near by autos and get you the quickest ride possible.",
       "REQUEST_RIDE" : "Request a NammaYatri Ride",

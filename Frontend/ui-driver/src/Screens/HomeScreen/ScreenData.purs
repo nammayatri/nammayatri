@@ -19,6 +19,7 @@ import Screens.Types
 import Prelude(negate)
 import Services.APITypes(Status(..))
 import Data.Maybe
+import Foreign.Object (empty)
 
 initData :: HomeScreenState
 initData = {
@@ -67,7 +68,8 @@ initData = {
         messages : [],
         messagesSize : "",
         suggestionsList : [],
-        messageToBeSent : ""
+        messageToBeSent : "",
+        logField : empty 
     },
     props: {
         statusOnline : true,

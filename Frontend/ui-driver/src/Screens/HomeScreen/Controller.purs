@@ -53,6 +53,8 @@ import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeSt
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
+import Engineering.Helpers.LogEvent (logEvent,logEventWithTwoParams)
+import Effect.Unsafe (unsafePerformEffect)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -285,7 +287,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
     "Profile" -> exit $ GoToProfileScreen state
     "Alert" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
+      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
       exit $ GoToNotifications state
     "Contest" -> do
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
@@ -328,7 +330,7 @@ eval (RideActionModalAction (RideActionModal.CancelRide)) state = do
   continue state{ data {cancelRideConfirmationPopUp{delayInSeconds = 5,  continueEnabled=false}}, props{cancelConfirmationPopup = true}}
 eval (RideActionModalAction (RideActionModal.CallCustomer)) state = continueWithCmd state [ do
   _ <- pure $ showDialer (if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone)
-  _ <- (firebaseLogEventWithTwoParams "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID))
+  _ <- (logEventWithTwoParams state.data.logField "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID))
   pure NoAction
   ]
 
@@ -459,7 +461,7 @@ eval (ChatViewActionController (ChatView.TextChanged value)) state = do
 
 eval(ChatViewActionController (ChatView.Call)) state = continueWithCmd state [ do
   _ <- pure $  showDialer (getCustomerNumber "")
-  _ <- (firebaseLogEventWithTwoParams "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID))
+  _ <- (logEventWithTwoParams state.data.logField "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID))
   pure NoAction
   ]
 
@@ -479,7 +481,7 @@ eval (ChatViewActionController (ChatView.SendSuggestion chatSuggestion)) state =
   let messageArr = map (\item -> (getEN item)) suggestions
   let message = fromMaybe "" (messageArr Array.!! 0)
   _ <- pure $ sendMessage message
-  _ <- pure $ firebaseLogEvent $ toLower $ (replaceAll (Pattern "'") (Replacement "") (replaceAll (Pattern ",") (Replacement "") (replaceAll (Pattern " ") (Replacement "_") message)))
+  let _ = unsafePerformEffect $ logEvent state.data.logField $ toLower $ (replaceAll (Pattern "'") (Replacement "") (replaceAll (Pattern ",") (Replacement "") (replaceAll (Pattern " ") (Replacement "_") message))) 
   continue state
 
 eval (ChatViewActionController (ChatView.BackPressed)) state = do

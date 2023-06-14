@@ -1,4 +1,6 @@
 module MerchantConfig.Types where
+import Prelude
+import Styles.Types (FontType)
 
 type AppConfig =
   {
@@ -25,7 +27,8 @@ type AppConfig =
     cancelRideColor :: String,
     infoIconUrl :: String,
     profileEditGravity :: String,
-    merchantLogo :: String
+    merchantLogo :: String,
+    logs :: Array String
   } 
 
 type QuoteListConfig = {

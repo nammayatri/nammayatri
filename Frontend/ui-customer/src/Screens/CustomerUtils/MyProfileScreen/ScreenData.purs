@@ -18,6 +18,7 @@ module Screens.MyProfileScreen.ScreenData where
 import Screens.Types (MyProfileScreenState, DeleteStatus(..))
 import Data.Maybe(Maybe(..))
 import MerchantConfig.DefaultConfig as DC
+import Foreign.Object (empty)
 
 initData :: MyProfileScreenState
 initData = {
@@ -40,6 +41,7 @@ initData = {
         editedGender : Nothing,
         editedEmailId  : Nothing,
         errorMessage : Nothing,
-        config : DC.config
+        config : DC.config,
+        logField : empty
     }
 }
