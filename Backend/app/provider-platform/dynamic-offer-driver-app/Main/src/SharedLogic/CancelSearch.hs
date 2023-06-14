@@ -18,7 +18,7 @@ module SharedLogic.CancelSearch
   )
 where
 
-import qualified Domain.Types.SearchRequest as SR
+import Domain.Types.SearchTry (SearchTry)
 import Kernel.Prelude
 import Kernel.Storage.Hedis (HedisFlow)
 import qualified Kernel.Storage.Hedis.Queries as Hedis
@@ -32,33 +32,33 @@ incrementSearchRequestLockCounter ::
   ( HasCacheConfig r,
     HedisFlow m r
   ) =>
-  Id SR.SearchRequest ->
+  Id SearchTry ->
   m ()
-incrementSearchRequestLockCounter searchRequestId = do
-  let searchLockKey = mkSearchLockKey searchRequestId
+incrementSearchRequestLockCounter searchTryId = do
+  let searchLockKey = mkSearchLockKey searchTryId
   _ <- Hedis.incr searchLockKey
   Hedis.expire searchLockKey 120
-  searchCancelled <- fromMaybe False <$> Hedis.get (mkStartedCancelInfomKey searchRequestId)
-  when searchCancelled $ throwError (InternalError "SEARCH_REQUEST_CANCELLED")
+  searchCancelled <- fromMaybe False <$> Hedis.get (mkStartedCancelInfomKey searchTryId)
+  when searchCancelled $ throwError (InternalError "SEARCH_TRY_CANCELLED")
 
 lockSearchRequest ::
   ( HasCacheConfig r,
     HedisFlow m r,
     CoreMetrics m
   ) =>
-  Id SR.SearchRequest ->
+  Id SearchTry ->
   m ()
-lockSearchRequest searchRequestId = do
-  let searchLockKey = mkSearchLockKey searchRequestId
-      startedCancelInfomKey = mkStartedCancelInfomKey searchRequestId
+lockSearchRequest searchTryId = do
+  let searchLockKey = mkSearchLockKey searchTryId
+      startedCancelInfomKey = mkStartedCancelInfomKey searchTryId
   val <- Hedis.incr searchLockKey
   cancellingSearchReq <- fromMaybe False <$> Hedis.get startedCancelInfomKey
   Hedis.expire searchLockKey 120
-  when (val > 1 && not cancellingSearchReq) $ throwError (InternalError "FAILED_TO_CANCEL_SEARCH_REQUEST")
+  when (val > 1 && not cancellingSearchReq) $ throwError (InternalError "FAILED_TO_CANCEL_SEARCH_TRY")
   Hedis.setExp startedCancelInfomKey True 120
 
-mkStartedCancelInfomKey :: Id SR.SearchRequest -> Text
-mkStartedCancelInfomKey searchRequestId = "SearchTry:Cancelling:" <> searchRequestId.getId
+mkStartedCancelInfomKey :: Id SearchTry -> Text
+mkStartedCancelInfomKey searchTryId = "SearchTry:Cancelling:" <> searchTryId.getId
 
-mkSearchLockKey :: Id SR.SearchRequest -> Text
-mkSearchLockKey searchRequestId = "LockCounter:SearchRequest:" <> searchRequestId.getId
+mkSearchLockKey :: Id SearchTry -> Text
+mkSearchLockKey searchTryId = "LockCounter:SearchTry:" <> searchTryId.getId

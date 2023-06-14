@@ -41,6 +41,18 @@ findLastByRequestId searchReqId = do
     Esq.limit 1
     return searchTryT
 
+findActiveTriesByRequestId ::
+  (Transactionable m) =>
+  Id SearchRequest ->
+  m [SearchTry]
+findActiveTriesByRequestId searchReqId = do
+  Esq.findAll $ do
+    searchTryT <- from $ table @SearchTryT
+    where_ $
+      searchTryT ^. SearchTryRequestId ==. val (toKey searchReqId)
+        &&. searchTryT ^. SearchTryStatus ==. val ACTIVE
+    return searchTryT
+
 cancelActiveTriesByRequestId ::
   Id SearchRequest ->
   SqlDB ()
