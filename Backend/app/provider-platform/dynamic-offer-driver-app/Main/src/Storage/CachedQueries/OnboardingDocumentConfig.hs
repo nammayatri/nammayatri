@@ -15,7 +15,8 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.OnboardingDocumentConfig
-  ( findByMerchantIdAndDocumentType,
+  ( findAllByMerchantId,
+    findByMerchantIdAndDocumentType,
     clearCache,
     create,
     update,
@@ -35,24 +36,27 @@ import qualified Storage.Queries.OnboardingDocumentConfig as Queries
 create :: OnboardingDocumentConfig -> Esq.SqlDB ()
 create = Queries.create
 
+findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [DTO.OnboardingDocumentConfig]
+findAllByMerchantId id =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdKey id) >>= \case
+    Just a -> return a
+    Nothing -> cacheOnboardingDocumentConfigs id /=<< Queries.findAllByMerchantId id
+
 findByMerchantIdAndDocumentType :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> DocumentType -> m (Maybe DTO.OnboardingDocumentConfig)
-findByMerchantIdAndDocumentType merchantId documentType =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantDocTypeKey merchantId documentType) >>= \case
-    Just a -> return $ Just a
-    Nothing -> flip whenJust cacheOnboardingDocumentConfig /=<< Queries.findByMerchantIdAndDocumentType merchantId documentType
+findByMerchantIdAndDocumentType merchantId documentType = find (\config -> config.documentType == documentType) <$> findAllByMerchantId merchantId
 
-cacheOnboardingDocumentConfig :: (CacheFlow m r) => DTO.OnboardingDocumentConfig -> m ()
-cacheOnboardingDocumentConfig config = do
+cacheOnboardingDocumentConfigs :: (CacheFlow m r) => Id Merchant -> [DTO.OnboardingDocumentConfig] -> m ()
+cacheOnboardingDocumentConfigs merchantId configs = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let key = makeMerchantDocTypeKey config.merchantId config.documentType
-  Hedis.withCrossAppRedis $ Hedis.setExp key config expTime
+  let key = makeMerchantIdKey merchantId
+  Hedis.withCrossAppRedis $ Hedis.setExp key configs expTime
 
-makeMerchantDocTypeKey :: Id Merchant -> DTO.DocumentType -> Text
-makeMerchantDocTypeKey merchantId documentType = "driver-offer:CachedQueries:OnboardingDocumentConfig:MerchantId-" <> merchantId.getId <> ":DocumentType-" <> show documentType
+makeMerchantIdKey :: Id Merchant -> Text
+makeMerchantIdKey merchantId = "driver-offer:CachedQueries:OnboardingDocumentConfig:MerchantId-" <> merchantId.getId
 
 -- Call it after any update
-clearCache :: Hedis.HedisFlow m r => Id Merchant -> DTO.DocumentType -> m ()
-clearCache merchantId documentType = Hedis.withCrossAppRedis . Hedis.del $ makeMerchantDocTypeKey merchantId documentType
+clearCache :: Hedis.HedisFlow m r => Id Merchant -> m ()
+clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantIdKey
 
 update :: OnboardingDocumentConfig -> Esq.SqlDB ()
 update = Queries.update

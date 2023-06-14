@@ -31,13 +31,12 @@ import Storage.Tabular.OnboardingDocumentConfig
 create :: OnboardingDocumentConfig -> SqlDB ()
 create = Esq.create
 
-findByMerchantIdAndDocumentType :: Transactionable m => Id Merchant -> DocumentType -> m (Maybe OnboardingDocumentConfig)
-findByMerchantIdAndDocumentType merchantId documentType =
-  Esq.findOne $ do
+findAllByMerchantId :: Transactionable m => Id Merchant -> m [OnboardingDocumentConfig]
+findAllByMerchantId merchantId =
+  Esq.findAll $ do
     config <- from $ table @OnboardingDocumentConfigT
     where_ $
       config ^. OnboardingDocumentConfigMerchantId ==. val (toKey merchantId)
-        &&. config ^. OnboardingDocumentConfigDocumentType ==. val documentType
     return config
 
 update :: OnboardingDocumentConfig -> SqlDB ()
