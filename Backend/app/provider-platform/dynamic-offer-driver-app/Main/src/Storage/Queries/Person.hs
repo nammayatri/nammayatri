@@ -313,7 +313,7 @@ getDriverLocs' ::
   [Id Person] ->
   Id Merchant ->
   m [DriverLocation]
-getDriverLocs driverIds (Id merchantId) = do
+getDriverLocs' driverIds (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
@@ -338,6 +338,19 @@ getDriverInfos ::
   [DriverLocation] ->
   m [DriverInformation]
 getDriverInfos driverLocs = do
+  Esq.findAll $ do
+    driverInfos <- from $ table @DriverInformationT
+    where_ $
+      driverInfos ^. DriverInformationDriverId `in_` valList personsKeys
+    return driverInfos
+  where
+    personsKeys = toKey . cast <$> fetchDriverIDsFromLocations driverLocs
+
+getDriverInfos' ::
+  L.MonadFlow m =>
+  [DriverLocation] ->
+  m [DriverInformation]
+getDriverInfos' driverLocs = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
@@ -354,6 +367,19 @@ getVehicles ::
   [DriverInformation] ->
   m [Vehicle]
 getVehicles driverInfo = do
+  Esq.findAll $ do
+    vehicles <- from $ table @VehicleT
+    where_ $
+      vehicles ^. VehicleDriverId `in_` valList personsKeys
+    return vehicles
+  where
+    personsKeys = toKey . cast <$> fetchDriverIDsFromInfo driverInfo
+
+getVehicles' ::
+  L.MonadFlow m =>
+  [DriverInformation] ->
+  m [Vehicle]
+getVehicles' driverInfo = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
@@ -370,6 +396,20 @@ getDrivers ::
   [Vehicle] ->
   m [Person]
 getDrivers vehicles = do
+  Esq.findAll $ do
+    persons <- from $ table @PersonT
+    where_ $
+      persons ^. PersonTId `in_` valList personsKeys
+        &&. persons ^. PersonRole ==. val Person.DRIVER
+    return persons
+  where
+    personsKeys = toKey . cast <$> fetchDriverIDsFromVehicle vehicles
+
+getDrivers' ::
+  (L.MonadFlow m, Log m) =>
+  [Vehicle] ->
+  m [Person]
+getDrivers' vehicles = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
@@ -397,7 +437,7 @@ getDriversWithMerchID' ::
   (L.MonadFlow m, Log m) =>
   Id Merchant ->
   m [Person]
-getDriversWithMerchID (Id merchantId) = do
+getDriversWithMerchID' (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
@@ -436,7 +476,7 @@ getDriverQuote' ::
   (L.MonadFlow m, Log m) =>
   [Person] ->
   m [DriverQuote]
-getDriverQuote persons = do
+getDriverQuote' persons = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
@@ -450,18 +490,6 @@ getDriverQuote persons = do
         case res of
           Right res' -> catMaybes <$> traverse QueriesDQ.transformBeamDriverQuoteToDomain res'
           _ -> pure []
-
-    -- fareParam <- do
-    --   res <- KV.findAllWithKVConnector
-    --       dbConf'
-    --       Mesh.meshConfig
-    --       [ Se.And [Se.Is BeamFP.id $ Se.In $ getId . DDQ.fareParams.id <$> driverQuotes ]
-    --       ]
-    --   case res of
-    --     Left _ -> pure []
-    --     Right res' -> traverse QueriesFP.transformBeamFareParametersToDomain res'
-    -- let dqWithFP = foldl' (getDriverQuoteWithFareParam fareParam) [] driverQuotes
-    -- pure dqWithFP
     Nothing -> pure []
   where
     personKeys = getId <$> fetchDriverIDsFromPersons persons
@@ -490,7 +518,7 @@ getBookingInfo' ::
   (L.MonadFlow m, Log m) =>
   [DriverQuote] ->
   m [Booking.Booking]
-getBookingInfo driverQuote = do
+getBookingInfo' driverQuote = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
@@ -502,7 +530,7 @@ getBookingInfo driverQuote = do
           ]
       case res of
         Right res' -> do
-          x <- mapM QueriesB.transformBeamBookingToDomain res'
+          x <- mapM QB.transformBeamBookingToDomain res'
           pure $ catMaybes x
         _ -> pure []
     Nothing -> pure []
@@ -514,6 +542,19 @@ getBookingLocs ::
   [Booking.Booking] ->
   m [BookingLocation]
 getBookingLocs bookings = do
+  Esq.findAll $ do
+    bookingLoc <- from $ table @BookingLocationT
+    where_ $
+      bookingLoc ^. BookingLocationTId `in_` valList toLocKeys
+    return bookingLoc
+  where
+    toLocKeys = toKey . cast <$> fetchToLocationIDFromBooking bookings
+
+getBookingLocs' ::
+  L.MonadFlow m =>
+  [Booking.Booking] ->
+  m [BookingLocation]
+getBookingLocs' bookings = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
     Just dbConf' -> do
@@ -548,26 +589,6 @@ getDriverLocsFromMerchId mbDriverPositionInfoExpiry LatLong {..} radiusMeters me
         &&. buildRadiusWithin (driverLoc ^. DriverLocationPoint) (lat, lon) (val radiusMeters)
     orderBy [asc (driverLoc ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon))]
     return driverLoc
-
--- getDriverLocsFromMerchId' :: (L.MonadFlow m, Log m, MonadTime m) =>
---   Maybe Seconds ->
---   LatLong ->
---   Int ->
---   Id Merchant ->
---   m [DriverLocation]
--- getDriverLocsFromMerchId' mbDriverPositionInfoExpiry LatLong {..} radiusMeters (Id merchantId) = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
---   case dbConf of
---     Just dbConf' -> do
---       res <- KV.findAllWithKVConnector
---           dbConf'
---           Mesh.meshConfig
---           [ Se.And [Se.Is BeamDL.merchantId $ Se.Eq  merchantId,Se.Is Utils.buildRadiusWithin' (lat, lon) (radiusMeters)]
---             ]
---       case res of
---         Left _ -> pure []
---         Right res' -> pure $ QueriesDL.transformBeamDriverLocationToDomain<$> res'
---     Nothing -> pure []
 
 fetchDriverIDsFromDriverQuotes :: [DriverQuote] -> [Id Person]
 fetchDriverIDsFromDriverQuotes = map DriverQuote.driverId
@@ -619,8 +640,6 @@ findAllDriversByIdsFirstNameAsc' (Id merchantId) driverIds = do
         case p of
           Right x -> catMaybes <$> traverse transformBeamPersonToDomain x
           _ -> pure []
-      -- either (pure []) (transformBeamPersonToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' Mesh.meshConfig [Se.And [Se.Is BeamP.role $ Se.Eq Person.DRIVER,
-      --               Se.Is BeamP.id $ Se.In $ getId <$> driverIds, Se.Is BeamP.merchantId $ Se.Eq merchantId ]] (Se.Asc BeamP.firstName) Nothing Nothing
       dlList <- either (pure []) (QDL.transformBeamDriverLocationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDL.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
       infoList <- either (pure []) (QueriesDI.transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamDI.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
       vehicleList <- either (pure []) (QV.transformBeamVehicleToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' Mesh.meshConfig [Se.Is BeamV.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]

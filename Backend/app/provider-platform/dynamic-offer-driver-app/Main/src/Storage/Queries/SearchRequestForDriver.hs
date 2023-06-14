@@ -138,8 +138,6 @@ findByDriverAndSearchTryId (Id driverId) (Id searchTryId) = do
           ]
     Nothing -> pure Nothing
 
-
-
 findByDriver :: (L.MonadFlow m, MonadTime m) => Id Person -> m [SearchRequestForDriver]
 findByDriver (Id driverId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg

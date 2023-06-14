@@ -130,7 +130,6 @@ findAllRidesByDriverId (Id driverId) = do
         Left _ -> pure []
     Nothing -> pure []
 
-
 findActiveByRBId :: L.MonadFlow m => Id Booking -> m (Maybe Ride)
 findActiveByRBId (Id rbId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg

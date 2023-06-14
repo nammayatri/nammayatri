@@ -48,7 +48,6 @@ findById (Id searchTry) = do
     Just dbConf' -> either (pure Nothing) (transformBeamSearchTryToDomain <$>) <$> KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamST.id $ Se.Eq searchTry]
     Nothing -> pure Nothing
 
-
 findLastByRequestId ::
   L.MonadFlow m =>
   Id SearchRequest ->
@@ -84,8 +83,6 @@ findLastByRequestId (Id searchRequest) = do
 --     where_ $
 --       tbl ^. SearchTryRequestId ==. val (toKey searchId)
 --         &&. tbl ^. SearchTryStatus ==. val ACTIVE
-
-
 
 cancelActiveTriesByRequestId ::
   (L.MonadFlow m, MonadTime m) =>
