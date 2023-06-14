@@ -8,29 +8,26 @@ import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Types (Language)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.IssueCategory as BeamIC
 import qualified Storage.Beam.Issue.IssueTranslation as BeamIT
 import qualified Storage.Queries.Issue.IssueTranslation as QueriesIT
-import Storage.Tabular.Issue.IssueCategory
-import Storage.Tabular.Issue.IssueTranslation
 
-fullCategoryTable ::
-  Language ->
-  From
-    ( Table IssueCategoryT
-        :& MbTable IssueTranslationT
-    )
-fullCategoryTable language =
-  table @IssueCategoryT
-    `leftJoin` table @IssueTranslationT
-      `Esq.on` ( \(category :& translation) ->
-                   just (category ^. IssueCategoryCategory) ==. translation ?. IssueTranslationSentence
-                     &&. translation ?. IssueTranslationLanguage ==. just (val language)
-               )
+-- fullCategoryTable ::
+--   Language ->
+--   From
+--     ( Table IssueCategoryT
+--         :& MbTable IssueTranslationT
+--     )
+-- fullCategoryTable language =
+--   table @IssueCategoryT
+--     `leftJoin` table @IssueTranslationT
+--       `Esq.on` ( \(category :& translation) ->
+--                    just (category ^. IssueCategoryCategory) ==. translation ?. IssueTranslationSentence
+--                      &&. translation ?. IssueTranslationLanguage ==. just (val language)
+--                )
 
 -- findAllByLanguage :: Transactionable m => Language -> m [(IssueCategory, Maybe IssueTranslation)]
 -- findAllByLanguage language = Esq.findAll $ do

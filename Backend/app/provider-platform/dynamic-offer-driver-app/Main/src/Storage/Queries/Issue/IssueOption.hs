@@ -8,15 +8,12 @@ import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Types (Language)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Lib.Mesh as Mesh
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.IssueOption as BeamIO
 import qualified Storage.Beam.Issue.IssueTranslation as BeamIT
 import qualified Storage.Queries.Issue.IssueTranslation as QueriesIT
-import Storage.Tabular.Issue.IssueOption
-import Storage.Tabular.Issue.IssueTranslation
 
 -- findByIdAndCategoryId :: Transactionable m => Id IssueOption -> Id IssueCategory -> m (Maybe IssueOption)
 -- findByIdAndCategoryId issueOptionId issueCategoryId = Esq.findOne $ do
@@ -33,19 +30,19 @@ findByIdAndCategoryId issueOptionId issueCategoryId = do
     Just dbConf' -> either (pure Nothing) (transformBeamIssueOptionToDomain <$>) <$> KV.findWithKVConnector dbConf' Mesh.meshConfig [Se.And [Se.Is BeamIO.id $ Se.Eq $ getId issueOptionId, Se.Is BeamIO.issueCategoryId $ Se.Eq $ getId issueCategoryId]]
     Nothing -> pure Nothing
 
-fullOptionTable ::
-  Language ->
-  From
-    ( Table IssueOptionT
-        :& MbTable IssueTranslationT
-    )
-fullOptionTable language =
-  table @IssueOptionT
-    `leftJoin` table @IssueTranslationT
-      `Esq.on` ( \(option :& translation) ->
-                   just (option ^. IssueOptionOption) ==. translation ?. IssueTranslationSentence
-                     &&. translation ?. IssueTranslationLanguage ==. just (val language)
-               )
+-- fullOptionTable ::
+--   Language ->
+--   From
+--     ( Table IssueOptionT
+--         :& MbTable IssueTranslationT
+--     )
+-- fullOptionTable language =
+--   table @IssueOptionT
+--     `leftJoin` table @IssueTranslationT
+--       `Esq.on` ( \(option :& translation) ->
+--                    just (option ^. IssueOptionOption) ==. translation ?. IssueTranslationSentence
+--                      &&. translation ?. IssueTranslationLanguage ==. just (val language)
+--                )
 
 -- findAllByCategoryAndLanguage :: Transactionable m => Id IssueCategory -> Language -> m [(IssueOption, Maybe IssueTranslation)]
 -- findAllByCategoryAndLanguage issueCategoryId language = Esq.findAll $ do

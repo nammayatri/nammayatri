@@ -30,8 +30,6 @@ import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Types
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto hiding (create)
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Kernel.Types.Logging
@@ -46,12 +44,6 @@ import Storage.Queries.Message.Message as QMM hiding (create)
 import Storage.Queries.Message.MessageTranslation as QMMT hiding (create)
 import qualified Storage.Queries.Person as QP
 import Storage.Tabular.Message.Instances ()
-import qualified Storage.Tabular.Message.Message as M
-import Storage.Tabular.Message.MessageReport
-import qualified Storage.Tabular.Message.MessageTranslation as MT
-
--- createMany :: [MessageReport] -> SqlDB ()
--- createMany = Esq.createMany
 
 createMany :: L.MonadFlow m => [MessageReport] -> m ()
 createMany = traverse_ create
@@ -63,25 +55,25 @@ create messageReport = do
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' Mesh.meshConfig (transformDomainMessageReportToBeam messageReport)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-fullMessage ::
-  Language ->
-  From
-    ( Table MessageReportT
-        :& Table M.MessageT
-        :& MbTable MT.MessageTranslationT
-    )
-fullMessage lang =
-  table
-    @MessageReportT
-    `innerJoin` table @M.MessageT
-      `Esq.on` ( \(messageReport :& message) ->
-                   messageReport ^. MessageReportMessageId ==. message ^. M.MessageTId
-               )
-    `leftJoin` table @MT.MessageTranslationT
-      `Esq.on` ( \(_ :& message :& messageTranslation) ->
-                   just (message ^. M.MessageTId) ==. messageTranslation ?. MT.MessageTranslationMessageId
-                     &&. messageTranslation ?. MT.MessageTranslationLanguage ==. val (Just lang)
-               )
+-- fullMessage ::
+--   Language ->
+--   From
+--     ( Table MessageReportT
+--         :& Table M.MessageT
+--         :& MbTable MT.MessageTranslationT
+--     )
+-- fullMessage lang =
+--   table
+--     @MessageReportT
+--     `innerJoin` table @M.MessageT
+--       `Esq.on` ( \(messageReport :& message) ->
+--                    messageReport ^. MessageReportMessageId ==. message ^. M.MessageTId
+--                )
+--     `leftJoin` table @MT.MessageTranslationT
+--       `Esq.on` ( \(_ :& message :& messageTranslation) ->
+--                    just (message ^. M.MessageTId) ==. messageTranslation ?. MT.MessageTranslationMessageId
+--                      &&. messageTranslation ?. MT.MessageTranslationLanguage ==. val (Just lang)
+--                )
 
 -- findByDriverIdAndLanguage :: Transactionable m => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
 -- findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
