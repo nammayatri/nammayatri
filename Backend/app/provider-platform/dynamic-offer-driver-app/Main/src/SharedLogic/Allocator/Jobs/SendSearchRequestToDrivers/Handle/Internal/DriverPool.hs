@@ -94,15 +94,17 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
       let batchSize = driverPoolCfg.driverBatchSize
       logDebug $ "DriverPool-" <> show allNearbyDrivers
       let onlyNewDrivers = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` previousBatchesDrivers) allNearbyDrivers
-      if length onlyNewDrivers < batchSize
-        then do
-          isAtMaxRadiusStep' <- isAtMaxRadiusStep radiusStep
-          if isAtMaxRadiusStep'
-            then calculatePool batchSize sortingType onlyNewDrivers allNearbyDrivers intelligentPoolConfig transporterConfig
-            else do
-              incrementPoolRadiusStep searchReq.id
-              prepareDriverPoolBatch' previousBatchesDrivers
-        else calculatePool batchSize sortingType onlyNewDrivers allNearbyDrivers intelligentPoolConfig transporterConfig
+      driverPoolWithoutBatchSplitDelays <-
+        if length onlyNewDrivers < batchSize
+          then do
+            isAtMaxRadiusStep' <- isAtMaxRadiusStep radiusStep
+            if isAtMaxRadiusStep'
+              then calculatePool batchSize sortingType onlyNewDrivers allNearbyDrivers intelligentPoolConfig transporterConfig
+              else do
+                incrementPoolRadiusStep searchReq.id
+                prepareDriverPoolBatch' previousBatchesDrivers
+          else calculatePool batchSize sortingType onlyNewDrivers allNearbyDrivers intelligentPoolConfig transporterConfig
+      pure $ addDistanceSplitConfigBasedDelaysForDriversWithinBatch driverPoolWithoutBatchSplitDelays
       where
         calculatePool batchSize sortingType onlyNewDrivers allNearbyDrivers intelligentPoolConfig transporterConfig = do
           driverPoolBatch <- mkDriverPoolBatch batchSize sortingType onlyNewDrivers intelligentPoolConfig transporterConfig
@@ -144,12 +146,10 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
           (randomPart, restRandom) = splitAt randomCount randomizedDriverPool
           poolBatch = sortedPart <> randomPart
           driversFromRestCount = take (driversCount - length poolBatch) (restRandom <> restSorted) -- taking rest of drivers if poolBatch length is less then driverCount requried.
-          filledPoolBatch = poolBatch <> driversFromRestCount
-          finalPoolBatch = addDistanceSplitConfigBasedDelaysForDriversWithinBatch filledPoolBatch
       logDebug $ "IntelligentDriverPool - SortedDriversCount " <> show (length sortedPart)
       logDebug $ "IntelligentDriverPool - RandomizedDriversCount " <> show (length randomPart)
-      logDebug $ "IntelligentDriverPool - finalPoolBatch " <> show (length finalPoolBatch)
-      pure finalPoolBatch
+      logDebug $ "IntelligentDriverPool - DriversFromRestCount " <> show (length driversFromRestCount)
+      pure $ poolBatch <> driversFromRestCount
 
     addDistanceSplitConfigBasedDelaysForDriversWithinBatch filledPoolBatch =
       fst $
@@ -188,7 +188,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
           Intelligent -> do
             let sortWithDriverScore' = sortWithDriverScore merchantId transporterConfig intelligentPoolConfig driverPoolCfg
             (sortedDriverPool, randomizedDriverPool) <-
-              bimapM (sortWithDriverScore' [AcceptanceRatio, CancellationRatio, AvailableTime, DriverSpeed] True) (sortWithDriverScore' [AvailableTime, DriverSpeed] False)
+              bimapM (sortWithDriverScore' [AcceptanceRatio, CancellationRatio, AvailableTime, DriverSpeed, ActualPickupDistance] True) (sortWithDriverScore' [AvailableTime, DriverSpeed, ActualPickupDistance] False)
                 =<< splitDriverPoolForSorting merchantId intelligentPoolConfig.minQuotesToQualifyForIntelligentPool driversWithValidReqAmount -- snd means taking drivers who recieved less then X(config- minQuotesToQualifyForIntelligentPool) quotes
             let sortedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance sortedDriverPool
             let randomizedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance randomizedDriverPool
