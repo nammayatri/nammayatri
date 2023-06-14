@@ -66,8 +66,19 @@ view push state =
         )
         if (state.backgroundClickable && state.dismissPopup) then (const DismissPopup) else if state.backgroundClickable then (const OnButton1Click) else (const NoAction)
     , gravity state.gravity
-    ]
-    [ linearLayout
+    ][ linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , margin state.dismissIconMargin
+        , gravity RIGHT
+        , visibility state.dismissIconVisibility
+        ][ imageView
+            [ height $ V 21
+            , width $ V 21
+            , imageWithFallback "ny_ic_dismiss,https://assets.juspay.in/nammayatri/images/user/ny_ic_dismiss.png" 
+            ]
+        ]
+     , linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , cornerRadii state.cornerRadius

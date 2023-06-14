@@ -57,7 +57,9 @@ type Config = {
     contactViewPadding :: Padding,
     contactViewMargin :: Margin,
     dismissPopup :: Boolean,
-    padding :: Padding
+    padding :: Padding,
+    dismissIconVisibility :: Visibility,
+    dismissIconMargin :: Margin
 }
 
 type ContactViewConfig = {
@@ -226,4 +228,6 @@ config = {
     , contactViewPadding : (Padding 23 16 23 16)
     , contactViewMargin : (Margin 16 12 16 32)
     , dismissPopup:false
+    , dismissIconVisibility : GONE
+    , dismissIconMargin : Margin 0 0 0 0
 }
