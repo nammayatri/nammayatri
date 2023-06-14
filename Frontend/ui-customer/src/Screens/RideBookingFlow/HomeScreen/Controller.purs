@@ -1498,7 +1498,9 @@ eval (GetRideConfirmation resp) state = do
 
 eval (NotificationListener notificationType) state = do
   _ <- pure $ printLog "storeCallBackCustomer notificationType" notificationType
-  exit $ NotificationHandler notificationType state { props { callbackInitiated = false}}
+  case notificationType of 
+    "DRIVER_QUOTE_INCOMING" -> continue state 
+    _ -> exit $ NotificationHandler notificationType state { props { callbackInitiated = false}}
 
 eval RecenterCurrentLocation state = recenterCurrentLocation state
 
