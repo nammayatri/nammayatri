@@ -355,6 +355,8 @@ logOutPopUpModelConfig state =
         popUpConfig'
     ST.TipsPopUp -> PopUpModal.config{
           optionButtonOrientation = "VERTICAL"
+          , dismissIconMargin = Margin 0 0 14 13
+          , dismissIconVisibility = if isLocalStageOn ST.QuoteList then GONE else VISIBLE
           , backgroundClickable = true
           , customerTipAvailable = true
           , dismissPopup = true
