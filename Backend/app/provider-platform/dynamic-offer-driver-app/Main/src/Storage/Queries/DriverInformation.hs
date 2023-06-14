@@ -20,7 +20,6 @@ import qualified Data.ByteString as BS
 import qualified Database.Beam as B
 import Database.Beam.Postgres hiding ((++.))
 import qualified Database.Beam.Query ()
-import Domain.Types.DriverInformation as DDI
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverLocation as DriverLocation
 import Domain.Types.Merchant (Merchant)
@@ -49,7 +48,7 @@ data DatabaseWith2 table1 table2 f = DatabaseWith2
   }
   deriving (Generic, B.Database be)
 
-create :: L.MonadFlow m => DDI.DriverInformation -> m ()
+create :: L.MonadFlow m => DriverInfo.DriverInformation -> m ()
 create driverInformation = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
@@ -273,111 +272,11 @@ findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOf
         ||. person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)
     unMaybe = maybe_ (val "") identity
 
--- getDriversWithOutdatedLocationsToMakeInactive :: Transactionable m => UTCTime -> m [Person]
--- getDriversWithOutdatedLocationsToMakeInactive before = do
---   driverLocations <- getDriverLocs before
---   driverInfos <- getDriverInfos driverLocations
---   getDrivers driverInfos
-
--- getDrivers ::
---   Transactionable m =>
---   [DriverInformation] ->
---   m [Person]
--- getDrivers driverInfos = do
---   Esq.findAll $ do
---     persons <- from $ table @PersonT
---     where_ $
---       persons ^. PersonTId `in_` valList personsKeys
---     return persons
---   where
---     personsKeys = toKey . cast <$> fetchDriverIDsFromInfo driverInfos
-
--- getDrivers' ::
---   L.MonadFlow m =>
---   [DriverInformation] ->
---   m [Person]
--- getDrivers' driverInfos = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
---   case dbConf of
---     Just dbConf' -> do
---       result <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamP.id $ Se.In personsKeys]
---       case result of
---         Left _ -> pure []
---         Right result' -> pure $ QueriesP.transformBeamPersonToDomain <$> result'
---     Nothing -> pure []
---   where
---     personsKeys = fetchDriverIDsFromInfo driverInfos
-
--- getDriverInfos ::
---   Transactionable m =>
---   [DriverLocation] ->
---   m [DriverInformation]
--- getDriverInfos driverLocations = do
---   Esq.findAll $ do
---     driverInfos <- from $ table @DriverInformationT
---     where_ $
---       driverInfos ^. DriverInformationDriverId `in_` valList personsKeys
---         &&. driverInfos ^. DriverInformationActive
---     return driverInfos
---   where
---     personsKeys = toKey . cast <$> fetchDriverIDsFromLocations driverLocations
-
--- getDriverInfos' ::
---   L.MonadFlow m =>
---   [DriverLocation] ->
---   m [DriverInformation]
--- getDriverInfos' driverLocations = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
---   case dbConf of
---     Just dbConf' -> do
---       result <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.And([Se.Is BeamDI.active $ Se.Eq True]<>
---                                                                           [Se.Is BeamDI.driverId $ Se.In personKeys])]
---       case result of
---         Left _ -> pure []
---         Right result' -> pure $ transformBeamDriverInformationToDomain <$> result'
---     Nothing -> pure []
---   where
---     personKeys = getId <$> fetchDriverIDsFromLocations driverLocations
-
--- getDriverLocs ::
---   Transactionable m =>
---   UTCTime ->
---   m [DriverLocation]
--- getDriverLocs before = do
---   Esq.findAll $ do
---     driverLocs <- from $ table @DriverLocationT
---     where_ $
---       driverLocs ^. DriverLocationUpdatedAt <. val before
---     return driverLocs
-
--- getDriverLocs' ::
---   L.MonadFlow m =>
---   UTCTime ->
---   m [DriverLocation]
--- getDriverLocs' before = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
---   case dbConf of
---     Just dbConf' -> do
---       result <- KV.findAllWithKVConnector dbConf' Mesh.meshConfig [Se.Is BeamDL.updatedAt $ Se.LessThan before]
---       case result of
---         Left _ -> pure []
---         Right result' -> pure $ QueriesDL.transformBeamDriverLocationToDomain <$> result'
---     Nothing -> pure []
-
 fetchDriverIDsFromLocations :: [DriverLocation] -> [Id Person]
 fetchDriverIDsFromLocations = map DriverLocation.driverId
 
 fetchDriverIDsFromInfo :: [DriverInformation] -> [Id Person]
 fetchDriverIDsFromInfo = map DriverInfo.driverId
-
--- addReferralCode :: Id Person -> EncryptedHashedField 'AsEncrypted Text -> SqlDB ()
--- addReferralCode personId code = do
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ DriverInformationReferralCode =. val (Just (code & unEncrypted . (.encrypted)))
---       ]
---     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey personId)
 
 addReferralCode :: (L.MonadFlow m) => Id Person -> EncryptedHashedField 'AsEncrypted Text -> m (MeshResult ())
 addReferralCode (Id personId) code = do
@@ -391,28 +290,6 @@ addReferralCode (Id personId) code = do
         ]
         [Se.Is BeamDI.driverId (Se.Eq personId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
-
--- countDrivers :: Transactionable m => Id Merchant -> m (Int, Int)
--- countDrivers merchantId =
---   getResults <$> do
---     findAll $ do
---       (driverInformation :& person) <-
---         from $
---           table @DriverInformationT
---             `innerJoin` table @PersonT
---               `Esq.on` ( \(driverInformation :& person) ->
---                            driverInformation ^. DriverInformationDriverId ==. person ^. PersonTId
---                        )
---       where_ $
---         person ^. PersonMerchantId ==. (val . toKey $ merchantId)
---       groupBy (driverInformation ^. DriverInformationActive)
---       pure (driverInformation ^. DriverInformationActive, count @Int $ person ^. PersonId)
---   where
---     getResults :: [(Bool, Int)] -> (Int, Int)
---     getResults = foldl func (0, 0)
-
---     func (active, inactive) (activity, counter) =
---       if activity then (active + counter, inactive) else (active, inactive + counter)
 
 countDrivers :: L.MonadFlow m => Id Merchant -> m (Int, Int)
 countDrivers merchantID =
