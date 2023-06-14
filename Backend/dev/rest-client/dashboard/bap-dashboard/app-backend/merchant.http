@@ -42,6 +42,14 @@ content-type: application/json
 
 ###
 
+# @name merchanServiceUsageConfig
+
+GET {{bap-dashboard-host}}/bap/YATRI/merchant/serviceUsageConfig
+token: {{juspay_admin}}
+content-type: application/json
+
+###
+
 # @name merchantGoogleConfigUpdate
 
 POST {{bap-dashboard-host}}/bap/YATRI/merchant/serviceConfig/maps/update

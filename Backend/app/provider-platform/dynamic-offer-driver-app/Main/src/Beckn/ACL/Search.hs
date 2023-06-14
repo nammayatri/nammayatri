@@ -34,7 +34,7 @@ buildSearchReq subscriber req = do
   validateContext Context.SEARCH context
   let intent = req.message.intent
   let pickup = intent.fulfillment.start
-  let dropOff = fromJust intent.fulfillment.end
+  dropOff <- intent.fulfillment.end & fromMaybeM (InvalidRequest "Missing field: intent.fulfillment.end")
   unless (subscriber.subscriber_id == context.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
   unless (subscriber.subscriber_url == context.bap_uri) $

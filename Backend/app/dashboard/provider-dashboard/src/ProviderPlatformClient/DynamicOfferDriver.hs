@@ -100,12 +100,17 @@ newtype BookingsAPIs = BookingsAPIs
 
 data MerchantAPIs = MerchantAPIs
   { merchantUpdate :: Merchant.MerchantUpdateReq -> Euler.EulerClient Merchant.MerchantUpdateRes,
+    merchantCommonConfig :: Euler.EulerClient Merchant.MerchantCommonConfigRes,
     merchantCommonConfigUpdate :: Merchant.MerchantCommonConfigUpdateReq -> Euler.EulerClient APISuccess,
+    driverPoolConfig :: Maybe Meters -> Euler.EulerClient Merchant.DriverPoolConfigRes,
     driverPoolConfigUpdate :: Meters -> Merchant.DriverPoolConfigUpdateReq -> Euler.EulerClient APISuccess,
     driverPoolConfigCreate :: Meters -> Merchant.DriverPoolConfigCreateReq -> Euler.EulerClient APISuccess,
+    driverIntelligentPoolConfig :: Euler.EulerClient Merchant.DriverIntelligentPoolConfigRes,
     driverIntelligentPoolConfigUpdate :: Merchant.DriverIntelligentPoolConfigUpdateReq -> Euler.EulerClient APISuccess,
+    onboardingDocumentConfig :: Maybe Merchant.DocumentType -> Euler.EulerClient Merchant.OnboardingDocumentConfigRes,
     onboardingDocumentConfigUpdate :: Merchant.DocumentType -> Merchant.OnboardingDocumentConfigUpdateReq -> Euler.EulerClient APISuccess,
     onboardingDocumentConfigCreate :: Merchant.DocumentType -> Merchant.OnboardingDocumentConfigCreateReq -> Euler.EulerClient APISuccess,
+    serviceUsageConfig :: Euler.EulerClient Merchant.ServiceUsageConfigRes,
     mapsServiceConfigUpdate :: Merchant.MapsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
     mapsServiceUsageConfigUpdate :: Merchant.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
     smsServiceConfigUpdate :: Merchant.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
@@ -205,12 +210,17 @@ mkDriverOfferAPIs merchantId token = do
     stuckBookingsCancel = bookingsClient
 
     merchantUpdate
+      :<|> merchantCommonConfig
       :<|> merchantCommonConfigUpdate
+      :<|> driverPoolConfig
       :<|> driverPoolConfigUpdate
       :<|> driverPoolConfigCreate
+      :<|> driverIntelligentPoolConfig
       :<|> driverIntelligentPoolConfigUpdate
+      :<|> onboardingDocumentConfig
       :<|> onboardingDocumentConfigUpdate
       :<|> onboardingDocumentConfigCreate
+      :<|> serviceUsageConfig
       :<|> mapsServiceConfigUpdate
       :<|> mapsServiceUsageConfigUpdate
       :<|> smsServiceConfigUpdate

@@ -37,6 +37,7 @@ import "lib-dashboard" Tools.Auth.Merchant
 type API =
   "merchant"
     :> ( MerchantUpdateAPI
+           :<|> ServiceUsageConfigAPI
            :<|> MapsServiceConfigUpdateAPI
            :<|> MapsServiceUsageConfigUpdateAPI
            :<|> SmsServiceConfigUpdateAPI
@@ -46,6 +47,10 @@ type API =
 type MerchantUpdateAPI =
   ApiAuth 'APP_BACKEND 'MERCHANT 'MERCHANT_UPDATE
     :> Common.MerchantUpdateAPI
+
+type ServiceUsageConfigAPI =
+  ApiAuth 'APP_BACKEND 'MERCHANT 'SERVICE_USAGE_CONFIG
+    :> Common.ServiceUsageConfigAPI
 
 type MapsServiceConfigUpdateAPI =
   ApiAuth 'APP_BACKEND 'MERCHANT 'MAPS_SERVICE_CONFIG_UPDATE
@@ -66,6 +71,7 @@ type SmsServiceUsageConfigUpdateAPI =
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   merchantUpdate merchantId
+    :<|> serviceUsageConfig merchantId
     :<|> mapsServiceConfigUpdate merchantId
     :<|> mapsServiceUsageConfigUpdate merchantId
     :<|> smsServiceConfigUpdate merchantId
@@ -93,6 +99,14 @@ merchantUpdate merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
   transaction <- buildTransaction Common.MerchantUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
     Client.callRiderApp checkedMerchantId (.merchant.merchantUpdate) req
+
+serviceUsageConfig ::
+  ShortId DM.Merchant ->
+  ApiTokenInfo ->
+  FlowHandler Common.ServiceUsageConfigRes
+serviceUsageConfig merchantShortId apiTokenInfo = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  Client.callRiderApp checkedMerchantId (.merchant.serviceUsageConfig)
 
 mapsServiceConfigUpdate ::
   ShortId DM.Merchant ->
