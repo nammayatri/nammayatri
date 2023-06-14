@@ -80,7 +80,7 @@ sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driver
   where
     handle =
       Handle
-        { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchReq.id,
+        { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchTry.id,
           isRideAlreadyAssigned = I.isRideAlreadyAssigned searchTry.id,
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchTry.id,
           getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq searchTry,
