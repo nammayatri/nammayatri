@@ -55,6 +55,7 @@ import Storage.CachedQueries.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as DriverStats
 import qualified Storage.Queries.FareParameters as QFare
 import Storage.Queries.Person as SQP
@@ -103,6 +104,7 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId merchan
     QRB.updateStatus bookingId SRB.COMPLETED
     DriverStats.updateIdleTime driverId
     DriverStats.incrementTotalRidesAndTotalDist (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
+    QDI.updateOnRide driverId False
     if driverInfo.active
       then QDFS.updateStatus ride.driverId DDFS.ACTIVE
       else QDFS.updateStatus ride.driverId DDFS.IDLE
@@ -115,6 +117,7 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId merchan
     let weekEndDate = addDays (fromIntegral (6 - currDayIndex)) rideDate
     driverWeeklyZscore <- Hedis.zScore (makeWeeklyDriverLeaderBoardKey weekStartDate weekEndDate) $ show ride.driverId
     updateDriverWeeklyZscore ride rideDate weekStartDate weekEndDate driverWeeklyZscore ride.chargeableDistance
+  DLoc.updateOnRideCacheForCancelledOrEndRide driverId merchantId
   SRide.clearCache $ cast driverId
 
 updateDriverDailyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, Metrics.CoreMetrics m, CacheFlow m r, Hedis.HedisFlow m r, MonadFlow m) => Ride.Ride -> Day -> Maybe Double -> Maybe Meters -> m ()
