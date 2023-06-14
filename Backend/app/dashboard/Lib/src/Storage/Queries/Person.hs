@@ -87,8 +87,9 @@ findAllWithLimitOffset ::
   Maybe DbHash ->
   Maybe Integer ->
   Maybe Integer ->
+  Maybe (Id Person.Person) ->
   m [(Person, Role, [ShortId Merchant.Merchant])]
-findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset =
+findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset personId =
   fromMaybeList <$> do
     findAll $ do
       merchantAccessAggTable <- with $ do
@@ -115,6 +116,7 @@ findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset =
                        )
       where_ $
         Esq.whenJust_ (liftA2 (,) mbSearchString mbSearchStrDBHash) (filterBySearchString person)
+          &&. Esq.whenJust_ personId (\defaultPerson -> person ^. PersonId ==. val (getId defaultPerson))
       orderBy [desc $ person ^. PersonCreatedAt]
       limit limitVal
       offset offsetVal
