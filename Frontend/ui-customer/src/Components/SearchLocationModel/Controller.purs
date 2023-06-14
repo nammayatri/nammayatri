@@ -26,6 +26,8 @@ import MerchantConfig.Types (AppConfig)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import Foreign.Object (Object)
+import Foreign (Foreign)
 
 data Action = GoBack
             | NoAction
@@ -55,6 +57,7 @@ type SearchLocationModelState = {
   , isDestServiceable :: Boolean
   , isRideServiceable :: Boolean
   , homeScreenConfig :: AppConfig
+  , logField :: Object Foreign
 }
 
 dummy_data :: Array LocationListItemState

@@ -23,6 +23,7 @@ import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEnti
 import Prelude (($))
 import Data.Array (head)
 import MerchantConfig.DefaultConfig as DC
+import Foreign.Object (empty)
 
 initData :: HomeScreenState
 initData = {
@@ -86,6 +87,7 @@ initData = {
       , id: ""
       }
     , config : DC.config
+    , logField : empty
     },
     props: {
       rideRequestFlow : false

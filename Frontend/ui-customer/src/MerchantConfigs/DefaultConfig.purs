@@ -43,4 +43,5 @@ config =
   , infoIconUrl : "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png"
   , profileEditGravity : "center"
   , merchantLogo : "ic_launcher,https://assets.juspay.in/nammayatri/images/user/ny_ic_launcher.png"
+  , logs : ["JUSPAY", "FIREBASE"]
   }

@@ -23,6 +23,7 @@ import Language.Types (STR(..))
 import Screens.Types (DriverProfileScreenState, BottomNavBarState)
 import Prelude (class Eq, unit, (<>), (==), (||), (/=))
 import Common.Types.App (LazyCheck(..))
+import Foreign.Object (empty)
 
 initData :: DriverProfileScreenState
 initData = {
@@ -37,6 +38,7 @@ initData = {
     vehicleModelName : "",
     vehicleColor : "",
     driverAlternateNumber : Nothing,
+    logField : empty ,
 
     capacity : 0,
     vehicleSelected: [],

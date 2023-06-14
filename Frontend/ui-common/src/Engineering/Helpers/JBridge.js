@@ -851,8 +851,10 @@ export const firebaseLogEventWithTwoParams = function (event) {
 };
 
 export const firebaseLogEvent = function (str) {
-  if (window.JBridge.firebaseLogEvent){
-      window.JBridge.firebaseLogEvent(str);
+  return function () {
+    if (window.JBridge.firebaseLogEvent){
+        window.JBridge.firebaseLogEvent(str);
+    }
   }
 };
 

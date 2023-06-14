@@ -87,6 +87,7 @@ import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage)
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
+import Engineering.Helpers.LogEvent (logEvent)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -533,7 +534,7 @@ recenterButtonView push state =
                 ( \action -> do
                     _ <- push action
                     _ <- getCurrentPosition push UpdateCurrentLocation
-                    _ <- pure $ firebaseLogEvent "ny_user_recenter_btn_click"
+                    _ <- pure $ logEvent state.data.logField "ny_user_recenter_btn_click"
                     pure unit
                 )
                 (const $ RecenterCurrentLocation)
@@ -1702,7 +1703,7 @@ getEstimate action flowStatusAction count duration push state = do
           let errResp = err.response
               codeMessage = decodeErrorMessage errResp.errorMessage
           if ( err.code == 400 && codeMessage == "ACTIVE_BOOKING_ALREADY_PRESENT" ) then do
-            -- _ <- pure $ firebaseLogEvent "ny_fs_active_booking_found_on_search"
+            -- _ <- pure $ logEvent state.data.logField "ny_fs_active_booking_found_on_search"
             void $ pure $ toast "ACTIVE BOOKING ALREADY PRESENT"
             doAff do liftEffect $ push $ flowStatusAction
           else do
@@ -1737,7 +1738,7 @@ getQuotesPolling pollingId action retryAction count duration push state = do
                doAff do liftEffect $ push $ action response
             else if not (null ((fromMaybe dummySelectedQuotes resp.selectedQuotes)^._selectedQuotes)) then do
               if (getValueToLocalStore GOT_ONE_QUOTE == "FALSE") then do
-                -- _ <- pure $ firebaseLogEvent "ny_user_received_quotes"
+                -- _ <- pure $ logEvent state.data.logField "ny_user_received_quotes"
                 pure unit
               else pure unit
               _ <- pure $ setValueToLocalStore GOT_ONE_QUOTE "TRUE"
@@ -1850,7 +1851,7 @@ confirmRide action count duration push state = do
         let status = if fareProductType == "OneWaySpecialZoneAPIDetails" then "CONFIRMED" else "TRIP_ASSIGNED"
         if  status == resp.status then do
             doAff do liftEffect $ push $ action response
-            -- _ <- pure $ firebaseLogEvent "ny_user_ride_assigned"
+            -- _ <- pure $ logEvent state.data.logField "ny_user_ride_assigned"
             pure unit
         else do
             void $ delay $ Milliseconds duration

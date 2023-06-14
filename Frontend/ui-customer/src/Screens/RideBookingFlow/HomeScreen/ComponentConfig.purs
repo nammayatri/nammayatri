@@ -695,6 +695,7 @@ searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLoc
                                     , isRideServiceable: state.props.isRideServiceable
                                     , savedlocationList: state.data.savedLocations
                                     , homeScreenConfig : state.data.config
+                                    , logField : state.data.logField
                                     }
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState

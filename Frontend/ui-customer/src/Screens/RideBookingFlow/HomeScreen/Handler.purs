@@ -26,6 +26,7 @@ import Screens.HomeScreen.Controller (ScreenOutput(..))
 import Screens.HomeScreen.View as HomeScreen
 import Types.App (FlowBT, GlobalState(..), ScreenType(..), HOME_SCREEN_OUTPUT(..))
 import Debug (spy)
+import Presto.Core.Types.Language.Flow (getLogFields)
 
 homeScreen ::FlowBT String HOME_SCREEN_OUTPUT
 homeScreen = do

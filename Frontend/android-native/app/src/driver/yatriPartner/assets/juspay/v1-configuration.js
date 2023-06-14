@@ -35,6 +35,7 @@ window.getMerchantConfig = function () {
       "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER": "നിലവിൽ കേരളത്തിൽ രജിസ്റ്റർ ചെയ്ത നമ്പർ മാത്രമേ ഞങ്ങൾ അനുവദിക്കൂ",
       "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "നിങ്ങൾ യാത്രി സപ്പോർട്ട് ടീമിലേക്ക് ഒരു കോൾ ചെയ്യാൻ പോകുകയാണ്. നിങ്ങൾക്ക് തുടരണോ?",
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "നിങ്ങളുടെ ലൊക്കേഷൻ ഞങ്ങളുടെ സിസ്റ്റത്തെ ടാക്സികൾ വഴി മാപ്പ് ചെയ്യാൻ സഹായിക്കുന്നു."
-    }
+    },
+    "logs": ["JUSPAY","FIREBASE"]
   })
 }
