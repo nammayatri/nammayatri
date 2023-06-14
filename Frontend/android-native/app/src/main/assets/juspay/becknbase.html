@@ -15,7 +15,7 @@
 
     var checkAndLoadFile = function() {
         console.log('callback triggered count : ', count);
-        var jsFile = JBridge.loadFileInDUI('v1-index_bundle.jsa');
+        var jsFile = JBridge.loadFileInDUI('index_bundle.js');
         if(jsFile == "" || jsFile == "undefined") {
             if (count >= 0) {
                 console.log('bundle not present, download');

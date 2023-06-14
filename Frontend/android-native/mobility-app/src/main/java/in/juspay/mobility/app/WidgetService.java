@@ -430,10 +430,6 @@ public class WidgetService extends Service {
                                     if (sharedPref == null)
                                         sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                                     if (sharedPref.getString("MAPS_OPENED", "null").equals("true")) {
-                                        String state = sharedPref.getString("ACTIVITY_STATUS", "null");
-                                        if (!(state.equals("onStop") || state.equals("onDestroy"))) {
-                                            minimizeApp();
-                                        }
                                         Handler mainLooper = new Handler(Looper.getMainLooper());
                                         mainLooper.postDelayed(() -> openMainActivity(), 600);
                                     } else {

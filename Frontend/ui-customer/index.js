@@ -138,7 +138,12 @@ window.onMerchantEvent = function (event, payload) {
           window.callNotificationCallBack(clientPaylod.notification_content.type);
         }
       }
-    } else {
+    } else if (clientPaylod.action == "OpenChatScreen") { 
+      if (window.openChatScreen) {
+        window.openChatScreen();
+      }
+    }
+    else {
       eventObject["type"] = "";
       eventObject["data"] = "";
       if(clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "CHAT_MESSAGE"){

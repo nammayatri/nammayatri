@@ -115,11 +115,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 }
 
                 @Override
-                public void openChatCallBack() {
-                    Log.i(CALLBACK, "No Required");
-                }
-
-                @Override
                 public void inAppCallBack(String onTapAction) {
                     Log.i(CALLBACK, "No Required");
                 }
@@ -464,9 +459,9 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     if (userPositionMarker == null) {
                         upsertMarker(CURRENT_LOCATION, String.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT")), String.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON")), 160, 0.5f, 0.9f); //TODO this function will be removed
                     } else {
+                        userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(locationName, CURRENT_LOCATION)));
+                        userPositionMarker.setTitle("");
                     }
-                    userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(locationName, CURRENT_LOCATION)));
-                    userPositionMarker.setTitle("");
                 }
                 layer.addLayerToMap();
             } catch (JSONException e) {

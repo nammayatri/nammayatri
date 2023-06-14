@@ -201,12 +201,6 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                 public void chatCallBack(String message, String sentBy, String time, String len) {
                     Log.i(OTHERS, "No Required");
                 }
-
-                @Override
-                public void openChatCallBack() {
-                    Log.i(OTHERS, "No Required");
-                }
-
                 @Override
                 public void inAppCallBack(String onTapAction) {
                     Log.i(OTHERS, "No Required");
@@ -214,7 +208,6 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
             };
             NotificationUtils.registerCallback(callBack);
             Utils.registerCallback(callBack);
-            NetworkBroadcastReceiver.registerCallback(callBack);
         }
         if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
             LocationUpdateService.UpdateTimeCallback callback = this::callUpdateTimeCallBack;

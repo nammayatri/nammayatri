@@ -40,7 +40,7 @@ window.getMerchantConfig = function () {
     "infoIconUrl" : "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png",
     "merchantLogo" : "ic_launcher,https://assets.juspay.in/jatrisaathi/images/user/ny_ic_launcher.png",
     "feedbackBackground": "#2C2F3A",
-    "sideBarList": ["MyRides", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout"],
+    "sideBarList": ["MyRides", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "Separator", "ShareApp", "About", "Logout"],
     "rateCardColor": "#2C2F3A",
     "nyBrandingVisibility": false,
     "fontType": "Assets",
@@ -48,6 +48,7 @@ window.getMerchantConfig = function () {
     "black800": "#454545",
     "red" : "#E55454",
     "popupBackground" : "#FFFFFF",
+    "profileEditGravity" : "center",
     "englishStrings": {
       "ABOUT_APP_DESCRIPTION": "Jatri Sathi is an open platform to connect riders with drivers. The app makes it convenient for riders to book a ride with meter rate hence minimal fare.",
       "WELCOME_TEXT": "Welcome to Jatri Sathi",

@@ -794,16 +794,19 @@ menuButtonConfig state item = let
     menuButtonConfig' = config {
       titleConfig{
           text = item.place
+        , gravity = CENTER_VERTICAL
       }
     , radioButtonConfig {
         height = V 16
         , width = V 16
-        , cornerRadius = 10.0
+        , cornerRadius = 8.0
+        , buttonWidth = V 8
+        , buttonHeight = V 8
         , buttonColor = Color.positive
-        , buttonMargin = (MarginRight 15)
+        , margin = (MarginRight 15)
         , activeStroke = ("2," <> Color.positive)
       }
-      , height = V 40
+      , height = WRAP_CONTENT
       , id = item.place
       , lat = item.lat
       , lng = item.lng

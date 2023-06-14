@@ -31,6 +31,7 @@ window.getMerchantConfig = function () {
       "otpTitleColor"  : "#6D7280"
     },
     "profileBackground": "#2C2F3A",
+    "profileEditGravity" : "center",
     "profileName": "#FFFFFF",
     "profileImage": "#012A72",
     "profileCompletion" : "#FCC32C",
@@ -39,7 +40,7 @@ window.getMerchantConfig = function () {
     "cancelRideColor" : "#E55454",
     "infoIconUrl" : "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png",
     "merchantLogo" : "ic_launcher,https://assets.juspay.in/yatri/images/user/ny_ic_launcher.png",
-    "sideBarList": ["MyRides", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout"],
+    "sideBarList": ["MyRides", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "Separator", "ShareApp", "About", "Logout"],
     "rateCardColor": "#2C2F3A",
     "nyBrandingVisibility": false,
     "fontType": "Assets",

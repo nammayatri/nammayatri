@@ -65,10 +65,6 @@ public class MobilityAppBridge extends HyperBridge {
             callChatMessageCallBack(message,sentBy,dateFormatted,len);
         }
         @Override
-        public void openChatCallBack() {
-            openChatScreen();
-        }
-        @Override
         public void inAppCallBack(String inAppCallBack) {
             callInAppNotificationCallBack(inAppCallBack);
         }
@@ -201,14 +197,6 @@ public class MobilityAppBridge extends HyperBridge {
     @JavascriptInterface
     public void storeCallBackOpenChatScreen(final String callback){
         storeCallBackOpenChatScreen = callback;
-    }
-
-    @JavascriptInterface
-    public void openChatScreen() {
-        if (storeCallBackOpenChatScreen != null) {
-            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s');", storeCallBackOpenChatScreen);
-            bridgeComponents.getJsCallback().addJsToWebView(javascript);
-        }
     }
 
     @JavascriptInterface

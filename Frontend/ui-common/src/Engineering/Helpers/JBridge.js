@@ -587,18 +587,16 @@ export const storeCallBackOpenChatScreen = function (cb) {
             var callback = callbackMapper.map(function(){
               cb(action)();
             });
+            var openChatScreen = function(){
+              cb(action)();
+            };
+            window.openChatScreen = openChatScreen;
             if(window.JBridge.storeCallBackOpenChatScreen) {
               window.JBridge.storeCallBackOpenChatScreen(callback);
             }
         };
       };
   };
-
-export const openChatScreen = function() {
-  if (window.JBridge.openChatScreen) {
-    window.JBridge.openChatScreen();
-  }
-}
 
 export const startChatListenerService = function() {
   if (JBridge.startChatListenerService) {
