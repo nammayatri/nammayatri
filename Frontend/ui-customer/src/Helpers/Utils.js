@@ -141,7 +141,7 @@ export const storeCallBackCustomer = function (cb) {
           };
             window.callNotificationCallBack = notificationCallBack;
             console.log("In storeCallBackCustomer ---------- + " + action);
-            window.JBridge.storeCallBackCustomer(callback);
+            JBridge.storeCallBackCustomer(callback);
         }
     }}
     catch (error){

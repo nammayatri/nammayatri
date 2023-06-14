@@ -41,6 +41,7 @@ import Prelude (Unit, bind, const, discard, not, pure, unit, (-), ($), (<<<), (=
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, linearLayout, margin, onAnimationEnd, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
+import PrestoDOM.Types.DomAttributes (decodeGravityUtil)
 import Resources.Constants as RSRC
 import Screens.MyProfileScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
@@ -267,14 +268,16 @@ headerView state push =
         ][ linearLayout
           [ width WRAP_CONTENT
           , height MATCH_PARENT
-          , gravity BOTTOM
+          , gravity $ case state.data.config.profileEditGravity of 
+              "bottom" -> BOTTOM
+              _ -> CENTER
           , orientation VERTICAL
           ][ textView $
               [ height WRAP_CONTENT
               , width WRAP_CONTENT
               , text (getString EDIT)
               , color Color.blueTextColor
-              , padding $ PaddingBottom 10
+              , padding $ PaddingBottom (if state.data.config.profileEditGravity == "bottom" then 10 else 0)
               , onClick push (const $ EditProfile Nothing)
               ] <> FontStyle.subHeading1 LanguageStyle
             ]

@@ -333,13 +333,12 @@ viewDetailsAndRepeatRide push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER
-  , margin $ MarginTop 15
   ][ textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text $ getString VIEW_DETAILS
       , color Color.blue900
-      , padding $ Padding 10 3 10 3
+      , padding $ Padding 26 18 50 3
       , PrestoList.onClickHolder push $ Screen.IndividualRideCardActionController <<< OnClick
       ] <> FontStyle.body1 LanguageStyle
     , linearLayout 
@@ -356,7 +355,7 @@ viewDetailsAndRepeatRide push state =
       , PrestoList.alphaHolder "alpha"
       , alpha $ if (isLocalStageOn HomeScreen) then 1.0 else 0.5
       , PrestoList.onClickHolder push $ (if (isLocalStageOn HomeScreen) then Screen.IndividualRideCardActionController <<< RepeatRide else Screen.IndividualRideCardActionController <<< NoAction)
-      , padding $ Padding 10 3 10 3
+      , padding $ Padding 50 18 26 3
       ] <> FontStyle.body1 LanguageStyle)
   ]
 

@@ -135,33 +135,66 @@ logoView state =
         ][  imageView
               [ height $ V 48
               , width $ V 60
-              , imageWithFallback $ "ny_ic_paytm_logo," <> (getAssetStoreLink FunctionCall) <> "ny_ic_paytm_logo.png"
-              , margin $ MarginRight 40
-              , visibility if state.appConfig.nyBrandingVisibility then VISIBLE else GONE
-              ]
-          , imageView
-              [ height $ V 48
-              , width $ V 48
-              , imageWithFallback $ "ic_launcher," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_launcher.png"
+              , imageWithFallback state.appConfig.merchantLogo
               ]
           ]
 
 --------------------------------------------------- bottomLinksView -----------------------------------------------------
-bottomLinksView :: ST.AboutUsScreenState -> forall w . PrestoDOM (Effect Unit) w
-bottomLinksView state = 
-   linearLayout
+bottomLinksView :: ST.AboutUsScreenState -> forall w. PrestoDOM (Effect Unit) w
+bottomLinksView state =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER
+    , orientation VERTICAL
+    ]
+    [ linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , gravity CENTER
         , orientation VERTICAL
-        , margin (Margin 0 10 0 10)
-        ][  textView $
-            [ width WRAP_CONTENT
-            , height WRAP_CONTENT
-            , text $ "v" <> (getValueToLocalStore VERSION_NAME) <> " [ " <> (getValueToLocalStore BUNDLE_VERSION) <> " ]"
-            , color "#354052"
-            ] <> FontStyle.paragraphText LanguageStyle
+        , gravity CENTER
+        , visibility if state.appConfig.nyBrandingVisibility then VISIBLE else GONE
+        ]
+        [ textView
+            $ [ height WRAP_CONTENT
+              , width WRAP_CONTENT
+              , text "Powered by"
+              , color Color.black800
+              , gravity CENTER_VERTICAL
+              , lineHeight "22"
+              ]
+            <> FontStyle.paragraphText LanguageStyle
+        , linearLayout
+            [ height $ V 25
+            , width MATCH_PARENT
+            , orientation HORIZONTAL
+            , gravity CENTER
+            ]
+            [ imageView
+                [ height $ V 20
+                , width $ V 20
+                , imageWithFallback $ "ic_launcher," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_launcher.png"
+                ]
+            , textView
+                $ [ text $ "namma yatri"
+                  , color Color.black
+                  , margin $ Margin 3 0 0 2
+                  , height WRAP_CONTENT
+                  , width WRAP_CONTENT
+                  , gravity CENTER
+                  ]
+                <> FontStyle.h2 LanguageStyle
+            ]
+        ]
+    , textView
+        $ [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text $ "v" <> (getValueToLocalStore VERSION_NAME) <> " [ " <> (getValueToLocalStore BUNDLE_VERSION) <> " ]"
+          , color "#354052"
+          , margin (Margin 0 20 0 10)
           ]
+        <> FontStyle.body6 LanguageStyle
+    ]
   
 --------------------------------------------------- softwareLicenseView -----------------------------------------------------
 softwareLicenseView :: forall w . PrestoDOM (Effect Unit) w

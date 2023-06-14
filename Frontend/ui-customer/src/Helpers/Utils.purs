@@ -379,21 +379,18 @@ getAssetStoreLink lazy = case (getMerchant lazy) of
   NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/user/images/"
   JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/user/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/user/images/"
-  UNKNOWN -> "https://assets.juspay.in/beckn/mobilitypaytm/user/"
+  PAYTM -> "https://assets.juspay.in/beckn/mobilitypaytm/user/"
 
 getCommonAssetStoreLink :: LazyCheck -> String
 getCommonAssetStoreLink lazy = case (getMerchant lazy) of
   NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/"
   JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/yatricommon/images/"
-  UNKNOWN -> "https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/"
+  PAYTM -> "https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/"
 
 getAssetsBaseUrl :: LazyCheck -> String
 getAssetsBaseUrl lazy = case (getMerchant lazy) of
   NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/user/"
   JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/user/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/user/"
-  UNKNOWN -> "https://assets.juspay.in/beckn/mobilitypaytm/user/"
-
-unLiftFlow :: forall a st . Flow st a -> Maybe a
-unLiftFlow = unsafeCoerce
+  PAYTM -> "https://assets.juspay.in/beckn/mobilitypaytm/user/"

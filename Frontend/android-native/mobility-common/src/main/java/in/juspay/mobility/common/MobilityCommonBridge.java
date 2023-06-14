@@ -259,6 +259,14 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
+    @JavascriptInterface
+    public String getCurrentLatLong() throws JSONException { // TODO:: TO BE DEPRECATED AS FUNCTION IS NOT IN USE
+        JSONObject location = new JSONObject();
+        location.put("lat", lastLatitudeValue);
+        location.put("lng", lastLongitudeValue);
+        return location.toString();
+    }
+
     @SuppressLint("MissingPermission")
     protected void updateLastKnownLocation(String callback, boolean animate) {
         if (!isLocationPermissionEnabled()) return;
@@ -1614,7 +1622,7 @@ public class MobilityCommonBridge extends HyperBridge {
         Vibrator vibrator = (Vibrator) bridgeComponents.getContext().getSystemService(Context.VIBRATOR_SERVICE);
 
         if (vibrator != null && vibrator.hasVibrator()) {
-            VibrationEffect effect = null;
+            VibrationEffect effect;
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 effect = VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE);
                 vibrator.vibrate(effect);

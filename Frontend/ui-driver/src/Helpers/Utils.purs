@@ -198,18 +198,18 @@ getAssetStoreLink lazy = case (getMerchant lazy) of
   NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/driver/images/"
   JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/driver/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/driver/images/"
-  UNKNOWN -> "https://assets.juspay.in/beckn/mobilitypaytm/driver/"
+  PAYTM -> "https://assets.juspay.in/beckn/mobilitypaytm/driver/"
 
 getAssetsBaseUrl :: LazyCheck -> String
 getAssetsBaseUrl lazy = case (getMerchant lazy) of
   NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/driver/"
   JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/driver/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/driver/"
-  UNKNOWN -> "https://assets.juspay.in/beckn/mobilitypaytm/"
+  PAYTM -> "https://assets.juspay.in/beckn/mobilitypaytm/"
 
 getCommonAssetStoreLink :: LazyCheck -> String
 getCommonAssetStoreLink lazy = case (getMerchant lazy) of
   NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/"
   JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/yatricommon/images/"
-  UNKNOWN -> "https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/"
+  PAYTM -> "https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/"

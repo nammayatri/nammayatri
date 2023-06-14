@@ -88,7 +88,7 @@ driverInfoViewSpecialZone push state =
               ][]
             , titleAndETA push state
             , otpAndWaitView push state
-            , separator (Margin 16 0 16 0) (V 1) Color.grey900 (state.props.currentStage == RideStarted && (secondsToHms state.data.eta) /= "" && (state.props.isSpecialZone && (state.props.estimatedTime /= "--"))) 
+            , separator (Margin 16 0 16 0) (V 1) Color.grey900 (state.props.currentStage == RideStarted && (secondsToHms state.data.eta) /= "" && (state.props.isSpecialZone && (state.props.estimatedTime /= "--")))
             , driverDetailsView push state
             , separator (Margin 16 0 16 0) (V 1) Color.grey900 true
             , paymentMethodView push state (getString PAY_VIA_CASH_OR_UPI <> " :-") false
@@ -183,13 +183,13 @@ otpView push state = linearLayout
         , width $ V 32
         , gravity CENTER
         , cornerRadius 4.0
-        , background state.data.config.primaryTextColor
+        , background state.data.config.quoteListModel.otpTextBackground
         , margin $ MarginLeft 7
         ][ textView (
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , text item
-            , color state.data.config.otpTextColor
+            , color state.data.config.quoteListModel.otpTextColor
             ] <> FontStyle.h2 TypoGraphy)
         ]) $ split (Pattern "")  state.data.otp)
 
@@ -365,7 +365,7 @@ otpAndWaitView push state =
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , cornerRadius 9.0
-          , background state.data.config.otpBackground
+          , background state.data.config.quoteListModel.otpBackground
           , gravity CENTER
           , padding $ Padding 10 14 10 14
           , weight 1.0
@@ -373,7 +373,7 @@ otpAndWaitView push state =
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , text $ getString OTP <> ":"
-              , color state.data.config.otpTextColor
+              , color state.data.config.quoteListModel.otpTitleColor
               ] <> FontStyle.body4 TypoGraphy)
             , otpView push state
           ]
@@ -479,7 +479,7 @@ driverInfoView push state =
             ]
             , if state.props.isSpecialZone  then headerTextView push state else contactView push state
             , otpAndWaitView push state
-            , separator (Margin 16 16 16 0) (V 1) Color.grey900 (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted)
+            , separator (Margin 16 16 16 0) (V 1) Color.grey900 $ (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) && state.data.config.nyBrandingVisibility
             , driverDetailsView push state
             , separator (Margin 16 0 16 0) (V 1) Color.grey900 true
             , paymentMethodView push state (getString RIDE_FARE) true
@@ -515,9 +515,9 @@ cancelRideLayout push state =
      [ width WRAP_CONTENT
      , height WRAP_CONTENT
      , text $ getString CANCEL_RIDE
-     , color state.data.config.confirmPickUpLocationBorder
-     , alpha 0.6
-     ] <> FontStyle.body1 TypoGraphy)
+     , color state.data.config.cancelRideColor
+     , alpha $ if (getMerchant FunctionCall) == PAYTM then 0.54 else 1.0
+     ] <> FontStyle.subHeading1 TypoGraphy)
    ]
  ]
 

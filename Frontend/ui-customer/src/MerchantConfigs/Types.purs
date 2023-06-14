@@ -12,23 +12,30 @@ type AppConfig =
     profileBackground :: String,
     profileName :: String,
     profileImage :: String,
+    profileCompletion :: String,
     feedbackBackground :: String,
     sideBarList :: Array String,
-    otpBackground :: String,
-    otpTextColor :: String,
     rateCardColor :: String,
     nyBrandingVisibility :: Boolean,
     fontType :: String,
     languageList :: Array Language,
     confirmPickUpLocationBorder ::String,
     bannerConfig :: BannerViewState,
-    popupBackground :: String
+    popupBackground :: String,
+    cancelRideColor :: String,
+    infoIconUrl :: String,
+    profileEditGravity :: String,
+    merchantLogo :: String
   } 
 
 type QuoteListConfig = {
   backgroundColor :: String,
   textColor :: String,
-  loaderColor :: String
+  loaderColor :: String,
+  otpTextBackground :: String,
+  otpBackground :: String,
+  otpTextColor :: String,
+  otpTitleColor :: String
 }
 
 type Language =  {

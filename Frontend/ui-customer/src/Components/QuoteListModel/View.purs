@@ -228,11 +228,11 @@ selectRideAndConfirmView state push =
   , width WRAP_CONTENT
   , weight 1.0
   , padding (Padding 16 16 0 16)
-  , background state.appConfig.quoteListModel.backgroundColor
+  -- , background state.appConfig.quoteListModel.backgroundColor
   ][textView (
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
-    , color state.appConfig.quoteListModel.textColor
+    , color state.appConfig.primaryBackground
     , text case getValueToLocalStore AUTO_SELECTING of
        "CANCELLED_AUTO_ASSIGN" -> "Select a Ride"
        "false"                 -> "Select a Ride"

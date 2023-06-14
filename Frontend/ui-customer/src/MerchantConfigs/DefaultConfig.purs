@@ -14,14 +14,16 @@ config =
       { backgroundColor: "#2C2F3A"
       , textColor: "#FFFFFF"
       , loaderColor: "#80B2FF"
+      , otpTextBackground : "#2C2F3A"
+      , otpBackground: "#F1F1F1"
+      , otpTextColor: "#FFFFFF"
+      , otpTitleColor : "#6D7280"
       }
   , profileBackground: "#2C2F3A"
   , profileName: "#FFFFFF"
   , profileImage: "#012A72"
   , feedbackBackground: "#2C2F3A"
   , sideBarList: [ "MyRides", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "Logout" ]
-  , otpBackground: "#F1F1F1"
-  , otpTextColor: "#FFFFFF"
   , rateCardColor: "#2C2F3A"
   , nyBrandingVisibility: false
   , fontType: "Assets"
@@ -36,4 +38,9 @@ config =
       , imageUrl : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
       }
   , popupBackground : "#FFFFFF"
+  , profileCompletion : "#FCC32C"
+  , cancelRideColor : "#E55454"
+  , infoIconUrl : "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png"
+  , profileEditGravity : "center"
+  , merchantLogo : "ic_launcher,https://assets.juspay.in/nammayatri/images/user/ny_ic_launcher.png"
   }

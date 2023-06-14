@@ -1197,7 +1197,7 @@ suggestedPriceView push state =
                        , orientation VERTICAL
                        , visibility if state.data.showPreferences then VISIBLE else GONE
                        ][showMenuButtonView push (getString AUTO_ASSIGN_DRIVER) ("ny_ic_faster," <> (getAssetStoreLink FunctionCall) <> "ny_ic_faster.png") true state,
-                         showMenuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) ("ny_ic_info_blue," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_info_blue.png") false state]
+                         showMenuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) state.data.config.infoIconUrl false state]
                   ]
 
               ]
@@ -1578,8 +1578,7 @@ rideTrackingView push state =
                 , sheetState COLLAPSED
                 , peakHeight if (state.props.currentStage == RideAccepted && state.data.config.nyBrandingVisibility == true) then getHeightFromPercent 66
                              else if (state.props.currentStage == RideStarted && state.data.config.nyBrandingVisibility == true) then getHeightFromPercent 52
-                             else if (state.props.currentStage == RideAccepted) then getHeightFromPercent 59
-                             else getHeightFromPercent 46
+                             else getPeakHeight state.props.currentStage
                 , visibility VISIBLE
                 , halfExpandedRatio 0.75
                 ]
@@ -1597,6 +1596,14 @@ rideTrackingView push state =
             ]
         ]
     ]
+
+getPeakHeight :: Stage -> Int
+getPeakHeight stage = case getValueFromConfig "enableShareRide" , stage of
+                      "true" , RideAccepted -> getHeightFromPercent 65
+                      "false" , RideAccepted -> getHeightFromPercent 60
+                      "true" , _ ->  getHeightFromPercent 52
+                      "false" , _ ->  getHeightFromPercent 47
+                      _ , _ -> getHeightFromPercent 47
 
 previousRideRatingView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 previousRideRatingView push state =

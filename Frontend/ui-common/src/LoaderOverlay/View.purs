@@ -17,15 +17,12 @@ module LoaderOverlay.View where
 import Common.Types.App (LazyCheck(..))
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
-import Engineering.Helpers.Commons (getNewIDWithTag)
 import Font.Style as FontStyle
-import JBridge (startLottieProcess)
-import LoaderOverlay.Controller (Action(..), ScreenOutput, eval)
+import LoaderOverlay.Controller (Action, ScreenOutput, eval)
 import LoaderOverlay.ScreenData (LoaderOverlayState)
-import Prelude (Unit, const, pure, unit, ($), (<>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, afterRender, background, cornerRadius, gravity, height, id, linearLayout, lottieAnimationView, margin, orientation, padding, text, textView, width, progressBar, progressColor)
+import Prelude (Unit, ($), (<>))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, background, cornerRadius, gravity, height, linearLayout, margin, orientation, padding, progressBar, stroke, text, textView, width)
 import Styles.Colors as Color
-import Helpers.Utils (getAssetsBaseUrl)
 
 screen :: LoaderOverlayState -> ScopedScreen Action LoaderOverlayState ScreenOutput
 screen initialState =
@@ -54,11 +51,10 @@ view _ state =
     , cornerRadius 10.0
     , gravity CENTER
     , padding $ PaddingVertical 20 20
-    ][ lottieAnimationView
-      [ height $ V 100
-      , width $ V 100
-      , id (getNewIDWithTag "lottieAnimationLoaderOverlay")
-      , afterRender (\_ -> pure $ startLottieProcess ((getAssetsBaseUrl FunctionCall) <> "lottie/ny_ic_loader.json") (getNewIDWithTag "lottieAnimationLoaderOverlay") true 0.6 "CENTER_CROP") (const unit)
+    ][ progressBar
+      [ height $ V 60
+      , width $ V 60
+      , stroke Color.black900
       ]
     , textView $ 
       [ height WRAP_CONTENT

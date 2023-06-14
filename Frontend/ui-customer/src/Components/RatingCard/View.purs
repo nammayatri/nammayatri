@@ -185,7 +185,7 @@ rideRatingButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig 
         { text = (getString SUBMIT_FEEDBACK)
-        , color = if state.data.rating < 1 then state.data.appConfig.profileName else state.data.appConfig.primaryTextColor
+        , color = state.data.appConfig.primaryTextColor
         , width = MATCH_PARENT
         }
       , isClickable = if state.data.rating < 1 then false else true 
@@ -194,7 +194,7 @@ rideRatingButtonConfig state = let
       , height = (V 48) 
       , gravity = CENTER_VERTICAL
       , cornerRadius = 8.0
-      , background = if state.data.rating < 1 then state.data.appConfig.feedbackBackground else state.data.appConfig.rateCardColor
+      , background = state.data.appConfig.primaryBackground
       , id = "RideRatingButton"
       , enableLoader = (getBtnLoader "RightRatingButton")
       }

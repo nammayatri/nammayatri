@@ -206,7 +206,7 @@ profileView state push =
           [ text $ (getString PROFILE_COMPLETION) <> ":"
           , width WRAP_CONTENT
           , height WRAP_CONTENT
-          , color state.appConfig.profileName
+          , color state.appConfig.profileCompletion
           ] <> FontStyle.body3 TypoGraphy
         , imageView
           [ imageWithFallback case profileCompleteValue state of
@@ -220,7 +220,7 @@ profileView state push =
         , textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , color state.appConfig.profileName
+          , color state.appConfig.profileCompletion
           , text $ (profileCompleteValue state) <> " %"
           ] <> FontStyle.body3 TypoGraphy
         ]

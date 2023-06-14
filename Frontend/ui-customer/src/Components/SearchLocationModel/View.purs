@@ -103,7 +103,7 @@ view push state =
                   [ imageView
                       [ height $ V 25
                       , width $ V 25
-                      , imageWithFallback if (getMerchant FunctionCall) == UNKNOWN then "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png" else "ny_ic_chevron_left_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_left_white.png"
+                      , imageWithFallback if (getMerchant FunctionCall) == PAYTM then "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png" else "ny_ic_chevron_left_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_left_white.png"
                       ]
                   ]
               , linearLayout

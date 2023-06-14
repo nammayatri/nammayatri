@@ -34,7 +34,7 @@ data Merchant
   = NAMMAYATRI
   | JATRISAATHI
   | YATRI
-  | UNKNOWN
+  | PAYTM
 
 derive instance genericMerchant :: Generic Merchant _
 
@@ -50,7 +50,7 @@ instance decodeMerchant :: Decode Merchant where
 getMerchant :: LazyCheck -> Merchant
 getMerchant lazy = case decodeMerchantId (getMerchantId "") of
   Just merchant -> merchant
-  Nothing -> UNKNOWN
+  Nothing -> NAMMAYATRI
 
 decodeMerchantId :: Foreign -> Maybe Merchant
 decodeMerchantId = hush <<< runExcept <<< decode

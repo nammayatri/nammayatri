@@ -45,7 +45,6 @@ view push state =
     , background Color.black9000
     , afterRender
         ( \action -> do
-            _ <- push action
             if (state.option2.enableTimer || state.option1.enableTimer) then do
               let
                 timerValue' = if state.option2.enableTimer then state.option2.timerValue else state.option1.timerValue

@@ -105,7 +105,7 @@ public class NotificationUtils extends AppCompatActivity {
     public static Bundle lastRideReq = new Bundle();
 //    public static  String versionName = BuildConfig.VERSION_NAME;
 
-    private static ArrayList<CallBack> callBack = new ArrayList<>();
+    private static final ArrayList<CallBack> callBack = new ArrayList<>();
 
     public static void registerCallback(CallBack notificationCallback) {
         callBack.add(notificationCallback);

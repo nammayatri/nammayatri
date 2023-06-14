@@ -47,11 +47,7 @@ view push state =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  , afterRender (\action -> do
-                          _ <- push action
-                          push StoreContacts 
-                          pure unit
-                        ) (const NoAction)
+  , afterRender push (const StoreContacts)
   ][  linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -183,7 +179,7 @@ callPoliceConfig state  =
     , option1 {
       text = getString CANCEL_
     , strokeColor = state.config.primaryBackground
-    , background = state.config.primaryTextColor
+    , background = state.config.popupBackground
     , color = state.config.primaryBackground
     }
     , option2 {
@@ -214,7 +210,7 @@ contactSupportConfig state  =
     , option1 {
       text = getString CANCEL_
     , strokeColor = state.config.primaryBackground
-    , background = state.config.primaryTextColor
+    , background = state.config.popupBackground
     , color = state.config.primaryBackground
     }
     , option2 {
@@ -245,7 +241,7 @@ callEmergencyContactConfig state  =
     , option1 {
       text = getString CANCEL_
     , strokeColor = state.config.primaryBackground
-    , background = state.config.primaryTextColor
+    , background = state.config.popupBackground
     , color = state.config.primaryBackground
     }
     , option2 {
@@ -279,10 +275,10 @@ callSuccessfulConfig state  =
     , margin = (Margin 40 23 40 46)
     }
     , option1 {
-      text = (getString YES)
+      text = (getString NO)
     , margin = (MarginRight 8) 
     , strokeColor = state.config.primaryBackground
-    , background = state.config.primaryTextColor
+    , background = state.config.popupBackground
     , color = state.config.primaryBackground
     }
     , option2 {

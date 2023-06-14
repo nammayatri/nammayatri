@@ -303,7 +303,7 @@ radioButton config push index item =
     [ linearLayout
         [ width (V 18)
         , height (V 18)
-        , stroke $ "1,"
+        , stroke $ "2,"
             <> case config.activeIndex of
                 Just activeIndex' -> if (index == activeIndex') then config.config.primaryBackground else Color.black600
                 Nothing -> Color.black600
@@ -340,7 +340,7 @@ firstPrimaryButtonConfig config = let
       {textConfig
       { text = config.primaryButtonTextConfig.firstText
       , color = config.config.primaryBackground}
-      , background = config.config.primaryTextColor
+      , background = config.config.popupBackground
       , stroke = "1," <> config.config.primaryBackground
       , width = V ((screenWidth unit/2)-30)
       , id = "Button1"

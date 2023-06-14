@@ -30,8 +30,8 @@ import Debug (spy)
 homeScreen ::FlowBT String HOME_SCREEN_OUTPUT
 homeScreen = do
   (GlobalState state) <- getState
-  _ <- pure $ spy "homrscreen" "handler"
   act <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen
+  _ <- pure $ spy "homrscreen" "handler"
   void $ lift $ lift $ toggleLoader false
   case act of
     UpdateLocationName updatedState lat lng-> do

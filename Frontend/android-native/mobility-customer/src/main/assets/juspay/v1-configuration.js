@@ -25,15 +25,18 @@ window.getMerchantConfig = function () {
     "quoteListModel": {
       "backgroundColor": "#E3F4FC",
       "textColor": "#2C2F3A",
-      "loaderColor": "#03B9F5"
+      "loaderColor": "#03B9F5",
+      "otpBackground": "#F5F9FE",
+      "otpTextBackground"  : "#FFFFFF",
+      "otpTextColor": "#101010",
+      "otpTitleColor"  : "#101010"
     },
     "profileBackground": "#81DFFA",
     "profileName": "#101010",
+    "profileCompletion" : "#101010",
     "profileImage": "#012A72",
     "feedbackBackground": "#D3D3D3",
     "sideBarList": ["MyRides", "Favorites", "HelpAndSupport", "Language", "About"],
-    "otpBackground": "#F5F9FE",
-    "otpTextColor": "#101010",
     "rateCardColor": "#00B8F5",
     "nyBrandingVisibility": true,
     "fontType": "Assets",
@@ -41,7 +44,11 @@ window.getMerchantConfig = function () {
     "black800": "#101010",
     "red" : "#FD5154",
     "popupBackground" : "#03B9F5",
+    "cancelRideColor" : "#101010",
+    "infoIconUrl" : "ny_ic_info_blue,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_info_blue.png",
     "popupTextColor" : "#FFFFFF",
+    "profileEditGravity" : "bottom",
+    "merchantLogo" : "ny_ic_paytm_logo,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_paytm_logo.png",
     "confirmPickUpLocationBorder" : "#101010",
     "englishStrings": {
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "Your location helps our system to map down all the near by autos and get you the quickest ride possible.",

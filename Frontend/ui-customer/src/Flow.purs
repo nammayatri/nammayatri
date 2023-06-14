@@ -54,7 +54,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
 import MerchantConfig.DefaultConfig as DC
-import MerchantConfig.Utils (Merchant(..), getMerchant)
+import MerchantConfig.Utils (Merchant(..), getAppConfig, getMerchant)
 import MerchantConfig.Utils (getAppConfig)
 import ModifyScreenState (modifyScreenState, updateRideDetails)
 import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>))
@@ -167,7 +167,7 @@ getIosVersion merchant =
                      patchUpdateIndex : 0,
                      enableForceUpdateIOS : false
                     }
-    UNKNOWN -> { majorUpdateIndex : 0,
+    PAYTM -> { majorUpdateIndex : 0,
                      minorUpdateIndex : 1,
                      patchUpdateIndex : 0,
                      enableForceUpdateIOS : false
@@ -205,7 +205,7 @@ getLatestAndroidVersion merchant =
     NAMMAYATRI -> 31
     YATRI -> 49
     JATRISAATHI -> 2
-    UNKNOWN -> 1
+    PAYTM -> 1
 
 forceIOSupdate :: Int -> Int -> Int -> IosVersion -> Boolean
 forceIOSupdate c_maj c_min c_patch updatedIOSversion=
@@ -1327,6 +1327,8 @@ myRidesScreenFlow fromNavBar = do
 
 selectLanguageScreenFlow :: FlowBT String Unit
 selectLanguageScreenFlow = do
+  appConfig <- getAppConfig
+  modifyScreenState $ SelectLanguageScreenStateType (\selectLanguageScreen -> selectLanguageScreen{data{config = appConfig}})
   flow <- UI.selectLanguageScreen
   case flow of
     UPDATE_LANGUAGE state -> do

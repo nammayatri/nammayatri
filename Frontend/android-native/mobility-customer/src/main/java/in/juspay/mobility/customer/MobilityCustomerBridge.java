@@ -125,7 +125,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 }
             };
             NotificationUtils.registerCallback(callBack);
-            NetworkBroadcastReceiver.registerCallback(callBack);
         }
     }
 

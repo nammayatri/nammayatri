@@ -225,7 +225,7 @@ whereToButtonConfig state =
       , isPrefixImage = true
       , background = state.data.config.primaryBackground
       , prefixImageConfig
-        { imageUrl = if (MU.getMerchant FunctionCall) == MU.UNKNOWN then "ny_ic_bent_right_arrow_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_bent_right_arrow_white.png" else  "ny_ic_bent_right_arrow," <> (getAssetStoreLink FunctionCall) <> "ny_ic_bent_right_arrow.png"
+        { imageUrl = if (MU.getMerchant FunctionCall) == MU.PAYTM then "ny_ic_bent_right_arrow_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_bent_right_arrow_white.png" else  "ny_ic_bent_right_arrow," <> (getAssetStoreLink FunctionCall) <> "ny_ic_bent_right_arrow.png"
         , height = V 16
         , width = V 21
         , margin = (Margin 17 0 17 0)
@@ -775,7 +775,7 @@ callSupportConfig state = let
     }
   , option1 {
       text =  getString CANCEL_
-    , background = state.data.config.primaryTextColor
+    , background = state.data.config.popupBackground
     , strokeColor = state.data.config.primaryBackground
     , color = state.data.config.primaryBackground
     }
