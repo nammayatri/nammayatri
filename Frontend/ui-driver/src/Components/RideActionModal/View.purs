@@ -105,7 +105,7 @@ getCurrentAndroidVersion merchant =
     NAMMAYATRI -> 54
     YATRI -> 47 
     JATRISAATHI -> 1
-    UNKNOWN -> 1
+    PAYTM -> 1
 
 checkVersionForChat :: Int -> Boolean
 checkVersionForChat reqVersion =

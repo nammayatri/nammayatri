@@ -13,4 +13,5 @@ config =
       , { name: "हिंदी", value: "HI_IN", subtitle: "Hindi" }
       , { name: "தமிழ்", value: "TA_IN", subtitle: "Tamil" }
       ]
+  , popupBackground : "#FFFFFF"
   }

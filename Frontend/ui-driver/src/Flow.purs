@@ -130,7 +130,7 @@ getLatestAndroidVersion merchant =
     NAMMAYATRI -> 54
     YATRI -> 48 
     JATRISAATHI -> 2
-    UNKNOWN -> 1
+    PAYTM -> 1
 
 ifNotRegistered :: Unit -> Boolean
 ifNotRegistered _ = getValueToLocalStore REGISTERATION_TOKEN == "__failed"
