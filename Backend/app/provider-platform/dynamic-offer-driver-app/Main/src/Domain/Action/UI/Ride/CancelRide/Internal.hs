@@ -49,6 +49,7 @@ import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
@@ -123,7 +124,6 @@ cancelRideTransaction ::
   m ()
 cancelRideTransaction bookingId ride bookingCReason merchantId = do
   let driverId = cast ride.driverId
-  DLoc.updateOnRide driverId False merchantId
   driverInfo <- CDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   Esq.runTransaction $ do
     when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId
@@ -131,7 +131,9 @@ cancelRideTransaction bookingId ride bookingCReason merchantId = do
     QRB.updateStatus bookingId SRB.CANCELLED
     QBCR.upsert bookingCReason
     QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
+    QDI.updateOnRide driverId False
   SRide.clearCache ride.driverId
+  DLoc.updateOnRideCacheForCancelledOrEndRide driverId merchantId
 
 repeatSearch ::
   ( EsqDBFlow m r,
