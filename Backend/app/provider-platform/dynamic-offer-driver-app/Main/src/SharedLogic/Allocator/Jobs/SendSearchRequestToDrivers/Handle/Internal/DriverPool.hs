@@ -224,7 +224,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
 
 splitSilentDriversAndSortWithDistance :: [DriverPoolWithActualDistResult] -> [DriverPoolWithActualDistResult]
 splitSilentDriversAndSortWithDistance drivers = do
-  let (silentDrivers, activeDrivers) = bimap (sortOn (.driverPoolResult.distanceToPickup)) (sortOn (.driverPoolResult.distanceToPickup)) $ DL.partition ((== Just DriverInfo.SILENT) . (.driverPoolResult.mode)) drivers
+  let (silentDrivers, activeDrivers) = bimap (sortOn (.actualDistanceToPickup)) (sortOn (.actualDistanceToPickup)) $ DL.partition ((== Just DriverInfo.SILENT) . (.driverPoolResult.mode)) drivers
   activeDrivers <> silentDrivers
 
 previouslyAttemptedDrivers ::
