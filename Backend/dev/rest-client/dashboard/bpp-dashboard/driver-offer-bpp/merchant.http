@@ -42,6 +42,14 @@ content-type: application/json
 
 ###
 
+# @name merchantCommonConfig
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/merchant/config/common
+token: {{juspay_admin}}
+content-type: application/json
+
+###
+
 # @name merchantCommonConfigUpdate
 
 POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/merchant/config/common/update
@@ -57,12 +65,19 @@ content-type: application/json
     "minRidesForCancellationScore" : {"value" : 7},
     "mediaFileUrlPattern" : {"value" : "mediaFileUrlPattern"},
     "mediaFileSizeUpperLimit" : {"value" : 8},
-    "waitingTimeEstimatedThreshold" : {"value" : 9},
     "onboardingTryLimit" : {"value" : 10},
     "onboardingRetryTimeInHours" : {"value" : 11},
     "checkImageExtractionForDashboard" : {"value" : false},
     "searchRepeatLimit" : {"value" : 12}
   }
+
+###
+
+# @name driverPoolConfig
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/merchant/config/driverPool?tripDistance=10000
+token: {{juspay_admin}}
+content-type: application/json
 
 ###
 
@@ -115,6 +130,14 @@ content-type: application/json
 
 ###
 
+# @name driverIntelligentPoolConfig
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/merchant/config/driverIntelligentPool
+token: {{juspay_admin}}
+content-type: application/json
+
+###
+
 # @name driverIntelligentPoolConfigUpdate
 
 POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/merchant/config/driverIntelligentPool/update
@@ -151,6 +174,14 @@ content-type: application/json
 
 ###
 
+# @name onboardingDocumentConfig
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/merchant/config/onboardingDocument?documentType="DL"
+token: {{juspay_admin}}
+content-type: application/json
+
+###
+
 # @name onboardingDocumentConfigUpdate
 
 POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/merchant/config/onboardingDocument/update?documentType="RC"
@@ -177,6 +208,13 @@ content-type: application/json
     "vehicleClassCheckType" : "Suffix"
   }
 
+###
+
+# @name merchanServiceUsageConfig
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/merchant/serviceUsageConfig
+token: {{juspay_admin}}
+content-type: application/json
 
 ###
 

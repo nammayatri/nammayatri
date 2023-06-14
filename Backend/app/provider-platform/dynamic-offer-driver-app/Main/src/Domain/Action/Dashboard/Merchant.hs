@@ -15,13 +15,18 @@
 module Domain.Action.Dashboard.Merchant
   ( mapsServiceConfigUpdate,
     mapsServiceUsageConfigUpdate,
+    merchantCommonConfig,
     merchantCommonConfigUpdate,
+    driverPoolConfig,
     driverPoolConfigUpdate,
     driverPoolConfigCreate,
+    driverIntelligentPoolConfig,
     driverIntelligentPoolConfigUpdate,
+    onboardingDocumentConfig,
     onboardingDocumentConfigUpdate,
     onboardingDocumentConfigCreate,
     merchantUpdate,
+    serviceUsageConfig,
     smsServiceConfigUpdate,
     smsServiceUsageConfigUpdate,
     verificationServiceConfigUpdate,
@@ -36,8 +41,11 @@ import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FarePolicy as FarePolicy
 import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as DFPEFB
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.DriverIntelligentPoolConfig as DDIPC
 import qualified Domain.Types.Merchant.DriverPoolConfig as DDPC
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
+import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as DMSUC
+import qualified Domain.Types.Merchant.TransporterConfig as DTC
 import qualified Domain.Types.OnboardingDocumentConfig as DODC
 import Environment
 import qualified Kernel.External.Maps as Maps
@@ -135,6 +143,16 @@ castMerchantStatus = \case
   DM.REJECTED -> Common.REJECTED
 
 ---------------------------------------------------------------------
+merchantCommonConfig :: ShortId DM.Merchant -> Flow Common.MerchantCommonConfigRes
+merchantCommonConfig merchantShortId = do
+  merchant <- findMerchantByShortId merchantShortId
+  config <- CQTC.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
+  pure $ mkMerchantCommonConfigRes config
+
+mkMerchantCommonConfigRes :: DTC.TransporterConfig -> Common.MerchantCommonConfigRes
+mkMerchantCommonConfigRes DTC.TransporterConfig {..} = Common.MerchantCommonConfigRes {..}
+
+---------------------------------------------------------------------
 merchantCommonConfigUpdate :: ShortId DM.Merchant -> Common.MerchantCommonConfigUpdateReq -> Flow APISuccess
 merchantCommonConfigUpdate merchantShortId req = do
   runRequestValidation Common.validateMerchantCommonConfigUpdateReq req
@@ -160,6 +178,27 @@ merchantCommonConfigUpdate merchantShortId req = do
   CQTC.clearCache merchant.id
   logTagInfo "dashboard -> merchantCommonConfigUpdate : " (show merchant.id)
   pure Success
+
+---------------------------------------------------------------------
+driverPoolConfig :: ShortId DM.Merchant -> Maybe Meters -> Flow Common.DriverPoolConfigRes
+driverPoolConfig merchantShortId mbTripDistance = do
+  merchant <- findMerchantByShortId merchantShortId
+  configs <- case mbTripDistance of
+    Nothing -> CQDPC.findAllByMerchantId merchant.id
+    Just tripDistance -> maybeToList <$> CQDPC.findByMerchantIdAndTripDistance merchant.id tripDistance
+  pure $ mkDriverPoolConfigRes <$> configs
+
+mkDriverPoolConfigRes :: DDPC.DriverPoolConfig -> Common.DriverPoolConfigItem
+mkDriverPoolConfigRes DDPC.DriverPoolConfig {..} =
+  Common.DriverPoolConfigItem
+    { poolSortingType = castDPoolSortingType poolSortingType,
+      ..
+    }
+
+castDPoolSortingType :: DriverPool.PoolSortingType -> Common.PoolSortingType
+castDPoolSortingType = \case
+  DriverPool.Intelligent -> Common.Intelligent
+  DriverPool.Random -> Common.Random
 
 ---------------------------------------------------------------------
 driverPoolConfigUpdate ::
@@ -239,6 +278,16 @@ buildDriverPoolConfig merchantId tripDistance Common.DriverPoolConfigCreateReq {
       }
 
 ---------------------------------------------------------------------
+driverIntelligentPoolConfig :: ShortId DM.Merchant -> Flow Common.DriverIntelligentPoolConfigRes
+driverIntelligentPoolConfig merchantShortId = do
+  merchant <- findMerchantByShortId merchantShortId
+  config <- CQDIPC.findByMerchantId merchant.id >>= fromMaybeM (DriverIntelligentPoolConfigNotFound merchant.id.getId)
+  pure $ mkDriverIntelligentPoolConfigRes config
+
+mkDriverIntelligentPoolConfigRes :: DDIPC.DriverIntelligentPoolConfig -> Common.DriverIntelligentPoolConfigRes
+mkDriverIntelligentPoolConfigRes DDIPC.DriverIntelligentPoolConfig {..} = Common.DriverIntelligentPoolConfigRes {..}
+
+---------------------------------------------------------------------
 driverIntelligentPoolConfigUpdate ::
   ShortId DM.Merchant ->
   Common.DriverIntelligentPoolConfigUpdateReq ->
@@ -270,6 +319,35 @@ driverIntelligentPoolConfigUpdate merchantShortId req = do
   pure Success
 
 ---------------------------------------------------------------------
+onboardingDocumentConfig :: ShortId DM.Merchant -> Maybe Common.DocumentType -> Flow Common.OnboardingDocumentConfigRes
+onboardingDocumentConfig merchantShortId mbReqDocumentType = do
+  merchant <- findMerchantByShortId merchantShortId
+  configs <- case mbReqDocumentType of
+    Nothing -> CQODC.findAllByMerchantId merchant.id
+    Just reqDocumentType -> maybeToList <$> CQODC.findByMerchantIdAndDocumentType merchant.id (castDocumentType reqDocumentType)
+  pure $ mkOnboardingDocumentConfigRes <$> configs
+
+mkOnboardingDocumentConfigRes :: DODC.OnboardingDocumentConfig -> Common.OnboardingDocumentConfigItem
+mkOnboardingDocumentConfigRes DODC.OnboardingDocumentConfig {..} =
+  Common.OnboardingDocumentConfigItem
+    { documentType = castDDocumentType documentType,
+      vehicleClassCheckType = castDVehicleClassCheckType vehicleClassCheckType,
+      ..
+    }
+
+castDVehicleClassCheckType :: DODC.VehicleClassCheckType -> Common.VehicleClassCheckType
+castDVehicleClassCheckType = \case
+  DODC.Infix -> Common.Infix
+  DODC.Prefix -> Common.Prefix
+  DODC.Suffix -> Common.Suffix
+
+castDDocumentType :: DODC.DocumentType -> Common.DocumentType
+castDDocumentType = \case
+  DODC.RC -> Common.RC
+  DODC.DL -> Common.DL
+  DODC.RCInsurance -> Common.RCInsurance
+
+---------------------------------------------------------------------
 onboardingDocumentConfigUpdate ::
   ShortId DM.Merchant ->
   Common.DocumentType ->
@@ -288,7 +366,7 @@ onboardingDocumentConfigUpdate merchantShortId reqDocumentType req = do
               }
   Esq.runTransaction $ do
     CQODC.update updConfig
-  CQODC.clearCache merchant.id documentType
+  CQODC.clearCache merchant.id
   logTagInfo "dashboard -> onboardingDocumentConfigUpdate : " $ show merchant.id <> "documentType : " <> show documentType
   pure Success
 
@@ -319,6 +397,8 @@ onboardingDocumentConfigCreate merchantShortId reqDocumentType req = do
   newConfig <- buildOnboardingDocumentConfig merchant.id documentType req
   Esq.runTransaction $ do
     CQODC.create newConfig
+  -- We should clear cache here, because cache contains list of all configs for current merchantId
+  CQODC.clearCache merchant.id
   logTagInfo "dashboard -> onboardingDocumentConfigCreate : " $ show merchant.id <> "documentType : " <> show documentType
   pure Success
 
@@ -370,6 +450,24 @@ smsServiceConfigUpdate merchantShortId req = do
   CQMSC.clearCache merchant.id serviceName
   logTagInfo "dashboard -> smsServiceConfigUpdate : " (show merchant.id)
   pure Success
+
+---------------------------------------------------------------------
+serviceUsageConfig ::
+  ShortId DM.Merchant ->
+  Flow Common.ServiceUsageConfigRes
+serviceUsageConfig merchantShortId = do
+  merchant <- findMerchantByShortId merchantShortId
+  config <- CQMSUC.findByMerchantId merchant.id >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchant.id.getId)
+  pure $ mkServiceUsageConfigRes config
+
+mkServiceUsageConfigRes :: DMSUC.MerchantServiceUsageConfig -> Common.ServiceUsageConfigRes
+mkServiceUsageConfigRes DMSUC.MerchantServiceUsageConfig {..} =
+  Common.ServiceUsageConfigRes
+    { getEstimatedPickupDistances = Just getEstimatedPickupDistances,
+      getPickupRoutes = Just getPickupRoutes,
+      getTripRoutes = Just getTripRoutes,
+      ..
+    }
 
 ---------------------------------------------------------------------
 mapsServiceUsageConfigUpdate ::
