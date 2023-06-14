@@ -109,10 +109,11 @@ listPerson ::
   Maybe Text ->
   Maybe Integer ->
   Maybe Integer ->
+  Maybe (Id DP.Person) ->
   m ListPersonRes
-listPerson _ mbSearchString mbLimit mbOffset = do
+listPerson _ mbSearchString mbLimit mbOffset mbPersonId = do
   mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
-  personAndRoleList <- runInReplica $ QP.findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset
+  personAndRoleList <- runInReplica $ QP.findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset mbPersonId
   res <- forM personAndRoleList $ \(encPerson, role, merchantAccessList) -> do
     decPerson <- decrypt encPerson
     pure $ DP.makePersonAPIEntity decPerson role merchantAccessList
