@@ -22,6 +22,7 @@ source-repository head
 library
   exposed-modules:
       API
+      API.CallbackRequest
       API.RiderPlatform
       API.RiderPlatform.Booking
       API.RiderPlatform.Customer

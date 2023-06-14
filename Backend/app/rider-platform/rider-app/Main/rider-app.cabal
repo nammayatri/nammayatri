@@ -31,6 +31,7 @@ library
       API.Beckn.OnUpdate
       API.Dashboard
       API.Dashboard.Booking
+      API.Dashboard.CallbackRequest
       API.Dashboard.Customer
       API.Dashboard.Exotel
       API.Dashboard.IssueList
@@ -102,6 +103,7 @@ library
       Domain.Action.Beckn.OnTrack
       Domain.Action.Beckn.OnUpdate
       Domain.Action.Dashboard.Booking
+      Domain.Action.Dashboard.CallbackRequest
       Domain.Action.Dashboard.Customer
       Domain.Action.Dashboard.Exotel
       Domain.Action.Dashboard.IssueList

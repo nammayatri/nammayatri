@@ -27,6 +27,7 @@ import qualified Dashboard.Common.Booking as Booking
 import qualified Dashboard.RiderPlatform.Customer as Customer
 import qualified Dashboard.RiderPlatform.Merchant as Merchant
 import qualified Dashboard.RiderPlatform.Ride as Ride
+import qualified "rider-app" Domain.Action.Dashboard.CallbackRequest as DC
 import qualified "rider-app" Domain.Action.Dashboard.IssueList as DI
 import qualified Domain.Action.Dashboard.Ride as DCM
 import qualified "rider-app" Domain.Action.UI.Booking as DBooking
@@ -39,6 +40,7 @@ import qualified "rider-app" Domain.Action.UI.Registration as DR
 import qualified "rider-app" Domain.Action.UI.Select as DSelect
 import qualified "rider-app" Domain.Types.Booking as SRB
 import qualified "rider-app" Domain.Types.Booking.API as DB
+import qualified "rider-app" Domain.Types.CallbackRequest as DCR
 import qualified "rider-app" Domain.Types.Estimate as DEstimate
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "rider-app" Domain.Types.Merchant.MerchantPaymentMethod as DMPM
@@ -64,7 +66,8 @@ data AppBackendAPIs = AppBackendAPIs
     merchant :: MerchantAPIs,
     rides :: RidesAPIs,
     rideBooking :: RideBookingAPIs,
-    issues :: ListIssueAPIs
+    issues :: ListIssueAPIs,
+    callback :: CallbackRequestAPIs
   }
 
 data CustomerAPIs = CustomerAPIs
@@ -164,6 +167,11 @@ newtype ListIssueAPIs = ListIssueAPIs
   { listIssue :: Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient DI.IssueListRes
   }
 
+data CallbackRequestAPIs = CallbackRequestAPIs
+  { listCallbackRequest :: Maybe Int -> Maybe Int -> Maybe Text -> Maybe UTCTime -> Maybe DCR.CallbackRequestStatus -> Euler.EulerClient DC.CallbackRequestRes,
+    updateCallbackRequest :: Id DCR.CallbackRequest -> DCR.CallbackRequestStatus -> Euler.EulerClient APISuccess
+  }
+
 mkAppBackendAPIs :: CheckedShortId DM.Merchant -> Text -> AppBackendAPIs
 mkAppBackendAPIs merchantId token = do
   let customers = CustomerAPIs {..}
@@ -182,6 +190,7 @@ mkAppBackendAPIs merchantId token = do
   let cancel = CancelBookingAPIs {..}
   let rideBooking = RideBookingAPIs {..}
   let issues = ListIssueAPIs {..}
+  let callback = CallbackRequestAPIs {..}
   AppBackendAPIs {..}
   where
     customersClient
@@ -189,7 +198,8 @@ mkAppBackendAPIs merchantId token = do
       :<|> merchantClient
       :<|> ridesClient
       :<|> rideBookingClient
-      :<|> issueClient = clientWithMerchant (Proxy :: Proxy BAP.API') merchantId token
+      :<|> issueClient
+      :<|> callbackClient = clientWithMerchant (Proxy :: Proxy BAP.API') merchantId token
 
     customerList
       :<|> customerDelete
@@ -255,6 +265,9 @@ mkAppBackendAPIs merchantId token = do
       :<|> smsServiceUsageConfigUpdate = merchantClient
 
     listIssue = issueClient
+
+    listCallbackRequest
+      :<|> updateCallbackRequest = callbackClient
 
 callRiderApp ::
   forall m r b c.

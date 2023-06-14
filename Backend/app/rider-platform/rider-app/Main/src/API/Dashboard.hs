@@ -15,6 +15,7 @@
 module API.Dashboard where
 
 import qualified API.Dashboard.Booking as Booking
+import qualified API.Dashboard.CallbackRequest as CallbackRequest
 import qualified API.Dashboard.Customer as Customer
 import qualified API.Dashboard.Exotel as Exotel
 import qualified API.Dashboard.IssueList as IssueList
@@ -42,6 +43,7 @@ type API' =
            :<|> Ride.API
            :<|> RideBookings.API
            :<|> IssueList.API
+           :<|> CallbackRequest.API
        )
 
 handler :: FlowServer API
@@ -53,6 +55,7 @@ handler =
         :<|> Ride.handler merchantId
         :<|> RideBookings.handler merchantId
         :<|> IssueList.handler merchantId
+        :<|> CallbackRequest.handler merchantId
   )
     :<|> exotelHandler
 

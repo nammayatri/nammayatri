@@ -18,6 +18,7 @@ module API.RiderPlatform
   )
 where
 
+import qualified API.CallbackRequest as CallbackRequest
 import qualified API.RiderPlatform.Booking as Booking
 import qualified API.RiderPlatform.Customer as Customer
 import qualified API.RiderPlatform.IssueList as IssueList
@@ -38,6 +39,7 @@ type API =
            :<|> Ride.API
            :<|> RideBooking.API
            :<|> IssueList.API
+           :<|> CallbackRequest.API
        )
 
 handler :: FlowServer API
@@ -48,3 +50,4 @@ handler merchantId =
     :<|> Ride.handler merchantId
     :<|> RideBooking.handler merchantId
     :<|> IssueList.handler merchantId
+    :<|> CallbackRequest.handler merchantId

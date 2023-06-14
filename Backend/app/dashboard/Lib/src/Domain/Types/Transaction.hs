@@ -14,6 +14,7 @@
 
 module Domain.Types.Transaction where
 
+import qualified "rider-app" API.Dashboard.CallbackRequest as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Booking as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Cancel as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Confirm as BAP
@@ -72,6 +73,7 @@ data Endpoint
   | SearchAPI BAP.RideSearchEndPoint
   | SelectAPI BAP.RideEstimatesEndPoint
   | ConfirmAPI BAP.RideConfirmEndPoint
+  | CallbackRequest BAP.CallbackRequestEndPoint
   | RBooking BAP.RideBookingEndPoint
   | ProfileAPI BAP.ProfileEndPoint
   | MapsAPI BAP.MapEndPoints

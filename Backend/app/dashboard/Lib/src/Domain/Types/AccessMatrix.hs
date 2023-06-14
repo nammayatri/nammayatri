@@ -132,6 +132,8 @@ data UserActionType
   | CLEAR_ON_RIDE_STUCK_DRIVER_IDS
   | CREATE_FP_DRIVER_EXTRA_FEE
   | UPDATE_FP_DRIVER_EXTRA_FEE
+  | LIST_CALLBACK_REQUEST
+  | UPDATE_CALLBACK_STATUS
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''UserActionType]
