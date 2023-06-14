@@ -160,13 +160,14 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
                   breakup
                 },
             payment =
-              RideCompletedOU.Payment
-                { collected_by = Common.castDPaymentCollector . (.collectedBy) <$> req.paymentMethodInfo,
-                  _type = Common.castDPaymentType . (.paymentType) <$> req.paymentMethodInfo,
-                  instrument = Common.castDPaymentInstrument . (.paymentInstrument) <$> req.paymentMethodInfo,
-                  time = RideCompletedOU.TimeDuration "FIXME",
-                  uri = req.paymentUrl
-                },
+              Just
+                RideCompletedOU.Payment
+                  { collected_by = Common.castDPaymentCollector . (.collectedBy) <$> req.paymentMethodInfo,
+                    _type = Common.castDPaymentType . (.paymentType) <$> req.paymentMethodInfo,
+                    instrument = Common.castDPaymentInstrument . (.paymentInstrument) <$> req.paymentMethodInfo,
+                    time = RideCompletedOU.TimeDuration "FIXME",
+                    uri = req.paymentUrl
+                  },
             fulfillment =
               RideCompletedOU.FulfillmentInfo
                 { id = ride.id.getId,

@@ -73,7 +73,7 @@ parseEvent _ (OnUpdate.RideStarted rsEvent) =
       { bppBookingId = Id rsEvent.id,
         bppRideId = Id rsEvent.fulfillment.id
       }
-parseEvent _ (OnUpdate.RideCompleted rcEvent) = do
+parseEvent _ (OnUpdate.RideCompleted rcEvent) =
   return $
     DOnUpdate.RideCompletedReq
       { bppBookingId = Id rcEvent.id,
@@ -83,7 +83,7 @@ parseEvent _ (OnUpdate.RideCompleted rcEvent) = do
         chargeableDistance = realToFrac rcEvent.fulfillment.chargeable_distance,
         traveledDistance = realToFrac rcEvent.fulfillment.traveled_distance,
         fareBreakups = mkOnUpdateFareBreakup <$> rcEvent.quote.breakup,
-        paymentUrl = rcEvent.payment.uri
+        paymentUrl = rcEvent.payment >>= (.uri)
       }
   where
     mkOnUpdateFareBreakup breakup =
