@@ -147,7 +147,7 @@ buildSearchTry merchantId searchReqId estimate sReq baseFare distance duration s
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
-  let validTill_ = searchRequestExpirationSeconds `addUTCTime` now
+  let validTill_ = searchRequestExpirationSeconds `addUTCTime` sReq.pickupTime
       customerExtraFee = sReq.customerExtraFee
   pure
     DST.SearchTry
