@@ -51,6 +51,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
+import Storage.Queries.SearchTry (findActiveTriesByRequestId)
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import Tools.Metrics
@@ -138,7 +139,8 @@ cancelSearch ::
   Id DSR.SearchRequest ->
   m ()
 cancelSearch merchantId req searchRequestId = do
-  CS.lockSearchRequest searchRequestId
+  searchTries <- findActiveTriesByRequestId searchRequestId
+  mapM_ (\st -> CS.lockSearchRequest st.id) searchTries
   driverSearchReqs <- QSRD.findAllActiveBySRId searchRequestId
   logTagInfo ("transactionId-" <> req.transactionId) "Search Request Cancellation"
   DB.runTransaction $ do
