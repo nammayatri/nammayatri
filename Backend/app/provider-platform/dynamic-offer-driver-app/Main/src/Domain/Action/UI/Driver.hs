@@ -776,7 +776,7 @@ respondQuote (driverId, _) req = do
       case req.response of
         Pulled -> throwError UnexpectedResponseValue
         Accept -> do
-          when (searchReq.autoAssignEnabled == Just True) $ CS.incrementSearchRequestLockCounter searchTryId
+          when searchReq.autoAssignEnabled $ CS.incrementSearchRequestLockCounter searchTryId
           logDebug $ "offered fare: " <> show req.offeredFare
           whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
           when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
