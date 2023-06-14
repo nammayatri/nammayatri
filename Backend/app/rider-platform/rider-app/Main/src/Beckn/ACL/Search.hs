@@ -19,7 +19,6 @@ import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
 import qualified Domain.Action.UI.Search.Rental as DRentalSearch
 import qualified Domain.Types.SearchRequest as DSearchReq
-import Environment
 import EulerHS.Prelude hiding (state)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
@@ -29,7 +28,7 @@ import Kernel.Utils.Common
 import qualified Tools.Maps as Maps
 
 buildOneWaySearchReq ::
-  (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
+  (MonadFlow m, MonadReader r m) =>
   DOneWaySearch.OneWaySearchRes ->
   m (BecknReq Search.SearchMessage)
 buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
@@ -43,9 +42,11 @@ buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
     (shortestRouteInfo >>= (.distance))
     (shortestRouteInfo >>= (.duration))
     customerLanguage
+    bapId
+    bapUrl
 
 buildRentalSearchReq ::
-  (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
+  (MonadFlow m, MonadReader r m) =>
   DRentalSearch.RentalSearchRes ->
   m (BecknReq Search.SearchMessage)
 buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
@@ -59,9 +60,11 @@ buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
     Nothing
     Nothing
     Nothing
+    bapId
+    bapUrl
 
 buildSearchReq ::
-  (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
+  (MonadFlow m, MonadReader r m) =>
   DSearchCommon.SearchReqLocation ->
   Maybe DSearchCommon.SearchReqLocation ->
   Id DSearchReq.SearchRequest ->
@@ -71,13 +74,13 @@ buildSearchReq ::
   Maybe Meters ->
   Maybe Seconds ->
   Maybe Maps.Language ->
+  Text ->
+  BaseUrl ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin mbDestination searchId startTime city device distance duration customerLanguage = do
+buildSearchReq origin mbDestination searchId startTime city device distance duration customerLanguage bapId bapUrl = do
   let transactionId = getId searchId
       messageId = transactionId
-  bapURIs <- asks (.bapSelfURIs)
-  bapIDs <- asks (.bapSelfIds)
-  context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) bapIDs.cabs bapURIs.cabs Nothing Nothing city
+  context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) bapId bapUrl Nothing Nothing city
   let intent = mkIntent origin mbDestination startTime customerLanguage
   let mbRouteInfo = Search.RouteInfo {distance, duration}
   let searchMessage = Search.SearchMessage intent (Just mbRouteInfo) device

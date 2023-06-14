@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Beckn (API, handler) where
+module API.Beckn (API, APIV2, handler) where
 
 import qualified API.Beckn.OnConfirm as OnConfirm
 import qualified API.Beckn.OnInit as OnInit
@@ -20,12 +20,26 @@ import qualified API.Beckn.OnSearch as OnSearch
 import qualified API.Beckn.OnSelect as OnSelect
 import qualified API.Beckn.OnTrack as OnTrack
 import qualified API.Beckn.OnUpdate as OnUpdate
+import qualified Domain.Types.Merchant as DM
 import Environment
+import Kernel.Types.Id
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 
 type API =
   "cab" :> "v1" :> SignatureAuth "Authorization"
+    :> ( OnSearch.API
+           :<|> OnSelect.API
+           :<|> OnInit.API
+           :<|> OnConfirm.API
+           :<|> OnUpdate.API
+           :<|> OnTrack.API
+       )
+
+type APIV2 =
+  "beckn" :> "cab" :> "v1"
+    :> Capture "merchantId" (Id DM.Merchant)
+    :> SignatureAuth "Authorization"
     :> ( OnSearch.API
            :<|> OnSelect.API
            :<|> OnInit.API

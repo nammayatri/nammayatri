@@ -47,7 +47,9 @@ data FeedbackRes = FeedbackRes
     providerId :: Text,
     providerUrl :: BaseUrl,
     transactionId :: Text,
-    city :: Text
+    city :: Text,
+    bapId :: Text,
+    bapUrl :: BaseUrl
   }
 
 feedback :: FeedbackReq -> App.Flow FeedbackRes
@@ -71,5 +73,7 @@ feedback request = do
         providerUrl = booking.providerUrl,
         transactionId = booking.transactionId,
         city = merchant.city,
+        bapId = merchant.bapId,
+        bapUrl = merchant.bapUrl,
         ..
       }

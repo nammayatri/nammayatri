@@ -17,7 +17,6 @@ module Beckn.ACL.Confirm (buildConfirmReq) where
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Types.LocationAddress as DBL
-import Environment
 import EulerHS.Prelude hiding (id, state)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
@@ -26,14 +25,12 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 
 buildConfirmReq ::
-  (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
+  (MonadFlow m, MonadReader r m) =>
   DOnInit.OnInitRes ->
   m (BecknReq Confirm.ConfirmMessage)
 buildConfirmReq res = do
-  bapURIs <- asks (.bapSelfURIs)
-  bapIDs <- asks (.bapSelfIds)
   messageId <- generateGUID
-  context <- buildTaxiContext Context.CONFIRM messageId (Just res.transactionId) bapIDs.cabs bapURIs.cabs (Just res.bppId) (Just res.bppUrl) res.city
+  context <- buildTaxiContext Context.CONFIRM messageId (Just res.transactionId) res.bapId res.bapUrl (Just res.bppId) (Just res.bppUrl) res.city
   pure $ BecknReq context $ mkConfirmMessage res
 
 mkConfirmMessage :: DOnInit.OnInitRes -> Confirm.ConfirmMessage

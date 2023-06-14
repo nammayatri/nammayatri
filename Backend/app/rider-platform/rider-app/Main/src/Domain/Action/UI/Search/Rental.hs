@@ -54,7 +54,9 @@ data RentalSearchRes = RentalSearchRes
     --TODO: This supposed to be temporary solution. Check if we still need it
     gatewayUrl :: BaseUrl,
     searchRequestExpiry :: UTCTime,
-    city :: Text
+    city :: Text,
+    bapId :: Text,
+    bapUrl :: BaseUrl
   }
 
 rentalSearch ::
@@ -93,7 +95,9 @@ rentalSearch personId bundleVersion clientVersion device req = do
             startTime = req.startTime,
             gatewayUrl = merchant.gatewayUrl,
             searchRequestExpiry = searchRequest.validTill,
-            city = merchant.city
+            city = merchant.city,
+            bapId = merchant.bapId,
+            bapUrl = merchant.bapUrl
           }
   return dSearchRes
   where

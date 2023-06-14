@@ -41,7 +41,8 @@ type API =
 
 type MainAPI =
   UI.API
-    :<|> Beckn.API
+    :<|> Beckn.API -- TODO :: Needs to be deprecated
+    :<|> Beckn.APIV2
     :<|> MetroBeckn.API
     :<|> Dashboard.API
 
@@ -56,6 +57,7 @@ mainServer :: FlowServer MainAPI
 mainServer =
   UI.handler
     :<|> Beckn.handler
+    :<|> const Beckn.handler
     :<|> MetroBeckn.handler
     :<|> Dashboard.handler
 

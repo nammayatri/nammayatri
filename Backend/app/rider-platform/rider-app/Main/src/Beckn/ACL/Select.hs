@@ -17,7 +17,6 @@ module Beckn.ACL.Select (buildSelectReq) where
 
 import qualified Beckn.Types.Core.Taxi.Select as Select
 import qualified Domain.Action.UI.Select as DSelect
-import Environment
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
@@ -25,15 +24,13 @@ import Kernel.Types.Common
 import Kernel.Utils.Common
 
 buildSelectReq ::
-  (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
+  (MonadFlow m, MonadReader r m) =>
   DSelect.DSelectRes ->
   m (BecknReq Select.SelectMessage)
 buildSelectReq dSelectRes = do
   let messageId = dSelectRes.estimate.bppEstimateId.getId
   let transactionId = dSelectRes.searchRequest.id.getId
-  bapURIs <- asks (.bapSelfURIs)
-  bapIDs <- asks (.bapSelfIds)
-  context <- buildTaxiContext Context.SELECT messageId (Just transactionId) bapIDs.cabs bapURIs.cabs (Just dSelectRes.providerId) (Just dSelectRes.providerUrl) dSelectRes.city
+  context <- buildTaxiContext Context.SELECT messageId (Just transactionId) dSelectRes.bapId dSelectRes.bapUrl (Just dSelectRes.providerId) (Just dSelectRes.providerUrl) dSelectRes.city
   let order = mkOrder dSelectRes
   pure $ BecknReq context $ Select.SelectMessage order
 

@@ -77,6 +77,8 @@ data DSelectRes = DSelectRes
     providerUrl :: BaseUrl,
     variant :: VehicleVariant,
     customerExtraFee :: Maybe Money,
+    bapId :: Text,
+    bapUrl :: BaseUrl,
     city :: Text,
     autoAssignEnabled :: Bool
   }
@@ -136,6 +138,8 @@ select personId estimateId req@DSelectReq {..} = do
         providerUrl = estimate.providerUrl,
         variant = estimate.vehicleVariant,
         city = merchant.city,
+        bapId = merchant.bapId,
+        bapUrl = merchant.bapUrl,
         ..
       }
 

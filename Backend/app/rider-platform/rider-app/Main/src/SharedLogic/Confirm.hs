@@ -49,6 +49,8 @@ data DConfirmRes = DConfirmRes
     booking :: DRB.Booking,
     searchRequestId :: Id DSReq.SearchRequest,
     city :: Text,
+    bapId :: Text,
+    bapUrl :: BaseUrl,
     maxEstimatedDistance :: Maybe HighPrecMeters,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
   }
@@ -114,6 +116,8 @@ confirm DConfirmReq {..} = do
         startTime = searchRequest.startTime,
         searchRequestId = searchRequest.id,
         city = merchant.city,
+        bapUrl = merchant.bapUrl,
+        bapId = merchant.bapId,
         maxEstimatedDistance = searchRequest.maxDistance,
         paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> paymentMethod
       }

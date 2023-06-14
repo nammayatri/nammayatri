@@ -64,7 +64,9 @@ data CancelRes = CancelRes
     bppUrl :: BaseUrl,
     cancellationSource :: SBCR.CancellationSource,
     transactionId :: Text,
-    city :: Text
+    city :: Text,
+    bapId :: Text,
+    bapUrl :: BaseUrl
   }
 
 data CancelSearch = CancelSearch
@@ -74,7 +76,9 @@ data CancelSearch = CancelSearch
     city :: Text,
     estimateStatus :: DEstimate.EstimateStatus,
     searchReqId :: Id SearchRequest,
-    sendToBpp :: Bool
+    sendToBpp :: Bool,
+    bapId :: Text,
+    bapUrl :: BaseUrl
   }
 
 cancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, HasCacheConfig r, HedisFlow m r, Metrics.CoreMetrics m) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> CancelReq -> m CancelRes
@@ -108,7 +112,9 @@ cancel bookingId _ req = do
         bppUrl = booking.providerUrl,
         cancellationSource = SBCR.ByUser,
         transactionId = booking.transactionId,
-        city = merchant.city
+        city = merchant.city,
+        bapId = merchant.bapId,
+        bapUrl = merchant.bapUrl
       }
   where
     buildBookingCancelationReason currentDriverLocation disToPickup merchantId = do
@@ -158,7 +164,9 @@ mkDomainCancelSearch personId estimateId = do
             searchReqId = searchRequestId,
             city = merchant.city,
             estimateStatus = estStatus,
-            sendToBpp
+            sendToBpp,
+            bapId = merchant.bapId,
+            bapUrl = merchant.bapUrl
           }
 
 cancelSearch ::

@@ -20,7 +20,6 @@ where
 
 import qualified Beckn.Types.Core.Taxi.Track as Track
 import qualified Domain.Types.Ride as DRide
-import Environment
 import Kernel.Prelude
 import Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
@@ -33,22 +32,21 @@ data TrackBuildReq = TrackBuildReq
     bppId :: Text,
     bppUrl :: BaseUrl,
     transactionId :: Text,
+    bapId :: Text,
+    bapUrl :: BaseUrl,
     city :: Text
   }
 
 buildTrackReq ::
   ( MonadFlow m,
-    HasBapInfo r m,
     HedisFlow m r
   ) =>
   TrackBuildReq ->
   m (BecknReq Track.TrackMessage)
 buildTrackReq res = do
-  bapURIs <- asks (.bapSelfURIs)
-  bapIDs <- asks (.bapSelfIds)
   messageId <- generateGUID
   Redis.setExp (key messageId) res.bppRideId 1800 --30 mins
-  context <- buildTaxiContext Context.TRACK messageId (Just res.transactionId) bapIDs.cabs bapURIs.cabs (Just res.bppId) (Just res.bppUrl) res.city
+  context <- buildTaxiContext Context.TRACK messageId (Just res.transactionId) res.bapId res.bapUrl (Just res.bppId) (Just res.bppUrl) res.city
   pure $ BecknReq context $ mkTrackMessage res
   where
     key messageId = "Track:bppRideId:" <> messageId

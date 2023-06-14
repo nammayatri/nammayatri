@@ -17,21 +17,18 @@ module Beckn.ACL.Cancel (buildCancelReq, buildCancelSearchReq) where
 import qualified Beckn.Types.Core.Taxi.Cancel.Req as Cancel
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Types.BookingCancellationReason as SBCR
-import Environment
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Utils.Common
 
 buildCancelReq ::
-  (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
+  (MonadFlow m, MonadReader r m) =>
   DCancel.CancelRes ->
   m (BecknReq Cancel.CancelMessage)
 buildCancelReq res = do
-  bapURIs <- asks (.bapSelfURIs)
-  bapIDs <- asks (.bapSelfIds)
   messageId <- generateGUID
-  context <- buildTaxiContext Context.CANCEL messageId (Just res.transactionId) bapIDs.cabs bapURIs.cabs (Just res.bppId) (Just res.bppUrl) res.city
+  context <- buildTaxiContext Context.CANCEL messageId (Just res.transactionId) res.bapId res.bapUrl (Just res.bppId) (Just res.bppUrl) res.city
   pure $ BecknReq context $ mkCancelMessage res
 
 mkCancelMessage :: DCancel.CancelRes -> Cancel.CancelMessage
@@ -45,14 +42,12 @@ mkCancelMessage res = Cancel.CancelMessage res.bppBookingId.getId "" $ castCance
       SBCR.ByApplication -> Cancel.ByApplication
 
 buildCancelSearchReq ::
-  (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
+  (MonadFlow m, MonadReader r m) =>
   DCancel.CancelSearch ->
   m (BecknReq Cancel.CancelMessage)
 buildCancelSearchReq res = do
-  bapURIs <- asks (.bapSelfURIs)
-  bapIDs <- asks (.bapSelfIds)
   let messageId = res.estimateId.getId
-  context <- buildTaxiContext Context.CANCEL messageId (Just res.searchReqId.getId) bapIDs.cabs bapURIs.cabs (Just res.providerId) (Just res.providerUrl) res.city
+  context <- buildTaxiContext Context.CANCEL messageId (Just res.searchReqId.getId) res.bapId res.bapUrl (Just res.providerId) (Just res.providerUrl) res.city
   pure $ BecknReq context $ mkCancelSearchMessage res
 
 mkCancelSearchMessage :: DCancel.CancelSearch -> Cancel.CancelMessage

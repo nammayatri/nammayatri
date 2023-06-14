@@ -27,7 +27,6 @@ import Beckn.Types.Core.Taxi.API.Track as API
 import Beckn.Types.Core.Taxi.API.Update as API
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Ride as DRide
-import Environment
 import qualified EulerHS.Types as Euler
 import GHC.Records.Extra
 import qualified Kernel.External.Maps.Types as MapSearch
@@ -47,19 +46,17 @@ import Tools.Metrics (CoreMetrics)
 
 search ::
   ( MonadFlow m,
-    CoreMetrics m,
-    HasBapInfo r m
+    CoreMetrics m
   ) =>
   BaseUrl ->
   API.SearchReq ->
   m API.SearchRes
 search gatewayUrl req = do
-  callBecknAPIWithSignature "search" API.searchAPI gatewayUrl req
+  callBecknAPIWithSignature req.context.bap_id "search" API.searchAPI gatewayUrl req
 
 searchMetro ::
   ( MonadFlow m,
-    CoreMetrics m,
-    HasBapInfo r m
+    CoreMetrics m
   ) =>
   BaseUrl ->
   BecknReq MigAPI.SearchIntent ->
@@ -69,58 +66,52 @@ searchMetro gatewayUrl req = do
 
 select ::
   ( MonadFlow m,
-    CoreMetrics m,
-    HasBapInfo r m
+    CoreMetrics m
   ) =>
   BaseUrl ->
   SelectReq ->
   m SelectRes
-select = callBecknAPIWithSignature "select" API.selectAPI
+select gatewayUrl req = callBecknAPIWithSignature req.context.bap_id "select" API.selectAPI gatewayUrl req
 
 init ::
   ( MonadFlow m,
-    CoreMetrics m,
-    HasBapInfo r m
+    CoreMetrics m
   ) =>
   BaseUrl ->
   API.InitReq ->
   m API.InitRes
-init = callBecknAPIWithSignature "init" API.initAPI
+init gatewayUrl req = callBecknAPIWithSignature req.context.bap_id "init" API.initAPI gatewayUrl req
 
 confirm ::
   ( MonadFlow m,
-    CoreMetrics m,
-    HasBapInfo r m
+    CoreMetrics m
   ) =>
   BaseUrl ->
   ConfirmReq ->
   m ConfirmRes
-confirm = callBecknAPIWithSignature "confirm" API.confirmAPI
+confirm gatewayUrl req = callBecknAPIWithSignature req.context.bap_id "confirm" API.confirmAPI gatewayUrl req
 
 cancel ::
   ( MonadFlow m,
-    CoreMetrics m,
-    HasBapInfo r m
+    CoreMetrics m
   ) =>
   BaseUrl ->
   CancelReq ->
   m CancelRes
-cancel = callBecknAPIWithSignature "cancel" API.cancelAPI
+cancel gatewayUrl req = callBecknAPIWithSignature req.context.bap_id "cancel" API.cancelAPI gatewayUrl req
 
 update ::
   ( MonadFlow m,
-    CoreMetrics m,
-    HasBapInfo r m
+    CoreMetrics m
   ) =>
   BaseUrl ->
   UpdateReq ->
   m UpdateRes
-update = callBecknAPIWithSignature "update" API.updateAPI
+update gatewayUrl req = callBecknAPIWithSignature req.context.bap_id "update" API.updateAPI gatewayUrl req
 
 callTrack ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasBapInfo r m,
     EsqDBFlow m r,
     HasCacheConfig r,
     HedisFlow m r
@@ -136,9 +127,11 @@ callTrack booking ride = do
             bppId = booking.providerId,
             bppUrl = booking.providerUrl,
             transactionId = booking.transactionId,
-            city = merchant.city
+            city = merchant.city,
+            bapUrl = merchant.bapUrl,
+            bapId = merchant.bapId
           }
-  void . callBecknAPIWithSignature "track" API.trackAPI booking.providerUrl =<< TrackACL.buildTrackReq trackBUildReq
+  void . callBecknAPIWithSignature merchant.bapId "track" API.trackAPI booking.providerUrl =<< TrackACL.buildTrackReq trackBUildReq
 
 data Status = PreRide | ActualRide
   deriving (Generic, ToJSON, Show, FromJSON, ToSchema)
@@ -164,30 +157,44 @@ callGetDriverLocation mTrackingUrl = do
 
 feedback ::
   ( MonadFlow m,
-    CoreMetrics m,
-    HasBapInfo r m
+    CoreMetrics m
   ) =>
   BaseUrl ->
   RatingReq ->
   m RatingRes
-feedback = callBecknAPIWithSignature "feedback" API.ratingAPI
+feedback gatewayUrl req = callBecknAPIWithSignature req.context.bap_id "feedback" API.ratingAPI gatewayUrl req
 
-callBecknAPIWithSignature,
-  callBecknAPIWithSignatureMetro ::
-    ( MonadFlow m,
-      CoreMetrics m,
-      IsBecknAPI api req res,
-      HasBapInfo r m,
-      SanitizedUrl api
-    ) =>
-    Text ->
-    Proxy api ->
-    BaseUrl ->
-    req ->
-    m res
-callBecknAPIWithSignature a b c d = do
-  bapId <- asks (.bapSelfIds.cabs)
-  callBecknAPI (Just $ getHttpManagerKey bapId) Nothing a b c d
+callBecknAPIWithSignature ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    IsBecknAPI api req res,
+    SanitizedUrl api
+  ) =>
+  Text ->
+  Text ->
+  Proxy api ->
+  BaseUrl ->
+  req ->
+  m res
+callBecknAPIWithSignature a = callBecknAPI (Just $ getHttpManagerKey a) Nothing
+
+callBecknAPIWithSignatureMetro ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    IsBecknAPI api req res,
+    SanitizedUrl api
+  ) =>
+  Text ->
+  Proxy api ->
+  BaseUrl ->
+  req ->
+  m res
 callBecknAPIWithSignatureMetro a b c d = do
-  bapId <- asks (.bapSelfIds.metro)
-  callBecknAPI (Just $ getHttpManagerKey bapId) Nothing a b c d
+  -- bapId <- asks (.bapSelfIds.metro)
+  callBecknAPI
+    Nothing -- (Just $ getHttpManagerKey bapId)
+    Nothing
+    a
+    b
+    c
+    d

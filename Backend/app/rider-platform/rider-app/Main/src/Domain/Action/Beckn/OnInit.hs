@@ -52,7 +52,9 @@ data OnInitRes = OnInitRes
     riderPhoneNumber :: Text,
     mbRiderName :: Maybe Text,
     transactionId :: Text,
-    city :: Text
+    city :: Text,
+    bapId :: Text,
+    bapUrl :: BaseUrl
   }
   deriving (Generic, Show, PrettyShow)
 
@@ -84,5 +86,7 @@ onInit req = do
         mbRiderName = decRider.firstName,
         transactionId = booking.transactionId,
         city = merchant.city,
+        bapId = merchant.bapId,
+        bapUrl = merchant.bapUrl,
         ..
       }

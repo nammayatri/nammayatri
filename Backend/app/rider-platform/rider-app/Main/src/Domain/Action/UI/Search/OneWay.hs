@@ -63,7 +63,9 @@ data OneWaySearchRes = OneWaySearchRes
     city :: Text,
     customerLanguage :: Maybe Maps.Language,
     device :: Maybe Text,
-    shortestRouteInfo :: Maybe Maps.RouteInfo
+    shortestRouteInfo :: Maybe Maps.RouteInfo,
+    bapUrl :: BaseUrl,
+    bapId :: Text
   }
 
 oneWaySearch ::
@@ -136,7 +138,9 @@ oneWaySearch personId req bundleVersion clientVersion device = do
             city = merchant.city,
             customerLanguage = searchRequest.language,
             device,
-            shortestRouteInfo
+            shortestRouteInfo,
+            bapId = merchant.bapId,
+            bapUrl = merchant.bapUrl
           }
   fork "updating search counters" $ do
     merchantConfigs <- QMC.findAllByMerchantId person.merchantId

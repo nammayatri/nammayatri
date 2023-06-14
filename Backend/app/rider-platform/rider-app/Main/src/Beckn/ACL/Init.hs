@@ -18,7 +18,6 @@ import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.Init as Init
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.VehicleVariant as VehVar
-import Environment
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.App
@@ -30,14 +29,12 @@ import Kernel.Utils.Context (buildTaxiContext)
 import qualified SharedLogic.Confirm as SConfirm
 
 buildInitReq ::
-  (HasBapInfo r m, MonadFlow m) =>
+  (MonadFlow m) =>
   SConfirm.DConfirmRes ->
   m (BecknReq Init.InitMessage)
 buildInitReq res = do
   let transactionId = res.searchRequestId.getId
-  bapURIs <- asks (.bapSelfURIs)
-  bapIDs <- asks (.bapSelfIds)
-  context <- buildTaxiContext Context.INIT res.booking.id.getId (Just transactionId) bapIDs.cabs bapURIs.cabs (Just res.providerId) (Just res.providerUrl) res.city
+  context <- buildTaxiContext Context.INIT res.booking.id.getId (Just transactionId) res.bapId res.bapUrl (Just res.providerId) (Just res.providerUrl) res.city
   initMessage <- buildInitMessage res
   pure $ BecknReq context initMessage
 

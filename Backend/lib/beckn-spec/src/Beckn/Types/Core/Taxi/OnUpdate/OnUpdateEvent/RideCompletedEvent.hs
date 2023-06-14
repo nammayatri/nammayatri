@@ -34,7 +34,7 @@ data RideCompletedEvent = RideCompletedEvent
     update_target :: Text,
     quote :: RideCompletedQuote,
     fulfillment :: FulfillmentInfo,
-    payment :: Payment
+    payment :: Maybe Payment
   }
   deriving (Generic, Show)
 

@@ -36,6 +36,7 @@ import Network.Wai.Handler.Warp
     setInstallShutdownHandler,
     setPort,
   )
+import qualified Storage.CachedQueries.Merchant as QMerchant
 import System.Environment (lookupEnv)
 
 runRiderApp :: (AppCfg -> AppCfg) -> IO ()
@@ -62,13 +63,15 @@ runRiderApp' appCfg = do
         migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
         logInfo "Setting up for signature auth..."
+        allSubscribers <-
+          try QMerchant.loadAllSubscribers
+            >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
+        let allSubscriberIds = map ((.bapId) &&& (.bapUniqueKeyId)) allSubscribers
         flowRt' <-
           modFlowRtWithAuthManagers
             flowRt
             appEnv
-            [ (appCfg.bapSelfIds.cabs, appCfg.bapSelfUniqueKeyIds.cabs),
-              (appCfg.bapSelfIds.metro, appCfg.bapSelfUniqueKeyIds.metro)
-            ]
+            allSubscriberIds
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         pure flowRt'
     runSettings settings $ App.run (App.EnvR flowRt' appEnv)

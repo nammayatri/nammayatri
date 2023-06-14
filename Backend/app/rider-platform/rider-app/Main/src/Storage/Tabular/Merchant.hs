@@ -37,6 +37,9 @@ mkPersist
       subscriberId Text
       name Text
       city Text
+      bapUrl Text
+      bapId Text
+      bapUniqueKeyId Text
       originRestriction GeoRestriction
       destinationRestriction GeoRestriction
       gatewayUrl Text
@@ -69,6 +72,7 @@ instance FromTType MerchantT Domain.Merchant where
             }
     gwUrl <- parseBaseUrl gatewayUrl
     regUrl <- parseBaseUrl registryUrl
+    bapUrl_ <- parseBaseUrl bapUrl
     doBaseUrl <- parseBaseUrl driverOfferBaseUrl
     return $
       Domain.Merchant
@@ -78,6 +82,7 @@ instance FromTType MerchantT Domain.Merchant where
           registryUrl = regUrl,
           gatewayUrl = gwUrl,
           driverOfferBaseUrl = doBaseUrl,
+          bapUrl = bapUrl_,
           ..
         }
 
@@ -93,5 +98,6 @@ instance ToTType MerchantT Domain.Merchant where
         gatewayUrl = showBaseUrl gatewayUrl,
         registryUrl = showBaseUrl registryUrl,
         driverOfferBaseUrl = showBaseUrl driverOfferBaseUrl,
+        bapUrl = showBaseUrl bapUrl,
         ..
       }
