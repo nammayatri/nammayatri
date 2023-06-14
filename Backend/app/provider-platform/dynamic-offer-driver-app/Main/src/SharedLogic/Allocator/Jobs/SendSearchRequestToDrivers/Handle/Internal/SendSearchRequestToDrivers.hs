@@ -62,7 +62,7 @@ sendSearchRequestToDrivers ::
 sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolConfig driverPool = do
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
   validTill <- getSearchRequestValidTill
-  batchNumber <- getPoolBatchNum searchReq.id
+  batchNumber <- getPoolBatchNum searchTry.id
   languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool
   DS.driverScoreEventHandler
     DST.OnNewSearchRequestForDrivers
