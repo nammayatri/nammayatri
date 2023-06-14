@@ -60,6 +60,7 @@ library
       API.UI.Frontend
       API.UI.GoogleTranslate
       API.UI.Maps
+      API.UI.Payment
       API.UI.Profile
       API.UI.Quote
       API.UI.Registration
@@ -116,6 +117,7 @@ library
       Domain.Action.UI.Feedback
       Domain.Action.UI.Frontend
       Domain.Action.UI.Maps
+      Domain.Action.UI.Payment
       Domain.Action.UI.Profile
       Domain.Action.UI.Quote
       Domain.Action.UI.Registration
@@ -158,6 +160,8 @@ library
       Domain.Types.Merchant.MerchantServiceUsageConfig
       Domain.Types.MerchantConfig
       Domain.Types.OnSearchEvent
+      Domain.Types.Payment.PaymentOrder
+      Domain.Types.Payment.PaymentTransaction
       Domain.Types.Person
       Domain.Types.Person.PersonDefaultEmergencyNumber
       Domain.Types.Person.PersonFlowStatus
@@ -216,6 +220,8 @@ library
       Storage.Queries.Merchant.MerchantServiceUsageConfig
       Storage.Queries.MerchantConfig
       Storage.Queries.OnSearchEvent
+      Storage.Queries.Payment.PaymentOrder
+      Storage.Queries.Payment.PaymentTransaction
       Storage.Queries.Person
       Storage.Queries.Person.PersonDefaultEmergencyNumber
       Storage.Queries.Person.PersonFlowStatus
@@ -252,6 +258,8 @@ library
       Storage.Tabular.Merchant.MerchantServiceUsageConfig
       Storage.Tabular.MerchantConfig
       Storage.Tabular.OnSearchEvent
+      Storage.Tabular.Payment.PaymentOrder
+      Storage.Tabular.Payment.PaymentTransaction
       Storage.Tabular.Person
       Storage.Tabular.Person.PersonDefaultEmergencyNumber
       Storage.Tabular.Person.PersonFlowStatus
@@ -276,6 +284,7 @@ library
       Tools.Metrics.BAPMetrics
       Tools.Metrics.BAPMetrics.Types
       Tools.Notifications
+      Tools.Payment
       Tools.Schema
       Tools.SignatureAuth
       Tools.SMS

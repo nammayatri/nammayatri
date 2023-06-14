@@ -1,0 +1,125 @@
+# @name healthcheck
+
+GET {{app-host}}
+
+###
+
+# @name addEmail
+POST {{app-host}}/profile
+content-type: application/json
+token: {{app-token}}
+
+{ "email" : "customer@gmail.com"
+}
+
+###
+
+# @name listOfCompletedRides
+GET {{app-host}}/rideBooking/list
+  ?offset=0
+  &limit=50
+  &status="COMPLETED"
+content-type: application/json
+token: {{app-token}}
+
+###
+
+# @name createOrder
+
+@rideId = {{listOfCompletedRides.response.body.list[0].rideList[0].id}}
+
+POST {{app-host}}/payment/{{rideId}}/createOrder
+token: {{app-token}}
+content-type: application/json
+
+###
+
+# @name orderStatus
+
+@orderId = {{rideId}}
+
+GET {{app-host}}/payment/{{orderId}}/status
+token: {{app-token}}
+content-type: application/json
+
+### webhook
+# https://docs.juspay.in/payment-page/ios/base-sdk-integration/webhooks
+#  basic auth username: dummyUsername; password: yyyyyyy
+
+@merchantShortId = NAMMA_YATRI
+@orderShortId={{listOfCompletedRides.response.body.list[0].rideList[0].shortRideId}}
+
+POST http://localhost:8013/{{merchantShortId}}/service/juspay/payment
+Authorization: Basic ZHVtbXlVc2VybmFtZTp5eXl5eXl5
+content-type: application/json
+
+{
+ "id": "evt_hk0a9ccu6qwkcryg",
+ "date_created": "2018-12-05T13:53:24Z",
+ "event_name": "ORDER_SUCCEEDED",
+ "content": {
+   "order": {
+     "gateway_id": 18,
+     "product_id": "",
+     "auth_type": "THREE_DS",
+     "customer_phone": "759<HIDDEN>35",
+     "bank_error_message": "",
+     "date_created": "2018-12-05T13:48:48Z",
+     "order_id": "{{orderShortId}}",
+     "currency": "INR",
+     "amount": 600,
+     "id": "ord_c4345b<HIDDEN>fe8299f5321f53",
+     "udf2": "",
+     "udf1": "",
+     "refunded": false,
+     "udf6": "",
+     "udf5": "",
+     "amount_refunded": 0,
+     "udf4": "",
+     "txn_id": "MID-<HIDDEN>-ea55d1ba6496-1",
+     "udf3": "",
+     "card": {
+       "saved_to_locker": false,
+        "card_issuer": "",
+        "card_brand": "MASTERCARD",
+        "card_reference": "008485a<HIDDEN>aa0cb95b13",
+        "card_type": "CREDIT",
+        "card_fingerprint": "<HIDDEN>6v2oos4qgc",
+        "expiry_year": "2023",
+        "using_saved_card": true,
+        "card_isin": "553227",
+        "name_on_card": "",
+        "last_four_digits": "",
+        "expiry_month": "04"
+      },
+      "merchant_id": "MID",
+      "payment_method_type": "CARD",
+      "payment_links": {
+        "iframe": "https://sandbox.juspay.in/merchant/ipay/ord_c4345ba45dd3457c85fe8299f5321f53",
+        "web": "https://sandbox.juspay.in/merchant/pay/ord_c4345ba45dd3457c85fe8299f5321f53",
+        "mobile": "https://sandbox.juspay.in/merchant/pay/ord_c4345ba45dd3457c85fe8299f5321f53?mobile=true"
+      },
+      "status": "CHARGED",
+      "txn_uuid": "rkuk1<HIDDEN>tiam",
+      "status_id": 21,
+      "customer_email": "",
+      "udf7": "",
+      "udf8": "",
+      "udf9": "",
+      "bank_error_code": "",
+      "return_url": "http://88.99.31.206:8222/transactions/online_payment_status",
+      "payment_gateway_response": {
+        "rrn": "201812<HIDDEN>0010016862<HIDDEN>6345",
+        "created": "2018-12-05T13:53:24Z",
+        "resp_code": "01",
+        "txn_id": "MID-3e0411f7-a4<HIDDEN>-ea55d1ba6496-1",
+        "epg_txn_id": "201812<HIDDEN>0010016862<HIDDEN>6345",
+        "resp_message": "Txn Success",
+        "auth_id_code": ""
+      },
+      "payment_method": "MASTERCARD",
+      "customer_id": "6989",
+      "udf10": ""
+   }
+ }
+}
