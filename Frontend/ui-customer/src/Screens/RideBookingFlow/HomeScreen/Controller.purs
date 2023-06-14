@@ -1647,17 +1647,7 @@ showPersonMarker state marker location = do
 getCurrentCustomerLocation :: forall t44 t51. Applicative t51 => (Action -> Effect Unit) -> t44 -> Effect (t51 Unit)
 getCurrentCustomerLocation push state = do
   location <- getCurrentLatLong
-  _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-    (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq location.lat location.lng (case (getValueToLocalStore LANGUAGE_KEY) of
-                                                                                                                            "HI_IN" -> "HINDI"
-                                                                                                                            "KN_IN" -> "KANNADA"
-                                                                                                                            "BN_IN" -> "BENGALI"
-                                                                                                                            "ML_IN" -> "MALAYALAM"
-                                                                                                                            _      -> "ENGLISH"))
-    let (PlaceName address) = (fromMaybe HomeScreenData.dummyLocationName (locationName !! 0))
-
-    lift $ lift $ doAff do liftEffect $ push $ UpdateSource location.lat location.lng address.formattedAddress
-    pure unit
+  push $ UpdateSource location.lat location.lng (getString CURRENT_LOCATION)
   pure (pure unit)
 
 dummyEstimateEntity :: EstimateAPIEntity
