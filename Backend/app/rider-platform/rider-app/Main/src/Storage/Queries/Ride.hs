@@ -246,3 +246,16 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
 --   where
 --     mkCount [counter] = counter
 --     mkCount _ = 0
+
+findRiderIdByRideId :: Transactionable m => Id Ride -> m (Maybe (Id Person))
+findRiderIdByRideId rideId = findOne $ do
+  ride :& booking <-
+    from $
+      table @RideT
+        `innerJoin` table @BookingT
+          `Esq.on` ( \(ride :& booking) ->
+                       ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
+                   )
+  where_ $
+    ride ^. RideTId ==. val (toKey rideId)
+  pure $ booking ^. BookingRiderId
