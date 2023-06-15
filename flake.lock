@@ -44,11 +44,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1685472764,
-        "narHash": "sha256-F0TOrzyn04387rU2zNn1hRXj2BCdY511WAwmyOHEy5s=",
+        "lastModified": 1686940943,
+        "narHash": "sha256-aPB9kDU9/IctaNfSuC4gyzHfVXL5iZ5y7VWpq53PJR4=",
         "owner": "nammayatri",
         "repo": "beckn-gateway",
-        "rev": "3ee594e1e336e48dc9ba17f76e68377a6017ca05",
+        "rev": "c4e83d6f2dde14dc0583b33b7f2dd98536b8b91e",
         "type": "github"
       },
       "original": {
@@ -2092,11 +2092,11 @@
         "prometheus-haskell": "prometheus-haskell"
       },
       "locked": {
-        "lastModified": 1686727298,
-        "narHash": "sha256-m7C3R18vi3/APOkTV9lY+AQnxzGGf62L18+ow2be/Zo=",
+        "lastModified": 1686940397,
+        "narHash": "sha256-0BXfC5BtY6ARMTpYqf2QboG8rPy6tGojtJrTGuuQ/lc=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "6653cb0ce3edd4d888372d3abfc096d654b6ca81",
+        "rev": "074e20ab74dd39f820fde91c5984cd7544c57ddb",
         "type": "github"
       },
       "original": {

@@ -76,6 +76,8 @@ data AppCfg = AppCfg
     esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
     hedisClusterCfg :: HedisCfg,
+    hedisNonCriticalCfg :: HedisCfg,
+    hedisNonCriticalClusterCfg :: HedisCfg,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     dumpEvery :: Seconds,
@@ -95,6 +97,8 @@ data AppEnv = AppEnv
     dumpEvery :: Seconds,
     hostname :: Maybe Text,
     hedisEnv :: HedisEnv,
+    hedisNonCriticalEnv :: HedisEnv,
+    hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
     cutOffHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
@@ -117,10 +121,15 @@ buildAppEnv AppCfg {..} consumerType = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   version <- lookupDeploymentVersion
   hedisEnv <- connectHedis hedisCfg id
+  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg id
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
       else connectHedisCluster hedisClusterCfg id
+  hedisNonCriticalClusterEnv <-
+    if cutOffHedisCluster
+      then pure hedisNonCriticalEnv
+      else connectHedisCluster hedisNonCriticalClusterCfg id
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   coreMetrics <- Metrics.registerCoreMetricsContainer
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv

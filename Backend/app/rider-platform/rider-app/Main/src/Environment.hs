@@ -62,7 +62,10 @@ data AppCfg = AppCfg
     esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
     hedisClusterCfg :: HedisCfg,
+    hedisNonCriticalCfg :: HedisCfg,
+    hedisNonCriticalClusterCfg :: HedisCfg,
     cutOffHedisCluster :: Bool,
+    cutOffNonCriticalHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
     smsCfg :: SmsConfig,
     infoBIPCfg :: InfoBIPConfig,
@@ -134,8 +137,11 @@ data AppEnv = AppEnv
     encTools :: EncTools,
     selfUIUrl :: BaseUrl,
     hedisEnv :: HedisEnv,
+    hedisNonCriticalEnv :: HedisEnv,
+    hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
     cutOffHedisCluster :: Bool,
+    cutOffNonCriticalHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
@@ -168,11 +174,17 @@ buildAppEnv AppCfg {..} = do
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBAPKafkaEnvs
+  let nonCriticalModifierFunc = ("ab:n_c:" <>)
   hedisEnv <- connectHedis hedisCfg riderAppPrefix
+  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg nonCriticalModifierFunc
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
       else connectHedisCluster hedisClusterCfg riderAppPrefix
+  hedisNonCriticalClusterEnv <-
+    if cutOffNonCriticalHedisCluster
+      then pure hedisNonCriticalEnv
+      else connectHedisCluster hedisNonCriticalClusterCfg nonCriticalModifierFunc
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

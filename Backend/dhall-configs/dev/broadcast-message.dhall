@@ -56,6 +56,8 @@ let cacheConfig = { configsExpTime = +86400 }
 
 in  { hedisCfg
     , hedisClusterCfg
+    , hedisNonCriticalCfg = hedisCfg
+    , hedisNonCriticalClusterCfg = hedisClusterCfg
     , hedisMigrationStage = True
     , cutOffHedisCluster = False
     , esqDBCfg

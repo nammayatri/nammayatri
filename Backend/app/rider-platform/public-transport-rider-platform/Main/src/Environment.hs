@@ -39,6 +39,8 @@ data AppCfg = AppCfg
     autoMigrate :: Bool,
     hedisCfg :: HedisCfg,
     hedisClusterCfg :: HedisCfg,
+    hedisNonCriticalCfg :: HedisCfg,
+    hedisNonCriticalClusterCfg :: HedisCfg,
     cutOffHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
     port :: Int,
@@ -77,6 +79,8 @@ data AppEnv = AppEnv
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
     hedisEnv :: HedisEnv,
+    hedisNonCriticalEnv :: HedisEnv,
+    hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
     cutOffHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
@@ -101,10 +105,15 @@ buildAppEnv AppCfg {..} = do
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBAPKafkaEnvs
   hedisEnv <- connectHedis hedisCfg publicTransportBapPrefix
+  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg publicTransportBapPrefix
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
       else connectHedisCluster hedisClusterCfg publicTransportBapPrefix
+  hedisNonCriticalClusterEnv <-
+    if cutOffHedisCluster
+      then pure hedisNonCriticalEnv
+      else connectHedisCluster hedisNonCriticalClusterCfg publicTransportBapPrefix
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
