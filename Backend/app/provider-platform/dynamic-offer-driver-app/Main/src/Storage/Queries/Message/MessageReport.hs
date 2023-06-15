@@ -90,6 +90,48 @@ create messageReport = do
 --     offset $ fromIntegral offsetVal
 --     return (messageReport, message, mbMessageTranslation)
 
+findAllMessageFromMessageReport :: (L.MonadFlow m) => [MessageReport] -> m [Message]
+findAllMessageFromMessageReport messageReport = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamM.MessageT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      message' <-
+        KV.findAllWithOptionsKVConnector
+          dbConf'
+          updatedMeshConfig
+          [Se.Is BeamM.id $ Se.In $ getId . DTMR.messageId <$> messageReport]
+          (Se.Desc BeamM.createdAt)
+          Nothing
+          Nothing
+      case message' of
+        Left _ -> pure []
+        Right result -> traverse QMM.transformBeamMessageToDomain result
+    Nothing -> pure []
+
+findAllMessageTranslationFromMessageAndLanguage :: (L.MonadFlow m) => [Message] -> Language -> m [MTD.MessageTranslation]
+findAllMessageTranslationFromMessageAndLanguage message language = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMT.MessageTranslationT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      messageTranslation' <-
+        KV.findAllWithOptionsKVConnector
+          dbConf'
+          updatedMeshConfig
+          [ Se.And
+              [Se.Is BeamMT.messageId $ Se.In $ getId . Msg.id <$> message, Se.Is BeamMT.language $ Se.Eq language]
+          ]
+          (Se.Desc BeamMT.createdAt)
+          Nothing
+          Nothing
+      case messageTranslation' of
+        Left _ -> pure []
+        Right result -> pure $ QMMT.transformBeamMessageTranslationToDomain <$> result
+    Nothing -> pure []
+
 findByDriverIdAndLanguage :: (L.MonadFlow m) => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
 findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -104,18 +146,7 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
         case messageReport' of
           Left _ -> pure []
           Right result -> pure $ transformBeamMessageReportToDomain <$> result
-      message <- do
-        message' <-
-          KV.findAllWithOptionsKVConnector
-            dbConf'
-            updatedMeshConfig
-            [Se.Is BeamM.id $ Se.In $ getId . DTMR.messageId <$> messageReport]
-            (Se.Desc BeamM.createdAt)
-            Nothing
-            Nothing
-        case message' of
-          Left _ -> pure []
-          Right result -> traverse QMM.transformBeamMessageToDomain result
+      message <- findAllMessageFromMessageReport messageReport
       let rawMessageFromMessage Message {..} =
             RawMessage
               { id = id,
@@ -129,20 +160,8 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
                 merchantId = merchantId,
                 createdAt = createdAt
               }
-      messageTranslation <- do
-        messageTranslation' <-
-          KV.findAllWithOptionsKVConnector
-            dbConf'
-            updatedMeshConfig
-            [ Se.And
-                [Se.Is BeamMT.messageId $ Se.In $ getId . Msg.id <$> message, Se.Is BeamMT.language $ Se.Eq language]
-            ]
-            (Se.Desc BeamMT.createdAt)
-            Nothing
-            Nothing
-        case messageTranslation' of
-          Left _ -> pure []
-          Right result -> pure $ QMMT.transformBeamMessageTranslationToDomain <$> result
+      messageTranslation <- findAllMessageTranslationFromMessageAndLanguage message language
+
       let messageReportAndMessage = foldl' (getMessageReportAndMessage messageReport) [] message
       let finalResult' = foldl' (getMessageTranslationAndMessage messageTranslation rawMessageFromMessage) [] messageReportAndMessage
       let finalResult = map (\(mr, rm, mt) -> (mr, rm, Just mt)) finalResult'

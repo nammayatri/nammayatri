@@ -41,7 +41,9 @@ findAllByLanguage language = do
   let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
-      iTranslations <- either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamIT.language $ Se.Eq language]
+      let modelNameT = Se.modelTableName @BeamIT.IssueTranslationT
+      let updatedMeshConfigT = setMeshConfig modelNameT
+      iTranslations <- either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfigT [Se.Is BeamIT.language $ Se.Eq language]
       iCategorys <- either (pure []) (transformBeamIssueCategoryToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamIC.category $ Se.In (DomainIT.sentence <$> iTranslations)]
       let dCategoriesWithTranslations = foldl' (getIssueCategoryWithTranslations iTranslations) [] iCategorys
       pure dCategoriesWithTranslations
@@ -79,7 +81,9 @@ findByIdAndLanguage (Id issueCategoryId) language = do
   let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
-      iCategory <- either (pure []) (transformBeamIssueCategoryToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamIC.id $ Se.Eq issueCategoryId]
+      let modelNameT = Se.modelTableName @BeamIT.IssueTranslationT
+      let updatedMeshConfigT = setMeshConfig modelNameT
+      iCategory <- either (pure []) (transformBeamIssueCategoryToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfigT [Se.Is BeamIC.id $ Se.Eq issueCategoryId]
       iTranslations <- either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamIT.language $ Se.Eq language, Se.Is BeamIT.sentence $ Se.In (DomainIC.category <$> iCategory)]]
       let dInfosWithTranslations' = foldl' (getIssueOptionsWithTranslations iTranslations) [] iCategory
           dInfosWithTranslations = headMaybe dInfosWithTranslations'

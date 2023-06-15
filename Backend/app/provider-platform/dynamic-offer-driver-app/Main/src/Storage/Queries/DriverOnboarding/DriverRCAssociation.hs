@@ -81,6 +81,15 @@ getActiveAssociationByDriver (Id personId) = do
 --     orderBy [desc $ rcAssoc ^. DriverRCAssociationAssociatedOn]
 --     return (rcAssoc, regCert)
 
+findAllvehicleRCFromDriverRCAssociation :: L.MonadFlow m => [DriverRCAssociation] -> m [VehicleRegistrationCertificate]
+findAllvehicleRCFromDriverRCAssociation driverRCAssociation = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamVRCT.VehicleRegistrationCertificateT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbCOnf' -> either (pure []) (QVRC.transformBeamVehicleRegistrationCertificateToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamVRCT.id $ Se.In $ getId . DRCA.rcId <$> driverRCAssociation]
+    Nothing -> pure []
+
 findAllByDriverId :: L.MonadFlow m => Id Person -> m [(DriverRCAssociation, VehicleRegistrationCertificate)]
 findAllByDriverId (Id driverId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -89,7 +98,7 @@ findAllByDriverId (Id driverId) = do
   case dbConf of
     Just dbCOnf' -> do
       driverRCA <- either (pure []) (transformBeamDriverRCAssociationToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDRCA.driverId $ Se.Eq driverId] (Se.Desc BeamDRCA.associatedOn) Nothing Nothing
-      vehicleRC <- either (pure []) (QVRC.transformBeamVehicleRegistrationCertificateToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamVRCT.id $ Se.In $ getId . DRCA.rcId <$> driverRCA]
+      vehicleRC <- findAllvehicleRCFromDriverRCAssociation driverRCA
       let rcAWithrc = foldl' (getRCAWithRC vehicleRC) [] driverRCA
       pure rcAWithrc
     Nothing -> pure []

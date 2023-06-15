@@ -26,6 +26,18 @@ import qualified Database.Beam as B
 import Database.Beam.Postgres
 import Domain.Types.Booking as Booking
 -- import Domain.Types.Booking as DB
+
+-- import qualified Storage.Beam.RideDetails as BeamRD
+-- import qualified Storage.Beam.RiderDetails as BeamRRD
+
+-- import qualified Storage.Queries.RideDetails as QRD
+-- import qualified Storage.Queries.RiderDetails as QRRD
+
+-- import Storage.Tabular.DriverInformation as DriverInfo
+
+-- import Storage.Queries.FullEntityBuilders (buildFullBooking)
+
+import Domain.Types.DriverInformation
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Ride as DR
@@ -36,14 +48,6 @@ import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
--- import qualified Storage.Beam.RideDetails as BeamRD
--- import qualified Storage.Beam.RiderDetails as BeamRRD
-
--- import qualified Storage.Queries.RideDetails as QRD
--- import qualified Storage.Queries.RiderDetails as QRRD
-
--- import Storage.Tabular.DriverInformation as DriverInfo
-
 import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..), lat, lon)
@@ -58,7 +62,6 @@ import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.Ride.Table as BeamR
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.DriverInformation as QDI
--- import Storage.Queries.FullEntityBuilders (buildFullBooking)
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.Ride as Ride
 import Storage.Tabular.RideDetails as RideDetails
@@ -209,6 +212,36 @@ findActiveByRBId (Id rbId) = do
 --           return (extractSolidType @Ride rideT, booking)
 --       )
 
+findAllBookingFromRidesAndMerchId :: L.MonadFlow m => Id Merchant -> [Ride] -> m [Booking]
+findAllBookingFromRidesAndMerchId (Id merchantId) rides = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamB.BookingT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      res <-
+        KV.findAllWithKVConnector
+          dbConf'
+          updatedMeshConfig
+          [ Se.And
+              [ Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <$> rides,
+                Se.Is BeamB.providerId $ Se.Eq merchantId
+              ]
+          ]
+      case res of
+        Right x -> catMaybes <$> traverse QB.transformBeamBookingToDomain x
+        _ -> pure []
+    Nothing -> pure []
+
+findAllDriverInfromationFromRides :: L.MonadFlow m => [Ride] -> m [DriverInformation]
+findAllDriverInfromationFromRides rides = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDI.DriverInformationT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> either (pure []) (QDI.transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamDI.driverId $ Se.In $ getId . DR.driverId <$> rides]]
+    Nothing -> pure []
+
 findAllRidesBookingsByRideId :: L.MonadFlow m => Id Merchant -> [Id Ride] -> m [(Ride, Booking)]
 findAllRidesBookingsByRideId (Id merchantId) rideIds = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -226,19 +259,7 @@ findAllRidesBookingsByRideId (Id merchantId) rideIds = do
           Left _ -> pure []
           Right x -> traverse transformBeamRideToDomain x
 
-      bookings <- do
-        res <-
-          KV.findAllWithKVConnector
-            dbConf'
-            updatedMeshConfig
-            [ Se.And
-                [ Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <$> rides,
-                  Se.Is BeamB.providerId $ Se.Eq merchantId
-                ]
-            ]
-        case res of
-          Right x -> catMaybes <$> traverse QB.transformBeamBookingToDomain x
-          _ -> pure []
+      bookings <- findAllBookingFromRidesAndMerchId (Id merchantId) rides
 
       let rideBooking = foldl' (getRideWithBooking bookings) [] rides
       pure rideBooking
@@ -278,8 +299,11 @@ findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus = do
         case ride' of
           Left _ -> pure []
           Right x -> traverse transformBeamRideToDomain x
+
       bookings <- do
-        booking' <- KV.findAllWithOptionsKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <$> rides]] (Se.Desc BeamB.createdAt) Nothing Nothing
+        let modelNameB = Se.modelTableName @BeamB.BookingT
+        let updatedMeshConfigB = setMeshConfig modelNameB
+        booking' <- KV.findAllWithOptionsKVConnector dbCOnf' updatedMeshConfigB [Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <$> rides] (Se.Desc BeamB.createdAt) Nothing Nothing
         case booking' of
           Left _ -> pure []
           Right x -> catMaybes <$> traverse QB.transformBeamBookingToDomain x
@@ -873,10 +897,12 @@ findStuckRideItems (Id merchantId) bookingIds now = do
           Left _ -> pure []
           Right x -> traverse transformBeamRideToDomain x
       bookings <- do
+        let modelNameB = Se.modelTableName @BeamB.BookingT
+        let updatedMeshConfigB = setMeshConfig modelNameB
         res <-
           KV.findAllWithKVConnector
             dbCOnf'
-            updatedMeshConfig
+            updatedMeshConfigB
             [ Se.And
                 [ Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <$> rides,
                   Se.Is BeamB.providerId $ Se.Eq merchantId,
@@ -886,7 +912,7 @@ findStuckRideItems (Id merchantId) bookingIds now = do
         case res of
           Left _ -> pure []
           Right x -> catMaybes <$> traverse QB.transformBeamBookingToDomain x
-      driverInfos <- either (pure []) (QDI.transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamDI.driverId $ Se.In $ getId . DR.driverId <$> rides]]
+      driverInfos <- findAllDriverInfromationFromRides rides
       let rideBooking = foldl' (getRideWithBooking bookings) [] rides
       let rideBookingDriverInfo = foldl' (getRideWithBookingDriverInfo driverInfos) [] rideBooking
 

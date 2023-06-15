@@ -60,8 +60,10 @@ findAllByCategoryAndLanguage (Id issueCategoryId) language = do
   let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
+      let modelNameT = Se.modelTableName @BeamIT.IssueTranslationT
+      let updatedMeshConfigT = setMeshConfig modelNameT
       iOptions <- either (pure []) (transformBeamIssueOptionToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamIO.issueCategoryId $ Se.Eq issueCategoryId]
-      iTranslations <- either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamIT.language $ Se.Eq language, Se.Is BeamIT.sentence $ Se.In (DomainIO.option <$> iOptions)]]
+      iTranslations <- either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfigT [Se.And [Se.Is BeamIT.language $ Se.Eq language, Se.Is BeamIT.sentence $ Se.In (DomainIO.option <$> iOptions)]]
       let dInfosWithTranslations = foldl' (getIssueOptionsWithTranslations iTranslations) [] iOptions
       pure dInfosWithTranslations
     Nothing -> pure []

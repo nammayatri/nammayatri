@@ -395,7 +395,7 @@ getVehicles' ::
   m [Vehicle]
 getVehicles' driverInfo = do
   dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
+  let modelName = Se.modelTableName @BeamV.VehicleT
   let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
@@ -498,7 +498,7 @@ getDriverQuote' ::
   m [DriverQuote]
 getDriverQuote' persons = do
   dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
+  let modelName = Se.modelTableName @BeamDQ.DriverQuoteT
   let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
@@ -542,7 +542,7 @@ getBookingInfo' ::
   m [Booking.Booking]
 getBookingInfo' driverQuote = do
   dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
+  let modelName = Se.modelTableName @BeamB.BookingT
   let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
@@ -640,6 +640,33 @@ fetchDriverIDsFromVehicle = map (.driverId)
 fetchDriverIDsTextFromQuote :: [DriverQuote] -> [Text]
 fetchDriverIDsTextFromQuote = map (.driverId.getId)
 
+findAllDriverLocationFromPersonIds :: L.MonadFlow m => [Person] -> m [DriverLocation]
+findAllDriverLocationFromPersonIds personList = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDL.DriverLocationT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> either (pure []) (QDL.transformBeamDriverLocationToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamDL.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
+    Nothing -> pure []
+
+findAllDriverInformationFromPersonIds :: L.MonadFlow m => [Person] -> m [DriverInformation]
+findAllDriverInformationFromPersonIds personList = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDI.DriverInformationT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> either (pure []) (QueriesDI.transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamDI.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
+    Nothing -> pure []
+
+findAllVehiclesFromPersonIds :: L.MonadFlow m => [Person] -> m [Vehicle]
+findAllVehiclesFromPersonIds personList = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamV.VehicleT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> either (pure []) (QV.transformBeamVehicleToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamV.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
+    Nothing -> pure []
+
 findAllDriversByIdsFirstNameAsc' ::
   (L.MonadFlow m, Log m) =>
   Id Merchant ->
@@ -668,9 +695,10 @@ findAllDriversByIdsFirstNameAsc' (Id merchantId) driverIds = do
         case p of
           Right x -> catMaybes <$> traverse transformBeamPersonToDomain x
           _ -> pure []
-      dlList <- either (pure []) (QDL.transformBeamDriverLocationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDL.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
-      infoList <- either (pure []) (QueriesDI.transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDI.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
-      vehicleList <- either (pure []) (QV.transformBeamVehicleToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamV.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
+      dlList <- findAllDriverLocationFromPersonIds personList
+      infoList <- findAllDriverInformationFromPersonIds personList
+      vehicleList <- findAllVehiclesFromPersonIds personList
+
       let pDl = foldl' (getPersonWithlocation dlList) [] personList
       let pDlInfo = foldl' (getPersonWithInfo infoList) [] pDl
       let pDlInfoVeh = foldl' (getPersonWithVehicle vehicleList) [] pDlInfo
