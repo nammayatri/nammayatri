@@ -54,29 +54,29 @@ getAllFareProducts merchantId fromLocationLatLong toLocationLatLong = do
   case (mbPickupSpecialLocation, mbDropSpecialLocation) of
     (Just (pickupSpecialLocation, pickupPriority), Just (dropSpecialLocation, dropPriority)) ->
       if pickupPriority > dropPriority
-        then getDropFareProductsAndSpecialLocationTag dropSpecialLocation
-        else getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation
-    (Just (pickupSpecialLocation, _), Nothing) -> getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation
-    (Nothing, Just (dropSpecialLocation, _)) -> getDropFareProductsAndSpecialLocationTag dropSpecialLocation
+        then getDropFareProductsAndSpecialLocationTag dropSpecialLocation $ mkSpecialLocationTag (show pickupSpecialLocation.category) (show dropSpecialLocation.category) "Drop"
+        else getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation $ mkSpecialLocationTag (show pickupSpecialLocation.category) (show dropSpecialLocation.category) "Pickup"
+    (Just (pickupSpecialLocation, _), Nothing) -> getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation $ mkSpecialLocationTag (show pickupSpecialLocation.category) "None" "Pickup"
+    (Nothing, Just (dropSpecialLocation, _)) -> getDropFareProductsAndSpecialLocationTag dropSpecialLocation $ mkSpecialLocationTag "None" (show dropSpecialLocation.category) "Drop"
     (Nothing, Nothing) -> getDefaultFareProducts
   where
-    getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation = do
+    getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation specialLocationTag = do
       let area = DFareProduct.Pickup pickupSpecialLocation.id
       fareProducts <- getFareProducts area
       return $
         FareProducts
           { fareProducts,
             area = area,
-            specialLocationTag = Just $ pickupTag pickupSpecialLocation
+            specialLocationTag = Just specialLocationTag
           }
-    getDropFareProductsAndSpecialLocationTag dropSpecialLocation = do
+    getDropFareProductsAndSpecialLocationTag dropSpecialLocation specialLocationTag = do
       let area = DFareProduct.Drop dropSpecialLocation.id
       fareProducts <- getFareProducts area
       return $
         FareProducts
           { fareProducts,
             area,
-            specialLocationTag = Just $ dropTag dropSpecialLocation
+            specialLocationTag = Just specialLocationTag
           }
 
     getDefaultFareProducts = do
@@ -88,8 +88,7 @@ getAllFareProducts merchantId fromLocationLatLong toLocationLatLong = do
             specialLocationTag = Nothing
           }
 
-    pickupTag specialLocation = show specialLocation.category <> " - Pickup"
-    dropTag specialLocation = show specialLocation.category <> " - Drop"
+    mkSpecialLocationTag pickupSpecialLocationCategory dropSpecialLocationCategory priority = pickupSpecialLocationCategory <> "_" <> dropSpecialLocationCategory <> "_" <> "Priority" <> priority
 
     getFareProducts area = do
       fareProducts <- QFareProduct.findAllFareProductForVariants merchantId area
