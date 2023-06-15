@@ -239,7 +239,7 @@
         "nixpkgs-21_11": "nixpkgs-21_11",
         "pre-commit-hooks-nix": "pre-commit-hooks-nix",
         "process-compose-flake": "process-compose-flake",
-        "systems": "systems_2",
+        "systems": "systems",
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
@@ -268,7 +268,7 @@
         "nixpkgs-21_11": "nixpkgs-21_11_2",
         "pre-commit-hooks-nix": "pre-commit-hooks-nix_2",
         "process-compose-flake": "process-compose-flake_2",
-        "systems": "systems_3",
+        "systems": "systems_2",
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
@@ -297,7 +297,7 @@
         "nixpkgs-21_11": "nixpkgs-21_11_3",
         "pre-commit-hooks-nix": "pre-commit-hooks-nix_3",
         "process-compose-flake": "process-compose-flake_3",
-        "systems": "systems_4",
+        "systems": "systems_3",
         "treefmt-nix": "treefmt-nix_3"
       },
       "locked": {
@@ -550,11 +550,11 @@
         "sequelize": "sequelize"
       },
       "locked": {
-        "lastModified": 1685661687,
-        "narHash": "sha256-QVBsg/GtxB25hNvGvQLLKlCQ4vm0swEFyq8f6vwZoVQ=",
+        "lastModified": 1686833766,
+        "narHash": "sha256-qbaixw86Xf6GqAbUz2iNNvSBF/M9ogEu8D1K2aPGAIY=",
         "ref": "ny-compatible",
-        "rev": "d7648a633173d048c67e01c0cce712fdb227e7cd",
-        "revCount": 2116,
+        "rev": "b36d5b37e1a8ebbd257cf6884cc2647741cf0755",
+        "revCount": 2117,
         "type": "git",
         "url": "ssh://git@ssh.bitbucket.juspay.net/iris/euler-hs"
       },
@@ -1092,17 +1092,16 @@
     "hedis": {
       "flake": false,
       "locked": {
-        "lastModified": 1672223380,
-        "narHash": "sha256-Jbc0YgzMjFRHDNvciTzVrj6s1kxd6ErlxcHxKkQu+2U=",
-        "ref": "cluster",
-        "rev": "f8b11e0512b864f165a4a086713b41a0e3d622ea",
-        "revCount": 571,
+        "lastModified": 1685620412,
+        "narHash": "sha256-cPRZRbR76M7fBNSXcrSOqLlIcs2KSj/Ynf0AdZ46qrE=",
+        "ref": "refs/heads/master",
+        "rev": "92a3d5ab73dcb0ea11139a01d6f2950a8b8e7e0e",
+        "revCount": 712,
         "type": "git",
         "url": "https://github.com/juspay/hedis"
       },
       "original": {
-        "ref": "cluster",
-        "rev": "f8b11e0512b864f165a4a086713b41a0e3d622ea",
+        "rev": "92a3d5ab73dcb0ea11139a01d6f2950a8b8e7e0e",
         "type": "git",
         "url": "https://github.com/juspay/hedis"
       }
@@ -2303,11 +2302,11 @@
         "prometheus-haskell": "prometheus-haskell"
       },
       "locked": {
-        "lastModified": 1685662011,
-        "narHash": "sha256-Ea+6O9jpehTkUWQ0qg0+JdQzVQWn4coNsxzn67iRmBg=",
+        "lastModified": 1686834287,
+        "narHash": "sha256-TTrZFtMntxemMtR4lRCPyNFK9awYqbYekKA871O+aTI=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "cb89133d6d9566bad51b8737710e7c28e46e9acb",
+        "rev": "6ddb4fbfc12286ab5b60adb919e211085b845b0c",
         "type": "github"
       },
       "original": {
@@ -2378,21 +2377,6 @@
       }
     },
     "systems_3": {
-      "locked": {
-        "lastModified": 1681028828,
-        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
-        "owner": "nix-systems",
-        "repo": "default",
-        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nix-systems",
-        "repo": "default",
-        "type": "github"
-      }
-    },
-    "systems_4": {
       "locked": {
         "lastModified": 1681028828,
         "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
