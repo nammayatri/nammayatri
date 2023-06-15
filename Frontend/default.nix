@@ -19,7 +19,7 @@
         src = ./.;
       };
 
-      # Wrapper for typescript language server to make it work with vscode/neovim by default
+      # Wrapper for typescript language server to make it work with neovim(and other editors) by default
       # Ensure that typescript is installed and the language server knows where tsserver lives
       # The --tsserver-path argument being hardcoded instead of sent in the initialization
       # both simplifies the process and ensures that everyone is using the same tsserver when
@@ -52,15 +52,12 @@
           config.mission-control.devShell
           config.pre-commit.devShell
           self'.packages.ui-common.develop
+          self'.devShells.node
         ];
         packages = [
           pkgs.dhall
-          config.nammayatri.nodejs
           typescript-language-server
         ];
-        shellHook = ''
-          export NODE_PATH="${config.nammayatri.nodeDependencies}/node_modules"
-        '';
       };
 
       packages = {

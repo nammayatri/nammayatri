@@ -1,50 +1,35 @@
-{ inputs, lib, flake-parts-lib, ... }:
-let
-  inherit (flake-parts-lib)
-    mkPerSystemOption;
-  inherit (lib)
-    types;
-in
+{ inputs, ... }:
 {
-  options = {
-    perSystem = mkPerSystemOption
-      ({ config, self', lib, pkgs, system, ... }:
-        let
-          nodePackages = inputs.dream2nix.lib.makeFlakeOutputs {
-            systems = [ system ];
-            source = ./.;
-            projects = {
-              "atlas-ui" = {
-                name = "atlas-ui";
-                subsystem = "nodejs";
-                translator = "package-lock";
-                builder = "strict-builder";
-                subsystemInfo = {
-                  nodejs = 14;
-                };
-              };
+  perSystem = { config, self', lib, pkgs, system, ... }:
+    let
+      nodePackages = inputs.dream2nix.lib.makeFlakeOutputs {
+        systems = [ system ];
+        source = ./.;
+        projects = {
+          "common" = {
+            name = "common";
+            subsystem = "nodejs";
+            translator = "package-lock";
+            builder = "strict-builder";
+            subsystemInfo = {
+              nodejs = 14;
             };
           };
+        };
+      };
 
-          nodeDependencies = nodePackages.packages.${system}.atlas-ui.lib;
-        in
-        {
-          options.nammayatri = lib.mkOption {
-            type = types.submodule {
-              options = {
-                nodeDependencies = lib.mkOption {
-                  type = types.package;
-                };
-                nodejs = lib.mkOption {
-                  type = types.package;
-                };
-              };
-            };
-          };
-          config.nammayatri = {
-            inherit nodeDependencies;
-            nodejs = pkgs.nodejs-14_x;
-          };
-        });
-  };
+      nodeDependencies = nodePackages.packages.${system}.common.lib;
+    in
+    {
+      packages = {
+        inherit nodeDependencies;
+        nodejs = pkgs.nodejs-14_x;
+      };
+      devShells.node = pkgs.mkShell {
+        buildInputs = [
+          self'.packages.nodejs
+        ];
+        NODE_PATH = "${nodeDependencies}/node_modules";
+      };
+    };
 }

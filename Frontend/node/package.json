@@ -1,7 +1,7 @@
 {
-  "name": "atlas-ui",
+  "name": "common",
   "version": "1.7.10",
-  "description": "Atlas UI",
+  "description": "Node Dependencies",
   "private": true,
   "license": "ISC",
   "dependencies": {

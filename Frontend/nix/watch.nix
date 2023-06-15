@@ -8,12 +8,12 @@
     let
       webpack-dev-server = pkgs.writeShellApplication {
         name = "webpack-dev-server-wrapped";
-        runtimeInputs = [ config.nammayatri.nodejs ];
+        runtimeInputs = [ self'.packages.nodejs ];
         text = ''
-          export NODE_PATH="${config.nammayatri.nodeDependencies}/node_modules"
+          export NODE_PATH="${self'.packages.nodeDependencies}/node_modules"
           PIPE="$1"
           shift
-          tail -n1 -f "$PIPE" | node ${../node/watch.js} "$@"
+          tail -n1 -f "$PIPE" | node ${./watch.js} "$@"
         '';
       };
 

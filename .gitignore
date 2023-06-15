@@ -12,7 +12,7 @@ dist-newstyle
 
 # Frontend ignores
 Frontend/.DS_Store
-Frontend/.psc-ide-port
+.psc-ide-port
 Frontend/package-lock.json
 Frontend/android-native/app/driverProd/debug/output-metadata.json
 Frontend/android-native/app/driverProd/release/output-metadata.json
