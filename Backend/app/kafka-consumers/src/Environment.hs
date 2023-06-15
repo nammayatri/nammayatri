@@ -87,7 +87,9 @@ data AppCfg = AppCfg
     granualityPeriodType :: PeriodType,
     loggerConfig :: LoggerConfig,
     cacheConfig :: CacheConfig,
-    httpClientOptions :: HttpClientOptions
+    httpClientOptions :: HttpClientOptions,
+    enableRedisLatencyLogging :: Bool,
+    enablePrometheusMetricLogging :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -112,7 +114,9 @@ data AppEnv = AppEnv
     esqDBReplicaEnv :: EsqDBEnv,
     cacheConfig :: CacheConfig,
     coreMetrics :: Metrics.CoreMetricsContainer,
-    version :: Metrics.DeploymentVersion
+    version :: Metrics.DeploymentVersion,
+    enableRedisLatencyLogging :: Bool,
+    enablePrometheusMetricLogging :: Bool
   }
   deriving (Generic)
 

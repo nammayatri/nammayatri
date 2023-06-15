@@ -28,4 +28,6 @@ in  { driverAllowedDelayForLocationUpdateInSec = +60
     , driverInactiveSmsTemplate =
         "Alert! You have been marked Busy on Namma Yatri Partner, as we have not received any location update from your phone in more than a day. Please open the app and update your location for the app to work properly."
     , cacheConfig = appCfg.cacheConfig
+    , enableRedisLatencyLogging = True
+    , enablePrometheusMetricLogging = True
     }

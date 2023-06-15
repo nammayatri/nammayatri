@@ -97,4 +97,6 @@ in  { esqDBCfg
     , encTools
     , exotelToken = sec.exotelToken
     , dataServers = [ becknTransport, driverOfferBpp, appBackend, specialZone ]
+    , enableRedisLatencyLogging = True
+    , enablePrometheusMetricLogging = True
     }

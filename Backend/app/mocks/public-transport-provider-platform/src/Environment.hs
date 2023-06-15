@@ -39,7 +39,9 @@ data AppCfg = AppCfg
     statusWaitTimeSec :: Seconds,
     callbackWaitTimeMilliSec :: Milliseconds,
     loggerConfig :: LoggerConfig,
-    authEntity :: AuthenticatingEntity'
+    authEntity :: AuthenticatingEntity',
+    enableRedisLatencyLogging :: Bool,
+    enablePrometheusMetricLogging :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -59,7 +61,9 @@ data AppEnv = AppEnv
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     loggerEnv :: LoggerEnv,
-    authManager :: Manager
+    authManager :: Manager,
+    enableRedisLatencyLogging :: Bool,
+    enablePrometheusMetricLogging :: Bool
   }
   deriving (Generic)
 
