@@ -42,6 +42,8 @@ data AppCfg = AppCfg
     graceTerminationPeriod :: Seconds,
     hedisCfg :: Redis.HedisCfg,
     hedisClusterCfg :: Redis.HedisCfg,
+    hedisNonCriticalCfg :: Redis.HedisCfg,
+    hedisNonCriticalClusterCfg :: Redis.HedisCfg,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     esqDBCfg :: EsqDBConfig,
@@ -72,6 +74,8 @@ data AppEnv = AppEnv
     driverInactiveSmsTemplate :: Text,
     esqDBEnv :: EsqDBEnv,
     hedisEnv :: Redis.HedisEnv,
+    hedisNonCriticalEnv :: Redis.HedisEnv,
+    hedisNonCriticalClusterEnv :: Redis.HedisEnv,
     hedisClusterEnv :: Redis.HedisEnv,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
@@ -93,10 +97,15 @@ buildAppEnv AppCfg {..} = do
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   let modifierFunc = (driverAppName <>)
   hedisEnv <- Redis.connectHedis hedisCfg modifierFunc
+  hedisNonCriticalEnv <- Redis.connectHedis hedisNonCriticalCfg modifierFunc
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
       else Redis.connectHedisCluster hedisClusterCfg modifierFunc
+  hedisNonCriticalClusterEnv <-
+    if cutOffHedisCluster
+      then pure hedisNonCriticalEnv
+      else Redis.connectHedisCluster hedisNonCriticalClusterCfg modifierFunc
   pure AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

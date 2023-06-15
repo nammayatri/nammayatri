@@ -86,6 +86,8 @@ in  { esqDBCfg
     , clickhouseCfg
     , hedisCfg = rcfg
     , hedisClusterCfg = rccfg
+    , hedisNonCriticalCfg = rcfg
+    , hedisNonCriticalClusterCfg = rccfg
     , hedisMigrationStage = True
     , cutOffHedisCluster = True
     , port = +8016

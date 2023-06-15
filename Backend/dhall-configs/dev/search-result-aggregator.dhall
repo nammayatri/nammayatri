@@ -32,6 +32,8 @@ in  { port = +8025
     , graceTerminationPeriod = +90
     , hedisCfg = hcfg
     , hedisClusterCfg = rccfg
+    , hedisNonCriticalCfg = hcfg
+    , hedisNonCriticalClusterCfg = rccfg
     , hedisMigrationStage = True
     , cutOffHedisCluster = False
     , kafkaConsumerCfgs

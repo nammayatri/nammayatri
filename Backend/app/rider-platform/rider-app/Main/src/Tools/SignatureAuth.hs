@@ -96,6 +96,8 @@ instance
     KnownSymbol header,
     FromJSON req,
     HasField "hedisEnv" r Redis.HedisEnv,
+    HasField "hedisNonCriticalEnv" r Redis.HedisEnv,
+    HasField "hedisNonCriticalClusterEnv" r Redis.HedisEnv,
     HasField "hedisClusterEnv" r Redis.HedisEnv,
     HasField "hedisMigrationStage" r Bool,
     HasField "esqDBEnv" r EsqDBEnv,
