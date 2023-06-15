@@ -42,6 +42,9 @@ import Data.Maybe (Maybe(..))
 -- import PrestoDOM.Core(terminateUI)
 import Presto.Core.Types.Language.Flow
 import Types.App (GlobalState(..))
+import Engineering.Helpers.Commons (screenHeight, screenWidth)
+import Effect.Uncurried (EffectFn3, EffectFn2)
+import Data.Function.Uncurried (Fn3)
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
 -- -- foreign import _createKeyStoreEntry :: String -> String -> (Effect Unit) -> (String -> Effect Unit) -> Effect Unit
@@ -189,7 +192,7 @@ foreign import generateSessionId :: Unit -> String
 foreign import initialWebViewSetUp :: forall action. (action -> Effect Unit) -> String -> (String -> action) -> Effect Unit
 foreign import goBackPrevWebPage ::  String -> Effect Unit
 
-foreign import emitJOSEvent ::  EffectFn3 String String String Unit
+foreign import emitJOSEvent :: Fn3 String String String Unit
 
 foreign import getMerchantConfig :: forall a. (a -> Maybe a) -> (Maybe a) -> Effect (Maybe a)
 

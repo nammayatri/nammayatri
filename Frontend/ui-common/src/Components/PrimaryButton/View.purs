@@ -33,6 +33,7 @@ view push config =
     , margin config.margin
     , visibility config.visibility
     , background Color.white900
+    , cornerRadius config.cornerRadius
     ]
     [ relativeLayout
         [ height config.height

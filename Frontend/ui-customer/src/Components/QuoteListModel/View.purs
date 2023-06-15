@@ -230,7 +230,7 @@ selectRideAndConfirmView state push =
   ][textView (
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
-    , color state.appConfig.primaryBackground
+    , color state.appConfig.quoteListModel.textColor
     , text case getValueToLocalStore AUTO_SELECTING of
        "CANCELLED_AUTO_ASSIGN" -> "Select a Ride"
        "false"                 -> "Select a Ride"
@@ -355,7 +355,7 @@ noQuotesErrorModel state =
       ][imageView
         [ height $ V 115
         , width $ V 137
-        , imageWithFallback $ "ic_no_quotes," <> (getAssetStoreLink FunctionCall) <> "ic_no_quotes.png"
+        , imageWithFallback $ "ny_ic_no_quotes," <> (getAssetStoreLink FunctionCall) <> "ny_ic_no_quotes.png"
         , padding (Padding 0 0 0 0)
         ]
       , textView $

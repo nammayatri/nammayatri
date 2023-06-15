@@ -119,9 +119,10 @@ window.onMerchantEvent = function (event, payload) {
       window.merchantID = "YATRI"
     } else if (clientId == "jatrisaathi" || clientId == "jatrisaathiconsumer"){
       window.merchantID = "JATRISAATHI"
-    } else if (clientId.includes("consumer"))
-    {
-      window.merchantID = "UNKNOWN";
+    } else if (clientId.includes("consumer")) {
+      var merchant = clientId.replace("mobility","")
+      merchant = merchant.replace("consumer","")
+      window.merchantID = merchant.toUpperCase();
     } else {
       window.merchantID = clientId.toUpperCase();
     }
@@ -247,7 +248,8 @@ function loadConfig() {
   const newScript = document.createElement("script");
   newScript.type = "text/javascript";
   newScript.id = "ny-customer-configuration";
-  newScript.innerHTML = window.JBridge.loadFileInDUI("v1-configuration.js");
+  var config = window.JBridge.loadFileInDUI("v1-configuration.jsa");
+  newScript.innerHTML = config == "" ? window.JBridge.loadFileInDUI("v1-configuration.js") : config;
   headID.appendChild(newScript);
   try {
       const merchantConfig = (

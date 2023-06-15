@@ -62,19 +62,7 @@ view push state =
     , gravity CENTER_HORIZONTAL
     , afterRender push (const AfterRender)
     ][  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
-      , linearLayout
-        [ height $ V 1
-        , width MATCH_PARENT
-        , background Color.greySmoke
-        ][]
-      , scrollView
-        [ width MATCH_PARENT
-        , scrollBarY false
-        ][  linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , orientation VERTICAL
-            ][  if (not state.appConfig.nyBrandingVisibility) then
+      , if (not state.appConfig.nyBrandingVisibility) then
                   linearLayout
                     [ height $ V 1
                     , width MATCH_PARENT
@@ -83,7 +71,14 @@ view push state =
                     []
                   else
                     linearLayout [] []
-              , topTextView push state
+      , scrollView
+        [ width MATCH_PARENT
+        , scrollBarY false
+        ][  linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            ][ topTextView push state
               , linearLayout
                 [ orientation VERTICAL
                 , weight 1.0

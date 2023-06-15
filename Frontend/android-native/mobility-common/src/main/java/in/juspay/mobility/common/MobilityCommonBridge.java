@@ -194,7 +194,11 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @Override
     public void reset() {
-
+        if (receivers != null){
+            receivers.deRegister(bridgeComponents.getContext());
+            receivers = null;
+        }
+        googleMap = null;
     }
 
     // region Store and Trigger CallBack
@@ -1377,12 +1381,14 @@ public class MobilityCommonBridge extends HyperBridge {
     public boolean isFilePresentDeep(String fileName) throws IOException {
         Context context = bridgeComponents.getContext();
         InputStream inputStreams;
-        fileName = fileName.substring(0, fileName.lastIndexOf("."));
+        String fileNameWithExe = fileName;
+        int idx = fileName.lastIndexOf(".");
+        fileName = idx == -1 ? fileName : fileName.substring(0,idx);
         boolean isCheckAssets = (context.getResources().getIdentifier(fileName, "raw", context.getPackageName()) == 0);
         if (isCheckAssets) {
-            inputStreams = context.getAssets().open(fileName);
+            inputStreams = context.getAssets().open(fileNameWithExe);
             if (inputStreams == null) {
-                inputStreams = context.getAssets().open("juspay/" + fileName);
+                inputStreams = context.getAssets().open("juspay/" + fileNameWithExe);
             }
             return (inputStreams != null);
         } else {

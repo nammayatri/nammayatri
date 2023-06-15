@@ -53,8 +53,8 @@ errorModalConfig state = let
     , buttonConfig {
         text = (getString TRY_AGAIN)
       , margin = (Margin 16 0 16 24)
-      , background = Color.black900
-      , color = Color.yellow900
+      , background = state.appConfig.primaryBackground
+      , color = state.appConfig.primaryTextColor
       }
     }
   in errorModalConfig' 

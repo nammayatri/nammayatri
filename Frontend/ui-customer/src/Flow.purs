@@ -41,7 +41,8 @@ import Debug (spy)
 import Effect (Effect)
 import Effect (Effect)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (runEffectFn3, runEffectFn5, runEffectFn2)
+import Effect.Uncurried (runEffectFn2, runEffectFn5)
+import Data.Function.Uncurried (runFn3)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, bundleVersion, getExpiryTime, stringToVersion)
 import Engineering.Helpers.LogEvent (logEventWithParams, logEventWithTwoParams, logEvent)
@@ -137,7 +138,7 @@ baseAppFlow (GlobalPayload gPayload) = do
                 Nothing -> pure unit
               currentFlowStatus
             Left err -> do
-              _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "event,signature_auth_failed"
+              pure $ runFn3 emitJOSEvent "java" "onEvent" "event,signature_auth_failed"
               pure unit
         Nothing -> enterMobileNumberScreenFlow
 
@@ -184,7 +185,7 @@ checkVersion versioncodeAndroid versionName= do
   logField_ <- lift $ lift $ getLogFields
   let updatedIOSversion = getIosVersion (getMerchant FunctionCall)
   if os /= "IOS" && versioncodeAndroid < (getLatestAndroidVersion (getMerchant FunctionCall)) then do
-    _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "event,hide_loader"
+    pure $ runFn3 emitJOSEvent "java" "onEvent" "event,event,hide_loader"
     _ <- UI.handleAppUpdatePopUp
     _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_app_update_pop_up_view"
     checkVersion versioncodeAndroid versionName
@@ -197,7 +198,7 @@ checkVersion versioncodeAndroid versionName= do
 
       if any (_ == -1) [majorUpdateIndex, minorUpdateIndex, patchUpdateIndex] then pure unit
         else if forceIOSupdate majorUpdateIndex minorUpdateIndex patchUpdateIndex updatedIOSversion then do
-          _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "event,hide_loader"
+          pure $ runFn3 emitJOSEvent "java" "onEvent" "event,hide_loader"
           _ <- UI.handleAppUpdatePopUp
           _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_app_update_pop_up_view"
           checkVersion versioncodeAndroid versionName
@@ -334,7 +335,7 @@ currentFlowStatus = do
     DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
     RIDE_ASSIGNED _                         -> currentRideFlow true
     _                                       -> currentRideFlow false
-  _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "event,hide_loader"
+  pure $ runFn3 emitJOSEvent "java" "onEvent" "event,hide_loader"
   permissionConditionA <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
   permissionConditionB <- lift $ lift $ liftFlow $ isLocationEnabled unit
   internetCondition <- lift $ lift $ liftFlow $ isInternetAvailable unit
@@ -362,7 +363,7 @@ currentFlowStatus = do
       setValueToLocalStore HAS_TAKEN_FIRST_RIDE if response.hasTakenRide then "true" else "false"
       if (((fromMaybe "" response.firstName) == "" ) && not (isJust response.firstName)) then do
         _ <- updateLocalStage HomeScreen
-        _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "event,hide_loader"
+        pure $ runFn3 emitJOSEvent "java" "onEvent" "event,hide_loader"
         accountSetUpScreenFlow
       else do
           modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{data{settingSideBar{name =fromMaybe "" response.firstName}}})
@@ -420,7 +421,7 @@ currentFlowStatus = do
 chooseLanguageScreenFlow :: FlowBT String Unit
 chooseLanguageScreenFlow = do
   logField_ <- lift $ lift $ getLogFields
-  _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "event,hide_loader"
+  pure $ runFn3 emitJOSEvent "java" "onEvent" "event,hide_loader"
   setValueToLocalStore LANGUAGE_KEY "EN_US"
   _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_choose_lang_scn_view"
   flow <- UI.chooseLanguageScreen
@@ -449,7 +450,7 @@ updateCustomerVersion dbClientVersion dbBundleVersion = do
 
 enterMobileNumberScreenFlow :: FlowBT String Unit
 enterMobileNumberScreenFlow = do
-  _ <- lift $ lift $ liftFlow $ runEffectFn3 emitJOSEvent "java" "onEvent" "event,hide_loader" -- Removed initial choose langauge screen
+  pure $ runFn3 emitJOSEvent "java" "onEvent" "event,hide_loader" -- Removed initial choose langauge screen
   setValueToLocalStore LANGUAGE_KEY "EN_US"
   void $ lift $ lift $ toggleLoader false
   config <- getAppConfig
@@ -1281,6 +1282,7 @@ helpAndSupportScreenFlow :: FlowBT String Unit
 helpAndSupportScreenFlow = do
   config <- getAppConfig
   modifyScreenState $ ContactUsScreenStateType (\contactUsScreen -> contactUsScreen{data{config = config}})
+  modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen{data{config = config}})
   flow <- UI.helpAndSupportScreen
   case flow of
     GO_TO_HOME_FROM_HELP -> homeScreenFlow
@@ -1303,7 +1305,8 @@ helpAndSupportScreenFlow = do
 
 myRidesScreenFlow :: Boolean ->  FlowBT String Unit
 myRidesScreenFlow fromNavBar = do
-  modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen {props{fromNavBar = fromNavBar}})
+  config <- getAppConfig
+  modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen {props{fromNavBar = fromNavBar}, data{config = config}})
   flow <- UI.myRidesScreen
   case flow of
     REFRESH state -> myRidesScreenFlow state.props.fromNavBar
@@ -1389,6 +1392,8 @@ aboutUsScreenFlow = do
 permissionScreenFlow :: String -> FlowBT String Unit
 permissionScreenFlow triggertype = do
   _ <- pure $ hideKeyboardOnNavigation true
+  config <- getAppConfig
+  modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen{appConfig = config})
   flow <- UI.permissionScreen triggertype
   permissionConditionA <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
   permissionConditionB <- lift $ lift $ liftFlow $ isLocationEnabled unit
@@ -1408,6 +1413,8 @@ permissionScreenFlow triggertype = do
 
 myProfileScreenFlow :: FlowBT String Unit
 myProfileScreenFlow = do
+  config <- getAppConfig
+  modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState -> myProfileScreenState{data{config = config}})
   flow <- UI.myProfileScreen
   case flow of
     UPDATE_USER_PROFILE state -> do

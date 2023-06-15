@@ -503,9 +503,6 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
     @Override
     public void reset() {
-        receivers.deRegister(bridgeComponents.getContext());
-        receivers = null;
-        googleMap = null;
         onDestroy();
         super.reset();
     }

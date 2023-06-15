@@ -29,7 +29,9 @@ type AppConfig =
     profileEditGravity :: String,
     merchantLogo :: String,
     logs :: Array String,
-    showCorporateAddress :: Boolean
+    showCorporateAddress :: Boolean,
+    terminateBtnConfig :: TerminateBtnConfig,
+    showDeleteAccount :: Boolean
   } 
 
 type QuoteListConfig = {
@@ -55,4 +57,9 @@ type BannerViewState = {
   actionText :: String,
   actionTextColor :: String,
   imageUrl :: String
+}
+type TerminateBtnConfig = {
+    visibility :: Boolean, 
+    title :: String,
+    imageUrl :: String
 }

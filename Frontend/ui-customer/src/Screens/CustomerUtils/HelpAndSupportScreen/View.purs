@@ -407,9 +407,9 @@ topicsList state = [
   { action : CallSupport
   , title : (getString CONTACT_SUPPORT)
   , image : "ny_ic_help," <> (getAssetStoreLink FunctionCall) <> "ny_ic_help.png"
-  },
-  { action : DeleteAccount
+  } ] <> if state.data.config.showDeleteAccount then [
+    { action : DeleteAccount
   , title : (getString REQUEST_TO_DELETE_ACCOUNT)
   , image : "ny_ic_delete_account,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_delete_account.png"
   }
-]
+  ] else []

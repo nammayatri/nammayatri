@@ -82,11 +82,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
 
     @Override
     public void reset() {
-        if (receivers != null){
-            receivers.deRegister(bridgeComponents.getContext());
-            receivers = null;
-        }
-        googleMap = null;
         super.reset();
     }
 
