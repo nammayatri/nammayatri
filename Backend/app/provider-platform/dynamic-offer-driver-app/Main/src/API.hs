@@ -17,6 +17,7 @@ module API where
 import qualified API.Beckn as Beckn
 import qualified API.Dashboard as Dashboard
 import qualified API.Internal as Internal
+import qualified API.Test as Test
 import qualified API.UI as UI
 import qualified Data.ByteString as BS
 import Data.OpenApi
@@ -35,6 +36,7 @@ type DriverOfferAPI =
   MainAPI
     :<|> SwaggerAPI
     :<|> OpenAPI
+    :<|> Test.API
     :<|> Raw
 
 type MainAPI =
@@ -64,6 +66,7 @@ driverOfferServer =
   mainServer
     :<|> writeSwaggerHTMLFlow
     :<|> writeOpenAPIFlow
+    :<|> Test.handler
     :<|> serveDirectoryWebApp "swagger"
 
 type SwaggerAPI = "swagger" :> Get '[HTML] BS.ByteString
