@@ -81,3 +81,16 @@ To start the frontend app for IOS, follow these steps:
 **Starting the Server**
 
 TODO: IOS is not currently supported in this repo
+
+
+# Editing with VSCode 
+We have a VSCode workspace that includes settings for the purescript ide plugin(https://marketplace.visualstudio.com/items?itemName=nwolverson.ide-purescript) and includes the three purescript code folders.
+
+If you use the direnv plugin(https://marketplace.visualstudio.com/items?itemName=mkhl.direnv) you should be able to just open the provided `frontend.code-workspace`. 
+
+If you instead prefer to manually enter the develop shell you can.
+```bash
+cd Frontend
+nix develop .#frontend
+code frontend.code-workspace
+```
