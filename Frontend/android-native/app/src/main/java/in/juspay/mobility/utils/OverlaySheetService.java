@@ -61,6 +61,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -102,6 +103,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private ArrayList<ShimmerFrameLayout> shimmerTipList;
     private Handler mainLooper = new Handler(Looper.getMainLooper());
     private String key = "";
+
+    private RideRequestUtils rideRequestUtils = new RideRequestUtils();
 
     @Override
     public void onCreate() {
@@ -477,9 +480,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
 
 
     public void addToList (Bundle rideRequestBundle) {
-        Handler handler = new Handler(Looper.getMainLooper());
-        executor.execute(() -> {
-            try {
+        try{
+            Handler handler = new Handler(Looper.getMainLooper());
+            handler.postDelayed(() -> executor.execute(() -> {
                 if (sheetArrayList.size() >= 3 || findCardById(rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID)))) return;
                 if (progressDialog==null || apiLoader == null ){
                     if (mediaPlayer!=null){
@@ -510,7 +513,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
                         f.setTimeZone(TimeZone.getTimeZone("UTC"));
                         String getCurrTime = f.format(new Date());
-                        int calculatedTime = calculateExpireTimer(searchRequestValidTill,getCurrTime);
+                        int calculatedTime = rideRequestUtils.calculateExpireTimer(searchRequestValidTill,getCurrTime);
                         if (sharedPref == null) sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                         int negotiationUnit = Integer.parseInt(sharedPref.getString("NEGOTIATION_UNIT", "10"));
                         int rideRequestedBuffer =  Integer.parseInt(sharedPref.getString("RIDE_REQUEST_BUFFER", "2"));
@@ -545,11 +548,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         updateProgressBars(false);
                     }
                 });
-            } catch (Exception e) {
-                firebaseLogEventWithParams("exception","add_to_list",e.toString());
-                e.printStackTrace();
-            }
-        });
+            }), (rideRequestBundle.getInt("keepHiddenForSeconds", 0)* 1000L));
+        } catch (Exception e) {
+        firebaseLogEventWithParams("exception","add_to_list", Objects.requireNonNull(e.getMessage()).substring(0 ,40));
+        e.printStackTrace();
+        }
     }
 
     public void removeCardById(String id){
@@ -751,28 +754,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     public boolean onTouch(View view, MotionEvent motionEvent) {
         view.performClick();
         return true;
-    }
-    private int calculateExpireTimer(String expireTimeTemp, String currTimeTemp){
-        String[] arrOfA = expireTimeTemp.split("T");
-        String[] arrOfB = currTimeTemp.split("T");
-        if(!arrOfA[0].equals(arrOfB[0])){
-            return -1;
-        }
-        String[] timeTempExpire = arrOfA[1].split(":");
-        String[] timeTempCurrent = arrOfB[1].split(":");
-        timeTempExpire[2] = timeTempExpire[2].substring(0,2);
-        timeTempCurrent[2] = timeTempCurrent[2].substring(0,2);
-        int currTime = 0, expireTime = 0, calculate = 3600;
-        for(int i = 0 ; i < timeTempCurrent.length;i++){
-            currTime+= (Integer.parseInt(timeTempCurrent[i])*calculate);
-            expireTime+= (Integer.parseInt(timeTempExpire[i])*calculate);
-            calculate = calculate/60;
-        }
-        if ((expireTime-currTime) >= 5)
-        {
-            return expireTime-currTime - 5 ;
-        }
-        return 0;
     }
 
     private void startLoader(String id) {
