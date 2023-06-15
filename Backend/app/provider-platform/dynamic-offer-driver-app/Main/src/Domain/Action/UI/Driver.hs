@@ -89,6 +89,7 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
@@ -102,6 +103,7 @@ import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
+import Lib.EventStream
 import SharedLogic.CallBAP (sendDriverOffer)
 import qualified SharedLogic.CancelSearch as CS
 import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
@@ -409,12 +411,18 @@ getInformation ::
     Redis.HedisFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasField "version" r r0,
+    HasField "getDeploymentVersion" r0 Text
   ) =>
   (Id SP.Person, Id DM.Merchant) ->
   m DriverInformationRes
 getInformation (personId, merchantId) = do
   let driverId = cast personId
+  version <- asks (.version)
+  envt <- createEvent (getId personId) (getId merchantId) "RideStarted" version.getDeploymentVersion "dynamic-driver-offer-app"
+  triggerEvent eventStreams eventStreamMapping envt
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverStats <- runInReplica $ QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
