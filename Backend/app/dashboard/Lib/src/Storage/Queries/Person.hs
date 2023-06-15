@@ -16,6 +16,7 @@
 module Storage.Queries.Person where
 
 import Control.Applicative (liftA2)
+import qualified Data.Text as T
 import Database.Esqueleto.PostgreSQL
 import Domain.Types.Merchant as Merchant
 import Domain.Types.Person as Person
@@ -44,7 +45,7 @@ findByEmail ::
   Text ->
   m (Maybe Person)
 findByEmail email = do
-  emailDbHash <- getDbHash email
+  emailDbHash <- getDbHash (T.toLower email)
   findOne $ do
     person <- from $ table @PersonT
     where_ $
@@ -57,7 +58,7 @@ findByEmailAndPassword ::
   Text ->
   m (Maybe Person)
 findByEmailAndPassword email password = do
-  emailDbHash <- getDbHash email
+  emailDbHash <- getDbHash (T.toLower email)
   passwordDbHash <- getDbHash password
   findOne $ do
     person <- from $ table @PersonT

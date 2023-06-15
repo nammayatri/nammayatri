@@ -15,6 +15,7 @@
 module Domain.Action.Dashboard.Person where
 
 import Dashboard.Common
+import qualified Data.Text as T
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantAccess as DAccess
@@ -256,7 +257,7 @@ buildPerson req = do
   pid <- generateGUID
   now <- getCurrentTime
   mobileNumber <- encrypt req.mobileNumber
-  email <- encrypt req.email
+  email <- encrypt (T.toLower req.email)
   passwordHash <- getDbHash req.password
   return
     SP.Person
