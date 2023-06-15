@@ -66,7 +66,7 @@ instance FromTType PaymentOrderT Domain.PaymentOrder where
     return $
       Domain.PaymentOrder
         { id = Id id,
-          shortId = ShortId id,
+          shortId = ShortId shortId,
           customerId = fromKey customerId,
           merchantId = fromKey merchantId,
           clientAuthToken = EncryptedHashed (Encrypted clientAuthTokenEncrypted) clientAuthTokenHash,
