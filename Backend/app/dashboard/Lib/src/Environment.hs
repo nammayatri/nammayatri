@@ -53,7 +53,9 @@ data AppCfg = AppCfg
     registrationTokenExpiry :: Days,
     encTools :: EncTools,
     exotelToken :: Text,
-    dataServers :: [DataServer]
+    dataServers :: [DataServer],
+    enableRedisLatencyLogging :: Bool,
+    enablePrometheusMetricLogging :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -83,7 +85,9 @@ data AppEnv = AppEnv
     authTokenCacheKeyPrefix :: Text,
     exotelToken :: Text,
     dataServers :: [DataServer],
-    version :: DeploymentVersion
+    version :: DeploymentVersion,
+    enableRedisLatencyLogging :: Bool,
+    enablePrometheusMetricLogging :: Bool
   }
   deriving (Generic)
 

@@ -100,6 +100,8 @@ instance
     HasField "hedisClusterEnv" r Redis.HedisEnv,
     HasField "hedisMigrationStage" r Bool,
     HasField "esqDBEnv" r EsqDBEnv,
+    HasField "enablePrometheusMetricLogging" r Bool,
+    HasField "enableRedisLatencyLogging" r Bool,
     HasLog r,
     HasCoreMetrics r,
     HasCacheConfig r

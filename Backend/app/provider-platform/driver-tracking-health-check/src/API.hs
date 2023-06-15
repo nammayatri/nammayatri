@@ -37,7 +37,9 @@ healthCheck ::
     HasField "hedisNonCriticalClusterEnv" r Redis.HedisEnv,
     HasField "hedisClusterEnv" r Redis.HedisEnv,
     HasField "hedisMigrationStage" r Bool,
-    HasField "driverAppName" r Text
+    HasField "driverAppName" r Text,
+    HasField "enablePrometheusMetricLogging" r Bool,
+    HasField "enableRedisLatencyLogging" r Bool
   ) =>
   FlowHandlerR r Text
 healthCheck = withFlowHandlerAPI do

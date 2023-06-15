@@ -54,7 +54,9 @@ data AppCfg = AppCfg
     driverLocationHealthCheckIntervalInSec :: Seconds,
     smsCfg :: SmsConfig,
     driverInactiveSmsTemplate :: Text,
-    cacheConfig :: CacheConfig
+    cacheConfig :: CacheConfig,
+    enableRedisLatencyLogging :: Bool,
+    enablePrometheusMetricLogging :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -83,7 +85,9 @@ data AppEnv = AppEnv
     coreMetrics :: CoreMetricsContainer,
     loggerEnv :: LoggerEnv,
     cacheConfig :: CacheConfig,
-    version :: DeploymentVersion
+    version :: DeploymentVersion,
+    enableRedisLatencyLogging :: Bool,
+    enablePrometheusMetricLogging :: Bool
   }
   deriving (Generic)
 
