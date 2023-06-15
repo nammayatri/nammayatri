@@ -20,30 +20,27 @@ import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id as KTI
-import Kernel.Utils.Common
 import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.DriverExtraFeeBounds as BeamDEFB
-import Storage.Tabular.FarePolicy.DriverExtraFeeBounds
 import qualified Storage.Tabular.FarePolicy.DriverExtraFeeBounds as Domain
 
-findAll' ::
-  ( Transactionable m,
-    Monad m,
-    MonadThrow m,
-    Log m
-  ) =>
-  Id DFP.FarePolicy ->
-  DTypeBuilder m [DriverExtraFeeBoundsT]
-findAll' farePolicyId = do
-  Esq.findAll' $ do
-    driverExtraFeeBounds <- from $ table @DriverExtraFeeBoundsT
-    where_ $
-      driverExtraFeeBounds ^. DriverExtraFeeBoundsFarePolicyId ==. val (toKey farePolicyId)
-    orderBy [asc $ driverExtraFeeBounds ^. DriverExtraFeeBoundsStartDistance]
-    return driverExtraFeeBounds
+-- findAll' ::
+--   ( Transactionable m,
+--     Monad m,
+--     MonadThrow m,
+--     Log m
+--   ) =>
+--   Id DFP.FarePolicy ->
+--   DTypeBuilder m [DriverExtraFeeBoundsT]
+-- findAll' farePolicyId = do
+--   Esq.findAll' $ do
+--     driverExtraFeeBounds <- from $ table @DriverExtraFeeBoundsT
+--     where_ $
+--       driverExtraFeeBounds ^. DriverExtraFeeBoundsFarePolicyId ==. val (toKey farePolicyId)
+--     orderBy [asc $ driverExtraFeeBounds ^. DriverExtraFeeBoundsStartDistance]
+--     return driverExtraFeeBounds
 
 findAll ::
   ( L.MonadFlow m
@@ -59,20 +56,18 @@ findAll farePolicyId = do
     Just dbCOnf' -> either (pure []) (transformBeamDriverExtraFeeBoundsToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDEFB.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamDEFB.startDistance) Nothing Nothing
     Nothing -> pure []
 
-deleteAll' :: Id DFP.FarePolicy -> FullEntitySqlDB ()
-deleteAll' farePolicyId =
-  Esq.delete' $ do
-    driverExtraFeeBounds <- from $ table @DriverExtraFeeBoundsT
-    where_ $
-      driverExtraFeeBounds ^. DriverExtraFeeBoundsFarePolicyId ==. val (toKey farePolicyId)
+-- deleteAll' :: Id DFP.FarePolicy -> FullEntitySqlDB ()
+-- deleteAll' farePolicyId =
+--   Esq.delete' $ do
+--     driverExtraFeeBounds <- from $ table @DriverExtraFeeBoundsT
+--     where_ $
+--       driverExtraFeeBounds ^. DriverExtraFeeBoundsFarePolicyId ==. val (toKey farePolicyId)
 
 transformBeamDriverExtraFeeBoundsToDomain :: BeamDEFB.DriverExtraFeeBounds -> Domain.FullDriverExtraFeeBounds
 transformBeamDriverExtraFeeBoundsToDomain BeamDEFB.DriverExtraFeeBoundsT {..} = do
   ( KTI.Id farePolicyId,
     DFP.DriverExtraFeeBounds
-      { -- id = id,
-        -- farePolicyId = getId farePolicyId,
-        startDistance = startDistance,
+      { startDistance = startDistance,
         minFee = minFee,
         maxFee = maxFee
       }
