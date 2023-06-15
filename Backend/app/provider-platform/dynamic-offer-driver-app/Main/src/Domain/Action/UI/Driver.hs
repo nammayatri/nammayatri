@@ -884,8 +884,7 @@ getStats ::
 getStats (driverId, _) date = do
   rides <- runInReplica $ QRide.getRidesForDate driverId date
   let fareParamId = mapMaybe (.fareParametersId) rides
-  fareParameters' <- mapM (runInReplica . QFP.findById) fareParamId
-  let fareParameters = catMaybes fareParameters'
+  fareParameters <- catMaybes <$> mapM (runInReplica . QFP.findById) fareParamId
   return $
     DriverStatsRes
       { totalRidesOfDay = length rides,
