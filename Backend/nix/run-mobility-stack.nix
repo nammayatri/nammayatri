@@ -45,10 +45,13 @@ _:
     in
     {
       process-compose = {
-        port = 7812; # process-compose Swagger API is served here.
-        configs = {
-          run-mobility-stack-nix.processes = buildConfig exeGetters.nix;
-          run-mobility-stack-dev.processes = buildConfig exeGetters.cabal;
+        run-mobility-stack-nix = {
+          port = 7812; # process-compose Swagger API is served here.
+          settings.processes = buildConfig exeGetters.nix;
+        };
+        run-mobility-stack-dev = {
+          port = 7812; # process-compose Swagger API is served here.
+          settings.processes = buildConfig exeGetters.cabal;
         };
       };
     };
