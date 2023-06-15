@@ -34,6 +34,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+import qualified Kernel.Storage.Hedis.Queries as Redis
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -112,9 +113,10 @@ onSelect OnSelectValidatedReq {..} = do
       case lowestFareQuote of
         Just autoAssignQuote -> do
           let dConfirmReq = SConfirm.DConfirmReq {personId = person.id, quoteId = autoAssignQuote.id, paymentMethodId = searchRequest.selectedPaymentMethodId}
-          dConfirmRes <- SConfirm.confirm dConfirmReq
-          becknInitReq <- ACL.buildInitReq dConfirmRes
-          handle (errHandler dConfirmRes.booking) $ void $ withShortRetry $ CallBPP.init dConfirmRes.providerUrl becknInitReq
+          Redis.whenWithLockRedis (autoAssignLockKey person.id.getId) 60 $ do
+            dConfirmRes <- SConfirm.confirm dConfirmReq
+            becknInitReq <- ACL.buildInitReq dConfirmRes
+            handle (errHandler dConfirmRes.booking) $ void $ withShortRetry $ CallBPP.init dConfirmRes.providerUrl becknInitReq
         Nothing -> Notify.notifyOnDriverOfferIncoming estimate.id quotes person
     else do
       Notify.notifyOnDriverOfferIncoming estimate.id quotes person
@@ -123,6 +125,9 @@ onSelect OnSelectValidatedReq {..} = do
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirm.cancelBooking booking
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DConfirm.cancelBooking booking
       | otherwise = throwM exc
+
+    autoAssignLockKey :: Text -> Text
+    autoAssignLockKey id = "Customer:AutoConfirm:CustomerId-" <> id
 
 selectLowestFareQuote :: [DQuote.Quote] -> Maybe DQuote.Quote
 selectLowestFareQuote (quoteInfo : quoteInfoArray) =
