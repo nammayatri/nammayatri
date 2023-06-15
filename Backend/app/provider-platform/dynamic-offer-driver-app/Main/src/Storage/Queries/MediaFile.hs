@@ -14,6 +14,7 @@
 
 module Storage.Queries.MediaFile where
 
+import qualified Data.Time as T
 import Domain.Types.MediaFile as DMF
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
@@ -71,7 +72,7 @@ transformBeamMediaFileToDomain BeamMF.MediaFileT {..} = do
     { id = Id id,
       _type = fileType,
       url = url,
-      createdAt = createdAt
+      createdAt = T.localTimeToUTC T.utc createdAt
     }
 
 transformDomainMediaFileToBeam :: MediaFile -> BeamMF.MediaFile
@@ -80,5 +81,5 @@ transformDomainMediaFileToBeam MediaFile {..} =
     { BeamMF.id = getId id,
       BeamMF.fileType = _type,
       BeamMF.url = url,
-      BeamMF.createdAt = createdAt
+      BeamMF.createdAt = T.utcToLocalTime T.utc createdAt
     }

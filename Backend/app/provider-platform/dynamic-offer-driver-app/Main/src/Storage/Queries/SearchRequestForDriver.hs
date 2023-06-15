@@ -160,7 +160,7 @@ findByDriver (Id driverId) = do
         <$> KV.findAllWithKVConnector
           dbCOnf'
           updatedMeshConfig
-          [Se.And [Se.Is BeamSRFD.driverId $ Se.Eq driverId, Se.Is BeamSRFD.status $ Se.Eq Domain.Active, Se.Is BeamSRFD.searchRequestValidTill $ Se.GreaterThan (T.utcToLocalTime (T.TimeZone (5 * 60 + 30) False "IST") now)]]
+          [Se.And [Se.Is BeamSRFD.driverId $ Se.Eq driverId, Se.Is BeamSRFD.status $ Se.Eq Domain.Active, Se.Is BeamSRFD.searchRequestValidTill $ Se.GreaterThan (T.utcToLocalTime T.utc now)]]
     Nothing -> pure []
 
 deleteByDriverId :: L.MonadFlow m => Id Person -> m ()
@@ -262,7 +262,7 @@ transformDomainSearchRequestForDriverToBeam SearchRequestForDriver {..} =
       BeamSRFD.requestId = getId requestId,
       BeamSRFD.searchTryId = getId searchTryId,
       BeamSRFD.startTime = startTime,
-      BeamSRFD.searchRequestValidTill = T.utcToLocalTime (T.TimeZone (5 * 60 + 30) False "IST") searchRequestValidTill,
+      BeamSRFD.searchRequestValidTill = T.utcToLocalTime T.utc searchRequestValidTill,
       BeamSRFD.driverId = getId driverId,
       BeamSRFD.actualDistanceToPickup = actualDistanceToPickup,
       BeamSRFD.straightLineDistanceToPickup = straightLineDistanceToPickup,
@@ -272,7 +272,7 @@ transformDomainSearchRequestForDriverToBeam SearchRequestForDriver {..} =
       BeamSRFD.batchNumber = batchNumber,
       BeamSRFD.lat = lat,
       BeamSRFD.lon = lon,
-      BeamSRFD.createdAt = T.utcToLocalTime (T.TimeZone (5 * 60 + 30) False "IST") createdAt,
+      BeamSRFD.createdAt = T.utcToLocalTime T.utc createdAt,
       BeamSRFD.response = response,
       BeamSRFD.driverMinExtraFee = driverMinExtraFee,
       BeamSRFD.driverMaxExtraFee = driverMaxExtraFee,

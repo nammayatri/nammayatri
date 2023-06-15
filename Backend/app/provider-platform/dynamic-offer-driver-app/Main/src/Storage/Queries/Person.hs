@@ -1092,7 +1092,7 @@ findAllDriverIdExceptProvided (Id merchantId) driverIdsToBeExcluded = do
             dbConf'
             updatedMeshConfig
             [ Se.And
-                ( [Se.Is BeamDI.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> person]
+                ( [Se.Is BeamDI.driverId $ Se.Not $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> person]
                     <> [Se.Is BeamDI.verified $ Se.Eq True]
                     <> [Se.Is BeamDI.enabled $ Se.Eq True]
                     <> [Se.Is BeamDI.driverId $ Se.Not $ Se.In $ getId <$> driverIdsToBeExcluded]

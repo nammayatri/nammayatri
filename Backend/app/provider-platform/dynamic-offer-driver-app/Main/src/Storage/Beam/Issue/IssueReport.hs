@@ -22,6 +22,7 @@ import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
+import qualified Data.Vector as V
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
@@ -63,10 +64,10 @@ instance IsString Domain.IssueStatus where
   fromString = show
 
 instance FromField [Text] where
-  fromField = fromFieldEnum
+  fromField f mbValue = V.toList <$> fromField f mbValue
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be [Text] where
-  sqlValueSyntax = autoSqlValueSyntax
+instance HasSqlValueSyntax be (V.Vector Text) => HasSqlValueSyntax be [Text] where
+  sqlValueSyntax x = sqlValueSyntax (V.fromList x)
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Text]
 
@@ -83,8 +84,8 @@ data IssueReportT f = IssueReportT
     optionId :: B.C f (Maybe Text),
     deleted :: B.C f Bool,
     mediaFiles :: B.C f [Text],
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    createdAt :: B.C f Time.LocalTime,
+    updatedAt :: B.C f Time.LocalTime
   }
   deriving (Generic, B.Beamable)
 
@@ -124,23 +125,6 @@ issueReportTMod =
       mediaFiles = B.fieldNamed "media_files",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
-    }
-
-defaultIssueReport :: IssueReport
-defaultIssueReport =
-  IssueReportT
-    { id = "",
-      driverId = "",
-      rideId = Nothing,
-      description = "",
-      assignee = Nothing,
-      status = "",
-      categoryId = "",
-      optionId = Nothing,
-      deleted = False,
-      mediaFiles = [],
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
     }
 
 instance Serialize IssueReport where
