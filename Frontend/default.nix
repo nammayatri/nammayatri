@@ -62,8 +62,8 @@
 
       packages = {
         inherit (localPackages) ui-customer ui-driver ui-common;
-        android-customer-bundle = self'.packages.ui-customer-android-prod-production-js;
-        android-driver-bundle = self'.packages.ui-driver-android-prod-production-js;
+        android-customer-bundle = self'.packages.ui-customer-android-bundle-js;
+        android-driver-bundle = self'.packages.ui-driver-android-bundle-js;
       };
     };
 }
