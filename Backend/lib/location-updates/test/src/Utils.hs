@@ -48,7 +48,9 @@ data AppEnv = AppEnv
     coreMetrics :: Metrics.CoreMetricsContainer,
     httpClientOptions :: HttpClientOptions,
     snapToRoadSnippetThreshold :: HighPrecMeters,
-    version :: Metrics.DeploymentVersion
+    version :: Metrics.DeploymentVersion,
+    enableRedisLatencyLogging :: Bool,
+    enablePrometheusMetricLogging :: Bool
   }
   deriving (Generic)
 

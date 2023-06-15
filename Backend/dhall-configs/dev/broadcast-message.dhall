@@ -74,4 +74,6 @@ in  { hedisCfg
         //  { logFilePath = "/tmp/kafka-consumers-broadcast-messages.log"
             , logRawSql = True
             }
+    , enableRedisLatencyLogging = True
+    , enablePrometheusMetricLogging = True
     }

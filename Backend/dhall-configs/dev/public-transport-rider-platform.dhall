@@ -75,4 +75,6 @@ in  { esqDBCfg
     , longDurationRetryCfg = common.longDurationRetryCfg
     , registryUrl = common.registryUrl
     , kafkaProducerCfg
+    , enableRedisLatencyLogging = True
+    , enablePrometheusMetricLogging = True
     }

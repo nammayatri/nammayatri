@@ -95,7 +95,9 @@ data AppCfg = AppCfg
     broadcastMessageTopic :: Text,
     snapToRoadSnippetThreshold :: HighPrecMeters,
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
-    maxShards :: Int
+    maxShards :: Int,
+    enableRedisLatencyLogging :: Bool,
+    enablePrometheusMetricLogging :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -153,7 +155,9 @@ data AppEnv = AppEnv
     snapToRoadSnippetThreshold :: HighPrecMeters,
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
     maxShards :: Int,
-    version :: Metrics.DeploymentVersion
+    version :: Metrics.DeploymentVersion,
+    enableRedisLatencyLogging :: Bool,
+    enablePrometheusMetricLogging :: Bool
   }
   deriving (Generic)
 

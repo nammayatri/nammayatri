@@ -18,4 +18,6 @@ in  { port = +8027
     , httpClientOptions = common.httpClientOptions
     , shortDurationRetryCfg = common.shortDurationRetryCfg
     , longDurationRetryCfg = common.longDurationRetryCfg
+    , enableRedisLatencyLogging = True
+    , enablePrometheusMetricLogging = True
     }

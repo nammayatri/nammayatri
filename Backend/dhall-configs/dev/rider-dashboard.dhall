@@ -79,4 +79,6 @@ in  { esqDBCfg
     , encTools
     , exotelToken = ""
     , dataServers = [ appBackend ]
+    , enableRedisLatencyLogging = True
+    , enablePrometheusMetricLogging = True
     }

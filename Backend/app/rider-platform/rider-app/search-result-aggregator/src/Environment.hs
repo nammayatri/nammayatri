@@ -35,7 +35,9 @@ data AppCfg = AppCfg
     hedisNonCriticalClusterCfg :: HedisCfg,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
-    hedisClusterCfg :: HedisCfg
+    hedisClusterCfg :: HedisCfg,
+    enableRedisLatencyLogging :: Bool,
+    enablePrometheusMetricLogging :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -53,7 +55,9 @@ data AppEnv = AppEnv
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     hedisClusterEnv :: HedisEnv,
-    version :: DeploymentVersion
+    version :: DeploymentVersion,
+    enableRedisLatencyLogging :: Bool,
+    enablePrometheusMetricLogging :: Bool
   }
   deriving (Generic)
 

@@ -56,7 +56,9 @@ data AppCfg = AppCfg
     authServiceUrl :: BaseUrl,
     disableSignatureAuth :: Bool,
     hostName :: Text,
-    kafkaProducerCfg :: KafkaProducerCfg
+    kafkaProducerCfg :: KafkaProducerCfg,
+    enableRedisLatencyLogging :: Bool,
+    enablePrometheusMetricLogging :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -89,7 +91,9 @@ data AppEnv = AppEnv
     coreMetrics :: CoreMetricsContainer,
     kafkaProducerTools :: KafkaProducerTools,
     kafkaEnvs :: BAPKafkaEnvs,
-    version :: DeploymentVersion
+    version :: DeploymentVersion,
+    enableRedisLatencyLogging :: Bool,
+    enablePrometheusMetricLogging :: Bool
   }
   deriving (Generic)
 

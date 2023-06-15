@@ -105,7 +105,9 @@ data AppCfg = AppCfg
     cacheTranslationConfig :: CacheTranslationConfig,
     maxEmergencyNumberCount :: Int,
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
-    registryMap :: M.Map Text BaseUrl
+    registryMap :: M.Map Text BaseUrl,
+    enableRedisLatencyLogging :: Bool,
+    enablePrometheusMetricLogging :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -158,7 +160,9 @@ data AppEnv = AppEnv
     maxEmergencyNumberCount :: Int,
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
     registryMap :: M.Map Text BaseUrl,
-    version :: DeploymentVersion
+    version :: DeploymentVersion,
+    enableRedisLatencyLogging :: Bool,
+    enablePrometheusMetricLogging :: Bool
   }
   deriving (Generic)
 
