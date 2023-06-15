@@ -51,6 +51,8 @@ in  { esqDBCfg
     , autoMigrate = True
     , hedisCfg = rcfg
     , hedisClusterCfg = rccfg
+    , hedisNonCriticalCfg = rcfg
+    , hedisNonCriticalClusterCfg = rccfg
     , hedisMigrationStage = True
     , cutOffHedisCluster = False
     , port = +8023

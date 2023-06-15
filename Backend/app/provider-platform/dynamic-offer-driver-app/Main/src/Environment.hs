@@ -52,6 +52,8 @@ data AppCfg = AppCfg
     cutOffHedisCluster :: Bool,
     hedisCfg :: HedisCfg,
     hedisClusterCfg :: HedisCfg,
+    hedisNonCriticalCfg :: HedisCfg,
+    hedisNonCriticalClusterCfg :: HedisCfg,
     clickhouseCfg :: ClickhouseCfg,
     port :: Int,
     metricsPort :: Int,
@@ -115,6 +117,8 @@ data AppEnv = AppEnv
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     hedisEnv :: HedisEnv,
+    hedisNonCriticalEnv :: HedisEnv,
+    hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
     isShuttingDown :: TMVar (),
     loggerEnv :: LoggerEnv,
@@ -168,10 +172,15 @@ buildAppEnv cfg@AppCfg {..} = do
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   let modifierFunc = ("dynamic-offer-driver-app:" <>)
   hedisEnv <- connectHedis hedisCfg modifierFunc -- will be depreciated once data is migrated to cluster
+  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg modifierFunc
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
       else connectHedisCluster hedisClusterCfg modifierFunc
+  hedisNonCriticalClusterEnv <-
+    if cutOffHedisCluster
+      then pure hedisNonCriticalEnv
+      else connectHedisCluster hedisNonCriticalClusterCfg modifierFunc
   bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- Metrics.registerCoreMetricsContainer

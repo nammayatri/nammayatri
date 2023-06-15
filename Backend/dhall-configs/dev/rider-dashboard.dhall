@@ -56,6 +56,8 @@ in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = rcfg
     , hedisClusterCfg = rccfg
+    , hedisNonCriticalCfg = rcfg
+    , hedisNonCriticalClusterCfg = rccfg
     , hedisMigrationStage = True
     , cutOffHedisCluster = False
     , port = +8017

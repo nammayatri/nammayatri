@@ -31,6 +31,8 @@ data AppCfg = AppCfg
     graceTerminationPeriod :: Seconds,
     kafkaConsumerCfgs :: KafkaConsumerCfgs,
     hedisCfg :: HedisCfg,
+    hedisNonCriticalCfg :: HedisCfg,
+    hedisNonCriticalClusterCfg :: HedisCfg,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     hedisClusterCfg :: HedisCfg
@@ -46,6 +48,8 @@ data AppEnv = AppEnv
     coreMetrics :: CoreMetricsContainer,
     kafkaConsumerEnv :: KafkaConsumerEnv,
     hedisEnv :: HedisEnv,
+    hedisNonCriticalEnv :: HedisEnv,
+    hedisNonCriticalClusterEnv :: HedisEnv,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     hedisClusterEnv :: HedisEnv,
@@ -62,6 +66,12 @@ buildAppEnv AppCfg {..} = do
   isShuttingDown <- mkShutdown
   kafkaConsumerEnv <- buildKafkaConsumerEnv kafkaConsumerCfgs
   hedisEnv <- connectHedis hedisCfg riderAppPrefix
+  -- let riderAppNonCriticalPrefix = riderAppPrefix
+  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg riderAppPrefix
+  hedisNonCriticalClusterEnv <-
+    if cutOffHedisCluster
+      then pure hedisNonCriticalEnv
+      else connectHedisCluster hedisNonCriticalClusterCfg riderAppPrefix
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
