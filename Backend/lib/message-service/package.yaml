@@ -1,4 +1,4 @@
-name: dynamic-offer-driver-app
+name: message-service
 version: 0.1.0.0
 github: "nammayatri/nammayatri"
 license: AllRightsReserved
@@ -94,7 +94,6 @@ dependencies:
   - singletons
   - cassava
   - vector
-  - message-service
 
 ghc-options:
   - -fwrite-ide-info
@@ -114,7 +113,6 @@ library:
     - beckn-spec
     - location-updates
     - special-zone-a
-    - message-service
 
 executables:
   dynamic-offer-driver-app-exe:

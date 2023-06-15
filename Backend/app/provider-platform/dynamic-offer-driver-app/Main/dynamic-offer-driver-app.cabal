@@ -420,6 +420,7 @@ library
     , http-client
     , lens
     , location-updates
+    , message-service
     , mobility-core
     , openapi3
     , persistent
@@ -509,6 +510,7 @@ executable dynamic-offer-driver-app-exe
     , hspec
     , http-client
     , lens
+    , message-service
     , mobility-core
     , openapi3
     , persistent

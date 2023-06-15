@@ -1,0 +1,216 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           message-service
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
+homepage:       https://github.com/nammayatri/nammayatri#readme
+bug-reports:    https://github.com/nammayatri/nammayatri/issues
+author:         nammayatri
+maintainer:     nammayatri
+copyright:      2023 Juspay Technologies Private Limited
+license:        AllRightsReserved
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/nammayatri/nammayatri
+
+library
+  exposed-modules:
+      Lib.API.Dashboard.Message
+      Lib.API.UI.Message
+      Lib.Domain.Action.Dashboard.Message
+      Lib.Domain.Action.UI.Message
+      Lib.Domain.Types.Message.MediaFile
+      Lib.Domain.Types.Message.Message
+      Lib.Domain.Types.Message.MessageReport
+      Lib.Domain.Types.Message.MessageTranslation
+      Lib.Storage.Queries.Message.MediaFile
+      Lib.Storage.Queries.Message.Message
+      Lib.Storage.Queries.Message.MessageReport
+      Lib.Storage.Queries.Message.MessageTranslation
+      Lib.Storage.Tabular.Message.Instances
+      Lib.Storage.Tabular.Message.MediaFile
+      Lib.Storage.Tabular.Message.Message
+      Lib.Storage.Tabular.Message.MessageReport
+      Lib.Storage.Tabular.Message.MessageTranslation
+  other-modules:
+      Paths_message_service
+  hs-source-dirs:
+      src
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      StandaloneDeriving
+      PackageImports
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , beckn-services
+    , beckn-spec
+    , bytestring
+    , cassava
+    , containers
+    , cryptonite
+    , dashboard-helper-api
+    , either
+    , esqueleto
+    , euler-hs
+    , exceptions
+    , extra
+    , generic-lens
+    , hashmap
+    , hspec
+    , http-client
+    , lens
+    , location-updates
+    , mobility-core
+    , openapi3
+    , persistent
+    , prometheus-client
+    , record-dot-preprocessor
+    , record-hasfield
+    , resource-pool
+    , scheduler
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-multipart
+    , servant-openapi3
+    , servant-server
+    , shared-services
+    , singletons
+    , special-zone-a
+    , stm
+    , string-conversions
+    , text
+    , text-conversions
+    , time
+    , unordered-containers
+    , uuid
+    , vector
+    , wai
+    , warp
+  default-language: Haskell2010
+
+executable dynamic-offer-driver-app-exe
+  main-is: Main.hs
+  hs-source-dirs:
+      server
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      StandaloneDeriving
+      PackageImports
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , beckn-services
+    , beckn-spec
+    , bytestring
+    , cassava
+    , containers
+    , cryptonite
+    , dashboard-helper-api
+    , dynamic-offer-driver-app
+    , either
+    , esqueleto
+    , euler-hs
+    , exceptions
+    , extra
+    , generic-lens
+    , hashmap
+    , hspec
+    , http-client
+    , lens
+    , mobility-core
+    , openapi3
+    , persistent
+    , prometheus-client
+    , record-dot-preprocessor
+    , record-hasfield
+    , resource-pool
+    , scheduler
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-multipart
+    , servant-openapi3
+    , servant-server
+    , shared-services
+    , singletons
+    , stm
+    , string-conversions
+    , text
+    , text-conversions
+    , time
+    , unordered-containers
+    , uuid
+    , vector
+    , wai
+    , warp
+  default-language: Haskell2010
