@@ -104,8 +104,11 @@ in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = hcfg
     , hedisClusterCfg = hccfg
+    , hedisNonCriticalCfg = hcfg
+    , hedisNonCriticalClusterCfg = hccfg
     , hedisMigrationStage = True
     , cutOffHedisCluster = False
+    , cutOffNonCriticalHedisCluster = False
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig
     , webengageCfg = WebengageConfig

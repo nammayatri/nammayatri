@@ -35,6 +35,8 @@ data AppCfg = AppCfg
     esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
     hedisClusterCfg :: HedisCfg,
+    hedisNonCriticalCfg :: HedisCfg,
+    hedisNonCriticalClusterCfg :: HedisCfg,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     port :: Int,
@@ -59,6 +61,8 @@ data AppEnv = AppEnv
   { esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
     hedisEnv :: HedisEnv,
+    hedisNonCriticalEnv :: HedisEnv,
+    hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
@@ -92,11 +96,17 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   coreMetrics <- registerCoreMetricsContainer
   let modifierFunc = ("dashboard:" <>)
+  let nonCriticalModifierFunc = ("dashboard:non-critical:" <>)
   hedisEnv <- connectHedis hedisCfg modifierFunc
+  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg nonCriticalModifierFunc
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
       else connectHedisCluster hedisClusterCfg modifierFunc
+  hedisNonCriticalClusterEnv <-
+    if cutOffHedisCluster
+      then pure hedisNonCriticalEnv
+      else connectHedisCluster hedisNonCriticalClusterCfg modifierFunc
   isShuttingDown <- mkShutdown
   return $ AppEnv {..}
 

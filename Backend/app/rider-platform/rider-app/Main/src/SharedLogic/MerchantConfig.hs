@@ -61,37 +61,37 @@ mkRideWindowCountKey :: Text -> Text -> Text
 mkRideWindowCountKey ind idtxt = "Customer:RidesCount:" <> idtxt <> ":" <> ind
 
 updateSearchFraudCounters :: (HasCacheConfig r, HedisFlow m r, MonadFlow m) => Id Person.Person -> [DMC.MerchantConfig] -> m ()
-updateSearchFraudCounters riderId merchantConfigs = Redis.withCrossAppRedis $ do
+updateSearchFraudCounters riderId merchantConfigs = Redis.withNonCriticalCrossAppRedis $ do
   mapM_ (\mc -> incrementCount mc.id.getId mc.fraudSearchCountWindow) merchantConfigs
   where
     incrementCount ind = SWC.incrementWindowCount (mkSearchCounterKey ind riderId.getId)
 
 updateCancelledByDriverFraudCounters :: (HasCacheConfig r, HedisFlow m r, MonadFlow m) => Id Person.Person -> [DMC.MerchantConfig] -> m ()
-updateCancelledByDriverFraudCounters riderId merchantConfigs = Redis.withCrossAppRedis $ do
+updateCancelledByDriverFraudCounters riderId merchantConfigs = Redis.withNonCriticalCrossAppRedis $ do
   mapM_ (\mc -> incrementCount mc.id.getId mc.fraudBookingCancelledByDriverCountWindow) merchantConfigs
   where
     incrementCount ind = SWC.incrementWindowCount (mkCancellationByDriverKey ind riderId.getId)
 
 updateCustomerFraudCounters :: (HasCacheConfig r, HedisFlow m r, MonadFlow m) => Id Person.Person -> [DMC.MerchantConfig] -> m ()
-updateCustomerFraudCounters riderId merchantConfigs = Redis.withCrossAppRedis $ do
+updateCustomerFraudCounters riderId merchantConfigs = Redis.withNonCriticalCrossAppRedis $ do
   mapM_ (\mc -> incrementCount mc.id.getId mc.fraudBookingCancellationCountWindow) merchantConfigs
   where
     incrementCount ind = SWC.incrementWindowCount (mkCancellationKey ind riderId.getId)
 
 updateTotalRidesCounters :: (HedisFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> m ()
-updateTotalRidesCounters riderId = Redis.withCrossAppRedis $ do
+updateTotalRidesCounters riderId = Redis.withNonCriticalCrossAppRedis $ do
   _ <- getTotalRidesCount riderId
   let key = mkTotalRidesKey riderId.getId
   void $ Redis.incr key
 
 updateTotalRidesInWindowCounters :: (HasCacheConfig r, HedisFlow m r, MonadFlow m) => Id Person.Person -> [DMC.MerchantConfig] -> m ()
-updateTotalRidesInWindowCounters riderId merchantConfigs = Redis.withCrossAppRedis $ do
+updateTotalRidesInWindowCounters riderId merchantConfigs = Redis.withNonCriticalCrossAppRedis $ do
   mapM_ (\mc -> incrementCount mc.id.getId mc.fraudRideCountWindow) merchantConfigs
   where
     incrementCount ind = SWC.incrementWindowCount (mkRideWindowCountKey ind riderId.getId)
 
 getTotalRidesCount :: (HedisFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> m Int
-getTotalRidesCount riderId = Redis.withCrossAppRedis $ do
+getTotalRidesCount riderId = Redis.withNonCriticalCrossAppRedis $ do
   let key = mkTotalRidesKey riderId.getId
   mbTotalCount <- Redis.safeGet key
   case mbTotalCount of
@@ -109,7 +109,7 @@ getRidesCountInWindow ::
   UTCTime ->
   m Int
 getRidesCountInWindow riderId start window currTime =
-  Redis.withCrossAppRedis $ do
+  Redis.withNonCriticalCrossAppRedis $ do
     let startTime = addUTCTime (fromIntegral (- start)) currTime
         endTime = addUTCTime (fromIntegral window) startTime
     runInReplica $ QB.findCountByRideIdStatusAndTime riderId BT.COMPLETED startTime endTime
@@ -118,7 +118,7 @@ anyFraudDetected :: (HedisFlow m r, HasCacheConfig r, MonadFlow m, EsqDBFlow m r
 anyFraudDetected riderId merchantId = checkFraudDetected riderId merchantId [MoreCancelling, MoreCancelledByDriver, MoreSearching, TotalRides, TotalRidesInWindow]
 
 checkFraudDetected :: (HedisFlow m r, HasCacheConfig r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> Id DM.Merchant -> [Factors] -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
-checkFraudDetected riderId merchantId factors merchantConfigs = Redis.withCrossAppRedis $ do
+checkFraudDetected riderId merchantId factors merchantConfigs = Redis.withNonCriticalCrossAppRedis $ do
   useFraudDetection <- maybe False (.useFraudDetection) <$> CMSUC.findByMerchantId merchantId
   if useFraudDetection
     then findM (\mc -> and <$> mapM (getFactorResult mc) factors) merchantConfigs

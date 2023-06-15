@@ -33,6 +33,8 @@ data AppCfg = AppCfg
     hedisCfg :: HedisCfg,
     hedisClusterCfg :: HedisCfg,
     hedisMigrationStage :: Bool,
+    hedisNonCriticalCfg :: HedisCfg,
+    hedisNonCriticalClusterCfg :: HedisCfg,
     cutOffHedisCluster :: Bool,
     statusWaitTimeSec :: Seconds,
     callbackWaitTimeMilliSec :: Milliseconds,
@@ -51,6 +53,8 @@ data AppEnv = AppEnv
     coreMetrics :: CoreMetricsContainer,
     authEntity :: AuthenticatingEntity',
     hedisEnv :: HedisEnv,
+    hedisNonCriticalEnv :: HedisEnv,
+    hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
@@ -62,6 +66,11 @@ data AppEnv = AppEnv
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv config@AppCfg {..} = do
   hedisEnv <- connectHedis hedisCfg ("mock_public_transport_provider_platform" <>)
+  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg ("mock_public_transport_provider_platform" <>)
+  hedisNonCriticalClusterEnv <-
+    if cutOffHedisCluster
+      then pure hedisNonCriticalEnv
+      else connectHedisCluster hedisNonCriticalClusterCfg ("mock_public_transport_provider_platform" <>)
   coreMetrics <- registerCoreMetricsContainer
   hedisClusterEnv <-
     if cutOffHedisCluster

@@ -35,6 +35,8 @@ data SchedulerConfig = SchedulerConfig
     esqDBCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
     hedisClusterCfg :: HedisCfg,
+    hedisNonCriticalCfg :: HedisCfg,
+    hedisNonCriticalClusterCfg :: HedisCfg,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     hedisPrefix :: Text,
@@ -50,6 +52,8 @@ data SchedulerConfig = SchedulerConfig
 data SchedulerEnv = SchedulerEnv
   { esqDBEnv :: EsqDBEnv,
     hedisEnv :: HedisEnv,
+    hedisNonCriticalEnv :: HedisEnv,
+    hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
@@ -71,6 +75,8 @@ data SchedulerEnv = SchedulerEnv
 releaseSchedulerEnv :: SchedulerEnv -> IO ()
 releaseSchedulerEnv SchedulerEnv {..} = do
   releaseLoggerEnv loggerEnv
+  disconnectHedis hedisNonCriticalEnv
+  disconnectHedis hedisNonCriticalClusterEnv
   disconnectHedis hedisEnv
   disconnectHedis hedisClusterEnv
 
