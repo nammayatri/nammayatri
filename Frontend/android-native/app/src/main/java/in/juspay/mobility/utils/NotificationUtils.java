@@ -292,6 +292,7 @@ public class NotificationUtils extends AppCompatActivity {
                     sheetData.putInt("driverMaxExtraFee", entity_payload.has("driverMaxExtraFee")?entity_payload.getInt("driverMaxExtraFee"):20);
                     sheetData.putInt("rideRequestPopupDelayDuration",entity_payload.has("rideRequestPopupDelayDuration")?entity_payload.getInt("rideRequestPopupDelayDuration"):0);
                     sheetData.putInt("customerExtraFee",(entity_payload.has("customerExtraFee") && !entity_payload.isNull("customerExtraFee") ? entity_payload.getInt("customerExtraFee") : 0));
+                    sheetData.putInt("keepHiddenForSeconds", (entity_payload.has("keepHiddenForSeconds") && !entity_payload.isNull("keepHiddenForSeconds") ? entity_payload.getInt("keepHiddenForSeconds") : 0));
                     expiryTime = entity_payload.getString("searchRequestValidTill");
                     searchRequestId = entity_payload.getString("searchRequestId");
                     System.out.println(String.valueOf(entity_payload));
@@ -308,9 +309,9 @@ public class NotificationUtils extends AppCompatActivity {
                 final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
                 f.setTimeZone(TimeZone.getTimeZone("IST"));
                 String currTime = f.format(new Date());
-                boolean rideReqExpired = (calculateTimeDifference(expiryTime, currTime))<=1;
-                System.out.println("TimeDifference : " + (calculateTimeDifference(expiryTime, currTime)));
-                if (calculateTimeDifference(expiryTime, currTime)>0){
+                boolean rideReqExpired = (rideRequestUtils.calculateExpireTimer(expiryTime, currTime))<=1;
+                Log.e(TAG, "TimeDifference : " + (rideRequestUtils.calculateExpireTimer(expiryTime, currTime)));
+                if (rideRequestUtils.calculateExpireTimer(expiryTime, currTime) > 2){
                     if(checkPermission(context)){
                         //Starting OverlaySheetService
                         if(binder == null) {
@@ -388,11 +389,12 @@ public class NotificationUtils extends AppCompatActivity {
                         }
                     }
                 }else {
-                    System.out.println("expired notification" + " <> " + currTime + " <> " + expiryTime + " <> " + String.valueOf(calculateTimeDifference(expiryTime, currTime)) + " <> " + searchRequestId + " <> " + sharedPref.getString("DRIVER_ID","null"));
+                    String expireTimer = String.valueOf(rideRequestUtils.calculateExpireTimer(expiryTime, currTime));
+                    System.out.println("expired notification" + " <> " + currTime + " <> " + expiryTime + " <> " + expireTimer + " <> " + searchRequestId + " <> " + sharedPref.getString("DRIVER_ID","null"));
                     Bundle overlayParams = new Bundle();
                     overlayParams.putString("current_time", currTime);
                     overlayParams.putString("expiry_time", expiryTime);
-                    overlayParams.putString("time_difference", String.valueOf(calculateTimeDifference(expiryTime, currTime)));
+                    overlayParams.putString("time_difference", expireTimer);
                     overlayParams.putString("search_request_id", searchRequestId);
                     overlayParams.putString("driver_id", sharedPref.getString("DRIVER_ID","null"));
                     mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
@@ -654,29 +656,7 @@ public class NotificationUtils extends AppCompatActivity {
         } catch (JSONException e) {
             e.printStackTrace();
         }
-        return "ERROR DECODING";
-    }
-
-    public static int calculateTimeDifference(String expireTimeTemp, String currTimeTemp){
-        String[] arrOfA = expireTimeTemp.split("T");
-        String[] arrOfB = currTimeTemp.split("T");
-        if(!arrOfA[0].equals(arrOfB[0])){
-            return -1;
-        }
-        String[] timeTempExpire = arrOfA[1].split(":");
-        String[] timeTempCurrent = arrOfB[1].split(":");
-        timeTempExpire[2] = timeTempExpire[2].substring(0,2);
-        timeTempCurrent[2] = timeTempCurrent[2].substring(0,2);
-        int currTime = 0, expireTime = 0, calculate = 3600;
-        for(int i = 0 ; i < timeTempCurrent.length;i++){
-            currTime+= (Integer.parseInt(timeTempCurrent[i])*calculate);
-            expireTime+= (Integer.parseInt(timeTempExpire[i])*calculate);
-            calculate = calculate/60;
-        }
-        if ((expireTime-currTime) >= 5) {
-            return expireTime-currTime - 5 ;
-        }
-        return 0;
+        return "";
     }
 
     public static void startMediaPlayer(Context context, int mediaFile, boolean increaseVolume){

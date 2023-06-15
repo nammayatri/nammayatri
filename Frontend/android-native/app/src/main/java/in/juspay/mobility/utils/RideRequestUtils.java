@@ -140,7 +140,7 @@ public class RideRequestUtils {
             expireTime+= (Integer.parseInt(timeTempExpire[i])*calculate);
             calculate = calculate/60;
         }
-        if ((expireTime-currTime) >= 2) return expireTime-currTime - 2 ;
+        if ((expireTime-currTime) > 0) return expireTime-currTime;
         return 0;
     }
 
