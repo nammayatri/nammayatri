@@ -167,7 +167,9 @@ rideHistoryListTransformer list = (map (\(RidesInfo ride) -> {
                     _ -> fromMaybe ride.estimatedBaseFare ride.computedFare),
     card_visibility : toPropValue "visible",
     shimmer_visibility : toPropValue "gone",
-    rideDistance : toPropValue $ (parseFloat (toNumber (fromMaybe 0 ride.chargeableDistance) / 1000.0) 2) <> " km " <> (getString RIDE),
+    rideDistance : toPropValue $ (parseFloat (toNumber (fromMaybe 0 ride.chargeableDistance) / 1000.0) 2) <> " km Ride" <> case ride.riderName of 
+                            Just name -> " with " <> name
+                            Nothing -> "",
     ride_distance_visibility : toPropValue (case (ride.status) of
                             "CANCELLED" -> "gone"
                             _ -> "visible"),

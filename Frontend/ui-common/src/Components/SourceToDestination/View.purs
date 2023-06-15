@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -19,11 +19,11 @@ import Prelude (Unit, ($), (<>))
 import Effect (Effect)
 import Components.SourceToDestination.Controller (Action,Config)
 import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Margin(..), Padding(..), background, color, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, maxLines, orientation, padding, text, textSize, textView, visibility, width, cornerRadius, stroke, margin, imageWithFallback)
-import Styles.Colors as Color
+import Common.Styles.Colors as Color
 import Font.Size as FontSize
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-view push config = 
+view push config =
   frameLayout
   [ height WRAP_CONTENT
   , width config.width
@@ -38,13 +38,13 @@ view push config =
     , distanceLayout config
     , linearLayout
       [ height WRAP_CONTENT
-      , orientation VERTICAL 
+      , orientation VERTICAL
       , width MATCH_PARENT
-      ][ sourceLayout config 
-      , destinationLayout config 
+      ][ sourceLayout config
+      , destinationLayout config
       ]
     ]
-    
+
 
 sourceLayout :: forall w. Config -> PrestoDOM (Effect Unit) w
 sourceLayout config =
@@ -57,7 +57,7 @@ sourceLayout config =
       [ width config.sourceImageConfig.width
       , height config.sourceImageConfig.height
       , imageWithFallback config.sourceImageConfig.imageUrl
-      , margin config.sourceImageConfig.margin 
+      , margin config.sourceImageConfig.margin
       ]
     , linearLayout
       [ height WRAP_CONTENT
@@ -81,13 +81,13 @@ sourceLayout config =
           , fontStyle config.rideStartedAtConfig.fontStyle
           , color config.rideStartedAtConfig.color
           , visibility config.rideStartedAtConfig.visibility
-          , margin config.rideStartedAtConfig.margin 
+          , margin config.rideStartedAtConfig.margin
           , padding config.rideStartedAtConfig.padding
           , maxLines config.rideStartedAtConfig.maxLines
           , ellipsize config.rideStartedAtConfig.ellipsize
           ]
         ]
-    
+
     ]
 
 destinationLayout :: forall w. Config -> PrestoDOM (Effect Unit) w
@@ -100,7 +100,7 @@ destinationLayout config =
   ][  linearLayout
       [ height MATCH_PARENT
       , width WRAP_CONTENT
-      , margin config.destinationImageConfig.margin 
+      , margin config.destinationImageConfig.margin
       , background config.destinationBackground
       ][  imageView
           [ width config.destinationImageConfig.width
@@ -131,7 +131,7 @@ destinationLayout config =
           , fontStyle config.rideEndedAtConfig.fontStyle
           , color config.rideEndedAtConfig.color
           , visibility config.rideEndedAtConfig.visibility
-          , margin config.rideEndedAtConfig.margin 
+          , margin config.rideEndedAtConfig.margin
           , padding config.rideEndedAtConfig.padding
           , maxLines config.rideEndedAtConfig.maxLines
           , ellipsize config.rideEndedAtConfig.ellipsize
@@ -140,7 +140,7 @@ destinationLayout config =
     ]
 
 distanceLayout :: forall w. Config -> PrestoDOM (Effect Unit) w
-distanceLayout config = 
+distanceLayout config =
   linearLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT

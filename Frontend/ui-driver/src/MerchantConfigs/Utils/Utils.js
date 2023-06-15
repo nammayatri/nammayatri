@@ -33,7 +33,7 @@ export const getStringFromConfig = function (constructorKey){
       return getStringFromCommon(key);
 }
 
-export const getValueFromMerchant = function (constructorKey){
+export const getValueFromConfig = function (constructorKey){
     let key = constructorKey.trim(); 
     switch(window.merchantID) {
         case "JATRISAATHIDRIVER" :

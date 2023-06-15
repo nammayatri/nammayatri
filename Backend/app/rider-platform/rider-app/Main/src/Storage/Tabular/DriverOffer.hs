@@ -26,6 +26,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import qualified Storage.Tabular.Estimate as TEstimate
+import Storage.Tabular.Merchant (MerchantTId)
 
 mkPersist
   defaultSqlSettings
@@ -33,6 +34,7 @@ mkPersist
     DriverOfferT sql=driver_offer
       id Text
       estimateId TEstimate.EstimateTId
+      merchantId MerchantTId Maybe
       driverName Text
       durationToPickup Int
       distanceToPickup HighPrecMeters
@@ -54,6 +56,7 @@ instance FromTType DriverOfferT Domain.DriverOffer where
       Domain.DriverOffer
         { id = Id id,
           bppQuoteId = Id bppQuoteId,
+          merchantId = fromKey <$> merchantId,
           estimateId = fromKey estimateId,
           ..
         }
@@ -63,6 +66,7 @@ instance ToTType DriverOfferT Domain.DriverOffer where
     DriverOfferT
       { id = getId id,
         bppQuoteId = bppQuoteId.getId,
+        merchantId = toKey <$> merchantId,
         estimateId = toKey estimateId,
         ..
       }

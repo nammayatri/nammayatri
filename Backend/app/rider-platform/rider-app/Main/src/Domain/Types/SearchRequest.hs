@@ -16,6 +16,7 @@
 module Domain.Types.SearchRequest where
 
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Kernel.External.Maps as Maps
@@ -43,8 +44,10 @@ data SearchRequest = SearchRequest
     clientVersion :: Maybe Version,
     language :: Maybe Maps.Language,
     customerExtraFee :: Maybe Money,
-    autoAssignEnabled :: Bool,
-    autoAssignEnabledV2 :: Bool,
+    autoAssignEnabled :: Maybe Bool,
+    autoAssignEnabledV2 :: Maybe Bool,
+    availablePaymentMethods :: [Id DMPM.MerchantPaymentMethod],
+    selectedPaymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod),
     createdAt :: UTCTime
   }
   deriving (Generic, Show)

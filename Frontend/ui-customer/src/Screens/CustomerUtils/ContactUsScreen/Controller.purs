@@ -23,12 +23,13 @@ import Helpers.Utils (validateEmail)
 import JBridge (hideKeyboardOnNavigation)
 import Log (printLog)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (pure, unit, class Show, bind, (>), (&&), ($), discard)
+import Prelude (pure, unit, class Show, bind, (>), (&&), ($), discard, (==))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
-import Screens.Types (ContactUsScreenState)
+import Screens.Types (ContactUsScreenState, EmailErrorType(..))
 import Storage (KeyStore(..), setValueToLocalStore)
+import Data.Maybe(Maybe(..))
 
 instance showAction :: Show Action where
     show _ = ""
@@ -82,7 +83,7 @@ eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do
 
 eval (SubjectEditTextActionController (PrimaryEditText.TextChanged id a)) state = continue state{data {subject = trim(a)}, props{btnActive = if ((length (trim(a))) > 0 && (length state.data.email) > 0 && (length state.data.description > 0 && (validateEmail state.data.email))) then true else false}}
 
-eval (EmailEditTextActionController (PrimaryEditText.TextChanged id a)) state = continue state{data {email = trim(a)},props{btnActive = if ((length state.data.subject > 0 )&& (length (trim(a)) > 0 )&& (length state.data.description > 0) && (validateEmail a)) then true else false}}
+eval (EmailEditTextActionController (PrimaryEditText.TextChanged id a)) state = continue state{data {email = trim(a), errorMessage = if (length a == 0) then Nothing else if ( validateEmail a) then Nothing else Just INVALID_EMAIL },props{btnActive = if ((length state.data.subject > 0 )&& (length (trim(a)) > 0 )&& (length state.data.description > 0) && (validateEmail a)) then true else false}}
 
 eval (DescriptionEditTextActionController (PrimaryEditText.TextChanged id a)) state = continue state{data {description = a},props{btnActive = if ((length state.data.subject > 0 )&& (length state.data.email > 0) && (length a > 0) && (validateEmail state.data.email)) then true else false}}
     

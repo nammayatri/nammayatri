@@ -463,5 +463,10 @@ const mlStrings = {
   FARE_RELATED : "യാത്രാക്കൂലിയുമായി ബന്ധപ്പെട്ടത്",
   RIDE_RELATED : "റൈഡ് ബന്ധപ്പെട്ട",
   LOST_AND_FOUND : "നഷ്ടപ്പെട്ടതും കണ്ടെത്തി",
-  REPORT_LOST_ITEM : "നഷ്ടപ്പെട്ട ഇനം റിപ്പോർട്ട് ചെയ്യുക"
+  REPORT_LOST_ITEM : "നഷ്ടപ്പെട്ട ഇനം റിപ്പോർട്ട് ചെയ്യുക",
+  COMPLAINTS_GRIEVANCES : "പരാതികളും ആവലാതികളും",
+  COMPLAINTS_DESCRIPTION : "എന്തെങ്കിലും പരാതികൾ ഉണ്ടെങ്കിൽ, <u>nammayatri.support@juspay.in</u> എന്ന വിലാസത്തിൽ ഞങ്ങളെ ബന്ധപ്പെടുക;",
+  COMPLAINTS_DESCRIPTION_ADDITIONAL : "പരാതികൾ പരിഹരിക്കുന്നതിന്, ഞങ്ങളുടെ <u>സ്വകാര്യതാ നയം</u> പരിശോധിക്കുക",
+  REGISTERED_ADDRESS : "രേഖപ്പെടുത്തിയ വിലാസം",
+  REGISTERED_ADDRESS_DESCRIPTION : "Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala, Bengaluru, Karnataka- 560095, India"
 }

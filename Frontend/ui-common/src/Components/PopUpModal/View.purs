@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 module Components.PopUpModal.View where
@@ -21,7 +21,7 @@ import Components.PopUpModal.Controller (Action(..), Config)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Font.Style as FontStyle
-import Styles.Colors as Color
+import Common.Styles.Colors as Color
 import Font.Size as FontSize
 import Engineering.Helpers.Commons (screenHeight, screenWidth)
 import PrestoDOM.Properties (cornerRadii)
@@ -66,8 +66,19 @@ view push state =
         )
         if (state.backgroundClickable && state.dismissPopup) then (const DismissPopup) else if state.backgroundClickable then (const OnButton1Click) else (const NoAction)
     , gravity state.gravity
-    ]
-    [ linearLayout
+    ][ linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , margin state.dismissIconMargin
+        , gravity RIGHT
+        , visibility state.dismissIconVisibility
+        ][ imageView
+            [ height $ V 21
+            , width $ V 21
+            , imageWithFallback "ny_ic_dismiss,https://assets.juspay.in/nammayatri/images/user/ny_ic_dismiss.png" 
+            ]
+        ]
+     , linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , cornerRadii state.cornerRadius

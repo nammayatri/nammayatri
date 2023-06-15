@@ -27,6 +27,7 @@ import Servant hiding (Unauthorized, throwError)
 type API =
   "merchant"
     :> ( Common.MerchantUpdateAPI
+           :<|> Common.ServiceUsageConfigAPI
            :<|> Common.MapsServiceConfigUpdateAPI
            :<|> Common.MapsServiceUsageConfigUpdateAPI
            :<|> Common.SmsServiceConfigUpdateAPI
@@ -36,6 +37,7 @@ type API =
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   merchantUpdate merchantId
+    :<|> serviceUsageConfig merchantId
     :<|> mapsServiceConfigUpdate merchantId
     :<|> mapsServiceUsageConfigUpdate merchantId
     :<|> smsServiceConfigUpdate merchantId
@@ -46,6 +48,11 @@ merchantUpdate ::
   Common.MerchantUpdateReq ->
   FlowHandler APISuccess
 merchantUpdate merchantShortId = withFlowHandlerAPI . DMerchant.merchantUpdate merchantShortId
+
+serviceUsageConfig ::
+  ShortId DM.Merchant ->
+  FlowHandler Common.ServiceUsageConfigRes
+serviceUsageConfig = withFlowHandlerAPI . DMerchant.serviceUsageConfig
 
 mapsServiceConfigUpdate ::
   ShortId DM.Merchant ->

@@ -18,7 +18,6 @@ _:
           beckn-gateway.command = lib.getExe config.haskellProjects.default.outputs.finalPackages.beckn-gateway;
           mock-registry.command = lib.getExe config.haskellProjects.default.outputs.finalPackages.mock-registry;
           # Local services
-          allocation-service-exe.command = getExe "allocation-service-exe";
           driver-offer-allocator-exe.command = getExe "driver-offer-allocator-exe";
           driver-tracking-healthcheck-exe.command = getExe "driver-tracking-healthcheck-exe";
           dynamic-offer-driver-app-exe.command = getExe "dynamic-offer-driver-app-exe";
@@ -41,17 +40,18 @@ _:
           scheduler-example-app-exe.command = getExe "scheduler-example-app-exe";
           scheduler-example-scheduler-exe.command = getExe "scheduler-example-scheduler-exe";
           search-result-aggregator-exe.command = getExe "search-result-aggregator-exe";
-          static-offer-driver-app-exe.command = getExe "static-offer-driver-app-exe";
-          transporter-scheduler-exe.command = getExe "transporter-scheduler-exe";
           special-zone-exe.command = self'.apps.special-zone-exe.program;
         };
     in
     {
       process-compose = {
-        port = 7812; # process-compose Swagger API is served here.
-        configs = {
-          run-mobility-stack-nix.processes = buildConfig exeGetters.nix;
-          run-mobility-stack-dev.processes = buildConfig exeGetters.cabal;
+        run-mobility-stack-nix = {
+          port = 7812; # process-compose Swagger API is served here.
+          settings.processes = buildConfig exeGetters.nix;
+        };
+        run-mobility-stack-dev = {
+          port = 7812; # process-compose Swagger API is served here.
+          settings.processes = buildConfig exeGetters.cabal;
         };
       };
     };

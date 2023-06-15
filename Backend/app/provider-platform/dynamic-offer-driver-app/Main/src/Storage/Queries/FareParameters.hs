@@ -100,6 +100,15 @@ findById (Id fareParametersId) = do
 --       govtChargesPerc = govtChargesPerc
 --     }
 
+-- TODO @Vijay Gupta, Change the following query.
+create :: FareParameters -> SqlDB ()
+create fareParams =
+  withFullEntity fareParams $ \(fareParams', fareParamsDetais) -> do
+    Esq.create' fareParams'
+    case fareParamsDetais of
+      ProgressiveDetailsT fppdt -> Esq.create' fppdt
+      SlabDetailsT fpsdt -> Esq.create' fpsdt
+
 transformBeamFareParametersToDomain :: L.MonadFlow m => BeamFP.FareParameters -> m (Maybe FareParameters)
 transformBeamFareParametersToDomain BeamFP.FareParametersT {..} = do
   fullFPPD <- BeamFPPD.findById' (Id id)

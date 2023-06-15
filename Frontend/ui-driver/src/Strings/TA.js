@@ -456,5 +456,11 @@ const tamilStrings = {
   LOST_AND_FOUND : "தொலைந்து போனது",
   REPORT_LOST_ITEM : "இழந்த பொருளைப் புகாரளிக்கவும",
   MAKE_YOURSELF_AVAILABLE_FOR : "பின்வருவனவற்றிற்கு உங்களைக் கிடைக்கச் செய்யுங்கள்",
-  CONFIRM_AND_CHANGE : "உறுதிப்படுத்தி மாற்றவும்"
+  CONFIRM_AND_CHANGE : "உறுதிப்படுத்தி மாற்றவும்",
+  CORPORATE_ADDRESS : "கார்ப்பரேட் முகவரி",
+  CORPORATE_ADDRESS_DESCRIPTION : "ஜுஸ்பே டெக்னாலஜிஸ் பிரைவேட் லிமிடெட் <br> கிரிஜா பில்டிங், எண் 817, கணபதி கோயில் சாலை, 8வது பிளாக், கோரமங்களா, பெங்களூரு, கர்நாடகா 560095, இந்தியா.",
+  CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL : "இணையதளம் : <u>https://nammayatri.in/</u>",
+  REGISTERED_ADDRESS : "பதிவு செய்யப்பட்ட முகவரி",
+  REGISTERED_ADDRESS_DESCRIPTION : "ஜஸ்பே டெக்னாலஜிஸ் பிரைவேட் லிமிடெட் <br> ஸ்டாலியன் பிசினஸ் சென்டர், எண். 444, 3வது & 4வது தளம், 18வது மெயின், 6வது பிளாக், கோரமங்களா பெங்களூரு, கர்நாடகா- 560095, இந்தியா.",
+  REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL : "இணையதளம் : <u>https://nammayatri.in/</u>"
 }

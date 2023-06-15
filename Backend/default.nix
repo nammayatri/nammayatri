@@ -56,5 +56,16 @@
           '';
         };
     };
+
+    devShells.backend = pkgs.mkShell {
+      name = "ny-backend";
+      # cf. https://haskell.flake.page/devshell#composing-devshells
+      inputsFrom = [
+        config.mission-control.devShell
+        config.pre-commit.devShell
+        config.haskellProjects.default.outputs.devShell
+        config.flake-root.devShell
+      ];
+    };
   };
 }

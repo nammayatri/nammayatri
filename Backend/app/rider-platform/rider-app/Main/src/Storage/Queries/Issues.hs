@@ -15,42 +15,55 @@
 module Storage.Queries.Issues where
 
 import Domain.Types.Issue
+import Domain.Types.Merchant
 import Domain.Types.Person (Person)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Tabular.Issue
+import Storage.Tabular.Person
 
 insertIssue :: Issue -> SqlDB ()
 insertIssue = do
   Esq.create
 
-findByCustomerId :: Transactionable m => Id Person -> Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [Issue]
-findByCustomerId customerId mbLimit mbOffset fromDate toDate = do
-  Esq.findAll $ do
-    issues <- from $ table @IssueT
-    where_ $
-      issues ^. IssueCustomerId ==. val (toKey customerId)
-        &&. issues ^. IssueCreatedAt >=. val fromDate
-        &&. issues ^. IssueCreatedAt <=. val toDate
-    orderBy [desc $ issues ^. IssueCreatedAt]
-    limit limitVal
-    offset offsetVal
-    pure issues
+findByCustomerId :: Transactionable m => Id Person -> Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [(Issue, Person)]
+findByCustomerId customerId mbLimit mbOffset fromDate toDate = Esq.findAll $ do
+  (issues :& person) <-
+    from $
+      table @IssueT
+        `innerJoin` table @PersonT
+        `Esq.on` ( \(issues :& person) ->
+                     issues ^. IssueCustomerId ==. person ^. PersonTId
+                 )
+  where_ $
+    issues ^. IssueCustomerId ==. val (toKey customerId)
+      &&. issues ^. IssueCreatedAt >=. val fromDate
+      &&. issues ^. IssueCreatedAt <=. val toDate
+  orderBy [desc $ issues ^. IssueCreatedAt]
+  limit limitVal
+  offset offsetVal
+  pure (issues, person)
   where
     limitVal = min (maybe 10 fromIntegral mbLimit) 10
     offsetVal = maybe 0 fromIntegral mbOffset
 
-findAllIssue :: Transactionable m => Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [Issue]
-findAllIssue mbLimit mbOffset fromDate toDate = do
-  Esq.findAll $ do
-    issues <- from $ table @IssueT
-    where_ $
-      issues ^. IssueCreatedAt >=. val fromDate
-        &&. issues ^. IssueCreatedAt <=. val toDate
-    limit limitVal
-    offset offsetVal
-    pure issues
+findAllIssue :: Transactionable m => Id Merchant -> Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [(Issue, Person)]
+findAllIssue merchantId mbLimit mbOffset fromDate toDate = Esq.findAll $ do
+  (issues :& person) <-
+    from $
+      table @IssueT
+        `innerJoin` table @PersonT
+        `Esq.on` ( \(issues :& person) ->
+                     issues ^. IssueCustomerId ==. person ^. PersonTId
+                 )
+  where_ $
+    person ^. PersonMerchantId ==. val (toKey merchantId)
+      &&. issues ^. IssueCreatedAt >=. val fromDate
+      &&. issues ^. IssueCreatedAt <=. val toDate
+  limit limitVal
+  offset offsetVal
+  pure (issues, person)
   where
     limitVal = min (maybe 10 fromIntegral mbLimit) 10
     offsetVal = maybe 0 fromIntegral mbOffset

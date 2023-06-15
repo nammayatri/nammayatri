@@ -39,6 +39,8 @@ data IssueReport
 
 data IssueCategory
 
+data FarePolicy
+
 -- | Hide secrets before storing request (or response) to DB.
 --
 -- By default considered that request type has no secrets.

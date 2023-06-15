@@ -43,6 +43,8 @@ mkPersist
       fraudBookingCancelledByDriverCountWindow SWC.SlidingWindowOptions
       fraudSearchCountThreshold Int
       fraudSearchCountWindow SWC.SlidingWindowOptions
+      fraudRideCountThreshold Int
+      fraudRideCountWindow SWC.SlidingWindowOptions
       enabled Bool
       Primary id
       deriving Generic

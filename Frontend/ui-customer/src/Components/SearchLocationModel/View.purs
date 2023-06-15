@@ -476,7 +476,7 @@ bottomBtnsView state push =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , padding (PaddingBottom if os == "IOS" then 24 else 0)
+    , padding (PaddingBottom if os == "IOS" then 16 else 0)
     , alignParentBottom "true,-1"
     , background Color.white900
     , visibility if state.isSearchLocation == LocateOnMap || (not state.isRideServiceable) then GONE else VISIBLE

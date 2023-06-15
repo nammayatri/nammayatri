@@ -69,7 +69,8 @@ data QuoteInfo = QuoteInfo
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
     quoteDetails :: DriverOfferQuoteDetails,
-    descriptions :: [Text]
+    descriptions :: [Text],
+    specialLocationTag :: Maybe Text
   }
 
 data DriverOfferQuoteDetails = DriverOfferQuoteDetails
@@ -105,12 +106,13 @@ onSelect OnSelectValidatedReq {..} = do
     QEstimate.updateStatus estimate.id DEstimate.GOT_DRIVER_QUOTE
   QPFS.clearCache searchRequest.riderId
 
-  if searchRequest.autoAssignEnabledV2
+  if searchRequest.autoAssignEnabledV2 == Just True
     then do
       let lowestFareQuote = selectLowestFareQuote quotes
       case lowestFareQuote of
         Just autoAssignQuote -> do
-          dConfirmRes <- SConfirm.confirm person.id autoAssignQuote.id
+          let dConfirmReq = SConfirm.DConfirmReq {personId = person.id, quoteId = autoAssignQuote.id, paymentMethodId = searchRequest.selectedPaymentMethodId}
+          dConfirmRes <- SConfirm.confirm dConfirmReq
           becknInitReq <- ACL.buildInitReq dConfirmRes
           handle (errHandler dConfirmRes.booking) $ void $ withShortRetry $ CallBPP.init dConfirmRes.providerUrl becknInitReq
         Nothing -> Notify.notifyOnDriverOfferIncoming estimate.id quotes person
@@ -148,7 +150,7 @@ buildSelectedQuote ::
 buildSelectedQuote estimate providerInfo now merchantId QuoteInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
-  driverOffer <- buildDriverOffer estimate.id quoteDetails
+  driverOffer <- buildDriverOffer estimate.id quoteDetails merchantId
   let quote =
         DQuote.Quote
           { id = uid,
@@ -169,12 +171,14 @@ buildDriverOffer ::
   MonadFlow m =>
   Id DEstimate.Estimate ->
   DriverOfferQuoteDetails ->
+  Id DMerchant.Merchant ->
   m DDriverOffer.DriverOffer
-buildDriverOffer estimateId DriverOfferQuoteDetails {..} = do
+buildDriverOffer estimateId DriverOfferQuoteDetails {..} merchantId = do
   uid <- generateGUID
   pure
     DDriverOffer.DriverOffer
       { id = uid,
+        merchantId = Just merchantId,
         bppQuoteId = bppDriverQuoteId,
         ..
       }

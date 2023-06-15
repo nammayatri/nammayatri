@@ -14,9 +14,11 @@
 
 module Beckn.ACL.Init where
 
+import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.API.Init as Init
 import qualified Beckn.Types.Core.Taxi.Init as Init
 import qualified Domain.Action.Beckn.Init as DInit
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Kernel.Prelude
 import qualified Kernel.Product.Validation.Context as Context
 import Kernel.Types.App
@@ -54,6 +56,7 @@ buildInitReq subscriber req = do
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
         maxEstimatedDistance = order.fulfillment.tags.max_estimated_distance,
+        paymentMethodInfo = mkPaymentMethodInfo order.payment,
         ..
       }
   where
@@ -62,3 +65,12 @@ buildInitReq subscriber req = do
       case itemCode.fareProductType of
         Init.ONE_WAY_SPECIAL_ZONE -> DInit.InitSpecialZoneReq
         _ -> DInit.InitNormalReq
+
+mkPaymentMethodInfo :: Init.Payment -> Maybe DMPM.PaymentMethodInfo
+mkPaymentMethodInfo Init.Payment {..} =
+  instrument <&> \instrument' -> do
+    DMPM.PaymentMethodInfo
+      { collectedBy = Common.castPaymentCollector collected_by,
+        paymentType = Common.castPaymentType _type,
+        paymentInstrument = Common.castPaymentInstrument instrument'
+      }

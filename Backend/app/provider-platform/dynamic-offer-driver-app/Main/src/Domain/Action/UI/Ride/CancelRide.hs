@@ -103,7 +103,7 @@ cancelRideHandler ServiceHandle {..} requestorId rideId req = withLogTag ("rideI
         DP.ADMIN -> do
           unless (authPerson.merchantId == driver.merchantId) $ throwError (RideDoesNotExist rideId.getId)
           logTagInfo "admin -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-          buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride
+          buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId)
         DP.DRIVER -> do
           unless (authPerson.id == driverId) $ throwError NotAnExecutor
           logTagInfo "driver -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
@@ -112,23 +112,24 @@ cancelRideHandler ServiceHandle {..} requestorId rideId req = withLogTag ("rideI
           disToPickup <- forM mbLocation $ \location -> do
             pickUpDistance booking.providerId (getCoordinates location) (getCoordinates booking.fromLocation)
           let currentDriverLocation = getCoordinates <$> mbLocation
-          buildRideCancelationReason currentDriverLocation disToPickup (Just driverId) DBCR.ByDriver ride
+          buildRideCancelationReason currentDriverLocation disToPickup (Just driverId) DBCR.ByDriver ride (Just driver.merchantId)
     DashboardRequestorId reqMerchantId -> do
       driver <- findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       unless (driver.merchantId == reqMerchantId) $ throwError (RideDoesNotExist rideId.getId)
       logTagInfo "dashboard -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-      buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride -- is it correct DBCR.ByMerchant?
+      buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) -- is it correct DBCR.ByMerchant?
   cancelRide rideId rideCancelationReason
   pure APISuccess.Success
   where
     isValidRide ride =
       ride.status == DRide.NEW
-    buildRideCancelationReason currentDriverLocation disToPickup mbDriverId source ride = do
+    buildRideCancelationReason currentDriverLocation disToPickup mbDriverId source ride merchantId = do
       let CancelRideReq {..} = req
       return $
         DBCR.BookingCancellationReason
           { bookingId = ride.bookingId,
             rideId = Just ride.id,
+            merchantId = merchantId,
             source = source,
             reasonCode = Just reasonCode,
             driverId = mbDriverId,

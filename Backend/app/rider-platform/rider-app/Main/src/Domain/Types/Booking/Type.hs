@@ -20,6 +20,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RentalSlab as DRentalSlab
@@ -60,6 +61,8 @@ data Booking = Booking
     transactionId :: Text,
     bppBookingId :: Maybe (Id BPPBooking),
     quoteId :: Maybe (Id DQuote.Quote),
+    paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod),
+    paymentUrl :: Maybe Text,
     status :: BookingStatus,
     providerId :: Text,
     providerUrl :: BaseUrl,
@@ -76,6 +79,7 @@ data Booking = Booking
     bookingDetails :: BookingDetails,
     tripTerms :: Maybe DTripTerms.TripTerms,
     merchantId :: Id DMerchant.Merchant,
+    specialLocationTag :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

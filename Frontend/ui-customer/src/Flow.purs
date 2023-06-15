@@ -63,7 +63,7 @@ import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.Types (CardType(..), AddNewAddressScreenState(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), EmailErrorType(..))
-import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..))
+import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), SelectEstimateRes(..))
 import Services.Backend as Remote
 import Screens.Types (Gender(..)) as Gender
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
@@ -269,7 +269,7 @@ currentRideFlow rideAssigned = do
       else do
         updateLocalStage HomeScreen
     Left err -> updateLocalStage HomeScreen
-  if state.props.currentStage /= RideAccepted then removeChatService "" else pure unit
+  if not (isLocalStageOn RideAccepted) then removeChatService "" else pure unit
 
 currentFlowStatus :: FlowBT String Unit
 currentFlowStatus = do
@@ -388,13 +388,13 @@ updateCustomerVersion dbClientVersion dbBundleVersion = do
         Version bundleVersion = stringToVersion bundle
         Version bundleVersion' = fromMaybe (Version bundleVersion) dbBundleVersion
         Version clientVersion' = fromMaybe (Version clientVersion) dbClientVersion
-    if any (_ == -1) [clientVersion.minor, clientVersion.major, clientVersion.maintenance,bundleVersion.minor,bundleVersion.major,bundleVersion.maintenance] then pure unit      
-      else if ( bundleVersion' /= bundleVersion || clientVersion' /= clientVersion)  then do 
+    if any (_ == -1) [clientVersion.minor, clientVersion.major, clientVersion.maintenance,bundleVersion.minor,bundleVersion.major,bundleVersion.maintenance] then pure unit
+      else if ( bundleVersion' /= bundleVersion || clientVersion' /= clientVersion)  then do
       resp <- lift $ lift $ Remote.updateProfile (Remote.makeUpdateVersionRequest (Version clientVersion) (Version bundleVersion))
-      pure unit    
-    else pure unit 
-  else pure unit       
-      
+      pure unit
+    else pure unit
+  else pure unit
+
 enterMobileNumberScreenFlow :: FlowBT String Unit
 enterMobileNumberScreenFlow = do
   lift $ lift $ doAff do liftEffect hideSplash -- Removed initial choose langauge screen
@@ -508,6 +508,15 @@ homeScreenFlow = do
         modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState ->  MyProfileScreenData.initData{props{updateProfile = updateProfile , fromHomeScreen = updateProfile , isBtnEnabled = not updateProfile , genderOptionExpanded = false , showOptions = false, expandEnabled = true }})
         myProfileScreenFlow
     GO_TO_FIND_ESTIMATES state-> do
+
+      (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq state.props.sourceLat state.props.sourceLong (case (getValueToLocalStore LANGUAGE_KEY) of
+                                                                                                                            "HI_IN" -> "HINDI"
+                                                                                                                            "KN_IN" -> "KANNADA"
+                                                                                                                            "BN_IN" -> "BENGALI"
+                                                                                                                            "ML_IN" -> "MALAYALAM"
+                                                                                                                            _      -> "ENGLISH"))
+
+      let (PlaceName address) = (fromMaybe HomeScreenData.dummyLocationName (locationName !! 0))
       _ <- lift $ lift $ liftFlow $ firebaseLogEventWithTwoParams "ny_user_source_and_destination" "ny_user_enter_source" (take 99 (state.data.source)) "ny_user_enter_destination" (take 99 (state.data.destination))
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq state.props.sourceLat state.props.sourceLong)
       if (not sourceServiceabilityResp.serviceable) then do
@@ -516,13 +525,13 @@ homeScreenFlow = do
         homeScreenFlow
         else pure unit
       (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress)
-      routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong (Remote.normalRoute "") "NORMAL" state.data.source state.data.destination rideSearchRes.routeInfo "pickup"
+      routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong (Remote.normalRoute "") "NORMAL" address.formattedAddress state.data.destination rideSearchRes.routeInfo "pickup"
       case rideSearchRes.routeInfo of
         Just (Route response) -> do
           let distance = if response.distance < 1000 then toString(response.distance)  <> " m" else parseFloat(INT.toNumber(response.distance) / 1000.0) 2 <> " km"
               duration = (show (response.duration / 60)) <> " min"
               tipEnabled = isTipEnabled response.distance
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration}, props{customerTip{enableTips = tipEnabled}}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration, source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] state.props.sourcePlaceId}, props{customerTip{enableTips = tipEnabled}}})
           _ <- setValueToLocalStore ENABLE_TIPS $ show tipEnabled
           if ((getMerchant FunctionCall) /= YATRI && response.distance >= 50000) then do
             updateLocalStage DistanceOutsideLimits
@@ -541,6 +550,33 @@ homeScreenFlow = do
                                                       , destinationAddress : state.data.destinationAddress })
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing}})
       updateLocalStage FindingEstimate
+      homeScreenFlow
+    RETRY_FINDING_QUOTES -> do
+      void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)  -- TODO : Handlde Loader in IOS Side
+      void $ lift $ lift $ toggleLoader true
+      (GlobalState newState) <- getState
+      let state = newState.homeScreen
+      if (not (isLocalStageOn QuoteList)) then do
+        void $ pure $ firebaseLogEvent "ny_user_cancel_and_retry_request_quotes"
+        cancelEstimate state.props.estimateId
+      else do
+        void $ pure $ firebaseLogEvent "ny_user_retry_request_quotes"
+      setValueToLocalStore AUTO_SELECTING "false"
+      setValueToLocalStore FINDING_QUOTES_POLLING "false"
+      setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
+      when (getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") do
+        void $ pure $ firebaseLogEvent "ny_user_auto_confirm"
+      void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
+
+      response <- lift $ lift $ Remote.selectEstimate (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing)) (state.props.estimateId)
+      case response of
+        Right res -> do
+          updateLocalStage FindingQuotes
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck") } })
+        Left err -> do
+          void $ pure $ firebaseLogEvent "ny_user_estimate_expired"
+          updateLocalStage FindEstimateAndSearch
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { currentStage = FindEstimateAndSearch } })
       homeScreenFlow
     LOCATION_SELECTED item addToRecents -> do
         void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)  -- TODO : Handlde Loader in IOS Side
@@ -578,7 +614,7 @@ homeScreenFlow = do
         if (not srcServiceable && (updateScreenState.props.sourceLat /= -0.1 && updateScreenState.props.sourceLong /= -0.1)) then do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> updateScreenState{props{isSrcServiceable = false, isRideServiceable= false, isSource = Just true}})
           homeScreenFlow
-         else if ((not destServiceable) && (updateScreenState.props.destinationLat /= 0.0 && updateScreenState.props.destinationLat /= -0.1) && (updateScreenState.props.destinationLong /= 0.0 && bothLocationChangedState.props.destinationLong /= -0.1)) then do
+        else if ((not destServiceable) && (updateScreenState.props.destinationLat /= 0.0 && updateScreenState.props.destinationLat /= -0.1) && (updateScreenState.props.destinationLong /= 0.0 && bothLocationChangedState.props.destinationLong /= -0.1)) then do
           if (getValueToLocalStore LOCAL_STAGE == "HomeScreen") then do
             _ <- pure $ toast (getString LOCATION_UNSERVICEABLE)
             pure unit

@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -18,7 +18,7 @@ module Components.MenuButton.View where
 import Prelude (Unit , (/=) ,const,(<>),($),not)
 import Effect (Effect)
 import Font.Style as FontStyle
-import Styles.Colors as Color
+import Common.Styles.Colors as Color
 import Components.MenuButton.Controller (Action(..), Config)
 import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), clickable, color, cornerRadius, fontStyle, gravity, height, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, singleLine, stroke, text, textSize, textView, visibility, width, imageWithFallback)
 import Common.Types.App
@@ -46,8 +46,8 @@ view push config =
               , if not config.leftsidebutton then buttonLayout config else linearLayout[width $ V 0][]
             ]
 titleView :: forall w . Config -> PrestoDOM (Effect Unit) w
-titleView config = 
-  textView 
+titleView config =
+  textView
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , text config.titleConfig.text
@@ -57,8 +57,8 @@ titleView config =
     , singleLine config.titleConfig.singleLine
     , lineHeight "24"
     , visibility config.titleConfig.visibility
-    ] 
-    
+    ]
+
 
 
 subTitleView :: forall w . Config -> PrestoDOM (Effect Unit) w
@@ -82,7 +82,7 @@ buttonLayout config =
     [ height WRAP_CONTENT
     , width if config.leftsidebutton then WRAP_CONTENT  else MATCH_PARENT
     , gravity if config.leftsidebutton then LEFT else  RIGHT
-    , margin config.radioButtonConfig.buttonMargin 
+    , margin config.radioButtonConfig.buttonMargin
     , padding config.radioButtonConfig.buttonPadding
     ][  linearLayout
         [ height config.radioButtonConfig.height

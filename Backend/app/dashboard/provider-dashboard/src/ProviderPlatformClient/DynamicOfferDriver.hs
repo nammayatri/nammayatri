@@ -28,6 +28,7 @@ import qualified Dashboard.ProviderPlatform.Driver.Registration as Registration
 import qualified Dashboard.ProviderPlatform.DriverReferral as DriverReferral
 import qualified Dashboard.ProviderPlatform.Issue as Issue
 import qualified Dashboard.ProviderPlatform.Merchant as Merchant
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as Common
 import qualified Dashboard.ProviderPlatform.Message as Message
 import qualified Dashboard.ProviderPlatform.Ride as Ride
 import qualified Dashboard.ProviderPlatform.Volunteer as Volunteer
@@ -76,7 +77,8 @@ data DriversAPIs = DriversAPIs
     endRCAssociation :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     updatePhoneNumber :: Id Driver.Driver -> Driver.UpdatePhoneNumberReq -> Euler.EulerClient APISuccess,
     addVehicle :: Id Driver.Driver -> Driver.AddVehicleReq -> Euler.EulerClient APISuccess,
-    updateDriverName :: Id Driver.Driver -> Driver.UpdateDriverNameReq -> Euler.EulerClient APISuccess
+    updateDriverName :: Id Driver.Driver -> Driver.UpdateDriverNameReq -> Euler.EulerClient APISuccess,
+    clearOnRideStuckDrivers :: Euler.EulerClient Driver.ClearOnRideStuckDriversRes
   }
 
 data RidesAPIs = RidesAPIs
@@ -98,17 +100,24 @@ newtype BookingsAPIs = BookingsAPIs
 
 data MerchantAPIs = MerchantAPIs
   { merchantUpdate :: Merchant.MerchantUpdateReq -> Euler.EulerClient Merchant.MerchantUpdateRes,
+    merchantCommonConfig :: Euler.EulerClient Merchant.MerchantCommonConfigRes,
     merchantCommonConfigUpdate :: Merchant.MerchantCommonConfigUpdateReq -> Euler.EulerClient APISuccess,
+    driverPoolConfig :: Maybe Meters -> Euler.EulerClient Merchant.DriverPoolConfigRes,
     driverPoolConfigUpdate :: Meters -> Merchant.DriverPoolConfigUpdateReq -> Euler.EulerClient APISuccess,
     driverPoolConfigCreate :: Meters -> Merchant.DriverPoolConfigCreateReq -> Euler.EulerClient APISuccess,
+    driverIntelligentPoolConfig :: Euler.EulerClient Merchant.DriverIntelligentPoolConfigRes,
     driverIntelligentPoolConfigUpdate :: Merchant.DriverIntelligentPoolConfigUpdateReq -> Euler.EulerClient APISuccess,
+    onboardingDocumentConfig :: Maybe Merchant.DocumentType -> Euler.EulerClient Merchant.OnboardingDocumentConfigRes,
     onboardingDocumentConfigUpdate :: Merchant.DocumentType -> Merchant.OnboardingDocumentConfigUpdateReq -> Euler.EulerClient APISuccess,
     onboardingDocumentConfigCreate :: Merchant.DocumentType -> Merchant.OnboardingDocumentConfigCreateReq -> Euler.EulerClient APISuccess,
+    serviceUsageConfig :: Euler.EulerClient Merchant.ServiceUsageConfigRes,
     mapsServiceConfigUpdate :: Merchant.MapsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
     mapsServiceUsageConfigUpdate :: Merchant.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
     smsServiceConfigUpdate :: Merchant.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
     smsServiceUsageConfigUpdate :: Merchant.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
-    verificationServiceConfigUpdate :: Merchant.VerificationServiceConfigUpdateReq -> Euler.EulerClient APISuccess
+    verificationServiceConfigUpdate :: Merchant.VerificationServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
+    createFPDriverExtraFee :: Id Common.FarePolicy -> Meters -> Merchant.CreateFPDriverExtraFeeReq -> Euler.EulerClient APISuccess,
+    updateFPDriverExtraFee :: Id Common.FarePolicy -> Meters -> Merchant.CreateFPDriverExtraFeeReq -> Euler.EulerClient APISuccess
   }
 
 data DriverReferralAPIs = DriverReferralAPIs
@@ -183,7 +192,8 @@ mkDriverOfferAPIs merchantId token = do
                :<|> uploadDocument
                :<|> registerDL
                :<|> registerRC
-             ) =
+             )
+      :<|> clearOnRideStuckDrivers =
         driversClient
 
     rideList
@@ -200,17 +210,24 @@ mkDriverOfferAPIs merchantId token = do
     stuckBookingsCancel = bookingsClient
 
     merchantUpdate
+      :<|> merchantCommonConfig
       :<|> merchantCommonConfigUpdate
+      :<|> driverPoolConfig
       :<|> driverPoolConfigUpdate
       :<|> driverPoolConfigCreate
+      :<|> driverIntelligentPoolConfig
       :<|> driverIntelligentPoolConfigUpdate
+      :<|> onboardingDocumentConfig
       :<|> onboardingDocumentConfigUpdate
       :<|> onboardingDocumentConfigCreate
+      :<|> serviceUsageConfig
       :<|> mapsServiceConfigUpdate
       :<|> mapsServiceUsageConfigUpdate
       :<|> smsServiceConfigUpdate
       :<|> smsServiceUsageConfigUpdate
-      :<|> verificationServiceConfigUpdate = merchantClient
+      :<|> verificationServiceConfigUpdate
+      :<|> createFPDriverExtraFee
+      :<|> updateFPDriverExtraFee = merchantClient
 
     updateReferralLinkPassword
       :<|> linkDriverReferralCode = driverReferralClient

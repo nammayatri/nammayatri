@@ -6,6 +6,7 @@ import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
@@ -23,12 +24,19 @@ import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSReq
 import Tools.Error
+
+data DConfirmReq = DConfirmReq
+  { personId :: Id DP.Person,
+    quoteId :: Id DQuote.Quote,
+    paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod)
+  }
 
 data DConfirmRes = DConfirmRes
   { providerId :: Text,
@@ -41,7 +49,8 @@ data DConfirmRes = DConfirmRes
     booking :: DRB.Booking,
     searchRequestId :: Id DSReq.SearchRequest,
     city :: Text,
-    maxEstimatedDistance :: Maybe HighPrecMeters
+    maxEstimatedDistance :: Maybe HighPrecMeters,
+    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
   }
   deriving (Show, Generic)
 
@@ -52,8 +61,8 @@ data ConfirmQuoteDetails
   | ConfirmOneWaySpecialZoneDetails Text
   deriving (Show, Generic)
 
-confirm :: (EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Id DQuote.Quote -> m DConfirmRes
-confirm personId quoteId = do
+confirm :: (EsqDBFlow m r, CacheFlow m r) => DConfirmReq -> m DConfirmRes
+confirm DConfirmReq {..} = do
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
   now <- getCurrentTime
   case quote.quoteDetails of
@@ -76,13 +85,22 @@ confirm personId quoteId = do
   bFromLocation <- buildBookingLocation now fromLocation
   mbBToLocation <- traverse (buildBookingLocation now) mbToLocation
   exophone <- findRandomExophone searchRequest.merchantId
-  booking <- buildBooking searchRequest quote bFromLocation mbBToLocation exophone now Nothing
+  booking <- buildBooking searchRequest quote bFromLocation mbBToLocation exophone now Nothing paymentMethodId
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   let details = mkConfirmQuoteDetails quote.quoteDetails
+
+  paymentMethod <- forM paymentMethodId $ \paymentMethodId' -> do
+    paymentMethod <-
+      CQMPM.findByIdAndMerchantId paymentMethodId' searchRequest.merchantId
+        >>= fromMaybeM (MerchantPaymentMethodDoesNotExist paymentMethodId'.getId)
+    unless (paymentMethodId' `elem` searchRequest.availablePaymentMethods) $
+      throwError (InvalidRequest "Payment method not allowed")
+    pure paymentMethod
+
   DB.runTransaction $ do
     QRideB.create booking
     QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill}
-    QEstimate.updateStatusbyRequestId quote.requestId DEstimate.COMPLETED
+    QEstimate.updateStatusByRequestId quote.requestId DEstimate.COMPLETED
   QPFS.clearCache searchRequest.riderId
   return $
     DConfirmRes
@@ -96,7 +114,8 @@ confirm personId quoteId = do
         startTime = searchRequest.startTime,
         searchRequestId = searchRequest.id,
         city = merchant.city,
-        maxEstimatedDistance = searchRequest.maxDistance
+        maxEstimatedDistance = searchRequest.maxDistance,
+        paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> paymentMethod
       }
   where
     mkConfirmQuoteDetails :: DQuote.QuoteDetails -> ConfirmQuoteDetails
@@ -115,8 +134,9 @@ buildBooking ::
   DExophone.Exophone ->
   UTCTime ->
   Maybe Text ->
+  Maybe (Id DMPM.MerchantPaymentMethod) ->
   m DRB.Booking
-buildBooking searchRequest quote fromLoc mbToLoc exophone now otpCode = do
+buildBooking searchRequest quote fromLoc mbToLoc exophone now otpCode paymentMethodId = do
   id <- generateGUID
   bookingDetails <- buildBookingDetails
   return $
@@ -125,6 +145,8 @@ buildBooking searchRequest quote fromLoc mbToLoc exophone now otpCode = do
         transactionId = searchRequest.id.getId,
         bppBookingId = Nothing,
         quoteId = Just quote.id,
+        paymentMethodId,
+        paymentUrl = Nothing,
         status = DRB.NEW,
         providerId = quote.providerId,
         primaryExophone = exophone.primaryPhone,
@@ -141,6 +163,7 @@ buildBooking searchRequest quote fromLoc mbToLoc exophone now otpCode = do
         bookingDetails,
         tripTerms = quote.tripTerms,
         merchantId = searchRequest.merchantId,
+        specialLocationTag = quote.specialLocationTag,
         createdAt = now,
         updatedAt = now
       }

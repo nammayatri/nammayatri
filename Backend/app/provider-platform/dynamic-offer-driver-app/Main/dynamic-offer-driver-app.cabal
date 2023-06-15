@@ -30,6 +30,7 @@ library
       API.Beckn.Search
       API.Beckn.Select
       API.Beckn.Track
+      API.Beckn.Update
       API.Dashboard
       API.Dashboard.Booking
       API.Dashboard.Driver
@@ -50,7 +51,6 @@ library
       API.UI.DriverOnboarding
       API.UI.DriverReferral
       API.UI.ExotelEndRide
-      API.UI.FarePolicy
       API.UI.Frontend
       API.UI.Issue
       API.UI.LeaderBoard
@@ -81,6 +81,7 @@ library
       Beckn.ACL.Search
       Beckn.ACL.Select
       Beckn.ACL.Track
+      Beckn.ACL.Update
       Beckn.Core
       Domain.Action.Beckn.Cancel
       Domain.Action.Beckn.Confirm
@@ -89,6 +90,7 @@ library
       Domain.Action.Beckn.Search
       Domain.Action.Beckn.Select
       Domain.Action.Beckn.Track
+      Domain.Action.Beckn.Update
       Domain.Action.Dashboard.Booking
       Domain.Action.Dashboard.Driver
       Domain.Action.Dashboard.Driver.Registration
@@ -111,7 +113,6 @@ library
       Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
       Domain.Action.UI.DriverReferral
       Domain.Action.UI.ExotelEndRide
-      Domain.Action.UI.FarePolicy
       Domain.Action.UI.Frontend
       Domain.Action.UI.Issue
       Domain.Action.UI.LeaderBoard
@@ -163,6 +164,7 @@ library
       Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Domain.Types.FarePolicy.FarePolicySlabsDetails
       Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
+      Domain.Types.FareProduct
       Domain.Types.Geometry
       Domain.Types.Issue.Comment
       Domain.Types.Issue.IssueCategory
@@ -174,6 +176,7 @@ library
       Domain.Types.Merchant.DriverIntelligentPoolConfig
       Domain.Types.Merchant.DriverPoolConfig
       Domain.Types.Merchant.MerchantMessage
+      Domain.Types.Merchant.MerchantPaymentMethod
       Domain.Types.Merchant.MerchantServiceConfig
       Domain.Types.Merchant.MerchantServiceUsageConfig
       Domain.Types.Merchant.TransporterConfig
@@ -220,6 +223,8 @@ library
       SharedLogic.DriverPool.Types
       SharedLogic.Estimate
       SharedLogic.FareCalculator
+      SharedLogic.FarePolicy
+      SharedLogic.FareProduct
       SharedLogic.GoogleMaps
       SharedLogic.GoogleTranslate
       SharedLogic.Merchant
@@ -290,6 +295,7 @@ library
       Storage.CachedQueries.DriverInformation
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FarePolicy
+      Storage.CachedQueries.FareProduct
       Storage.CachedQueries.Issue.IssueCategory
       Storage.CachedQueries.Issue.IssueOption
       Storage.CachedQueries.Issue.IssueReport
@@ -298,6 +304,7 @@ library
       Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig
       Storage.CachedQueries.Merchant.DriverPoolConfig
       Storage.CachedQueries.Merchant.MerchantMessage
+      Storage.CachedQueries.Merchant.MerchantPaymentMethod
       Storage.CachedQueries.Merchant.MerchantServiceConfig
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
       Storage.CachedQueries.Merchant.TransporterConfig
@@ -330,6 +337,7 @@ library
       Storage.Queries.FarePolicy.FarePolicyProgressiveDetails
       Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
+      Storage.Queries.FareProduct
       Storage.Queries.FullEntityBuilders
       Storage.Queries.Geometry
       Storage.Queries.Issue.Comment
@@ -342,6 +350,7 @@ library
       Storage.Queries.Merchant.DriverIntelligentPoolConfig
       Storage.Queries.Merchant.DriverPoolConfig
       Storage.Queries.Merchant.MerchantMessage
+      Storage.Queries.Merchant.MerchantPaymentMethod
       Storage.Queries.Merchant.MerchantServiceConfig
       Storage.Queries.Merchant.MerchantServiceUsageConfig
       Storage.Queries.Merchant.TransporterConfig
@@ -385,6 +394,7 @@ library
       Storage.Tabular.Exophone
       Storage.Tabular.FareParameters
       Storage.Tabular.FareParameters.FareParametersProgressiveDetails
+      Storage.Tabular.FareParameters.FareParametersSlabDetails
       Storage.Tabular.FareParameters.Instances
       Storage.Tabular.FareParameters.Table
       Storage.Tabular.FarePolicy
@@ -394,6 +404,7 @@ library
       Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Storage.Tabular.FarePolicy.Instances
       Storage.Tabular.FarePolicy.Table
+      Storage.Tabular.FareProduct
       Storage.Tabular.Geometry
       Storage.Tabular.GeometryNew
       Storage.Tabular.Issue.Comment
@@ -406,6 +417,7 @@ library
       Storage.Tabular.Merchant.DriverIntelligentPoolConfig
       Storage.Tabular.Merchant.DriverPoolConfig
       Storage.Tabular.Merchant.MerchantMessage
+      Storage.Tabular.Merchant.MerchantPaymentMethod
       Storage.Tabular.Merchant.MerchantServiceConfig
       Storage.Tabular.Merchant.MerchantServiceUsageConfig
       Storage.Tabular.Merchant.TransporterConfig

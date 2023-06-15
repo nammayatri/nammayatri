@@ -14,6 +14,7 @@
 
 module Beckn.ACL.OnInit where
 
+import qualified Beckn.ACL.Common as Common
 import Beckn.Types.Core.Taxi.OnInit as OnInit
 import Domain.Action.Beckn.Init as DInit
 import qualified Domain.Types.FareParameters as DFParams
@@ -45,14 +46,16 @@ mkOnInitMessage res = do
                 },
             payment =
               OnInit.Payment
-                { collected_by = "BPP",
+                { collected_by = maybe OnInit.BPP (Common.castDPaymentCollector . (.collectedBy)) res.paymentMethodInfo,
                   params =
                     OnInit.PaymentParams
                       { currency = currency,
                         amount = fareDecimalValue
                       },
-                  _type = OnInit.ON_FULFILLMENT,
-                  time = OnInit.TimeDuration "FIXME"
+                  _type = maybe OnInit.ON_FULFILLMENT (Common.castDPaymentType . (.paymentType)) res.paymentMethodInfo,
+                  instrument = Common.castDPaymentInstrument . (.paymentInstrument) <$> res.paymentMethodInfo,
+                  time = OnInit.TimeDuration "FIXME",
+                  uri = res.paymentUrl
                 }
           }
     }
@@ -70,5 +73,6 @@ mkOnInitMessage res = do
           breakup.title == "BASE_FARE"
             || breakup.title == "SERVICE_CHARGE"
             || breakup.title == "WAITING_OR_PICKUP_CHARGES"
+            || breakup.title == "PLATFORM_FEE"
             || breakup.title == "FIXED_GOVERNMENT_RATE"
             || breakup.title == "TOTAL_FARE"

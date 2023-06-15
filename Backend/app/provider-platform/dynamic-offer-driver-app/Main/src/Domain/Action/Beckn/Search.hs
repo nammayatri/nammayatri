@@ -29,8 +29,10 @@ import qualified Data.Text as T
 import qualified Domain.Types.Estimate as DEst
 import Domain.Types.FareParameters
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.DriverPoolConfig (DriverPoolConfig)
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.QuoteSpecialZone as DQuoteSpecialZone
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
@@ -52,14 +54,14 @@ import Kernel.Types.Common
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import SharedLogic.DriverPool hiding (lat, lon)
 import qualified SharedLogic.Estimate as SHEst
 import SharedLogic.FareCalculator
+import SharedLogic.FarePolicy
 import SharedLogic.GoogleMaps
 import Storage.CachedQueries.CacheConfig (CacheFlow)
-import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import Storage.CachedQueries.Merchant.TransporterConfig as CTC
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.Geometry as QGeometry
@@ -84,7 +86,6 @@ data DSearchReq = DSearchReq
     routeDistance :: Maybe Meters,
     routeDuration :: Maybe Seconds,
     device :: Maybe Text,
-    autoAssignEnabled :: Bool,
     customerLanguage :: Maybe Maps.Language
   }
 
@@ -94,6 +95,7 @@ data SpecialZoneQuoteInfo = SpecialZoneQuoteInfo
     estimatedFare :: Money,
     fromLocation :: LatLong,
     toLocation :: LatLong,
+    specialLocationTag :: Maybe Text,
     startTime :: UTCTime
   }
 
@@ -104,7 +106,8 @@ data DSearchRes = DSearchRes
     now :: UTCTime,
     estimateList :: Maybe [EstimateInfo],
     specialQuoteList :: Maybe [SpecialZoneQuoteInfo],
-    searchMetricsMVar :: Metrics.SearchMetricsMVar
+    searchMetricsMVar :: Metrics.SearchMetricsMVar,
+    paymentMethodsInfo :: [DMPM.PaymentMethodInfo]
   }
 
 data EstimateInfo = EstimateInfo
@@ -138,25 +141,24 @@ handler merchant sReq = do
       merchantId = merchant.id
   result <- getDistanceAndDuration merchantId fromLocationLatLong toLocationLatLong sReq.routeDistance sReq.routeDuration
   logDebug $ "distance: " <> show result.distance
-  mbSpecialLocation <- QSpecialLocation.findSpecialLocationByLatLong fromLocationLatLong
   sessiontoken <- generateGUIDText
   fromLocation <- buildSearchReqLocation merchantId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
   toLocation <- buildSearchReqLocation merchantId sessiontoken sReq.dropAddrress sReq.customerLanguage sReq.dropLocation
 
+  allFarePoliciesProduct <- getAllFarePoliciesProduct merchantId fromLocationLatLong toLocationLatLong
+  let farePolicies = selectFarePolicy result.distance allFarePoliciesProduct.farePolicies
   (quotes, mbEstimateInfos) <-
-    if isJust mbSpecialLocation
-      then do
+    case allFarePoliciesProduct.flow of
+      DFareProduct.RIDE_OTP -> do
         whenJustM
           (QSearchRequestSpecialZone.findByMsgIdAndBapIdAndBppId sReq.messageId sReq.bapId merchantId)
           (\_ -> throwError $ InvalidRequest "Duplicate Search request")
-        searchRequestSpecialZone <- buildSearchRequestSpecialZone sReq merchantId fromLocation toLocation result.distance result.duration
+        searchRequestSpecialZone <- buildSearchRequestSpecialZone sReq merchantId fromLocation toLocation result.distance result.duration allFarePoliciesProduct.area
         -- Esq.runTransaction $ do
         _ <- QSearchRequestSpecialZone.create searchRequestSpecialZone
         now <- getCurrentTime
+        let listOfVehicleVariants = listVehicleVariantHelper farePolicies
         listOfSpecialZoneQuotes <- do
-          allFarePolicies <- FarePolicyS.findAllByMerchantId merchant.id
-          let farePolicies = selectFarePolicy result.distance allFarePolicies
-          let listOfVehicleVariants = listVehicleVariantHelper farePolicies
           for listOfVehicleVariants $ \farePolicy -> do
             fareParams <-
               calculateFareParameters
@@ -175,19 +177,22 @@ handler merchant sReq = do
               result.distance
               farePolicy.vehicleVariant
               result.duration
+              allFarePoliciesProduct.specialLocationTag
         -- Esq.runTransaction $
         for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
         return (Just (mkQuoteInfo fromLocation toLocation now <$> listOfSpecialZoneQuotes), Nothing)
-      else do
-        driverPoolCfg <- getDriverPoolConfig merchantId result.distance
-        estimateInfos <- do
-          allFarePolicies <- FarePolicyS.findAllByMerchantId merchant.id
-          let farePolicies = selectFarePolicy result.distance allFarePolicies
-          buildEstimatesInfos fromLocation toLocation driverPoolCfg result farePolicies
-        return (Nothing, Just estimateInfos)
-  buildSearchRes merchant fromLocationLatLong toLocationLatLong mbEstimateInfos quotes searchMetricsMVar
+      DFareProduct.NORMAL -> buildEstimates farePolicies result fromLocation toLocation allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area
+
+  merchantPaymentMethods <- CQMPM.findAllByMerchantId merchantId
+  let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
+  buildSearchRes merchant fromLocationLatLong toLocationLatLong mbEstimateInfos quotes searchMetricsMVar paymentMethodsInfo
   where
     listVehicleVariantHelper farePolicy = catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleVariant)) farePolicy
+
+    buildEstimates farePolicies result fromLocation toLocation specialLocationTag area = do
+      driverPoolCfg <- getDriverPoolConfig merchant.id result.distance
+      estimateInfos <- buildEstimatesInfos fromLocation toLocation driverPoolCfg result farePolicies specialLocationTag area
+      return (Nothing, Just estimateInfos)
 
     selectFarePolicy distance farePolicies = do
       farePolicy <- farePolicies
@@ -211,9 +216,11 @@ handler merchant sReq = do
       DLoc.SearchReqLocation ->
       DriverPoolConfig ->
       DistanceAndDuration ->
-      [DFP.FarePolicy] ->
+      [DFP.FullFarePolicy] ->
+      Maybe Text ->
+      DFareProduct.Area ->
       Flow [EstimateInfo]
-    buildEstimatesInfos fromLocation toLocation driverPoolCfg result farePolicies = do
+    buildEstimatesInfos fromLocation toLocation driverPoolCfg result farePolicies specialLocationTag area = do
       let merchantId = merchant.id
       if null farePolicies
         then do
@@ -234,8 +241,8 @@ handler merchant sReq = do
           logDebug $ "Search handler: driver pool " <> show driverPool
 
           let onlyFPWithDrivers = filter (\fp -> isJust (find (\dp -> dp.variant == fp.vehicleVariant) driverPool)) farePolicies
-          searchReq <- buildSearchRequest sReq merchantId fromLocation toLocation result.distance result.duration
-          estimates <- mapM (SHEst.buildEstimate searchReq.id sReq.pickupTime result.distance) onlyFPWithDrivers
+          searchReq <- buildSearchRequest sReq merchantId fromLocation toLocation result.distance result.duration specialLocationTag area
+          estimates <- mapM (SHEst.buildEstimate searchReq.id sReq.pickupTime result.distance specialLocationTag) onlyFPWithDrivers
           -- Esq.runTransaction $ do
           _ <- QSR.create searchReq
           QEst.createMany estimates
@@ -261,8 +268,9 @@ buildSearchRes ::
   Maybe [EstimateInfo] ->
   Maybe [SpecialZoneQuoteInfo] ->
   Metrics.SearchMetricsMVar ->
+  [DMPM.PaymentMethodInfo] ->
   m DSearchRes
-buildSearchRes org fromLocation toLocation estimateList specialQuoteList searchMetricsMVar = do
+buildSearchRes org fromLocation toLocation estimateList specialQuoteList searchMetricsMVar paymentMethodsInfo = do
   now <- getCurrentTime
   pure $
     DSearchRes
@@ -272,7 +280,8 @@ buildSearchRes org fromLocation toLocation estimateList specialQuoteList searchM
         toLocation,
         estimateList,
         specialQuoteList,
-        searchMetricsMVar
+        searchMetricsMVar,
+        paymentMethodsInfo
       }
 
 buildSearchRequest ::
@@ -284,14 +293,18 @@ buildSearchRequest ::
   DLoc.SearchReqLocation ->
   Meters ->
   Seconds ->
+  Maybe Text ->
+  DFareProduct.Area ->
   m DSR.SearchRequest
-buildSearchRequest DSearchReq {..} providerId fromLocation toLocation estimatedDistance estimatedDuration = do
+buildSearchRequest DSearchReq {..} providerId fromLocation toLocation estimatedDistance estimatedDuration specialLocationTag area = do
   uuid <- generateGUID
   now <- getCurrentTime
   pure
     DSR.SearchRequest
       { id = Id uuid,
         createdAt = now,
+        area = Just area,
+        autoAssignEnabled = Nothing,
         ..
       }
 
@@ -307,8 +320,9 @@ buildSearchRequestSpecialZone ::
   DLoc.SearchReqLocation ->
   Meters ->
   Seconds ->
+  DFareProduct.Area ->
   m DSRSZ.SearchRequestSpecialZone
-buildSearchRequestSpecialZone DSearchReq {..} providerId fromLocation toLocation estimatedDistance estimatedDuration = do
+buildSearchRequestSpecialZone DSearchReq {..} providerId fromLocation toLocation estimatedDistance estimatedDuration area = do
   uuid <- generateGUID
   now <- getCurrentTime
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -319,6 +333,7 @@ buildSearchRequestSpecialZone DSearchReq {..} providerId fromLocation toLocation
         startTime = pickupTime,
         createdAt = now,
         updatedAt = now,
+        area = Just area,
         ..
       }
 
@@ -335,8 +350,9 @@ buildSpecialZoneQuote ::
   Meters ->
   DVeh.Variant ->
   Seconds ->
+  Maybe Text ->
   m DQuoteSpecialZone.QuoteSpecialZone
-buildSpecialZoneQuote productSearchRequest fareParams transporterId distance vehicleVariant duration = do
+buildSpecialZoneQuote productSearchRequest fareParams transporterId distance vehicleVariant duration specialLocationTag = do
   quoteId <- Id <$> generateGUID
   now <- getCurrentTime
   let estimatedFare = fareSum fareParams

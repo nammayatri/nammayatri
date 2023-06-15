@@ -18,6 +18,8 @@ module Domain.Action.Dashboard.IssueList where
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.Issue as DI
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Person as DPerson
+import qualified Domain.Types.Quote as DQuote
 import Environment
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -30,10 +32,25 @@ import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.Person as QPerson
 
 data IssueListRes = IssueListRes
-  { list :: [DI.Issue],
+  { list :: [Issue],
     summary :: Summary
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+data Issue = Issue
+  { id :: Id DI.Issue,
+    customerId :: Id DPerson.Person,
+    bookingId :: Maybe (Id DQuote.Quote),
+    firstName :: Maybe Text,
+    lastName :: Maybe Text,
+    mobileNumber :: Maybe Text,
+    contactEmail :: Maybe Text,
+    reason :: Text,
+    description :: Text,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data Summary = Summary
   { totalCount :: Int,
@@ -55,12 +72,32 @@ getIssueList merchantShortId mbLimit mbOffset mbmobileCountryCode mbMobileNumber
       mobileNumberDbHash <- getDbHash mobileNumber
       let mobileCountryCode = fromMaybe mobileIndianCode mbmobileCountryCode
       customer <- runInReplica $ QPerson.findByMobileNumberAndMerchantId mobileCountryCode mobileNumberDbHash merchant.id >>= fromMaybeM (PersonNotFound mobileNumber)
-      issueList <- runInReplica $ QIssue.findByCustomerId customer.id mbLimit mbOffset fromDate toDate
+      issues <- runInReplica $ QIssue.findByCustomerId customer.id mbLimit mbOffset fromDate toDate
+      issueList <- mapM buildIssueList issues
       let count = length issueList
       let summary = Summary {totalCount = count, count}
       return $ IssueListRes {list = issueList, summary = summary}
     Nothing -> do
-      issueList <- runInReplica $ QIssue.findAllIssue mbLimit mbOffset fromDate toDate
+      issues <- runInReplica $ QIssue.findAllIssue merchant.id mbLimit mbOffset fromDate toDate
+      issueList <- mapM buildIssueList issues
       let count = length issueList
       let summary = Summary {totalCount = count, count}
       return $ IssueListRes {list = issueList, summary = summary}
+
+buildIssueList :: EncFlow m r => (DI.Issue, DPerson.Person) -> m Issue
+buildIssueList (issues, person) = do
+  mobileNo <- mapM decrypt person.mobileNumber
+  pure $
+    Issue
+      { id = issues.id,
+        customerId = issues.customerId,
+        bookingId = issues.bookingId,
+        firstName = person.firstName,
+        lastName = person.lastName,
+        mobileNumber = mobileNo,
+        contactEmail = issues.contactEmail,
+        reason = issues.reason,
+        description = issues.description,
+        createdAt = issues.createdAt,
+        updatedAt = issues.updatedAt
+      }

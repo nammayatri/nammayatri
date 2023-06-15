@@ -15,6 +15,7 @@
 
 module Domain.Types.SearchRequest where
 
+import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Kernel.Prelude
@@ -29,11 +30,13 @@ data SearchRequest = SearchRequest
     providerId :: Id DM.Merchant,
     fromLocation :: DLoc.SearchReqLocation,
     toLocation :: DLoc.SearchReqLocation,
+    area :: Maybe FareProductD.Area,
     bapId :: Text,
     bapUri :: BaseUrl,
     estimatedDistance :: Meters,
     estimatedDuration :: Seconds,
-    autoAssignEnabled :: Bool,
+    specialLocationTag :: Maybe Text,
+    autoAssignEnabled :: Maybe Bool,
     device :: Maybe Text,
     customerLanguage :: Maybe Maps.Language,
     createdAt :: UTCTime

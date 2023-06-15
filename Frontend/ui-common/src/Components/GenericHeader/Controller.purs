@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -18,12 +18,12 @@ module Components.GenericHeader.Controller where
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), padding)
-import Styles.Colors as Color
+import Common.Styles.Colors as Color
 import Common.Types.App
 
 data Action = SuffixImgOnClick | PrefixImgOnClick
 
-type Config = 
+type Config =
   {
     height :: Length
   , width :: Length
@@ -33,7 +33,7 @@ type Config =
   , isClickable :: Boolean
   , gravity :: Gravity
   , prefixImageConfig :: ImageConfig
-  , textConfig :: TextConfig 
+  , textConfig :: TextConfig
   , suffixImageConfig :: ImageConfig
   }
 
@@ -43,7 +43,7 @@ type ImageConfig =
   , width :: Length
   , imageUrl :: String
   , margin :: Margin
-  , padding :: Padding 
+  , padding :: Padding
   , visibility :: Visibility
   }
 

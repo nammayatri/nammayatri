@@ -21,7 +21,6 @@ import Domain.Types.Merchant
 import Domain.Types.Message.Message as Message
 import Domain.Types.Person as Person
 import Domain.Types.RegistrationToken as RegToken
-import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
 import Domain.Types.SearchTry
 import EulerHS.Prelude
@@ -104,8 +103,7 @@ notifyOnCancel merchantId booking personId mbDeviceToken cancellationSource = do
           fcmNotificationJSON = FCM.createAndroidNotification title (body cancellationText) FCM.CANCELLED_PRODUCT
         }
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"
-    body text =
-      FCMNotificationBody text
+    body = FCMNotificationBody
     getCancellationText = case cancellationSource of
       SBCR.ByUser ->
         return $
@@ -412,9 +410,9 @@ notifyOnCancelSearchRequest ::
   Id Merchant ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
-  Id DSR.SearchRequest ->
+  Id SearchTry ->
   m ()
-notifyOnCancelSearchRequest merchantId personId mbDeviceToken searchRequestId = do
+notifyOnCancelSearchRequest merchantId personId mbDeviceToken searchTryId = do
   transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
   FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
@@ -424,7 +422,7 @@ notifyOnCancelSearchRequest merchantId personId mbDeviceToken searchRequestId = 
         { fcmNotificationType = notifType,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.SearchRequest,
-          fcmEntityIds = searchRequestId.getId,
+          fcmEntityIds = searchTryId.getId,
           fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification title body notifType
         }

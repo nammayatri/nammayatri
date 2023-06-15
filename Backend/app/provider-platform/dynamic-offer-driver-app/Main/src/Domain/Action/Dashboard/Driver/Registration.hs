@@ -65,7 +65,6 @@ uploadDocument merchantShortId driverId_ req = do
   res <-
     validateImage
       True
-      (Just merchant)
       (cast driverId_, cast merchant.id)
       ImageValidateRequest
         { image = req.imageBase64,

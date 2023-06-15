@@ -5,6 +5,7 @@ result
 result-*
 .direnv
 /.pre-commit-config.yaml
+.envrc
 
 # Backend ignores
 dist-newstyle

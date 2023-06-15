@@ -22,7 +22,9 @@ import qualified Data.Text.Encoding as DT
 import Data.Time
 import qualified Domain.Types.Booking.BookingLocation as DLoc
 import Domain.Types.FareParameters (FareParameters)
+import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.Vehicle.Variant as DVeh
 import EulerHS.Prelude hiding (id)
@@ -54,6 +56,8 @@ data Booking = Booking
     status :: BookingStatus,
     bookingType :: BookingType,
     specialZoneOtpCode :: Maybe Text,
+    specialLocationTag :: Maybe Text,
+    area :: Maybe FareProductD.Area,
     providerId :: Id DM.Merchant, -- FIXME merchantId
     primaryExophone :: Text,
     bapId :: Text,
@@ -69,6 +73,7 @@ data Booking = Booking
     estimatedDuration :: Seconds,
     fareParams :: FareParameters,
     riderName :: Maybe Text,
+    paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod),
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

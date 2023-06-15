@@ -20,7 +20,6 @@ import qualified "rider-app" Domain.Types.Booking as BDB
 import qualified "rider-app" Domain.Types.Ride as BDRide
 import qualified "dynamic-offer-driver-app" Environment as ARDU
 import qualified "rider-app" Environment as BecknApp
-import qualified "static-offer-driver-app" Environment as BecknTransport
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import GHC.IO (unsafePerformIO)
@@ -33,7 +32,7 @@ import Kernel.Utils.Common
 import Network.HTTP.Client (Manager)
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
-import Resources (appBackendEnv, driverOfferBppEnv, transporterAppEnv)
+import Resources (appBackendEnv, driverOfferBppEnv)
 import Servant.Client hiding (client)
 import qualified "rider-app" Storage.Queries.Booking as BQB
 import qualified "rider-app" Storage.Queries.RegistrationToken as BQRegToken
@@ -151,9 +150,6 @@ defaultManager = unsafePerformIO $ Client.newManager tlsManagerSettings
 
 runAppFlow :: Text -> FlowR BecknApp.AppEnv a -> IO a
 runAppFlow tag = runFlow tag appBackendEnv
-
-runTransporterFlow :: Text -> FlowR BecknTransport.AppEnv a -> IO a
-runTransporterFlow tag = runFlow tag transporterAppEnv
 
 runARDUFlow :: Text -> FlowR ARDU.AppEnv a -> IO a
 runARDUFlow tag = runFlow tag driverOfferBppEnv

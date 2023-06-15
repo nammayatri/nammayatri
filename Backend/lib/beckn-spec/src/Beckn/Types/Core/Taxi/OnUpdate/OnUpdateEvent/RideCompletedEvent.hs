@@ -20,6 +20,7 @@ where
 
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_COMPLETED))
+import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent.Payment as Reexport
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, title, value)
@@ -32,7 +33,8 @@ data RideCompletedEvent = RideCompletedEvent
   { id :: Text,
     update_target :: Text,
     quote :: RideCompletedQuote,
-    fulfillment :: FulfillmentInfo
+    fulfillment :: FulfillmentInfo,
+    payment :: Maybe Payment
   }
   deriving (Generic, Show)
 
@@ -43,6 +45,7 @@ instance ToJSON RideCompletedEvent where
       "id" .= id
         <> "./komn/update_target" .= update_target
         <> "quote" .= quote
+        <> "payment" .= payment
         <> "fulfillment" .= (fulfJSON <> ("state" .= (("code" .= RIDE_COMPLETED) :: A.Object)))
 
 instance FromJSON RideCompletedEvent where
@@ -54,11 +57,13 @@ instance FromJSON RideCompletedEvent where
       <*> obj .: "./komn/update_target"
       <*> obj .: "quote"
       <*> obj .: "fulfillment"
+      <*> obj .: "payment"
 
 instance ToSchema RideCompletedEvent where
   declareNamedSchema _ = do
     txt <- declareSchemaRef (Proxy :: Proxy Text)
     quote <- declareSchemaRef (Proxy :: Proxy RideCompletedQuote)
+    payment <- declareSchemaRef (Proxy :: Proxy Payment)
     update_type <- declareSchemaRef (Proxy :: Proxy OnUpdateEventType)
     let st =
           mempty
@@ -81,13 +86,15 @@ instance ToSchema RideCompletedEvent where
               [ ("id", txt),
                 ("./komn/update_target", txt),
                 ("quote", quote),
+                ("payment", payment),
                 ("fulfillment", Inline fulfillment)
               ]
           & required
             L..~ [ "id",
                    "./komn/update_target",
                    "quote",
-                   "fulfillment"
+                   "fulfillment",
+                   "payment"
                  ]
 
 data RideCompletedQuote = RideCompletedQuote
@@ -129,7 +136,8 @@ instance ToSchema BreakupPrice where
 
 data FulfillmentInfo = FulfillmentInfo
   { id :: Text, -- bppRideId
-    chargeable_distance :: DecimalValue
+    chargeable_distance :: DecimalValue,
+    traveled_distance :: DecimalValue
   }
   deriving (Generic, Show)
 

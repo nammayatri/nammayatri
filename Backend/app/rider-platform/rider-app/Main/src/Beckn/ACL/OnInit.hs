@@ -44,6 +44,7 @@ buildOnInitReq req = do
         { estimatedFare = roundToIntegral estimatedFare,
           estimatedTotalFare = roundToIntegral estimatedTotalFare,
           discount = roundToIntegral <$> discount,
+          paymentUrl = message.order.payment.uri,
           ..
         }
 

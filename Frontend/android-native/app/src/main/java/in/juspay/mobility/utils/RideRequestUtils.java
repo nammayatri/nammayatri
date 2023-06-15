@@ -35,6 +35,9 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.SocketTimeoutException;
 import java.net.URL;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import javax.net.ssl.HttpsURLConnection;
 
 import in.juspay.mobility.MainActivity;
@@ -52,6 +55,7 @@ public class RideRequestUtils {
         SharedPreferences sharedPref = context.getApplicationContext().getSharedPreferences(context.getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         String bundle_version = sharedPref.getString("BUNDLE_VERSION", "null");
         String version = sharedPref.getString("VERSION_NAME", "null");
+        String deviceDetails = sharedPref.getString("DEVICE_DETAILS","null");
         try {
             String orderUrl = sharedPref.getString("BASE_URL", "null") + "/driver/searchRequest/quote/respond";
             HttpURLConnection connection = (HttpURLConnection) (new URL(orderUrl).openConnection());
@@ -62,6 +66,7 @@ public class RideRequestUtils {
             connection.setRequestProperty("x-client-version", version);
             connection.setRequestProperty("token", sharedPref.getString(context.getResources().getString(R.string.REGISTERATION_TOKEN), "null"));
             connection.setRequestProperty("x-bundle-version", bundle_version);
+            connection.setRequestProperty("x-device", deviceDetails);
             connection.setDoOutput(true);
             connection.setConnectTimeout(20000);
             connection.setReadTimeout(20000);
@@ -184,6 +189,79 @@ public class RideRequestUtils {
         params.putString(paramKey,paramValue);
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
         mFirebaseAnalytics.logEvent(event, params);
+    }
+
+    public void restartLocationService(Context context)
+    {
+        Intent locationService = new Intent(context, LocationUpdateService.class);
+        locationService.putExtra("StartingSource","TRIGGER_SERVICE");
+        locationService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(locationService);
+        }else{
+            context.startService(locationService);
+        }
+    }
+
+    public void callAPIViaFCM(String orderUrl, JSONObject requestBody, String method, Context context){
+        SharedPreferences sharedPref = context.getSharedPreferences(
+                context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
+        String deviceDetails = sharedPref.getString("DEVICE_DETAILS", "null");
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        Handler handler = new Handler(Looper.getMainLooper());
+        executor.execute(() -> {
+            StringBuilder result = new StringBuilder();
+            try {
+                System.out.println("in callAPIViaFCM");
+                HttpURLConnection connection = (HttpURLConnection) (new URL(orderUrl).openConnection());
+                if (connection instanceof HttpsURLConnection)
+                    ((HttpsURLConnection) connection).setSSLSocketFactory(new TLSSocketFactory());
+                connection.setRequestMethod(method);
+                connection.setRequestProperty("Content-Type", "application/json");
+                connection.setRequestProperty("token", token);
+                connection.setRequestProperty("x-device", deviceDetails);
+                connection.setDoOutput(true);
+
+                OutputStream stream = connection.getOutputStream();
+                if(requestBody!=null){
+                    stream.write(requestBody.toString().getBytes());
+                }
+                connection.connect();
+                int respCode = connection.getResponseCode();
+                InputStreamReader respReader;
+
+                if ((respCode < 200 || respCode >= 300) && respCode != 302) {
+                    respReader = new InputStreamReader(connection.getErrorStream());
+                    firebaseLogEventWithParams("ny_fcm_error_calling_api","status_code", String.valueOf(respCode), context);
+                    System.out.println("in error : " + respReader);
+                } else {
+                    respReader = new InputStreamReader(connection.getInputStream());
+                    firebaseLogEventWithParams("ny_fcm_success_calling_api","status_code", String.valueOf(respCode), context);
+                    System.out.println("in 200 : " + respReader);
+                }
+
+                BufferedReader in = new BufferedReader(respReader);
+                String inputLine;
+
+                while ((inputLine = in.readLine()) != null) {
+                    result.append(inputLine);
+                }
+                System.out.println("in result : " + result.toString());
+
+            } catch (Exception e) {
+                System.out.println("Catch in callAPIViaFCM : " +e);
+            }
+            handler.post(executor::shutdown);
+        });
+    }
+
+    public void openApplication(Context context){
+        Intent intent = new Intent(context.getApplicationContext(), MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+        try {
+            context.getApplicationContext().startActivity(intent);
+        }catch (Exception ignored){}
     }
 
 }

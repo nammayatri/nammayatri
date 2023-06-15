@@ -243,11 +243,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1685470074,
-        "narHash": "sha256-0vdewKY4Vmx476Qg5qd2voyuL7ZssqOUlQeNJCuvs3Q=",
+        "lastModified": 1686790910,
+        "narHash": "sha256-vnfx5Uy2ef57/tavvHZ9eiVDpLUy5+7AYThPMtr1LSE=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "9b0393630068e688795bedd46c49df1a0bbc7c0a",
+        "rev": "ac9490062cf3caddbf25be3ba9281ce9ae58537b",
         "type": "github"
       },
       "original": {
@@ -1094,11 +1094,10 @@
       "locked": {
         "lastModified": 1685620412,
         "narHash": "sha256-cPRZRbR76M7fBNSXcrSOqLlIcs2KSj/Ynf0AdZ46qrE=",
-        "ref": "refs/heads/master",
+        "owner": "juspay",
+        "repo": "hedis",
         "rev": "92a3d5ab73dcb0ea11139a01d6f2950a8b8e7e0e",
-        "revCount": 712,
-        "type": "git",
-        "url": "https://github.com/juspay/hedis"
+        "type": "github"
       },
       "original": {
         "rev": "92a3d5ab73dcb0ea11139a01d6f2950a8b8e7e0e",
@@ -2199,11 +2198,11 @@
     },
     "process-compose-flake": {
       "locked": {
-        "lastModified": 1680797953,
-        "narHash": "sha256-lFYbfId1IX6jh/wUf+gt3LyvE9HblS4hcBQcougSzX0=",
+        "lastModified": 1686771612,
+        "narHash": "sha256-J1rKoEZpw/IyOdr+3UbwyRr2H2mkjvgQAab/71L/hos=",
         "owner": "Platonic-Systems",
         "repo": "process-compose-flake",
-        "rev": "aee1b8d126a5efe5945513eb2fb343f3d68dca4b",
+        "rev": "ef453a6ce5deb13f90ebcebcbf25e01fdf2c7505",
         "type": "github"
       },
       "original": {

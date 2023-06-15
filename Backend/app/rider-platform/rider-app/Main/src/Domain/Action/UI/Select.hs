@@ -30,6 +30,7 @@ import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
 import Domain.Types.Booking.Type
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import Domain.Types.Quote (QuoteAPIEntity (..))
@@ -56,8 +57,9 @@ import Tools.Error
 
 data DSelectReq = DSelectReq
   { customerExtraFee :: Maybe Money,
-    autoAssignEnabled :: Maybe Bool, --TODO: deprecated, to be removed
-    autoAssignEnabledV2 :: Maybe Bool
+    autoAssignEnabled :: Bool,
+    autoAssignEnabledV2 :: Maybe Bool,
+    paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod)
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -76,7 +78,7 @@ data DSelectRes = DSelectRes
     variant :: VehicleVariant,
     customerExtraFee :: Maybe Money,
     city :: Text,
-    autoAssignEnabled :: Maybe Bool
+    autoAssignEnabled :: Bool
   }
 
 data QuotesResultResponse = QuotesResultResponse
@@ -116,18 +118,17 @@ select personId estimateId req@DSelectReq {..} = do
   runRequestValidation validateDSelectReq req
   now <- getCurrentTime
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
-  when (estimate.status == DEstimate.DRIVER_QUOTE_REQUESTED) $ throwError (InvalidRequest "Estimate already offered")
   let searchRequestId = estimate.requestId
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
   merchant <- QM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   when ((searchRequest.validTill) < now) $
     throwError SearchRequestExpired
   Esq.runTransaction $ do
-    whenJust autoAssignEnabled $ \autoAssignEnabled' -> QSearchRequest.updateAutoAssign searchRequestId autoAssignEnabled' (fromMaybe False autoAssignEnabledV2)
+    QSearchRequest.updateAutoAssign searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2)
     QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, validTill = searchRequest.validTill}
     QEstimate.updateStatus estimateId DEstimate.DRIVER_QUOTE_REQUESTED
-    when (isJust req.customerExtraFee) $ do
-      QSearchRequest.updateCustomerExtraFee searchRequest.id req.customerExtraFee
+    when (isJust req.customerExtraFee || isJust req.paymentMethodId) $ do
+      QSearchRequest.updateCustomerExtraFeeAndPaymentMethod searchRequest.id req.customerExtraFee req.paymentMethodId
   QPFS.clearCache searchRequest.riderId
   pure
     DSelectRes

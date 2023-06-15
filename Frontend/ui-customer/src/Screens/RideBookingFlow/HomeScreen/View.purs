@@ -79,10 +79,10 @@ import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(.
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, driverTracking, rideTracking, walkCoordinates, walkCoordinate, getSavedLocationList)
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage)
 import Styles.Colors as Color
-import Types.App (GlobalState)
 import Services.Backend as Remote
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Control.Monad.Trans.Class (lift)
+import Types.App (GlobalState, defaultGlobalState)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -95,7 +95,7 @@ screen initialState =
             _ <- pure $ printLog "storeCallBackCustomer callbackInitiated" initialState.props.callbackInitiated
             -- push NewUser -- TODO :: Handle the functionality
             _ <- isMockLocation push IsMockLocation
-            _ <- launchAff $ flowRunner $ checkForLatLongInSavedLocations push UpdateSavedLoc initialState
+            _ <- launchAff $ flowRunner defaultGlobalState $ checkForLatLongInSavedLocations push UpdateSavedLoc initialState
             if (not initialState.props.callbackInitiated) then do
               _ <- pure $ printLog "storeCallBackCustomer initiateCallback" "."
               _ <- storeCallBackCustomer push NotificationListener
@@ -118,7 +118,7 @@ screen initialState =
                   pure unit
               FindingEstimate -> do
                 _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
-                _ <- launchAff $ flowRunner $ getEstimate GetEstimates CheckFlowStatusAction 10 1000.0 push initialState
+                _ <- launchAff $ flowRunner defaultGlobalState $ getEstimate GetEstimates CheckFlowStatusAction 10 1000.0 push initialState
                 pure unit
               FindingQuotes -> do
                 when ((getValueToLocalStore FINDING_QUOTES_POLLING) == "false") $ do
@@ -127,8 +127,8 @@ screen initialState =
                   _ <- pure $ setValueToLocalStore GOT_ONE_QUOTE "FALSE"
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   let pollingCount = ceil ((toNumber initialState.props.searchExpire)/((fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) / 1000.0))
-                  void $ launchAff $ flowRunner $ getQuotesPolling (getValueToLocalStore TRACKING_ID) GetQuotesList Restart pollingCount (fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) push initialState
-              ConfirmingRide -> void $ launchAff $ flowRunner $ confirmRide GetRideConfirmation 5 3000.0 push initialState
+                  void $ launchAff $ flowRunner defaultGlobalState $ getQuotesPolling (getValueToLocalStore TRACKING_ID) GetQuotesList Restart pollingCount (fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) push initialState
+              ConfirmingRide -> void $ launchAff $ flowRunner defaultGlobalState $ confirmRide GetRideConfirmation 5 3000.0 push initialState
               HomeScreen -> do
                 _ <- pure $ setValueToLocalStore SESSION_ID (generateSessionId unit)
                 _ <- pure $ removeAllPolylines ""
@@ -140,7 +140,7 @@ screen initialState =
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
                   _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
-                  void $ launchAff $ flowRunner $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 3000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup"
+                  void $ launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 3000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup"
                 else pure unit
                 if(not initialState.props.chatcallbackInitiated) then do
                   _ <- storeCallBackMessageUpdated push initialState.data.driverInfoCardState.bppRideId "Customer" UpdateMessages
@@ -155,7 +155,7 @@ screen initialState =
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
                   _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
-                  _ <- launchAff $ flowRunner $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 20000.0 (getValueToLocalStore TRACKING_ID) initialState "trip"
+                  _ <- launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 20000.0 (getValueToLocalStore TRACKING_ID) initialState "trip"
                   pure unit
                 else
                   pure unit
@@ -168,7 +168,10 @@ screen initialState =
                 _ <- storeCallBackLocateOnMap push UpdatePickupLocation
                 pure unit
               TryAgain -> do
-                _ <- launchAff $ flowRunner $ getEstimate EstimatesTryAgain CheckFlowStatusAction 10 1000.0 push initialState
+                _ <- launchAff $ flowRunner defaultGlobalState $ getEstimate EstimatesTryAgain CheckFlowStatusAction 10 1000.0 push initialState
+                pure unit
+              FindEstimateAndSearch -> do
+                push $ SearchForSelectedLocation
                 pure unit
               _ -> pure unit
             if ((initialState.props.sourceLat /= (-0.1)) && (initialState.props.sourceLong /= (-0.1))) then do
@@ -187,20 +190,9 @@ screen initialState =
                     if src == "" || src == "Current Location" then do
                         if (checkCurrentLocation initialState.props.sourceLat initialState.props.sourceLong initialState.data.previousCurrentLocations.pastCurrentLocations  && initialState.props.storeCurrentLocs )|| checkSavedLocations initialState.props.sourceLat initialState.props.sourceLong initialState.data.savedLocations
                           then push $ UpdateSourceFromPastLocations
-                        else do
-                          _ <- launchAff $ flowRunner $ runExceptT $ runBackT $ do
-                            (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq initialState.props.sourceLat initialState.props.sourceLong (case (getValueToLocalStore LANGUAGE_KEY) of
-                                                                                                                            "HI_IN" -> "HINDI"
-                                                                                                                            "KN_IN" -> "KANNADA"
-                                                                                                                            "BN_IN" -> "BENGALI"
-                                                                                                                            "ML_IN" -> "MALAYALAM"
-                                                                                                                            _      -> "ENGLISH"))
-
-                            let (PlaceName address) = (fromMaybe HomeScreenData.dummyLocationName (locationName !! 0))
-
-                            if src == "Current Location" then lift $ lift $ doAff do liftEffect $ push $ UpdateSourceName initialState.props.sourceLat initialState.props.sourceLong address.formattedAddress
-                              else lift $ lift $ doAff do liftEffect $ push $ UpdateSource initialState.props.sourceLat initialState.props.sourceLong address.formattedAddress
-                          pure unit
+                          else 
+                            if src == "Current Location" then push $ UpdateSourceName initialState.props.sourceLat initialState.props.sourceLong (getString CURRENT_LOCATION)
+                              else push $ UpdateSource initialState.props.sourceLat initialState.props.sourceLong (getString CURRENT_LOCATION)
                         pure (pure unit)
                     else  pure (pure unit)
             else
@@ -322,7 +314,7 @@ view push state =
     ]
 
 callSupportPopUpView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-callSupportPopUpView push state = 
+callSupportPopUpView push state =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -382,6 +374,8 @@ driverCallPopUp push state =
               [ text (getString CALL_DRIVER_USING)
               , height WRAP_CONTENT
               , color Color.black700
+              , textSize FontSize.a_18
+              , margin (MarginBottom 4)
               ]
             <> FontStyle.subHeading2 TypoGraphy
         , linearLayout
@@ -397,12 +391,13 @@ driverCallPopUp push state =
                       , orientation VERTICAL
                       ]
                       [ trackingCardCallView push state item
-                      , linearLayout
+                      , if(item.type == ANONYMOUS_CALLER) then linearLayout
                           [ height $ V 1
                           , width MATCH_PARENT
                           , background Color.grey900
                           ]
                           []
+                        else linearLayout[][]
                       ]
                 )
                 (driverCallPopUpData state)
@@ -414,12 +409,12 @@ driverCallPopUp push state =
 driverCallPopUpData :: HomeScreenState -> Array { text :: String, imageWithFallback :: String, type :: CallType, data :: String }
 driverCallPopUpData state =
   [ { text: (getString ANONYMOUS_CALL)
-    , imageWithFallback: "ic_anonymous_call ,https://assets.juspay.in/beckn/merchantcommon/images/ic_anonymous_call.png"
+    , imageWithFallback: "ny_ic_anonymous_call,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_anonymous_call.png"
     , type: ANONYMOUS_CALLER
-    , data: (getString YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER)
+    , data: (getString YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER_THE_CALL_WILL_BE_RECORDED_FOR_COMPLIANCE)
     }
   , { text: (getString DIRECT_CALL)
-    , imageWithFallback: "ic_direct_call,https://assets.juspay.in/beckn/merchantcommon/images/ic_direct_call.png"
+    , imageWithFallback: "ny_ic_direct_call,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_direct_call.png"
     , type: DIRECT_CALLER
     , data: (getString YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER)
     }
@@ -447,14 +442,25 @@ trackingCardCallView push state item =
       , weight 1.0
       , orientation VERTICAL]
     [
-      textView
+      linearLayout
+      [
+        height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , gravity CENTER
+      , orientation HORIZONTAL
+      , margin (MarginBottom 2) 
+      ][
+        textView
         $
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
+          , textSize FontSize.a_16
           , text item.text
           , gravity CENTER_VERTICAL
           , color Color.black800
           ]
+        , if(item.type == ANONYMOUS_CALLER) then labelView push state else linearLayout[][]
+      ]     
       , textView
         $
           [ height WRAP_CONTENT
@@ -470,6 +476,27 @@ trackingCardCallView push state item =
         , padding (Padding 3 3 3 3)
         ]
     ]
+
+labelView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+labelView push state =
+  linearLayout[
+    height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , cornerRadii $ Corners 24.0 true true true true
+  , background Color.green900
+  , margin (MarginHorizontal 10 10)
+  , gravity BOTTOM
+  ][
+    textView $ [
+      width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , color Color.white900
+    , gravity CENTER
+    , padding (Padding 8 1 8 1)
+    , textSize FontSize.a_13
+    , text (getString RECOMMENDED)
+    ]
+  ]
 
 searchLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 searchLocationView push state =
@@ -925,9 +952,9 @@ rideRequestFlowView push state =
         ]
         [ PrestoAnim.animationSet [ fadeIn true ]
             $ if (state.props.currentStage == SettingPrice) then
-                if (state.props.isSpecialZone && (getMerchant FunctionCall == JATRISAATHI))  || ((getMerchant FunctionCall) /= NAMMAYATRI) then 
+                if (state.props.isSpecialZone && (getMerchant FunctionCall == JATRISAATHI))  || ((getMerchant FunctionCall) /= NAMMAYATRI) then
                   ChooseYourRide.view (push <<< ChooseYourRideAction) (chooseYourRideConfig state)
-                else 
+                else
                 suggestedPriceView push state
               else if (state.props.currentStage == ConfirmingLocation) then
                 confirmPickUpLocationView push state
@@ -1453,7 +1480,7 @@ confirmPickUpLocationView push state =
             , height WRAP_CONTENT
             , width MATCH_PARENT
             , fontStyle $ FontStyle.bold LanguageStyle
-            ] 
+            ]
         , if  ((getMerchant FunctionCall == JATRISAATHI) && state.props.isSpecialZone ) then  nearByPickUpPointsView state push else currentLocationView push state
         , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfirmPickupConfig state)
         ]
@@ -1601,7 +1628,7 @@ rideTrackingView push state =
                 , width MATCH_PARENT
                 , background Color.transparent
                 , sheetState COLLAPSED
-                , peakHeight if state.props.currentStage == RideAccepted then getHeightFromPercent 64 else getHeightFromPercent 51
+                , peakHeight $ getPeakHeight state.props.currentStage
                 , visibility VISIBLE
                 , halfExpandedRatio 0.75
                 ]
@@ -1619,6 +1646,15 @@ rideTrackingView push state =
             ]
         ]
     ]
+
+
+getPeakHeight :: Stage -> Int
+getPeakHeight stage = case getValueFromConfig "enableShareRide" , stage of
+                      "true" , RideAccepted -> getHeightFromPercent 65
+                      "false" , RideAccepted -> getHeightFromPercent 60
+                      "true" , _ ->  getHeightFromPercent 52
+                      "false" , _ ->  getHeightFromPercent 47
+                      _ , _ -> getHeightFromPercent 47
 
 previousRideRatingView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 previousRideRatingView push state =
@@ -1796,14 +1832,14 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
           else
             pure unit
         Left err -> pure unit
-    if (state.props.isSpecialZone) && (isLocalStageOn RideAccepted) then do 
+    if (state.props.isSpecialZone) && (isLocalStageOn RideAccepted) then do
       _ <- pure $ enableMyLocation true
       _ <- pure $ removeAllPolylines ""
       _ <- doAff $ liftEffect $ animateCamera state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng 17
       _ <- doAff $ liftEffect $ addMarker "ny_ic_src_marker" state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng 160 (0.0) (0.0)
       void $ delay $ Milliseconds duration
       driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState
-      else do 
+      else do
         response <- getDriverLocation state.data.driverInfoCardState.rideId
         case response of
           Right (GetDriverLocationResp resp) -> do
@@ -1906,7 +1942,7 @@ checkForLatLongInSavedLocations push action state = do
   pure unit
 
 notinPickUpZoneView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-notinPickUpZoneView push state = 
+notinPickUpZoneView push state =
   linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -1916,7 +1952,7 @@ notinPickUpZoneView push state =
       , cornerRadius 8.0
       , margin $ MarginTop 16
       , padding $ PaddingVertical 2 10
-      ][linearLayout 
+      ][linearLayout
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , orientation HORIZONTAL
@@ -1925,7 +1961,7 @@ notinPickUpZoneView push state =
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , orientation VERTICAL
-        , gravity CENTER 
+        , gravity CENTER
         , margin $ MarginTop if os == "IOS" then 10 else 0
         ][  textView
             [ text $ if state.data.rateCard.additionalFare == 0 then "₹" <> (show state.data.suggestedAmount) else  "₹" <> (show state.data.suggestedAmount) <> "-" <> "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))
@@ -1971,7 +2007,7 @@ notinPickUpZoneView push state =
                   , gravity CENTER_HORIZONTAL
                   , onClick push $ const PreferencesDropDown
                   , margin $ MarginBottom 8
-                  ][ 
+                  ][
                       textView
                       [ height $ V 24
                       , width WRAP_CONTENT
@@ -1979,7 +2015,7 @@ notinPickUpZoneView push state =
                       , text $ getString BOOKING_PREFERENCE
                       , textSize FontSize.a_16
                       , fontStyle $ FontStyle.regular LanguageStyle
-                      
+
                       ],
                       imageView
                       [ width $ V 10
@@ -1992,7 +2028,7 @@ notinPickUpZoneView push state =
                     [ width MATCH_PARENT
                     , height WRAP_CONTENT
                     , margin $ MarginLeft 20
-                    , orientation VERTICAL 
+                    , orientation VERTICAL
                     ][ linearLayout
                        [ width MATCH_PARENT
                        , height WRAP_CONTENT
@@ -2001,7 +2037,7 @@ notinPickUpZoneView push state =
                        ][showMenuButtonView push (getString AUTO_ASSIGN_DRIVER) "ny_ic_faster,https://assets.juspay.in/nammayatri/images/user/ny_ic_faster.png" true,
                          showMenuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png" false]
                   ]
-                  
+
               ]
           ]
       ]
@@ -2037,7 +2073,7 @@ currentLocationView push state =
             ]
 
 nearByPickUpPointsView :: forall w . HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-nearByPickUpPointsView state push = 
+nearByPickUpPointsView state push =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT

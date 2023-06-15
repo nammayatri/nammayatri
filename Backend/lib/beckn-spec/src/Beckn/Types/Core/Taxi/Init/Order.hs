@@ -14,9 +14,9 @@
 
 module Beckn.Types.Core.Taxi.Init.Order where
 
+import Beckn.Types.Core.Taxi.Common.Payment
 import Beckn.Types.Core.Taxi.Init.Descriptor
 import Beckn.Types.Core.Taxi.Init.Fulfillment
-import Beckn.Types.Core.Taxi.Init.Payment
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (State, id, state)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)

@@ -178,6 +178,7 @@ addMessage merchantShortId Common.AddMessageRequest {..} = do
             title,
             label,
             likeCount = 0,
+            viewCount = 0,
             description,
             shortDescription,
             mediaFiles = cast <$> mediaFiles,
@@ -293,7 +294,7 @@ messageDeliveryInfo merchantShortId messageId = do
   --seen <- Esq.runInReplica $ MRQuery.getMessageCountByReadStatus messageId
   seen <- MRQuery.getMessageCountByReadStatus messageId
   message <- MQuery.findById messageId >>= fromMaybeM (InvalidRequest "Message Not Found")
-  return $ Common.MessageDeliveryInfoResponse {messageId = cast messageId, success, failed, queued, sending, seen, liked = message.likeCount}
+  return $ Common.MessageDeliveryInfoResponse {messageId = cast messageId, success, failed, queued, sending, seen, liked = message.likeCount, viewed = message.viewCount}
 
 messageReceiverList :: ShortId DM.Merchant -> Id Domain.Message -> Maybe Text -> Maybe Common.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> Flow Common.MessageReceiverListResponse
 messageReceiverList merchantShortId msgId _ mbStatus mbLimit mbOffset = do

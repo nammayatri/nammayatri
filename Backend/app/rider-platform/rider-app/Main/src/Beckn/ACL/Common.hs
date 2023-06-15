@@ -14,6 +14,8 @@
 
 module Beckn.ACL.Common where
 
+import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Kernel.Prelude
 import Kernel.Utils.Common
 import Tools.Error
@@ -23,3 +25,33 @@ validatePrices price priceWithDiscount = do
   when (price < 0) $ throwError $ InvalidRequest "price is less than zero"
   when (priceWithDiscount < 0) $ throwError $ InvalidRequest "discounted price is less than zero"
   when (priceWithDiscount > price) $ throwError $ InvalidRequest "price is lesser than discounted price"
+
+castDPaymentCollector :: DMPM.PaymentCollector -> Payment.PaymentCollector
+castDPaymentCollector DMPM.BAP = Payment.BAP
+castDPaymentCollector DMPM.BPP = Payment.BPP
+
+castDPaymentType :: DMPM.PaymentType -> Payment.PaymentType
+castDPaymentType DMPM.PREPAID = Payment.ON_ORDER
+castDPaymentType DMPM.POSTPAID = Payment.ON_FULFILLMENT
+
+castDPaymentInstrument :: DMPM.PaymentInstrument -> Payment.PaymentInstrument
+castDPaymentInstrument (DMPM.Card DMPM.DefaultCardType) = Payment.Card Payment.DefaultCardType
+castDPaymentInstrument (DMPM.Wallet DMPM.DefaultWalletType) = Payment.Wallet Payment.DefaultWalletType
+castDPaymentInstrument DMPM.UPI = Payment.UPI
+castDPaymentInstrument DMPM.NetBanking = Payment.NetBanking
+castDPaymentInstrument DMPM.Cash = Payment.Cash
+
+castPaymentCollector :: Payment.PaymentCollector -> DMPM.PaymentCollector
+castPaymentCollector Payment.BAP = DMPM.BAP
+castPaymentCollector Payment.BPP = DMPM.BPP
+
+castPaymentType :: Payment.PaymentType -> DMPM.PaymentType
+castPaymentType Payment.ON_ORDER = DMPM.PREPAID
+castPaymentType Payment.ON_FULFILLMENT = DMPM.POSTPAID
+
+castPaymentInstrument :: Payment.PaymentInstrument -> DMPM.PaymentInstrument
+castPaymentInstrument (Payment.Card Payment.DefaultCardType) = DMPM.Card DMPM.DefaultCardType
+castPaymentInstrument (Payment.Wallet Payment.DefaultWalletType) = DMPM.Wallet DMPM.DefaultWalletType
+castPaymentInstrument Payment.UPI = DMPM.UPI
+castPaymentInstrument Payment.NetBanking = DMPM.NetBanking
+castPaymentInstrument Payment.Cash = DMPM.Cash

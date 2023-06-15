@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -19,7 +19,7 @@ import PrestoDOM ( Length(..), Margin(..), Visibility(..), Padding(..), Gravity(
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Styles.Colors as Color
+import Common.Styles.Colors as Color
 import Common.Types.App
 
 data Action = OnCloseClick
@@ -30,11 +30,11 @@ type Config =
   , starterLayout :: StarterLayoutConfig
   }
 
-type ImageConfig = 
+type ImageConfig =
   { imageUrl :: String
   , height :: Length
-  , width :: Length 
-  , margin :: Margin 
+  , width :: Length
+  , margin :: Margin
   , alpha :: Number
   , padding :: Padding
   }
@@ -44,16 +44,16 @@ type TextConfig =
   , textSize :: Int
   , fontStyle :: String
   , text :: String
-  , color :: String 
+  , color :: String
   , padding :: Padding
-  , margin :: Margin 
+  , margin :: Margin
   , visibility :: Visibility
   , gravity :: Gravity
   , weight :: Number
   }
 
 type StarterLayoutConfig =
-  { width :: Length 
+  { width :: Length
   , height :: Length
   , background :: String
   , cornerRadii :: Corners
@@ -61,9 +61,9 @@ type StarterLayoutConfig =
   , margin :: Margin
   }
 
-config :: Config 
-config = 
-  { imageConfig : 
+config :: Config
+config =
+  { imageConfig :
     { imageUrl : "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
     , height : V 25
     , width : V 25

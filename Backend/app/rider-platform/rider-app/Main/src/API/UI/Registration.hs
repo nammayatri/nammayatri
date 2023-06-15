@@ -73,11 +73,11 @@ handler =
 
 auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> FlowHandler DRegistration.AuthRes
 auth req mbBundleVersion =
-  withFlowHandlerAPI . DRegistration.auth False req mbBundleVersion
+  withFlowHandlerAPI . DRegistration.auth req mbBundleVersion
 
 signatureAuth :: SignatureAuthResult DRegistration.AuthReq -> Maybe Version -> Maybe Version -> FlowHandler DRegistration.AuthRes
 signatureAuth (SignatureAuthResult req) mbBundleVersion =
-  withFlowHandlerAPI . DRegistration.auth True req mbBundleVersion
+  withFlowHandlerAPI . DRegistration.signatureAuth req mbBundleVersion
 
 verify :: Id SR.RegistrationToken -> DRegistration.AuthVerifyReq -> FlowHandler DRegistration.AuthVerifyRes
 verify tokenId = withFlowHandlerAPI . DRegistration.verify tokenId

@@ -28,6 +28,7 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Version
 import qualified Storage.Tabular.Merchant as SMerchant
+import qualified Storage.Tabular.Merchant.MerchantPaymentMethod as SMPM
 import qualified Storage.Tabular.Person as SP
 import qualified Storage.Tabular.SearchRequest.SearchReqLocation as SLoc
 
@@ -46,12 +47,14 @@ mkPersist
       estimatedRideDuration Seconds Maybe
       device Text Maybe
       merchantId SMerchant.MerchantTId
-      bundleVersion Text Maybe
-      clientVersion Text Maybe
       language Language Maybe
       customerExtraFee Money Maybe
-      autoAssignEnabled Bool
-      autoAssignEnabledV2 Bool
+      availablePaymentMethods (PostgresList SMPM.MerchantPaymentMethodTId)
+      selectedPaymentMethodId SMPM.MerchantPaymentMethodTId Maybe
+      autoAssignEnabled Bool Maybe
+      autoAssignEnabledV2 Bool Maybe
+      bundleVersion Text Maybe
+      clientVersion Text Maybe
       createdAt UTCTime
       Primary id
       deriving Generic
@@ -80,6 +83,8 @@ instance FromTType FullSearchRequestT Domain.SearchRequest where
           merchantId = fromKey merchantId,
           bundleVersion = bundleVersion',
           clientVersion = clientVersion',
+          availablePaymentMethods = fromKey <$> unPostgresList availablePaymentMethods,
+          selectedPaymentMethodId = fromKey <$> selectedPaymentMethodId,
           ..
         }
 
@@ -98,6 +103,8 @@ instance ToTType FullSearchRequestT Domain.SearchRequest where
               merchantId = toKey merchantId,
               bundleVersion = versionToText <$> bundleVersion,
               clientVersion = versionToText <$> clientVersion,
+              availablePaymentMethods = PostgresList $ toKey <$> availablePaymentMethods,
+              selectedPaymentMethodId = toKey <$> selectedPaymentMethodId,
               ..
             }
     (searchReq, fromLoc, mbToLoc)

@@ -30,14 +30,16 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverLocation as DrLoc
 import Domain.Types.FareParameters as Fare
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Merchant.TransporterConfig as DTConf
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RD
 import qualified Domain.Types.Vehicle as DVeh
 import Environment (Flow)
-import EulerHS.Prelude hiding (pi)
+import EulerHS.Prelude hiding (id, pi)
 import Kernel.External.Maps
 import Kernel.Prelude (roundToIntegral)
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -49,8 +51,9 @@ import qualified Lib.LocationUpdates as LocUpd
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.DriverLocation as DrLoc
 import qualified SharedLogic.FareCalculator as Fare
-import qualified Storage.CachedQueries.FarePolicy as QFP
+import qualified SharedLogic.FarePolicy as FarePolicy
 import qualified Storage.CachedQueries.Merchant as MerchantS
+import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
@@ -77,8 +80,8 @@ data ServiceHandle m = ServiceHandle
     findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     getMerchant :: Id DM.Merchant -> m (Maybe DM.Merchant),
     endRideTransaction :: Id DP.Driver -> Id SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> Id DM.Merchant -> m (),
-    notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> m (),
-    getFarePolicy :: Id DM.Merchant -> DVeh.Variant -> m (Maybe DFP.FarePolicy),
+    notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> Maybe DMPM.PaymentMethodInfo -> Maybe Text -> m (),
+    getFarePolicy :: Id DM.Merchant -> DVeh.Variant -> Maybe DFareProduct.Area -> m DFP.FullFarePolicy,
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> Money -> Meters -> m (),
     findDriverLoc :: Id DM.Merchant -> Id DP.Person -> m (Maybe DrLoc.DriverLocation),
@@ -88,7 +91,8 @@ data ServiceHandle m = ServiceHandle
     clearInterpolatedPoints :: Id DP.Person -> m (),
     findConfig :: m (Maybe DTConf.TransporterConfig),
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m (),
-    getDistanceBetweenPoints :: LatLong -> LatLong -> [LatLong] -> m Meters
+    getDistanceBetweenPoints :: LatLong -> LatLong -> [LatLong] -> m Meters,
+    findPaymentMethodByIdAndMerchantId :: Id DMPM.MerchantPaymentMethod -> Id DM.Merchant -> m (Maybe DMPM.MerchantPaymentMethod)
   }
 
 buildEndRideHandle :: Id DM.Merchant -> Flow (ServiceHandle Flow)
@@ -101,7 +105,7 @@ buildEndRideHandle merchantId = do
         getMerchant = MerchantS.findById,
         notifyCompleteToBAP = CallBAP.sendRideCompletedUpdateToBAP,
         endRideTransaction = RideEndInt.endRideTransaction,
-        getFarePolicy = QFP.findByMerchantIdAndVariant,
+        getFarePolicy = FarePolicy.getFarePolicy,
         calculateFareParameters = Fare.calculateFareParameters,
         putDiffMetric = RideEndInt.putDiffMetric,
         findDriverLoc = DrLoc.findById,
@@ -111,7 +115,8 @@ buildEndRideHandle merchantId = do
         clearInterpolatedPoints = LocUpd.clearInterpolatedPoints defaultRideInterpolationHandler,
         findConfig = QTConf.findByMerchantId merchantId,
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock,
-        getDistanceBetweenPoints = RideEndInt.getDistanceBetweenPoints merchantId
+        getDistanceBetweenPoints = RideEndInt.getDistanceBetweenPoints merchantId,
+        findPaymentMethodByIdAndMerchantId = CQMPM.findByIdAndMerchantId
       }
 
 driverEndRide ::
@@ -212,7 +217,14 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
     -- we need to store fareParams only when they changed
     endRideTransaction (cast @DP.Person @DP.Driver driverId) booking.id updRide mbUpdatedFareParams booking.riderId booking.providerId
     clearInterpolatedPoints driverId
-    notifyCompleteToBAP booking updRide newFareParams
+
+    mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
+      findPaymentMethodByIdAndMerchantId paymentMethodId booking.providerId
+        >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+    let mbPaymentUrl = DMPM.getPostpaidPaymentUrl =<< mbPaymentMethod
+    let mbPaymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+
+    notifyCompleteToBAP booking updRide newFareParams mbPaymentMethodInfo mbPaymentUrl
   return APISuccess.Success
 
 recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> m (Meters, Money, Maybe FareParameters)
@@ -222,7 +234,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance = do
 
   -- maybe compare only distance fare?
   let estimatedFare = Fare.fareSum booking.fareParams
-  farePolicy <- getFarePolicy merchantId booking.vehicleVariant >>= fromMaybeM (FareParametersNotFound merchantId.getId)
+  farePolicy <- getFarePolicy merchantId booking.vehicleVariant booking.area
   fareParams <-
     calculateFareParameters
       Fare.CalculateFareParametersParams

@@ -24,6 +24,7 @@ import qualified Kernel.Types.SlidingWindowCounters as SWC
 
 data DriverIntelligentPoolConfigD u = DriverIntelligentPoolConfig
   { merchantId :: Id Merchant,
+    actualPickupDistanceWeightage :: Int,
     availabilityTimeWeightage :: Int,
     availabilityTimeWindowOption :: SWC.SlidingWindowOptions,
     acceptanceRatioWeightage :: Int,
@@ -49,13 +50,14 @@ instance FromJSON (DriverIntelligentPoolConfigD 'Unsafe)
 
 instance ToJSON (DriverIntelligentPoolConfigD 'Unsafe)
 
-data IntelligentFactors = AcceptanceRatio | CancellationRatio | AvailableTime | DriverSpeed
+data IntelligentFactors = AcceptanceRatio | CancellationRatio | AvailableTime | DriverSpeed | ActualPickupDistance
 
 data IntelligentScores = IntelligentScores
   { acceptanceRatio :: Maybe Double,
     cancellationRatio :: Maybe Double,
     availableTime :: Maybe Double,
     driverSpeed :: Maybe Double,
+    actualPickupDistanceScore :: Maybe Double,
     rideRequestPopupDelayDuration :: Seconds
   }
   deriving (Generic, Show, ToJSON, FromJSON)

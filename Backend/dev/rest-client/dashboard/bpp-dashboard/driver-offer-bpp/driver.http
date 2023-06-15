@@ -152,3 +152,21 @@ content-type: application/json
 POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId4}}/endRCAssociation
 token: {{juspay_admin}}
 content-type: application/json
+
+###
+
+# @name blockDriver
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId1}}/block
+token: {{juspay_ops}}
+content-type: application/json
+
+###
+
+# @name unblockDriver
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId1}}/unblock
+token: {{juspay_ops}}
+content-type: application/json
+
+###

@@ -21,6 +21,7 @@ import qualified API.Beckn.Rating as Rating
 import qualified API.Beckn.Search as Search
 import qualified API.Beckn.Select as Select
 import qualified API.Beckn.Track as Track
+import qualified API.Beckn.Update as Update
 import Environment
 import Servant
 
@@ -33,6 +34,7 @@ type API =
            :<|> Track.API
            :<|> Cancel.API
            :<|> Rating.API
+           :<|> Update.API
        )
 
 handler :: FlowServer API
@@ -44,3 +46,4 @@ handler =
     :<|> Track.handler
     :<|> Cancel.handler
     :<|> Rating.handler
+    :<|> Update.handler

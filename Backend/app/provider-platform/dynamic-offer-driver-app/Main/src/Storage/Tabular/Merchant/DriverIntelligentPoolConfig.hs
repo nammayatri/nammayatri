@@ -37,6 +37,7 @@ mkPersist
   [defaultQQ|
     DriverIntelligentPoolConfigT sql=driver_intelligent_pool_config
       merchantId MerchantTId
+      actualPickupDistanceWeightage Int
       availabilityTimeWeightage Int
       availabilityTimeWindowOption SWC.SlidingWindowOptions
       acceptanceRatioWeightage Int

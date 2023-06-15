@@ -29,6 +29,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Common (Meters, Money)
 import Kernel.Types.Id
 import Kernel.Types.Time
+import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Person (PersonTId)
 import Storage.Tabular.SearchRequest (SearchRequestTId)
 import Storage.Tabular.SearchTry (SearchTryTId)
@@ -44,6 +45,7 @@ mkPersist
       id Text
       requestId SearchRequestTId sql=search_request_id
       searchTryId SearchTryTId
+      merchantId MerchantTId Maybe
       startTime UTCTime
       actualDistanceToPickup Meters
       straightLineDistanceToPickup Meters
@@ -65,9 +67,9 @@ mkPersist
       driverAvailableTime Double Maybe
       parallelSearchRequestCount Int Maybe
       driverSpeed Double Maybe
+      keepHiddenForSeconds Seconds
       mode D.DriverMode Maybe
       createdAt UTCTime
-
       Primary id
       deriving Generic
     |]
@@ -85,6 +87,7 @@ instance FromTType SearchRequestForDriverT Domain.SearchRequestForDriver where
           driverId = fromKey driverId,
           requestId = fromKey requestId,
           searchTryId = fromKey searchTryId,
+          merchantId = fromKey <$> merchantId,
           ..
         }
 
@@ -96,5 +99,6 @@ instance ToTType SearchRequestForDriverT Domain.SearchRequestForDriver where
         driverId = toKey driverId,
         requestId = toKey requestId,
         searchTryId = toKey searchTryId,
+        merchantId = toKey <$> merchantId,
         ..
       }

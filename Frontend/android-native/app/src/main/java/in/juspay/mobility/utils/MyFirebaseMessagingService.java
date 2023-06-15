@@ -46,6 +46,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     private FirebaseAnalytics mFirebaseAnalytics;
     String merchantType = BuildConfig.MERCHANT_TYPE;
 
+    private RideRequestUtils rideRequestUtils = new RideRequestUtils();
+
     @Override
     public void onNewToken(@NonNull String newToken){
         super.onNewToken(newToken);
@@ -113,10 +115,16 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 String notificationType = (String) payload.get("notification_type");
                 stopChatService(notificationType,sharedPref);
                 switch (notificationType) {
+                    case NotificationTypes.DRIVER_NOTIFY:
+                        if (remoteMessage.getData().containsKey("driver_notification_payload")) {
+                            showOverlayMessage(new JSONObject(remoteMessage.getData().get("driver_notification_payload")));
+                        }
+                        break;
+
                     case NotificationTypes.TRIGGER_SERVICE :
                         if (merchantType.equals("DRIVER")) {
                             FirebaseAnalytics.getInstance(this).logEvent("notification_trigger_service", new Bundle());
-                            restartLocationService();
+                            rideRequestUtils.restartLocationService(this);
                         }
                         break;
 
@@ -204,7 +212,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             String storage_key = notification_payload.get("storage_key").toString();
                             String storage_value = notification_payload.get("storage_value").toString();
                             if(storage_key.equals("update_driver_status")){
-                                storage_value = storage_value.toLowerCase();
                                 boolean status = storage_value.equals("SILENT") || storage_value.equals("ONLINE") ;
                                 NotificationUtils.updateDriverStatus(status, storage_value, this);
                             }
@@ -220,7 +227,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             JSONObject reqBody =(JSONObject) notification_payload.get("reqBody");
                             if (endPoint != null && method != null){
                                 reqBody = reqBody != null ? reqBody : null;
-                                callAPIViaFCM(endPoint, reqBody, method);
+                                rideRequestUtils.callAPIViaFCM(endPoint, reqBody, method, this);
                             }
 
                         }catch (Exception e) {
@@ -261,60 +268,14 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         }
     }
 
-    private void callAPIViaFCM(String orderUrl, JSONObject requestBody, String method){
-        SharedPreferences sharedPref = this.getSharedPreferences(
-                this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        Handler handler = new Handler(Looper.getMainLooper());
-        executor.execute(() -> {
-            StringBuilder result = new StringBuilder();
-            try {
-                System.out.print("in updateFCMToken");
-                HttpURLConnection connection = (HttpURLConnection) (new URL(orderUrl).openConnection());
-                if (connection instanceof HttpsURLConnection)
-                    ((HttpsURLConnection) connection).setSSLSocketFactory(new TLSSocketFactory());
-                connection.setRequestMethod(method);
-                connection.setRequestProperty("Content-Type", "application/json");
-                connection.setRequestProperty("token", token);
-                connection.setDoOutput(true);
-
-                OutputStream stream = connection.getOutputStream();
-                if(requestBody!=null){
-                    stream.write(requestBody.toString().getBytes());
-                }
-                connection.connect();
-                int respCode = connection.getResponseCode();
-                InputStreamReader respReader;
-
-                if ((respCode < 200 || respCode >= 300) && respCode != 302) {
-                    respReader = new InputStreamReader(connection.getErrorStream());
-                    firebaseLogEventWithParams("ny_fcm_error_calling_api","status_code", String.valueOf(respCode));
-                    System.out.print("in error : " + respReader);
-                } else {
-                    respReader = new InputStreamReader(connection.getInputStream());
-                    firebaseLogEventWithParams("ny_fcm_success_calling_api","status_code", String.valueOf(respCode));
-                    System.out.print("in 200 : " + respReader);
-                }
-
-                BufferedReader in = new BufferedReader(respReader);
-                String inputLine;
-
-                while ((inputLine = in.readLine()) != null) {
-                    result.append(inputLine);
-                }
-                System.out.print("in result : " + result.toString());
-
-            } catch (Exception ignored) {
-                System.out.println("Catch in updateFCMToken : " +ignored);
-            }
-            handler.post(()->{
-                onDestroy();
-                stopForeground(true);
-                stopSelf();
-                executor.shutdown();
-            });
-        });
+    private void showOverlayMessage(JSONObject payload) {
+        try{
+            Intent showMessage = new Intent(getApplicationContext(), OverlayMessagingService.class);
+            showMessage.putExtra("payload", payload.toString());
+            startService(showMessage);
+        }catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @SuppressLint("StaticFieldLeak")
@@ -323,6 +284,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
         String baseUrl = sharedPref.getString("BASE_URL", "null");
+        String deviceDetails = sharedPref.getString("DEVICE_DETAILS", "null");
         ExecutorService executor = Executors.newSingleThreadExecutor();
         Handler handler = new Handler(Looper.getMainLooper());
         executor.execute(() -> {
@@ -342,6 +304,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     connection.setRequestMethod("POST");
                     connection.setRequestProperty("Content-Type", "application/json");
                     connection.setRequestProperty("token", token);
+                    connection.setRequestProperty("x-device", deviceDetails);
                     connection.setDoOutput(true);
 
                     JSONObject payload = new JSONObject();
@@ -379,18 +342,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     executor.shutdown();
                 });
             });
-    }
-    public void restartLocationService() 
-    {
-        Context context = getApplicationContext();
-        Intent locationService = new Intent(context, LocationUpdateService.class);
-        locationService.putExtra("StartingSource","TRIGGER_SERVICE");
-        locationService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.startForegroundService(locationService);
-        }else{
-            context.startService(locationService);
-        }
     }
 
     private void startWidgetService(String widgetMessage, JSONObject data, JSONObject payload){
@@ -458,5 +409,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         private static final String UPDATE_STORAGE = "UPDATE_STORAGE";
         private static final String CALL_API = "CALL_API";
         private static final String CHAT_MESSAGE = "CHAT_MESSAGE";
+        private static final String DRIVER_NOTIFY = "DRIVER_NOTIFY";
     }
 }

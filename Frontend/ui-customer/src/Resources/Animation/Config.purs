@@ -1,20 +1,26 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Animation.Config where
+module Animation.Config
+    ( module Animation.Config
+    , module Common
+    )
 
+    where
+
+import Common.Animation.Config (AnimConfig) as Common
 import Engineering.Helpers.Commons (screenHeight, os)
 import Prelude ((+), (*), negate, unit, (==))
 import PrestoDOM.Animation (Interpolator, RepeatCount, fromAlpha, interpolator, toAlpha)
@@ -22,28 +28,7 @@ import PrestoDOM.Animation as PrestoAnim
 
 data Direction = LEFT_RIGHT | RIGHT_LEFT | BOTTOM_TOP | TOP_BOTTOM
 
-type AnimConfig = {
-    duration :: Int
-  , delay :: Int
-  , fromY :: Int
-  , toY :: Int
-  , fromX :: Int
-  , toX :: Int
-  , repeatCount ::RepeatCount -- (Repeat 0)
-  , toAlpha :: Number
-  , fromAlpha :: Number 
-  , interpolator :: Interpolator
-  , tag :: String
-  , ifAnim :: Boolean
-  , fromRotation :: Int
-  , toRotation :: Int
-  , fromScaleY :: Number
-  , toScaleY :: Number
-  , fromScaleX :: Number
-  , toScaleX :: Number
-}
-
-animConfig :: AnimConfig
+animConfig :: Common.AnimConfig
 animConfig = {
     duration : 0
   , delay : 0
@@ -53,7 +38,7 @@ animConfig = {
   , toX : 0
   , repeatCount : (PrestoAnim.Repeat 0)
   , toAlpha : 0.0
-  , fromAlpha : 0.0 
+  , fromAlpha : 0.0
   , interpolator : PrestoAnim.Bezier 0.37 0.0 0.63 1.0
   , tag : ""
   , ifAnim : true
@@ -65,20 +50,20 @@ animConfig = {
   , toScaleX : 0.0
 }
 
-translateYAnimConfig :: AnimConfig
+translateYAnimConfig :: Common.AnimConfig
 translateYAnimConfig = animConfig {
   duration = 300
 , fromY = 10
 , toY = 0
 }
 
-translateYAnimConfigUpdate :: AnimConfig
+translateYAnimConfigUpdate :: Common.AnimConfig
 translateYAnimConfigUpdate = animConfig {
  fromY = (300)
 , toY = 0
 }
 
-translateYAnimHomeConfig :: Direction -> AnimConfig
+translateYAnimHomeConfig :: Direction -> Common.AnimConfig
 translateYAnimHomeConfig direction = animConfig {
   duration = 1000
 , fromY = case direction of
@@ -87,14 +72,14 @@ translateYAnimHomeConfig direction = animConfig {
             _          -> 0
 }
 
-translateYAnimMapConfig :: Int -> AnimConfig
+translateYAnimMapConfig :: Int -> Common.AnimConfig
 translateYAnimMapConfig index = animConfig {
-  duration = (300 + (index*50)) 
+  duration = (300 + (index*50))
 , fromY = 10
 , toY = 0
 }
 
-removeYAnimFromTopConfig :: AnimConfig
+removeYAnimFromTopConfig :: Common.AnimConfig
 removeYAnimFromTopConfig = animConfig {
   duration = 100
 , fromY = 0
@@ -103,11 +88,10 @@ removeYAnimFromTopConfig = animConfig {
 , toAlpha = 0.0
 }
 
-translateFullYAnimWithDurationConfig :: Int -> AnimConfig
+translateFullYAnimWithDurationConfig :: Int -> Common.AnimConfig
 translateFullYAnimWithDurationConfig duration = animConfig {
   duration = duration
 , fromY = screenHeight unit
 , toY = 0
 , interpolator = PrestoAnim.EaseInOut
 }
-  

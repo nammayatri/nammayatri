@@ -267,7 +267,8 @@ type ContactUsScreenData =
     email :: String,
     subject :: String,
     description :: String,
-    bookingId :: String
+    bookingId :: String,
+    errorMessage :: Maybe EmailErrorType
   }
 
 type ContactUsScreenProps =
@@ -432,6 +433,8 @@ data Stage = HomeScreen
            | RideRating
            | FavouriteLocationModel
            | ChatWithDriver
+           | FindEstimateAndSearch
+           | RetryFindingQuote
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -750,7 +753,7 @@ type DriverInfoCard =
   , driverArrived :: Boolean
   , estimatedDistance :: String
   , driverArrivalTime :: Int
-  , bppRideId :: String 
+  , bppRideId :: String
   , driverNumber :: Maybe String
   , merchantExoPhone :: String
   , createdAt :: String

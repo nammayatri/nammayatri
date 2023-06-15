@@ -102,6 +102,8 @@ handler transporter req quote = do
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   now <- getCurrentTime
   (riderDetails, isNewRider) <- getRiderDetails transporter.id req.customerMobileCountryCode req.customerPhoneNumber now
+  unless (booking.status == DRB.NEW) $
+    throwError (BookingInvalidStatus $ show booking.status)
   case booking.bookingType of
     DRB.NormalBooking -> do
       case quote of
@@ -195,6 +197,7 @@ handler transporter req quote = do
             pickupDropOutsideOfThreshold = Nothing,
             bookingId = booking.id,
             shortId = shortId,
+            merchantId = Just booking.providerId,
             status = DRide.NEW,
             driverId = cast driverId,
             otp = otp,
@@ -293,12 +296,12 @@ cancelBooking ::
   m ()
 cancelBooking booking mbDriver transporter = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
-  let transporterId' = booking.providerId
-  unless (transporterId' == transporter.id) $ throwError AccessDenied
+  let transporterId' = Just booking.providerId
+  unless (transporterId' == Just transporter.id) $ throwError AccessDenied
   mbRide <- QRide.findActiveByRBId booking.id
   bookingCancellationReason <- case mbDriver of
-    Nothing -> buildBookingCancellationReason booking.id Nothing mbRide
-    Just driver -> buildBookingCancellationReason booking.id (Just driver.id) mbRide
+    Nothing -> buildBookingCancellationReason booking.id Nothing mbRide transporterId'
+    Just driver -> buildBookingCancellationReason booking.id (Just driver.id) mbRide transporterId'
   -- Esq.runTransaction $ do
   _ <- QRB.updateStatus booking.id DRB.CANCELLED
   QBCR.upsert bookingCancellationReason
@@ -318,12 +321,13 @@ cancelBooking booking mbDriver transporter = do
         fork "cancelRide - Notify driver" $ do
           Notify.notifyOnCancel transporter.id booking driver.id driver.deviceToken bookingCancellationReason.source
   where
-    buildBookingCancellationReason bookingId driverId ride = do
+    buildBookingCancellationReason bookingId driverId ride merchantId = do
       return $
         DBCR.BookingCancellationReason
           { driverId = driverId,
             bookingId,
             rideId = (.id) <$> ride,
+            merchantId = merchantId,
             source = DBCR.ByApplication,
             reasonCode = Nothing,
             additionalInfo = Nothing,

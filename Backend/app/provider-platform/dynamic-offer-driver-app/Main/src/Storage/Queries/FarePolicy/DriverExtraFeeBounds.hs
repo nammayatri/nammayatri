@@ -16,6 +16,7 @@
 module Storage.Queries.FarePolicy.DriverExtraFeeBounds where
 
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.FarePolicy as FarePolicy
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
@@ -82,3 +83,26 @@ transformDomainDriverExtraFeeBoundsToBeam (KTI.Id farePolicyId, DFP.DriverExtraF
       minFee = minFee,
       maxFee = maxFee
     }
+
+create :: DFP.FullDriverExtraFeeBounds -> SqlDB ()
+create = Esq.create
+
+findByFarePolicyIdAndStartDistance :: Transactionable m => Id FarePolicy.FarePolicy -> Meters -> m (Maybe DFP.FullDriverExtraFeeBounds)
+findByFarePolicyIdAndStartDistance farePolicyId startDistance = Esq.findOne $ do
+  farePolicy <- from $ table @DFP.DriverExtraFeeBoundsT
+  where_ $
+    farePolicy ^. DFP.DriverExtraFeeBoundsFarePolicyId ==. val (toKey farePolicyId)
+      &&. farePolicy ^. DFP.DriverExtraFeeBoundsStartDistance ==. val startDistance
+  pure farePolicy
+
+update :: Id FarePolicy.FarePolicy -> Meters -> Money -> Money -> SqlDB ()
+update farePolicyId startDistace minFee maxFee = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DFP.DriverExtraFeeBoundsMinFee =. val minFee,
+        DFP.DriverExtraFeeBoundsMaxFee =. val maxFee
+      ]
+    where_ $
+      tbl ^. DFP.DriverExtraFeeBoundsFarePolicyId ==. val (toKey farePolicyId)
+        &&. tbl ^. DFP.DriverExtraFeeBoundsStartDistance ==. val startDistace

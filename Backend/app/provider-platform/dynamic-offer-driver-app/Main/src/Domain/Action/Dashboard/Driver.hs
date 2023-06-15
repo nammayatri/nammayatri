@@ -30,6 +30,7 @@ module Domain.Action.Dashboard.Driver
     updatePhoneNumber,
     addVehicle,
     updateDriverName,
+    clearOnRideStuckDrivers,
   )
 where
 
@@ -58,6 +59,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified SharedLogic.DeleteDriver as DeleteDriver
+import qualified SharedLogic.DriverLocation as DLoc
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.DriverInformation as CQDriverInfo
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
@@ -236,8 +238,8 @@ blockDriver merchantShortId reqDriverId = do
   -- merchant access checking
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
-
-  _ <- CQDriverInfo.updateBlockedState driverId True
+  driverInf <- CQDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
+  when (not driverInf.blocked) (CQDriverInfo.updateBlockedState driverId True)
   logTagInfo "dashboard -> blockDriver : " (show personId)
   pure Success
 
@@ -255,7 +257,8 @@ unblockDriver merchantShortId reqDriverId = do
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  _ <- CQDriverInfo.updateBlockedState driverId False
+  driverInf <- CQDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
+  when driverInf.blocked (CQDriverInfo.updateBlockedState driverId False)
   logTagInfo "dashboard -> unblockDriver : " (show personId)
   pure Success
 
@@ -573,3 +576,17 @@ endRCAssociation merchantShortId reqDriverId = do
   _ <- CQDriverInfo.updateEnabledVerifiedState driverId False False
   logTagInfo "dashboard -> endRCAssociation : " (show personId)
   pure Success
+
+---------------------------------------------------------------------
+clearOnRideStuckDrivers :: ShortId DM.Merchant -> Flow Common.ClearOnRideStuckDriversRes
+clearOnRideStuckDrivers merchantShortId = do
+  merchant <- findMerchantByShortId merchantShortId
+  driverInfos <- Esq.runInReplica QPerson.getOnRideStuckDriverIds
+  driverIds <-
+    mapM
+      ( \driverInf -> do
+          DLoc.updateOnRide (cast driverInf.driverId) False merchant.id
+          return (cast driverInf.driverId)
+      )
+      driverInfos
+  return Common.ClearOnRideStuckDriversRes {driverIds = driverIds}

@@ -20,6 +20,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Estimate as DEst
+import Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
@@ -32,6 +33,7 @@ data SearchTry = SearchTry
   { id :: Id SearchTry,
     requestId :: Id DSR.SearchRequest,
     estimateId :: Id DEst.Estimate,
+    merchantId :: Maybe (Id DM.Merchant),
     messageId :: Text,
     startTime :: UTCTime,
     validTill :: UTCTime,

@@ -27,7 +27,6 @@ import qualified Domain.Types.Person as Person
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Types (base64Encode)
-import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -35,7 +34,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant.Multipart
 import SharedLogic.DriverOnboarding
-import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.TransporterConfig
 import qualified Storage.Queries.DriverOnboarding.Image as Query
 import qualified Storage.Queries.Person as Person
@@ -91,28 +89,29 @@ createPath driverId merchantId imageType = do
 
 validateImage ::
   Bool ->
-  Maybe DM.Merchant ->
   (Id Person.Person, Id DM.Merchant) ->
   ImageValidateRequest ->
   Flow ImageValidateResponse
-validateImage isDashboard mbMerchant (personId, _) ImageValidateRequest {..} = do
+validateImage isDashboard (personId, _) ImageValidateRequest {..} = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantId = person.merchantId
-  org <- case mbMerchant of
-    Nothing -> do
-      CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-    Just merchant -> do
-      -- merchant access checking
-      unless (merchant.id == merchantId) $ throwError (PersonNotFound personId.getId)
-      pure merchant
+  -- not needed org now because it is used to notify
+  -- org <- case mbMerchant of
+  --   Nothing -> do
+  --     CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  --   Just merchant -> do
+  --     -- merchant access checking
+  --     unless (merchant.id == merchantId) $ throwError (PersonNotFound personId.getId)
+  --     pure merchant
 
   images <- Query.findRecentByPersonIdAndImageType personId imageType
   unless isDashboard $ do
     transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
     let onboardingTryLimit = transporterConfig.onboardingTryLimit
     when (length images > onboardingTryLimit) $ do
-      driverPhone <- mapM decrypt person.mobileNumber
-      notifyErrorToSupport org.id driverPhone org.name ((.failureReason) <$> images)
+      -- not needed now
+      -- driverPhone <- mapM decrypt person.mobileNumber
+      -- notifyErrorToSupport org.id driverPhone org.name ((.failureReason) <$> images)
       throwError (ImageValidationExceedLimit personId.getId)
 
   imagePath <- createPath personId.getId merchantId.getId imageType
@@ -123,7 +122,7 @@ validateImage isDashboard mbMerchant (personId, _) ImageValidateRequest {..} = d
   -- skipping validation for rc as validation not available in idfy
   validationOutput <-
     Verification.validateImage merchantId $
-      Verification.ValidateImageReq {image, imageType = castImageType imageType}
+      Verification.ValidateImageReq {image, imageType = castImageType imageType, driverId = person.id.getId}
   when validationOutput.validationAvailable $ do
     checkErrors imageEntity.id imageType validationOutput.detectedImage
   _ <- Query.updateToValid imageEntity.id
@@ -151,7 +150,7 @@ validateImageFile ::
   Flow ImageValidateResponse
 validateImageFile isDashboard (personId, merchantId) ImageValidateFileRequest {..} = do
   image' <- L.runIO $ base64Encode <$> BS.readFile image
-  validateImage isDashboard Nothing (personId, merchantId) $ ImageValidateRequest image' imageType
+  validateImage isDashboard (personId, merchantId) $ ImageValidateRequest image' imageType
 
 mkImage ::
   (MonadGuid m, MonadTime m) =>

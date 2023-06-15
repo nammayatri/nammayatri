@@ -25,7 +25,7 @@ import Components.PopUpModal as PopUpModal
 import Components.PrimaryEditText as PrimaryEditText
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array ((!!), union, length, unionBy, any) as Array
+import Data.Array ((!!), union, length, unionBy, any, filter) as Array
 import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), split, length, take, drop, joinWith, trim)
@@ -43,6 +43,7 @@ import Services.APITypes (MediaFileApiResponse(..), MediaType(..), MessageAPIEnt
 import Services.Backend as Remote
 import Storage (KeyStore(..), setValueToLocalNativeStore)
 import Debug (spy)
+import Types.App (defaultGlobalState)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -59,6 +60,7 @@ data ScreenOutput
   | GoToRidesScreen
   | GoToReferralScreen
   | GoToProfileScreen
+  | GoToCurrentRideFlow
 
 data Action
   = OnFadeComplete String
@@ -80,16 +82,17 @@ eval Refresh state = exit $ RefreshScreen state
 eval BackPressed state = do
   if state.notifsDetailModelVisibility == VISIBLE && state.notificationDetailModelState.addCommentModelVisibility == GONE then
     continueWithCmd state { notifsDetailModelVisibility = GONE }
-    [ do
-        _ <- pure $ setYoutubePlayer youtubeData (getNewIDWithTag "youtubeView") $ show PAUSE
-        _ <- removeMediaPlayer ""
-        _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-        pure NoAction
-    ]
+      [ do
+          _ <- pure $ setYoutubePlayer youtubeData (getNewIDWithTag "youtubeView") $ show PAUSE
+          _ <- removeMediaPlayer ""
+          _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+          pure NoAction
+      ]
   else if state.notificationDetailModelState.addCommentModelVisibility == VISIBLE then
     continue state { notificationDetailModelState { addCommentModelVisibility = GONE, comment = Nothing} }
   else
-    exit $ GoBack
+    exit $ if state.deepLinkActivated then GoToCurrentRideFlow else GoBack
+
 
 eval (NotificationCardClick (NotificationCardAC.Action1Click index)) state = do
   case state.notificationList Array.!! index of
@@ -132,7 +135,7 @@ eval (NotificationDetailModelAC (NotificationDetailModel.AddCommentModelAction P
       let updatedNotificationList = (map(\item -> if(item.messageId == state.notificationDetailModelState.messageId) then item{comment = Just comment } else item)state.notificationList)
       continueWithCmd state { notificationDetailModelState { addCommentModelVisibility = GONE }, notificationList = updatedNotificationList }
         [ do
-            void $ launchAff $ flowRunner $ runExceptT $ runBackT
+            void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT
               $ do
                   res <- Remote.messageResponseBT state.notificationDetailModelState.messageId (Remote.makeMessageReplyReq comment)
                   pure unit
@@ -189,10 +192,17 @@ eval (MessageListResAction (MessageListRes notificationArray)) state = do
   _ <- pure $ setRefreshing (getNewIDWithTag "NotificationSwipeRefresh") false
   let
     loadBtnDisabled = if (Array.length notificationArray == 0) then true else false
-  if state.loadMore then
-      continue $ state { shimmerLoader = AnimatedOut, recievedResponse = true, notificationList = Array.unionBy (\a b -> a.messageId == b.messageId) state.notificationList notificationsList, prestoListArrayItems = Array.unionBy (\a b -> a.messageId == b.messageId) state.prestoListArrayItems propValueList, loadMoreDisabled = loadBtnDisabled, loadMore = false }
-  else
-      continue $ state { shimmerLoader = AnimatedOut, recievedResponse = true, notificationList = Array.unionBy (\a b -> a.messageId == b.messageId) notificationsList state.notificationList, prestoListArrayItems = Array.unionBy (\a b -> a.messageId == b.messageId) propValueList state.prestoListArrayItems, loadMoreDisabled = loadBtnDisabled }
+  let
+    newState =  case state.loadMore of
+                  true  -> state { shimmerLoader = AnimatedOut, recievedResponse = true, notificationList = Array.unionBy (\a b -> a.messageId == b.messageId) state.notificationList notificationsList, prestoListArrayItems = Array.unionBy (\a b -> a.messageId == b.messageId) state.prestoListArrayItems propValueList, loadMoreDisabled = loadBtnDisabled, loadMore = false }
+                  false -> state { shimmerLoader = AnimatedOut, recievedResponse = true, notificationList = Array.unionBy (\a b -> a.messageId == b.messageId) notificationsList state.notificationList, prestoListArrayItems = Array.unionBy (\a b -> a.messageId == b.messageId) propValueList state.prestoListArrayItems, loadMoreDisabled = loadBtnDisabled }
+  case newState.selectedNotification of
+    Just id -> do
+      let notificationItem = Array.filter (\a -> a.messageId == id) newState.notificationList
+      case notificationItem Array.!! 0 of
+        Just item -> continue newState{ notificationDetailModelState = notifisDetailStateTransformer item, notifsDetailModelVisibility = VISIBLE, selectedNotification = Nothing }
+        Nothing   -> continue newState{ selectedNotification = Nothing }
+    Nothing -> continue newState
 
 eval LoadMore state = do
   exit $ LoaderOutput state{loadMore = true}

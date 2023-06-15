@@ -95,7 +95,7 @@ view push config =
          ]
       ,linearLayout
         [ width MATCH_PARENT
-        , height WRAP_CONTENT
+        , height $ V 350
         , orientation HORIZONTAL
         ][PrestoAnim.animationSet [ if config.currentRateCardType == DefaultRateCard then (translateInXBackwardAnim config.onFirstPage) else (translateInXForwardAnim true) ] $
           if config.currentRateCardType == DefaultRateCard then defaultRateCardView push config 
@@ -379,7 +379,7 @@ driverAdditionView push config =
     , imageView
       [ height $ V 100
       , width MATCH_PARENT
-      , imageWithFallback "ny_ic_driver_addition_table,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_addition_table.png"
+      , imageWithFallback "ny_ic_driver_addition_table2,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_addition_table2.png"
       , margin $ MarginTop 12
       ] 
     ,textView

@@ -76,7 +76,7 @@ statusHandler :: (Id DP.Person, Id DM.Merchant) -> FlowHandler DriverOnboarding.
 statusHandler = withFlowHandlerAPI . DriverOnboarding.statusHandler
 
 validateImage :: (Id DP.Person, Id DM.Merchant) -> Image.ImageValidateRequest -> FlowHandler Image.ImageValidateResponse
-validateImage (personId, merchantId) = withFlowHandlerAPI . Image.validateImage False Nothing (personId, merchantId)
+validateImage (personId, merchantId) = withFlowHandlerAPI . Image.validateImage False (personId, merchantId)
 
 validateImageFile :: (Id DP.Person, Id DM.Merchant) -> Image.ImageValidateFileRequest -> FlowHandler Image.ImageValidateResponse
 validateImageFile (personId, merchantId) = withFlowHandlerAPI . Image.validateImageFile False (personId, merchantId)

@@ -46,6 +46,7 @@ mkPersist
       driverOfferMerchantId Text
       geoHashPrecisionValue Int
       signingPublicKey Base64
+      cipherText Base64 Maybe
       signatureExpiry Int
       updatedAt UTCTime
       createdAt UTCTime

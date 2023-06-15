@@ -48,7 +48,9 @@ import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.SearchRequest as QSearch
 
 data BookingCancelledReq = BookingCancelledReq
   { bookingId :: Id DTB.Booking,
@@ -139,15 +141,17 @@ rideList ::
   Maybe (ShortId Common.Ride) ->
   Maybe Text ->
   Maybe Text ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
   Flow Common.RideListRes
-rideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCustomerPhone mbDriverPhone = do
+rideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo = do
   merchant <- findMerchantByShortId merchantShortId
   let limit_ = min maxLimit . fromMaybe defaultLimit $ mbLimit -- TODO move to common code
       offset_ = fromMaybe 0 mbOffset
   let mbShortRideId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) <$> mbReqShortRideId
   mbCustomerPhoneDBHash <- getDbHash `traverse` mbCustomerPhone
   now <- getCurrentTime
-  rideItems <- runInReplica $ QRide.findAllRideItems merchant.id limit_ offset_ mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhone now
+  rideItems <- runInReplica $ QRide.findAllRideItems merchant.id limit_ offset_ mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhone mbFrom mbTo now
   rideListItems <- traverse buildRideListItem rideItems
   let count = length rideListItems
   -- should we consider filters in totalCount, e.g. count all canceled rides?
@@ -178,6 +182,17 @@ rideInfo merchantShortId reqRideId = do
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  estimatedDuration <- case booking.quoteId of
+    Just quoteId -> do
+      mbQuote <- runInReplica $ QQuote.findById quoteId
+      case mbQuote of
+        Just quote -> do
+          mbSearchReq <- runInReplica $ QSearch.findById quote.requestId
+          case mbSearchReq of
+            Just searchReq -> pure searchReq.estimatedRideDuration
+            Nothing -> pure Nothing
+        Nothing -> pure Nothing
+    Nothing -> pure Nothing
   merchant <- findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   unless (merchant.id == booking.merchantId) $ throwError (RideDoesNotExist rideId.getId)
   person <- runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
@@ -192,6 +207,11 @@ rideInfo merchantShortId reqRideId = do
         DB.OneWayDetails locationDetail -> Just $ mkCommonBookingLocation locationDetail.toLocation
         DB.DriverOfferDetails driverOfferDetail -> Just $ mkCommonBookingLocation driverOfferDetail.toLocation
         _ -> Nothing
+  let mbDistance = case booking.bookingDetails of
+        DB.OneWayDetails locationDetail -> Just $ locationDetail.distance
+        DB.DriverOfferDetails driverOfferDetail -> Just $ driverOfferDetail.distance
+        DB.OneWaySpecialZoneDetails oneWaySpecialZoneDetail -> Just $ oneWaySpecialZoneDetail.distance
+        _ -> Nothing
   let cancelledBy = castCancellationSource <$> (mbBCReason <&> (.source))
   pure
     Common.RideInfoRes
@@ -201,27 +221,30 @@ rideInfo merchantShortId reqRideId = do
         customerName = person.firstName,
         customerPhoneNo = person.unencryptedMobileNumber,
         rideOtp = ride.otp,
-        fromLocation = mkCommonBookingLocation booking.fromLocation,
-        toLocation = mbtoLocation,
+        customerPickupLocation = mkCommonBookingLocation booking.fromLocation,
+        customerDropLocation = mbtoLocation,
         driverName = ride.driverName,
         driverPhoneNo = Just ride.driverMobileNumber,
         driverRegisteredAt = ride.driverRegisteredAt,
-        vehicleNumber = ride.vehicleNumber,
+        vehicleNo = ride.vehicleNumber,
         vehicleModel = ride.vehicleModel,
         rideBookingTime = booking.createdAt,
-        driverArrivalTime = ride.driverArrivalTime,
+        actualDriverArrivalTime = ride.driverArrivalTime,
         rideStartTime = ride.rideStartTime,
         rideEndTime = ride.rideEndTime,
+        rideDistanceEstimated = mbDistance,
+        rideDistanceActual = ride.traveledDistance,
         chargeableDistance = ride.chargeableDistance,
         estimatedFare = booking.estimatedFare,
         actualFare = ride.fare,
-        rideDuration = timeDiffInMinutes <$> ride.rideEndTime <*> ride.rideStartTime,
+        estimatedRideDuration = estimatedDuration,
+        rideDuration = timeDiffInSeconds <$> ride.rideEndTime <*> ride.rideStartTime,
         cancelledTime = cancelledTime,
         cancelledBy = cancelledBy
       }
 
-timeDiffInMinutes :: UTCTime -> UTCTime -> Minutes
-timeDiffInMinutes t1 = secondsToMinutes . nominalDiffTimeToSeconds . diffUTCTime t1
+timeDiffInSeconds :: UTCTime -> UTCTime -> Seconds
+timeDiffInSeconds t1 = nominalDiffTimeToSeconds . diffUTCTime t1
 
 castCancellationSource :: DBCReason.CancellationSource -> Common.CancellationSource
 castCancellationSource = \case
@@ -241,7 +264,7 @@ bookingCancel BookingCancelledReq {..} = do
     throwError (BookingInvalidStatus (show booking.status))
   mbRide <- QRide.findActiveByRBId booking.id
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCReason.ByMerchant)
-  let bookingCancellationReason = buildBookingCancellationReason booking.id (mbRide <&> (.id))
+  let bookingCancellationReason = buildBookingCancellationReason booking.id (mbRide <&> (.id)) booking.merchantId
   runTransaction $ do
     QRB.updateStatus booking.id DTB.CANCELLED
     whenJust mbRide $ \ride -> QRide.updateStatus ride.id DRide.CANCELLED
@@ -254,11 +277,13 @@ bookingCancel BookingCancelledReq {..} = do
 buildBookingCancellationReason ::
   Id DTB.Booking ->
   Maybe (Id DRide.Ride) ->
+  Id DM.Merchant ->
   DBCReason.BookingCancellationReason
-buildBookingCancellationReason bookingId mbRideId = do
+buildBookingCancellationReason bookingId mbRideId merchantId = do
   DBCReason.BookingCancellationReason
     { bookingId = bookingId,
       rideId = mbRideId,
+      merchantId = Just merchantId,
       source = DBCReason.ByMerchant,
       reasonCode = Just $ CancellationReasonCode "BOOKING_NEW_STATUS_MORE_THAN_6HRS",
       reasonStage = Nothing,

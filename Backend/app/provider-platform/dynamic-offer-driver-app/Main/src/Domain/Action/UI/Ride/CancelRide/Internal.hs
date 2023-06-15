@@ -39,11 +39,11 @@ import SharedLogic.DriverMode as DMode
 import SharedLogic.DriverPool
 import qualified SharedLogic.DriverPool as DP
 import SharedLogic.FareCalculator
+import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as CDI
-import qualified Storage.CachedQueries.FarePolicy as QFP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.Booking as QRB
@@ -97,7 +97,7 @@ cancelRideImpl rideId bookingCReason = do
     transpConf <- QTC.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
     let searchRepeatLimit = transpConf.searchRepeatLimit
     now <- getCurrentTime
-    farePolicy <- QFP.findByMerchantIdAndVariant searchReq.providerId searchTry.vehicleVariant >>= fromMaybeM NoFarePolicy
+    farePolicy <- getFarePolicy searchReq.providerId searchTry.vehicleVariant searchReq.area
     let isRepeatSearch =
           searchTry.searchRepeatCounter < searchRepeatLimit
             && bookingCReason.source == SBCR.ByDriver
@@ -145,7 +145,7 @@ repeatSearch ::
     CacheFlow m r
   ) =>
   DMerc.Merchant ->
-  DFP.FarePolicy ->
+  DFP.FullFarePolicy ->
   DSR.SearchRequest ->
   DST.SearchTry ->
   SRB.Booking ->

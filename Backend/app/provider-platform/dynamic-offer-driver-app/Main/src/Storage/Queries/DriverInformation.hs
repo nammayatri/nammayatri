@@ -149,6 +149,20 @@ updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
         [Se.Is BeamDI.driverId (Se.Eq driverId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
+-- TODO @Vijay Gupta: update the following function according to main
+-- updateBlockedState :: Id Person.Driver -> Bool -> SqlDB ()
+-- updateBlockedState driverId isBlocked = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       ( [ DriverInformationBlocked =. val isBlocked,
+--           DriverInformationUpdatedAt =. val now
+--         ]
+--           <> [DriverInformationNumOfLocks +=. val 1 | isBlocked]
+--       )
+--     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
+
 updateBlockedState :: (L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> m (MeshResult ())
 updateBlockedState (Id driverId) isBlocked = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -297,6 +311,52 @@ findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOf
         )
         ||. person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)
     unMaybe = maybe_ (val "") identity
+
+getDriversWithOutdatedLocationsToMakeInactive :: Transactionable m => UTCTime -> m [Person]
+getDriversWithOutdatedLocationsToMakeInactive before = do
+  driverLocations <- getDriverLocs before
+  driverInfos <- getDriverInfos driverLocations
+  drivers <- getDrivers driverInfos
+  logDebug $ "GetDriversWithOutdatedLocationsToMakeInactive - DLoc:- " <> show (length driverLocations) <> " DInfo:- " <> show (length driverInfos) <> " Drivers:- " <> show (length drivers)
+  return drivers
+
+getDrivers ::
+  Transactionable m =>
+  [DriverInformation] ->
+  m [Person]
+getDrivers driverInfos = do
+  Esq.findAll $ do
+    persons <- from $ table @PersonT
+    where_ $
+      persons ^. PersonTId `in_` valList personsKeys
+    return persons
+  where
+    personsKeys = toKey . cast <$> fetchDriverIDsFromInfo driverInfos
+
+getDriverInfos ::
+  Transactionable m =>
+  [DriverLocation] ->
+  m [DriverInformation]
+getDriverInfos driverLocations = do
+  Esq.findAll $ do
+    driverInfos <- from $ table @DriverInformationT
+    where_ $
+      driverInfos ^. DriverInformationDriverId `in_` valList personsKeys
+        &&. driverInfos ^. DriverInformationActive
+    return driverInfos
+  where
+    personsKeys = toKey . cast <$> fetchDriverIDsFromLocations driverLocations
+
+getDriverLocs ::
+  Transactionable m =>
+  UTCTime ->
+  m [DriverLocation]
+getDriverLocs before = do
+  Esq.findAll $ do
+    driverLocs <- from $ table @DriverLocationT
+    where_ $
+      driverLocs ^. DriverLocationUpdatedAt <. val before
+    return driverLocs
 
 fetchDriverIDsFromLocations :: [DriverLocation] -> [Id Person]
 fetchDriverIDsFromLocations = map DriverLocation.driverId

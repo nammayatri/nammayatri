@@ -50,6 +50,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
+import Storage.Queries.SearchTry (findActiveTriesByRequestId)
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import Tools.Metrics
@@ -115,6 +116,7 @@ cancel req merchant booking = do
         DBCR.BookingCancellationReason
           { bookingId = req.bookingId,
             rideId = Nothing,
+            merchantId = Just booking.providerId,
             source = DBCR.ByUser,
             reasonCode = Nothing,
             driverId = Nothing,
@@ -136,7 +138,8 @@ cancelSearch ::
   Id DSR.SearchRequest ->
   m ()
 cancelSearch merchantId req searchRequestId = do
-  CS.lockSearchRequest searchRequestId
+  searchTries <- findActiveTriesByRequestId searchRequestId
+  mapM_ (\st -> CS.lockSearchRequest st.id) searchTries
   driverSearchReqs <- QSRD.findAllActiveBySRId searchRequestId
   logTagInfo ("transactionId-" <> req.transactionId) "Search Request Cancellation"
   -- DB.runTransaction $ do
@@ -145,7 +148,7 @@ cancelSearch merchantId req searchRequestId = do
   _ <- QSRD.setInactiveBySRId searchRequestId
   for_ driverSearchReqs $ \driverReq -> do
     driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
-    Notify.notifyOnCancelSearchRequest merchantId driverReq.driverId driver_.deviceToken searchRequestId
+    Notify.notifyOnCancelSearchRequest merchantId driverReq.driverId driver_.deviceToken driverReq.searchTryId
 
 validateCancelSearchRequest ::
   ( EsqDBFlow m r

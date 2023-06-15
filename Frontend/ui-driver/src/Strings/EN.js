@@ -410,7 +410,7 @@ const englishStrings = {
   VOICE_NOTE_ADDED : "Voice Note Added",
   SUBMIT_ISSUE_DETAILS : "Submit Issue Details",
   IMAGE_PREVIEW : "Image Preview",
-  RIDE_REPORT_ISSUE : "Select a ride to report issue on",
+  RIDE_REPORT_ISSUE : "Select ride to report issue on",
   ADDED_IMAGES : "Added Images",
   NO_IMAGES_ADDED : "No Images Added",
   ASK_DETAILS_MESSAGE : "Please give some more details. You can also send images or voice notes to elaborate better.",
@@ -425,7 +425,7 @@ const englishStrings = {
   CALL_CUSTOMER_TITLE : "Call Customer?",
   CALL_CUSTOMER_DESCRIPTION : "You are about to place a call to the Customer. Do you want to proceed?",
   PLACE_CALL : "Place Call",
-  ADD_IMAGE : "Add Image",
+  ADD_IMAGE : "Add Image(s)",
   ADD_ANOTHER : "Add Another",
   IMAGES_ADDED : "Images Added",
   ISSUE_SUBMITTED_TEXT : "Hold on! We are working on solving your issue",
@@ -459,5 +459,11 @@ const englishStrings = {
   FARE_RELATED : "Fare Related",
   RIDE_RELATED : "Ride Related",
   LOST_AND_FOUND : "Lost and Found",
-  REPORT_LOST_ITEM : "Report Lost Item"
+  REPORT_LOST_ITEM : "Report Lost Item",
+  CORPORATE_ADDRESS : "Corporate Address",
+  CORPORATE_ADDRESS_DESCRIPTION : "Juspay Technologies Private Limited <br> Girija Building, Number 817, Ganapathi Temple Rd, 8th Block, Koramangala, Bengaluru, Karnataka 560095, India.",
+  CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL :  "Website: <u>https://nammayatri.in/</u>",
+  REGISTERED_ADDRESS : "Registered Address",
+  REGISTERED_ADDRESS_DESCRIPTION : "Juspay Technologies Private Limited <br> Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala Bengaluru, Karnataka- 560095, India.",
+  REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL : "Website: <u>https://nammayatri.in/</u>"
 }

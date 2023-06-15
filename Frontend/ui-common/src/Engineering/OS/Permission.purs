@@ -33,7 +33,6 @@ import Effect.Exception (Error, error)
 import Foreign.Generic (decodeJSON)
 import Presto.Core.Types.Language.Flow (Flow, checkPermissions, takePermissions)
 import Presto.Core.Types.Permission (Permission(..), PermissionResponse, PermissionStatus(..))
-import Types.App (GlobalState)
 
 foreign import getPermissionStatusImpl :: Array String -> (Effect String)
 foreign import requestPermissionImpl :: Fn3 (Error -> Effect Unit) (String -> Effect Unit) String (Effect Unit)
@@ -48,20 +47,20 @@ toAndroidPermission _ = ""
 allPermissionGranted :: Array PermissionResponse -> Boolean
 allPermissionGranted = all (\(Tuple _ status) -> status == PermissionGranted)
 
-getStoragePermission :: Flow GlobalState Boolean
+getStoragePermission :: forall st. Flow st Boolean
 getStoragePermission =
   ifM (storageGranted) (pure true) (askForStorage)
   where
-    storageGranted :: Flow GlobalState Boolean
+    storageGranted :: Flow st Boolean
     storageGranted = do
        status <- checkPermissions [PermissionWriteStorage]
        case status of
         PermissionGranted -> pure true
         _ -> pure false
-    askForStorage :: Flow GlobalState Boolean
+    askForStorage :: Flow st Boolean
     askForStorage = pure <<< allPermissionGranted =<< takePermissions [PermissionWriteStorage]
 
-storagePermissionGranted :: Flow GlobalState Boolean
+storagePermissionGranted :: forall st. Flow st Boolean
 storagePermissionGranted = do
    status <- checkPermissions [PermissionWriteStorage]
    case status of

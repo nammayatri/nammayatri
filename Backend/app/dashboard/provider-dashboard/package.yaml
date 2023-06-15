@@ -93,7 +93,6 @@ library:
     - -Wincomplete-uni-patterns
   dependencies:
     - lib-dashboard
-    - static-offer-driver-app
     - dynamic-offer-driver-app
     - rider-app
     - special-zone

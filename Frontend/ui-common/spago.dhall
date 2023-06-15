@@ -11,7 +11,36 @@ When creating a new Spago project, you can use
 to generate this file without the comments in this block.
 -}
 { name = "beckn-common"
-, dependencies = [ "console", "effect", "prelude", "psci-support" ]
+, dependencies =
+  [ "aff"
+  , "arrays"
+  , "avar"
+  , "backtrack"
+  , "effect"
+  , "either"
+  , "exceptions"
+  , "foldable-traversable"
+  , "foreign"
+  , "foreign-generic"
+  , "foreign-object"
+  , "free"
+  , "functions"
+  , "halogen-vdom"
+  , "integers"
+  , "lists"
+  , "maybe"
+  , "newtype"
+  , "numbers"
+  , "prelude"
+  , "presto"
+  , "presto-dom"
+  , "refs"
+  , "strings"
+  , "tailrec"
+  , "tracker"
+  , "transformers"
+  , "tuples"
+  ]
 , packages = ../packages.dhall
 , sources = [ "src/**/*.purs" ]
 }

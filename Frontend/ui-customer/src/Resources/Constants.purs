@@ -197,7 +197,7 @@ getFaresList fares baseDistance =
           , title : case item.description of
                       "BASE_FARE" -> (getEN BASE_FARES) <> " (" <> baseDistance <> ")"
                       "EXTRA_DISTANCE_FARE" -> getEN NOMINAL_FARE
-                      "DRIVER_SELECTED_FARE" -> getEN NOMINAL_FARE
+                      "DRIVER_SELECTED_FARE" -> getEN DRIVER_ADDITIONS
                       "TOTAL_FARE" -> getEN TOTAL_PAID
                       "DEAD_KILOMETER_FARE" -> getEN PICKUP_CHARGE
                       "PICKUP_CHARGES" -> getEN PICKUP_CHARGE

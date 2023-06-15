@@ -719,7 +719,7 @@ ratingView push state =
       , gravity CENTER
       , fontStyle $ FontStyle.medium LanguageStyle
       , margin (Margin 8 0 2 0)
-      , width $ V 26
+      , width WRAP_CONTENT
       , height $ V 30
       , lineHeight "15"
       ]

@@ -16,6 +16,7 @@
 module Domain.Types.SearchRequestForDriver where
 
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
@@ -42,6 +43,7 @@ data SearchRequestForDriver = SearchRequestForDriver
   { id :: Id SearchRequestForDriver,
     requestId :: Id DSR.SearchRequest,
     searchTryId :: Id DST.SearchTry,
+    merchantId :: Maybe (Id DM.Merchant),
     startTime :: UTCTime,
     searchRequestValidTill :: UTCTime,
     driverId :: Id Person,
@@ -64,6 +66,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     driverAvailableTime :: Maybe Double,
     parallelSearchRequestCount :: Maybe Int,
     driverSpeed :: Maybe Double,
+    keepHiddenForSeconds :: Seconds,
     mode :: Maybe DI.DriverMode
   }
   deriving (Generic, Show, PrettyShow)
@@ -83,12 +86,14 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     driverLatLong :: LatLong,
     driverMinExtraFee :: Maybe Money,
     driverMaxExtraFee :: Maybe Money,
-    rideRequestPopupDelayDuration :: Seconds
+    rideRequestPopupDelayDuration :: Seconds,
+    specialLocationTag :: Maybe Text,
+    keepHiddenForSeconds :: Seconds
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
 
-makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Seconds -> SearchRequestForDriverAPIEntity
-makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry delayDuration =
+makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Seconds -> Seconds -> SearchRequestForDriverAPIEntity
+makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry delayDuration keepHiddenForSeconds =
   SearchRequestForDriverAPIEntity
     { searchRequestId = nearbyReq.searchTryId,
       searchTryId = nearbyReq.searchTryId,
@@ -108,5 +113,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry delayDurat
           },
       driverMinExtraFee = nearbyReq.driverMinExtraFee,
       driverMaxExtraFee = nearbyReq.driverMaxExtraFee,
-      rideRequestPopupDelayDuration = delayDuration
+      rideRequestPopupDelayDuration = delayDuration,
+      specialLocationTag = searchRequest.specialLocationTag,
+      keepHiddenForSeconds = keepHiddenForSeconds
     }
