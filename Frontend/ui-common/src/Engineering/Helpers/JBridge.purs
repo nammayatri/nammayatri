@@ -71,7 +71,7 @@ foreign import isMicrophonePermissionEnabled :: Unit -> Effect Boolean
 foreign import getVersionCode   :: Effect Int
 foreign import getVersionName   :: Effect String
 -- foreign import getManufacturerName :: Unit -> String
--- foreign import getAndroidVersion :: Effect Int
+foreign import getAndroidVersion :: Effect Int
 -- foreign import showQrCodeImpl      :: String -> String -> Effect Unit
 -- foreign import scanQrCode       :: forall action. String -> (action -> Effect Unit) ->  (String -> action) -> Effect Unit
 -- foreign import timePicker       :: forall action. (action -> Effect Unit) -> (Int -> Int -> action) -> Effect Unit

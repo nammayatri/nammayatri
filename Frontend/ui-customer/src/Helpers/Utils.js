@@ -522,10 +522,13 @@ export const contactPermission = function () {
 }
 
 export const performHapticFeedback = function () {
-  if(window.JBridge.performHapticFeedback){
-    return window.JBridge.performHapticFeedback();
+  if(window.JBridge.performHapticFeedback ){
+    if ((window.__OS == "IOS") || (JBridge.getAndroidVersion() >= 26)){
+      return window.JBridge.performHapticFeedback();
+    }
   }
 }
+
 export const initialWebViewSetUp = function (cb) {
   return function (id) {
       return function (action) {
