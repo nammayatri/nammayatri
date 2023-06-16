@@ -12,32 +12,31 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.Payment.PaymentTransaction where
+module Lib.Payment.Domain.Types.PaymentOrder where
 
-import qualified Domain.Types.Merchant as DM
-import Domain.Types.Payment.PaymentOrder as DOrder
+import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Lib.Payment.Domain.Types.Common
 
-data PaymentTransaction = PaymentTransaction
-  { id :: Id PaymentTransaction,
-    txnUUID :: Text,
-    paymentMethodType :: Text,
-    paymentMethod :: Text,
-    respMessage :: Maybe Text,
-    respCode :: Maybe Text,
-    gatewayReferenceId :: Maybe Text,
-    orderId :: Id DOrder.PaymentOrder,
-    merchantId :: Id DM.Merchant,
-    amount :: HighPrecMoney,
+data PaymentOrderE e = PaymentOrder
+  { id :: Id PaymentOrder, -- can be same as ride.id
+    shortId :: ShortId PaymentOrder, -- can be same as ride.shortId
+    personId :: Id Person,
+    merchantId :: Id Merchant,
+    amount :: Money,
     currency :: Payment.Currency,
-    dateCreated :: Maybe UTCTime,
-    statusId :: Int,
     status :: Payment.TransactionStatus,
-    juspayResponse :: Maybe Text, -- webhook resp dump
+    paymentLinks :: Payment.PaymentLinks,
+    clientAuthToken :: EncryptedHashedField e Text,
+    clientAuthTokenExpiry :: UTCTime,
+    getUpiDeepLinksOption :: Maybe Bool,
+    environment :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
   deriving (Generic)
+
+type PaymentOrder = PaymentOrderE 'AsEncrypted

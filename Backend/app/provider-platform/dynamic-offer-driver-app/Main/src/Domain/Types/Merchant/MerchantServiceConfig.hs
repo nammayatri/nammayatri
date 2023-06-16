@@ -22,6 +22,7 @@ import qualified Kernel.External.Call as Call
 import Kernel.External.Call.Interface.Types
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Interface.Types
+import Kernel.External.Payment.Interface as Payment
 import Kernel.External.SMS as Sms
 import qualified Kernel.External.Verification as Verification
 import Kernel.External.Verification.Interface.Types
@@ -37,6 +38,7 @@ data ServiceName
   | WhatsappService Whatsapp.WhatsappService
   | VerificationService Verification.VerificationService
   | CallService Call.CallService
+  | PaymentService Payment.PaymentService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -46,6 +48,7 @@ instance Show ServiceName where
   show (WhatsappService s) = "Whatsapp_" <> show s
   show (VerificationService s) = "Verification_" <> show s
   show (CallService s) = "Call_" <> show s
+  show (PaymentService s) = "Payment_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -72,6 +75,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Call_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (PaymentService v1, r2)
+                 | r1 <- stripPrefix "Payment_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -83,6 +90,7 @@ data ServiceConfigD (s :: UsageSafety)
   | WhatsappServiceConfig !WhatsappServiceConfig
   | VerificationServiceConfig !VerificationServiceConfig
   | CallServiceConfig !CallServiceConfig
+  | PaymentServiceConfig !PaymentServiceConfig
   deriving (Generic, Eq)
 
 type ServiceConfig = ServiceConfigD 'Safe
@@ -120,6 +128,8 @@ getServiceName osc = case osc.serviceConfig of
     Verification.IdfyConfig _ -> VerificationService Verification.Idfy
   CallServiceConfig callCfg -> case callCfg of
     Call.ExotelConfig _ -> CallService Call.Exotel
+  PaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig _ -> PaymentService Payment.Juspay
 
 buildMerchantServiceConfig ::
   MonadTime m =>

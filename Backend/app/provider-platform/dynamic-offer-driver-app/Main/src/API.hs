@@ -21,12 +21,15 @@ import qualified API.UI as UI
 import qualified Data.ByteString as BS
 import Data.OpenApi
 import qualified Domain.Action.UI.DriverOnboarding.IdfyWebhook as DriverOnboarding
+import qualified Domain.Action.UI.Payment as Payment
 import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude
+import qualified Kernel.External.Payment.Juspay.Webhook as Juspay
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Servant.BasicAuth ()
 import Kernel.Utils.Servant.HTML
 import Servant hiding (serveDirectoryWebApp)
 import Servant.OpenApi
@@ -44,6 +47,9 @@ type MainAPI =
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
              :> Idfy.IdfyWebhookAPI
          )
+    :<|> ( Capture "merchantId" (ShortId DM.Merchant)
+             :> Juspay.JuspayWebhookAPI
+         )
     :<|> Dashboard.API
     :<|> Internal.API
 
@@ -56,6 +62,7 @@ mainServer =
     :<|> Beckn.handler
     :<|> oldIdfyWebhookHandler
     :<|> idfyWebhookHandler
+    :<|> juspayWebhookHandler
     :<|> Dashboard.handler
     :<|> Internal.handler
 
@@ -101,3 +108,11 @@ oldIdfyWebhookHandler ::
   FlowHandler AckResponse
 oldIdfyWebhookHandler secret =
   withFlowHandlerAPI . DriverOnboarding.oldIdfyWebhookHandler secret
+
+juspayWebhookHandler ::
+  ShortId DM.Merchant ->
+  BasicAuthData ->
+  Value ->
+  FlowHandler AckResponse
+juspayWebhookHandler merchantShortId secret =
+  withFlowHandlerAPI . Payment.juspayWebhookHandler merchantShortId secret

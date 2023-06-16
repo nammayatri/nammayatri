@@ -12,13 +12,13 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Storage.Queries.Payment.PaymentTransaction where
+module Lib.Payment.Storage.Queries.PaymentTransaction where
 
-import Domain.Types.Payment.PaymentTransaction as DTransaction
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Utils.Common (getCurrentTime)
-import Storage.Tabular.Payment.PaymentTransaction
+import Lib.Payment.Domain.Types.PaymentTransaction as DTransaction
+import Lib.Payment.Storage.Tabular.PaymentTransaction
 
 create :: PaymentTransaction -> SqlDB ()
 create = Esq.create

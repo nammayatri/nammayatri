@@ -12,14 +12,14 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Storage.Queries.Payment.PaymentOrder where
+module Lib.Payment.Storage.Queries.PaymentOrder where
 
-import qualified Domain.Types.Payment.PaymentOrder as DOrder
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common (getCurrentTime)
-import Storage.Tabular.Payment.PaymentOrder
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import Lib.Payment.Storage.Tabular.PaymentOrder
 
 findById :: Transactionable m => Id DOrder.PaymentOrder -> m (Maybe DOrder.PaymentOrder)
 findById = Esq.findById
