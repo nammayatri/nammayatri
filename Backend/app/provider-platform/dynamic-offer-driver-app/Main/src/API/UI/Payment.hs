@@ -21,7 +21,6 @@ where
 import qualified Domain.Action.UI.Payment as DPayment
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DP
-import qualified Domain.Types.Ride as DRide
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Payment.Interface as Payment
@@ -34,14 +33,14 @@ import Tools.Auth
 
 type API =
   TokenAuth
-    :> Payment.API DRide.Ride
+    :> Payment.API DOrder.PaymentOrder
 
 handler :: FlowServer API
 handler authInfo =
   createOrder authInfo
     :<|> getStatus authInfo
 
-createOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DRide.Ride -> FlowHandler Payment.CreateOrderResp
+createOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DOrder.PaymentOrder -> FlowHandler Payment.CreateOrderResp
 createOrder tokenDetails rideId = withFlowHandlerAPI $ DPayment.createOrder tokenDetails rideId
 
 getStatus :: (Id DP.Person, Id Merchant.Merchant) -> Id DOrder.PaymentOrder -> FlowHandler DPayment.PaymentStatusResp

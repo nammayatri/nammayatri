@@ -18,17 +18,15 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.Payment.PaymentOrder where
+module Lib.Payment.Storage.Tabular.PaymentOrder where
 
-import qualified Domain.Types.Payment.PaymentOrder as Domain
 import Kernel.External.Encryption (DbHash, Encrypted (..), EncryptedHashed (..))
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
-import qualified Storage.Tabular.Merchant as TM
-import qualified Storage.Tabular.Person as TP
+import qualified Lib.Payment.Domain.Types.PaymentOrder as Domain
 
 mkPersist
   defaultSqlSettings
@@ -36,8 +34,8 @@ mkPersist
     PaymentOrderT sql=payment_order
       id Text
       shortId Text
-      customerId TP.PersonTId
-      merchantId TM.MerchantTId
+      personId Text -- PersonTId
+      merchantId Text -- MerchantTId
       amount Money
       currency Payment.Currency
       status Payment.TransactionStatus
@@ -67,8 +65,8 @@ instance FromTType PaymentOrderT Domain.PaymentOrder where
       Domain.PaymentOrder
         { id = Id id,
           shortId = ShortId shortId,
-          customerId = fromKey customerId,
-          merchantId = fromKey merchantId,
+          personId = Id personId,
+          merchantId = Id merchantId,
           clientAuthToken = EncryptedHashed (Encrypted clientAuthTokenEncrypted) clientAuthTokenHash,
           ..
         }
@@ -85,8 +83,8 @@ instance ToTType PaymentOrderT Domain.PaymentOrder where
     PaymentOrderT
       { id = getId id,
         shortId = getShortId shortId,
-        customerId = toKey customerId,
-        merchantId = toKey merchantId,
+        personId = personId.getId,
+        merchantId = merchantId.getId,
         webPaymentLink = showBaseUrl <$> paymentLinks.web,
         iframePaymentLink = showBaseUrl <$> paymentLinks.iframe,
         mobilePaymentLink = showBaseUrl <$> paymentLinks.mobile,
