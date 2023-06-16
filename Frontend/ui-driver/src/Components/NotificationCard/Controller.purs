@@ -20,3 +20,16 @@ data Action
   | Action2Click Int
   | IllutrationClick Int
   | NoAction
+
+data CounterData = CounterData
+    { 
+      icon :: String,
+      value :: String
+    }
+
+getCounters :: String -> Array CounterData
+getCounters dummy = 
+    [
+       CounterData {icon : "ny_ic_heart_grey,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_heart_grey.png", value : "likeCount"}, 
+       CounterData {icon : "ny_ic_eye,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_eye.png", value : "viewCount"}
+    ]

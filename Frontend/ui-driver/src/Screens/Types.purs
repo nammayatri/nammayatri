@@ -1082,7 +1082,10 @@ type NotificationCardState = {
   notificationNotSeen :: Boolean,
   comment :: Maybe String,
   imageUrl :: String,
-  mediaType :: Maybe MediaType
+  mediaType :: Maybe MediaType,
+  likeCount :: Int,
+  viewCount :: Int,
+  likeStatus :: Boolean
 }
 
 type NotificationCardPropState = {
@@ -1109,7 +1112,9 @@ type NotificationCardPropState = {
   imageVisibility :: PropValue,
   messageId :: PropValue,
   imageWithUrl :: PropValue,
-  imageWithUrlVisibility :: PropValue
+  imageWithUrlVisibility :: PropValue,
+  likeCount :: PropValue,
+  viewCount :: PropValue
 }
 
 type NotificationDetailModelState = {
@@ -1125,7 +1130,9 @@ type NotificationDetailModelState = {
   messageId :: String,
   notificationNotSeen :: Boolean,
   imageUrl :: String,
-  mediaType :: Maybe MediaType
+  mediaType :: Maybe MediaType,
+  likeCount :: Int,
+  likeStatus :: Boolean
 }
 
 type YoutubeData = {

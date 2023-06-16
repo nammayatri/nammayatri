@@ -24,19 +24,19 @@ import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (mapWithIndex, (!!)) as Array
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
-import Data.String (Pattern(..), length, trim)
+import Data.String (length, trim)
 import Data.String.CodeUnits (charAt)
 import Effect (Effect)
 import Effect.Aff (launchAff)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag)
+import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (addMediaPlayer, getVideoID, setYoutubePlayer)
+import Helpers.Utils (addMediaPlayer, getVideoID, setYoutubePlayer, parseNumber)
 import JBridge (renderBase64Image, openUrlInApp, setScaleType)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, pure, show, unit, ($), (<<<), (<>), (==), (&&), (-), void)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, progressBar, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, scrollBarY, scrollView, lineHeight, textFromHtml)
+import Prelude (Unit, bind, const, pure, show, unit, void, discard, ($), (<<<), (<>), (==), (&&), (-), (*), (/))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, progressBar, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, scrollBarY, scrollView, lineHeight, textFromHtml, imageWithFallback)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (NotificationDetailModelState, YoutubeData, YoutubeVideoStatus(..))
 import Services.APITypes (MediaType(..))
@@ -53,6 +53,7 @@ view push state =
         , clickable true
         , afterRender
             ( \action -> do
+                if state.notificationNotSeen then push IncreaseViewCount else pure unit
                 _ <- push action
                 void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT
                   $ do
@@ -149,7 +150,7 @@ view push state =
                                       ]
                                   ]
                         ]
-                      , titleAndTimeLabel state push
+                      , titleAndLikeCount state push
                       , descriptionAndComment state push
                     ]
                 ]
@@ -290,20 +291,52 @@ headerLayout state push =
         []
     ]
 
-titleAndTimeLabel :: NotificationDetailModelState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
-titleAndTimeLabel state push =
+titleAndLikeCount :: NotificationDetailModelState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+titleAndLikeCount state push =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , margin $ Margin 16 0 16 8
     ]
-    [ customTextView state.title FontSize.a_14 Color.black800 (Margin 0 0 0 0) $ FontStyle.semiBold LanguageStyle
+    [ linearLayout
+      [ width $ V ((screenWidth unit) * 65/100)
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      ][ customTextView state.title FontSize.a_14 Color.black800 (Margin 0 0 0 0) $ FontStyle.semiBold LanguageStyle
+       , customTextView state.timeLabel FontSize.a_10 Color.black500 (Margin 0 0 0 0) $ FontStyle.regular LanguageStyle
+      ]
     , linearLayout
         [ height WRAP_CONTENT
         , weight 1.0
         ]
         []
-    , customTextView state.timeLabel FontSize.a_12 Color.black800 (Margin 0 0 0 0) $ FontStyle.medium LanguageStyle
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , padding (Padding 8 4 8 4)
+      , cornerRadius 48.0
+      , stroke if state.likeStatus then "1," <> Color.transparent else "1," <> Color.grey900 
+      , background if state.likeStatus then Color.red100 else Color.transparent
+      , onClick push (const $ LikeMessage)
+      ][ imageView
+         [ height $ V 16
+         , width $ V 16
+         , imageWithFallback if state.likeStatus then 
+                                "ny_ic_heart_red,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_heart_red.png" 
+                             else 
+                                "ny_ic_heart_outline,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_heart_outline.png"
+         , margin $ MarginRight 4
+         ]
+       , textView 
+         [ height WRAP_CONTENT
+         , width WRAP_CONTENT
+         , textSize FontSize.a_12
+         , lineHeight "20"
+         , color Color.black700
+         , fontStyle $ FontStyle.medium LanguageStyle
+         , text $ parseNumber state.likeCount
+         ]
+      ]
     ]
 
 customTextView :: String -> Int -> String -> Margin -> FontStyle -> forall w. PrestoDOM (Effect Unit) w

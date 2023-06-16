@@ -48,7 +48,6 @@ import Screens.Types (NotificationsScreenState, AnimationState(..), Notification
 import Services.APITypes (MessageListRes(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
-import Debug (spy)
 import Components.BottomNavBar.View as BottomNavBar
 import Components.BottomNavBar.Controller (navData)
 import Screens as ScreenNames
@@ -338,4 +337,6 @@ shimmerData i =
   , messageId: toPropValue ""
   , imageWithUrl : toPropValue ""
   , imageWithUrlVisibility : toPropValue ""
+  , likeCount : toPropValue 0
+  , viewCount : toPropValue 0
   }
