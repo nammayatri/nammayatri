@@ -703,6 +703,15 @@ messageSeenBT messageId = do
     errorHandler (ErrorPayload errorPayload) =  do
         BackT $ pure GoBack
 
+--------------------------------- likeMessage  --------------------------------------------------------------------------------------------------------
+likeMessageBT :: String -> FlowBT String LikeMessageRes
+likeMessageBT messageId = do
+        headers <- getHeaders' ""
+        withAPIResultBT (EP.likeMessage messageId) (\x → x) errorHandler (lift $ lift $ callAPI headers (LikeMessageReq messageId))
+    where
+    errorHandler (ErrorPayload errorPayload) =  do
+        BackT $ pure GoBack
+
 --------------------------------- messageResponse --------------------------------------------------------------------------------------------------------
 messageResponseBT :: String -> MessageReplyReq -> FlowBT String MessageResponseRes
 messageResponseBT messageId reply = do

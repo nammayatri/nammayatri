@@ -16,12 +16,13 @@
 module Components.NotificationCard.View where
 
 import Common.Types.App (LazyCheck(..))
-import Components.NotificationCard.Controller (Action(..))
+import Components.NotificationCard.Controller (Action(..), CounterData(..), getCounters)
+import Data.Array (mapWithIndex)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Prelude (Unit, map, ($), (<<<), (<>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, color, cornerRadius, fontStyle, gravity, height, imageView, linearLayout, margin, orientation, padding, relativeLayout, shimmerFrameLayout, stroke, textSize, textView, weight, width, ellipsize, maxLines)
+import Prelude (Unit, map, ($), (<<<), (<>), (==))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, color, cornerRadius, ellipsize, fontStyle, gravity, height, imageView, lineHeight, linearLayout, margin, maxLines, orientation, padding, relativeLayout, shimmerFrameLayout, stroke, textSize, textView, weight, width, imageWithFallback)
 import PrestoDOM.List as PrestoList
 import Screens.NotificationsScreen.Controller (Action(..)) as NotificationsScreen
 import Styles.Colors as Color
@@ -101,50 +102,63 @@ notificationCardView push =
             , cornerRadius 4.0
             ]
         ]
-    , titleAndLabel push
+    , titleAndTimeView push
     , descriptionView push
     , descriptionWithBulletPoints push
-    , actionAndTimeLabel push
+    , actionAndCount push
     ]
 
-titleAndLabel :: forall w. (NotificationsScreen.Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-titleAndLabel push =
+titleAndTimeView :: forall w. (NotificationsScreen.Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+titleAndTimeView push =
   linearLayout
-    [ width MATCH_PARENT
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , margin $ MarginTop 5
+  ][ linearLayout
+     [ width MATCH_PARENT
+     , height WRAP_CONTENT
+     ]
+     [ textView
+         [ width WRAP_CONTENT
+         , height WRAP_CONTENT
+         , PrestoList.textHolder "title"
+         , fontStyle $ FontStyle.bold LanguageStyle
+         , color Color.black800
+         , textSize FontSize.a_16
+         ]
+     , linearLayout
+         [ height WRAP_CONTENT
+         , weight 1.0
+         ]
+         []
+     , linearLayout
+         [ height WRAP_CONTENT
+         , width WRAP_CONTENT
+         , PrestoList.backgroundHolder "notificationLabelColor"
+         , cornerRadius 14.0
+         , padding $ Padding 10 3 10 5
+         , PrestoList.visibilityHolder "notificationNotSeen"
+         ]
+         [ textView
+             [ width WRAP_CONTENT
+             , height WRAP_CONTENT
+             , color Color.white900
+             , PrestoList.textHolder "notificationLabel"
+             , fontStyle $ FontStyle.semiBold LanguageStyle
+             , textSize FontSize.a_12
+             ]
+         ]
+     ]
+  , textView
+    [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    , margin $ MarginTop 5
+    , PrestoList.textHolder "timeLabel"
+    , fontStyle $ FontStyle.regular LanguageStyle
+    , color Color.black500
+    , textSize FontSize.a_10
     ]
-    [ textView
-        [ width WRAP_CONTENT
-        , height WRAP_CONTENT
-        , PrestoList.textHolder "title"
-        , fontStyle $ FontStyle.bold LanguageStyle
-        , color Color.black800
-        , textSize FontSize.a_16
-        ]
-    , linearLayout
-        [ height WRAP_CONTENT
-        , weight 1.0
-        ]
-        []
-    , linearLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , PrestoList.backgroundHolder "notificationLabelColor"
-        , cornerRadius 14.0
-        , padding $ Padding 10 3 10 5
-        , PrestoList.visibilityHolder "notificationNotSeen"
-        ]
-        [ textView
-            [ width WRAP_CONTENT
-            , height WRAP_CONTENT
-            , color Color.white900
-            , PrestoList.textHolder "notificationLabel"
-            , fontStyle $ FontStyle.semiBold LanguageStyle
-            , textSize FontSize.a_12
-            ]
-        ]
-    ]
+  ]
 
 descriptionView :: forall w. (NotificationsScreen.Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 descriptionView push =
@@ -165,12 +179,13 @@ descriptionView push =
         ]
     ]
 
-actionAndTimeLabel :: forall w. (NotificationsScreen.Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-actionAndTimeLabel push =
+actionAndCount :: forall w. (NotificationsScreen.Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+actionAndCount push =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , margin $ MarginTop 5
+    , gravity CENTER_VERTICAL
     ]
     [ textView
         [ width WRAP_CONTENT
@@ -200,15 +215,39 @@ actionAndTimeLabel push =
             , PrestoList.onClickHolder push $ NotificationsScreen.NotificationCardClick <<< Action2Click
             ]
         ]
-    , textView
-        [ width WRAP_CONTENT
-        , height WRAP_CONTENT
-        , PrestoList.textHolder "timeLabel"
-        , fontStyle $ FontStyle.medium LanguageStyle
-        , color Color.black800
-        , textSize FontSize.a_12
-        ]
+    , counterView push
     ]
+
+counterView :: forall w. (NotificationsScreen.Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+counterView push = 
+    linearLayout
+    [ height WRAP_CONTENT,
+      width WRAP_CONTENT
+    ](mapWithIndex (\index (CounterData counter) -> 
+                    linearLayout
+                    [ height WRAP_CONTENT
+                    , width WRAP_CONTENT
+                    , cornerRadius 48.0
+                    , background Color.blue600
+                    , padding (Padding 8 4 8 4)
+                    , margin $ MarginLeft if index == 0 then 0 else 8
+                    ][ imageView
+                        [ imageWithFallback counter.icon
+                        , height $ V 16
+                        , width $ V 16
+                        , margin $ MarginRight 4
+                        ]
+                    , textView
+                        [ height WRAP_CONTENT
+                        , width WRAP_CONTENT
+                        , PrestoList.textHolder counter.value
+                        , color Color.black700
+                        , textSize FontSize.a_12
+                        , lineHeight "20"
+                        , fontStyle $ FontStyle.medium LanguageStyle
+                        ]
+                     ]
+                    ) (getCounters "") )
 
 descriptionWithBulletPoints :: forall w. (NotificationsScreen.Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 descriptionWithBulletPoints push =

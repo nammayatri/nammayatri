@@ -113,6 +113,7 @@ foreign import renderBase64ImageFile :: String -> String -> Boolean -> Effect Un
 foreign import removeMediaPlayer :: String -> Effect Unit
 foreign import getVideoID :: String -> String
 foreign import getImageUrl :: String -> String
+foreign import parseNumber :: Int -> String
 
 -- -- ####### MAP FFI ######## -----
 foreign import currentPosition  :: String -> Effect Unit
