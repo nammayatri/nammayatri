@@ -25,6 +25,9 @@ import Screens.HelpAndSupportScreen.View as HelpAndSupportScreen
 import Components.SettingSideBar.Controller as SettingSideBar
 import ModifyScreenState (modifyScreenState)
 import Types.App (FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), ScreenType(..))
+import Storage (getValueToLocalStore, KeyStore(..))
+import Common.Types.App (LazyCheck(..))
+import Screens.HelpAndSupportScreen.Controller (isEmailPresent)
 
 helpAndSupportScreen :: FlowBT String HELP_AND_SUPPORT_SCREEN_OUTPUT
 helpAndSupportScreen = do
@@ -38,5 +41,7 @@ helpAndSupportScreen = do
     GoToSupportScreen bookingId-> App.BackT $ App.BackPoint <$> (pure $ GO_TO_SUPPORT_SCREEN bookingId)
     GoToTripDetails updatedState-> App.BackT $ App.BackPoint <$> (pure $ GO_TO_TRIP_DETAILS updatedState)
     GoToMyRides -> App.BackT $ App.BackPoint <$> (pure $ VIEW_RIDES)
-    UpdateState updatedState -> App.BackT $ App.BackPoint <$> (pure $ UPDATE_STATE updatedState)
+    UpdateState updatedState -> do
+      let email = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else "" 
+      App.BackT $ App.BackPoint <$> (pure $ UPDATE_STATE updatedState{data{email=email}})
     ConfirmDeleteAccount updatedState -> App.BackT $ App.NoBack <$> (pure $ DELETE_USER_ACCOUNT updatedState)
