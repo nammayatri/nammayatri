@@ -509,15 +509,7 @@ homeScreenFlow = do
         modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState ->  MyProfileScreenData.initData{props{updateProfile = updateProfile , fromHomeScreen = updateProfile , isBtnEnabled = not updateProfile , genderOptionExpanded = false , showOptions = false, expandEnabled = true }})
         myProfileScreenFlow
     GO_TO_FIND_ESTIMATES state-> do
-
-      (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq state.props.sourceLat state.props.sourceLong (case (getValueToLocalStore LANGUAGE_KEY) of
-                                                                                                                            "HI_IN" -> "HINDI"
-                                                                                                                            "KN_IN" -> "KANNADA"
-                                                                                                                            "BN_IN" -> "BENGALI"
-                                                                                                                            "ML_IN" -> "MALAYALAM"
-                                                                                                                            _      -> "ENGLISH"))
-
-      let (PlaceName address) = (fromMaybe HomeScreenData.dummyLocationName (locationName !! 0))
+      PlaceName address <- getPlaceName state.props.sourceLat state.props.sourceLong
       _ <- lift $ lift $ liftFlow $ firebaseLogEventWithTwoParams "ny_user_source_and_destination" "ny_user_enter_source" (take 99 (state.data.source)) "ny_user_enter_destination" (take 99 (state.data.destination))
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq state.props.sourceLat state.props.sourceLong)
       if (not sourceServiceabilityResp.serviceable) then do
@@ -525,7 +517,7 @@ homeScreenFlow = do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = SearchLocationModel ,rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = false, isSource = Just true, isRideServiceable = false}})
         homeScreenFlow
         else pure unit
-      (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress)
+      (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong (encodeAddress address.formattedAddress [] state.props.sourcePlaceId) state.data.destinationAddress)
       routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong (Remote.normalRoute "") "NORMAL" address.formattedAddress state.data.destination rideSearchRes.routeInfo "pickup"
       case rideSearchRes.routeInfo of
         Just (Route response) -> do
@@ -545,9 +537,9 @@ homeScreenFlow = do
               else pure unit
           pure unit
         Nothing -> pure unit
-      void $ pure $ setFlowStatusData (FlowStatusData { source : {lat : state.props.sourceLat, lng : state.props.sourceLong, place : state.data.source}
+      void $ pure $ setFlowStatusData (FlowStatusData { source : {lat : state.props.sourceLat, lng : state.props.sourceLong, place : address.formattedAddress}
                                                       , destination : {lat : state.props.destinationLat, lng : state.props.destinationLong, place : state.data.destination}
-                                                      , sourceAddress : state.data.sourceAddress
+                                                      , sourceAddress : (encodeAddress address.formattedAddress [] state.props.sourcePlaceId)
                                                       , destinationAddress : state.data.destinationAddress })
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing}})
       updateLocalStage FindingEstimate
@@ -879,14 +871,8 @@ homeScreenFlow = do
       modifyScreenState $ HomeScreenStateType (\homeScreen ->  HomeScreenData.initData{data{settingSideBar{gender = state.homeScreen.data.settingSideBar.gender , email = state.homeScreen.data.settingSideBar.email}},props { isbanner = state.homeScreen.props.isbanner}})
       currentFlowStatus
     UPDATE_LOCATION_NAME state lat lon -> do
-      (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq lat lon (case (getValueToLocalStore LANGUAGE_KEY) of
-                                                                                                                          "HI_IN" -> "HINDI"
-                                                                                                                          "KN_IN" -> "KANNADA"
-                                                                                                                          "BN_IN" -> "BENGALI"
-                                                                                                                          "ML_IN" -> "MALAYALAM"
-                                                                                                                          _      -> "ENGLISH"))
+      PlaceName placeDetails <- getPlaceName lat lon
       _ <- pure $ firebaseLogEvent "ny_user_placename_api_lom_onDrag"
-      let (PlaceName placeDetails) = fromMaybe HomeScreenData.dummyLocationName (locationName !! 0)
       modifyScreenState $ HomeScreenStateType (\homeScreen ->
       homeScreen {
         data {
@@ -911,14 +897,8 @@ homeScreenFlow = do
       let _ = spy "UPDATE_LOCATION_NAME" "UPDATE_LOCATION_NAME"
       homeScreenFlow
     UPDATE_PICKUP_NAME state lat lon -> do
-      (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq lat lon (case (getValueToLocalStore LANGUAGE_KEY) of
-                                                                                                                          "HI_IN" -> "HINDI"
-                                                                                                                          "KN_IN" -> "KANNADA"
-                                                                                                                          "BN_IN" -> "BENGALI"
-                                                                                                                          "ML_IN" -> "MALAYALAM"
-                                                                                                                          _      -> "ENGLISH"))
+      PlaceName address <- getPlaceName lat lon
       _ <- pure $ firebaseLogEvent "ny_user_placename_api_cpu_onDrag"
-      let (PlaceName address) = (fromMaybe HomeScreenData.dummyLocationName (locationName !! 0))
       modifyScreenState $ HomeScreenStateType (\homeScreen ->
       homeScreen {
         data {
@@ -1130,10 +1110,11 @@ rideSearchFlow flowType = do
           _ <- pure $ updateLocalStage ConfirmingLocation
           void $ lift $ lift $ toggleLoader false
         true -> do
-          (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong finalState.data.sourceAddress finalState.data.destinationAddress)
-          void $ pure $ setFlowStatusData (FlowStatusData { source : {lat : finalState.props.sourceLat, lng : finalState.props.sourceLong, place : finalState.data.source}
+          PlaceName address <- getPlaceName finalState.props.sourceLat finalState.props.sourceLong
+          (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong (encodeAddress address.formattedAddress [] finalState.props.sourcePlaceId) finalState.data.destinationAddress)
+          void $ pure $ setFlowStatusData (FlowStatusData { source : {lat : finalState.props.sourceLat, lng : finalState.props.sourceLong, place : address.formattedAddress}
                                                           , destination : {lat : finalState.props.destinationLat, lng : finalState.props.destinationLong, place : finalState.data.destination}
-                                                          , sourceAddress : finalState.data.sourceAddress
+                                                          , sourceAddress : (encodeAddress address.formattedAddress [] finalState.props.sourcePlaceId)
                                                           , destinationAddress : finalState.data.destinationAddress })
           case finalState.props.currentStage of
             TryAgain -> do
@@ -1142,13 +1123,13 @@ rideSearchFlow flowType = do
               _ <- pure $ updateLocalStage TryAgain
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId, currentStage = TryAgain, rideRequestFlow = true}})
             _        -> do
-              routeResponse <- Remote.drawMapRoute finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong (Remote.normalRoute "") "NORMAL" finalState.data.source finalState.data.destination rideSearchRes.routeInfo "pickup"
+              routeResponse <- Remote.drawMapRoute finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong (Remote.normalRoute "") "NORMAL" address.formattedAddress finalState.data.destination rideSearchRes.routeInfo "pickup"
               case rideSearchRes.routeInfo of
                 Just (Route response) -> do
                   let distance = if response.distance < 1000 then toString(response.distance)  <> " m" else parseFloat(INT.toNumber(response.distance) / 1000.0) 2 <> " km"
                       duration = (show (response.duration / 60)) <> " min"
                       tipEnabled = isTipEnabled response.distance
-                  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration}, props{customerTip{enableTips = tipEnabled}}})
+                  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration,source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] finalState.props.sourcePlaceId}, props{customerTip{enableTips = tipEnabled}}})
                   _ <- setValueToLocalStore ENABLE_TIPS $ show tipEnabled
                   if ((getMerchant FunctionCall) /= YATRI && response.distance >= 50000 )then do
                     _ <- pure $ updateLocalStage DistanceOutsideLimits
@@ -1160,7 +1141,7 @@ rideSearchFlow flowType = do
                       void $ lift $ lift $ toggleLoader false
                       else do
                         if flowType == "REPEAT_RIDE_FLOW" then lift $ lift $ liftFlow $ firebaseLogEventWithParams "ny_user_repeat_ride_flow" "searchId" rideSearchRes.searchId else pure unit
-                        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing}})
+                        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing}, data {source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] finalState.props.sourcePlaceId}})
                         _ <- pure $ updateLocalStage FindingEstimate
                         void $ lift $ lift $ toggleLoader false
 
@@ -1582,13 +1563,7 @@ addNewAddressScreenFlow input = do
         else savedLocationFlow
 
     UPDATE_LOCATION_NAME_ADDRESS state lat lon -> do
-      (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq lat lon (case (getValueToLocalStore LANGUAGE_KEY) of
-                                                                                                                          "HI_IN" -> "HINDI"
-                                                                                                                          "KN_IN" -> "KANNADA"
-                                                                                                                          "BN_IN" -> "BENGALI"
-                                                                                                                          "ML_IN" -> "MALAYALAM"
-                                                                                                                          _      -> "ENGLISH"))
-      let (PlaceName address) = (fromMaybe HomeScreenData.dummyLocationName (locationName !! 0))
+      PlaceName address <- getPlaceName lat lon
       modifyScreenState $ AddNewAddressScreenStateType (\addNewAddressScreen -> addNewAddressScreen{  data  { locSelectedFromMap = address.formattedAddress
                                                                                                             , latSelectedFromMap = lat
                                                                                                             , lonSelectedFromMap = lon
@@ -1900,3 +1875,15 @@ getGenderValue gender =
       Gender.OTHER -> Just "OTHER"
       _ -> Just "PREFER_NOT_TO_SAY"
     Nothing -> Nothing
+
+getPlaceName :: Number -> Number -> FlowBT String PlaceName
+getPlaceName lat long = do
+  (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq lat long (case (getValueToLocalStore LANGUAGE_KEY) of
+                                                                                                                            "HI_IN" -> "HINDI"
+                                                                                                                            "KN_IN" -> "KANNADA"
+                                                                                                                            "BN_IN" -> "BENGALI"
+                                                                                                                            "ML_IN" -> "MALAYALAM"
+                                                                                                                            _      -> "ENGLISH"))
+
+  let (PlaceName address) = (fromMaybe HomeScreenData.dummyLocationName (locationName !! 0))
+  pure (PlaceName address)
