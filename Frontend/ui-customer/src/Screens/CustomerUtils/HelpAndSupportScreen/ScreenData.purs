@@ -18,6 +18,7 @@ module Screens.HelpAndSupportScreen.ScreenData where
 import Screens.Types (HelpAndSupportScreenState)
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Screens.Types (DeleteStatus(..))
+import MerchantConfig.DefaultConfig as DC
 
 initData :: HelpAndSupportScreenState
 initData = {
@@ -40,7 +41,8 @@ initData = {
     faresList : [],
     email : "",
     description : "",
-    accountStatus : ACTIVE
+    accountStatus : ACTIVE,
+    config : DC.config
   },
   props:{
     apiFailure : false

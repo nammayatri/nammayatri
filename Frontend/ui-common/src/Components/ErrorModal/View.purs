@@ -22,7 +22,10 @@ import Components.PrimaryButton.View as PrimaryButton
 import Components.PrimaryButton.Controller as PrimaryButtonConfig
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import Common.Types.App (LazyCheck(..))
 import Common.Styles.Colors as Color
+import Font.Style as FontStyle
+
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
   relativeLayout
@@ -62,26 +65,22 @@ errorView config =
       , visibility config.imageConfig.visibility
       , margin config.imageConfig.margin
       ]
-    , textView
+    , textView $
       [ text config.errorConfig.text
-      , textSize config.errorConfig.textSize
       , color config.errorConfig.color
-      , fontStyle config.errorConfig.fontStyle
       , padding config.errorConfig.padding
       , gravity CENTER
       , margin config.errorConfig.margin
       , visibility config.errorConfig.visibility
-      ]
-    , textView
+      ] <> (FontStyle.getFontStyle config.errorConfig.textStyle LanguageStyle) 
+    , textView $ 
       [ text config.errorDescriptionConfig.text
-      , textSize config.errorDescriptionConfig.textSize
       , color config.errorDescriptionConfig.color
-      , fontStyle config.errorDescriptionConfig.fontStyle
       , padding config.errorDescriptionConfig.padding
       , margin config.errorDescriptionConfig.margin
       , gravity CENTER
       , visibility config.errorDescriptionConfig.visibility
-      ]
+      ] <> (FontStyle.getFontStyle config.errorDescriptionConfig.textStyle LanguageStyle) 
   ]
 primaryButtonConfig :: Config -> PrimaryButtonConfig.Config
 primaryButtonConfig config = let
@@ -89,9 +88,8 @@ primaryButtonConfig config = let
     primaryButtonConfig' = config'
       { textConfig
         { text = config.buttonConfig.text
-        , fontStyle = config.buttonConfig.fontStyle
-        , textSize = config.buttonConfig.textSize
         , color = config.buttonConfig.color
+        -- , textStyle = config.buttonConfig.textStyle ?? NEED TO CHECK
         }
       , width = config.buttonConfig.width
       , height = config.buttonConfig.height

@@ -21,7 +21,7 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
 import PrestoDOM.Core.Types.Language.Flow (runScreenWithNameSpace, initUIWithNameSpace)
 import Screens.PermissionScreen.View as PermissionScreen
-import Presto.Core.Types.Language.Flow (doAff)
+import Presto.Core.Types.Language.Flow (doAff , getLogFields)
 import Data.Maybe
 import PrestoDOM.Core(terminateUI)
 import Effect.Class (liftEffect)
@@ -31,8 +31,9 @@ import Types.App (FlowBT, GlobalState(..), PERMISSION_SCREEN_OUTPUT(..))
 permissionScreen :: String -> FlowBT String PERMISSION_SCREEN_OUTPUT
 permissionScreen triggertype= do
   (GlobalState state) <- getState
+  logField_ <- lift $ lift $ getLogFields
   _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "PermissionScreen" Nothing
-  act <- lift $ lift $ runScreenWithNameSpace $ PermissionScreen.screen state.permissionScreen triggertype
+  act <- lift $ lift $ runScreenWithNameSpace $ PermissionScreen.screen state.permissionScreen{logField = logField_} triggertype
   _ <- lift $ lift $ doAff $ liftEffect $ terminateUI $ Just "PermissionScreen"
   case act of
     GoBack -> App.BackT $ pure App.GoBack

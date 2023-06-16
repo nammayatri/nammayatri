@@ -15,6 +15,8 @@
 
 module Types.App where
 
+import Prelude
+
 import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
 import Control.Transformers.Back.Trans (BackT)
@@ -27,6 +29,7 @@ import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.HelpAndSupportScreen.ScreenData as HelpAndSupportScreenData
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.InvoiceScreen.ScreenData as InvoiceScreenData
+import LoaderOverlay.ScreenData as LoaderScreenScreenData
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
 import Screens.MyRidesScreen.ScreenData as MyRideScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreenData
@@ -34,8 +37,11 @@ import Screens.SavedLocationScreen.ScreenData as SavedLocationScreenData
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
 import Screens.EmergencyContactsScreen.ScreenData as EmergencyContactsScreenData
+import Screens.OnBoardingFlow.PermissionScreen.ScreenData as PermissionScreenData
+import Screens.CustomerUtils.AboutUsScreen.ScreenData as AboutUsScreenData
 import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType)
-import Services.API (GetDriverLocationResp)
+import Foreign.Object ( Object(..), empty)
+import Foreign (Foreign)
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -59,6 +65,7 @@ newtype GlobalState = GlobalState {
   , appUpdatePopUpScreen :: AppUpdatePopUpState
   , referralScreen :: ReferralScreenState
   , emergencyContactsScreen :: EmergencyContactsScreenState
+  , loaderOverlay :: LoaderScreenScreenData.LoaderOverlayState
   }
 
 defaultGlobalState :: GlobalState
@@ -74,14 +81,15 @@ defaultGlobalState = GlobalState {
   , myRidesScreen : MyRideScreenData.initData
   , homeScreen : HomeScreenData.initData
   , selectLanguageScreen : SelectLanguageScreenData.initData
-  , permissionScreen : {}
-  , aboutUsScreen : {}
+  , permissionScreen : PermissionScreenData.initData
+  , aboutUsScreen : AboutUsScreenData.initData
   , myProfileScreen : MyProfileScreenData.initData
   , savedLocationScreen : SavedLocationScreenData.initData
   , addNewAddressScreen : AddNewAddressScreenData.initData
-  , appUpdatePopUpScreen : {version : 1}
+  , appUpdatePopUpScreen : {version : 1 , logField : empty}
   , referralScreen : ReferralScreenData.initData
   , emergencyContactsScreen : EmergencyContactsScreenData.initData
+  , loaderOverlay : LoaderScreenScreenData.initData
   }
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK
 
@@ -178,3 +186,5 @@ data ScreenType =
   | SavedLocationScreenStateType (SavedLocationScreenState -> SavedLocationScreenState)
   | ReferralScreenStateType (ReferralScreenState -> ReferralScreenState)
   | EmergencyContactsScreenStateType (EmergencyContactsScreenState -> EmergencyContactsScreenState)
+  | PermissionScreenStateType (PermissionScreenState -> PermissionScreenState)
+  | AboutUsScreenStateType (AboutUsScreenState -> AboutUsScreenState)

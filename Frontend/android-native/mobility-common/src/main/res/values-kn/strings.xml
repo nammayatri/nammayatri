@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="select_date">ದಿನಾಂಕವನ್ನು ಆಯ್ಕೆಮಾಡಿ</string>
+    <string name="open_settings">1. ಸೆಟ್ಟಿಂಗ್‌ ತೆರೆಯಿರಿ</string>
+    <string name="tap_on_permission">2. ಅನುಮತಿಗಳು ಮೇಲೆ ಟ್ಯಾಪ್ ಮಾಡಿ</string>
+    <string name="required_permission">3. Tap on the required permission</string>
+    <string name="select_allow">4. ಅನುಮತಿಸು ಆಯ್ಕೆಮಾಡಿ</string>
+    <string name="tap_on">3. Tap on </string>
+    <string name="location">Location</string>
+    <string name="phone">Phone</string>
+    <string name="no_enabled_browser">ನಿಮ್ಮ ಸಾಧನದಲ್ಲಿ ಯಾವುದೇ ಸಕ್ರಿಯಗೊಳಿಸಿದ ಬ್ರೌಸರ್ ಕಂಡುಬಂದಿಲ್ಲ, ದಯವಿಟ್ಟು ಬ್ರೌಸರ್ ಅನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ ಅಥವಾ ಸ್ಥಾಪಿಸಿ</string>
+</resources>

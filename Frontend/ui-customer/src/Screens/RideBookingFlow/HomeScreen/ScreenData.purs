@@ -16,14 +16,14 @@
 module Screens.HomeScreen.ScreenData where
 
 import Components.LocationListItem.Controller (dummyLocationListState)
-import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Maybe (Maybe(..))
-import Styles.Colors as Color
 import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location,RateCardType(..))
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..))
 import Prelude (($))
 import Data.Array (head)
+import MerchantConfig.DefaultConfig as DC
+import Foreign.Object (empty)
 
 initData :: HomeScreenState
 initData = {
@@ -69,14 +69,6 @@ initData = {
     , messagesSize : ""
     , suggestionsList : []
     , messageToBeSent : ""
-    , bannerViewState : {
-        backgroundColor : Color.lightMintGreen
-      , title : "Complete your profile for a personalised ride experience"
-      , titleColor : Color.elfGreen
-      , actionText : "Update now"
-      , actionTextColor : Color.elfGreen
-      , imageUrl : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
-      }
     , nearByPickUpPoints : dummyPickUpPoints
     , polygonCoordinates : ""
     , specialZoneQuoteList : []
@@ -94,6 +86,8 @@ initData = {
       , index: 0
       , id: ""
       }
+    , config : DC.config
+    , logField : empty
     },
     props: {
       rideRequestFlow : false
@@ -188,46 +182,6 @@ emergencyHelpModalData = {
   isSelectEmergencyContact : false
 }
 
-dummyQuoteList :: Array QuoteListItemState
-dummyQuoteList = [
-  {
-   seconds : 10
-  , id : "1"  
-  , timer : "0"
-  , timeLeft : 0
-  , driverRating : 4.0
-  , profile : ""
-  , price : "200"
-  , vehicleType : "auto"
-  , driverName : "Drive_Name"
-  , selectedQuote : Nothing
-
-  },
-  {
-   seconds : 10
-  , id : "2"  
-  , timer : "0"
-  , timeLeft : 0
-  , driverRating : 4.0
-  , profile : ""
-  , price : "300"
-  , vehicleType : "auto"
-  , driverName : "Drive_Name"
-  ,selectedQuote : Nothing
-  },
-  {
-   seconds : 3
-  , id : "3"  
-  , timer : "0"
-  , timeLeft : 0
-  , driverRating : 4.0
-  , profile : ""
-  , price : "3150"
-  , vehicleType : "auto"
-  , driverName : "Drive_Name"
-  ,selectedQuote : Nothing
-  }
-]
 
 dummyPreviousRiderating :: RatingCard
 dummyPreviousRiderating = {
@@ -249,6 +203,7 @@ dummyPreviousRiderating = {
 , offeredFare : 0
 , distanceDifference : 0
 , feedback : ""
+, appConfig : DC.config 
 }
 
 
@@ -281,6 +236,7 @@ dummyDriverInfo =
   , driverNumber : Nothing
   , merchantExoPhone : ""
   , createdAt : ""
+  , config : DC.config
   }
 
 dummySettingBar :: SettingSideBarState
@@ -290,7 +246,9 @@ dummySettingBar = {
   , opened : CLOSED
   , email : Nothing
   , gender : Nothing
-  }
+  , appConfig : DC.config
+  , sideBarList : ["MyRides", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "ShareApp", "LiveStatsDashboard", "About", "Logout"]
+}
 
 dummyAddress :: Address
 dummyAddress = {

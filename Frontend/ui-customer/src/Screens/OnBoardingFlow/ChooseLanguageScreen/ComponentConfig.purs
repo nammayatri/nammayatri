@@ -17,7 +17,8 @@ module Screens.OnBoardingFlow.ChooseLanguageScreen.ComponentConfig where
 
 import Components.MenuButton as MenuButton
 import Components.PrimaryButton as PrimaryButton
-import JBridge as JB 
+import JBridge as JB
+import MerchantConfig.Types (Language)
 import Prelude ((==))
 import PrestoDOM (Margin(..))
 import Screens.Types as ST
@@ -36,7 +37,7 @@ primaryButtonConfig state = let
       }
   in primaryButtonConfig'
 
-menuButtonConfig :: ST.ChooseLanguageScreenState -> ST.Language -> MenuButton.Config
+menuButtonConfig :: ST.ChooseLanguageScreenState -> Language -> MenuButton.Config
 menuButtonConfig state language = let  
     config = MenuButton.config
     menuButtonConfig' = config {

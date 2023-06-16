@@ -31,13 +31,15 @@ import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..)
 import Types.ModifyScreenState (modifyScreenState)
 import Screens.Types (KeyboardModalType(..))
 import Data.Maybe (Maybe(..))
+import Presto.Core.Types.Language.Flow (getLogFields)
 
 data Location = Location String String
 
 homeScreen :: FlowBT String HOME_SCREENOUTPUT
 homeScreen = do
+  logField_ <- lift $ lift $ getLogFields
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen
+  action <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen{data{logField = logField_}}
   case action of
     GoToProfileScreen updatedState-> do
       modifyScreenState $ HomeScreenStateType (\homeScreen → updatedState)

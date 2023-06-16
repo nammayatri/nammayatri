@@ -33,7 +33,15 @@ import Foreign.Class (class Decode, class Encode)
 import Foreign.Generic (decodeJSON)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Data.Either (Either(..))
-import Engineering.Helpers.Commons (screenHeight, screenWidth)
+import Engineering.Helpers.Commons (screenHeight, screenWidth, flowRunnerWithState)
+import Effect.Uncurried (EffectFn3, EffectFn2, EffectFn1, runEffectFn1, EffectFn5)
+import Data.Maybe (Maybe(..))
+-- import LoaderOverlay.Handler as UI
+-- import Effect.Aff (launchAff)
+-- import Effect.Class (liftEffect)
+-- import PrestoDOM.Core(terminateUI)
+import Presto.Core.Types.Language.Flow
+import Types.App (GlobalState(..))
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
 -- -- foreign import _createKeyStoreEntry :: String -> String -> (Effect Unit) -> (String -> Effect Unit) -> Effect Unit
@@ -58,7 +66,7 @@ import Engineering.Helpers.Commons (screenHeight, screenWidth)
 foreign import showLoaderImpl      :: String -> Effect Unit
 -- foreign import readFile'      :: String -> Effect String
 -- foreign import showLoader'      :: String -> Effect Unit
-foreign import locateOnMap :: Boolean -> Number -> Number -> String-> Array Location -> Unit
+foreign import locateOnMap :: EffectFn5 Boolean Number Number String (Array Location) Unit
 
 foreign import exitLocateOnMap :: String -> Unit
 foreign import shareTextMessage :: String -> String -> Unit
@@ -151,18 +159,18 @@ foreign import storeCallBackOpenChatScreen :: forall action. (action -> Effect U
 foreign import sendMessage :: String -> Unit
 foreign import scrollToBottom :: String -> Effect Unit
 foreign import metaLogEvent :: String -> Unit
-foreign import firebaseLogEvent :: String -> Unit
+foreign import firebaseLogEvent :: String -> Effect Unit
 foreign import firebaseLogEventWithParams :: String -> String -> String -> Effect Unit
 foreign import firebaseLogEventWithTwoParams :: String -> String -> String -> String -> String -> Effect Unit
 foreign import firebaseScreenNameLog :: String  -> Effect Unit
 foreign import firebaseUserID :: String  -> Effect Unit
 -- foreign import closeApp       :: String -> Effect Unit
-foreign import storeCallBackDriverLocationPermission :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
+foreign import storeCallBackDriverLocationPermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
 foreign import setStoreCallBackPopUp :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import deletePopUpCallBack :: String -> Unit
 -- foreign import requestLocationPermissionDriver :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
-foreign import storeCallBackOverlayPermission :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
-foreign import storeCallBackBatteryUsagePermission :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
+foreign import storeCallBackOverlayPermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
+foreign import storeCallBackBatteryUsagePermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
 foreign import isInternetAvailable :: Unit -> Effect Boolean
 foreign import storeCallBackInternetAction :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 
@@ -180,6 +188,10 @@ foreign import generateSessionId :: Unit -> String
 
 foreign import initialWebViewSetUp :: forall action. (action -> Effect Unit) -> String -> (String -> action) -> Effect Unit
 foreign import goBackPrevWebPage ::  String -> Effect Unit
+
+foreign import emitJOSEvent ::  EffectFn3 String String String Unit
+
+foreign import getMerchantConfig :: forall a. (a -> Maybe a) -> (Maybe a) -> Effect (Maybe a)
 
 -- -- keyStoreEntryPresent :: String -> Flow Boolean
 -- -- keyStoreEntryPresent = liftFlow <<< _keyStoreEntryPresent
@@ -264,12 +276,6 @@ addMarker title lat lng markerSize anchorV anchorV1 = (addMarkerImpl title lat l
 showMap :: forall action. String -> Boolean -> String -> Number -> (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Boolean
 showMap = showMapImpl --liftFlow (showMapImpl id mapType)
 
-toggleLoader :: forall st. Boolean -> Flow st Unit
-toggleLoader flag = liftFlow (toggleLoaderImpl flag)
-
-loaderText :: forall st. String -> String -> Flow st Unit
-loaderText mainTxt subTxt = liftFlow (loaderTextImpl mainTxt subTxt)
-
 -- loader :: Boolean -> Maybe LoaderMessage -> Flow GlobalState Unit
 -- loader flag message = do
 --     _ <- pure $ hideKeyboardOnNavigation true
@@ -313,6 +319,9 @@ type IsLocationOnPath = {
   , distance :: Int
 }
 
+getConfig :: forall  a. Effect (Maybe a)
+getConfig = getMerchantConfig Just Nothing
+
 type Location = {
   lat :: Number,
   lng :: Number,
@@ -343,3 +352,7 @@ getWidthFromPercent :: Int -> Int
 getWidthFromPercent percent =
   let scrWidth = (screenWidth unit)
     in ((scrWidth / 100) * percent)
+
+
+-- loaderFlow :: forall a. Flow GlobalState Unit
+-- loaderFlow = 

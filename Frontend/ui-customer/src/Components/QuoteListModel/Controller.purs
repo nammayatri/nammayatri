@@ -18,6 +18,7 @@ module Components.QuoteListModel.Controller where
 import Components.PrimaryButton as PrimaryButtonController
 import Components.QuoteListItem as QuoteListItemController
 import Data.Maybe (Maybe)
+import MerchantConfig.Types (AppConfig)
 
 data Action = GoBack
             | NoAction
@@ -36,4 +37,5 @@ type QuoteListModelState = {
   , autoSelecting :: Boolean
   , searchExpire :: Int
   , showProgress :: Boolean
+  , appConfig :: AppConfig
 }

@@ -27,14 +27,17 @@ import Font.Style as FontStyle
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Merchant.Utils (getValueFromConfig)
-import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, scrollView, scrollBarY)
+import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), not)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, imageWithFallback, scrollView, scrollBarY)
 import Screens.AboutUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.CustomerUtils.AboutUsScreen.ComponentConfig (genericHeaderConfig)
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
+import Common.Types.App
+import Screens.CustomerUtils.AboutUsScreen.ComponentConfig 
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import MerchantConfig.Utils(getValueFromConfig)
 
 screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOutput
 screen initialState =
@@ -70,7 +73,16 @@ view push state =
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , orientation VERTICAL
-            ][ topTextView push state
+            ][  if (not state.appConfig.nyBrandingVisibility) then
+                  linearLayout
+                    [ height $ V 1
+                    , width MATCH_PARENT
+                    , background Color.greySmoke
+                    ]
+                    []
+                  else
+                    linearLayout [] []
+              , topTextView push state
               , linearLayout
                 [ orientation VERTICAL
                 , weight 1.0
@@ -89,23 +101,22 @@ topTextView push state =
     , orientation VERTICAL
     , padding (Padding 20 0 20 10)
     ][  logoView state
-      , textView
+      , textView $
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , textSize FontSize.a_16
         , text (getString ABOUT_APP_DESCRIPTION)
         , color Color.black800
-        , fontStyle $ FontStyle.regular LanguageStyle
         , gravity LEFT
         , lineHeight "22"
         , margin (Margin 0 40 0 32)
-        ]
+        ] <> FontStyle.body5 LanguageStyle
       , ComplaintsModel.view (ComplaintsModel.config{cardData = contactUsData state})
       , linearLayout
         [ gravity LEFT
         , width WRAP_CONTENT
         , height WRAP_CONTENT
         , orientation VERTICAL
+        , visibility if state.appConfig.nyBrandingVisibility then GONE else VISIBLE
         ][  softwareLicenseView
           , termsAndConditionsView state
           , privacyPolicyView state
@@ -123,29 +134,67 @@ logoView state =
         , cornerRadius 10.0
         ][  imageView
               [ height $ V 48
-              , width $ V 48
-              , imageWithFallback "ic_launcher,https://assets.juspay.in/nammayatri/images/common/ny_ic_launcher.png"
+              , width $ V 60
+              , imageWithFallback state.appConfig.merchantLogo
               ]
           ]
 
 --------------------------------------------------- bottomLinksView -----------------------------------------------------
-bottomLinksView :: ST.AboutUsScreenState -> forall w . PrestoDOM (Effect Unit) w
-bottomLinksView state = 
-   linearLayout
+bottomLinksView :: ST.AboutUsScreenState -> forall w. PrestoDOM (Effect Unit) w
+bottomLinksView state =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER
+    , orientation VERTICAL
+    ]
+    [ linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , gravity CENTER
         , orientation VERTICAL
-        , margin (Margin 0 10 0 10)
-        ][  textView
-            [ width WRAP_CONTENT
-            , height WRAP_CONTENT
-            , text $ "v" <> (getValueToLocalStore VERSION_NAME) <> " [ " <> (getValueToLocalStore BUNDLE_VERSION) <> " ]"
-            , textSize FontSize.a_14
-            , fontStyle $ FontStyle.semiBold LanguageStyle
-            , color "#354052"
+        , gravity CENTER
+        , visibility if state.appConfig.nyBrandingVisibility then VISIBLE else GONE
+        ]
+        [ textView
+            $ [ height WRAP_CONTENT
+              , width WRAP_CONTENT
+              , text "Powered by"
+              , color Color.black800
+              , gravity CENTER_VERTICAL
+              , lineHeight "22"
+              ]
+            <> FontStyle.paragraphText LanguageStyle
+        , linearLayout
+            [ height $ V 25
+            , width MATCH_PARENT
+            , orientation HORIZONTAL
+            , gravity CENTER
             ]
+            [ imageView
+                [ height $ V 20
+                , width $ V 20
+                , imageWithFallback $ "ic_launcher," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_launcher.png"
+                ]
+            , textView
+                $ [ text $ "namma yatri"
+                  , color Color.black
+                  , margin $ Margin 3 0 0 2
+                  , height WRAP_CONTENT
+                  , width WRAP_CONTENT
+                  , gravity CENTER
+                  ]
+                <> FontStyle.h2 LanguageStyle
+            ]
+        ]
+    , textView
+        $ [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text $ "v" <> (getValueToLocalStore VERSION_NAME) <> " [ " <> (getValueToLocalStore BUNDLE_VERSION) <> " ]"
+          , color "#354052"
+          , margin (Margin 0 20 0 10)
           ]
+        <> FontStyle.body6 LanguageStyle
+    ]
   
 --------------------------------------------------- softwareLicenseView -----------------------------------------------------
 softwareLicenseView :: forall w . PrestoDOM (Effect Unit) w
@@ -159,15 +208,13 @@ softwareLicenseView =
         , orientation VERTICAL
         , width WRAP_CONTENT
         , visibility GONE
-        ][  textView
+        ][  textView $
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , text (getString SOFTWARE_LICENSE)
-            , textSize FontSize.a_14
-            , fontStyle $ FontStyle.regular LanguageStyle
             , color Color.blue900
             , margin (Margin 0 0 0 0)
-            ]
+            ] <> FontStyle.paragraphText LanguageStyle
           , linearLayout
             [ width MATCH_PARENT
             , height (V 1)
@@ -183,12 +230,10 @@ termsAndConditionsView state =
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , orientation VERTICAL
-    ][  textView
+    ][  textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text (getString TERMS_AND_CONDITIONS)
-        , textSize FontSize.a_14
-        , fontStyle $ FontStyle.regular LanguageStyle
         , color Color.blue900
         , onClick (\action -> do
             _ <- pure action
@@ -196,7 +241,7 @@ termsAndConditionsView state =
             pure unit
           ) (const TermsAndConditions)
         , margin (Margin 0 20 0 0)
-        ]
+        ] <> FontStyle.paragraphText LanguageStyle
       , linearLayout
               [ width MATCH_PARENT
               , height (V 1)
@@ -211,12 +256,10 @@ privacyPolicyView state =
     [ height WRAP_CONTENT
     , orientation VERTICAL
     , width WRAP_CONTENT
-    ][  textView
+    ][  textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text (getString PRIVACY_POLICY)
-        , textSize FontSize.a_14
-        , fontStyle $ FontStyle.regular LanguageStyle
         , color Color.blue900
         , margin (Margin 0 20 0 0)
         , onClick (\action -> do
@@ -224,7 +267,7 @@ privacyPolicyView state =
             _ <- JB.openUrlInApp $ getValueFromConfig "PRIVACY_POLICY_LINK" 
             pure unit
           ) (const PrivacyPolicy)
-        ]
+        ] <> FontStyle.paragraphText LanguageStyle
       , linearLayout
         [ width MATCH_PARENT
         , height (V 1)

@@ -19,8 +19,6 @@ import Prelude
 import Control.Monad.Trans.Class (lift)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
-import Effect (Effect)
-import Helpers.Utils as Utils
 import JBridge as JBridge
 import Screens.Types (Stage)
 import Types.App (FlowBT)
@@ -69,6 +67,7 @@ data KeyStore
   | ACCURACY_THRESHOLD
   | DEVICE_DETAILS
   | USER_EMAIL
+  | LAST_LOGIN
 
 derive instance genericKeyStore :: Generic KeyStore _
 
@@ -80,9 +79,6 @@ setValueToLocalStore keyStore val = void $ lift $ lift $ pure $ JBridge.setKeyIn
 
 getValueToLocalStore :: KeyStore -> String
 getValueToLocalStore = JBridge.getKeyInSharedPrefKeys <<< show
-
-getValueToLocalStoreEff :: KeyStore -> Effect String
-getValueToLocalStoreEff = Utils.getKeyInSharedPrefKeysConfigEff <<< show
 
 deleteValueFromLocalStore :: KeyStore -> FlowBT String Unit
 deleteValueFromLocalStore = void <<< lift <<< lift <<< pure <<< JBridge.removeKeysInSharedPrefs <<< show

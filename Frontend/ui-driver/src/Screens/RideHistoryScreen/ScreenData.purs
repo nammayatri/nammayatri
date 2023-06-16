@@ -17,6 +17,9 @@ module Screens.RideHistoryScreen.ScreenData where
 
 import Screens.Types (AnimationState(..), RideHistoryScreenState, BottomNavBarState)
 import PrestoDOM.Types.Core (toPropValue)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
+import Foreign.Object (empty)
 
 initData :: RideHistoryScreenState
 initData = {
@@ -46,5 +49,6 @@ initData = {
     destination : ""
   },
   offsetValue: 0,
-  loaderButtonVisibility: false
+  loaderButtonVisibility: false,
+  logField : empty 
 }

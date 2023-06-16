@@ -6,6 +6,7 @@ require('core-js');
 window.session_id = guid();
 window.version = __VERSION__;
 console.warn("Hello World");
+loadConfig();
 
 var jpConsumingBackpress = {
   event: "jp_consuming_backpress",
@@ -102,13 +103,16 @@ window.onMerchantEvent = function (event, payload) {
       , errorCode: ""
     }
     if (clientPaylod.payload.clientId == "open-kochi") {
-      window.merchantID = "YATRIPARTNER"
+      window.merchantID = "YATRI"
     } else if(clientPaylod.payload.clientId == "jatrisaathiprovider" || clientPaylod.payload.clientId == "jatrisaathidriver"){
-      window.merchantID = "JATRISAATHIDRIVER"
+      window.merchantID = "JATRISAATHI"
     }else {
-      window.merchantID = clientPaylod.payload.clientId.toUpperCase();
+      // window.merchantID = clientPaylod.payload.clientId.toUpperCase();
+      window.merchantID = "NAMMAYATRI";
     }
     console.log(window.merchantID);
+    var header = {"x-client-id" : "nammayatripartner"};
+    JBridge.setAnalyticsHeader(JSON.stringify(header));
     JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
   } else if (event == "process") {
     window.__payload.sdkVersion = "2.0.1"
@@ -151,27 +155,21 @@ window.callUICallback = function () {
   }
 }
 
+window.onResumeListeners = [];
+
 window.onPause = function () {
-  if (window.eventListeners && window.eventListeners["onPause"]) {
-    if (Array.isArray(window.eventListeners["onPause"])) {
-      var onPauseEvents = window.eventListeners["onPause"];
-      onPauseEvents.forEach(function (fn) {
-        fn()();
-      })
-      window.eventListeners["onPause"] = [];
-    } else window.eventListeners["onPause"]()();
+  console.error("onEvent onPause");
+  if (JBridge.pauseMediaPlayer) {
+    JBridge.pauseMediaPlayer();
   }
 }
 
 window.onResume = function () {
-  if (window.eventListeners && window.eventListeners["onResume"]) {
-    if (Array.isArray(window.eventListeners["onResume"])) {
-      var onResumeEvents = window.eventListeners["onResume"];
-      onResumeEvents.forEach(function (fn) {
-        fn()();
-      })
-      window.eventListeners["onResume"] = [];
-    } else window.eventListeners["onResume"]()();
+  console.error("onEvent onResume");
+  if (window.onResumeListeners && Array.isArray(window.onResumeListeners)) {
+    for (let i = 0; i < window.onResumeListeners.length;i++) {
+      window.onResumeListeners[i].call();
+    }
   }
 }
 window.onActivityResult = function () {
@@ -215,6 +213,10 @@ window["onEvent'"] = function (event, args) {
     window.onPause();
   } else if (event == "onResume") {
     window.onResume();
+  } else if (event == "onDestroy") {
+    if (JBridge.onDestroy){
+      JBridge.onDestroy();
+    }
   }
 }
 
@@ -245,4 +247,33 @@ if(sessionInfo.package_name.includes("debug")){
 
 function makeEvent(_type, _data) {
   return { type : _type, data : _data };
+}
+function loadConfig() {
+  if (window.appConfig) {
+    return;
+  }
+  const headID = document.getElementsByTagName("head")[0];
+  console.log(headID)
+  const newScript = document.createElement("script");
+  newScript.type = "text/javascript";
+  newScript.id = "ny-customer-configuration";
+  newScript.innerHTML = window.JBridge.loadFileInDUI("v1-configuration.js");
+  headID.appendChild(newScript);
+  try {
+      const merchantConfig = (
+          function(){
+              try {
+                  return JSON.parse(window.getMerchantConfig());
+              } catch(e){
+                  return "{}";
+              }
+          }
+      )();
+      // console.log(merchantConfig)
+      // window.appConfig = mergeDeep(defaultConfig, merchantConfig);
+      window.appConfig = merchantConfig;
+  } catch(e){
+      console.error("config parse/merge failed", e);
+      // window.appConfig = defaultConfig;
+  }
 }

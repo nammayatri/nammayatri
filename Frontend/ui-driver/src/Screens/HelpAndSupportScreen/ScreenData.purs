@@ -16,7 +16,7 @@
 module Screens.HelpAndSupportScreen.ScreenData where
 
 import Screens.Types(HelpAndSupportScreenState)
-import Prelude (class Eq)
+import Prelude (class Eq, (<>))
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Screens.Types as ST

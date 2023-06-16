@@ -1,77 +1,63 @@
-const hiString = require("./../../src/Strings/HI.js");
-const enStrings = require("./../../src/Strings/EN.js");
-const knStrings = require("./../../src/Strings/KN.js");
-const taStrings = require("./../../src/Strings/TA.js");
-const bnStrings = require("./../../src/Strings/BN.js");
-const mlStrings = require("./../../src/Strings/ML.js");
-const jatriConfig = require("./../../src/MerchantConfigs/JatriSathiConfig.js");
-const nammaYatriConfig = require("./../../src/MerchantConfigs/NammaYatriPartnerConfig.js");
-const yatriConfig = require("./../../src/MerchantConfigs/YatriPartnerConfig.js");
+const hindiStrings = require("./../../src/Strings/HI.js");
+const kannadaStrings = require("./../../src/Strings/KN.js");
+const englishStrings = require("./../../src/Strings/EN.js");
+const bengaliStrings = require("./../../src/Strings/BN.js");
+const malayalamStrings = require("./../../src/Strings/ML.js");
+const tamilStrings = require("./../../src/Strings/TA.js");
 
 
-export const getStringFromConfig = function (constructorKey){
-    let key = constructorKey.trim(); 
-    switch(window.merchantID) {
-        case "JATRISAATHIDRIVER" :
-            if (jatriConfig.isCurrentMerchantString(key)){
-                return jatriConfig.currentMerchantString(key);
-            }
-            break;
-        case "NAMMAYATRIPARTNER" :
-            if (nammaYatriConfig.isCurrentMerchantString(key)){
-                return nammaYatriConfig.currentMerchantString(key);
-            }
-            break;
-        case "YATRIPARTNER" :
-            if (yatriConfig.isCurrentMerchantString(key)){
-                return yatriConfig.currentMerchantString(key);
-            }
-            break;
-        default:
-            return getStringFromCommon(key);
-      }
-      return getStringFromCommon(key);
+export const getStringFromConfig = function (key) {
+
+  if (window.appConfig.StringKeys.includes(key)){
+    return getMerchantString(key);
+  }
+  return getStringFromCommon(key);
 }
 
 export const getValueFromConfig = function (constructorKey){
-    let key = constructorKey.trim(); 
-    switch(window.merchantID) {
-        case "JATRISAATHIDRIVER" :
-            return jatriConfig.getMerchantConfig(key);
-        case "NAMMAYATRIPARTNER" :
-            return nammaYatriConfig.getMerchantConfig(key);
-        case "YATRIPARTNER" :
-            return yatriConfig.getMerchantConfig(key);
-        default:
-            console.error("no value found for key "+ key);
-            return "";
-      }
+  if (constructorKey in window.appConfig){
+    return window.appConfig[constructorKey];
+  }
+  console.error("no value found for key "+ constructorKey);
+  return "";
 }
 
-function getStringFromCommon(key){
-    var selectedLanguage = JBridge.getKeysInSharedPrefs("LANGUAGE_KEY");
-    switch(selectedLanguage) {
-        case "HI_IN" :
-            return hiString.getStringValue(key);
-        case "KN_IN" :
-            return knStrings.getStringValue(key);
-        case "EN_US" :
-            return enStrings.getStringValue(key);
-        case "TA_IN" :
-            return taStrings.getStringValue(key);
-        case "BN_IN" : 
-            return bnStrings.getStringValue(key);
-        case "ML_IN" :
-            return mlStrings.getStringValue(key);
-        default:
-            return enStrings.getStringValue(key);
-      }
+function getStringFromCommon(key) {
+  var selectedLanguage = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
+  switch (selectedLanguage) {
+    case "HI_IN":
+      return hindiStrings.getStringValue(key);
+    case "KN_IN":
+      return kannadaStrings.getStringValue(key);
+    case "BN_IN":
+      return bengaliStrings.getStringValue(key);
+    case "ML_IN":
+      return malayalamStrings.getStringValue(key);
+    case "TA_IN":
+      return tamilStrings.getStringValue(key);
+    default:
+      return englishStrings.getStringValue(key);
+  }
 }
 
 export const getENStrings = function (constructorKey){
-    return enStrings.getStringValue(constructorKey);
-  }
+  return englishStrings.getStringValue(constructorKey);
+}
 
-export const getMerchantId = function(id) {
-    return window.merchantID;
+export const getMerchantString = function(key) {
+  var selectedLanguage = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
+  switch (selectedLanguage) {
+    case "HI_IN":
+      return window.appConfig.hindiStrings[key];
+    case "KN_IN":
+      return window.appConfig.kannadaStrings[key];
+    case "BN_IN":
+      return window.appConfig.bengaliStrings[key];
+    case "ML_IN":
+      return window.appConfig.malayalamStrings[key];
+    case "TA_IN":
+      return window.appConfig.tamilStrings[key];
+    default:
+      return window.appConfig.englishStrings[key];
   }
+}

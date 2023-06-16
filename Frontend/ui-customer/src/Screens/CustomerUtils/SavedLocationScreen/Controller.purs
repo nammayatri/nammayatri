@@ -8,7 +8,7 @@
  
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  
-  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+  or FITNESS FOR A PARTIEHULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
@@ -30,13 +30,16 @@ import Data.String (trim, toLower, split, Pattern(..))
 import Data.Array (filter, (!!), length)
 import Data.Maybe (fromMaybe, Maybe(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromSaved)
-import JBridge (toast, toggleLoader, toggleBtnLoader)
+import JBridge (toast, toggleBtnLoader)
 import Language.Strings(getString)
 import Language.Types(STR(..))
 import Accessor (_list)
 import Data.Lens ((^.))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppBackPress, trackAppScreenRender, trackAppScreenEvent, trackAppTextInput)
 import Screens (ScreenName(..), getScreen)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Engineering.Helpers.Utils as EHU
+import Common.Types.App (LazyCheck(..))
 
 instance showAction :: Show Action where 
   show _ = ""
@@ -112,7 +115,7 @@ eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ DeleteLocatio
 eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = exit $ GoBack
 
 eval (SavedLocationListAPIResponseAction respList) state = do 
-  _ <- pure $ toggleLoader false
+  _ <- pure $ EHU.toggleLoader false
   let home = (filter (\x -> (toLower x.tag) == "home") (getSavedLocation (respList ^. _list)))
   let work = (filter (\x -> (toLower x.tag) == "work") (getSavedLocation (respList ^. _list)))
   let otherLocation = (filter (\x -> not  ((toLower x.tag) == "home" || (toLower x.tag) == "work")) (getSavedLocation (respList ^. _list)))
@@ -159,7 +162,7 @@ getSavedLocation (savedLocation) = (map (\(SavedReqLocationAPIEntity item) ->
 
 getSavedLocationForAddNewAddressScreen :: (Array LocationListItemState) -> Array LocationListItemState 
 getSavedLocationForAddNewAddressScreen (savedLocation) = (map (\ (item) -> 
-  { prefixImageUrl : "ny_ic_loc_grey,https://assets.juspay.in/nammayatri/images/user/ny_ic_loc_grey.png"
+  { prefixImageUrl : "ny_ic_loc_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_loc_grey.png"
   , postfixImageUrl : ""
   , postfixImageVisibility : false
   , title : (fromMaybe "" ((split (Pattern ",") (item.address)) !! 0))

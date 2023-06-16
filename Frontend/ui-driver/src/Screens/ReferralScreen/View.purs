@@ -142,25 +142,21 @@ commonView push img title description state=
               , margin $ if img == "ny_ic_comming_soon_poster" then (Margin 0 0 0 0) else (MarginBottom 72)
               , onClick push (const if img == "ny_ic_comming_soon_poster" then EnableReferralFlow else EnableReferralFlowNoAction)
               ]
-          , textView
+          , textView $
               [ height WRAP_CONTENT
               , width WRAP_CONTENT
               , gravity CENTER
               , text title
               , color Color.black900
-              , textSize $ FontSize.a_18
-              , fontStyle $ FontStyle.bold LanguageStyle
-              ]
-          , textView
+              ] <> FontStyle.h2 LanguageStyle
+          , textView $
               [ height WRAP_CONTENT
               , width WRAP_CONTENT
               , gravity CENTER
               , text description
               , color Color.black700
-              , textSize $ FontSize.a_14
-              , fontStyle $ FontStyle.regular LanguageStyle
               , padding (PaddingVertical 10 10)
-              ]
+              ] <> FontStyle.paragraphText TypoGraphy
           ]
         ]
     ]
@@ -402,15 +398,13 @@ qrScreen push state =
                 , padding $ Padding 20 13 0 0
                 , orientation VERTICAL
                 ]
-                [ textView
+                [ textView $
                   [ height WRAP_CONTENT
                   , width MATCH_PARENT
                   , gravity LEFT
                   , text if state.data.driverPerformance.referrals.totalActivatedCustomers > 0 then (getString FIRST_REFERRAL_SUCCESSFUL) else (getString AWAITING_REFERRAL_RIDE)
                   , color Color.white900
-                  , textSize FontSize.a_14
-                  , fontStyle $ FontStyle.semiBold LanguageStyle
-                  ]
+                  ] <> FontStyle.body6 TypoGraphy
                 , textView
                   [ height WRAP_CONTENT
                   , width MATCH_PARENT
@@ -454,41 +448,36 @@ qrScreen push state =
                 , color Color.black800
                 , textSize $ FontSize.a_14
                 ]
-              , textView
+              , textView $
                 [ height WRAP_CONTENT
                 , width WRAP_CONTENT
                 , alignParentRight "true,-1"
                 , gravity CENTER
                 , text (show state.data.driverPerformance.referrals.totalReferredCustomers)
                 , color Color.black800
-                , textSize FontSize.a_18
-                , fontStyle  $ FontStyle.bold LanguageStyle
-                ]
+                ] <> FontStyle.h2 LanguageStyle
               ]
             , linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 ]
                 [
-                  textView
+                  textView $
                   [ height WRAP_CONTENT
                   , width WRAP_CONTENT
                   , gravity LEFT
                   , weight 1.0
                   , text (getString ACTIVATED_CUSTOMERS)
                   , color Color.black800
-                  , textSize FontSize.a_14
-                  ]
-                , textView
+                  ] <> FontStyle.paragraphText TypoGraphy
+                , textView $
                   [ height WRAP_CONTENT
                   , width WRAP_CONTENT
                   , alignParentRight "true,-1"
                   , gravity CENTER
                   , text (show state.data.driverPerformance.referrals.totalActivatedCustomers)
                   , color Color.black800
-                  , textSize FontSize.a_18
-                  , fontStyle $ FontStyle.bold LanguageStyle
-                  ]
+                  ] <> FontStyle.h2 LanguageStyle
                 ]
             ]
         ]
@@ -523,15 +512,13 @@ contactUsTextView push state =
   , margin $ MarginTop 4
   , visibility if state.data.driverPerformance.referrals.totalActivatedCustomers > 0 then VISIBLE else GONE
   , onClick push $ const GoToAlertScreen
-  ][ textView
+  ][ textView $
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , gravity LEFT
     , text (getString FOR_UPDATES_SEE_ALERTS)
     , color Color.white900
-    , textSize $ FontSize.a_12
-    , fontStyle $ FontStyle.regular LanguageStyle
-    ]
+    ] <> FontStyle.body3 TypoGraphy
     , linearLayout
     [ height $ V 1
     , width MATCH_PARENT

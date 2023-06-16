@@ -18,7 +18,7 @@ module Components.PrimaryEditText.Controller where
 import Prelude((<>))
 import Font.Size as FontSize
 import Common.Styles.Colors as Color
-import Font.Style as FontStyle
+import Font.Style (Style(..))
 import Data.Maybe(Maybe(..))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), LetterSpacing(..))
 import Common.Types.App
@@ -47,8 +47,6 @@ type Config =
 
 type EditTextConfig =
   { text :: String
-  , textSize :: Int
-  , fontStyle :: String
   , color :: String
   , gravity :: Gravity
   , visibility :: Visibility
@@ -62,17 +60,17 @@ type EditTextConfig =
   , alpha :: Number
   , capsLock :: Boolean
   , enabled :: Boolean
+  , textStyle :: Style
   }
 
 type TextConfig =
   { text :: String
-  , textSize :: Int
-  , fontStyle :: String
   , color :: String
   , gravity :: Gravity
   , visibility :: Visibility
   , alpha :: Number
   , margin :: Margin
+  , textStyle :: Style
   }
 type ImageConfig =
   { height :: Length
@@ -90,8 +88,7 @@ config = {
   , type : ""
   , editText :
     { text : ""
-    , textSize : FontSize.a_12
-    , fontStyle : FontStyle.regular LanguageStyle
+    , textStyle : SubHeading1
     , color : Color.black800
     , gravity : LEFT
     , visibility : VISIBLE
@@ -114,8 +111,7 @@ config = {
   , id : ""
   , topLabel :
     { text : ""
-    , fontStyle : FontStyle.regular LanguageStyle
-    , textSize :  FontSize.a_12
+    , textStyle : Body3
     , gravity : LEFT
     , visibility : VISIBLE
     , color : Color.yellow900
@@ -125,9 +121,8 @@ config = {
   , showErrorLabel : false
   , errorLabel : {
       text : ""
-    , fontStyle : FontStyle.bold LanguageStyle
-    , textSize :  FontSize.a_12
     , gravity : LEFT
+    , textStyle : Body3
     , color : Color.lightMaroon
     , visibility : GONE
     , alpha : 1.0

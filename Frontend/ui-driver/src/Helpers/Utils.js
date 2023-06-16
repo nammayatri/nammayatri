@@ -381,6 +381,7 @@ export const storeCallBackForNotification = function (cb) {
           var callback = callbackMapper.map(function (notificationType) {
             cb(action(notificationType))();
           });
+          window.onResumeListeners = [];
           JBridge.storeCallBackForNotification(callback);
       }
   }}
@@ -580,3 +581,6 @@ export const getImageUrl = function (url) {
   }
 };
 
+export const getMerchantId = function(id) {
+  return window.merchantID;
+}
