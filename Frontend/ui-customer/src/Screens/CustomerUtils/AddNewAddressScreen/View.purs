@@ -493,11 +493,10 @@ savePlaceView state push =
               , maxLines 1
               , ellipsize true 
               ] <> (if EHC.os == "IOS" then [width $ V (4 * (EHC.screenWidth unit / 5) - 75)] else [weight 1.0]) )
-            , linearLayout[
+            , linearLayout([
               height WRAP_CONTENT
-            , weight 1.0
             , gravity RIGHT 
-            ][  textView
+            ] <> (if EHC.os == "IOS" then [weight 1.0] else [width WRAP_CONTENT]) )[  textView
                 [ text (getString EDIT)
                 , color Color.blue900
                 , onFocus push $ const $ EditTextFocusChanged
