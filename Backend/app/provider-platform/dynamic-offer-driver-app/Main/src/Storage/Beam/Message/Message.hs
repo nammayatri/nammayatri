@@ -22,6 +22,7 @@ import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize hiding (label)
 import qualified Data.Time as Time
+import qualified Data.Vector as V
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
@@ -59,7 +60,7 @@ data MessageT f = MessageT
     likeCount :: B.C f Int,
     mediaFiles :: B.C f [Text],
     merchantId :: B.C f Text,
-    createdAt :: B.C f Time.UTCTime
+    createdAt :: B.C f Time.LocalTime
   }
   deriving (Generic, B.Beamable)
 
@@ -83,10 +84,10 @@ instance ToJSON Message where
   toJSON = A.genericToJSON A.defaultOptions
 
 instance FromField [Text] where
-  fromField = fromFieldEnum
+  fromField f mbValue = V.toList <$> fromField f mbValue
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be [Text] where
-  sqlValueSyntax = autoSqlValueSyntax
+instance HasSqlValueSyntax be (V.Vector Text) => HasSqlValueSyntax be [Text] where
+  sqlValueSyntax x = sqlValueSyntax (V.fromList x)
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Text]
 
@@ -115,7 +116,7 @@ messageTMod :: MessageT (B.FieldModification (B.TableField MessageT))
 messageTMod =
   B.tableModification
     { id = B.fieldNamed "id",
-      messageType = B.fieldNamed "message_type",
+      messageType = B.fieldNamed "type",
       title = B.fieldNamed "title",
       description = B.fieldNamed "description",
       shortDescription = B.fieldNamed "short_description",

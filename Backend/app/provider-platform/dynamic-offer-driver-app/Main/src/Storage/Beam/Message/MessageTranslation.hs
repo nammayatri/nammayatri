@@ -21,6 +21,7 @@ import qualified Data.Aeson as A
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import qualified Data.Serialize
+import qualified Data.Time as T
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
@@ -55,7 +56,7 @@ data MessageTranslationT f = MessageTranslationT
     description :: B.C f Text,
     shortDescription :: B.C f Text,
     label :: B.C f (Maybe Text),
-    createdAt :: B.C f Time.UTCTime
+    createdAt :: B.C f Time.LocalTime
   }
   deriving (Generic, B.Beamable)
 
@@ -101,7 +102,7 @@ defaultMessageTranslation =
       description = "",
       shortDescription = "",
       label = Nothing,
-      createdAt = defaultUTCDate
+      createdAt = T.utcToLocalTime T.utc defaultUTCDate
     }
 
 instance Data.Serialize.Serialize MessageTranslation where
