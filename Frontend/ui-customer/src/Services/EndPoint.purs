@@ -135,3 +135,9 @@ userSos _ = (getBaseUrl "36") <> "/sos/create"
 
 userSosStatus :: String -> String
 userSosStatus sosId = (getBaseUrl "37") <> "/sos/" <> sosId <>"/status"
+
+createOrder :: String -> String
+createOrder dummy = (getBaseUrl "37") <> "/payment/" <> dummy <>"/createOrder"
+
+orderStatus :: String -> String
+orderStatus orderId = (getBaseUrl "37") <> "/payment/" <> orderId <>"/status"

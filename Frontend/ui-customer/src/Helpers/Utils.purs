@@ -40,7 +40,7 @@ import Data.String as DS
 import Data.Traversable (traverse)
 import Debug (spy)
 import Effect (Effect)
-import Effect.Aff (error, killFiber, launchAff, launchAff_)
+import Effect.Aff (error, killFiber, launchAff, launchAff_, makeAff, nonCanceler)
 import Effect.Aff.Compat (EffectFn1, EffectFnAff, fromEffectFnAff, runEffectFn1, runEffectFn2, runEffectFn3, EffectFn2)
 import Effect.Class (liftEffect)
 import Effect.Console (logShow)
@@ -53,15 +53,22 @@ import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||))
+import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||),  (*>), (>>>))
 import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..))
-import Services.API (Prediction)
+import Services.API (Prediction, PaymentPagePayload)
 import Types.App (GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
+-- import Services.APITypes (PaymentPagePayload)
+import Presto.Core.Types.Language.Flow (Flow, doAff)
+import Types.App (FlowBT)
+import Control.Monad.Except.Trans (lift)
+import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
+import Data.Newtype (class Newtype)
+import Presto.Core.Types.API (class StandardEncode, standardEncode)
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
 -- shuffle' array = do
@@ -394,3 +401,21 @@ getAssetsBaseUrl lazy = case (getMerchant lazy) of
   JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/user/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/user/"
   PAYTM -> "https://assets.juspay.in/beckn/mobilitypaytm/user/"
+
+
+type AffSuccess s = (s -> Effect Unit)
+type MicroAPPInvokeSignature = String -> (AffSuccess String) ->  Effect Unit
+
+
+foreign import startPP1 :: MicroAPPInvokeSignature
+
+startPP'' :: forall a. PaymentPagePayload -> Flow a String
+startPP'' payload = do
+  response <- doAff $ makeAff (\cb -> (startPP1 (encodeJSON payload) (Right >>> cb) ) *> pure nonCanceler)
+  pure $ response
+
+
+startPP :: PaymentPagePayload -> FlowBT String String
+startPP payload = do
+  action <- lift $ lift $ startPP'' payload
+  pure action

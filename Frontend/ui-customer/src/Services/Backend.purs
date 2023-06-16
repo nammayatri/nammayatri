@@ -894,3 +894,21 @@ makeSosStatus :: String -> SosStatus
 makeSosStatus sosStatus = SosStatus {
      "status" : sosStatus
 }
+
+
+-- create order
+
+createPaymentOrder dummy = do
+    headers <- getHeaders ""
+    withAPIResult (EP.createOrder dummy) unwrapResponse $ callAPI headers (CreateOrderReq dummy)
+    where
+        unwrapResponse (x) = x
+
+
+-- order Status
+
+paymentOrderStatus orderId = do
+    headers <- getHeaders ""
+    withAPIResult (EP.orderStatus orderId) unwrapResponse $ callAPI headers (OrderStatusReq orderId)
+    where
+        unwrapResponse (x) = x
