@@ -430,6 +430,7 @@ calculateDriverPool ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     CoreMetrics m,
+    L.MonadFlow m,
     HasCoordinates a
   ) =>
   PoolCalculationStage ->
@@ -446,14 +447,13 @@ calculateDriverPool poolStage driverPoolCfg mbVariant pickup merchantId onlyNotO
   now <- getCurrentTime
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
-      Esq.runInReplica $
-        QP.getNearestDrivers
-          mbVariant
-          coord
-          radius
-          merchantId
-          onlyNotOnRide
-          driverPoolCfg.driverPositionInfoExpiry
+      QP.getNearestDrivers
+        mbVariant
+        coord
+        radius
+        merchantId
+        onlyNotOnRide
+        driverPoolCfg.driverPositionInfoExpiry
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount now) approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
@@ -512,6 +512,7 @@ calculateDriverPoolCurrentlyOnRide ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     CoreMetrics m,
+    L.MonadFlow m,
     HasCoordinates a
   ) =>
   PoolCalculationStage ->
@@ -528,14 +529,14 @@ calculateDriverPoolCurrentlyOnRide poolStage driverPoolCfg mbVariant pickup merc
   now <- getCurrentTime
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPoolCurrentlyOnRide" $
-      Esq.runInReplica $
-        QP.getNearestDriversCurrentlyOnRide
-          mbVariant
-          coord
-          radius
-          merchantId
-          driverPoolCfg.driverPositionInfoExpiry
-          reduceRadiusValue
+      -- Esq.runInReplica $
+      QP.getNearestDriversCurrentlyOnRide
+        mbVariant
+        coord
+        radius
+        merchantId
+        driverPoolCfg.driverPositionInfoExpiry
+        reduceRadiusValue
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount now) approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts

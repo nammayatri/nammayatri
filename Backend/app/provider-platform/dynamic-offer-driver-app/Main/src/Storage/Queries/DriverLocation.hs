@@ -16,23 +16,29 @@
 
 module Storage.Queries.DriverLocation where
 
-import qualified Database.Beam as B
 -- import qualified Database.Beam.Query as B
 
 -- import qualified EulerHS.KVConnector.Flow as KV
 -- import EulerHS.KVConnector.Types
 
+import Data.Maybe as Mb
+-- import qualified EulerHS.KVConnector.Flow as KV
+-- import EulerHS.KVConnector.Types
+
+import Data.Time (addUTCTime)
+import qualified Database.Beam as B
+import Database.Beam.Postgres
+import Database.Beam.Postgres.Syntax (PgExpressionSyntax (..), emit)
+import qualified Database.Beam.Query as BQ
 import qualified Database.Beam.Schema.Tables as B
 import Domain.Types.DriverLocation
 import Domain.Types.Merchant
 import Domain.Types.Person
--- import qualified EulerHS.KVConnector.Flow as KV
--- import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
-import Kernel.Types.Common (MonadTime (getCurrentTime))
+import Kernel.Types.Common
 import Kernel.Types.Id
 import Lib.Utils
 import qualified Storage.Beam.DriverLocation as BeamDL
@@ -143,6 +149,39 @@ deleteById (Id driverId') = do
                 (\BeamDL.DriverLocationT {..} -> driverId B.==. B.val_ driverId')
             )
     Left _ -> pure ()
+
+getDriverLocsFromMerchId' ::
+  (L.MonadFlow m, MonadTime m) =>
+  Maybe Seconds ->
+  LatLong ->
+  Int ->
+  Id Merchant ->
+  m [DriverLocation]
+getDriverLocsFromMerchId' mbDriverPositionInfoExpiry gps radiusMeters merchantId' = do
+  let expTime = maybe 0 getSeconds mbDriverPositionInfoExpiry
+  now <- getCurrentTime
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  conn <- L.getOrInitSqlConn (fromJust dbConf)
+  case conn of
+    Right c -> do
+      dlocs <-
+        L.runDB c $
+          L.findRows $
+            B.select $
+              B.orderBy_ (\_ -> B.asc_ (byDist (gps.lat, gps.lon))) $
+                B.filter_'
+                  ( \BeamDL.DriverLocationT {..} ->
+                      merchantId B.==?. B.val_ (getId merchantId')
+                        B.&&?. (B.sqlBool_ (B.val_ (Mb.isNothing mbDriverPositionInfoExpiry)) B.||?. B.sqlBool_ (coordinatesCalculatedAt B.>=. (B.val_ (addUTCTime (fromIntegral (-1 * expTime)) now))))
+                        B.&&?. buildRadiusWithin' (gps.lat, gps.lon) radiusMeters
+                  )
+                  $ B.all_ (driverLocation atlasDB)
+      pure (either (const []) (transformBeamDriverLocationToDomain <$>) dlocs)
+    Left _ -> pure []
+
+byDist :: (Double, Double) -> BQ.QGenExpr context Postgres s Double
+-- getDist (lat, lon) = BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "point <-> ST_SetSRID (ST_Point (" <> show lon <> " , " <> show lat <> "),4326)"))
+byDist (lat, lon) = BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "point <-> 'SRID=4326;POINT(" <> show lon <> " " <> show lat <> ")'"))
 
 transformBeamDriverLocationToDomain :: BeamDL.DriverLocation -> DriverLocation
 transformBeamDriverLocationToDomain BeamDL.DriverLocationT {..} = do

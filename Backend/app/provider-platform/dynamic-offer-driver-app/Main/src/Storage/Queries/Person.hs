@@ -1510,7 +1510,7 @@ data NearestDriversResult = NearestDriversResult
   deriving (Generic, Show, PrettyShow, HasCoordinates)
 
 getNearestDrivers ::
-  (Transactionable m, MonadTime m) =>
+  (Transactionable m, MonadTime m, L.MonadFlow m) =>
   Maybe Variant ->
   LatLong ->
   Int ->
@@ -1520,7 +1520,7 @@ getNearestDrivers ::
   m [NearestDriversResult]
 getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide mbDriverPositionInfoExpiry = do
   res <- do
-    driverLocs <- getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry LatLong {..} radiusMeters
+    driverLocs <- QueriesDL.getDriverLocsFromMerchId' mbDriverPositionInfoExpiry LatLong {..} radiusMeters merchantId
     driverInfos <- getDriverInfosWithCond driverLocs onlyNotOnRide False
     vehicle <- getVehiclesWithCond driverInfos
     drivers <- getDrivers vehicle
@@ -1687,7 +1687,7 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
   deriving (Generic, Show, PrettyShow, HasCoordinates)
 
 getNearestDriversCurrentlyOnRide ::
-  (Transactionable m, MonadTime m) =>
+  (Transactionable m, MonadTime m, L.MonadFlow m) =>
   Maybe Variant ->
   LatLong ->
   Int ->
@@ -1698,7 +1698,7 @@ getNearestDriversCurrentlyOnRide ::
 getNearestDriversCurrentlyOnRide mbVariant LatLong {..} radiusMeters merchantId mbDriverPositionInfoExpiry reduceRadiusValue = do
   let onRideRadius = fromIntegral (radiusMeters - reduceRadiusValue) :: Double
   res <- do
-    driverLocs <- getDriverLocsFromMerchId mbDriverPositionInfoExpiry LatLong {..} radiusMeters merchantId
+    driverLocs <- QueriesDL.getDriverLocsFromMerchId' mbDriverPositionInfoExpiry LatLong {..} radiusMeters merchantId
     driverInfos <- getDriverInfosWithCond driverLocs False True
     vehicles <- getVehicles driverInfos
     drivers <- getDrivers vehicles
