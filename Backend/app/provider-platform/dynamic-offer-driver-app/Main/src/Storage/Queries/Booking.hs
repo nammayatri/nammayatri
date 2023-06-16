@@ -113,7 +113,7 @@ findStuckBookings merchantId bookingIds now = do
     where_ $
       booking ^. BookingProviderId ==. val (toKey merchantId)
         &&. booking ^. BookingTId `in_` valList (toKey <$> bookingIds)
-        &&. (booking ^. BookingStatus ==. val NEW &&. upcoming6HrsCond)
+        &&. (booking ^. BookingStatus `in_` valList [NEW, TRIP_ASSIGNED] &&. upcoming6HrsCond)
     pure $ booking ^. BookingTId
 
 findBookingBySpecialZoneOTP :: Transactionable m => Id Merchant -> Text -> UTCTime -> m (Maybe Booking)

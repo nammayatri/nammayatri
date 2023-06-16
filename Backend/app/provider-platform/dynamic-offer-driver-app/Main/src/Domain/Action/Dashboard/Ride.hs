@@ -24,6 +24,7 @@ where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
 import Data.Coerce (coerce)
+import Data.Either.Extra (mapLeft)
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import qualified Domain.Types.Booking as DBooking
@@ -328,11 +329,14 @@ multipleRideSync merchantShortId rideSyncReq = do
   logTagInfo "dashboard -> syncRide : " $ show rideIds <> "; status: " <> show (map fun ridesBookingsZip)
   rideDataResult <-
     mapM
-      ( \(ride, booking) -> case ride.status of
-          DRide.NEW -> syncNewMultipleRide ride booking
-          DRide.INPROGRESS -> syncInProgressMultipleRide ride booking
-          DRide.COMPLETED -> syncCompletedMultipleRide ride booking
-          DRide.CANCELLED -> syncCancelledMultipleRide ride booking merchant
+      ( \(ride, booking) ->
+          mapLeft show
+            <$> ( try @_ @SomeException $ case ride.status of
+                    DRide.NEW -> syncNewMultipleRide ride booking
+                    DRide.INPROGRESS -> syncInProgressMultipleRide ride booking
+                    DRide.COMPLETED -> syncCompletedMultipleRide ride booking
+                    DRide.CANCELLED -> syncCancelledMultipleRide ride booking merchant
+                )
       )
       ridesBookingsZip
   return

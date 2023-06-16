@@ -316,7 +316,7 @@ instance HideSecrets MultipleRideSyncReq where
   hideSecrets = identity
 
 newtype MultipleRideSyncRes = MultipleRideSyncRes
-  { list :: [MultipleRideData]
+  { list :: [Either Text MultipleRideData]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
