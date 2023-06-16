@@ -548,7 +548,7 @@ findStuckBookings merchantId bookingIds now = do
     where_ $
       booking ^. BookingMerchantId ==. val (toKey merchantId)
         &&. booking ^. BookingTId `in_` valList (toKey <$> bookingIds)
-        &&. (booking ^. BookingStatus ==. val NEW &&. upcoming6HrsCond)
+        &&. (booking ^. BookingStatus `in_` valList [NEW, CONFIRMED, TRIP_ASSIGNED] &&. upcoming6HrsCond)
     pure $ booking ^. BookingTId
 
 findStuckBookings' :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
