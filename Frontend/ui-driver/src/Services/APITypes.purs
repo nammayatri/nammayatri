@@ -1031,6 +1031,9 @@ newtype MessageAPIEntityResponse = MessageAPIEntityResponse
   , reply :: Maybe String
   , label :: Maybe String
   , created_at :: String
+  , likeCount :: Int
+  , viewCount :: Int
+  , likeStatus :: Boolean
   }
 
 newtype MediaFileApiResponse = MediaFileApiResponse
@@ -1132,6 +1135,30 @@ instance showMessageSeenRes :: Show MessageSeenRes where show = genericShow
 instance standardEncodeMessageSeenRes :: StandardEncode MessageSeenRes where standardEncode (MessageSeenRes res) = standardEncode res
 instance decodeMessageSeenRes :: Decode MessageSeenRes where decode = defaultDecode
 instance encodeMessageSeenRes :: Encode MessageSeenRes where encode = defaultEncode
+
+------------------------------------------------------ likeMessage -----------------------------------------------
+
+data LikeMessageReq = LikeMessageReq String
+
+newtype LikeMessageRes = LikeMessageRes ApiSuccessResult
+
+instance makeLikeMessageReq :: RestEndpoint LikeMessageReq LikeMessageRes where
+    makeRequest reqBody@(LikeMessageReq messageId) headers = defaultMakeRequest PUT (EP.likeMessage messageId) headers reqBody
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericLikeMessageReq :: Generic LikeMessageReq _
+instance showLikeMessageReq :: Show LikeMessageReq where show = genericShow
+instance standardEncodeLikeMessageReq :: StandardEncode LikeMessageReq where standardEncode (LikeMessageReq _) = standardEncode {}
+instance decodeLikeMessageReq :: Decode LikeMessageReq where decode = defaultDecode
+instance encodeLikeMessageReq :: Encode LikeMessageReq where encode = defaultEncode
+
+derive instance genericLikeMessageRes :: Generic LikeMessageRes _
+derive instance newtypeLikeMessageRes :: Newtype LikeMessageRes _
+instance showLikeMessageRes :: Show LikeMessageRes where show = genericShow
+instance standardEncodeLikeMessageRes :: StandardEncode LikeMessageRes where standardEncode (LikeMessageRes res) = standardEncode res
+instance decodeLikeMessageRes :: Decode LikeMessageRes where decode = defaultDecode
+instance encodeLikeMessageRes :: Encode LikeMessageRes where encode = defaultEncode
 
 ------------------------------------------------------ messageReply -----------------------------------------------
 

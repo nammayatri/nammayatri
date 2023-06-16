@@ -32,7 +32,7 @@ import Data.String (Pattern(..), split, length, take, drop, joinWith, trim)
 import Data.String.CodeUnits (charAt)
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (getNewIDWithTag, strToBool, flowRunner)
-import Helpers.Utils (getImageUrl, getTimeStampString, removeMediaPlayer, setEnabled, setRefreshing, setYoutubePlayer)
+import Helpers.Utils (getImageUrl, getTimeStampString, removeMediaPlayer, setEnabled, setRefreshing, setYoutubePlayer, parseNumber)
 import JBridge (hideKeyboardOnNavigation, requestKeyboardShow)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -111,9 +111,29 @@ eval (NotificationDetailModelAC NotificationDetailModel.BackArrow) state =
     [ pure BackPressed
     ]
 
+eval (NotificationDetailModelAC (NotificationDetailModel.LikeMessage)) state = do
+  let likes = if state.notificationDetailModelState.likeStatus then state.notificationDetailModelState.likeCount - 1 else state.notificationDetailModelState.likeCount + 1
+      likeStatus = not state.notificationDetailModelState.likeStatus
+      updatedNotificationList = (map(\item -> if(item.messageId == state.notificationDetailModelState.messageId) then item{likeCount = likes, likeStatus = likeStatus } else item)state.notificationList)
+      updatedPrestoListArrayItems = (map(\item -> if(item.messageId == (toPropValue state.notificationDetailModelState.messageId)) then item{likeCount = toPropValue $ parseNumber likes } else item) state.prestoListArrayItems)
+  continueWithCmd state { notificationDetailModelState { likeStatus = likeStatus, likeCount = likes }, notificationList = updatedNotificationList, prestoListArrayItems = updatedPrestoListArrayItems }
+        [ do
+            void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT
+              $ do
+                  _ <- Remote.likeMessageBT state.notificationDetailModelState.messageId
+                  pure unit
+            pure NoAction
+        ]
+
 eval (NotificationDetailModelAC NotificationDetailModel.AddCommentClick) state = do
   _ <- pure $ requestKeyboardShow $ getNewIDWithTag "NotificationDetailModel"
   continue state { notificationDetailModelState { addCommentModelVisibility = VISIBLE } }
+
+eval (NotificationDetailModelAC NotificationDetailModel.IncreaseViewCount) state = do
+  let views = state.selectedItem.viewCount + 1
+      updatedNotificationList = (map(\item -> if(item.messageId == state.notificationDetailModelState.messageId) then item{viewCount = views } else item)state.notificationList)
+      updatedPrestoListArrayItems = (map(\item -> if(item.messageId == (toPropValue state.notificationDetailModelState.messageId)) then item{viewCount = toPropValue $ parseNumber views } else item) state.prestoListArrayItems)
+  continue state { notificationList = updatedNotificationList, prestoListArrayItems = updatedPrestoListArrayItems }
 
 eval (NotificationDetailModelAC (NotificationDetailModel.AddCommentModelAction PopUpModal.OnImageClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
@@ -240,6 +260,8 @@ notifisDetailStateTransformer selectedItem =
   , notificationNotSeen: selectedItem.notificationNotSeen
   , imageUrl: getImageUrl $ selectedItem.mediaUrl
   , mediaType: selectedItem.mediaType
+  , likeCount : selectedItem.likeCount
+  , likeStatus : selectedItem.likeStatus
   }
 
 notificationListTransformer :: Array MessageAPIEntityResponse -> Array NotificationCardState
@@ -269,6 +291,9 @@ notificationListTransformer notificationArray =
                   AudioLink -> "ny_ic_audio_file"
                   Audio -> "ny_ic_audio_file"
             , mediaType: Just media.fileType
+            , likeCount : notificationItem.likeCount
+            , viewCount : notificationItem.viewCount
+            , likeStatus : notificationItem.likeStatus
             }
       )
       notificationArray
@@ -314,6 +339,8 @@ propValueTransformer notificationArray =
             , messageId: toPropValue notificationItem.messageId
             , imageWithUrl : toPropValue media.url
             , imageWithUrlVisibility : toPropValue $ if media.fileType == ImageLink then "visible" else "gone"
+            , likeCount : toPropValue $ parseNumber $ notificationItem.likeCount
+            , viewCount : toPropValue $ parseNumber $ notificationItem.viewCount
             }
       )
       notificationArray

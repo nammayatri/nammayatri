@@ -24,6 +24,8 @@ data Action
   | AddCommentModelAction PopUpModal.Action
   | AddCommentClick
   | AfterRender
+  | LikeMessage
+  | IncreaseViewCount
   | NoAction
 
 

@@ -15,7 +15,7 @@
 
 module Services.EndPoints where
 
-import Prelude ((<>), ($), show)
+import Prelude ((<>), show)
 import Services.Config (getBaseUrl)
 
 
@@ -135,7 +135,7 @@ issueInfo issueId = (getBaseUrl "") <> "/issue/" <> issueId <> "/info"
 callDriverToCustomer :: String ->  String
 callDriverToCustomer  rideId =  (getBaseUrl "") <> "/driver/ride/" <> rideId <> "/call/customer"
 
- 
+
 fetchIssueList :: String -> String 
 fetchIssueList dummy = (getBaseUrl "") <> "/issue/list"
 
@@ -147,3 +147,6 @@ otpRide dummyRideOtp = (getBaseUrl "") <> "/driver/otpRide/start"
 
 onCall :: String -> String
 onCall _ = (getBaseUrl "") <> "/onCall"
+
+likeMessage :: String -> String
+likeMessage messageId = (getBaseUrl "") <> "/message/" <> messageId <> "/like"

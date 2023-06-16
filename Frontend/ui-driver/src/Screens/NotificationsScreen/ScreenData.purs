@@ -43,7 +43,9 @@ initData = {
     messageId : "",
     notificationNotSeen : false,
     imageUrl : "",
-    mediaType : Nothing
+    mediaType : Nothing,
+    likeCount : 0,
+    likeStatus : false
   },
   notifsDetailModelVisibility : GONE,
   loadMore : false,
@@ -64,5 +66,8 @@ dummyNotificationCard = {
     notificationNotSeen : false,
     comment : Nothing,
     imageUrl : "",
-    mediaType : Nothing
+    mediaType : Nothing,
+    likeCount : 0,
+    viewCount : 0,
+    likeStatus : false
   }
