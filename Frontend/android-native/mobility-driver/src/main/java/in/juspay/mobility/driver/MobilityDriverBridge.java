@@ -514,7 +514,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                         Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
                         setKeysInSharedPrefs(context.getResources().getString(in.juspay.mobility.app.R.string.TIME_STAMP_FILE_UPLOAD), timeStamp);
-                        Uri photoFile = FileProvider.getUriForFile(context, context.getPackageName() + ".fileProvider", new File(context.getFilesDir(), "IMG_" + timeStamp + ".jpg"));
+                        Uri photoFile = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", new File(context.getFilesDir(), "IMG_" + timeStamp + ".jpg"));
                         takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
                         Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
                         chooseFromFile.setType("image/*");
@@ -1037,6 +1037,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
             case IMAGE_CAPTURE_REQ_CODE:
                 if (resultCode == RESULT_OK) {
                     if (bridgeComponents.getActivity() != null) {
+                        isUploadPopupOpen = false;
                         imageUtils.captureImage(data, bridgeComponents.getActivity());
                     }
                 }
@@ -1063,7 +1064,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                         Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
                         setKeysInSharedPrefs(context.getResources().getString(in.juspay.mobility.app.R.string.TIME_STAMP_FILE_UPLOAD), timeStamp);
-                        Uri photoFile = FileProvider.getUriForFile(context, context.getPackageName() + ".fileProvider", new File(context.getFilesDir(), "IMG_" + timeStamp + ".jpg"));
+                        Uri photoFile = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", new File(context.getFilesDir(), "IMG_" + timeStamp + ".jpg"));
                         takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
                         Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
                         chooseFromFile.setType("image/*");
@@ -1091,7 +1092,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                 break;
             case AudioRecorder.REQUEST_RECORD_AUDIO_PERMISSION:
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    startAudioRecording();
+
                 } else {
                     Toast.makeText(bridgeComponents.getContext(), "Permission Denied", Toast.LENGTH_SHORT).show();
                 }

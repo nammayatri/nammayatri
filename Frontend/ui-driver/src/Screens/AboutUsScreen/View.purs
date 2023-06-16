@@ -14,9 +14,8 @@
 -}
 module Screens.AboutUsScreen.View where
 
-import Common.Types.App (LazyCheck(..))
-import Screens.AboutUsScreen.ComponentConfig (demoModePopUpConfig)
 import Animation as Anim
+import Common.Types.App (LazyCheck(..))
 import Components.ComplaintsModel as ComplaintsModel
 import Components.PopUpModal as PopUpModal
 import Data.Maybe (Maybe(..))
@@ -26,9 +25,10 @@ import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Merchant.Utils (getValueFromConfig)
+import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, const, ($), (<>), (==), bind, pure, unit, (<<<))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, background, color, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textView, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textView, visibility, weight, width)
+import Screens.AboutUsScreen.ComponentConfig (demoModePopUpConfig)
 import Screens.AboutUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
@@ -181,7 +181,11 @@ applicationInformationLayout state push =
           , padding (Padding 20 0 20 0)
           ]
         <> FontStyle.body5 TypoGraphy
-    , ComplaintsModel.view (ComplaintsModel.config { cardData = contactUsData state })
+    , linearLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , visibility if getValueFromConfig "showCorporateAddress" then VISIBLE else GONE
+        ][ComplaintsModel.view (ComplaintsModel.config { cardData = contactUsData state })]
     , underlinedTextView (getString T_C) push
     , underlinedTextView (getString PRIVACY_POLICY) push
     ]

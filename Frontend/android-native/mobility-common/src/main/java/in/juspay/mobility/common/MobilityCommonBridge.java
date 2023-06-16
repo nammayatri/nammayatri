@@ -1407,7 +1407,7 @@ public class MobilityCommonBridge extends HyperBridge {
             sendIntent.setAction(Intent.ACTION_SEND);
             sendIntent.putExtra(Intent.EXTRA_TEXT, message);
             sendIntent.putExtra(Intent.EXTRA_TITLE, title);
-            Bitmap thumbnailBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_icon);
+            Bitmap thumbnailBitmap = BitmapFactory.decodeResource(context.getResources(), context.getResources().getIdentifier("ic_launcher", "drawable", context.getPackageName()));
             if (thumbnailBitmap != null) {
                 Uri thumbnailUri = getImageUri(context, thumbnailBitmap);
                 ClipData clipData = ClipData.newUri(context.getContentResolver(), "ThumbnailImage", thumbnailUri);

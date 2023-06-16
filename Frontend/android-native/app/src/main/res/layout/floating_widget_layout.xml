@@ -46,47 +46,47 @@
                     android:orientation="vertical"
                     android:visibility="gone"
                     android:id="@+id/silent_ride_request_background"
+                    android:paddingStart="64dp"
                     >
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
-                        android:orientation="horizontal"
-                        android:gravity="center">
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
 
 
 
                     <TextView
-                        android:layout_width="50dp"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="$120"
+                        android:text="$12000"
                         android:gravity="end"
                         android:textColor="#FFFFFF"
-                        android:layout_marginLeft="54dp"
                         android:textSize="20dp"
                         android:id="@+id/ride_fare"/>
 
-                    <ImageView
-                        android:layout_width="4dp"
-                        android:layout_height="4dp"
-                        android:layout_marginHorizontal="6dp"
-                        android:src="@drawable/separator_silent_mode"
-                        ></ImageView>
+                        <ImageView
+                            android:layout_width="4dp"
+                            android:layout_height="4dp"
+                            android:layout_marginHorizontal="6dp"
+                            android:src="@drawable/separator_silent_mode" />
 
                     <TextView
                         android:layout_width="100dp"
                         android:layout_height="wrap_content"
+                        android:singleLine="true"
                         android:text="900m pickup"
                         android:textSize="16dp"
                         android:textColor="#FFFFFF"
                         android:id="@+id/distance_to_pickup"/>
 
-                    <TextView
-                        android:layout_width="80dp"
-                        android:layout_height="wrap_content"
-                        android:gravity="end"
-                        android:text="View now"
-                        android:textSize="18dp"
-                        android:textColor="#FCC32C"></TextView>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="View now"
+                            android:textSize="18dp"
+                            android:singleLine="true"
+                            android:textColor="#FCC32C" />
                     </LinearLayout>
 
 

@@ -207,6 +207,7 @@ getFaresList fares baseDistance =
                       "WAITING_OR_PICKUP_CHARGES" -> getEN PICKUP_CHARGE 
                       "SERVICE_CHARGE" -> getEN SERVICE_CHARGES
                       "FIXED_GOVERNMENT_RATE" -> getEN GOVERNMENT_CHAGRES
+                      "PLATFORM_FEE" -> getEN PLATFORM_FEE
                       _ -> getEN BASE_FARES
           }
     )

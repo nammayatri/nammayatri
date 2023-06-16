@@ -362,22 +362,10 @@ public class MainActivity extends AppCompatActivity {
         editor.apply();
     }
 
-    public void triggerPopUPMain(String id, String type) {
-
-        try {
-            Log.i(LOG_TAG, "Triggering the process");
-            JSONObject payload = new JSONObject()
-                    .put("service", getService())
-                    .put("requestId", UUID.randomUUID());
-            JSONObject innerPayload = new JSONObject()
-                    .put("action", "showPopup")
-                    .put("id", id)
-                    .put("popType", type);
-            payload.put("payload", innerPayload);
-            hyperServices.process(payload);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        hyperServices.onActivityResult(requestCode, resultCode, data);
     }
 
     private void initApp() {
@@ -559,7 +547,7 @@ public class MainActivity extends AppCompatActivity {
         super.onPause();
         if (sharedPref != null)
             sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onPause").apply();
-        if (getResources().getString(R.string.service).equals("nammayatripartner") && widgetService != null && Settings.canDrawOverlays(this) && !sharedPref.getString(getResources().getString(in.juspay.mobility.app.R.string.REGISTERATION_TOKEN), "null").equals("null")) {
+        if (BuildConfig.MERCHANT_TYPE.equals("DRIVER") && widgetService != null && Settings.canDrawOverlays(this) && !sharedPref.getString(getResources().getString(in.juspay.mobility.app.R.string.REGISTERATION_TOKEN), "null").equals("null")) {
             widgetService.putExtra("payload", "{}");
             widgetService.putExtra("data", "{}");
             startService(widgetService);

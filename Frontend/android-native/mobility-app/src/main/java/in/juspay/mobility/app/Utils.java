@@ -86,7 +86,7 @@ public class Utils {
             Uri imageUri;
             if (data == null || data.getData() == null) { //Camera
                 File image = new File(context.getFilesDir(), "IMG_" + sharedPref.getString(context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), "null") + ".jpg");
-                imageUri = FileProvider.getUriForFile(context, context.getPackageName() + ".fileProvider", image);
+                imageUri = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", image);
             } else { // storage
                 imageUri = data.getData();
             }

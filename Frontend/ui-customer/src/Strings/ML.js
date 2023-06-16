@@ -458,5 +458,6 @@ const malayalamStrings = {
   "WE_WOULD_APPRECIATE_YOUR_FEEDBACK" : "അക്കൗണ്ട് ഇല്ലാതാക്കുന്നതിന് പിന്നിലെ നിങ്ങളുടെ ന്യായവാദത്തെ ഞങ്ങൾ അഭിനന്ദിക്കുന്നു",
   "REASON_FOR_DELETING_ACCOUNT" : "അക്കൗണ്ട് ഇല്ലാതാക്കാനുള്ള കാരണം*",
   "SUBMIT_REQUEST" : "അഭ്യർത്ഥന സമർപ്പിക്കുക",
-  "PLEASE_ENTER_A_VALID_EMAIL" : "സാധുവായ ഒരു ഇമെയിൽ നൽകുക"
+  "PLEASE_ENTER_A_VALID_EMAIL" : "സാധുവായ ഒരു ഇമെയിൽ നൽകുക",
+  "PLATFORM_FEE" : "പ്ലാറ്റ്ഫോം ഫീസ്"
 }

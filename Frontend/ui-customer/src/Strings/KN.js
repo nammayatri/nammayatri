@@ -455,5 +455,6 @@ const kannadaStrings = {
   "WE_WOULD_APPRECIATE_YOUR_FEEDBACK" : "ಖಾತೆ ಅಳಿಸುವಿಕೆಯ ಹಿಂದಿನ ನಿಮ್ಮ ತಾರ್ಕಿಕತೆಯನ್ನು ನಾವು ಪ್ರಶಂಸಿಸುತ್ತೇವೆ",
   "REASON_FOR_DELETING_ACCOUNT" : "ಖಾತೆಯನ್ನು ಅಳಿಸಲು ಕಾರಣ*",
   "SUBMIT_REQUEST" : "ವಿನಂತಿಯನ್ನು ಸಲ್ಲಿಸಿ",
-  "PLEASE_ENTER_A_VALID_EMAIL" : "ದಯವಿಟ್ಟು ಮಾನ್ಯವಾದ ಇಮೇಲ್ ಅನ್ನು ನಮೂದಿಸಿ"
+  "PLEASE_ENTER_A_VALID_EMAIL" : "ದಯವಿಟ್ಟು ಮಾನ್ಯವಾದ ಇಮೇಲ್ ಅನ್ನು ನಮೂದಿಸಿ",
+  "PLATFORM_FEE" : "ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಶುಲ್ಕ"
 }

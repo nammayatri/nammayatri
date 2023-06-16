@@ -1,7 +1,6 @@
 #!/bin/bash
 echo " ---------- Customer prod:android :- --------------"
 cd ../ui-customer
-# bower i
 npm run prod:android
 cd ./../android-native
 
@@ -17,7 +16,6 @@ sh userJuspayAssets.sh $1
 echo " ---------- Driver prod:android :- --------------"
 
 cd ui-driver
-# bower i
 npm run prod:android
 cd ./../android-native
 

@@ -9,6 +9,9 @@ window.getMerchantConfig = function () {
     "fontType": "Assets",
     "popupBackground" : "#FFFFFF",
     "apiLoaderLottie": "primary_button_loader.json",
+    "primaryTextColor": "#FCC32C",
+    "primaryBackground": "#2C2F3A",
+    "showCorporateAddress" : true,
     "languageList" : [
       {"name":"English","value":"EN_US", "subtitle": ""}, 
       {"name":"ಕನ್ನಡ","value":"KN_IN", "subtitle": "Kannada"},

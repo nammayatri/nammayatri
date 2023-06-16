@@ -172,7 +172,7 @@ eval AddImage state =
     continueWithCmd state { props { showImageModel = true, isPopupModelOpen = true }
                           , data  { addImagesState { images = state.data.addedImages, stateChanged = false } } } [do
       _ <- pure $ clearFocus (getNewIDWithTag "submit_chat_edit_text")
-      _ <- pure $ startLottieProcess "primary_button_loader" (getNewIDWithTag "add_images_model_done_button") true 0.6 "CENTER_CROP"
+      _ <- pure $ startLottieProcess "primary_button_loader.json" (getNewIDWithTag "add_images_model_done_button") true 0.6 "CENTER_CROP"
       pure NoAction
     ]
 
@@ -233,7 +233,7 @@ eval (AddAudioModelAction (AudioModel.OnClickDelete)) state =
 ---------------------------------------------------- Add Image Model ----------------------------------------------------
 eval (AddImagesModelAction (ImageModel.AddImage)) state =
   continueWithCmd state [do
-    _ <- pure $ startLottieProcess "primary_button_loader" (getNewIDWithTag "add_images_model_done_button") true 0.6 "CENTER_CROP"
+    _ <- pure $ startLottieProcess "primary_button_loader.json" (getNewIDWithTag "add_images_model_done_button") true 0.6 "CENTER_CROP"
     _ <- liftEffect $ uploadFile unit
     pure NoAction
   ]
@@ -308,16 +308,16 @@ eval (ViewImageModelAction (ViewImageModel.BackPressed)) state = do
     ]
 ---------------------------------------------------- Record Audio Model ----------------------------------------------------
 eval (RecordAudioModelAction (RecordAudioModel.OnClickRecord push)) state = do
-  continueWithCmd state { data { recordAudioState { timer = "00:00" } } }  [do
-    -- (Result cond) <- doAff $ makeAff \cb -> startAudioRecording (cb <<< Right) Result $> nonCanceler
-    -- if cond 
-    -- then do
-    --   _ <- pure $ clearTimer ""
-    --   _ <- removeMediaPlayer ""
-    --   _ <- startTimer 0 false push RecordAudioModel.TimerCallback
-    --   pure $ UpdateState state { data { recordAudioState { isRecording = true, timer = "00:00" } } }
-    -- else 
-    pure $ NoAction
+   continueWithCmd state { data { recordAudioState { timer = "00:00" } } }  [do
+    cond <- startAudioRecording ""
+    if cond 
+    then do
+      _ <- pure $ clearTimer ""
+      _ <- removeMediaPlayer ""
+      _ <- startTimer 0 false push RecordAudioModel.TimerCallback
+      pure $ UpdateState state { data { recordAudioState { isRecording = true, timer = "00:00" } } }
+    else 
+      pure $ NoAction
   ]
 
 eval (RecordAudioModelAction RecordAudioModel.OnClickStop) state =
@@ -329,7 +329,7 @@ eval (RecordAudioModelAction RecordAudioModel.OnClickStop) state =
 
 eval (RecordAudioModelAction RecordAudioModel.OnClickDone) state =
   continueWithCmd state { data { recordAudioState { isUploading = true } } } [do
-    _ <- pure $ startLottieProcess "audio_upload_animation" (getNewIDWithTag "audio_recording_done") true 1.0 "FIT_CENTER"
+    _ <- pure $ startLottieProcess "audio_upload_animation.json" (getNewIDWithTag "audio_recording_done") true 1.0 "FIT_CENTER"
     _ <- pure $ clearTimer ""
     case state.data.recordAudioState.recordedFile of
       Just url -> do

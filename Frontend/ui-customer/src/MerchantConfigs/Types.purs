@@ -28,7 +28,8 @@ type AppConfig =
     infoIconUrl :: String,
     profileEditGravity :: String,
     merchantLogo :: String,
-    logs :: Array String
+    logs :: Array String,
+    showCorporateAddress :: Boolean
   } 
 
 type QuoteListConfig = {

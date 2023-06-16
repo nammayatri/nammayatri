@@ -256,7 +256,7 @@ function loadConfig() {
   console.log(headID)
   const newScript = document.createElement("script");
   newScript.type = "text/javascript";
-  newScript.id = "ny-customer-configuration";
+  newScript.id = "ny-driver-configuration";
   newScript.innerHTML = window.JBridge.loadFileInDUI("v1-configuration.js");
   headID.appendChild(newScript);
   try {

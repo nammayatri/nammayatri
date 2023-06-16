@@ -170,7 +170,7 @@ instance loggableAction :: Loggable Action where
 
 
 data ScreenOutput =   Refresh ST.HomeScreenState
-                    | GoToHelpAndSupportScreen
+                    | GoToHelpAndSupportScreen ST.HomeScreenState
                     | GoToProfileScreen ST.HomeScreenState
                     | GoToRidesScreen ST.HomeScreenState
                     | GoToReferralScreen
@@ -541,7 +541,7 @@ eval ClickAddAlternateButton state = do
 eval ZoneOtpAction state = do
   continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false } }
 
-eval HelpAndSupportScreen state = exit $ GoToHelpAndSupportScreen
+eval HelpAndSupportScreen state = exit $ GoToHelpAndSupportScreen state
 eval _ state = continue state 
 
 

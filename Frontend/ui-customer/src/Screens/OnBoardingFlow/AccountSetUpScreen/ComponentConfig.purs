@@ -100,7 +100,7 @@ goBackPopUpModelConfig state =
         { primaryText { text = (getString GO_BACK_) }
         , secondaryText { text = (getString REGISTER_USING_DIFFERENT_NUMBER) }
         , option1 { 
-            background = state.data.config.primaryTextColor
+            background = state.data.config.popupBackground
           , strokeColor = state.data.config.primaryBackground
           , color = state.data.config.primaryBackground
           , text = (getString NO)

@@ -82,7 +82,7 @@ foreign import addMediaPlayer :: String -> String -> Effect Unit
 foreign import saveAudioFile :: String -> Effect String
 foreign import clearFocus :: String -> Effect Unit
 foreign import uploadMultiPartData :: String -> String -> String -> Effect String
-foreign import startAudioRecording :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
+foreign import startAudioRecording :: String -> Effect Boolean
 foreign import stopAudioRecording :: String -> Effect String
 foreign import renderBase64ImageFile :: String -> String -> Boolean -> Effect Unit
 foreign import removeMediaPlayer :: String -> Effect Unit

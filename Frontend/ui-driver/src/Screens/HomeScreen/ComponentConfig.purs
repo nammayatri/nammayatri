@@ -15,29 +15,31 @@
 
 module Screens.HomeScreen.ComponentConfig where
 
+import Language.Strings
+import Prelude
+import PrestoDOM
+
+import Common.Types.App (LazyCheck(..))
 import Components.CancelRide as CancelRide
+import Components.ChatView as ChatView
+import Components.InAppKeyboardModal as InAppKeyboardModal
 import Components.PopUpModal as PopUpModal
 import Components.RideActionModal as RideActionModal
 import Components.StatsModel as StatsModel
-import Components.ChatView as ChatView
 import Data.Array as DA
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as DS
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
+import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Helpers.Utils as HU
-import Components.InAppKeyboardModal as InAppKeyboardModal
-import Language.Strings
 import Language.Types (STR(..))
-import Prelude
-import PrestoDOM
+import Prelude ((<>))
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.Types as ST
-import Styles.Colors as Color
 import Storage (KeyStore(..), getValueToLocalStore)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Common.Types.App (LazyCheck(..))
-import Prelude ((<>))
+import Styles.Colors as Color
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -248,6 +250,7 @@ enterOtpStateConfig state = let
         text = state.props.rideOtp,
         -- pattern = "[0-9]*,4",
         focusIndex = state.props.enterOtpFocusIndex
+        , textStyle = FontStyle.Heading1
       },
       headingConfig {
         text = getString (ENTER_OTP)
@@ -259,6 +262,7 @@ enterOtpStateConfig state = let
       subHeadingConfig {
         text = getString (PLEASE_ASK_THE_CUSTOMER_FOR_THE_OTP),
         visibility = if (state.props.otpAttemptsExceeded) then GONE else VISIBLE
+      , textStyle = FontStyle.Body1
       },
       imageConfig {
         alpha = if(DS.length state.props.rideOtp < 4) then 0.3 else 1.0

@@ -15,6 +15,9 @@
 
 module Screens.AboutUsScreen.View where
 
+import Common.Types.App
+import Screens.CustomerUtils.AboutUsScreen.ComponentConfig
+
 import Animation as Anim
 import Common.Types.App (LazyCheck(..))
 import Components.ComplaintsModel as ComplaintsModel
@@ -24,20 +27,18 @@ import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), not)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, imageWithFallback, scrollView, scrollBarY)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollBarY, scrollView, text, textSize, textView, visibility, weight, width)
 import Screens.AboutUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.CustomerUtils.AboutUsScreen.ComponentConfig (genericHeaderConfig)
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
-import Common.Types.App
-import Screens.CustomerUtils.AboutUsScreen.ComponentConfig 
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import MerchantConfig.Utils(getValueFromConfig)
 
 screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOutput
 screen initialState =
@@ -110,7 +111,11 @@ topTextView push state =
         , lineHeight "22"
         , margin (Margin 0 40 0 32)
         ] <> FontStyle.body5 LanguageStyle
-      , ComplaintsModel.view (ComplaintsModel.config{cardData = contactUsData state})
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , visibility if state.appConfig.showCorporateAddress then VISIBLE else GONE
+        ][ ComplaintsModel.view (ComplaintsModel.config{cardData = contactUsData state})]
       , linearLayout
         [ gravity LEFT
         , width WRAP_CONTENT

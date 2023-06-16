@@ -24,7 +24,7 @@ import Types.App (FlowBT)
 
 foreign import getStringFromConfig :: String -> String
 
-foreign import getValueFromConfig :: String -> String
+foreign import getValueFromConfig :: forall a. String -> a
 
 foreign import getENStrings :: String -> String
 

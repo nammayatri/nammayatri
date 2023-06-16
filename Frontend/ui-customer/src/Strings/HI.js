@@ -461,5 +461,6 @@ const hindiStrings = {
   "WE_WOULD_APPRECIATE_YOUR_FEEDBACK" : "खाता हटाने के पीछे आपके तर्क की हम सराहना करेंगे",
   "REASON_FOR_DELETING_ACCOUNT" : "खाता हटाने का कारण*",
   "SUBMIT_REQUEST" : "अनुरोध सबमिट करें",
-  "PLEASE_ENTER_A_VALID_EMAIL" : "कृपया एक मान्य ईमेल दर्ज करें"
+  "PLEASE_ENTER_A_VALID_EMAIL" : "कृपया एक मान्य ईमेल दर्ज करें",
+  "PLATFORM_FEE" : "प्लेटफार्म शुल्क"
 }

@@ -34,6 +34,7 @@ import Styles.Colors as Color
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import Debug
 
 screen :: ST.SelectLanguageScreenState -> Screen Action ST.SelectLanguageScreenState ScreenOutput
 screen initialState =
@@ -41,7 +42,10 @@ screen initialState =
   , view
   , name : "SelectLanguageScreen"
   , globalEvents : []
-  , eval
+  , eval : (\action  state -> do
+      let _ = spy "HomeScreen state -----" state
+      let _ = spy "HomeScreen--------action" action
+      eval action state)
   }
 
 view
@@ -93,7 +97,7 @@ headerLayout push state =
         , color Color.black
         , weight 1.0
         , gravity CENTER_VERTICAL
-        ] <> FontStyle.body14 TypoGraphy
+        ] <> FontStyle.h3 TypoGraphy
     ]
   , linearLayout
     [ width MATCH_PARENT

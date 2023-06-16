@@ -139,6 +139,7 @@ amountBreakupView state =
                       "SERVICE_CHARGE" -> getString SERVICE_CHARGES
                       "FIXED_GOVERNMENT_RATE" -> getString GOVERNMENT_CHAGRES
                       "WAITING_OR_PICKUP_CHARGES"  -> getString PICKUP_CHARGE
+                      "PLATFORM_FEE" -> getString PLATFORM_FEE
                       _ -> "BASE_FARE"
                   , color Color.black800
                   , layoutGravity "bottom"

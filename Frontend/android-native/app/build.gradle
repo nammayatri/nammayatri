@@ -159,12 +159,12 @@ android {
         jsDriver.setRoot('src/driver/jatriSaathiDriver')
         yatriUser.setRoot('src/user/yatri')
         yatriDriver.setRoot('src/driver/yatriPartner')
-        nyUser.res.srcDir('src/user/common')
-        jsUser.res.srcDir('src/user/common')
-        yatriUser.res.srcDir('src/user/common')
-        nyDriver.res.srcDir('src/driver/common')
-        jsDriver.res.srcDir('src/driver/common')
-        yatriDriver.res.srcDir('src/driver/common')
+        nyUser.res.srcDir('src/user/common/res')
+        jsUser.res.srcDir('src/user/common/res')
+        yatriUser.res.srcDir('src/user/common/res')
+        nyDriver.res.srcDir('src/driver/common/res')
+        jsDriver.res.srcDir('src/driver/common/res')
+        yatriDriver.res.srcDir('src/driver/common/res')
     }
     sourceSets {
         dev.res.srcDir 'src/dev/res'

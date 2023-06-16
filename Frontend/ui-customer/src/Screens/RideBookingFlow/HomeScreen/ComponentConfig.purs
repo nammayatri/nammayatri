@@ -91,7 +91,7 @@ shareAppConfig state = let
       },
       cornerRadius = (Corners 15.0 true true true true),
       coverImageConfig {
-        imageUrl = "ny_ic_share_app," <> (getAssetStoreLink FunctionCall) <> "ny_ic_share_app.png"
+        imageUrl = "ic_share_app," <> (getAssetStoreLink FunctionCall) <> "ic_share_app.png"
       , visibility = VISIBLE
       , margin = Margin 16 20 16 24
       , width = MATCH_PARENT
@@ -330,15 +330,15 @@ logOutPopUpModelConfig state =
             { primaryText { text = (getString LOGOUT_) }
             , secondaryText { text = (getString ARE_YOU_SURE_YOU_WANT_TO_LOGOUT) }
             , option1 { 
-                color = state.data.config.primaryTextColor
-              , strokeColor = state.data.config.primaryBackground
-              , background = state.data.config.primaryBackground
-              , text = (getString GO_BACK_)
-              }
-            , option2 { 
                 background = state.data.config.popupBackground
               , strokeColor = state.data.config.primaryBackground
               , color = state.data.config.primaryBackground
+              , text = (getString GO_BACK_)
+              }
+            , option2 { 
+                color = state.data.config.primaryTextColor
+              , strokeColor = state.data.config.primaryBackground
+              , background = state.data.config.primaryBackground
               , text = (getString LOGOUT_)
               }
             }
@@ -370,7 +370,7 @@ logOutPopUpModelConfig state =
               , padding = (Padding 16 12 16 12)
             },
           option1 {
-            text = if (state.props.customerTip.tipForDriver == 0) then ( if(isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITHOUT_TIP)else (getString SEARCH_AGAIN_WITHOUT_A_TIP)) else ((if (isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITH)else(getString SEARCH_AGAIN_WITH) ) <> " + ₹"<> (fromMaybe "" (["0", "10", "15", "20"] DA.!! state.props.customerTip.tipActiveIndex))) <>" "<>(getString TIP)
+            text = if (state.props.customerTip.tipForDriver == 0) then ( if(isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITHOUT_TIP)else (getString SEARCH_AGAIN_WITHOUT_A_TIP)) else ((if (isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITH)else(getString SEARCH_AGAIN_WITH) ) <> " + ₹"<> (fromMaybe "" (["0", "10", "20", "30"] DA.!! state.props.customerTip.tipActiveIndex))) <>" "<>(getString TIP)
           , width = MATCH_PARENT
           , color = state.data.config.primaryTextColor
           , strokeColor = state.data.config.primaryBackground
@@ -467,7 +467,7 @@ shortDistanceConfig state =
           , margin = (Margin 0 16 0 20)
           }
         , option1 { 
-            background = state.data.config.primaryTextColor
+            background = state.data.config.popupBackground
           , strokeColor = state.data.config.primaryBackground
           , color = state.data.config.primaryBackground
           , text = (getString GO_BACK_)

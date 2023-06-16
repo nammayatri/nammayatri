@@ -22,69 +22,79 @@ import JBridge (startLottieProcess, toggleBtnLoader, getKeyInSharedPrefKeys)
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
 import MerchantConfig.Utils (getValueFromConfig)
 import Font.Style as FontStyle
+import Common.Styles.Colors as Color
 import Common.Types.App (LazyCheck(..))
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
-  relativeLayout
+  linearLayout
     [ height config.height
     , width config.width
     , margin config.margin
     , visibility config.visibility
+    , background Color.white900
     ]
-    [ linearLayout
+    [ relativeLayout
         [ height config.height
         , width config.width
-        , cornerRadius config.cornerRadius
-        , background config.background
-        , gravity config.gravity
-        , clickable if config.enableLoader then false else config.isClickable
-        , onClick
-            ( \action -> do
-                _ <- pure $ toggleBtnLoader config.id true
-                _ <- pure $ startLottieProcess (getValueFromConfig "apiLoaderLottie") (getNewIDWithTag config.id) true 0.6 "Default"
-                push action
-            )
-            (const OnClick)
-        , orientation HORIZONTAL
-        , afterRender
-            ( \action -> do
-                _ <- pure $ toggleBtnLoader "" false
-                pure unit
-            )
-            (const NoAction)
-        , alpha if config.enableLoader then 0.5 else config.alpha
-        , stroke config.stroke
+        , margin config.margin
+        , visibility config.visibility
         ]
         [ linearLayout
-            [ width config.width
-            , height config.height
-            , orientation HORIZONTAL
+            [ height config.height
+            , width config.width
+            , cornerRadius config.cornerRadius
+            , background config.background
             , gravity config.gravity
-            , visibility if config.enableLoader then GONE else VISIBLE
+            , clickable if config.enableLoader then false else config.isClickable
+            , onClick
+                ( \action -> do
+                    _ <- pure $ toggleBtnLoader config.id true
+                    _ <- pure $ startLottieProcess (getValueFromConfig "apiLoaderLottie") (getNewIDWithTag config.id) true 0.6 "Default"
+                    push action
+                )
+                (const OnClick)
+            , orientation HORIZONTAL
+            , afterRender
+                ( \action -> do
+                    _ <- pure $ toggleBtnLoader "" false
+                    pure unit
+                )
+                (const NoAction)
+            , alpha if config.enableLoader then 0.5 else config.alpha
+            , stroke config.stroke
             ]
-            [ prefixImageLayout config
-            , textView $ 
-                [ height config.textConfig.height
-                , width config.textConfig.width
-                , text config.textConfig.text
-                , color config.textConfig.color
-                , gravity config.textConfig.gravity
-                , lineHeight "20"
-                ] <> (FontStyle.getFontStyle config.textConfig.textStyle LanguageStyle)
-            , suffixImageLayout config
+            [ linearLayout
+                [ width config.width
+                , height config.height
+                , orientation HORIZONTAL
+                , gravity config.gravity
+                , visibility if config.enableLoader then GONE else VISIBLE
+                ]
+                [ prefixImageLayout config
+                , textView
+                    $ [ height config.textConfig.height
+                      , width config.textConfig.width
+                      , text config.textConfig.text
+                      , color config.textConfig.color
+                      , gravity config.textConfig.gravity
+                      , lineHeight "20"
+                      ]
+                    <> (FontStyle.getFontStyle config.textConfig.textStyle LanguageStyle)
+                , suffixImageLayout config
+                ]
             ]
-        ]
-    , linearLayout
-        [ height config.height
-        , width config.width
-        , gravity CENTER
-        ]
-        [ lottieAnimationView
-            [ id (getNewIDWithTag config.id)
-            , visibility if config.enableLoader then VISIBLE else GONE
-            , height $ V 30
-            , width $ V 150
+        , linearLayout
+            [ height config.height
+            , width config.width
+            , gravity CENTER
+            ]
+            [ lottieAnimationView
+                [ id (getNewIDWithTag config.id)
+                , visibility if config.enableLoader then VISIBLE else GONE
+                , height $ V 30
+                , width $ V 150
+                ]
             ]
         ]
     ]
@@ -110,4 +120,3 @@ suffixImageLayout config =
     , visibility if config.isSuffixImage then VISIBLE else GONE
     , margin config.suffixImageConfig.margin
     ]
-  

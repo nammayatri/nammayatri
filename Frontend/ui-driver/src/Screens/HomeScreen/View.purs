@@ -40,7 +40,7 @@ import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils as HU
-import Merchant.Utils as MU
+import MerchantConfig.Utils as MU
 import JBridge as JB
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
@@ -69,7 +69,7 @@ import Services.APITypes (Status(..))
 import Components.BottomNavBar.Controller (navData)
 import Screens.HomeScreen.ComponentConfig
 import Screens as ScreenNames
-import Merchant.Utils (getValueFromConfig)
+import MerchantConfig.Utils (getValueFromConfig)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Engineering.Helpers.Commons (flowRunner)
@@ -290,8 +290,8 @@ otpButtonView state push =
         ]
       , textView $
         [ width WRAP_CONTENT
-        , height MATCH_PARENT
-        , gravity CENTER
+        , height WRAP_CONTENT
+        , gravity CENTER_VERTICAL
         , color Color.blue900
         , padding $ PaddingLeft 8
         , margin $ MarginBottom 2
@@ -379,7 +379,7 @@ offlineView push state =
             ][ lottieAnimationView
               [ id (EHC.getNewIDWithTag "RippleGoOnlineLottie")
               , afterRender (\action-> do
-                              _ <- pure $ JB.startLottieProcess "rippling_online_effect" (EHC.getNewIDWithTag "RippleGoOnlineLottie") true 1.0 "DEFAULT"
+                              _ <- pure $ JB.startLottieProcess "rippling_online_effect.json" (EHC.getNewIDWithTag "RippleGoOnlineLottie") true 1.0 "DEFAULT"
                               pure unit)(const NoAction)
               , height WRAP_CONTENT
               , width MATCH_PARENT

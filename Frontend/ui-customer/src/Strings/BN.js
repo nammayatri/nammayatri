@@ -458,5 +458,6 @@ const bengaliStrings = {
   "WE_WOULD_APPRECIATE_YOUR_FEEDBACK" : "আমরা অ্যাকাউন্ট মুছে ফেলার পিছনে আপনার যুক্তির প্রশংসা করব",
   "REASON_FOR_DELETING_ACCOUNT" : "অ্যাকাউন্ট মুছে ফেলার কারণ*",
   "SUBMIT_REQUEST" : "অনুরোধ জমা দিন",
-  "PLEASE_ENTER_A_VALID_EMAIL" : "একটি বৈধ ইমেইল প্রবেশ করুন"
+  "PLEASE_ENTER_A_VALID_EMAIL" : "একটি বৈধ ইমেইল প্রবেশ করুন",
+  "PLATFORM_FEE" : "প্ল্যাটফর্ম ফি"
 }

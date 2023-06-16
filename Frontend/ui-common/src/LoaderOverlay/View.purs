@@ -21,7 +21,7 @@ import Font.Style as FontStyle
 import LoaderOverlay.Controller (Action, ScreenOutput, eval)
 import LoaderOverlay.ScreenData (LoaderOverlayState)
 import Prelude (Unit, ($), (<>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, background, cornerRadius, gravity, height, linearLayout, margin, orientation, padding, progressBar, stroke, text, textView, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, background, cornerRadius, gravity, height, linearLayout, margin, orientation, padding, progressBar, stroke, text, textView, width, color)
 import Styles.Colors as Color
 
 screen :: LoaderOverlayState -> ScopedScreen Action LoaderOverlayState ScreenOutput
@@ -60,11 +60,13 @@ view _ state =
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , text state.data.title
+      , color Color.black900
       ] <> FontStyle.h0 LanguageStyle
     , textView $ 
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , text state.data.subTitle
+      , color Color.black900
       ] <> FontStyle.subHeading2 LanguageStyle
     ]
   ]

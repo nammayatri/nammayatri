@@ -99,7 +99,7 @@ public class NotificationUtils extends AppCompatActivity {
     private static FirebaseAnalytics mFirebaseAnalytics;
     static Random rand = new Random();
     public static int notificationId = rand.nextInt(1000000);
-    private static int smallIcon = R.drawable.ny_ic_launcher;
+    private static int smallIcon;
     public static MediaPlayer mediaPlayer;
     private static AudioManager audio;
     public static Bundle lastRideReq = new Bundle();
@@ -129,6 +129,7 @@ public class NotificationUtils extends AppCompatActivity {
 
     public static Notification createNotification(Context context, String title, String msg, JSONObject data) throws JSONException {
         Bitmap bigIcon = BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher);
+        smallIcon = context.getResources().getIdentifier("ic_launcher","drawable",context.getPackageName());
         Intent intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
         System.out.println("Create notification" + data.toString());
         intent.putExtra("NOTIFICATION_DATA", data.toString());
@@ -405,6 +406,7 @@ public class NotificationUtils extends AppCompatActivity {
     @RequiresApi(api = Build.VERSION_CODES.M)
     public static void showNotification(Context context, String title, String msg, JSONObject data, String imageUrl) throws JSONException {
         Log.e(TAG, "SHOWNOTIFICATION MESSAGE");
+        smallIcon = context.getResources().getIdentifier("ic_launcher","drawable",context.getPackageName());
         Bitmap bigIcon = BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher);
         Bitmap bitmap = null;
         if (imageUrl != null) {
@@ -703,7 +705,7 @@ public class NotificationUtils extends AppCompatActivity {
                         .setContentTitle(sentBy)
                         .setAutoCancel(true)
                         .setContentText(message)
-                        .setSmallIcon(R.drawable.ny_ic_launcher)
+                        .setSmallIcon(context.getResources().getIdentifier("ic_launcher","drawable",context.getPackageName()))
                         .setDefaults(Notification.DEFAULT_ALL)
                         .setPriority(NotificationCompat.PRIORITY_HIGH)
                         .setContentIntent(pendingIntent)

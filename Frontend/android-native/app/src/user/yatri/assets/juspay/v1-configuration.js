@@ -89,7 +89,8 @@ window.getMerchantConfig = function () {
     , "actionText" : "Update now"
     , "actionTextColor" : "#27AE5F"
     , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
-    }
+    },
+    "showCorporateAddress" : false
   })
 }
 
