@@ -1204,7 +1204,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SourceC
     pure unit
   else
     pure unit
-  continue state { data { source = "" }, props { sourceLat = -0.1, sourceLong = -0.1, sourcePlaceId = Nothing, isSource = Just true, isSrcServiceable = true, isRideServiceable = true } }
+  continue state { data { source = "" }, props { isSource = Just true, isSrcServiceable = true, isRideServiceable = true } }
 
 eval (SearchLocationModelActionController (SearchLocationModelController.DestinationClear)) state = do
   _ <- pure $ performHapticFeedback unit
@@ -1213,7 +1213,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Destina
     pure unit
   else
     pure unit
-  continue state { data { destination = "" }, props { destinationLat = -0.1, destinationLong = -0.1, destinationPlaceId = Nothing, isSource = Just false, isDestServiceable = true, isRideServiceable = true } }
+  continue state { data { destination = "" }, props {isSource = Just false, isDestServiceable = true, isRideServiceable = true } }
 
 eval (SearchLocationModelActionController (SearchLocationModelController.GoBack)) state = do
   _ <- pure $ performHapticFeedback unit
@@ -1234,7 +1234,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetLoca
   _ <- pure $ removeAllPolylines ""
   _ <- pure $ hideKeyboardOnNavigation true
   if (state.props.isSource == Just true) then pure $ firebaseLogEvent "ny_user_src_set_location_on_map" else pure $ firebaseLogEvent "ny_user_dest_set_location_on_map"
-  let newState = state{props{isSearchLocation = LocateOnMap, currentStage = SearchLocationModel, locateOnMap = true, isRideServiceable = true, showlocUnserviceablePopUp = false}}
+  let newState = state{data{source = "Current Location"}, props{isSearchLocation = LocateOnMap, currentStage = SearchLocationModel, locateOnMap = true, isRideServiceable = true, showlocUnserviceablePopUp = false}}
   (updateAndExit newState) $ UpdatedState newState false
 
 eval (SearchLocationModelActionController (SearchLocationModelController.UpdateSource lat lng name)) state = do

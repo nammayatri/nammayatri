@@ -85,6 +85,7 @@
       "ny_ic_customer_current_location" : true,
       "ny_ic_dest_marker" : true,
       "ny_ic_direct_call" : true,
+      "ny_ic_dismiss" : true,
       "ny_ic_download" : true,
       "ny_ic_driver_addition_table" : true,
       "ny_ic_driver_addition_table2" : true,
