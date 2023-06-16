@@ -63,7 +63,7 @@ instance TEntityKey MerchantServiceUsageConfigT where
   toKey id = MerchantServiceUsageConfigTKey $ toKey id
 
 instance FromTType MerchantServiceUsageConfigT Domain.MerchantServiceUsageConfig where
-  fromTType MerchantServiceUsageConfigT {..} = do
+  fromTType MerchantServiceUsageConfigT {..} =
     return $
       Domain.MerchantServiceUsageConfig
         { merchantId = fromKey merchantId,
@@ -73,7 +73,7 @@ instance FromTType MerchantServiceUsageConfigT Domain.MerchantServiceUsageConfig
         }
 
 instance ToTType MerchantServiceUsageConfigT Domain.MerchantServiceUsageConfig where
-  toTType Domain.MerchantServiceUsageConfig {..} = do
+  toTType Domain.MerchantServiceUsageConfig {..} =
     MerchantServiceUsageConfigT
       { merchantId = toKey merchantId,
         smsProvidersPriorityList = PostgresList smsProvidersPriorityList,

@@ -58,6 +58,7 @@ library
       API.UI.Message
       API.UI.OnMessage
       API.UI.OrgAdmin
+      API.UI.Payment
       API.UI.Performance
       API.UI.Registration
       API.UI.Ride
@@ -121,6 +122,7 @@ library
       Domain.Action.UI.Message
       Domain.Action.UI.OnMessage
       Domain.Action.UI.OrgAdmin
+      Domain.Action.UI.Payment
       Domain.Action.UI.Performance
       Domain.Action.UI.Registration
       Domain.Action.UI.Ride
@@ -454,6 +456,7 @@ library
       Tools.Metrics.SendSearchRequestToDriverMetrics
       Tools.Metrics.SendSearchRequestToDriverMetrics.Types
       Tools.Notifications
+      Tools.Payment
       Tools.SMS
       Tools.Verification
       Tools.Whatsapp
@@ -526,6 +529,7 @@ library
     , location-updates
     , mobility-core
     , openapi3
+    , payment
     , persistent
     , postgresql-simple
     , prometheus-client

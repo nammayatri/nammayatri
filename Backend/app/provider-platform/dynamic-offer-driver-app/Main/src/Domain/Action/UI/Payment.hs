@@ -23,9 +23,7 @@ where
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
-import qualified Domain.Types.Ride as DRide
 import Environment
-import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
 import Kernel.Prelude
@@ -36,12 +34,12 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DPayment
 import Servant (BasicAuthData)
 import SharedLogic.Merchant
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import Tools.Metrics
 import qualified Tools.Payment as Payment
@@ -50,32 +48,27 @@ import qualified Tools.Payment as Payment
 
 createOrder ::
   (Id DP.Person, Id DM.Merchant) ->
-  Id DRide.Ride ->
+  Id DPayment.PaymentOrder ->
   Flow Payment.CreateOrderResp
-createOrder (personId, merchantId) rideId = do
-  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  unless (ride.status == DRide.COMPLETED) $ throwError (RideInvalidStatus $ show ride.status)
-  totalFare <- ride.totalFare & fromMaybeM (RideFieldNotPresent "totalFare")
+createOrder (personId, merchantId) orderId = do
   person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
-  riderId <- runInReplica $ QRide.findRiderIdByRideId ride.id >>= fromMaybeM (InternalError "riderId not found")
-  unless (person.id == riderId) $ throwError NotAnExecutor
-  customerEmail <- person.email & fromMaybeM (PersonFieldNotPresent "email") >>= decrypt
+  customerEmail <- person.email & fromMaybeM (PersonFieldNotPresent "email")
   customerPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+  shortId <- generateShortId
   let createOrderReq =
         Payment.CreateOrderReq
-          { orderShortId = ride.shortId.getShortId, -- should be Alphanumeric with character length less than 18.
-            amount = totalFare,
+          { orderShortId = shortId.getShortId, -- FIXME change type to ShortId -- should be Alphanumeric with character length less than 18.
+            amount = 10, -- FIXME
             customerId = person.id.getId,
             customerEmail,
             customerPhone,
             paymentPageClientId = person.id.getId, -- FIXME
-            customerFirstName = person.firstName,
+            customerFirstName = Just person.firstName,
             customerLastName = person.lastName
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person personId
-      orderId = cast @DRide.Ride @DOrder.PaymentOrder rideId
       createOrderCall = Payment.createOrder merchantId -- api call
   DPayment.createOrderService commonMerchantId commonPersonId orderId createOrderReq createOrderCall
 
@@ -84,7 +77,6 @@ createOrder (personId, merchantId) rideId = do
 getStatus ::
   ( CacheFlow m r,
     EsqDBReplicaFlow m r,
-    L.MonadFlow m,
     EsqDBFlow m r,
     EncFlow m r,
     CoreMetrics m

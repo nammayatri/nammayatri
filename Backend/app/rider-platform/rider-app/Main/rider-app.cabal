@@ -160,8 +160,6 @@ library
       Domain.Types.Merchant.MerchantServiceUsageConfig
       Domain.Types.MerchantConfig
       Domain.Types.OnSearchEvent
-      Domain.Types.Payment.PaymentOrder
-      Domain.Types.Payment.PaymentTransaction
       Domain.Types.Person
       Domain.Types.Person.PersonDefaultEmergencyNumber
       Domain.Types.Person.PersonFlowStatus
@@ -262,8 +260,6 @@ library
       Storage.Queries.Merchant.MerchantServiceUsageConfig
       Storage.Queries.MerchantConfig
       Storage.Queries.OnSearchEvent
-      Storage.Queries.Payment.PaymentOrder
-      Storage.Queries.Payment.PaymentTransaction
       Storage.Queries.Person
       Storage.Queries.Person.PersonDefaultEmergencyNumber
       Storage.Queries.Person.PersonFlowStatus
@@ -301,8 +297,6 @@ library
       Storage.Tabular.Merchant.MerchantServiceUsageConfig
       Storage.Tabular.MerchantConfig
       Storage.Tabular.OnSearchEvent
-      Storage.Tabular.Payment.PaymentOrder
-      Storage.Tabular.Payment.PaymentTransaction
       Storage.Tabular.Person
       Storage.Tabular.Person.PersonDefaultEmergencyNumber
       Storage.Tabular.Person.PersonFlowStatus
@@ -399,6 +393,7 @@ library
     , memory
     , mobility-core
     , openapi3
+    , payment
     , persistent
     , postgresql-simple
     , prometheus-client

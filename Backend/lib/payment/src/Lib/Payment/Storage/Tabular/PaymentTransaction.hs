@@ -18,16 +18,15 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.Payment.PaymentTransaction where
+module Lib.Payment.Storage.Tabular.PaymentTransaction where
 
-import qualified Domain.Types.Payment.PaymentTransaction as Domain
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
-import qualified Storage.Tabular.Merchant as TM
-import qualified Storage.Tabular.Payment.PaymentOrder as TOrder
+import qualified Lib.Payment.Domain.Types.PaymentTransaction as Domain
+import qualified Lib.Payment.Storage.Tabular.PaymentOrder as TOrder
 
 mkPersist
   defaultSqlSettings
@@ -41,7 +40,7 @@ mkPersist
       respCode Text Maybe
       gatewayReferenceId Text Maybe
       orderId TOrder.PaymentOrderTId
-      merchantId TM.MerchantTId
+      merchantId Text -- TM.MerchantTId
       amount HighPrecMoney
       currency Payment.Currency
       dateCreated UTCTime Maybe
@@ -66,7 +65,7 @@ instance FromTType PaymentTransactionT Domain.PaymentTransaction where
       Domain.PaymentTransaction
         { id = Id id,
           orderId = fromKey orderId,
-          merchantId = fromKey merchantId,
+          merchantId = Id merchantId,
           ..
         }
 
@@ -75,6 +74,6 @@ instance ToTType PaymentTransactionT Domain.PaymentTransaction where
     PaymentTransactionT
       { id = getId id,
         orderId = toKey orderId,
-        merchantId = toKey merchantId,
+        merchantId = merchantId.getId,
         ..
       }

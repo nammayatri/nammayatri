@@ -1,0 +1,91 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           payment
+version:        0.1.0.0
+description:    Please see the README on GitHub
+homepage:       https://github.com/nammayatri/nammayatri#readme
+bug-reports:    https://github.com/nammayatri/nammayatri/issues
+author:         nammayatri
+maintainer:     nammayatri
+copyright:      2023 Juspay Technologies Private Limited
+license:        AllRightsReserved
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/nammayatri/nammayatri
+
+library
+  exposed-modules:
+      Lib.Payment.API
+      Lib.Payment.Domain.Action
+      Lib.Payment.Domain.Types.Common
+      Lib.Payment.Domain.Types.PaymentOrder
+      Lib.Payment.Domain.Types.PaymentTransaction
+      Lib.Payment.Storage.Queries.PaymentOrder
+      Lib.Payment.Storage.Queries.PaymentTransaction
+      Lib.Payment.Storage.Tabular.PaymentOrder
+      Lib.Payment.Storage.Tabular.PaymentTransaction
+  other-modules:
+      Paths_payment
+  hs-source-dirs:
+      src
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PackageImports
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , base16-bytestring
+    , bytestring
+    , containers
+    , cryptohash
+    , euler-hs
+    , exceptions
+    , http-client
+    , http-types
+    , mobility-core
+    , record-dot-preprocessor
+    , record-hasfield
+    , servant
+    , servant-client
+    , servant-server
+    , text
+    , time
+    , uri-encode
+  default-language: Haskell2010

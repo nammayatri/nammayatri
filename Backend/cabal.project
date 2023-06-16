@@ -25,6 +25,7 @@ packages:
   app/utils/image-api-helper
   lib/beckn-spec
   lib/beckn-services
+  lib/payment
   lib/shared-services
   lib/location-updates
   lib/special-zone
