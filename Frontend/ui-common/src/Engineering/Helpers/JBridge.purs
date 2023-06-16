@@ -180,7 +180,7 @@ foreign import storeCallBackInternetAction :: forall action. (action -> Effect U
 
 foreign import openWhatsAppSupport :: String -> Effect Unit
 
-foreign import startLottieProcess :: String -> String -> Boolean -> Number -> String -> Unit
+foreign import startLottieProcess :: String -> String -> Boolean -> Number -> String -> AnimationConfig -> Unit
 foreign import generateSessionToken :: String -> String
 foreign import addMediaFile :: String -> String -> String -> String -> String -> String -> Effect Unit
 
@@ -202,6 +202,15 @@ foreign import cleverTapCustomEventWithParams :: String -> String -> String -> E
 foreign import cleverTapSetLocation :: Unit -> Effect Unit
 foreign import saveSuggestions :: String -> Suggestions -> Unit
 foreign import saveSuggestionDefs :: String -> SuggestionDefinitions -> Unit
+
+type AnimationConfig = {
+  minProgress :: Number
+}
+
+animationConfig :: AnimationConfig
+animationConfig = {
+  minProgress : 0.0
+}
 
 -- -- keyStoreEntryPresent :: String -> Flow Boolean
 -- -- keyStoreEntryPresent = liftFlow <<< _keyStoreEntryPresent

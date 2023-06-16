@@ -19,7 +19,7 @@ import Effect (Effect)
 import Prelude (Unit, bind, const, discard, pure, unit, ($), (&&), (==))
 import Components.PrimaryButton.Controller (Action(..), Config)
 import PrestoDOM (Length(..), Orientation(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback)
-import JBridge (startLottieProcess, toggleBtnLoader, getKeyInSharedPrefKeys)
+import JBridge (startLottieProcess, toggleBtnLoader, getKeyInSharedPrefKeys, animationConfig)
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
 
 
@@ -35,7 +35,7 @@ view push config =
   , margin config.margin
   , onClick (\action -> do
               _ <- pure $ toggleBtnLoader config.id true
-              _ <- pure $ startLottieProcess "primary_button_loader" (getNewIDWithTag config.id) true 0.6 "CENTER_CROP"
+              _ <- pure $ startLottieProcess "primary_button_loader" (getNewIDWithTag config.id) true 0.6 "CENTER_CROP" animationConfig
               push action
               ) (const OnClick)
   , orientation HORIZONTAL

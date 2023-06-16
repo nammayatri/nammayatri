@@ -2201,17 +2201,23 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void startLottieProcess(String rawJson, String id, boolean repeat, float speed, String scaleType) {
-        if (activity != null) activity.runOnUiThread(() -> {
-            try {
-                animationView = activity.findViewById(Integer.parseInt(id));
-                animationView.setAnimationFromJson(getJsonFromResources(rawJson));
-                animationView.loop(repeat);
-                animationView.setSpeed(speed);
-                animationView.playAnimation();
-                animationView.setScaleType(getScaleTypes(scaleType));
-            } catch (Exception e) {
-                Log.d("TAG", "exception in startLottieAnimation", e);
+    public void startLottieProcess(String rawJson, String id, boolean repeat, float speed, String scaleType, String configObj) {
+        if (activity != null) activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    JSONObject jsonObject = new JSONObject(configObj);
+                    float progress = Float.parseFloat(jsonObject.getString("minProgress"));
+                    animationView = activity.findViewById(Integer.parseInt(id));
+                    animationView.setAnimationFromJson(getJsonFromResources(rawJson), null);
+                    animationView.setRepeatCount(repeat ? ValueAnimator.INFINITE : 0);
+                    animationView.setSpeed(speed);
+                    animationView.setMinProgress(progress);
+                    animationView.setScaleType(getScaleTypes(scaleType));
+                    animationView.playAnimation();
+                } catch (Exception e) {
+                    Log.d("TAG", "exception in startLottieAnimation" , e);
+                }
             }
         });
     }

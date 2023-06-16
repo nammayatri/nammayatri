@@ -1411,15 +1411,14 @@ export const startLottieProcess = function (rawJson) {
     return function (loop) {
       return function (speed) {
         return function (scaleType){
-          if (JBridge.startLottieProcess) {
-            try {
-              return JBridge.startLottieProcess(rawJson,lottieId, loop, speed, scaleType);
-            } catch (err) {
-              /*
-              * This Function is deprecated on 12 Jan - 2023
-              * Remove this function once it is not begin used.
-              */
-              return JBridge.startLottieProcess(rawJson,lottieId, loop, speed);
+          return function (configObj){
+            if (JBridge.startLottieProcess) {
+              console.log("inside startLottieProcess");
+              try {
+                return JBridge.startLottieProcess(rawJson,lottieId, loop, speed, scaleType, JSON.stringify(configObj));
+              } catch (err) {
+                return JBridge.startLottieProcess(rawJson,lottieId, loop, speed, scaleType);
+              }
             }
           }
         };
@@ -1427,6 +1426,7 @@ export const startLottieProcess = function (rawJson) {
     };
   };
 };
+
 
 export const generateSessionToken = function (type) {
   if (window.__OS == "IOS"){

@@ -22,7 +22,7 @@ import Data.Array (deleteAt, length, snoc)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Helpers.Utils (clearFocus, clearTimer, convertUTCtoISC, getCurrentUTC, removeMediaPlayer, renderBase64ImageFile, saveAudioFile, startAudioRecording, startTimer, stopAudioRecording, uploadMultiPartData)
-import JBridge (addMediaFile, hideKeyboardOnNavigation, scrollToEnd, startLottieProcess, toast, uploadFile)
+import JBridge (addMediaFile, hideKeyboardOnNavigation, scrollToEnd, startLottieProcess, toast, uploadFile, animationConfig)
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender)
 import PrestoDOM.Types.Core (class Loggable, Eval)
 import PrestoDOM.Utils (continue, continueWithCmd, exit)
@@ -169,7 +169,7 @@ eval AddImage state =
     continueWithCmd state { props { showImageModel = true, isPopupModelOpen = true }
                           , data  { addImagesState { images = state.data.addedImages, stateChanged = false } } } [do
       _ <- pure $ clearFocus (getNewIDWithTag "submit_chat_edit_text")
-      _ <- pure $ startLottieProcess "primary_button_loader" (getNewIDWithTag "add_images_model_done_button") true 0.6 "CENTER_CROP"
+      _ <- pure $ startLottieProcess "primary_button_loader" (getNewIDWithTag "add_images_model_done_button") true 0.6 "CENTER_CROP" animationConfig
       pure NoAction
     ]
 
@@ -230,7 +230,7 @@ eval (AddAudioModelAction (AudioModel.OnClickDelete)) state =
 ---------------------------------------------------- Add Image Model ----------------------------------------------------
 eval (AddImagesModelAction (ImageModel.AddImage)) state =
   continueWithCmd state [do
-    _ <- pure $ startLottieProcess "primary_button_loader" (getNewIDWithTag "add_images_model_done_button") true 0.6 "CENTER_CROP"
+    _ <- pure $ startLottieProcess "primary_button_loader" (getNewIDWithTag "add_images_model_done_button") true 0.6 "CENTER_CROP" animationConfig
     _ <- liftEffect $ uploadFile unit
     pure NoAction
   ]
@@ -327,7 +327,7 @@ eval (RecordAudioModelAction RecordAudioModel.OnClickStop) state =
 
 eval (RecordAudioModelAction RecordAudioModel.OnClickDone) state =
   continueWithCmd state { data { recordAudioState { isUploading = true } } } [do
-    _ <- pure $ startLottieProcess "audio_upload_animation" (getNewIDWithTag "audio_recording_done") true 1.0 "FIT_CENTER"
+    _ <- pure $ startLottieProcess "audio_upload_animation" (getNewIDWithTag "audio_recording_done") true 1.0 "FIT_CENTER" animationConfig
     _ <- pure $ clearTimer ""
     case state.data.recordAudioState.recordedFile of
       Just url -> do

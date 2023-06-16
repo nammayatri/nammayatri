@@ -41,4 +41,5 @@ type QuoteListModelState = {
   , showProgress :: Boolean
   , tipViewProps :: TipViewProps
   , findingRidesAgain :: Boolean
+  , progress :: Number
 }

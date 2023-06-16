@@ -22,7 +22,7 @@ import Components.RecordAudioModel.Controller (Action(..), RecordAudioModelState
 import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Font.Style (bold)
-import JBridge (startLottieProcess)
+import JBridge (startLottieProcess, animationConfig)
 import PrestoDOM (frameLayout, id, linearLayout)
 import PrestoDOM.Elements.Elements (imageView, lottieAnimationView, textView)
 import PrestoDOM.Events (afterRender, onBackPressed, onClick)
@@ -86,7 +86,7 @@ view push state =
           , padding (PaddingRight 50)
           , id (getNewIDWithTag "recordAnimation")
           , afterRender (\action -> do
-                 _ <- pure $ startLottieProcess "record_audio_animation" (getNewIDWithTag "recordAnimation") true 1.0 "FIT_CENTER"
+                 _ <- pure $ startLottieProcess "record_audio_animation" (getNewIDWithTag "recordAnimation") true 1.0 "FIT_CENTER" animationConfig
                  pure unit
                 ) (const NoAction)
           ]

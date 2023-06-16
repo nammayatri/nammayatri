@@ -63,7 +63,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os, getExpiryTime, convertUTCtoISC, getCurrentUTC)
 import Helpers.Utils (Merchant(..), addToRecentSearches, clearCountDownTimer, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, getMerchant, performHapticFeedback)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, startLottieProcess, getSuggestionfromKey)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, startLottieProcess, getSuggestionfromKey, animationConfig)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
@@ -620,9 +620,19 @@ eval (UpdateCurrentStage stage) state = do
     continue state
 
 eval OnResumeCallback state =
-  if (isLocalStageOn FindingQuotes) && flowWithoutOffers WithoutOffers then
-    exit $ OnResumeApp state
-  else continue state
+  case getValueToLocalNativeStore LOCAL_STAGE of
+    "FindingQuotes" -> do
+      let secondsLeft = findingQuotesSearchExpired false
+          findingQuotesProgress = 1.0 - (toNumber secondsLeft)/(toNumber (getSearchExpiryTime "LazyCheck"))
+      void $ pure $ startLottieProcess "progress_loader_line" (getNewIDWithTag "lottieLoaderAnimProgress") true 0.6 "CENTER_CROP" (animationConfig {minProgress = findingQuotesProgress})
+      case flowWithoutOffers WithoutOffers of
+        true  -> exit $ OnResumeApp state
+        false -> continue state
+    "QuoteList" -> do
+      let findingQuotesProgress = 1.0 - 30.0/(toNumber (getSearchExpiryTime "LazyCheck"))
+      void $ pure $ startLottieProcess "progress_loader_line" (getNewIDWithTag "lottieLoaderAnimProgress") true 0.6 "CENTER_CROP" (animationConfig {minProgress = findingQuotesProgress})
+      continue state
+    _ -> continue state
 
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
 
@@ -1518,10 +1528,7 @@ eval (GetQuotesList (SelectListRes resp)) state = do
               let newState = state{data{quoteListModelState = quoteListModelState },props{isSearchLocation = NoView, isSource = Nothing,currentStage = QuoteList}}
               if isLocalStageOn QuoteList then do
                 _ <- pure $ spy "checking " "state"
-                let updatedState = if newState.props.customerTip.enableTips then tipEnabledState newState{props{isPopUp = TipsPopUp}} else newState{props{isPopUp = ConfirmBack}}
-                _ <- pure $ spy "checking zxc" newState
-                _ <- pure $ spy "checking zxc 2" newState
-                -- exit $ GetSelectList newState{props{isPopUp = if state.props.customerTip.enableTips then TipsPopUp else NoPopUp}}
+                let updatedState = if newState.props.customerTip.enableTips then tipEnabledState newState{props{isPopUp = TipsPopUp, findingQuotesProgress = 0.0}} else newState{props{isPopUp = ConfirmBack, findingQuotesProgress = 0.0}}
                 exit $ GetSelectList updatedState
               else if(state.props.selectedQuote == Nothing && (getValueToLocalStore AUTO_SELECTING) /= "CANCELLED_AUTO_ASSIGN") then do
                 let id = (fromMaybe dummyQuoteList (newState.data.quoteListModelState!!0)).id
@@ -2116,3 +2123,11 @@ getZoneType tag =
   case tag of
     Just "SureMetro" -> METRO
     _                -> NOZONE
+findingQuotesSearchExpired :: Boolean -> Int
+findingQuotesSearchExpired gotQuotes =
+  let secondsPassed = getExpiryTime (getValueToLocalStore FINDING_QUOTES_START_TIME) true
+      searchExpiryTime = getSearchExpiryTime "LazyCheck"
+      secondsLeft = case gotQuotes of
+                      true  -> if (searchExpiryTime - secondsPassed) < 30 then (searchExpiryTime - secondsPassed) else 30
+                      false -> (searchExpiryTime - secondsPassed)
+  in secondsLeft

@@ -406,7 +406,7 @@ offlineView push state =
           ][ lottieAnimationView
               [ id (EHC.getNewIDWithTag "RippleGoOnlineLottie")
               , afterRender (\action-> do
-                              _ <- pure $ JB.startLottieProcess "rippling_online_effect" (EHC.getNewIDWithTag "RippleGoOnlineLottie") true 1.0 "DEFAULT"
+                              _ <- pure $ JB.startLottieProcess "rippling_online_effect" (EHC.getNewIDWithTag "RippleGoOnlineLottie") true 1.0 "DEFAULT" JB.animationConfig
                               pure unit)(const NoAction)
               , height WRAP_CONTENT
               , width MATCH_PARENT

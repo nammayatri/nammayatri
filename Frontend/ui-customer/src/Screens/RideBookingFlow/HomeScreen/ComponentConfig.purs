@@ -804,6 +804,7 @@ quoteListModelViewState state = { source: state.data.source
                             , showProgress : (DA.null state.data.quoteListModelState) && isLocalStageOn FindingQuotes
                             , tipViewProps : getTipViewProps state.props.tipViewProps
                             , findingRidesAgain : state.props.findingRidesAgain
+                            , progress : state.props.findingQuotesProgress
                             }
 
 previousRideRatingViewState :: ST.HomeScreenState -> RatingCard.RatingCardState

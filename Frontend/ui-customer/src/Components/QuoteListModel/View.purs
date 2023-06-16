@@ -27,7 +27,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag, os, safeMarginTop, screenWidth,safeMarginBottom, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import JBridge (getBtnLoader, startLottieProcess)
+import JBridge (getBtnLoader, startLottieProcess, animationConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, map, pure, unit, not, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||))
@@ -79,8 +79,9 @@ paymentView state =
   ][  lottieAnimationView
           [ id (getNewIDWithTag "lottieLoaderAnimProgress")
           , afterRender (\action-> do
-                        _ <- pure $ startLottieProcess "progress_loader_line" (getNewIDWithTag "lottieLoaderAnimProgress") true 0.6 "CENTER_CROP"
-                        pure unit)(const NoAction)
+                        _ <- pure $ startLottieProcess "progress_loader_line" (getNewIDWithTag "lottieLoaderAnimProgress") true 0.6 "CENTER_CROP" (animationConfig {minProgress = state.progress})
+                        pure unit
+            )(const NoAction)
           , height WRAP_CONTENT
           , width MATCH_PARENT
           , visibility if state.showProgress then VISIBLE else GONE
@@ -219,7 +220,7 @@ findingRidesView state push =
       lottieAnimationView
       [ id (getNewIDWithTag "lottieLoaderAnim")
       , afterRender (\action-> do
-                    _ <- pure $ startLottieProcess "finding_rides_loader_with_text" (getNewIDWithTag "lottieLoaderAnim") true 0.6 "Default"
+                    _ <- pure $ startLottieProcess "finding_rides_loader_with_text" (getNewIDWithTag "lottieLoaderAnim") true 0.6 "Default" animationConfig
                     pure unit)(const NoAction)
       , height $ V 300
       , width $ V 300

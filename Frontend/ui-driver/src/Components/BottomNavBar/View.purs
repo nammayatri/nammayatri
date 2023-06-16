@@ -24,7 +24,7 @@ import Engineering.Helpers.Commons (getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (toString)
-import JBridge (startLottieProcess)
+import JBridge (startLottieProcess, animationConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, (==), const, (<>), (&&), bind, ($), pure, unit, (/=))
@@ -95,7 +95,7 @@ lottieLoaderView state push activeIndex text =
     , id (getIdForScreenIndex activeIndex)
     , afterRender
         ( \action -> do
-            _ <- pure $ startLottieProcess "notification_bell" (getIdForScreenIndex activeIndex) true 1.0 "default"
+            _ <- pure $ startLottieProcess "notification_bell" (getIdForScreenIndex activeIndex) true 1.0 "default" animationConfig
             pure unit
         )
         (const OnNavigate text)

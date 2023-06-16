@@ -177,6 +177,7 @@ initData = {
     , timerId : ""
     , findingRidesAgain : false
     , routeEndPoints : Nothing
+    , findingQuotesProgress : 0.0
     }
 }
 

@@ -27,7 +27,7 @@ import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
-import JBridge (startLottieProcess)
+import JBridge (startLottieProcess, animationConfig)
 import Presto.Core.Types.Language.Flow (delay, doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, afterRender, background, color, gravity, height, id, linearLayout, lottieAnimationView, margin, orientation, padding, text, textView, width, imageView, imageUrl)
 import PrestoDOM.Properties (cornerRadii)
@@ -108,7 +108,7 @@ lottieLoaderView state push =
     [ id (EHC.getNewIDWithTag "SuccessLottieView")
     , afterRender
         ( \action -> do
-            _ <- pure $ startLottieProcess "success_lottie" (EHC.getNewIDWithTag "SuccessLottieView") true 1.0 "default"
+            _ <- pure $ startLottieProcess "success_lottie" (EHC.getNewIDWithTag "SuccessLottieView") true 1.0 "default" animationConfig
             pure unit
         )
         (const CountDown)
