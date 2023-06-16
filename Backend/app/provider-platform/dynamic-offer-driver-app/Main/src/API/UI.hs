@@ -31,6 +31,7 @@ import qualified API.UI.Location as Location
 import qualified API.UI.Message as Message
 import qualified API.UI.OnMessage as OnMessage
 import qualified API.UI.OrgAdmin as OrgAdmin
+import qualified API.UI.Payment as Payment
 import qualified API.UI.Performance as Performance
 import qualified API.UI.Registration as Registration
 import qualified API.UI.Ride as Ride
@@ -50,6 +51,7 @@ type API =
            :<|> Registration.API
            :<|> DriverOnboarding.API
            :<|> OrgAdmin.API
+           :<|> Payment.API
            :<|> Driver.API
            :<|> Vehicle.API
            :<|> Frontend.API
@@ -75,6 +77,7 @@ handler =
     :<|> Registration.handler
     :<|> DriverOnboarding.handler
     :<|> OrgAdmin.handler
+    :<|> Payment.handler
     :<|> Driver.handler
     :<|> Vehicle.handler
     :<|> Frontend.handler
