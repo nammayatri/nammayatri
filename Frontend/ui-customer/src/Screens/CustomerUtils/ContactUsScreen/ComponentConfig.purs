@@ -105,7 +105,6 @@ primaryEditTextConfigEmail state = let
             Just ST.EMAIL_EXISTS -> "Email already exists"
             Just ST.INVALID_EMAIL -> "Please enter a valid email"
             Nothing -> ""
-        , fontStyle = FontStyle.regular LanguageStyle
         , color = Color.textDanger
         }
       } 

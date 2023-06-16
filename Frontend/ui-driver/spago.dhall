@@ -24,6 +24,7 @@ to generate this file without the comments in this block.
   , "foldable-traversable"
   , "foreign"
   , "foreign-generic"
+  , "foreign-object"
   , "free"
   , "halogen-vdom"
   , "integers"
