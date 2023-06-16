@@ -640,8 +640,8 @@ fetchDriverIDsFromVehicle = map (.driverId)
 fetchDriverIDsTextFromQuote :: [DriverQuote] -> [Text]
 fetchDriverIDsTextFromQuote = map (.driverId.getId)
 
-findAllDriverLocationFromPersonIds :: L.MonadFlow m => [Person] -> m [DriverLocation]
-findAllDriverLocationFromPersonIds personList = do
+findAllDriverLocationFromPerson :: L.MonadFlow m => [Person] -> m [DriverLocation]
+findAllDriverLocationFromPerson personList = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamDL.DriverLocationT
   let updatedMeshConfig = setMeshConfig modelName
@@ -649,8 +649,8 @@ findAllDriverLocationFromPersonIds personList = do
     Just dbConf' -> either (pure []) (QDL.transformBeamDriverLocationToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamDL.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
     Nothing -> pure []
 
-findAllDriverInformationFromPersonIds :: L.MonadFlow m => [Person] -> m [DriverInformation]
-findAllDriverInformationFromPersonIds personList = do
+findAllDriverInformationFromPerson :: L.MonadFlow m => [Person] -> m [DriverInformation]
+findAllDriverInformationFromPerson personList = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamDI.DriverInformationT
   let updatedMeshConfig = setMeshConfig modelName
@@ -658,8 +658,8 @@ findAllDriverInformationFromPersonIds personList = do
     Just dbConf' -> either (pure []) (QueriesDI.transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamDI.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
     Nothing -> pure []
 
-findAllVehiclesFromPersonIds :: L.MonadFlow m => [Person] -> m [Vehicle]
-findAllVehiclesFromPersonIds personList = do
+findAllVehiclesFromPerson :: L.MonadFlow m => [Person] -> m [Vehicle]
+findAllVehiclesFromPerson personList = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamV.VehicleT
   let updatedMeshConfig = setMeshConfig modelName
@@ -695,9 +695,9 @@ findAllDriversByIdsFirstNameAsc' (Id merchantId) driverIds = do
         case p of
           Right x -> catMaybes <$> traverse transformBeamPersonToDomain x
           _ -> pure []
-      dlList <- findAllDriverLocationFromPersonIds personList
-      infoList <- findAllDriverInformationFromPersonIds personList
-      vehicleList <- findAllVehiclesFromPersonIds personList
+      dlList <- findAllDriverLocationFromPerson personList
+      infoList <- findAllDriverInformationFromPerson personList
+      vehicleList <- findAllVehiclesFromPerson personList
 
       let pDl = foldl' (getPersonWithlocation dlList) [] personList
       let pDlInfo = foldl' (getPersonWithInfo infoList) [] pDl
