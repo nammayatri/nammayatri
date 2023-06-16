@@ -15,7 +15,7 @@
 module Storage.Queries.Message.Message where
 
 import Domain.Types.Merchant (Merchant)
--- import qualified Kernel.Storage.Esqueleto as Esq
+-- import Kernel.Storage.Esqueleto as Esq
 
 import Domain.Types.Message.Message
 import Domain.Types.Message.MessageTranslation as DomainMT
@@ -70,6 +70,7 @@ findById (Id messageId) = do
                     shortDescription = shortDescription,
                     label = label,
                     likeCount = likeCount,
+                    viewCount = viewCount,
                     mediaFiles = mediaFiles,
                     merchantId = merchantId,
                     createdAt = createdAt
@@ -102,6 +103,7 @@ findAllWithLimitOffset mbLimit mbOffset merchantIdParam = do
                       shortDescription = shortDescription,
                       label = label,
                       likeCount = likeCount,
+                      viewCount = viewCount,
                       mediaFiles = mediaFiles,
                       merchantId = merchantId,
                       createdAt = createdAt
@@ -145,6 +147,30 @@ updateMessageLikeCount messageId value = do
         Nothing -> pure ()
     Nothing -> pure ()
 
+updateMessageViewCount :: L.MonadFlow m => Id Message -> Int -> m ()
+updateMessageViewCount messageId value = do
+  messageObject <- findById messageId
+  case messageObject of
+    Just msg -> do
+      let viewCount = msg.viewCount
+      dbConf <- L.getOption KBT.PsqlDbCfg
+      let modelName = Se.modelTableName @BeamM.MessageT
+      let updatedMeshConfig = setMeshConfig modelName
+      case dbConf of
+        Just dbConf' ->
+          void $
+            KV.updateWoReturningWithKVConnector
+              dbConf'
+              updatedMeshConfig
+              [Se.Set BeamM.viewCount $ viewCount + value]
+              [Se.Is BeamM.id (Se.Eq $ getId messageId)]
+        Nothing -> pure ()
+    Nothing -> pure ()
+
+-- Esq.update $ \msg -> do
+--   set msg [MessageViewCount =. (msg ^. MessageViewCount) +. val value]
+--   where_ $ msg ^. MessageId ==. val (getId messageId)
+
 transformBeamMessageToDomain :: L.MonadFlow m => BeamM.Message -> m Message
 transformBeamMessageToDomain BeamM.MessageT {..} = do
   mT' <- MT.findByMessageId (Id id)
@@ -158,6 +184,7 @@ transformBeamMessageToDomain BeamM.MessageT {..} = do
         shortDescription = shortDescription,
         label = label,
         likeCount = likeCount,
+        viewCount = viewCount,
         mediaFiles = Id <$> mediaFiles,
         messageTranslations = mT,
         merchantId = Id merchantId,
@@ -174,19 +201,8 @@ transformDomainMessageToBeam Message {..} =
       BeamM.shortDescription = shortDescription,
       BeamM.label = label,
       BeamM.likeCount = likeCount,
+      BeamM.viewCount = viewCount,
       BeamM.mediaFiles = getId <$> mediaFiles,
       BeamM.merchantId = getId merchantId,
       BeamM.createdAt = createdAt
     }
-
-updateMessageViewCount :: Id Message -> Int -> SqlDB ()
-updateMessageViewCount messageId value = do
-  Esq.update $ \msg -> do
-    set msg [MessageViewCount =. (msg ^. MessageViewCount) +. val value]
-    where_ $ msg ^. MessageId ==. val (getId messageId)
-
-updateMessageViewCount :: Id Message -> Int -> SqlDB ()
-updateMessageViewCount messageId value = do
-  Esq.update $ \msg -> do
-    set msg [MessageViewCount =. (msg ^. MessageViewCount) +. val value]
-    where_ $ msg ^. MessageId ==. val (getId messageId)

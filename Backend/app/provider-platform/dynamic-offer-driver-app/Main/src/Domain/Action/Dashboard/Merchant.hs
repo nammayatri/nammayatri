@@ -551,7 +551,7 @@ createFPDriverExtraFee _ farePolicyId startDistance req = do
   mbFarePolicy <- QFPEFB.findByFarePolicyIdAndStartDistance farePolicyId startDistance
   whenJust mbFarePolicy $ \_ -> throwError $ InvalidRequest "Fare policy with the same id and startDistance already exists"
   farePolicyDetails <- buildFarePolicy farePolicyId startDistance req
-  Esq.runTransaction $ QFPEFB.create farePolicyDetails
+  _ <- QFPEFB.create farePolicyDetails
   CQFP.clearCacheById farePolicyId
   pure Success
   where
@@ -568,6 +568,6 @@ createFPDriverExtraFee _ farePolicyId startDistance req = do
 updateFPDriverExtraFee :: ShortId DM.Merchant -> Id FarePolicy.FarePolicy -> Meters -> Common.CreateFPDriverExtraFeeReq -> Flow APISuccess
 updateFPDriverExtraFee _ farePolicyId startDistance req = do
   _ <- QFPEFB.findByFarePolicyIdAndStartDistance farePolicyId startDistance >>= fromMaybeM (InvalidRequest "Fare Policy with given id and startDistance not found")
-  Esq.runTransaction $ QFPEFB.update farePolicyId startDistance req.minFee req.maxFee
+  _ <- QFPEFB.update farePolicyId startDistance req.minFee req.maxFee
   CQFP.clearCacheById farePolicyId
   pure Success

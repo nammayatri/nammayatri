@@ -17,8 +17,6 @@ module Storage.Queries.FareParameters where
 import Domain.Types.FareParameters as DFP
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
--- import Storage.Queries.FareParameters.FareParametersProgressiveDetails (findById')
-
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -26,14 +24,7 @@ import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FareParameters as BeamFP
 import qualified Storage.Queries.FareParameters.FareParametersProgressiveDetails as BeamFPPD
-
--- create :: FareParameters -> SqlDB ()
--- create fareParams =
---   withFullEntity fareParams $ \(fareParams', fareParamsDetais) -> do
---     Esq.create' fareParams'
---     case fareParamsDetais of
---       ProgressiveDetailsT fppdt -> Esq.create' fppdt
---       SlabDetailsT -> return ()
+import qualified Storage.Queries.FareParameters.FareParametersSlabDetails as BeamFPSD
 
 create :: L.MonadFlow m => DFP.FareParameters -> m ()
 create fareParameters = do
@@ -49,11 +40,6 @@ create fareParameters = do
         _ -> pure ()
     Nothing -> pure ()
 
--- findById :: Transactionable m => Id FareParameters -> m (Maybe FareParameters)
--- findById fareParametersId = buildDType $ do
---   res <- Esq.findById' @FareParametersT fareParametersId
---   join <$> mapM buildFullFareParameters res
-
 findById :: L.MonadFlow m => Id FareParameters -> m (Maybe FareParameters)
 findById (Id fareParametersId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -68,51 +54,21 @@ findById (Id fareParametersId) = do
     -- either (pure Nothing) (transformBeamFareParametersToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]
     Nothing -> pure Nothing
 
--- findById'' :: L.MonadFlow m => Id FareParameters -> m (Maybe FareParameters)
--- findById'' (Id fareParametersId) = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
--- let modelName = Se.modelTableName @BeamFP.FareParametersT
--- let updatedMeshConfig = setMeshConfig modelName
---   case dbConf of
---     Just dbCOnf' -> do
---       -- either (pure Nothing) (transformBeamFareParametersToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]
---       fp <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]
---       either (\_ -> pure Nothing) (sequence (transformBeamFareParametersToDomain <$>)) fp
---     Nothing -> pure Nothing
-
--- fp = Right Just ...
---
--- transformBeamFareParametersToDomain :: BeamFP.FareParameters -> FareParameters
--- transformBeamFareParametersToDomain BeamFP.FareParametersT {..} = do
---   FareParameters
---     { id = Id id,
---       baseFare = baseFare,
---       deadKmFare = deadKmFare,
---       extraKmFare = extraKmFare,
---       driverSelectedFare = driverSelectedFare,
---       customerExtraFee = customerExtraFee,
---       nightShiftRate = nightShiftRate,
---       nightCoefIncluded = nightCoefIncluded,
---       waitingChargePerMin = waitingChargePerMin,
---       waitingOrPickupCharges = waitingOrPickupCharges,
---       serviceCharge = serviceCharge,
---       farePolicyType = farePolicyType,
---       govtChargesPerc = govtChargesPerc
---     }
-
 -- TODO @Vijay Gupta, Change the following query.
-create :: FareParameters -> SqlDB ()
-create fareParams =
-  withFullEntity fareParams $ \(fareParams', fareParamsDetais) -> do
-    Esq.create' fareParams'
-    case fareParamsDetais of
-      ProgressiveDetailsT fppdt -> Esq.create' fppdt
-      SlabDetailsT fpsdt -> Esq.create' fpsdt
+-- create :: FareParameters -> SqlDB ()
+-- create fareParams =
+--   withFullEntity fareParams $ \(fareParams', fareParamsDetais) -> do
+--     Esq.create' fareParams'
+--     case fareParamsDetais of
+--       ProgressiveDetailsT fppdt -> Esq.create' fppdt
+--       SlabDetailsT fpsdt -> Esq.create' fpsdt
 
 transformBeamFareParametersToDomain :: L.MonadFlow m => BeamFP.FareParameters -> m (Maybe FareParameters)
 transformBeamFareParametersToDomain BeamFP.FareParametersT {..} = do
   fullFPPD <- BeamFPPD.findById' (Id id)
   let fPPD = snd $ fromJust fullFPPD
+  fullFPSD <- BeamFPSD.findById' (Id id)
+  let fPSD = snd $ fromJust fullFPSD
   if isJust fullFPPD
     then
       pure $
@@ -129,7 +85,7 @@ transformBeamFareParametersToDomain BeamFP.FareParametersT {..} = do
               nightShiftCharge = nightShiftCharge,
               fareParametersDetails = case fareParametersType of
                 Progressive -> ProgressiveDetails fPPD
-                Slab -> SlabDetails FParamsSlabDetails
+                Slab -> SlabDetails fPSD
             }
     else pure Nothing
 

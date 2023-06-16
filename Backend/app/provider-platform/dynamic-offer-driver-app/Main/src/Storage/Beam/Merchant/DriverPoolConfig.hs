@@ -36,7 +36,7 @@ import Kernel.Types.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config (PoolSortingType (..))
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config (BatchSplitByPickupDistance (..), PoolSortingType (..))
 
 instance FromField PoolSortingType where
   fromField = fromFieldEnum
@@ -48,8 +48,18 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be PoolSortingType
 
 instance FromBackendRow Postgres PoolSortingType
 
-instance IsString PoolSortingType where
-  fromString = show
+instance FromField [BatchSplitByPickupDistance] where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be [BatchSplitByPickupDistance] where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be [BatchSplitByPickupDistance]
+
+instance FromBackendRow Postgres [BatchSplitByPickupDistance]
+
+-- instance IsString BatchSplitByPickupDistance where
+--   fromString = show
 
 instance IsString Seconds where
   fromString = show
@@ -57,8 +67,12 @@ instance IsString Seconds where
 instance IsString Meters where
   fromString = show
 
+instance IsString PoolSortingType where
+  fromString = show
+
 data DriverPoolConfigT f = DriverPoolConfigT
   { merchantId :: B.C f Text,
+    distanceBasedBatchSplit :: B.C f [BatchSplitByPickupDistance], -- (PostgresList BatchSplitByPickupDistance)
     minRadiusOfSearch :: B.C f Meters,
     maxRadiusOfSearch :: B.C f Meters,
     radiusStepSize :: B.C f Meters,
@@ -106,10 +120,13 @@ deriving stock instance Ord PoolSortingType
 
 deriving stock instance Eq PoolSortingType
 
+deriving stock instance Ord BatchSplitByPickupDistance
+
 driverPoolConfigTMod :: DriverPoolConfigT (B.FieldModification (B.TableField DriverPoolConfigT))
 driverPoolConfigTMod =
   B.tableModification
     { merchantId = B.fieldNamed "merchant_id",
+      distanceBasedBatchSplit = B.fieldNamed "distance_based_batch_split",
       minRadiusOfSearch = B.fieldNamed "min_radius_of_search",
       maxRadiusOfSearch = B.fieldNamed "max_radius_of_search",
       radiusStepSize = B.fieldNamed "radius_step_size",
@@ -135,6 +152,7 @@ defaultDriverPoolConfig :: DriverPoolConfig
 defaultDriverPoolConfig =
   DriverPoolConfigT
     { merchantId = "",
+      distanceBasedBatchSplit = [],
       minRadiusOfSearch = "",
       maxRadiusOfSearch = "",
       radiusStepSize = "",

@@ -45,6 +45,7 @@ data QuoteSpecialZoneT f = QuoteSpecialZoneT
     estimatedFare :: B.C f Common.Money,
     fareParametersId :: B.C f Text,
     estimatedFinishTime :: B.C f Time.UTCTime,
+    specialLocationTag :: B.C f (Maybe Text),
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
@@ -94,6 +95,7 @@ quoteSpecialZoneTMod =
       estimatedFare = B.fieldNamed "estimated_fare",
       fareParametersId = B.fieldNamed "fare_parameters_id",
       estimatedFinishTime = B.fieldNamed "estimated_finish_time",
+      specialLocationTag = B.fieldNamed "special_location_tag",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }
@@ -121,6 +123,7 @@ defaultQuoteSpecialZone =
       estimatedFare = "",
       fareParametersId = "",
       estimatedFinishTime = defaultUTCDate,
+      specialLocationTag = Nothing,
       createdAt = defaultUTCDate,
       updatedAt = defaultUTCDate
     }

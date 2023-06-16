@@ -22,7 +22,7 @@ import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
-import qualified Data.Vector as V
+-- import qualified Data.Vector as V
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
@@ -48,10 +48,10 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.VehicleClassCheckT
 
 instance FromBackendRow Postgres Domain.VehicleClassCheckType
 
-instance FromField [Text] where
-  fromField f mbValue = V.toList <$> (fromField f mbValue)
+-- instance FromField [Text] where
+--   fromField f mbValue = V.toList <$> (fromField f mbValue)
 
-instance FromBackendRow Postgres [Text]
+-- instance FromBackendRow Postgres [Text]
 
 instance FromField Domain.DocumentType where
   fromField = fromFieldEnum
@@ -59,12 +59,12 @@ instance FromField Domain.DocumentType where
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.DocumentType where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [Text] where
-  sqlValueSyntax x = sqlValueSyntax (V.fromList x)
+-- instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [Text] where
+--   sqlValueSyntax x = sqlValueSyntax (V.fromList x)
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.DocumentType
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Text]
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Text]
 
 instance FromBackendRow Postgres Domain.DocumentType
 

@@ -24,8 +24,6 @@ import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.Backend ()
 import Database.Beam.MySQL ()
--- import qualified Domain.Types.FarePolicy.FareParametersProgressiveDetails as Domain
-
 import qualified Domain.Types.Vehicle.Variant as Vehicle
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
@@ -36,55 +34,11 @@ import Lib.UtilsTH
 import Sequelize as Se
 import Storage.Tabular.Vehicle ()
 
--- fromFieldEnum ::
---   (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldEnum f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' ->
---     case (readMaybe (unpackChars value')) of
---       Just val -> pure val
---       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
-
--- instance FromField Vehicle.Variant where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Vehicle.Variant where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Vehicle.Variant
-
--- instance FromBackendRow Postgres Vehicle.Variant
-
 instance IsString Vehicle.Variant where
   fromString = show
 
--- instance FromField Meters where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
-
--- instance FromBackendRow Postgres Meters
-
 instance IsString Meters where
   fromString = show
-
--- instance FromField Money where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
-
--- instance FromBackendRow Postgres Money
-
--- deriving stock instance Read Money
 
 instance IsString Money where
   fromString = show
@@ -139,29 +93,5 @@ fareParametersProgressiveDetailsToHSModifiers =
 fareParametersProgressiveDetailsToPSModifiers :: M.Map Text (A.Value -> A.Value)
 fareParametersProgressiveDetailsToPSModifiers =
   M.empty
-
--- transformBeamFareParametersProgressiveDetailsToDomain :: FareParametersProgressiveDetails -> DomainFPPD.FullFareParametersProgressiveDetails
--- transformBeamFareParametersProgressiveDetailsToDomain FareParametersProgressiveDetailsT {..} = do
---   ( (KTI.Id fareParametersId),
---     Domain.FParamsProgressiveDetails
---       { deadKmFare = deadKmFare,
---         extraKmFare = extraKmFare
---       }
---     )
-
--- transformDomainFareParametersProgressiveDetailsToBeam :: DomainFPPD.FullFareParametersProgressiveDetails -> FareParametersProgressiveDetails
--- transformDomainFareParametersProgressiveDetailsToBeam (KTI.Id fareParametersId, Domain.FParamsProgressiveDetails {..}) =
---   FareParametersProgressiveDetailsT
---     { fareParametersId = fareParametersId,
---       deadKmFare = deadKmFare,
---       extraKmFare = extraKmFare
---     }
-
--- findById' :: L.MonadFlow m => KTI.Id Domain.FareParameters -> m (Maybe DomainFPPD.FullFareParametersProgressiveDetails)
--- findById' (KTI.Id fareParametersId') = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
---   case dbConf of
---     Just dbCOnf' -> either (pure Nothing) (transformBeamFareParametersProgressiveDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is fareParametersId $ Se.Eq fareParametersId']
---     Nothing -> pure Nothing
 
 $(enableKVPG ''FareParametersProgressiveDetailsT ['fareParametersId] [])

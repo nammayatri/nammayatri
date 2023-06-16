@@ -79,6 +79,9 @@ data FarePolicySlabsDetailsSlabT f = FarePolicySlabsDetailsSlabT
     farePolicyId :: B.C f Text,
     startDistance :: B.C f Meters,
     baseFare :: B.C f Money,
+    platformFeeCharge :: B.C f (Maybe Domain.PlatformFeeCharge),
+    platformFeeCgst :: B.C f (Maybe Double),
+    platformFeeSgst :: B.C f (Maybe Double),
     waitingCharge :: B.C f (Maybe Domain.WaitingCharge),
     freeWatingTime :: B.C f (Maybe Minutes),
     nightShiftCharge :: B.C f (Maybe Domain.NightShiftCharge)
@@ -112,6 +115,8 @@ deriving stock instance Ord Domain.WaitingChargeInfo
 
 deriving stock instance Ord Domain.NightShiftCharge
 
+deriving stock instance Ord Domain.PlatformFeeCharge
+
 -- deriving stock instance Read Domain.NightShiftCharge
 
 -- deriving stock instance Read Domain.WaitingCharge
@@ -123,6 +128,9 @@ farePolicySlabsDetailsSlabTMod =
       farePolicyId = B.fieldNamed "fare_policy_id",
       startDistance = B.fieldNamed "start_distance",
       baseFare = B.fieldNamed "base_fare",
+      platformFeeCharge = B.fieldNamed "platform_fee_charge",
+      platformFeeCgst = B.fieldNamed "platform_fee_cgst",
+      platformFeeSgst = B.fieldNamed "platform_fee_sgst",
       freeWatingTime = B.fieldNamed "free_wating_time",
       waitingCharge = B.fieldNamed "waiting_charge",
       nightShiftCharge = B.fieldNamed "night_shift_charge"

@@ -39,14 +39,6 @@
         "common": [
           "common"
         ],
-        "flake-parts": [
-          "common",
-          "flake-parts"
-        ],
-        "nixpkgs": [
-          "common",
-          "nixpkgs"
-        ],
         "shared-kernel": [
           "shared-kernel"
         ]
@@ -446,11 +438,11 @@
     "easy-purescript-nix": {
       "flake": false,
       "locked": {
-        "lastModified": 1679861376,
-        "narHash": "sha256-LLqaLPJNiap2U8I77K5XVPGJA/Be30Z8lyGOyYXmBlc=",
+        "lastModified": 1686810822,
+        "narHash": "sha256-rv++OJWEDLFaasLlRx8Ys+PVrvirXK3rTOQtLO7h+OU=",
         "owner": "justinwoo",
         "repo": "easy-purescript-nix",
-        "rev": "0c10ff170461aed0c336f5c21ed0f430c2c3574b",
+        "rev": "26b3845c5405e490127203e9ade15c87b8373c86",
         "type": "github"
       },
       "original": {
@@ -1094,10 +1086,11 @@
       "locked": {
         "lastModified": 1685620412,
         "narHash": "sha256-cPRZRbR76M7fBNSXcrSOqLlIcs2KSj/Ynf0AdZ46qrE=",
-        "owner": "juspay",
-        "repo": "hedis",
+        "ref": "refs/heads/master",
         "rev": "92a3d5ab73dcb0ea11139a01d6f2950a8b8e7e0e",
-        "type": "github"
+        "revCount": 712,
+        "type": "git",
+        "url": "https://github.com/juspay/hedis"
       },
       "original": {
         "rev": "92a3d5ab73dcb0ea11139a01d6f2950a8b8e7e0e",

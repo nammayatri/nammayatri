@@ -57,6 +57,7 @@ data MessageT f = MessageT
     shortDescription :: B.C f Text,
     label :: B.C f (Maybe Text),
     likeCount :: B.C f Int,
+    viewCount :: B.C f Int,
     mediaFiles :: B.C f [Text],
     merchantId :: B.C f Text,
     createdAt :: B.C f Time.UTCTime
@@ -81,16 +82,6 @@ instance FromJSON Message where
 
 instance ToJSON Message where
   toJSON = A.genericToJSON A.defaultOptions
-
-instance FromField [Text] where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be [Text] where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Text]
-
-instance FromBackendRow Postgres [Text]
 
 instance FromField Domain.MessageType where
   fromField = fromFieldEnum
@@ -121,6 +112,7 @@ messageTMod =
       shortDescription = B.fieldNamed "short_description",
       label = B.fieldNamed "label",
       likeCount = B.fieldNamed "like_count",
+      viewCount = B.fieldNamed "view_count",
       mediaFiles = B.fieldNamed "media_files",
       merchantId = B.fieldNamed "merchant_id",
       createdAt = B.fieldNamed "created_at"

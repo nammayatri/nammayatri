@@ -16,32 +16,80 @@
 module Storage.Queries.FarePolicy.DriverExtraFeeBounds where
 
 import qualified Domain.Types.FarePolicy as DFP
-import qualified Domain.Types.FarePolicy as FarePolicy
+-- import qualified Domain.Types.FarePolicy as FarePolicy
 import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
+-- import Kernel.Storage.Esqueleto as Esq
+
+import Kernel.Types.Common
 import Kernel.Types.Id as KTI
-import Lib.Utils (setMeshConfig)
+import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.DriverExtraFeeBounds as BeamDEFB
 import qualified Storage.Tabular.FarePolicy.DriverExtraFeeBounds as Domain
 
--- findAll' ::
---   ( Transactionable m,
---     Monad m,
---     MonadThrow m,
---     Log m
---   ) =>
---   Id DFP.FarePolicy ->
---   DTypeBuilder m [DriverExtraFeeBoundsT]
--- findAll' farePolicyId = do
---   Esq.findAll' $ do
---     driverExtraFeeBounds <- from $ table @DriverExtraFeeBoundsT
+-- create :: Domain.FullDriverExtraFeeBounds -> SqlDB ()
+-- create = Esq.create
+
+create :: L.MonadFlow m => Domain.FullDriverExtraFeeBounds -> m (MeshResult ())
+create fullDriverExtraFeeBounds = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDEFB.DriverExtraFeeBoundsT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainDriverExtraFeeBoundsToBeam fullDriverExtraFeeBounds)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
+-- findByFarePolicyIdAndStartDistance :: Transactionable m => Id DFP.FarePolicy -> Meters -> m (Maybe Domain.FullDriverExtraFeeBounds)
+-- findByFarePolicyIdAndStartDistance farePolicyId startDistance = Esq.findOne $ do
+--   farePolicy <- from $ table @DFP.DriverExtraFeeBoundsT
+--   where_ $
+--     farePolicy ^. Domain.DriverExtraFeeBoundsFarePolicyId ==. val (toKey farePolicyId)
+--       &&. farePolicy ^. Domain.DriverExtraFeeBoundsStartDistance ==. val startDistance
+--   pure farePolicy
+
+findByFarePolicyIdAndStartDistance :: L.MonadFlow m => Id DFP.FarePolicy -> Meters -> m (Maybe Domain.FullDriverExtraFeeBounds)
+findByFarePolicyIdAndStartDistance (Id farePolicyId) startDistance = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDEFB.DriverExtraFeeBoundsT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' ->
+      either (pure Nothing) (transformBeamDriverExtraFeeBoundsToDomain <$>)
+        <$> KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamDEFB.farePolicyId $ Se.Eq farePolicyId, Se.Is BeamDEFB.startDistance $ Se.Eq startDistance]]
+    Nothing -> pure Nothing
+
+-- update :: Id DFP.FarePolicy -> Meters -> Money -> Money -> SqlDB ()
+-- update farePolicyId startDistace minFee maxFee = do
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ Domain.DriverExtraFeeBoundsMinFee =. val minFee,
+--         Domain.DriverExtraFeeBoundsMaxFee =. val maxFee
+--       ]
 --     where_ $
---       driverExtraFeeBounds ^. DriverExtraFeeBoundsFarePolicyId ==. val (toKey farePolicyId)
---     orderBy [asc $ driverExtraFeeBounds ^. DriverExtraFeeBoundsStartDistance]
---     return driverExtraFeeBounds
+--       tbl ^. Domain.DriverExtraFeeBoundsFarePolicyId ==. val (toKey farePolicyId)
+--         &&. tbl ^. Domain.DriverExtraFeeBoundsStartDistance ==. val startDistace
+
+update :: L.MonadFlow m => Id DFP.FarePolicy -> Meters -> Money -> Money -> m ()
+update (Id farePolicyId) startDistance minFee maxFee = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDEFB.DriverExtraFeeBoundsT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' ->
+      void $
+        KV.updateWoReturningWithKVConnector
+          dbConf'
+          updatedMeshConfig
+          [ Se.Set BeamDEFB.minFee minFee,
+            Se.Set BeamDEFB.maxFee maxFee
+          ]
+          [Se.And [Se.Is BeamDEFB.farePolicyId $ Se.Eq farePolicyId, Se.Is BeamDEFB.startDistance $ Se.Eq startDistance]]
+    Nothing -> pure ()
 
 findAll ::
   ( L.MonadFlow m
@@ -56,13 +104,6 @@ findAll farePolicyId = do
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamDriverExtraFeeBoundsToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDEFB.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamDEFB.startDistance) Nothing Nothing
     Nothing -> pure []
-
--- deleteAll' :: Id DFP.FarePolicy -> FullEntitySqlDB ()
--- deleteAll' farePolicyId =
---   Esq.delete' $ do
---     driverExtraFeeBounds <- from $ table @DriverExtraFeeBoundsT
---     where_ $
---       driverExtraFeeBounds ^. DriverExtraFeeBoundsFarePolicyId ==. val (toKey farePolicyId)
 
 transformBeamDriverExtraFeeBoundsToDomain :: BeamDEFB.DriverExtraFeeBounds -> Domain.FullDriverExtraFeeBounds
 transformBeamDriverExtraFeeBoundsToDomain BeamDEFB.DriverExtraFeeBoundsT {..} = do
@@ -83,26 +124,3 @@ transformDomainDriverExtraFeeBoundsToBeam (KTI.Id farePolicyId, DFP.DriverExtraF
       minFee = minFee,
       maxFee = maxFee
     }
-
-create :: DFP.FullDriverExtraFeeBounds -> SqlDB ()
-create = Esq.create
-
-findByFarePolicyIdAndStartDistance :: Transactionable m => Id FarePolicy.FarePolicy -> Meters -> m (Maybe DFP.FullDriverExtraFeeBounds)
-findByFarePolicyIdAndStartDistance farePolicyId startDistance = Esq.findOne $ do
-  farePolicy <- from $ table @DFP.DriverExtraFeeBoundsT
-  where_ $
-    farePolicy ^. DFP.DriverExtraFeeBoundsFarePolicyId ==. val (toKey farePolicyId)
-      &&. farePolicy ^. DFP.DriverExtraFeeBoundsStartDistance ==. val startDistance
-  pure farePolicy
-
-update :: Id FarePolicy.FarePolicy -> Meters -> Money -> Money -> SqlDB ()
-update farePolicyId startDistace minFee maxFee = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ DFP.DriverExtraFeeBoundsMinFee =. val minFee,
-        DFP.DriverExtraFeeBoundsMaxFee =. val maxFee
-      ]
-    where_ $
-      tbl ^. DFP.DriverExtraFeeBoundsFarePolicyId ==. val (toKey farePolicyId)
-        &&. tbl ^. DFP.DriverExtraFeeBoundsStartDistance ==. val startDistace

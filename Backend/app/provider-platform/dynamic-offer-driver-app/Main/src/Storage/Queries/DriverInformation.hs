@@ -34,11 +34,13 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Logging
 import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.Person as BeamP
 import Storage.Tabular.DriverInformation
+import Storage.Tabular.DriverLocation
 import Storage.Tabular.Person
 import qualified Prelude
 
@@ -428,11 +430,13 @@ transformBeamDriverInformationToDomain BeamDI.DriverInformationT {..} = do
   DriverInformation
     { driverId = Id driverId,
       adminId = Id <$> adminId,
+      merchantId = Id <$> merchantId,
       active = active,
       onRide = onRide,
       enabled = enabled,
       blocked = blocked,
       verified = verified,
+      numOfLocks = numOfLocks,
       referralCode = EncryptedHashed <$> (Encrypted <$> referralCode) <*> Just (DbHash BS.empty),
       lastEnabledOn = lastEnabledOn,
       canDowngradeToSedan = canDowngradeToSedan,
@@ -448,10 +452,12 @@ transformDomainDriverInformationToBeam DriverInformation {..} =
   BeamDI.DriverInformationT
     { BeamDI.driverId = getId driverId,
       BeamDI.adminId = getId <$> adminId,
+      BeamDI.merchantId = getId <$> merchantId,
       BeamDI.active = active,
       BeamDI.onRide = onRide,
       BeamDI.enabled = enabled,
       BeamDI.blocked = blocked,
+      BeamDI.numOfLocks = numOfLocks,
       BeamDI.verified = verified,
       BeamDI.referralCode = referralCode <&> unEncrypted . (.encrypted),
       BeamDI.lastEnabledOn = lastEnabledOn,

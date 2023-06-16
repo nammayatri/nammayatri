@@ -42,7 +42,7 @@ import EulerHS.KVConnector.Types
 import Kernel.External.Encryption
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto hiding (isNothing)
+-- import Kernel.Storage.Esqueleto hiding (isNothing)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
@@ -214,14 +214,14 @@ onVerifyDL verificationReq output = do
           let mLicenseExpiry = convertTextToUTC (output.t_validity_to <|> output.nt_validity_to)
           let mDriverLicense = createDL onboardingDocumentConfig person.id output id verificationReq.documentImageId1 verificationReq.documentImageId2 now <$> mEncryptedDL <*> mLicenseExpiry
 
-      case mDriverLicense of
-        Just driverLicense -> do
-          Query.upsert driverLicense
-          case driverLicense.driverName of
-            Just name_ -> Person.updateName person.id name_
-            Nothing -> pure (Left $ MKeyNotFound "")
-          return Ack
-        Nothing -> return Ack
+          case mDriverLicense of
+            Just driverLicense -> do
+              Query.upsert driverLicense
+              case driverLicense.driverName of
+                Just name_ -> Person.updateName person.id name_
+                Nothing -> pure (Left $ MKeyNotFound "")
+              return Ack
+            Nothing -> return Ack
 
 dlCacheKey :: Id Person.Person -> Text
 dlCacheKey personId =

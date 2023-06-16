@@ -20,7 +20,6 @@ import qualified Data.Text as T
 import qualified Domain.Types.MediaFile as MF
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Message.Message as Domain
--- import qualified Domain.Types.Message.MessageTranslation as MTD
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -123,10 +122,11 @@ fetchMedia (driverId, _) filePath = do
 
 messageSeen :: (Id SP.Person, Id DM.Merchant) -> Id Domain.Message -> Flow APISuccess
 messageSeen (driverId, _) messageId = do
-  messageDetails <- Esq.runInReplica $ MRQ.findByMessageIdAndDriverId messageId (cast driverId) >>= fromMaybeM (InvalidRequest "Message not found")
+  -- messageDetails <- Esq.runInReplica $ MRQ.findByMessageIdAndDriverId messageId (cast driverId) >>= fromMaybeM (InvalidRequest "Message not found")
+  messageDetails <- MRQ.findByMessageIdAndDriverId messageId (cast driverId) >>= fromMaybeM (InvalidRequest "Message not found")
   -- Esq.runTransaction $ do
   when (not messageDetails.readStatus) $ MQ.updateMessageViewCount messageId 1
-  MRQ.updateSeenAndReplyByMessageIdAndDriverId messageId (cast driverId) True Nothing
+  _ <- MRQ.updateSeenAndReplyByMessageIdAndDriverId messageId (cast driverId) True Nothing
   return Success
 
 messageLiked :: (Id SP.Person, Id DM.Merchant) -> Id Domain.Message -> Flow APISuccess

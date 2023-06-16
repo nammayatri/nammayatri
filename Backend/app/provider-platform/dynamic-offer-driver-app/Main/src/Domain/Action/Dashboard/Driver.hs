@@ -239,7 +239,7 @@ blockDriver merchantShortId reqDriverId = do
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
   driverInf <- CQDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
-  when (not driverInf.blocked) (CQDriverInfo.updateBlockedState driverId True)
+  when (not driverInf.blocked) (void $ CQDriverInfo.updateBlockedState driverId True)
   logTagInfo "dashboard -> blockDriver : " (show personId)
   pure Success
 
@@ -258,7 +258,7 @@ unblockDriver merchantShortId reqDriverId = do
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
   driverInf <- CQDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
-  when driverInf.blocked (CQDriverInfo.updateBlockedState driverId False)
+  when driverInf.blocked (void $ CQDriverInfo.updateBlockedState driverId False)
   logTagInfo "dashboard -> unblockDriver : " (show personId)
   pure Success
 
@@ -585,7 +585,7 @@ clearOnRideStuckDrivers merchantShortId = do
   driverIds <-
     mapM
       ( \driverInf -> do
-          DLoc.updateOnRide (cast driverInf.driverId) False merchant.id
+          _ <- DLoc.updateOnRide (cast driverInf.driverId) False merchant.id
           return (cast driverInf.driverId)
       )
       driverInfos

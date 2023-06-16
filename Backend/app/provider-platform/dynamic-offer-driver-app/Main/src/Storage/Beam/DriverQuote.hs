@@ -25,9 +25,7 @@ import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
+import Database.Beam.Postgres (Postgres)
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.DriverQuote as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
@@ -68,6 +66,7 @@ data DriverQuoteT f = DriverQuoteT
     estimatedFare :: B.C f Common.Money,
     fareParametersId :: B.C f Text,
     providerId :: B.C f Text,
+    specialLocationTag :: B.C f (Maybe Text),
     createdAt :: B.C f Time.LocalTime,
     updatedAt :: B.C f Time.LocalTime
   }
@@ -112,10 +111,6 @@ instance ToJSON Domain.DriverQuoteStatus where
 
 deriving stock instance Show DriverQuote
 
--- deriving stock instance Read Money
-
--- deriving stock instance Ord Domain.DriverQuoteStatus
-
 driverQuoteTMod :: DriverQuoteT (B.FieldModification (B.TableField DriverQuoteT))
 driverQuoteTMod =
   B.tableModification
@@ -135,6 +130,7 @@ driverQuoteTMod =
       estimatedFare = B.fieldNamed "estimated_fare",
       fareParametersId = B.fieldNamed "fare_parameters_id",
       providerId = B.fieldNamed "provider_id",
+      specialLocationTag = B.fieldNamed "special_location_tag",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }

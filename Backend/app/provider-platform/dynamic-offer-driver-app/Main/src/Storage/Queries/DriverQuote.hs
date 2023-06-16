@@ -194,7 +194,8 @@ transformBeamDriverQuoteToDomain BeamDQ.DriverQuoteT {..} = do
               validTill = T.localTimeToUTC T.utc validTill,
               estimatedFare = estimatedFare,
               fareParams = fromJust fp, -- this should take a default value?
-              providerId = Id providerId
+              providerId = Id providerId,
+              specialLocationTag = specialLocationTag
             }
     else pure Nothing
 
@@ -218,5 +219,6 @@ transformDomainDriverQuoteToBeam Domain.DriverQuote {..} =
       BeamDQ.validTill = T.utcToLocalTime (T.TimeZone (5 * 60 + 30) False "IST") validTill,
       BeamDQ.estimatedFare = estimatedFare,
       BeamDQ.fareParametersId = getId fareParams.id,
-      BeamDQ.providerId = getId providerId
+      BeamDQ.providerId = getId providerId,
+      BeamDQ.specialLocationTag = specialLocationTag
     }

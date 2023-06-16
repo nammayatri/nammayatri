@@ -39,7 +39,7 @@ instance FromJSON (FPSlabsDetailsSlabD 'Unsafe)
 instance ToJSON (FPSlabsDetailsSlabD 'Unsafe)
 
 data PlatformFeeCharge = ProgressivePlatformFee HighPrecMoney | ConstantPlatformFee Money
-  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema, Read)
 
 data PlatformFeeInfo = PlatformFeeInfo
   { platformFeeCharge :: PlatformFeeCharge,

@@ -128,6 +128,7 @@ transformBeamQuoteSpecialZoneToDomain BeamQSZ.QuoteSpecialZoneT {..} = do
               updatedAt = updatedAt,
               validTill = validTill,
               estimatedFare = estimatedFare,
+              specialLocationTag = specialLocationTag,
               fareParams = fromJust fp -- to take a default value?
             }
     else pure Nothing
@@ -145,5 +146,6 @@ transformDomainQuoteSpecialZoneToBeam QuoteSpecialZone {..} =
       BeamQSZ.updatedAt = updatedAt,
       BeamQSZ.validTill = validTill,
       BeamQSZ.estimatedFare = estimatedFare,
+      BeamQSZ.specialLocationTag = specialLocationTag,
       BeamQSZ.fareParametersId = getId fareParams.id
     }

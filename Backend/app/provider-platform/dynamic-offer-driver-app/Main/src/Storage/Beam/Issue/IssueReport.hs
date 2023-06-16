@@ -62,16 +62,6 @@ instance FromBackendRow Postgres Domain.IssueStatus
 instance IsString Domain.IssueStatus where
   fromString = show
 
-instance FromField [Text] where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be [Text] where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Text]
-
-instance FromBackendRow Postgres [Text]
-
 data IssueReportT f = IssueReportT
   { id :: B.C f Text,
     driverId :: B.C f Text,

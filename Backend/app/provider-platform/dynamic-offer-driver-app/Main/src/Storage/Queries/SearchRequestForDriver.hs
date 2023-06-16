@@ -14,8 +14,6 @@
 
 module Storage.Queries.SearchRequestForDriver where
 
--- import Kernel.Storage.Esqueleto as Esq
-
 import qualified Data.Time as T
 import Domain.Types.Person
 import Domain.Types.SearchRequest (SearchRequest)
@@ -31,8 +29,6 @@ import Kernel.Types.Id
 import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequestForDriver as BeamSRFD
-
--- import Storage.Tabular.SearchRequestForDriver
 
 createMany :: L.MonadFlow m => [SearchRequestForDriver] -> m ()
 createMany = traverse_ createOne
@@ -82,25 +78,6 @@ findAllActiveBySRId (Id searchReqId) = do
           ]
     Nothing -> pure []
 
--- findAllActiveBySTId :: (Transactionable m, MonadTime m) => Id SearchTry -> m [SearchRequestForDriver]
--- findAllActiveBySTId searchTryId = do
---   Esq.findAll $ do
---     sReq <- from $ table @SearchRequestForDriverT
---     where_ $
---       sReq ^. SearchRequestForDriverSearchTryId ==. val (toKey searchTryId)
---         &&. sReq ^. SearchRequestForDriverStatus ==. val Domain.Active
---     pure sReq
-
--- findAllActiveWithoutRespBySearchTryId :: (Transactionable m, MonadTime m) => Id SearchTry -> m [SearchRequestForDriver]
--- findAllActiveWithoutRespBySearchTryId searchTryId = do
---   Esq.findAll $ do
---     sReq <- from $ table @SearchRequestForDriverT
---     where_ $
---       sReq ^. SearchRequestForDriverSearchTryId ==. val (toKey searchTryId)
---         &&. sReq ^. SearchRequestForDriverStatus ==. val Domain.Active
---         &&. Esq.isNothing (sReq ^. SearchRequestForDriverResponse)
---     pure sReq
-
 findAllActiveWithoutRespBySearchTryId :: (L.MonadFlow m, MonadTime m) => Id SearchTry -> m [SearchRequestForDriver]
 findAllActiveWithoutRespBySearchTryId (Id searchTryId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -119,15 +96,6 @@ findAllActiveWithoutRespBySearchTryId (Id searchTryId) = do
               )
           ]
     Nothing -> pure []
-
--- findByDriverAndSearchTryId :: Transactionable m => Id Person -> Id SearchTry -> m (Maybe SearchRequestForDriver)
--- findByDriverAndSearchTryId driverId searchTryId = Esq.findOne $ do
---   sReq <- from $ table @SearchRequestForDriverT
---   where_ $
---     sReq ^. SearchRequestForDriverSearchTryId ==. val (toKey searchTryId)
---       &&. sReq ^. SearchRequestForDriverDriverId ==. val (toKey driverId)
---       &&. sReq ^. SearchRequestForDriverStatus ==. val Domain.Active
---   pure sReq
 
 findByDriverAndSearchTryId :: L.MonadFlow m => Id Person -> Id SearchTry -> m (Maybe SearchRequestForDriver)
 findByDriverAndSearchTryId (Id driverId) (Id searchTryId) = do
@@ -177,11 +145,6 @@ deleteByDriverId (Id personId) = do
           [Se.Is BeamSRFD.driverId (Se.Eq personId)]
     Nothing -> pure ()
 
--- setInactiveBySTId :: Id SearchTry -> SqlDB ()
--- setInactiveBySTId searchTryId = Esq.update $ \p -> do
---   set p [SearchRequestForDriverStatus =. val Domain.Inactive]
---   where_ $ p ^. SearchRequestForDriverSearchTryId ==. val (toKey searchTryId)
-
 setInactiveBySTId :: L.MonadFlow m => Id SearchTry -> m (MeshResult ())
 setInactiveBySTId (Id searchTryId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -230,6 +193,7 @@ transformBeamSearchRequestForDriverToDomain BeamSRFD.SearchRequestForDriverT {..
     { id = Id id,
       requestId = Id requestId,
       searchTryId = Id searchTryId,
+      merchantId = Id <$> merchantId,
       startTime = startTime,
       searchRequestValidTill = T.localTimeToUTC T.utc searchRequestValidTill,
       driverId = Id driverId,
@@ -251,6 +215,7 @@ transformBeamSearchRequestForDriverToDomain BeamSRFD.SearchRequestForDriverT {..
       acceptanceRatio = acceptanceRatio,
       driverAvailableTime = driverAvailableTime,
       parallelSearchRequestCount = parallelSearchRequestCount,
+      keepHiddenForSeconds = keepHiddenForSeconds,
       driverSpeed = driverSpeed,
       mode = mode
     }
@@ -261,6 +226,7 @@ transformDomainSearchRequestForDriverToBeam SearchRequestForDriver {..} =
     { BeamSRFD.id = getId id,
       BeamSRFD.requestId = getId requestId,
       BeamSRFD.searchTryId = getId searchTryId,
+      BeamSRFD.merchantId = getId <$> merchantId,
       BeamSRFD.startTime = startTime,
       BeamSRFD.searchRequestValidTill = T.utcToLocalTime (T.TimeZone (5 * 60 + 30) False "IST") searchRequestValidTill,
       BeamSRFD.driverId = getId driverId,
@@ -282,6 +248,7 @@ transformDomainSearchRequestForDriverToBeam SearchRequestForDriver {..} =
       BeamSRFD.acceptanceRatio = acceptanceRatio,
       BeamSRFD.driverAvailableTime = driverAvailableTime,
       BeamSRFD.parallelSearchRequestCount = parallelSearchRequestCount,
+      BeamSRFD.keepHiddenForSeconds = keepHiddenForSeconds,
       BeamSRFD.driverSpeed = driverSpeed,
       BeamSRFD.mode = mode
     }

@@ -41,34 +41,6 @@ import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.FareParameters as QueriesFP
 import Storage.Queries.Geometry
 
--- import Storage.Tabular.Booking
--- import Storage.Tabular.DriverQuote as DriverQuote
-
--- baseBookingTable ::
---   From
---     ( Table BookingT
---         :& Table BookingLocationT
---         :& Table BookingLocationT
---         :& Table Fare.FareParametersT
---     )
--- baseBookingTable =
---   table @BookingT
---     `innerJoin` table @BookingLocationT `Esq.on` (\(rb :& loc1) -> rb ^. BookingFromLocationId ==. loc1 ^. BookingLocationTId)
---     `innerJoin` table @BookingLocationT `Esq.on` (\(rb :& _ :& loc2) -> rb ^. BookingToLocationId ==. loc2 ^. BookingLocationTId)
---     `innerJoin` table @Fare.FareParametersT
---       `Esq.on` ( \(rb :& _ :& _ :& farePars) ->
---                    rb ^. BookingFareParametersId ==. farePars ^. Fare.FareParametersTId
---                )
-
--- fareParams already created with driverQuote
-
--- create :: Booking -> SqlDB ()
--- create dBooking =
---   withFullEntity dBooking $ \(booking, fromLoc, toLoc, _fareParams) -> do
---     Esq.create' fromLoc
---     Esq.create' toLoc
---     Esq.create' booking
-
 createBooking :: L.MonadFlow m => Booking -> m (MeshResult ())
 createBooking booking = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -97,13 +69,6 @@ findById (Id bookingId) = do
         _ -> pure Nothing
     Nothing -> pure Nothing
 
--- findBySTId :: (Transactionable m) => Id DST.SearchTry -> m (Maybe Booking)
--- findBySTId searchTryId = buildDType $ do
---   mbDriverQuoteT <- QDQuote.findDriverQuoteBySTId searchTryId
---   let mbDriverQuoteId = Id . DriverQuote.id <$> mbDriverQuoteT
---   mbBookingT <- (join <$>) $ mapM findBookingByDriverQuoteId' mbDriverQuoteId
---   join <$> mapM buildFullBooking mbBookingT
-
 findBySTId :: L.MonadFlow m => Id DST.SearchTry -> m (Maybe Booking)
 findBySTId searchTryId = do
   mbDriverQuote <- QDQuote.findDriverQuoteBySTId searchTryId
@@ -121,12 +86,6 @@ findBySTId searchTryId = do
             Right (Just booking) -> transformBeamBookingToDomain booking
             _ -> pure Nothing
         Nothing -> pure Nothing
-
--- findBookingByDriverQuoteId' :: Transactionable m => Id DriverQuote -> DTypeBuilder m (Maybe BookingT)
--- findBookingByDriverQuoteId' driverQuoteId = Esq.findOne' $ do
---   booking <- from $ table @BookingT
---   where_ $ booking ^. BookingQuoteId ==. val driverQuoteId.getId
---   pure booking
 
 updateStatus :: (L.MonadFlow m, MonadTime m) => Id Booking -> BookingStatus -> m (MeshResult ())
 updateStatus rbId rbStatus = do
@@ -263,12 +222,6 @@ cancelBookings bookingIds now = do
         [Se.Is BeamB.id (Se.In $ getId <$> bookingIds)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
--- findAllBookings :: Transactionable m => m [Id Geometry]
--- findAllBookings = do
---   Esq.findAll $ do
---     booking <- from $ table @GeometryT
---     pure $ booking ^. GeometryTId
-
 findAllBookings :: L.MonadFlow m => m [Id Geometry]
 findAllBookings = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -300,7 +253,9 @@ transformBeamBookingToDomain BeamB.BookingT {..} = do
               quoteId = quoteId,
               status = status,
               bookingType = bookingType,
+              specialLocationTag = specialLocationTag,
               specialZoneOtpCode = specialZoneOtpCode,
+              area = area,
               providerId = Id providerId,
               primaryExophone = primaryExophone,
               bapId = bapId,
@@ -315,6 +270,7 @@ transformBeamBookingToDomain BeamB.BookingT {..} = do
               estimatedFare = estimatedFare,
               estimatedDuration = estimatedDuration,
               fareParams = fromJust fp,
+              paymentMethodId = Id <$> paymentMethodId,
               riderName = riderName,
               createdAt = createdAt,
               updatedAt = updatedAt
@@ -329,7 +285,9 @@ transformDomainBookingToBeam Booking {..} =
       BeamB.quoteId = quoteId,
       BeamB.status = status,
       BeamB.bookingType = bookingType,
+      BeamB.specialLocationTag = specialLocationTag,
       BeamB.specialZoneOtpCode = specialZoneOtpCode,
+      BeamB.area = area,
       BeamB.providerId = getId providerId,
       BeamB.primaryExophone = primaryExophone,
       BeamB.bapId = bapId,
@@ -344,6 +302,7 @@ transformDomainBookingToBeam Booking {..} =
       BeamB.estimatedFare = estimatedFare,
       BeamB.estimatedDuration = estimatedDuration,
       BeamB.fareParametersId = getId fareParams.id,
+      BeamB.paymentMethodId = getId <$> paymentMethodId,
       BeamB.riderName = riderName,
       BeamB.createdAt = createdAt,
       BeamB.updatedAt = updatedAt

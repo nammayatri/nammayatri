@@ -52,8 +52,6 @@ instance FromBackendRow Postgres Domain.FarePolicyType
 
 data FarePolicyT f = FarePolicyT
   { id :: B.C f Text,
-    merchantId :: B.C f Text,
-    vehicleVariant :: B.C f Variant.Variant,
     farePolicyType :: B.C f Domain.FarePolicyType,
     serviceCharge :: B.C f (Maybe Money),
     nightShiftStart :: B.C f (Maybe TimeOfDay),
@@ -61,6 +59,7 @@ data FarePolicyT f = FarePolicyT
     maxAllowedTripDistance :: B.C f (Maybe Meters),
     minAllowedTripDistance :: B.C f (Maybe Meters),
     govtCharges :: B.C f (Maybe Double),
+    description :: B.C f (Maybe Text),
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
@@ -115,8 +114,6 @@ farePolicyTMod :: FarePolicyT (B.FieldModification (B.TableField FarePolicyT))
 farePolicyTMod =
   B.tableModification
     { id = B.fieldNamed "id",
-      merchantId = B.fieldNamed "merchant_id",
-      vehicleVariant = B.fieldNamed "vehicle_variant",
       farePolicyType = B.fieldNamed "fare_policy_type",
       serviceCharge = B.fieldNamed "service_charge",
       nightShiftStart = B.fieldNamed "night_shift_start",
@@ -124,6 +121,7 @@ farePolicyTMod =
       maxAllowedTripDistance = B.fieldNamed "max_allowed_trip_distance",
       minAllowedTripDistance = B.fieldNamed "min_allowed_trip_distance",
       govtCharges = B.fieldNamed "govt_charges",
+      description = B.fieldNamed "description",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }
@@ -143,8 +141,6 @@ defaultFarePolicy :: FarePolicy
 defaultFarePolicy =
   FarePolicyT
     { id = "",
-      merchantId = "",
-      vehicleVariant = "",
       farePolicyType = "",
       serviceCharge = Nothing,
       nightShiftStart = Nothing,
@@ -152,6 +148,7 @@ defaultFarePolicy =
       maxAllowedTripDistance = Nothing,
       minAllowedTripDistance = Nothing,
       govtCharges = Nothing,
+      description = Nothing,
       createdAt = defaultUTCDate,
       updatedAt = defaultUTCDate
     }

@@ -28,9 +28,6 @@ import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchTry as BeamST
 
--- create :: SearchTry -> SqlDB ()
--- create = Esq.create
-
 create :: L.MonadFlow m => SearchTry -> m (MeshResult ())
 create searchTry = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -39,9 +36,6 @@ create searchTry = do
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainSearchTryToBeam searchTry)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
-
--- findById :: Transactionable m => Id SearchTry -> m (Maybe SearchTry)
--- findById = Esq.findById
 
 findById :: L.MonadFlow m => Id SearchTry -> m (Maybe SearchTry)
 findById (Id searchTry) = do
@@ -75,32 +69,17 @@ findLastByRequestId (Id searchRequest) = do
     headMaybe [] = Nothing
     headMaybe (a : _) = Just a
 
--- cancelActiveTriesByRequestId ::
---   Id SearchRequest ->
---   SqlDB ()
--- cancelActiveTriesByRequestId searchId = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ SearchTryUpdatedAt =. val now,
---         SearchTryStatus =. val CANCELLED
---       ]
---     where_ $
---       tbl ^. SearchTryRequestId ==. val (toKey searchId)
---         &&. tbl ^. SearchTryStatus ==. val ACTIVE
-
 findActiveTriesByRequestId ::
-  (Transactionable m) =>
+  L.MonadFlow m =>
   Id SearchRequest ->
   m [SearchTry]
-findActiveTriesByRequestId searchReqId = do
-  Esq.findAll $ do
-    searchTryT <- from $ table @SearchTryT
-    where_ $
-      searchTryT ^. SearchTryRequestId ==. val (toKey searchReqId)
-        &&. searchTryT ^. SearchTryStatus ==. val ACTIVE
-    return searchTryT
+findActiveTriesByRequestId (Id searchRequest) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamST.SearchTryT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> either (pure []) (transformBeamSearchTryToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamST.id $ Se.Eq searchRequest, Se.Is BeamST.status $ Se.Eq ACTIVE]]
+    Nothing -> pure []
 
 cancelActiveTriesByRequestId ::
   (L.MonadFlow m, MonadTime m) =>
@@ -126,48 +105,6 @@ cancelActiveTriesByRequestId (Id searchId) = do
         ]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
--- updateStatus ::
---   Id SearchTry ->
---   SearchTryStatus ->
---   SqlDB ()
--- updateStatus searchId status_ = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ SearchTryUpdatedAt =. val now,
---         SearchTryStatus =. val status_
---       ]
---     where_ $ tbl ^. SearchTryTId ==. val (toKey searchId)
-
--- updateStatus ::
---   Id SearchTry ->
---   SearchTryStatus ->
---   SqlDB ()
--- updateStatus searchId status_ = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ SearchTryUpdatedAt =. val now,
---         SearchTryStatus =. val status_
---       ]
---     where_ $ tbl ^. SearchTryTId ==. val (toKey searchId)
-
--- updateStatus ::
---   Id SearchTry ->
---   SearchTryStatus ->
---   SqlDB ()
--- updateStatus searchId status_ = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ SearchTryUpdatedAt =. val now,
---         SearchTryStatus =. val status_
---       ]
---     where_ $ tbl ^. SearchTryTId ==. val (toKey searchId)
-
 updateStatus ::
   (L.MonadFlow m, MonadTime m) =>
   Id SearchTry ->
@@ -189,17 +126,6 @@ updateStatus (Id searchId) status_ = do
           ]
           [Se.Is BeamST.id $ Se.Eq searchId]
     Nothing -> pure ()
-
--- getSearchTryStatusAndValidTill ::
---   (Transactionable m) =>
---   Id SearchTry ->
---   m (Maybe (UTCTime, SearchTryStatus))
--- getSearchTryStatusAndValidTill searchRequestId = do
---   findOne $ do
---     searchT <- from $ table @SearchTryT
---     where_ $
---       searchT ^. SearchTryTId ==. val (toKey searchRequestId)
---     return (searchT ^. SearchTryValidTill, searchT ^. SearchTryStatus)
 
 getSearchTryStatusAndValidTill ::
   (L.MonadFlow m) =>
@@ -227,6 +153,7 @@ transformBeamSearchTryToDomain BeamST.SearchTryT {..} = do
     { id = Id id,
       requestId = Id requestId,
       estimateId = Id estimateId,
+      merchantId = Id <$> merchantId,
       messageId = messageId,
       startTime = startTime,
       validTill = validTill,
@@ -246,6 +173,7 @@ transformDomainSearchTryToBeam SearchTry {..} =
     { id = getId id,
       requestId = getId requestId,
       estimateId = getId estimateId,
+      merchantId = getId <$> merchantId,
       messageId = messageId,
       startTime = startTime,
       validTill = validTill,

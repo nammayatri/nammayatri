@@ -19,7 +19,7 @@ where
 
 import Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent
 import Data.OpenApi
-import EulerHS.Prelude hiding ((.=))
+import EulerHS.Prelude
 import qualified Kernel.Utils.JSON as J
 import qualified Kernel.Utils.Schema as S
 

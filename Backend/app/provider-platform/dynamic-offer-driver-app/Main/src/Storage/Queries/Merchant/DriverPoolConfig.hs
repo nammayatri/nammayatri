@@ -135,6 +135,7 @@ transformBeamDriverPoolConfigToDomain :: BeamDPC.DriverPoolConfig -> DriverPoolC
 transformBeamDriverPoolConfigToDomain BeamDPC.DriverPoolConfigT {..} = do
   DriverPoolConfig
     { merchantId = Id merchantId,
+      distanceBasedBatchSplit = distanceBasedBatchSplit,
       minRadiusOfSearch = minRadiusOfSearch,
       maxRadiusOfSearch = maxRadiusOfSearch,
       radiusStepSize = radiusStepSize,
@@ -160,6 +161,7 @@ transformDomainDriverPoolConfigToBeam :: DriverPoolConfig -> BeamDPC.DriverPoolC
 transformDomainDriverPoolConfigToBeam DriverPoolConfig {..} =
   BeamDPC.DriverPoolConfigT
     { BeamDPC.merchantId = getId merchantId,
+      BeamDPC.distanceBasedBatchSplit = distanceBasedBatchSplit,
       BeamDPC.minRadiusOfSearch = minRadiusOfSearch,
       BeamDPC.maxRadiusOfSearch = maxRadiusOfSearch,
       BeamDPC.radiusStepSize = radiusStepSize,

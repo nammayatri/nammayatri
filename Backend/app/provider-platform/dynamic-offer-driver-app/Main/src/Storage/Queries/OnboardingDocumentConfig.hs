@@ -64,13 +64,14 @@ findByMerchantIdAndDocumentType merchantId documentType = do
     Nothing -> pure Nothing
 
 --TODO @Vijay Gupta, update the following function.
-findAllByMerchantId :: Transactionable m => Id Merchant -> m [OnboardingDocumentConfig]
-findAllByMerchantId merchantId =
-  Esq.findAll $ do
-    config <- from $ table @OnboardingDocumentConfigT
-    where_ $
-      config ^. OnboardingDocumentConfigMerchantId ==. val (toKey merchantId)
-    return config
+findAllByMerchantId :: L.MonadFlow m => Id Merchant -> m [OnboardingDocumentConfig]
+findAllByMerchantId merchantId = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamODC.OnboardingDocumentConfigT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbCOnf' -> either (pure []) (transformBeamOnboardingDocumentConfigToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamODC.merchantId $ Se.Eq $ getId merchantId]
+    Nothing -> pure []
 
 update :: (L.MonadFlow m, MonadTime m) => OnboardingDocumentConfig -> m (MeshResult ())
 update config = do
