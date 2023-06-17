@@ -119,6 +119,7 @@ library
       Domain.Action.UI.LeaderBoard
       Domain.Action.UI.Location
       Domain.Action.UI.Location.UpdateLocation
+      Domain.Action.UI.Maps
       Domain.Action.UI.Message
       Domain.Action.UI.OnMessage
       Domain.Action.UI.OrgAdmin
@@ -174,6 +175,7 @@ library
       Domain.Types.Issue.IssueReport
       Domain.Types.Issue.IssueTranslation
       Domain.Types.LeaderBoardConfig
+      Domain.Types.Maps.PlaceNameCache
       Domain.Types.MediaFile
       Domain.Types.Merchant
       Domain.Types.Merchant.DriverIntelligentPoolConfig
@@ -240,6 +242,7 @@ library
       Storage.CachedQueries.Issue.IssueOption
       Storage.CachedQueries.Issue.IssueReport
       Storage.CachedQueries.LeaderBoardConfig
+      Storage.CachedQueries.Maps.PlaceNameCache
       Storage.CachedQueries.MediaFile
       Storage.CachedQueries.Merchant
       Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig
@@ -284,6 +287,7 @@ library
       Storage.Queries.Issue.IssueOption
       Storage.Queries.Issue.IssueReport
       Storage.Queries.LeaderBoardConfig
+      Storage.Queries.Maps.PlaceNameCache
       Storage.Queries.MediaFile
       Storage.Queries.Merchant
       Storage.Queries.Merchant.DriverIntelligentPoolConfig
@@ -349,6 +353,7 @@ library
       Storage.Tabular.Issue.IssueReport
       Storage.Tabular.Issue.IssueTranslation
       Storage.Tabular.LeaderBoardConfig
+      Storage.Tabular.Maps.PlaceNameCache
       Storage.Tabular.MediaFile
       Storage.Tabular.Merchant
       Storage.Tabular.Merchant.DriverIntelligentPoolConfig
@@ -447,6 +452,7 @@ library
     , exceptions
     , extra
     , generic-lens
+    , geohash ==1.0.1
     , hashmap
     , hspec
     , http-client
@@ -538,6 +544,7 @@ executable dynamic-offer-driver-app-exe
     , exceptions
     , extra
     , generic-lens
+    , geohash ==1.0.1
     , hashmap
     , hspec
     , http-client
