@@ -293,7 +293,8 @@ accountDeletedPopUp state = let
         visibility = false
       },
       option2 {
-        visibility = false
+        text = getString REQUEST_SUBMITTED,
+        margin = MarginHorizontal 16 16
       }
     }
     in popUpConfig'
