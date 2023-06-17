@@ -16,10 +16,17 @@
 module Screens.DriverProfileScreen.ComponentConfig where
 
 import Components.PopUpModal as PopUpModal
+import Components.GenericHeader as GenericHeader
+import Components.PrimaryEditText as PrimaryEditText
 import Language.Strings
 import Language.Types (STR(..))
 import PrestoDOM
 import Screens.Types as ST
+import Font.Size as FontSize
+import Font.Style as FontStyle
+import Styles.Colors as Color
+import Common.Types.App (LazyCheck(..))
+import Data.Maybe(Maybe(..))
 
 logoutPopUp :: ST.DriverProfileScreenState -> PopUpModal.Config
 logoutPopUp  state = let 
@@ -31,3 +38,49 @@ logoutPopUp  state = let
     option2 {text = (getString LOGOUT)}
   }
   in popUpConfig'
+
+genericHeaderConfig :: ST.DriverProfileScreenState -> GenericHeader.Config 
+genericHeaderConfig state = let 
+  config = GenericHeader.config
+  genericHeaderConfig' = config 
+    {
+      height = WRAP_CONTENT
+    , prefixImageConfig {
+       visibility = VISIBLE
+      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+      , height = (V 25)
+      , width = (V 25)
+      , margin = (Margin 16 16 16 16)
+      } 
+    , padding = (Padding 0 5 0 5)
+    , textConfig {
+        text = "Settings"
+      , textSize = FontSize.a_18
+      , color = Color.darkDescriptionText
+      , fontStyle = FontStyle.bold LanguageStyle
+      }
+    , suffixImageConfig {
+        visibility = GONE
+      }
+    }
+  in genericHeaderConfig'
+
+primaryEditTextConfig :: ST.DriverProfileScreenState -> PrimaryEditText.Config
+primaryEditTextConfig state = let 
+  config = PrimaryEditText.config
+  primaryEditTextConfig' = config
+    { editText
+      { singleLine = true
+        , pattern = Just "[0-9]*,10"
+        , fontStyle = FontStyle.medium LanguageStyle
+        , textSize = FontSize.a_16
+        , text = ""
+        , placeholder =""
+      }
+    , topLabel
+      { textSize = FontSize.a_14
+      , text = ""
+      , color = Color.greyTextColor
+      }
+    }
+  in primaryEditTextConfig'

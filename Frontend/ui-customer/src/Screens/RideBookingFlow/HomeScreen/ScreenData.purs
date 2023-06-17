@@ -154,7 +154,7 @@ initData = {
     , isBanner : true
     , callSupportPopUp : false
     , isMockLocation: false
-    , isSpecialZone : false
+    , isSpecialZone : true
     , defaultPickUpPoint : ""
     , cancelSearchCallDriver : false
     , zoneType : dummyZoneType
