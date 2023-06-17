@@ -37,6 +37,9 @@ initData = {
         resendEnable : true,
         capturedOtp : "",
         isReadingOTP : true,
-        letterSpacing : PX 1.0
+        letterSpacing : PX 1.0,
+        mNumberEdtFocused : false,
+        otpEdtFocused : false,
+        editTextVal : ""
     }
 }

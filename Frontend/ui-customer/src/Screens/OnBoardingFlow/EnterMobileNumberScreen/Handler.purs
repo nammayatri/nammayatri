@@ -42,9 +42,9 @@ enterMobileNumberScreen = do
                     modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber ->  state)
                     App.BackT  $ App.BackPoint <$> pure act 
     GoBack state -> do
-                    modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber ->  state{data{otp=""},props{wrongOTP=false}})
-                    App.BackT  $ App.NoBack <$> pure act
-    GoToChooseLanguage state -> do
+                    modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber ->  state{ data { otp = "" }, props { wrongOTP = false}})
+                    App.BackT  $ App.BackPoint <$> pure act
+    GoToWelcomeScreen state -> do
                     modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> defaultGlobalState'.enterMobileNumberScreen )
                     App.BackT  $ App.NoBack <$> pure act
 

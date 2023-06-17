@@ -15,7 +15,6 @@
 
 module Screens.PermissionScreen.View where
 
-import Data.Maybe
 import Components.ErrorModal as ErrorModal
 import Components.PrimaryButton as PrimaryButton
 import Effect (Effect)
@@ -25,15 +24,16 @@ import Font.Style as FontStyle
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, pure, unit, (<<<), ($), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, afterRender, alignParentBottom, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, orientation, padding, relativeLayout, text, textSize, textView, width, imageWithFallback)
+import Prelude (Unit, bind, const, pure, unit, (<<<), ($), (==), (<>), (/=))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alignParentBottom, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, orientation, padding, text, textSize, textView, width)
 import Screens.PermissionScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
-import Common.Types.App
-import Screens.OnBoardingFlow.PermissionScreen.ComponentConfig 
+import Common.Types.App (LazyCheck(..))
+import Screens.OnBoardingFlow.PermissionScreen.ComponentConfig (errorModalConfig, primaryButtonConfig)
+import Storage (getValueToLocalStore, KeyStore(..))
 
-screen :: ST.PermissionScreenState -> String -> ScopedScreen Action ST.PermissionScreenState ScreenOutput
+screen :: ST.PermissionScreenState -> String -> Screen Action ST.PermissionScreenState ScreenOutput
 screen initialState triggertype = 
   { initialState
   , view : view triggertype
@@ -44,7 +44,6 @@ screen initialState triggertype =
     pure $ pure unit
   )]
   , eval
-  , parent : Just "PermissionScreen"
   }
 
 view :: forall w . String -> (Action -> Effect Unit) -> ST.PermissionScreenState -> PrestoDOM (Effect Unit) w 
@@ -56,7 +55,6 @@ view triggertype push state =
   ][ linearLayout
      [ height MATCH_PARENT
      , width MATCH_PARENT
-     , background Color.white900
      , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
      , gravity CENTER
      , afterRender push (const AfterRender)
@@ -65,56 +63,49 @@ view triggertype push state =
   
 locationAccessPermissionView :: forall w. (Action -> Effect Unit) -> ST.PermissionScreenState -> PrestoDOM (Effect Unit) w 
 locationAccessPermissionView push state = 
-  relativeLayout
+  linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  , orientation VERTICAL
+  , gravity CENTER
   , padding (Padding 16 16 16 (if EHC.safeMarginBottom == 0 then 24 else 0))
-  ][  linearLayout[
-    height WRAP_CONTENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  ][  
-    -- linearLayout
-        -- [ height $ V 25
-        -- , width MATCH_PARENT
-        -- , gravity RIGHT  
-        -- , onClick push $ const BackPressed
-        -- ][imageView
-        --   [ height $ V 25
-        --   , width $ V 25
-        --   , imageUrl "ic_close"
-        --   ]
-        -- ]
-      textView 
-      [ text (getString WE_NEED_ACCESS_TO_YOUR_LOCATION)
-      , textSize FontSize.a_22
-      , color Color.black800
-      , gravity LEFT
-      , lineHeight "27"
-      , margin (Margin 0 22 0 16)
-      , fontStyle $ FontStyle.bold LanguageStyle
-      ]
-    , textView
-      [ text (getString YOUR_LOCATION_HELPS_OUR_SYSTEM)
-      , textSize FontSize.a_16
-      , color Color.black800
-      , fontStyle $ FontStyle.regular LanguageStyle
-      , lineHeight "22"
-      ]
-    ]
-    , linearLayout[
-      height MATCH_PARENT
-    , width MATCH_PARENT
-    , gravity CENTER
-    ][imageView
-      [ imageWithFallback "ny_ic_location_access,https://assets.juspay.in/nammayatri/images/common/ny_ic_location_access.png"
-      , height $ V 213
-      , width $ V 240
+  , background Color.blackLessTrans
+  ][ linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
       , gravity CENTER
-      ]]
-    , buttonView push state 
-    
+      , padding $ Padding 20 20 20 20
+      , margin $ MarginHorizontal 20 20
+      , cornerRadius 8.0
+      , background Color.white900
+      ][  imageView
+          [ imageWithFallback "ic_location_permission_logo,https://assets.juspay.in/nammayatri/images/user/ic_location_permission_logo.png"
+          , height $ V 213
+          , width $ V 240
+          , gravity CENTER
+          ]
+        , textView 
+          [ text $ "Hey " <> (getValueToLocalStore USER_NAME) <> "!"
+          , textSize FontSize.a_22
+          , color Color.black800
+          , gravity CENTER
+          , lineHeight "27"
+          , margin $ Margin 0 22 0 16
+          , fontStyle $ FontStyle.bold LanguageStyle
+        ]
+        , textView
+          [ text $ getString if (getValueToLocalStore PERMISSION_POPUP_TIRGGERED) /= "true" then LOCATION_PERMISSION_SUBTITLE_NEW_USER else LOCATION_PERMISSION_SUBTITLE
+          , textSize FontSize.a_16
+          , color Color.black800
+          , fontStyle $ FontStyle.regular LanguageStyle
+          , lineHeight "22"
+          , gravity CENTER
+          , margin $ MarginBottom 15
+          ]
+        , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig)
+      ]
+
+      
   ]
 
 buttonView :: forall w. (Action -> Effect Unit) -> ST.PermissionScreenState -> PrestoDOM (Effect Unit) w 

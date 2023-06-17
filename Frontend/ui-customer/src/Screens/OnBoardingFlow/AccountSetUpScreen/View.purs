@@ -39,6 +39,7 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Array (mapWithIndex)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants as RSRC
+import Components.StepsHeaderModel as StepsHeaderModel
 
 
 screen :: ST.AccountSetUpScreenState -> Screen Action ST.AccountSetUpScreenState ScreenOutput
@@ -54,8 +55,7 @@ view ::
   forall w.
   (Action -> Effect Unit) -> ST.AccountSetUpScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  Anim.screenAnimation
-    $ relativeLayout
+  relativeLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , background Color.white900
@@ -66,13 +66,13 @@ view push state =
             [ height MATCH_PARENT
             , width MATCH_PARENT
             , orientation VERTICAL
-            , margin (Margin 0 16 0 24)
+            , margin $ MarginBottom 24
             , padding (Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom)
             , background Color.white900
             , onBackPressed push (const BackPressed)
-            ]
-            [ GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig)
-            , scrollView
+            ][ StepsHeaderModel.view (push <<< StepsHeaderModelAC) (StepsHeaderModel.stepsHeaderData 2)
+            , Anim.screenAnimation $
+              scrollView
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
                 ]
@@ -82,16 +82,7 @@ view push state =
                     , orientation VERTICAL
                     , padding (Padding 16 0 16 0)
                     ]
-                    [ textView
-                        $ [ height WRAP_CONTENT
-                          , width MATCH_PARENT
-                          , text (getString SET_UP_YOUR_ACCOUNT)
-                          , color Color.black800
-                          , gravity LEFT
-                          , singleLine true
-                          ]
-                        <> FontStyle.h1 TypoGraphy
-                    , nameEditTextView state push
+                    [ nameEditTextView state push
                     , genderCaptureView state push
                     , linearLayout
                         [ height WRAP_CONTENT
@@ -135,25 +126,35 @@ nameEditTextView state push =
     , orientation VERTICAL
     , margin $ MarginTop 30
     ]
-    [ textView
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , text (getString HOW_SHOULD_WE_ADDRESS_YOU)
-      , textSize FontSize.a_12
-      , singleLine true
-      , color Color.greyTextColor
-      , gravity LEFT
-      , fontStyle $ FontStyle.regular LanguageStyle
+    [ linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
       , margin $ MarginBottom 12
+      ][ textView $
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text $ getString FULL_NAME
+          , singleLine true
+          , color Color.greyTextColor
+          ] <> FontStyle.body3 TypoGraphy,
+          textView $ 
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text "(Helps driver confirm it is you)"
+          , singleLine true
+          , color Color.black600
+          , margin $ MarginLeft 7
+          ] <> FontStyle.body3 TypoGraphy
+
       ]
     , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , cornerRadius 8.0
         , gravity CENTER_VERTICAL
-        , stroke $ "1,"<> Color.borderColorLight
+        , stroke if state.props.activeField == Just ST.NameSection then "1,"<> Color.blue800 else "1,"<> Color.borderColorLight
         ]
-        [ editText
+        [ editText $ 
           [ height MATCH_PARENT
           , width WRAP_CONTENT
           , weight 1.0
@@ -169,7 +170,7 @@ nameEditTextView state push =
           , hintColor Color.black600
           , pattern "[a-zA-Z ]*,30"
           , id $ EHC.getNewIDWithTag "NameEditText"
-          ]
+          ] <> if EHC.os == "IOS" then [] else [onClick push $ const NameSectionClick]
         ]
     ]
 
@@ -187,7 +188,7 @@ genderCaptureView state push =
     [ textView
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , text $ getString HOW_DO_YOU_IDENTIFY_YOURSELF
+      , text $ getString GENDER_STR
       , color Color.black800
       , gravity LEFT
       , fontStyle $ FontStyle.regular LanguageStyle
@@ -201,7 +202,7 @@ genderCaptureView state push =
         , padding $ Padding 20 15 20 15
         , cornerRadius 8.0
         , onClick push (const ShowOptions)
-        , stroke $ "1,"<> Color.borderColorLight
+        , stroke if state.props.activeField == Just ST.DropDown then "1,"<> Color.blue800 else "1,"<> Color.borderColorLight
         , gravity CENTER_VERTICAL
         ]
         [ textView

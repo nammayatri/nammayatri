@@ -20,7 +20,7 @@ import Effect (Effect)
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons (os)
 import Components.PrimaryEditText.Controller (Action(..), Config)
-import PrestoDOM (InputType(..),Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), alpha, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, hintColor, imageUrl, imageView, lineHeight, letterSpacing, linearLayout, margin, onChange, orientation, padding, pattern, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, inputType, multiLineEditText, maxLines, inputTypeI, clickable)
+import PrestoDOM (InputType(..),Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), alpha, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, hintColor, imageUrl, imageView, lineHeight, letterSpacing, linearLayout, margin, onChange, orientation, padding, pattern, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, inputType, multiLineEditText, maxLines, inputTypeI, onFocus, clickable)
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -59,8 +59,26 @@ editTextLayout push config =
     , background config.background
     , cornerRadius config.cornerRadius
     , gravity CENTER_VERTICAL
-    , stroke if config.showErrorLabel then config.warningStroke else config.stroke
-    ][editTextView push config]
+    , stroke if config.showErrorLabel then config.warningStroke else if config.editText.focused then config.focusedStroke else config.stroke
+    ][  constantField push config 
+      , editTextView push config
+      ]
+
+
+constantField :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
+constantField push config = 
+  textView
+  [ width config.constantField.width
+  , height config.constantField.height
+  , gravity config.constantField.gravity
+  , text config.constantField.text
+  , fontStyle config.constantField.fontStyle
+  , textSize config.constantField.textSize
+  , color config.constantField.color
+  , padding config.constantField.padding
+  , margin config.constantField.margin
+  , visibility if config.showConstantField then VISIBLE else GONE
+  ]
 
 
 
@@ -85,6 +103,7 @@ editTextView push config =
   , gravity config.editText.gravity
   , letterSpacing config.editText.letterSpacing
   , alpha config.editText.alpha
+  , onFocus push $ FocusChanged
   ] 
   <> (case config.editText.pattern of 
         Just _pattern -> case config.type of 

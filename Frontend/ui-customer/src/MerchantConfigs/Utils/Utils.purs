@@ -2,8 +2,9 @@ module Merchant.Utils where
 
 import Common.Types.App (LazyCheck(..))
 import Helpers.Utils (Merchant(..), getMerchant)
-import Prelude ((<>))
+import Prelude ((<>), (==), (&&))
 import Screens.Types ( Language)
+import Engineering.Helpers.Commons (os)
 
 foreign import getStringFromConfig :: String -> String
 
@@ -55,3 +56,6 @@ getLanguagesList lazy = case (getMerchant FunctionCall) of
       , subTitle: "Malayalam"
       }
     ]
+
+showCarouselScreen :: LazyCheck -> Boolean
+showCarouselScreen a = os == "ANDROID" && (getMerchant FunctionCall) == NAMMAYATRI

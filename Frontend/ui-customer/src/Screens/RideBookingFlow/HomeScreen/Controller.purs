@@ -63,7 +63,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os, getExpiryTime, convertUTCtoISC, getCurrentUTC)
 import Helpers.Utils (Merchant(..), addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, getMerchant, performHapticFeedback)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
@@ -492,6 +492,7 @@ data ScreenOutput = LogoutUser
                   | CheckCurrentStatus
                   | CheckFlowStatus HomeScreenState
                   | RetryFindingQuotes HomeScreenState
+                  | ExitToPermissionFlow String
 
 data Action = NoAction
             | BackPressed
@@ -586,6 +587,7 @@ data Action = NoAction
             | SearchForSelectedLocation
             | GenderBannerModal Banner.Action
             | CancelSearchAction PopUpModal.Action        
+            | TriggerPermissionFlow String
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -1629,6 +1631,19 @@ eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionControll
       let updatedState = state{props{currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck")}}
       updateAndExit (updatedState) (GetQuotes updatedState)
 
+eval MapReadyAction state = continueWithCmd state [ do
+      permissionConditionA <- isLocationPermissionEnabled unit
+      permissionConditionB <- isLocationEnabled unit
+      internetCondition <- isInternetAvailable unit
+      let action =  if( not internetCondition) then TriggerPermissionFlow "INTERNET_ACTION"
+                    else if ( not (permissionConditionA && permissionConditionB)) then TriggerPermissionFlow "LOCATION_DISABLED"
+                    else NoAction
+      pure action
+    ]
+
+eval (TriggerPermissionFlow flowType) state = exit $ ExitToPermissionFlow flowType
+
+
 
 eval _ state = continue state
 
@@ -1660,10 +1675,6 @@ checkPermissionAndUpdatePersonMarker state = do
   else do
     if (os == "IOS" && conditionC) then do
       _ <- getLocationName (showPersonMarker state (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))) 9.9 9.9 "Current Location" constructLatLong
-      pure unit
-    else if (not conditionA || not conditionB) then do
-      _ <- requestLocation unit
-      _ <- checkPermissionAndUpdatePersonMarker state
       pure unit
     else pure unit
 

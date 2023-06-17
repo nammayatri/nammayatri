@@ -26,7 +26,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (not, (<>))
-import PrestoDOM (Length(..), Margin(..), Visibility(..))
+import PrestoDOM (Length(..), Margin(..), Visibility(..), Padding(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
@@ -64,11 +64,13 @@ mobileNumberEditTextConfig state = let
       { editText
         {
             color = Color.black800
-          , placeholder = (getString ENTER_MOBILE_NUMBER)
           , singleLine = true
           , pattern = Just "[0-9]*,10"
           , fontStyle = FontStyle.bold LanguageStyle
           , textSize = FontSize.a_16
+          , margin = MarginHorizontal 10 10
+          , focused = state.props.mNumberEdtFocused
+          , text = state.props.editTextVal
         }
       , background = Color.white900
       , topLabel
@@ -81,10 +83,16 @@ mobileNumberEditTextConfig state = let
       , id = (EHC.getNewIDWithTag "EnterMobileNumberEditText")
       , type = "number"
       , height = V 54
-      , margin = (Margin 0 30 0 0)
+      , margin = MarginTop 30
       , showErrorLabel = (not state.props.isValidMobileNumber)
       , errorLabel
         { text = (getString INVALID_MOBILE_NUMBER)
+        }
+      , showConstantField = true
+      , constantField { 
+          color = if state.props.mNumberEdtFocused then Color.black800 else Color.grey900 
+        , textSize = FontSize.a_16
+        , padding = PaddingBottom 1
         }
       }
     in primaryEditTextConfig'
@@ -102,6 +110,7 @@ otpEditTextConfig state = let
         , textSize = FontSize.a_16
         , letterSpacing = state.props.letterSpacing
         , text = ""
+        , focused = state.props.otpEdtFocused
         }
       , background = Color.white900
       , margin = (Margin 0 30 0 20)

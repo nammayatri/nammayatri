@@ -45,7 +45,7 @@ const kannadaStrings = {
   "YOUR_EMAIL_ID": "ನಿಮ್ಮ ಇಮೇಲ್ ಐಡಿ",
   "DESCRIBE_YOUR_ISSUE": "ನಿಮ್ಮ ಸಮಸ್ಯೆಯನ್ನು ವಿವರಿಸಿ",
   "ENTER_MOBILE_NUMBER": "ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ",
-  "BY_TAPPING_CONTINUE": "ಮುಂದುವರಿಸಿ ಕ್ಲಿಕ್ ಮಾಡುವ ಮೂಲಕ",
+  "BY_TAPPING_CONTINUE": "ಮುಂದುವರಿಸಿ ಕ್ಲಿಕ್ ಮಾಡುವ ಮೂಲಕ, ನೀವು ನಮ್ಮ ಸಮ್ಮತಿಸುತ್ತೀರಿ",
   "TO_THE": "ನೀವು ಸ್ವೀಕರಿಸುತ್ತಿದ್ದೀರಿ ಎಂದು ನೀವು ಒಪ್ಪುತ್ತೀರಿ",
   "ENTER_OTP": "ಒಟಿಪಿ ನಮೂದಿಸಿ",
   "RESEND": "ಮರುಕಳುಹಿಸಿ",
@@ -101,7 +101,7 @@ const kannadaStrings = {
   "SORRY_WE_COULDNT_FIND_ANY_RIDES": "ಕ್ಷಮಿಸಿ, ನಮಗೆ ಯಾವುದೇ ಸವಾರಿಗಳು ಸಿಗಲಿಲ್ಲ",
   "LOAD_MORE": "ಇನ್ನಷ್ಟು ಲೋಡ್ ಮಾಡಿ",
   "WE_NEED_ACCESS_TO_YOUR_LOCATION": "ನಿಮ್ಮ ಸ್ಥಳಕ್ಕೆ ನಮಗೆ ಪ್ರವೇಶ ಬೇಕು!",
-  "YOUR_LOCATION_HELPS_OUR_SYSTEM": "ಆಟೋಗಳಿಂದ ಹತ್ತಿರವಿರುವ ಎಲ್ಲವನ್ನು ನಕ್ಷೆ ಮಾಡಲು ಮತ್ತು ಸಾಧ್ಯವಾದಷ್ಟು ತ್ವರಿತ ಸವಾರಿಯನ್ನು ಪಡೆಯಲು ನಿಮ್ಮ ಸ್ಥಳವು ನಮ್ಮ ಸಿಸ್ಟಮ್‌ಗೆ ಸಹಾಯ ಮಾಡುತ್ತದೆ.",
+  "LOCATION_PERMISSION_SUBTITLE" : "ನಿಮ್ಮ ಸವಾರಿಗಳನ್ನು ಪಡೆಯಲು, ನಮಗೆ ನಿಮ್ಮ ಸಾಧನದ ಸ್ಥಳದ ಅಗತ್ಯವಿದೆ.",
   "CALL": "ಕರೆಯಿಸು",
   "EMPTY_RIDES": "ಖಾಲಿ ಸವಾರಿಗಳು",
   "YOU_HAVENT_TAKEN_A_TRIP_YET": "ನೀವು ಇನ್ನೂ ಪ್ರವಾಸ ಕೈಗೊಂಡಿಲ್ಲ",
@@ -478,5 +478,6 @@ const kannadaStrings = {
   "WOULD_YOU_LIKE_TO_CHECK_WITH_THE_DRIVER_BEFORE_CANCELLING" : "\nರದ್ದುಗೊಳಿಸುವ ಮೊದಲು ನೀವು ಚಾಲಕನೊಂದಿಗೆ ಮಾತನಾಡಲು ಬಯಸುವಿರಾ?",
   "DRIVER_IS_NEAR_YOUR_LOCATION" : "ಚಾಲಕ ನಿಮ್ಮ ಸ್ಥಳವನ್ನು ತಲುಪಿದ್ದಾರೆ.",
   "HAS_TRAVELLED" : " ಪ್ರಯಾಣಿಸಿದ್ದಾರೆ.",
-  "SOME_OTHER_REASON" : "ಬೇರೆ ಯಾವುದೋ ಕಾರಣ."
+  "SOME_OTHER_REASON" : "ಬೇರೆ ಯಾವುದೋ ಕಾರಣ.",
+  "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "ನಮ್ಮ ಯಾತ್ರಿಗೆ ಸುಸ್ವಾಗತ! \nಬುಕಿಂಗ್ ರೈಡ್‌ಗಳನ್ನು ಪ್ರಾರಂಭಿಸಲು, ನಮಗೆ ನಿಮ್ಮ ಸಾಧನದ ಸ್ಥಳದ ಅಗತ್ಯವಿದೆ."
 }

@@ -92,7 +92,7 @@ public class ChatService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        handleMessages();
+        handler.postDelayed(this::handleMessages, 1000);
         return  START_STICKY;
     }
 
