@@ -92,9 +92,9 @@ view rideListItem push state =
         , width MATCH_PARENT
         , orientation VERTICAL
         , weight 1.0
-        ][ headerView push state
-          , separatorView
-          , ridesView rideListItem push state
+        , background Color.white900
+        ][  headerView push state
+          , ridesView rideListItem push state 
           ]
       , linearLayout
       [ height WRAP_CONTENT
@@ -132,9 +132,9 @@ headerView push state =
     , width MATCH_PARENT
     , orientation VERTICAL
     , gravity CENTER
-    , margin (MarginTop 30)
+    , margin $ MarginTop 16
     ][ textView
-        [ text (getString TRIPS)
+        [ text $ getString RIDES
         , gravity CENTER_VERTICAL
         , textSize FontSize.a_20
         , color Color.black900
@@ -167,6 +167,7 @@ headerView push state =
                   [ height (V 2)
                   , width MATCH_PARENT
                   , background Color.black900
+                  , margin $ MarginHorizontal 5 5
                   , visibility if state.currentTab == "COMPLETED" then VISIBLE else GONE
                   ][]
               ]
@@ -192,6 +193,7 @@ headerView push state =
                   [ height (V 2)
                   , width MATCH_PARENT
                   , background Color.black900
+                  , margin $ MarginHorizontal 5 5
                   , visibility if state.currentTab == "CANCELLED" then VISIBLE else GONE
                   ][]
               ]
@@ -225,7 +227,7 @@ ridesView rideListItem push state =
                         ST.AnimatedOut -> VISIBLE
                         _ -> GONE
             , PrestoList.listItem rideListItem
-            , background Color.bg_grey
+            , background Color.white900
             , PrestoList.listDataV2 (prestoListFilter state.currentTab state.prestoListArrayItems)
             ]
           , DT.Tuple "LOADER"
@@ -249,7 +251,7 @@ ridesView rideListItem push state =
               ] $ PrestoList.list
                 [ height MATCH_PARENT
                 , scrollBarY false
-                , background Color.bg_grey
+                , background Color.white900
                 , width MATCH_PARENT
                 , onAnimationEnd push OnFadeComplete
                 , PrestoList.listItem rideListItem
@@ -273,8 +275,6 @@ ridesView rideListItem push state =
 
   ]
 
-
-
 separatorView :: forall w. PrestoDOM (Effect Unit) w
 separatorView =
   linearLayout
@@ -290,7 +290,6 @@ shimmerData i = {
   total_amount : toPropValue "₹ 0.0",
   card_visibility : toPropValue "gone",
   shimmer_visibility : toPropValue "visible",
-  ride_distance_visibility : toPropValue "visible",
   rideDistance : toPropValue "10km Ride with Bharat",
   status :  toPropValue "",
   vehicleModel : toPropValue "Auto",
@@ -303,5 +302,10 @@ shimmerData i = {
   updatedAt : toPropValue "",
   source : toPropValue "Nagarjuna Apartments,15/2, 19th Main, 27th Cross Rd, Sector 2, HSR Layout, Bengaluru, Karnataka 560102",
   destination : toPropValue "Nagarjuna Apartments,15/2, 19th Main, 27th Cross Rd, Sector 2, HSR Layout, Bengaluru, Karnataka 560102",
-  amountColor: toPropValue ""
+  amountColor: toPropValue "",
+  riderName : toPropValue "",
+  metroTagVisibility : toPropValue "",
+  specialZoneText : toPropValue "",
+  specialZoneImage : toPropValue "",
+  specialZoneLayoutBackground : toPropValue ""
 }

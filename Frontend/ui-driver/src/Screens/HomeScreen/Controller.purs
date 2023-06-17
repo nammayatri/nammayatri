@@ -613,7 +613,8 @@ activeRideDetail state (RidesInfo ride) = {
   estimatedFare : ride.driverSelectedFare + ride.estimatedBaseFare,
   isDriverArrived : state.data.activeRide.isDriverArrived,
   notifiedCustomer : if (differenceBetweenTwoUTC ride.updatedAt ride.createdAt) == 0 then false else true,
-  exoPhone : ride.exoPhone
+  exoPhone : ride.exoPhone,
+  specialLocationTag : ride.specialLocationTag -- Just "SureMetro - Pickup"
 }
 
 cancellationReasons :: String -> Array OptionButtonList

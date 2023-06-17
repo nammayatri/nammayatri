@@ -18,15 +18,16 @@ module Components.RideActionModal.View where
 import Common.Types.App
 
 import Components.RideActionModal.Controller (Action(..), Config)
+import Data.Maybe as Maybe
 import Effect (Effect)
 import Effect.Unsafe (unsafePerformEffect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (countDown)
+import Helpers.Utils (countDown, getSpecialZoneConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, not, pure, show, unit, ($), (/=), (<>), (&&), (==), (-), (>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), alpha, background, clickable, color, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, width, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), alpha, background, clickable, color, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, width, imageWithFallback, fontSize)
 import PrestoDOM.Properties (cornerRadii, cornerRadius)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Storage (KeyStore(..), getValueToLocalStore)
@@ -42,7 +43,6 @@ view push config =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , clickable true
     ][linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -53,26 +53,7 @@ view push config =
        , callButton push config
        , openGoogleMap push config 
       ]
-    , linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , cornerRadii $ Corners 25.0 true true false false
-      , orientation VERTICAL
-      , background Color.white900
-      , padding (PaddingTop 8)
-      , stroke ("1," <> Color.grey900)
-      ][  rideActionDataView push config
-        , linearLayout
-          [ width MATCH_PARENT
-          , height (V 1)
-          , background Color.lightGrey
-          ][]
-        , if config.startRideActive then 
-            startRide push config
-          else --swipe button
-            endRide push config
-        , cancelRide push config
-      ]
+    , if config.specialLocationTag == Maybe.Nothing then rideActionView push config else rideActionViewWithZone push config
     ]
 
 messageButton :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -129,6 +110,82 @@ callButton push config =
       ]
   ]
   
+rideActionViewWithZone :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM ( Effect Unit) w
+rideActionViewWithZone push config =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , background $ getSpecialZoneConfig "backgroundColor" config.specialLocationTag
+  , cornerRadii $ Corners 25.0 true true false false
+  , orientation VERTICAL
+  , padding $ PaddingTop 5
+  , gravity CENTER
+  , visibility if config.specialLocationTag == Maybe.Nothing then GONE else VISIBLE
+  ][ linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , gravity CENTER
+      ][ imageView
+          [ width $ V 18
+          , height $ V 18
+          , imageWithFallback $ getSpecialZoneConfig "imageUrl" config.specialLocationTag
+          ]
+        , textView 
+          [ width WRAP_CONTENT
+          , height MATCH_PARENT
+          , text $ getSpecialZoneConfig "text" config.specialLocationTag
+          , gravity CENTER_VERTICAL
+          , color Color.white900
+          , margin $ MarginLeft 5
+          , textSize FontSize.a_12
+          , fontStyle $ FontStyle.medium TypoGraphy
+          ]
+      ]
+    , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , cornerRadii $ Corners 25.0 true true false false
+      , orientation VERTICAL
+      , background Color.white900
+      , padding $ PaddingTop 6
+      , margin $ MarginTop 6
+      , gravity CENTER
+      , stroke $ "1," <> Color.grey800
+      ][  rideActionDataView push config
+        , linearLayout
+          [ width MATCH_PARENT
+          , height $ V 1
+          , background Color.lightGrey
+          , margin $ MarginTop 24
+          ][]
+        , if config.startRideActive then startRide push config else endRide push config
+        , cancelRide push config
+      ]
+  ]
+
+rideActionView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+rideActionView push config =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , cornerRadii $ Corners 25.0 true true false false
+  , orientation VERTICAL
+  , background Color.white900
+  , padding $ PaddingTop 6
+  , gravity CENTER
+  , stroke $ "1," <> Color.grey800
+  , visibility if config.specialLocationTag == Maybe.Nothing then VISIBLE else GONE
+  ][  rideActionDataView push config
+    , linearLayout
+      [ width MATCH_PARENT
+      , height $ V 1
+      , background Color.lightGrey
+      , margin $ MarginTop 24
+      ][]
+    , if config.startRideActive then startRide push config else endRide push config
+    , cancelRide push config
+  ]
+
 
 openGoogleMap :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 openGoogleMap push config =

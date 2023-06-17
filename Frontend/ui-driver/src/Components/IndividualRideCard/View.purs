@@ -21,22 +21,26 @@ import Components.IndividualRideCard.Controller(Action(..))
 import Screens.RideSelectionScreen.Controller (Action(..)) as RideSelectionScreen
 import Screens.RideHistoryScreen.Controller (Action(..)) as RideHistoryScreen
 import Effect (Effect)
-import Screens.Types (IndividualRideCardState)
-import Language.Strings (getString)
-import Language.Types (STR(..))
-import PrestoDOM.List as PrestoList
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Prelude (Unit, ($), (<<<), const, (==), (<>))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, maxLines, orientation, padding, relativeLayout, shimmerFrameLayout, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM.List as PrestoList
+import PrestoDOM.Properties (cornerRadii, orientation, visibility, width)
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Screens.RideHistoryScreen.Controller (Action(..)) as RideHistoryScreen
+import Screens.Types (IndividualRideCardState)
 import Styles.Colors as Color
 import Common.Types.App
-import PrestoDOM.Properties (orientation, visibility, width)
 
 view :: forall w .  (RideHistoryScreen.Action  -> Effect Unit)  -> PrestoDOM (Effect Unit) w
 view push =
   relativeLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  ][  shimmerView false
+  ][  shimmerView
     , cardView push
   ]
 
@@ -45,22 +49,42 @@ selectView push =
   relativeLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  ][  shimmerView true
+  ][  shimmerView
     , selectCardView push
   ]
 
-shimmerView :: Boolean -> forall w. PrestoDOM (Effect Unit) w 
-shimmerView showTripId =
-    linearLayout
+shimmerView :: forall w. PrestoDOM (Effect Unit) w 
+shimmerView =
+  linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , padding (Padding 16 20 16 20)
-  , orientation VERTICAL
   , PrestoList.visibilityHolder "shimmer_visibility"
+  , orientation VERTICAL
+  , clickable true
   , background Color.white900
-  ][  rideDetailsShimmerView showTripId
-    , sourceAndDestinationShimmerView
-    , separator
+  , margin $ Margin 16 10 16 4
+  , cornerRadius 8.0
+  , stroke $ "1," <> Color.grey900
+  ][ linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , padding $ PaddingHorizontal 16 16
+      ][  rideDetailsShimmerView
+        , separator
+        , sourceAndDestinationShimmerView
+        , linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , padding $ PaddingBottom 10    
+          ][ sfl $ textView
+              [ textSize FontSize.a_14
+              , height WRAP_CONTENT
+              , fontStyle $ FontStyle.regular LanguageStyle
+              , color Color.black700
+              ]
+          ]
+      ]
    ]
 
 cardView :: forall w. (RideHistoryScreen.Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w 
@@ -68,16 +92,54 @@ cardView push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , padding (Padding 0 20 0 20)
   , PrestoList.visibilityHolder "card_visibility"
   , orientation VERTICAL
   , clickable true
   , background Color.white900
+  , margin $ Margin 16 10 16 4
+  , cornerRadius 8.0
+  , stroke $ "1," <> Color.grey900
   , PrestoList.onClickHolder push $ RideHistoryScreen.IndividualRideCardAction <<< Select
-  ][  rideDetails false
-    , sourceAndDestination
-    , rideWithDetails
-    , separator
+  ][ linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , cornerRadii $ Corners 7.0 true true false false
+      , orientation VERTICAL
+      , PrestoList.backgroundHolder "specialZoneLayoutBackground"
+      , padding $ PaddingVertical 5 5
+      , PrestoList.visibilityHolder "metroTagVisibility"
+      , gravity CENTER
+      ][ linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , gravity CENTER
+          ][ imageView
+              [ width $ V 18
+              , height $ V 18
+              , PrestoList.imageUrlHolder "specialZoneImage"
+              ]
+            , textView 
+              [ width WRAP_CONTENT
+              , height MATCH_PARENT
+              , PrestoList.textHolder "specialZoneText"
+              , gravity CENTER_VERTICAL
+              , color Color.white900
+              , margin $ MarginLeft 5
+              , textSize FontSize.a_12
+              , fontStyle $ FontStyle.medium TypoGraphy
+              ]
+          ]
+        ]
+    , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , padding $ PaddingHorizontal 16 16
+      ][ rideDetails false
+        , separator
+        , sourceAndDestination
+        , distanceAndCustomerName
+      ]
    ]
 
 selectCardView :: forall w. (RideSelectionScreen.Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -85,16 +147,54 @@ selectCardView push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , padding (Padding 0 20 0 20)
   , PrestoList.visibilityHolder "card_visibility"
   , orientation VERTICAL
   , clickable true
   , background Color.white900
+  , margin $ Margin 16 10 16 4
+  , cornerRadius 8.0
+  , stroke $ "1," <> Color.grey900
   , PrestoList.onClickHolder push $ RideSelectionScreen.IndividualRideCardAction <<< Select
-  ][  rideDetails true
-    , sourceAndDestination
-    , rideWithDetails
-    , separator
+  ][ linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , cornerRadii $ Corners 7.0 true true false false
+      , orientation VERTICAL
+      , PrestoList.backgroundHolder "specialZoneLayoutBackground"
+      , padding $ PaddingVertical 5 5
+      , PrestoList.visibilityHolder "metroTagVisibility"
+      , gravity CENTER
+      ][ linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , gravity CENTER
+          ][ imageView
+              [ width $ V 18
+              , height $ V 18
+              , PrestoList.imageUrlHolder "specialZoneImage"
+              ]
+            , textView 
+              [ width WRAP_CONTENT
+              , height MATCH_PARENT
+              , PrestoList.textHolder "specialZoneText"
+              , gravity CENTER_VERTICAL
+              , color Color.white900
+              , margin $ MarginLeft 5
+              , textSize FontSize.a_12
+              , fontStyle $ FontStyle.medium TypoGraphy
+              ]
+          ]
+        ]
+    , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , padding $ PaddingHorizontal 16 16
+      ][ rideDetails false
+        , separator
+        , sourceAndDestination
+        , distanceAndCustomerName
+      ]
    ]
 
 rideDetails :: Boolean -> forall w. PrestoDOM (Effect Unit) w 
@@ -104,71 +204,68 @@ rideDetails showTripId =
   , width MATCH_PARENT
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
-  , padding (Padding 16 0 16 16)
-  ][  linearLayout 
-      [ orientation VERTICAL
-      ][ textView
-         [ PrestoList.textHolder "shortRideId"
-         , textSize FontSize.a_18
-         , color Color.black900
-         , visibility if showTripId then VISIBLE else GONE
-         , fontStyle $ FontStyle.semiBold LanguageStyle
-         , margin (MarginBottom 8)
-         ]
-       , linearLayout 
-         [ orientation HORIZONTAL
-         , gravity CENTER_VERTICAL
-         ][ textView
-           [ PrestoList.textHolder "date"
-           , textSize FontSize.a_14
-           , color Color.black700
-           , fontStyle $ FontStyle.regular LanguageStyle
-           ]
-         , imageView
-           [ imageWithFallback "ny_ic_circle,https://assets.juspay.in/nammayatri/images/common/ny_ic_circle.png"
-           , height $ V 5
-           , width $ V 5
-           , cornerRadius 2.5
-           , background Color.black700
-           , margin (Margin 6 0 6 0)
-           ]
-         , textView
-           [ PrestoList.textHolder "time"
-           , textSize FontSize.a_14
-           , color Color.black700
-           , fontStyle $ FontStyle.regular LanguageStyle
-           ]
-         ]
-       ]
+  , padding $ PaddingVertical 12 12
+  ][ linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      ][ linearLayout
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          ][ textView $
+              [ text "Trip Id : "
+              , color Color.black900
+              ] <> FontStyle.body1 TypoGraphy
+            , textView $
+              [ PrestoList.textHolder "shortRideId"
+              , margin $ MarginRight 12
+              , color Color.black900
+              ] <> FontStyle.body1 TypoGraphy
+          ]
+        , linearLayout
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , gravity CENTER
+          , margin $ MarginTop 5
+          ][  textView
+              [ PrestoList.textHolder "date"
+              , textSize FontSize.a_14
+              , color Color.black700
+              , fontStyle $ FontStyle.regular LanguageStyle
+              ]
+            , imageView
+              [ imageWithFallback "ny_ic_circle,https://assets.juspay.in/nammayatri/images/common/ny_ic_circle.png"
+              , height $ V 5
+              , width $ V 5
+              , cornerRadius 2.5
+              , background Color.black700
+              , margin (Margin 6 0 6 0)
+              ]
+            , textView
+              [ PrestoList.textHolder "time"
+              , textSize FontSize.a_14
+              , color Color.black700
+              , fontStyle $ FontStyle.regular LanguageStyle
+              ]
+          ]
+      ]
     , linearLayout
       [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , orientation HORIZONTAL
-      , gravity RIGHT 
-      ][
-        textView
-          [ text "₹"
-          , textSize FontSize.a_20
-          , PrestoList.colorHolder "amountColor"
-          , fontStyle $ FontStyle.medium LanguageStyle
-          ]  
-        , textView
-          [ PrestoList.textHolder "total_amount"
-          , textSize FontSize.a_20
-          , PrestoList.colorHolder "amountColor"
-          , margin (MarginRight 12)
-          , fontStyle $ FontStyle.medium LanguageStyle
-          ]
-        , textView
-          [ text (getString CANCELLED_)
-          , background Color.peach
-          , cornerRadius 3.0
-          , visibility GONE
-          , textSize FontSize.a_12
-          , color Color.red
-          , padding (Padding 10 2 10 2)
-          ]
-        ]
+      , weight 1.0
+      ][]
+    , textView
+      [ text "₹"
+      , textSize FontSize.a_20
+      , PrestoList.colorHolder "amountColor"
+      , fontStyle $ FontStyle.medium LanguageStyle
+      ]  
+    , textView
+      [ PrestoList.textHolder "total_amount"
+      , textSize FontSize.a_20
+      , PrestoList.colorHolder "amountColor"
+      , margin (MarginRight 12)
+      , fontStyle $ FontStyle.medium LanguageStyle
+      ]
     ]
 
 sourceAndDestination :: forall w . PrestoDOM (Effect Unit) w 
@@ -178,7 +275,7 @@ sourceAndDestination =
   , width WRAP_CONTENT
   , gravity LEFT
   , PrestoList.visibilityHolder "card_visibility"
-  , padding (Padding 16 0 16 10)
+  , padding $ PaddingVertical 10 10
   ][  imageView
       [ imageUrl "ic_line"
       , height MATCH_PARENT
@@ -194,22 +291,19 @@ sourceAndDestination =
           [ orientation HORIZONTAL
           , height WRAP_CONTENT
           , width MATCH_PARENT
-          , margin (MarginBottom 26)
+          , margin $ MarginBottom 26
           ][  imageView
-              [ margin(MarginTop 5)
-              , imageWithFallback "ny_ic_source_dot,https://assets.juspay.in/nammayatri/images/common/ny_ic_source_dot.png"
+              [ imageWithFallback "ny_ic_source_dot,https://assets.juspay.in/nammayatri/images/common/ny_ic_source_dot.png"
               , height $ V 19
               , width $ V 17
               ]
-            , textView
+            , textView $
               [ PrestoList.textHolder "source"
-              , textSize FontSize.a_14
               , padding (Padding 10 0 70 2)
-              , fontStyle $ FontStyle.regular LanguageStyle
-              , color Color.black700
+              , color Color.black900
               , maxLines 1
               , ellipsize true
-              ]
+              ] <> FontStyle.paragraphText TypoGraphy
             ]
           , linearLayout
             [ orientation HORIZONTAL
@@ -221,34 +315,28 @@ sourceAndDestination =
                 , height $ V 16
                 , width $ V 14
                 ]
-              , textView
+              , textView $
                 [ PrestoList.textHolder "destination"
-                , textSize FontSize.a_14
                 , layoutGravity "center_vertical"
                 , padding (Padding 10 0 70 2)
-                , fontStyle $ FontStyle.regular LanguageStyle
                 , maxLines 1
                 , ellipsize true
-                , color Color.black700
-                ]
+                , color Color.black900
+                ] <> FontStyle.paragraphText TypoGraphy
               ]
         ]
       
     ]
 
-rideWithDetails :: forall w. PrestoDOM (Effect Unit) w 
-rideWithDetails = 
+distanceAndCustomerName :: forall w. PrestoDOM (Effect Unit) w 
+distanceAndCustomerName = 
   textView
     [ PrestoList.textHolder "rideDistance"
-    , PrestoList.visibilityHolder "ride_distance_visibility"
     , textSize FontSize.a_14
     , height WRAP_CONTENT
     , fontStyle $ FontStyle.regular LanguageStyle
-    , layoutGravity "center_vertical"
-    , padding (Padding 16 0 70 20)
-    , maxLines 1
-    , ellipsize true
     , color Color.black700
+    , margin $ MarginBottom 10    
     ]
 
 separator :: forall w. PrestoDOM (Effect Unit) w 
@@ -256,14 +344,12 @@ separator =
   linearLayout
   [ height $ V 1
   , width MATCH_PARENT
-  , margin (MarginTop 20)
   , background Color.separatorViewColor
   ][]
 
-
     
-rideDetailsShimmerView :: Boolean -> forall w. PrestoDOM (Effect Unit) w 
-rideDetailsShimmerView showTripId = 
+rideDetailsShimmerView :: forall w. PrestoDOM (Effect Unit) w 
+rideDetailsShimmerView = 
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -278,7 +364,6 @@ rideDetailsShimmerView showTripId =
          , textSize FontSize.a_18
          , cornerRadius 5.0
          , background Color.borderGreyColor
-         , visibility if showTripId then VISIBLE else GONE
          , color Color.borderGreyColor
          , margin (MarginBottom 8)
          ]
@@ -313,7 +398,6 @@ rideDetailsShimmerView showTripId =
       width WRAP_CONTENT
     , height WRAP_CONTENT
     , gravity RIGHT
-    -- , background Color.borderGreyColor
     ][textView
           [ PrestoList.textHolder "total_amount"
           , textSize FontSize.a_14
@@ -334,7 +418,7 @@ sourceAndDestinationShimmerView =
   , width MATCH_PARENT
   , gravity LEFT
   , PrestoList.visibilityHolder "shimmer_visibility"
-  , padding (PaddingBottom 16)
+  , padding $ PaddingVertical 16 16
   ][sfl $  imageView[
     imageWithFallback "ny_ic_shimmer_img,https://assets.juspay.in/nammayatri/images/common/ny_ic_shimmer_img.png"
   , height $ V 57

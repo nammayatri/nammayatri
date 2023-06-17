@@ -30,8 +30,8 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Int(fromString, toNumber)
 import Data.Number(fromString) as NUM
 import Data.String (Pattern(..), split)
-import Helpers.Utils (setRefreshing, setEnabled, parseFloat)
-import Engineering.Helpers.Commons (getNewIDWithTag, strToBool, convertUTCtoISC)
+import Helpers.Utils (setRefreshing, setEnabled, parseFloat, getSpecialZoneConfig, convertUTCtoISC)
+import Engineering.Helpers.Commons (getNewIDWithTag, strToBool)
 import Data.Int (ceil)
 import Styles.Colors as Color
 import Log
@@ -161,18 +161,13 @@ rideHistoryListTransformer :: Array RidesInfo -> Array ItemState
 rideHistoryListTransformer list = (map (\(RidesInfo ride) -> {
     date : toPropValue (convertUTCtoISC (ride.createdAt) "D MMM"),
     time : toPropValue (convertUTCtoISC (ride.createdAt )"h:mm A"),
-    total_amount : toPropValue (case (ride.status) of
-                    "CANCELLED" -> 0
-                    _ -> fromMaybe ride.estimatedBaseFare ride.computedFare),
+    total_amount : toPropValue $ fromMaybe ride.estimatedBaseFare ride.computedFare,
     card_visibility : toPropValue "visible",
     shimmer_visibility : toPropValue "gone",
     rideDistance : toPropValue $ (parseFloat (toNumber (fromMaybe 0 ride.chargeableDistance) / 1000.0) 2) <> " km Ride" <> case ride.riderName of 
                             Just name -> " with " <> name
                             Nothing -> "",
-    ride_distance_visibility : toPropValue (case (ride.status) of
-                            "CANCELLED" -> "gone"
-                            _ -> "visible"),
-    status :  toPropValue (ride.status),
+    status :  toPropValue ride.status,
     vehicleModel : toPropValue ride.vehicleModel ,
     shortRideId : toPropValue ride.shortRideId  ,
     vehicleNumber :  toPropValue ride.vehicleNumber  ,
@@ -186,8 +181,15 @@ rideHistoryListTransformer list = (map (\(RidesInfo ride) -> {
     amountColor: toPropValue (case (ride.status) of
                   "COMPLETED" -> Color.black800
                   "CANCELLED" -> Color.red
-                  _ -> Color.black800)
+                  _ -> Color.black800),
+    riderName : toPropValue $ fromMaybe "" ride.riderName,
+    metroTagVisibility : toPropValue if ride.specialLocationTag == Nothing then "gone" else "visible",
+    specialZoneText : toPropValue $ getSpecialZoneConfig "text" ride.specialLocationTag,
+    specialZoneImage : toPropValue $ getSpecialZoneConfig "imageUrl" ride.specialLocationTag,
+    specialZoneLayoutBackground : toPropValue $ getSpecialZoneConfig "backgroundColor" ride.specialLocationTag
+
 }) list )
+
 
 rideListResponseTransformer :: Array RidesInfo -> Array IndividualRideCardState
 rideListResponseTransformer list = (map (\(RidesInfo ride) -> {

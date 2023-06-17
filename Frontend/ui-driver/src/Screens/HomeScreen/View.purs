@@ -164,11 +164,9 @@ view push state =
   frameLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  ]([  linearLayout
+  ][ relativeLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
-      , orientation VERTICAL
-      , PP.sheetState EXPANDED
       , background Color.white900
       , weight 1.0
       , afterRender
@@ -181,75 +179,75 @@ view push state =
         ) (const AfterRender)
       , onBackPressed push (const BackPressed)
       ][ Anim.screenAnimationFadeInOut $
-          linearLayout
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , weight 1.0
-            , orientation VERTICAL
-            , background Color.white900
-            ,cornerRadius 50.0
-            ][  linearLayout
-                [ width MATCH_PARENT
-                , height $ V 2
-                , background Color.greyTextColor
-                , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then GONE else VISIBLE
-                , alpha 0.1
-                ][]
-              , frameLayout
-                [ width MATCH_PARENT
-                , height MATCH_PARENT
-                ][  googleMap state
-                  -- , linearLayout
-                  --   [ height MATCH_PARENT
-                  --   , width MATCH_PARENT
-                  --   , background Color.blackLessTrans
-                  --   ][]
-                  , if state.props.driverStatusSet == ST.Offline then offlineView push state else dummyTextView
-                  , linearLayout
-                   [ width MATCH_PARENT
-                   , height WRAP_CONTENT
-                   , orientation VERTICAL ]
-                   [ linearLayout
-                      [
-                        width MATCH_PARENT
-                      , height WRAP_CONTENT
-                      , orientation VERTICAL
-                      , PP.cornerRadii $ PTD.Corners 24.0  false false true true
-                      , background $ Color.white900
-                      , stroke $ (if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then "0," else "1,") <> "#E5E7EB"
-                      ][
-                        driverDetail2 push state
-                        , driverActivityStatus state
-                        -- , updateLocationAndLastUpdatedView2 state push
-                        , statsModel2 push state
-                      ]
-                  -- , if not state.props.statusOnline then showOfflineStatus push state else dummyTextView
-                    , linearLayout[
-                      width MATCH_PARENT
-                      , height WRAP_CONTENT
-                      , gravity RIGHT
-                      , orientation VERTICAL
-                      , weight 1.0
-                      ][
-                        if not state.props.rideActionModal && (state.props.driverStatusSet == ST.Online || state.props.driverStatusSet == ST.Silent)  then updateLocationAndLastUpdatedView2 state push else dummyTextView
-                        , viewRecenterAndSupport state push
-                      ]
-                    ]
-                  , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True") then genderBannerView state push else linearLayout[][]
-                  ]
-              ]
-        , bottomNavBar push state
+          driverMapsHeaderView push state
+        , rideActionModelView push state
         ]
       , if (getValueToLocalNativeStore PROFILE_DEMO) /= "false" then profileDemoView state push else linearLayout[][]
       , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
-      , if state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted then  rideActionModelView push state else dummyTextView
       , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView
       , if state.props.endRidePopUp then endRidePopView push state else dummyTextView
+      , if state.props.cancelConfirmationPopup then cancelConfirmation push state else dummyTextView
+      , if state.props.cancelRideModalShow then cancelRidePopUpView push state else dummyTextView
       , if state.props.currentStage == ChatWithCustomer then chatView push state else dummyTextView
       , if state.props.silentPopUpView then popupModelSilentAsk push state else dummyTextView
-      ] <> if state.props.cancelRideModalShow then [cancelRidePopUpView push state] else []
-        <>  if state.props.cancelConfirmationPopup then [cancelConfirmation push state] else []
-        )
+  ]
+
+driverMapsHeaderView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+driverMapsHeaderView push state = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , orientation VERTICAL
+  ][ linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , weight 1.0
+      , orientation VERTICAL
+      , background Color.white900
+      ,cornerRadius 50.0
+      ][ linearLayout
+          [ width MATCH_PARENT
+          , height $ V 2
+          , background Color.greyTextColor
+          , visibility if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then GONE else VISIBLE
+          , alpha 0.1
+          ][]
+        , frameLayout
+          [ width MATCH_PARENT
+          , height MATCH_PARENT
+          ][  googleMap state
+            , if state.props.driverStatusSet == Offline then offlineView push state else dummyTextView
+            , linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , orientation VERTICAL 
+              ][ linearLayout
+                  [ width MATCH_PARENT
+                  , height WRAP_CONTENT  
+                  , orientation VERTICAL
+                  , PP.cornerRadii $ PTD.Corners 24.0  false false true true
+                  , background $ Color.white900
+                  , stroke $ (if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then "0," else "1,") <> "#E5E7EB"
+                  ][  driverDetail push state
+                    , driverActivityStatus state
+                    , statsModel push state      
+                  ]
+              , linearLayout
+                [ width MATCH_PARENT
+                , height WRAP_CONTENT
+                , gravity RIGHT
+                , orientation VERTICAL
+                , weight 1.0
+                ][  if not state.props.rideActionModal && (state.props.driverStatusSet == Online || state.props.driverStatusSet == Silent)  then updateLocationAndLastUpdatedView state push else dummyTextView
+                  , viewRecenterAndSupport state push
+                ]
+              ]
+            , alternateNumberOrOTPView state push
+            , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True") then genderBannerView state push else linearLayout[][]
+            ]
+        ]
+        , bottomNavBar push state 
+  ]
 
 alternateNumberOrOTPView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 alternateNumberOrOTPView state push =
@@ -350,7 +348,7 @@ driverActivityStatus :: forall w . HomeScreenState -> PrestoDOM (Effect Unit) w
 driverActivityStatus state =
   linearLayout
   [ width MATCH_PARENT
-  , margin (Margin 10 0 10 0)
+  , margin $ Margin 10 0 10 0
   , height $ V 1
   , background Color.grey900
   ][]
@@ -379,33 +377,31 @@ recenterBtnView state push =
   , visibility if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then GONE else VISIBLE
   , cornerRadius 24.0
   ][ imageView
-    [ width ( V 40 )
-    , height ( V 40 )
-    , imageWithFallback "ny_ic_recenter_btn,https://assets.juspay.in/nammayatri/images/common/ny_ic_recenter_btn.png"
-    , onClick (\action -> do
-            _ <- JB.getCurrentPosition push CurrentLocation
-            pure unit
-          ) (const RecenterButtonAction)
-    ]
+      [ width $ V 40
+      , height $ V 40
+      , imageWithFallback "ny_ic_recenter_btn,https://assets.juspay.in/nammayatri/images/common/ny_ic_recenter_btn.png"
+      , onClick (\action -> do
+              _ <- JB.getCurrentPosition push CurrentLocation
+              pure unit
+            ) (const RecenterButtonAction)
+      ]
   ]
 
 offlineView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-offlineView push state =
-  linearLayout[
-          width MATCH_PARENT
-        , height MATCH_PARENT--(V 200)
-        , gravity BOTTOM
-        , background "#2C2F3A80"
-        ][
-          frameLayout
-          [ height WRAP_CONTENT
+offlineView push state = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , gravity BOTTOM
+  , background "#2C2F3A80"
+  ][ frameLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      ][ linearLayout
+          [ height $ V 280
           , width MATCH_PARENT
-          ][
-            linearLayout
-            [ height (V 280)
-            , width MATCH_PARENT
-            , gravity CENTER_HORIZONTAL
-            ][ lottieAnimationView
+          , gravity CENTER_HORIZONTAL
+          ][ lottieAnimationView 
               [ id (EHC.getNewIDWithTag "RippleGoOnlineLottie")
               , afterRender (\action-> do
                               _ <- pure $ JB.startLottieProcess "rippling_online_effect" (EHC.getNewIDWithTag "RippleGoOnlineLottie") true 1.0 "DEFAULT"
@@ -413,22 +409,20 @@ offlineView push state =
               , height WRAP_CONTENT
               , width MATCH_PARENT
               ]
-            ]
-          , linearLayout
-            [ height MATCH_PARENT
-            , width MATCH_PARENT
-            , gravity BOTTOM
-            ][
-          linearLayout
-            [ height (V 140)
+          ]
+      , linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , gravity BOTTOM
+        ][ linearLayout 
+            [ height $ V 140
             , width MATCH_PARENT
             , gravity BOTTOM
             , background Color.white900
             , PP.cornerRadii $ PTD.Corners 40.0 true true false false
             ][
               textView
-              [
-                height WRAP_CONTENT
+              [ height WRAP_CONTENT
               , width MATCH_PARENT
               , gravity CENTER_HORIZONTAL
               , margin $ MarginBottom 10
@@ -436,41 +430,39 @@ offlineView push state =
               , textSize FontSize.a_14
               ]
             ]
-            ]
-         , linearLayout
-            [ height (V 205)
-            , width MATCH_PARENT
-            , gravity CENTER_HORIZONTAL
-            ][ linearLayout
-              [ height WRAP_CONTENT
-              , width WRAP_CONTENT
-              -- , gravity CENTER
-              ][
-                frameLayout
+        ]
+    , linearLayout
+        [ height $ V 205
+        , width MATCH_PARENT
+        , gravity CENTER_HORIZONTAL
+        ][ linearLayout
+            [ height WRAP_CONTENT 
+            , width WRAP_CONTENT
+            ][ frameLayout
                 [ height MATCH_PARENT
                 , width MATCH_PARENT
                 , margin $ MarginTop 72
-                ][linearLayout
-                  [ height $ V 132
-                  , width $ V 132
-                  , cornerRadius 75.0
-                  , background "#53BB6F"
-                  , onClick  push  (const $ SwitchDriverStatus ST.Online)
-                  ][]
-                , textView
-                  [ height MATCH_PARENT
-                  , width MATCH_PARENT
-                  , gravity CENTER
-                  , text $ getString GO_ONLINE
-                  , textSize FontSize.a_32
-                  , fontStyle $ FontStyle.bold LanguageStyle
-                  , color Color.white900
-                  ]
+                ][ linearLayout
+                    [ height $ V 132
+                    , width $ V 132
+                    , cornerRadius 75.0
+                    , background "#53BB6F"
+                    , onClick  push  (const $ SwitchDriverStatus Online)
+                    ][]
+                  , textView
+                    [ height MATCH_PARENT
+                    , width MATCH_PARENT
+                    , gravity CENTER
+                    , text $ getString GO_ONLINE
+                    , textSize FontSize.a_32
+                    , fontStyle $ FontStyle.bold LanguageStyle
+                    , color Color.white900
+                    ]
               ]
-            ]
           ]
-          ]
-        ]
+      ]
+    ]
+  ]
 
 popupModelSilentAsk :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 popupModelSilentAsk push state =
@@ -482,46 +474,6 @@ popupModelSilentAsk push state =
 
 driverDetail :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 driverDetail push state =
-  linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , orientation HORIZONTAL
-  , gravity CENTER_VERTICAL
-  , margin (MarginTop 5)
-  ][  linearLayout
-      [ width WRAP_CONTENT
-      , height MATCH_PARENT
-      , padding $ Padding 16 20 12 16
-      ][ imageView
-         [ width $ V 42
-         , height $ V 42
-         , imageWithFallback "ny_ic_avatar,https://assets.juspay.in/nammayatri/images/driver/ny_ic_avatar.png"
-         ]
-      ]
-    , linearLayout
-      [ width WRAP_CONTENT
-      , height MATCH_PARENT
-      , orientation VERTICAL
-      , padding (Padding 0 18 0 16)
-      ][  textView (
-          [ width WRAP_CONTENT
-          , height WRAP_CONTENT
-          , text ((DS.take 12 (getValueToLocalStore USER_NAME)) <> (if (DS.length (getValueToLocalStore USER_NAME)) > 12 then "..." else "")) --------
-          , color Color.greyTextColor
-          ] <> FontStyle.subHeading1 TypoGraphy
-          )
-        , textView (
-          [ width WRAP_CONTENT
-          , height WRAP_CONTENT
-          , text state.data.vehicleType
-          ] <> FontStyle.body3 TypoGraphy
-          )
-      ]
-    , driverStatus push state
-  ]
-
-driverDetail2 :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-driverDetail2 push state =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -578,7 +530,7 @@ driverStatusPill pillConfig push state index =
       , gravity CENTER
       , orientation HORIZONTAL
       , onClick push (const $ SwitchDriverStatus pillConfig.status)
-      , clickable if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then false else true
+      , clickable if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted]) then false else true
       ][ imageView
         [ width $ V 15
         , height $ V 15
@@ -611,13 +563,12 @@ driverStatusPill pillConfig push state index =
 
   ]
 
-updateLocationAndLastUpdatedView2 :: forall w . HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-updateLocationAndLastUpdatedView2 state push =
-  PrestoAnim.animationSet
+updateLocationAndLastUpdatedView :: forall w . HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+updateLocationAndLastUpdatedView state push = 
+  PrestoAnim.animationSet 
   [ Anim.translateYAnimFromTop $ AnimConfig.translateYAnimHomeConfig AnimConfig.TOP_BOTTOM ] $
   linearLayout
   [ width MATCH_PARENT
-  -- , height $ V 40
   , padding (Padding 16 8 16 8)
   , margin (Margin 16 16 16 0)
   , cornerRadius 7.0
@@ -625,14 +576,10 @@ updateLocationAndLastUpdatedView2 state push =
   , background Color.white900
   ][ locationLastUpdatedTextAndTimeView push state
     , updateButtonIconAndText push state
---    , helpAndSupportBtnView state push
-    -- , recenterBtnView state push
   ]
 
-statsModel2 :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-statsModel2 push state =
-  -- PrestoAnim.animationSet
-  -- [ Anim.translateYAnimFromTop $ AnimConfig.translateYAnimHomeConfig AnimConfig.TOP_BOTTOM ] $
+statsModel :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+statsModel push state = 
     linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -914,26 +861,7 @@ goOfflineModal push state =
       ]
   ]
 
-updateLocationAndLastUpdatedView :: forall w . HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-updateLocationAndLastUpdatedView state push =
- linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , padding (Padding 16 8 16 8)
-  , orientation HORIZONTAL
-  ][ locationLastUpdatedTextAndTimeView push state
-   , updateButtonIconAndText push state
-  ]
 
--- driverDetailsView state push =
---  linearLayout
---   [ width MATCH_PARENT
---   , height $ V 50
---   , padding (Padding 16 8 16 8)
---   , orientation HORIZONTAL
---   ][ locationLastUpdatedTextAndTimeView push state
---    , updateButtonIconAndText push state
---   ]
 addAlternateNumber :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 addAlternateNumber push state =
   linearLayout
@@ -1018,28 +946,6 @@ updateButtonIconAndText push state =
     ]
   ]
 
-statsModel :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-statsModel push state =
-  PrestoAnim.animationSet
-  [ Anim.translateYAnimFromTop $ AnimConfig.translateYAnimHomeConfig AnimConfig.TOP_BOTTOM ] $
-  linearLayout
-  [ orientation VERTICAL
-  , width MATCH_PARENT
-  , height MATCH_PARENT
-  , gravity RIGHT
-  , margin (Margin 16 10 16 0)
-  ][ linearLayout
-   [ orientation VERTICAL
-   , width MATCH_PARENT
-   , gravity RIGHT
-   , visibility if not state.props.rideActionModal && state.props.statusOnline then VISIBLE else GONE
-   ][ StatsModel.view (push <<< StatsModelAction) (statsModelConfig state)
-    , helpAndSupportBtnView state push
-    , recenterBtnView state push
-   ]
-   , if state.props.rideActionModal && state.props.statusOnline then helpAndSupportBtnView state push else dummyTextView
-  ]
-
 bottomNavBar :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 bottomNavBar push state =
     BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.HOME_SCREEN)
@@ -1048,19 +954,23 @@ rideActionModelView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> 
 rideActionModelView push state =
   linearLayout
   [ width MATCH_PARENT
-  , height MATCH_PARENT
+  , height WRAP_CONTENT
+  , alignParentBottom "true,-1"
   , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted,RideStarted]) then VISIBLE else GONE
   ][  coordinatorLayout
       [ width MATCH_PARENT
-      , height MATCH_PARENT
+      , height WRAP_CONTENT
       ][  bottomSheetLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , PP.sheetState COLLAPSED
           , peakHeight if state.data.activeRide.isDriverArrived then 518 else 470
           , halfExpandedRatio 0.9
-          ][ RideActionModal.view (push <<< RideActionModalAction) (rideActionModalConfig state)]
+          ][ if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then 
+                RideActionModal.view (push <<< RideActionModalAction) (rideActionModalConfig state)
+                else linearLayout[][]
         ]
+      ]
     ]
 
 chatView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w

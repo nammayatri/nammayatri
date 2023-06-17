@@ -479,7 +479,8 @@ newtype RidesInfo = RidesInfo
       fromLocation :: LocationInfo,
       toLocation :: LocationInfo,
       estimatedDistance :: Int,
-      exoPhone :: String
+      exoPhone :: String,
+      specialLocationTag :: Maybe String
   }
 
 newtype LocationInfo = LocationInfo

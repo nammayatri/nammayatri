@@ -461,7 +461,6 @@ type ItemState =
     card_visibility :: PropValue,
     shimmer_visibility :: PropValue,
     rideDistance :: PropValue,
-    ride_distance_visibility :: PropValue,
     status :: PropValue,
     vehicleModel :: PropValue,
     shortRideId :: PropValue,
@@ -473,7 +472,12 @@ type ItemState =
     updatedAt :: PropValue,
     source :: PropValue,
     destination :: PropValue,
-    amountColor :: PropValue
+    amountColor :: PropValue,
+    riderName :: PropValue,
+    metroTagVisibility :: PropValue,
+    specialZoneText :: PropValue,
+    specialZoneImage :: PropValue,
+    specialZoneLayoutBackground :: PropValue
   }
 -----------------------------------------------ApplicationStatusScreen -------------------
 
@@ -656,7 +660,8 @@ type ActiveRide = {
   riderName :: String,
   estimatedFare :: Int,
   isDriverArrived :: Boolean,
-  notifiedCustomer :: Boolean
+  notifiedCustomer :: Boolean,
+  specialLocationTag :: Maybe String
 }
 
 type HomeScreenProps =  {
