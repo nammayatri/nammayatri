@@ -14,6 +14,7 @@
 -}
 
 module Components.RideActionModal.Controller where
+import Data.Maybe as Mb
 
 import Screens.Types (HomeScreenStage(..))
 
@@ -39,7 +40,8 @@ type Config = {
   id :: String,
   buttonTimeOut :: Int,
   currentStage :: HomeScreenStage,
-  unReadMessages :: Boolean
+  unReadMessages :: Boolean,
+  specialLocationTag :: Mb.Maybe String
   }
 
 type AddressConfig = {
@@ -66,5 +68,6 @@ config = {
   buttonTimeOut : 10,
   id : "buttonTimer",
   currentStage : RideAccepted,
-  unReadMessages : false
+  unReadMessages : false,
+  specialLocationTag : Mb.Nothing
 }

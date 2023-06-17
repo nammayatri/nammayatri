@@ -76,14 +76,22 @@ public class RideRequestActivity extends AppCompatActivity {
                     return;
             }
 
-            holder.pickUpDistance.setText(model.getPickUpDistance()+" km " + getString(R.string.away));
+            holder.pickUpDistance.setText(model.getPickUpDistance()+" km ");
             holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
             holder.distanceToBeCovered.setText(model.getDistanceToBeCovered()+" km");
             holder.sourceArea.setText(model.getSourceArea());
             holder.sourceAddress.setText(model.getSourceAddress());
             holder.destinationArea.setText(model.getDestinationArea());
             holder.destinationAddress.setText(model.getDestinationAddress());
-            holder.acceptRejTimer.setText("" + (model.getReqExpiryTime() + model.getStartTime() - time));
+            holder.textIncPrice.setText(String.valueOf(model.getNegotiationUnit()));
+            holder.textDecPrice.setText(String.valueOf(model.getNegotiationUnit()));
+            if (holder.specialLocationTag != null){
+                rideRequestUtils.setSpecialZoneAttrs(holder, model.getspecialLocationTag(), RideRequestActivity.this);
+            }
+            if (model.getDriverMaxExtraFee() == 0) {
+                holder.buttonIncreasePrice.setVisibility(View.GONE);
+                holder.buttonDecreasePrice.setVisibility(View.GONE);
+            }
             holder.reqButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
@@ -248,7 +256,8 @@ public class RideRequestActivity extends AppCompatActivity {
                         rideRequestBundle.getInt("driverMaxExtraFee"),
                         rideRequestBundle.getInt("rideRequestPopupDelayDuration"),
                         negotiationUnit,
-                        rideRequestBundle.getInt("customerTip"));
+                        rideRequestBundle.getInt("customerTip"),
+                        rideRequestBundle.getString("specialLocationTag"));
 
                 sheetArrayList.add(sheetModel);
                 sheetAdapter.updateSheetList(sheetArrayList);

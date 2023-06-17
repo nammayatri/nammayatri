@@ -15,6 +15,9 @@
 
 module Screens.HomeScreen.ComponentConfig where
 
+import Language.Strings (getString)
+import Prelude(unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Visibility(..))
 import Components.SelectListModal as SelectListModal
 import Components.Banner as Banner
 import Components.PopUpModal as PopUpModal
@@ -30,9 +33,6 @@ import Helpers.Utils as HU
 import Components.InAppKeyboardModal as InAppKeyboardModal
 import Language.Strings
 import Language.Types (STR(..))
-import Styles.Colors as Color
-import Prelude
-import PrestoDOM
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -62,7 +62,8 @@ rideActionModalConfig state = let
     isDriverArrived = state.data.activeRide.isDriverArrived,
     notifiedCustomer = state.data.activeRide.notifiedCustomer,
     currentStage = state.props.currentStage,
-    unReadMessages = state.props.unReadMessages
+    unReadMessages = state.props.unReadMessages,
+    specialLocationTag = state.data.activeRide.specialLocationTag
   }
   in rideActionModalConfig'
 
@@ -150,7 +151,9 @@ cancelConfirmationConfig state = let
     margin = MarginHorizontal 24 24 ,
     buttonLayoutMargin = Margin 16 0 16 20 ,
     primaryText {
-      text = (getString FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES)
+      text = case state.data.activeRide.specialLocationTag of 
+              Nothing -> getString FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES
+              Just specialLocationTag -> getString $ getCancelAlertText $ HU.getSpecialZoneConfig  "cancelText" (Just specialLocationTag)
     , margin = Margin 16 24 16 24 },
     secondaryText {visibility = GONE},
     option1 {
@@ -176,7 +179,8 @@ cancelConfirmationConfig state = let
     backgroundClickable = false,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl = "ic_cancel_prevention,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cancel_prevention.png"
+      imageUrl = if state.data.activeRide.specialLocationTag == Nothing then "ic_cancel_prevention,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cancel_prevention.png" 
+                  else HU.getSpecialZoneConfig "cancelConfirmImage" (state.data.activeRide.specialLocationTag)
     , visibility = VISIBLE
     , margin = Margin 16 20 16 0
     , height = V 178
@@ -313,3 +317,8 @@ driverStatusIndicators = [
         textColor : Color.white900
     }
 ]
+getCancelAlertText :: String -> STR
+getCancelAlertText key = case key of 
+  "ZONE_CANCEL_TEXT_PICKUP" -> ZONE_CANCEL_TEXT_PICKUP
+  "ZONE_CANCEL_TEXT_DROP" -> ZONE_CANCEL_TEXT_DROP
+  _ -> FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES

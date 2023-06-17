@@ -18,6 +18,7 @@ import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.CountDownTimer;
@@ -107,6 +108,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         super.onCreate();
         key = getApplicationContext().getResources().getString(R.string.service);
     }
+    private RideRequestUtils rideRequestUtils = new RideRequestUtils();
 
     public class OverlayBinder extends Binder {
         public OverlaySheetService getService () {
@@ -140,6 +142,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             holder.destinationAddress.setText(model.getDestinationAddress());
             holder.textIncPrice.setText(String.valueOf(model.getNegotiationUnit()));
             holder.textDecPrice.setText(String.valueOf(model.getNegotiationUnit()));
+            if (holder.specialLocationTag != null){
+                rideRequestUtils.setSpecialZoneAttrs(holder, model.getspecialLocationTag(), OverlaySheetService.this);
+            }
             if (model.getDriverMaxExtraFee() == 0) {
                 holder.buttonIncreasePrice.setVisibility(View.GONE);
                 holder.buttonDecreasePrice.setVisibility(View.GONE);
@@ -498,6 +503,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         int driverMaxExtraFee = rideRequestBundle.getInt("driverMaxExtraFee");
                         int driverMinExtraFee = rideRequestBundle.getInt("driverMinExtraFee");
                         int rideRequestPopupDelayDuration = rideRequestBundle.getInt("rideRequestPopupDelayDuration");
+                        String specialLocationTag = rideRequestBundle.getString("specialLocationTag");
                         DecimalFormat df = new DecimalFormat();
                         df.setMaximumFractionDigits(2);
 
@@ -526,7 +532,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                                 driverMaxExtraFee,
                                 rideRequestPopupDelayDuration,
                                 negotiationUnit,
-                                customerExtraFee);
+                                customerExtraFee,
+                                specialLocationTag);
                         if (floatyView == null) {
                             startTimer();
                             showOverLayPopup();

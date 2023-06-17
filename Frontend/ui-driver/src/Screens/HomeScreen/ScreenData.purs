@@ -42,7 +42,8 @@ initData = {
           estimatedFare : 0,
           isDriverArrived : false,
           notifiedCustomer : false,
-          exoPhone : ""
+          exoPhone : "",
+          specialLocationTag : Nothing
         },
         cancelRideModal : {
           selectionOptions : [],

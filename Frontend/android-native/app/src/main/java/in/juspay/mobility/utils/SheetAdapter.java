@@ -13,12 +13,14 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
+import com.google.android.material.card.MaterialCardView;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -66,9 +68,11 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
     }
 
     public class SheetViewHolder extends RecyclerView.ViewHolder{
-        TextView pickUpDistance, acceptRejTimer, baseFare, sourceArea, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges;
+        TextView pickUpDistance, acceptRejTimer, baseFare, sourceArea, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, zoneText, fixedFareText, customerTipText, textIncludesCharges;
         Button reqButton, rejectButton;
         View buttonDecreasePrice, buttonIncreasePrice, progressBar;
+        ImageView assetZonePickup, assetZoneDrop;
+        MaterialCardView specialLocationTag, zoneDot;
         LinearLayout customerTipBlock;
         public SheetViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -90,6 +94,12 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             customerTipBlock = itemView.findViewById(R.id.customer_tip_block);
             customerTipText = itemView.findViewById(R.id.customer_tip_text);
             textIncludesCharges = itemView.findViewById(R.id.textIncludesCharges);
+            specialLocationTag = itemView.findViewById(R.id.specialLocationTag);
+            zoneText = itemView.findViewById(R.id.zoneText);
+            fixedFareText = itemView.findViewById(R.id.fixedFareText);
+            zoneDot = itemView.findViewById(R.id.zoneDot);
+            assetZoneDrop = itemView.findViewById(R.id.assetZoneDrop);
+            assetZonePickup = itemView.findViewById(R.id.assetZonePickup);
         }
     }
 

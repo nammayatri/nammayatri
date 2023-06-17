@@ -64,7 +64,7 @@
                             android:orientation="vertical">
 
                             <LinearLayout
-                                android:layout_width="wrap_content"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:orientation="horizontal">
 
@@ -95,6 +95,70 @@
                                         android:textColor="#454545"
                                         android:textFontWeight="600"
                                         android:textSize="24dp" />
+
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="right">
+
+                                <com.google.android.material.card.MaterialCardView
+                                    android:id="@+id/specialLocationTag"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_gravity="center"
+                                    android:visibility="gone"
+                                    app:cardBackgroundColor="#CEDEF8"
+                                    android:theme="@style/Theme.MaterialComponents.Light"
+                                    app:cardCornerRadius="10dp"
+                                    app:cardElevation="0dp"
+                                    app:contentPadding="10dp"
+                                    android:layout_marginVertical="10dp">
+
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="horizontal">
+
+                                        <TextView
+                                            android:id="@+id/zoneText"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:textSize="11dp"
+                                            android:layout_marginLeft="5dp"
+                                            android:gravity="center"
+                                            android:textColor="#0066FF"
+                                            android:textFontWeight="600"
+                                            android:fontFamily="@font/plus_jakartasans_semibold"
+                                            android:text="Metro Ride "/>
+
+                                        <com.google.android.material.card.MaterialCardView
+                                            android:id="@+id/zoneDot"
+                                            android:layout_width="4dp"
+                                            android:layout_height="4dp"
+                                            android:layout_gravity="center"
+                                            app:cardBackgroundColor="#0066FF"
+                                            android:theme="@style/Theme.MaterialComponents.Light"
+                                            app:cardCornerRadius="10dp"
+                                            app:cardElevation="0dp"
+                                            android:layout_marginLeft="5dp"/>
+
+                                        <TextView
+                                            android:id="@+id/fixedFareText"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:textSize="11dp"
+                                            android:layout_marginLeft="5dp"
+                                            android:textColor="#0066FF"
+                                            android:gravity="center"
+                                            android:singleLine="false"
+                                            android:textFontWeight="600"
+                                            android:fontFamily="@font/plus_jakartasans_semibold"
+                                            android:text="No Cancellation"/>
+                                    </LinearLayout>
+
+                                </com.google.android.material.card.MaterialCardView>
 
                                 </LinearLayout>
 
@@ -163,37 +227,49 @@
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginLeft="27dp"
-                                android:gravity="center_vertical"
-                                android:orientation="vertical">
+                                android:layout_marginLeft="27dp">
 
-                                <TextView
-                                    android:id="@+id/sourceArea"
-                                    android:layout_width="wrap_content"
+                                <LinearLayout
+                                    android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
-                                    android:layout_gravity="center_vertical"
-                                    android:ellipsize="end"
-                                    android:fontFamily="@font/plus_jakartasans_medium"
-                                    android:gravity="bottom"
-                                    android:lines="2"
-                                    android:singleLine="false"
-                                    android:text="Area"
-                                    android:textColor="#454545"
-                                    android:textSize="18dp"
-                                    android:textStyle="bold" />
+                                    android:layout_weight="1"
+                                    android:gravity="center_vertical"
+                                    android:orientation="vertical">
+                                    <TextView
+                                        android:id="@+id/sourceArea"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_gravity="center_vertical"
+                                        android:ellipsize="end"
+                                        android:fontFamily="@font/plus_jakartasans_medium"
+                                        android:gravity="bottom"
+                                        android:lines="2"
+                                        android:singleLine="false"
+                                        android:text="Area"
+                                        android:textColor="#454545"
+                                        android:textSize="18dp"
+                                        android:textStyle="bold" />
 
-                                <TextView
-                                    android:id="@+id/journeySource"
-                                    android:layout_width="wrap_content"
+                                    <TextView
+                                        android:id="@+id/journeySource"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="match_parent"
+                                        android:ellipsize="end"
+                                        android:fontFamily="@font/plus_jakartasans_medium"
+                                        android:lineHeight="18dp"
+                                        android:lines="2"
+                                        android:text="source Address"
+                                        android:textColor="#868B98"
+                                        android:textFontWeight="500"
+                                        android:textSize="14dp" />
+                                </LinearLayout>
+
+                                <ImageView
+                                    android:layout_width="40dp"
                                     android:layout_height="match_parent"
-                                    android:ellipsize="end"
-                                    android:fontFamily="@font/plus_jakartasans_medium"
-                                    android:lineHeight="18dp"
-                                    android:lines="2"
-                                    android:text="source Address"
-                                    android:textColor="#868B98"
-                                    android:textFontWeight="500"
-                                    android:textSize="14dp" />
+                                    android:id="@+id/assetZonePickup"
+                                    android:visibility="gone"
+                                    android:src="@drawable/ic_metro_shape"/>
                             </LinearLayout>
 
                             <TextView
@@ -215,37 +291,48 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginLeft="27dp"
-                                android:layout_marginTop="164dp"
-                                android:gravity="center_vertical"
-                                android:orientation="vertical">
-
-                                <TextView
-                                    android:id="@+id/destinationArea"
-                                    android:layout_width="wrap_content"
+                                android:layout_marginTop="164dp">
+                                <LinearLayout
+                                    android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
-                                    android:layout_gravity="center_vertical"
-                                    android:ellipsize="end"
-                                    android:fontFamily="@font/plus_jakartasans_medium"
-                                    android:maxLines="2"
-                                    android:singleLine="false"
-                                    android:text="Area"
-                                    android:textColor="#454545"
-                                    android:textSize="18dp"
-                                    android:textStyle="bold" />
+                                    android:layout_weight="1"
+                                    android:gravity="center_vertical"
+                                    android:orientation="vertical">
+                                    <TextView
+                                        android:id="@+id/destinationArea"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_gravity="center_vertical"
+                                        android:ellipsize="end"
+                                        android:fontFamily="@font/plus_jakartasans_medium"
+                                        android:maxLines="2"
+                                        android:singleLine="false"
+                                        android:text="Area"
+                                        android:textColor="#454545"
+                                        android:textSize="18dp"
+                                        android:textStyle="bold" />
 
-                                <TextView
-                                    android:id="@+id/journeyDestination"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_gravity="center_vertical"
-                                    android:ellipsize="end"
-                                    android:fontFamily="@font/plus_jakartasans_medium"
-                                    android:lineHeight="18dp"
-                                    android:lines="2"
-                                    android:text="dest Address"
-                                    android:textColor="#868B98"
-                                    android:textFontWeight="500"
-                                    android:textSize="14dp" />
+                                    <TextView
+                                        android:id="@+id/journeyDestination"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_gravity="center_vertical"
+                                        android:ellipsize="end"
+                                        android:fontFamily="@font/plus_jakartasans_medium"
+                                        android:lineHeight="18dp"
+                                        android:lines="2"
+                                        android:text="dest Address"
+                                        android:textColor="#868B98"
+                                        android:textFontWeight="500"
+                                        android:textSize="14dp" />
+                                </LinearLayout>
+                            <ImageView
+                                android:layout_width="40dp"
+                                android:layout_height="match_parent"
+                                android:id="@+id/assetZoneDrop"
+                                android:visibility="gone"
+                                android:src="@drawable/ic_metro_shape"/>
+
                             </LinearLayout>
 
                             <LinearLayout
