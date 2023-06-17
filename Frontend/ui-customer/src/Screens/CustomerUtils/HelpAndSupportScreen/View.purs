@@ -35,7 +35,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, map, pure, unit, ($), (-), (/=), (<<<), (<=), (<>), (==), (||))
 import Presto.Core.Types.Language.Flow (Flow, doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Shadow(..), Visibility(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, shadow, stroke, text, textSize, textView, visibility, width, imageWithFallback, weight, layoutGravity, clickable, alignParentBottom)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Shadow(..), Visibility(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, shadow, stroke, text, textSize, textView, visibility, width, imageWithFallback, weight, layoutGravity, clickable, alignParentBottom, scrollView)
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.HelpAndSupportScreen.Controller (Action(..), ScreenOutput, eval)
@@ -340,7 +340,7 @@ deleteAccountView state push=
     , background Color.blue600
     ][ 
       textView
-      [ text (getString WE_WOULD_APPRECIATE_YOUR_FEEDBACK)
+      [ text if state.props.btnActive || state.data.accountStatus == ST.DEL_REQUESTED then (getString WE_WOULD_APPRECIATE_YOUR_REASONING) else (getString WE_WOULD_APPRECIATE_YOUR_FEEDBACK)
       , textSize FontSize.a_12
       , fontStyle $ FontStyle.regular LanguageStyle
       , color Color.black650
@@ -361,14 +361,25 @@ deleteAccountView state push=
 
 editTextView :: ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 editTextView state push =
-  linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , padding (Padding 6 0 6 60)
+  linearLayout[
+    height MATCH_PARENT
+  , width MATCH_PARENT
   , orientation VERTICAL
   ][
-      PrimaryEditText.view (push <<< EmailEditTextAC) (primaryEditTextConfigEmail state)
-    , PrimaryEditText.view (push <<< DescriptionEditTextAC) (primaryEditTextConfigDescription state)
+    scrollView[
+      width MATCH_PARENT
+    , orientation VERTICAL
+    ]
+    [ linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , padding (Padding 6 0 6 60)
+      , orientation VERTICAL
+      ][
+          PrimaryEditText.view (push <<< EmailEditTextAC) (primaryEditTextConfigEmail state)
+        , PrimaryEditText.view (push <<< DescriptionEditTextAC) (primaryEditTextConfigDescription state)
+      ]
+    ]
   ]
 
 headingView :: ST.HelpAndSupportScreenState -> String -> forall w . PrestoDOM (Effect Unit) w

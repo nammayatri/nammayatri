@@ -154,7 +154,7 @@ const englishStrings = {
   "DEL_ACCOUNT": "Delete Account",
   "ACCOUNT_DELETION_CONFIRMATION": "Are you sure you want to delete your account? All your personal data will be lost",
   "REQUEST_SUBMITTED": "Request Submitted",
-  "WE_WILL_DELETE_YOUR_ACCOUNT": "We are sorry to see you leave our platform. We will delete your account within the next 30 days. Should you want to retain your account, please do call us on our support number",
+  "WE_WILL_DELETE_YOUR_ACCOUNT": "We are sorry to see you leave our platform. Your account will be deleted within the next 30 days. Meanwhile if you wish to retain your account, please call to our customer support number",
   "YES_DELETE_IT": "Yes, Delete It",
   "REQUEST_TO_DELETE_ACCOUNT": "Request to delete account",
   "CANCEL_STR": "Cancel",
@@ -462,5 +462,7 @@ const englishStrings = {
   "WE_WOULD_APPRECIATE_YOUR_FEEDBACK" : "We would appreciate your reasoning behind account deletion",
   "REASON_FOR_DELETING_ACCOUNT" : "Reason for deleting account*",
   "SUBMIT_REQUEST" : "Submit Request",
-  "PLEASE_ENTER_A_VALID_EMAIL" : "Please enter a valid email"
+  "PLEASE_ENTER_A_VALID_EMAIL" : "Please enter a valid email",
+  "WE_WOULD_APPRECIATE_YOUR_REASONING" : "We would appreciate your feedback on your reasoning behind account deletion",
+  "OK_GOT_IT" : "Ok, Got it"
 }

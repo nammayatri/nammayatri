@@ -1235,7 +1235,7 @@ helpAndSupportScreenFlow = do
       helpAndSupportScreenFlow
     DELETE_USER_ACCOUNT updatedState -> do
       _ <- Remote.sendIssueBT (Remote.makeSendIssueReq (Just updatedState.data.email) Nothing "Request To Delete Account" updatedState.data.description )
-      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data {accountStatus = DEL_REQUESTED}})
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { props{showDeleteAccountView = true}, data {accountStatus = DEL_REQUESTED}})
       helpAndSupportScreenFlow
 
 myRidesScreenFlow :: Boolean ->  FlowBT String Unit
