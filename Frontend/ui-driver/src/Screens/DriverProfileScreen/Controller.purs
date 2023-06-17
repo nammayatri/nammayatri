@@ -28,7 +28,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(..)) as Data
-import Screens.Types (DriverProfileScreenState, VehicleP)
+import Screens.Types (DriverProfileScreenState, VehicleP, DriverProfileScreenType(..))
 import Services.APITypes (GetDriverInfoResp(..), Vehicle(..))
 import Services.Backend (dummyVehicleObject)
 import Storage (setValueToLocalNativeStore, KeyStore(..))
@@ -64,6 +64,7 @@ instance loggableAction :: Loggable Action where
     GetDriverInfoResponse resp -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "get_driver_info_response"
     HideLiveDashboard val -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "hide_live_stats_dashboard"
     NoAction -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "no_action"
+    _ -> pure unit
 
 data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | GoToVehicleDetailsScreen DriverProfileScreenState
@@ -87,6 +88,7 @@ data Action = BackPressed Boolean
             | PopUpModalAction PopUpModal.Action
             | AfterRender
             | HideLiveDashboard String
+            | ChangeScreen DriverProfileScreenType
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 
@@ -147,6 +149,9 @@ eval (GetDriverInfoResponse (GetDriverInfoResp driverProfileResp)) state = do
                                       vehicleColor = linkedVehicle.color,
                                       vehicleSelected = getDowngradeOptionsSelected  (GetDriverInfoResp driverProfileResp)
                                       }})
+
+
+eval (ChangeScreen screenType) state = continue state{props{ screenType = screenType }}
 
 eval _ state = continue state
 

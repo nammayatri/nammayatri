@@ -24,8 +24,8 @@ import Data.Maybe
 
 import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
-import Language.Types (STR(..))
-import Screens.Types (DriverProfileScreenState, BottomNavBarState)
+import Language.Types (STR(..)) as STR
+import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfileScreenType(..))
 import Merchant.Utils (getMerchant, Merchant(..))
 import Prelude (class Eq, unit, (<>), (==), (||), (/=))
 
@@ -42,7 +42,6 @@ initData = {
     vehicleModelName : "",
     vehicleColor : "",
     driverAlternateNumber : Nothing,
-
     capacity : 0,
     vehicleSelected: [],
     downgradeOptions : []
@@ -50,7 +49,8 @@ initData = {
 
   props: {
     logoutModalView: false,
-    showLiveDashboard : false
+    showLiveDashboard : false,
+    screenType : DRIVER_DETAILS
    }
 }
 

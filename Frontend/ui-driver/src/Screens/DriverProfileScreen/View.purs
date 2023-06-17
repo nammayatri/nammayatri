@@ -40,7 +40,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), const, map, (==), (||), (/), unit, bind, (-), (<>), (<<<), pure, discard, show, (&&), void)
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout)
 import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle)
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(..), optionList)
 import Screens.Types as ST
@@ -50,6 +50,8 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Screens as ScreenNames
 import Helpers.Utils (getVehicleType)
+import PrestoDOM.Animation as PrestoAnim
+
 
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
@@ -74,36 +76,139 @@ view
   -> ST.DriverProfileScreenState
   -> PrestoDOM (Effect Unit) w
 view push state =
-  frameLayout
-    [ width MATCH_PARENT
-    , height MATCH_PARENT
-    ][ linearLayout
-      [ height MATCH_PARENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , background Color.white900
-      , onBackPressed push (const BackPressed state)
-      , afterRender push (const AfterRender)
-      , background Color.white900
-      ][ Anim.screenAnimationFadeInOut $
-          linearLayout
-          [ width MATCH_PARENT
-          , height MATCH_PARENT
-          , orientation VERTICAL
-          , weight 1.0
-          ][ profilePictureLayout state push
-           , profileOptionsLayout state push
-           ]
-        , BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.DRIVER_PROFILE_SCREEN)
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , background Color.white900
+  ][  headerView state push 
+    , driverDetailsView state push
+
+  ]
+
+
+headerView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+headerView state push = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation HORIZONTAL 
+  , gravity CENTER_VERTICAL
+  , padding $ Padding 16 16 16 16
+  ][ imageView
+      [ width $ V 30
+      , height $ V 30
+      , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left.png"
+      -- , onClick push $ const BackPressed
+      , padding $ Padding 2 2 2 2
+      , margin $ MarginLeft 5
       ]
-      , linearLayout
-        [ width MATCH_PARENT
-        , height MATCH_PARENT
-        , background Color.lightBlack900
-        , visibility if state.props.logoutModalView == true then VISIBLE else GONE
-        ][ PopUpModal.view (push <<<PopUpModalAction) (logoutPopUp state) ]
-      , if state.props.showLiveDashboard then showLiveStatsDashboard push state else dummyTextView
+    , textView
+      [ weight 1.0
+      , height WRAP_CONTENT
+      , text "My Profile"
+      , fontStyle $ FontStyle.semiBold LanguageStyle
+      , textSize FontSize.a_18
+      , margin $ MarginLeft 20
+      , color Color.black900
+      ]
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , gravity CENTER_VERTICAL
+      ][  imageView
+          [ height $ V 14
+          , width $ V 14 
+          , margin $ MarginRight 4
+          , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left.png"
+          ]
+        , textView
+          [ text "Settings"
+          , textSize FontSize.a_14 
+          , color Color.blue900
+          , fontStyle $ FontStyle.semiBold LanguageStyle
+          ]
+      ]
+    
+
+  ]
+
+driverDetailsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+driverDetailsView state push = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , background Color.blue600
+  , orientation VERTICAL
+  ][  tabView state push 
     ]
+
+tabView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+tabView state push = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , cornerRadius 24.0 
+  , margin $ Margin 16 16 16 0
+  , background Color.white900
+  , padding $ Padding 6 6 6 6
+  , gravity CENTER
+  ][  
+      textView
+      [ height WRAP_CONTENT
+      , weight 1.0 
+      , background if state.props.screenType == ST.DRIVER_DETAILS then Color.black900 else Color.white900
+      , text "Driver Details"
+      , cornerRadius 24.0 
+      , padding $ PaddingVertical 6 6
+      , onClick push $ const $ ChangeScreen ST.DRIVER_DETAILS
+      , fontStyle $ FontStyle.medium LanguageStyle
+      , gravity CENTER
+      , color if state.props.screenType == ST.DRIVER_DETAILS then Color.white900 else Color.black900
+      ]
+    , textView
+      [ height WRAP_CONTENT
+      , weight 1.0 
+      , gravity CENTER
+      , cornerRadius 24.0 
+      , onClick push $ const $ ChangeScreen ST.AUTO_DETAILS
+      , padding $ PaddingVertical 6 6
+      , text "Auto Details"
+      , fontStyle $ FontStyle.medium LanguageStyle
+      , background if state.props.screenType == ST.AUTO_DETAILS then Color.black900 else Color.white900
+      , color if state.props.screenType == ST.AUTO_DETAILS then Color.white900 else Color.black900
+      ]
+  ]
+  -- frameLayout
+  --   [ width MATCH_PARENT
+  --   , height MATCH_PARENT
+  --   ][ linearLayout
+  --     [ height MATCH_PARENT
+  --     , width MATCH_PARENT
+  --     , orientation VERTICAL
+  --     , background Color.white900
+  --     , onBackPressed push (const BackPressed state)
+  --     , afterRender push (const AfterRender)
+  --     , background Color.white900
+  --     ][ Anim.screenAnimationFadeInOut $
+  --         linearLayout
+  --         [ width MATCH_PARENT
+  --         , height MATCH_PARENT
+  --         , orientation VERTICAL
+  --         , weight 1.0
+  --         ][ profilePictureLayout state push
+  --          , profileOptionsLayout state push
+  --          ]
+  --       , BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.DRIVER_PROFILE_SCREEN)
+  --     ]
+  --     , linearLayout
+  --       [ width MATCH_PARENT
+  --       , height MATCH_PARENT
+  --       , background Color.lightBlack900
+  --       , visibility if state.props.logoutModalView == true then VISIBLE else GONE
+  --       ][ PopUpModal.view (push <<<PopUpModalAction) (logoutPopUp state) ]
+  --     , if state.props.showLiveDashboard then showLiveStatsDashboard push state else dummyTextView
+  --   ]
 
 
 showLiveStatsDashboard :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
