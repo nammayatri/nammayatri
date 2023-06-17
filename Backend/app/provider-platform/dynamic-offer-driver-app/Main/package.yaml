@@ -96,6 +96,7 @@ dependencies:
   - singletons
   - cassava
   - vector
+  - geohash == 1.0.1
   - cereal
   - beam-core
   - beam-mysql

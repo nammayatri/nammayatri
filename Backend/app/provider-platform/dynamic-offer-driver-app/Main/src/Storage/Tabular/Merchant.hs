@@ -43,6 +43,7 @@ mkPersist
       gstin Text Maybe
       fromTime UTCTime Maybe
       toTime UTCTime Maybe
+      geoHashPrecisionValue Int
       headCount Int Maybe
       status Domain.Status
       city Text

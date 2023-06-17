@@ -26,6 +26,7 @@ import qualified Beckn.Types.Core.Taxi.Search as BA
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as M
 import qualified Data.Text as T
+import qualified Domain.Action.UI.Maps as DMaps
 import qualified Domain.Types.Estimate as DEst
 import Domain.Types.FareParameters
 import qualified Domain.Types.FarePolicy as DFP
@@ -439,7 +440,7 @@ buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@
 getAddressByGetPlaceName :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> LatLong -> m Address
 getAddressByGetPlaceName merchantId sessionToken latLong = do
   pickupRes <-
-    Maps.getPlaceName merchantId $
+    DMaps.getPlaceName merchantId $
       Maps.GetPlaceNameReq
         { getBy = Maps.ByLatLong latLong,
           sessionToken = Just sessionToken,
