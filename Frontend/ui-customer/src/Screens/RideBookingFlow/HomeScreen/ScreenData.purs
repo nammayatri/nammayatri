@@ -170,7 +170,7 @@ initData = {
     , isBanner : true
     , callSupportPopUp : false
     , isMockLocation: false
-    , isSpecialZone : false
+    , isSpecialZone : true
     , defaultPickUpPoint : ""
     , showChatNotification : false
     , cancelSearchCallDriver : false
