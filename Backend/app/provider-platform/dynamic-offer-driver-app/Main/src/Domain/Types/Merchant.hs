@@ -57,6 +57,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     verified :: Bool,
     enabled :: Bool,
     internalApiKey :: Text,
+    geoHashPrecisionValue :: Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     geofencingConfig :: GeofencingConfig,
