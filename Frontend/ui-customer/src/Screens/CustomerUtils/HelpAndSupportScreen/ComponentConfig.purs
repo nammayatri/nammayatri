@@ -120,7 +120,7 @@ callConfirmationPopup state = let
       option1 {
         text = (getString GO_BACK_)
       , strokeColor = state.data.config.primaryBackground
-      , background = state.data.config.primaryTextColor
+      , background = state.data.config.popupBackground
       , color = state.data.config.primaryBackground
       },
       option2 {

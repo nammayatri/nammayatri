@@ -73,13 +73,20 @@ import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.mobility.app.callbacks.CallBack;
-import in.juspay.mobility.app.NetworkBroadcastReceiver;
 import in.juspay.mobility.app.NotificationUtils;
 import in.juspay.mobility.common.MobilityCommonBridge;
 
 public class MobilityCustomerBridge extends MobilityCommonBridge {
 
     public static int debounceAnimateCameraCounter = 0;
+
+    @Override
+    public void reset() {
+        super.reset();
+        receivers.deRegister(bridgeComponents.getContext());
+        receivers = null;
+        googleMap = null;
+    }
 
     // CallBacks Strings
     private static String storeContactsCallBack = null;

@@ -141,9 +141,9 @@ screen initialState =
                 fetchAndUpdateCurrentLocation push UpdateLocAndLatLong RecenterCurrentLocation
               RideAccepted -> do
                 _ <- pure $ enableMyLocation true
+                _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                 if ((getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION") then waitingCountdownTimer initialState.data.driverInfoCardState.driverArrivalTime push WaitingTimeAction else pure unit
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
-                  _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   void $ launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 3000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup"
                 else pure unit
@@ -157,8 +157,8 @@ screen initialState =
                   pure unit
               RideStarted -> do
                 _ <- pure $ enableMyLocation false
+                _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
-                  _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   _ <- launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 20000.0 (getValueToLocalStore TRACKING_ID) initialState "trip"
                   pure unit

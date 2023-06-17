@@ -129,6 +129,7 @@ import java.util.Locale;
 import in.juspay.hyper.bridge.HyperBridge;
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
+import in.juspay.hyper.core.JsCallback;
 import in.juspay.hyper.core.JuspayLogger;
 
 public class MobilityCommonBridge extends HyperBridge {
@@ -178,7 +179,7 @@ public class MobilityCommonBridge extends HyperBridge {
     // Others
     private LottieAnimationView animationView;
 
-    private static Receivers receivers = new Receivers();
+    protected static Receivers receivers = new Receivers();
 
 
     public MobilityCommonBridge(BridgeComponents bridgeComponents) {
@@ -1422,10 +1423,14 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     private Uri getImageUri(Context context, Bitmap bitmap) {
-        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, bytes);
-        String path = MediaStore.Images.Media.insertImage(context.getContentResolver(), bitmap, "ThumbnailImage", null);
-        return Uri.parse(path);
+        try {
+            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, bytes);
+            String path = MediaStore.Images.Media.insertImage(context.getContentResolver(), bitmap, "ThumbnailImage", null);
+            return Uri.parse(path);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @JavascriptInterface
@@ -1632,56 +1637,55 @@ public class MobilityCommonBridge extends HyperBridge {
     // endregion
 
     protected static class Receivers {
-        BridgeComponents bridgeComponents;
-        BroadcastReceiver gpsReceiver;
+        BroadcastReceiver gpsReceiver ;
         BroadcastReceiver internetActionReceiver;
         String storeInternetActionCallBack;
 
         public void initReceiver(BridgeComponents bridgeComponents) {
-            this.bridgeComponents = bridgeComponents;
             gpsReceiver = new BroadcastReceiver() {
                 @Override
                 public void onReceive(Context context, Intent intent) {
                     LocationManager locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
                     boolean isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
                     if (!isGpsEnabled) {
-                        invokeOnEvent("onLocationChanged", "{}");
+                        invokeOnEvent(bridgeComponents.getJsCallback(), "onLocationChanged", "{}");
                     }
                 }
             };
             internetActionReceiver = new BroadcastReceiver() {
                 @Override
                 public void onReceive(Context context, Intent intent) {
-                    if (!isNetworkAvailable()) {
-                        invokeOnEvent("onInternetChanged", "{}");
+                    if (!isNetworkAvailable(bridgeComponents.getContext())) {
+                        invokeOnEvent(bridgeComponents.getJsCallback(),"onInternetChanged", "{}");
                     } else {
-                        callInternetActionCallBack("true");
+                        callInternetActionCallBack(bridgeComponents.getJsCallback(),"true");
                     }
                 }
             };
             bridgeComponents.getContext().registerReceiver(gpsReceiver, new IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION));
             bridgeComponents.getContext().registerReceiver(internetActionReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
         }
-
-        protected void invokeOnEvent(String event, String payload) {
+        protected void invokeOnEvent(JsCallback callback, String event, String payload) {
             String encoded = Base64.encodeToString(payload.getBytes(), Base64.NO_WRAP);
             String command = String.format("window[\"onEvent'\"]('%s',atob('%s'))", event, encoded);
-            bridgeComponents.getJsCallback().addJsToWebView(command);
+            callback.addJsToWebView(command);
         }
-
-        private boolean isNetworkAvailable() {
+        private boolean isNetworkAvailable(Context context) {
             ConnectivityManager connectivityManager
-                    = (ConnectivityManager) bridgeComponents.getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+                    = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
             NetworkInfo activeNetworkInfo = connectivityManager != null ? connectivityManager.getActiveNetworkInfo() : null;
             return activeNetworkInfo != null && activeNetworkInfo.isConnected();
         }
-
-        public void callInternetActionCallBack(String isPermission) {
+        public void callInternetActionCallBack(JsCallback callback, String isPermission) {
             if (storeInternetActionCallBack != null) {
                 String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
                         storeInternetActionCallBack, isPermission);
-                bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                callback.addJsToWebView(javascript);
             }
+        }
+        public void deRegister(Context context) {
+            context.unregisterReceiver(gpsReceiver);
+            context.unregisterReceiver(internetActionReceiver);
         }
     }
 }
