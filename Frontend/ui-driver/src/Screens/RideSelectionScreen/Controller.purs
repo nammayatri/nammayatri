@@ -184,11 +184,11 @@ rideHistoryListTransformer list categoryAction =
     , card_visibility    : toPropValue "visible"
     , shimmer_visibility : toPropValue "gone"
     , driverSelectedFare : toPropValue ride.driverSelectedFare
-    , ride_distance_visibility : toPropValue
-                                   (case (ride.status) of
-                                     "CANCELLED" -> "gone"
-                                     _           -> "visible"
-                                   )
+    , riderName : toPropValue $ fromMaybe "" ride.riderName
+    , metroTagVisibility : toPropValue  "gone"
+    , specialZoneText : toPropValue ""
+    , specialZoneImage : toPropValue ""
+    , specialZoneLayoutBackground : toPropValue $ ""
     }
   ) (filter (\(RidesInfo ride) -> ((ride.status /= "CANCELLED" && categoryAction == "LOST_AND_FOUND") || (categoryAction /= "LOST_AND_FOUND"))) list))
 

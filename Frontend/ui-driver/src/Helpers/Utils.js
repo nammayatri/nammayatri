@@ -580,3 +580,33 @@ export const getImageUrl = function (url) {
   }
 };
 
+export const getZoneTagConfig = function (key){
+  return function(zoneType){
+    if (zoneType in zoneConfig){
+      var zoneOb = zoneConfig[zoneType];
+      if(key in zoneOb){
+        return zoneOb[key];
+      }
+      console.error("no value found for key "+ key);
+    }
+    console.error("no value found for key "+ zoneType);
+    return "";
+  }
+}
+
+const zoneConfig = {
+  SureMetro_Pickup : {
+    "backgroundColor" : "#2194FF",
+    "text" : "Metro Pickup",
+    "imageUrl" : "ic_metro_white,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_metro_white.png",
+    "cancelText" : "ZONE_CANCEL_TEXT_PICKUP",
+    "cancelConfirmImage" : "ic_cancelride_metro_pickup,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_pickup.png"
+  },
+  SureMetro_Drop : {
+    "backgroundColor" : "#2194FF",
+    "text" : "Metro Drop",
+    "imageUrl" : "ic_metro_white,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_metro_white.png",
+    "cancelText" : "ZONE_CANCEL_TEXT_DROP",
+    "cancelConfirmImage" : "ic_cancelride_metro_drop,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_drop.png"
+  } //More zoneConfigs can be added
+}

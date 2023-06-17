@@ -17,10 +17,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.View;
 import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
@@ -30,11 +33,14 @@ import com.google.firebase.analytics.FirebaseAnalytics;
 import org.json.JSONException;
 import org.json.JSONObject;
 import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.SocketTimeoutException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -256,12 +262,59 @@ public class RideRequestUtils {
         });
     }
 
-    public void openApplication(Context context){
+    public void openApplication(Context context) {
         Intent intent = new Intent(context.getApplicationContext(), MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
         try {
             context.getApplicationContext().startActivity(intent);
-        }catch (Exception ignored){}
+        } catch (Exception ignored) {}
+    }
+
+
+    public JSONObject getZoneConfig(String tag, Context context){
+        try {
+            String key = "";
+            String[] arrOfStr = tag.split("_");
+            String pickup = arrOfStr[0];
+            String drop = arrOfStr[1];
+            String priority = arrOfStr[2];
+            if (priority.equals("PriorityPickup")) {
+                key = pickup + "_Pickup";
+            } else if (priority.equals("PriorityDrop")){
+                key = drop + "_Drop";
+            } else {
+                return new JSONObject();
+            }
+            InputStream is = context.getAssets().open("juspay/zone_config.json");
+            int size = is.available();
+            byte[] buffer = new byte[size];
+            is.read(buffer);
+            is.close();
+            String json = new String(buffer, StandardCharsets.UTF_8);
+            return new JSONObject(json).getJSONObject(key);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return new JSONObject();
+        }
+    }
+
+    public void setSpecialZoneAttrs(SheetAdapter.SheetViewHolder holder, String specialLocationTag, Context context) {
+        try{
+            JSONObject zoneConfig = getZoneConfig(specialLocationTag,context);
+            holder.specialLocationTag.setCardBackgroundColor(Color.parseColor(zoneConfig.get("backgroundColor").toString()));
+            holder.zoneDot.setCardBackgroundColor(Color.parseColor(zoneConfig.get("textColor").toString()));
+            holder.zoneText.setText(zoneConfig.get("text").toString());
+            holder.zoneText.setTextColor(Color.parseColor(zoneConfig.get("textColor").toString()));
+            holder.fixedFareText.setText("No Cancellation");
+            holder.fixedFareText.setTextColor(Color.parseColor(zoneConfig.get("textColor").toString()));
+            holder.specialLocationTag.setVisibility(View.VISIBLE);
+            holder.assetZonePickup.setImageURI(Uri.parse("android.resource://"+ context.getPackageName() +"/drawable/"+ zoneConfig.get("imageUrl")));
+            holder.assetZoneDrop.setImageURI(Uri.parse("android.resource://"+ context.getPackageName() +"/drawable/"+ zoneConfig.get("imageUrl")));
+            holder.assetZonePickup.setVisibility(zoneConfig.getInt("assetZonePickupVisibility"));
+            holder.assetZoneDrop.setVisibility(zoneConfig.getInt("assetZoneDropVisibility"));
+        }catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
 }

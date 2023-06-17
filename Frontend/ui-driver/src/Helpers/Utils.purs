@@ -33,7 +33,7 @@ import Data.Array.NonEmpty (fromArray)
 import Data.Either (hush)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as DS
 import Data.Traversable (traverse)
 import Effect (Effect)
@@ -48,6 +48,7 @@ import Prelude (Unit, bind, pure, discard, unit, void, ($), identity, (<*>), (<#
 import Prelude (class Eq, class Show, (<<<))
 import Prelude (map, (*), (-), (/))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
+import Data.String (Pattern(..), split)
 
 -- import Control.Monad.Except (runExcept)
 -- import Data.Array.NonEmpty (fromArray)
@@ -217,3 +218,19 @@ getVehicleType vehicleType =
     "TAXI" -> "Non AC Taxi"
     "TAXI_PLUS" -> "AC Taxi"
     _ -> ""
+
+foreign import getZoneTagConfig :: String -> String -> String
+
+getSpecialZoneConfig :: String -> Maybe String -> String
+getSpecialZoneConfig prop tag = do
+  case tag of
+    Nothing -> ""
+    Just tag' -> do
+      let arr = split (Pattern "_") tag'
+      let pickup = fromMaybe "" (arr DA.!! 0)
+      let drop = fromMaybe "" (arr DA.!! 1)
+      let priority = fromMaybe "" (arr DA.!! 2)
+      case priority of 
+        "PriorityPickup" -> getZoneTagConfig prop (pickup <> "_Pickup")
+        "PriorityDrop" -> getZoneTagConfig prop (drop <> "_Drop")
+        _ -> ""

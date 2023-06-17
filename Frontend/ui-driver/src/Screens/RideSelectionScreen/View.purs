@@ -222,7 +222,6 @@ ridesView rideListItem push state =
                        AnimatedOut -> VISIBLE
                        _ -> GONE
            , PrestoList.listItem rideListItem
-           , background Color.bg_grey
            , PrestoList.listDataV2 (state.prestoListArrayItems)
            ]
          , Tuple "LOADER" $
@@ -247,7 +246,7 @@ ridesView rideListItem push state =
              PrestoList.list
              [ height MATCH_PARENT
              , scrollBarY false
-             , background Color.bg_grey
+             , background Color.white900
              , width MATCH_PARENT
              , onAnimationEnd push OnFadeComplete
              , PrestoList.listItem rideListItem
@@ -274,25 +273,29 @@ ridesView rideListItem push state =
 
 shimmerData :: Int -> ItemState
 shimmerData i =
-  { id   : toPropValue ""
-  , date : toPropValue "31/05/2022"
-  , time : toPropValue "7:35pm"
-  , status : toPropValue ""
-  , source : toPropValue "Nagarjuna Apartments,15/2, 19th Main, 27th Cross Rd, Sector 2, HSR Layout, Bengaluru, Karnataka 560102"
-  , updatedAt   : toPropValue ""
-  , driverName  : toPropValue ""
-  , shortRideId : toPropValue "Trip Id: 1234567890"
-  , destination : toPropValue "Nagarjuna Apartments,15/2, 19th Main, 27th Cross Rd, Sector 2, HSR Layout, Bengaluru, Karnataka 560102"
-  , amountColor : toPropValue ""
-  , total_amount : toPropValue "₹ 0.0"
-  , rideDistance : toPropValue "10km Ride with Bharat"
-  , vehicleModel : toPropValue "Auto"
-  , vehicleColor : toPropValue ""
-  , vehicleNumber   :  toPropValue ""
-  , card_visibility : toPropValue "gone"
-  , shimmer_visibility : toPropValue "visible"
-  , driverSelectedFare : toPropValue ""
-  , ride_distance_visibility : toPropValue "visible"
+  { date : toPropValue "31/05/2022",
+  time : toPropValue "7:35pm",
+  total_amount : toPropValue "₹ 0.0",
+  card_visibility : toPropValue "gone",
+  shimmer_visibility : toPropValue "visible",
+  rideDistance : toPropValue "10km Ride with Bharat",
+  status :  toPropValue "",
+  vehicleModel : toPropValue "Auto",
+  shortRideId : toPropValue ""  ,
+  vehicleNumber :  toPropValue ""  ,
+  driverName : toPropValue ""  ,
+  driverSelectedFare : toPropValue ""  ,
+  vehicleColor : toPropValue ""  ,
+  id : toPropValue "",
+  updatedAt : toPropValue "",
+  source : toPropValue "Nagarjuna Apartments,15/2, 19th Main, 27th Cross Rd, Sector 2, HSR Layout, Bengaluru, Karnataka 560102",
+  destination : toPropValue "Nagarjuna Apartments,15/2, 19th Main, 27th Cross Rd, Sector 2, HSR Layout, Bengaluru, Karnataka 560102",
+  amountColor: toPropValue "",
+  riderName : toPropValue "",
+  metroTagVisibility : toPropValue "",
+  specialZoneText : toPropValue "",
+  specialZoneImage : toPropValue "",
+  specialZoneLayoutBackground : toPropValue ""
   }
 
 getCategoryName :: String -> String
