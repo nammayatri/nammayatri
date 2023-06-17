@@ -254,6 +254,7 @@ type DriverProfileScreenData = {
   downgradeOptions :: Array String,
   vehicleSelected :: Array VehicleP,
   driverGender :: Maybe String
+  gender :: Maybe String
 }
 
 type VehicleP = {
@@ -263,8 +264,17 @@ type VehicleP = {
 
 type DriverProfileScreenProps = {
   logoutModalView :: Boolean,
-  showLiveDashboard :: Boolean
+  showLiveDashboard :: Boolean,
+  screenType :: DriverProfileScreenType,
+  openSettings :: Boolean,
+  updateDetails :: Boolean
 }
+
+data DriverProfileScreenType = DRIVER_DETAILS | AUTO_DETAILS | SETTINGS
+
+derive instance genericDriverProfileScreenType :: Generic DriverProfileScreenType _
+instance showDriverProfileScreenType :: Show DriverProfileScreenType where show = genericShow
+instance eqDriverProfileScreenType :: Eq DriverProfileScreenType where eq = genericEq 
 -----------------------------------------------ApplicationStatusScreen ---------------------------------------
 type ApplicationStatusScreenState = {
   data :: ApplicationStatusScreenData,

@@ -22,18 +22,20 @@ import JBridge (firebaseLogEvent, goBackPrevWebPage)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
-import Prelude (class Show, pure, unit, ($), discard, bind)
+import Prelude (class Show, pure, unit, ($), discard, bind, (==))
 import PrestoDOM (Eval, continue, exit, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(..)) as Data
-import Screens.Types (DriverProfileScreenState, VehicleP)
 import Services.API (GetDriverInfoResp(..), Vehicle(..))
+import Screens.Types (DriverProfileScreenState, VehicleP, DriverProfileScreenType(..))
 import Services.Backend (dummyVehicleObject)
 import Storage (setValueToLocalNativeStore, KeyStore(..))
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(LIVE_STATS_DASHBOARD))
+import Components.GenericHeader.Controller as GenericHeaderController
+import Components.PrimaryEditText.Controller as PrimaryEditTextController
 
 instance showAction :: Show Action where
   show _ = ""
@@ -64,13 +66,14 @@ instance loggableAction :: Loggable Action where
     GetDriverInfoResponse resp -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "get_driver_info_response"
     HideLiveDashboard val -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "hide_live_stats_dashboard"
     NoAction -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "no_action"
+    _ -> pure unit
 
 data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | GoToVehicleDetailsScreen DriverProfileScreenState
                     | GoToBookingOptions DriverProfileScreenState
-                    | GoToSelectLanguageScreen
-                    | GoToHelpAndSupportScreen
-                    | GoToDriverHistoryScreen
+                    | GoToSelectLanguageScreen DriverProfileScreenState
+                    | GoToHelpAndSupportScreen DriverProfileScreenState
+                    | GoToDriverHistoryScreen DriverProfileScreenState
                     | GoToNotifications
                     | GoToAboutUsScreen
                     | OnBoardingFlow
@@ -87,6 +90,11 @@ data Action = BackPressed Boolean
             | PopUpModalAction PopUpModal.Action
             | AfterRender
             | HideLiveDashboard String
+            | ChangeScreen DriverProfileScreenType
+            | GenericHeaderAC GenericHeaderController.Action
+            | PrimaryEditTextAC PrimaryEditTextController.Action
+            | UpdateValue String
+            | OpenSettings 
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 
@@ -98,12 +106,14 @@ eval (BackPressed flag) state = if state.props.logoutModalView then continue $ s
                                   _ <- pure $ goBackPrevWebPage (getNewIDWithTag "webview")
                                   pure NoAction
                                 ]
+                                else if state.props.openSettings then continue state{props{openSettings = false}}
+                                
                                 else exit GoBack
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
   case screen of
     "Home" -> exit $ GoToHomeScreen
-    "Rides" -> exit $ GoToDriverHistoryScreen
+    "Rides" -> exit $ GoToDriverHistoryScreen state
     "Alert" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
@@ -119,8 +129,8 @@ eval (OptionClick optionIndex) state = do
     Data.DRIVER_VEHICLE_DETAILS -> exit $ GoToVehicleDetailsScreen state
     Data.DRIVER_BANK_DETAILS -> continue state
     Data.DRIVER_BOOKING_OPTIONS -> exit $ GoToBookingOptions state
-    Data.MULTI_LANGUAGE -> exit $ GoToSelectLanguageScreen
-    Data.HELP_AND_FAQS -> exit $ GoToHelpAndSupportScreen
+    Data.MULTI_LANGUAGE -> exit $ GoToSelectLanguageScreen state
+    Data.HELP_AND_FAQS -> exit $ GoToHelpAndSupportScreen state
     Data.ABOUT_APP -> exit $ GoToAboutUsScreen
     Data.DRIVER_LOGOUT -> continue $ (state {props = state.props {logoutModalView = true}})
     Data.REFER -> exit $ OnBoardingFlow
@@ -147,6 +157,13 @@ eval (GetDriverInfoResponse (GetDriverInfoResp driverProfileResp)) state = do
                                       vehicleColor = linkedVehicle.color,
                                       vehicleSelected = getDowngradeOptionsSelected  (GetDriverInfoResp driverProfileResp)
                                       }})
+
+
+eval (ChangeScreen screenType) state = continue state{props{ screenType = screenType }}
+
+eval OpenSettings state = continue state{props{openSettings = true}}
+
+eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = continue state{ props { openSettings = false }}
 
 eval _ state = continue state
 
