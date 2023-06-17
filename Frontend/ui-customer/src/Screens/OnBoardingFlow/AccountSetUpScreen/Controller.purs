@@ -27,9 +27,10 @@ import Prelude (class Show, bind, discard, pure, unit, not, ($), (/=), (&&), (>=
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
-import Screens.Types (AccountSetUpScreenState, Gender(..))
+import Screens.Types (AccountSetUpScreenState, Gender(..), ActiveFieldAccountSetup(..))
 import Engineering.Helpers.Commons(getNewIDWithTag)
 import Data.Maybe(Maybe(..))
+import Components.StepsHeaderModel.Controller as StepsHeaderModelController
 
 instance showAction :: Show Action where
   show _ = ""
@@ -44,7 +45,9 @@ instance loggableAction :: Loggable Action where
       PrimaryButtonController.OnClick -> do
         trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "primary_button_action" "continue"
       PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "primary_button" "no_action"
-    NameEditTextActionController (PrimaryEditTextController.TextChanged id value) -> trackAppTextInput appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_edit_text_changed" "primary_edit_text"
+    NameEditTextActionController act -> case act of
+      PrimaryEditTextController.TextChanged _ _ -> trackAppTextInput appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_edit_text_changed" "primary_edit_text"
+      PrimaryEditTextController.FocusChanged _ -> trackAppTextInput appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_edit_text_focus_changed" "primary_edit_text"
     GenericHeaderActionController act -> case act of
       GenericHeaderController.PrefixImgOnClick -> do
         trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "generic_header_action" "back_icon"
@@ -66,6 +69,8 @@ instance loggableAction :: Loggable Action where
     TextChanged value -> trackAppTextInput appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_text_changed" "edit_text"
     GenderSelected value -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "gender_selected" "edit_text"
     AnimationEnd _ -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "show_options" "animation_end"
+    StepsHeaderModelAC _ -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "steps_header_modal" "backpressed"
+    NameSectionClick -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "in_screen" "full_name_click"
       
 
 
@@ -85,6 +90,8 @@ data Action
   | GenderSelected Gender
   | AfterRender
   | AnimationEnd String
+  | StepsHeaderModelAC StepsHeaderModelController.Action
+  | NameSectionClick
 
 eval :: Action -> AccountSetUpScreenState -> Eval Action ScreenOutput AccountSetUpScreenState
 eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = do
@@ -97,7 +104,9 @@ eval (GenericHeaderActionController (GenericHeaderController.PrefixImgOnClick)) 
         pure $ BackPressed
     ]
 
-eval EditTextFocusChanged state = continue state {props{genderOptionExpanded = false}}
+eval (StepsHeaderModelAC StepsHeaderModelController.OnArrowClick) state = continueWithCmd state[ do pure $ BackPressed]
+
+eval EditTextFocusChanged state = continue state {props{genderOptionExpanded = false, activeField = Just NameSection}}
 
 eval (GenderSelected value) state = continue state{data{gender = Just value}, props{genderOptionExpanded = false, btnActive = (state.data.name /= "") && (length state.data.name >= 3) }}
 
@@ -108,7 +117,9 @@ eval (TextChanged value) state = do
 
 eval (ShowOptions) state = do
   _ <- pure $ hideKeyboardOnNavigation true
-  continue state{props{genderOptionExpanded = not state.props.genderOptionExpanded, expandEnabled = true}}
+  continue state{props{genderOptionExpanded = not state.props.genderOptionExpanded, expandEnabled = true, activeField = Just DropDown}}
+
+eval NameSectionClick state = continue state {props{genderOptionExpanded = false, activeField = Just NameSection}}
 
 eval (AnimationEnd _)  state = continue state{props{showOptions = false}}
 

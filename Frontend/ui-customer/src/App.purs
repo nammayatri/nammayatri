@@ -34,8 +34,8 @@ import Screens.SavedLocationScreen.ScreenData as SavedLocationScreenData
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
 import Screens.EmergencyContactsScreen.ScreenData as EmergencyContactsScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType)
-import Services.API (GetDriverLocationResp)
+import Screens.OnBoardingFlow.WelcomeScreen.ScreenData as WelcomeScreenData
+import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, WelcomeScreenState, CallType)
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -59,6 +59,7 @@ newtype GlobalState = GlobalState {
   , appUpdatePopUpScreen :: AppUpdatePopUpState
   , referralScreen :: ReferralScreenState
   , emergencyContactsScreen :: EmergencyContactsScreenState
+  , welcomeScreen :: WelcomeScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -82,6 +83,7 @@ defaultGlobalState = GlobalState {
   , appUpdatePopUpScreen : {version : 1}
   , referralScreen : ReferralScreenData.initData
   , emergencyContactsScreen : EmergencyContactsScreenData.initData
+  , welcomeScreen : WelcomeScreenData.initData
   }
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK
 
@@ -144,6 +146,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | CHECK_FLOW_STATUS
                         | RETRY_FINDING_QUOTES
                         | ON_CALL HomeScreenState CallType
+                        | TRIGGER_PERMISSION_FLOW String
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 
@@ -161,6 +164,8 @@ data ADD_NEW_ADDRESS_SCREEN_OUTPUT =  SEARCH_ADDRESS String AddNewAddressScreenS
 data MY_PROFILE_SCREEN_OUTPUT = UPDATE_USER_PROFILE MyProfileScreenState | GO_TO_HOME_
 
 data REFERRAL_SCREEN_OUPUT = UPDATE_REFERRAL String | BACK_TO_HOME
+
+data WELCOME_SCREEN_OUTPUT = GoToMobileNumberScreen
 
 data ScreenType =
     EnterMobileNumberScreenType (EnterMobileNumberScreenState -> EnterMobileNumberScreenState)

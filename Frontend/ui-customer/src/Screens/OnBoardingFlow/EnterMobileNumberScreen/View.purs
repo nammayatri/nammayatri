@@ -21,6 +21,7 @@ import Screens.OnBoardingFlow.EnterMobileNumberScreen.ComponentConfig
 import Animation as Anim
 import Animation.Config (translateYAnimConfig)
 import Components.GenericHeader as GenericHeader
+import Components.StepsHeaderModel as StepsHeaderModel
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Control.Monad.Except.Trans (runExceptT)
@@ -40,7 +41,7 @@ import Language.Types (STR(..))
 import Log (printLog)
 import Prelude (Unit, bind, const, discard, not, pure, unit, when, ($), (&&), (/=), (<<<), (<>), (==), (>=))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, fontStyle, frameLayout, gravity, height, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, singleLine, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, fontStyle, frameLayout, gravity, height, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, singleLine, text, textSize, textView, visibility, weight, width, textFromHtml)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.EnterMobileNumberScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
@@ -57,6 +58,7 @@ screen initialState =
   , globalEvents : [ (\push ->
     do
       _ <- JB.setFCMToken push $ SetToken
+      if not initialState.props.enterOTP then JB.detectPhoneNumbers push $ SetPhoneNumber else pure unit
       if initialState.data.timerID == "" then pure unit else pure $ EHC.clearTimer initialState.data.timerID
       if not initialState.props.resendEnable && initialState.data.attempts >= 0 then do
           _ <- launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ lift $ lift $ doAff do liftEffect $ EHC.countDown 15 "otp" push CountDown
@@ -87,13 +89,13 @@ view push state = let
         -- _ <- requestKeyboardShow (getNewIDWithTag "EnterMobileNumberEditText")
         pure unit
         ) (const AfterRender)
-    , margin (Margin 0 16 0 24)
+    , margin $ MarginBottom 24
     , padding (Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom)
     , background Color.white900
     , onBackPressed push (const BackPressed state.props.enterOTP)
     ][  PrestoAnim.animationSet
           [ Anim.fadeIn true
-          ] $ GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
+          ] $ StepsHeaderModel.view (push <<< StepsHeaderModelAC) (StepsHeaderModel.stepsHeaderData if state.props.enterOTP then 1 else 0)
       , frameLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT
@@ -122,18 +124,7 @@ enterMobileNumberView  state lang push =
     , visibility  if state.props.enterOTP then GONE else VISIBLE
     , alpha if state.props.enterOTP then 0.0 else 1.0
     , orientation VERTICAL
-    ][
-      PrestoAnim.animationSet
-      [ Anim.translateYAnimFromTopWithAlpha translateYAnimConfig -- 300 10 0 0 true PrestoAnim.Linear
-      ] $ textView $
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , text (getString ENTER_MOBILE_NUMBER)
-        , color Color.black800
-        , gravity LEFT
-        , singleLine true
-        ] <> FontStyle.h1 TypoGraphy
-    , PrestoAnim.animationSet
+    ][PrestoAnim.animationSet
       [ Anim.translateYAnimFromTopWithAlpha translateYAnimConfig -- 300 10 0 0 true PrestoAnim.Linear
       ] $ PrimaryEditText.view (push <<< MobileNumberEditTextAction) (mobileNumberEditTextConfig state)
     , linearLayout
@@ -146,14 +137,9 @@ enterMobileNumberView  state lang push =
       ]) $ linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , orientation VERTICAL
         , margin (Margin 11 0 0 10)
-        ][ commonTextView state (getString BY_TAPPING_CONTINUE) false Nothing push
-          ,linearLayout
-            [ height WRAP_CONTENT
-            , width WRAP_CONTENT
-            , orientation HORIZONTAL
-            ][ (commonTextView state ((getString TO_THE) <> " " <> (getString TERMS_AND_CONDITIONS)) true (Just (getValueFromConfig "DOCUMENT_LINK")) push) ]
+        ][ commonTextView state (getString BY_TAPPING_CONTINUE) false Nothing push false
+        , commonTextView state " &nbsp; <u>T&Cs</u>" true (Just (getValueFromConfig "DOCUMENT_LINK")) push true
           ]
     , PrestoAnim.animationSet
       [ Anim.fadeIn $ not state.props.enterOTP
@@ -165,12 +151,12 @@ enterMobileNumberView  state lang push =
         ][PrimaryButton.view (push <<< MobileNumberButtonAction) (mobileNumberButtonConfig state)]
     ]
 
-commonTextView :: ST.EnterMobileNumberScreenState -> String -> Boolean -> Maybe String -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-commonTextView state textValue isLink link push =
+commonTextView :: ST.EnterMobileNumberScreenState -> String -> Boolean -> Maybe String -> (Action -> Effect Unit) -> Boolean -> forall w . PrestoDOM (Effect Unit) w
+commonTextView state textValue isLink link push isTextFromHtml =
   textView
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    , text textValue--(getString TERMS_AND_CONDITIONS)
+    , (if isTextFromHtml then textFromHtml else text) textValue
     , color if isLink then Color.blue900 else Color.black700
     , textSize FontSize.a_12
     , fontStyle $ FontStyle.medium LanguageStyle
@@ -182,7 +168,7 @@ commonTextView state textValue isLink link push =
 
 ------------------------------------- enterOTPView --------------------------------------------
 enterOTPView:: ST.EnterMobileNumberScreenState -> String -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-enterOTPView state lang push=
+enterOTPView state lang push =
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -190,16 +176,6 @@ enterOTPView state lang push=
     , alpha if state.props.enterOTP then 1.0 else 0.0
     , orientation VERTICAL
     ][PrestoAnim.animationSet
-      [ Anim.translateYAnimFromTopWithAlpha translateYAnimConfig{ifAnim = state.props.enterOTP} -- 400 15 0 0 state.props.enterOTP PrestoAnim.Linear
-      ] $ textView $
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , text(getString ENTER_OTP)
-      , color Color.black800
-      , gravity LEFT
-      , singleLine true
-      ]  <> FontStyle.h1 TypoGraphy
-    , PrestoAnim.animationSet
       [ Anim.translateYAnimFromTopWithAlpha translateYAnimConfig{ifAnim = state.props.enterOTP} --400 15 0 0 state.props.enterOTP PrestoAnim.Linear
       ] $ PrimaryEditText.view (push <<< OTPEditTextAction) (otpEditTextConfig state)
     , PrestoAnim.animationSet

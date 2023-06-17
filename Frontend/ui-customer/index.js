@@ -231,15 +231,6 @@ window["onEvent'"] = function (event, args) {
   console.log(event, args);
   if (event == "onBackPressed") {
     purescript.onEvent(event)();
-    // if (window.__dui_screen && window.isObject(window.onBackPressedEvent) && window.onBackPressedEvent[window.__dui_screen]) {
-      // console.log("======----===");
-      // console.log(window.__dui_screen)
-    //   if(window.__dui_screen === "RideHomeScreen" || window.__dui_screen === "HomeScreen"){
-    //     JBridge.minimizeApp();
-    //   }
-    //   window.onBackPressedEvent[window.__dui_screen]();
-    // }
-    // window.onBackPressed();
   } else if (event == "onPause") {
     previousDateObject = new Date();
     window.onPause();

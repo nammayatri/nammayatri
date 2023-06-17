@@ -51,7 +51,7 @@ import Juspay.OTP.Reader.Flow as Reader
 import Data.Number (fromString, pi, sin, cos, sqrt, asin)
 import Prelude (class Show, class Ord, class Eq, Unit, bind, discard, pure, unit, void, identity, not, (<*>), (<#>), (<<<), (>>>), ($), (<>), (>), show, (==), (/=), (/), (*), (-), (+), map, compare, (<), (=<<), (<=), ($))
 import Presto.Core.Flow (Flow, doAff)
-import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent)
+import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, CarouselModel)
 import Services.API (Prediction)
 import Types.App (GlobalState)
 import Data.Array (sortBy)
@@ -376,3 +376,5 @@ getMerchant lazy = case (decodeMerchantId (getMerchantId "")) of
 
 decodeMerchantId :: Foreign -> Maybe Merchant
 decodeMerchantId = hush <<< runExcept <<< decode
+
+foreign import addCarousel :: Array CarouselModel -> String -> Effect Unit

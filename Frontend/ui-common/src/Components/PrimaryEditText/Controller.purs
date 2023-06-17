@@ -23,7 +23,7 @@ import Data.Maybe(Maybe(..))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), LetterSpacing(..))
 import Common.Types.App
 
-data Action = TextChanged String String
+data Action = TextChanged String String | FocusChanged Boolean
 
 type Config =
   { height :: Length
@@ -42,8 +42,22 @@ type Config =
   , margin :: Margin
   , type :: String
   , warningStroke :: String
+  , constantField :: ConstantFieldConfig
+  , showConstantField :: Boolean
+  , focusedStroke :: String
   }
 
+type ConstantFieldConfig = {
+    width :: Length
+  , height :: Length
+  , gravity :: Gravity
+  , text :: String
+  , fontStyle :: String
+  , textSize :: Int
+  , color :: String
+  , padding :: Padding
+  , margin :: Margin
+}
 
 type EditTextConfig =
   { text :: String
@@ -62,6 +76,7 @@ type EditTextConfig =
   , alpha :: Number
   , capsLock :: Boolean
   , enabled :: Boolean
+  , focused :: Boolean
   }
 
 type TextConfig =
@@ -105,12 +120,14 @@ config = {
     , alpha : 1.0
     , capsLock : false
     , enabled : true
+    , focused : false
     }
   , visibility : VISIBLE
   , background : Color.white900
   , cornerRadius : 5.0
   , stroke : ("1," <> Color.borderColorLight)
   , warningStroke : ("1," <> Color.lightMaroon)
+  , focusedStroke : ("1," <> Color.blue800)
   , id : ""
   , topLabel :
     { text : ""
@@ -140,6 +157,18 @@ config = {
     , imageUrl : ""
     , margin : (Margin 0 0 0 0)
     , padding : (Padding 0 0 0 0)
+  }
+  , showConstantField : false
+  , constantField : {
+    width : WRAP_CONTENT
+  , height : MATCH_PARENT
+  , gravity : CENTER
+  , text : "+91"
+  , fontStyle : FontStyle.bold LanguageStyle
+  , textSize : FontSize.a_14
+  , color : Color.black800
+  , padding : Padding 0 0 0 0
+  , margin : Margin 10 0 0 0
   }
 
 }

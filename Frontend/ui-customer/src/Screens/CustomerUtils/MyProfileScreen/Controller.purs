@@ -42,16 +42,20 @@ instance loggableAction :: Loggable Action where
         trackAppEndScreen appId (getScreen MY_PROFILE_SCREEN)
       GenericHeader.SuffixImgOnClick -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "generic_header_action" "forward_icon"
     EditProfile fieldType -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "primary_button" "edit"
-    NameEditTextAction (PrimaryEditText.TextChanged id value) -> trackAppTextInput appId (getScreen MY_PROFILE_SCREEN) "edit_name_text_changed" "primary_edit_text"
     UpdateButtonAction act -> case act of
       PrimaryButton.OnClick -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "primary_button" "update"
       PrimaryButton.NoAction -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "primary_button" "no_action"
     UserProfile profile -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "in_screen" "user_profile"
     ShowOptions -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "open_gender_options_drop_down"
     GenderSelected value -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "gender_selected"
-    EmailIDEditTextAction (PrimaryEditText.TextChanged id value) -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "edit_email_text_changed" "primary_edit_text"
     NoAction -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "no_action"
     AnimationEnd _ -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "show_options" "animation_end"
+    NameEditTextAction act -> case act of
+      PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen MY_PROFILE_SCREEN) "edit_name_text_changed" "primary_edit_text"
+      PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen MY_PROFILE_SCREEN) "edit_name_text_focus_changed" "primary_edit_text"
+    EmailIDEditTextAction act -> case act of
+      PrimaryEditText.TextChanged _ _ -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "edit_email_text_changed" "primary_edit_text"
+      PrimaryEditText.FocusChanged _ -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "edit_email_text_focus_changed" "primary_edit_text"
 data Action = GenericHeaderActionController GenericHeader.Action
             | BackPressed MyProfileScreenState
             | AfterRender

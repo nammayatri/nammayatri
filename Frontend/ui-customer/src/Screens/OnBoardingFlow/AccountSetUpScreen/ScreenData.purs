@@ -32,5 +32,6 @@ initData =
       , genderOptionExpanded: false
       , expandEnabled : false
       , showOptions : false
+      , activeField : Nothing
       }
   }

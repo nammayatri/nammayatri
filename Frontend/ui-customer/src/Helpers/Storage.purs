@@ -70,6 +70,7 @@ data KeyStore
   | DEVICE_DETAILS
   | USER_EMAIL
   | PICKUP_DISTANCE
+  | PERMISSION_POPUP_TIRGGERED
 
 derive instance genericKeyStore :: Generic KeyStore _
 

@@ -45,7 +45,7 @@ const englishStrings = {
   "YOUR_EMAIL_ID": "Your email ID",
   "DESCRIBE_YOUR_ISSUE": "Describe your Issue",
   "ENTER_MOBILE_NUMBER": "Enter Mobile number",
-  "BY_TAPPING_CONTINUE": "By tapping continue",
+  "BY_TAPPING_CONTINUE": "By clicking Continue, you agree to our",
   "TO_THE": "You agree that you are accepting the ",
   "ENTER_OTP": "Enter OTP",
   "RESEND": "Resend",
@@ -101,7 +101,7 @@ const englishStrings = {
   "SORRY_WE_COULDNT_FIND_ANY_RIDES": "Sorry, we couldn’t find any rides",
   "LOAD_MORE": "Load More",
   "WE_NEED_ACCESS_TO_YOUR_LOCATION": "We need access to your location!",
-  "YOUR_LOCATION_HELPS_OUR_SYSTEM": "Your location helps our system to map down all the near by autos and get you the quickest ride possible.",
+  "LOCATION_PERMISSION_SUBTITLE" : "To get you rides, we require your device location.",
   "CALL": "Call",
   "EMPTY_RIDES": "Empty Rides",
   "YOU_HAVENT_TAKEN_A_TRIP_YET": "You haven't taken a trip yet",
@@ -175,7 +175,7 @@ const englishStrings = {
   "IS_ON_THE_WAY": "is on the way..",
   "ENTER_4_DIGIT_OTP": "Enter 4 digit OTP",
   "WRONG_OTP": "Wrong OTP",
-  "GRANT_ACCESS": "Grant Access",
+  "GRANT_ACCESS": "Grant Location Access",
   "ENTER_A_LOCATION": "Enter a location",
   "NEARBY": "Nearby",
   "MINS_AWAY": "mins Away",
@@ -484,5 +484,6 @@ const englishStrings = {
   "DRIVER_IS_NOT_MOVING_Q" : "Driver is not moving?",
   "WOULD_YOU_LIKE_TO_CHECK_WITH_THE_DRIVER_BEFORE_CANCELLING" : "\nWould you like to check with the driver before cancelling?",
   "DRIVER_IS_NEAR_YOUR_LOCATION" : "Driver is near your location.",
-  "SOME_OTHER_REASON" : "Some other reason."
+  "SOME_OTHER_REASON" : "Some other reason.",
+  "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "Welcome to Namma Yatri! \nTo start booking rides, we require your device location."
 }

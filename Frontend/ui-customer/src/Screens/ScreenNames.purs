@@ -38,6 +38,7 @@ data ScreenName = SPLASH_SCREEN
                 | REFERRAL_SCREEN
                 | APP_UPDATE_POPUP_SCREEN
                 | ENTER_OTP_NUMBER_SCREEN
+                | WELCOME_SCREEN
 
 getScreen :: ScreenName -> String
 getScreen str = case str of 
@@ -64,3 +65,4 @@ getScreen str = case str of
         REFERRAL_SCREEN               -> "referral_screen"
         APP_UPDATE_POPUP_SCREEN       -> "app_update_popup_screen"
         ENTER_OTP_NUMBER_SCREEN       -> "enter_otp_number_screen"
+        WELCOME_SCREEN                -> "welcome_screen"

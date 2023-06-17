@@ -78,6 +78,7 @@ import androidx.work.WorkManager;
 
 import com.airbnb.lottie.LottieAnimationView;
 import com.google.android.gms.ads.identifier.AdvertisingIdClient;
+import com.google.android.gms.auth.api.credentials.Credential;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
@@ -1051,6 +1052,15 @@ public class MainActivity extends AppCompatActivity {
                     Log.e(TAG,result.getError().toString());
                 }
                 break;
+            case CommonJsInterface.CREDENTIAL_PICKER_REQUEST :
+                if (resultCode == RESULT_OK){
+                    Credential credentials = data.getParcelableExtra(Credential.EXTRA_KEY);
+                    String selectedNumber = credentials.getId().substring(3);
+                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                            CommonJsInterface.detectPhoneNumbersCallBack, selectedNumber); //mobile_number
+                    juspayServicesGlobal.getDuiCallback().addJsToWebView(javascript);
+                }
+
             default:return;
         }
     }
