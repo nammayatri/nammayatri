@@ -101,9 +101,13 @@ instance loggableAction :: Loggable Action where
       RideBookingListAPIResponseAction rideList status -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "ride_booking_list_api_response"
       CallSupport -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "call_support"
       DeleteAccount -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "delete_account"
-      EmailEditTextAC (PrimaryEditText.TextChanged id a) -> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "email_edit_text_changed" "primary_edit_text"
-      DescriptionEditTextAC (PrimaryEditText.TextChanged id a) -> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "description_edit_text_changed" "primary_edit_text"
-      PrimaryButtonAC act -> case act of
+      EmailEditTextAC act -> case act of
+        PrimaryEditText.TextChanged _ _-> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "email_edit_text_changed" "primary_edit_text"
+        PrimaryEditText.FocusChanged _-> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "email_edit_text_focus_changed" "primary_edit_text"
+      DescriptionEditTextAC act -> case act of
+        PrimaryEditText.TextChanged _ _-> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "description_edit_text_changed" "primary_edit_text"
+        PrimaryEditText.FocusChanged _-> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "description_edit_text_focus_changed" "primary_edit_text"
+      PrimaryButtonAC act -> case act of 
         PrimaryButton.OnClick -> do
             trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "primary_button_action" "go_to_home/submit"
             trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)

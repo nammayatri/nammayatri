@@ -76,7 +76,9 @@ instance loggableAction :: Loggable Action where
       LocationListItemController.SelectedCurrentLocation lat lon name -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "location_list_item" "current_location"
       LocationListItemController.OnClick item -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "location_list_item" "location"
       LocationListItemController.FavClick act -> trackAppScreenEvent appId (getScreen ADD_NEW_ADDRESS_SCREEN) "location_list_item" "fav"
-    PrimaryEditTextAC (PrimaryEditText.TextChanged id input) -> trackAppTextInput appId (getScreen ADD_NEW_ADDRESS_SCREEN)"save_as_text_changed" "primary_edit_text"
+    PrimaryEditTextAC act -> case act of
+      PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen ADD_NEW_ADDRESS_SCREEN)"save_as_text_changed" "primary_edit_text"
+      PrimaryEditText.FocusChanged _ -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "primary_button" "focus_changed"
     PrimaryButtonAC act -> case act of
       PrimaryButton.OnClick -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "primary_button" "onclick"
       PrimaryButton.NoAction -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "primary_button" "no_action"

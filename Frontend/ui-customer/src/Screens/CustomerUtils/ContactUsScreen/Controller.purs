@@ -53,9 +53,15 @@ instance loggableAction :: Loggable Action where
                 trackAppActionClick appId (getScreen CONTACT_US_SCREEN) "primary_button_action" "go_to_home/submit"
                 trackAppEndScreen appId (getScreen CONTACT_US_SCREEN)
             PrimaryButton.NoAction -> trackAppActionClick appId (getScreen CONTACT_US_SCREEN) "primary_button" "no_action"
-        SubjectEditTextActionController (PrimaryEditText.TextChanged id a) -> trackAppTextInput appId (getScreen CONTACT_US_SCREEN) "subject_edit_text_changed" "primary_edit_text" 
-        EmailEditTextActionController (PrimaryEditText.TextChanged id a) -> trackAppTextInput appId (getScreen CONTACT_US_SCREEN) "email_edit_text_changed" "primary_edit_text"
-        DescriptionEditTextActionController (PrimaryEditText.TextChanged id a) -> trackAppTextInput appId (getScreen CONTACT_US_SCREEN) "description_edit_text_changed" "primary_edit_text"
+        SubjectEditTextActionController act -> case act of
+            PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen CONTACT_US_SCREEN) "subject_edit_text_changed" "primary_edit_text" 
+            PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen CONTACT_US_SCREEN) "subject_edit_text_focus_changed" "primary_edit_text" 
+        EmailEditTextActionController act -> case act of
+            PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen CONTACT_US_SCREEN) "email_edit_text_changed" "primary_edit_text"
+            PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen CONTACT_US_SCREEN) "email_edit_text_focus_changed" "primary_edit_text" 
+        DescriptionEditTextActionController act -> case act of
+            PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen CONTACT_US_SCREEN) "description_edit_text_changed" "primary_edit_text"
+            PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen CONTACT_US_SCREEN) "description_edit_text_focus_changed" "primary_edit_text" 
 
 data ScreenOutput = GoBack | GoHome ContactUsScreenState
 

@@ -41,7 +41,9 @@ instance loggableAction :: Loggable Action where
     GoToHomeButtonAC act -> case act of
       PrimaryButton.OnClick -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "go_to_home_primary_button" "go_to_home"
       PrimaryButton.NoAction -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "go_to_home_primary_button" "no_action"
-    ReferralEditText (PrimaryEditText.TextChanged id value) -> trackAppTextInput appId (getScreen REFERRAL_SCREEN) "referral_code_text_changed" "primary_edit_text"
+    ReferralEditText act -> case act of
+      PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen REFERRAL_SCREEN) "referral_code_text_changed" "primary_edit_text"
+      PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen REFERRAL_SCREEN) "referral_code_text_focus_changed" "primary_edit_text"
     GenericHeaderAC act -> case act of
       GenericHeader.PrefixImgOnClick -> do
         trackAppActionClick appId (getScreen REFERRAL_SCREEN) "generic_header_action" "back_icon"

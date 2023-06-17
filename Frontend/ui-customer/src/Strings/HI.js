@@ -47,7 +47,7 @@ const hindiStrings = {
   "YOUR_EMAIL_ID": "आपकी ईमेल आईडी",
   "DESCRIBE_YOUR_ISSUE": "अपनी समस्या का वर्णन करें",
   "ENTER_MOBILE_NUMBER": "मोबाइल नंबर दर्ज करें",
-  "BY_TAPPING_CONTINUE": "कंटिन्यू पर क्लिक करके ",
+  "BY_TAPPING_CONTINUE": "जारी रखें पर क्लिक करके, आप हमारी सहमति देते हैं",
   "  TO_THE": "आप सहमत हैं कि आप स्वीकार कर रहे हैं",
   "ENTER_OTP": "OTP दर्ज करें",
   "RESEND": "पुन: भेजें",
@@ -102,7 +102,7 @@ const hindiStrings = {
   "SORRY_WE_COULDNT_FIND_ANY_RIDES": "क्षमा करें, हमें कोई सवारी नहीं मिली",
   "LOAD_MORE": "और लोड करें",
   "WE_NEED_ACCESS_TO_YOUR_LOCATION": "हमें आपके स्थान तक पहुंच की आवश्यकता है!",
-  "YOUR_LOCATION_HELPS_OUR_SYSTEM": "आपका स्थान हमारे सिस्टम को ऑटो के पास सभी को मैप करने में मदद करता है और आपको सबसे तेज सवारी संभव है।",
+  "LOCATION_PERMISSION_SUBTITLE": "आपको राइड दिलाने के लिए, हमें आपके डिवाइस की लोकेशन की आवश्यकता होती है।",
   "CALL": "कॉल",
   "EMPTY_RIDES": "खाली सवारी सूची",
   "YOU_HAVENT_TAKEN_A_TRIP_YET": "आपने अभी तक कोई यात्रा नहीं की है!",
@@ -484,5 +484,6 @@ const hindiStrings = {
   "WOULD_YOU_LIKE_TO_CHECK_WITH_THE_DRIVER_BEFORE_CANCELLING" : "\nक्या आप कैंसिल करने से पहले ड्राइवर से बात करना चाहेंगे?",
   "DRIVER_IS_NEAR_YOUR_LOCATION" : "ड्राइवर आपकी लोकशन पर पहुँच चुका है।",
   "HAS_TRAVELLED" : " का सफर तय कर चुका है।",
-  "SOME_OTHER_REASON" : "कोई और कारण।"
+  "SOME_OTHER_REASON" : "कोई और कारण।",
+  "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "नम्मा यात्री में आपका स्वागत है! \nराइड बुक करना शुरू करने के लिए, हमें आपके डिवाइस की लोकेशन की आवश्यकता होती है।"
 }

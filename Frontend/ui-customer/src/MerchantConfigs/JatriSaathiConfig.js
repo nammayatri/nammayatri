@@ -45,7 +45,18 @@ export function getStringBNValue(key) {
 
 
 const config = {
-  "StringKeys": ["ABOUT_APP_DESCRIPTION", "WELCOME_TEXT", "REQUEST_AUTO_RIDE", "CURRENTLY_WE_ARE_LIVE_IN_", "DRIVER_PICKUP_CHARGES", "YOU_ARE_ABOUT_TO_CALL_JATRI_SATHI_SUPPORT", "SUCCESSFUL_ONBOARD", "ABOUT_REFERRAL_PROGRAM_DISCRIPTION", "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT"],
+  "StringKeys": ["ABOUT_APP_DESCRIPTION",
+  "WELCOME_TEXT",
+  "REQUEST_AUTO_RIDE",
+  "CURRENTLY_WE_ARE_LIVE_IN_",
+  "DRIVER_PICKUP_CHARGES",
+  "YOU_ARE_ABOUT_TO_CALL_JATRI_SATHI_SUPPORT",
+  "SUCCESSFUL_ONBOARD", "ABOUT_REFERRAL_PROGRAM_DISCRIPTION",
+  "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER",
+  "YOUR_LOCATION_HELPS_OUR_SYSTEM",
+  "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT",
+  "LOCATION_PERMISSION_SUBTITLE_NEW_USER"],
+
   "isReferralEnabled" : "false",
   "showBookingPreference" : "false",
   "showRateCard" : "false",
@@ -70,7 +81,8 @@ const bengaliStrings = {
   "ABOUT_REFERRAL_PROGRAM_DISCRIPTION": "রেফারেল প্রোগ্রাম চালকদের আরও রাইড গ্রহণ করতে, কম বাতিল করতে এবং যোগ্য ড্রাইভারদের চিনতে এবং পুরস্কৃত করার মাধ্যমে আপনাকে আরও ভাল পরিবেশন করতে উত্সাহিত করে। \n\n আপনি ড্রাইভারের রেফারেল কোড লিখে সাহায্য করতে পারেন এবং যাত্রী সাথী সম্প্রদায়ের জন্য রাইডের মান উন্নত করতে পারেন!",
   "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER": "\n আপনি আপনার যাত্রী সাথী ড্রাইভারকে জিজ্ঞাসা করে একটি রেফারেল কোড পেতে পারেন।",
   "YOUR_LOCATION_HELPS_OUR_SYSTEM" : "আপনার অবস্থান আমাদের সিস্টেমকে ট্যাক্সি দ্বারা আশেপাশের সমস্ত স্থান ম্যাপ করতে এবং আপনাকে দ্রুততম রাইড করতে সাহায্য করে৷",
-  "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT" : "আপনি জাত্রি সাথি সমর্থন দলকে কল করতে চলেছেন। আপনি কি এগিয়ে যেতে চান?"
+  "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT" : "আপনি জাত্রি সাথি সমর্থন দলকে কল করতে চলেছেন। আপনি কি এগিয়ে যেতে চান?",
+  "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "Jatri Saathi-এ স্বাগতম \nরাইড বুকিং শুরু করতে, আমাদের আপনার ডিভাইসের লোকেশন প্রয়োজন।"
 }
 
 const hindiStrings = {
@@ -85,6 +97,7 @@ const hindiStrings = {
   "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER": "\n आप अपने जात्री साथी ड्राइवर से पूछकर रेफ़रल कोड प्राप्त कर सकते हैं।",
   "YOUR_LOCATION_HELPS_OUR_SYSTEM" : "आपका स्थान हमारे सिस्टम को आस पास के सभी टैक्सियों को मैप करने में सहायता कर्ता है और आपको सबसे तेज सवारी प्रदान करता है",
   "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT" : "आप जात्री साथी सपोर्ट टीम को कॉल करने वाले हैं। क्या आपकी आगे बढ़ने की इच्छा है?",
+  "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "जात्री साथी में आपका स्वागत है! \nराइड बुक करना शुरू करने के लिए, हमें आपके डिवाइस की लोकेशन की आवश्यकता होती है।"
 }
 
 const englishStrings = {
@@ -98,5 +111,6 @@ const englishStrings = {
   "ABOUT_REFERRAL_PROGRAM_DISCRIPTION": "The referral program incentivises drivers to accept more rides, cancel less and serve you better by recognising and rewarding worthy drivers. \n\n You can help out by entering the driver’s referral code  and improve the quality of rides for the Jatri Sathi Community!",
   "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER": "\nYou can get a referral code by asking your Jatri Sathi Driver.",
   "YOUR_LOCATION_HELPS_OUR_SYSTEM" : "Your location helps our system to map down all the near by taxis and get you the quickest ride possible.",
-  "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT" : "You are about to place a call to the Jatri Sathi Support Team. Do you want to proceed?"
+  "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT" : "You are about to place a call to the Jatri Sathi Support Team. Do you want to proceed?",
+  "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "Welcome to Jatri Sathi! \nTo start booking rides, we require your device location."
 }

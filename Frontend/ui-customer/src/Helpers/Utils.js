@@ -41,7 +41,6 @@ export const getLocationName = function(cb){
 }
 export const hideSplash = window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"hide_splash"}))()
 
-
 export const getCurrentDate = function (string) {
   var today = new Date();
   var dd = String(today.getDate()).padStart(2, '0');
@@ -536,3 +535,11 @@ export const removeLabelFromMarker = function(unit){
     }
   }
 }
+export const addCarousel = function (modelArray) {
+  return function (id) {
+    var stringifyModelArray = JSON.stringify(modelArray)
+    if(JBridge.addCarousel){
+      return JBridge.addCarousel(stringifyModelArray, id);
+    }
+  };
+};

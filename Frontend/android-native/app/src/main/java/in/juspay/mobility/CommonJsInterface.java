@@ -69,6 +69,7 @@ import android.util.Base64;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.ActionMode;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -105,6 +106,7 @@ import androidx.core.location.LocationManagerCompat;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
+import androidx.viewpager2.widget.ViewPager2;
 import androidx.work.Constraints;
 import androidx.work.ExistingPeriodicWorkPolicy;
 import androidx.work.PeriodicWorkRequest;
@@ -113,6 +115,9 @@ import androidx.work.WorkManager;
 import com.airbnb.lottie.LottieAnimationView;
 import com.facebook.appevents.AppEventsConstants;
 import com.google.android.gms.ads.identifier.AdvertisingIdClient;
+import com.google.android.gms.auth.api.credentials.Credentials;
+import com.google.android.gms.auth.api.credentials.CredentialsOptions;
+import com.google.android.gms.auth.api.credentials.HintRequest;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.ResolvableApiException;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -218,6 +223,8 @@ import in.juspay.mobility.utils.LocationUpdateService;
 import in.juspay.mobility.utils.MediaPlayerView;
 import in.juspay.mobility.utils.NotificationUtils;
 import in.juspay.mobility.utils.OtpUtils;
+import in.juspay.mobility.utils.carousel.VPAdapter;
+import in.juspay.mobility.utils.carousel.ViewPagerItem;
 import in.juspay.mobility.utils.mediaPlayer.DefaultMediaPlayerControl;
 import in.juspay.hypersdk.core.HyperFragment;
 import in.juspay.hypersdk.core.JBridge;
@@ -230,6 +237,8 @@ import in.juspay.hypersdk.core.DuiCallback;
 
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 import static androidx.core.app.ActivityCompat.startActivityForResult;
+import static androidx.core.app.ActivityCompat.startIntentSenderForResult;
+import static androidx.core.content.ContextCompat.getCodeCacheDir;
 import static android.Manifest.permission.CAMERA;
 import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
@@ -253,6 +262,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     private static final String CURRENT_LOCATION = "ny_ic_customer_current_location";
     private static final String CURRENT_LOCATION_LATLON = "Current Location";
     public static final int LOCATION_PERMISSION_REQ_CODE = 1;
+    public static final int CREDENTIAL_PICKER_REQUEST = 74;
     public static final int STORAGE_PERMISSION = 67;
     public static float videoDuration = 0;
     private Activity activity;
@@ -301,6 +311,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     private SharedPreferences sharedPref;
     private String zoneName = "";
     private float zoom = 17.0f;
+    public static String detectPhoneNumbersCallBack = null;
 
 
     public CommonJsInterface() {
@@ -437,6 +448,93 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         return KeyValueStore.read(juspayServices, key, "__failed");
     }
 
+    @JavascriptInterface
+    public void addCarousel(String stringifyArray,String id){
+        if (activity == null) return;
+        activity.runOnUiThread(() -> {
+            ViewPager2 viewPager2 = new ViewPager2(context);
+            LinearLayout layout = activity.findViewById(Integer.parseInt(id));
+            LinearLayout sliderDotsPanel;
+            LinearLayout.LayoutParams sliderDotsPanelParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+
+            //adding data in array list
+            ArrayList<ViewPagerItem> viewPagerItemArrayList = new ArrayList<>();
+            try {
+                JSONArray jsonArray = new JSONArray(stringifyArray);
+                for (int i =0 ; i<jsonArray.length(); i++){
+                    JSONObject jsonObject = jsonArray.getJSONObject(i);
+                    int imageID = context.getResources().getIdentifier(jsonObject.getString("image"), "drawable", activity.getPackageName());
+                    ViewPagerItem viewPagerItem = new ViewPagerItem(imageID, jsonObject.getString("title"), jsonObject.getString("description"));
+                    viewPagerItemArrayList.add(viewPagerItem);
+                }
+            }catch (Exception e){
+                Log.e(LOG_TAG, "Exception"+ e);
+                return;
+            }
+            VPAdapter vpAdapter = new VPAdapter(viewPagerItemArrayList);
+            viewPager2.setAdapter(vpAdapter);
+
+            // setting the dots layout
+            int dotsCount;
+            ImageView[] dots;
+            sliderDotsPanel = new LinearLayout(context);
+            dotsCount = vpAdapter.getItemCount();
+            dots = new ImageView[dotsCount];
+            for(int i = 0; i < dotsCount; i++){
+                dots[i] = new ImageView(context);
+                dots[i].setImageDrawable(ContextCompat.getDrawable(context, R.drawable.carousel_dot_inactive));
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(30, 30);
+                params.setMargins(14, 0, 14, 0);
+                sliderDotsPanel.addView(dots[i], params);
+                dots[0].setImageDrawable(ContextCompat.getDrawable(context, R.drawable.carousel_dot_active));
+                int finalI = i;
+                dots[i].setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        viewPager2.setCurrentItem(finalI);
+                    }
+                });
+            }
+            sliderDotsPanel.setGravity(Gravity.CENTER);
+            sliderDotsPanel.setLayoutParams(sliderDotsPanelParams);
+
+            viewPager2.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+                @Override
+                public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+                    super.onPageScrolled(position, positionOffset, positionOffsetPixels);
+                }
+                @Override
+                public void onPageSelected(int position) {
+                    //setting active inactive dots
+                    for(int i = 0; i< dotsCount; i++){
+                        dots[i].setImageDrawable(ContextCompat.getDrawable(context, R.drawable.carousel_dot_inactive));
+                    }
+                    dots[position].setImageDrawable(ContextCompat.getDrawable(context, R.drawable.carousel_dot_active));
+                    super.onPageSelected(position);
+                }
+                @Override
+                public void onPageScrollStateChanged(int state) {
+                    super.onPageScrollStateChanged(state);
+                }
+            });
+            layout.addView(viewPager2);
+            layout.addView(sliderDotsPanel);
+        });
+    }
+
+    @JavascriptInterface
+    public void detectPhoneNumbers(final String callback){
+        detectPhoneNumbersCallBack = callback;
+        HintRequest hintRequest = new HintRequest.Builder()
+                .setPhoneNumberIdentifierSupported(true)
+                .build();
+        PendingIntent intent = Credentials.getClient(context).getHintPickerIntent(hintRequest);
+        try {
+            startIntentSenderForResult(activity,intent.getIntentSender(), CREDENTIAL_PICKER_REQUEST, null, 0, 0, 0,new Bundle());
+        } catch (IntentSender.SendIntentException e) {
+            e.printStackTrace();
+        }
+    }
 
     @JavascriptInterface
     public String getKeyInNativeSharedPrefKeys(String key) {

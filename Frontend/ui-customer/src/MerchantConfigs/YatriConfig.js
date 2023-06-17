@@ -42,7 +42,17 @@ export function getAppLink(os) {
 
 
 const config = {
-    "StringKeys": ["ABOUT_APP_DESCRIPTION", "WELCOME_TEXT", "REQUEST_AUTO_RIDE", "CURRENTLY_WE_ARE_LIVE_IN_", "DRIVER_PICKUP_CHARGES", "SUCCESSFUL_ONBOARD", "ABOUT_REFERRAL_PROGRAM_DISCRIPTION", "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT"],
+    "StringKeys": ["ABOUT_APP_DESCRIPTION",
+    "WELCOME_TEXT", "REQUEST_AUTO_RIDE",
+    "CURRENTLY_WE_ARE_LIVE_IN_",
+    "DRIVER_PICKUP_CHARGES",
+    "SUCCESSFUL_ONBOARD",
+    "ABOUT_REFERRAL_PROGRAM_DISCRIPTION",
+    "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER",
+    "YOUR_LOCATION_HELPS_OUR_SYSTEM",
+    "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT",
+    "LOCATION_PERMISSION_SUBTITLE_NEW_USER"],
+
     "isReferralEnabled" : "false",
     "showBookingPreference" : "false",
     "showRateCard" : "false",
@@ -66,7 +76,8 @@ const malayalamStrings = {
     "SUCCESSFUL_ONBOARD" : "നിങ്ങൾ വിജയകരമായി \n നമ്മ യാത്രിയിലേക്ക് പ്രവേശിച്ചിരിക്കുന്നു",
     "ABOUT_REFERRAL_PROGRAM_DISCRIPTION": "യോഗ്യരായ ഡ്രൈവർമാരെ കണ്ടെത്തി അവരെ അഭിനന്ദിക്കുകയും, തക്ക പ്രതിഫലം നൽകുകയും അതിലൂടെ കൂടുതൽ റൈഡറുകൾ സ്വീകരിക്കാനും, ക്യാൻസല്ലേഷൻസ് കുറക്കാനും, അതുവഴി നിങ്ങളെ മെച്ചപ്പെട്ട രീതിയിൽ സേവിക്കുവാനും ഡ്രൈവർമാരെ പ്രോത്സാഹിപ്പിക്കുകയും ചെയ്യാൻ ഉതകുന്ന ഒരു പദ്ധതി ആണ് റഫറൽ പ്രോഗ്രാം. ഡ്രൈവറുടെ റെഫെറൽ കോഡ് എന്റർ ചെയ്യുന്നതിലൂടെ നിങ്ങൾക്കും, നമ്മ യാത്രി കൂട്ടായ്മയ്ക്ക് വേണ്ടി റൈഡ്കളുടെ നിലവാരം പൊതുവെ മെച്ചപ്പെടുത്താൻ സഹായിക്കാവുന്നതാണ്!",
     "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER": "നിങ്ങളുടെ നമ്മ യാത്രി ഡ്രൈവറോട് ചോദിച്ചാൽ ഒരു റഫറൽ കോഡ് ലഭിക്കും.",
-    "YOUR_LOCATION_HELPS_OUR_SYSTEM" : "നിങ്ങളുടെ ലൊക്കേഷൻ ഞങ്ങളുടെ സിസ്റ്റത്തെ ടാക്സികൾ വഴി മാപ്പ് ചെയ്യാൻ സഹായിക്കുന്നു."
+    "YOUR_LOCATION_HELPS_OUR_SYSTEM" : "നിങ്ങളുടെ ലൊക്കേഷൻ ഞങ്ങളുടെ സിസ്റ്റത്തെ ടാക്സികൾ വഴി മാപ്പ് ചെയ്യാൻ സഹായിക്കുന്നു.",
+    "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "യാത്രിയിലേക്ക് സ്വാഗതം \nബുക്കിംഗ് റൈഡുകൾ ആരംഭിക്കാൻ, ഞങ്ങൾക്ക് നിങ്ങളുടെ ഉപകരണ ലൊക്കേഷൻ ആവശ്യമാണ്."
 
 }
 
@@ -80,5 +91,6 @@ const englishStrings = {
     "SUCCESSFUL_ONBOARD": "You have successfully signed on to \n Yatri",
     "ABOUT_REFERRAL_PROGRAM_DISCRIPTION": "The referral program incentivises drivers to accept more rides, cancel less and serve you better by recognising and rewarding worthy drivers. \n\n You can help out by entering the driver’s referral code  and improve the quality of rides for the Yatri Community!",
     "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER": "\nYou can get a referral code by asking your Yatri Driver.",
-    "YOUR_LOCATION_HELPS_OUR_SYSTEM" : "Your location helps our system to map down all the near by taxis and get you the quickest ride possible."
+    "YOUR_LOCATION_HELPS_OUR_SYSTEM" : "Your location helps our system to map down all the near by taxis and get you the quickest ride possible.",
+    "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "Welcome to Yatri \nTo start booking rides, we require your device location."
   }

@@ -1417,3 +1417,16 @@ export const goBackPrevWebPage = function (id) {
     console.log("goBackPrevWebPage error " + err);
   }
 }
+
+export const detectPhoneNumbers = function (cb) {
+  return function (action) {
+    return function () {
+      var callback = callbackMapper.map(function (id) {
+        cb(action(id))();
+      });
+      if(JBridge.detectPhoneNumbers){
+        return window.JBridge.detectPhoneNumbers(callback);
+      }
+    };
+  };
+};

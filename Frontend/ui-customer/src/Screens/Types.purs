@@ -108,6 +108,28 @@ type SplashScreenData =  {
    message :: String
  }
 
+-- ############################################################# WelcomeScreen ################################################################################
+
+type CarouselModel = {
+  image :: String,
+  title :: String,
+  description :: String
+}
+
+type WelcomeScreenState = {
+  data :: WelcomeScreenData
+}
+
+type WelcomeScreenData = {
+  carouselModel :: Array CarouselModel
+}
+
+type StepsHeaderModelState = {
+  activeIndex :: Int,
+  textArray :: Array String,
+  backArrowVisibility :: Boolean
+}
+
 -- ############################################################# ChooseLanguageScreen ################################################################################
 
 type ChooseLanguageScreenState = {
@@ -150,7 +172,10 @@ type EnterMobileNumberScreenStateProps = {
   resendEnable :: Boolean,
   isReadingOTP :: Boolean,
   capturedOtp :: String,
-  letterSpacing :: LetterSpacing
+  letterSpacing :: LetterSpacing,
+  mNumberEdtFocused :: Boolean,
+  otpEdtFocused :: Boolean,
+  editTextVal :: String
 }
 
 type EnterMobileNumberScreenStateData = {
@@ -181,7 +206,13 @@ type AccountSetUpScreenStateProps =
     , genderOptionExpanded :: Boolean
     , expandEnabled :: Boolean
     , showOptions :: Boolean
+    , activeField :: Maybe ActiveFieldAccountSetup
   }
+
+data ActiveFieldAccountSetup = DropDown | NameSection
+
+derive instance genericActiveFieldAccountSetup :: Generic ActiveFieldAccountSetup _
+instance eqActiveFieldAccountSetup :: Eq ActiveFieldAccountSetup where eq = genericEq
 
 type AccountSetUpScreenStateData =
   {   name :: String
