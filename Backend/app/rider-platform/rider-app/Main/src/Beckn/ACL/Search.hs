@@ -122,5 +122,17 @@ mkIntent origin mbDestination startTime customerLanguage = do
               { lat = info.gps.lat,
                 lon = info.gps.lon
               },
-          address = Nothing
+          address =
+            Just
+              Search.Address
+                { locality = info.address.area,
+                  state = info.address.state,
+                  country = info.address.country,
+                  building = info.address.building,
+                  street = info.address.street,
+                  city = info.address.city,
+                  area_code = info.address.areaCode,
+                  door = info.address.door,
+                  ward = info.address.ward
+                }
         }
