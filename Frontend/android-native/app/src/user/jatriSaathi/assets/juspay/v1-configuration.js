@@ -35,6 +35,7 @@ window.getMerchantConfig = function () {
     },
     "profileBackground": "#2C2F3A",
     "profileName": "#FFFFFF",
+    "addFavouriteScreenBackArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png",
     "profileImage": "#012A72",
     "profileCompletion" : "#FCC32C",
     "cancelRideColor" : "#E55454",

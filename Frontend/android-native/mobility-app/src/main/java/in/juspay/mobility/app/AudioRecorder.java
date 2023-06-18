@@ -9,24 +9,17 @@
 
 package in.juspay.mobility.app;
 
-import android.Manifest;
 import android.content.Context;
 import android.media.MediaRecorder;
 import android.util.Log;
-import androidx.core.app.ActivityCompat;
 
 public class AudioRecorder {
     private static final String LOG_TAG = "AudioRecordTest";
     public static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
     private static String fileName = null;
-    private Context context;
     private MediaRecorder recorder = null;
 
-    public AudioRecorder(Context context) {
-        this.context = context;
-    }
-
-    public void startRecording() {
+    public void startRecording(Context context) {
         Log.d(LOG_TAG, "Recording in audio recorder");
         fileName = context.getFilesDir().getAbsolutePath() + "namma_yatri_audio_record.mp3";
         recorder = new MediaRecorder();

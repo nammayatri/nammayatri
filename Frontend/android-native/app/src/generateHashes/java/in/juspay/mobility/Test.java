@@ -1,4 +1,4 @@
-/* 
+/*
  *  Copyright 2022-23, Juspay India Pvt Ltd
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
  *  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
@@ -24,7 +24,7 @@ import java.util.Arrays;
 
 /**
  * This is a helper class to generate your message hash to be included in your SMS message.
- *
+ * <p>
  * Without the correct hash, your app won't recieve the message callback. This only needs to be
  * generated once per app and stored. Then you can remove this helper class from your code.
  */
@@ -41,6 +41,7 @@ public class Test extends ContextWrapper {
 
     /**
      * Get all the app signatures for the current package
+     *
      * @return
      */
     public ArrayList<String> getAppSignatures() {

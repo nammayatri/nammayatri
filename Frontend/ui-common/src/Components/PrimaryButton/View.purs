@@ -37,7 +37,6 @@ view push config =
     [ relativeLayout
         [ height config.height
         , width config.width
-        , margin config.margin
         , visibility config.visibility
         ]
         [ linearLayout

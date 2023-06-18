@@ -532,7 +532,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
-        if (getResources().getString(R.string.service).equals("DRIVER")) {
+        if (MERCHANT_TYPE.equals("DRIVER")) {
             if (NotificationUtils.overlayFeatureNotAvailable(this)) {
                 checkRideRequest();
             }

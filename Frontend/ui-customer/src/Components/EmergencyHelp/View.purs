@@ -25,7 +25,7 @@ import Prelude (Unit, const, map, ($), (/=), (<>), (==), pure, (<<<), (-), disca
 import Data.Array (take, (!!), drop, head, mapWithIndex, null)
 import Data.String as DS
 import Data.Array as DA
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, relativeLayout, frameLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, textFromHtml, onBackPressed, scrollView, imageWithFallback, stroke, afterRender)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, relativeLayout, frameLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, textFromHtml, onBackPressed, scrollView, imageWithFallback, stroke, afterRender, singleLine, ellipsize)
 import Styles.Colors as Color
 import Data.String (split, Pattern(..), indexOf, length)
 import Components.PopUpModal.Controller as PopUpModalConfig
@@ -392,49 +392,37 @@ allContactsView state push =
     , stroke ("1," <> Color.borderColorLight)
     , padding $ Padding 13 11 13 11
     , cornerRadius 8.0
+    , gravity CENTER
     ][  linearLayout
-        [ height WRAP_CONTENT
-        , width  MATCH_PARENT
+        [ height $ V 24
+        , width $ V 24
+        , background (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 0))
+        , cornerRadius 12.0
         , gravity CENTER
-        ][  linearLayout
-            [ height $ V 24
-            , width $ V 24
-            , background (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 0))
-            , cornerRadius 12.0
-            , gravity CENTER
-            ][  textView $
-                [text (DS.toUpper((<>) (getFirstChar item.name) (getLastChar item.name) ))
-                , color (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 1))
-                ] <> FontStyle.body3 TypoGraphy
-              ]
-              ,  linearLayout 
-                 [ height  WRAP_CONTENT
-                 , width  WRAP_CONTENT
-                 , padding (PaddingLeft 8)
-                 ][  textView (
-                   [text (item.name)
-                   , color Color.black800
-                   ] <> FontStyle.subHeading1 LanguageStyle)
-                  ]
-              , 
-              linearLayout
-              [ height WRAP_CONTENT
-              , width MATCH_PARENT
-              , gravity RIGHT
-              ][
-                linearLayout
-                  [ height  WRAP_CONTENT
-                  , width  WRAP_CONTENT
-                  , onClick push $ const $ CallContactPopUp item
-                  ][ textView (
-                    [ text $ (getString CALL)
-                    , color Color.green900
-                    , margin $ MarginLeft 5
-                    , padding $ Padding 20 10 20 10
-                    ] <> FontStyle.paragraphText LanguageStyle)
-                  ]
-              ]
-          ]
+        , margin (MarginRight 10)
+        ]
+        [ textView $
+            [ text (DS.toUpper $ (getFirstChar item.name) <> (getLastChar item.name))
+            , color (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 1))
+            ] <> FontStyle.body3 TypoGraphy
+        ]
+    , textView $
+        [ height $ WRAP_CONTENT
+        , width $ WRAP_CONTENT
+        , weight 1.0
+        , text item.name
+        , color Color.black800
+        , ellipsize true
+        , singleLine true
+        ] <> FontStyle.subHeading1 LanguageStyle
+    , textView $
+        [ height $ WRAP_CONTENT
+        , width $ WRAP_CONTENT
+        , text $ getString CALL
+        , color Color.green900
+        , onClick push $ const $ CallContactPopUp item
+        , padding $ Padding 20 10 20 10
+        ]  <> FontStyle.paragraphText LanguageStyle
        ]) state.emergencyContactData)
 
 genericHeaderConfig :: EmergencyHelpModelState -> GenericHeaderConfig.Config

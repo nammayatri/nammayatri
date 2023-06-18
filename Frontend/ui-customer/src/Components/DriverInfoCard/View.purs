@@ -854,7 +854,7 @@ sourceToDestinationConfig state = let
       , padding = Padding 2 0 2 2
       , margin = MarginVertical 12 15 
       , maxLines = 1
-      , textStyle = FontStyle.Tags
+      , textStyle = FontStyle.Body1
       , ellipsize = true
       }
     , distanceConfig {

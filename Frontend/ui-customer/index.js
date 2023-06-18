@@ -209,9 +209,7 @@ window.onActivityResult = function (requestCode, resultCode, bundle) {
 
 window["onEvent'"] = function (event, args) {
   console.log(event, args);
-  if (event == "onBackPressed") {
-    purescript.onEvent(event)();
-  } else if (event == "onPause") {
+  if (event == "onPause") {
     window.onPause();
   } else if (event == "onResume") {
     window.onResume();
@@ -220,6 +218,7 @@ window["onEvent'"] = function (event, args) {
   } else if (event == "onInternetChanged") {
     purescript.onConnectivityEvent("INTERNET_ACTION")();
   }
+  purescript.onEvent(event)();
 }
 
 if (typeof window.JOS != "undefined") {

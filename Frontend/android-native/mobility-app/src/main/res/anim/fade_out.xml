@@ -4,6 +4,5 @@
     <alpha
         android:duration="@integer/WIDGET_MESSAGE_ANIMATION_DURATION"
         android:fromAlpha="1.0"
-        android:toAlpha="0.1" >
-    </alpha>
+        android:toAlpha="0.1"></alpha>
 </set>

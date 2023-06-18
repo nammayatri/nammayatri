@@ -1,4 +1,4 @@
-/* 
+/*
  *  Copyright 2022-23, Juspay India Pvt Ltd
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
  *  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
@@ -26,7 +26,6 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -44,7 +43,7 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
         MediaPlayerOnDurationListener,
         MediaPlayerOnPauseListener,
         MediaPlayerOnPreparedListener,
-        OnTaskCompleteListener{
+        OnTaskCompleteListener {
 
     protected final Context context;
     protected MediaPlayerControl player = new DefaultMediaPlayerControl();
@@ -104,7 +103,7 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
 
     public void addAudioFileUri(final Uri audioFileUri) throws IOException {
         player.setAudioSource(context, audioFileUri);
-        if (activity != null){
+        if (activity != null) {
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -120,7 +119,7 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
 
     public void addAudioFileUrl(String audioFileUrl) throws IOException {
         player.setAudioSource(audioFileUrl);
-        if (activity != null){
+        if (activity != null) {
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -133,9 +132,10 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
             });
         }
     }
+
     public void addAudioFileInput(FileInputStream file) throws IOException {
         player.setAudioSource(file);
-        if (activity != null){
+        if (activity != null) {
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -145,11 +145,12 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
         }
         onTaskComplete();
     }
+
     public void updateVisualizer(Uri audioFileUrl) throws IOException {
         visualizerBar.updateVisualizer(audioFileUrl);
     }
 
-    public MediaPlayerControl getPlayer (){
+    public MediaPlayerControl getPlayer() {
         return player;
     }
 
@@ -200,17 +201,17 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
         actionButton.setOnClickListener(runner -> player.toggle());
     }
 
-    public void setTimerColorAndSize (int color, float size) {
+    public void setTimerColorAndSize(int color, float size) {
         timer.setTextSize(size);
         timer.setTextColor(color);
     }
 
-    public void setVisualizerBarPlayedColor (int color) {
+    public void setVisualizerBarPlayedColor(int color) {
         visualizerBar.setNonPlayedStateColor(color);
     }
 
-    public void inflateView (int id) throws IOException {
-        if (activity != null){
+    public void inflateView(int id) throws IOException {
+        if (activity != null) {
             LinearLayout linearLayout = activity.findViewById(id);
             if (linearLayout != null) {
                 linearLayout.addView(this);
@@ -231,7 +232,7 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
 
     @Override
     public void onComplete(MediaPlayerControl player) {
-        if (activity!=null) {
+        if (activity != null) {
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -245,7 +246,7 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
 
     @Override
     public void onDurationProgress(MediaPlayerControl player, Long duration, Long currentTimestamp) {
-        if (activity != null){
+        if (activity != null) {
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -258,7 +259,7 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
 
     @Override
     public void onPause(MediaPlayerControl player) {
-        if (activity != null){
+        if (activity != null) {
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -270,7 +271,7 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
 
     @Override
     public void onPlay(MediaPlayerControl player) {
-        if (activity != null){
+        if (activity != null) {
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -289,7 +290,7 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
 
     @Override
     public void onPrepared(MediaPlayerControl player) {
-        if (activity != null){
+        if (activity != null) {
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -299,7 +300,8 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
             });
         }
     }
-    public String getTime (long milliseconds) {
+
+    public String getTime(long milliseconds) {
         long minutes = (milliseconds / 1000) / 60;
         long seconds = (milliseconds / 1000) % 60;
         return (minutes + ":" + String.format("%02d", seconds));

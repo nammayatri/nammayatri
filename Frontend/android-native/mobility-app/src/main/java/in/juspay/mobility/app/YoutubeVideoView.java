@@ -16,16 +16,16 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTube
 public class YoutubeVideoView extends AppCompatActivity {
     float duration;
     YouTubePlayerView youTubePlayerView;
-    
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Bundle newBundle = getIntent().getExtras();
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        supportRequestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         if (newBundle != null && newBundle.getString("videoType").equals("VIDEO")) {
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-        }else{
+        } else {
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         }
 
@@ -38,7 +38,7 @@ public class YoutubeVideoView extends AppCompatActivity {
         youTubePlayerView.addYouTubePlayerListener(new AbstractYouTubePlayerListener() {
             @Override
             public void onReady(@NonNull YouTubePlayer youTubePlayer) {
-                if(newBundle != null){
+                if (newBundle != null) {
                     youTubePlayer.loadVideo(newBundle.getString("videoId"), newBundle.getFloat("videoDuration"));
                 }
             }
@@ -56,7 +56,7 @@ public class YoutubeVideoView extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        if (youTubePlayerView!=null) {
+        if (youTubePlayerView != null) {
             youTubePlayerView.release();
         }
         super.onDestroy();

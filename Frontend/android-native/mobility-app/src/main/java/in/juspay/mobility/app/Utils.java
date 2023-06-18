@@ -32,25 +32,26 @@ public class Utils {
 
     private static final String UTILS = "UTILS";
     Context context;
-    private FirebaseAnalytics mFirebaseAnalytics;
-    private SharedPreferences sharedPref;
+    private final FirebaseAnalytics mFirebaseAnalytics;
+    private final SharedPreferences sharedPref;
 
     public Utils(Context context) {
         this.context = context;
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
         sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key
-        ),Context.MODE_PRIVATE);
+        ), Context.MODE_PRIVATE);
     }
 
     private static final ArrayList<CallBack> callBack = new ArrayList<>();
-    public static void registerCallback(CallBack notificationCallback)
-    {
+
+    public static void registerCallback(CallBack notificationCallback) {
         callBack.add(notificationCallback);
     }
-    public static void deRegisterCallback(CallBack notificationCallback)
-    {
+
+    public static void deRegisterCallback(CallBack notificationCallback) {
         callBack.remove(notificationCallback);
     }
+
     public void updateLocaleResource(String languageKey) {
         Locale locale;
         switch (languageKey) {
@@ -66,10 +67,10 @@ public class Utils {
             case "TA_IN":
                 locale = new Locale("ta");
                 break;
-            case "BN_IN" :
+            case "BN_IN":
                 locale = new Locale("bn");
                 break;
-            case "ML_IN" : 
+            case "ML_IN":
                 locale = new Locale("ml");
                 break;
             default:
@@ -105,7 +106,8 @@ public class Utils {
     public void encodeImageToBase64(@Nullable Intent data) {
         try {
             CropImage.ActivityResult result = CropImage.getActivityResult(data);
-            Uri fileUri = result.getUri();
+            Uri fileUri = null;
+            if (result != null) fileUri = result.getUri();
             InputStream imageStream = context.getContentResolver().openInputStream(fileUri);
             Bitmap selectedImage = BitmapFactory.decodeStream(imageStream);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -139,8 +141,10 @@ public class Utils {
             Log.d(UTILS, "encoded image size camera : " + (((encImage.length() / 4) * 3) / 1000));
             {
                 String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-                for(int i = 0; i< callBack.size(); i++) {
-                    callBack.get(i).imageUploadCallBack(encImage, "IMG_" + timeStamp +".jpg", result.getUri().getPath());
+                for (int i = 0; i < callBack.size(); i++) {
+                    if (fileUri != null) {
+                        callBack.get(i).imageUploadCallBack(encImage, "IMG_" + timeStamp + ".jpg", fileUri.getPath());
+                    }
                 }
             }
         } catch (Exception e) {
@@ -149,7 +153,8 @@ public class Utils {
             mFirebaseAnalytics.logEvent("exception_crop_image", params);
         }
     }
-    public static void minimizeApp(Context context){
+
+    public static void minimizeApp(Context context) {
         Intent startMain = new Intent(Intent.ACTION_MAIN);
         startMain.addCategory(Intent.CATEGORY_HOME);
         startMain.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

@@ -1,4 +1,4 @@
-/* 
+/*
  *  Copyright 2022-23, Juspay India Pvt Ltd
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
  *  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
@@ -9,20 +9,18 @@
 
 package in.juspay.mobility.app;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
 
 public class CheckPermissionOverlay extends AppCompatActivity {
     private final int REQUEST_CODE = 1;
-    private int twoChecks =2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,14 +28,15 @@ public class CheckPermissionOverlay extends AppCompatActivity {
         checkPermission();
     }
 
-    private void checkPermission(){
+    private void checkPermission() {
 
         try {
             Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
             Uri uri = Uri.fromParts("package", getPackageName(), null);
             intent.setData(uri);
             intent.setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
-            startActivityForResult(intent,REQUEST_CODE);
+            Activity activity = this;
+            activity.startActivityForResult(intent, REQUEST_CODE, null);
 
         } catch (Exception e) {
             //Log.e(LOG_TAG, "Exception in request permission", e);
@@ -53,9 +52,7 @@ public class CheckPermissionOverlay extends AppCompatActivity {
             if (!Settings.canDrawOverlays(this)) {
                 finish();
                 // checkPermission();
-            }
-            else
-            {
+            } else {
                 finish();
             }
 

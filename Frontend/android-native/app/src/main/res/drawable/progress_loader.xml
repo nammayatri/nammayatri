@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<rotate
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<rotate xmlns:android="http://schemas.android.com/apk/res/android"
     android:pivotX="50%"
     android:pivotY="50%"
     android:fromDegrees="0"
@@ -19,6 +18,6 @@
             android:useLevel="false"
             android:angle="0"
             android:startColor="@android:color/transparent"
-            android:endColor="#2E66FF"/>
+            android:endColor="#2E66FF" />
     </shape>
 </rotate>

@@ -59,11 +59,12 @@ main event = do
         pure unit
 
 onEvent :: String -> Effect Unit
-onEvent "onBackPressed" = do
+onEvent event = do
   _ <- pure $ toggleBtnLoader "" false
-  PrestoDom.processEvent "onBackPressedEvent" unit
-
-onEvent _ = pure unit
+  case event of 
+    "onBackPressed" -> do
+      PrestoDom.processEvent "onBackPressedEvent" unit
+    _ -> pure unit
 
 onConnectivityEvent :: String -> Effect Unit
 onConnectivityEvent triggertype = do

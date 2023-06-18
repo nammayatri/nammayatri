@@ -12,8 +12,8 @@
     <color name="colorCircleButton">#204480</color>
     <color name="colorSublimePicker">#323643</color>
     <color name="colorIconBackground">#d3f0ea</color>
-    <color name ="colorApprovalText">#38a398</color>
-    <color name ="colorBodyText">#8e8e8e</color>
+    <color name="colorApprovalText">#38a398</color>
+    <color name="colorBodyText">#8e8e8e</color>
     <color name="PrimaryBlue">#0066FF</color>
     <color name="greylight">#F4F4F6</color>
     <color name="greyDark">#E5E7EB</color>

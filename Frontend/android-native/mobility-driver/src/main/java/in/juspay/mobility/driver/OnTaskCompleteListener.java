@@ -9,5 +9,5 @@
 package in.juspay.mobility.driver;
 
 public interface OnTaskCompleteListener {
-    public void onTaskComplete ();
+    public void onTaskComplete();
 }

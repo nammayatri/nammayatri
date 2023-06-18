@@ -12,7 +12,6 @@ package in.juspay.mobility.app;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;
-import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -35,15 +34,10 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-import android.os.SystemClock;
 import android.provider.Settings;
 import android.util.Log;
 
 import androidx.annotation.RequiresApi;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
@@ -54,19 +48,19 @@ import com.google.firebase.analytics.FirebaseAnalytics;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.Locale;
 import java.util.Random;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -90,18 +84,14 @@ public class NotificationUtils extends AppCompatActivity {
     public static String REALLOCATE_PRODUCT = "REALLOCATE_PRODUCT";
     public static String DRIVER_REACHED = "DRIVER_REACHED";
     public static Uri soundUri = null;
-    private static boolean hasStartedService = false;
     public static OverlaySheetService.OverlayBinder binder;
-    public static ArrayList<Bundle> listData = new ArrayList();
-    private static RideRequestUtils rideRequestUtils = new RideRequestUtils();
+    public static ArrayList<Bundle> listData = new ArrayList<>();
 
     @SuppressLint("MissingPermission")
     private static FirebaseAnalytics mFirebaseAnalytics;
     static Random rand = new Random();
     public static int notificationId = rand.nextInt(1000000);
-    private static int smallIcon;
     public static MediaPlayer mediaPlayer;
-    private static AudioManager audio;
     public static Bundle lastRideReq = new Bundle();
 //    public static  String versionName = BuildConfig.VERSION_NAME;
 
@@ -113,72 +103,6 @@ public class NotificationUtils extends AppCompatActivity {
 
     public static void deRegisterCallback(CallBack notificationCallback) {
         callBack.remove(notificationCallback);
-    }
-
-    public static void scheduleNotification(Context context, Notification notification, int delay) {
-        Intent notificationIntent = new Intent(context, NotificationReciever.class);
-        notificationIntent.putExtra(NotificationReciever.NOTIFICATION_ID, notificationId);
-        notificationId++;
-        notificationIntent.putExtra(NotificationReciever.NOTIFICATION, notification);
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        long futureInMillis = SystemClock.elapsedRealtime() + delay;
-        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        assert alarmManager != null;
-        alarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, futureInMillis, pendingIntent);
-    }
-
-    public static Notification createNotification(Context context, String title, String msg, JSONObject data) throws JSONException {
-        Bitmap bigIcon = BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher);
-        smallIcon = context.getResources().getIdentifier("ic_launcher","drawable",context.getPackageName());
-        Intent intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
-        System.out.println("Create notification" + data.toString());
-        intent.putExtra("NOTIFICATION_DATA", data.toString());
-//        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        PendingIntent pendingIntent = PendingIntent.getActivity(context, notificationId, intent, PendingIntent.FLAG_IMMUTABLE);
-        String channelId = FLOATING_NOTIFICATION;
-        Uri notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.allocation_request);
-        if (data.has("notification_type")) {
-            String notificationType = new String(data.getString("notification_type"));
-            if (ALLOCATION_TYPE.equals(notificationType)) {
-                System.out.println("created:- " + notificationType);
-                channelId = RINGING_CHANNEL_ID;
-            } else if (TRIP_CHANNEL_ID.equals(notificationType)) {
-                System.out.println("created:- " + notificationType);
-                channelId = notificationType;
-            } else if (DRIVER_HAS_REACHED.equals(notificationType)) {
-                System.out.println("created:- " + notificationType);
-                channelId = notificationType;
-            }
-        }
-        System.out.println("created:- " + channelId);
-        Log.e("Beckn_LOG", "CRETENOTIFICTION");
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, channelId)
-                .setLargeIcon(bigIcon)
-                .setSmallIcon(smallIcon)
-                .setContentTitle(title)
-                .setContentText(msg)
-                .setAutoCancel(true)
-                .setContentIntent(pendingIntent)
-                .setChannelId(channelId)
-                .setPriority(NotificationManager.IMPORTANCE_MAX);
-        if (data.has("notification_type")) {
-            String notificationType = new String(data.getString("notification_type"));
-            int calculatedTime = 20;
-            if (data.has("calculated_time")) {
-                calculatedTime = data.getInt("calculated_time");
-                if (calculatedTime < 0) {
-                    calculatedTime = 0;
-                }
-            }
-            if (ALLOCATION_TYPE.equals(notificationType)) {
-                builder.setSound(notificationSound);
-                builder.setTimeoutAfter(calculatedTime * 1000);
-            }
-        }
-
-        notificationId++;
-        return builder.build();
     }
 
     private static void updateStorage(String key, String value, Context context) {
@@ -242,13 +166,11 @@ public class NotificationUtils extends AppCompatActivity {
         });
     }
 
-    public static void showAllocationNotification(Context context, String title, String msg, JSONObject data, String imageUrl, JSONObject entity_payload) {
+    public static void showAllocationNotification(Context context, JSONObject data, JSONObject entity_payload) {
         try {
-            String notificationType = new String(data.getString("notification_type"));
-            String channelId;
+            String notificationType = data.getString("notification_type");
             if (ALLOCATION_TYPE.equals(notificationType)) {
                 System.out.println("showNotification:- " + notificationType);
-                channelId = RINGING_CHANNEL_ID;
             }
             if (ALLOCATION_TYPE.equals(notificationType)) {
                 System.out.println("In_if_in_notification before");
@@ -260,8 +182,6 @@ public class NotificationUtils extends AppCompatActivity {
                 Intent svcT = new Intent(context, OverlaySheetService.class);
                 SharedPreferences sharedPref = context.getSharedPreferences(
                         context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                String token = sharedPref.getString("RegistrationToken", "null");
-                String env = sharedPref.getString("ENV", "null");
                 svcT.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 System.out.println("Call Service before");
                 Bundle sheetData = new Bundle();
@@ -286,7 +206,7 @@ public class NotificationUtils extends AppCompatActivity {
                     sheetData.putInt("customerExtraFee", (entity_payload.has("customerExtraFee") && !entity_payload.isNull("customerExtraFee") ? entity_payload.getInt("customerExtraFee") : 0));
                     expiryTime = entity_payload.getString("searchRequestValidTill");
                     searchRequestId = entity_payload.getString("searchRequestId");
-                    System.out.println(String.valueOf(entity_payload));
+                    System.out.println(entity_payload);
                 } catch (Exception e) {
                     System.out.println("exception_parsing_overlay_data" + " <> " + searchRequestId + " <> " + sharedPref.getString("DRIVER_ID", "null"));
                     Bundle overlayExceptionParams = new Bundle();
@@ -309,12 +229,9 @@ public class NotificationUtils extends AppCompatActivity {
                             context.startService(svcT);
                             listData.add(sheetData);
                         } else {
-                            new Handler(Looper.getMainLooper()).post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    if (binder != null) {
-                                        binder.getService().addToList(sheetData);
-                                    }
+                            new Handler(Looper.getMainLooper()).post(() -> {
+                                if (binder != null) {
+                                    binder.getService().addToList(sheetData);
                                 }
                             });
                         }
@@ -322,16 +239,12 @@ public class NotificationUtils extends AppCompatActivity {
                             @Override
                             public void onServiceConnected(ComponentName name, IBinder service) {
                                 if (service instanceof OverlaySheetService.OverlayBinder) {
-                                    new Handler(Looper.getMainLooper()).post(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            binder = (OverlaySheetService.OverlayBinder) service;
-                                            ArrayList x = listData;
-                                            listData = new ArrayList<>();
-                                            for (Iterator<Bundle> it = x.iterator(); it.hasNext(); ) {
-                                                Bundle item = it.next();
-                                                binder.getService().addToList(item);
-                                            }
+                                    new Handler(Looper.getMainLooper()).post(() -> {
+                                        binder = (OverlaySheetService.OverlayBinder) service;
+                                        ArrayList<Bundle> x = listData;
+                                        listData = new ArrayList<>();
+                                        for (Bundle item : x) {
+                                            binder.getService().addToList(item);
                                         }
                                     });
                                 }
@@ -358,7 +271,7 @@ public class NotificationUtils extends AppCompatActivity {
                                 lastRideReq.putAll(sheetData);
                                 lastRideReq.putBoolean("rideReqExpired", rideReqExpired);
                                 startMediaPlayer(context, R.raw.allocation_request, true);
-                                rideRequestUtils.createRideRequestNotification(context);
+                                RideRequestUtils.createRideRequestNotification(context);
                             } catch (Exception e) {
                                 params.putString("exception", e.toString());
                                 mFirebaseAnalytics.logEvent("exception_in_opening_ride_req_activity", params);
@@ -372,18 +285,14 @@ public class NotificationUtils extends AppCompatActivity {
                         overlayPermissionParams.putString("driver_id", sharedPref.getString("DRIVER_ID", "null"));
                         mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
                         mFirebaseAnalytics.logEvent("no_overlay_permission", overlayPermissionParams);
-                        if (ALLOCATION_TYPE.equals(notificationType)) {
-//                            for(int i =0;i<notificationCallback.size();i++){
-//                                notificationCallback.get(i).triggerAllocationPopUp(data.getString("entity_ids"), data.getString("notification_type"), entity_payload);
-//                            }
-                        }
                     }
                 } else {
-                    System.out.println("expired notification" + " <> " + currTime + " <> " + expiryTime + " <> " + String.valueOf(calculateTimeDifference(expiryTime, currTime)) + " <> " + searchRequestId + " <> " + sharedPref.getString("DRIVER_ID", "null"));
                     Bundle overlayParams = new Bundle();
+                    String expiry = String.valueOf(calculateTimeDifference(expiryTime, currTime));
+                    System.out.println("expired notification" + " <> " + currTime + " <> " + expiryTime + " <> " + expiry + " <> " + searchRequestId + " <> " + sharedPref.getString("DRIVER_ID", "null"));
                     overlayParams.putString("current_time", currTime);
                     overlayParams.putString("expiry_time", expiryTime);
-                    overlayParams.putString("time_difference", String.valueOf(calculateTimeDifference(expiryTime, currTime)));
+                    overlayParams.putString("time_difference", expiry);
                     overlayParams.putString("search_request_id", searchRequestId);
                     overlayParams.putString("driver_id", sharedPref.getString("DRIVER_ID", "null"));
                     mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
@@ -402,12 +311,11 @@ public class NotificationUtils extends AppCompatActivity {
         }
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @SuppressLint("MissingPermission")
-    @RequiresApi(api = Build.VERSION_CODES.M)
     public static void showNotification(Context context, String title, String msg, JSONObject data, String imageUrl) throws JSONException {
         Log.e(TAG, "SHOWNOTIFICATION MESSAGE");
-        smallIcon = context.getResources().getIdentifier("ic_launcher","drawable",context.getPackageName());
-        Bitmap bigIcon = BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher);
+        int smallIcon = context.getResources().getIdentifier("ic_launcher", "drawable", context.getPackageName());
         Bitmap bitmap = null;
         if (imageUrl != null) {
             bitmap = getBitmapfromUrl(imageUrl);
@@ -422,7 +330,7 @@ public class NotificationUtils extends AppCompatActivity {
         //            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, notificationId, intent, PendingIntent.FLAG_IMMUTABLE);
-        String notificationType = new String(data.getString("notification_type"));
+        String notificationType = data.getString("notification_type");
         String channelId;
         String merchantType = context.getString(R.string.service);
         String key = merchantType.contains("partner") || merchantType.contains("driver") ? "DRIVER" : "USER";
@@ -452,7 +360,6 @@ public class NotificationUtils extends AppCompatActivity {
                     .setContentText(msg)
                     .setAutoCancel(true)
                     .setContentIntent(pendingIntent)
-                    .setPriority(NotificationManager.IMPORTANCE_MAX)
                     .setChannelId(channelId)
                     .setStyle(
                             new NotificationCompat.BigPictureStyle()
@@ -463,7 +370,6 @@ public class NotificationUtils extends AppCompatActivity {
                     .setContentTitle(title)
                     .setContentText(msg)
                     .setAutoCancel(true)
-                    .setPriority(NotificationManager.IMPORTANCE_MAX)
                     .setContentIntent(pendingIntent)
                     .setChannelId(channelId);
         }
@@ -564,7 +470,6 @@ public class NotificationUtils extends AppCompatActivity {
         }
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
     private static boolean checkPermission(Context context) {
         return Settings.canDrawOverlays(context);
     }
@@ -572,13 +477,12 @@ public class NotificationUtils extends AppCompatActivity {
     public static void createNotificationChannel(Context context, String channel_Id) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                CharSequence name = channel_Id;
                 String description = "Important Notification";
                 int importance = NotificationManager.IMPORTANCE_HIGH;
                 if (channel_Id.equals("FLOATING_NOTIFICATION")) {
                     importance = NotificationManager.IMPORTANCE_DEFAULT;
                 }
-                NotificationChannel channel = new NotificationChannel(channel_Id, name, importance);
+                NotificationChannel channel = new NotificationChannel(channel_Id, channel_Id, importance);
                 channel.setDescription(description);
                 System.out.println("Channel" + channel_Id);
                 if (channel_Id.equals(RINGING_CHANNEL_ID)) {
@@ -609,45 +513,6 @@ public class NotificationUtils extends AppCompatActivity {
         }
     }
 
-    private static Bitmap getBitmapFromURL(String src) {
-        try {
-            URL url = new URL(src);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            if (connection instanceof HttpsURLConnection)
-                ((HttpsURLConnection) connection).setSSLSocketFactory(new TLSSocketFactory());
-            connection.setDoInput(true);
-            connection.connect();
-            InputStream input = connection.getInputStream();
-            return BitmapFactory.decodeStream(input);
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    public static String decodeAddress(JSONObject object) {
-        try {
-            String add1 = object.get("door").toString() + ", " + object.get("building").toString() + ", " + object.get("street").toString() + ", " + object.get("city").toString() + ", " + object.get("state").toString() + ", " + object.get("country").toString(); // + object.get("locality").toString()
-            String add2 = object.get("building").toString() + ", " + object.get("street").toString() + ", " + object.get("city").toString() + ", " + object.get("state").toString() + ", " + object.get("country").toString(); // after street ", "+ object.get("locality").toString()+
-            String add3 = object.get("street").toString() + ", " + object.get("city").toString() + ", " + object.get("state").toString() + ", " + object.get("country").toString();
-            String add4 = object.get("city").toString() + ", " + object.get("state").toString() + ", " + object.get("country").toString();
-            String add5 = object.get("city").toString() + ", " + object.get("state").toString() + ", " + object.get("country").toString();
-            if (object.get("door").toString().equals("") && object.get("building").toString().equals(" ") && object.get("street").toString().equals("")) { //&& object.get("locality").toString().equals(" ")
-                return add5;
-            } else if (object.get("door").toString().equals("") && object.get("building").toString().equals(" ") && object.get("street").toString().equals("")) {
-                return add4;
-            } else if (object.get("door").toString().equals("") && object.get("building").toString().equals(" ")) {
-                return add3;
-            } else if (object.get("door").toString().equals("")) {
-                return add2;
-            } else {
-                return add1;
-            }
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        return "ERROR DECODING";
-    }
-
     public static int calculateTimeDifference(String expireTimeTemp, String currTimeTemp) {
         String[] arrOfA = expireTimeTemp.split("T");
         String[] arrOfB = currTimeTemp.split("T");
@@ -675,9 +540,9 @@ public class NotificationUtils extends AppCompatActivity {
             mediaPlayer.stop();
             mediaPlayer = null;
         }
-        audio = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+        AudioManager audio = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         if (increaseVolume)
-            audio.setStreamVolume(AudioManager.STREAM_MUSIC, (int) audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC), AudioManager.ADJUST_SAME);
+            audio.setStreamVolume(AudioManager.STREAM_MUSIC, audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC), AudioManager.ADJUST_SAME);
         mediaPlayer = MediaPlayer.create(context, mediaFile);
         mediaPlayer.start();
     }
@@ -705,7 +570,7 @@ public class NotificationUtils extends AppCompatActivity {
                         .setContentTitle(sentBy)
                         .setAutoCancel(true)
                         .setContentText(message)
-                        .setSmallIcon(context.getResources().getIdentifier("ic_launcher","drawable",context.getPackageName()))
+                        .setSmallIcon(context.getResources().getIdentifier("ic_launcher", "drawable", context.getPackageName()))
                         .setDefaults(Notification.DEFAULT_ALL)
                         .setPriority(NotificationCompat.PRIORITY_HIGH)
                         .setContentIntent(pendingIntent)
@@ -714,7 +579,7 @@ public class NotificationUtils extends AppCompatActivity {
 
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            Log.e(LOG_TAG,"no notification permission");
+            Log.e(LOG_TAG, "no notification permission");
             return;
         }
         notificationManager.notify(chatNotificationId, notification);
@@ -722,7 +587,7 @@ public class NotificationUtils extends AppCompatActivity {
 
     private static void createChatNotificationChannel(Context context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            CharSequence name = "MessageUpdates" ;
+            CharSequence name = "MessageUpdates";
             String description = "Chat Notification Channel";
             NotificationChannel channel = new NotificationChannel("MessageUpdates", name, NotificationManager.IMPORTANCE_HIGH);
             channel.setDescription(description);

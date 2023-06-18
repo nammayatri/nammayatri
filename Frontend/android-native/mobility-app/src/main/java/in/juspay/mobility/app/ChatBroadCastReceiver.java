@@ -10,14 +10,11 @@ public class ChatBroadCastReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         Intent chatListenerService = new Intent(context, ChatService.class);
-        chatListenerService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK );
+        chatListenerService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-            {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(chatListenerService);
-            }
-            else
-            {
+            } else {
                 context.startService(chatListenerService);
             }
         } catch (Exception e) {

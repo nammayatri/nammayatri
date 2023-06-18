@@ -27,7 +27,7 @@
     <string name="location">Location</string>
     <string name="phone">Phone</string>
     <string name="includes_pickup_charges_10">ಪಿಕಪ್ ಶುಲ್ಕಗಳು ₹ 10 ಒಳಗೊಂಡಿದೆ</string>
-    <string name="away" >ದೂರದಲ್ಲಿದೆ</string>
+    <string name="away">ದೂರದಲ್ಲಿದೆ</string>
     <string name="we_made_you_online">ನಾವು ನಿಮ್ಮನ್ನು online ಮಾಡಿದ್ದೇವೆ</string>
     <string name="location_is_turned_on">ಸ್ಥಳ ನವೀಕರಣವನ್ನು ಆನ್ ಮಾಡಲಾಗಿದೆ</string>
     <string name="waiting_for_gps_signal">GPS ಸಿಗ್ನಲ್‌ಗಾಗಿ ನಿರೀಕ್ಷಿಸಲಾಗುತ್ತಿದೆ</string>

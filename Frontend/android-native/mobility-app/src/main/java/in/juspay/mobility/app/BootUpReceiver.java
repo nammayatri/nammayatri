@@ -8,6 +8,8 @@
  */
 package in.juspay.mobility.app;
 
+import static android.content.Intent.ACTION_BOOT_COMPLETED;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -16,33 +18,33 @@ import android.os.Build;
 import android.provider.Settings;
 import android.util.Log;
 
-//import in.juspay.mobility.utils.LocationUpdateService;
-
 public class BootUpReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        Intent locationUpdateService = new Intent(context, LocationUpdateService.class);
-        locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-        Intent widgetReloadService = new Intent(context, WidgetService.class);
-        widgetReloadService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-        SharedPreferences sharedPrefs = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        String driverStatus = sharedPrefs.getString("DRIVER_STATUS", "__failed");
-        String key = context.getString(R.string.service);
-        String merchant = key.contains("partner") || key.contains("driver") ? "DRIVER" : "USER";
-        if (merchant.equals("DRIVER")) {
-            if (driverStatus.equals("true")) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    context.startForegroundService(locationUpdateService);
-                } else {
-                    context.startService(locationUpdateService);
+        if (intent.getAction() != null && intent.getAction().equals(ACTION_BOOT_COMPLETED)) {
+            Intent locationUpdateService = new Intent(context, LocationUpdateService.class);
+            locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+            Intent widgetReloadService = new Intent(context, WidgetService.class);
+            widgetReloadService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+            SharedPreferences sharedPrefs = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            String driverStatus = sharedPrefs.getString("DRIVER_STATUS", "__failed");
+            String key = context.getString(R.string.service);
+            String merchant = key.contains("partner") || key.contains("driver") ? "DRIVER" : "USER";
+            if (merchant.equals("DRIVER")) {
+                if (driverStatus.equals("true")) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        context.startForegroundService(locationUpdateService);
+                    } else {
+                        context.startService(locationUpdateService);
+                    }
                 }
-            }
-            if(Settings.canDrawOverlays(context)){
-                try{
-                    context.startService(widgetReloadService);
-                } catch (Exception e) {
-                    Log.e("BootUpReceiver", "Unable to Start Widget Service");
+                if (Settings.canDrawOverlays(context)) {
+                    try {
+                        context.startService(widgetReloadService);
+                    } catch (Exception e) {
+                        Log.e("BootUpReceiver", "Unable to Start Widget Service");
+                    }
                 }
             }
         }

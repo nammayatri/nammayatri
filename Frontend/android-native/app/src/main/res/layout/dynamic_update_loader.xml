@@ -5,6 +5,7 @@
     android:layout_height="match_parent"
     android:background="@android:color/transparent"
     android:id="@+id/loaderOverlay">
+
     <androidx.cardview.widget.CardView
         android:id="@+id/apiLoaderOverlayCard"
         app:cardCornerRadius="12dp"
@@ -48,6 +49,7 @@
                 android:gravity="center"
                 android:textColor="@color/quantum_black_100"
                 android:text="@string/we_have_updated_your_app_kindly_relaunch" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

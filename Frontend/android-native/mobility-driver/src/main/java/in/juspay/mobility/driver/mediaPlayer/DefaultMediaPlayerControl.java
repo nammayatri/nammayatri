@@ -35,13 +35,13 @@ public class DefaultMediaPlayerControl implements MediaPlayerControl {
     @Override
     public void preparePlayer() {
         mediaPlayer.prepareAsync();
-        mediaPlayer.setVolume(1.0f,1.0f);
+        mediaPlayer.setVolume(1.0f, 1.0f);
         mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
             @Override
             public void onPrepared(MediaPlayer mp) {
-               if (onPrepariedListener != null){
-                   onPrepariedListener.onPrepared(DefaultMediaPlayerControl.this);
-               }
+                if (onPrepariedListener != null) {
+                    onPrepariedListener.onPrepared(DefaultMediaPlayerControl.this);
+                }
             }
         });
 
@@ -51,7 +51,7 @@ public class DefaultMediaPlayerControl implements MediaPlayerControl {
                 if (onDurationListener != null)
                     onDurationListener.onDurationProgress(DefaultMediaPlayerControl.this, getDuration(), durationCounter.addAndGet(INTERVAL));
                 if (mediaPlayer.isPlaying()) {
-                    handler.postDelayed(this,INTERVAL);
+                    handler.postDelayed(this, INTERVAL);
                 }
             }
         };
@@ -150,7 +150,7 @@ public class DefaultMediaPlayerControl implements MediaPlayerControl {
 
     @Override
     public void toggle() {
-        if(mediaPlayer.isPlaying()) {
+        if (mediaPlayer.isPlaying()) {
             pause();
         } else {
             play();

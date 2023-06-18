@@ -42,28 +42,29 @@ public class MobilityAppBridge extends HyperBridge {
     CallBack callBack = new CallBack() {
         @Override
         public void customerCallBack(String notificationType) {
-            Log.i(CALLBACK,"Not required");
+            Log.i(CALLBACK, "Not required");
         }
 
         @Override
         public void driverCallBack(String notificationType) {
-            Log.i(CALLBACK,"Not required");
+            Log.i(CALLBACK, "Not required");
         }
 
         @Override
         public void imageUploadCallBack(String encImage, String filename, String filePath) {
-            Log.i(CALLBACK,"Not required");
+            Log.i(CALLBACK, "Not required");
         }
 
         @Override
         public void internetCallBack(String isPermission) {
-            Log.i(CALLBACK,"Not required");
+            Log.i(CALLBACK, "Not required");
         }
 
         @Override
         public void chatCallBack(String message, String sentBy, String dateFormatted, String len) {
-            callChatMessageCallBack(message,sentBy,dateFormatted,len);
+            callChatMessageCallBack(message, sentBy, dateFormatted, len);
         }
+
         @Override
         public void inAppCallBack(String inAppCallBack) {
             callInAppNotificationCallBack(inAppCallBack);
@@ -104,13 +105,14 @@ public class MobilityAppBridge extends HyperBridge {
 
     public void callChatMessageCallBack(String message, String sentBy, String dateFormatted, String len) {
         if (storeChatMessageCallBack != null) {
-            String javascript = String.format("window.callUICallback(\"%s\",\"%s\",\"%s\",\"%s\",\"%s\");", storeChatMessageCallBack, message, sentBy, dateFormatted,len);
+            String javascript = String.format("window.callUICallback(\"%s\",\"%s\",\"%s\",\"%s\",\"%s\");", storeChatMessageCallBack, message, sentBy, dateFormatted, len);
             bridgeComponents.getJsCallback().addJsToWebView(javascript);
         }
     }
+
     public void callInAppNotificationCallBack(String onTapAction) {
-            String javascript = String.format(Locale.ENGLISH, "window.callUICallback(\"%s\");", onTapAction);
-            bridgeComponents.getJsCallback().addJsToWebView(javascript);
+        String javascript = String.format(Locale.ENGLISH, "window.callUICallback(\"%s\");", onTapAction);
+        bridgeComponents.getJsCallback().addJsToWebView(javascript);
     }
     // endregion
 
@@ -158,7 +160,7 @@ public class MobilityAppBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void metaLogEvent(String event){
+    public void metaLogEvent(String event) {
         try {
             AppEventsLogger logger = AppEventsLogger.newLogger(bridgeComponents.getContext());
             logger.logEvent(event);
@@ -166,7 +168,7 @@ public class MobilityAppBridge extends HyperBridge {
             Log.e(META_LOG, "Error logging meta event : " + e);
         }
     }
-    
+
     @JavascriptInterface
     public void launchInAppRatingPopup() {
         ReviewManager manager = ReviewManagerFactory.create(bridgeComponents.getContext());
@@ -195,7 +197,7 @@ public class MobilityAppBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void storeCallBackOpenChatScreen(final String callback){
+    public void storeCallBackOpenChatScreen(final String callback) {
         storeCallBackOpenChatScreen = callback;
     }
 
@@ -235,11 +237,11 @@ public class MobilityAppBridge extends HyperBridge {
         void sendMessage(String message);
     }
 
-    public static void registerSendMessageCallBack(SendMessageCallBack callBack){
+    public static void registerSendMessageCallBack(SendMessageCallBack callBack) {
         sendMessageCallBacks.add(callBack);
     }
 
-    public static void deRegisterSendMessageCallBack(SendMessageCallBack callBack){
+    public static void deRegisterSendMessageCallBack(SendMessageCallBack callBack) {
         sendMessageCallBacks.remove(callBack);
     }
     // endregion

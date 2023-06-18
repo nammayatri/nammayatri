@@ -41,7 +41,7 @@
                     app:lottie_loop="true"
                     android:layout_gravity="center"
                     android:visibility="gone"
-                    app:lottie_rawRes="@raw/waiting_for_customer_lottie"/>
+                    app:lottie_rawRes="@raw/waiting_for_customer_lottie" />
 
                 <ImageView
                     android:layout_width="180dp"

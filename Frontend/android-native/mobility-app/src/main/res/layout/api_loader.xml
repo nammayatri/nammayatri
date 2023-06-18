@@ -56,7 +56,7 @@
                         app:lottie_autoPlay="true"
                         app:lottie_loop="true"
                         android:layout_gravity="center_horizontal"
-                        app:lottie_rawRes="@raw/auto_rickshaw_processing"/>
+                        app:lottie_rawRes="@raw/auto_rickshaw_processing" />
 
 
                     <TextView
@@ -68,7 +68,7 @@
                         android:gravity="center"
                         android:textColor="@color/quantum_black_100"
                         android:layout_marginTop="15dp"
-                        android:text="@string/sending_request_to_customer"/>
+                        android:text="@string/sending_request_to_customer" />
 
 
                 </LinearLayout>
@@ -78,7 +78,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="45dp"
                 android:background="@android:color/transparent"
-                android:src="@drawable/ny_ic_namma_yatri_text_with_logo"/>
+                android:src="@drawable/ny_ic_namma_yatri_text_with_logo" />
 
         </RelativeLayout>
     </LinearLayout>

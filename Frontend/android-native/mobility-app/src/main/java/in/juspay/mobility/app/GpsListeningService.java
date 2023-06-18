@@ -125,7 +125,7 @@ public class GpsListeningService extends Service {
                 new NotificationCompat.Builder(this, channelId)
                         .setContentTitle("GPS")
                         .setContentText(getString(R.string.waiting_for_gps_signal))
-                        .setSmallIcon(R.drawable.ny_ic_launcher)
+                        .setSmallIcon(getResources().getIdentifier("ic_launcher", "drawable", getPackageName()))
                         .setProgress(100, 0, true)
                         .setPriority(NotificationCompat.PRIORITY_MIN)
                         .setOngoing(true)
@@ -137,16 +137,16 @@ public class GpsListeningService extends Service {
         Intent notificationIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
         PendingIntent pendingIntent = PendingIntent.getActivity(this, alertNotificationId, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
         NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(this, "General");
-        mBuilder.setLargeIcon(BitmapFactory.decodeResource(this.getResources(), R.drawable.ny_ic_launcher));
+        mBuilder.setLargeIcon(BitmapFactory.decodeResource(this.getResources(), getResources().getIdentifier("ic_launcher", "drawable", getPackageName())));
         mBuilder.setContentTitle(getString(R.string.we_made_you_online))
-                .setSmallIcon((R.drawable.ny_ic_launcher))
+                .setSmallIcon(getResources().getIdentifier("ic_launcher", "drawable", getPackageName()))
                 .setContentText(getString(R.string.location_is_turned_on))
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_MAX);
         mBuilder.setContentIntent(pendingIntent);
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            Log.e(LOG_TAG,"no notification permission");
+            Log.e(LOG_TAG, "no notification permission");
             return;
         }
         notificationManager.notify(alertNotificationId, mBuilder.build());
@@ -169,7 +169,7 @@ public class GpsListeningService extends Service {
             connection.setRequestProperty("x-client-version", version);
             connection.setRequestProperty("token", token);
             connection.setRequestProperty("x-bundle-version", bundle_version);
-            connection.setRequestProperty("x-device",deviceDetails);
+            connection.setRequestProperty("x-device", deviceDetails);
             connection.setDoOutput(true);
             connection.connect();
 

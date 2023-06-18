@@ -94,15 +94,14 @@ import java.util.concurrent.TimeUnit;
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.mobility.app.AudioRecorder;
-import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.app.CheckPermissionOverlay;
 import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.LocationUpdateWorker;
-import in.juspay.mobility.app.NetworkBroadcastReceiver;
 import in.juspay.mobility.app.NotificationUtils;
 import in.juspay.mobility.app.OverlaySheetService;
 import in.juspay.mobility.app.Utils;
 import in.juspay.mobility.app.YoutubeVideoView;
+import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.common.MobilityCommonBridge;
 import in.juspay.mobility.driver.mediaPlayer.DefaultMediaPlayerControl;
 
@@ -201,6 +200,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                 public void chatCallBack(String message, String sentBy, String time, String len) {
                     Log.i(OTHERS, "No Required");
                 }
+
                 @Override
                 public void inAppCallBack(String onTapAction) {
                     Log.i(OTHERS, "No Required");
@@ -214,7 +214,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
             LocationUpdateService.registerCallback(callback);
         }
         if (isClassAvailable("in.juspay.mobility.app.OverlaySheetService")) {
-            OverlaySheetService.registerCallback(callBack);
+            OverlaySheetService.deRegisterCallback(callBack);
         }
     }
 
@@ -222,8 +222,10 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     public void onDestroy() {
         NotificationUtils.deRegisterCallback(callBack);
         Utils.deRegisterCallback(callBack);
-        NetworkBroadcastReceiver.deRegisterCallback(callBack);
         DefaultMediaPlayerControl.mediaPlayer.reset();
+        if (isClassAvailable("in.juspay.mobility.app.OverlaySheetService")) {
+            OverlaySheetService.registerCallback(callBack);
+        }
     }
     //endregion
 
@@ -504,12 +506,21 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         DefaultMediaPlayerControl.mediaPlayer.reset();
     }
 
+    @Override
+    public void reset() {
+        receivers.deRegister(bridgeComponents.getContext());
+        receivers = null;
+        googleMap = null;
+        onDestroy();
+        super.reset();
+    }
+
     @JavascriptInterface
     public void uploadFile() {
         if (!isUploadPopupOpen) {
             ExecutorManager.runOnMainThread(() -> {
                 Context context = bridgeComponents.getContext();
-                if ((ActivityCompat.checkSelfPermission(context.getApplicationContext(), CAMERA) == PackageManager.PERMISSION_GRANTED) && isStoragePermissionGiven()) {
+                if ((ActivityCompat.checkSelfPermission(context.getApplicationContext(), CAMERA) == PackageManager.PERMISSION_GRANTED)) {
                     if (bridgeComponents.getActivity() != null) {
                         Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
@@ -550,8 +561,8 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     @JavascriptInterface
     public boolean startAudioRecording() {
         if (isMicrophonePermissionEnabled()) {
-            audioRecorder = new AudioRecorder(bridgeComponents.getContext());
-            audioRecorder.startRecording();
+            audioRecorder = new AudioRecorder();
+            audioRecorder.startRecording(bridgeComponents.getContext());
             return true;
         } else {
             if (bridgeComponents.getActivity() != null) {
@@ -852,7 +863,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
             HttpURLConnection connection = (HttpURLConnection) (new URL(url).openConnection());
             connection.setRequestMethod("GET");
             connection.setRequestProperty("token", getKeysInSharedPref("REGISTERATION_TOKEN"));
-            connection.setRequestProperty("x-device",getKeysInSharedPref("DEVICE_DETAILS"));
+            connection.setRequestProperty("x-device", getKeysInSharedPref("DEVICE_DETAILS"));
             connection.connect();
             int respCode = connection.getResponseCode();
             InputStreamReader respReader;
@@ -998,10 +1009,10 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     }
 
     @JavascriptInterface
-    public void setScaleType (String id, String imageUrl, String scaleType){
+    public void setScaleType(String id, String imageUrl, String scaleType) {
         Activity activity = bridgeComponents.getActivity();
         if (activity == null) return;
-        if (id != null){
+        if (id != null) {
             ImageView imageView = activity.findViewById(Integer.parseInt(id));
             try {
                 URL url = new URL(imageUrl);
@@ -1009,7 +1020,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                 Handler mainLooper = new Handler(Looper.getMainLooper());
                 mainLooper.post(() -> {
                     if (bitmap == null) return;
-                    imageView.getLayoutParams().height = (getScreenWidth() * bitmap.getHeight())/bitmap.getWidth();
+                    imageView.getLayoutParams().height = (getScreenWidth() * bitmap.getHeight()) / bitmap.getWidth();
                     imageView.setScaleType(getScaleTypes(scaleType));
                     imageView.setImageBitmap(bitmap);
                     LinearLayout linearLayout = (LinearLayout) imageView.getParent();
@@ -1022,9 +1033,10 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
             }
         }
     }
-    public int getScreenWidth(){
+
+    public int getScreenWidth() {
         DisplayMetrics dm = new DisplayMetrics();
-        ((WindowManager)bridgeComponents.getContext().getSystemService(WINDOW_SERVICE)).getDefaultDisplay().getRealMetrics(dm);
+        ((WindowManager) bridgeComponents.getContext().getSystemService(WINDOW_SERVICE)).getDefaultDisplay().getRealMetrics(dm);
         return dm.widthPixels;
     }
     // endregion
@@ -1059,7 +1071,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         switch (requestCode) {
             case IMAGE_PERMISSION_REQ_CODE:
                 Context context = bridgeComponents.getContext();
-                if ((ActivityCompat.checkSelfPermission(context, CAMERA) == PackageManager.PERMISSION_GRANTED) && isStoragePermissionGiven()) {
+                if ((ActivityCompat.checkSelfPermission(context, CAMERA) == PackageManager.PERMISSION_GRANTED)) {
                     if (bridgeComponents.getActivity() != null) {
                         Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
@@ -1091,9 +1103,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                 }
                 break;
             case AudioRecorder.REQUEST_RECORD_AUDIO_PERMISSION:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-
-                } else {
+                if (grantResults.length > 0 && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
                     Toast.makeText(bridgeComponents.getContext(), "Permission Denied", Toast.LENGTH_SHORT).show();
                 }
                 break;

@@ -1,4 +1,4 @@
-/* 
+/*
  *  Copyright 2022-23, Juspay India Pvt Ltd
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
  *  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
@@ -31,7 +31,7 @@ import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
 
-public class SoundVisualizerBarView extends View{
+public class SoundVisualizerBarView extends View {
 
     /**
      * constant value for Height of the bar
@@ -253,13 +253,13 @@ public class SoundVisualizerBarView extends View{
                 float left = barNum * dp(4);
                 float top = (float) (y + dp(VISUALIZER_HEIGHT - Math.max(1, VISUALIZER_HEIGHT * value / 30.0f)));
                 float right = left + dp(3);
-                float bottom = (float) (y/1.1 + dp(Math.max(1, VISUALIZER_HEIGHT * value / 30.0f)));
+                float bottom = (float) (y / 1.1 + dp(Math.max(1, VISUALIZER_HEIGHT * value / 30.0f)));
                 if (left < denseness && left + dp(2) < denseness) {
-                    canvas.drawRoundRect(left, top, right, bottom,10.5f,10.5f,notPlayedStatePainting);
+                    canvas.drawRoundRect(left, top, right, bottom, 10.5f, 10.5f, notPlayedStatePainting);
                 } else {
-                    canvas.drawRoundRect(left, top, right, bottom,10.5f,10.5f, playedStatePainting);
+                    canvas.drawRoundRect(left, top, right, bottom, 10.5f, 10.5f, playedStatePainting);
                     if (left < denseness) {
-                        canvas.drawRoundRect(left, top, right, bottom,10.5f,10.5f, notPlayedStatePainting);
+                        canvas.drawRoundRect(left, top, right, bottom, 10.5f, 10.5f, notPlayedStatePainting);
                     }
                 }
                 barNum++;

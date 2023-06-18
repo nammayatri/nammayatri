@@ -9,10 +9,26 @@
 package in.juspay.mobility.app;
 
 public class SheetModel {
-    private String pickUpDistance, distanceToBeCovered, sourceArea, sourceAddress, destinationArea, destinationAddress, requestId, searchRequestId;
-    private int baseFare, reqExpiryTime, startTime, updatedAmount, offeredPrice, driverMinExtraFee, driverMaxExtraFee, rideRequestPopupDelayDuration, negotiationUnit, customerExtraFee;
-    private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha;
-    private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable;
+    private final String pickUpDistance;
+    private final String distanceToBeCovered;
+    private final String sourceArea;
+    private final String sourceAddress;
+    private final String destinationArea;
+    private final String destinationAddress;
+    private String requestId;
+    private final String searchRequestId;
+    private final int baseFare;
+    private final int reqExpiryTime;
+    private int startTime;
+    private int updatedAmount;
+    private int offeredPrice;
+    private final int driverMinExtraFee;
+    private final int driverMaxExtraFee;
+    private final int rideRequestPopupDelayDuration;
+    private int negotiationUnit;
+    private int customerExtraFee;
+    private float buttonIncreasePriceAlpha, buttonDecreasePriceAlpha;
+    private boolean buttonIncreasePriceClickable, buttonDecreasePriceClickable;
 
     public SheetModel(String pickUpDistance,
                       String distanceToBeCovered,
@@ -29,12 +45,12 @@ public class SheetModel {
                       int rideRequestPopupDelayDuration,
                       int negotiationUnit,
                       int customerExtraFee
-    ){
+    ) {
         this.customerExtraFee = customerExtraFee;
         this.pickUpDistance = pickUpDistance;
         this.distanceToBeCovered = distanceToBeCovered;
         this.sourceArea = sourceArea;
-        this.sourceAddress =sourceAddress;
+        this.sourceAddress = sourceAddress;
         this.destinationArea = destinationArea;
         this.destinationAddress = destinationAddress;
         this.updatedAmount = 0;
@@ -57,7 +73,9 @@ public class SheetModel {
         return offeredPrice;
     }
 
-    public int getCustomerTip() { return customerExtraFee; }
+    public int getCustomerTip() {
+        return customerExtraFee;
+    }
 
     public void setOfferedPrice(int offeredPrice) {
         this.offeredPrice = offeredPrice;
@@ -83,7 +101,7 @@ public class SheetModel {
         return sourceAddress;
     }
 
-    public String getDestinationArea(){
+    public String getDestinationArea() {
         return destinationArea;
     }
 
@@ -175,7 +193,7 @@ public class SheetModel {
         this.buttonDecreasePriceClickable = buttonDecreasePriceClickable;
     }
 
-    public void  setCustomerTip(int customerExtraFee){
+    public void setCustomerTip(int customerExtraFee) {
         this.customerExtraFee = customerExtraFee;
     }
 }

@@ -40,6 +40,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
+import androidx.core.content.res.ResourcesCompat;
 import androidx.interpolator.view.animation.FastOutLinearInInterpolator;
 
 import com.google.android.material.progressindicator.LinearProgressIndicator;
@@ -180,7 +181,7 @@ public class WidgetService extends Service {
                 //onClick Listener for rideRequest
                 silentRideRequest.setOnClickListener(view -> {
                     if (data != null && entity_payload != null) {
-                        NotificationUtils.showAllocationNotification(getApplicationContext(), "", "", data, "", entity_payload);
+                        NotificationUtils.showAllocationNotification(getApplicationContext(), data, entity_payload);
                         silentRideRequest.setVisibility(View.GONE);
                         progressBar.setVisibility(View.GONE);
                         dismissRequest.setVisibility(View.GONE);
@@ -377,7 +378,7 @@ public class WidgetService extends Service {
         }
         imageClose.setPadding(0, 0, 0, (int) (10 * scale + 0.5f));
         imageClose.setVisibility(View.INVISIBLE);
-        imageClose.setBackground(this.getResources().getDrawable(R.drawable.widget_close_gradient));
+        imageClose.setBackground(ResourcesCompat.getDrawable(getResources(), R.drawable.widget_close_gradient, null));
         windowManager.addView(imageClose, closeImageParams);
         windowManager.addView(widgetView, widgetLayoutParams);
         widgetView.setVisibility(View.VISIBLE);
@@ -395,6 +396,7 @@ public class WidgetService extends Service {
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
                 try {
+                    view.performClick();
                     switch (motionEvent.getAction()) {
                         case MotionEvent.ACTION_DOWN:
                             imageClose.setVisibility(View.GONE);

@@ -1,5 +1,4 @@
-<rotate
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<rotate xmlns:android="http://schemas.android.com/apk/res/android"
     android:fromDegrees="0"
     android:pivotX="50%"
     android:pivotY="50%"
@@ -17,7 +16,7 @@
             android:fillColor="#00000000"
             android:strokeColor="#ECDB46"
             android:fillAlpha="0.2"
-            android:strokeLineCap="round"/>
+            android:strokeLineCap="round" />
         <path
             android:pathData="M16,8V2.6667"
             android:strokeAlpha="0.6"
@@ -26,7 +25,7 @@
             android:fillColor="#00000000"
             android:strokeColor="#ECDB46"
             android:fillAlpha="0.6"
-            android:strokeLineCap="round"/>
+            android:strokeLineCap="round" />
         <path
             android:pathData="M6.5734,25.4268L10.3467,21.6534"
             android:strokeAlpha="0.3"
@@ -35,7 +34,7 @@
             android:fillColor="#00000000"
             android:strokeColor="#ECDB46"
             android:fillAlpha="0.3"
-            android:strokeLineCap="round"/>
+            android:strokeLineCap="round" />
         <path
             android:pathData="M21.6533,10.3467L25.4267,6.5733"
             android:strokeAlpha="0.7"
@@ -44,7 +43,7 @@
             android:fillColor="#00000000"
             android:strokeColor="#ECDB46"
             android:fillAlpha="0.7"
-            android:strokeLineCap="round"/>
+            android:strokeLineCap="round" />
         <path
             android:pathData="M2.6666,16H8"
             android:strokeAlpha="0.4"
@@ -53,14 +52,14 @@
             android:fillColor="#00000000"
             android:strokeColor="#ECDB46"
             android:fillAlpha="0.4"
-            android:strokeLineCap="round"/>
+            android:strokeLineCap="round" />
         <path
             android:pathData="M24,16H29.3333"
             android:strokeLineJoin="round"
             android:strokeWidth="2"
             android:fillColor="#00000000"
             android:strokeColor="#ECDB46"
-            android:strokeLineCap="round"/>
+            android:strokeLineCap="round" />
         <path
             android:pathData="M6.5734,6.5733L10.3467,10.3467"
             android:strokeAlpha="0.5"
@@ -69,7 +68,7 @@
             android:fillColor="#00000000"
             android:strokeColor="#ECDB46"
             android:fillAlpha="0.5"
-            android:strokeLineCap="round"/>
+            android:strokeLineCap="round" />
         <path
             android:pathData="M21.6533,21.6534L25.4267,25.4268"
             android:strokeAlpha="0.1"
@@ -78,6 +77,6 @@
             android:fillColor="#00000000"
             android:strokeColor="#ECDB46"
             android:fillAlpha="0.1"
-            android:strokeLineCap="round"/>
+            android:strokeLineCap="round" />
     </vector>
 </rotate>

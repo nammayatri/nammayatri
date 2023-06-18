@@ -3,6 +3,7 @@
     android:id="@+id/notification_layout"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content">
+
     <RelativeLayout
         android:id="@+id/notification"
         android:layout_width="wrap_content"
@@ -50,7 +51,7 @@
             android:textColor="#6D7280"
             android:textSize="13dp"
             android:ellipsize="end"
-            android:maxLines="2"/>
+            android:maxLines="2" />
 
         <TextView
             android:id="@+id/count"
@@ -73,22 +74,21 @@
             android:layout_height="wrap_content"
             android:layout_below="@+id/desc"
             android:orientation="horizontal"
-            android:layout_marginTop="10dp"
-            >
+            android:layout_marginTop="10dp">
 
             <LinearLayout
                 android:id="@+id/first_action_button"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginRight="15dp"
-                >
+                android:layout_marginRight="15dp">
 
                 <ImageView
                     android:id="@+id/action1_image"
                     android:layout_width="16dp"
                     android:layout_height="16dp"
                     android:src="@drawable/ic_share_blue" />
+
                 <TextView
                     android:id="@+id/action1_text"
                     android:layout_width="wrap_content"
@@ -97,22 +97,21 @@
                     android:textSize="12dp"
                     android:textFontWeight="600"
                     android:textColor="#0066FF"
-                    android:layout_marginLeft="5dp"
-                    />
+                    android:layout_marginLeft="5dp" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/second_action_button"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                >
+                android:orientation="horizontal">
 
                 <ImageView
                     android:id="@+id/action2_image"
                     android:layout_width="16dp"
                     android:layout_height="16dp"
                     android:src="@drawable/ic_share_blue" />
+
                 <TextView
                     android:id="@+id/action2_text"
                     android:layout_width="wrap_content"
@@ -121,8 +120,7 @@
                     android:textSize="12dp"
                     android:textFontWeight="600"
                     android:textColor="#0066FF"
-                    android:layout_marginLeft="5dp"
-                    />
+                    android:layout_marginLeft="5dp" />
             </LinearLayout>
 
         </LinearLayout>

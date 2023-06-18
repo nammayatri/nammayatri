@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="960px"
     android:layout_height="1338px"
@@ -21,8 +20,8 @@
             <ImageView
                 android:layout_width="147px"
                 android:layout_height="47px"
-                android:src="@drawable/ny_ic_invoice_logo"
-                />
+                android:src="@drawable/ny_ic_invoice_logo" />
+
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -61,37 +60,41 @@
             android:layout_height="1px"
             android:layout_marginTop="31px"
             android:background="@color/Black500" />
+
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content">
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="28px"
-            android:lineHeight="28px"
-            android:text="Hey "
-            android:textColor="@color/Black800"
-            android:textFontWeight="500"
-            android:textSize="24px" />
-        <TextView
-            android:id="@+id/userName"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="28px"
-            android:lineHeight="28px"
-            android:text="Aman Maurya"
-            android:textColor="@color/Black800"
-            android:textFontWeight="500"
-            android:textSize="24px" />
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="28px"
-            android:lineHeight="28px"
-            android:text=", here’s your invoice"
-            android:textColor="@color/Black800"
-            android:textFontWeight="500"
-            android:textSize="24px" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28px"
+                android:lineHeight="28px"
+                android:text="Hey "
+                android:textColor="@color/Black800"
+                android:textFontWeight="500"
+                android:textSize="24px" />
+
+            <TextView
+                android:id="@+id/userName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28px"
+                android:lineHeight="28px"
+                android:text="Aman Maurya"
+                android:textColor="@color/Black800"
+                android:textFontWeight="500"
+                android:textSize="24px" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28px"
+                android:lineHeight="28px"
+                android:text=", here’s your invoice"
+                android:textColor="@color/Black800"
+                android:textFontWeight="500"
+                android:textSize="24px" />
         </LinearLayout>
 
         <LinearLayout
@@ -135,20 +138,23 @@
             android:paddingVertical="20px"
             android:orientation="vertical"
             android:id="@+id/fareBreakupContainer">
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:id="@+id/fareBreakupElements"
-                android:orientation="vertical">
-            </LinearLayout>
+                android:orientation="vertical"></LinearLayout>
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="1px"
                 android:layout_marginVertical="18px"
                 android:background="@color/Black500" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -180,6 +186,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="80px">
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -204,6 +211,7 @@
                 android:textFontWeight="600"
                 android:textSize="20px"
                 android:textStyle="bold" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -254,6 +262,7 @@
                     android:textFontWeight="400"
                     android:textSize="18px" />
             </LinearLayout>
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
@@ -315,13 +324,15 @@
                     <ImageView
                         android:layout_width="12px"
                         android:layout_height="12px"
-                        android:src="@drawable/ny_ic_red_circle"/>
+                        android:src="@drawable/ny_ic_red_circle" />
                 </LinearLayout>
+
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginLeft="12px"
                     android:orientation="vertical">
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -331,6 +342,7 @@
                         android:textFontWeight="400"
                         android:id="@+id/rideStartTime"
                         android:textSize="16px" />
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -342,6 +354,7 @@
                         android:textColor="@color/Black800"
                         android:textFontWeight="400"
                         android:textSize="16px" />
+
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -352,6 +365,7 @@
                         android:textFontWeight="400"
                         android:layout_marginTop="38px"
                         android:textSize="16px" />
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -366,10 +380,12 @@
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>
+
         <LinearLayout
             android:layout_width="0px"
             android:layout_height="0px"
-            android:layout_weight="1.0"/>
+            android:layout_weight="1.0" />
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

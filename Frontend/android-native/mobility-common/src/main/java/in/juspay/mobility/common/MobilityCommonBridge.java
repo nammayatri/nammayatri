@@ -1,8 +1,6 @@
 package in.juspay.mobility.common;
 
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
-import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
-import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 
 import android.Manifest;
 import android.animation.ValueAnimator;
@@ -142,14 +140,13 @@ public class MobilityCommonBridge extends HyperBridge {
     private static final String LOCATE_ON_MAP = "LocateOnMap";
     protected static final String CURRENT_LOCATION = "ny_ic_customer_current_location";
     private static final String CURRENT_LOCATION_LATLON = "Current Location";
-    private static final int LOCATION_RESOLUTION_REQUEST_CODE = 21345;
+    protected static final int LOCATION_RESOLUTION_REQUEST_CODE = 21345;
     private static final int DATEPICKER_SPINNER_COUNT = 3;
     //Maps
     protected static JSONObject markers = new JSONObject();
     protected static GoogleMap googleMap;
     protected static ArrayList<Marker> pickupPointsZoneMarkers = new ArrayList<>();
     protected static GeoJsonLayer layer;
-    protected static List<LatLng> zoneLatLngPoints = new ArrayList<LatLng>();
     protected String regToken, baseUrl;
     protected String zoneName = "";
     protected float zoom = 17.0f;
@@ -179,7 +176,7 @@ public class MobilityCommonBridge extends HyperBridge {
     // Others
     private LottieAnimationView animationView;
 
-    protected static Receivers receivers = new Receivers();
+    protected Receivers receivers;
 
 
     public MobilityCommonBridge(BridgeComponents bridgeComponents) {
@@ -344,6 +341,7 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public void initiateLocationServiceClient() {
+        receivers = new Receivers();
         receivers.initReceiver(bridgeComponents);
         if (!isLocationPermissionEnabled()) return;
         resolvableLocationSettingsReq();
@@ -745,9 +743,9 @@ public class MobilityCommonBridge extends HyperBridge {
 
                     }
                     if ((sourceMarker != null && !sourceMarker.equals(""))) {
+                        List<LatLng> points = polylineOptions.getPoints();
+                        LatLng source = points.get(points.size() - 1);
                         if (type.equals("DRIVER_LOCATION_UPDATE")) {
-                            List<LatLng> points = polylineOptions.getPoints();
-                            LatLng source = points.get(points.size() - 1);
                             upsertMarker(sourceMarker, String.valueOf(source.latitude), String.valueOf(source.longitude), 90, 0.5f, 0.5f);
                             Marker currMarker = (Marker) markers.get(sourceMarker);
                             int index = polyline.getPoints().size() - 1;
@@ -756,8 +754,6 @@ public class MobilityCommonBridge extends HyperBridge {
                             currMarker.setAnchor(0.5f, 0.5f);
                             markers.put(sourceMarker, currMarker);
                         } else {
-                            List<LatLng> points = polylineOptions.getPoints();
-                            LatLng source = points.get(points.size() - 1);
                             MarkerOptions markerObj = new MarkerOptions()
                                     .title(sourceMarker)
                                     .position(source)
@@ -1387,7 +1383,7 @@ public class MobilityCommonBridge extends HyperBridge {
     public boolean isFilePresentDeep(String fileName) throws IOException {
         Context context = bridgeComponents.getContext();
         InputStream inputStreams;
-        fileName = fileName.substring(0,fileName.lastIndexOf("."));
+        fileName = fileName.substring(0, fileName.lastIndexOf("."));
         boolean isCheckAssets = (context.getResources().getIdentifier(fileName, "raw", context.getPackageName()) == 0);
         if (isCheckAssets) {
             inputStreams = context.getAssets().open(fileName);
@@ -1570,16 +1566,6 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    protected boolean isStoragePermissionGiven() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            JuspayLogger.d(OTHERS, "Storage Permission is required for API less than 29");
-            return (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED);
-        } else {
-            JuspayLogger.d(OTHERS, "Storage Permission is not required for API greater than 29");
-            return true;
-        }
-    }
-
     private static class DatePickerLabels {
         private static final String MAXIMUM_PRESENT_DATE = "MAXIMUM_PRESENT_DATE";
         private static final String MINIMUM_EIGHTEEN_YEARS = "MINIMUM_EIGHTEEN_YEARS";
@@ -1637,7 +1623,7 @@ public class MobilityCommonBridge extends HyperBridge {
     // endregion
 
     protected static class Receivers {
-        BroadcastReceiver gpsReceiver ;
+        BroadcastReceiver gpsReceiver;
         BroadcastReceiver internetActionReceiver;
         String storeInternetActionCallBack;
 
@@ -1648,7 +1634,7 @@ public class MobilityCommonBridge extends HyperBridge {
                     LocationManager locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
                     boolean isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
                     if (!isGpsEnabled) {
-                        invokeOnEvent(bridgeComponents.getJsCallback(), "onLocationChanged", "{}");
+                        invokeOnEvent(bridgeComponents.getJsCallback(), "onLocationChanged");
                     }
                 }
             };
@@ -1656,26 +1642,29 @@ public class MobilityCommonBridge extends HyperBridge {
                 @Override
                 public void onReceive(Context context, Intent intent) {
                     if (!isNetworkAvailable(bridgeComponents.getContext())) {
-                        invokeOnEvent(bridgeComponents.getJsCallback(),"onInternetChanged", "{}");
+                        invokeOnEvent(bridgeComponents.getJsCallback(), "onInternetChanged");
                     } else {
-                        callInternetActionCallBack(bridgeComponents.getJsCallback(),"true");
+                        callInternetActionCallBack(bridgeComponents.getJsCallback(), "true");
                     }
                 }
             };
             bridgeComponents.getContext().registerReceiver(gpsReceiver, new IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION));
             bridgeComponents.getContext().registerReceiver(internetActionReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
         }
-        protected void invokeOnEvent(JsCallback callback, String event, String payload) {
-            String encoded = Base64.encodeToString(payload.getBytes(), Base64.NO_WRAP);
+
+        protected void invokeOnEvent(JsCallback callback, String event) {
+            String encoded = Base64.encodeToString("{}".getBytes(), Base64.NO_WRAP);
             String command = String.format("window[\"onEvent'\"]('%s',atob('%s'))", event, encoded);
             callback.addJsToWebView(command);
         }
+
         private boolean isNetworkAvailable(Context context) {
             ConnectivityManager connectivityManager
                     = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
             NetworkInfo activeNetworkInfo = connectivityManager != null ? connectivityManager.getActiveNetworkInfo() : null;
             return activeNetworkInfo != null && activeNetworkInfo.isConnected();
         }
+
         public void callInternetActionCallBack(JsCallback callback, String isPermission) {
             if (storeInternetActionCallBack != null) {
                 String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
@@ -1683,6 +1672,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 callback.addJsToWebView(javascript);
             }
         }
+
         public void deRegister(Context context) {
             context.unregisterReceiver(gpsReceiver);
             context.unregisterReceiver(internetActionReceiver);

@@ -41,7 +41,7 @@ import JBridge as JB
 import Language.Strings (LANGUAGE_KEY(..), getString, getKey)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, not, pure, show, unit, ($), (&&), (*), (-), (/), (/=), (<<<), (<>), (==), (||))
-import PrestoDOM (Length(..), Margin(..), Orientation(..), Gravity(..), Visibility(..), Padding(..), PrestoDOM, Screen, height, width, color, background, orientation, padding, margin, onBackPressed, linearLayout, gravity, textView, text, textSize, fontStyle, scrollView, scrollBarY, relativeLayout, editText, hint, singleLine, hintColor, ellipsize, cornerRadius, lineHeight, stroke, onChange, id, visibility, maxLines, onClick, imageView, imageUrl, alignParentBottom, afterRender, adjustViewWithKeyboard, weight, alpha, frameLayout, clickable, onFocus, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
 import Screens.AddNewAddressScreen.Controller (Action(..), ScreenOutput, eval, validTag)
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
@@ -479,23 +479,25 @@ savePlaceView state push =
                           _ <- HU.setText' (EHC.getNewIDWithTag "SavedLocationEditText") state.data.address
                           pure unit)
               $ const ChangeAddress
-          ][  textView
-              ([ text (state.data.selectedItem).description
+          ][  textView $ 
+              [ text (state.data.selectedItem).description
               , color Color.black600
               , height WRAP_CONTENT
               , gravity CENTER_VERTICAL
               , padding (PaddingRight 8)
               , maxLines 1
               , ellipsize true 
-              ] <> (if EHC.os == "IOS" then [width $ V (4 * (EHC.screenWidth unit / 5) - 75)] else [weight 1.0]) <> FontStyle.body1 LanguageStyle)
+              , width $ V (4 * (EHC.screenWidth unit / 5) - (if EHC.os == "IOS" then 75 else 50))
+              ] <> FontStyle.body1 LanguageStyle
             , linearLayout[
               height WRAP_CONTENT
             , gravity RIGHT 
             ] <> (if EHC.os == "IOS" then [weight 1.0] else [width WRAP_CONTENT]) )[  textView
                 [ text (getString EDIT)
                 , color Color.blue900
+                , width MATCH_PARENT
                 , onFocus push $ const $ EditTextFocusChanged
-                , gravity CENTER_VERTICAL
+                , gravity CENTER_VERTICAL 
                 ] <> FontStyle.body1 LanguageStyle]
           ]
          , textView $

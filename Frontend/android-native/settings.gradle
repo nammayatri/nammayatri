@@ -1,4 +1,4 @@
-rootProject.name='mobility'
+rootProject.name = 'mobility'
 include ':app'
 include ':mobility-common'
 include ':mobility-customer'

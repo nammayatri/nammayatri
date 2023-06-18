@@ -46,6 +46,7 @@ window.getMerchantConfig = function () {
     "nyBrandingVisibility": false,
     "fontType": "Assets",
     "black900": "#2C2F3A",
+    "addFavouriteScreenBackArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png",
     "black800": "#454545",
     "red" : "#E55454",
     "popupBackground" : "#FFFFFF",

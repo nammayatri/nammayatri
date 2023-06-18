@@ -1,4 +1,4 @@
-/* 
+/*
  *  Copyright 2022-23, Juspay India Pvt Ltd
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
  *  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
@@ -22,26 +22,27 @@ import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
 public class LocationUpdateWorker extends Worker {
-    public LocationUpdateWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
+    public LocationUpdateWorker(@NonNull Context context, @NonNull WorkerParameters workerParams, SharedPreferences sharedPrefs) {
         super(context, workerParams);
+        this.sharedPrefs = sharedPrefs;
     }
-    private SharedPreferences sharedPrefs;
+
+    private final SharedPreferences sharedPrefs;
 
     @NonNull
     @Override
-    public Result doWork() 
-    {
-        String driverStatus = sharedPrefs!=null ? sharedPrefs.getString("DRIVER_STATUS", "__failed"): "";
+    public Result doWork() {
+        String driverStatus = sharedPrefs != null ? sharedPrefs.getString("DRIVER_STATUS", "__failed") : "";
         if (driverStatus.equals("true")) {
             Context context = getApplicationContext();
             // creates intent for main activity
             final PackageManager pm = context.getPackageManager();
-            if(isScreenLocked()) {
+            if (isScreenLocked()) {
                 final Intent intent = pm.getLaunchIntentForPackage(context.getPackageName());
                 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 context.startActivity(intent);
             }
-            Intent locationService = new Intent(context,LocationUpdateService.class);
+            Intent locationService = new Intent(context, LocationUpdateService.class);
             locationService.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(locationService);
@@ -52,12 +53,11 @@ public class LocationUpdateWorker extends Worker {
         return Result.success();
     }
 
-    private boolean isScreenLocked()
-    {
+    private boolean isScreenLocked() {
         Context context = getApplicationContext();
-        PowerManager powerManager = (PowerManager)context.getSystemService(Context.POWER_SERVICE);
+        PowerManager powerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
         KeyguardManager myKM = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
         boolean isPhoneLocked = myKM.inKeyguardRestrictedInputMode();
-        return  isPhoneLocked || !(Build.VERSION.SDK_INT < 20? powerManager.isScreenOn():powerManager.isInteractive());
+        return isPhoneLocked || !powerManager.isInteractive();
     }
 }

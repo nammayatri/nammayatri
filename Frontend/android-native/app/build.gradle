@@ -65,7 +65,7 @@ android {
 //            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.debug
             manifestPlaceholders = [
-                    appIcon: "@mipmap/ic_launcher_debug",
+                    appIcon     : "@mipmap/ic_launcher_debug",
                     appIconRound: "@mipmap/ic_launcher_debug"
             ]
         }
@@ -76,7 +76,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.debug
             manifestPlaceholders = [
-                    appIcon: "@mipmap/ic_launcher",
+                    appIcon     : "@mipmap/ic_launcher",
                     appIconRound: "@mipmap/ic_launcher_round"
             ]
         }
@@ -94,10 +94,10 @@ android {
             buildConfigField "String", "MERCHANT_ID_DRIVER", properties.getProperty("MERCHANT_ID_DRIVER", "")
             buildConfigField "String", "CONFIG_URL_USER", properties.getProperty("CONFIG_URL_USER", "")
             buildConfigField "String", "CONFIG_URL_DRIVER", properties.getProperty("CONFIG_URL_DRIVER", "")
-            manifestPlaceholders = [isUsesCleartextTraffic: "false", mapsApiKey : properties.getProperty("MAPS_API_KEY", "")]
-            resValue "string", "facebook_app_id", properties.getProperty("FACEBOOK_APP_ID","")
-            resValue "string", "facebook_client_token", properties.getProperty("FACEBOOK_CLIENT_TOKEN","")
-            resValue "string", "fb_login_protocol_scheme", properties.getProperty("FB_LOGIN_PROTOCOL_SCHEMA","")
+            manifestPlaceholders = [isUsesCleartextTraffic: "false", mapsApiKey: properties.getProperty("MAPS_API_KEY", "")]
+            resValue "string", "facebook_app_id", properties.getProperty("FACEBOOK_APP_ID", "")
+            resValue "string", "facebook_client_token", properties.getProperty("FACEBOOK_CLIENT_TOKEN", "")
+            resValue "string", "fb_login_protocol_scheme", properties.getProperty("FB_LOGIN_PROTOCOL_SCHEMA", "")
             dimension "mode"
         }
         dev {
@@ -106,14 +106,14 @@ android {
             buildConfigField "String", "MERCHANT_ID_DRIVER", properties.getProperty("MERCHANT_ID_DRIVER", "")
             buildConfigField "String", "CONFIG_URL_USER", properties.getProperty("CONFIG_URL_USER", "")
             buildConfigField "String", "CONFIG_URL_DRIVER", properties.getProperty("CONFIG_URL_DRIVER", "")
-            manifestPlaceholders = [isUsesCleartextTraffic: "true", mapsApiKey : properties.getProperty("MAPS_API_KEY", "")]
-            resValue "string", "facebook_app_id", properties.getProperty("FACEBOOK_APP_ID","")
-            resValue "string", "facebook_client_token", properties.getProperty("FACEBOOK_CLIENT_TOKEN","")
-            resValue "string", "fb_login_protocol_scheme", properties.getProperty("FB_LOGIN_PROTOCOL_SCHEMA","")
+            manifestPlaceholders = [isUsesCleartextTraffic: "true", mapsApiKey: properties.getProperty("MAPS_API_KEY", "")]
+            resValue "string", "facebook_app_id", properties.getProperty("FACEBOOK_APP_ID", "")
+            resValue "string", "facebook_client_token", properties.getProperty("FACEBOOK_CLIENT_TOKEN", "")
+            resValue "string", "fb_login_protocol_scheme", properties.getProperty("FB_LOGIN_PROTOCOL_SCHEMA", "")
             dimension "mode"
         }
         nyUser {
-            applicationId  "in.juspay.nammayatri"
+            applicationId "in.juspay.nammayatri"
             buildConfigField "String", "MERCHANT_TYPE", "\"USER\""
             buildConfigField "String", "MERCHANT", "\"KA\""
             dimension "app"
@@ -125,7 +125,7 @@ android {
             dimension "app"
         }
         jsUser {
-            applicationId  "in.juspay.jatrisaathi"
+            applicationId "in.juspay.jatrisaathi"
             buildConfigField "String", "MERCHANT_TYPE", "\"USER\""
             buildConfigField "String", "MERCHANT", "\"WB\""
             dimension "app"
@@ -137,7 +137,7 @@ android {
             dimension "app"
         }
         yatriUser {
-            applicationId  "net.openkochi.yatri"
+            applicationId "net.openkochi.yatri"
             buildConfigField "String", "MERCHANT_TYPE", "\"USER\""
             buildConfigField "String", "MERCHANT", "\"KL\""
             dimension "app"
@@ -192,7 +192,7 @@ android {
 }
 
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar','*.aar'])
+    implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
     implementation 'in.juspay:hypersdk:2.1.13-nammayatri.23'
     implementation project(path: ':mobility-app')
     implementation platform('com.google.firebase:firebase-bom:31.1.1')

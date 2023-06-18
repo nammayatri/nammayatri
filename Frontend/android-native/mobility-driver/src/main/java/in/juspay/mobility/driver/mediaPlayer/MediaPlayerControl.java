@@ -17,20 +17,33 @@ import java.io.IOException;
 public interface MediaPlayerControl {
 
     public void preparePlayer();
+
     public MediaPlayerControl setOnPrepariedListener(MediaPlayerOnPreparedListener onPrepariedListener);
+
     public MediaPlayerControl setOnPauseListener(MediaPlayerOnPauseListener onPauseListener);
+
     public MediaPlayerControl setOnPlayListener(MediaPlayerOnPlayListener onPlayListener);
+
     public MediaPlayerControl setOnDurationListener(MediaPlayerOnDurationListener onDurationListener);
+
     public MediaPlayerControl setOnCompleteListener(MediaPlayerOnCompleteListener onCompleteListener);
+
     public void setAudioSource(Context context, Uri uri) throws IOException;
+
     public void setAudioSource(String url) throws IOException;
+
     public void setAudioSource(FileInputStream file) throws IOException;
 
     public void play();
+
     public void pause();
+
     public void stop();
+
     public void toggle();
+
     public boolean isPlaying();
+
     public long getDuration();
 
 }

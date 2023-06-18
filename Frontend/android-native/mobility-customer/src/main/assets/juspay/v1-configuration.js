@@ -44,6 +44,7 @@ window.getMerchantConfig = function () {
     "black800": "#101010",
     "red" : "#FD5154",
     "popupBackground" : "#03B9F5",
+    "addFavouriteScreenBackArrow" : "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left.png",
     "cancelRideColor" : "#101010",
     "infoIconUrl" : "ny_ic_info_blue,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_info_blue.png",
     "popupTextColor" : "#FFFFFF",

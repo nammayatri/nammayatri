@@ -37,7 +37,7 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
         this.listener = listener;
     }
 
-    public void updateSheetList (ArrayList<SheetModel> sheetList) {
+    public void updateSheetList(ArrayList<SheetModel> sheetList) {
         this.sheetList = sheetList;
     }
 
@@ -50,12 +50,12 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
 
     @Override
     public void onBindViewHolder(@NonNull SheetViewHolder holder, int position) {
-        listener.onViewHolderBind(holder,position, viewPager, null);
+        listener.onViewHolderBind(holder, position, viewPager, null);
     }
 
     @Override
     public void onBindViewHolder(@NonNull SheetViewHolder holder, int position, @NonNull List<Object> payloads) {
-        listener.onViewHolderBind(holder,position, viewPager, payloads);
+        listener.onViewHolderBind(holder, position, viewPager, payloads);
     }
 
     @Override
@@ -63,11 +63,12 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
         return sheetList.size();
     }
 
-    public class SheetViewHolder extends RecyclerView.ViewHolder{
+    public static class SheetViewHolder extends RecyclerView.ViewHolder {
         TextView pickUpDistance, acceptRejTimer, baseFare, sourceArea, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, customerTipText, textIncludesCharges;
         Button reqButton, rejectButton;
         View buttonDecreasePrice, buttonIncreasePrice, progressBar;
         LinearLayout customerTipBlock;
+
         public SheetViewHolder(@NonNull View itemView) {
             super(itemView);
             pickUpDistance = itemView.findViewById(R.id.distancePickUp);
@@ -92,8 +93,7 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
     }
 
 
-
-    public interface OnItemClickListener{
+    public interface OnItemClickListener {
         void onViewHolderBind(SheetViewHolder holder, int position, ViewPager2 viewPager, List<Object> objects);
     }
 

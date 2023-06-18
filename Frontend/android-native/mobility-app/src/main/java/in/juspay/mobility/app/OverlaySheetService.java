@@ -41,9 +41,9 @@ import androidx.annotation.Nullable;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.airbnb.lottie.LottieAnimationView;
+import com.facebook.shimmer.ShimmerFrameLayout;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.firebase.analytics.FirebaseAnalytics;
-import com.facebook.shimmer.ShimmerFrameLayout;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -116,10 +116,10 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     @SuppressLint("SetTextI18n")
     private void updateTipView(SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
-            if (model.getCustomerTip() > 0){
+            if (model.getCustomerTip() > 0) {
                 holder.customerTipText.setText("₹ " + model.getCustomerTip() + " " + getString(R.string.tip_included));
                 holder.customerTipBlock.setVisibility(View.VISIBLE);
-                holder.textIncludesCharges.setText(getString(R.string.includes_pickup_charges_10)+ " " + getString(R.string.and) +" ₹" + model.getCustomerTip() + " Tip");
+                holder.textIncludesCharges.setText(getString(R.string.includes_pickup_charges_10) + " " + getString(R.string.and) + " ₹" + model.getCustomerTip() + " Tip");
             } else {
                 holder.customerTipBlock.setVisibility(View.GONE);
                 holder.textIncludesCharges.setText(getString(R.string.includes_pickup_charges_10));
@@ -151,7 +151,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             holder.rejectButton.setAlpha(1.0f);
             holder.rejectButton.setClickable(true);
         }
-    }    private final SheetAdapter sheetAdapter = new SheetAdapter(sheetArrayList, viewPager, new SheetAdapter.OnItemClickListener() {
+    }
+
+    private final SheetAdapter sheetAdapter = new SheetAdapter(sheetArrayList, viewPager, new SheetAdapter.OnItemClickListener() {
         @SuppressLint("SetTextI18n")
         @Override
         public void onViewHolderBind(SheetAdapter.SheetViewHolder holder, int position, ViewPager2 viewPager, List<Object> payloads) {
@@ -186,11 +188,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 holder.buttonDecreasePrice.setVisibility(View.VISIBLE);
             }
             updateTipView(holder, model);
-            
-            if (key != null && key.equals("jatrisaathidriver")){
+
+            if (key != null && key.equals("jatrisaathidriver")) {
                 holder.textIncludesCharges.setVisibility(View.GONE);
             }
-            updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(),model.getStartTime(), getString(R.string.accept_offer));
+            updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), getString(R.string.accept_offer));
             updateIncreaseDecreaseButtons(holder, model);
             holder.reqButton.setOnClickListener(view -> {
                 holder.reqButton.setClickable(false);
@@ -215,8 +217,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             });
                         } else {
                             handler.post(() -> {
-//                                    cleanUp();
-//                                    executor.shutdown();
                                 removeCard(position);
                                 if (apiLoader != null) {
                                     windowManager.removeView(apiLoader);
@@ -265,8 +265,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     firebaseLogEvent("price_is_increased");
                     model.setOfferedPrice(model.getOfferedPrice() + model.getNegotiationUnit());
                     sheetAdapter.notifyItemChanged(position, "inc");
+                    Handler handler = new Handler(Looper.getMainLooper());
                     if (model.getOfferedPrice() == model.getDriverMaxExtraFee()) {
-                        Handler handler = new Handler(Looper.getMainLooper());
                         handler.post(() -> {
                             model.setButtonIncreasePriceAlpha(0.5f);
                             model.setButtonIncreasePriceClickable(false);
@@ -274,7 +274,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             model.setButtonDecreasePriceClickable(true);
                         });
                     } else {
-                        Handler handler = new Handler(Looper.getMainLooper());
                         handler.post(() -> {
                             model.setButtonDecreasePriceAlpha(1.0f);
                             model.setButtonDecreasePriceClickable(true);
@@ -288,8 +287,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     firebaseLogEvent("price_is_decreased");
                     model.setOfferedPrice(model.getOfferedPrice() - model.getNegotiationUnit());
                     sheetAdapter.notifyItemChanged(position, "inc");
+                    Handler handler = new Handler(Looper.getMainLooper());
                     if (model.getOfferedPrice() == 0) {
-                        Handler handler = new Handler(Looper.getMainLooper());
                         handler.post(() -> {
                             model.setButtonDecreasePriceAlpha(0.5f);
                             model.setButtonDecreasePriceClickable(false);
@@ -297,7 +296,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             model.setButtonIncreasePriceClickable(true);
                         });
                     } else {
-                        Handler handler = new Handler(Looper.getMainLooper());
                         handler.post(() -> {
                             model.setButtonIncreasePriceAlpha(1.0f);
                             model.setButtonIncreasePriceClickable(true);
@@ -326,21 +324,16 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         }
     });
 
-    private void removeCard (int position) {
-        removeCard(position, false);
-    }
-
-    private void removeCard(int position, boolean isRemoved) {
+    private void removeCard(int position) {
         try {
             Handler handler = new Handler(Looper.getMainLooper());
             handler.post(() -> {
-                if (!isRemoved) {
-                    if (!(sheetArrayList.size() > position)) {
-                        return;
-                    }
-                    if (position >= 0 && position < sheetArrayList.size()) {
-                        sheetArrayList.remove(position);
-                    }
+                if (!(sheetArrayList.size() > position)) {
+                    return;
+                }
+                if (position >= 0) {
+                    sheetArrayList.size();
+                    sheetArrayList.remove(position);
                 }
                 sheetAdapter.updateSheetList(sheetArrayList);
                 sheetAdapter.notifyItemRemoved(position);
@@ -451,7 +444,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     int rideRequestPopupDelayDuration = rideRequestBundle.getInt("rideRequestPopupDelayDuration");
                     DecimalFormat df = new DecimalFormat();
                     df.setMaximumFractionDigits(2);
-                    final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+                    final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "us"));
                     f.setTimeZone(TimeZone.getTimeZone("UTC"));
                     String getCurrTime = f.format(new Date());
                     int calculatedTime = calculateExpireTimer(searchRequestValidTill, getCurrTime);
@@ -530,11 +523,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         params.gravity = Gravity.CENTER;
         params.screenOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
         LayoutInflater inflater = ((LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE));
-        floatyView = inflater.inflate(R.layout.viewpager_layout_view,null);
-        TextView merchantLogo = (TextView) floatyView.findViewById(R.id.merchantLogo);
-        if (key != null && key.equals("jatrisaathidriver")){
+        floatyView = inflater.inflate(R.layout.viewpager_layout_view, null);
+        TextView merchantLogo = floatyView.findViewById(R.id.merchantLogo);
+        if (key != null && key.equals("jatrisaathidriver")) {
             merchantLogo.setText("Jatri Sathi");
-        } else if (key != null && key.equals("yatripartner")){
+        } else if (key != null && key.equals("yatripartner")) {
             merchantLogo.setText("Yatri Partner");
         }
         progressDialog = inflater.inflate(R.layout.loading_screen_overlay, null);
@@ -560,7 +553,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     for (SheetModel model : sheetArrayList) {
                         int index = sheetArrayList.indexOf(model);
                         if (model.getReqExpiryTime() + model.getStartTime() - time < 1) {
-                            removeCard(index, false);
+                            removeCard(index);
                         } else {
                             sheetAdapter.notifyItemChanged(index, "time");
                         }
@@ -594,7 +587,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         String bundle_version = sharedPref.getString("BUNDLE_VERSION", "null");
         String version = sharedPref.getString("VERSION_NAME", "null");
         String sessionToken = sharedPref.getString("SESSION_ID", "null");
-        String deviceDetails = sharedPref.getString("DEVICE_DETAILS","null");
+        String deviceDetails = sharedPref.getString("DEVICE_DETAILS", "null");
         try {
             String orderUrl = baseUrl + "/driver/searchRequest/quote/respond";
             HttpURLConnection connection = (HttpURLConnection) (new URL(orderUrl).openConnection());
@@ -763,7 +756,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 }
                 LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
                 loaderText.setText(ackText);
-                if (lottieAnimationView.getVisibility() != View.GONE){
+                if (lottieAnimationView.getVisibility() != View.GONE) {
                     lottieAnimationView.setAnimation(rawResource);
                     lottieAnimationView.setProgress(0);
                     lottieAnimationView.setSpeed(1.2f);
@@ -801,59 +794,55 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     }
 
     private void updateIndicators() {
-        mainLooper.post(new Runnable() {
-            @SuppressLint("SetTextI18n")
-            @Override
-            public void run() {
-                if (floatyView == null || viewPager == null) return;
-                indicatorText1 = floatyView.findViewById(R.id.indicatorText1);
-                indicatorText2 = floatyView.findViewById(R.id.indicatorText2);
-                indicatorText3 = floatyView.findViewById(R.id.indicatorText3);
-                progressIndicator1 = floatyView.findViewById(R.id.progress_indicator_1);
-                progressIndicator2 = floatyView.findViewById(R.id.progress_indicator_2);
-                progressIndicator3 = floatyView.findViewById(R.id.progress_indicator_3);
-                indicatorTextList = new ArrayList<>(Arrays.asList(indicatorText1, indicatorText2, indicatorText3));
-                progressIndicatorsList = new ArrayList<>(Arrays.asList(progressIndicator1, progressIndicator2, progressIndicator3));
-                indicatorList = new ArrayList<>(Arrays.asList(
-                        floatyView.findViewById(R.id.indicator1),
-                        floatyView.findViewById(R.id.indicator2),
-                        floatyView.findViewById(R.id.indicator3)));
-                indicatorTip1 = floatyView.findViewById(R.id.tip_view_0);
-                indicatorTip2 = floatyView.findViewById(R.id.tip_view_1);
-                indicatorTip3 = floatyView.findViewById(R.id.tip_view_2);
-                shimmerTip1 = (ShimmerFrameLayout) floatyView.findViewById(R.id.shimmer_view_container_0);
-                shimmerTip2 = (ShimmerFrameLayout) floatyView.findViewById(R.id.shimmer_view_container_1);
-                shimmerTip3 = (ShimmerFrameLayout) floatyView.findViewById(R.id.shimmer_view_container_2);
-                tipsList = new ArrayList<>(Arrays.asList(indicatorTip1,indicatorTip2,indicatorTip3));
-                shimmerTipList = new ArrayList<>(Arrays.asList(shimmerTip1,shimmerTip2,shimmerTip3));
-                for (int  i =0; i<3; i++){
-                    if (viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i))){
-                        indicatorList.get(i).setBackgroundColor(getColor(R.color.grey900));
-                        progressIndicatorsList.get(i).setTrackColor(getColor(R.color.white));
-                        shimmerTipList.get(i).stopShimmer();
-                    }else {
-                        indicatorList.get(i).setBackgroundColor(getColor(R.color.white));
-                        progressIndicatorsList.get(i).setTrackColor(getColor(R.color.grey900));
-                        shimmerTipList.get(i).startShimmer();
+        mainLooper.post(() -> {
+            if (floatyView == null || viewPager == null) return;
+            indicatorText1 = floatyView.findViewById(R.id.indicatorText1);
+            indicatorText2 = floatyView.findViewById(R.id.indicatorText2);
+            indicatorText3 = floatyView.findViewById(R.id.indicatorText3);
+            progressIndicator1 = floatyView.findViewById(R.id.progress_indicator_1);
+            progressIndicator2 = floatyView.findViewById(R.id.progress_indicator_2);
+            progressIndicator3 = floatyView.findViewById(R.id.progress_indicator_3);
+            indicatorTextList = new ArrayList<>(Arrays.asList(indicatorText1, indicatorText2, indicatorText3));
+            progressIndicatorsList = new ArrayList<>(Arrays.asList(progressIndicator1, progressIndicator2, progressIndicator3));
+            indicatorList = new ArrayList<>(Arrays.asList(
+                    floatyView.findViewById(R.id.indicator1),
+                    floatyView.findViewById(R.id.indicator2),
+                    floatyView.findViewById(R.id.indicator3)));
+            indicatorTip1 = floatyView.findViewById(R.id.tip_view_0);
+            indicatorTip2 = floatyView.findViewById(R.id.tip_view_1);
+            indicatorTip3 = floatyView.findViewById(R.id.tip_view_2);
+            shimmerTip1 = floatyView.findViewById(R.id.shimmer_view_container_0);
+            shimmerTip2 = floatyView.findViewById(R.id.shimmer_view_container_1);
+            shimmerTip3 = floatyView.findViewById(R.id.shimmer_view_container_2);
+            tipsList = new ArrayList<>(Arrays.asList(indicatorTip1, indicatorTip2, indicatorTip3));
+            shimmerTipList = new ArrayList<>(Arrays.asList(shimmerTip1, shimmerTip2, shimmerTip3));
+            for (int i = 0; i < 3; i++) {
+                if (viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i))) {
+                    indicatorList.get(i).setBackgroundColor(getColor(R.color.grey900));
+                    progressIndicatorsList.get(i).setTrackColor(getColor(R.color.white));
+                    shimmerTipList.get(i).stopShimmer();
+                } else {
+                    indicatorList.get(i).setBackgroundColor(getColor(R.color.white));
+                    progressIndicatorsList.get(i).setTrackColor(getColor(R.color.grey900));
+                    shimmerTipList.get(i).startShimmer();
+                }
+                if (i < sheetArrayList.size()) {
+                    indicatorTextList.get(i).setText("₹" + (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
+                    progressIndicatorsList.get(i).setVisibility(View.VISIBLE);
+
+                    if (viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i)) && sheetArrayList.get(i).getCustomerTip() > 0) {
+                        indicatorList.get(i).setBackgroundColor(Color.parseColor("#FEEBB9"));
                     }
-                    if (i < sheetArrayList.size()) {
-                        indicatorTextList.get(i).setText("₹" + (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
-                        progressIndicatorsList.get(i).setVisibility(View.VISIBLE);
 
-                        if (viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i)) && sheetArrayList.get(i).getCustomerTip() > 0) {
-                            indicatorList.get(i).setBackgroundColor(Color.parseColor("#FEEBB9"));
-                        }
-
-                        if (sheetArrayList.get(i).getCustomerTip() > 0){
-                            tipsList.get(i).setVisibility(View.VISIBLE);
-                        }else {
-                            tipsList.get(i).setVisibility(View.INVISIBLE);
-                        }
+                    if (sheetArrayList.get(i).getCustomerTip() > 0) {
+                        tipsList.get(i).setVisibility(View.VISIBLE);
                     } else {
-                        indicatorTextList.get(i).setText("--");
-                        progressIndicatorsList.get(i).setVisibility(View.GONE);
                         tipsList.get(i).setVisibility(View.INVISIBLE);
                     }
+                } else {
+                    indicatorTextList.get(i).setText("--");
+                    progressIndicatorsList.get(i).setVisibility(View.GONE);
+                    tipsList.get(i).setVisibility(View.INVISIBLE);
                 }
             }
         });
@@ -908,8 +897,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private void updateSharedPreferences() {
         Context context = getApplicationContext();
         SharedPreferences sharedPreferences = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        sharedPreferences.edit().putString(getString(R.string.LOCAL_STAGE),getString(R.string.RideRequested)).apply();
-        SimpleDateFormat formatter = new SimpleDateFormat("EE MMM d y H:m:s ZZZ", new Locale("en","US"));
+        sharedPreferences.edit().putString(getString(R.string.LOCAL_STAGE), getString(R.string.RideRequested)).apply();
+        SimpleDateFormat formatter = new SimpleDateFormat("EE MMM d y H:m:s ZZZ", new Locale("en", "US"));
         String dateString = formatter.format(new Date());
         sharedPref.edit().putString(getString(R.string.RIDE_REQUEST_TIME), dateString).apply();
     }
@@ -919,8 +908,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             return OverlaySheetService.this;
         }
     }
-
-
 
 
 }

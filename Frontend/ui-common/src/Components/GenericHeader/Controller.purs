@@ -21,7 +21,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(.
 import Common.Styles.Colors as Color
 import Common.Types.App
 import Prelude ((<>))
-import Helpers.Utils (getCommonAssetStoreLink)
+import MerchantConfig.Utils (getValueFromConfig)
 
 data Action = SuffixImgOnClick | PrefixImgOnClick
 
@@ -71,7 +71,7 @@ config = {
   , prefixImageConfig : {
       height : V 25
     , width : V 25
-    , imageUrl : "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+    , imageUrl : getValueFromConfig "addFavouriteScreenBackArrow"
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 12 12 12 12)
     , visibility : VISIBLE
@@ -106,7 +106,7 @@ merchantConfig = {
   , prefixImageConfig : {
       height : V 25
     , width : V 25
-    , imageUrl : "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+    , imageUrl : getValueFromConfig "addFavouriteScreenBackArrow"
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 16 16 16 12)
     , visibility : VISIBLE

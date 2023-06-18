@@ -72,8 +72,8 @@ import java.util.Locale;
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JuspayLogger;
-import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.app.NotificationUtils;
+import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.common.MobilityCommonBridge;
 
 public class MobilityCustomerBridge extends MobilityCommonBridge {
@@ -82,10 +82,10 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
 
     @Override
     public void reset() {
-        super.reset();
         receivers.deRegister(bridgeComponents.getContext());
         receivers = null;
         googleMap = null;
+        super.reset();
     }
 
     // CallBacks Strings
@@ -510,12 +510,12 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     e.printStackTrace();
                 }
                 removeMarker("ny_ic_customer_current_location");
+                LatLng zoomLatLon = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
                 if (goToCurrentLocation) {
                     LatLng latLng = new LatLng(lastLatitudeValue, lastLongitudeValue);
                     googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
                 } else {
-                    LatLng latLng = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
-                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
+                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(zoomLatLon, 17.0f));
                     googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
                 }
                 googleMap.setOnCameraIdleListener(() -> {
@@ -580,7 +580,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     LatLng latLngObjMain = new LatLng(lastLatitudeValue, lastLongitudeValue);
                     googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, 17.0f));
                 } else {
-                    LatLng latLngObjMain = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
+                    LatLng latLngObjMain = zoomLatLon;
                     googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, 17.0f));
                     googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
                 }
@@ -605,7 +605,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
             connection.setRequestProperty("Content-Type", "application/json");
             connection.setRequestProperty("token", regToken);
             connection.setRequestProperty("x-client-version", version);
-            connection.setRequestProperty("x-device",deviceDetails);
+            connection.setRequestProperty("x-device", deviceDetails);
 
             JSONObject payload = new JSONObject();
 
@@ -733,7 +733,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 while (cursor.moveToNext()) {
                     String contactNameStr = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
                     String contactStr = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER));
-                    String contactNumber = contactStr.replaceAll("[^0-9]", "");
+                    String contactNumber = contactStr.replaceAll("\\D", "");
                     String contactName = contactNameStr.replaceAll("'", "");
                     JSONObject tempPoints = new JSONObject();
                     tempPoints.put("name", contactName);
@@ -777,7 +777,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 content.draw(page.getCanvas());
                 pdfDocument.finishPage(page);
                 JuspayLogger.d(OTHERS, "PDF Document canvas drawn");
-                String fileNameformat = "";
+                String fileNameformat;
                 String serviceName = context.getResources().getString(R.string.service);
                 if (serviceName.equals("jatrisaathi")) {
                     fileNameformat = "JS_RIDE_";
@@ -787,7 +787,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     fileNameformat = "YATRI_RIDE_";
                 }
                 fileNameformat = fileNameformat + selectedItem.getString("date") + selectedItem.getString("rideStartTime");
-                String removedSpecial = fileNameformat.replaceAll("[^a-zA-Z0-9]", "_");
+                String removedSpecial = fileNameformat.replaceAll("[^a-zA-Z\\d]", "_");
                 JuspayLogger.d(OTHERS, "PDF Document name " + removedSpecial);
                 try {
                     File file = checkAndGetFileName(removedSpecial);
@@ -803,14 +803,14 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 pdfDocument.close();
                 JuspayLogger.d(OTHERS, "PDF Document closed ");
             } catch (Exception e) {
-                JuspayLogger.e(OTHERS,e.toString());
+                JuspayLogger.e(OTHERS, e.toString());
             }
         }).start();
     }
 
     private void showInvoiceNotification(Uri path) {
         Context context = bridgeComponents.getContext();
-        JuspayLogger.d(OTHERS,"PDF Document inside Show Notification");
+        JuspayLogger.d(OTHERS, "PDF Document inside Show Notification");
         Intent pdfOpenintent = new Intent(Intent.ACTION_VIEW);
         pdfOpenintent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         pdfOpenintent.setDataAndType(path, "application/pdf");
@@ -824,7 +824,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                     .setUsage(AudioAttributes.USAGE_NOTIFICATION)
                     .build();
-            channel.setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),attributes);
+            channel.setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION), attributes);
             notificationManager.createNotificationChannel(channel);
         }
         NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, CHANNEL_ID);
@@ -837,21 +837,21 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 .setPriority(NotificationCompat.PRIORITY_MAX);
         mBuilder.setContentIntent(pendingIntent);
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
-        JuspayLogger.d(OTHERS,"PDF Document notification is Created");
+        JuspayLogger.d(OTHERS, "PDF Document notification is Created");
         if (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            JuspayLogger.d(OTHERS,"PDF Document Notification permission is not given");
+            JuspayLogger.d(OTHERS, "PDF Document Notification permission is not given");
             toast("Invoice Downloaded!!!");
         } else {
             notificationManager.notify(234567, mBuilder.build());
-            JuspayLogger.d(OTHERS,"PDF Document notification is notified");
+            JuspayLogger.d(OTHERS, "PDF Document notification is notified");
         }
     }
 
     @SuppressLint("SetTextI18n")
     private View getInvoiceLayout(JSONObject selectedRide, JSONArray fares, String user, Context context) throws JSONException {
-        JuspayLogger.d(OTHERS,"PDF Document inside inflate View");
+        JuspayLogger.d(OTHERS, "PDF Document inside inflate View");
         View invoiceLayout = LayoutInflater.from(context).inflate(R.layout.invoice_template, null, false);
-        JuspayLogger.d(OTHERS,"PDF Document inflated View");
+        JuspayLogger.d(OTHERS, "PDF Document inflated View");
         TextView textView = invoiceLayout.findViewById(R.id.rideDate);
         textView.setText(selectedRide.getString("date"));
         textView = invoiceLayout.findViewById(R.id.userName);
@@ -877,7 +877,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 linearParamsChild.weight = 1.0f;
 
                 JSONObject fare = fares.getJSONObject(i);
-                JuspayLogger.d(OTHERS,"PDF Document updating fares break ups" + fare);
+                JuspayLogger.d(OTHERS, "PDF Document updating fares break ups" + fare);
                 String value = fare.getString("price");
                 String fareTypes = fare.getString("title");
                 TextView textViewText = new TextView(context);
@@ -896,7 +896,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 linearLayout.addView(textViewPrice);
 
                 fareBreakupElements.addView(linearLayout);
-                JuspayLogger.d(OTHERS,"PDF Document updated the fare " + fare + "in view");
+                JuspayLogger.d(OTHERS, "PDF Document updated the fare " + fare + "in view");
             }
         } catch (JSONException e) {
             e.printStackTrace();
@@ -919,7 +919,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         textView.setText(selectedRide.getString("destination"));
         textView = invoiceLayout.findViewById(R.id.referenceText);
         textView.setText(selectedRide.getString("referenceString"));
-        JuspayLogger.d(OTHERS,"PDF Document view updated and returning the view");
+        JuspayLogger.d(OTHERS, "PDF Document view updated and returning the view");
         return invoiceLayout;
     }
     //endregion
@@ -927,7 +927,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     //region Override Functions
     @Override
     public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
-
         return super.onActivityResult(requestCode, resultCode, data);
     }
 
@@ -949,13 +948,13 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
             case STORAGE_PERMISSION:
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     try {
-                        JuspayLogger.d(OTHERS,"Storage Permission is granted. downloading  PDF");
+                        JuspayLogger.d(OTHERS, "Storage Permission is granted. downloading  PDF");
                         downloadPDF(invoice, bridgeComponents.getContext());
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
-                } else{
-                    JuspayLogger.d(OTHERS,"Storage Permission is denied.");
+                } else {
+                    JuspayLogger.d(OTHERS, "Storage Permission is denied.");
                     toast("Permission Denied");
                 }
                 break;

@@ -112,7 +112,9 @@ public class RideRequestActivity extends AppCompatActivity {
             updateIndicators();
             updateProgressBars(false);
         });
-    }    private final SheetAdapter sheetAdapter = new SheetAdapter(sheetArrayList, viewPager2, new SheetAdapter.OnItemClickListener() {
+    }
+
+    private final SheetAdapter sheetAdapter = new SheetAdapter(sheetArrayList, viewPager2, new SheetAdapter.OnItemClickListener() {
         @SuppressLint("SetTextI18n")
         @Override
         public void onViewHolderBind(SheetAdapter.SheetViewHolder holder, int position, ViewPager2 viewPager, List<Object> payloads) {
@@ -374,7 +376,7 @@ public class RideRequestActivity extends AppCompatActivity {
                 findViewById(R.id.progress_indicator_2),
                 findViewById(R.id.progress_indicator_3)));
 
-        for (int i = 0; i < sheetArrayList.size(); i++) {
+        for (int i = 0; (i < sheetArrayList.size()) && (i < progressIndicatorsList.size()); i++) {
             int progressCompat = sheetArrayList.get(i).getReqExpiryTime() + sheetArrayList.get(i).getStartTime() - time;
             progressIndicatorsList.get(i).setProgressCompat(progressCompat * 4, animated); // (100/maxExpiryTime)
             if (progressCompat <= 8) {
@@ -426,8 +428,6 @@ public class RideRequestActivity extends AppCompatActivity {
             }
         }
     }
-
-
 
 
 }

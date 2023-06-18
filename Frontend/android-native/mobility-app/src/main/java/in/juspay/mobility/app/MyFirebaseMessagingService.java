@@ -149,13 +149,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     if (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onPause") || sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy"))) {
                         startWidgetService(null, payload, entity_payload);
                     } else {
-                        NotificationUtils.showAllocationNotification(this, title, body, payload, imageUrl, entity_payload);
+                        NotificationUtils.showAllocationNotification(this, payload, entity_payload);
                     }
                     break;
 
                 case NotificationTypes.CLEARED_FARE:
                     sharedPref.edit().putString(getString(R.string.CLEAR_FARE), String.valueOf(payload.get(getString(R.string.entity_ids)))).apply();
-                    NotificationUtils.showAllocationNotification(this, title, body, payload, imageUrl, entity_payload);
+                    NotificationUtils.showAllocationNotification(this, payload, entity_payload);
                     startWidgetService("CLEAR_FARE", payload, entity_payload);
                     break;
 
@@ -207,7 +207,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                 case NotificationTypes.CANCELLED_SEARCH_REQUEST:
                     sharedPref.edit().putString(getString(R.string.CANCELLED_SEARCH_REQUEST), String.valueOf(payload.get(getString(R.string.entity_ids)))).apply();
-                    NotificationUtils.showAllocationNotification(this, title, body, payload, imageUrl, entity_payload);
+                    NotificationUtils.showAllocationNotification(this, payload, entity_payload);
                     startWidgetService("CLEAR_FARE", payload, entity_payload);
                     break;
 
@@ -233,7 +233,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             NotificationUtils.updateDriverStatus(status, storage_value, this);
                         } else sharedPref.edit().putString(storage_key, storage_value).apply();
                     }
-                    NotificationUtils.showAllocationNotification(this, title, body, payload, imageUrl, entity_payload);
+                    NotificationUtils.showAllocationNotification(this, payload, entity_payload);
                     break;
 
                 case NotificationTypes.CALL_API:

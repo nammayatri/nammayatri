@@ -1,31 +1,31 @@
 {
-  "hints":{
-    "visited_nodes.average":"74.0",
-    "visited_nodes.sum":"74"
+  "hints": {
+    "visited_nodes.average": "74.0",
+    "visited_nodes.sum": "74"
   },
-  "info":{
-    "copyrights":[
+  "info": {
+    "copyrights": [
       "GraphHopper",
       "OpenStreetMap contributors"
     ],
-    "took":7
+    "took": 7
   },
-  "paths":[
+  "paths": [
     {
-      "distance":24563.212,
-      "weight":1428.00993,
-      "time":1059512,
-      "transfers":0,
-      "points_encoded":false,
-      "bbox":[
+      "distance": 24563.212,
+      "weight": 1428.00993,
+      "time": 1059512,
+      "transfers": 0,
+      "points_encoded": false,
+      "bbox": [
         72.877643,
         19.023512,
         73.0407,
         19.075966
       ],
-      "points":{
-        "type":"LineString",
-        "coordinates":[
+      "points": {
+        "type": "LineString",
+        "coordinates": [
           [
             72.877643,
             19.075966
@@ -916,114 +916,112 @@
           ]
         ]
       },
-      "instructions":[
+      "instructions": [
         {
-          "distance":3771.715,
-          "heading":123.5,
-          "sign":0,
-          "interval":[
+          "distance": 3771.715,
+          "heading": 123.5,
+          "sign": 0,
+          "interval": [
             0,
             41
           ],
-          "text":"Continue",
-          "time":259857,
-          "street_name":""
+          "text": "Continue",
+          "time": 259857,
+          "street_name": ""
         },
         {
-          "distance":1205.176,
-          "sign":2,
-          "interval":[
+          "distance": 1205.176,
+          "sign": 2,
+          "interval": [
             41,
             60
           ],
-          "text":"Turn right onto Ghatkopar - Mankhurd Link Road, GMLR",
-          "time":45189,
-          "street_name":"Ghatkopar - Mankhurd Link Road, GMLR"
+          "text": "Turn right onto Ghatkopar - Mankhurd Link Road, GMLR",
+          "time": 45189,
+          "street_name": "Ghatkopar - Mankhurd Link Road, GMLR"
         },
         {
-          "distance":2778.545,
-          "sign":0,
-          "interval":[
+          "distance": 2778.545,
+          "sign": 0,
+          "interval": [
             60,
             82
           ],
-          "text":"Continue onto Jeejabai Bhosale Marg, GMLR",
-          "time":101392,
-          "street_name":"Jeejabai Bhosale Marg, GMLR"
+          "text": "Continue onto Jeejabai Bhosale Marg, GMLR",
+          "time": 101392,
+          "street_name": "Jeejabai Bhosale Marg, GMLR"
         },
         {
-          "distance":4812.655,
-          "sign":-7,
-          "interval":[
+          "distance": 4812.655,
+          "sign": -7,
+          "interval": [
             82,
             97
           ],
-          "text":"Keep left",
-          "time":156381,
-          "street_name":""
+          "text": "Keep left",
+          "time": 156381,
+          "street_name": ""
         },
         {
-          "annotation_text":"toll road",
-          "distance":9849.698,
-          "sign":0,
-          "annotation_importance":1,
-          "interval":[
+          "annotation_text": "toll road",
+          "distance": 9849.698,
+          "sign": 0,
+          "annotation_importance": 1,
+          "interval": [
             97,
             182
           ],
-          "text":"Continue onto Sion-Panvel Highway, SPH",
-          "time":369347,
-          "street_name":"Sion-Panvel Highway, SPH"
+          "text": "Continue onto Sion-Panvel Highway, SPH",
+          "time": 369347,
+          "street_name": "Sion-Panvel Highway, SPH"
         },
         {
-          "distance":349.322,
-          "sign":7,
-          "interval":[
+          "distance": 349.322,
+          "sign": 7,
+          "interval": [
             182,
             186
           ],
-          "text":"Keep right onto TBR",
-          "time":34932,
-          "street_name":"TBR"
+          "text": "Keep right onto TBR",
+          "time": 34932,
+          "street_name": "TBR"
         },
         {
-          "exit_number":4,
-          "distance":1796.101,
-          "sign":6,
-          "exited":true,
-          "turn_angle":0.83,
-          "interval":[
+          "exit_number": 4,
+          "distance": 1796.101,
+          "sign": 6,
+          "exited": true,
+          "turn_angle": 0.83,
+          "interval": [
             186,
             221
           ],
-          "text":"At roundabout, take exit 4 onto TBR",
-          "time":92414,
-          "street_name":"TBR"
+          "text": "At roundabout, take exit 4 onto TBR",
+          "time": 92414,
+          "street_name": "TBR"
         },
         {
-          "distance":0.0,
-          "sign":4,
-          "last_heading":352.1169425755987,
-          "interval":[
+          "distance": 0.0,
+          "sign": 4,
+          "last_heading": 352.1169425755987,
+          "interval": [
             221,
             221
           ],
-          "text":"Arrive at destination",
-          "time":0,
-          "street_name":""
+          "text": "Arrive at destination",
+          "time": 0,
+          "street_name": ""
         }
       ],
-      "legs":[
-
+      "legs": [
       ],
-      "details":{
-
+      "details": {
       },
-      "ascend":135.71599973738194,
-      "descend":124.16100014746189,
-      "snapped_waypoints":{
-        "type":"LineString",
-        "coordinates":[
+      "ascend": 135.71599973738194,
+      "descend": 124.16100014746189,
+      "snapped_waypoints": {
+        "type": "LineString",
+        "coordinates": [
           [
             72.877643,
             19.075966

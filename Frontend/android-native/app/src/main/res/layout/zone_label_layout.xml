@@ -4,6 +4,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:id="@+id/map_xml">
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
@@ -17,8 +18,10 @@
         android:fontFamily="@font/plus_jakartasans_regular"
         android:textFontWeight="400"
         android:background="@drawable/ic_grey_border"
-        android:id="@+id/marker_text"/>
-    <LinearLayout android:id="@+id/ll_marker_right"
+        android:id="@+id/marker_text" />
+
+    <LinearLayout
+        android:id="@+id/ll_marker_right"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
@@ -29,7 +32,7 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:src="@drawable/ny_ic_zone_pickup_marker"
-            android:id="@+id/pointer_img"/>
+            android:id="@+id/pointer_img" />
     </LinearLayout>
 
 </LinearLayout>

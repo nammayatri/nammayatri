@@ -1,4 +1,4 @@
-/* 
+/*
  *  Copyright 2022-23, Juspay India Pvt Ltd
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
  *  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
@@ -119,73 +119,73 @@ public class CheckPermissionAutoStart {
 
     private void autoStartAsus(final Context context) {
         if (isPackageExists(context, PACKAGE_ASUS_MAIN)) {
-                try {
+            try {
 //                    PrefUtil.writeBoolean(context, PrefUtil.PREF_KEY_APP_AUTO_START, true);
-                    startIntent(context, PACKAGE_ASUS_MAIN, PACKAGE_ASUS_COMPONENT);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+                startIntent(context, PACKAGE_ASUS_MAIN, PACKAGE_ASUS_COMPONENT);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
     private void autoStartXiaomi(final Context context) {
         System.out.println("Inside CheckPermissionAutoStart");
         if (isPackageExists(context, PACKAGE_XIAOMI_MAIN)) {
-                try {
+            try {
 //                    PrefUtil.writeBoolean(context, PrefUtil.PREF_KEY_APP_AUTO_START, true);
-                    startIntent(context, PACKAGE_XIAOMI_MAIN, PACKAGE_XIAOMI_COMPONENT);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+                startIntent(context, PACKAGE_XIAOMI_MAIN, PACKAGE_XIAOMI_COMPONENT);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
     private void autoStartLetv(final Context context) {
         if (isPackageExists(context, PACKAGE_LETV_MAIN)) {
-                    try {
+            try {
 //                        PrefUtil.writeBoolean(context, PrefUtil.PREF_KEY_APP_AUTO_START, true);
-                        startIntent(context, PACKAGE_LETV_MAIN, PACKAGE_LETV_COMPONENT);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
+                startIntent(context, PACKAGE_LETV_MAIN, PACKAGE_LETV_COMPONENT);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
+    }
 
 
     private void autoStartHonor(final Context context) {
         if (isPackageExists(context, PACKAGE_HONOR_MAIN)) {
-                    try {
+            try {
 //                        PrefUtil.writeBoolean(context, PrefUtil.PREF_KEY_APP_AUTO_START, true);
-                        startIntent(context, PACKAGE_HONOR_MAIN, PACKAGE_HONOR_COMPONENT);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
+                startIntent(context, PACKAGE_HONOR_MAIN, PACKAGE_HONOR_COMPONENT);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private void autoStartOppo(final Context context) {
         if (isPackageExists(context, PACKAGE_OPPO_MAIN) || isPackageExists(context, PACKAGE_OPPO_FALLBACK)) {
-                    try {
+            try {
 //                        PrefUtil.writeBoolean(context, PrefUtil.PREF_KEY_APP_AUTO_START, true);
-                        startIntent(context, PACKAGE_OPPO_MAIN, PACKAGE_OPPO_COMPONENT);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        try {
+                startIntent(context, PACKAGE_OPPO_MAIN, PACKAGE_OPPO_COMPONENT);
+            } catch (Exception e) {
+                e.printStackTrace();
+                try {
 //                            PrefUtil.writeBoolean(context, PrefUtil.PREF_KEY_APP_AUTO_START, true);
-                            startIntent(context, PACKAGE_OPPO_FALLBACK, PACKAGE_OPPO_COMPONENT_FALLBACK);
-                        } catch (Exception ex) {
-                            ex.printStackTrace();
-                            try {
+                    startIntent(context, PACKAGE_OPPO_FALLBACK, PACKAGE_OPPO_COMPONENT_FALLBACK);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    try {
 //                                PrefUtil.writeBoolean(context, PrefUtil.PREF_KEY_APP_AUTO_START, true);
-                                startIntent(context, PACKAGE_OPPO_MAIN, PACKAGE_OPPO_COMPONENT_FALLBACK_A);
-                            } catch (Exception exx) {
-                                exx.printStackTrace();
-                            }
-
-                        }
-
+                        startIntent(context, PACKAGE_OPPO_MAIN, PACKAGE_OPPO_COMPONENT_FALLBACK_A);
+                    } catch (Exception exx) {
+                        exx.printStackTrace();
                     }
+
                 }
+
+            }
+        }
     }
 
     private void autoStartVivo(final Context context) {
@@ -193,50 +193,50 @@ public class CheckPermissionAutoStart {
         if (isPackageExists(context, PACKAGE_VIVO_MAIN) || isPackageExists(context, PACKAGE_VIVO_FALLBACK)) {
             System.out.println("Inside autoStartVivo if");
 
-                    try {
+            try {
 //                        PrefUtil.writeBoolean(context, PrefUtil.PREF_KEY_APP_AUTO_START, true);
-                        System.out.println("Inside main try Exception");
-                        startIntent(context, PACKAGE_VIVO_MAIN, PACKAGE_VIVO_COMPONENT);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        try {
+                System.out.println("Inside main try Exception");
+                startIntent(context, PACKAGE_VIVO_MAIN, PACKAGE_VIVO_COMPONENT);
+            } catch (Exception e) {
+                e.printStackTrace();
+                try {
 //                            PrefUtil.writeBoolean(context, PrefUtil.PREF_KEY_APP_AUTO_START, true);
-                            System.out.println("Inside First Exception");
-                            startIntent(context, PACKAGE_VIVO_FALLBACK, PACKAGE_VIVO_COMPONENT_FALLBACK);
-                        } catch (Exception ex) {
-                            ex.printStackTrace();
-                            try {
+                    System.out.println("Inside First Exception");
+                    startIntent(context, PACKAGE_VIVO_FALLBACK, PACKAGE_VIVO_COMPONENT_FALLBACK);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    try {
 //                                PrefUtil.writeBoolean(context, PrefUtil.PREF_KEY_APP_AUTO_START, true);
-                                System.out.println("Inside second Exception");
-                                startIntent(context, PACKAGE_VIVO_MAIN, PACKAGE_VIVO_COMPONENT_FALLBACK_A);
-                            } catch (Exception exx) {
+                        System.out.println("Inside second Exception");
+                        startIntent(context, PACKAGE_VIVO_MAIN, PACKAGE_VIVO_COMPONENT_FALLBACK_A);
+                    } catch (Exception exx) {
 
-                                exx.printStackTrace();
-                                try{
-                                    System.out.println("Inside third Exception");
-                                    startIntent(context, PACKAGE_VIVO_MAIN, PACKAGE_VIVO_COMPONENT_FALLBACK_B);
-                                }catch (Exception exxx){
-                                    System.out.println("Inside Main Exception");
-                                    exxx.printStackTrace();
-                                }
-                            }
-
+                        exx.printStackTrace();
+                        try {
+                            System.out.println("Inside third Exception");
+                            startIntent(context, PACKAGE_VIVO_MAIN, PACKAGE_VIVO_COMPONENT_FALLBACK_B);
+                        } catch (Exception exxx) {
+                            System.out.println("Inside Main Exception");
+                            exxx.printStackTrace();
                         }
-
                     }
 
                 }
+
+            }
+
+        }
     }
 
     private void autoStartNokia(final Context context) {
         if (isPackageExists(context, PACKAGE_NOKIA_MAIN)) {
-                    try {
+            try {
 //                        PrefUtil.writeBoolean(context, PrefUtil.PREF_KEY_APP_AUTO_START, true);
-                        startIntent(context, PACKAGE_NOKIA_MAIN, PACKAGE_NOKIA_COMPONENT);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
+                startIntent(context, PACKAGE_NOKIA_MAIN, PACKAGE_NOKIA_COMPONENT);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
 

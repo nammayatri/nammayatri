@@ -1002,11 +1002,8 @@ export const storeCallBackDriverLocationPermission = function (cb) {
   try {
   return function (action) {
       return function () {
-          var callback = callbackMapper.map(function (isLocationPermissionGranted) {
-            cb(action (isLocationPermissionGranted))();
-          });
           var locationCallBack = function () {
-            var isPermissionEnabled = JBridge.isLocationPermissionEnabled()
+            var isPermissionEnabled = isLocationPermissionEnabled()() && isLocationEnabled()()
             cb(action (isPermissionEnabled))();
           };
           if (window.onResumeListeners){

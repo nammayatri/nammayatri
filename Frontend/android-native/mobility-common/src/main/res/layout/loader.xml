@@ -32,8 +32,9 @@
             android:textSize="24sp"
             android:gravity="center"
             android:id="@+id/loaderMainText"
-            android:textStyle = "bold"
-            android:text="Applying for pass"/>
+            android:textStyle="bold"
+            android:text="Applying for pass" />
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -43,6 +44,6 @@
             android:layout_marginTop="16dp"
             android:gravity="center"
             android:lineHeight="22dp"
-            android:text="Please wait while your pass is sent for approval"/>
+            android:text="Please wait while your pass is sent for approval" />
     </LinearLayout>
 </LinearLayout>

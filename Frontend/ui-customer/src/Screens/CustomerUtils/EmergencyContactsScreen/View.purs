@@ -197,7 +197,7 @@ contactCardView push state contact index =
         [ height $ V 24
         , width $ V 24
         , background (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 0))
-        , cornerRadius if os == "IOS" then 12.0 else 20.0
+        , cornerRadius 12.0
         , gravity CENTER
         , margin (MarginRight 10)
         ]
