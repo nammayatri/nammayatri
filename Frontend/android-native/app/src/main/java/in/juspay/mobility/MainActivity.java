@@ -441,12 +441,12 @@ public class MainActivity extends AppCompatActivity {
                         break;
                     case "process_result":
                         try {
-                            JSONObject innerPayload = json.getJSONObject(PaymentConstants.PAYLOAD);
+                            JSONObject innerPayload = jsonObject.getJSONObject(PaymentConstants.PAYLOAD);
                             if (innerPayload.getString("action").equals("terminate")) {
                                 minimizeApp(context);
                             }
                         } catch (Exception ignored) {
-                        }
+                        } break;
                     default:
                         Log.e(LOG_TAG, "json_payload" + json);
                         hyperServices.process(json);

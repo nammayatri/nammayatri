@@ -489,10 +489,11 @@ savePlaceView state push =
               , ellipsize true 
               , width $ V (4 * (EHC.screenWidth unit / 5) - (if EHC.os == "IOS" then 75 else 50))
               ] <> FontStyle.body1 LanguageStyle
-            , linearLayout[
+            , linearLayout([
               height WRAP_CONTENT
             , gravity RIGHT 
-            ] <> (if EHC.os == "IOS" then [weight 1.0] else [width WRAP_CONTENT]) )[  textView
+            ] <> (if EHC.os == "IOS" then [weight 1.0] else [width WRAP_CONTENT]))
+            [  textView $
                 [ text (getString EDIT)
                 , color Color.blue900
                 , width MATCH_PARENT

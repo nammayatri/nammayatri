@@ -168,9 +168,7 @@ deleteGenericHeaderConfig state = let
     , padding = PaddingVertical 5 5
     , textConfig {
         text = getString DEL_ACCOUNT
-      , textSize = FontSize.a_18
       , color = Color.black900
-      , fontStyle = FontStyle.bold LanguageStyle
       }
     }
   in genericHeaderConfig'
@@ -182,24 +180,20 @@ primaryEditTextConfigEmail state = let
     primaryEditTextConfig' = config
       { editText 
         { color = Color.black800
-        , textSize = FontSize.a_14
-        , fontStyle = FontStyle.medium LanguageStyle
         , margin = Margin 16 16 16 16
         , placeholder = "example@xyz.com"
         , text = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else "" 
         , enabled = not isEmailPresent FunctionCall
+        , textStyle = FontStyle.Body1
         }
       , background = Color.white900
       , topLabel
         { text = getString YOUR_EMAIL_ID <> "*"
-        , textSize = FontSize.a_12
         , color = Color.black900
-        , fontStyle = FontStyle.regular LanguageStyle
         }
       , showErrorLabel = not validateEmail state.data.email && DS.length state.data.email > 0
       , errorLabel
         { text = getString PLEASE_ENTER_A_VALID_EMAIL 
-        , fontStyle = FontStyle.regular LanguageStyle 
         , color = Color.textDanger }
       , margin = Margin 10 32 10 0
       } 
@@ -211,27 +205,23 @@ primaryEditTextConfigDescription state = let
     primaryEditTextConfig' = config
       { editText 
         { color = Color.black800
-        , textSize = FontSize.a_14
-        , fontStyle = FontStyle.medium LanguageStyle
         , margin = if EHC.os == "IOS" then Margin 10 16 10 10 else Margin 16 16 16 16
         , singleLine = false
         , placeholder = getString YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE
         , pattern = Just "[A-Za-z0-9,. ]*,300"
+        , textStyle = FontStyle.Body1
         }
       , background = Color.white900
       , height = V 120
       , stroke = "1," <> if DS.length state.data.description >= 300 then Color.textDanger else Color.borderColorLight
       , topLabel
         { text = getString REASON_FOR_DELETING_ACCOUNT
-        , textSize = FontSize.a_12
         , color = Color.black900
-        , fontStyle = FontStyle.regular LanguageStyle
         }  
       , margin = Margin 10 32 10 0
       , showErrorLabel = DS.length state.data.description >= 300
       , errorLabel 
         { text = getString MAX_CHAR_LIMIT_REACHED <> " 300 " <> getString OF <> " 300"
-        , fontStyle = FontStyle.regular LanguageStyle 
         , color = Color.textDanger
         }
       } 
@@ -248,7 +238,7 @@ primaryButtonConfigSubmitRequest state = let
       , cornerRadius = 8.0
       , background = if state.props.btnActive then Color.black900 else Color.black500
       , isClickable = state.props.btnActive 
-      , margin = Margin 16 0 16 38
+      , margin = Margin 16 0 16 (if EHC.safeMarginBottom == 0 then 24 else (EHC.safeMarginBottom))
       , id = "ButtonDeleteAccount"
       }
   in primaryButtonConfig'
@@ -263,13 +253,11 @@ requestDeletePopUp state = let
       color = Color.black600},
       option1 {
         text = getString CANCEL_STR
-      , fontSize = FontSize.a_16
       },
       option2 {text = getString YES_DELETE_IT
       , background = Color.red
       , color = Color.white900
-      , strokeColor = Color.red
-      , fontSize = FontSize.a_16 }
+      , strokeColor = Color.red }
      
     }
   in popUpConfig'

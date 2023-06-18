@@ -122,8 +122,8 @@ view push state =
       , headingView state (getString ALL_TOPICS)
       , allTopicsView state push
       , apiFailureView state push
-      , deleteAccountView state push
       ]
+     , deleteAccountView state push
   ] <> (if state.props.isCallConfirmation then [PopUpModal.view (push <<< PopupModelActionController) (callConfirmationPopup state)] else [])
     <> (if state.data.accountStatus == ST.CONFIRM_REQ then [PopUpModal.view (push <<<  PopUpModalAction) (requestDeletePopUp state )] else [])
     <> (if state.data.accountStatus == ST.DEL_REQUESTED then [PopUpModal.view (push <<< AccountDeletedModalAction) (accountDeletedPopUp state)] else [])
