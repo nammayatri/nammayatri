@@ -13,6 +13,9 @@
 -}
 {-# LANGUAGE NamedWildCards #-}
 {-# LANGUAGE PartialTypeSignatures #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use newtype instead of data" #-}
 
 module Storage.Queries.DriverLocation where
 
@@ -150,14 +153,14 @@ deleteById (Id driverId') = do
             )
     Left _ -> pure ()
 
-getDriverLocsFromMerchId' ::
+getDriverLocsFromMerchId ::
   (L.MonadFlow m, MonadTime m) =>
   Maybe Seconds ->
   LatLong ->
   Int ->
   Id Merchant ->
   m [DriverLocation]
-getDriverLocsFromMerchId' mbDriverPositionInfoExpiry gps radiusMeters merchantId' = do
+getDriverLocsFromMerchId mbDriverPositionInfoExpiry gps radiusMeters merchantId' = do
   let expTime = maybe 0 getSeconds mbDriverPositionInfoExpiry
   now <- getCurrentTime
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -172,7 +175,7 @@ getDriverLocsFromMerchId' mbDriverPositionInfoExpiry gps radiusMeters merchantId
                 B.filter_'
                   ( \BeamDL.DriverLocationT {..} ->
                       merchantId B.==?. B.val_ (getId merchantId')
-                        B.&&?. (B.sqlBool_ (B.val_ (Mb.isNothing mbDriverPositionInfoExpiry)) B.||?. B.sqlBool_ (coordinatesCalculatedAt B.>=. (B.val_ (addUTCTime (fromIntegral (-1 * expTime)) now))))
+                        B.&&?. (B.sqlBool_ (B.val_ (Mb.isNothing mbDriverPositionInfoExpiry)) B.||?. B.sqlBool_ (coordinatesCalculatedAt B.>=. B.val_ (addUTCTime (fromIntegral (-1 * expTime)) now)))
                         B.&&?. buildRadiusWithin' (gps.lat, gps.lon) radiusMeters
                   )
                   $ B.all_ (driverLocation atlasDB)
@@ -182,6 +185,83 @@ getDriverLocsFromMerchId' mbDriverPositionInfoExpiry gps radiusMeters merchantId
 byDist :: (Double, Double) -> BQ.QGenExpr context Postgres s Double
 -- getDist (lat, lon) = BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "point <-> ST_SetSRID (ST_Point (" <> show lon <> " , " <> show lat <> "),4326)"))
 byDist (lat, lon) = BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "point <-> 'SRID=4326;POINT(" <> show lon <> " " <> show lat <> ")'"))
+
+findAllDriverLocations ::
+  (L.MonadFlow m, MonadTime m) =>
+  [Id Person] ->
+  Maybe Seconds ->
+  UTCTime ->
+  m [DriverLocation]
+findAllDriverLocations driverIds mbDriverPositionInfoExpiry now = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let expTime = maybe 0 getSeconds mbDriverPositionInfoExpiry
+  case dbConf of
+    Just dbConf' -> do
+      conn <- L.getOrInitSqlConn dbConf'
+      case conn of
+        Right c -> do
+          geoms <-
+            L.runDB c $
+              L.findRows $
+                B.select $
+                  B.filter_'
+                    ( \BeamDL.DriverLocationT {..} ->
+                        (B.sqlBool_ (B.val_ (Mb.isNothing mbDriverPositionInfoExpiry)) B.||?. B.sqlBool_ (coordinatesCalculatedAt B.>=. B.val_ (addUTCTime (fromIntegral (-1 * expTime)) now))) B.&&?. B.sqlBool_ (driverId `B.in_` (B.val_ . getId <$> driverIds))
+                    )
+                    $ B.all_ (driverLocation atlasDB)
+          pure (either (const []) (transformBeamDriverLocationToDomain <$>) geoms)
+        Left _ -> pure []
+    Nothing -> pure []
+
+getDriverLocations ::
+  (L.MonadFlow m, MonadTime m) =>
+  UTCTime ->
+  m [DriverLocation]
+getDriverLocations before = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      conn <- L.getOrInitSqlConn dbConf'
+      case conn of
+        Right c -> do
+          geoms <-
+            L.runDB c $
+              L.findRows $
+                B.select $
+                  B.filter_'
+                    ( \BeamDL.DriverLocationT {..} ->
+                        B.sqlBool_ (updatedAt B.<. B.val_ before)
+                    )
+                    $ B.all_ (driverLocation atlasDB)
+          pure (either (const []) (transformBeamDriverLocationToDomain <$>) geoms)
+        Left _ -> pure []
+    Nothing -> pure []
+
+getDriverLocs ::
+  L.MonadFlow m =>
+  [Id Person] ->
+  Id Merchant ->
+  m [DriverLocation]
+getDriverLocs driverIds (Id merchId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      conn <- L.getOrInitSqlConn dbConf'
+      case conn of
+        Right c -> do
+          geoms <-
+            L.runDB c $
+              L.findRows $
+                B.select $
+                  B.filter_'
+                    ( \BeamDL.DriverLocationT {..} ->
+                        B.sqlBool_ (driverId `B.in_` (B.val_ . getId <$> driverIds))
+                          B.&&?. B.sqlBool_ (merchantId B.==. B.val_ merchId)
+                    )
+                    $ B.all_ (driverLocation atlasDB)
+          pure (either (const []) (transformBeamDriverLocationToDomain <$>) geoms)
+        Left _ -> pure []
+    Nothing -> pure []
 
 transformBeamDriverLocationToDomain :: BeamDL.DriverLocation -> DriverLocation
 transformBeamDriverLocationToDomain BeamDL.DriverLocationT {..} = do
