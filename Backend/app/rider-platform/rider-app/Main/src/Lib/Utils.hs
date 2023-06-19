@@ -174,6 +174,9 @@ instance FromBackendRow Postgres HighPrecMeters
 instance FromField HighPrecMeters where
   fromField = fromFieldHighPrecMeters
 
+instance IsString HighPrecMeters where
+  fromString = show
+
 instance HasSqlValueSyntax be Int => HasSqlValueSyntax be Meters where
   sqlValueSyntax = sqlValueSyntax . getMeters
 
@@ -203,6 +206,9 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Rational where
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be HighPrecMoney
 
 instance FromBackendRow Postgres HighPrecMoney
+
+instance IsString HighPrecMoney where
+  fromString = show
 
 instance FromField Seconds where
   fromField = fromFieldSeconds

@@ -191,6 +191,7 @@ library
       SharedLogic.MetroOffer
       SharedLogic.PublicTransport
       Storage.Beam.BlackListOrg
+      Storage.Beam.Booking
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.Exophone
