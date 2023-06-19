@@ -35,8 +35,6 @@ import qualified Streamly.Internal.Data.Fold as SF
 import Streamly.Internal.Data.Stream.Serial (SerialT)
 import qualified Streamly.Prelude as S
 
-import Consumer.AvailabilityTime.Types (LocationUpdates)
-
 runConsumer :: L.FlowRuntime -> AppEnv -> ConsumerType -> Consumer.KafkaConsumer -> IO ()
 runConsumer flowRt appEnv consumerType kafkaConsumer = do
   case consumerType of
