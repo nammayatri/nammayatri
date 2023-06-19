@@ -26,7 +26,7 @@ import Beckn.Types.Core.Taxi.Update.UpdateEvent.UpdateEventType (UpdateEventType
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, title, value)
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (fromList, id)
 import GHC.Exts (fromList)
 import Kernel.Utils.Schema
 
