@@ -191,8 +191,7 @@ screen initialState =
                         if (checkCurrentLocation initialState.props.sourceLat initialState.props.sourceLong initialState.data.previousCurrentLocations.pastCurrentLocations  && initialState.props.storeCurrentLocs )|| checkSavedLocations initialState.props.sourceLat initialState.props.sourceLong initialState.data.savedLocations
                           then push $ UpdateSourceFromPastLocations
                           else 
-                            if src == "Current Location" then push $ UpdateSourceName initialState.props.sourceLat initialState.props.sourceLong (getString CURRENT_LOCATION)
-                              else push $ UpdateSource initialState.props.sourceLat initialState.props.sourceLong (getString CURRENT_LOCATION)
+                            pure unit
                         pure (pure unit)
                     else  pure (pure unit)
             else
