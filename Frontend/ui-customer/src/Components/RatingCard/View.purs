@@ -263,11 +263,11 @@ starRatingView state push =
         , width $ V (screenWidth unit - 64)
         , textSize FontSize.a_16
         , text case state.data.rating of  
-                1 -> "Terrible Experience 😠"
-                2 -> "Poor Experience 😕"
-                3 -> "Needs Improvement 😕"
-                4 -> "Almost Perfect! 🙂"
-                5 -> "Amazing!!! 🤩"
+                1 -> (getString TERRIBLE_EXPERIENCE)
+                2 -> (getString POOR_EXPERIENCE)
+                3 -> (getString NEEDS_IMPROVEMENT)
+                4 -> (getString ALMOST_PERFECT)
+                5 -> (getString AMAZING)
                 _ -> ""
         , color Color.black800
         , maxLines 2
