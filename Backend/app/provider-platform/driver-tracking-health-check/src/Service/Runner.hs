@@ -27,7 +27,6 @@ import Kernel.External.Notification.FCM.Types (FCMNotificationType (TRIGGER_SERV
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.SMS.MyValueFirst.Flow as SF
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (lPush, rPop)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
@@ -100,8 +99,8 @@ driverMakingInactiveService = startService "driverMakingInactiveService" $ withR
       mobileNumber' <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
       countryCode <- driver.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
       log INFO "Make driver inactive"
-      Esq.runTransaction $
-        DrInfo.updateActivity (cast driver.id) False (Just OFFLINE)
+      -- Esq.runTransaction $
+      DrInfo.updateActivity (cast driver.id) False (Just OFFLINE)
 
       smsCfg <- asks (.smsCfg)
       driverInactiveSmsTemplate <- asks (.driverInactiveSmsTemplate)
