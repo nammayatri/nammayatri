@@ -44,7 +44,8 @@ initData = {
     driverAlternateNumber : Nothing,
     capacity : 0,
     vehicleSelected: [],
-    downgradeOptions : []
+    downgradeOptions : [],
+    gender : Nothing
     },
 
   props: {

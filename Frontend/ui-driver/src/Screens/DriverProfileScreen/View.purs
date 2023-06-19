@@ -38,7 +38,7 @@ import Font.Style as FontStyle
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), const, map, (==), (||), (/), unit, bind, (-), (<>), (<<<), pure, discard, show, (&&), void)
+import Prelude (Unit, ($), const, map, (==), (||), (/), unit, bind, (-), (<>), (<<<), pure, discard, show, (&&), void, negate, not)
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout)
 import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle)
@@ -51,7 +51,8 @@ import Styles.Colors as Color
 import Screens as ScreenNames
 import Helpers.Utils (getVehicleType)
 import PrestoDOM.Animation as PrestoAnim
-
+import Animation.Config as AnimConfig
+import Data.Maybe (Maybe(..), isJust)
 
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
@@ -140,7 +141,10 @@ driverDetailsView state push =
   , width MATCH_PARENT
   , background Color.blue600
   , orientation VERTICAL
-  ][  tabView state push 
+  , padding $ PaddingVertical 16 24
+  ][  tabView state push
+    , tabImageView state push  
+    , driverDetails state push 
     ]
 
 tabView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -149,7 +153,7 @@ tabView state push =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , cornerRadius 24.0 
-  , margin $ Margin 16 16 16 0
+  , margin $ MarginHorizontal 16 16
   , background Color.white900
   , padding $ Padding 6 6 6 6
   , gravity CENTER
@@ -209,6 +213,135 @@ tabView state push =
   --       ][ PopUpModal.view (push <<<PopUpModalAction) (logoutPopUp state) ]
   --     , if state.props.showLiveDashboard then showLiveStatsDashboard push state else dummyTextView
   --   ]
+
+
+tabImageView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+tabImageView state push = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , gravity CENTER_HORIZONTAL
+  , padding $ PaddingTop 32
+  , orientation HORIZONTAL
+  ][  PrestoAnim.animationSet [ Anim.scaleAnim $ autoAnimConfig (state.props.screenType == ST.DRIVER_DETAILS)
+  , Anim.scaleAnim1 $ autoAnimConfig ( (state.props.screenType == ST.AUTO_DETAILS))] $ 
+    imageView
+      [height $ V 88
+      , width $ V 88 
+      , cornerRadius 44.0
+      , margin $ MarginRight 10
+      , onClick push $ const AfterRender
+      , alpha if (state.props.screenType == ST.DRIVER_DETAILS) then 1.0 else 0.4
+      , imageWithFallback "ny_ic_user,https://assets.juspay.in/nammayatri/images/user/ny_ic_user.png" --change the link once uploaded to asset
+      ]
+  ,  PrestoAnim.animationSet [ Anim.scaleAnim1 $ autoAnimConfig1 (state.props.screenType == ST.AUTO_DETAILS)
+  , Anim.scaleAnim $ autoAnimConfig1 ( (state.props.screenType == ST.DRIVER_DETAILS))] $ 
+   linearLayout
+      [ height $ V 88
+      , width $ V 88
+      , cornerRadius 44.0
+      , background Color.white900
+      , onClick push $ const AfterRender
+      , gravity CENTER
+      , alpha if (state.props.screenType == ST.AUTO_DETAILS) then 1.0 else 0.4
+      ][  imageView 
+          [ imageWithFallback "ny_ic_auto_side_view,https://assets.juspay.in/nammayatri/images/common/ic_navigation_blue11.png" --change this image link after uploading in asset store
+          , height $ V 68
+          , width $ V 68
+          ]
+      ]
+
+  ]
+
+
+driverDetails :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+driverDetails state push = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , padding $ PaddingHorizontal 16 16
+  , background Color.white900
+  , margin $ Margin 16 32 16 0
+  , orientation VERTICAL
+  , cornerRadius 10.0
+  ](map(\item ->  
+        linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        ][linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation HORIZONTAL
+            , padding $ PaddingVertical 16 16
+            ][  textView
+                [ text item.key
+                , textSize FontSize.a_12 
+                , color Color.black700
+                , fontStyle $ FontStyle.regular LanguageStyle
+                ]
+              , linearLayout
+                [ height WRAP_CONTENT
+                , weight 1.0
+                ][]
+              , textView
+                [ text $ fromMaybe "" item.value
+                , textSize FontSize.a_14
+                , onClick push $ const item.action
+                , color Color.black900
+                , fontStyle $ FontStyle.semiBold LanguageStyle
+                ]
+            ]
+          , linearLayout
+            [ height $ V 1
+            , width MATCH_PARENT
+            , background Color.grey700
+            ][]
+            ]
+        ) (driverDetailsArray state))
+
+
+driverDetailsArray state = [
+    { key : "Name" , value : Just "Rammoorthy Parashuram" , action : NoAction , isEditable : false }
+  , { key : "Mobile Number" , value : Just "9988776655" , action : NoAction , isEditable : false }
+  , { key : "Alternate Number" , value : Nothing , action : if (isJust state.data.driverAlternateNumber) then NoAction else UpdateValue "Alternate Number" , isEditable : true}
+  , { key : "Gender" , value : Nothing , action : if (isJust state.data.gender) then NoAction else UpdateValue "Gender" , isEditable : true } ]
+
+autoAnimConfig :: Boolean ->  AnimConfig.AnimConfig
+autoAnimConfig state =
+  let
+    config = AnimConfig.animConfig
+    autoAnimConfig' =
+      config
+        { duration = 10000
+        , toScaleX = 1.0
+        , toScaleY = 1.0
+        , fromScaleY = 0.5
+        , fromScaleX = 0.5
+        , fromX = - 10
+        , toX = 0
+        , ifAnim = state
+        }
+  in
+    autoAnimConfig'
+
+autoAnimConfig1 :: Boolean ->  AnimConfig.AnimConfig
+autoAnimConfig1 state =
+  let
+    config = AnimConfig.animConfig
+    autoAnimConfig' =
+      config
+        { duration = 10000
+        , toScaleX = 0.5
+        , toScaleY = 0.5
+        , fromScaleY = 1.0
+        , fromScaleX = 1.0
+        , fromX = - 10
+        , toX = 0
+        , ifAnim = state
+        }
+  in
+    autoAnimConfig'
 
 
 showLiveStatsDashboard :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w

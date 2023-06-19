@@ -89,6 +89,7 @@ data Action = BackPressed Boolean
             | AfterRender
             | HideLiveDashboard String
             | ChangeScreen DriverProfileScreenType
+            | UpdateValue String
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 

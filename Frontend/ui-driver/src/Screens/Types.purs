@@ -252,7 +252,8 @@ type DriverProfileScreenData = {
   driverAlternateNumber :: Maybe String,
   capacity :: Int,
   downgradeOptions :: Array String,
-  vehicleSelected :: Array VehicleP
+  vehicleSelected :: Array VehicleP,
+  gender :: Maybe String
 }
 
 type VehicleP = {
