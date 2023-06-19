@@ -48,7 +48,7 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import SharedLogic.DriverPool hiding (lat, lon)
+import SharedLogic.DriverPool
 import qualified SharedLogic.Estimate as SHEst
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
