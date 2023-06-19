@@ -386,7 +386,6 @@ driverCallPopUp push state =
               , textSize FontSize.a_18
               , margin (MarginBottom 4)
               ]
-            <> FontStyle.subHeading2 TypoGraphy
         , linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
