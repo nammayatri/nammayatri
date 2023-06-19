@@ -15,10 +15,10 @@
 
 module Main where
 
-import Prelude (Unit, bind, pure, show, unit, ($), (<$>), (<<<), (==), void)
+import Prelude (Unit, bind, pure, show, unit, ($), (<$>), (<<<), (==), void, discard)
 import Data.Either (Either(..))
 import Effect (Effect)
-import Effect.Aff (launchAff)
+import Effect.Aff (killFiber, launchAff, launchAff_)
 import Engineering.Helpers.Commons (flowRunner, liftFlow, getWindowVariable)
 import Flow as Flow
 import Control.Monad.Except.Trans (runExceptT)
@@ -36,25 +36,22 @@ import Data.Maybe (fromMaybe, Maybe(..))
 import Screens.Types (AllocationData)
 import Types.ModifyScreenState (modifyScreenState)
 import Types.App (FlowBT, ScreenType(..))
+import JBridge as JBridge
+import Effect.Exception (error)
+import Data.Function.Uncurried (runFn2)
 
 main :: Event -> Effect Unit
 main event = do
-  void $ launchAff $ flowRunner defaultGlobalState $ do
+  mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
     _ <- runExceptT $ runBackT $ updateEventData event
-    _ <- pure $ printLog "printLog " "in main"
-    resp ← runExceptT $ runBackT $ Flow.baseAppFlow
+    resp ← runExceptT $ runBackT $ Flow.baseAppFlow true
     case resp of
       Right _ -> pure $ printLog "printLog " "Success in main"
       Left error -> do
         _ <- pure $ printLog "printLog error in main" error
         liftFlow $ main event
-
-updateEventData :: Event -> FlowBT String Unit
-updateEventData event =
-    case event.type of
-      "NEW_MESSAGE" -> do
-        modifyScreenState $ NotificationsScreenStateType (\notificationScreen -> notificationScreen{ selectedNotification = Just event.data, deepLinkActivated = true })
-      _ -> pure unit
+  JBridge.storeMainFiberOb mainFiber
+  pure unit
 
 mainAllocationPop :: String -> AllocationData -> Effect Unit
 mainAllocationPop payload_type entityPayload = do
@@ -86,11 +83,26 @@ onEvent _ = pure unit
 
 onConnectivityEvent :: String -> Effect Unit
 onConnectivityEvent triggertype = do
-  void $ launchAff $ flowRunner defaultGlobalState $ do
-    resp ← runExceptT $ runBackT $ Flow.noInternetScreenFlow triggertype
-    case resp of
-      Right _ -> pure $ printLog "Event" "onConnectivityEvent"
-      Left error -> throwErr $ show error
+  mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
+    _  <- case (runFn2 JBridge.getMainFiber Just Nothing) of
+      Nothing -> pure unit
+      Just fiber -> liftFlow $ launchAff_ $ killFiber (error "error in killing fiber") fiber
+    _ ← runExceptT $ runBackT $ case triggertype of
+      "LOCATION_DISABLED" -> Flow.noInternetScreenFlow triggertype
+      "INTERNET_ACTION" -> Flow.noInternetScreenFlow triggertype
+      "REFRESH" -> Flow.baseAppFlow false
+      _ -> Flow.baseAppFlow false
+    pure unit
+  JBridge.storeMainFiberOb mainFiber
+  pure unit
+
+updateEventData :: Event -> FlowBT String Unit
+updateEventData event =
+    case event.type of
+      "NEW_MESSAGE" -> do
+        modifyScreenState $ NotificationsScreenStateType (\notificationScreen -> notificationScreen{ selectedNotification = Just event.data, deepLinkActivated = true })
+      _ -> pure unit
+
 
 type Event = {
     type :: String

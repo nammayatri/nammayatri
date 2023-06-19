@@ -7,6 +7,8 @@ window.session_id = guid();
 window.version = __VERSION__;
 // JBridge.setSessionId(window.session_id);
 console.warn("Hello World MASTER ONE");
+let previousDateObject = new Date();
+const refreshThreshold = 30;
 
 let eventObject = {
   type : ""
@@ -239,12 +241,22 @@ window["onEvent'"] = function (event, args) {
     // }
     // window.onBackPressed();
   } else if (event == "onPause") {
+    previousDateObject = new Date();
     window.onPause();
   } else if (event == "onResume") {
     window.onResume();
+    refreshFlow();
   }
 }
 
+function refreshFlow(){
+  let currentDate = new Date();
+  let diff = Math.abs(previousDateObject - currentDate) / 1000;
+  let token = ((window.JBridge.getKeysInSharedPrefs("REGISTERATION_TOKEN")));
+  if ((diff > refreshThreshold) && (token != "__failed") && (token != "(null)")){
+    purescript.onConnectivityEvent("REFRESH")();
+  }
+}
 // if(__OS == "ANDROID") {
 //   // JBridge.trackEvent("app_id", "in.juspay.arya");
 //   // JBridge.trackEvent("app_version", window.version);
