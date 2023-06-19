@@ -29,6 +29,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.DriverInformation as CQDriverInfo
 import qualified Storage.CachedQueries.DriverInformation as DriverInfo
 import Storage.CachedQueries.Merchant.TransporterConfig as CTC
 import qualified Storage.Queries.DriverOnboarding.AadhaarOtp as Query
@@ -105,6 +106,7 @@ verifyAadhaarOtp mbMerchant personId req = do
           Redis.del key
           aadhaarEntity <- mkAadhaar personId res
           Esq.runNoTransaction $ Q.create aadhaarEntity
+          void $ CQDriverInfo.updateAadhaarVerifiedState (cast personId) True
         else throwError $ InternalError "Aadhaar Verification failed, Please try again"
       pure res
     Nothing -> throwError $ InternalError "transaction Id not found ,Try again"
