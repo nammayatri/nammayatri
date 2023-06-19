@@ -792,7 +792,8 @@ eval (MAPREADY key latitude longitude) state =
 
 eval OpenSearchLocation state = do
   _ <- pure $ performHapticFeedback unit
-  exit $ UpdateSavedLocation state { props { isSource = Just true, currentStage = SearchLocationModel, isSearchLocation = SearchLocation } }
+  let srcValue = if state.data.source == "" then "Current Location" else state.data.source
+  exit $ UpdateSavedLocation state { props { isSource = Just true, currentStage = SearchLocationModel, isSearchLocation = SearchLocation }, data {source=srcValue} }
 
 eval (SourceUnserviceableActionController (ErrorModalController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = continueWithCmd state [ do pure $ OpenSearchLocation ]
 
@@ -900,7 +901,7 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
       HomeScreen   -> do
         _ <- pure $ performHapticFeedback unit
         _ <- pure $ firebaseLogEvent "ny_user_where_to_btn"
-        exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel}}
+        exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel}, data{source="Current Location"}}
       ConfirmingLocation -> do
         _ <- pure $ performHapticFeedback unit
         _ <- pure $ exitLocateOnMap ""
@@ -1234,7 +1235,8 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetLoca
   _ <- pure $ removeAllPolylines ""
   _ <- pure $ hideKeyboardOnNavigation true
   if (state.props.isSource == Just true) then pure $ firebaseLogEvent "ny_user_src_set_location_on_map" else pure $ firebaseLogEvent "ny_user_dest_set_location_on_map"
-  let newState = state{data{source = "Current Location"}, props{isSearchLocation = LocateOnMap, currentStage = SearchLocationModel, locateOnMap = true, isRideServiceable = true, showlocUnserviceablePopUp = false}}
+  let srcValue = if state.data.source == "" then "Current Location" else state.data.source
+  let newState = state{data{source = srcValue}, props{isSearchLocation = LocateOnMap, currentStage = SearchLocationModel, locateOnMap = true, isRideServiceable = true, showlocUnserviceablePopUp = false}}
   (updateAndExit newState) $ UpdatedState newState false
 
 eval (SearchLocationModelActionController (SearchLocationModelController.UpdateSource lat lng name)) state = do
