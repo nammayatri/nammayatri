@@ -609,7 +609,13 @@ type HomeScreenStateProps =
   , tipViewProps :: TipViewProps
   , timerId :: String
   , findingRidesAgain :: Boolean
+  , routeEndPoints :: Maybe RouteEndPoints
   }
+
+type RouteEndPoints = {
+    source :: Location
+  , destination :: Location
+}
 
 type SpecialTags = {
     sourceTag :: ZoneType

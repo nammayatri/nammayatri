@@ -40,7 +40,6 @@ import Components.ChatView as ChatView
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Data.String as DS
 import Animation.Config as AnimConfig
-import Components.SearchLocationModel as SearchLocationModel
 import Components.SourceToDestination as SourceToDestination
 import Data.Array as DA
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -381,6 +380,7 @@ cancelRidePopUpConfig state =
     cancelRideconfig' =
       cancelRideconfig
         { selectionOptions = state.props.cancellationReasons
+        , showAllOptionsText = (getString SHOW_ALL_OPTIONS)
         , primaryButtonTextConfig
           { firstText = getString WAIT_FOR_DRIVER
           , secondText = getString CANCEL_RIDE
