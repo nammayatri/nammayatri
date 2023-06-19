@@ -104,3 +104,13 @@ transformDomainFareParametersToBeam FareParameters {..} =
       BeamFP.nightShiftCharge = nightShiftCharge,
       BeamFP.fareParametersType = getFareParametersType $ FareParameters {..}
     }
+
+findAllIn :: Transactionable m => [Id FareParameters] -> m [FareParameters]
+findAllIn fareParamIds =
+  buildDType $ do
+    res <- Esq.findAll' $ do
+      fareParamFile <- from $ table @FareParametersT
+      where_ $
+        fareParamFile ^. FareParametersId `in_` valList (map getId fareParamIds)
+      pure fareParamFile
+    catMaybes <$> mapM buildFullFareParameters res
