@@ -306,3 +306,14 @@ updateDowngradingOptions personId canDowngradeToSedan canDowngradeToHatchback ca
         DriverInformationUpdatedAt =. val now
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey personId)
+
+updateAadhaarVerifiedState :: Id Person.Driver -> Bool -> SqlDB ()
+updateAadhaarVerifiedState personId isVerified = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverInformationAadhaarVerified =. val isVerified,
+        DriverInformationUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast personId)

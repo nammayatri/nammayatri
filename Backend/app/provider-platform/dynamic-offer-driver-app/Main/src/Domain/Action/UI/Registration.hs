@@ -183,6 +183,7 @@ createDriverDetails personId merchantId = do
             canDowngradeToSedan = False,
             canDowngradeToHatchback = False,
             canDowngradeToTaxi = False,
+            aadhaarVerified = False,
             mode = Just DriverInfo.OFFLINE,
             createdAt = now,
             updatedAt = now

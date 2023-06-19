@@ -49,6 +49,7 @@ mkPersist
       canDowngradeToHatchback Bool
       canDowngradeToTaxi Bool
       mode Domain.DriverMode Maybe
+      aadhaarVerified Bool
       createdAt UTCTime
       updatedAt UTCTime
       Primary driverId
