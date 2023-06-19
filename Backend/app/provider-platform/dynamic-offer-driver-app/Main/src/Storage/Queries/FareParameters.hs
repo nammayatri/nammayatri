@@ -19,7 +19,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Queries.FullEntityBuilders (buildFullFareParameters)
-import Storage.Tabular.FareParameters (FareParametersT)
+import Storage.Tabular.FareParameters (EntityField (FareParametersId), FareParametersT)
 import Storage.Tabular.FareParameters.Instances
 
 create :: FareParameters -> SqlDB ()
@@ -34,3 +34,13 @@ findById :: Transactionable m => Id FareParameters -> m (Maybe FareParameters)
 findById fareParametersId = buildDType $ do
   res <- Esq.findById' @FareParametersT fareParametersId
   join <$> mapM buildFullFareParameters res
+
+findAllIn :: Transactionable m => [Id FareParameters] -> m [FareParameters]
+findAllIn fareParamIds =
+  buildDType $ do
+    res <- Esq.findAll' $ do
+      fareParamFile <- from $ table @FareParametersT
+      where_ $
+        fareParamFile ^. FareParametersId `in_` valList (map getId fareParamIds)
+      pure fareParamFile
+    catMaybes <$> mapM buildFullFareParameters res
