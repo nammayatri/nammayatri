@@ -54,7 +54,6 @@ data DSelectReq = DSelectReq
     bapId :: Text,
     bapUri :: BaseUrl,
     pickupTime :: UTCTime,
-    estimateId :: Id DEst.Estimate,
     autoAssignEnabled :: Bool,
     customerExtraFee :: Maybe Money
   }
