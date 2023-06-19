@@ -5,17 +5,18 @@ import Common.Types.App
 import Components.ChooseVehicle as ChooseVehicle
 import Components.ChooseYourRide.Controller (Action(..), Config)
 import Components.PrimaryButton as PrimaryButton
-import Data.Array (mapWithIndex)
+import Data.Array (mapWithIndex, length)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), (<>), const, pure, unit, not, (<<<))
+import Prelude (Unit, ($), (<>), const, pure, unit, not, (<<<), (==), (>=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width, scrollView)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
+import Engineering.Helpers.Commons as EHC
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -80,16 +81,29 @@ estimatedTimeAndDistanceView push config =
 quoteListView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 quoteListView push config =
   linearLayout
-    [ weight 1.0
+    [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin $ MarginTop 16
-    ][scrollView[width MATCH_PARENT][linearLayout[height WRAP_CONTENT, width MATCH_PARENT, orientation VERTICAL]
-    ( mapWithIndex
-        ( \index item ->
-            ChooseVehicle.view (push <<< ChooseVehicleAC) (item)
-        ) config.quoteList
-    )]]
+    ]
+    [ scrollView
+      [ height $ getQuoteListViewHeight config
+      , width MATCH_PARENT
+      ][  linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          ]( mapWithIndex
+              ( \index item ->
+                  ChooseVehicle.view (push <<< ChooseVehicleAC) (item)
+              ) config.quoteList
+          )]]
+
+getQuoteListViewHeight :: Config -> Length
+getQuoteListViewHeight config = 
+  if EHC.os == "IOS" then 
+    if length config.quoteList >= 4 then V 300 else V 160
+    else WRAP_CONTENT
 
 primaryButtonRequestRideConfig :: Config -> PrimaryButton.Config
 primaryButtonRequestRideConfig config = PrimaryButton.config
