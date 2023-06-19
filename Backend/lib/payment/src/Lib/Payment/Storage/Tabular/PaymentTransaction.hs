@@ -33,9 +33,9 @@ mkPersist
   [defaultQQ|
     PaymentTransactionT sql=payment_transaction
       id Text
-      txnUUID Text sql=txn_uuid
-      paymentMethodType Text
-      paymentMethod Text
+      txnUUID Text Maybe sql=txn_uuid
+      paymentMethodType Text Maybe
+      paymentMethod Text Maybe
       respMessage Text Maybe
       respCode Text Maybe
       gatewayReferenceId Text Maybe
@@ -50,7 +50,6 @@ mkPersist
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
-      UniqueTxnUUID txnUUID
       deriving Generic
     |]
 

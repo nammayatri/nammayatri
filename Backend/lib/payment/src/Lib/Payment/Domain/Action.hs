@@ -121,7 +121,10 @@ updateOrderTransaction ::
   Maybe Text ->
   m ()
 updateOrderTransaction order resp respDump = do
-  mbTransaction <- runInReplica $ QTransaction.findByTxnUUID resp.transactionUUID
+  mbTransaction <- do
+    case resp.transactionUUID of
+      Just transactionUUID -> runInReplica $ QTransaction.findByTxnUUID transactionUUID
+      Nothing -> runInReplica $ QTransaction.findNewTransactionByOrderId order.id
   let updOrder = order{status = resp.transactionStatus}
   case mbTransaction of
     Nothing -> do

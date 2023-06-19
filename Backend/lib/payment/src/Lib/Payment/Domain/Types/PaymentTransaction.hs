@@ -23,9 +23,9 @@ import Lib.Payment.Domain.Types.PaymentOrder as DOrder
 
 data PaymentTransaction = PaymentTransaction
   { id :: Id PaymentTransaction,
-    txnUUID :: Text,
-    paymentMethodType :: Text,
-    paymentMethod :: Text,
+    txnUUID :: Maybe Text,
+    paymentMethodType :: Maybe Text,
+    paymentMethod :: Maybe Text,
     respMessage :: Maybe Text,
     respCode :: Maybe Text,
     gatewayReferenceId :: Maybe Text,
