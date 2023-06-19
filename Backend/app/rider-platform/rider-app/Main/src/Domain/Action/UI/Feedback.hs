@@ -19,6 +19,7 @@ module Domain.Action.UI.Feedback
   )
 where
 
+import Beckn.Types.Core.Taxi.Rating.FeedbackForm (FeedbackChip)
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
@@ -36,7 +37,8 @@ import Tools.Error
 data FeedbackReq = FeedbackReq
   { rideId :: Id DRide.Ride,
     rating :: Int,
-    feedbackDetails :: Maybe Text
+    feedbackDetails :: Maybe Text,
+    feedbackChips :: Maybe [FeedbackChip]
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -44,6 +46,7 @@ data FeedbackRes = FeedbackRes
   { bppBookingId :: Id DBooking.BPPBooking,
     ratingValue :: Int,
     feedbackDetails :: Maybe Text,
+    feedbackChips :: Maybe [FeedbackChip],
     providerId :: Text,
     providerUrl :: BaseUrl,
     transactionId :: Text,
@@ -56,6 +59,7 @@ feedback request = do
   unless (ratingValue `elem` [1 .. 5]) $ throwError InvalidRatingValue
   let rideId = request.rideId
       feedbackDetails = request.feedbackDetails
+      feedbackChips = request.feedbackChips
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (ride.status == DRide.COMPLETED) $ throwError (RideInvalidStatus "Feedback available only for completed rides.")
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)

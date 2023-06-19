@@ -20,9 +20,38 @@ import Kernel.Utils.Schema
 
 data FeedbackForm = FeedbackForm
   { question :: Text,
-    answer :: Maybe Text
+    answer :: Maybe Text,
+    details :: Maybe [FeedbackChip]
   }
   deriving (Generic, FromJSON, ToJSON, Show)
+
+data FeedbackChip
+  = DRIVER_WAS_NOT_READY_TO_GO
+  | ASKING_FOR_MORE_MONEY
+  | AUTO_BROKEN
+  | UNPROFESSIONAL_DRIVER
+  | RASH_DRIVING
+  | DRIVER_CHARGED_MORE
+  | UNCOMFORTABLE_AUTO
+  | TRIP_GOT_DELAYED
+  | FELT_UNSAFE
+  | POLITE_DRIVER
+  | EXPERT_DRIVING
+  | SAFE_RIDE
+  | CLEAN_AUTO
+  | ON_TIME
+  | SKILLED_NAVIGATOR
+  | RUDE_DRIVER
+  | TOO_MANY_CALLS
+  | RECKLESS_DRIVING
+  | LATE_DROP_OFF
+  | LATE_PICK_UP
+  | POOR_EXPERIENCE
+  | TERRIBLE_EXPERIENCE
+  | NEEDS_IMPROVEMENT
+  | ALMOST_PERFECT
+  | AMAZING
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema, Read)
 
 instance ToSchema FeedbackForm where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

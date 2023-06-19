@@ -21,6 +21,7 @@ import qualified "rider-app" API.UI.Feedback as AppFeedback
 import qualified "rider-app" API.UI.Registration as Reg
 import qualified "rider-app" API.UI.Select as AppSelect
 import qualified "rider-app" API.UI.Serviceability as AppServ
+import qualified "beckn-spec" Beckn.Types.Core.Taxi.Rating.FeedbackForm as FF
 import qualified "rider-app" Domain.Action.UI.Cancel as CancelAPI
 import qualified "rider-app" Domain.Types.Booking as AbeBooking
 import qualified "rider-app" Domain.Types.Booking as BRB
@@ -65,7 +66,8 @@ callAppFeedback ratingValue rideId =
         AppFeedback.FeedbackReq
           { rideId = rideId,
             rating = ratingValue,
-            feedbackDetails = Just "driver was well behaved!"
+            feedbackDetails = Just "driver was well behaved!",
+            feedbackChips = Just [FF.ON_TIME]
           }
    in appFeedback appRegistrationToken request
 

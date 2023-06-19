@@ -55,6 +55,7 @@ dependencies:
   - mock-fcm
   - mock-google
   - rider-app
+  - beckn-spec
   - beckn-gateway
   - mobility-core
   - mock-registry
