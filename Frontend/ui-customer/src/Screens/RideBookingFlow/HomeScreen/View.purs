@@ -432,8 +432,8 @@ trackingCardCallView push state item =
     [
     imageView
         [ imageWithFallback item.imageWithFallback
-        , height $ V 25
-        , width $ V 25
+        , height $ V 30
+        , width $ V 30
         , margin (MarginRight 20)
         ]
     ,  linearLayout[
@@ -481,10 +481,9 @@ labelView push state =
   linearLayout[
     height WRAP_CONTENT
   , width WRAP_CONTENT
-  , cornerRadii $ Corners 24.0 true true true true
+  , cornerRadii $ Corners 8.0 true true true true
   , background Color.green900
   , margin (MarginHorizontal 10 10)
-  , gravity BOTTOM
   ][
     textView $ [
       width WRAP_CONTENT
