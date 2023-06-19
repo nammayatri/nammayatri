@@ -90,6 +90,15 @@ dependencies:
   - geohash == 1.0.1
   - euler-hs
   - unordered-containers
+  - vector
+  - cereal
+  - beam-core
+  - beam-mysql
+  - beam-postgres
+  - template-haskell
+  - sequelize
+  - casing
+  - postgresql-simple
 
 ghc-options:
   - -fwrite-ide-info
