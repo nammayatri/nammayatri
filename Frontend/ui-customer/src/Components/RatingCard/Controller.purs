@@ -29,6 +29,7 @@ data Action = NoAction
             | SourceToDestinationAC SourceToDestination.Action
             | SkipButtonAC PrimaryButton.Action
             | FeedbackChanged String
+            | SelectPill String
 
 type RatingCardState = 
   { data :: RatingCardData
@@ -54,4 +55,5 @@ type RatingCardData =
   , offeredFare :: Int
   , distanceDifference :: Int
   , feedback :: String
+  , feedbackList :: Array String
   }

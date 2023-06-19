@@ -798,6 +798,7 @@ type RatingCard =
   , offeredFare :: Int
   , distanceDifference :: Int
   , feedback :: String
+  , feedbackList :: Array String 
   }
 
 type Address =

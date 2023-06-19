@@ -262,6 +262,7 @@ dummyPreviousRiderating = {
 , offeredFare : 0
 , distanceDifference : 0
 , feedback : ""
+, feedbackList : []
 }
 
 

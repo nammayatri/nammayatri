@@ -50,7 +50,7 @@ import Components.SettingSideBar.Controller as SettingSideBarController
 import Components.SourceToDestination.Controller as SourceToDestinationController
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array ((!!), filter, null, snoc, length, head, last, sortBy, union)
+import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union)
 import Data.Int (toNumber, round)
 import Data.Int (toNumber, round, fromString)
 import Data.Lens ((^.))
@@ -860,7 +860,14 @@ eval (OnIconClick autoAssign) state = do
 eval PreferencesDropDown state = do
   continue state { data { showPreferences = not state.data.showPreferences}}
 
-eval (RatingCardAC (RatingCard.Rating index)) state = continue state { data { rideRatingState { rating = index }, ratingViewState { selectedRating = index} } }
+eval (RatingCardAC (RatingCard.Rating index)) state = do 
+  let temp = if index == state.data.rideRatingState.rating then state.data.rideRatingState.feedbackList else []
+  _ <- pure $ spy "feedback lsit "  temp
+  continue state { data { rideRatingState { rating = index , feedbackList = if index == state.data.rideRatingState.rating then state.data.rideRatingState.feedbackList else []}, ratingViewState { selectedRating = index} } }
+eval (RatingCardAC (RatingCard.SelectPill feedbackItem)) state = do
+  let temp = addItemToFeedbackList state.data.rideRatingState.feedbackList feedbackItem
+  _ <- pure $ spy "feedback lsit "  temp
+  continue state { data { rideRatingState {  feedbackList = addItemToFeedbackList state.data.rideRatingState.feedbackList feedbackItem} } }
 
 eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = do
   _ <- pure $ firebaseLogEvent "ny_user_ride_give_feedback"
@@ -1688,6 +1695,9 @@ constructLatLong lat lng _ =
   , place: ""
   }
 
+addItemToFeedbackList :: Array String -> String -> Array String
+addItemToFeedbackList feedbackList feedbackItem = if (any (_ == feedbackItem) feedbackList ) then (filter (\item -> feedbackItem /= item) feedbackList) else snoc feedbackList feedbackItem
+
 checkPermissionAndUpdatePersonMarker :: HomeScreenState -> Effect Unit
 checkPermissionAndUpdatePersonMarker state = do
   conditionA <- isLocationPermissionEnabled unit
@@ -1787,7 +1797,8 @@ dummyRideRatingState = {
   dateDDMMYY          : "",
   offeredFare         : 0,
   distanceDifference  : 0,
-  feedback            : ""
+  feedback            : "",
+  feedbackList        : []
 }
 dummyListItem :: LocationListItemState
 dummyListItem = {

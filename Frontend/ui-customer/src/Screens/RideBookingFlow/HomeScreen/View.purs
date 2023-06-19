@@ -296,7 +296,7 @@ view push state =
             , if state.props.currentStage == DistanceOutsideLimits then (distanceOutsideLimitsView push state) else emptyTextView state
             , if state.props.currentStage == ShortDistance then (shortDistanceView push state) else emptyTextView state
             , if state.props.showRateCard then (rateCardView push state) else emptyTextView state
-            , if state.props.currentStage == RideRating then rideRatingCardView state push else emptyTextView state
+            , if true then rideRatingCardView state push else emptyTextView state
             , if state.props.isSaveFavourite then saveFavouriteCardView push state else emptyTextView state
             , if state.props.emergencyHelpModal then (emergencyHelpModal push state) else emptyTextView state
             , if state.props.showShareAppPopUp then (shareAppPopUp push state) else emptyTextView state

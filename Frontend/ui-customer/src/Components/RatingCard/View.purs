@@ -20,7 +20,7 @@ import Components.FareBreakUp as FareBreakUp
 import Components.PrimaryButton as PrimaryButton
 import Components.RatingCard.Controller (Action(..), RatingCardState)
 import Components.SourceToDestination as SourceToDestination
-import Data.Array (mapWithIndex, (!!))
+import Data.Array (mapWithIndex, (!!), any)
 import Data.Maybe (fromMaybe)
 import Data.String (split, Pattern(..))
 import Effect (Effect)
@@ -30,7 +30,7 @@ import Font.Style as FontStyle
 import JBridge (getBtnLoader, getKeyInSharedPrefKeys)
 import Language.Strings (getString, getKey, LANGUAGE_KEY(..))
 import Language.Types (STR(..))
-import Prelude (Unit, const, unit, ($), (-), (<<<), (<=), (<>), (==), (<), (/), (/=), not, (&&))
+import Prelude (Unit, map, const, unit, ($), (-), (<<<), (<=), (<>), (==), (<), (/), (/=), not, (&&))
 import PrestoDOM (Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, visibility, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, imageUrl, imageView, inputType, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, singleLine, stroke, text, textSize, textView, weight, width, multiLineEditText, pattern, maxLines, editText, imageWithFallback, scrollBarY, scrollView)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
@@ -74,6 +74,7 @@ currentRatingView push state =
   , clickable true
   , onClick push $ const NoAction
   ][  starRatingView state push
+    , feedbackPillView state push
     , editTextView state push
     , PrimaryButton.view (push <<< PrimaryButtonAC ) (rideRatingButtonConfig state)
   ]
@@ -96,6 +97,65 @@ emptyLayout :: forall w. RatingCardState -> PrestoDOM (Effect Unit) w
 emptyLayout state = 
   linearLayout
   [height $ V 0][]
+
+-------------------------------------------------- feedbackPillView ---------------------------------------------------
+feedbackPillView :: forall w. RatingCardState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
+feedbackPillView state push = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , gravity CENTER_VERTICAL
+    , margin $ MarginBottom 26
+    ](map  
+      (\list1 ->  
+        linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation HORIZONTAL
+        , gravity CENTER_HORIZONTAL
+        , margin $ MarginBottom 6
+        ](map 
+            (\item -> 
+              linearLayout
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , cornerRadius 20.0
+                , stroke ("1," <> if checkPillSelected item state.data.feedbackList then Color.blue900 else Color.grey900)
+                , margin $ Margin 6 6 6 6
+                , background if checkPillSelected item state.data.feedbackList then Color.blue600 else Color.white900
+                , onClick push $ const $ SelectPill item
+                ][ textView
+                    [ height WRAP_CONTENT
+                    , textSize FontSize.a_12
+                    , fontStyle $ FontStyle.medium LanguageStyle
+                    , text item
+                    , color if checkPillSelected item state.data.feedbackList then Color.blue900 else Color.black800
+                    , padding $ Padding 12 12 12 12
+                    ]
+                ]
+            )list1
+          ) 
+      ) (getFeedbackPillData state.data.rating)
+    ) 
+
+getFeedbackPillData :: Int -> Array (Array String) 
+getFeedbackPillData rating = if rating < 3 then feedbackPillDataWithLowRating 
+                             else if rating < 5 then feedbackPillDataWithMediumRating
+                             else feedbackPillDataWithHighRating
+
+
+checkPillSelected :: String -> Array String -> Boolean
+checkPillSelected feedbackItem feedbackList = (any (_ == feedbackItem) feedbackList)
+feedbackPillDataWithLowRating :: Array (Array String) 
+feedbackPillDataWithLowRating  = [["Rude Driver", "Felt Unsafe", "Too Many Calls"], ["Reckless Driving", "Driver charged more"], ["Late Drop Off", "Late Pick Up"]]
+
+feedbackPillDataWithMediumRating :: Array (Array String) 
+feedbackPillDataWithMediumRating  = [["Unprofessional Driver", "Rash Driving"], ["Driver charged more", "Uncomfortable Auto"], ["Trip Got Delayed", "Felt Unsafe"]]
+
+feedbackPillDataWithHighRating :: Array (Array String) 
+feedbackPillDataWithHighRating  = [["Polite Driver", "Expert Driving", "Safe Ride"], ["Clean Auto", "On Time"], ["Skilled Navigator"]]
+--------------------------------------------------------------------------------------------------------------------
 
 --------------------------------------------------- editTextView ---------------------------------------------------
 
@@ -166,14 +226,14 @@ starRatingView state push =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , margin (MarginBottom 24)
+    , margin (MarginBottom 10)
     , gravity CENTER
     , padding (PaddingVertical 16 16)
     , cornerRadius 8.0
     ][textView
         [ height WRAP_CONTENT
         , width $ V (screenWidth unit - 64)
-        , textSize FontSize.a_16
+        , textSize FontSize.a_18
         , text $ getString RATE_YOUR_EXPERIENCE
         , color Color.black800
         , maxLines 2
@@ -193,9 +253,27 @@ starRatingView state push =
                           , margin (MarginHorizontal 5 5)
                           , onClick push $ const (Rating item)
                           ][imageView
-                              [ height $ V 30
-                              , width $ V 30
+                              [ height $ V 35
+                              , width $ V 35
                               , imageWithFallback if item <= state.data.rating then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png" else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
                               ]
                           ]) [1,2,3,4,5])
+    , textView
+        [ height WRAP_CONTENT
+        , width $ V (screenWidth unit - 64)
+        , textSize FontSize.a_16
+        , text case state.data.rating of  
+                1 -> "Terrible Experience 😠"
+                2 -> "Poor Experience 😕"
+                3 -> "Needs Improvement 😕"
+                4 -> "Almost Perfect! 🙂"
+                5 -> "Amazing!!! 🤩"
+                _ -> ""
+        , color Color.black800
+        , maxLines 2
+        , fontStyle $ FontStyle.semiBold LanguageStyle
+        , gravity CENTER
+        -- , lineHeight "20"
+        , margin (MarginTop 16)
+        ]
     ]
