@@ -51,7 +51,8 @@ view push config =
                               pure unit) (const $ OnClick config)
         ]([  linearLayout
             [ height WRAP_CONTENT
-            , width WRAP_CONTENT
+            , width $ V 42
+            , margin (Margin 12 2 12 2)
             , orientation VERTICAL
             , gravity CENTER
             ][  prefixImageView config
@@ -83,7 +84,6 @@ prefixImageView config =
     [ height MATCH_PARENT
     , width $ V 20
     , orientation VERTICAL
-    , margin (Margin 13 2 12 2)
     , gravity CENTER
     ][  imageView
         [ height $ V 20
