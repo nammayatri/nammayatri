@@ -5,7 +5,8 @@ require("presto-ui");
 require('core-js');
 window.session_id = guid();
 window.version = __VERSION__;
-console.warn("Hello World");
+let previousDateObject = new Date();
+const refreshThreshold = 120;
 
 var jpConsumingBackpress = {
   event: "jp_consuming_backpress",
@@ -212,9 +213,20 @@ window["onEvent'"] = function (event, args) {
   if (event == "onBackPressed") {
     purescript.onEvent(event)();
   } else if (event == "onPause") {
+    previousDateObject = new Date();
     window.onPause();
   } else if (event == "onResume") {
     window.onResume();
+    refreshFlow();
+  }
+}
+
+function refreshFlow(){
+  let currentDate = new Date();
+  let diff = Math.abs(previousDateObject - currentDate) / 1000;
+  let token = window.JBridge.getKeysInSharedPrefs("REGISTERATION_TOKEN");
+  if ((diff > refreshThreshold) && (token != "__failed")){
+    purescript.onConnectivityEvent("REFRESH")();
   }
 }
 
