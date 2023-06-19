@@ -188,7 +188,7 @@ primaryEditTextConfigEmail state = let
     config = PrimaryEditText.config
     primaryEditTextConfig' = config
       { editText 
-        { color = Color.black800
+        { color = if isEmailPresent FunctionCall then Color.black600 else Color.black800
         , textSize = FontSize.a_14
         , fontStyle = FontStyle.medium LanguageStyle
         , margin = Margin 16 16 16 16
@@ -234,7 +234,7 @@ primaryEditTextConfigDescription state = let
         , color = Color.black900
         , fontStyle = FontStyle.regular LanguageStyle
         }  
-      , margin = Margin 10 32 10 0
+      , margin = Margin 10 32 10 100
       , showErrorLabel = DS.length state.data.description >= 300
       , errorLabel 
         { text = getString MAX_CHAR_LIMIT_REACHED <> " 300 " <> getString OF <> " 300"
