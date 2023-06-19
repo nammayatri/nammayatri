@@ -89,7 +89,8 @@ public class MainActivity extends AppCompatActivity {
     private Activity activity;
     @Nullable
     private SharedPreferences sharedPref;
-    private InAppNotification inAppNotification;
+    @SuppressLint("StaticFieldLeak")
+    private static InAppNotification inAppNotification;
     ShowNotificationCallBack inappCallBack;
     SharedPreferences.OnSharedPreferenceChangeListener mListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
         @Override
@@ -572,9 +573,9 @@ public class MainActivity extends AppCompatActivity {
             hyperServices.terminate();
         }
         ChatService.deRegisterInAppCallback(inappCallBack);
-        inAppNotification = null;
         MyFirebaseMessagingService.deRegisterBundleUpdateCallback(bundleUpdateCallBack);
         MyFirebaseMessagingService.deRegisterShowNotificationCallBack(inappCallBack);
+        inAppNotification = null;
         super.onDestroy();
     }
 
@@ -617,7 +618,7 @@ public class MainActivity extends AppCompatActivity {
             Handler handler = new Handler(context.getMainLooper());
             handler.postDelayed(() -> {
                 try {
-                    inAppNotification.generateNotification(title, message, onTapAction, action1Text, action2Text, action1Image, action2Image, channelId, durationInMilliSeconds);
+                    if (inAppNotification != null) inAppNotification.generateNotification(title, message, onTapAction, action1Text, action2Text, action1Image, action2Image, channelId, durationInMilliSeconds);
                 } catch (JSONException e) {
                     Log.e(LOG_TAG, "Error in In App Notification Handler " + e);
                 }

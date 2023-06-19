@@ -82,8 +82,10 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
 
     @Override
     public void reset() {
-        receivers.deRegister(bridgeComponents.getContext());
-        receivers = null;
+        if (receivers != null){
+            receivers.deRegister(bridgeComponents.getContext());
+            receivers = null;
+        }
         googleMap = null;
         super.reset();
     }
@@ -111,10 +113,6 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     Log.i(CALLBACK, "No Required");
                 }
 
-                @Override
-                public void internetCallBack(String isPermission) {
-                    callInternetActionCallBack(isPermission);
-                }
 
                 @Override
                 public void chatCallBack(String message, String sentBy, String time, String len) {

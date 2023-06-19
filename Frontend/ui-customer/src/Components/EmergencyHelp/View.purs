@@ -434,6 +434,11 @@ genericHeaderConfig state = let
     , textConfig {
         text = getString EMERGENCY_HELP
       , color = Color.darkDescriptionText }
+    , prefixImageConfig {
+        height = V 25
+      , width = V 25
+      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+      } 
     , suffixImageConfig {
         visibility = GONE }
     }

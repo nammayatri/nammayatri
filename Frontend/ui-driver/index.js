@@ -209,6 +209,10 @@ window["onEvent'"] = function (event, args) {
   console.log(event, args);
   if (event == "onBackPressed") {
     purescript.onEvent(event)();
+  }  else if (event == "onLocationChanged") {
+    purescript.onConnectivityEvent("LOCATION_DISABLED")();
+  } else if (event == "onInternetChanged") {
+    purescript.onConnectivityEvent("INTERNET_ACTION")();
   } else if (event == "onPause") {
     window.onPause();
   } else if (event == "onResume") {

@@ -441,9 +441,9 @@ distanceOusideLimitsConfig state =
           }
         , option1 { visibility = false }
         , option2 { 
-            background = state.data.config.primaryTextColor
+            background = state.data.config.primaryBackground
           , strokeColor = state.data.config.primaryBackground
-          , color = state.data.config.primaryBackground
+          , color = state.data.config.primaryTextColor
           , text = (getString CHANGE_DROP_LOCATION)
           , margin = (Margin 16 0 16 EHC.safeMarginBottom)
           }

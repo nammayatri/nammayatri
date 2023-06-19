@@ -526,9 +526,7 @@ export const contactPermission = function () {
 
 export const performHapticFeedback = function () {
   if(window.JBridge.performHapticFeedback ){
-    if ((window.__OS == "IOS") || (JBridge.getAndroidVersion() >= 26)){
       return window.JBridge.performHapticFeedback();
-    }
   }
 }
 

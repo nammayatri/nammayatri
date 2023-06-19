@@ -192,11 +192,6 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                 }
 
                 @Override
-                public void internetCallBack(String isPermission) {
-                    callInternetActionCallBack(isPermission);
-                }
-
-                @Override
                 public void chatCallBack(String message, String sentBy, String time, String len) {
                     Log.i(OTHERS, "No Required");
                 }

@@ -152,7 +152,6 @@ public class MobilityCommonBridge extends HyperBridge {
     protected float zoom = 17.0f;
     // CallBacks
     protected static String storeLocateOnMapCallBack = null;
-    protected static String storeInternetActionCallBack = null;
     protected static String storeDashboardCallBack = null;
     protected static Marker userPositionMarker;
     private final FusedLocationProviderClient client;
@@ -176,7 +175,7 @@ public class MobilityCommonBridge extends HyperBridge {
     // Others
     private LottieAnimationView animationView;
 
-    protected Receivers receivers;
+    protected static Receivers receivers = new Receivers();
 
 
     public MobilityCommonBridge(BridgeComponents bridgeComponents) {
@@ -201,16 +200,12 @@ public class MobilityCommonBridge extends HyperBridge {
     // region Store and Trigger CallBack
     @JavascriptInterface
     public void storeCallBackInternetAction(String callback) {
-        storeInternetActionCallBack = callback;
-        receivers.storeInternetActionCallBack = callback;
+        Receivers.storeInternetActionCallBack = callback;
     }
 
-    public void callInternetActionCallBack(String isPermission) {
-        if (storeInternetActionCallBack != null) {
-            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
-                    storeInternetActionCallBack, isPermission);
-            bridgeComponents.getJsCallback().addJsToWebView(javascript);
-        }
+    @JavascriptInterface
+    public void storeCallBackDriverLocationPermission(String callback) {
+        Receivers.storeLocationCallBack = callback;
     }
     // endregion
 
@@ -341,7 +336,6 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public void initiateLocationServiceClient() {
-        receivers = new Receivers();
         receivers.initReceiver(bridgeComponents);
         if (!isLocationPermissionEnabled()) return;
         resolvableLocationSettingsReq();
@@ -1405,7 +1399,7 @@ public class MobilityCommonBridge extends HyperBridge {
             sendIntent.putExtra(Intent.EXTRA_TEXT, message);
             sendIntent.putExtra(Intent.EXTRA_TITLE, title);
             Bitmap thumbnailBitmap = BitmapFactory.decodeResource(context.getResources(), context.getResources().getIdentifier("ic_launcher", "drawable", context.getPackageName()));
-            if (thumbnailBitmap != null) {
+            if (thumbnailBitmap != null && Build.VERSION.SDK_INT > 28) {
                 Uri thumbnailUri = getImageUri(context, thumbnailBitmap);
                 ClipData clipData = ClipData.newUri(context.getContentResolver(), "ThumbnailImage", thumbnailUri);
                 sendIntent.setClipData(clipData);
@@ -1625,7 +1619,8 @@ public class MobilityCommonBridge extends HyperBridge {
     protected static class Receivers {
         BroadcastReceiver gpsReceiver;
         BroadcastReceiver internetActionReceiver;
-        String storeInternetActionCallBack;
+        static String storeInternetActionCallBack = null;
+        static String storeLocationCallBack = null;
 
         public void initReceiver(BridgeComponents bridgeComponents) {
             gpsReceiver = new BroadcastReceiver() {
@@ -1635,6 +1630,8 @@ public class MobilityCommonBridge extends HyperBridge {
                     boolean isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
                     if (!isGpsEnabled) {
                         invokeOnEvent(bridgeComponents.getJsCallback(), "onLocationChanged");
+                    } else {
+                        callLocationCallBack(bridgeComponents.getJsCallback(),"true");
                     }
                 }
             };
@@ -1669,6 +1666,14 @@ public class MobilityCommonBridge extends HyperBridge {
             if (storeInternetActionCallBack != null) {
                 String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
                         storeInternetActionCallBack, isPermission);
+                callback.addJsToWebView(javascript);
+            }
+        }
+
+        public void callLocationCallBack(JsCallback callback, String isPermission) {
+            if (storeLocationCallBack != null) {
+                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                        storeLocationCallBack, isPermission);
                 callback.addJsToWebView(javascript);
             }
         }

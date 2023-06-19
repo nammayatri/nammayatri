@@ -163,7 +163,9 @@ genericHeaderConfig state = let
     {
       height = WRAP_CONTENT
     , prefixImageConfig {
-       visibility = VISIBLE
+        height = V 25
+      , width = V 25
+      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
       } 
     , padding = (Padding 0 5 0 5)
     , textConfig {

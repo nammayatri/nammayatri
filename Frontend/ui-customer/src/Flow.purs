@@ -1380,6 +1380,8 @@ emergencyScreenFlow = do
 
 aboutUsScreenFlow :: FlowBT String Unit
 aboutUsScreenFlow = do
+  config <- getAppConfig
+  modifyScreenState $ AboutUsScreenStateType (\aboutUsScreen -> aboutUsScreen {appConfig = config})
   flow <- UI.aboutUsScreen
   case flow of
     GO_TO_HOME_FROM_ABOUT -> homeScreenFlow

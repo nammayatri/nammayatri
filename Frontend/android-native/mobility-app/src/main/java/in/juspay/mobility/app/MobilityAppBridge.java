@@ -56,11 +56,6 @@ public class MobilityAppBridge extends HyperBridge {
         }
 
         @Override
-        public void internetCallBack(String isPermission) {
-            Log.i(CALLBACK, "Not required");
-        }
-
-        @Override
         public void chatCallBack(String message, String sentBy, String dateFormatted, String len) {
             callChatMessageCallBack(message, sentBy, dateFormatted, len);
         }
