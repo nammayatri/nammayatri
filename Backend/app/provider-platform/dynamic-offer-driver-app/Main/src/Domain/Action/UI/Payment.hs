@@ -52,7 +52,7 @@ createOrder ::
   Flow Payment.CreateOrderResp
 createOrder (personId, merchantId) orderId = do
   person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
-  customerEmail <- person.email & fromMaybeM (PersonFieldNotPresent "email")
+  let customerEmail = fromMaybe "test@juspay.in" person.email
   customerPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   shortId <- generateShortId
   let createOrderReq =

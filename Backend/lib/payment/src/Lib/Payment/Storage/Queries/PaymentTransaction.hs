@@ -16,7 +16,9 @@ module Lib.Payment.Storage.Queries.PaymentTransaction where
 
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
 import Kernel.Utils.Common (getCurrentTime)
+import Lib.Payment.Domain.Types.PaymentOrder (PaymentOrder)
 import Lib.Payment.Domain.Types.PaymentTransaction as DTransaction
 import Lib.Payment.Storage.Tabular.PaymentTransaction
 
@@ -47,5 +49,16 @@ findByTxnUUID :: Transactionable m => Text -> m (Maybe PaymentTransaction)
 findByTxnUUID txnUUID =
   findOne $ do
     transaction <- from $ table @PaymentTransactionT
-    where_ $ transaction ^. PaymentTransactionTxnUUID ==. val txnUUID
+    where_ $ transaction ^. PaymentTransactionTxnUUID ==. val (Just txnUUID)
+    return transaction
+
+findNewTransactionByOrderId :: Transactionable m => Id PaymentOrder -> m (Maybe PaymentTransaction)
+findNewTransactionByOrderId orderId =
+  findOne $ do
+    transaction <- from $ table @PaymentTransactionT
+    where_ $
+      Esq.isNothing (transaction ^. PaymentTransactionTxnUUID)
+        &&. transaction ^. PaymentTransactionOrderId ==. val (toKey orderId)
+    orderBy [desc $ transaction ^. PaymentTransactionCreatedAt]
+    limit 1
     return transaction
