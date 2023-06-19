@@ -39,7 +39,8 @@ buildRatingReq DFeedback.FeedbackRes {..} = do
             feedback_form =
               Rating.FeedbackForm
                 { question = "Evaluate your ride experience.",
-                  answer = feedbackDetails
+                  answer = feedbackDetails,
+                  details = feedbackChips
                 }
           }
   pure $ BecknReq context message

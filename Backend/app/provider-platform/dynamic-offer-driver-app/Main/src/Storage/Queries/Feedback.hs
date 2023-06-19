@@ -12,18 +12,24 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Rating.FeedbackForm where
+module Storage.Queries.Feedback where
 
-import Data.OpenApi
-import EulerHS.Prelude hiding (id)
-import Kernel.Utils.Schema
+import Domain.Types.Feedback (Feedback)
+import Domain.Types.Person (Person)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import Storage.Tabular.Feedback
 
-data FeedbackForm = FeedbackForm
-  { question :: Text,
-    answer :: Maybe Text,
-    details :: Maybe [String]
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
+create :: Feedback -> SqlDB ()
+create = Esq.create
 
-instance ToSchema FeedbackForm where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+updateFeedback :: Id Feedback -> Id Person -> Text -> SqlDB ()
+updateFeedback feedbackId driverId newBadge = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [FeedbackBadge =. val newBadge]
+    where_ $
+      tbl ^. FeedbackTId ==. val (toKey feedbackId)
+        &&. tbl ^. FeedbackDriverId ==. val (toKey driverId)

@@ -14,7 +14,9 @@
 
 module Domain.Action.Beckn.Rating where
 
+import qualified Data.Text as DT
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.Feedback as DFeedback
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
@@ -26,6 +28,7 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.Feedback as QFeedback
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as QRide
@@ -34,8 +37,10 @@ import Tools.Error
 data DRatingReq = DRatingReq
   { bookingId :: Id DBooking.Booking,
     ratingValue :: Int,
-    feedbackDetails :: Maybe Text
+    feedbackDetails :: Maybe Text,
+    feedbackChips :: Maybe [String]
   }
+  deriving (Show)
 
 handler :: DRatingReq -> DRide.Ride -> Flow ()
 handler req ride = do
@@ -43,6 +48,7 @@ handler req ride = do
   let driverId = ride.driverId
   let ratingValue = req.ratingValue
       feedbackDetails = req.feedbackDetails
+      feedbackChips = req.feedbackChips
   case rating of
     Nothing -> do
       logTagInfo "FeedbackAPI" $
@@ -54,7 +60,19 @@ handler req ride = do
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
       Esq.runTransaction $ do
         QRating.updateRating rideRating.id driverId ratingValue feedbackDetails
+  addFeedbackToTable feedbackChips ride.id driverId
   calculateAverageRating driverId
+
+addFeedbackToTable :: Maybe [String] -> Id DRide.Ride -> Id DP.Person -> Flow ()
+addFeedbackToTable feedbackChipsList rideId driverId = do
+  case feedbackChipsList of
+    Just feedbackChip -> do
+      traverse_ saveFeedback feedbackChip
+    Nothing -> return ()
+  where
+    saveFeedback feedbackItem = do
+      newFeedback <- buildFeedback rideId driverId (DT.pack feedbackItem)
+      Esq.runTransaction $ QFeedback.create newFeedback
 
 calculateAverageRating ::
   (EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["minimumDriverRatesCount" ::: Int]) =>
@@ -80,6 +98,11 @@ buildRating rideId driverId ratingValue feedbackDetails = do
   let createdAt = now
   let updatedAt = now
   pure $ DRating.Rating {..}
+
+buildFeedback :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Text -> m DFeedback.Feedback
+buildFeedback rideId driverId badge = do
+  id <- Id <$> L.generateGUID
+  pure $ DFeedback.Feedback {..}
 
 validateRequest :: DRatingReq -> Flow DRide.Ride
 validateRequest req = do

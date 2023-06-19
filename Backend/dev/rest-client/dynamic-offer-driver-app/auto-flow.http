@@ -352,5 +352,6 @@ content-type: application/json
 {
   "rideId": "{{bapRideId}}",
   "rating" : 5,
-  "feedbackDetails": "The ride was good"
+  "feedbackDetails": "The ride was good",
+  "feedbackChips": ["Clean auto", "On time"]
 }

@@ -12,18 +12,17 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Rating.FeedbackForm where
+module Domain.Types.Feedback where
 
-import Data.OpenApi
-import EulerHS.Prelude hiding (id)
-import Kernel.Utils.Schema
+import Domain.Types.Person (Person)
+import Domain.Types.Ride (Ride)
+import Kernel.Prelude
+import Kernel.Types.Id
 
-data FeedbackForm = FeedbackForm
-  { question :: Text,
-    answer :: Maybe Text,
-    details :: Maybe [String]
+data Feedback = Feedback
+  { id :: Id Feedback,
+    rideId :: Id Ride,
+    driverId :: Id Person,
+    badge :: Text
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema FeedbackForm where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+  deriving (Generic, Show, Eq)
