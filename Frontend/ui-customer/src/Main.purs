@@ -20,22 +20,24 @@ import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Either (Either(..))
+import Data.Function.Uncurried (runFn2)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Effect (Effect)
-import Effect.Aff (launchAff)
+import Effect.Aff (killFiber, launchAff, launchAff_)
 import Effect.Class (liftEffect)
+import Effect.Exception (error)
 import Effect.Ref (new)
-import Engineering.Helpers.Commons (flowRunner, liftFlow, getWindowVariable)
+import Engineering.Helpers.Commons (flowRunner, getWindowVariable, liftFlow)
 import Flow as Flow
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Generic (decode)
-import JBridge (toggleBtnLoader)
+import JBridge as JBridge
 import Log (printLog)
-import Prelude (Unit, bind, pure, show, unit, ($), (<$>), (<<<))
+import ModifyScreenState (modifyScreenState)
+import Prelude (Unit, bind, pure, show, unit, ($), (<$>), (<<<), discard)
 import Presto.Core.Types.Language.Flow (throwErr)
 import PrestoDOM.Core (processEvent) as PrestoDom
-import Types.App (defaultGlobalState,FlowBT, ScreenType(..))
-import ModifyScreenState (modifyScreenState)
+import Types.App (defaultGlobalState, FlowBT, ScreenType(..))
 
 main :: Event -> Effect Unit
 main event = do
@@ -43,16 +45,16 @@ main event = do
   payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
   case payload of
     Right payload'  -> do
-       _ <- launchAff $ flowRunner defaultGlobalState $ do
-          -- _ <- pure $ JBridge._addCertificates (Config.getFingerPrint "")
+       mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
           _ <- runExceptT $ runBackT $ updateEventData event
-          resp ← runExceptT $ runBackT $ Flow.baseAppFlow payload'
+          resp ← runExceptT $ runBackT $ Flow.baseAppFlow payload' false
           case resp of
                 Right x → pure unit
                 Left err → do
                   _ <- pure $ printLog "printLog error in main is : " err
                   _ <- liftFlow $ main event
                   pure unit
+       JBridge.storeMainFiberOb mainFiber
        pure unit
     Left e -> do
         _ <- launchAff $ flowRunner defaultGlobalState $ do
@@ -61,7 +63,7 @@ main event = do
 
 onEvent :: String -> Effect Unit
 onEvent "onBackPressed" = do
-  _ <- pure $ toggleBtnLoader "" false
+  _ <- pure $ JBridge.toggleBtnLoader "" false
   PrestoDom.processEvent "onBackPressedEvent" unit
 onEvent _ = pure unit
 
@@ -71,10 +73,17 @@ onConnectivityEvent triggertype = do
   payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
   case payload of
     Right payload'  -> do
-        _ <- launchAff $ flowRunner defaultGlobalState $ do
-          -- _ <- pure $ JBridge._addCertificates (Config.getFingerPrint "")
-          _ ← runExceptT $ runBackT $ Flow.permissionScreenFlow triggertype
+        mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
+          _  <- case (runFn2 JBridge.getMainFiber Just Nothing) of
+            Nothing -> pure unit
+            Just fiber -> liftFlow $ launchAff_ $ killFiber (error "error in killing fiber") fiber
+          _ ← runExceptT $ runBackT $ case triggertype of 
+              "LOCATION_DISABLED" -> Flow.permissionScreenFlow triggertype
+              "INTERNET_ACTION" -> Flow.permissionScreenFlow triggertype
+              "REFRESH" -> Flow.baseAppFlow payload' true
+              _ -> Flow.baseAppFlow payload' true
           pure unit
+        JBridge.storeMainFiberOb mainFiber
         pure unit
     Left e -> do
         _ <- launchAff $ flowRunner defaultGlobalState $ do

@@ -1,6 +1,7 @@
 import { callbackMapper } from 'presto-ui';
 const btnLoaderState = new Map();
 const { JBridge } = window;
+var mainFiber = null;
 
 // exports._keyStoreEntryPresent = function(alias) {
 //   return function() {
@@ -1330,6 +1331,20 @@ export const toggleBtnLoader = function(id){
 export const getBtnLoader = function(val){
     return (btnLoaderState.get(val) == true)? true : false;
 };
+
+export const storeMainFiberOb = function(fiber){
+  mainFiber = fiber;
+};
+
+export const getMainFiber = function (just, nothing) {
+  if (mainFiber == null) {
+    return nothing;
+  } else {
+    var localFiber = mainFiber;
+    mainFiber = null;
+    return just(localFiber);
+  }
+}
 
 export const launchInAppRatingPopup = function (unit) {
   if (JBridge.launchInAppRatingPopup) {

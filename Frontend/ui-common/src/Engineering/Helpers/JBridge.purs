@@ -19,9 +19,10 @@ module JBridge where
 import Prelude
 
 import Effect (Effect)
--- import Effect.Aff (makeAff, nonCanceler)
+import Effect.Aff (Fiber)
 import Presto.Core.Flow (Flow)
 import Engineering.Helpers.Commons (liftFlow)
+import Data.Maybe (Maybe(..))
 -- import Common.Types.App (Place)
 -- import Types.APIv2 (Address)
 -- import Foreign (Foreign)
@@ -36,6 +37,7 @@ import Data.Either (Either(..))
 import Engineering.Helpers.Commons (screenHeight, screenWidth)
 import Helpers.Utils (parseFloat)
 import Data.Int (toNumber)
+import Data.Function.Uncurried (Fn2(..))
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
 -- -- foreign import _createKeyStoreEntry :: String -> String -> (Effect Unit) -> (String -> Effect Unit) -> Effect Unit
@@ -182,6 +184,8 @@ foreign import generateSessionId :: Unit -> String
 
 foreign import initialWebViewSetUp :: forall action. (action -> Effect Unit) -> String -> (String -> action) -> Effect Unit
 foreign import goBackPrevWebPage ::  String -> Effect Unit
+foreign import storeMainFiberOb :: forall a. Fiber a -> Effect Unit
+foreign import getMainFiber :: forall f a. Fn2 (f -> Maybe f) (Maybe f) (Maybe (Fiber a))
 
 -- -- keyStoreEntryPresent :: String -> Flow Boolean
 -- -- keyStoreEntryPresent = liftFlow <<< _keyStoreEntryPresent
