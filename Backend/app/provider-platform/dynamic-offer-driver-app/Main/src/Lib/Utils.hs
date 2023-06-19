@@ -159,7 +159,7 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Text]
 instance FromBackendRow Postgres [Text]
 
 instance FromField [Text] where
-  fromField f mbValue = V.toList <$> (fromField f mbValue)
+  fromField f mbValue = V.toList <$> fromField f mbValue
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be FareProductD.Area where
   sqlValueSyntax = autoSqlValueSyntax
@@ -169,7 +169,7 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be FareProductD.Area
 instance FromBackendRow Postgres FareProductD.Area
 
 instance FromField FareProductD.Area where
-  fromField = fromFieldJSON
+  fromField = fromFieldEnum
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centi
 

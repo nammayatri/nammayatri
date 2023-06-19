@@ -19,6 +19,7 @@ module Storage.Queries.Merchant.DriverPoolConfig
     #-}
 where
 
+import qualified Debug.Trace as T
 import Domain.Types.Merchant
 import Domain.Types.Merchant.DriverPoolConfig
 import qualified EulerHS.KVConnector.Flow as KV
@@ -32,9 +33,6 @@ import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.DriverPoolConfig as BeamDPC
 
--- create :: DriverPoolConfig -> SqlDB ()
--- create = Esq.create
-
 create :: L.MonadFlow m => DriverPoolConfig -> m (MeshResult ())
 create driverPoolConfig = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -44,31 +42,14 @@ create driverPoolConfig = do
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainDriverPoolConfigToBeam driverPoolConfig)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
--- findAllByMerchantId :: Transactionable m => Id Merchant -> m [DriverPoolConfig]
--- findAllByMerchantId merchantId =
---   Esq.findAll $ do
---     driverPoolConfig <- from $ table @DriverPoolConfigT
---     where_ $
---       driverPoolConfig ^. DriverPoolConfigMerchantId ==. val (toKey merchantId)
---     orderBy [desc $ driverPoolConfig ^. DriverPoolConfigTripDistance]
---     return driverPoolConfig
-
 findAllByMerchantId :: L.MonadFlow m => Id Merchant -> m [DriverPoolConfig]
 findAllByMerchantId (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamDPC.DriverPoolConfigT
   let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamDriverPoolConfigToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDPC.merchantId $ Se.Eq merchantId]
-    Nothing -> pure []
-
--- findByMerchantIdAndTripDistance :: Transactionable m => Id Merchant -> Meters -> m (Maybe DriverPoolConfig)
--- findByMerchantIdAndTripDistance merchantId tripDistance =
---   Esq.findOne $ do
---     driverPoolConfig <- from $ table @DriverPoolConfigT
---     where_ $
---       driverPoolConfig ^. DriverPoolConfigTId ==. val (toKey (merchantId, tripDistance))
---     return driverPoolConfig
+    Just dbCOnf' -> T.trace ("[Apoorv]DBConf-----" <> show merchantId) $ either (pure []) (transformBeamDriverPoolConfigToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDPC.merchantId $ Se.Eq merchantId]
+    Nothing -> T.trace ("[Apoorv]Nothing-----" <> show merchantId) $ pure []
 
 findByMerchantIdAndTripDistance :: L.MonadFlow m => Id Merchant -> Meters -> m (Maybe DriverPoolConfig)
 findByMerchantIdAndTripDistance (Id merchantId) tripDistance = do
@@ -78,29 +59,6 @@ findByMerchantIdAndTripDistance (Id merchantId) tripDistance = do
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamDriverPoolConfigToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamDPC.merchantId $ Se.Eq merchantId, Se.Is BeamDPC.tripDistance $ Se.Eq tripDistance]]
     Nothing -> pure Nothing
-
--- update :: DriverPoolConfig -> SqlDB ()
--- update config = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ DriverPoolConfigMinRadiusOfSearch =. val config.minRadiusOfSearch,
---         DriverPoolConfigMaxRadiusOfSearch =. val config.maxRadiusOfSearch,
---         DriverPoolConfigRadiusStepSize =. val config.radiusStepSize,
---         DriverPoolConfigDriverPositionInfoExpiry =. val config.driverPositionInfoExpiry,
---         DriverPoolConfigActualDistanceThreshold =. val config.actualDistanceThreshold,
---         DriverPoolConfigMaxDriverQuotesRequired =. val config.maxDriverQuotesRequired,
---         DriverPoolConfigDriverQuoteLimit =. val config.driverQuoteLimit,
---         DriverPoolConfigDriverRequestCountLimit =. val config.driverRequestCountLimit,
---         DriverPoolConfigDriverBatchSize =. val config.driverBatchSize,
---         DriverPoolConfigMaxNumberOfBatches =. val config.maxNumberOfBatches,
---         DriverPoolConfigMaxParallelSearchRequests =. val config.maxParallelSearchRequests,
---         DriverPoolConfigPoolSortingType =. val config.poolSortingType,
---         DriverPoolConfigSingleBatchProcessTime =. val config.singleBatchProcessTime,
---         DriverPoolConfigUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. DriverPoolConfigTId ==. val (toKey (config.merchantId, config.tripDistance))
 
 update :: (L.MonadFlow m, MonadTime m) => DriverPoolConfig -> m (MeshResult ())
 update config = do
