@@ -205,9 +205,9 @@ eval (APIFailureActionController (ErrorModal.PrimaryButtonActionController Prima
 
 eval (NoRidesActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit GoHome
 
-eval (EmailEditTextAC (PrimaryEditText.TextChanged id a)) state = continue state{data {email = trim(a)},props{btnActive = length (trim(a)) > 0  && length state.data.description > 2 && validateEmail a}}
+eval (EmailEditTextAC (PrimaryEditText.TextChanged id a)) state = continue state{data {email = trim(a)},props{btnActive = length (trim a) > 0  && length (trim state.data.description) > 9 && validateEmail a}}
 
-eval (DescriptionEditTextAC (PrimaryEditText.TextChanged id a)) state = continue state{data {description = a},props{btnActive = length state.data.email > 0 && length (trim(a)) > 2 && validateEmail state.data.email}}
+eval (DescriptionEditTextAC (PrimaryEditText.TextChanged id a)) state = continue state{data {description = a},props{btnActive = length state.data.email > 0 && length (trim a) > 9 && validateEmail state.data.email}}
 
 eval DeleteAccount state = continue state {props {showDeleteAccountView = true}}
 

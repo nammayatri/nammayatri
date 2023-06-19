@@ -798,6 +798,7 @@ homeScreenFlow = do
       _ <- pure $ deleteValueFromLocalStore CUSTOMER_ID
       _ <- pure $ deleteValueFromLocalStore LANGUAGE_KEY
       _ <- pure $ deleteValueFromLocalStore CONTACTS
+      _ <- pure $ deleteValueFromLocalStore USER_EMAIL
       _ <- pure $ factoryResetApp ""
       _ <- pure $ firebaseLogEvent "ny_user_logout"
       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)

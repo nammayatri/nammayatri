@@ -35,7 +35,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, map, pure, unit, ($), (-), (/=), (<<<), (<=), (<>), (==), (||))
 import Presto.Core.Types.Language.Flow (Flow, doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Shadow(..), Visibility(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, shadow, stroke, text, textSize, textView, visibility, width, imageWithFallback, weight, layoutGravity, clickable, alignParentBottom, scrollView)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Shadow(..), Visibility(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, shadow, stroke, text, textSize, textView, visibility, width, imageWithFallback, weight, layoutGravity, clickable, alignParentBottom, scrollView, adjustViewWithKeyboard)
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.HelpAndSupportScreen.Controller (Action(..), ScreenOutput, eval)
@@ -328,7 +328,7 @@ deleteAccountView state push=
   , width MATCH_PARENT
   , orientation VERTICAL
   , visibility if state.props.showDeleteAccountView then VISIBLE else GONE
-  , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
+  , padding $ PaddingTop EHC.safeMarginTop
   , background Color.white900
   , clickable true
   ][
@@ -349,10 +349,12 @@ deleteAccountView state push=
   , relativeLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
+    , adjustViewWithKeyboard "true"
     ][  editTextView state push
       , linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
+        , background Color.white900
         , alignParentBottom "true,-1"
         , weight 1.0 
         ][PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfigSubmitRequest state)]
