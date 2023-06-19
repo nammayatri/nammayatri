@@ -22,7 +22,7 @@ import JBridge (firebaseLogEvent, goBackPrevWebPage)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
-import Prelude (class Show, pure, unit, ($), discard, bind)
+import Prelude (class Show, pure, unit, ($), discard, bind, (==))
 import PrestoDOM (Eval, continue, exit, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -34,6 +34,7 @@ import Services.Backend (dummyVehicleObject)
 import Storage (setValueToLocalNativeStore, KeyStore(..))
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(LIVE_STATS_DASHBOARD))
+import Components.GenericHeader.Controller as GenericHeaderController
 
 instance showAction :: Show Action where
   show _ = ""
@@ -89,7 +90,9 @@ data Action = BackPressed Boolean
             | AfterRender
             | HideLiveDashboard String
             | ChangeScreen DriverProfileScreenType
+            | GenericHeaderAC GenericHeaderController.Action
             | UpdateValue String
+            | OpenSettings 
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 
@@ -101,6 +104,7 @@ eval (BackPressed flag) state = if state.props.logoutModalView then continue $ s
                                   _ <- pure $ goBackPrevWebPage (getNewIDWithTag "webview")
                                   pure NoAction
                                 ]
+                                else if state.props.screenType == SETTINGS then continue state{props{screenType = AUTO_DETAILS}}
                                 else exit GoBack
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do 
@@ -153,6 +157,10 @@ eval (GetDriverInfoResponse (GetDriverInfoResp driverProfileResp)) state = do
 
 
 eval (ChangeScreen screenType) state = continue state{props{ screenType = screenType }}
+
+eval OpenSettings state = continue state{props{screenType = SETTINGS}}
+
+eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = continue state{ props { screenType = AUTO_DETAILS }}
 
 eval _ state = continue state
 

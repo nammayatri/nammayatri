@@ -264,10 +264,11 @@ type VehicleP = {
 type DriverProfileScreenProps = {
   logoutModalView :: Boolean,
   showLiveDashboard :: Boolean,
-  screenType :: DriverProfileScreenType
+  screenType :: DriverProfileScreenType,
+  openSettings :: Boolean
 }
 
-data DriverProfileScreenType = DRIVER_DETAILS | AUTO_DETAILS
+data DriverProfileScreenType = DRIVER_DETAILS | AUTO_DETAILS | SETTINGS
 
 derive instance genericDriverProfileScreenType :: Generic DriverProfileScreenType _
 instance showDriverProfileScreenType :: Show DriverProfileScreenType where show = genericShow

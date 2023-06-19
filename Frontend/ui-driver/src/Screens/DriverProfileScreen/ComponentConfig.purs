@@ -16,10 +16,15 @@
 module Screens.DriverProfileScreen.ComponentConfig where
 
 import Components.PopUpModal as PopUpModal
+import Components.GenericHeader as GenericHeader
 import Language.Strings
 import Language.Types (STR(..))
 import PrestoDOM
 import Screens.Types as ST
+import Font.Size as FontSize
+import Font.Style as FontStyle
+import Styles.Colors as Color
+import Common.Types.App (LazyCheck(..))
 
 logoutPopUp :: ST.DriverProfileScreenState -> PopUpModal.Config
 logoutPopUp  state = let 
@@ -31,3 +36,29 @@ logoutPopUp  state = let
     option2 {text = (getString LOGOUT)}
   }
   in popUpConfig'
+
+genericHeaderConfig :: ST.DriverProfileScreenState -> GenericHeader.Config 
+genericHeaderConfig state = let 
+  config = GenericHeader.config
+  genericHeaderConfig' = config 
+    {
+      height = WRAP_CONTENT
+    , prefixImageConfig {
+       visibility = VISIBLE
+      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+      , height = (V 25)
+      , width = (V 25)
+      , margin = (Margin 12 12 12 12)
+      } 
+    , padding = (Padding 0 5 0 5)
+    , textConfig {
+        text = "Settings"
+      , textSize = FontSize.a_18
+      , color = Color.darkDescriptionText
+      , fontStyle = FontStyle.bold LanguageStyle
+      }
+    , suffixImageConfig {
+        visibility = GONE
+      }
+    }
+  in genericHeaderConfig'
