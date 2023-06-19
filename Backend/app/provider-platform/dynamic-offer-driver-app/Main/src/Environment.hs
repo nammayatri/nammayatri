@@ -99,7 +99,9 @@ data AppCfg = AppCfg
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
     maxShards :: Int,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    enableAPILatencyLogging :: Bool,
+    enableAPIPrometheusMetricLogging :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -161,7 +163,9 @@ data AppEnv = AppEnv
     maxShards :: Int,
     version :: Metrics.DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    enableAPILatencyLogging :: Bool,
+    enableAPIPrometheusMetricLogging :: Bool
   }
   deriving (Generic)
 
