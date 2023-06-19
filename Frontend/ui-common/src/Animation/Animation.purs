@@ -135,30 +135,30 @@ scaleYAnim config =
 --     , PrestoAnim.interpolator interpolator
 --     ] config.ifAnim
 
-scaleAnim :: AnimConfig -> PrestoAnim.Animation
-scaleAnim config =
+scaleAndTransitionAnim :: AnimConfig -> PrestoAnim.Animation
+scaleAndTransitionAnim config =
    PrestoAnim.Animation
-    [ PrestoAnim.duration 400
+    [ PrestoAnim.duration config.duration
     , PrestoAnim.fromScaleY config.fromScaleY
     , PrestoAnim.toScaleY config.toScaleY
     , PrestoAnim.fromScaleX config.fromScaleX
     , PrestoAnim.toScaleX config.toScaleX
     , PrestoAnim.interpolator interpolator
-    , PrestoAnim.fromX (-46)
-    , PrestoAnim.toX (46)
+    , PrestoAnim.fromX config.fromX --(-46)
+    , PrestoAnim.toX config.fromY --(46)
     ] config.ifAnim
 
 scaleAnim1 :: AnimConfig -> PrestoAnim.Animation
 scaleAnim1 config =
    PrestoAnim.Animation
-    [ PrestoAnim.duration 400
+    [ PrestoAnim.duration config.duration
     , PrestoAnim.fromScaleY config.toScaleY
     , PrestoAnim.toScaleY config.fromScaleY
     , PrestoAnim.fromScaleX config.toScaleX
     , PrestoAnim.toScaleX config.fromScaleX
     , PrestoAnim.interpolator interpolator
-    , PrestoAnim.fromX (46)
-    , PrestoAnim.toX (-46)
+    , PrestoAnim.fromX config.fromX --(46) 
+    , PrestoAnim.toX config.fromY --(-46) 
     ] config.ifAnim
 rotateAnim :: AnimConfig -> PrestoAnim.Animation
 rotateAnim config =
