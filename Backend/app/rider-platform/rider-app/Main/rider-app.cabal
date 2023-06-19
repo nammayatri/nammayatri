@@ -192,6 +192,7 @@ library
       SharedLogic.PublicTransport
       Storage.Beam.BlackListOrg
       Storage.Beam.Booking
+      Storage.Beam.BookingCancellationReason
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.Exophone
