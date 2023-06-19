@@ -55,6 +55,7 @@ mkPersist
       originRestriction GeoRestriction
       destinationRestriction GeoRestriction
       info Text Maybe
+      aadhaarVerificationRequired Bool
       Primary id
       UniqueMerchantSubscriberId subscriberId
       UniqueMerchantShortId shortId

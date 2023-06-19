@@ -67,6 +67,7 @@ data DriverInformationE e = DriverInformation
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
     mode :: Maybe DriverMode,
+    aadhaarVerified :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

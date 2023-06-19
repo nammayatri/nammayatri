@@ -50,6 +50,11 @@ updateEnabledState driverId isEnabled = do
   clearDriverInfoCache driverId
   Queries.updateEnabledState driverId isEnabled
 
+updateAadhaarVerifiedState :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Bool -> m ()
+updateAadhaarVerifiedState driverId isVerified = do
+  clearDriverInfoCache driverId
+  Esq.runNoTransaction $ Queries.updateAadhaarVerifiedState driverId isVerified
+
 updateEnabledVerifiedState :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> Bool -> m (MeshResult ())
 updateEnabledVerifiedState driverId isEnabled isVerified = do
   clearDriverInfoCache driverId

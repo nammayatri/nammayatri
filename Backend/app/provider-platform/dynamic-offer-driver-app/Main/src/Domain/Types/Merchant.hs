@@ -58,6 +58,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     enabled :: Bool,
     internalApiKey :: Text,
     geoHashPrecisionValue :: Int,
+    aadhaarVerificationRequired :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     geofencingConfig :: GeofencingConfig,
@@ -77,7 +78,8 @@ data MerchantAPIEntity = MerchantAPIEntity
     description :: Maybe Text,
     contactNumber :: Text,
     status :: Status,
-    enabled :: Bool
+    enabled :: Bool,
+    aadhaarVerificationRequired :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
