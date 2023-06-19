@@ -148,13 +148,13 @@ getFeedbackPillData rating = if rating < 3 then feedbackPillDataWithLowRating
 checkPillSelected :: String -> Array String -> Boolean
 checkPillSelected feedbackItem feedbackList = (any (_ == feedbackItem) feedbackList)
 feedbackPillDataWithLowRating :: Array (Array String) 
-feedbackPillDataWithLowRating  = [["Rude Driver", "Felt Unsafe", "Too Many Calls"], ["Reckless Driving", "Driver charged more"], ["Late Drop Off", "Late Pick Up"]]
+feedbackPillDataWithLowRating  = [[(getString RUDE_DRIVER), (getString FELT_UNSAFE), (getString TOO_MANY_CALLS)], [(getString RECKLESS_DRIVING), (getString DRIVER_CHARGED_MORE)], [(getString LATE_DROP_OFF), (getString LATE_PICK_UP)]]
 
 feedbackPillDataWithMediumRating :: Array (Array String) 
-feedbackPillDataWithMediumRating  = [["Unprofessional Driver", "Rash Driving"], ["Driver charged more", "Uncomfortable Auto"], ["Trip Got Delayed", "Felt Unsafe"]]
+feedbackPillDataWithMediumRating  = [[(getString UNPROFESSIONAL_DRIVER), (getString RASH_DRIVING)], [(getString DRIVER_CHARGED_MORE), (getString UNCOMFORTABLE_AUTO)], [(getString TRIP_GOT_DELAYED), (getString FELT_UNSAFE)]]
 
 feedbackPillDataWithHighRating :: Array (Array String) 
-feedbackPillDataWithHighRating  = [["Polite Driver", "Expert Driving", "Safe Ride"], ["Clean Auto", "On Time"], ["Skilled Navigator"]]
+feedbackPillDataWithHighRating  = [[(getString POLITE_DRIVER), (getString EXPERT_DRIVING), (getString SAFE_RIDE)], [(getString CLEAN_AUTO), (getString ON_TIME)], [getString SKILLED_NAVIGATOR]]
 --------------------------------------------------------------------------------------------------------------------
 
 --------------------------------------------------- editTextView ---------------------------------------------------
