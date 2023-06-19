@@ -140,4 +140,6 @@ in  { esqDBCfg
     , maxShards = +5
     , enableRedisLatencyLogging = False
     , enablePrometheusMetricLogging = True
+    , enableAPILatencyLogging = True
+    , enableAPIPrometheusMetricLogging = True
     }
