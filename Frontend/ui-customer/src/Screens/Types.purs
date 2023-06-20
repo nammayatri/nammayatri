@@ -15,7 +15,7 @@
 
 module Screens.Types where
 
-import Common.Types.App (CancellationReasons)
+import Common.Types.App (OptionButtonList)
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState)
@@ -497,7 +497,6 @@ type HomeScreenStateData =
   , messagesSize :: String
   , suggestionsList :: Array String
   , messageToBeSent :: String
-  , bannerViewState :: BannerViewState
   , nearByPickUpPoints :: Array Location
   , polygonCoordinates :: String
   , specialZoneQuoteList :: Array ChooseVehicle.Config
@@ -526,7 +525,7 @@ type HomeScreenStateProps =
   , customerTip :: CustomerTipProps
   , expiredQuotes :: Array String
   , isCancelRide :: Boolean
-  , cancellationReasons :: Array CancellationReasons
+  , cancellationReasons :: Array OptionButtonList
   , cancelRideActiveIndex :: Maybe Int
   , cancelDescription :: String
   , cancelReasonCode :: String
@@ -565,7 +564,7 @@ type HomeScreenStateProps =
   , openChatScreen :: Boolean
   , emergencyHelpModelState :: EmergencyHelpModelState
   , showLiveDashboard :: Boolean
-  , isbanner :: Boolean
+  , isBanner :: Boolean
   , callSupportPopUp :: Boolean
   , defaultPickUpPoint :: String
   , isSpecialZone :: Boolean

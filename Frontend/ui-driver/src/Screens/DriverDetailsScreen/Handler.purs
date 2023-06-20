@@ -39,3 +39,4 @@ driverDetailsScreen = do
     ResendAlternateNumberOTP updatedState -> App.BackT $ App.BackPoint <$> pure (RESEND_ALTERNATE_OTP updatedState)
     RemoveAlternateNumber    updatedState -> App.BackT $ App.NoBack <$> pure (ALTERNATE_NUMBER_REMOVE updatedState)
     GoToHomeScreen           updatedState -> App.BackT $ App.NoBack <$> pure (GO_TO_HOMESCREEN updatedState)
+    UpdateGender             updatedState -> App.BackT $ App.NoBack <$> pure (DRIVER_GENDER updatedState)

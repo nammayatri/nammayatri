@@ -42,7 +42,7 @@ initData = {
     vehicleModelName : "",
     vehicleColor : "",
     driverAlternateNumber : Nothing,
-
+    driverGender : Nothing,
     capacity : 0,
     vehicleSelected: [],
     downgradeOptions : []
