@@ -468,5 +468,15 @@ const mlStrings = {
   COMPLAINTS_DESCRIPTION : "എന്തെങ്കിലും പരാതികൾ ഉണ്ടെങ്കിൽ, <u>nammayatri.support@juspay.in</u> എന്ന വിലാസത്തിൽ ഞങ്ങളെ ബന്ധപ്പെടുക;",
   COMPLAINTS_DESCRIPTION_ADDITIONAL : "പരാതികൾ പരിഹരിക്കുന്നതിന്, ഞങ്ങളുടെ <u>സ്വകാര്യതാ നയം</u> പരിശോധിക്കുക",
   REGISTERED_ADDRESS : "രേഖപ്പെടുത്തിയ വിലാസം",
-  REGISTERED_ADDRESS_DESCRIPTION : "Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala, Bengaluru, Karnataka- 560095, India"
+  "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "സ്റ്റാലിയൻ ബിസിനസ് സെന്റർ, നമ്പർ 444, 3rd & 4th നിലകൾ, 18th മെയിൻ, 6th ബ്ലോക്ക്, കോറമംഗല, ബെംഗളൂരു, കർണാടക- 560095, ഇന്ത്യ",
+  SELECT_YOUR_GENDER : "നിങ്ങളുടെ ലിംഗഭേദം തിരഞ്ഞെടുക്കുക",
+  FEMALE : "സ്ത്രീ",
+  MALE : "പുരുഷൻ",
+  PREFER_NOT_TO_SAY : "പറയാൻ ആഗ്രഹിക്കുന്നില്ല",
+  GENDER : "ലിംഗഭേദം",
+  SET_NOW : "ഇപ്പോൾ സജ്ജമാക്കുക",
+  COMPLETE_YOUR_PROFILE_AND_FIND_MORE_RIDES : "നിങ്ങളുടെ പ്രൊഫൈൽ പൂർത്തിയാക്കി കൂടുതൽ റൈഡുകൾ കണ്ടെത്തൂ!",
+  UPDATE_NOW : "ഇപ്പോൾ തന്നെ നവീകരിക്കുക",
+  CONFIRM : "സ്ഥിരീകരിക്കുക",
+  GENDER_UPDATED : "ലിംഗഭേദം അപ്ഡേറ്റ് ചെയ്തു"
 }

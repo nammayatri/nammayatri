@@ -43,6 +43,7 @@ homeScreen = do
       modifyScreenState $ HomeScreenStateType (\homeScreen → updatedState)
       App.BackT $ App.BackPoint <$> pure GO_TO_PROFILE_SCREEN
     GoToHelpAndSupportScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_HELP_AND_SUPPORT_SCREEN
+    GotoEditGenderScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_EDIT_GENDER_SCREEN
     GoToRidesScreen updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen → updatedState)
       App.BackT $ App.BackPoint <$> pure GO_TO_RIDES_SCREEN
@@ -67,7 +68,7 @@ homeScreen = do
       _ <- pure $ printLog "lon handler" endRideCurrentLong
       modifyScreenState $ HomeScreenStateType (\homeScreen → updatedState)
       App.BackT $ App.NoBack <$> (pure $ GO_TO_END_RIDE {id : updatedState.data.activeRide.id, lat : endRideCurrentLat, lon : endRideCurrentLong})
-    CancelRide state -> do
+    SelectListModal state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen → state)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_CANCEL_RIDE {id : state.data.activeRide.id , info : state.data.cancelRideModal.selectedReasonDescription, reason : state.data.cancelRideModal.selectedReasonCode})
     Refresh state -> do

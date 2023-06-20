@@ -13,14 +13,14 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Components.CancelRide.View where
+module Components.SelectListModal.View where
 
 import Prelude
 import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Length(..), PrestoDOM, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, text, textSize, textView, weight, width, padding, visibility, frameLayout, stroke, scrollView, afterRender, editText, onClick, id, onChange, pattern, relativeLayout, alignParentBottom, adjustViewWithKeyboard, singleLine, hint, hintColor, multiLineEditText, disableClickFeedback, imageWithFallback )
 import Effect (Effect)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Gravity(..), Corners(..))
-import Components.CancelRide.Controller
+import Components.SelectListModal.Controller
 import Components.PrimaryButton.Controller as PrimaryButtonConfig
 import Components.PrimaryButton.View as PrimaryButton
 import Common.Styles.Colors as Color
@@ -68,74 +68,101 @@ view push config =
           , background Color.white900
           , padding (Padding 20 20 20 0)
           ][  headingText config push ,
-              cancelationReasonsList push config
+              optionListView push config
            ]
          ]
 
 
 headingText :: forall w . Config -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
-headingText config push =
- linearLayout
- [ width MATCH_PARENT
- , height WRAP_CONTENT
- , orientation VERTICAL
- , clickable true
- , onClick ( \action -> do
-            _ <- pure $ hideKeyboardOnNavigation true
-            pure unit
-          ) (const NoAction)
- , disableClickFeedback true
- ][ textView
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , text config.headingText
-    , color Color.black800
-    , orientation HORIZONTAL
-    , gravity CENTER
-    , textSize FontSize.a_22
-    , fontStyle $ FontStyle.bold LanguageStyle
-    ],
-    textView
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , text config.subHeadingText
-    , orientation HORIZONTAL
-    , padding (PaddingTop 4)
-    , gravity CENTER
-    , textSize FontSize.a_14
-    , color Color.black700
-    , fontStyle $ FontStyle.regular LanguageStyle
-    ],
+headingText config push = 
+  linearLayout
+  [
+    width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation HORIZONTAL
+  ][
     linearLayout
-    [ height WRAP_CONTENT
+    [
+      height WRAP_CONTENT
     , width WRAP_CONTENT
-    , padding (Padding 4 12 4 12)
-    , margin (Margin 2 16 0 0)
+    , orientation HORIZONTAL
+    , gravity LEFT
+    , margin $ MarginTop 4
+    , visibility if config.topLeftIcon then VISIBLE else GONE
+    , onClick push (const OnGoBack)
+    , padding (PaddingRight 12)
+    ][
+      imageView
+      [ height $ V 22
+      , width $ V 22
+      , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+      , margin $ MarginTop 4
+      , color Color.black900
+      , fontStyle $ FontStyle.semiBold LanguageStyle
+      ] 
+    ]   
+    ,linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
     , orientation VERTICAL
-    , onClick ((\action -> do
-        _ <- push action
-        _ <- setText' (getNewIDWithTag "OtherReasonEditText") ""
-        _ <- setText' (getNewIDWithTag "TechGlitchEditText") ""
-        pure unit
-    )) ( const ClearOptions)
-    , visibility case config.activeReasonCode of
-                    Just reasonCode -> if ( reasonCode == "OTHER" || reasonCode == "TECHNICAL_GLITCH") then VISIBLE else GONE
-                    _               -> GONE
-    ][  textView
-        [ width WRAP_CONTENT
+    , clickable true
+    , onClick ( \action -> do 
+                _ <- pure $ hideKeyboardOnNavigation true
+                pure unit 
+              ) (const NoAction)
+    , disableClickFeedback true
+    ][ textView
+        [ width MATCH_PARENT
         , height WRAP_CONTENT
-        , text config.showAllOptionsText
-        , color Color.blue900
-        , textSize FontSize.a_12
-        , fontStyle $ FontStyle.semiBold LanguageStyle
+        , text config.headingTextConfig.text
+        , color config.headingTextConfig.color
+        , orientation HORIZONTAL
+        , gravity if config.topLeftIcon then LEFT else CENTER
+        , textSize config.headingTextConfig.size
+        , fontStyle $ FontStyle.bold LanguageStyle
+        ], 
+        textView 
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , visibility if config.subHeadingTextConfig.visibility then VISIBLE else GONE
+        , text config.subHeadingTextConfig.text
+        , orientation HORIZONTAL
+        , padding (PaddingTop 4)
+        , gravity CENTER
+        , textSize config.subHeadingTextConfig.size
+        , color config.subHeadingTextConfig.color
+        , fontStyle $ FontStyle.regular LanguageStyle
+        ],
+        linearLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , padding (Padding 4 12 4 12)
+        , margin (Margin 2 16 0 0)
+        , orientation VERTICAL
+        , onClick ((\action -> do
+            _ <- push action
+            _ <- setText' (getNewIDWithTag "OtherReasonEditText") ""
+            _ <- setText' (getNewIDWithTag "TechGlitchEditText") ""
+            pure unit 
+        )) ( const ClearOptions)
+        , visibility case config.activeReasonCode of 
+                        Just reasonCode -> if ( reasonCode == "OTHER" || reasonCode == "TECHNICAL_GLITCH") then VISIBLE else GONE
+                        _               -> GONE
+        ][  textView
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , text config.showAllOptionsText
+            , color Color.blue900
+            , textSize FontSize.a_12
+            , fontStyle $ FontStyle.semiBold LanguageStyle
+            ]
         ]
     ]
+  ]
+  
 
- ]
-
-
-cancelationReasonsList :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-cancelationReasonsList push config =
+optionListView :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+optionListView push config =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -145,13 +172,13 @@ cancelationReasonsList push config =
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        ][cancelationReasonOptions config push],
+        ][dataListOptions config push],
           primaryButtons push config
     ]
 
 
-cancelationReasonOptions :: forall w . Config -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-cancelationReasonOptions config push =
+dataListOptions :: forall w . Config -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
+dataListOptions config push =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -189,7 +216,7 @@ cancelationReasonOptions config push =
             -- , technicalGlitchDescription config push index
            ]
           ]
-      ) config.cancelRideReasons)
+      ) config.selectionOptions)
 
 
 someOtherReason :: forall w . Config -> (Action  -> Effect Unit) -> Int -> PrestoDOM (Effect Unit) w
@@ -298,11 +325,11 @@ primaryButtons push config =
   , height WRAP_CONTENT
   , orientation HORIZONTAL
   , gravity CENTER
-  ] [ PrimaryButton.view (push <<< Button1) (firstPrimaryButtonConfig config)
-    , PrimaryButton.view (push <<< Button2) (secondPrimaryButtonConfig config)]
+  ] [ PrimaryButton.view (push <<< Button1) (primaryButtonConfig config)
+    , PrimaryButton.view (push <<< Button2) (secondaryButtonConfig config)]
 
 
-radioButton :: forall w .  Config -> (Action  -> Effect Unit) -> Int -> CancellationReasons -> PrestoDOM (Effect Unit) w
+radioButton :: forall w .  Config -> (Action  -> Effect Unit) -> Int -> OptionButtonList -> PrestoDOM (Effect Unit) w
 radioButton config push index item =
  linearLayout
   [ height MATCH_PARENT
@@ -325,9 +352,8 @@ radioButton config push index item =
       , color Color.black900
       ]
   ]
-
-firstPrimaryButtonConfig :: Config -> PrimaryButtonConfig.Config
-firstPrimaryButtonConfig config = let
+primaryButtonConfig :: Config -> PrimaryButtonConfig.Config
+primaryButtonConfig config = let
   config' = PrimaryButtonConfig.config
   primaryButtonConfig' =
     config'
@@ -336,22 +362,24 @@ firstPrimaryButtonConfig config = let
       , color = Color.black700}
       , background = Color.white900
       , stroke = "1," <> Color.black500
-      , width = V ((screenWidth unit/2)-30)
+      , width = if(config.secondaryButtonVisibility) then (V ((screenWidth unit/2)-30)) else config.primaryButtonTextConfig.width
       , id = "Button1"
+      , visibility = if config.primaryButtonVisibility then VISIBLE else GONE
       }
   in primaryButtonConfig'
 
-secondPrimaryButtonConfig :: Config -> PrimaryButtonConfig.Config
-secondPrimaryButtonConfig config = let
+secondaryButtonConfig :: Config -> PrimaryButtonConfig.Config
+secondaryButtonConfig config = let
   config' = PrimaryButtonConfig.config
   primaryButtonConfig' =
     config'
        {textConfig
         { text = config.primaryButtonTextConfig.secondText}
-        , width = V ((screenWidth unit/2)-30)
+        , width = if config.primaryButtonVisibility then (V ((screenWidth unit/2)-30)) else config.primaryButtonTextConfig.width
         , id = "Button2"
-        , alpha = if(config.isCancelButtonActive) then 1.0  else 0.5
-        , isClickable = config.isCancelButtonActive
+        , alpha = if(config.isSelectButtonActive) then 1.0 else 0.5
+        , isClickable = config.isSelectButtonActive
+        , visibility = if config.secondaryButtonVisibility then VISIBLE else GONE
        }
   in primaryButtonConfig'
 
@@ -363,7 +391,7 @@ horizontalLine index activeIndex config =
   , width MATCH_PARENT
   , background Color.grey800
   , padding (PaddingVertical 2 2)
-  , visibility if(((fromMaybe dummyReason( (config.cancelRideReasons)!!index)).reasonCode == "OTHER" && index == activeIndex) || (index == (length (config.cancelRideReasons) -1)) || ((fromMaybe dummyReason( (config.cancelRideReasons)!!index)).reasonCode == "TECHNICAL_GLITCH" && index == activeIndex)  ) then GONE else VISIBLE
+  , visibility if(((fromMaybe dummyReason( (config.selectionOptions)!!index)).textBoxRequired == true && index == activeIndex)) then GONE else VISIBLE
   ][]
 
 dummyTextView :: forall w . PrestoDOM (Effect Unit) w
@@ -373,8 +401,9 @@ dummyTextView =
  , height $ V 0
  ]
 
-dummyReason :: CancellationReasons
+dummyReason :: OptionButtonList
 dummyReason = {
   reasonCode : ""
 , description : ""
+, textBoxRequired : false
 }

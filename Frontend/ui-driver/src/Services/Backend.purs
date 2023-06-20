@@ -423,8 +423,8 @@ updateDriverInfoBT payload = do
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
 
-makeUpdateDriverInfoReq :: String -> UpdateDriverInfoReq
-makeUpdateDriverInfoReq deviceToken = UpdateDriverInfoReq {
+mkUpdateDriverInfoReq :: UpdateDriverInfoReq
+mkUpdateDriverInfoReq = UpdateDriverInfoReq {
        "middleName": Nothing,
        "firstName" : Nothing,
        "lastName"  : Nothing,
@@ -432,56 +432,6 @@ makeUpdateDriverInfoReq deviceToken = UpdateDriverInfoReq {
        "canDowngradeToSedan" : Nothing,
        "canDowngradeToHatchback" : Nothing,
        "canDowngradeToTaxi" : Nothing,
-       "language" : Nothing,
-       "bundleVersion" : Nothing,
-       "clientVersion" : Nothing
-    }
-
-makeUpdateBookingOptions :: Boolean -> Boolean -> Boolean -> UpdateDriverInfoReq
-makeUpdateBookingOptions toSedan toHatchBack toTaxi = UpdateDriverInfoReq {
-       "middleName": Nothing,
-       "firstName" : Nothing,
-       "lastName"  : Nothing,
-       "deviceToken" : Nothing,
-       "canDowngradeToSedan" : Just toSedan,
-       "canDowngradeToHatchback" : Just toHatchBack,
-       "canDowngradeToTaxi" : Just toTaxi,
-       "language" : Nothing,
-       "bundleVersion" : Nothing,
-       "clientVersion" : Nothing
-    }
-
-makeUpdateDriverVersion :: Version -> Version -> UpdateDriverInfoReq
-makeUpdateDriverVersion clientVersion bundleVersion = UpdateDriverInfoReq {
-        "middleName": Nothing,
-        "firstName" : Nothing,
-        "lastName"  : Nothing,
-        "deviceToken" : Nothing,
-        "canDowngradeToSedan" : Nothing,
-        "canDowngradeToHatchback" : Nothing,
-        "canDowngradeToTaxi" : Nothing,
-        "bundleVersion" : Just bundleVersion,
-        "clientVersion" : Just clientVersion,
-        "language" : Just case getValueToLocalNativeStore LANGUAGE_KEY of
-            "EN_US" -> "ENGLISH"
-            "KN_IN" -> "KANNADA"
-            "HI_IN" -> "HINDI"
-            "ML_IN" -> "MALAYALAM"
-            "TA_IN" -> "TAMIL"
-            _       -> "ENGLISH"
-    }
-
-makeUpdateDriverLangChange :: String -> UpdateDriverInfoReq
-makeUpdateDriverLangChange deviceToken = UpdateDriverInfoReq {
-        "middleName": Nothing,
-        "firstName" : Nothing,
-        "lastName"  : Nothing,
-        "deviceToken" : Nothing,
-        "canDowngradeToSedan" : Nothing,
-        "canDowngradeToHatchback" : Nothing,
-        "canDowngradeToTaxi" : Nothing,
-        "bundleVersion" : Nothing,
-        "clientVersion" : Nothing,
         "language" : Just case getValueToLocalNativeStore LANGUAGE_KEY of
             "EN_US" -> "ENGLISH"
             "KN_IN" -> "KANNADA"
@@ -489,8 +439,12 @@ makeUpdateDriverLangChange deviceToken = UpdateDriverInfoReq {
             "ML_IN" -> "MALAYALAM"
             "BN_IN" -> "BENGALI"
             "TA_IN" -> "TAMIL"
-            _       -> "ENGLISH"
+            _       -> "ENGLISH",
+       "bundleVersion" : Nothing,
+       "clientVersion" : Nothing,
+       "gender"        : Nothing
     }
+
 
 --------------------------------- getDriverInfoBT ---------------------------------------------------------------------------------------------------------------------------------
 

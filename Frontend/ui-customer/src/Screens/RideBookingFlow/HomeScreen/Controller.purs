@@ -16,8 +16,9 @@
 module Screens.HomeScreen.Controller where
 
 import Accessor (_estimatedFare, _estimateId, _vehicleVariant, _status, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _selectedQuotes)
-import Common.Types.App (CancellationReasons, LazyCheck(..))
-import Components.CancelRide.Controller as CancelRidePopUp
+import Common.Types.App (OptionButtonList, LazyCheck(..))
+import Components.Banner as Banner
+import Components.SelectListModal.Controller as CancelRidePopUp
 import Components.ChooseVehicle as ChooseVehicleController
 import Components.ChooseYourRide as ChooseYourRide
 import Components.ChooseYourRide.Controller as ChooseYourRideController
@@ -583,6 +584,7 @@ data Action = NoAction
             | MenuButtonActionController MenuButtonController.Action
             | ChooseYourRideAction ChooseYourRideController.Action
             | SearchForSelectedLocation
+            | GenderBannerModal Banner.Action
 
 
 
@@ -1680,35 +1682,43 @@ dummyEstimateEntity =
     , nightShiftRate: Nothing
     }
 
-cancelReasons :: String -> Array CancellationReasons
+cancelReasons :: String -> Array OptionButtonList
 cancelReasons dummy =
   [ { reasonCode: "GOT_ANOTHER_RIDE"
     , description: getString GOT_ANOTHER_RIDE_ELSE_WHERE
+    , textBoxRequired : false
     }
   , { reasonCode: "HIGH_FARE"
     , description: getString FARE_WAS_HIGH
+    , textBoxRequired : false
     }
   , { reasonCode: "WAIT_TIME_TOO_LONG"
     , description: getString WAIT_TIME_TOO_LONG
+    , textBoxRequired : false
     }
   , { reasonCode: "DRIVER_UNREACHABLE"
     , description: getString DRIVER_WAS_NOT_REACHABLE
+    , textBoxRequired : false
     }
   , { reasonCode: "DRIVER_WAS_RUDE"
     , description: getString DRIVER_WAS_RUDE
+    , textBoxRequired : false
     }
   , { reasonCode: "FORCED_BY_DRIVER"
     , description: getString DRIVER_REQUESTED_TO_CANCEL
+    , textBoxRequired : false
     }
   , { reasonCode: "OTHER"
     , description: getString OTHER
+    , textBoxRequired : true
     }
   ]
 
-dummyCancelReason :: CancellationReasons
+dummyCancelReason :: OptionButtonList
 dummyCancelReason =
   { reasonCode: ""
   , description: ""
+  , textBoxRequired : false
   }
 
 dummyRideRatingState :: RatingCard
