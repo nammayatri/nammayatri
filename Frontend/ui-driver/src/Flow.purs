@@ -18,7 +18,7 @@ module Flow where
 import Log
 
 import Control.Monad.Except.Trans (lift)
-import Common.Types.App (Version(..))
+import Common.Types.App (Version(..),LazyCheck(..))
 import Data.Array (concat, filter, cons, elemIndex, head, length, mapWithIndex, null, snoc, sortBy, (!!), any)
 import Data.Either (Either(..))
 import Data.Int (round, toNumber, ceil,fromString)
@@ -45,13 +45,14 @@ import Screens.BookingOptionsScreen.Controller (downgradeOptionsConfig)
 import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
 import Screens.Handlers as UI
 import Screens.HomeScreen.Controller (activeRideDetail)
+import Screens.DriverDetailsScreen.Controller (getGenderValue,genders)
 import Screens.HomeScreen.View (rideRequestPollingData)
 import Screens.PopUpScreen.Controller (transformAllocationData)
 import Screens.Types (ActiveRide, AllocationData, HomeScreenStage(..), Location, KeyboardModalType(..), ReferralType(..), DriverStatus(..))
 import Screens.Types as ST
-import Services.APITypes (AlternateNumberResendOTPResp(..), Category(Category), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), OfferRideResp(..), Option(Option), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), TriggerOTPResp(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyTokenResp(..), OnCallRes(..))
+import Services.APITypes (AlternateNumberResendOTPResp(..), Category(Category), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), OfferRideResp(..), Option(Option), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), TriggerOTPResp(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyTokenResp(..), UpdateDriverInfoReq(..), OnCallRes(..))
 import Services.Accessor (_lat, _lon, _id)
-import Services.Backend (makeTriggerOTPReq, makeGetRouteReq, walkCoordinates, walkCoordinate, makeVerifyOTPReq, makeUpdateDriverInfoReq, makeOfferRideReq, makeDriverRCReq, makeDriverDLReq, makeValidateImageReq, makeReferDriverReq, dummyVehicleObject, driverRegistrationStatusBT, makeUpdateDriverLangChange,makeUpdateDriverVersion, makeValidateAlternateNumberRequest, makeResendAlternateNumberOtpRequest, makeVerifyAlternateNumberOtpRequest, makeLinkReferralCodeReq, makeUpdateBookingOptions)
+import Services.Backend (makeTriggerOTPReq, makeGetRouteReq, walkCoordinates, walkCoordinate, makeVerifyOTPReq, mkUpdateDriverInfoReq, makeOfferRideReq, makeDriverRCReq, makeDriverDLReq, makeValidateImageReq, makeReferDriverReq, dummyVehicleObject, driverRegistrationStatusBT, makeValidateAlternateNumberRequest, makeResendAlternateNumberOtpRequest, makeVerifyAlternateNumberOtpRequest, makeLinkReferralCodeReq)
 import Services.Backend as Remote
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore)
@@ -92,6 +93,7 @@ baseAppFlow baseFlow = do
       setValueToLocalStore BUNDLE_VERSION bundle
       setValueToLocalStore BASE_URL (getBaseUrl "dummy")
       setValueToLocalStore RIDE_REQUEST_BUFFER "-3"
+      setValueToLocalStore IS_BANNER_ACTIVE "True"
       setValueToLocalNativeStore BUNDLE_VERSION bundle
       setValueToLocalNativeStore GPS_METHOD "CURRENT"
       setValueToLocalNativeStore MAKE_NULL_API_CALL "NO"
@@ -154,7 +156,7 @@ enterOTPFlow = do
       setValueToLocalStore DRIVER_ID driverId
       setValueToLocalStore REGISTERATION_TOKEN resp.token -- add from response
       void $ lift $ lift $ toggleLoader false
-      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (makeUpdateDriverLangChange "")
+      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT mkUpdateDriverInfoReq
       getDriverInfoFlow
     RETRY updatedState -> do
       modifyScreenState $ EnterOTPScreenType (\enterOTPScreen -> updatedState)
@@ -211,9 +213,10 @@ getDriverInfoFlow = do
         driverRating = getDriverInfoResp.rating,
        -- base64Image = updatedState.data.base64Image,
         driverMobile = getDriverInfoResp.mobileNumber,
-        driverAlternateMobile = getDriverInfoResp.alternateNumber
+        driverAlternateMobile = getDriverInfoResp.alternateNumber,
+        driverGender = getGenderValue getDriverInfoResp.gender
         }})
-        modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {data = driverProfileScreen.data {driverName = getDriverInfoResp.firstName, driverVehicleType = linkedVehicle.variant, driverRating = getDriverInfoResp.rating , driverAlternateNumber = getDriverInfoResp.alternateNumber, capacity = fromMaybe 2 linkedVehicle.capacity, downgradeOptions = getDowngradeOptions linkedVehicle.variant}})
+        modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {data = driverProfileScreen.data {driverName = getDriverInfoResp.firstName, driverVehicleType = linkedVehicle.variant, driverRating = getDriverInfoResp.rating , driverAlternateNumber = getDriverInfoResp.alternateNumber, driverGender = getGenderValue getDriverInfoResp.gender,capacity = fromMaybe 2 linkedVehicle.capacity, downgradeOptions = getDowngradeOptions linkedVehicle.variant}})
         permissionsGiven <- checkAll3Permissions
         if permissionsGiven
           then currentRideFlow
@@ -271,7 +274,9 @@ updateDriverVersion dbClientVersion dbBundleVersion = do
         Version clientVersion' = fromMaybe (Version clientVersion) dbClientVersion
     if any (_ == -1) [clientVersion.minor, clientVersion.major, clientVersion.maintenance,bundleVersion.minor,bundleVersion.major,bundleVersion.maintenance] then pure unit
       else if ( bundleVersion' /= bundleVersion || clientVersion' /= clientVersion)  then do
-      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (makeUpdateDriverVersion (Version clientVersion) (Version bundleVersion))
+      let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq
+          requiredData = initialData{clientVersion = Just (Version clientVersion),bundleVersion = Just (Version bundleVersion)}
+      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)
       pure unit
     else pure unit
   else pure unit
@@ -673,6 +678,17 @@ driverDetailsFlow = do
        modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> state {props {keyboardModalType = NONE}} )
        homeScreenFlow
 
+    DRIVER_GENDER state -> do
+        let genderSelected = state.data.driverGender
+        let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq
+            requiredData = initialData{gender = genderSelected}
+        (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)       
+        pure $ toast (getString GENDER_UPDATED)
+        modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> state { data {driverGender = getGenderValue genderSelected}})
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props = homeScreen.props {  showGenderBanner = false}})
+        setValueToLocalStore IS_BANNER_ACTIVE "False"
+        driverDetailsFlow
+        
   pure unit
 
 vehicleDetailsFlow :: FlowBT String Unit
@@ -680,7 +696,7 @@ vehicleDetailsFlow = do
   action <- UI.vehicleDetailsScreen
   case action of
     UPDATE_VEHICLE_INFO  updatedState -> do
-      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (makeUpdateDriverInfoReq "")
+      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT mkUpdateDriverInfoReq
       vehicleDetailsFlow
 
 aboutUsFlow :: FlowBT String Unit
@@ -695,7 +711,7 @@ selectLanguageFlow = do
   action <- UI.selectLanguageScreen
   case action of
     CHANGE_LANGUAGE -> do
-      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (makeUpdateDriverLangChange "")
+      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT mkUpdateDriverInfoReq
       driverProfileFlow
 
 bookingOptionsFlow :: FlowBT String Unit
@@ -706,7 +722,9 @@ bookingOptionsFlow = do
       let toSedan = (filter (\item -> item.vehicleVariant == "SEDAN" && item.isSelected) state.data.downgradeOptions) !! 0
           toHatchBack = (filter (\item -> item.vehicleVariant == "HATCHBACK" && item.isSelected) state.data.downgradeOptions) !! 0
           toTaxi = (filter (\item -> item.vehicleVariant == "TAXI" && item.isSelected) state.data.downgradeOptions) !! 0
-      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (spy "update Req" (makeUpdateBookingOptions (isJust toSedan) (isJust toHatchBack) (isJust toTaxi)))
+      let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq
+          requiredData = initialData{canDowngradeToSedan = Just (isJust toSedan),canDowngradeToHatchback = Just (isJust toHatchBack) ,canDowngradeToTaxi = Just (isJust toTaxi)}
+      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT ((UpdateDriverInfoReq) requiredData)
       modifyScreenState $ BookingOptionsScreenType (\bookingOptions -> BookingOptionsScreenData.initData)
       driverProfileFlow
     GO_TO_PROFILE -> driverProfileFlow
@@ -1058,9 +1076,9 @@ homeScreenFlow = do
   else pure unit
   getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
   let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
+  let showGender = not (isJust (getGenderValue getDriverInfoResp.gender))
   let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
   setValueToLocalStore USER_NAME getDriverInfoResp.firstName
-  _ <- pure $ spy "response for mode zxc" getDriverInfoResp
   if (isJust getDriverInfoResp.numberOfRides) then do
     setValueToLocalStore HAS_TAKEN_FIRST_RIDE $ show $ fromMaybe 0 getDriverInfoResp.numberOfRides == 0
     else setValueToLocalStore HAS_TAKEN_FIRST_RIDE "false"
@@ -1100,7 +1118,7 @@ homeScreenFlow = do
   let currdate = getcurrentdate ""
   (DriverProfileStatsResp resp) <- Remote.getDriverProfileStatsBT (DriverProfileStatsReq currdate)
   lift $ lift $ doAff do liftEffect hideSplash
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{totalRidesOfDay = resp.totalRidesOfDay, totalEarningsOfDay = resp.totalEarningsOfDay}})
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{totalRidesOfDay = resp.totalRidesOfDay, totalEarningsOfDay = resp.totalEarningsOfDay}, props{showGenderBanner = showGender}})
   void $ lift $ lift $ toggleLoader false
   isGpsEnabled <- lift $ lift $ liftFlow $ isLocationEnabled unit
   if not isGpsEnabled then noInternetScreenFlow "LOCATION_DISABLED" else pure unit
@@ -1149,6 +1167,9 @@ homeScreenFlow = do
       let categories' = sortBy compareByOrder temp
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )
       helpAndSupportFlow
+    GO_TO_EDIT_GENDER_SCREEN -> do
+      modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> driverDetailsScreen { data {driverGender = Nothing,genderSelectionModal{selectionOptions = genders FunctionCall,activeIndex = Nothing,isSelectButtonActive = false}}, props  { genderSelectionModalShow = true}})
+      driverDetailsFlow
     GO_TO_START_RIDE {id, otp , lat, lon} updatedState -> do
       _ <- pure $ printLog "HOME_SCREEN_FLOW GO_TO_START_RIDE" "."
       _ <- pure $ printLog "Lat in Floww: " lat
@@ -1457,4 +1478,4 @@ setDriverStatusInLocal status mode = do
                                     setValueToLocalNativeStore DRIVER_STATUS status
                                     setValueToLocalStore DRIVER_STATUS_N mode
                                     setValueToLocalNativeStore DRIVER_STATUS_N mode
-                                    pure unit
+                              

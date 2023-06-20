@@ -69,14 +69,6 @@ initData = {
     , messagesSize : ""
     , suggestionsList : []
     , messageToBeSent : ""
-    , bannerViewState : {
-        backgroundColor : Color.lightMintGreen
-      , title : "Complete your profile for a personalised ride experience"
-      , titleColor : Color.elfGreen
-      , actionText : "Update now"
-      , actionTextColor : Color.elfGreen
-      , imageUrl : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
-      }
     , nearByPickUpPoints : dummyPickUpPoints
     , polygonCoordinates : ""
     , specialZoneQuoteList : []
@@ -158,7 +150,7 @@ initData = {
     , openChatScreen : false
     , emergencyHelpModelState : emergencyHelpModalData
     , showLiveDashboard : false
-    , isbanner : true
+    , isBanner : true
     , callSupportPopUp : false
     , isMockLocation: false
     , isSpecialZone : false

@@ -15,7 +15,8 @@
 
 module Screens.HomeScreen.ComponentConfig where
 
-import Components.CancelRide as CancelRide
+import Components.SelectListModal as SelectListModal
+import Components.Banner as Banner
 import Components.PopUpModal as PopUpModal
 import Components.RideActionModal as RideActionModal
 import Components.StatsModel as StatsModel
@@ -29,6 +30,7 @@ import Helpers.Utils as HU
 import Components.InAppKeyboardModal as InAppKeyboardModal
 import Language.Strings
 import Language.Types (STR(..))
+import Styles.Colors as Color
 import Prelude
 import PrestoDOM
 import PrestoDOM.Types.DomAttributes as PTD
@@ -77,28 +79,32 @@ endRidePopUp state = let
   in popUpConfig'
 
 ------------------------------------------ cancelRideModalConfig ---------------------------------
-cancelRideModalConfig :: ST.HomeScreenState -> CancelRide.Config
+cancelRideModalConfig :: ST.HomeScreenState -> SelectListModal.Config
 cancelRideModalConfig state = let
-  config = CancelRide.config
-  lastIndex = ((DA.length state.data.cancelRideModal.cancelRideReasons) -1)
+  config = SelectListModal.config
+  lastIndex = ((DA.length state.data.cancelRideModal.selectionOptions) -1)
   cancelRideModalConfig' = config {
     activeIndex = state.data.cancelRideModal.activeIndex,
-    headingText = ((getString CANCEL_RIDE) <> "?"),
-    subHeadingText = (getString PLEASE_TELL_US_WHY_YOU_WANT_TO_CANCEL),
     hint = (getString HELP_US_WITH_YOUR_REASON),
     strings {
       mandatory = (getString MANDATORY),
       limitReached = ((getString MAX_CHAR_LIMIT_REACHED) <> " 100 " <> (getString OF) <> " 100")
     },
+    headingTextConfig{
+      text = ((getString CANCEL_RIDE) <> "?")
+    },
+    subHeadingTextConfig{
+      text = (getString PLEASE_TELL_US_WHY_YOU_WANT_TO_CANCEL)
+    },
     showAllOptionsText = (getString SHOW_ALL_OPTIONS),
-    cancelRideReasons = state.data.cancelRideModal.cancelRideReasons,
+    selectionOptions = state.data.cancelRideModal.selectionOptions,
     isLimitExceeded = ((DS.length (state.data.cancelRideModal.selectedReasonDescription)) >= 100),
     activeReasonCode = Just state.data.cancelRideModal.selectedReasonCode,
     primaryButtonTextConfig {
       firstText = (getString GO_BACK)
     , secondText = (getString CANCEL_RIDE)
     },
-    isCancelButtonActive = case state.data.cancelRideModal.activeIndex of 
+    isSelectButtonActive = case state.data.cancelRideModal.activeIndex of 
                               Just index -> true
                               Nothing    -> false
   }
@@ -115,6 +121,23 @@ statsModelConfig state =
       , textConfig {  text = "" }
       , totalRidesOfDay = state.data.totalRidesOfDay
       , totalEarningsOfDay = state.data.totalEarningsOfDay
+      }
+  in config'
+
+-------------------------------------genderBannerConfig------------------------------------
+genderBannerConfig :: ST.HomeScreenState -> Banner.Config
+genderBannerConfig state = 
+  let 
+    config = Banner.config
+    config' = config
+      { 
+        backgroundColor = Color.green600,
+        title = (getString COMPLETE_YOUR_PROFILE_AND_FIND_MORE_RIDES),
+        titleColor = Color.white900,
+        actionText = (getString UPDATE_NOW),
+        actionTextColor = Color.white900,
+        imageUrl = "ny_ic_driver_gender_banner,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_driver_gender_banner.png",
+        isBanner = true
       }
   in config'
 

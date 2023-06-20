@@ -458,6 +458,8 @@ const hindiStrings = {
   "REGISTERED_ADDRESS_DESCRIPTION" : "जस्पे टेक्नोलॉजीज प्राइवेट लिमिटेड <br> स्टैलियन बिजनेस सेंटर, नंबर 444, तीसरी और चौथी मंजिल, 18वीं मेन, 6वां ब्लॉक, कोरमंगला बेंगलुरु, कर्नाटक- 560095, भारत।",
   "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "वेबसाइट: <u>https://nammayatri.in/</u>",
   "RECOMMENDED" : "अनुशंसित",
+  "COMPLETE_YOUR_PROFILE_FOR_A_PERSONALISED_RIDE_EXPERIENCE" : "वैयक्तिकृत सवारी अनुभव के लिए अपनी प्रोफ़ाइल पूर्ण करें",
+  "UPDATE_NOW" : "अभी अपडेट करे",
   "WE_WOULD_APPRECIATE_YOUR_FEEDBACK" : "खाता हटाने के पीछे आपके तर्क की हम सराहना करेंगे",
   "REASON_FOR_DELETING_ACCOUNT" : "खाता हटाने का कारण*",
   "SUBMIT_REQUEST" : "अनुरोध सबमिट करें",

@@ -15,13 +15,15 @@
 
 module Screens.DriverDetailsScreen.ComponentConfig where
 
-import Prelude (Unit, bind, const, map, pure, unit, ($), (/), (==), (<>),(<<<),(&&),(||),(<),not,(/=))
+import Prelude (Unit, bind, const, map, pure, unit, class Eq ,($), (/), (==), (<>),(<<<),(&&),(||),(<),not,(/=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, afterRender, id, visibility, imageWithFallback, clickable, relativeLayout)
 import Effect (Effect)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Font.Style as FontStyle
 import Font.Size as FontSize
+import Data.Eq.Generic (genericEq)
+import Data.Generic.Rep (class Generic)
 import Language.Strings (getString)
 import Language.Types(STR(..))
 import Common.Types.App
@@ -30,6 +32,8 @@ import Components.InAppKeyboardModal.View as InAppKeyboardModal
 import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (length)
+import Components.SelectListModal.View as CancelRide
+import Components.SelectListModal.Controller as GenderSelection
 import Components.PopUpModal.View as PopUpModal
 import Components.PopUpModal.Controller as PopUpModalConfig
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -64,6 +68,34 @@ removeAlternateNumberConfig state = let
       , fontStyle = FontStyle.semiBold LanguageStyle }
     }
   in popUpConfig'
+
+selectYourGenderConfig :: ST.DriverDetailsScreenState -> GenderSelection.Config
+selectYourGenderConfig state = let
+    config = GenderSelection.config
+    popUpConfigs' = config {
+        headingTextConfig{
+        text = (getString SELECT_YOUR_GENDER)
+      },
+      subHeadingTextConfig{
+        visibility = false
+      }
+      , selectionOptions = state.data.genderSelectionModal.selectionOptions
+      , activeIndex = state.data.genderSelectionModal.activeIndex
+      , isSelectButtonActive = case state.data.genderSelectionModal.activeIndex of 
+                              Just index -> true
+                              Nothing    -> false
+      , primaryButtonTextConfig =
+        {
+            firstText : ""
+          , secondText : (getString CONFIRM)
+          , width : MATCH_PARENT
+        }
+      , primaryButtonVisibility = false
+      , secondaryButtonVisibility = true
+      , topLeftIcon = true
+    }
+  in popUpConfigs'
+
 
 enterOtpExceededModalStateConfig:: ST.DriverDetailsScreenState -> PopUpModalConfig.Config
 enterOtpExceededModalStateConfig state = let
@@ -171,3 +203,24 @@ enterMobileNumberState state = let
       isValidAlternateNumber = if state.props.numberExistError == true then false else state.props.checkAlternateNumber
         }
       in inAppModalConfig'
+
+
+data ListOptions = DRIVER_NAME_INFO | DRIVER_MOBILE_INFO | DRIVER_LICENCE_INFO | DRIVER_ALTERNATE_MOBILE_INFO | GENDER_INFO
+derive instance genericListOptions :: Generic ListOptions _
+instance eqListOptions :: Eq ListOptions where eq = genericEq
+
+type Listtype =
+    { value :: String,
+      title :: ListOptions,
+      editButtonReq :: Boolean
+    }
+
+optionList :: ST.DriverDetailsScreenState -> Array Listtype
+optionList state =
+    [
+      {title:DRIVER_NAME_INFO, value:"" , editButtonReq : false},
+      {title:DRIVER_MOBILE_INFO, value:"" ,editButtonReq : false},
+      {title:DRIVER_LICENCE_INFO, value:"",editButtonReq : false},
+      {title:DRIVER_ALTERNATE_MOBILE_INFO, value:"" ,editButtonReq : isJust state.data.driverAlternateMobile},
+      {title:GENDER_INFO,value:"", editButtonReq : isJust state.data.driverGender}
+    ]

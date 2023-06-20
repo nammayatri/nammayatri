@@ -15,7 +15,7 @@
 
 module Screens.Types where
 
-import Common.Types.App (CancellationReasons)
+import Common.Types.App (OptionButtonList)
 import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
 import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
@@ -252,7 +252,8 @@ type DriverProfileScreenData = {
   driverAlternateNumber :: Maybe String,
   capacity :: Int,
   downgradeOptions :: Array String,
-  vehicleSelected :: Array VehicleP
+  vehicleSelected :: Array VehicleP,
+  driverGender :: Maybe String
 }
 
 type VehicleP = {
@@ -494,6 +495,8 @@ type DriverDetailsScreenStateData =  {
   driverMobile :: Maybe String,
   driverAlternateMobile :: Maybe String,
   driverEditAlternateMobile :: Maybe String,
+  genderSelectionModal ::  GenderSelectionModalData,
+  driverGender :: Maybe String,
   otpLimit :: Int,
   otpBackAlternateNumber :: Maybe String
 }
@@ -504,6 +507,7 @@ type DriverDetailsScreenStateProps =  {
   enterOtpFocusIndex :: Int,
   otpIncorrect :: Boolean,
   otpAttemptsExceeded :: Boolean,
+  genderSelectionModalShow :: Boolean,
   alternateMobileOtp :: String,
   removeNumberPopup :: Boolean,
   isEditAlternateMobile :: Boolean,
@@ -576,6 +580,8 @@ type HomeScreenState = {
   props :: HomeScreenProps
 }
 
+-- check something here as well
+
 type HomeScreenData =  {
   driverName :: String,
   vehicleType :: String,
@@ -603,12 +609,20 @@ type CancelRidePopUpData = {
 }
 
 type CancelRideModalData = {
-  cancelRideReasons :: Array CancellationReasons,
+  selectionOptions :: Array OptionButtonList,
   activeIndex ::Maybe Int,
   selectedReasonCode :: String,
   selectedReasonDescription :: String,
   isMandatoryTextHidden :: Boolean,
-  isCancelButtonActive :: Boolean
+  isSelectButtonActive :: Boolean
+}
+
+type GenderSelectionModalData = {
+  selectionOptions :: Array OptionButtonList,
+  activeIndex ::Maybe Int,
+  selectedReasonCode :: String,
+  selectedReasonDescription :: String,
+  isSelectButtonActive :: Boolean
 }
 
 type Rides = {
@@ -671,7 +685,9 @@ type HomeScreenProps =  {
   updatedArrivalInChat :: Boolean,
   driverStatusSet :: DriverStatus,
   silentPopUpView :: Boolean,
-  zoneRideBooking :: Boolean
+  zoneRideBooking :: Boolean,
+  showGenderBanner :: Boolean,
+  notRemoveBanner :: Boolean
  }
 
 data DriverStatus = Online | Offline | Silent

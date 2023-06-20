@@ -45,12 +45,12 @@ initData = {
           exoPhone : ""
         },
         cancelRideModal : {
-          cancelRideReasons : [],
+          selectionOptions : [],
           activeIndex : Nothing,
           selectedReasonCode : "",
           selectedReasonDescription : "",
           isMandatoryTextHidden : false,
-          isCancelButtonActive : false
+          isSelectButtonActive : false
         },
         currentDriverLat : 0.0,
         currentDriverLon : 0.0,
@@ -94,7 +94,9 @@ initData = {
         sendMessageActive : false,
         unReadMessages : false,
         openChatScreen : false,
-        silentPopUpView : false,
-        zoneRideBooking : true
+        silentPopUpView : false, 
+        zoneRideBooking : true,
+        showGenderBanner : false,
+        notRemoveBanner : true
     }
 }

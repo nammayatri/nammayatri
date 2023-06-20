@@ -21,7 +21,8 @@ import Screens.Types (DriverDetailsScreenState, KeyboardModalType(..))
 import PrestoDOM.Types.Core (class Loggable)
 import Language.Strings (getString)
 import Language.Types(STR(..))
-import Screens.DriverDetailsScreen.ScreenData (ListOptions(..))
+import Common.Types.App (LazyCheck(..))
+import Screens.DriverDetailsScreen.ComponentConfig (ListOptions(..))
 import Effect.Class (liftEffect)
 import JBridge (renderBase64Image, toast)
 import Engineering.Helpers.Commons (getNewIDWithTag)
@@ -37,6 +38,10 @@ import Data.String (take, length, drop)
 import Data.String.CodeUnits (charAt)
 import Data.Int (fromString)
 import Helpers.Utils(toString)
+import Components.SelectListModal as SelectListModal
+import Components.PrimaryButton as PrimaryButtonController
+import Common.Types.App (OptionButtonList)
+import Data.Array as Array
 import Components.PopUpModal as PopUpModal
 
 
@@ -79,6 +84,7 @@ data ScreenOutput = GoBack DriverDetailsScreenState
                     | VerifyAlternateNumberOTP DriverDetailsScreenState
                     | RemoveAlternateNumber DriverDetailsScreenState
                     | GoToHomeScreen DriverDetailsScreenState
+                    | UpdateGender DriverDetailsScreenState
 
 data Action = NoAction
               | BackPressed
@@ -90,9 +96,11 @@ data Action = NoAction
               | InAppKeyboardModalMobile InAppKeyboardModal.Action
               | InAppKeyboardModalOtp InAppKeyboardModal.Action
               | PopUpModalAction PopUpModal.Action
+              | GenderSelectionModalAction SelectListModal.Action
               | ClickRemoveAlternateNumber
               | ClickEditAlternateNumber
               | PopUpModalActions PopUpModal.Action
+              | GenderSelectionOpen
 
 
 eval :: Action -> DriverDetailsScreenState -> Eval Action ScreenOutput DriverDetailsScreenState
@@ -212,7 +220,40 @@ eval (InAppKeyboardModalOtp (InAppKeyboardModal.OnClickDone text)) state = do
     exit (VerifyAlternateNumberOTP state)
 
 
+eval (GenderSelectionModalAction (SelectListModal.UpdateIndex indexValue)) state = continue state { data = state.data { genderSelectionModal  { activeIndex = Just indexValue}}}
+eval (GenderSelectionModalAction (SelectListModal.OnGoBack)) state = continue state { data { genderSelectionModal {activeIndex = Nothing}} ,props{ genderSelectionModalShow = false}}
+
+eval GenderSelectionOpen state = do
+  continue state{props {genderSelectionModalShow = true},data{genderSelectionModal{selectionOptions = genders FunctionCall}}}
+
+eval (GenderSelectionModalAction (SelectListModal.Button2 PrimaryButtonController.OnClick)) state = do
+    let genderSelected = case state.data.genderSelectionModal.activeIndex of
+                                  Just index -> (state.data.genderSelectionModal.selectionOptions Array.!! (index))
+                                  Nothing    -> Nothing
+    _ <- pure $ spy "Gender Selected " genderSelected
+    exit (UpdateGender state {data = state.data{driverGender = Just (fromMaybe {description:"",reasonCode:"",textBoxRequired:false} genderSelected).reasonCode},props = state.props{genderSelectionModalShow = false}})
+
 eval _ state = continue state
+
+genders :: LazyCheck -> Array OptionButtonList
+genders dummy =
+  [ { reasonCode: "MALE"
+    , description: (getString MALE)
+    , textBoxRequired : false
+    }
+  , { reasonCode: "FEMALE"
+    , description: (getString FEMALE)
+    , textBoxRequired : false
+    }
+  , { reasonCode: "OTHER"
+    , description: (getString OTHER)
+    , textBoxRequired : false
+    }
+  , { reasonCode: "PREFER_NOT_TO_SAY"
+    , description: (getString PREFER_NOT_TO_SAY)
+    , textBoxRequired : false
+    }
+  ]
 
 getTitle :: ListOptions -> String
 getTitle listOptions =
@@ -221,6 +262,7 @@ getTitle listOptions =
     DRIVER_MOBILE_INFO -> (getString MOBILE_NUMBER)
     DRIVER_LICENCE_INFO -> (getString DRIVING_LICENSE)
     DRIVER_ALTERNATE_MOBILE_INFO -> (getString ALTERNATE_MOBILE_NUMBER)
+    GENDER_INFO -> (getString GENDER)
 
 getValue :: ListOptions -> DriverDetailsScreenState -> String
 getValue listOptions state =
@@ -229,3 +271,15 @@ getValue listOptions state =
     DRIVER_MOBILE_INFO -> (fromMaybe "" (state.data.driverMobile))
     DRIVER_LICENCE_INFO -> state.data.drivingLicenseNo
     DRIVER_ALTERNATE_MOBILE_INFO -> (fromMaybe "" state.data.driverAlternateMobile)
+    GENDER_INFO -> (fromMaybe (getString SET_NOW) ( state.data.driverGender))
+
+getGenderValue :: Maybe String -> Maybe String
+getGenderValue gender =
+  case gender of
+    Just value -> case value of
+      "MALE" -> Just (getString MALE)
+      "FEMALE" -> Just (getString FEMALE)
+      "OTHER" -> Just (getString OTHER)
+      "PREFER_NOT_TO_SAY" -> Just (getString PREFER_NOT_TO_SAY)
+      _ -> Nothing
+    Nothing -> Nothing
