@@ -391,7 +391,7 @@ const hindiStrings = {
   "UPTO": "तक",
   "SEARCH_AGAIN_WITH_A_TIP": "टिप के साथ फिर से खोजें?",
   "TRY_AGAIN_WITH_A_TIP": "टिप के साथ पुन: प्रयास करें?",
-  "BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS": "टिप से राइड मिलने की संभावना बढ़ सकती है। पीक ऑवर्स के दौरान ड्राइवर की मदद करता है / खाली रिटर्न ट्रिप की भरपाई करता है",
+  "BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS": "ऐसा लगता है कि यह बहुत ही व्यस्त दिन है। सवारी मिलने की संभावना बढ़ाने के लिए आप बख्शीश जोड़ने की कोशिश कर सकते हैं।",
   "TRY_AGAIN_WITHOUT_TIP": "टिप के बिना पुन: प्रयास करें",
   "SEARCH_AGAIN_WITHOUT_A_TIP": "टिप के बिना फिर से खोजें",
   "TRY_AGAIN_WITH": "दुबारा कोशिश करें",
@@ -491,5 +491,15 @@ const hindiStrings = {
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST": "ड्राइवर ने आपके विशेष अनुरोध को प्राथमिकता दी और वह केवल ",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST": "ड्राइवर ने आपके विशेष अनुरोध को प्राथमिकता दी और पहले ही ",
   "AND_HAS_TRAVELLED": " किमी की यात्रा कर चुका है।",
-  "PLEASE_FIND_REVISED_FARE_ESTIMATE": "कृपया संशोधित अनुमानित किराया ज्ञात करें। रात का शुल्क दिन के शुल्क का 1.5 गुना है।"
+  "PLEASE_FIND_REVISED_FARE_ESTIMATE": "कृपया संशोधित अनुमानित किराया ज्ञात करें। रात का शुल्क दिन के शुल्क का 1.5 गुना है।",
+  "REGISTERED_ADDRESS_DESCRIPTION" : "Juspay Technologies Private Limited <br> Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala Bengaluru, Karnataka- 560095, India.",
+  "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "Website: <u>https://nammayatri.in/</u>",
+  "NAVIGATE_TO_PICKUP" : "पिकअप पर नेविगेट करें" ,
+  "FARE_ESTIMATE" : "किराया अनुमान" ,
+  "TIP_SELECTED" : "टिप चयनित",
+  "ADD_A_TIP_TO_FIND_A_RIDE_QUICKER" : "तेजी से सवारी खोजने के लिए एक टिप जोड़ें!",
+  "IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL" : "ऐसा लगता है कि इसमें सामान्य से ज़्यादा समय लग रहा है।",
+  "CONTINUE_SEARCH_WITH" : "के साथ खोज जारी रखें",
+  "CONTINUING_SEARCH_WITH" : "से तलाश जारी है",
+  "SEARCHING_WITH" : "से खोज रहे हैं"
 }

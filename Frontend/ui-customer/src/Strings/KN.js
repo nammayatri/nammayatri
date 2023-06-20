@@ -385,7 +385,7 @@ const kannadaStrings = {
   "PEOPLE": "ಜನರು",
   "SEARCH_AGAIN_WITH_A_TIP": "ಸಲಹೆಯೊಂದಿಗೆ ಮತ್ತೆ ಹುಡುಕುವುದೇ?",
   "TRY_AGAIN_WITH_A_TIP": "ಸಲಹೆಯೊಂದಿಗೆ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸುವುದೇ?",
-  "BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS": "ಟಿಪ್ ಸೆ ರೈಡ್ ಮಿಲನೆ ಪೀಕ್ ಆವರ್ಸ್ ಕೆ ದೌರನ್ ಡ್ರೈವರ್ ಕಿ ಮದದ ಕರತಾ ಹೈ / ಖಾಲಿ ರಿಟರ್ನ್ ಟ್ರಿಪ್ ಕಿ ಭಾರತೈ",
+  "BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS": "ಇದು ತುಂಬಾ ಬಿಡುವಿಲ್ಲದ ದಿನವಾಗಿದೆ ಎಂದು ತೋರುತ್ತದೆ. ಸವಾರಿ ಮಾಡುವ ಸಾಧ್ಯತೆಗಳನ್ನು ಹೆಚ್ಚಿಸಲು ನೀವು ಸಲಹೆಯನ್ನು ಸೇರಿಸಲು ಪ್ರಯತ್ನಿಸಬಹುದು.",
   "TRY_AGAIN_WITHOUT_TIP": "ಸಲಹೆ ಇಲ್ಲದೆ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
   "SEARCH_AGAIN_WITHOUT_A_TIP": "ಸುಳಿವು ಇಲ್ಲದೆ ಮತ್ತೆ ಹುಡುಕಿ",
   "TRY_AGAIN_WITH": "ಇದರೊಂದಿಗೆ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
@@ -485,5 +485,13 @@ const kannadaStrings = {
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST": "ಚಾಲಕ ನಿಮ್ಮ ವಿಶೇಷ ವಿನಂತಿಯನ್ನು ಆದ್ಯತೆ ನೀಡಿದ್ದಾರೆ ಮತ್ತು ಕೇವಲ ",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST": "ಚಾಲಕರು ನಿಮ್ಮ ವಿಶೇಷ ವಿನಂತಿಯನ್ನು ಆದ್ಯತೆ ನೀಡಿದ್ದಾರೆ ಮತ್ತು ಈಗಾಗಲೇ ",
   "AND_HAS_TRAVELLED": " ಕಿಮೀ ಪ್ರಯಾಣಿಸಿದ್ದಾರೆ.",
-  "PLEASE_FIND_REVISED_FARE_ESTIMATE": "ದಯವಿಟ್ಟು ಪರಿಷ್ಕೃತ ಅಂದಾಜು ದರವನ್ನು ಕಂಡುಹಿಡಿಯಿರಿ. ರಾತ್ರಿ ಶುಲ್ಕಗಳು ದಿನದ ಶುಲ್ಕಕ್ಕಿಂತ 1.5 ಪಟ್ಟು ಹೆಚ್ಚು."
+  "PLEASE_FIND_REVISED_FARE_ESTIMATE": "ದಯವಿಟ್ಟು ಪರಿಷ್ಕೃತ ಅಂದಾಜು ದರವನ್ನು ಕಂಡುಹಿಡಿಯಿರಿ. ರಾತ್ರಿ ಶುಲ್ಕಗಳು ದಿನದ ಶುಲ್ಕಕ್ಕಿಂತ 1.5 ಪಟ್ಟು ಹೆಚ್ಚು.",
+  "NAVIGATE_TO_PICKUP" : "ಪಿಕಪ್ ಮಾಡಲು ನ್ಯಾವಿಗೇಟ್ ಮಾಡಿ" ,
+  "FARE_ESTIMATE" : "ದರದ ಅಂದಾಜುಗಳು" ,
+  "TIP_SELECTED" : "ಸಲಹೆ ಆಯ್ಕೆಮಾಡಲಾಗಿದೆ",
+  "ADD_A_TIP_TO_FIND_A_RIDE_QUICKER" : "ರೈಡ್ ಅನ್ನು ತ್ವರಿತವಾಗಿ ಹುಡುಕಲು ಸಲಹೆಯನ್ನು ಸೇರಿಸಿ!",
+  "IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL" : "ಇದು ಸಾಮಾನ್ಯಕ್ಕಿಂತ ಹೆಚ್ಚು ಸಮಯ ತೆಗೆದುಕೊಳ್ಳುತ್ತಿರುವಂತೆ ತೋರುತ್ತಿದೆ.",
+  "CONTINUE_SEARCH_WITH" : "ಇದರೊಂದಿಗೆ ಹುಡುಕಾಟವನ್ನು ಮುಂದುವರಿಸಿ",
+  "CONTINUING_SEARCH_WITH" : "ಇದರೊಂದಿಗೆ ಹುಡುಕಾಟವನ್ನು ಮುಂದುವರಿಸಲಾಗುತ್ತಿದೆ",
+  "SEARCHING_WITH" : "ಇದರೊಂದಿಗೆ ಹುಡುಕಲಾಗುತ್ತಿದೆ"
 }

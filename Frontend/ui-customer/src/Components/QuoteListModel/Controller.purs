@@ -18,6 +18,7 @@ module Components.QuoteListModel.Controller where
 import Components.PrimaryButton as PrimaryButtonController
 import Components.QuoteListItem as QuoteListItemController
 import Data.Maybe (Maybe)
+import Screens.Types (TipViewProps)
 
 data Action = GoBack
             | NoAction
@@ -26,6 +27,8 @@ data Action = GoBack
             | HomeButtonActionController PrimaryButtonController.Action
             | TryAgainButtonActionController PrimaryButtonController.Action
             | CancelAutoAssigning
+            | TipBtnClick Int Int
+            | TipViewPrimaryButtonClick PrimaryButtonController.Action
             | HidePopUp
 
 type QuoteListModelState = {
@@ -36,4 +39,6 @@ type QuoteListModelState = {
   , autoSelecting :: Boolean
   , searchExpire :: Int
   , showProgress :: Boolean
+  , tipViewProps :: TipViewProps
+  , findingRidesAgain :: Boolean
 }

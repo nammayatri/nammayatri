@@ -606,6 +606,9 @@ type HomeScreenStateProps =
   , zoneType :: SpecialTags
   , cancelRideConfirmationPopup :: Boolean
   , searchAfterEstimate :: Boolean
+  , tipViewProps :: TipViewProps
+  , timerId :: String
+  , findingRidesAgain :: Boolean
   }
 
 type SpecialTags = {
@@ -626,6 +629,26 @@ type CustomerTipProps = {
   , tipActiveIndex :: Int
   , tipForDriver :: Int
   , isTipSelected :: Boolean
+}
+
+data TipViewStage = DEFAULT | TIP_AMOUNT_SELECTED | TIP_ADDED_TO_SEARCH | RETRY_SEARCH_WITH_TIP
+
+derive instance genericTipViewStage :: Generic TipViewStage _
+instance showTipViewStage :: Show TipViewStage where show = genericShow
+instance encodeTipViewStage :: Encode TipViewStage where encode = defaultEncode
+instance decodeTipViewStage :: Decode TipViewStage where decode = defaultDecode
+
+type TipViewProps = {
+    stage :: TipViewStage
+  , isVisible :: Boolean
+  , onlyPrimaryText :: Boolean
+  , isprimaryButtonVisible :: Boolean
+  , primaryText :: String
+  , secondaryText :: String
+  , customerTipArray :: Array String
+  , customerTipArrayWithValues :: Array Int
+  , activeIndex :: Int
+  , primaryButtonText :: String
 }
 
 type BannerViewState = {
@@ -1063,3 +1086,13 @@ instance showZoneType :: Show ZoneType where show = genericShow
 instance eqZoneType :: Eq ZoneType where eq = genericEq
 instance encodeZoneType :: Encode ZoneType where encode = defaultEncode
 instance decodeZoneType :: Decode ZoneType where decode = defaultDecode
+newtype TipViewData = TipViewData {
+    stage :: TipViewStage
+  , activeIndex :: Int
+  , isVisible :: Boolean
+}
+
+derive instance genericTipViewData :: Generic TipViewData _
+instance showTipViewData :: Show TipViewData where show = genericShow
+instance encodeTipViewData :: Encode TipViewData where encode = defaultEncode
+instance decodeTipViewData :: Decode TipViewData where decode = defaultDecode

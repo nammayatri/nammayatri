@@ -71,6 +71,8 @@ data KeyStore
   | USER_EMAIL
   | PICKUP_DISTANCE
   | PERMISSION_POPUP_TIRGGERED
+  | TIP_VIEW_DATA
+  | FARE_ESTIMATE_DATA
 
 derive instance genericKeyStore :: Generic KeyStore _
 
