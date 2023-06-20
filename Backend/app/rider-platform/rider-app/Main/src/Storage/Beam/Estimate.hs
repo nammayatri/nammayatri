@@ -80,8 +80,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be [LatLong]
 
 instance FromBackendRow Postgres [LatLong]
 
-deriving stock instance Ord VehVar.VehicleVariant
-
 deriving stock instance Ord LatLong
 
 data EstimateT f = EstimateT

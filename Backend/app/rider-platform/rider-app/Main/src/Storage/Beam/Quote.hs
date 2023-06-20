@@ -53,8 +53,6 @@ instance FromBackendRow Postgres VehVar.VehicleVariant
 instance IsString VehVar.VehicleVariant where
   fromString = show
 
-deriving stock instance Ord VehVar.VehicleVariant
-
 instance FromField Domain.FareProductType where
   fromField = fromFieldEnum
 

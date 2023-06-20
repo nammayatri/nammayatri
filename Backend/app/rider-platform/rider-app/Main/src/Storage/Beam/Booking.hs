@@ -80,8 +80,6 @@ instance FromBackendRow Postgres VehVar.VehicleVariant
 instance IsString VehVar.VehicleVariant where
   fromString = show
 
-deriving stock instance Ord VehVar.VehicleVariant
-
 data BookingT f = BookingT
   { id :: B.C f Text,
     transactionId :: B.C f Text,

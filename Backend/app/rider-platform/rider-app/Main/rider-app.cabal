@@ -208,6 +208,14 @@ library
       Storage.Beam.Person
       Storage.Beam.Quote
       Storage.Beam.RegistrationToken
+      Storage.Beam.RentalSlab
+      Storage.Beam.Ride
+      Storage.Beam.SavedReqLocation
+      Storage.Beam.SearchRequest
+      Storage.Beam.Sos
+      Storage.Beam.SpecialZoneQuote
+      Storage.Beam.TripTerms
+      Storage.Beam.Webengage
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.Exophone
