@@ -199,6 +199,11 @@ library
       Storage.Beam.DriverOffer
       Storage.Beam.Estimate
       Storage.Beam.EstimateBreakup
+      Storage.Beam.Exophone
+      Storage.Beam.Geometry
+      Storage.Beam.Issue
+      Storage.Beam.Merchant
+      Storage.Beam.MerchantConfig
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.Exophone
