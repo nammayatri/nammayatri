@@ -391,7 +391,7 @@ const englishStrings = {
   "CANCEL_ONGOING_SEARCH": "Are you sure you want to continue with cancelling an ongoing search?",
   "SEARCH_AGAIN_WITH_A_TIP": "Search again with a tip?",
   "TRY_AGAIN_WITH_A_TIP": "Try again with a tip?",
-  "BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS": "A tip might help increase the chance of getting a ride. Helps the driver during peak hours / compensate for empty return trips",
+  "BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS": "It seems to be a very busy day. You may try adding a tip to increase chances of getting a ride.",
   "TRY_AGAIN_WITHOUT_TIP": "Try Again Without Tip",
   "SEARCH_AGAIN_WITHOUT_A_TIP": "Search Again Without Tip",
   "TRY_AGAIN_WITH": "Try Again With",
@@ -491,5 +491,12 @@ const englishStrings = {
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST": "The driver preferred your special request and is just ",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST": "The driver preferred your special request and has travelled ",
   "AND_HAS_TRAVELLED": " km.",
-  "PLEASE_FIND_REVISED_FARE_ESTIMATE": "Please find the Revised Estimated Fare. Night charges are 1.5 times the day charges."
+  "PLEASE_FIND_REVISED_FARE_ESTIMATE": "Please find the Revised Estimated Fare. Night charges are 1.5 times the day charges.",
+  "FARE_ESTIMATE" : "Fare Estimate",
+  "TIP_SELECTED" : "Tip Selected",
+  "ADD_A_TIP_TO_FIND_A_RIDE_QUICKER" : "Add a tip to find a ride quicker!",
+  "IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL" : "It seems to be taking longer than usual.",
+  "CONTINUE_SEARCH_WITH" : "Continue Search with",
+  "CONTINUING_SEARCH_WITH" : "Continuing search with",
+  "SEARCHING_WITH" : "Searching with"
 }

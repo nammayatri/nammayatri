@@ -51,7 +51,7 @@ import Components.SettingSideBar.Controller as SettingSideBarController
 import Components.SourceToDestination.Controller as SourceToDestinationController
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array ((!!), filter, null, snoc, length, head, last, sortBy, union)
+import Data.Array ((!!), filter, null, snoc, length, head, last, sortBy, union, any)
 import Data.Int (toNumber, round)
 import Data.Int (toNumber, round, fromString)
 import Data.Lens ((^.))
@@ -63,7 +63,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os, getExpiryTime, convertUTCtoISC, getCurrentUTC)
 import Helpers.Utils (Merchant(..), addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, getMerchant, performHapticFeedback)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, startLottieProcess)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
@@ -78,7 +78,7 @@ import Screens.AddNewAddressScreen.Controller (validTag, getSavedTagsFromHome)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity, dummyZoneType)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList)
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (HomeScreenState, Location, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), RateCardType(..), CallType(..), ZoneType(..), SpecialTags)
+import Screens.Types (HomeScreenState, Location, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), RateCardType(..), CallType(..), ZoneType(..), SpecialTags, TipViewStage(..))
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
@@ -89,6 +89,9 @@ import Presto.Core.Types.Language.Flow (doAff)
 import Effect.Class (liftEffect)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Types.App (defaultGlobalState)
+import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData)
+import Screens.Types (TipViewData(..) , TipViewProps(..))
+
 
 instance showAction :: Show Action where
   show _ = ""
@@ -491,8 +494,8 @@ data ScreenOutput = LogoutUser
                   | OnResumeApp HomeScreenState
                   | CheckCurrentStatus
                   | CheckFlowStatus HomeScreenState
-                  | RetryFindingQuotes HomeScreenState
                   | ExitToPermissionFlow String
+                  | RetryFindingQuotes Boolean HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -720,8 +723,7 @@ eval BackPressed state = do
                       continue state{props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation}}
     QuoteList       -> do
                       _ <- pure $ performHapticFeedback unit
-                      let newState = if state.props.customerTip.enableTips then (tipEnabledState state) else state
-                      if newState.props.customerTip.enableTips then continue ( newState{props { isPopUp = TipsPopUp} } )else continue newState{ props{isPopUp = if ( not null (filter (\a -> a.seconds > 0) state.data.quoteListModelState)) then ActiveQuotePopUp else ConfirmBack}}
+                      if state.props.isPopUp == NoPopUp then continue $ state { props{isPopUp = ConfirmBack}} else continue state
     PricingTutorial -> do
                       _ <- pure $ performHapticFeedback unit
                       continue state { props { currentStage = SettingPrice}}
@@ -735,8 +737,7 @@ eval BackPressed state = do
                       continue state{props{isSource = Just false,isPopUp = NoPopUp, rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSearchLocation = SearchLocation}}
     FindingQuotes ->  do
                       _ <- pure $ performHapticFeedback unit
-                      let newState = if state.props.customerTip.enableTips then (tipEnabledState state) else state
-                      continue $ newState { props{isPopUp = if state.props.customerTip.enableTips then TipsPopUp else ConfirmBack}}
+                      continue $ state { props{isPopUp = ConfirmBack}}
     FavouriteLocationModel -> do
                       _ <- pure $ performHapticFeedback unit
                       _ <- pure $ updateLocalStage (if state.props.isSearchLocation == NoView then HomeScreen else SearchLocationModel)
@@ -950,9 +951,16 @@ eval OpenSettings state = do
 eval (SearchExpireCountDown seconds id status timerID) state = do
   if status == "EXPIRED" then do
     _ <- pure $ clearTimer timerID
+    let tipViewData = HomeScreenData.initData.props.tipViewProps
+    _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
     continue state { props { searchExpire = seconds } }
   else
-    continue state { props { searchExpire = seconds } }
+    if any ( _ == state.props.currentStage) [FindingQuotes , QuoteList] then continue state { props { searchExpire = seconds ,timerId = timerID , tipViewProps {isVisible = state.props.customerTip.enableTips && (seconds <= (getSearchExpiryTime "LazyCheck")-30 || state.props.tipViewProps.isVisible) && (state.props.customerTip.tipActiveIndex >0) }} }
+      else do
+        _ <- pure $ clearTimer timerID
+        let tipViewData = HomeScreenData.initData.props.tipViewProps
+        _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
+        continue state { props { searchExpire = (getSearchExpiryTime "LazyCheck") ,timerId = timerID , tipViewProps {isVisible = false}} }
 
 eval CancelSearch state = case state.props.currentStage of
   FindingEstimate -> do
@@ -1278,6 +1286,19 @@ eval (QuoteListModelActionController (QuoteListModelController.CancelAutoAssigni
   _ <- pure $ setValueToLocalStore AUTO_SELECTING "CANCELLED_AUTO_ASSIGN"
   continue state
 
+
+eval (QuoteListModelActionController (QuoteListModelController.TipViewPrimaryButtonClick PrimaryButtonController.OnClick)) state = do
+  _ <- pure $ clearTimer state.props.timerId
+  _ <- pure $ startLottieProcess "progress_loader_line" (getNewIDWithTag "lottieLoaderAnimProgress") true 0.6 "CENTER_CROP"
+  let tipViewData = state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH }
+  let newState = state{ props{findingRidesAgain = true ,searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = TryAgain, sourceSelectedOnMap = true, isPopUp = NoPopUp ,tipViewProps = tipViewData ,customerTip {tipForDriver = (fromMaybe 10 (state.props.tipViewProps.customerTipArrayWithValues !! state.props.tipViewProps.activeIndex)) , tipActiveIndex = state.props.tipViewProps.activeIndex+1 , isTipSelected = true } }}
+  _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
+  updateAndExit newState $ RetryFindingQuotes false newState
+
+eval (QuoteListModelActionController (QuoteListModelController.TipBtnClick index value)) state = do
+  let check = index == state.props.tipViewProps.activeIndex
+  continue state { props {tipViewProps { stage = (if check then DEFAULT else TIP_AMOUNT_SELECTED) , isprimaryButtonVisible = not check , activeIndex = (if check then -1 else index)}}}
+
 eval (QuoteListModelActionController (QuoteListModelController.QuoteListItemActionController QuoteListItemController.ConfirmRide)) state = do
   _ <- pure $ performHapticFeedback unit
   _ <- pure $ firebaseLogEvent "ny_user_quote_confirm"
@@ -1320,43 +1341,55 @@ eval (QuoteListModelActionController (QuoteListModelController.HomeButtonActionC
   _ <- pure $ performHapticFeedback unit
   updateAndExit state CheckCurrentStatus
 
-eval (Restart err) state = exit $ (LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state)
+eval (Restart err) state = exit $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.isPopUp of
   TipsPopUp -> do
     _ <- pure $ performHapticFeedback unit
     _ <- pure $ firebaseLogEvent if state.props.customerTip.isTipSelected then ("ny_added_tip_for_" <> (show state.props.currentStage)) else "ny_no_tip_added"
-    updateAndExit state{props{isPopUp = NoPopUp, currentStage = RetryFindingQuote}} $ RetryFindingQuotes state{props{currentStage = RetryFindingQuote, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
+    _ <- pure $ clearTimer state.props.timerId
+    let tipViewData = state.props.tipViewProps{stage = RETRY_SEARCH_WITH_TIP , isVisible = not (state.props.customerTip.tipActiveIndex == 0) , activeIndex = state.props.customerTip.tipActiveIndex-1 }
+    let newState = state{ props{findingRidesAgain = true ,searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = RetryFindingQuote, sourceSelectedOnMap = true, isPopUp = NoPopUp ,tipViewProps = tipViewData }}
+    _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
+    updateAndExit newState $ RetryFindingQuotes true newState
   Logout -> continue state{props{isPopUp = NoPopUp}}
   _ -> do
     _ <- pure $ performHapticFeedback unit
     _ <- pure $ firebaseLogEvent "ny_tip_not_applicable"
-    if (isLocalStageOn FindingQuotes ) then exit $ CheckCurrentStatus else updateAndExit state{props{isPopUp = NoPopUp, currentStage = RetryFindingQuote}} $ RetryFindingQuotes state{props{currentStage = RetryFindingQuote, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
+    if (isLocalStageOn FindingQuotes ) then do
+        _ <- pure $ clearTimer state.props.timerId
+        let tipViewData = HomeScreenData.initData.props.tipViewProps
+        _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
+        exit $ CheckCurrentStatus
+      else do
+      _ <- pure $ clearTimer state.props.timerId
+      let newState = state{props{findingRidesAgain = true , searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = RetryFindingQuote, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
+      updateAndExit newState $ RetryFindingQuotes true newState
 
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isPopUp of
-  TipsPopUp -> case state.props.currentStage of
-    QuoteList -> do
-      _ <- pure $ performHapticFeedback unit
-      updateAndExit state CheckCurrentStatus
-    FindingQuotes -> do
-      _ <- pure $ performHapticFeedback unit
-      exit $ CheckCurrentStatus
-    _ -> continue state
-  Logout -> exit LogoutUser
-  ConfirmBack -> do
-    _ <- pure $ firebaseLogEvent "ny_no_retry"
-    case (getValueToLocalStore LOCAL_STAGE) of
-      "QuoteList" -> do
+    TipsPopUp -> case state.props.currentStage of
+      QuoteList -> do
+        _ <- pure $ performHapticFeedback unit
+        updateAndExit state CheckCurrentStatus
+      FindingQuotes -> do
         _ <- pure $ performHapticFeedback unit
         exit $ CheckCurrentStatus
-      "FindingQuotes" -> do
-        _ <- pure $ performHapticFeedback unit
-        continue state{props{isPopUp = NoPopUp}}
       _ -> continue state
-  NoPopUp -> continue state
-  ActiveQuotePopUp -> do
-    _ <- pure $ performHapticFeedback unit
-    exit $ CheckCurrentStatus
+    Logout -> exit LogoutUser
+    ConfirmBack -> do
+      _ <- pure $ firebaseLogEvent "ny_no_retry"
+      case (getValueToLocalStore LOCAL_STAGE) of
+        "QuoteList" -> do
+          _ <- pure $ performHapticFeedback unit
+          exit $ CheckCurrentStatus
+        "FindingQuotes" -> do
+          _ <- pure $ performHapticFeedback unit
+          continue state{props{isPopUp = NoPopUp}}
+        _ -> continue state
+    NoPopUp -> continue state
+    ActiveQuotePopUp -> do
+      _ <- pure $ performHapticFeedback unit
+      exit $ CheckCurrentStatus
 
 eval (PopUpModalAction (PopUpModal.Tipbtnclick index value)) state = do
   _ <- pure $ performHapticFeedback unit
@@ -1940,11 +1973,10 @@ getSearchExpiryTime dummy =
   in searchExpiryTime
 
 tipEnabledState :: HomeScreenState -> HomeScreenState
-tipEnabledState state = state { props{customerTip {isTipSelected= true, tipForDriver= 10, tipActiveIndex=1}}}
+tipEnabledState state = state { props{customerTip {isTipSelected= true, tipForDriver= (fromMaybe 10 (state.props.tipViewProps.customerTipArrayWithValues !! (state.props.customerTip.tipActiveIndex-1)))}}}
 
 isTipEnabled :: Int -> Boolean
-isTipEnabled distance = distance < 5000 &&
-                        (getValueFromConfig "CUSTOMER_TIP") == "true"
+isTipEnabled distance = (getValueFromConfig "CUSTOMER_TIP") == "true"
 
 estimatesFlow :: Array EstimateAPIEntity -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 estimatesFlow estimatedQuotes state = do

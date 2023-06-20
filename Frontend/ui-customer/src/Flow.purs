@@ -21,6 +21,7 @@ import Common.Types.App (LazyCheck(..),Version(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Components.SavedLocationCard.Controller (getCardType)
 import Components.SettingSideBar.Controller as SettingSideBarController
+import Screens.RideBookingFlow.HomeScreen.Config (getTipViewData , setTipViewData)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Data.Array (catMaybes, filter, length, null, snoc, (!!), any, sortBy, head, uncons)
@@ -61,7 +62,7 @@ import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
-import Screens.Types (CardType(..), AddNewAddressScreenState(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), EmailErrorType(..), ZoneType(..))
+import Screens.Types (CardType(..), AddNewAddressScreenState(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), EmailErrorType(..), ZoneType(..), TipViewData(..))
 import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), SelectEstimateRes(..),UpdateProfileReq(..), OnCallRes(..))
 import Services.Backend as Remote
 import Screens.Types (Gender(..)) as Gender
@@ -343,6 +344,12 @@ currentFlowStatus = do
           setValueToLocalStore AUTO_SELECTING ""
           setValueToLocalStore FINDING_QUOTES_POLLING "false"
           _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
+          (GlobalState currentState) <- getState
+          let tipViewData = case (getTipViewData "LazyCheck") of
+                              Just (TipViewData tipView) -> do
+                                currentState.homeScreen.props.tipViewProps{stage = tipView.stage , activeIndex = tipView.activeIndex , isVisible = tipView.isVisible }
+                              Nothing -> do
+                                currentState.homeScreen.props.tipViewProps
           case (getFlowStatusData "LazyCheck") of
             Just (FlowStatusData flowStatusData) -> do
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{
@@ -356,8 +363,9 @@ currentFlowStatus = do
                      , rideRequestFlow = true
                      , customerTip{
                         enableTips = (getValueToLocalStore ENABLE_TIPS) == "true"
-                     }
-                     , selectedQuote = Nothing}
+                      }
+                     , selectedQuote = Nothing
+                     , tipViewProps = tipViewData}
                 , data { source = flowStatusData.source.place
                        , destination = flowStatusData.destination.place
                        , sourceAddress = flowStatusData.sourceAddress
@@ -561,9 +569,9 @@ homeScreenFlow = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing}})
       updateLocalStage FindingEstimate
       homeScreenFlow
-    RETRY_FINDING_QUOTES -> do
+    RETRY_FINDING_QUOTES showLoader-> do
       void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)  -- TODO : Handlde Loader in IOS Side
-      void $ lift $ lift $ toggleLoader true
+      void $ lift $ lift $ toggleLoader showLoader
       (GlobalState newState) <- getState
       let state = newState.homeScreen
       if (not (isLocalStageOn QuoteList)) then do
@@ -595,8 +603,11 @@ homeScreenFlow = do
             void $ pure $ firebaseLogEvent "ny_user_estimate_expired"
             updateLocalStage FindEstimateAndSearch
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { currentStage = FindEstimateAndSearch, searchAfterEstimate = true } })
+        let tipViewData = if state.props.customerTip.isTipSelected then state.props.tipViewProps else HomeScreenData.initData.props.tipViewProps
+        _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { customerTip = if homeScreen.props.customerTip.isTipSelected then homeScreen.props.customerTip else HomeScreenData.initData.props.customerTip{enableTips = homeScreen.props.customerTip.enableTips } , tipViewProps = tipViewData }})
       homeScreenFlow
-    LOCATION_SELECTED item addToRecents -> do
+    LOCATION_SELECTED item addToRecents-> do
         void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)  -- TODO : Handlde Loader in IOS Side
         void $ lift $ lift $ toggleLoader true
         (GlobalState newState) <- getState

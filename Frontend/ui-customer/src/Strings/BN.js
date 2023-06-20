@@ -388,7 +388,7 @@ const bengaliStrings = {
   "CANCEL_ONGOING_SEARCH" : "আপনি কি নিশ্চিত যে আপনি চলমান অনুসন্ধান বাতিল করে চালিয়ে যেতে চান?",
   "SEARCH_AGAIN_WITH_A_TIP" : "আবার একটি টিপ দিয়ে অনুসন্ধান করবেন?",
   "TRY_AGAIN_WITH_A_TIP" : "একটি টিপ দিয়ে আবার চেষ্টা করুন?",
-  "BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS" : "টিপ যাত্রা পাওয়ার সুযোগ বাড়াতে সহায়তা করতে পারে। পিক আওয়ারের সময় ড্রাইভারকে সহায়তা করে / খালি রিটার্ন ভ্রমণের জন্য ক্ষতিপূরণ দেয়",
+  "BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS" : "খুব ব্যস্ত দিন মনে হচ্ছে। রাইড পাওয়ার সম্ভাবনা বাড়ানোর জন্য আপনি একটি টিপ যোগ করার চেষ্টা করতে পারেন।",
   "TRY_AGAIN_WITHOUT_TIP" : "টিপ ছাড়াই আবার চেষ্টা করুন",
   "SEARCH_AGAIN_WITHOUT_A_TIP" : "টিপ ছাড়াই আবার অনুসন্ধান করুন",
   "TRY_AGAIN_WITH" : "আবার চেষ্টা করুন",
@@ -467,5 +467,13 @@ const bengaliStrings = {
   "GO_BACK_TEXT": "ফিরে যাও",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST": "ড্রাইভার আপনার বিশেষ অনুরোধ পছন্দ করেছে এবং মাত্র ",
   "WE_URGE_YOU_NOT_TO_CANCEL": " মিটার দূরে। আমরা আপনাকে রাইড বাতিল না করার জন্য অনুরোধ করছি",
-  "PLEASE_FIND_REVISED_FARE_ESTIMATE": "অনুগ্রহ করে সংশোধিত আনুমানিক ভাড়া খুঁজুন। রাতের চার্জ দিনের চার্জের 1.5 গুণ।"
+  "PLEASE_FIND_REVISED_FARE_ESTIMATE": "অনুগ্রহ করে সংশোধিত আনুমানিক ভাড়া খুঁজুন। রাতের চার্জ দিনের চার্জের 1.5 গুণ।",
+  "NAVIGATE_TO_PICKUP" : "পিকআপে নেভিগেট করুন" ,
+  "FARE_ESTIMATE" : "ভাড়া অনুমান" ,
+  "TIP_SELECTED" : "টিপ নির্বাচিত",
+  "ADD_A_TIP_TO_FIND_A_RIDE_QUICKER" : "দ্রুত একটি রাইড খুঁজে পেতে একটি টিপ যোগ করুন!",
+  "IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL" : "এটি স্বাভাবিকের চেয়ে বেশি সময় নিচ্ছে বলে মনে হচ্ছে।",
+  "CONTINUE_SEARCH_WITH" : "এর সাথে অনুসন্ধান চালিয়ে যান",
+  "CONTINUING_SEARCH_WITH" : "সঙ্গে অনুসন্ধান অব্যাহত",
+  "SEARCHING_WITH" : "সঙ্গে অনুসন্ধান"
 }

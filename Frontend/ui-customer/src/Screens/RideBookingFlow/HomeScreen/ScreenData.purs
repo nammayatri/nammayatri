@@ -20,9 +20,9 @@ import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Maybe (Maybe(..))
 import Styles.Colors as Color
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location,RateCardType(..), ZoneType(..), SpecialTags)
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location,RateCardType(..), ZoneType(..), SpecialTags, TipViewStage(..))
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..))
-import Prelude (($))
+import Prelude (($) ,negate)
 import Data.Array (head)
 
 initData :: HomeScreenState
@@ -160,6 +160,20 @@ initData = {
     , zoneType : dummyZoneType
     , cancelRideConfirmationPopup : false
     , searchAfterEstimate : false
+    , tipViewProps : {
+        stage : DEFAULT
+      , isVisible : false
+      , onlyPrimaryText : false
+      , isprimaryButtonVisible : false
+      , primaryText : ""
+      , secondaryText : ""
+      , customerTipArray : ["₹10 🙂", "₹20 😄", "₹30 🤩"]
+      , customerTipArrayWithValues : [10, 20, 30]
+      , activeIndex : -1
+      , primaryButtonText : ""
+      }
+    , timerId : ""
+    , findingRidesAgain : false
     }
 }
 
