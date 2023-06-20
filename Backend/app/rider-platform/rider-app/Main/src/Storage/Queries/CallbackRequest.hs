@@ -15,8 +15,39 @@
 module Storage.Queries.CallbackRequest where
 
 import Domain.Types.CallbackRequest
+import Kernel.External.Encryption (Encrypted (..), EncryptedHashed (..))
+import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import qualified Storage.Beam.CallbackRequest as BeamCR
 import Storage.Tabular.CallbackRequest ()
 
 create :: CallbackRequest -> SqlDB ()
 create = Esq.create
+
+transformBeamCallbackRequestToDomain :: BeamCR.CallbackRequest -> CallbackRequest
+transformBeamCallbackRequestToDomain BeamCR.CallbackRequestT {..} = do
+  CallbackRequest
+    { id = Id id,
+      merchantId = Id merchantId,
+      customerName = customerName,
+      customerPhone = EncryptedHashed (Encrypted customerPhoneEncrypted) customerPhoneHash,
+      customerMobileCountryCode = customerMobileCountryCode,
+      status = status,
+      createdAt = createdAt,
+      updatedAt = updatedAt
+    }
+
+transformDomainCallbackRequestToBeam :: CallbackRequest -> BeamCR.CallbackRequest
+transformDomainCallbackRequestToBeam CallbackRequest {..} =
+  BeamCR.defaultCallbackRequest
+    { BeamCR.id = getId id,
+      BeamCR.merchantId = getId merchantId,
+      BeamCR.customerName = customerName,
+      BeamCR.customerPhoneEncrypted = customerPhone & unEncrypted . (.encrypted),
+      BeamCR.customerPhoneHash = customerPhone & (.hash),
+      BeamCR.customerMobileCountryCode = customerMobileCountryCode,
+      BeamCR.status = status,
+      BeamCR.createdAt = createdAt,
+      BeamCR.updatedAt = updatedAt
+    }
