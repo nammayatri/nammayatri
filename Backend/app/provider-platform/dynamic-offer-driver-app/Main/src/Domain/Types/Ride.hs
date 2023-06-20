@@ -69,6 +69,7 @@ data Ride = Ride
     distanceCalculationFailed :: Maybe Bool,
     pickupDropOutsideOfThreshold :: Maybe Bool,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    numberOfDeviation :: Maybe Double
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)

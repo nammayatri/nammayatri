@@ -63,7 +63,8 @@ data EndRideReq = DriverReq DriverEndRideReq | DashboardReq DashboardEndRideReq 
 
 data DriverEndRideReq = DriverEndRideReq
   { point :: LatLong,
-    requestor :: DP.Person
+    requestor :: DP.Person,
+    numberOfDeviation :: Maybe Double
   }
 
 data DashboardEndRideReq = DashboardEndRideReq
@@ -125,7 +126,7 @@ driverEndRide ::
   Id DRide.Ride ->
   DriverEndRideReq ->
   m APISuccess.APISuccess
-driverEndRide handle rideId req =
+driverEndRide handle rideId req = do
   withLogTag ("requestorId-" <> req.requestor.id.getId)
     . endRide handle rideId
     $ DriverReq req
@@ -212,7 +213,8 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                tripEndPos = Just tripEndPoint,
                fareParametersId = Just newFareParams.id,
                distanceCalculationFailed = Just distanceCalculationFailed,
-               pickupDropOutsideOfThreshold = Just pickupDropOutsideOfThreshold
+               pickupDropOutsideOfThreshold = Just pickupDropOutsideOfThreshold,
+               numberOfDeviation = getDeviations req
               }
     -- we need to store fareParams only when they changed
     endRideTransaction (cast @DP.Person @DP.Driver driverId) booking.id updRide mbUpdatedFareParams booking.riderId booking.providerId
@@ -226,6 +228,10 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
 
     notifyCompleteToBAP booking updRide newFareParams mbPaymentMethodInfo mbPaymentUrl
   return APISuccess.Success
+  where
+    getDeviations endRideReq = case endRideReq of
+      DriverReq request -> request.numberOfDeviation
+      _ -> Nothing
 
 recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> m (Meters, Money, Maybe FareParameters)
 recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance = do
