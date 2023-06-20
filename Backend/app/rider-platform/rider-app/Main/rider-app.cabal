@@ -194,6 +194,8 @@ library
       Storage.Beam.Booking
       Storage.Beam.BookingCancellationReason
       Storage.Beam.CallbackRequest
+      Storage.Beam.CallStatus
+      Storage.Beam.CancellationReason
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.Exophone
