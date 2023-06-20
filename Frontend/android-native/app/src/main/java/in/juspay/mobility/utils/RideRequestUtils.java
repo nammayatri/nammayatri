@@ -24,6 +24,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.provider.Settings;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
@@ -46,14 +48,17 @@ import java.util.concurrent.Executors;
 
 import javax.net.ssl.HttpsURLConnection;
 
+import in.juspay.mobility.BuildConfig;
 import in.juspay.mobility.MainActivity;
 import in.juspay.mobility.R;
 
 public class RideRequestUtils {
     private final int rideReqNotificationId = 5032023;
+    private static final String LOG_TAG = "RideRequestUtils";
     private final String RIDE_REQUEST_CHANNEL = "in.juspay.mobility.riderequest";
     private final int rideReqNotificationReqCode = 6032023;
     private FirebaseAnalytics mFirebaseAnalytics;
+    public static  String versionName = BuildConfig.VERSION_NAME;
 
     public Boolean driverRespondApi(String searchRequestId, int offeredPrice, boolean isAccept, Context context, int slotNumber) {
         Handler mainLooper = new Handler(Looper.getMainLooper());
@@ -317,4 +322,63 @@ public class RideRequestUtils {
         }
     }
 
+    public void updateDriverStatus(Boolean status, String mode, Context context, Boolean startWidget) {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.execute(() ->
+        {
+            StringBuilder result = new StringBuilder();
+            SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
+            String bundle_version = sharedPref.getString("BUNDLE_VERSION","null");
+            String baseUrl = sharedPref.getString("BASE_URL", "null");
+            String deviceDetails = sharedPref.getString("DEVICE_DETAILS", "null");
+            try
+            {
+                //endPoint for driver status
+                String orderUrl = baseUrl + "/driver/setActivity?active=" + status + "&mode=\"" + mode + "\"";
+                Log.d(LOG_TAG, "orderUrl " + orderUrl);
+                //Http connection to make API call
+                HttpURLConnection connection = (HttpURLConnection) (new URL(orderUrl).openConnection());
+                if (connection instanceof HttpsURLConnection)
+                    ((HttpsURLConnection) connection).setSSLSocketFactory(new TLSSocketFactory());
+                connection.setRequestMethod("POST");
+                connection.setRequestProperty("Content-Type", "application/json");
+                connection.setRequestProperty("x-client-version", versionName);
+                connection.setRequestProperty("token", token);
+                connection.setRequestProperty("x-bundle-version", bundle_version);
+                connection.setRequestProperty("x-device", deviceDetails);
+                connection.setDoOutput(true);
+                connection.connect();
+
+                // validating the response code
+                int respCode = connection.getResponseCode();
+                InputStreamReader respReader;
+                Log.d(LOG_TAG, "respCode "+ respCode);
+
+                if ((respCode < 200 || respCode >= 300) && respCode != 302) {
+                    respReader = new InputStreamReader(connection.getErrorStream());
+                    Log.d(LOG_TAG, "in error "+ respReader);
+                } else {
+                    if (startWidget == true && Settings.canDrawOverlays(context)  && !sharedPref.getString(context.getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
+                            Intent widgetService = new Intent(context, WidgetService.class);
+                            context.startActivity(widgetService);
+                    }
+                    respReader = new InputStreamReader(connection.getInputStream());
+                    Log.d(LOG_TAG, "in 200 "+ respReader);
+                }
+
+                BufferedReader in = new BufferedReader(respReader);
+                String inputLine;
+                while ((inputLine = in.readLine()) != null) {
+                    result.append(inputLine);
+                }
+                sharedPref.edit().putString("DRIVER_STATUS","__failed").apply();
+                Log.d(LOG_TAG, "in result "+ result);
+            }
+            catch (Exception error)
+            {
+                Log.d(LOG_TAG, "Catch in updateDriverStatus : "+error);
+            }
+        });
+    }
 }

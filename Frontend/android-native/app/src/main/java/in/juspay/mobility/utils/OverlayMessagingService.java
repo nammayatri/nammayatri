@@ -181,7 +181,7 @@ public class OverlayMessagingService extends Service {
                     if (action != null){
                         switch (action){
                             case "SET_DRIVER_ONLINE" :
-                                NotificationUtils.updateDriverStatus(true,"ONLINE", this);
+                                rideRequestUtils.updateDriverStatus(true,"ONLINE", this,false);
                                 rideRequestUtils.restartLocationService(this);
                                 break;
                             case "OPEN_LINK" :
