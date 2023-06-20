@@ -25,6 +25,7 @@ module API.UI.Ride
   )
 where
 
+import Data.Time (Day)
 import qualified Domain.Action.UI.Ride as DRide
 import qualified Domain.Action.UI.Ride.CancelRide as RideCancel
 import qualified Domain.Action.UI.Ride.EndRide as RideEnd
@@ -61,6 +62,7 @@ type API =
                     :> QueryParam "offset" Integer
                     :> QueryParam "onlyActive" Bool
                     :> QueryParam "status" Ride.RideStatus
+                    :> QueryParam "day" Day
                     :> Get '[JSON] DRide.DriverRideListRes
                     :<|> TokenAuth
                     :> Capture "rideId" (Id Ride.Ride)
@@ -151,8 +153,9 @@ listDriverRides ::
   Maybe Integer ->
   Maybe Bool ->
   Maybe Ride.RideStatus ->
+  Maybe Day ->
   FlowHandler DRide.DriverRideListRes
-listDriverRides (driverId, _) mbLimit mbOffset mbRideStatus = withFlowHandlerAPI . DRide.listDriverRides driverId mbLimit mbOffset mbRideStatus
+listDriverRides (driverId, _) mbLimit mbOffset mbRideStatus mbDay = withFlowHandlerAPI . DRide.listDriverRides driverId mbLimit mbOffset mbRideStatus mbDay
 
 arrivedAtPickup :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
 arrivedAtPickup (_, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtPickup rideId req

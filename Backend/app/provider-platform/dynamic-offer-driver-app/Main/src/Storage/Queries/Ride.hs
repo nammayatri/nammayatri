@@ -195,6 +195,48 @@ findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus = do
       let bookings' = filter (\b -> b.id == ride.bookingId) bookings
        in acc <> ((\b -> (ride, b)) <$> bookings')
 
+-- findAllByDriverId ::
+--   Transactionable m =>
+--   Id Person ->
+--   Maybe Integer ->
+--   Maybe Integer ->
+--   Maybe Bool ->
+--   Maybe Ride.RideStatus ->
+--   Maybe Day ->
+--   m [(Ride, Booking)]
+-- findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = Esq.buildDType $ do
+--   let limitVal = fromIntegral $ fromMaybe 10 mbLimit
+--       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
+--       isOnlyActive = Just True == mbOnlyActive
+--   res <- Esq.findAll' $ do
+--     (booking :& ride) <-
+--       from $
+--         table @BookingT
+--           `innerJoin` table @RideT
+--             `Esq.on` ( \(booking :& ride) ->
+--                          ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
+--                      )
+--     where_ $
+--       ride ^. RideDriverId ==. val (toKey driverId)
+--         &&. whenTrue_ isOnlyActive (not_ $ ride ^. RideStatus `in_` valList [Ride.COMPLETED, Ride.CANCELLED])
+--         &&. whenJust_ mbRideStatus (\status -> ride ^. RideStatus ==. val status)
+--         &&. whenJust_ mbDay (\date -> ride ^. RideTripEndTime >=. val (Just (minDayTime date)) &&. ride ^. RideTripEndTime <. val (Just (maxDayTime date)))
+--     orderBy [desc $ ride ^. RideCreatedAt]
+--     limit limitVal
+--     offset offsetVal
+--     return (booking, ride)
+
+--   catMaybes
+--     <$> forM
+--       res
+--       ( \(bookingT, rideT) -> runMaybeT do
+--           booking <- MaybeT $ buildFullBooking bookingT
+--           return (extractSolidType @Ride rideT, booking)
+--       )
+--   where
+--     minDayTime date = UTCTime (addDays (-1) date) 66600
+--     maxDayTime date = UTCTime date 66600
+
 findOneByDriverId :: L.MonadFlow m => Id Person -> m (Maybe Ride)
 findOneByDriverId (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
