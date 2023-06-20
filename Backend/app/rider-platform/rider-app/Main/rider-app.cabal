@@ -201,9 +201,15 @@ library
       Storage.Beam.Estimate
       Storage.Beam.EstimateBreakup
       Storage.Beam.Exophone
+      Storage.Beam.FarePolicy.FareBreakup
       Storage.Beam.Geometry
       Storage.Beam.Issue
+      Storage.Beam.Maps.PlaceNameCache
       Storage.Beam.Merchant
+      Storage.Beam.Merchant.MerchantMessage
+      Storage.Beam.Merchant.MerchantPaymentMethod
+      Storage.Beam.Merchant.MerchantServiceConfig
+      Storage.Beam.Merchant.MerchantServiceUsageConfig
       Storage.Beam.MerchantConfig
       Storage.Beam.OnSearchEvent
       Storage.Beam.Person
