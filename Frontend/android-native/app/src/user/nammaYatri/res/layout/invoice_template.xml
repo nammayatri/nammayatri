@@ -18,11 +18,41 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal">
 
-            <ImageView
-                android:layout_width="147px"
-                android:layout_height="47px"
-                android:src="@drawable/ic_invoice_logo"
-                />
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/plus_jakartasans_medium"
+                    android:layout_marginTop="3px"
+                    android:lineHeight="28px"
+                    android:text="Hey "
+                    android:textColor="@color/Black800"
+                    android:textFontWeight="500"
+                    android:textSize="24px" />
+                <TextView
+                    android:id="@+id/userName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3px"
+                    android:fontFamily="@font/plus_jakartasans_medium"
+                    android:lineHeight="28px"
+                    android:text=""
+                    android:textColor="@color/Black800"
+                    android:textFontWeight="500"
+                    android:textSize="24px" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3px"
+                    android:fontFamily="@font/plus_jakartasans_medium"
+                    android:lineHeight="28px"
+                    android:text=", here’s your invoice"
+                    android:textColor="@color/Black800"
+                    android:textFontWeight="500"
+                    android:textSize="24px" />
+            </LinearLayout>
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -61,48 +91,13 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="1px"
-            android:layout_marginTop="31px"
+            android:layout_marginTop="27px"
             android:background="@color/Black500" />
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="28px"
-                android:fontFamily="@font/plus_jakartasans_medium"
-                android:lineHeight="28px"
-                android:text="Hey "
-                android:textColor="@color/Black800"
-                android:textFontWeight="500"
-                android:textSize="24px" />
-            <TextView
-                android:id="@+id/userName"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="28px"
-                android:fontFamily="@font/plus_jakartasans_medium"
-                android:lineHeight="28px"
-                android:text="Aman Maurya"
-                android:textColor="@color/Black800"
-                android:textFontWeight="500"
-                android:textSize="24px" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="28px"
-                android:fontFamily="@font/plus_jakartasans_medium"
-                android:lineHeight="28px"
-                android:text=", here’s your invoice"
-                android:textColor="@color/Black800"
-                android:textFontWeight="500"
-                android:textSize="24px" />
-        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="58px">
+            android:layout_marginTop="45px">
 
             <TextView
                 android:layout_width="wrap_content"
@@ -187,7 +182,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="80px">
+            android:layout_marginTop="60px">
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -385,14 +380,11 @@
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>
-        <LinearLayout
-            android:layout_width="0px"
-            android:layout_height="0px"
-            android:layout_weight="1.0"/>
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:fontFamily="@font/plus_jakartasans_regular"
+            android:layout_marginTop="35px"
             android:lineHeight="16px"
             android:id="@+id/referenceText"
             android:text=""
