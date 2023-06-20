@@ -333,11 +333,11 @@ eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
   continue state
 eval (RideActionModalAction (RideActionModal.CancelRide)) state = do
   continue state{ data {cancelRideConfirmationPopUp{delayInSeconds = 5,  continueEnabled=false}}, props{cancelConfirmationPopup = true}}
-eval (RideActionModalAction (RideActionModal.CallCustomer)) state = updateWithCmdAndExit state [ do
+eval (RideActionModalAction (RideActionModal.CallCustomer)) state = continueWithCmd state [ do
   _ <- pure $ showDialer (if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone)
   _ <- (firebaseLogEventWithTwoParams "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID))
   pure NoAction
-  ] $ CallCustomer state
+  ]
 
 eval (OpenChatScreen) state = do
   continueWithCmd state{props{openChatScreen = false}} [do
@@ -464,11 +464,11 @@ eval (ChatViewActionController (ChatView.TextChanged value)) state = do
                           false
   continue state{data{messageToBeSent = (trim value)},props{sendMessageActive = sendMessageActive}}
 
-eval(ChatViewActionController (ChatView.Call)) state = updateWithCmdAndExit state [ do
+eval(ChatViewActionController (ChatView.Call)) state = continueWithCmd state [ do
   _ <- pure $ showDialer (if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone)
   _ <- (firebaseLogEventWithTwoParams "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID))
   pure NoAction
-  ] $ CallCustomer state
+  ]
 
 eval (ChatViewActionController (ChatView.SendMessage)) state = do
   if state.data.messageToBeSent /= ""
