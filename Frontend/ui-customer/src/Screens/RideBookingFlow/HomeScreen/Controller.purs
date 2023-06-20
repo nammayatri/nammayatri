@@ -1393,22 +1393,21 @@ eval CloseLocationTracking state = continue state { props { isLocationTracking =
 eval CloseShowCallDialer state = continue state { props { showCallPopUp = false } }
 
 eval (ShowCallDialer item) state = do
-  let newState = state { props { showCallPopUp = false } }
   case item of
     ANONYMOUS_CALLER -> do
-      updateWithCmdAndExit newState 
+      continueWithCmd state 
         [ do
             _ <- pure $ showDialer (if (STR.take 1 state.data.driverInfoCardState.merchantExoPhone) == "0" then state.data.driverInfoCardState.merchantExoPhone else "0" <> state.data.driverInfoCardState.merchantExoPhone)
             _ <- (firebaseLogEventWithTwoParams "ny_user_anonymous_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
             pure NoAction
-        ] $ CallDriver newState ANONYMOUS_CALLER
+        ]
     DIRECT_CALLER -> do
-      updateWithCmdAndExit newState
+      continueWithCmd state
         [ do
             _ <- pure $ showDialer $ fromMaybe state.data.driverInfoCardState.merchantExoPhone state.data.driverInfoCardState.driverNumber
             _ <- (firebaseLogEventWithTwoParams "ny_user_direct_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
             pure NoAction
-        ] $ CallDriver newState DIRECT_CALLER
+        ]
     _ -> continue state
 
 eval (StartLocationTracking item) state = do
