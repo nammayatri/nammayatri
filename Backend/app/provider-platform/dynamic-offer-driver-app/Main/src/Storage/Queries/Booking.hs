@@ -15,7 +15,6 @@
 module Storage.Queries.Booking where
 
 import Domain.Types.Booking
--- import Domain.Types.DriverQuote (DriverQuote)
 import Domain.Types.DriverQuote as DDQ
 import Domain.Types.Geometry
 import Domain.Types.Merchant
@@ -24,10 +23,6 @@ import qualified Domain.Types.SearchTry as DST
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
--- import qualified Kernel.Storage.Esqueleto
-
--- import Storage.Queries.FullEntityBuilders
-
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
