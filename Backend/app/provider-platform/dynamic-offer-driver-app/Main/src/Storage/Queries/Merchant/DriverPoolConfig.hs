@@ -19,7 +19,6 @@ module Storage.Queries.Merchant.DriverPoolConfig
     #-}
 where
 
-import qualified Debug.Trace as T
 import Domain.Types.Merchant
 import Domain.Types.Merchant.DriverPoolConfig
 import qualified EulerHS.KVConnector.Flow as KV
@@ -48,8 +47,8 @@ findAllByMerchantId (Id merchantId) = do
   let modelName = Se.modelTableName @BeamDPC.DriverPoolConfigT
   let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> T.trace ("[Apoorv]DBConf-----" <> show merchantId) $ either (pure []) (transformBeamDriverPoolConfigToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDPC.merchantId $ Se.Eq merchantId]
-    Nothing -> T.trace ("[Apoorv]Nothing-----" <> show merchantId) $ pure []
+    Just dbCOnf' -> either (pure []) (transformBeamDriverPoolConfigToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDPC.merchantId $ Se.Eq merchantId]
+    Nothing -> pure []
 
 findByMerchantIdAndTripDistance :: L.MonadFlow m => Id Merchant -> Meters -> m (Maybe DriverPoolConfig)
 findByMerchantIdAndTripDistance (Id merchantId) tripDistance = do
