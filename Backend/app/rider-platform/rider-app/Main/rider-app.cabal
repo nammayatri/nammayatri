@@ -192,6 +192,7 @@ library
       SharedLogic.PublicTransport
       Storage.Beam.BlackListOrg
       Storage.Beam.Booking
+      Storage.Beam.Booking.BookingLocation
       Storage.Beam.BookingCancellationReason
       Storage.Beam.CallbackRequest
       Storage.Beam.CallStatus
