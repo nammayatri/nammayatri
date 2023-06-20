@@ -25,6 +25,7 @@ where
 
 import Data.String.Conversions
 import qualified Data.Text as T
+import Data.Time (Day)
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
@@ -120,9 +121,10 @@ listDriverRides ::
   Maybe Integer ->
   Maybe Bool ->
   Maybe DRide.RideStatus ->
+  Maybe Day ->
   m DriverRideListRes
-listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus = do
-  rides <- runInReplica $ QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus
+listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = do
+  rides <- runInReplica $ QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
   driverRideLis <- forM rides $ \(ride, booking) -> do
     rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
     rideRating <- runInReplica $ QR.findRatingForRide ride.id

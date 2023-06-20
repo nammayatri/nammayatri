@@ -70,8 +70,9 @@ findAllByDriverId ::
   Maybe Integer ->
   Maybe Bool ->
   Maybe Ride.RideStatus ->
+  Maybe Day ->
   m [(Ride, Booking)]
-findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus = Esq.buildDType $ do
+findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = Esq.buildDType $ do
   let limitVal = fromIntegral $ fromMaybe 10 mbLimit
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
       isOnlyActive = Just True == mbOnlyActive
@@ -87,6 +88,7 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus = Esq.buil
       ride ^. RideDriverId ==. val (toKey driverId)
         &&. whenTrue_ isOnlyActive (not_ $ ride ^. RideStatus `in_` valList [Ride.COMPLETED, Ride.CANCELLED])
         &&. whenJust_ mbRideStatus (\status -> ride ^. RideStatus ==. val status)
+        &&. whenJust_ mbDay (\date -> ride ^. RideTripEndTime >=. val (Just (minDayTime date)) &&. ride ^. RideTripEndTime <. val (Just (maxDayTime date)))
     orderBy [desc $ ride ^. RideCreatedAt]
     limit limitVal
     offset offsetVal
@@ -99,6 +101,9 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus = Esq.buil
           booking <- MaybeT $ buildFullBooking bookingT
           return (extractSolidType @Ride rideT, booking)
       )
+  where
+    minDayTime date = UTCTime (addDays (-1) date) 66600
+    maxDayTime date = UTCTime date 66600
 
 findAllRidesBookingsByRideId :: Transactionable m => Id Merchant -> [Id Ride] -> m [(Ride, Booking)]
 findAllRidesBookingsByRideId merchantId rideIds = Esq.buildDType $ do
