@@ -52,13 +52,18 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..))
+import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData , TipViewStage(..) , TipViewProps)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Data.Int as INT
-import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn)
+import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn ,setValueToLocalStore)
+import Control.Monad.Except (runExcept)
+import Foreign.Generic (decodeJSON, encodeJSON)
+import Effect (Effect)
+import Data.Either (Either(..))
+import Foreign.Class (class Encode)
+import Data.Array ((!!))
 import Resources.Constants (getKmMeter)
-
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -444,11 +449,15 @@ logOutPopUpModelConfig state =
           , dismissIconVisibility = if isLocalStageOn ST.QuoteList then GONE else VISIBLE
           , backgroundClickable = true
           , customerTipAvailable = true
+          , fareEstimateText = getString FARE_ESTIMATE
+          , tipSelectedText = getString TIP_SELECTED
+          , fareEstimate = getValueToLocalStore FARE_ESTIMATE_DATA
+          , tipSelected = if state.props.customerTip.tipActiveIndex == 0 then "-" else " ₹"<> (fromMaybe "" (["0", "10", "20", "30"] DA.!! state.props.customerTip.tipActiveIndex))
           , dismissPopup = true
           , customerTipArray = [(getString NO_TIP), "₹10 🙂", "₹20 😄", "₹30 🤩"]
           , customerTipArrayWithValues = [0,10, 20, 30]
           , primaryText {
-              text =  if(isLocalStageOn ST.QuoteList)then (getString TRY_AGAIN_WITH_A_TIP) else (getString SEARCH_AGAIN_WITH_A_TIP)
+              text = if isLocalStageOn ST.QuoteList then (getString TRY_AGAIN <> "?") else getString SEARCH_AGAIN_WITH_A_TIP
             , fontSize = FontSize.a_22
             },
           secondaryText {
@@ -465,7 +474,7 @@ logOutPopUpModelConfig state =
               , padding = (Padding 16 12 16 12)
             },
           option1 {
-            text = if (state.props.customerTip.tipForDriver == 0) then ( if(isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITHOUT_TIP)else (getString SEARCH_AGAIN_WITHOUT_A_TIP)) else ((if (isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITH)else(getString SEARCH_AGAIN_WITH) ) <> " + ₹"<> (fromMaybe "" (["0", "10", "20", "30"] DA.!! state.props.customerTip.tipActiveIndex))) <>" "<>(getString TIP)
+            text = if state.props.customerTip.tipActiveIndex == 0 then getString SEARCH_AGAIN_WITHOUT_A_TIP else getString SEARCH_AGAIN_WITH  <> " + ₹"<> (fromMaybe "" (["0", "10", "20", "30"] DA.!! state.props.customerTip.tipActiveIndex)) <>" "<> getString TIP
           , fontSize = FontSize.a_16
           , width = MATCH_PARENT
           , color = Color.yellow900
@@ -794,7 +803,9 @@ quoteListModelViewState state = { source: state.data.source
                             , selectedQuote: state.props.selectedQuote
                             , autoSelecting: state.props.autoSelecting
                             , searchExpire: state.props.searchExpire
-                            , showProgress : (DA.null state.data.quoteListModelState) && isLocalStageOn FindingQuotes && state.props.currentStage /= TryAgain
+                            , showProgress : (DA.null state.data.quoteListModelState) && isLocalStageOn FindingQuotes
+                            , tipViewProps : getTipViewProps state.props.tipViewProps
+                            , findingRidesAgain : state.props.findingRidesAgain
                             }
 
 previousRideRatingViewState :: ST.HomeScreenState -> RatingCard.RatingCardState
@@ -935,3 +946,39 @@ updateRouteMarkerConfig locations sourceName destName sourceIcon destIcon specia
   , destIcon : destIcon
   , specialLocation : specialLocation
 }
+
+setTipViewData :: Encode TipViewData => TipViewData -> Effect Unit
+setTipViewData object = void $ pure $ setValueToLocalStore TIP_VIEW_DATA (encodeJSON object)
+
+getTipViewData :: String -> Maybe TipViewData
+getTipViewData dummy =
+  case runExcept (decodeJSON (getValueToLocalStore TIP_VIEW_DATA) :: _ TipViewData) of
+    Right res -> Just res
+    Left err -> Nothing
+
+getTipViewProps :: TipViewProps -> TipViewProps
+getTipViewProps tipViewProps =
+  case tipViewProps.stage of
+    DEFAULT ->  tipViewProps{ stage = DEFAULT
+                            , onlyPrimaryText = false
+                            , isprimaryButtonVisible = false
+                            , primaryText = getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER
+                            , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
+                            }
+    TIP_AMOUNT_SELECTED -> tipViewProps{ stage = TIP_AMOUNT_SELECTED
+                                       , onlyPrimaryText = false
+                                       , isprimaryButtonVisible = true
+                                       , primaryText = getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER
+                                       , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
+                                       , primaryButtonText = getTipViewText tipViewProps (getString CONTINUE_SEARCH_WITH)
+                                       }
+    TIP_ADDED_TO_SEARCH -> tipViewProps{ onlyPrimaryText = true , primaryText = getTipViewText tipViewProps (getString CONTINUING_SEARCH_WITH) }
+    RETRY_SEARCH_WITH_TIP -> tipViewProps{ onlyPrimaryText = true , primaryText = getTipViewText tipViewProps (getString SEARCHING_WITH) }
+
+
+
+getTipViewText :: TipViewProps -> String -> String
+getTipViewText tipViewProps prefixString =
+  case (getValueToLocalStore LANGUAGE_KEY) of
+    "EN_US" -> prefixString <> " +₹"<>show (fromMaybe 10 (tipViewProps.customerTipArrayWithValues !! tipViewProps.activeIndex))<>" "<>(getString TIP)
+    _ -> " +₹"<>show (fromMaybe 10 (tipViewProps.customerTipArrayWithValues !! tipViewProps.activeIndex))<>" "<>(getString TIP) <> " " <> prefixString

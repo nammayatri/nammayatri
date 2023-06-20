@@ -21,7 +21,7 @@ import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.QuoteListItem as QuoteListItem
 import Components.QuoteListModel.Controller (Action(..), QuoteListModelState)
-import Data.Array (filter, head, null, (!!))
+import Data.Array (filter, head, null, (!!) , mapWithIndex )
 import Data.Maybe (Maybe(..), fromMaybe)
 import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag, os, safeMarginTop, screenWidth,safeMarginBottom, isPreviousVersion)
@@ -30,13 +30,15 @@ import Font.Style as FontStyle
 import JBridge (getBtnLoader, startLottieProcess)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, clickable, color, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, text, textSize, textView, visibility, weight, width, imageWithFallback)
+import Prelude (Unit, bind, const, map, pure, unit, not, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, clickable, color, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, text, textSize, textView, visibility, weight, width, imageWithFallback , cornerRadius ,stroke)
 import PrestoDOM.Animation as PrestoAnim
 import Storage (KeyStore(..), getValueToLocalStore)
 import Helpers.Utils (getPreviousVersion)
 import Styles.Colors as Color
 import Common.Types.App
+import Storage (isLocalStageOn)
+import Screens.Types (Stage(..))
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -70,7 +72,7 @@ paymentView state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , visibility if (state.selectedQuote == Nothing && (null state.quoteListModel) && getValueToLocalStore LOCAL_STAGE /= "FindingQuotes" ) then GONE else VISIBLE
+  , visibility if state.selectedQuote == Nothing && (null state.quoteListModel) && (not isLocalStageOn FindingQuotes) && (not state.findingRidesAgain) then GONE else VISIBLE
   , alignParentBottom "true,-1"
   , background Color.white900
   , orientation VERTICAL
@@ -93,18 +95,18 @@ paymentView state =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , gravity CENTER
-      , padding (PaddingVertical 15 (if safeMarginBottom == 0 then 17 else safeMarginBottom))
+      , padding $ PaddingVertical 15 (if safeMarginBottom == 0 then 17 else safeMarginBottom)
       , orientation HORIZONTAL
       ][  imageView
           [ imageWithFallback imageData.imageUrl
           , height imageData.height
           , width imageData.width
-          , margin (MarginRight 8)
+          , margin $ MarginRight 8
           ]
         , textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text (getString PAY_DRIVER_USING_CASH_OR_UPI)
+          , text $ getString PAY_DRIVER_USING_CASH_OR_UPI
           , gravity CENTER_HORIZONTAL
           , color Color.black800
           , textSize FontSize.a_14
@@ -124,11 +126,11 @@ imageData =
 
 ---------------------------- sourceDestinationImageView ---------------------------------
 sourceDestinationImageView :: forall w . PrestoDOM (Effect Unit) w
-sourceDestinationImageView  =
+sourceDestinationImageView =
   linearLayout
     [ height MATCH_PARENT
     , width WRAP_CONTENT
-    , margin (MarginTop 7)
+    , margin $ MarginTop 7
     , gravity CENTER
     , orientation VERTICAL
     ][ imageView
@@ -139,7 +141,7 @@ sourceDestinationImageView  =
       , imageView
         [ height $ V 27
         , width $ V 15
-        , imageUrl if os == "IOS" then (if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_line_img" else "ny_ic_line_img") else "ic_line"
+        , imageUrl if os == "IOS" then if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_line_img" else "ny_ic_line_img" else "ic_line"
         , margin if os == "IOS" then (Margin 0 0 0 0) else (Margin 7 0 0 0)
         ]
       , imageView
@@ -203,11 +205,18 @@ findingRidesView state push =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , gravity CENTER_HORIZONTAL
-  , visibility if null state.quoteListModel && getValueToLocalStore LOCAL_STAGE == "FindingQuotes" then VISIBLE else GONE
-  , margin $ MarginTop 100
+  , orientation VERTICAL
+  , visibility if (null state.quoteListModel && isLocalStageOn FindingQuotes) || state.findingRidesAgain then VISIBLE else GONE
   , clickable true
   ][
-    lottieAnimationView
+    linearLayout
+    [ width MATCH_PARENT
+    , orientation VERTICAL
+    , weight 1.0
+    , gravity CENTER
+    ]
+    [
+      lottieAnimationView
       [ id (getNewIDWithTag "lottieLoaderAnim")
       , afterRender (\action-> do
                     _ <- pure $ startLottieProcess "finding_rides_loader_with_text" (getNewIDWithTag "lottieLoaderAnim") true 0.6 "Default"
@@ -215,8 +224,88 @@ findingRidesView state push =
       , height $ V 300
       , width $ V 300
       ]
+    ]
+  , addTipView state push
   ]
 
+addTipView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
+addTipView state push = 
+  linearLayout
+    [ width MATCH_PARENT
+    , orientation VERTICAL
+    , margin $ if state.tipViewProps.onlyPrimaryText then MarginBottom 80 else if state.tipViewProps.isprimaryButtonVisible then MarginBottom 62 else  MarginBottom 72
+    , visibility if state.tipViewProps.isVisible then VISIBLE else GONE
+    ]
+    [ 
+      linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , alignParentBottom "true,-1"
+        , background Color.pink
+        , margin $ MarginHorizontal 16 16
+        , cornerRadius 12.0
+        , padding $ Padding 20 16 20 16
+        ]
+        [ 
+          textView
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , text state.tipViewProps.secondaryText
+          , color Color.black800
+          , gravity CENTER
+          , textSize $ FontSize.a_12
+          , fontStyle $ FontStyle.regular LanguageStyle
+          , visibility if state.tipViewProps.onlyPrimaryText then GONE else VISIBLE
+          ]
+        , textView
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , text state.tipViewProps.primaryText
+          , color Color.black800
+          , gravity CENTER
+          , textSize $ FontSize.a_14
+          , fontStyle $ FontStyle.bold LanguageStyle
+          ]
+        , linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , margin (MarginTop  16)
+          , visibility if state.tipViewProps.onlyPrimaryText then GONE else VISIBLE
+          ]
+          ( mapWithIndex
+              ( \index item ->
+                  linearLayout
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , weight if index == 2 then 0.0 else 1.0
+                    ]
+                    [ textView
+                        [ text $ item
+                        , color $ Color.black800
+                        , textSize FontSize.a_14
+                        , stroke $ "1," <> (if (state.tipViewProps.activeIndex == index) then Color.blue800 else Color.grey900)
+                        , cornerRadius 8.0
+                        , width WRAP_CONTENT
+                        , height WRAP_CONTENT
+                        , padding (Padding 20 10 20 10)
+                        , fontStyle $ FontStyle.bold LanguageStyle
+                        , onClick push $ const $ TipBtnClick index (fromMaybe 100 (state.tipViewProps.customerTipArrayWithValues !! index))
+                        , background $ if state.tipViewProps.activeIndex == index then Color.blue600 else Color.white900
+                        ]
+                    ]
+              )state.tipViewProps.customerTipArray
+          )
+        , linearLayout
+          [
+            width MATCH_PARENT
+          , height WRAP_CONTENT
+          , visibility if state.tipViewProps.isprimaryButtonVisible && not state.tipViewProps.onlyPrimaryText then VISIBLE else GONE
+          ][
+            PrimaryButton.view (push <<< TipViewPrimaryButtonClick) (continueWithTipButtonConfig state)
+          ]
+        ]
+    ]
 
 selectRideAndConfirmView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 selectRideAndConfirmView state push =
@@ -264,7 +353,7 @@ paymentMethodView push state =
   , width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER_VERTICAL
-  , visibility if (state.selectedQuote == Nothing && (null state.quoteListModel) && getValueToLocalStore LOCAL_STAGE /= "FindingQuotes" ) then VISIBLE else GONE
+  , visibility if state.selectedQuote == Nothing && (null state.quoteListModel) && (not isLocalStageOn FindingQuotes) then VISIBLE else GONE
   ][linearLayout
   [ orientation VERTICAL
   , height WRAP_CONTENT
@@ -352,7 +441,7 @@ noQuotesErrorModel state =
     , orientation VERTICAL
     , gravity CENTER
     , background Color.white900
-    , visibility if ( null state.quoteListModel) && getValueToLocalStore LOCAL_STAGE == "QuoteList" then VISIBLE else GONE
+    , visibility if ( null state.quoteListModel) && isLocalStageOn QuoteList then VISIBLE else GONE
     , margin (MarginBottom 100)
     ][ linearLayout
       [ width MATCH_PARENT
@@ -361,16 +450,15 @@ noQuotesErrorModel state =
       , gravity CENTER
       ][imageView
         [ height $ V 115
-        , width $ V 137
-        , imageWithFallback "ic_no_quotes,https://assets.juspay.in/nammayatri/images/user/ny_ic_no_quotes.png"
-        , padding (Padding 0 0 0 0)
+        , width $ V 161
+        , imageWithFallback "ic_no_quotes_color,https://assets.juspay.in/nammayatri/images/user/ic_no_quotes_color.png"
         ]
       , textView $
         [ height WRAP_CONTENT
         , width $ V ((screenWidth unit / 2) + (screenWidth unit /3))
         , color Color.black800
         , text (getString SORRY_WE_COULDNT_FIND_ANY_RIDES)
-        , margin (Margin 0 32 0 4)
+        , margin $ MarginVertical 20 4
         , gravity CENTER
         ] <> FontStyle.h2 TypoGraphy
       , textView $
@@ -421,7 +509,7 @@ homeOrTryAgain state push =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation HORIZONTAL
-    , visibility if (state.selectedQuote == Nothing && (null state.quoteListModel) && getValueToLocalStore LOCAL_STAGE == "QuoteList" ) then VISIBLE else GONE
+    , visibility if state.selectedQuote == Nothing && (null state.quoteListModel) && isLocalStageOn QuoteList then VISIBLE else GONE
     ][ PrimaryButton.view (push <<< HomeButtonActionController) (homeButtonConfig state)
      , PrimaryButton.view (push <<< TryAgainButtonActionController) (tryAgainButtonConfig state)
     ]
@@ -444,6 +532,17 @@ homeOrTryAgain state push =
 --       ]
 --     ]
 
+---------------------------- continueWithTipButtonConfig ---------------------------------
+continueWithTipButtonConfig :: QuoteListModelState -> PrimaryButton.Config
+continueWithTipButtonConfig state = let 
+    config = PrimaryButton.config
+    continueWithTipButtonConfig' = config 
+      { textConfig
+        { text = state.tipViewProps.primaryButtonText}
+      , id = "ContinueWithTipButtonQuoteList"
+      , margin = MarginTop 10
+      }
+  in continueWithTipButtonConfig'
 
 ---------------------------- homeButtonConfig ---------------------------------
 homeButtonConfig :: QuoteListModelState -> PrimaryButton.Config

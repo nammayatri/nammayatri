@@ -59,7 +59,11 @@ type Config = {
     dismissPopup :: Boolean,
     padding :: Padding,
     dismissIconVisibility :: Visibility,
-    dismissIconMargin :: Margin
+    dismissIconMargin :: Margin,
+    fareEstimate :: String,
+    tipSelected :: String,
+    fareEstimateText :: String,
+    tipSelectedText :: String
 }
 
 type ContactViewConfig = {
@@ -230,4 +234,8 @@ config = {
     , dismissPopup:false
     , dismissIconVisibility : GONE
     , dismissIconMargin : Margin 0 0 0 0
+    , fareEstimate : ""
+    , tipSelected : ""
+    , fareEstimateText : ""
+    , tipSelectedText : ""
 }

@@ -293,7 +293,7 @@ view push state =
             , if ((not state.props.ratingModal) && (state.props.showlocUnserviceablePopUp || (state.props.isMockLocation && (getMerchant FunctionCall == NAMMAYATRI))) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else emptyTextView state
             , if state.data.settingSideBar.opened /= SettingSideBar.CLOSED then settingSideBarView push state else emptyTextView state
             , if (state.props.currentStage == SearchLocationModel || state.props.currentStage == FavouriteLocationModel) then searchLocationView push state else emptyTextView state
-            , if (any (_ == state.props.currentStage) [ FindingQuotes, QuoteList ]) then (quoteListModelView push state) else emptyTextView state
+            , if (any (_ == state.props.currentStage) [ FindingQuotes, QuoteList, TryAgain ]) then (quoteListModelView push state) else emptyTextView state
             , if (state.props.isCancelRide) then (cancelRidePopUpView push state) else emptyTextView state
             , if (state.props.isPopUp /= NoPopUp) then (logOutPopUpView push state) else emptyTextView state
             , if (state.props.isLocationTracking) then (locationTrackingPopUp push state) else emptyTextView state
@@ -886,7 +886,7 @@ rideRequestFlowView push state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , cornerRadii $ Corners 24.0 true true false false
-    , visibility if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, RideCompleted, FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain ]) then VISIBLE else GONE
+    , visibility if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, RideCompleted, FindingEstimate, ConfirmingRide, FindingQuotes ]) then VISIBLE else GONE
     , alignParentBottom "true,-1"
     ]
     [ -- TODO Add Animations
@@ -1109,7 +1109,23 @@ suggestedPriceView push state =
   , stroke ("1," <> Color.grey900)
   , gravity CENTER
   , cornerRadii $ Corners 24.0 true true false false
-  ][  linearLayout
+  , afterRender
+        ( \action -> do
+            let fareEstimate = if state.data.rateCard.additionalFare == 0 then "₹" <> (show state.data.suggestedAmount) else  "₹" <> (show state.data.suggestedAmount) <> "-" <> "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))
+            _ <- pure $  setValueToLocalStore FARE_ESTIMATE_DATA fareEstimate
+            pure unit
+        )
+        (const NoAction)
+  ][  textView
+      [ text $ getString REQUEST_AUTO_RIDE
+      , textSize FontSize.a_22
+      , color Color.black800
+      , gravity CENTER_HORIZONTAL
+      , height WRAP_CONTENT
+      , width MATCH_PARENT
+      , fontStyle $ FontStyle.bold LanguageStyle
+      ]
+    , linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation HORIZONTAL
