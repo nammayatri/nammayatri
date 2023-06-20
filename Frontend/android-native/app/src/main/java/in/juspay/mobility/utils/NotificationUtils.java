@@ -186,69 +186,6 @@ public class NotificationUtils extends AppCompatActivity {
         notificationId ++;
         return builder.build() ;
     }
-    private static void updateStorage(String key, String value, Context context){
-        SharedPreferences sharedPref = context.getSharedPreferences(
-                context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPref.edit();
-        editor.putString(key, value);
-        editor.apply();
-    }
-
-     public static  void updateDriverStatus(Boolean status, String mode, Context context) {
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        executor.execute(() ->
-        {
-            StringBuilder result = new StringBuilder();
-            SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-            String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
-            String bundle_version = sharedPref.getString("BUNDLE_VERSION","null");
-            String baseUrl = sharedPref.getString("BASE_URL", "null");
-            String deviceDetails = sharedPref.getString("DEVICE_DETAILS", "null");
-            try
-            {
-                //endPoint for driver status
-                String orderUrl = baseUrl + "/driver/setActivity?active=" + status + "&mode=\"" + mode + "\"";
-                Log.d(LOG_TAG, "orderUrl " + orderUrl);
-                //Http connection to make API call
-                HttpURLConnection connection = (HttpURLConnection) (new URL(orderUrl).openConnection());
-                if (connection instanceof HttpsURLConnection)
-                    ((HttpsURLConnection) connection).setSSLSocketFactory(new TLSSocketFactory());
-                connection.setRequestMethod("POST");
-                connection.setRequestProperty("Content-Type", "application/json");
-                connection.setRequestProperty("x-client-version", versionName);
-                connection.setRequestProperty("token", token);
-                connection.setRequestProperty("x-bundle-version", bundle_version);
-                connection.setRequestProperty("x-device", deviceDetails);
-                connection.setDoOutput(true);
-                connection.connect();
-
-                // validating the response code
-                int respCode = connection.getResponseCode();
-                InputStreamReader respReader;
-                Log.d(LOG_TAG, "respCode "+ respCode);
-
-                if ((respCode < 200 || respCode >= 300) && respCode != 302) {
-                    respReader = new InputStreamReader(connection.getErrorStream());
-                    Log.d(LOG_TAG, "in error "+ respReader);
-                } else {
-                    respReader = new InputStreamReader(connection.getInputStream());
-                    Log.d(LOG_TAG, "in 200 "+ respReader);
-                }
-
-                BufferedReader in = new BufferedReader(respReader);
-                String inputLine;
-                while ((inputLine = in.readLine()) != null) {
-                    result.append(inputLine);
-                }
-                updateStorage("DRIVER_STATUS","__failed", context);
-                Log.d(LOG_TAG, "in result "+ result);
-            }
-            catch (Exception error)
-            {
-                Log.d(LOG_TAG, "Catch in updateDriverStatus : "+error);
-            }
-        });
-    }
 
     public static void showAllocationNotification (Context context, String title, String msg, JSONObject data, String imageUrl, JSONObject entity_payload){
         try{

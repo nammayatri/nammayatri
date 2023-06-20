@@ -211,9 +211,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         if(notification_payload.has("storage_key") && notification_payload.has("storage_value")) {
                             String storage_key = notification_payload.get("storage_key").toString();
                             String storage_value = notification_payload.get("storage_value").toString();
-                            if(storage_key.equals("update_driver_status")){
+                            if(storage_key.equals("update_driver_status") && merchantType.equals("DRIVER")){
                                 boolean status = storage_value.equals("SILENT") || storage_value.equals("ONLINE") ;
-                                NotificationUtils.updateDriverStatus(status, storage_value, this);
+                                rideRequestUtils.updateDriverStatus(status, storage_value, this, true);
                             }
                             else sharedPref.edit().putString(storage_key, storage_value).apply();
                         }
