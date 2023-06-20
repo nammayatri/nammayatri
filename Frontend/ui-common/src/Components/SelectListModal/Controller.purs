@@ -13,11 +13,14 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Components.CancelRide.Controller where
+module Components.SelectListModal.Controller where
 
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Data.Maybe
-import Common.Types.App (CancellationReasons)
+import Common.Types.App (OptionButtonList)
+import PrestoDOM ( Length(..) )
+import Font.Size as FontSize
+import Styles.Colors as Color
 
 
 data Action = Button1 PrimaryButtonController.Action
@@ -29,18 +32,21 @@ data Action = Button1 PrimaryButtonController.Action
             | ClearOptions
             
 type Config = {
-    cancelRideReasons :: Array CancellationReasons
+    selectionOptions :: Array OptionButtonList
     , primaryButtonTextConfig :: PrimaryButtonTextConfig
+    , headingTextConfig :: HeadingTextConfig
+    , subHeadingTextConfig :: SubHeadingTextConfig
+    , primaryButtonVisibility :: Boolean
+    , secondaryButtonVisibility :: Boolean
     , activeIndex :: Maybe Int
     , activeReasonCode :: Maybe String
-    , isCancelButtonActive :: Boolean
+    , isSelectButtonActive :: Boolean
     , isMandatoryTextHidden :: Boolean
     , isLimitExceeded :: Boolean
-    , headingText  :: String 
-    , subHeadingText :: String
     , showAllOptionsText :: String
     , hint :: String
     , strings :: StringConfig
+    , topLeftIcon :: Boolean
 }
 
 type StringConfig = {
@@ -52,28 +58,61 @@ type PrimaryButtonTextConfig =
   {
       firstText :: String
     , secondText :: String
+    , width :: Length
+  }
+
+type HeadingTextConfig = 
+  {
+       text :: String
+      , size :: Int
+      , color :: String
+      , visibility :: Boolean
+  }
+
+type SubHeadingTextConfig = 
+  {
+       text :: String
+      , size :: Int
+      , color :: String
+      , visibility :: Boolean
   }
 
 config :: Config
 config = 
   {
-    cancelRideReasons : []
+    selectionOptions : []
     , showAllOptionsText : "Show All Options"
     , primaryButtonTextConfig :
         {
             firstText : "Go Back"
           , secondText : "Cancel Ride"
+          , width : MATCH_PARENT
         }
     , activeIndex : Nothing  
     , activeReasonCode : Nothing
-    , isCancelButtonActive : false
+    , isSelectButtonActive : false
     , isMandatoryTextHidden : true
     , isLimitExceeded : false
-    , headingText : "Cancel Ride"
-    , subHeadingText : "Please tell us why you want to cancel"
+    , headingTextConfig : 
+      {
+          text : ""
+          , size : FontSize.a_22
+          , color : Color.black800
+          , visibility : true
+      }
+    , subHeadingTextConfig :
+      {
+          text : ""
+          , size : FontSize.a_14
+          , color : Color.black700
+          , visibility : true
+      }
     , hint : "Help us with your reason"
     , strings: {
         mandatory : "Mandatory"
       , limitReached : "Max character limit reached 100 of 100"
     }
+    , primaryButtonVisibility : true
+    , secondaryButtonVisibility : true
+    , topLeftIcon : false
 }

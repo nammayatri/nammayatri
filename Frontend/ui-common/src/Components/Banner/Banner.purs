@@ -13,7 +13,8 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Components.CancelRide (module Reexport)where
+module Components.Banner (module Reexport)where
 
-import Components.CancelRide.View as Reexport
-import Components.CancelRide.Controller as Reexport
+import Components.Banner.View as Reexport
+import Components.Banner.Controller as Reexport
+

@@ -20,7 +20,7 @@ import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..))
 import Types.App (defaultGlobalState)
 import Components.BottomNavBar as BottomNavBar
-import Components.CancelRide as CancelRide
+import Components.SelectListModal as SelectListModal
 import Components.InAppKeyboardModal as InAppKeyboardModal
 import Components.PopUpModal as PopUpModal
 import Components.RideActionModal as RideActionModal
@@ -65,6 +65,8 @@ import Data.Int(toNumber, ceil)
 import Control.Monad.Except.Trans (lift)
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
+import Components.Banner.View as Banner
+import Components.Banner.Controller as BannerConfig
 import Services.APITypes (Status(..))
 import Components.BottomNavBar.Controller (navData)
 import Screens.HomeScreen.ComponentConfig
@@ -233,7 +235,7 @@ view push state =
                         , viewRecenterAndSupport state push
                       ]
                     ]
-                  , alternateNumberOrOTPView state push
+                  , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True") then genderBannerView state push else linearLayout[][]
                   ]
               ]
         , bottomNavBar push state
@@ -267,6 +269,34 @@ alternateNumberOrOTPView state push =
         , if (getValueFromConfig "SPECIAL_ZONE_OTP_VIEW") == "true"  then otpButtonView state push else dummyTextView
         ]
       ]
+
+genderBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+genderBannerView state push = 
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin (Margin 10 10 10 10)
+    , gravity BOTTOM
+    ][     
+    linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , gravity RIGHT
+      ][  
+        imageView
+        [
+          height $ V 24
+        , width $ V 24
+        , gravity RIGHT
+        , margin (MarginRight 4)
+        , onClick push (const RemoveGenderBanner)
+        , imageWithFallback "ny_ic_grey_cross,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_grey_cross_icon.png"
+        ]
+        , genderBanner push state
+      ]
+    ]
 
 otpButtonView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
 otpButtonView state push =
@@ -1048,7 +1078,7 @@ cancelRidePopUpView push state =
   linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
-    ][ CancelRide.view (push <<< CancelRideModalAction) (cancelRideModalConfig state)
+    ][ SelectListModal.view (push <<< CancelRideModalAction) (cancelRideModalConfig state)
     ]
 
 endRidePopView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -1138,3 +1168,7 @@ launchMaps push action = do
     doAff do liftEffect $ push $ action
     else pure unit
   pure unit
+
+genderBanner :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+genderBanner push state =
+  Banner.view (push <<< GenderBannerModal) (genderBannerConfig state)

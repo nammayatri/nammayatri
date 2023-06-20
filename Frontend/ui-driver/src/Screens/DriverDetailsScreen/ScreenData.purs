@@ -16,9 +16,6 @@
 module Screens.DriverDetailsScreen.ScreenData where
 
 import Screens.Types(DriverDetailsScreenState, KeyboardModalType(..))
-import Prelude (class Eq)
-import Data.Eq.Generic (genericEq)
-import Data.Generic.Rep (class Generic)
 import Data.Maybe
 
 initData :: DriverDetailsScreenState
@@ -32,6 +29,14 @@ initData = {
     driverMobile : Just "",
     driverAlternateMobile : Nothing,
     driverEditAlternateMobile : Nothing,
+    genderSelectionModal : {
+          selectionOptions : [],
+          activeIndex : Nothing,
+          selectedReasonCode : "",
+          selectedReasonDescription : "",
+          isSelectButtonActive : false
+        },
+    driverGender : Nothing,
     otpLimit : 5,
     otpBackAlternateNumber : Nothing
     },
@@ -40,6 +45,7 @@ initData = {
     checkAlternateNumber : true,
     otpAttemptsExceeded: false,
     enterOtpFocusIndex : 0,
+    genderSelectionModalShow : false,
     otpIncorrect : false,
     alternateMobileOtp : "",
     removeNumberPopup : false,
@@ -49,20 +55,5 @@ initData = {
   }
 }
 
-data ListOptions = DRIVER_NAME_INFO | DRIVER_MOBILE_INFO | DRIVER_LICENCE_INFO | DRIVER_ALTERNATE_MOBILE_INFO
-derive instance genericListOptions :: Generic ListOptions _
-instance eqListOptions :: Eq ListOptions where eq = genericEq
 
-type Listtype =
-    { value :: String,
-      title :: ListOptions
-    }
 
-optionList :: Array Listtype
-optionList =
-    [
-      {title:DRIVER_NAME_INFO, value:"" },
-      {title:DRIVER_MOBILE_INFO, value:"" },
-      {title:DRIVER_LICENCE_INFO, value:""},
-      {title:DRIVER_ALTERNATE_MOBILE_INFO, value:""}
-    ]
