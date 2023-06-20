@@ -67,8 +67,6 @@ instance FromBackendRow Postgres DQuote.FareProductType
 instance IsString DQuote.FareProductType where
   fromString = show
 
-deriving stock instance Ord DQuote.FareProductType
-
 instance FromField VehVar.VehicleVariant where
   fromField = fromFieldEnum
 

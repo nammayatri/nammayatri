@@ -12,6 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -33,20 +34,9 @@ import qualified Domain.Types.RegistrationToken as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
-
-instance FromField Domain.Medium where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.Medium where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.Medium
-
-instance FromBackendRow Postgres Domain.Medium
 
 instance FromField Domain.LoginType where
   fromField = fromFieldEnum
@@ -58,6 +48,22 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.LoginType
 
 instance FromBackendRow Postgres Domain.LoginType
 
+instance IsString Domain.LoginType where
+  fromString = show
+
+instance FromField Domain.Medium where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.Medium where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.Medium
+
+instance FromBackendRow Postgres Domain.Medium
+
+instance IsString Domain.Medium where
+  fromString = show
+
 instance FromField Domain.RTEntityType where
   fromField = fromFieldEnum
 
@@ -68,19 +74,12 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.RTEntityType
 
 instance FromBackendRow Postgres Domain.RTEntityType
 
--- instance FromField RegToken where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be RegToken where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be RegToken
-
--- instance FromBackendRow Postgres RegToken
+instance IsString Domain.RTEntityType where
+  fromString = show
 
 data RegistrationTokenT f = RegistrationTokenT
   { id :: B.C f Text,
-    token :: B.C f RegToken,
+    token :: B.C f Text,
     attempts :: B.C f Int,
     authMedium :: B.C f Domain.Medium,
     authType :: B.C f Domain.LoginType,
@@ -93,8 +92,7 @@ data RegistrationTokenT f = RegistrationTokenT
     entityType :: B.C f Domain.RTEntityType,
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime,
-    info :: B.C f (Maybe Text),
-    alternateNumberAttempts :: B.C f Int
+    info :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -107,7 +105,7 @@ instance B.Table RegistrationTokenT where
 instance ModelMeta RegistrationTokenT where
   modelFieldModification = registrationTokenTMod
   modelTableName = "registration_token"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
+  modelSchemaName = Just "atlas_app"
 
 type RegistrationToken = RegistrationTokenT Identity
 
@@ -118,21 +116,6 @@ instance ToJSON RegistrationToken where
   toJSON = A.genericToJSON A.defaultOptions
 
 deriving stock instance Show RegistrationToken
-
-deriving stock instance Ord Domain.Medium
-
-deriving stock instance Ord Domain.LoginType
-
-deriving stock instance Ord Domain.RTEntityType
-
-instance IsString Domain.LoginType where
-  fromString = show
-
-instance IsString Domain.Medium where
-  fromString = show
-
-instance IsString Domain.RTEntityType where
-  fromString = show
 
 registrationTokenTMod :: RegistrationTokenT (B.FieldModification (B.TableField RegistrationTokenT))
 registrationTokenTMod =
@@ -151,20 +134,8 @@ registrationTokenTMod =
       entityType = B.fieldNamed "entity_type",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at",
-      info = B.fieldNamed "info",
-      alternateNumberAttempts = B.fieldNamed "alternate_number_attempts"
+      info = B.fieldNamed "info"
     }
-
-psToHs :: HM.HashMap Text Text
-psToHs = HM.empty
-
-registrationTokenToHSModifiers :: M.Map Text (A.Value -> A.Value)
-registrationTokenToHSModifiers =
-  M.empty
-
-registrationTokenToPSModifiers :: M.Map Text (A.Value -> A.Value)
-registrationTokenToPSModifiers =
-  M.empty
 
 defaultRegistrationToken :: RegistrationToken
 defaultRegistrationToken =
@@ -176,19 +147,29 @@ defaultRegistrationToken =
       authType = "",
       authValueHash = "",
       verified = False,
-      authExpiry = 10,
-      tokenExpiry = 10,
+      authExpiry = 0,
+      tokenExpiry = 0,
       entityId = "",
       merchantId = "",
       entityType = "",
       createdAt = defaultUTCDate,
       updatedAt = defaultUTCDate,
-      info = Nothing,
-      alternateNumberAttempts = 0
+      info = Nothing
     }
 
 instance Serialize RegistrationToken where
   put = error "undefined"
   get = error "undefined"
+
+psToHs :: HM.HashMap Text Text
+psToHs = HM.empty
+
+registrationTokenToHSModifiers :: M.Map Text (A.Value -> A.Value)
+registrationTokenToHSModifiers =
+  M.empty
+
+registrationTokenToPSModifiers :: M.Map Text (A.Value -> A.Value)
+registrationTokenToPSModifiers =
+  M.empty
 
 $(enableKVPG ''RegistrationTokenT ['id] [])

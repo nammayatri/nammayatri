@@ -204,6 +204,10 @@ library
       Storage.Beam.Issue
       Storage.Beam.Merchant
       Storage.Beam.MerchantConfig
+      Storage.Beam.OnSearchEvent
+      Storage.Beam.Person
+      Storage.Beam.Quote
+      Storage.Beam.RegistrationToken
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.Exophone
