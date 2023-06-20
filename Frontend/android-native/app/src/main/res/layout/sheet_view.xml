@@ -109,7 +109,7 @@
                                     android:layout_height="wrap_content"
                                     android:layout_gravity="center"
                                     android:visibility="gone"
-                                    app:cardBackgroundColor="#CEDEF8"
+                                    app:cardBackgroundColor="#1A0066FF"
                                     android:theme="@style/Theme.MaterialComponents.Light"
                                     app:cardCornerRadius="10dp"
                                     app:cardElevation="0dp"
