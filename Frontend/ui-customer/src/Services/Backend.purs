@@ -34,7 +34,7 @@ import Tracker (trackApiCallFlow, trackExceptionFlow)
 import Presto.Core.Types.API (Header(..), Headers(..))
 import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
 import Screens.Types (Address, Stage(..))
-import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, toggleLoader, removeAllPolylines, stopChatListenerService)
+import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, toggleLoader, removeAllPolylines, stopChatListenerService, SpecialLocationTag)
 import Prelude (Unit, bind, discard, map, pure, unit, void, ($), ($>), (&&), (*>), (<<<), (=<<), (==), (<=),(||), show, (<>))
 import Storage (getValueToLocalStore, deleteValueFromLocalStore, getValueToLocalNativeStore, KeyStore(..), setValueToLocalStore)
 import Tracker.Labels (Label(..))
@@ -686,8 +686,8 @@ sendIssueBT req = do
             BackT $ pure GoBack
 
 ----------------------------------------------------------------------------------------------
-drawMapRoute :: Number -> Number -> Number -> Number -> Markers -> String -> String -> String -> Maybe Route -> String -> FlowBT String (Maybe Route)
-drawMapRoute srcLat srcLng destLat destLng markers routeType srcAddress destAddress existingRoute routeAPIType= do
+drawMapRoute :: Number -> Number -> Number -> Number -> Markers -> String -> String -> String -> Maybe Route -> String -> SpecialLocationTag -> FlowBT String (Maybe Route)
+drawMapRoute srcLat srcLng destLat destLng markers routeType srcAddress destAddress existingRoute routeAPIType specialLocation = do
     _ <- pure $ removeAllPolylines ""
     case existingRoute of
         Just (Route route) -> do
@@ -709,10 +709,10 @@ drawMapRoute srcLat srcLng destLat destLng markers routeType srcAddress destAddr
             case route of
                 Just (Route routes) ->
                     if (routes.distance <= 50000) then do
-                      lift $ lift $ liftFlow $ drawRoute (walkCoordinates routes.points) "LineString" "#323643" true markers.srcMarker markers.destMarker 8 routeType srcAddress destAddress
+                      lift $ lift $ liftFlow $ drawRoute (walkCoordinates routes.points) "LineString" "#323643" true markers.srcMarker markers.destMarker 8 routeType srcAddress destAddress specialLocation
                       pure route
                     else do
-                      lift $ lift $ liftFlow $ drawRoute (walkCoordinate srcLat srcLng destLat destLng) "DOT" "#323643" false markers.srcMarker markers.destMarker 8 routeType srcAddress destAddress
+                      lift $ lift $ liftFlow $ drawRoute (walkCoordinate srcLat srcLng destLat destLng) "DOT" "#323643" false markers.srcMarker markers.destMarker 8 routeType srcAddress destAddress specialLocation
                       pure route
                 Nothing -> pure route
 

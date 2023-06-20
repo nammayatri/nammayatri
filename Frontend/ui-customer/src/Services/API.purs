@@ -26,14 +26,16 @@ import Data.Newtype (class Newtype)
 import Foreign (ForeignError(..), fail)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON)
-import Prelude (class Show, show, ($), (<$>), (>>=))
+import Prelude (class Show,class Eq, show, ($), (<$>), (>>=))
 import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPayload, Method(..), defaultDecodeResponse, defaultMakeRequest, standardEncode)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Types.EndPoint as EP
 import Foreign.Index (readProp)
 import Control.Monad.Except (runExcept)
 import Data.Either (Either(..))
-
+import Foreign.Generic.EnumEncoding (GenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
+import Data.Eq.Generic (genericEq)
+import Debug (spy)
 
 newtype ErrorPayloadWrapper = ErrorPayload ErrorPayload
 
@@ -542,7 +544,8 @@ newtype EstimateAPIEntity = EstimateAPIEntity {
   agencyCompletedRidesCount :: Int,
   estimateFareBreakup :: Maybe (Array EstimateFares),
   totalFareRange :: Maybe FareRange,
-  nightShiftRate :: Maybe NightShiftRate
+  nightShiftRate :: Maybe NightShiftRate,
+  specialLocationTag :: Maybe String
 }
 
 newtype NightShiftRate = NightShiftRate {
@@ -566,10 +569,10 @@ newtype SearchReqLocationAPIEntity = SearchReqLocationAPIEntity {
   lon :: Number
 }
 
-data OfferRes 
+data OfferRes
   = Quotes {onDemandCab :: QuoteAPIEntity}
-  | Metro {metro :: MetroOffer}  
-  | Public {publicTransport :: PublicTransportQuote}  
+  | Metro {metro :: MetroOffer}
+  | Public {publicTransport :: PublicTransportQuote}
 
 newtype QuoteAPIEntity = QuoteAPIEntity {
   agencyNumber :: String,
@@ -590,7 +593,7 @@ newtype QuoteAPIDetails = QuoteAPIDetails {
   fareProductType :: String
 }
 
-data QuoteAPIContents 
+data QuoteAPIContents
   = ONE_WAY OneWayQuoteAPIDetails
   -- | RENTAL TODO ADD RENTAL WHEN NEEDED
   | DRIVER_OFFER DriverOfferAPIEntity
@@ -604,7 +607,7 @@ newtype SpecialZoneQuoteAPIDetails = SpecialZoneQuoteAPIDetails {
   quoteId :: String
 }
 
-newtype DriverOfferAPIEntity = DriverOfferAPIEntity 
+newtype DriverOfferAPIEntity = DriverOfferAPIEntity
   {
     rating :: Maybe Number
   , validTill :: String
@@ -724,29 +727,29 @@ instance decodeSpecialZoneQuoteAPIDetails :: Decode SpecialZoneQuoteAPIDetails w
 instance encodeSpecialZoneQuoteAPIDetails  :: Encode SpecialZoneQuoteAPIDetails where encode = defaultEncode
 
 derive instance genericOfferRes :: Generic OfferRes _
-instance standardEncodeOfferRes :: StandardEncode OfferRes where 
+instance standardEncodeOfferRes :: StandardEncode OfferRes where
   standardEncode (Quotes body) = standardEncode body
   standardEncode (Metro body) = standardEncode body
   standardEncode (Public body) = standardEncode body
 instance showOfferRes :: Show OfferRes where show = genericShow
-instance decodeOfferRes :: Decode OfferRes  
+instance decodeOfferRes :: Decode OfferRes
   where
     decode body = (Quotes <$> decode body) <|> (Metro <$> decode body) <|> (Public <$> decode body) <|> (fail $ ForeignError "Unknown response")
-instance encodeOfferRes  :: Encode OfferRes where 
+instance encodeOfferRes  :: Encode OfferRes where
   encode (Quotes body) = encode body
   encode (Metro body) = encode body
   encode (Public body) = encode body
 
 derive instance genericQuoteAPIContents :: Generic QuoteAPIContents _
-instance standardEncodeQuoteAPIContents :: StandardEncode QuoteAPIContents where 
+instance standardEncodeQuoteAPIContents :: StandardEncode QuoteAPIContents where
   standardEncode (ONE_WAY body) = standardEncode body
   standardEncode (DRIVER_OFFER body) = standardEncode body
   standardEncode (SPECIAL_ZONE body) = standardEncode body
 instance showQuoteAPIContents :: Show QuoteAPIContents where show = genericShow
-instance decodeQuoteAPIContents :: Decode QuoteAPIContents 
+instance decodeQuoteAPIContents :: Decode QuoteAPIContents
   where
     decode body = (ONE_WAY <$> decode body) <|> (DRIVER_OFFER <$> decode body) <|> (SPECIAL_ZONE <$> decode body) <|> (fail $ ForeignError "Unknown response")
-instance encodeQuoteAPIContents  :: Encode QuoteAPIContents where 
+instance encodeQuoteAPIContents  :: Encode QuoteAPIContents where
   encode (ONE_WAY body) = encode body
   encode (DRIVER_OFFER body) = encode body
   encode (SPECIAL_ZONE body) = encode body
@@ -865,7 +868,8 @@ newtype RideBookingRes = RideBookingRes {
   updatedAt :: String,
   bookingDetails :: RideBookingAPIDetails ,
   fromLocation ::  BookingLocationAPIEntity,
-  merchantExoPhone :: String
+  merchantExoPhone :: String,
+  specialLocationTag :: Maybe String
 }
 
 newtype FareBreakupAPIEntity = FareBreakupAPIEntity {
@@ -981,7 +985,7 @@ instance encodeBookingLocationAPIEntity  :: Encode BookingLocationAPIEntity wher
 data SelectEstimateReq = SelectEstimateReq String DEstimateSelect
 
 newtype DEstimateSelect = DEstimateSelect
-  { 
+  {
     customerExtraFee :: Maybe Int,
     autoAssignEnabled :: Boolean,
     autoAssignEnabledV2 :: Boolean
@@ -1539,20 +1543,20 @@ newtype DestinationServiceabilityReq = DestinationServiceabilityReq
   { location  :: LatLong
   }
 
-newtype ServiceabilityReq = ServiceabilityReq 
+newtype ServiceabilityReq = ServiceabilityReq
   { location  :: LatLong
   }
 
-newtype ServiceabilityRes = ServiceabilityRes 
+newtype ServiceabilityRes = ServiceabilityRes
   { serviceable :: Boolean,
     geoJson :: Maybe String,
-    specialLocation :: Maybe SpecialLocation 
+    specialLocation :: Maybe SpecialLocation
   }
 
-newtype ServiceabilityResDestination = ServiceabilityResDestination 
+newtype ServiceabilityResDestination = ServiceabilityResDestination
   { serviceable :: Boolean,
     geoJson :: Maybe String,
-    specialLocation :: Maybe SpecialLocation 
+    specialLocation :: Maybe SpecialLocation
   }
 newtype SpecialLocation = SpecialLocation
   {

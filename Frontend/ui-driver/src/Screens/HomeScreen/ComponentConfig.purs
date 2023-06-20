@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -37,18 +37,19 @@ import PrestoDOM.Types.DomAttributes as PTD
 import Screens.Types as ST
 import Styles.Colors as Color
 import Storage (KeyStore(..), getValueToLocalStore)
+import JBridge as JB
 
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
-rideActionModalConfig state = let 
+rideActionModalConfig state = let
   config = RideActionModal.config
   rideActionModalConfig' = config {
     startRideActive = if state.props.currentStage == ST.RideAccepted then true else false,
     totalDistance = if state.data.activeRide.distance <= 0.0 then "0.0" else if(state.data.activeRide.distance < 1000.0) then HU.parseFloat (state.data.activeRide.distance) 2 <> " m" else HU.parseFloat((state.data.activeRide.distance / 1000.0)) 2 <> " km",
-    customerName = if DS.length (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)) < 4 
-                      then (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)) <> " " <> (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 1)) 
-                      else 
+    customerName = if DS.length (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)) < 4
+                      then (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)) <> " " <> (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 1))
+                      else
                         (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)),
     sourceAddress  {
       titleText = fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.activeRide.source)) DA.!! 0),
@@ -69,7 +70,7 @@ rideActionModalConfig state = let
 
 ---------------------------------------- endRidePopUp -----------------------------------------
 endRidePopUp :: ST.HomeScreenState -> PopUpModal.Config
-endRidePopUp state = let 
+endRidePopUp state = let
   config' = PopUpModal.config
   popUpConfig' = config'{
     primaryText {text = (getString END_RIDE)},
@@ -105,16 +106,16 @@ cancelRideModalConfig state = let
       firstText = (getString GO_BACK)
     , secondText = (getString CANCEL_RIDE)
     },
-    isSelectButtonActive = case state.data.cancelRideModal.activeIndex of 
+    isSelectButtonActive = case state.data.cancelRideModal.activeIndex of
                               Just index -> true
                               Nothing    -> false
   }
-  in cancelRideModalConfig' 
+  in cancelRideModalConfig'
 
 ---------------------------------- statsModelConfig --------------------------------
 statsModelConfig :: ST.HomeScreenState -> StatsModel.Config
-statsModelConfig state = 
-  let 
+statsModelConfig state =
+  let
     config = StatsModel.config
     config' = config
       { countTextConfig { text = getString TRIP_COUNT }
@@ -127,11 +128,11 @@ statsModelConfig state =
 
 -------------------------------------genderBannerConfig------------------------------------
 genderBannerConfig :: ST.HomeScreenState -> Banner.Config
-genderBannerConfig state = 
-  let 
+genderBannerConfig state =
+  let
     config = Banner.config
     config' = config
-      { 
+      {
         backgroundColor = Color.green600,
         title = (getString COMPLETE_YOUR_PROFILE_AND_FIND_MORE_RIDES),
         titleColor = Color.white900,
@@ -151,7 +152,7 @@ cancelConfirmationConfig state = let
     margin = MarginHorizontal 24 24 ,
     buttonLayoutMargin = Margin 16 0 16 20 ,
     primaryText {
-      text = case state.data.activeRide.specialLocationTag of 
+      text = case state.data.activeRide.specialLocationTag of
               Nothing -> getString FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES
               Just specialLocationTag -> getString $ getCancelAlertText $ HU.getSpecialZoneConfig  "cancelText" (Just specialLocationTag)
     , margin = Margin 16 24 16 24 },
@@ -159,7 +160,7 @@ cancelConfirmationConfig state = let
     option1 {
       text = (getString CONTINUE)
     , fontSize = FontSize.a_16
-    , width = V $ (((EHC.screenWidth unit)-92)/2) 
+    , width = V $ (((EHC.screenWidth unit)-92)/2)
     , isClickable = state.data.cancelRideConfirmationPopUp.continueEnabled
     , timerValue = state.data.cancelRideConfirmationPopUp.delayInSeconds
     , enableTimer = true
@@ -169,7 +170,7 @@ cancelConfirmationConfig state = let
     },
     option2 {
       text = (getString GO_BACK)
-    , margin = Margin 12 0 0 0
+    , margin = MarginLeft 12
     , fontSize = FontSize.a_16
     , width = V $ (((EHC.screenWidth unit)-92)/2)
     , color = Color.yellow900
@@ -179,7 +180,7 @@ cancelConfirmationConfig state = let
     backgroundClickable = false,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl = if state.data.activeRide.specialLocationTag == Nothing then "ic_cancel_prevention,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cancel_prevention.png" 
+      imageUrl = if state.data.activeRide.specialLocationTag == Nothing then "ic_cancel_prevention,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cancel_prevention.png"
                   else HU.getSpecialZoneConfig "cancelConfirmImage" (state.data.activeRide.specialLocationTag)
     , visibility = VISIBLE
     , margin = Margin 16 20 16 0
@@ -222,7 +223,7 @@ chatViewConfig state = let
   in chatViewConfig'
 
 initialSuggestions :: String -> Array String
-initialSuggestions _ = 
+initialSuggestions _ =
   [
     (getString I_AM_ON_MY_WAY),
     (getString GETTING_DELAYED_PLEASE_WAIT),
@@ -230,7 +231,7 @@ initialSuggestions _ =
   ]
 
 pickupSuggestions :: String -> Array String
-pickupSuggestions _ = 
+pickupSuggestions _ =
   [
     (getString I_HAVE_ARRIVED),
     (getString PLEASE_COME_FAST_I_AM_WAITING),
@@ -248,15 +249,15 @@ silentModeConfig state = let
       text = getString TRY_SILENT_MODE
     }
   , secondaryText {
-      text =  getString SILENT_MODE_PROMPT 
+      text =  getString SILENT_MODE_PROMPT
     }
     , option1 {
-      text =   getString GO_OFFLINE 
+      text =   getString GO_OFFLINE
       , width = (V 140)
     }
   , option2 {
       width = (V 170)
-      , text =  getString GO_SILENT 
+      , text =  getString GO_SILENT
     }
   }
   in popUpConfig'
@@ -318,7 +319,13 @@ driverStatusIndicators = [
     }
 ]
 getCancelAlertText :: String -> STR
-getCancelAlertText key = case key of 
+getCancelAlertText key = case key of
   "ZONE_CANCEL_TEXT_PICKUP" -> ZONE_CANCEL_TEXT_PICKUP
   "ZONE_CANCEL_TEXT_DROP" -> ZONE_CANCEL_TEXT_DROP
   _ -> FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES
+
+specialLocationConfig :: String -> String -> JB.SpecialLocationTag
+specialLocationConfig srcIcon destIcon = {
+    sourceSpecialTagIcon : srcIcon
+  , destSpecialTagIcon : destIcon
+}

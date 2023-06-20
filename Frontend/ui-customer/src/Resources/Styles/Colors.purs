@@ -477,9 +477,12 @@ linearGradient = [
 ]
 green900 :: Color
 green900 = "#53BB6F"
- 
+
 lightMintGreen :: Color
 lightMintGreen = "#F0FAF0"
 
 elfGreen :: Color
 elfGreen = "#269574"
+
+transparentBlue :: Color
+transparentBlue = "#100066FF"

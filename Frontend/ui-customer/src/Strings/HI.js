@@ -485,5 +485,9 @@ const hindiStrings = {
   "DRIVER_IS_NEAR_YOUR_LOCATION" : "ड्राइवर आपकी लोकशन पर पहुँच चुका है।",
   "HAS_TRAVELLED" : " का सफर तय कर चुका है।",
   "SOME_OTHER_REASON" : "कोई और कारण।",
-  "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "नम्मा यात्री में आपका स्वागत है! \nराइड बुक करना शुरू करने के लिए, हमें आपके डिवाइस की लोकेशन की आवश्यकता होती है।"
+  "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "नम्मा यात्री में आपका स्वागत है! \nराइड बुक करना शुरू करने के लिए, हमें आपके डिवाइस की लोकेशन की आवश्यकता होती है।",
+  "METRO_RIDE" : "मेट्रो की सवारी",
+  "GO_BACK_TEXT": "पीछे जाएं",
+  "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST": "ड्ड्राइवर पार्टनर ने आपके विशेष अनुरोध को पसंद किया और वह बस ",
+  "WE_URGE_YOU_NOT_TO_CANCEL": " मीटर दूर है। हम आपसे आग्रह करते हैं कि राइड रद्द न करें"
 }
