@@ -209,7 +209,7 @@ driverMapsHeaderView push state =
           [ width MATCH_PARENT
           , height $ V 2
           , background Color.greyTextColor
-          , visibility if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then GONE else VISIBLE
+          , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then GONE else VISIBLE
           , alpha 0.1
           ][]
         , frameLayout
@@ -227,7 +227,7 @@ driverMapsHeaderView push state =
                   , orientation VERTICAL
                   , PP.cornerRadii $ PTD.Corners 24.0  false false true true
                   , background $ Color.white900
-                  , stroke $ (if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then "0," else "1,") <> "#E5E7EB"
+                  , stroke $ (if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then "0," else "1,") <> "#E5E7EB"
                   ][  driverDetail push state
                     , driverActivityStatus state
                     , statsModel push state      
@@ -374,7 +374,7 @@ recenterBtnView state push =
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , stroke $ "1," <> Color.black500
-  , visibility if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then GONE else VISIBLE
+  , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then GONE else VISIBLE
   , cornerRadius 24.0
   ][ imageView
       [ width $ V 40
@@ -530,7 +530,7 @@ driverStatusPill pillConfig push state index =
       , gravity CENTER
       , orientation HORIZONTAL
       , onClick push (const $ SwitchDriverStatus pillConfig.status)
-      , clickable if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted]) then false else true
+      , clickable if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then false else true
       ][ imageView
         [ width $ V 15
         , height $ V 15
