@@ -33,7 +33,7 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (addUTCTime, fromMaybeM, logDebug, throwError)
-import Lib.Scheduler.JobStorageType.DB.Queries (createJobIn)
+import Lib.Scheduler.JobStorageType.DB.Queries (createJobIn')
 import Lib.Scheduler.Types (ExecutionResult (ReSchedule))
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
@@ -73,14 +73,21 @@ handler merchant sReq estimate = do
   case res of
     ReSchedule _ -> do
       maxShards <- asks (.maxShards)
-      Esq.runTransaction $ do
-        whenJust sReq.autoAssignEnabled $ QSR.updateAutoAssign searchReq.id
-        createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
-          SendSearchRequestToDriverJobData
-            { searchTryId = searchTry.id,
-              estimatedRideDistance = searchReq.estimatedDistance,
-              driverExtraFeeBounds = driverExtraFeeBounds
-            }
+      -- Esq.runTransaction $ do
+      --   whenJust sReq.autoAssignEnabled $ QSR.updateAutoAssign searchReq.id
+      --   createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
+      --     SendSearchRequestToDriverJobData
+      --       { searchTryId = searchTry.id,
+      --         estimatedRideDistance = searchReq.estimatedDistance,
+      --         driverExtraFeeBounds = driverExtraFeeBounds
+      --       }
+      Esq.runTransaction $ whenJust sReq.autoAssignEnabled $ QSR.updateAutoAssign searchReq.id
+      createJobIn' @_ @'SendSearchRequestToDriver inTime maxShards $
+        SendSearchRequestToDriverJobData
+          { searchTryId = searchTry.id,
+            estimatedRideDistance = searchReq.estimatedDistance,
+            driverExtraFeeBounds = driverExtraFeeBounds
+          }
     _ -> return ()
   where
     createNewSearchTry :: DFP.FarePolicy -> DSR.SearchRequest -> Flow DST.SearchTry

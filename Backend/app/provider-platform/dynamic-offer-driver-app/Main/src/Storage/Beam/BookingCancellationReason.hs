@@ -131,4 +131,4 @@ instance Serialize BookingCancellationReason where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''BookingCancellationReasonT ['bookingId] [])
+$(enableKVPG ''BookingCancellationReasonT ['bookingId] [['rideId], ['driverId]])
