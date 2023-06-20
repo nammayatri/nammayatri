@@ -1,6 +1,7 @@
 package in.juspay.mobility.app;
 
 import android.app.Activity;
+import android.content.Context;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
@@ -28,11 +29,13 @@ public class InAppNotification extends AppCompatActivity {
     private final ArrayList<String> notificationStack = new ArrayList<>();
     private final JSONObject notificationChannels = new JSONObject();
     private final Activity activity;
+    private final Context context;
     private final String LOG_TAG = "InAppNotification";
     private static final ArrayList<CallBack> callBack = new ArrayList<>();
 
     public InAppNotification(Activity activity) {
         this.activity = activity;
+        this.context = activity.getApplicationContext();;
         mainLayout = activity.findViewById(R.id.main_layout);
     }
 
@@ -61,7 +64,7 @@ public class InAppNotification extends AppCompatActivity {
         notification.bringToFront();
         // if stack of notification is empty or the notification ( channelId ) which is visible on the front is not equals to new channelId then we will start animation else we will just change the content .
         if (notificationStack.isEmpty() || !notificationStack.get(notificationStack.size() - 1).equals(channelId)) {
-            notification.view.startAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.top_to_bottom));
+            notification.view.startAnimation(AnimationUtils.loadAnimation(context, R.anim.top_to_bottom));
             notificationStack.remove(channelId);
             notificationStack.add(channelId);
             notification.view.getAnimation().setAnimationListener(new Animation.AnimationListener() {
@@ -140,14 +143,14 @@ public class InAppNotification extends AppCompatActivity {
             View action2View = view.findViewById(R.id.second_action_button);
             if (action1Text.length() > 0 && action1Image.length() > 0) {
                 action1TextView.setText(action1Text);
-                action1ImageView.setImageResource(activity.getResources().getIdentifier(action1Image, "drawable", getApplicationContext().getPackageName()));
+                action1ImageView.setImageResource(activity.getResources().getIdentifier(action1Image, "drawable", context.getPackageName()));
             } else {
                 action1View.setVisibility(View.GONE);
             }
 
             if (action2Text.length() > 0 && action2Image.length() > 0) {
                 action2TextView.setText(action2Text);
-                action2ImageView.setImageResource(activity.getResources().getIdentifier(action2Image, "drawable", getApplicationContext().getPackageName()));
+                action2ImageView.setImageResource(activity.getResources().getIdentifier(action2Image, "drawable", context.getPackageName()));
             } else {
                 action2View.setVisibility(View.GONE);
             }
@@ -161,7 +164,7 @@ public class InAppNotification extends AppCompatActivity {
         }
 
         private void dismissNotification() {
-            view.startAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.bottom_to_top));
+            view.startAnimation(AnimationUtils.loadAnimation(context, R.anim.bottom_to_top));
             mainLayout.removeView(view);
             notificationChannels.remove(channelId);
             notificationStack.remove(channelId);
@@ -184,9 +187,9 @@ public class InAppNotification extends AppCompatActivity {
             });
 
             view.findViewById(R.id.cross).setOnClickListener(v -> dismissNotification());
-            view.findViewById(R.id.first_action_button).setOnClickListener(view -> Toast.makeText(getApplicationContext(), "First Action Button is Clicked", Toast.LENGTH_SHORT).show());
+            view.findViewById(R.id.first_action_button).setOnClickListener(view -> Toast.makeText(context, "First Action Button is Clicked", Toast.LENGTH_SHORT).show());
 
-            view.findViewById(R.id.second_action_button).setOnClickListener(view -> Toast.makeText(getApplicationContext(), "Second Action Button is Clicked", Toast.LENGTH_SHORT).show());
+            view.findViewById(R.id.second_action_button).setOnClickListener(view -> Toast.makeText(context, "Second Action Button is Clicked", Toast.LENGTH_SHORT).show());
         }
 
         private void handleNotificationHandler(int durationInMilliSeconds) {
@@ -196,7 +199,7 @@ public class InAppNotification extends AppCompatActivity {
             // adding new postDelay .
             handler.postDelayed(() -> {
                 if (notificationStack.get(notificationStack.size() - 1).equals(channelId)) {
-                    view.startAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.bottom_to_top));
+                    view.startAnimation(AnimationUtils.loadAnimation(context, R.anim.bottom_to_top));
                 }
                 mainLayout.removeView(view);
                 notificationChannels.remove(channelId);
@@ -212,7 +215,7 @@ public class InAppNotification extends AppCompatActivity {
         private void ring() {
             try {
                 Uri notify = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-                Ringtone r = RingtoneManager.getRingtone(getApplicationContext(), notify);
+                Ringtone r = RingtoneManager.getRingtone(context, notify);
                 r.play();
             } catch (Exception e) {
                 Log.e(LOG_TAG, "Error in ring " + e);
