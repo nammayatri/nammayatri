@@ -14,6 +14,7 @@
 
 module Domain.Types.CallbackRequest where
 
+import qualified Data.Aeson as A
 import qualified Domain.Types.Merchant as DM
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -34,4 +35,10 @@ data CallbackRequestE e = CallbackRequest
 type CallbackRequest = CallbackRequestE 'AsEncrypted
 
 data CallbackRequestStatus = PENDING | RESOLVED | CLOSED
-  deriving (Show, Read)
+  deriving (Show, Read, Eq, Ord, Generic)
+
+instance FromJSON CallbackRequestStatus where
+  parseJSON = A.genericParseJSON A.defaultOptions
+
+instance ToJSON CallbackRequestStatus where
+  toJSON = A.genericToJSON A.defaultOptions

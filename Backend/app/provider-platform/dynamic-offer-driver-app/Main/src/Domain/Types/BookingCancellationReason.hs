@@ -15,6 +15,7 @@
 
 module Domain.Types.BookingCancellationReason where
 
+import qualified Data.Aeson as A
 import qualified Domain.Types.Booking as DRB
 import Domain.Types.CancellationReason (CancellationReasonCode)
 import qualified Domain.Types.Merchant as DM
@@ -45,3 +46,9 @@ data CancellationSource
   | ByAllocator
   | ByApplication
   deriving (Show, Eq, Ord, Read, Generic)
+
+instance FromJSON CancellationSource where
+  parseJSON = A.genericParseJSON A.defaultOptions
+
+instance ToJSON CancellationSource where
+  toJSON = A.genericToJSON A.defaultOptions

@@ -193,6 +193,7 @@ library
       Storage.Beam.BlackListOrg
       Storage.Beam.Booking
       Storage.Beam.BookingCancellationReason
+      Storage.Beam.CallbackRequest
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.Exophone
