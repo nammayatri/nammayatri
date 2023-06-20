@@ -28,6 +28,7 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres (Postgres)
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.BookingCancellationReason as Domain
+import qualified Domain.Types.CancellationReason as DCR
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
@@ -46,22 +47,45 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.CancellationSource
 
 instance FromBackendRow Postgres Domain.CancellationSource
 
+instance IsString Domain.CancellationSource where
+  fromString = show
+
+instance FromField DCR.CancellationStage where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be DCR.CancellationStage where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be DCR.CancellationStage
+
+instance FromBackendRow Postgres DCR.CancellationStage
+
+instance FromField DCR.CancellationReasonCode where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be DCR.CancellationReasonCode where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be DCR.CancellationReasonCode
+
+instance FromBackendRow Postgres DCR.CancellationReasonCode
+
+instance IsString DCR.CancellationStage where
+  fromString = show
+
 data BookingCancellationReasonT f = BookingCancellationReasonT
-  { driverId :: B.C f (Maybe Text),
-    bookingId :: B.C f Text,
+  { bookingId :: B.C f Text,
     rideId :: B.C f (Maybe Text),
     merchantId :: B.C f (Maybe Text),
     source :: B.C f Domain.CancellationSource,
-    reasonCode :: B.C f (Maybe Text),
+    reasonStage :: B.C f (Maybe DCR.CancellationStage),
+    reasonCode :: B.C f (Maybe DCR.CancellationReasonCode),
     additionalInfo :: B.C f (Maybe Text),
     driverCancellationLocationLat :: B.C f (Maybe Double),
     driverCancellationLocationLon :: B.C f (Maybe Double),
     driverDistToPickup :: B.C f (Maybe Meters)
   }
   deriving (Generic, B.Beamable)
-
-instance IsString Domain.CancellationSource where
-  fromString = show
 
 instance B.Table BookingCancellationReasonT where
   data PrimaryKey BookingCancellationReasonT f
@@ -93,8 +117,7 @@ deriving stock instance Show BookingCancellationReason
 bookingCancellationReasonTMod :: BookingCancellationReasonT (B.FieldModification (B.TableField BookingCancellationReasonT))
 bookingCancellationReasonTMod =
   B.tableModification
-    { driverId = B.fieldNamed "driver_id",
-      bookingId = B.fieldNamed "booking_id",
+    { bookingId = B.fieldNamed "booking_id",
       rideId = B.fieldNamed "ride_id",
       merchantId = B.fieldNamed "merchant_id",
       source = B.fieldNamed "source",
@@ -119,12 +142,12 @@ bookingCancellationReasonToPSModifiers =
 defaultBookingCancellationReason :: BookingCancellationReason
 defaultBookingCancellationReason =
   BookingCancellationReasonT
-    { driverId = Nothing,
-      bookingId = "",
+    { bookingId = "",
       rideId = Nothing,
       merchantId = Nothing,
       source = "",
       reasonCode = Nothing,
+      reasonStage = Nothing,
       additionalInfo = Nothing,
       driverCancellationLocationLat = Nothing,
       driverCancellationLocationLon = Nothing,
