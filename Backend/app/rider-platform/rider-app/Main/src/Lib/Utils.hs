@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Lib.Utils where
@@ -21,6 +22,7 @@ import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import EulerHS.KVConnector.Types (MeshConfig (..))
 import qualified EulerHS.Language as L
 import Kernel.External.Encryption
+import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Types
@@ -239,7 +241,7 @@ instance IsString DbHash where
   fromString = show
 
 fromFieldJSON ::
-  (Typeable a, Read a, FromJSON a) =>
+  (Typeable a, FromJSON a) =>
   DPSF.Field ->
   Maybe ByteString ->
   DPSF.Conversion a
@@ -258,6 +260,36 @@ instance FromField Language where
   fromField = fromFieldEnum
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Language
+
+instance FromField Payment.Currency where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Payment.Currency where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Payment.Currency
+
+instance FromBackendRow Postgres Payment.Currency
+
+instance IsString Payment.Currency where
+  fromString = show
+
+deriving stock instance Ord Payment.Currency
+
+instance FromField Payment.TransactionStatus where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Payment.TransactionStatus where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Payment.TransactionStatus
+
+instance FromBackendRow Postgres Payment.TransactionStatus
+
+instance IsString Payment.TransactionStatus where
+  fromString = show
+
+deriving stock instance Ord Payment.TransactionStatus
 
 fromFieldEnum ::
   (Typeable a, Read a) =>

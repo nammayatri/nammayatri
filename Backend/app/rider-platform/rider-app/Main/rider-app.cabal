@@ -212,13 +212,18 @@ library
       Storage.Beam.Merchant.MerchantServiceUsageConfig
       Storage.Beam.MerchantConfig
       Storage.Beam.OnSearchEvent
+      Storage.Beam.Payment.PaymentOrder
+      Storage.Beam.Payment.PaymentTransaction
       Storage.Beam.Person
+      Storage.Beam.Person.PersonDefaultEmergencyNumber
+      Storage.Beam.Person.PersonFlowStatus
       Storage.Beam.Quote
       Storage.Beam.RegistrationToken
       Storage.Beam.RentalSlab
       Storage.Beam.Ride
       Storage.Beam.SavedReqLocation
       Storage.Beam.SearchRequest
+      Storage.Beam.SearchRequest.SearchReqLocation
       Storage.Beam.Sos
       Storage.Beam.SpecialZoneQuote
       Storage.Beam.TripTerms
