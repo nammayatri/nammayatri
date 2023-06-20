@@ -361,7 +361,7 @@ public class RideRequestUtils {
                 } else {
                     if (startWidget == true && Settings.canDrawOverlays(context)  && !sharedPref.getString(context.getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
                             Intent widgetService = new Intent(context, WidgetService.class);
-                            context.startActivity(widgetService);
+                            context.startService(widgetService);
                     }
                     respReader = new InputStreamReader(connection.getInputStream());
                     Log.d(LOG_TAG, "in 200 "+ respReader);
