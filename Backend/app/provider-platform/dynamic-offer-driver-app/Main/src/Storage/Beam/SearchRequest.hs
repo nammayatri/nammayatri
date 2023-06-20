@@ -155,4 +155,4 @@ instance Serialize SearchRequest where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''SearchRequestT ['id] [])
+$(enableKVPG ''SearchRequestT ['id] [['transactionId]])

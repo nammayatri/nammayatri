@@ -152,4 +152,4 @@ instance Serialize OnboardingDocumentConfig where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''OnboardingDocumentConfigT ['documentType] [])
+$(enableKVPG ''OnboardingDocumentConfigT ['documentType, 'merchantId] [])

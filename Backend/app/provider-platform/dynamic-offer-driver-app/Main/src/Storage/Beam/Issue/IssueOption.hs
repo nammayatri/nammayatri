@@ -100,4 +100,4 @@ issueOptionToPSModifiers :: M.Map Text (A.Value -> A.Value)
 issueOptionToPSModifiers =
   M.empty
 
-$(enableKVPG ''IssueOptionT ['id] [])
+$(enableKVPG ''IssueOptionT ['id] [['issueCategoryId]])

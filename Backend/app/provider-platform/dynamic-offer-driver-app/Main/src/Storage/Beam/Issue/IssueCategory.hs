@@ -100,4 +100,4 @@ issueCategoryToPSModifiers :: M.Map Text (A.Value -> A.Value)
 issueCategoryToPSModifiers =
   M.empty
 
-$(enableKVPG ''IssueCategoryT ['id] [])
+$(enableKVPG ''IssueCategoryT ['id] [['category]])

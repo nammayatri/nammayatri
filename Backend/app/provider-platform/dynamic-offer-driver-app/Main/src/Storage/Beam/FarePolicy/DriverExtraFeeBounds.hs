@@ -128,4 +128,4 @@ driverExtraFeeBoundsToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverExtraFeeBoundsToPSModifiers =
   M.empty
 
-$(enableKVPG ''DriverExtraFeeBoundsT ['id] [])
+$(enableKVPG ''DriverExtraFeeBoundsT ['id] [['farePolicyId]])

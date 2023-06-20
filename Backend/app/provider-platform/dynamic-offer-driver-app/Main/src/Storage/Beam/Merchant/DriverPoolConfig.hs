@@ -180,4 +180,4 @@ driverPoolConfigToPSModifiers =
 -- instance IsString Seconds where
 --   fromString = show
 
-$(enableKVPG ''DriverPoolConfigT ['tripDistance] [])
+$(enableKVPG ''DriverPoolConfigT ['merchantId] [])

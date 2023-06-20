@@ -111,4 +111,4 @@ operatingCityToPSModifiers :: M.Map Text (A.Value -> A.Value)
 operatingCityToPSModifiers =
   M.empty
 
-$(enableKVPG ''OperatingCityT ['id] [])
+$(enableKVPG ''OperatingCityT ['id] [['merchantId], ['cityName]])

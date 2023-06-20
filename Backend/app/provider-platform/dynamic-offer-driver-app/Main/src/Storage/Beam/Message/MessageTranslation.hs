@@ -120,4 +120,4 @@ messageTranslationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 messageTranslationToPSModifiers =
   M.empty
 
-$(enableKVPG ''MessageTranslationT ['language] [])
+$(enableKVPG ''MessageTranslationT ['messageId] [])

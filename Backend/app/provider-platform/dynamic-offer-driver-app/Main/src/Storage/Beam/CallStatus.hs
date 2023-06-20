@@ -115,4 +115,4 @@ instance Serialize CallStatus where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''CallStatusT ['id] [])
+$(enableKVPG ''CallStatusT ['id] [['callId]])

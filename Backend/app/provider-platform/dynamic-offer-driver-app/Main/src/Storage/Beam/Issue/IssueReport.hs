@@ -142,4 +142,4 @@ issueReportToPSModifiers :: M.Map Text (A.Value -> A.Value)
 issueReportToPSModifiers =
   M.empty
 
-$(enableKVPG ''IssueReportT ['id] [])
+$(enableKVPG ''IssueReportT ['id] [['driverId], ['categoryId]])
