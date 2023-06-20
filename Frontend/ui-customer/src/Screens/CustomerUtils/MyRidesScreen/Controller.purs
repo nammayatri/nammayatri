@@ -35,7 +35,8 @@ import PrestoDOM (Eval, ScrollState(..), continue, continueWithCmd, exit, update
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Screens (ScreenName(..), getScreen)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
-import Screens.Types (AnimationState(..), FareComponent, Fares, IndividualRideCardState, ItemState, MyRidesScreenState, Stage(..))
+import Screens.HomeScreen.Controller (getSpecialTag)
+import Screens.Types (AnimationState(..), FareComponent, Fares, IndividualRideCardState, ItemState, MyRidesScreenState, Stage(..), ZoneType(..))
 import Services.API (FareBreakupAPIEntity(..), RideAPIEntity(..), RideBookingListRes, RideBookingRes(..))
 import Storage (isLocalStageOn)
 import Language.Strings (getString, getEN)
@@ -190,7 +191,8 @@ myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropVal
     rideId : toPropValue ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._id),
     status : toPropValue (ride.status),
     rideEndTimeUTC : toPropValue (fromMaybe ride.createdAt ride.rideEndTime),
-    alpha : toPropValue if isLocalStageOn HomeScreen then "1.0" else "0.5"
+    alpha : toPropValue if isLocalStageOn HomeScreen then "1.0" else "0.5",
+    zoneVisibility : toPropValue if (getSpecialTag ride.specialLocationTag).priorityTag == METRO then "visible" else "gone"
 }) (listRes ))
 
 
@@ -203,6 +205,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
     timeVal = (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "HH:mm:ss")
     nightChargesVal = (withinTimeRange "22:00:00" "5:00:00" timeVal)
     updatedFareList = getFaresList ride.fareBreakup baseDistanceVal
+    specialTags = getSpecialTag ride.specialLocationTag
      in {
     date : (( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "llll")) !!0 )) <> ", " <>  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "Do MMM") )),
     time :  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A"),
@@ -242,6 +245,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
                         <> (if (isHaveFare "CUSTOMER_SELECTED_FARE" ((updatedFareList))) then "\n\n" <> (getEN CUSTOMER_TIP_DESCRIPTION) else "")
   , nightCharges : nightChargesVal
   , isSpecialZone : (null ride.rideList || isJust (ride.bookingDetails ^._contents^._otpCode))
+  , zoneType : specialTags.priorityTag
 }) (listRes))
 
 

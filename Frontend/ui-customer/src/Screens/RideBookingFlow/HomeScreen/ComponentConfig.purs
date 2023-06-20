@@ -52,7 +52,7 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (DriverInfoCard, Stage(..))
+import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Data.Int as INT
@@ -141,8 +141,8 @@ cancelAppConfig state = let
       },
       cornerRadius = Corners 15.0 true true false false,
       coverImageConfig {
-        imageUrl = if state.data.driverInfoCardState.distance <= 500 
-                    then "ny_ic_driver_near,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png" 
+        imageUrl = if state.data.driverInfoCardState.distance <= 500
+                    then "ny_ic_driver_near,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png"
                     else "ny_ic_driver_started,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_started.png"
       , visibility = VISIBLE
       , margin = Margin 16 20 16 24
@@ -399,19 +399,19 @@ cancelRidePopUpConfig state =
         }
   in
     cancelRideconfig'
-  
+
 genderBannerConfig :: ST.HomeScreenState -> Banner.Config
-genderBannerConfig state = 
-  let 
+genderBannerConfig state =
+  let
     config = Banner.config
     config' = config
-      { 
+      {
         backgroundColor = Color.lightMintGreen
       , title = (getString COMPLETE_YOUR_PROFILE_FOR_A_PERSONALISED_RIDE_EXPERIENCE)
       , titleColor = Color.elfGreen
       , actionText = (getString UPDATE_NOW)
       , actionTextColor = Color.elfGreen
-      , imageUrl = "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
+      , imageUrl = "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png"
       , isBanner = state.props.isBanner
       }
   in config'
@@ -650,6 +650,7 @@ driverInfoCardViewState state = { props:
                                   , showCallPopUp: state.props.showCallPopUp
                                   , isSpecialZone: state.props.isSpecialZone
                                   , estimatedTime : state.data.rideDuration
+                                  , zoneType : state.props.zoneType.priorityTag
                                   }
                               , data: driverInfoTransformer state
                             }
@@ -762,6 +763,7 @@ ratingCardViewState state = { props:
                             , estimatedDistance: state.props.estimatedDistance
                             , showFareBreakUp: false
                             , enableFeedback: true
+                            , zoneType: state.props.zoneType.priorityTag
                             }
                         , data: state.data.previousRideRatingState
                         }
@@ -794,6 +796,7 @@ previousRideRatingViewState state = { props:
                                         , estimatedDistance: state.props.estimatedDistance
                                         , enableFeedback: false
                                         , showFareBreakUp: true
+                                        , zoneType: state.props.zoneType.priorityTag
                                         }
                                     , data: state.data.previousRideRatingState
                                     }
@@ -903,3 +906,59 @@ chooseYourRideConfig state = ChooseYourRide.config
     rideDuration = state.data.rideDuration,
     quoteList = state.data.specialZoneQuoteList
   }
+
+cancelConfirmationConfig :: ST.HomeScreenState -> PopUpModal.Config
+cancelConfirmationConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    gravity = CENTER,
+    margin = MarginHorizontal 24 24 ,
+    buttonLayoutMargin = Margin 16 0 16 20 ,
+    primaryText {
+      text = (getString DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST) <> (show state.data.driverInfoCardState.distance) <> (getString WE_URGE_YOU_NOT_TO_CANCEL)
+    , margin = Margin 16 24 16 24
+    , fontStyle = FontStyle.semiBold LanguageStyle
+    },
+    secondaryText {visibility = GONE},
+    option1 {
+      text = (getString CONTINUE)
+    , fontSize = FontSize.a_16
+    , width = V $ (((EHC.screenWidth unit)-92)/2)
+    , isClickable = state.data.cancelRideConfirmationData.continueEnabled
+    , timerValue = state.data.cancelRideConfirmationData.delayInSeconds
+    , enableTimer = true
+    , background = Color.white900
+    , strokeColor = Color.black500
+    , color = Color.black700
+    },
+    option2 {
+      text = (getString GO_BACK_TEXT)
+    , margin = MarginLeft 12
+    , fontSize = FontSize.a_16
+    , width = V $ (((EHC.screenWidth unit)-92)/2)
+    , color = Color.yellow900
+    , strokeColor = Color.black900
+    , background = Color.black900
+    },
+    backgroundClickable = false,
+    cornerRadius = (Corners 15.0 true true true true),
+    coverImageConfig {
+      imageUrl = "ny_ic_driver_near,https://assets.juspay.in/nammayatri/images/driver/ny_ic_driver_near.png"
+    , visibility = VISIBLE
+    , margin = Margin 16 20 16 0
+    , height = V 178
+    }
+  }
+  in popUpConfig'
+
+specialLocationIcons :: ZoneType -> String
+specialLocationIcons tag =
+  case tag of
+    METRO -> "ny_ic_metro_black"
+    _     -> ""
+
+specialLocationConfig :: String -> String -> JB.SpecialLocationTag
+specialLocationConfig srcIcon destIcon = {
+    sourceSpecialTagIcon : srcIcon
+  , destSpecialTagIcon : destIcon
+}

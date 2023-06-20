@@ -40,7 +40,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (Stage(..))
+import Screens.Types (Stage(..), ZoneType(..))
 import Styles.Colors as Color
 import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Storage (isLocalStageOn)
@@ -52,12 +52,12 @@ view push state =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , background Color.transparent
-  , orientation VERTICAL 
-  ][  mapOptionsView push state 
+  , orientation VERTICAL
+  ][  mapOptionsView push state
     , if state.data.isSpecialZone then driverInfoViewSpecialZone push state else driverInfoView push state
     ]
 
-driverInfoViewSpecialZone :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w 
+driverInfoViewSpecialZone :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 driverInfoViewSpecialZone push state =
   linearLayout
   [ width MATCH_PARENT
@@ -86,33 +86,33 @@ driverInfoViewSpecialZone push state =
               ][]
             , titleAndETA push state
             , otpAndWaitView push state
-            , separator (Margin 16 0 16 0) (V 1) Color.grey900 (state.props.currentStage == RideStarted && (secondsToHms state.data.eta) /= "" && (state.props.isSpecialZone && (state.props.estimatedTime /= "--"))) 
+            , separator (MarginHorizontal 16 16) (V 1) Color.grey900 (state.props.currentStage == RideStarted && (secondsToHms state.data.eta) /= "" && (state.props.isSpecialZone && (state.props.estimatedTime /= "--")))
             , driverDetailsView push state
-            , separator (Margin 16 0 16 0) (V 1) Color.grey900 true
+            , separator (MarginHorizontal 16 16) (V 1) Color.grey900 true
             , paymentMethodView push state (getString PAY_VIA_CASH_OR_UPI <> " :-") false
-            , separator (Margin 16 0 16 0) (V 1) Color.grey900 true
+            , separator (MarginHorizontal 16 16) (V 1) Color.grey900 true
             , linearLayout
               [ width MATCH_PARENT
               , height WRAP_CONTENT
               , orientation VERTICAL
               ][ dropPointView push state
-                , separator (Margin 16 0 16 0) (V 1) Color.grey900 (state.props.currentStage == RideAccepted)
+                , separator (MarginHorizontal 16 16) (V 1) Color.grey900 (state.props.currentStage == RideAccepted)
                 , cancelRideLayout push state
               ]
             ]
       ]
   ]
 
-titleAndETA :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w 
-titleAndETA push state = 
-  linearLayout 
+titleAndETA :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
+titleAndETA push state =
+  linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
   , padding $ Padding 16 20 16 16
   , visibility $ if ((state.props.currentStage /= RideAccepted && (secondsToHms state.data.eta) == "") || (state.props.currentStage == RideStarted && (spy "estimatedTimeABCD" state.props.estimatedTime == "--"))) then GONE else VISIBLE
-  ][ textView 
-      [ width MATCH_PARENT 
+  ][ textView
+      [ width MATCH_PARENT
       , height WRAP_CONTENT
       , text $ if state.props.currentStage == RideAccepted then getString BOARD_THE_FIRST_TAXI else "ETA: " <> if state.props.isSpecialZone then (state.props.estimatedTime) else (secondsToHms state.data.eta)
       , color Color.black800
@@ -122,9 +122,9 @@ titleAndETA push state =
       ]
   ]
 
-dropPointView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w 
-dropPointView push state = 
-  linearLayout 
+dropPointView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
+dropPointView push state =
+  linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
@@ -143,8 +143,8 @@ dropPointView push state =
     , estimatedTimeAndDistanceView push state
   ]
 
-estimatedTimeAndDistanceView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w 
-estimatedTimeAndDistanceView push state = 
+estimatedTimeAndDistanceView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
+estimatedTimeAndDistanceView push state =
   linearLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
@@ -177,12 +177,12 @@ estimatedTimeAndDistanceView push state =
     --   ]
   ]
 
-otpView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w 
-otpView push state = 
+otpView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
+otpView push state =
   linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
-  ] (map(\item -> 
+  ] (map(\item ->
       linearLayout
         [ height $ V 32
         , width $ V 32
@@ -200,8 +200,8 @@ otpView push state =
             ]
         ]) $ split (Pattern "")  state.data.otp)
 
-expiryTimeView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w 
-expiryTimeView push state = 
+expiryTimeView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
+expiryTimeView push state =
  linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -233,7 +233,7 @@ expiryTimeView push state =
       ]
   ]
 
-mapOptionsView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w 
+mapOptionsView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 mapOptionsView push state =
   linearLayout
   [ width MATCH_PARENT
@@ -243,7 +243,7 @@ mapOptionsView push state =
   , gravity CENTER_VERTICAL
   , padding $ PaddingHorizontal 16 16
   ][  if state.data.isSpecialZone && state.props.currentStage == RideAccepted then navigateView push state  else sosView push state
-    , linearLayout 
+    , linearLayout
       [ height WRAP_CONTENT
       , weight 1.0
       , clickable false
@@ -332,7 +332,7 @@ sosView push state =
     ]
 
 navigateView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
-navigateView push state = 
+navigateView push state =
   linearLayout
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -439,7 +439,7 @@ waitTimeView push state =
       ]
   ]
 
-driverInfoView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w 
+driverInfoView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 driverInfoView push state =
   linearLayout
   [ width MATCH_PARENT
@@ -449,39 +449,71 @@ driverInfoView push state =
       , width MATCH_PARENT
       , scrollBarY false
       ][ linearLayout
-          [ orientation VERTICAL
-          , height WRAP_CONTENT
-          , width MATCH_PARENT
-          , padding $ PaddingBottom 24
-          , margin $ MarginVertical 14 0
-          , background Color.white900
-          , gravity CENTER
-          , cornerRadii $ Corners 24.0 true true false false
-          , stroke $ "1," <> Color.grey900
-          ][ linearLayout
-            [ gravity CENTER
-            , background Color.transparentGrey
-            , height $ V 4
-            , width $ V 34
-            , margin (MarginTop 8)
-            , cornerRadius 4.0
-            ][]
-            , if state.props.isSpecialZone  then headerTextView push state else contactView push state
-            , otpAndWaitView push state
-            , separator (Margin 16 0 16 0) (V 1) Color.grey900 (state.props.currentStage == RideAccepted)
-            , driverDetailsView push state
-            , separator (Margin 16 0 16 0) (V 1) Color.grey900 true
-            , paymentMethodView push state (getString RIDE_FARE) true
-            , separator (Margin 16 0 16 0) (V 1) Color.grey900 true
-            , (if os == "IOS" then scrollView else linearLayout)
-              [ width MATCH_PARENT
-              , height if os == "IOS" then (V 210) else WRAP_CONTENT
-              , orientation VERTICAL
-              ][ if state.props.isSpecialZone then destinationView push state else  sourceDistanceView push state
-                , separator (Margin 0 0 0 0) (V 1) Color.grey900 (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted)
-                , cancelRideLayout push state
+         [ orientation VERTICAL
+         , height WRAP_CONTENT
+         , width MATCH_PARENT
+         , margin $ MarginTop 14
+         , background Color.blue800
+         , gravity CENTER
+         , cornerRadii $ Corners 24.0 true true false false
+         , stroke $ "1," <> Color.grey900
+         ][ linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , background Color.blue800
+            , cornerRadii $ Corners 24.0 true true false false
+            , gravity CENTER
+            , orientation HORIZONTAL
+            , padding (PaddingVertical 4 4)
+            , visibility if state.props.zoneType == METRO then VISIBLE else GONE
+            ][ imageView
+                [ width (V 15)
+                , height (V 15)
+                , margin (MarginRight 6)
+                , imageWithFallback "ny_ic_metro_white,https://assets.juspay.in/nammayatri/images/common/ny_ic_metro_white.png"
+                ]
+              , textView
+                [ width WRAP_CONTENT
+                , height WRAP_CONTENT
+                , textSize FontSize.a_14
+                , text (getString METRO_RIDE)
+                , color Color.white900
+                ]
+             ]
+          , linearLayout
+            [ orientation VERTICAL
+            , height WRAP_CONTENT
+            , width MATCH_PARENT
+            , padding $ PaddingBottom 24
+            , background Color.white900
+            , gravity CENTER
+            , cornerRadii $ Corners 24.0 true true false false
+            , stroke $ "1," <> Color.grey900
+            ][ linearLayout
+              [ gravity CENTER
+              , background Color.transparentGrey
+              , height $ V 4
+              , width $ V 34
+              , margin (MarginTop 8)
+              , cornerRadius 4.0
+              ][]
+              , if state.props.isSpecialZone  then headerTextView push state else contactView push state
+              , otpAndWaitView push state
+              , separator (MarginHorizontal 16 16) (V 1) Color.grey900 (state.props.currentStage == RideAccepted)
+              , driverDetailsView push state
+              , separator (MarginHorizontal 16 16) (V 1) Color.grey900 true
+              , paymentMethodView push state (getString RIDE_FARE) true
+              , separator (MarginHorizontal 16 16) (V 1) Color.grey900 true
+              , (if os == "IOS" then scrollView else linearLayout)
+                [ width MATCH_PARENT
+                , height if os == "IOS" then (V 210) else WRAP_CONTENT
+                , orientation VERTICAL
+                ][ if state.props.isSpecialZone then destinationView push state else  sourceDistanceView push state
+                  , separator (Margin 0 0 0 0) (V 1) Color.grey900 (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted)
+                  , cancelRideLayout push state
+                ]
               ]
-            ]
+         ]
       ]
   ]
 
@@ -727,7 +759,7 @@ ratingView push state =
 
 ---------------------------------- paymentMethodView ---------------------------------------
 
-paymentMethodView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> String -> Boolean -> PrestoDOM (Effect Unit) w 
+paymentMethodView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> String -> Boolean -> PrestoDOM (Effect Unit) w
 paymentMethodView push state title shouldShowIcon =
   linearLayout
   [ orientation HORIZONTAL
@@ -858,7 +890,7 @@ sourceToDestinationConfig state = let
         text = state.data.destination
       , textSize = FontSize.a_14
       , padding = Padding 2 0 2 2
-      , margin = MarginVertical 12 15 
+      , margin = MarginVertical 12 15
       , maxLines = 1
       , fontStyle = FontStyle.medium LanguageStyle
       , ellipsize = true
@@ -872,8 +904,8 @@ sourceToDestinationConfig state = let
     }
   in sourceToDestinationConfig'
 
-headerTextView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w 
-headerTextView push state = 
+headerTextView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
+headerTextView push state =
   linearLayout
   [ orientation VERTICAL
   , height WRAP_CONTENT
@@ -892,7 +924,7 @@ headerTextView push state =
     , if state.props.currentStage == RideStarted then  contactView push state else linearLayout[][]
   ]
 
-destinationView ::  forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w 
+destinationView ::  forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 destinationView push state=
   linearLayout
       [ orientation VERTICAL
@@ -972,12 +1004,12 @@ openGoogleMap push state =
           , imageWithFallback "ny_ic_navigation,https://assets.juspay.in/nammayatri/images/driver/ny_ic_navigation.png"
           ]
       ]
-  ] 
+  ]
 
 
 configurations ∷ { letterSpacing ∷ Number , paddingOTP ∷ Padding , paddingOTPText ∷ Padding }
-configurations = 
-  case os of 
+configurations =
+  case os of
     "IOS" -> {paddingOTPText : PaddingVertical 4 4
               , letterSpacing : 6.0
               , paddingOTP : Padding 20 5 18 7}

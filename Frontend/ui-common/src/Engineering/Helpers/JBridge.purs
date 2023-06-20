@@ -94,11 +94,12 @@ foreign import uploadFile :: Unit -> Effect Unit
 foreign import previewImage :: String -> Effect Unit
 foreign import storeCallBackImageUpload :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
 foreign import renderBase64Image :: String -> String -> Boolean -> Effect Unit
-foreign import setScaleType :: String -> String -> String -> Effect Unit 
+foreign import setScaleType :: String -> String -> String -> Effect Unit
 foreign import copyToClipboard :: String -> Unit
-foreign import drawRoute :: Locations -> String -> String -> Boolean -> String -> String -> Int -> String -> String -> String -> Effect Unit
+foreign import drawRoute :: Locations -> String -> String -> Boolean -> String -> String -> Int -> String -> String -> String -> SpecialLocationTag -> Effect Unit
+foreign import updateRouteMarker :: Locations -> String -> String -> String -> String -> SpecialLocationTag -> Effect Unit
 foreign import isCoordOnPath :: Locations -> Number -> Number -> Int -> Effect IsLocationOnPath
-foreign import updateRoute :: Locations -> String -> String -> Effect Unit
+foreign import updateRoute :: Locations -> String -> String -> SpecialLocationTag -> Effect Unit
 -- -- foreign import drawActualRoute :: String -> String -> Locations -> Effect Int
 -- -- foreign import showAndDrawRoute :: String -> String -> String -> Locations -> Effect Int
 -- foreign import addMarkers :: Markers -> Effect Unit
@@ -304,6 +305,11 @@ setEnvInNativeSharedPrefKeys key val = liftFlow (setEnvInNativeSharedPrefKeysImp
 
 type Locations = {
     points :: Coordinates
+}
+
+type SpecialLocationTag = {
+    sourceSpecialTagIcon :: String
+  , destSpecialTagIcon :: String
 }
 
 type Coordinates = Array Paths

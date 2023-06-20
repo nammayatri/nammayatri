@@ -419,6 +419,7 @@ type IndividualRideCardState =
   , referenceString :: String
   , isSpecialZone :: Boolean
   , nightCharges :: Boolean
+  , zoneType :: ZoneType
   }
 
 type ItemState =
@@ -441,7 +442,8 @@ type ItemState =
     rideId :: PropValue,
     status :: PropValue,
     rideEndTimeUTC :: PropValue,
-    alpha :: PropValue
+    alpha :: PropValue,
+    zoneVisibility :: PropValue
   }
 
 -- ################################################ PermissionScreenState ##################################################
@@ -533,6 +535,7 @@ type HomeScreenStateData =
   , specialZoneQuoteList :: Array ChooseVehicle.Config
   , specialZoneSelectedQuote :: Maybe String
   , selectedEstimatesObject :: ChooseVehicle.Config
+  , cancelRideConfirmationData :: CancelRideConfirmationData
   }
 
 type HomeScreenStateProps =
@@ -600,7 +603,22 @@ type HomeScreenStateProps =
   , defaultPickUpPoint :: String
   , isSpecialZone :: Boolean
   , cancelSearchCallDriver :: Boolean
+  , zoneType :: SpecialTags
+  , cancelRideConfirmationPopup :: Boolean
   }
+
+type SpecialTags = {
+    sourceTag :: ZoneType
+  , destinationTag :: ZoneType
+  , priorityTag :: ZoneType
+}
+
+type CancelRideConfirmationData = {
+  delayInSeconds :: Int,
+  timerID :: String,
+  enableTimer :: Boolean,
+  continueEnabled :: Boolean
+}
 
 type CustomerTipProps = {
     enableTips :: Boolean
@@ -1031,3 +1049,16 @@ derive instance genericFlowStatusData :: Generic FlowStatusData _
 instance showFlowStatusData :: Show FlowStatusData where show = genericShow
 instance encodeFlowStatusData :: Encode FlowStatusData where encode = defaultEncode
 instance decodeFlowStatusData :: Decode FlowStatusData where decode = defaultDecode
+
+data ZoneType = METRO
+              | HOSPITAL
+              | AIRPORT
+              | SCHOOL
+              | RAILWAY
+              | NOZONE
+
+derive instance genericZoneType :: Generic ZoneType _
+instance showZoneType :: Show ZoneType where show = genericShow
+instance eqZoneType :: Eq ZoneType where eq = genericEq
+instance encodeZoneType :: Encode ZoneType where encode = defaultEncode
+instance decodeZoneType :: Decode ZoneType where decode = defaultDecode

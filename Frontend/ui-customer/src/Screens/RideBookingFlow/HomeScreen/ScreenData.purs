@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -20,7 +20,7 @@ import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Maybe (Maybe(..))
 import Styles.Colors as Color
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location,RateCardType(..))
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location,RateCardType(..), ZoneType(..), SpecialTags)
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..))
 import Prelude (($))
 import Data.Array (head)
@@ -73,7 +73,7 @@ initData = {
     , polygonCoordinates : ""
     , specialZoneQuoteList : []
     , specialZoneSelectedQuote : Nothing
-    , selectedEstimatesObject : { 
+    , selectedEstimatesObject : {
       vehicleImage: ""
       , isSelected: false
       , vehicleVariant: ""
@@ -86,6 +86,7 @@ initData = {
       , index: 0
       , id: ""
       }
+    , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
     },
     props: {
       rideRequestFlow : false
@@ -132,7 +133,7 @@ initData = {
     , autoSelecting : true
     , searchExpire : 90
     , isEstimateChanged : false
-    , showRateCard : false 
+    , showRateCard : false
     , showRateCardIcon : false
     , sendMessageActive : false
     , chatcallbackInitiated : false
@@ -156,19 +157,25 @@ initData = {
     , isSpecialZone : false
     , defaultPickUpPoint : ""
     , cancelSearchCallDriver : false
+    , zoneType : dummyZoneType
+    , cancelRideConfirmationPopup : false
     }
 }
-    
 
+dummyZoneType = {
+    sourceTag : NOZONE
+  , destinationTag : NOZONE
+  , priorityTag : NOZONE
+}
 
 dummyContactData :: Array Contact
 dummyContactData = []
 
 selectedContactData ::  Contact
-selectedContactData = 
-  { name : "", phoneNo : "" } 
+selectedContactData =
+  { name : "", phoneNo : "" }
 
-emergencyHelpModalData :: EmergencyHelpModelState 
+emergencyHelpModalData :: EmergencyHelpModelState
 emergencyHelpModalData = {
   showCallPolicePopUp : false,
   showCallContactPopUp : false,
@@ -185,7 +192,7 @@ dummyQuoteList :: Array QuoteListItemState
 dummyQuoteList = [
   {
    seconds : 10
-  , id : "1"  
+  , id : "1"
   , timer : "0"
   , timeLeft : 0
   , driverRating : 4.0
@@ -198,7 +205,7 @@ dummyQuoteList = [
   },
   {
    seconds : 10
-  , id : "2"  
+  , id : "2"
   , timer : "0"
   , timeLeft : 0
   , driverRating : 4.0
@@ -210,7 +217,7 @@ dummyQuoteList = [
   },
   {
    seconds : 3
-  , id : "3"  
+  , id : "3"
   , timer : "0"
   , timeLeft : 0
   , driverRating : 4.0
@@ -246,16 +253,16 @@ dummyPreviousRiderating = {
 
 
 dummyDriverInfo :: DriverInfoCard
-dummyDriverInfo = 
+dummyDriverInfo =
   { otp : ""
   , driverName : ""
   , eta : 0
   , vehicleDetails : ""
   , registrationNumber : ""
   , rating : 0.0
-  , startedAt : "" 
+  , startedAt : ""
   , endedAt : ""
-  , source : "" 
+  , source : ""
   , destination : ""
   , rideId : ""
   , price : 0
@@ -298,7 +305,7 @@ dummyAddress = {
             , "areaCode" : Nothing
             , "ward" : Nothing
             , "placeId" : Nothing
-            }  
+            }
 
 dummyQuoteAPIEntity :: QuoteAPIEntity
 dummyQuoteAPIEntity = QuoteAPIEntity {
@@ -337,8 +344,8 @@ dummyLocationName = PlaceName {
   "addressComponents" : []
 }
 dummyPickUpPoints :: Array Location
-dummyPickUpPoints = [ 
-  {place : "Kolkata airport arrival gate 1 ", lat : 12.941156, lng : 77.623510 }, 
+dummyPickUpPoints = [
+  {place : "Kolkata airport arrival gate 1 ", lat : 12.941156, lng : 77.623510 },
   {place : "Kolkata airport arrival gate 2 ", lat : 12.940696, lng : 77.622877 }
 ]
 

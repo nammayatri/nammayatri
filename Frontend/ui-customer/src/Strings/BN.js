@@ -462,5 +462,9 @@ const bengaliStrings = {
   "SUBMIT_REQUEST" : "অনুরোধ জমা দিন",
   "PLEASE_ENTER_A_VALID_EMAIL" : "একটি বৈধ ইমেইল প্রবেশ করুন",
   "WE_WOULD_APPRECIATE_YOUR_REASONING" : "অ্যাকাউন্ট মুছে ফেলার পিছনে আপনার যুক্তি সম্পর্কে আমরা আপনার প্রতিক্রিয়ার প্রশংসা করব",
-  "OK_GOT_IT" : "ঠিক আছে বুঝেছি"
+  "OK_GOT_IT" : "ঠিক আছে বুঝেছি",
+  "METRO_RIDE": "মেট্রো রাইড",
+  "GO_BACK_TEXT": "ফিরে যাও",
+  "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST": "ড্রাইভার আপনার বিশেষ অনুরোধ পছন্দ করেছে এবং মাত্র ",
+  "WE_URGE_YOU_NOT_TO_CANCEL": " মিটার দূরে। আমরা আপনাকে রাইড বাতিল না করার জন্য অনুরোধ করছি"
 }

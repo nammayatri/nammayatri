@@ -403,7 +403,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             case "BN_IN" :
                 locale = new Locale("bn");
                 break;
-            case "ML_IN" : 
+            case "ML_IN" :
                 locale = new Locale("ml");
                 break;
             default:
@@ -2481,7 +2481,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                                                 .title("")
                                                 .position(new LatLng(lat,lng))
                                                 .anchor(0.49f, 0.78f)
-                                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(name,"ny_ic_zone_pickup_marker")));
+                                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(name,"ny_ic_zone_pickup_marker", null)));
                     Marker m = googleMap.addMarker(markerOptionsObj);
                     m.hideInfoWindow();
                     pickupPointsZoneMarkers.add(m);
@@ -2520,7 +2520,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                             upsertMarker(CURRENT_LOCATION, String.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT")), String.valueOf( getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON")),160, 0.5f,0.9f); //TODO this function will be removed
                         } else {
                         }
-                        userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(locationName,CURRENT_LOCATION)));
+                        userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(locationName,CURRENT_LOCATION, null)));
                         userPositionMarker.setTitle("");
                         LatLng latLng = new LatLng(Double.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT")) , Double.valueOf( getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON")));
                     }
@@ -2546,7 +2546,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     if(layer != null){
                         layer.removeLayerFromMap();
                     }
-                    userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView("",CURRENT_LOCATION)));
+                    userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView("",CURRENT_LOCATION, null)));
                     userPositionMarker.setTitle("");
                 }
                 catch (Exception e){
@@ -2823,12 +2823,12 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         return Bitmap.createScaledBitmap(b, markerWidth, markerHeight, false);
     }
 
-    private Bitmap getMarkerBitmapFromView(String locationName, String imageName) {
-
+    private Bitmap getMarkerBitmapFromView(String locationName, String imageName, String specialLocationTagIcon) {
         View customMarkerView = ((LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate( imageName.equals("ny_ic_zone_pickup_marker") ? R.layout.zone_label_layout :  R.layout.marker_label_layout, null);
+        View ImageAndTextView = customMarkerView.findViewById(R.id.zone_image_and_text);
         TextView label = customMarkerView.findViewById(R.id.marker_text);
         if (locationName.equals("")) {
-            label.setVisibility(customMarkerView.GONE);
+            ImageAndTextView.setVisibility(View.GONE);
         }else {
             if (locationName.length() <= 27) {
                 label.setText(locationName);
@@ -2836,22 +2836,35 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                 label.setText(locationName.substring(0, 17) + "...");
             }
         }
+
+        try {
+            if (specialLocationTagIcon != null) {
+                ImageView specialTagImage = customMarkerView.findViewById(R.id.zone_image);
+                specialTagImage.setVisibility(View.VISIBLE);
+                int imageID = context.getResources().getIdentifier(specialLocationTagIcon, "drawable", activity.getPackageName());
+                BitmapDrawable bitmapdraw = (BitmapDrawable) context.getResources().getDrawable(imageID);
+                specialTagImage.setImageDrawable(bitmapdraw);
+            }
+        } catch (Exception e) {
+            Log.e("Exception in rendering Image for special zone", e.toString());
+        }
+
         ImageView pointer = customMarkerView.findViewById(R.id.pointer_img);
         try {
-            if (imageName.equals("ny_ic_dest_marker")) {
-                pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_dest_marker));
+                if (imageName.equals("ny_ic_dest_marker")) {
+                    pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_dest_marker));
             } else if(imageName.equals("ny_ic_zone_pickup_marker")){
-                pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_zone_pickup_marker));
+                    pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_zone_pickup_marker));
             } else if(imageName.equals("ny_ic_customer_current_location")){
-                pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_customer_current_location));
-                ViewGroup.LayoutParams layoutParams = (ViewGroup.LayoutParams) pointer.getLayoutParams();
-                layoutParams.height = 160;
-                layoutParams.width = 160;
-                pointer.setLayoutParams(layoutParams);
+                    pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_customer_current_location));
+                    ViewGroup.LayoutParams layoutParams = (ViewGroup.LayoutParams) pointer.getLayoutParams();
+                    layoutParams.height = 160;
+                    layoutParams.width = 160;
+                    pointer.setLayoutParams(layoutParams);
              }
             else{
-                pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_src_marker));
-            }
+                    pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_src_marker));
+                }
         } catch (Exception e) {
             Log.e("Exception in rendering Image", e.toString());
         }
@@ -3174,7 +3187,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void updateRoute(String json, String dest, String eta, String dummy) {
+    public void updateRoute(String json, String dest, String eta, String specialLocation) {
         activity.runOnUiThread(() -> {
             if (googleMap != null) {
                 try {
@@ -3191,7 +3204,10 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     }
                     Marker currMarker = (Marker) markers.get("ic_vehicle_nav_on_map");
                     Marker destMarker = (Marker) markers.get(dest);
-                    destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(eta, dest))));
+                    JSONObject specialLocationObject = new JSONObject(specialLocation);
+                    String destinationSpecialTagIcon = specialLocationObject.getString("destSpecialTagIcon");
+
+                    destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(eta, dest, destinationSpecialTagIcon.equals("") ? null : destinationSpecialTagIcon))));
                     if (polylines != null) {
                         polylines.setEndCap(new ButtCap());
                         if (path.size() == 0) {
@@ -3253,7 +3269,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             catch(Exception e) {
                 firebaseLogEvent("exception_in_shareTextMessage");
             }
-            
+
         });
     }
 
@@ -3522,9 +3538,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void drawRoute(final String json, final String style, final String trackColor, final boolean isActual, final String sourceMarker, final String destMarker, final int polylineWidth, String type, String sourceName, String destinationName) {
-//        ArrayList<Polyline> lines = new ArrayList<>();
-//        polylines.add(lines);
+    public void drawRoute(final String json, final String style, final String trackColor, final boolean isActual, final String sourceMarker, final String destMarker, final int polylineWidth, String type, String sourceName, String destinationName, final String specialLocation) {
         activity.runOnUiThread(() -> {
             if (googleMap != null) {
                 PolylineOptions polylineOptions = new PolylineOptions();
@@ -3564,6 +3578,9 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                         polylineOptions.add(fromPointObj);
                     }
 
+                    JSONObject specialLocationObject = new JSONObject(specialLocation);
+                    String sourceSpecialTagIcon = specialLocationObject.getString("sourceSpecialTagIcon");
+                    String destinationSpecialTagIcon = specialLocationObject.getString("destSpecialTagIcon");
                     polylines = setRouteCustomTheme(polylineOptions, color, style, polylineWidth);
                     LatLng sourceLatLng = new LatLng(sourceLat, sourceLong);
                     LatLng destLatLng = new LatLng(destLat, destLong);
@@ -3574,7 +3591,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                         MarkerOptions markerObj = new MarkerOptions()
                                 .title(destMarker)
                                 .position(dest)
-                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destinationName, destMarker)));
+                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destinationName, destMarker, destinationSpecialTagIcon.equals("") ? null : destinationSpecialTagIcon)));
 
                         Marker tempmarker = googleMap.addMarker(markerObj);
                         markers.put(destMarker, tempmarker);
@@ -3598,7 +3615,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                             MarkerOptions markerObj = new MarkerOptions()
                                     .title(sourceMarker)
                                     .position(source)
-                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceName,sourceMarker)));
+                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceName,sourceMarker, sourceSpecialTagIcon.equals("") ? null : sourceSpecialTagIcon)));
                             Marker tempmarker = googleMap.addMarker(markerObj);
                             markers.put(sourceMarker, tempmarker);
                         }
@@ -3608,6 +3625,49 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                 }
             }
         });
+    }
+
+    @JavascriptInterface
+    public void updateRouteMarker(final String json, String sourceName, String destinationName, String sourceMarker, String destinationMarker, final String specialLocation) {
+        if (activity != null) {
+            activity.runOnUiThread(() -> {
+                try {
+                    if (googleMap != null) {
+                        JSONObject jsonObject = new JSONObject(json);
+                        JSONArray coordinates = jsonObject.getJSONArray("points");
+                        JSONObject specialLocationObject = new JSONObject(specialLocation);
+                        String sourceTag = specialLocationObject.getString("sourceSpecialTagIcon");
+                        String destinationTag = specialLocationObject.getString("destSpecialTagIcon");
+                        if (coordinates.length() > 0) {
+                            JSONObject sourceCoordinates = (JSONObject) coordinates.get(0);
+                            JSONObject destCoordinates = (JSONObject) coordinates.get(coordinates.length() - 1);
+                            if ((sourceMarker != null && !sourceMarker.equals("")) && (!sourceName.equals("") || !sourceTag.equals(""))) {
+                                removeMarker(sourceMarker);
+                                LatLng sourceLatLng = new LatLng(sourceCoordinates.getDouble("lat"), sourceCoordinates.getDouble("lng"));
+                                MarkerOptions markerObj = new MarkerOptions()
+                                        .title(sourceMarker)
+                                        .position(sourceLatLng)
+                                        .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceName, sourceMarker, sourceTag.equals("") ? null : sourceTag)));
+                                Marker marker = googleMap.addMarker(markerObj);
+                                markers.put(sourceMarker, marker);
+                            }
+                            if ((destinationMarker != null && !destinationMarker.equals("")) && (!destinationName.equals("") || !destinationTag.equals(""))) {
+                                removeMarker(destinationMarker);
+                                LatLng destinationLatLng = new LatLng(destCoordinates.getDouble("lat"), destCoordinates.getDouble("lng"));
+                                MarkerOptions markerObj = new MarkerOptions()
+                                        .title(destinationMarker)
+                                        .position(destinationLatLng)
+                                        .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destinationName, destinationMarker, destinationTag.equals("") ? null : destinationTag)));
+                                Marker marker = googleMap.addMarker(markerObj);
+                                markers.put(destinationMarker, marker);
+                            }
+                        }
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            });
+        }
     }
 
     @JavascriptInterface
