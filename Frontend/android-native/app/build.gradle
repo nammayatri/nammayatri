@@ -170,9 +170,6 @@ android {
         js_d_kl_.setRoot('src/driver/jatriSaathiDriver')
         yatri.setRoot('src/user/yatri')
         yp_.setRoot('src/driver/yatriPartner')
-        ny_p_.assets.srcDirs = ['src/driver/assets']
-        js_d_kl_.assets.srcDirs = ['src/driver/assets']
-        yp_.assets.srcDirs = ['src/driver/assets']
     }
     sourceSets {
         dev.res.srcDir 'src/dev/res'
