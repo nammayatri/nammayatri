@@ -360,7 +360,7 @@ const englishStrings = {
   START_YOUR_CHAT_WITH_THE_DRIVER : "Start your chat with the driver",
   MESSAGE : "Message",
   I_AM_ON_MY_WAY : "I'm on my way",
-  GETTING_DELAYED_PLEASE_WAIT : "Getting delayed, please wait",
+  GETTING_DELAYED_PLEASE_WAIT : "Getting delayed, Please wait",
   UNREACHABLE_PLEASE_CALL_BACK : "Unreachable, Please call back",
   ARE_YOU_STARING : "Are you starting?",
   PLEASE_COME_SOON : "Please come soon",
