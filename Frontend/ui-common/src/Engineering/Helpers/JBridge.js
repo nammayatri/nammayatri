@@ -530,11 +530,18 @@ export const drawRoute = function (data) {
             return function (polylineWidth) {
               return function (type) {
                 return function (sourceName) {
-                  return function (destinationName){
-                    return function () {
-                      console.log("I AM HERE ------------------ IN DRAW ROUTE");
-                      return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarker, destMarker, polylineWidth,type, sourceName, destinationName);
+                  return function (destinationName) {
+                    return function (specialLocation) {
+                      return function () {
+                        console.log("I AM HERE ------------------ IN DRAW ROUTE");
+                        try {
+                          return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName, JSON.stringify(specialLocation));
+                        } catch (err) {
+                          console.log("Catch error" + err);
+                          return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName);
+                        }
                       };
+                    }
                   }
                 }
               };
@@ -546,29 +553,48 @@ export const drawRoute = function (data) {
   };
 };
 
+export const updateRouteMarker = function (data) {
+  return function (sourceName) {
+    return function (destName) {
+      return function (sourceIcon) {
+        return function (destIcon) {
+          return function (specialLocation) {
+            return function () {
+              if (window.JBridge.updateRouteMarker) {
+                return window.JBridge.updateRouteMarker(JSON.stringify(data), sourceName, destName, sourceIcon, destIcon, JSON.stringify(specialLocation));
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 export const updateRoute = function (data) {
   return function (destMarker) {
     return function (eta) {
-      return function (){
+      return function (specialLocation) {
+        return function () {
           if (window.JBridge.updateRoute) {
             var json = JSON.stringify(data);
             try {
               console.log("I AM HERE ------------------ IN UPDATE ROUTE");
-              var extension = "";
-              return window.JBridge.updateRoute(json,destMarker,eta,extension);
+              return window.JBridge.updateRoute(json, destMarker, eta, JSON.stringify(specialLocation));
             } catch (err) {
-                console.log("Catch error" + err);
-                /*
-                * This Function is deprecated on 12 Jan - 2023
-                * Remove this function once it is not begin used.
-                */
-                return window.JBridge.updateRoute(json,destMarker,eta);
+              console.log("Catch error" + err);
+              /*
+              * This Function is deprecated on 12 Jan - 2023
+              * Remove this function once it is not begin used.
+              */
+              return window.JBridge.updateRoute(json, destMarker, eta);
             }
           }
         };
       };
     };
   };
+};
 
 export const storeCallBackMessageUpdated = function (cb) {
       return function (chatChannelID) {

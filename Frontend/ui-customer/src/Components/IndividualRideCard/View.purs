@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -25,13 +25,15 @@ import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), (<>), (<<<), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, maxLines, orientation, padding, relativeLayout, shimmerFrameLayout, text, textSize, textView, weight, width, stroke, lineHeight, imageWithFallback, alpha)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, maxLines, orientation, padding, relativeLayout, shimmerFrameLayout, text, textSize, textView, weight, width, stroke, lineHeight, imageWithFallback, alpha, visibility)
 import PrestoDOM.List as PrestoList
 import Screens.MyRidesScreen.Controller (Action(..)) as Screen
-import Screens.Types (IndividualRideCardState, Stage(..))
+import Screens.Types (IndividualRideCardState, Stage(..), ZoneType(..))
 import Storage
 import Styles.Colors as Color
 import Storage
+import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM.Types.DomAttributes (Corners(..))
 
 view :: forall w .  (Screen.Action  -> Effect Unit) -> IndividualRideCardState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -43,7 +45,7 @@ view push state =
   ]
 
 
-shimmerView  :: forall w. (Screen.Action  -> Effect Unit) -> IndividualRideCardState -> PrestoDOM (Effect Unit) w 
+shimmerView  :: forall w. (Screen.Action  -> Effect Unit) -> IndividualRideCardState -> PrestoDOM (Effect Unit) w
 shimmerView push state =
   linearLayout
   [ height WRAP_CONTENT
@@ -61,33 +63,67 @@ shimmerView push state =
     , viewDetailsAndRepeatRideShimmer state
    ]
 
-cardView :: forall w. (Screen.Action -> Effect Unit) -> IndividualRideCardState -> PrestoDOM (Effect Unit) w 
-cardView push state = 
+cardView :: forall w. (Screen.Action -> Effect Unit) -> IndividualRideCardState -> PrestoDOM (Effect Unit) w
+cardView push state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , padding $ Padding 0 20 0 20
   , PrestoList.visibilityHolder "cardVisibility"
   , orientation VERTICAL
   , margin $ Margin 16 20 16 4
   , cornerRadius 8.0
   , stroke $ "1,"<>Color.grey900
   , background Color.white900
-  ][  rideDetails push state
-    , separator
-    , sourceAndDestination push
-    , separator
-    , viewDetailsAndRepeatRide push state
+  ][  zoneView state
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , padding $ Padding 16 20 16 20
+      , cornerRadius 8.0
+      , orientation VERTICAL
+      , background Color.white900
+      ][  rideDetails push state
+        , separator
+        , sourceAndDestination push
+        , separator
+        , viewDetailsAndRepeatRide push state
+      ]
    ]
 
-rideDetails :: forall w. (Screen.Action -> Effect Unit) -> IndividualRideCardState ->  PrestoDOM (Effect Unit) w 
-rideDetails push state = 
+zoneView :: forall w. IndividualRideCardState ->  PrestoDOM (Effect Unit) w
+zoneView state =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , background Color.blue800
+  , padding (PaddingVertical 5 5)
+  , orientation HORIZONTAL
+  , gravity CENTER
+  , cornerRadii $ Corners 8.0 true true false false
+  , PrestoList.visibilityHolder "zoneVisibility"
+  ][ imageView
+     [ width (V 15)
+     , height (V 15)
+     , margin (MarginRight 6)
+     , imageWithFallback "ny_ic_metro_white,https://assets.juspay.in/nammayatri/images/common/ny_ic_metro_white.png"
+     ]
+   , textView
+     [ width WRAP_CONTENT
+     , height WRAP_CONTENT
+     , textSize FontSize.a_14
+     , text (getString METRO_RIDE)
+     , color Color.white900
+     ]
+   ]
+
+rideDetails :: forall w. (Screen.Action -> Effect Unit) -> IndividualRideCardState ->  PrestoDOM (Effect Unit) w
+rideDetails push state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
-  , padding $ PaddingHorizontal 16 16 
+  , padding $ PaddingHorizontal 16 16
   , PrestoList.onClickHolder push $ Screen.IndividualRideCardActionController <<< OnClick
   , margin (MarginBottom 20)
   ][  textView
@@ -98,7 +134,7 @@ rideDetails push state =
       , fontStyle $ FontStyle.semiBold LanguageStyle
       ])
     , linearLayout
-      [ 
+      [
        height $ V 5
       , width $ V 5
       , cornerRadius 2.5
@@ -108,7 +144,7 @@ rideDetails push state =
     , textView
       ([ PrestoList.textHolder "time"
       , color Color.black800
-      , textSize FontSize.a_14 
+      , textSize FontSize.a_14
       , lineHeight "20"
       , fontStyle $ FontStyle.semiBold LanguageStyle
       ] )
@@ -116,13 +152,13 @@ rideDetails push state =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation HORIZONTAL
-      , gravity RIGHT 
+      , gravity RIGHT
       ][  linearLayout
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
           , orientation HORIZONTAL
           , gravity CENTER_VERTICAL
-    
+
           , layoutGravity "center_vertical"
           ][  textView
               [ PrestoList.textHolder "totalAmount"
@@ -154,7 +190,7 @@ rideDetails push state =
         ]
     ]
 
-sourceAndDestination :: forall w . (Screen.Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+sourceAndDestination :: forall w . (Screen.Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 sourceAndDestination push =
   frameLayout
   [ height WRAP_CONTENT
@@ -225,8 +261,8 @@ sourceAndDestination push =
     ]
 
 
-separator :: forall w. PrestoDOM (Effect Unit) w 
-separator = 
+separator :: forall w. PrestoDOM (Effect Unit) w
+separator =
   linearLayout
   [ height $ V 1
   , width MATCH_PARENT
@@ -235,9 +271,9 @@ separator =
   ][]
 
 
-    
-rideDetailsShimmerView :: forall w. IndividualRideCardState -> PrestoDOM (Effect Unit) w 
-rideDetailsShimmerView state = 
+
+rideDetailsShimmerView :: forall w. IndividualRideCardState -> PrestoDOM (Effect Unit) w
+rideDetailsShimmerView state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -264,7 +300,7 @@ rideDetailsShimmerView state =
       , margin (MarginLeft 46)
       , color Color.borderGreyColor
       ]]
-  
+
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -308,7 +344,7 @@ sourceAndDestinationShimmerView state =
           , height WRAP_CONTENT
           , width MATCH_PARENT
           , margin (Margin 20 0 0 26)
-          ][  
+          ][
             sfl $  linearLayout[
               width MATCH_PARENT
               , height $ V 15
@@ -327,7 +363,7 @@ sourceAndDestinationShimmerView state =
           , height WRAP_CONTENT
           , width MATCH_PARENT
           , margin (MarginLeft 20)
-          ][  
+          ][
              sfl $ linearLayout [
               height $ V 15
             , width MATCH_PARENT
@@ -343,13 +379,12 @@ sourceAndDestinationShimmerView state =
     ]
 
 
-viewDetailsAndRepeatRide :: forall w. (Screen.Action  -> Effect Unit) -> IndividualRideCardState -> PrestoDOM (Effect Unit) w 
-viewDetailsAndRepeatRide push state = 
+viewDetailsAndRepeatRide :: forall w. (Screen.Action  -> Effect Unit) -> IndividualRideCardState -> PrestoDOM (Effect Unit) w
+viewDetailsAndRepeatRide push state =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER
-  
   ][ textView
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -357,10 +392,12 @@ viewDetailsAndRepeatRide push state =
       , color Color.blue900
       , textSize FontSize.a_14
       , fontStyle $ FontStyle.medium LanguageStyle
-      , padding $ Padding 26 18 50 3
+      , padding $ PaddingVertical 18 3
       , PrestoList.onClickHolder push $ Screen.IndividualRideCardActionController <<< OnClick
+      , weight 1.0
+      , gravity CENTER
       ]
-    , linearLayout 
+    , linearLayout
       [ width $ V 1
       , height if os == "IOS" then (V 20) else MATCH_PARENT
       , margin $ MarginTop 15
@@ -376,12 +413,14 @@ viewDetailsAndRepeatRide push state =
       , PrestoList.alphaHolder "alpha"
       , alpha $ if (isLocalStageOn HomeScreen) then 1.0 else 0.5
       , PrestoList.onClickHolder push $ (if (isLocalStageOn HomeScreen) then Screen.IndividualRideCardActionController <<< RepeatRide else Screen.IndividualRideCardActionController <<< NoAction)
-      , padding $ Padding 50 18 26 3
+      , padding $ PaddingVertical 18 3
+      , weight 1.0
+      , gravity CENTER
       ]
   ]
 
-viewDetailsAndRepeatRideShimmer :: forall w. IndividualRideCardState -> PrestoDOM (Effect Unit) w 
-viewDetailsAndRepeatRideShimmer state = 
+viewDetailsAndRepeatRideShimmer :: forall w. IndividualRideCardState -> PrestoDOM (Effect Unit) w
+viewDetailsAndRepeatRideShimmer state =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -398,7 +437,7 @@ viewDetailsAndRepeatRideShimmer state =
       , padding $ Padding 10 3 10 3
       , PrestoList.visibilityHolder "shimmerVisibility"
       ]
-    , linearLayout 
+    , linearLayout
       [ width $ V 1
       , height if os == "IOS" then (V 10) else MATCH_PARENT
       , margin $ MarginHorizontal 40 40

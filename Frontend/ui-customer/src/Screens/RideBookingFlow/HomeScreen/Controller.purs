@@ -15,7 +15,7 @@
 
 module Screens.HomeScreen.Controller where
 
-import Accessor (_estimatedFare, _estimateId, _vehicleVariant, _status, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _selectedQuotes)
+import Accessor (_estimatedFare, _estimateId, _vehicleVariant, _status, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _selectedQuotes, _specialLocationTag)
 import Common.Types.App (OptionButtonList, LazyCheck(..))
 import Components.Banner as Banner
 import Components.SelectListModal.Controller as CancelRidePopUp
@@ -68,17 +68,17 @@ import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
 import Merchant.Utils (getValueFromConfig)
-import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/))
+import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+))
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, Visibility(..), continue, continueWithCmd, exit, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resources.Constants (encodeAddress)
 import Screens (ScreenName(..), getScreen)
 import Screens.AddNewAddressScreen.Controller (validTag, getSavedTagsFromHome)
-import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity)
+import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity, dummyZoneType)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList)
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (HomeScreenState, Location, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), RateCardType(..), CallType(..))
+import Screens.Types (HomeScreenState, Location, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), RateCardType(..), CallType(..), ZoneType(..), SpecialTags)
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
@@ -586,11 +586,27 @@ data Action = NoAction
             | ChooseYourRideAction ChooseYourRideController.Action
             | SearchForSelectedLocation
             | GenderBannerModal Banner.Action
-            | CancelSearchAction PopUpModal.Action        
+            | CancelSearchAction PopUpModal.Action
             | TriggerPermissionFlow String
+            | PopUpModalCancelConfirmationAction PopUpModal.Action
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
+
+eval (PopUpModalCancelConfirmationAction (PopUpModal.OnButton2Click)) state = do
+  _ <- pure $ clearTimer state.data.cancelRideConfirmationData.timerID
+  continue state {props{cancelRideConfirmationPopup = false}, data{cancelRideConfirmationData{timerID = "" , continueEnabled=false, enableTimer=false}}}
+
+eval (PopUpModalCancelConfirmationAction (PopUpModal.OnButton1Click)) state = do
+  _ <- pure $ performHapticFeedback unit
+  continue state { props {cancelRideConfirmationPopup = false, isCancelRide = true, cancellationReasons = cancelReasons "", cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "" } }
+
+eval (PopUpModalCancelConfirmationAction (PopUpModal.CountDown seconds id status timerID)) state = do
+  if status == "EXPIRED" && seconds == 0 then do
+    _ <- pure $ clearTimer timerID
+    continue state { data { cancelRideConfirmationData{delayInSeconds = 0, timerID = "", continueEnabled = true}}}
+  else
+    continue state { data {cancelRideConfirmationData{delayInSeconds = seconds + 1, timerID = timerID, continueEnabled = false}}}
 
 eval SearchForSelectedLocation state =
   updateAndExit state{props{isPopUp = NoPopUp}} $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = TryAgain, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
@@ -1009,7 +1025,10 @@ eval (CancelSearchAction PopUpModal.OnButton2Click) state = do
   continue state { props { isCancelRide = true, cancellationReasons = cancelReasons "", cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "", cancelSearchCallDriver = false } }
 
 eval (DriverInfoCardActionController (DriverInfoCardController.CancelRide infoCard)) state = do
-  continue state { props { cancelSearchCallDriver = true } }
+  if state.props.zoneType.priorityTag == METRO then
+    continue state{ props{ cancelRideConfirmationPopup = true } }
+  else do
+    continue state { props { cancelSearchCallDriver = true } }
 
 eval (DriverInfoCardActionController (DriverInfoCardController.LocationTracking)) state = do
   _ <- pure $ performHapticFeedback unit
@@ -1397,7 +1416,7 @@ eval CloseShowCallDialer state = continue state { props { showCallPopUp = false 
 eval (ShowCallDialer item) state = do
   case item of
     ANONYMOUS_CALLER -> do
-      continueWithCmd state 
+      continueWithCmd state
         [ do
             _ <- pure $ showDialer (if (STR.take 1 state.data.driverInfoCardState.merchantExoPhone) == "0" then state.data.driverInfoCardState.merchantExoPhone else "0" <> state.data.driverInfoCardState.merchantExoPhone)
             _ <- (firebaseLogEventWithTwoParams "ny_user_anonymous_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
@@ -1512,8 +1531,8 @@ eval (GetRideConfirmation resp) state = do
 
 eval (NotificationListener notificationType) state = do
   _ <- pure $ printLog "storeCallBackCustomer notificationType" notificationType
-  case notificationType of 
-    "DRIVER_QUOTE_INCOMING" -> continue state 
+  case notificationType of
+    "DRIVER_QUOTE_INCOMING" -> continue state
     _ -> exit $ NotificationHandler notificationType state { props { callbackInitiated = false}}
 
 eval RecenterCurrentLocation state = recenterCurrentLocation state
@@ -1568,9 +1587,9 @@ eval (UpdateETA currentETA currentDistance) state = do
   let initDistance = state.data.driverInfoCardState.initDistance
   distance <- case initDistance of
                       Just initDistance -> pure initDistance
-                      Nothing -> do 
+                      Nothing -> do
                                     let storedDistance = getValueToLocalStore PICKUP_DISTANCE
-                                    if storedDistance == "0" || storedDistance == "__failed" || storedDistance == "(null)" then do 
+                                    if storedDistance == "0" || storedDistance == "__failed" || storedDistance == "(null)" then do
                                       _ <- pure $ setValueToLocalStore PICKUP_DISTANCE (show currentDistance)
                                       pure currentDistance
                                       else pure $ fromMaybe 0 (fromString storedDistance)
@@ -1706,6 +1725,7 @@ dummyEstimateEntity =
     , estimateFareBreakup: Nothing
     , totalFareRange: Nothing
     , nightShiftRate: Nothing
+    , specialLocationTag: Nothing
     }
 
 cancelReasons :: String -> Array OptionButtonList
@@ -1981,13 +2001,14 @@ estimatesFlow estimatedQuotes state = do
         Just a -> round $ (toNumber $ a ^. _price) * (if nightCharges then nightShiftMultiplier else 1.0)
         Nothing -> 0
       showRateCardIcon = if (null estimateFareBreakup) then false else true
+      zoneType = getSpecialTag $ if isJust (estimatedVarient !! 0) then (fromMaybe dummyEstimateEntity (estimatedVarient !! 0)) ^. _specialLocationTag else Nothing
   if ((not (null estimatedVarient)) && (isLocalStageOn FindingEstimate)) then do
     _ <- pure $ firebaseLogEvent "ny_user_estimate"
     exit
       $ SelectEstimate
           state
             { data { suggestedAmount = estimatedPrice, rateCard = { baseFare: baseFare, extraFare: extraFare, pickUpCharges: pickUpCharges, additionalFare: additionalFare, nightShiftMultiplier: nightShiftMultiplier, nightCharges: nightCharges,currentRateCardType: DefaultRateCard,onFirstPage: false}, showPreferences = getPreferenceValue "" }
-            , props { estimateId = estimateId, currentStage = SettingPrice, showRateCardIcon = showRateCardIcon}
+            , props { estimateId = estimateId, currentStage = SettingPrice, showRateCardIcon = showRateCardIcon, zoneType = zoneType}
             }
   else do
     _ <- pure $ hideKeyboardOnNavigation true
@@ -2083,3 +2104,20 @@ specialZoneRideFlow  (RideBookingRes response) state = do
 
 getPreferenceValue :: String -> Boolean
 getPreferenceValue dummy = (getValueToLocalStore ENABLE_TIPS) /= "true"
+
+getSpecialTag :: Maybe String -> SpecialTags
+getSpecialTag specialTag =
+  case specialTag of
+    Just tag ->
+      let zones = STR.split (STR.Pattern "_") tag
+          sourceTag = getZoneType $ zones !! 0
+          destinationTag = getZoneType $ zones !! 1
+          priorityTag = if zones !! 2 == Just "PriorityPickup" then sourceTag else destinationTag
+      in { sourceTag : sourceTag, destinationTag : destinationTag, priorityTag : priorityTag}
+    Nothing -> dummyZoneType
+
+getZoneType :: Maybe String -> ZoneType
+getZoneType tag =
+  case tag of
+    Just "SureMetro" -> METRO
+    _                -> NOZONE

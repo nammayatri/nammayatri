@@ -462,5 +462,9 @@ const malayalamStrings = {
   "SUBMIT_REQUEST" : "അഭ്യർത്ഥന സമർപ്പിക്കുക",
   "PLEASE_ENTER_A_VALID_EMAIL" : "സാധുവായ ഒരു ഇമെയിൽ നൽകുക",
   "WE_WOULD_APPRECIATE_YOUR_REASONING" : "അക്കൗണ്ട് ഇല്ലാതാക്കുന്നതിന് പിന്നിലെ നിങ്ങളുടെ ന്യായവാദത്തെക്കുറിച്ചുള്ള നിങ്ങളുടെ പ്രതികരണത്തെ ഞങ്ങൾ അഭിനന്ദിക്കുന്നു",
-  "OK_GOT_IT" : "മനസ്സിലായി"
+  "OK_GOT_IT" : "മനസ്സിലായി",
+  "METRO_RIDE" : "മെട്രോ റൈഡ്",
+  "GO_BACK_TEXT": "മടങ്ങിപ്പോവുക",
+  "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST": "ഡ്രൈവർ നിങ്ങളുടെ പ്രത്യേക അഭ്യർത്ഥന തിരഞ്ഞെടുത്തു, അത് ",
+  "WE_URGE_YOU_NOT_TO_CANCEL": " മീറ്റർ അകലെയാണ്. യാത്ര റദ്ദാക്കരുതെന്ന് ഞങ്ങൾ നിങ്ങളോട് അഭ്യർത്ഥിക്കുന്നു"
 }
