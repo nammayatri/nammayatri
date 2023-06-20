@@ -57,6 +57,9 @@ instance FromBackendRow Postgres Money
 instance FromField Money where
   fromField = fromFieldJSON
 
+instance IsString Money where
+  fromString = show
+
 instance FromField Centi where
   fromField = fromFieldCenti
 
@@ -161,6 +164,9 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centi
 
 instance FromBackendRow Postgres Centi
 
+instance IsString Centi where
+  fromString = show
+
 instance HasSqlValueSyntax be Centi => HasSqlValueSyntax be Centesimal where
   sqlValueSyntax = sqlValueSyntax . getCenti
 
@@ -187,12 +193,18 @@ instance FromBackendRow Postgres Meters
 instance FromField Meters where
   fromField = fromFieldJSON
 
+instance IsString Meters where
+  fromString = show
+
 instance HasSqlValueSyntax be Int => HasSqlValueSyntax be Seconds where
   sqlValueSyntax = sqlValueSyntax . getSeconds
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Seconds
 
 instance FromBackendRow Postgres Seconds
+
+instance IsString Seconds where
+  fromString = show
 
 instance FromField HighPrecMoney where
   fromField = fromFieldHighPrecMoney

@@ -196,6 +196,9 @@ library
       Storage.Beam.CallbackRequest
       Storage.Beam.CallStatus
       Storage.Beam.CancellationReason
+      Storage.Beam.DriverOffer
+      Storage.Beam.Estimate
+      Storage.Beam.EstimateBreakup
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.Exophone
