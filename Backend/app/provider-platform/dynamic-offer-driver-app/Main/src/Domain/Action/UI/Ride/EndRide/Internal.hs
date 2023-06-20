@@ -110,12 +110,12 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId merchan
       else QDFS.updateStatus ride.driverId DDFS.IDLE
   DLoc.updateOnRide driverId False merchantId
   fork "Updating ZScore for driver" . Hedis.withNonCriticalRedis $ do
-    driverZscore <- Hedis.zScore (makeDailyDriverLeaderBoardKey rideDate) $ show ride.driverId
+    driverZscore <- Hedis.zScore (makeDailyDriverLeaderBoardKey rideDate) ride.driverId.getId
     updateDriverDailyZscore ride rideDate driverZscore ride.chargeableDistance
     let (_, currDayIndex) = sundayStartWeek rideDate
     let weekStartDate = addDays (fromIntegral (- currDayIndex)) rideDate
     let weekEndDate = addDays (fromIntegral (6 - currDayIndex)) rideDate
-    driverWeeklyZscore <- Hedis.zScore (makeWeeklyDriverLeaderBoardKey weekStartDate weekEndDate) $ show ride.driverId
+    driverWeeklyZscore <- Hedis.zScore (makeWeeklyDriverLeaderBoardKey weekStartDate weekEndDate) ride.driverId.getId
     updateDriverWeeklyZscore ride rideDate weekStartDate weekEndDate driverWeeklyZscore ride.chargeableDistance
   DLoc.updateOnRideCacheForCancelledOrEndRide driverId merchantId
   SRide.clearCache $ cast driverId
