@@ -1,7 +1,7 @@
 # Add a process-compose based package for running the entire backend stack.
 _:
 {
-  perSystem = { config, self', pkgs, lib, ... }:
+  perSystem = perSystem@{ config, self', pkgs, lib, ... }:
     let
       # Top-level common process-compose configuration
       commonConfig = { config, ... }: {
@@ -20,15 +20,25 @@ _:
         nix = { name, ... }: {
           command = self'.apps.${name}.program;
         };
-        cabal = { name, ... }:
+        cabal = { config, name, ... }:
           let
             cabalTargetForExe = lib.listToAttrs (lib.flatten (lib.mapAttrsToList
               (name: info: map (exe: lib.nameValuePair exe "${name}:exe:${exe}") (lib.attrNames info.exes))
-              config.haskellProjects.default.outputs.packages));
-            cabalTarget = cabalTargetForExe.${name};
+              perSystem.config.haskellProjects.default.outputs.packages));
           in
           {
-            command = "set -x; cabal run ${cabalTarget}";
+            options = {
+              cabalTarget = lib.mkOption {
+                type = lib.types.str;
+                default = cabalTargetForExe.${name};
+                description = "The cabal target to run";
+                internal = true;
+                readOnly = true;
+              };
+            };
+            config = {
+              command = "set -x; cabal run ${config.cabalTarget}";
+            };
           };
       };
 
