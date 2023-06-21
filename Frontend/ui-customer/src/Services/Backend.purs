@@ -187,8 +187,8 @@ triggerOTPBT payload = do
         let errResp = errorPayload.response
         let codeMessage = decodeErrorCode errResp.errorMessage
         if (errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then
-            pure $ toast (getString LIMIT_EXCEEDED)
-            else pure $ toast (getString ERROR_OCCURED)
+            pure $ toast (getString OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
+            else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
         modifyScreenState $ ChooseLanguageScreenStateType (\chooseLanguage -> chooseLanguage { props {btnActive = false} })
         BackT $ pure GoBack
 
@@ -212,8 +212,8 @@ resendOTPBT token = do
         let errResp = errorPayload.response
         let codeMessage = decodeErrorCode errResp.errorMessage
         if ( errorPayload.code == 400 && codeMessage == "AUTH_BLOCKED") then
-            pure $ toast (getString LIMIT_EXCEEDED)
-            else pure $ toast (getString ERROR_OCCURED)
+            pure $ toast (getString OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
+            else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
         BackT $ pure GoBack
 
 
@@ -228,14 +228,14 @@ verifyTokenBT payload token = do
         let errResp = errorPayload.response
         let codeMessage = decodeErrorCode errResp.errorMessage
         if ( errorPayload.code == 400 && codeMessage == "TOKEN_EXPIRED") then
-            pure $ toast (getString REQUEST_TIMED_OUT)
+            pure $ toast (getString OTP_PAGE_HAS_BEEN_EXPIRED_PLEASE_REQUEST_OTP_AGAIN)
             else if ( errorPayload.code == 400 && codeMessage == "INVALID_AUTH_DATA") then do
                 modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber{props{wrongOTP = true}})
                 void $ lift $ lift $ toggleLoader false
                 pure $ toast "INVALID_AUTH_DATA"
             else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then
-                pure $ toast (getString LIMIT_EXCEEDED)
-            else pure $ toast (getString ERROR_OCCURED)
+                pure $ toast (getString OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
+            else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
         BackT $ pure GoBack
 
 -- verifyTokenBT :: VerifyTokenReq -> String -> FlowBT String VerifyTokenResp
@@ -312,7 +312,7 @@ placeDetailsBT (PlaceDetailsReq id) = do
     withAPIResultBT (EP.placeDetails id) (\x → x) errorHandler (lift $ lift $ callAPI headers (PlaceDetailsReq id))
     where
     errorHandler errorPayload  = do
-        pure $ toast (getString ERROR_OCCURED)
+        pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
         _ <- lift $ lift $ toggleLoader false
         BackT $ pure GoBack
 
@@ -335,7 +335,7 @@ rideSearchBT payload = do
       errorHandler errorPayload = do
             if errorPayload.code == 400 then
                 pure $ toast (getString RIDE_NOT_SERVICEABLE)
-              else pure $ toast (getString ERROR_OCCURED)
+              else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{currentStage = SearchLocationModel}})
             _ <- pure $ setValueToLocalStore LOCAL_STAGE "SearchLocationModel"
             BackT $ pure GoBack

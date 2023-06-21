@@ -486,16 +486,16 @@ enterMobileNumberScreenFlow = do
                 let errResp = err.response
                     codeMessage = decodeErrorCode errResp.errorMessage
                 if ( err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
-                    _ <- pure $ toast (getString REQUEST_TIMED_OUT)
+                    _ <- pure $ toast (getString OTP_PAGE_HAS_BEEN_EXPIRED_PLEASE_REQUEST_OTP_AGAIN)
                     modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber{data{otp=""}, props{enterOTP = false, wrongOTP = false}})
                 else if ( err.code == 400 && codeMessage == "INVALID_AUTH_DATA") then do
                     modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber{props{wrongOTP = true}, data{otp=""}})
                     pure $ toast (getString WRONG_OTP)
                 else if ( err.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
-                    pure $ toast (getString LIMIT_EXCEEDED)
+                    pure $ toast (getString TOO_MANY_LOGIN_ATTEMPTS_PLEASE_TRY_AGAIN_LATER)
                     modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen {props {enterOTP = false, wrongOTP = false}, data{otp=""}})
                 else do
-                    pure $ toast (getString ERROR_OCCURED)
+                    pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
                     modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen {props {enterOTP = false,wrongOTP = false}, data{otp=""}})
                 enterMobileNumberScreenFlow
     GoToOTP state -> do
@@ -546,7 +546,7 @@ accountSetUpScreenFlow = do
           _ <- pure $ metaLogEvent "ny_user_onboarded"
           pure unit
         Left err -> do
-          _ <- pure $ toast (getString ERROR_OCCURED)
+          _ <- pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
           modifyScreenState $ AccountSetUpScreenStateType (\accountSetUpScreen -> state{props{btnActive = true},data{name=state.data.name}})
           accountSetUpScreenFlow
     GO_BACK -> do
@@ -1511,7 +1511,7 @@ myProfileScreenFlow = do
             "PERSON_EMAIL_ALREADY_EXISTS" -> do
               _ <- lift $ lift $ liftFlow (setText' (getNewIDWithTag "EmailEditText") "" )
               modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState -> myProfileScreenState{props{isEmailValid = false, updateProfile = true}, data{emailErrorMessage = Just EMAIL_EXISTS, name = state.data.name, editedName = state.data.editedName, emailId = state.data.emailId, gender = state.data.gender, editedGender = state.data.editedGender}})
-            _ -> pure $ toast (getString ERROR_OCCURED)
+            _ -> pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
           myProfileScreenFlow
       myProfileScreenFlow
     GO_TO_HOME_ -> do
@@ -1803,7 +1803,7 @@ referralScreenFlow = do
           if ((err.code == 500 && (decodeErrorCode err.response.errorMessage) == "BPP_INTERNAL_API_ERROR")) then
             modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { isInvalidCode = true })
           else do
-            _ <- pure $ toast (getString ERROR_OCCURED_TRY_AFTER_SOMETIME)
+            _ <- pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
             pure unit
       referralScreenFlow
     BACK_TO_HOME -> do
@@ -1962,7 +1962,8 @@ updateFlowStatus eventType = do
           let errResp = err.response
               codeMessage = decodeErrorCode errResp.errorMessage
           when ( err.code == 400 && codeMessage == "ACTIVE_BOOKING_EXISTS") $ do
-            void $ pure $ toast "ACTIVE BOOKING EXISTS"
+            void $ pure $ toast $ getString IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_
+          currentRideFlow true
           currentFlowStatus
 
 cancelEstimate :: String -> FlowBT String Unit
@@ -1981,24 +1982,24 @@ cancelEstimate bookingId = do
               _ <- pure $ firebaseLogEvent "ny_user_cancel_waiting_for_quotes"
               pure unit
         "BookingAlreadyCreated" -> do
-          void $ pure $ toast "ACTIVE BOOKING EXISTS"
+          void $ pure $ toast $ getString IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_
           _ <- pure $ firebaseLogEvent "ny_fs_cancel_estimate_booking_exists_right"
           currentRideFlow true
           homeScreenFlow
         _ -> do
-          void $ pure $ toast "CANCEL FAILED"
+          void $ pure $ toast $ getString CANCELLATION_UNSUCCESSFULL_PLEASE_TRY_AGAIN
           _ <- pure $ firebaseLogEvent "ny_fs_cancel_estimate_failed_right"
           homeScreenFlow
     Left err -> do
       let errResp = err.response
           codeMessage = decodeErrorCode errResp.errorMessage
       if ( err.code == 400 && codeMessage == "ACTIVE_BOOKING_EXISTS") then do
-        void $ pure $ toast "ACTIVE BOOKING EXISTS"
+        void $ pure $ toast $ getString IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_
         _ <- pure $ firebaseLogEvent "ny_fs_cancel_estimate_booking_exists_left"
         currentRideFlow true
         homeScreenFlow
       else do
-        void $ pure $ toast "CANCEL FAILED"
+        void $ pure $ toast $ getString CANCELLATION_UNSUCCESSFULL_PLEASE_TRY_AGAIN
         _ <- pure $ firebaseLogEvent "ny_fs_cancel_estimate_failed_left"
         homeScreenFlow
 

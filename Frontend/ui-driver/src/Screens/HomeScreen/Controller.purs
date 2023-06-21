@@ -547,7 +547,7 @@ eval ClickAddAlternateButton state = do
   let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
   let time_diff = differenceBetweenTwoUTC curr_time last_attempt_time
   if(time_diff <= 600) then do
-    pure $ toast (getString LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
+    pure $ toast $ getString TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER
     continue state
   else do
     exit $ AddAlternateNumber state
