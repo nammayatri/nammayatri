@@ -3,7 +3,7 @@
 # We use https://github.com/Platonic-Systems/mission-control
 _:
 {
-  perSystem = { self', pkgs, lib, ... }: {
+  perSystem = { config, self', pkgs, lib, ... }: {
     mission-control.scripts = {
       ghcid = {
         category = "Backend";
@@ -57,13 +57,22 @@ _:
         description = ''
           Run the nammayatri backend components via "cabal run".
         '';
-        exec = ''
-          set -x
-          cd ./Backend  # These processes expect $PWD to be backend, for reading dhall configs
-          rm -f ./*.log # Clean up the log files
-          cabal build all
-          nix run .#run-mobility-stack-dev -- "$@"
-        '';
+        exec =
+          let
+            cabalTargets =
+              lib.pipe config.process-compose.run-mobility-stack-dev.settings.processes [
+                (lib.mapAttrsToList
+                  (_: lib.attrByPath [ "cabalTarget" ] null))
+                (lib.filter (v: v != null))
+              ];
+          in
+          ''
+            set -x
+            cd ./Backend  # These processes expect $PWD to be backend, for reading dhall configs
+            rm -f ./*.log # Clean up the log files
+            cabal build ${lib.concatStringsSep " " cabalTargets}
+            nix run .#run-mobility-stack-dev -- "$@"
+          '';
       };
 
       backend-new-service = {
