@@ -130,7 +130,7 @@ eval (NotificationDetailModelAC NotificationDetailModel.AddCommentClick) state =
   continue state { notificationDetailModelState { addCommentModelVisibility = VISIBLE } }
 
 eval (NotificationDetailModelAC NotificationDetailModel.IncreaseViewCount) state = do
-  let views = state.selectedItem.viewCount + 1
+  let views = state.notificationDetailModelState.viewCount + 1
       updatedNotificationList = (map(\item -> if(item.messageId == state.notificationDetailModelState.messageId) then item{viewCount = views } else item)state.notificationList)
       updatedPrestoListArrayItems = (map(\item -> if(item.messageId == (toPropValue state.notificationDetailModelState.messageId)) then item{viewCount = toPropValue $ parseNumber views } else item) state.prestoListArrayItems)
   continue state { notificationList = updatedNotificationList, prestoListArrayItems = updatedPrestoListArrayItems }
@@ -262,6 +262,7 @@ notifisDetailStateTransformer selectedItem =
   , mediaType: selectedItem.mediaType
   , likeCount : selectedItem.likeCount
   , likeStatus : selectedItem.likeStatus
+  , viewCount: selectedItem.viewCount
   }
 
 notificationListTransformer :: Array MessageAPIEntityResponse -> Array NotificationCardState
