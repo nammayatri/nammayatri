@@ -203,8 +203,8 @@ triggerOTPBT payload = do
         let errResp = errorPayload.response
         let codeMessage = decodeErrorCode errResp.errorMessage
         if (errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then
-            pure $ toast (getString LIMIT_EXCEEDED_PLEASE_TRY_AGAIN_AFTER_10MIN)
-            else pure $ toast (getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER)
+            pure $ toast $ getString OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_RESENDING_OTP
+            else pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
         modifyScreenState $ ChooseLanguageScreenStateType (\chooseLanguageScreen -> chooseLanguageScreen { props {btnActive = false} })
         BackT $ pure GoBack
 
@@ -230,8 +230,8 @@ resendOTPBT token = do
         let errResp = errorPayload.response
         let codeMessage = decodeErrorCode errResp.errorMessage
         if ( errorPayload.code == 400 && codeMessage == "AUTH_BLOCKED") then
-            pure $ toast (getString LIMIT_EXCEEDED)
-            else pure $ toast (getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER)
+            pure $ toast $ getString OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER
+            else pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
         BackT $ pure GoBack
 
 
@@ -246,16 +246,16 @@ verifyTokenBT payload token = do
     errorHandler (ErrorPayload errorPayload) = do
         let errResp = errorPayload.response
         let codeMessage = decodeErrorCode errResp.errorMessage
-        if ( errorPayload.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
-            pure $ toast (getString YOUR_REQUEST_HAS_TIMEOUT_TRY_AGAIN)
+        if errorPayload.code == 400 && codeMessage == "TOKEN_EXPIRED" then do
+            pure $ toast $ getString OTP_PAGE_HAS_BEEN_EXPIRED_PLEASE_REQUEST_OTP_AGAIN
             void $ lift $ lift $ toggleLoader false
-            else if ( errorPayload.code == 400 && codeMessage == "INVALID_AUTH_DATA") then do
+            else if errorPayload.code == 400 && codeMessage == "INVALID_AUTH_DATA" then do
                 modifyScreenState $ EnterOTPScreenType (\enterOTPScreen -> enterOTPScreen { props {isValid = true} })
                 void $ lift $ lift $ toggleLoader false
-            else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
+            else if errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED" then do
                 void $ lift $ lift $ toggleLoader false
-                pure $ toast (getString LIMIT_EXCEEDED_PLEASE_TRY_AGAIN_AFTER_10MIN)
-            else pure $ toast (getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER)
+                pure $ toast $ getString OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER
+            else pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
         BackT $ pure GoBack
 
 makeVerifyOTPReq :: String -> VerifyTokenReq
@@ -273,7 +273,7 @@ driverActiveInactiveBT status status_n = do
     where
         errorHandler (ErrorPayload errorPayload) =  do
             modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { goOfflineModal = true }})
-            pure $ toast (getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER)
+            pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
             void $ lift $ lift $ toggleLoader false
             BackT $ pure GoBack
 --------------------------------- startRide ---------------------------------------------------------------------------------------------------------------------------------

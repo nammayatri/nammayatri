@@ -120,7 +120,7 @@ eval (SavedLocationListAPIResponseAction respList) state = do
 
 eval (PrimaryButtonAC (PrimaryButtonController.OnClick)) state = do 
   if (length state.data.savedLocations >= 20) then do 
-    _ <- pure $ toast (getString FAVOURITE_LIMIT_REACHED)
+    _ <- pure $ toast (getString SORRY_LIMIT_EXCEEDED_YOU_CANT_ADD_ANY_MORE_FAVOURITES)
     _ <- pure $ toggleBtnLoader "" false
     continue state
     else updateAndExit state $ AddLocation state 

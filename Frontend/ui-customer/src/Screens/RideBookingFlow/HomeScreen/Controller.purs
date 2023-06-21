@@ -1010,7 +1010,7 @@ eval (WaitingTimeAction timerID timeInMinutes seconds) state = do
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ZoneOTPExpiryAction timerID timeInMinutes seconds)) state = do
   if seconds <= 0 then do
-    _ <- pure $ toast "expired"
+    _ <- pure $ toast $ getString OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN
     _ <- pure $ clearTimer timerID
     exit $ NotificationHandler "CANCELLED_PRODUCT" state
     else
@@ -1118,7 +1118,7 @@ eval (PredictionClickedAction (LocationListItemController.OnClick item)) state =
 
 eval (PredictionClickedAction (LocationListItemController.FavClick item)) state = do
   if (length state.data.savedLocations >= 20) then do
-    void $ pure $ toast (getString FAVOURITE_LIMIT_REACHED)
+    void $ pure $ toast (getString SORRY_LIMIT_EXCEEDED_YOU_CANT_ADD_ANY_MORE_FAVOURITES)
     continue state
     else exit $ CheckFavDistance state{data{saveFavouriteCard{ address = item.description, selectedItem = item, tag = "", tagExists = false, tagData = [], isBtnActive = false }, selectedLocationListItem = Just item}}
 
@@ -1493,7 +1493,7 @@ eval (EstimatesTryAgain (GetQuotesRes quotesRes)) state = do
       case (null estimatedVarient) of
         true -> do
           _ <- pure $ hideKeyboardOnNavigation true
-          _ <- pure $ toast (getString NO_DRIVERS_AVAILABLE)
+          _ <- pure $ toast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN)
           continue state { props { currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true } }
         false -> do
           if (estimatedPrice > state.data.suggestedAmount) then
@@ -1866,7 +1866,7 @@ tagClickEvent savedAddressType arrItem state =
           continue state{props{currentStage = FavouriteLocationModel}}
         _,Nothing    -> do
           if (length state.data.savedLocations >= 20) then do
-            _ <- pure $ toast (getString FAVOURITE_LIMIT_REACHED)
+            _ <- pure $ toast (getString SORRY_LIMIT_EXCEEDED_YOU_CANT_ADD_ANY_MORE_FAVOURITES)
             continue state
             else updateAndExit state{props{tagType = Just savedAddressType}}  $ CheckFavDistance state{props{tagType = Just savedAddressType}}
         _,Just item  -> do
@@ -2033,7 +2033,7 @@ estimatesFlow estimatedQuotes state = do
             }
   else do
     _ <- pure $ hideKeyboardOnNavigation true
-    _ <- pure $ toast (getString NO_DRIVERS_AVAILABLE)
+    _ <- pure $ toast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN)
     let lang = getValueToLocalStore LANGUAGE_KEY
     continue
       state
@@ -2061,7 +2061,7 @@ specialZoneFlow estimatedQuotes state = do
   else do
     _ <- pure $ hideKeyboardOnNavigation true
     _ <- pure $ updateLocalStage SearchLocationModel
-    _ <- pure $ toast (getString NO_DRIVERS_AVAILABLE)
+    _ <- pure $ toast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN)
     continue state { props {currentStage = SearchLocationModel}}
 
 estimatesListFlow :: Array EstimateAPIEntity -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -2084,7 +2084,7 @@ estimatesListFlow estimates state = do
   else do
     _ <- pure $ hideKeyboardOnNavigation true
     _ <- pure $ updateLocalStage SearchLocationModel
-    _ <- pure $ toast (getString NO_DRIVERS_AVAILABLE)
+    _ <- pure $ toast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN)
     continue state { props {currentStage = SearchLocationModel}}
 
 
@@ -2099,7 +2099,7 @@ estimatesListTryAgainFlow (GetQuotesRes quotesRes) state = do
   case (null estimatedVarient) of
     true -> do
       _ <- pure $ hideKeyboardOnNavigation true
-      _ <- pure $ toast $ getString NO_DRIVERS_AVAILABLE
+      _ <- pure $ toast $ getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN
       continue state { props { currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true } }
     false -> do
       if (estimatedPrice > fromMaybe 0 (fromString state.data.selectedEstimatesObject.price)) then

@@ -963,7 +963,10 @@ export const minimizeApp = function (str) {
   window.JBridge.minimizeApp();
 };
 export const toast = function (str) {
-  window.JBridge.toast(str);
+  if(window.JBridge.toaster)
+    window.JBridge.toaster(str);
+  else
+    window.JBridge.toast(str);
 };
 
 export const firebaseLogEventWithParams = function (event) {

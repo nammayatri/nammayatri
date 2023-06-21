@@ -130,7 +130,7 @@ eval (ContactsCallback allContacts) state = do
               Just contact ->  if (contact.name == "beckn_contacts_flag") then take ((length allContacts) - 1) allContacts else allContacts -- TODO :: Need to refactor @Chakradhar
               Nothing -> allContacts
   if(flag == "false") then do
-    _ <- pure $ toast (getString PERMISSION_DENIED)
+    _ <- pure $ toast (getString PLEASE_ENABLE_CONTACTS_PERMISSION_TO_PROCEED)
     continueWithCmd state
       [do
         _ <- launchAff $ flowRunner defaultGlobalState $ do
@@ -139,7 +139,7 @@ eval (ContactsCallback allContacts) state = do
         pure NoAction
       ]
   else if (null updatedContactList) then do
-    _ <- pure $ toast (getString NO_CONTACTS_FOUND_ON_DEVICE_TO_ADD)
+    _ <- pure $ toast (getString NO_CONTACTS_FOUND_ON_THE_DEVICE_TO_BE_ADDED)
     continueWithCmd state
       [do
         _ <- launchAff $ flowRunner defaultGlobalState $ do
@@ -253,10 +253,10 @@ eval (NewContactActionController (NewContactController.ContactSelected index)) s
     contact {number =  DS.drop ((DS.length contact.number) - 10) contact.number}
   else contact
   if (((length state.data.contactsList) >= 3) && (item.isSelected == false)) then do
-    _ <- pure $ toast (getString MAXIMUM_CONTACTS_LIMIT_REACHED)
+    _ <- pure $ toast $ getString LIMIT_REACHED_3_OF_3_EMERGENCY_CONTACTS_ALREADY_ADDED
     continue state
   else if((DS.length item.number) /= 10 || (fromMaybe 0 (fromString (DS.take 1 item.number)) < 6)) then do
-    _ <- pure $ toast (getString SELECTED_CONTACT_IS_INVALID)
+    _ <- pure $ toast (getString INVALID_CONTACT_FORMAT)
     continue state
   else do
     let contactListState = if(contact.isSelected == false) then state{ data {contactsList = (snoc state.data.contactsList item{isSelected = true}) } } else state { data {contactsList = filter (\x -> ((if DS.length contact.number == 10 then "" else "91") <> x.number <> x.name  /= contact.number <> contact.name)) state.data.contactsList}}

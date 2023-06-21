@@ -100,12 +100,12 @@ eval BackPressed state = do
   _ <- pure $ minimizeApp ""
   continue state
 eval (PrimaryButtonActionController) state = exit GoToHomeScreen
-eval (CompleteOnBoardingAction PrimaryButtonController.OnClick) state = do
-  let timelimit = (((getExpiryTime (getValueToLocalStore INVALID_OTP_TIME) true))/60)
+eval (CompleteOnBoardingAction PrimaryButtonController.OnClick) state = do 
+  let timelimit = (getExpiryTime (getValueToLocalStore INVALID_OTP_TIME) true)/60
   if state.props.onBoardingFailure then  continue state{props{popupview = true}} else do
-    if (not ((timelimit)<=10)||(getValueToLocalStore INVALID_OTP_TIME == "__failed")) then continue state{props{enterMobileNumberView =true,isValidOtp = false,isAlternateMobileNumberExists = false , isValidAlternateNumber = false},data{mobileNumber=""}}
+    if not (timelimit<=10)||(getValueToLocalStore INVALID_OTP_TIME == "__failed") then continue state{props{enterMobileNumberView =true,isValidOtp = false,isAlternateMobileNumberExists = false , isValidAlternateNumber = false},data{mobileNumber=""}}
     else continueWithCmd state [do
-      _ <- pure $ toast $ (getString LIMIT_EXCEEDED_PLEASE_TRY_AGAIN_AFTER_10MIN)
+      _ <- pure $ toast $ getString OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_RESENDING_OTP
       pure Dummy
     ]
 eval (ReTry docType) state = case docType of

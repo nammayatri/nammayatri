@@ -199,7 +199,7 @@ enterOTPFlow = do
     RETRY updatedState -> do
       modifyScreenState $ EnterOTPScreenType (\enterOTPScreen -> updatedState)
       (ResendOTPResp resp_resend) <- Remote.resendOTPBT updatedState.data.tokenId
-      pure $ toast (getString OTP_RESENT)
+      pure $ toast $ getString OTP_HAS_BEEN_RESENT
       modifyScreenState $ EnterOTPScreenType (\enterOTPScreen → enterOTPScreen { data { tokenId = resp_resend.authId, attemptCount = resp_resend.attempts}})
       enterOTPFlow
 
@@ -323,7 +323,7 @@ getDriverInfoFlow = do
       if ((decodeErrorCode errorPayload.response.errorMessage) == "VEHICLE_NOT_FOUND" || (decodeErrorCode errorPayload.response.errorMessage) == "DRIVER_INFORMATON_NOT_FOUND")
         then onBoardingFlow
         else do
-          _ <- pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+          _ <- pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
           if getValueToLocalStore IS_DRIVER_ENABLED == "true" then do
             permissionsGiven <- checkAll3Permissions
             if permissionsGiven then
@@ -398,7 +398,7 @@ uploadDrivingLicenseFlow = do
                 modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { props {errorVisibility = true}, data {errorMessage = correspondingErrorMessage}}
                 uploadDrivingLicenseFlow
                 else do
-                  _ <- pure $ toast $ getString SOMETHING_WENT_WRONG
+                  _ <- pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
                   uploadDrivingLicenseFlow
 
     LOGOUT_ACCOUNT -> do
@@ -440,7 +440,7 @@ uploadDrivingLicenseFlow = do
             modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { props {errorVisibility = true}, data {errorMessage = correspondingErrorMessage, imageFrontUrl = state.data.imageFront, imageFront = "IMAGE_NOT_VALIDATED"}}
             uploadDrivingLicenseFlow
             else do
-              _ <- pure $ toast $ getString SOMETHING_WENT_WRONG
+              _ <- pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
               modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { data {imageFrontUrl = state.data.imageFront, imageFront = "IMAGE_NOT_VALIDATED"}}
               uploadDrivingLicenseFlow
 
@@ -473,7 +473,7 @@ addVehicleDetailsflow = do
                 modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {errorVisibility = true}, data {errorMessage = correspondingErrorMessage}}
                 addVehicleDetailsflow
                 else do
-                  _ <- pure $ toast $ getString SOMETHING_WENT_WRONG
+                  _ <- pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
                   addVehicleDetailsflow
 
     VALIDATE_IMAGE_API_CALL state -> do
@@ -496,7 +496,7 @@ addVehicleDetailsflow = do
             modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {errorVisibility = true}, data {errorMessage = correspondingErrorMessage , rcImageID = "IMAGE_NOT_VALIDATED" }}
             addVehicleDetailsflow
             else do
-              _ <- pure $ toast $ getString SOMETHING_WENT_WRONG
+              _ <- pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
               modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data {rcImageID = "IMAGE_NOT_VALIDATED" }}
               addVehicleDetailsflow
 
@@ -522,11 +522,11 @@ addVehicleDetailsflow = do
       case referDriverResponse of
         Right (ReferDriverResp resp) -> do
           void $ lift $ lift $ toggleLoader false
-          modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> state)
+          modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> state{ props{isValid = false, openReferralMobileNumber = false, referralViewstatus = true}})
           addVehicleDetailsflow
         Left errorPayload -> do
           void $ lift $ lift $ toggleLoader false
-          _ <- pure $ toast $ if decodeErrorMessage errorPayload.response.errorMessage /= "" then decodeErrorMessage errorPayload.response.errorMessage else getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+          modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> state{ props{ isValid = true, openReferralMobileNumber = true, referralViewstatus = false}})
           addVehicleDetailsflow
     APPLICATION_STATUS_SCREEN -> applicationSubmittedFlow "StatusScreen"
     ONBOARDING_FLOW -> onBoardingFlow
@@ -558,7 +558,7 @@ applicationSubmittedFlow screenType = do
               if (errorPayload.code == 400 && (decodeErrorCode errorPayload.response.errorMessage) == "INVALID_REQUEST") then do
                 modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> state {props{enterMobileNumberView = true, isAlternateMobileNumberExists = true,enterOtp = false}})
               else do
-                pure $ toast $ getString SOMETHING_WENT_WRONG
+                pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
                 modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> state {props{enterMobileNumberView = false,enterOtp=false,buttonVisibilty=false}})
               applicationSubmittedFlow screenType
     VALIDATE_OTP state -> do
@@ -573,26 +573,26 @@ applicationSubmittedFlow screenType = do
                 modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> state{props{isValidOtp = true}})
                 applicationSubmittedFlow screenType
             else if (errorPayload.code == 429 && (decodeErrorCode errorPayload.response.errorMessage == "HITS_LIMIT_EXCEED")) then do
-              pure $ toast $ getString OTP_LIMIT_EXCEEDED
+              pure $ toast $ getString OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER
               (setValueToLocalStore INVALID_OTP_TIME (getCurrentUTC ""))
               modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> state{props{enterOtp = false , enterMobileNumberView = false}})
               applicationSubmittedFlow screenType
             else do
-              pure $ toast (decodeErrorCode errorPayload.response.errorMessage)
+              pure $ toast $ getString SOMETHING_WENT_WRONG
               applicationSubmittedFlow screenType
     RESEND_OTP_TO_ALTERNATE_NUMBER state-> do
       let number =  state.data.mobileNumber
       getAlternateMobileResendOtpResp <- lift $ lift $ Remote.resendAlternateNumberOTP (makeResendAlternateNumberOtpRequest (number))
       case getAlternateMobileResendOtpResp of
             Right (AlternateNumberResendOTPResp resp) -> do
-                pure $ toast (getString OTP_RESENT)
+                pure $ toast $ getString OTP_HAS_BEEN_RESENT
                 applicationSubmittedFlow screenType
             Left errorPayload -> do
               if (errorPayload.code == 400 &&(decodeErrorCode errorPayload.response.errorMessage) == "AUTH_BLOCKED") then do
-                  pure $ toast (getString OTP_RESEND_LIMIT_EXCEEDED)
+                  pure $ toast $ getString OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER
                   applicationSubmittedFlow screenType
               else do
-                  pure $ toast (decodeErrorCode errorPayload.response.errorMessage)
+                  pure $ toast $ getString SOMETHING_WENT_WRONG
                   applicationSubmittedFlow screenType
     LOGOUT_ACCOUT -> do
       (LogOutRes resp) <- Remote.logOutBT LogOutReq
@@ -691,7 +691,7 @@ driverDetailsFlow = do
                 modifyScreenState $ DriverDetailsScreenStateType $ \driverDetailsScreen -> updatedState { props {numberExistError = true,keyboardModalType = MOBILE__NUMBER }}
                 driverDetailsFlow
                else do
-                  pure $ toast $ (getString ALTERNATE_NUMBER_CANNOT_BE_ADDED)
+                  pure $ toast $ getString SOMETHING_WENT_WRONG_TRY_AGAIN_LATER
                   modifyScreenState $ DriverDetailsScreenStateType $ \driverDetailsScreen -> updatedState { data {driverAlternateMobile = alternateNumber} , props {keyboardModalType = NONE,isEditAlternateMobile = false,checkAlternateNumber = (alternateNumber == Nothing)}}
                   driverDetailsFlow
 
@@ -703,16 +703,16 @@ driverDetailsFlow = do
       getAlternateMobileResendOtpResp <- lift $ lift $ Remote.resendAlternateNumberOTP (makeResendAlternateNumberOtpRequest (fromMaybe "" (number)))
       case getAlternateMobileResendOtpResp of
             Right (AlternateNumberResendOTPResp resp) -> do
-                pure $ toast (getString OTP_RESENT)
+                pure $ toast $ getString OTP_HAS_BEEN_RESENT
                 modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> updatedState)
                 driverDetailsFlow
             Left errorPayload -> do
               if (errorPayload.code == 400 &&(decodeErrorCode errorPayload.response.errorMessage) == "AUTH_BLOCKED") then do
                   modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> updatedState)
-                  pure $ toast (getString OTP_RESEND_LIMIT_EXCEEDED)
+                  pure $ toast $ getString OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER
                   driverDetailsFlow
               else do
-                  pure $ toast (decodeErrorMessage errorPayload.response.errorMessage)
+                  pure $ toast $ getString SOMETHING_WENT_WRONG
                   modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> updatedState {data{ driverAlternateMobile = (if(updatedState.props.isEditAlternateMobile) then updatedState.data.driverAlternateMobile else Nothing), driverEditAlternateMobile = Nothing} , props{  otpIncorrect = false ,otpAttemptsExceeded = false ,keyboardModalType = NONE , alternateMobileOtp = "",checkAlternateNumber =(updatedState.props.isEditAlternateMobile == false) }})
                   driverDetailsFlow
 
@@ -745,7 +745,7 @@ driverDetailsFlow = do
                   setValueToLocalStore SET_ALTERNATE_TIME ((getCurrentUTC ""))
                   driverDetailsFlow
             else do
-                pure $ toast (decodeErrorMessage errorPayload.response.errorMessage)
+                pure $ toast $ getString SOMETHING_WENT_WRONG
                 modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> state {data{ driverAlternateMobile = (if(state.props.isEditAlternateMobile) then state.data.driverAlternateMobile else Nothing), driverEditAlternateMobile = Nothing} , props{  otpIncorrect = false ,otpAttemptsExceeded = false ,keyboardModalType = NONE , alternateMobileOtp = "",checkAlternateNumber =(state.props.isEditAlternateMobile == false) }})
                 driverDetailsFlow
 
@@ -760,7 +760,7 @@ driverDetailsFlow = do
                 modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {data = driverProfileScreen.data { driverAlternateNumber = Nothing}})
                 driverDetailsFlow
           Left errorPayload -> do
-               _ <- pure $ toast $ (decodeErrorCode errorPayload.response.errorMessage)
+               _ <- pure $ toast $ getString SOMETHING_WENT_WRONG
                modifyScreenState $ DriverDetailsScreenStateType $ \driverDetailsScreen -> state
                driverDetailsFlow
 
@@ -863,7 +863,7 @@ helpAndSupportFlow = do
        helpAndSupportFlow
     REMOVE_ISSUE_SCREEN issueId updatedState -> do
        resp <- Remote.deleteIssueBT issueId
-       pure $ toast (getString ISSUE_REMOVED)
+       pure $ toast $ getString ISSUE_REMOVED_SUCCESSFULLY
        modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> updatedState)
        helpAndSupportFlow
 
@@ -1069,7 +1069,7 @@ referralScreenFlow = do
           modifyScreenState $ ReferralScreenStateType (\ referralScreen -> referralScreen{ data { driverInfo {referralCode = Just updatedState.data.referralCode} } ,  props { stage = SuccessScreen , firstTime = true}})
           referralScreenFlow
         Left error -> do
-          _ <- pure $ toast (decodeErrorMessage error.response.errorMessage)
+          _ <- pure $ toast $ getString SOMETHING_WENT_WRONG
           referralScreenFlow
       referralScreenFlow
     REFRESH_LEADERBOARD -> referralScreenFlow
@@ -1299,7 +1299,7 @@ homeScreenFlow = do
             else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpAttemptsExceeded = true, enterOtpModal = true, rideOtp = ""} })
               void $ lift $ lift $ toggleLoader false
-              else pure $ toast (getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER)
+              else pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
           homeScreenFlow
     GO_TO_START_ZONE_RIDE {otp, lat, lon} -> do
       void $ lift $ lift $ loaderText (getString PLEASE_WAIT) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
@@ -1318,7 +1318,7 @@ homeScreenFlow = do
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = true, enterOtpModal = true, otpAttemptsExceeded = false, rideOtp = ""} })
             else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpAttemptsExceeded = true, enterOtpModal = true, rideOtp = ""} })
-              else pure $ toast (getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER)
+              else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
           void $ lift $ lift $ toggleLoader false
           homeScreenFlow
     GO_TO_END_RIDE {id, lat, lon} -> do
