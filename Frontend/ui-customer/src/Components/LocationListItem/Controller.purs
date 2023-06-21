@@ -46,7 +46,7 @@ dummyLocationListState = { prefixImageUrl : "ny_ic_briefcase,https://assets.jusp
   , fullAddress : dummyAddress
   , locationItemType : Nothing
   , distance : Nothing
-  , showDistance : false
+  , showDistance : Just false
   }
 
 dummyAddress :: Address

@@ -415,7 +415,7 @@ bottomBtnsData state =
     , fullAddress : dummyAddress
     , locationItemType : Nothing
     , distance : Nothing
-    , showDistance : false
+    , showDistance : Just false
     }
   , { prefixImageUrl : "ny_ic_current_location,https://assets.juspay.in/nammayatri/images/user/ny_ic_current_location.png"
     , title :  (getString USE_CURRENT_LOCATION)
@@ -439,7 +439,7 @@ bottomBtnsData state =
     , fullAddress : dummyAddress
     , locationItemType : Nothing
     , distance : Nothing
-    , showDistance : false
+    , showDistance : Just false
     }
 
   ]
