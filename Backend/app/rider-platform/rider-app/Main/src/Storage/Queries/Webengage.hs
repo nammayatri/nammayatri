@@ -17,6 +17,7 @@ module Storage.Queries.Webengage where
 
 import Domain.Types.Webengage
 import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
@@ -27,8 +28,14 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Webengage as BeamW
 import Storage.Tabular.Webengage
 
-create :: Webengage -> SqlDB ()
-create = Esq.create
+create :: L.MonadFlow m => Webengage -> m (MeshResult ())
+create Webengage = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamW.WebEngageT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainWebengageToBeam Webengage)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById :: Transactionable m => Id Webengage -> m (Maybe Webengage)
 findById = Esq.findById

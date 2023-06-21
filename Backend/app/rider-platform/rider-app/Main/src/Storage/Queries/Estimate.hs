@@ -35,6 +35,20 @@ import qualified Storage.Queries.TripTerms as QTT
 import Storage.Tabular.Estimate
 import Storage.Tabular.TripTerms
 
+-- import qualified Kernel.Beam.Types as KBT
+-- import qualified Sequelize as Se
+-- import EulerHS.KVConnector.Types
+-- import Lib.Utils (setMeshConfig)
+
+-- create :: L.MonadFlow m => Estimate -> m (MeshResult ())
+-- create Estimate = do
+--   dbConf <- L.getOption KBT.PsqlDbCfg
+--   let modelName = Se.modelTableName @BeamR.RideT
+--   let updatedMeshConfig = setMeshConfig modelName
+--   case dbConf of
+--     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRideToBeam Estimate)
+--     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
 -- order of creating entites make sense!
 create :: Estimate -> SqlDB ()
 create estimate =

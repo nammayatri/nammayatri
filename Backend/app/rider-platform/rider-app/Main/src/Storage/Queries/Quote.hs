@@ -54,6 +54,15 @@ createDetails = \case
   OneWaySpecialZoneDetailsT specialZoneQuoteT -> do
     Esq.create' specialZoneQuoteT
 
+-- create :: L.MonadFlow m => Quote -> m (MeshResult ())
+-- create Quote = do
+--   dbConf <- L.getOption KBT.PsqlDbCfg
+--   let modelName = Se.modelTableName @BeamR.RideT
+--   let updatedMeshConfig = setMeshConfig modelName
+--   case dbConf of
+--     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRideToBeam Quote)
+--     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
 -- order of creating entites make sense!
 create :: Quote -> SqlDB ()
 create quote =

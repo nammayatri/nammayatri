@@ -22,15 +22,27 @@ where
 import Domain.Types.Person
 import Domain.Types.Person.PersonFlowStatus
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import qualified Sequelize as Se
 import qualified Storage.Beam.Person.PersonFlowStatus as BeamPFS
 import Storage.Tabular.Person.PersonFlowStatus
+import Lib.Utils
 
-create :: DPFS.PersonFlowStatus -> SqlDB ()
-create = Esq.create
+create :: L.MonadFlow m => DPFS.PersonFlowStatus -> m (MeshResult ())
+create personFlowStatus = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamPFS.PersonFlowStatusT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainPersonFlowStatusToBeam personFlowStatus)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 getStatus ::
   (Transactionable m) =>

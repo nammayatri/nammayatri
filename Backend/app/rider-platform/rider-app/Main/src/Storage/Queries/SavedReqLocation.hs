@@ -17,6 +17,7 @@ module Storage.Queries.SavedReqLocation where
 import Domain.Types.Person (Person)
 import Domain.Types.SavedReqLocation
 import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
@@ -27,8 +28,14 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.SavedReqLocation as BeamSRL
 import Storage.Tabular.SavedReqLocation
 
-create :: SavedReqLocation -> SqlDB ()
-create = Esq.create
+create :: L.MonadFlow m => SavedReqLocation -> m (MeshResult ())
+create savedReqLocation = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSRL.SavedReqLocationT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainSavedReqLocationToBeam savedReqLocation)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findAllByRiderId :: Transactionable m => Id Person -> m [SavedReqLocation]
 findAllByRiderId perId =

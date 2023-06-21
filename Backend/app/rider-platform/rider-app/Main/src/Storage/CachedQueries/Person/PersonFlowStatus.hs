@@ -23,8 +23,10 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Person.PersonFlowStatus as Queries
+import qualified EulerHS.Language as L
+import EulerHS.KVConnector.Types
 
-create :: PersonFlowStatus -> Esq.SqlDB ()
+create :: (L.MonadFlow m) => PersonFlowStatus -> m (MeshResult ())
 create = Queries.create
 
 getStatus :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person -> m (Maybe FlowStatus)

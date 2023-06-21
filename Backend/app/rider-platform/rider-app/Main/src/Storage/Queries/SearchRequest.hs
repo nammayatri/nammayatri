@@ -35,6 +35,15 @@ import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
 import Storage.Tabular.SearchRequest
 import Storage.Tabular.SearchRequest.SearchReqLocation
 
+-- create :: L.MonadFlow m => SearchRequest -> m (MeshResult ())
+-- create SearchRequest = do
+--   dbConf <- L.getOption KBT.PsqlDbCfg
+--   let modelName = Se.modelTableName @BeamR.RideT
+--   let updatedMeshConfig = setMeshConfig modelName
+--   case dbConf of
+--     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRideToBeam SearchRequest)
+--     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
 create :: SearchRequest -> SqlDB ()
 create dsReq = Esq.runTransaction $
   withFullEntity dsReq $ \(sReq, fromLoc, mbToLoc) -> do

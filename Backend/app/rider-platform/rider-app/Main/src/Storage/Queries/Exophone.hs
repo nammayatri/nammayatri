@@ -24,6 +24,7 @@ import qualified Database.Beam as B
 import Domain.Types.Exophone as DE
 import qualified Domain.Types.Merchant as DM
 import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
@@ -36,8 +37,25 @@ import Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Exophone as BeamE
 import Storage.Tabular.Exophone
 
-create :: Exophone -> SqlDB ()
-create = Esq.create
+create :: L.MonadFlow m => Exophone -> m (MeshResult ())
+create exophone = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamE.ExophoneT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainExophoneToBeam exophone)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
+findAllMerchantIdsByPhone :: L.MonadFlow m => Text -> m [Id DM.Merchant]
+findAllMerchantIdsByPhone phone = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamE.ExophoneT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      res <- either (pure []) (transformBeamExophoneToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Or [Se.Is BeamE.primaryPhone $ Se.Eq phone, Se.Is BeamE.backupPhone $ Se.Eq phone]]
+      pure $ DE.merchantId <$> res
+    Nothing -> pure []
 
 findAllMerchantIdsByPhone :: L.MonadFlow m => Text -> m [Id DM.Merchant]
 findAllMerchantIdsByPhone phone = do

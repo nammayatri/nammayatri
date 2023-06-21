@@ -21,9 +21,21 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (getCurrentTime)
 import qualified Storage.Beam.Payment.PaymentTransaction as BeamPT
 import Storage.Tabular.Payment.PaymentTransaction
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
+import qualified Sequelize as Se
+import Lib.Utils
 
-create :: PaymentTransaction -> SqlDB ()
-create = Esq.create
+create :: L.MonadFlow m => PaymentTransaction -> m (MeshResult ())
+create paymentTransaction = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamPT.PaymentTransactionT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainPaymentTransactionToBeam paymentTransaction)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 updateMultiple :: PaymentTransaction -> SqlDB ()
 updateMultiple transaction = do

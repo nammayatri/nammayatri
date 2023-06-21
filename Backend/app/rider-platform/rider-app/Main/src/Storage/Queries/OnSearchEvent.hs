@@ -15,13 +15,27 @@
 module Storage.Queries.OnSearchEvent where
 
 import Domain.Types.OnSearchEvent
-import Kernel.Storage.Esqueleto as Esq
+-- import Kernel.Storage.Esqueleto as Esq
+
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
+import Kernel.Prelude
 import Kernel.Types.Id
+import Lib.Utils (setMeshConfig)
+import qualified Sequelize as Se
 import qualified Storage.Beam.OnSearchEvent as BeamOSE
 import Storage.Tabular.OnSearchEvent ()
 
-create :: OnSearchEvent -> SqlDB ()
-create = Esq.create
+create :: L.MonadFlow m => OnSearchEvent -> m (MeshResult ())
+create onSearchEvent = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamOSE.OnSearchEventT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainOnSearchEventToBeam onSearchEvent)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 transformBeamOnSearchEventToDomain :: BeamOSE.OnSearchEvent -> OnSearchEvent
 transformBeamOnSearchEventToDomain BeamOSE.OnSearchEventT {..} = do

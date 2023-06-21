@@ -15,15 +15,26 @@
 module Storage.Queries.CallbackRequest where
 
 import Domain.Types.CallbackRequest
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption (Encrypted (..), EncryptedHashed (..))
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Lib.Utils (setMeshConfig)
+import qualified Sequelize as Se
 import qualified Storage.Beam.CallbackRequest as BeamCR
 import Storage.Tabular.CallbackRequest ()
 
-create :: CallbackRequest -> SqlDB ()
-create = Esq.create
+create :: L.MonadFlow m => CallbackRequest -> m (MeshResult ())
+create callbackRequest = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamCR.CallbackRequestT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainCallbackRequestToBeam callbackRequest)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 transformBeamCallbackRequestToDomain :: BeamCR.CallbackRequest -> CallbackRequest
 transformBeamCallbackRequestToDomain BeamCR.CallbackRequestT {..} = do

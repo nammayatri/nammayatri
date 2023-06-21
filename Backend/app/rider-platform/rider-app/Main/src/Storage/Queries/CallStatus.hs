@@ -29,6 +29,22 @@ import qualified Storage.Beam.CallStatus as BeamCS
 import Storage.Tabular.CallStatus
 import qualified Tools.Call as Call
 
+-- import qualified EulerHS.KVConnector.Flow as KV
+-- import qualified EulerHS.Language as L
+-- import qualified Kernel.Beam.Types as KBT
+-- import qualified Sequelize as Se
+-- import EulerHS.KVConnector.Types
+-- import Lib.Utils (setMeshConfig)
+
+-- Need to update this according to createUnique
+-- create :: L.MonadFlow m => CallStatus -> m (MeshResult ())
+-- create callStatus = do
+--   dbConf <- L.getOption KBT.PsqlDbCfg
+--   let modelName = Se.modelTableName @BeamCS.CallStatusT
+--   let updatedMeshConfig = setMeshConfig modelName
+--   case dbConf of
+--     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRideToBeam CallStatus)
+--     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 create :: CallStatus -> SqlDB ()
 create callStatus = void $ Esq.createUnique callStatus
 

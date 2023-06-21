@@ -19,19 +19,30 @@ import Domain.Types.Booking.Type (Booking)
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Lib.Utils (setMeshConfig)
+import qualified Sequelize as Se
 import qualified Storage.Beam.Ride as BeamR
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.Person as Person
 import Storage.Tabular.Ride as Ride
 
-create :: Ride -> SqlDB ()
-create = Esq.create
+create :: L.MonadFlow m => Ride -> m (MeshResult ())
+create ride = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamR.RideT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRideToBeam ride)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 updateStatus ::
   Id Ride ->

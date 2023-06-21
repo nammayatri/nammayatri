@@ -29,8 +29,14 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.RegistrationToken as BeamRT
 import Storage.Tabular.RegistrationToken
 
-create :: RegistrationToken -> SqlDB ()
-create = Esq.create
+create :: L.MonadFlow m => RegistrationToken -> m (MeshResult ())
+create registrationToken = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRegistrationTokenToBeam registrationToken)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById :: Transactionable m => Id RegistrationToken -> m (Maybe RegistrationToken)
 findById = Esq.findById

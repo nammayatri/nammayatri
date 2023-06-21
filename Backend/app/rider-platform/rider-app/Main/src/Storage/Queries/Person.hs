@@ -39,8 +39,14 @@ import Storage.Tabular.Booking
 import Storage.Tabular.Person
 import Storage.Tabular.Ride
 
-create :: Person -> SqlDB ()
-create = Esq.create
+create :: L.MonadFlow m => Person -> m (MeshResult ())
+create person = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamP.PersonT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainPersonToBeam person)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById ::
   Transactionable m =>

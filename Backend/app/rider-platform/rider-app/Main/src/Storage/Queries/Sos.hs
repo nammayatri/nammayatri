@@ -15,8 +15,14 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Sos as BeamS
 import Storage.Tabular.Sos
 
-create :: Sos.Sos -> SqlDB ()
-create = Esq.create
+create :: L.MonadFlow m => Sos.Sos -> m (MeshResult ())
+create sos = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamS.Sos
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRideToBeam sos)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 updateStatus :: Id Sos.Sos -> Sos.SosStatus -> SqlDB ()
 updateStatus sosId status = do

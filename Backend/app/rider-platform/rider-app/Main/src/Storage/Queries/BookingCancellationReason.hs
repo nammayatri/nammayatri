@@ -17,6 +17,7 @@ module Storage.Queries.BookingCancellationReason where
 import Domain.Types.Booking
 import Domain.Types.BookingCancellationReason
 import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Maps
@@ -28,8 +29,14 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.BookingCancellationReason as BeamBCR
 import Storage.Tabular.BookingCancellationReason
 
-create :: BookingCancellationReason -> SqlDB ()
-create = Esq.create
+create :: L.MonadFlow m => BookingCancellationReason -> m (MeshResult ())
+create bookingCancellationReason = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamBCR.BookingCancellationReasonT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainBookingCancellationReasonToBeam bookingCancellationReason)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findByRideBookingId ::
   Transactionable m =>

@@ -21,14 +21,26 @@ module Storage.Queries.Maps.PlaceNameCache
 where
 
 import Domain.Types.Maps.PlaceNameCache
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Lib.Utils (setMeshConfig)
+import qualified Sequelize as Se
 import Kernel.Types.Id
 import qualified Storage.Beam.Maps.PlaceNameCache as BeamPNC
 import Storage.Tabular.Maps.PlaceNameCache
 
-create :: PlaceNameCache -> SqlDB ()
-create = Esq.create
+create :: L.MonadFlow m => PlaceNameCache -> m (MeshResult ())
+create placeNameCache = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamPNC.PlaceNameCacheT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainPlaceNameCacheToBeam placeNameCache)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findPlaceByPlaceId :: Transactionable m => Text -> m [PlaceNameCache]
 findPlaceByPlaceId placeId =

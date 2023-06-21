@@ -16,7 +16,6 @@ module Storage.Queries.Payment.PaymentOrder where
 
 import Domain.Types.Payment.PaymentOrder
 import qualified Domain.Types.Payment.PaymentOrder as DOrder
-import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Juspay.Types as Payment
 import Kernel.Prelude
@@ -25,6 +24,12 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (getCurrentTime)
 import qualified Storage.Beam.Payment.PaymentOrder as BeamPO
 import Storage.Tabular.Payment.PaymentOrder
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
+import qualified Sequelize as Se
+import Lib.Utils
 
 findById :: Transactionable m => Id DOrder.PaymentOrder -> m (Maybe DOrder.PaymentOrder)
 findById = Esq.findById
@@ -36,8 +41,14 @@ findByShortId shortId =
     where_ $ order ^. PaymentOrderShortId ==. val (getShortId shortId)
     return order
 
-create :: DOrder.PaymentOrder -> SqlDB ()
-create = Esq.create
+create :: L.MonadFlow m => DOrder.PaymentOrder -> m (MeshResult ())
+create paymentOrder = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamPO.PaymentOrderT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainPaymentOrderToBeam paymentOrder)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 updateStatus :: DOrder.PaymentOrder -> SqlDB ()
 updateStatus order = do

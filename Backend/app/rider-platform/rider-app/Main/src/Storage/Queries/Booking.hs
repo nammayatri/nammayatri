@@ -51,6 +51,7 @@ import qualified Storage.Tabular.Ride as R
 import qualified Storage.Tabular.TripTerms as TripTerms
 
 -- we already created TripTerms and RentalSlab when created Quote
+-- create :: L.MonadFlow m => Booking -> m (MeshResult ())
 create :: Booking -> SqlDB ()
 create booking =
   Esq.withFullEntity booking $ \(bookingT, fromLocT, _mbTripTermsT, bookingDetailsT) -> do
