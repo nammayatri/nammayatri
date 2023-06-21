@@ -27,23 +27,27 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), const, (<>), (/=), (==), (<<<), (||), (&&), discard, bind, pure, unit, not, void)
-import Presto.Core.Types.Language.Flow (doAff)
+import Prelude (Unit, ($), const, (<>), (/=), (==), (<<<), (||), (&&), discard, bind, pure, unit, not, void, (+))
+import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, visibility, afterRender, lineHeight, stroke, cornerRadius, alignParentRight, onBackPressed, imageWithFallback,relativeLayout)
 import Screens.ApplicationStatusScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Services.APITypes (DriverRegistrationStatusResp(..), DriverRegistrationStatusReq(..))
-import Services.Backend (driverRegistrationStatusBT)
+import Services.Backend (driverRegistrationStatusBT, driverRegistrationStatus)
 import Styles.Colors as Color
 import Common.Types.App
-import Types.App (defaultGlobalState)
+import Types.App (defaultGlobalState, GlobalState)
 import Components.PrimaryButton as PrimaryButton
 import Components.PopUpModal as PopUpModal
 import Components.ReferralMobileNumber as ReferralMobileNumber
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Data.Maybe
 import Data.String (length)
+import Data.Time.Duration (Milliseconds(..))
 import Screens.ApplicationStatusScreen.ComponentConfig
+import Debug (spy)
+import Data.Either (Either(..))
+import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore)
 
 screen :: ST.ApplicationStatusScreenState -> String -> Screen Action ST.ApplicationStatusScreenState ScreenOutput
 screen initialState screenType =
@@ -62,6 +66,13 @@ screen initialState screenType =
         if initialState.props.isAlternateMobileNumberExists then do
           EHC.setText' (EHC.getNewIDWithTag "Referalnumber") initialState.data.mobileNumber
           else pure unit
+
+        if (getValueToLocalStore APPLICATION_STATUS_POLLING) == "False" then do
+          _ <- pure $ setValueToLocalStore APPLICATION_STATUS_POLLING "True"
+          void $ launchAff $ EHC.flowRunner defaultGlobalState $ applicationStatusPolling 0 3000.0 initialState push DriverRegistrationStatusAction
+          pure unit
+          else pure unit
+
         pure $ pure unit
       )
   ]
@@ -374,3 +385,25 @@ alternateNumber push state =
   , width MATCH_PARENT
   , background Color.blackLessTrans
   ][ReferralMobileNumber.view (push <<< AlternateMobileNumberAction) (alternateMobileNumberConfig state )]
+
+
+applicationStatusPolling ::  forall action. Int -> Number -> ST.ApplicationStatusScreenState -> (action -> Effect Unit) -> (DriverRegistrationStatusResp -> action) -> Flow GlobalState Unit
+applicationStatusPolling count duration state push action = do
+  if (getValueToLocalStore APPLICATION_STATUS_POLLING) == "True" then do
+    driverRegistrationStatusResp <- driverRegistrationStatus (DriverRegistrationStatusReq { })
+    _ <- pure $ spy "polling inside applicationStatusPolling function" driverRegistrationStatusResp
+    case driverRegistrationStatusResp of
+        Right (DriverRegistrationStatusResp regStatusResponse) -> do 
+          if count == 200 then do
+            pure unit
+            else if (regStatusResponse.dlVerificationStatus == "VALID" && regStatusResponse.rcVerificationStatus == "VALID") then do
+              _ <- pure $ setValueToLocalStore APPLICATION_STATUS_POLLING "False"
+              pure unit
+            else if (regStatusResponse.dlVerificationStatus == "VALID" || regStatusResponse.rcVerificationStatus == "VALID") then 
+              doAff do liftEffect $ push $ action ( DriverRegistrationStatusResp regStatusResponse )         
+            else do
+              void $ delay $ Milliseconds duration
+              applicationStatusPolling (count + 1) duration state push action 
+        Left err -> pure unit
+    pure unit
+    else pure unit

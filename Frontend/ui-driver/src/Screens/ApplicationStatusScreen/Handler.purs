@@ -22,12 +22,15 @@ import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.ApplicationStatusScreen.View as ApplicationStatusScreen
 import Types.App (FlowBT, GlobalState(..), APPLICATION_STATUS_SCREENOUTPUT(..),ScreenType(..))
+import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore)
 
 
 applicationStatus :: String -> FlowBT String APPLICATION_STATUS_SCREENOUTPUT
 applicationStatus screenType = do
   (GlobalState state) <- getState
+  let _ = setValueToLocalStore APPLICATION_STATUS_POLLING "False"
   action <- lift $ lift $ runScreen $ ApplicationStatusScreen.screen state.applicationStatusScreen screenType
+  let _ = setValueToLocalStore APPLICATION_STATUS_POLLING "False"
   case action of
     GoToHomeScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_HOME_FROM_APPLICATION_STATUS
     GoToDlScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_UPLOAD_DL_SCREEN

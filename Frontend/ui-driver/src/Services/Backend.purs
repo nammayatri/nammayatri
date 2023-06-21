@@ -601,6 +601,12 @@ driverRegistrationStatusBT payload = do
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
 
+driverRegistrationStatus payload = do
+     headers <- getHeaders ""
+     withAPIResult (EP.driverRegistrationStatus "") unwrapResponse $ callAPI headers payload
+    where
+        unwrapResponse (x) = x
+
 referDriver payload = do
      headers <- getHeaders ""
      withAPIResult (EP.referDriver "") unwrapResponse $ callAPI headers payload
