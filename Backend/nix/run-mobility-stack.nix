@@ -40,7 +40,7 @@ _:
           scheduler-example-app-exe.command = getExe "scheduler-example-app-exe";
           scheduler-example-scheduler-exe.command = getExe "scheduler-example-scheduler-exe";
           search-result-aggregator-exe.command = getExe "search-result-aggregator-exe";
-          special-zone-exe.command = self'.apps.special-zone-exe.program;
+          special-zone-exe.command = getExe "special-zone-exe";
         };
     in
     {
