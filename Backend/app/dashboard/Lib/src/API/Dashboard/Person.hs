@@ -56,6 +56,23 @@ type API =
              :> DashboardAuth 'DASHBOARD_ADMIN
              :> ReqBody '[JSON] DPerson.CreatePersonReq
              :> Post '[JSON] DPerson.CreatePersonRes
+           :<|> ( "change"
+                    :> "email"
+                    :> DashboardAuth 'DASHBOARD_ADMIN
+                    :> Capture "personId" (Id DP.Person)
+                    :> ReqBody '[JSON] DPerson.ChangeEmailByAdminReq
+                    :> Post '[JSON] APISuccess
+                    :<|> "password"
+                    :> DashboardAuth 'DASHBOARD_ADMIN
+                    :> Capture "personId" (Id DP.Person)
+                    :> ReqBody '[JSON] DPerson.ChangePasswordByAdminReq
+                    :> Post '[JSON] APISuccess
+                    :<|> "mobile"
+                    :> DashboardAuth 'DASHBOARD_ADMIN
+                    :> Capture "personId" (Id DP.Person)
+                    :> ReqBody '[JSON] DPerson.ChangeMobileNumberByAdminReq
+                    :> Post '[JSON] APISuccess
+                )
        )
     :<|> "user"
       :> ( "profile"
@@ -80,6 +97,9 @@ handler =
       :<|> assignMerchantAccess
       :<|> resetMerchantAccess
       :<|> createPerson
+      :<|> changeEmailByAdmin
+      :<|> changePasswordByAdmin
+      :<|> changeMobileByAdmin
   )
     :<|> ( profile
              :<|> getCurrentMerchant
@@ -121,3 +141,15 @@ changePassword req =
 getAccessMatrix :: TokenInfo -> FlowHandler AccessMatrixRowAPIEntity
 getAccessMatrix =
   withFlowHandlerAPI . DPerson.getAccessMatrix
+
+changeEmailByAdmin :: TokenInfo -> Id DP.Person -> DPerson.ChangeEmailByAdminReq -> FlowHandler APISuccess
+changeEmailByAdmin tokenInfo personId req =
+  withFlowHandlerAPI $ DPerson.changeEmailByAdmin tokenInfo personId req
+
+changePasswordByAdmin :: TokenInfo -> Id DP.Person -> DPerson.ChangePasswordByAdminReq -> FlowHandler APISuccess
+changePasswordByAdmin tokenInfo personId req =
+  withFlowHandlerAPI $ DPerson.changePasswordByAdmin tokenInfo personId req
+
+changeMobileByAdmin :: TokenInfo -> Id DP.Person -> DPerson.ChangeMobileNumberByAdminReq -> FlowHandler APISuccess
+changeMobileByAdmin tokenInfo personId req =
+  withFlowHandlerAPI $ DPerson.changeMobileNumberByAdmin tokenInfo personId req

@@ -156,3 +156,27 @@ updatePersonPassword personId newPasswordHash = do
         PersonUpdatedAt =. val now
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
+
+updatePersonEmail :: Id Person -> EncryptedHashed Text -> SqlDB ()
+updatePersonEmail personId encEmail = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ PersonEmailEncrypted =. val (unEncrypted encEmail.encrypted),
+        PersonEmailHash =. val encEmail.hash,
+        PersonUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+
+updatePersonMobile :: Id Person -> EncryptedHashed Text -> SqlDB ()
+updatePersonMobile personId encMobileNumber = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ PersonMobileNumberEncrypted =. val (unEncrypted encMobileNumber.encrypted),
+        PersonMobileNumberHash =. val encMobileNumber.hash,
+        PersonUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. PersonTId ==. val (toKey personId)
