@@ -221,6 +221,6 @@ optionList state =
       {title:DRIVER_NAME_INFO, value:"" , editButtonReq : false},
       {title:DRIVER_MOBILE_INFO, value:"" ,editButtonReq : false},
       {title:DRIVER_LICENCE_INFO, value:"",editButtonReq : false},
-      {title:DRIVER_ALTERNATE_MOBILE_INFO, value:"" ,editButtonReq : isJust state.data.driverAlternateMobile},
-      {title:GENDER_INFO,value:"", editButtonReq : isJust state.data.driverGender}
+      {title:DRIVER_ALTERNATE_MOBILE_INFO, value:"" ,editButtonReq : isJust state.data.driverAlternateMobile}
+      -- {title:GENDER_INFO,value:"", editButtonReq : isJust state.data.driverGender}
     ]
