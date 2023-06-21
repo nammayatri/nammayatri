@@ -178,6 +178,9 @@ library
       Domain.Types.VehicleVariant
       Domain.Types.Webengage
       Environment
+      Lib.Mesh
+      Lib.Utils
+      Lib.UtilsTH
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
       SharedLogic.Confirm
@@ -187,6 +190,44 @@ library
       SharedLogic.MessageBuilder
       SharedLogic.MetroOffer
       SharedLogic.PublicTransport
+      Storage.Beam.BlackListOrg
+      Storage.Beam.Booking
+      Storage.Beam.Booking.BookingLocation
+      Storage.Beam.BookingCancellationReason
+      Storage.Beam.CallbackRequest
+      Storage.Beam.CallStatus
+      Storage.Beam.CancellationReason
+      Storage.Beam.DriverOffer
+      Storage.Beam.Estimate
+      Storage.Beam.EstimateBreakup
+      Storage.Beam.Exophone
+      Storage.Beam.FarePolicy.FareBreakup
+      Storage.Beam.Geometry
+      Storage.Beam.Issue
+      Storage.Beam.Maps.PlaceNameCache
+      Storage.Beam.Merchant
+      Storage.Beam.Merchant.MerchantMessage
+      Storage.Beam.Merchant.MerchantPaymentMethod
+      Storage.Beam.Merchant.MerchantServiceConfig
+      Storage.Beam.Merchant.MerchantServiceUsageConfig
+      Storage.Beam.MerchantConfig
+      Storage.Beam.OnSearchEvent
+      Storage.Beam.Payment.PaymentOrder
+      Storage.Beam.Payment.PaymentTransaction
+      Storage.Beam.Person
+      Storage.Beam.Person.PersonDefaultEmergencyNumber
+      Storage.Beam.Person.PersonFlowStatus
+      Storage.Beam.Quote
+      Storage.Beam.RegistrationToken
+      Storage.Beam.RentalSlab
+      Storage.Beam.Ride
+      Storage.Beam.SavedReqLocation
+      Storage.Beam.SearchRequest
+      Storage.Beam.SearchRequest.SearchReqLocation
+      Storage.Beam.Sos
+      Storage.Beam.SpecialZoneQuote
+      Storage.Beam.TripTerms
+      Storage.Beam.Webengage
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.Exophone
@@ -334,8 +375,13 @@ library
     , amazonka-ses
     , base >=4.7 && <5
     , base64-bytestring
+    , beam-core
+    , beam-mysql
+    , beam-postgres
     , beckn-spec
     , bytestring
+    , casing
+    , cereal
     , containers
     , cryptonite
     , cryptostore >=0.2.3.0
@@ -351,10 +397,12 @@ library
     , mobility-core
     , openapi3
     , persistent
+    , postgresql-simple
     , prometheus-client
     , prometheus-metrics-ghc
     , record-dot-preprocessor
     , record-hasfield
+    , sequelize
     , servant
     , servant-client
     , servant-client-core
@@ -362,11 +410,13 @@ library
     , servant-server
     , special-zone
     , special-zone-a
+    , template-haskell
     , text
     , text-conversions
     , time
     , unliftio-core
     , unordered-containers
+    , vector
     , wai
     , wai-middleware-prometheus
     , warp
@@ -420,8 +470,13 @@ executable rider-app-exe
     , amazonka-ses
     , base >=4.7 && <5
     , base64-bytestring
+    , beam-core
+    , beam-mysql
+    , beam-postgres
     , beckn-spec
     , bytestring
+    , casing
+    , cereal
     , containers
     , cryptonite
     , cryptostore >=0.2.3.0
@@ -437,21 +492,25 @@ executable rider-app-exe
     , mobility-core
     , openapi3
     , persistent
+    , postgresql-simple
     , prometheus-client
     , prometheus-metrics-ghc
     , record-dot-preprocessor
     , record-hasfield
     , rider-app
+    , sequelize
     , servant
     , servant-client
     , servant-client-core
     , servant-openapi3
     , servant-server
+    , template-haskell
     , text
     , text-conversions
     , time
     , unliftio-core
     , unordered-containers
+    , vector
     , wai
     , wai-middleware-prometheus
     , warp

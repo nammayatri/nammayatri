@@ -14,8 +14,6 @@
 
 module Storage.Queries.Message.Message where
 
--- import qualified Kernel.Storage.Esqueleto as Esq
-
 import qualified Data.Time as T
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Message.Message

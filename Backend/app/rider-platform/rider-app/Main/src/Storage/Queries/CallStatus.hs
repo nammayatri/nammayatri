@@ -19,6 +19,7 @@ import Domain.Types.CallStatus
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Storage.Beam.CallStatus as BeamCS
 import Storage.Tabular.CallStatus
 import qualified Tools.Call as Call
 
@@ -45,3 +46,29 @@ updateCallStatus callId status conversationDuration mbrecordingUrl = do
         CallStatusRecordingUrl =. val (showBaseUrl <$> mbrecordingUrl)
       ]
     where_ $ tbl ^. CallStatusId ==. val (getId callId)
+
+transformBeamCallStatusToDomain :: BeamCS.CallStatus -> CallStatus
+transformBeamCallStatusToDomain BeamCS.CallStatusT {..} = do
+  CallStatus
+    { id = Id id,
+      callId = callId,
+      rideId = Id rideId,
+      dtmfNumberUsed = dtmfNumberUsed,
+      status = status,
+      recordingUrl = recordingUrl,
+      conversationDuration = conversationDuration,
+      createdAt = createdAt
+    }
+
+transformDomainCallStatusToBeam :: CallStatus -> BeamCS.CallStatus
+transformDomainCallStatusToBeam CallStatus {..} =
+  BeamCS.defaultCallStatus
+    { BeamCS.id = getId id,
+      BeamCS.callId = callId,
+      BeamCS.rideId = getId rideId,
+      BeamCS.dtmfNumberUsed = dtmfNumberUsed,
+      BeamCS.status = status,
+      BeamCS.recordingUrl = recordingUrl,
+      BeamCS.conversationDuration = conversationDuration,
+      BeamCS.createdAt = createdAt
+    }

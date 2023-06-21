@@ -24,6 +24,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Types.Registry.Subscriber (Subscriber)
+import qualified Storage.Beam.BlackListOrg as BeamBLO
 import Storage.Tabular.BlackListOrg
 
 findBySubscriberId :: Transactionable m => ShortId Subscriber -> m (Maybe BlackListOrg)
@@ -32,3 +33,19 @@ findBySubscriberId subscriberId = do
     org <- from $ table @BlackListOrgT
     where_ $ org ^. BlackListOrgSubscriberId ==. val (getShortId subscriberId)
     return org
+
+transformBeamBlackListOrgToDomain :: BeamBLO.BlackListOrg -> BlackListOrg
+transformBeamBlackListOrgToDomain BeamBLO.BlackListOrgT {..} = do
+  BlackListOrg
+    { id = Id id,
+      subscriberId = ShortId subscriberId,
+      _type = orgType
+    }
+
+transformDomainBlackListOrgToBeam :: BlackListOrg -> BeamBLO.BlackListOrg
+transformDomainBlackListOrgToBeam BlackListOrg {..} =
+  BeamBLO.defaultBlackListOrg
+    { BeamBLO.id = getId id,
+      BeamBLO.subscriberId = getShortId subscriberId,
+      BeamBLO.orgType = _type
+    }

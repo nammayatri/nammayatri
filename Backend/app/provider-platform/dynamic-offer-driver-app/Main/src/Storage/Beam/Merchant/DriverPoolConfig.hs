@@ -22,6 +22,7 @@ import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
+import qualified Data.Vector as V
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
@@ -48,18 +49,18 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be PoolSortingType
 
 instance FromBackendRow Postgres PoolSortingType
 
-instance FromField [BatchSplitByPickupDistance] where
+instance FromField BatchSplitByPickupDistance where
   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be [BatchSplitByPickupDistance] where
-  sqlValueSyntax = autoSqlValueSyntax
+instance FromField [BatchSplitByPickupDistance] where
+  fromField f mbValue = V.toList <$> fromField f mbValue
+
+instance (HasSqlValueSyntax be Value) => HasSqlValueSyntax be [BatchSplitByPickupDistance] where
+  sqlValueSyntax = sqlValueSyntax . A.toJSON
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [BatchSplitByPickupDistance]
 
 instance FromBackendRow Postgres [BatchSplitByPickupDistance]
-
--- instance IsString BatchSplitByPickupDistance where
---   fromString = show
 
 instance IsString Seconds where
   fromString = show
@@ -189,13 +190,4 @@ driverPoolConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverPoolConfigToPSModifiers =
   M.empty
 
--- instance IsString Meters where
---   fromString = show
-
--- instance IsString PoolSortingType where
---   fromString = show
-
--- instance IsString Seconds where
---   fromString = show
-
-$(enableKVPG ''DriverPoolConfigT ['merchantId] [])
+$(enableKVPG ''DriverPoolConfigT ['tripDistance] [])

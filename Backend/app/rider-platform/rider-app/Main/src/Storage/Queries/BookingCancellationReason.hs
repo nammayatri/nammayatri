@@ -16,9 +16,11 @@ module Storage.Queries.BookingCancellationReason where
 
 import Domain.Types.Booking
 import Domain.Types.BookingCancellationReason
+import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Storage.Beam.BookingCancellationReason as BeamBCR
 import Storage.Tabular.BookingCancellationReason
 
 create :: BookingCancellationReason -> SqlDB ()
@@ -45,3 +47,32 @@ upsert cancellationReason =
       BookingCancellationReasonReasonStage =. val (cancellationReason.reasonStage),
       BookingCancellationReasonAdditionalInfo =. val (cancellationReason.additionalInfo)
     ]
+
+transformBeamBookingCancellationReasonToDomain :: BeamBCR.BookingCancellationReason -> BookingCancellationReason
+transformBeamBookingCancellationReasonToDomain BeamBCR.BookingCancellationReasonT {..} = do
+  BookingCancellationReason
+    { bookingId = Id bookingId,
+      rideId = Id <$> rideId,
+      merchantId = Id <$> merchantId,
+      source = source,
+      reasonCode = reasonCode,
+      reasonStage = reasonStage,
+      additionalInfo = additionalInfo,
+      driverCancellationLocation = LatLong <$> driverCancellationLocationLat <*> driverCancellationLocationLon,
+      driverDistToPickup = driverDistToPickup
+    }
+
+transformDomainBookingCancellationReasonToBeam :: BookingCancellationReason -> BeamBCR.BookingCancellationReason
+transformDomainBookingCancellationReasonToBeam BookingCancellationReason {..} =
+  BeamBCR.BookingCancellationReasonT
+    { BeamBCR.bookingId = getId bookingId,
+      BeamBCR.rideId = getId <$> rideId,
+      BeamBCR.merchantId = getId <$> merchantId,
+      BeamBCR.source = source,
+      BeamBCR.reasonStage = reasonStage,
+      BeamBCR.reasonCode = reasonCode,
+      BeamBCR.additionalInfo = additionalInfo,
+      BeamBCR.driverCancellationLocationLat = driverCancellationLocation <&> (.lat),
+      BeamBCR.driverCancellationLocationLon = driverCancellationLocation <&> (.lon),
+      BeamBCR.driverDistToPickup = driverDistToPickup
+    }

@@ -74,15 +74,6 @@ handler merchant sReq estimate = do
   case res of
     ReSchedule _ -> do
       maxShards <- asks (.maxShards)
-      -- Esq.runTransaction $ do
-      --   whenJust sReq.autoAssignEnabled $ QSR.updateAutoAssign searchReq.id
-      --   createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
-      --     SendSearchRequestToDriverJobData
-      --       { searchTryId = searchTry.id,
-      --         estimatedRideDistance = searchReq.estimatedDistance,
-      --         driverExtraFeeBounds = driverExtraFeeBounds
-      --       }
-      -- Esq.runTransaction $ do
       when sReq.autoAssignEnabled $ QSR.updateAutoAssign searchReq.id sReq.autoAssignEnabled
       createJobIn' @_ @'SendSearchRequestToDriver inTime maxShards $
         SendSearchRequestToDriverJobData

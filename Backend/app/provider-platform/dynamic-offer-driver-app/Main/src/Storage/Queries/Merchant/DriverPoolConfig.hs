@@ -32,9 +32,6 @@ import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.DriverPoolConfig as BeamDPC
 
--- create :: DriverPoolConfig -> SqlDB ()
--- create = Esq.create
-
 create :: L.MonadFlow m => DriverPoolConfig -> m (MeshResult ())
 create driverPoolConfig = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -43,15 +40,6 @@ create driverPoolConfig = do
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainDriverPoolConfigToBeam driverPoolConfig)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
-
--- findAllByMerchantId :: Transactionable m => Id Merchant -> m [DriverPoolConfig]
--- findAllByMerchantId merchantId =
---   Esq.findAll $ do
---     driverPoolConfig <- from $ table @DriverPoolConfigT
---     where_ $
---       driverPoolConfig ^. DriverPoolConfigMerchantId ==. val (toKey merchantId)
---     orderBy [desc $ driverPoolConfig ^. DriverPoolConfigTripDistance]
---     return driverPoolConfig
 
 findAllByMerchantId :: L.MonadFlow m => Id Merchant -> m [DriverPoolConfig]
 findAllByMerchantId (Id merchantId) = do
@@ -62,14 +50,6 @@ findAllByMerchantId (Id merchantId) = do
     Just dbCOnf' -> either (pure []) (transformBeamDriverPoolConfigToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDPC.merchantId $ Se.Eq merchantId]
     Nothing -> pure []
 
--- findByMerchantIdAndTripDistance :: Transactionable m => Id Merchant -> Meters -> m (Maybe DriverPoolConfig)
--- findByMerchantIdAndTripDistance merchantId tripDistance =
---   Esq.findOne $ do
---     driverPoolConfig <- from $ table @DriverPoolConfigT
---     where_ $
---       driverPoolConfig ^. DriverPoolConfigTId ==. val (toKey (merchantId, tripDistance))
---     return driverPoolConfig
-
 findByMerchantIdAndTripDistance :: L.MonadFlow m => Id Merchant -> Meters -> m (Maybe DriverPoolConfig)
 findByMerchantIdAndTripDistance (Id merchantId) tripDistance = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -78,29 +58,6 @@ findByMerchantIdAndTripDistance (Id merchantId) tripDistance = do
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamDriverPoolConfigToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamDPC.merchantId $ Se.Eq merchantId, Se.Is BeamDPC.tripDistance $ Se.Eq tripDistance]]
     Nothing -> pure Nothing
-
--- update :: DriverPoolConfig -> SqlDB ()
--- update config = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ DriverPoolConfigMinRadiusOfSearch =. val config.minRadiusOfSearch,
---         DriverPoolConfigMaxRadiusOfSearch =. val config.maxRadiusOfSearch,
---         DriverPoolConfigRadiusStepSize =. val config.radiusStepSize,
---         DriverPoolConfigDriverPositionInfoExpiry =. val config.driverPositionInfoExpiry,
---         DriverPoolConfigActualDistanceThreshold =. val config.actualDistanceThreshold,
---         DriverPoolConfigMaxDriverQuotesRequired =. val config.maxDriverQuotesRequired,
---         DriverPoolConfigDriverQuoteLimit =. val config.driverQuoteLimit,
---         DriverPoolConfigDriverRequestCountLimit =. val config.driverRequestCountLimit,
---         DriverPoolConfigDriverBatchSize =. val config.driverBatchSize,
---         DriverPoolConfigMaxNumberOfBatches =. val config.maxNumberOfBatches,
---         DriverPoolConfigMaxParallelSearchRequests =. val config.maxParallelSearchRequests,
---         DriverPoolConfigPoolSortingType =. val config.poolSortingType,
---         DriverPoolConfigSingleBatchProcessTime =. val config.singleBatchProcessTime,
---         DriverPoolConfigUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. DriverPoolConfigTId ==. val (toKey (config.merchantId, config.tripDistance))
 
 update :: (L.MonadFlow m, MonadTime m) => DriverPoolConfig -> m (MeshResult ())
 update config = do

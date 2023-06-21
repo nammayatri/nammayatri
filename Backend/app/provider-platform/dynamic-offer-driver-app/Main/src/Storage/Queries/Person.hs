@@ -261,7 +261,6 @@ findAllDriversByIdsFirstNameAsc merchantId driverIds = do
   driverInfos <- getDriverInfos driverLocs
   vehicle <- getVehicles driverInfos
   drivers <- getDrivers vehicle
-  logDebug $ "FindAllDriversByIdsFirstNameAsc - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vec:- " <> show (length vehicle) <> " Drivers:- " <> show (length drivers)
   return (linkArrays driverLocs driverInfos vehicle drivers)
 
 linkArrays :: [DriverLocation] -> [DriverInformation] -> [Vehicle] -> [Person] -> [FullDriver]
@@ -385,6 +384,23 @@ getOnRideStuckDriverIds = do
       where_ (r ^. RideStatus `in_` valList [Ride.INPROGRESS, Ride.NEW])
       pure (r ^. RideDriverId)
 
+getVehicles ::
+  Transactionable m =>
+  [DriverInformation] ->
+  m [Vehicle]
+getVehicles driverInfo = do
+  Esq.findAll $ do
+    driverInfos <- from $ table @DriverInformationT
+    where_ $
+      driverInfos ^. DriverInformationOnRide ==. val True
+        &&. not_ (driverInfos ^. DriverInformationDriverId `in_` rideSubQuery)
+    return driverInfos
+  where
+    rideSubQuery = subList_select $ do
+      r <- from $ table @RideT
+      where_ (r ^. RideStatus `in_` valList [Ride.INPROGRESS, Ride.NEW])
+      pure (r ^. RideDriverId)
+
 -- getVehicles ::
 --   Transactionable m =>
 --   [DriverInformation] ->
@@ -398,11 +414,11 @@ getOnRideStuckDriverIds = do
 --   where
 --     personsKeys = toKey . cast <$> fetchDriverIDsFromInfo driverInfo
 
-getVehicles ::
+getVehicles' ::
   L.MonadFlow m =>
   [DriverInformation] ->
   m [Vehicle]
-getVehicles driverInfo = do
+getVehicles' driverInfo = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamV.VehicleT
   let updatedMeshConfig = setMeshConfig modelName

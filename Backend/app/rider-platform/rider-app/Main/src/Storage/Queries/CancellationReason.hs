@@ -15,8 +15,10 @@
 module Storage.Queries.CancellationReason where
 
 import Domain.Types.CancellationReason
+import qualified Domain.Types.CancellationReason as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Storage.Beam.CancellationReason as BeamCR
 import Storage.Tabular.CancellationReason
 
 findAll :: Transactionable m => CancellationStage -> m [CancellationReason]
@@ -31,3 +33,27 @@ findAll cancStage =
           OnAssign -> cancellationReason ^. CancellationReasonOnAssign
     orderBy [desc $ cancellationReason ^. CancellationReasonPriority]
     return cancellationReason
+
+transformBeamCancellationReasonToDomain :: BeamCR.CancellationReason -> CancellationReason
+transformBeamCancellationReasonToDomain BeamCR.CancellationReasonT {..} = do
+  CancellationReason
+    { reasonCode = Domain.CancellationReasonCode reasonCode,
+      description = description,
+      enabled = enabled,
+      onSearch = onSearch,
+      onConfirm = onConfirm,
+      onAssign = onAssign,
+      priority = priority
+    }
+
+transformDomainCancellationReasonToBeam :: CancellationReason -> BeamCR.CancellationReason
+transformDomainCancellationReasonToBeam CancellationReason {..} =
+  BeamCR.defaultCancellationReason
+    { BeamCR.reasonCode = let (Domain.CancellationReasonCode rc) = reasonCode in rc,
+      BeamCR.description = description,
+      BeamCR.enabled = enabled,
+      BeamCR.onSearch = onSearch,
+      BeamCR.onConfirm = onConfirm,
+      BeamCR.onAssign = onAssign,
+      BeamCR.priority = priority
+    }

@@ -81,12 +81,6 @@ instance FromJSON BookingCancellationReason where
 instance ToJSON BookingCancellationReason where
   toJSON = A.genericToJSON A.defaultOptions
 
-instance FromJSON Domain.CancellationSource where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Domain.CancellationSource where
-  toJSON = A.genericToJSON A.defaultOptions
-
 deriving stock instance Show BookingCancellationReason
 
 bookingCancellationReasonTMod :: BookingCancellationReasonT (B.FieldModification (B.TableField BookingCancellationReasonT))
