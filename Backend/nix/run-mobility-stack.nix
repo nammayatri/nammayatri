@@ -3,58 +3,76 @@ _:
 {
   perSystem = { config, self', pkgs, lib, ... }:
     let
-      withLogFiles = lib.mapAttrs (name: proc:
-        proc // { log_location = "${name}.log"; });
-      cabalTargetForExe = lib.listToAttrs (lib.flatten (lib.mapAttrsToList
-        (name: info: map (exe: lib.nameValuePair exe "${name}:exe:${exe}") (lib.attrNames info.exes))
-        config.haskellProjects.default.outputs.packages));
-      exeGetters = {
-        nix = exe: self'.apps.${exe}.program;
-        cabal = exe: "set -x; cabal run ${cabalTargetForExe.${exe}}";
+      # Top-level common process-compose configuration
+      commonConfig = { config, ... }: {
+        # process-compose Swagger API is served here.
+        port = 7812;
       };
-      buildConfig = getExe:
-        withLogFiles {
-          # External services
-          beckn-gateway.command = lib.getExe config.haskellProjects.default.outputs.finalPackages.beckn-gateway;
-          mock-registry.command = lib.getExe config.haskellProjects.default.outputs.finalPackages.mock-registry;
-          # Local services
-          driver-offer-allocator-exe.command = getExe "driver-offer-allocator-exe";
-          driver-tracking-healthcheck-exe.command = getExe "driver-tracking-healthcheck-exe";
-          dynamic-offer-driver-app-exe.command = getExe "dynamic-offer-driver-app-exe";
-          image-api-helper-exe.command = getExe "image-api-helper-exe";
-          kafka-consumers-exe = {
-            command = getExe "kafka-consumers-exe";
-            environment = {
-              CONSUMER_TYPE = "AVAILABILITY_TIME";
-            };
-          };
-          mock-fcm-exe.command = getExe "mock-fcm-exe";
-          mock-google-exe.command = getExe "mock-google-exe";
-          mock-idfy-exe.command = getExe "mock-idfy-exe";
-          mock-sms-exe.command = getExe "mock-sms-exe";
-          provider-dashboard-exe.command = getExe "provider-dashboard-exe";
-          public-transport-rider-platform-exe.command = getExe "public-transport-rider-platform-exe";
-          public-transport-search-consumer-exe.command = getExe "public-transport-search-consumer-exe";
-          rider-app-exe.command = getExe "rider-app-exe";
-          rider-dashboard-exe.command = getExe "rider-dashboard-exe";
-          scheduler-example-app-exe.command = getExe "scheduler-example-app-exe";
-          scheduler-example-scheduler-exe.command = getExe "scheduler-example-scheduler-exe";
-          search-result-aggregator-exe.command = getExe "search-result-aggregator-exe";
-          special-zone-exe.command = getExe "special-zone-exe";
+      # process-compose configuration for each process
+      perProcessConfig = { name, ... }: {
+        log_location = "${name}.log";
+      };
+      # import the given module in each of the attrset values.
+      addModule = x: lib.mapAttrs (_: v: { imports = [ x v ]; });
+
+      # process-compose configs for running a Haskell executable via either 'nix run' or 'cabal run'.
+      runnerConfigs = {
+        nix = { name, ... }: {
+          command = self'.apps.${name}.program;
         };
-      common = {
-        port = 7812; # process-compose Swagger API is served here.
+        cabal = { name, ... }:
+          let
+            cabalTargetForExe = lib.listToAttrs (lib.flatten (lib.mapAttrsToList
+              (name: info: map (exe: lib.nameValuePair exe "${name}:exe:${exe}") (lib.attrNames info.exes))
+              config.haskellProjects.default.outputs.packages));
+            cabalTarget = cabalTargetForExe.${name};
+          in
+          {
+            command = "set -x; cabal run ${cabalTarget}";
+          };
       };
+
+      externalProcesses = {
+        beckn-gateway.command = lib.getExe config.haskellProjects.default.outputs.finalPackages.beckn-gateway;
+        mock-registry.command = lib.getExe config.haskellProjects.default.outputs.finalPackages.mock-registry;
+      };
+
+      mobilityStackProcesses = m: addModule m {
+        # The keys of this attrset correspond to the cabal executable names
+        driver-offer-allocator-exe = { };
+        driver-tracking-healthcheck-exe = { };
+        dynamic-offer-driver-app-exe = { };
+        image-api-helper-exe = { };
+        kafka-consumers-exe = {
+          environment = {
+            CONSUMER_TYPE = "AVAILABILITY_TIME";
+          };
+        };
+        mock-fcm-exe = { };
+        mock-google-exe = { };
+        mock-idfy-exe = { };
+        mock-sms-exe = { };
+        provider-dashboard-exe = { };
+        public-transport-rider-platform-exe = { };
+        public-transport-search-consumer-exe = { };
+        rider-app-exe = { };
+        rider-dashboard-exe = { };
+        scheduler-example-app-exe = { };
+        scheduler-example-scheduler-exe = { };
+        search-result-aggregator-exe = { };
+        special-zone-exe = { };
+      };
+
     in
     {
-      process-compose = {
+      process-compose = addModule commonConfig {
         run-mobility-stack-nix = {
-          imports = [ common ];
-          settings.processes = buildConfig exeGetters.nix;
+          settings.processes = addModule perProcessConfig
+            (externalProcesses // mobilityStackProcesses runnerConfigs.nix);
         };
         run-mobility-stack-dev = {
-          imports = [ common ];
-          settings.processes = buildConfig exeGetters.cabal;
+          settings.processes = addModule perProcessConfig
+            (externalProcesses // mobilityStackProcesses runnerConfigs.cabal);
         };
       };
     };
