@@ -151,6 +151,7 @@ data DriverInformationRes = DriverInformationRes
     enabled :: Bool,
     blocked :: Bool,
     aadhaarVerified :: Bool,
+    subscribed :: Bool,
     referralCode :: Maybe Text,
     organization :: DM.MerchantAPIEntity,
     language :: Maybe Maps.Language,
@@ -181,6 +182,7 @@ data DriverEntityRes = DriverEntityRes
     onRide :: Bool,
     enabled :: Bool,
     blocked :: Bool,
+    subscribed :: Bool,
     verified :: Bool,
     aadhaarVerified :: Bool,
     registeredAt :: UTCTime,
@@ -410,6 +412,7 @@ createDriverDetails personId adminId merchantId = do
             blocked = False,
             numOfLocks = 0,
             verified = False,
+            subscribed = True,
             aadhaarVerified = False,
             referralCode = Nothing,
             canDowngradeToSedan = False,
@@ -458,7 +461,8 @@ setActivity (personId, _) isActive mode = do
   let driverId = cast personId
   when (isActive || (isJust mode && (mode == Just DriverInfo.SILENT || mode == Just DriverInfo.ONLINE))) $ do
     driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
-    unless driverInfo.enabled $ throwError DriverAccountDisabled
+    unless (driverInfo.enabled) $ throwError DriverAccountDisabled
+    unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
     unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
   _ <- QDriverInformation.updateActivity driverId isActive mode
   driverStatus <- QDFS.getStatus personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -495,6 +499,7 @@ buildDriverEntityRes (person, driverInfo) = do
         enabled = driverInfo.enabled,
         blocked = driverInfo.blocked,
         verified = driverInfo.verified,
+        subscribed = driverInfo.subscribed,
         aadhaarVerified = driverInfo.aadhaarVerified,
         registeredAt = person.createdAt,
         language = person.language,

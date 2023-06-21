@@ -146,6 +146,7 @@ library
       Domain.Types.CancellationReason
       Domain.Types.Common
       Domain.Types.Driver.DriverFlowStatus
+      Domain.Types.DriverFee
       Domain.Types.DriverInformation
       Domain.Types.DriverLocation
       Domain.Types.DriverOnboarding.AadhaarOtp
@@ -214,6 +215,7 @@ library
       Lib.Utils
       Lib.UtilsTH
       SharedLogic.Allocator
+      SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal
@@ -327,6 +329,7 @@ library
       Storage.Queries.CallStatus
       Storage.Queries.CancellationReason
       Storage.Queries.Driver.DriverFlowStatus
+      Storage.Queries.DriverFee
       Storage.Queries.DriverInformation
       Storage.Queries.DriverLocation
       Storage.Queries.DriverOnboarding.AadhaarOtp
@@ -395,6 +398,7 @@ library
       Storage.Tabular.CallStatus
       Storage.Tabular.CancellationReason
       Storage.Tabular.Driver.DriverFlowStatus
+      Storage.Tabular.DriverFee
       Storage.Tabular.DriverInformation
       Storage.Tabular.DriverLocation
       Storage.Tabular.DriverOnboarding.AadhaarOtpReq

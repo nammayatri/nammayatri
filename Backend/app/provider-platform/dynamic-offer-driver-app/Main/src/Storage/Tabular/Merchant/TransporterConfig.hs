@@ -27,6 +27,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common (nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import Storage.Tabular.Merchant (MerchantTId)
 
 mkPersist
@@ -57,6 +58,11 @@ mkPersist
       actualRideDistanceDiffThreshold Centesimal
       upwardsRecomputeBuffer Centesimal
       approxRideDistanceDiffThreshold Centesimal
+      driverLeaderBoardExpiry Seconds Maybe
+      driverPaymentCycleBuffer Seconds
+      driverPaymentCycleDuration Seconds
+      driverPaymentCycleStartTime Seconds
+      driverPaymentReminderInterval Seconds
       minLocationAccuracy Double
       createdAt UTCTime
       updatedAt UTCTime
@@ -83,6 +89,10 @@ instance FromTType TransporterConfigT Domain.TransporterConfig where
               { fcmUrl = fcmUrl',
                 ..
               },
+          driverPaymentCycleBuffer = secondsToNominalDiffTime driverPaymentCycleBuffer,
+          driverPaymentCycleDuration = secondsToNominalDiffTime driverPaymentCycleDuration,
+          driverPaymentCycleStartTime = secondsToNominalDiffTime driverPaymentCycleStartTime,
+          driverPaymentReminderInterval = secondsToNominalDiffTime driverPaymentCycleStartTime,
           ..
         }
 
@@ -96,5 +106,9 @@ instance ToTType TransporterConfigT Domain.TransporterConfig where
         actualRideDistanceDiffThreshold = getHighPrecMeters actualRideDistanceDiffThreshold,
         upwardsRecomputeBuffer = getHighPrecMeters upwardsRecomputeBuffer,
         approxRideDistanceDiffThreshold = getHighPrecMeters approxRideDistanceDiffThreshold,
+        driverPaymentCycleBuffer = nominalDiffTimeToSeconds driverPaymentCycleBuffer,
+        driverPaymentCycleDuration = nominalDiffTimeToSeconds driverPaymentCycleDuration,
+        driverPaymentCycleStartTime = nominalDiffTimeToSeconds driverPaymentCycleStartTime,
+        driverPaymentReminderInterval = nominalDiffTimeToSeconds driverPaymentReminderInterval,
         ..
       }

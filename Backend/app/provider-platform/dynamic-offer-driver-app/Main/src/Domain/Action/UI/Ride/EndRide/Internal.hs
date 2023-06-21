@@ -30,9 +30,11 @@ import Data.Time hiding (getCurrentTime)
 import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
+import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.FareParameters as DFare
 import qualified Domain.Types.LeaderBoardConfig as LConfig
 import Domain.Types.Merchant
+import Domain.Types.Merchant.TransporterConfig
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RiderDetails as RD
@@ -46,6 +48,8 @@ import Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common hiding (getCurrentTime)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Scheduler.JobStorageType.DB.Queries (createJobIn)
+import SharedLogic.Allocator
 import SharedLogic.DriverLocation as DLoc
 import SharedLogic.FareCalculator
 import qualified SharedLogic.Ride as SRide
@@ -53,8 +57,10 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as CDI
 import Storage.CachedQueries.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
+import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as DriverStats
 import qualified Storage.Queries.FareParameters as QFare
@@ -67,15 +73,23 @@ import qualified Tools.Metrics as Metrics
 import Tools.Notifications (sendNotificationToDriver)
 
 endRideTransaction ::
-  (Metrics.CoreMetrics m, CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)) =>
+  ( Metrics.CoreMetrics m,
+    CacheFlow m r,
+    Hedis.HedisFlow m r,
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
+    HasField "maxShards" r Int
+  ) =>
   Id DP.Driver ->
   Id SRB.Booking ->
   Ride.Ride ->
   Maybe DFare.FareParameters ->
   Maybe (Id RD.RiderDetails) ->
+  DFare.FareParameters ->
   Id Merchant ->
   m ()
-endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId merchantId = do
+endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId newFareParams merchantId = do
   driverInfo <- CDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
@@ -93,7 +107,16 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId merchan
             driver <- SQP.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
             sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver.id driver.deviceToken
           Nothing -> pure ()
+
+  transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+  let govtCharges = newFareParams.govtCharges
+  let platformFee = case newFareParams.fareParametersDetails of
+        DFare.ProgressiveDetails _ -> Nothing
+        DFare.SlabDetails fpDetails -> fpDetails.platformFee
+  let driverRideFee = fromMaybe 0 govtCharges + fromMaybe 0 platformFee
   now <- getCurrentTime
+  lastDriverFee <- QDF.findLatestFeeByDriverId driverId
+  driverFee <- mkDriverFee now driverId driverRideFee transporterConfig
   let rideDate = getCurrentDate now
   Esq.runTransaction $ do
     whenJust mbRiderDetails $ \riderDetails ->
@@ -108,6 +131,13 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId merchan
     if driverInfo.active
       then QDFS.updateStatus ride.driverId DDFS.ACTIVE
       else QDFS.updateStatus ride.driverId DDFS.IDLE
+    unless (driverRideFee <= 0) $ do
+      case lastDriverFee of
+        Just ldFee ->
+          if now >= ldFee.startTime && now < ldFee.endTime
+            then QDF.updateFee ldFee.id (ldFee.totalAmount + driverRideFee)
+            else QDF.create driverFee
+        Nothing -> QDF.create driverFee
   DLoc.updateOnRide driverId False merchantId
   fork "Updating ZScore for driver" . Hedis.withNonCriticalRedis $ do
     driverZscore <- Hedis.zScore (makeDailyDriverLeaderBoardKey merchantId rideDate) $ ride.driverId.getId
@@ -119,6 +149,32 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId merchan
     updateDriverWeeklyZscore ride rideDate weekStartDate weekEndDate driverWeeklyZscore ride.chargeableDistance merchantId
   DLoc.updateOnRideCacheForCancelledOrEndRide driverId merchantId
   SRide.clearCache $ cast driverId
+  unless (driverRideFee <= 0) $ do
+    maxShards <- asks (.maxShards)
+    isPendingPaymentJobScheduled <- getPendingPaymentCache driverFee.endTime
+    let pendingPaymentJobTs = diffUTCTime driverFee.endTime now
+    case isPendingPaymentJobScheduled of
+      Nothing -> do
+        Esq.runNoTransaction $
+          createJobIn @_ @'SendPaymentReminderToDriver pendingPaymentJobTs maxShards $
+            SendPaymentReminderToDriverJobData
+              { startTime = driverFee.startTime,
+                endTime = driverFee.endTime
+              }
+        setPendingPaymentCache driverFee.endTime pendingPaymentJobTs
+      _ -> pure ()
+
+    let overduePaymentJobTs = diffUTCTime driverFee.payBy now
+    isOverduePaymentJobScheduled <- getOverduePaymentCache driverFee.endTime
+    case isOverduePaymentJobScheduled of
+      Nothing -> do
+        Esq.runNoTransaction $
+          createJobIn @_ @'UnsubscribeDriverForPaymentOverdue overduePaymentJobTs maxShards $
+            UnsubscribeDriverForPaymentOverdueJobData
+              { startTime = driverFee.startTime
+              }
+        setOverduePaymentCache driverFee.endTime overduePaymentJobTs
+      _ -> pure ()
 
 updateDriverDailyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, Metrics.CoreMetrics m, CacheFlow m r, Hedis.HedisFlow m r, MonadFlow m) => Ride.Ride -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> m ()
 updateDriverDailyZscore ride rideDate driverZscore chargeableDistance merchantId = do
@@ -241,3 +297,43 @@ pickWaypoints waypoints = do
 safeMod :: Int -> Int -> Int
 _ `safeMod` 0 = 0
 a `safeMod` b = a `mod` b
+
+mkDriverFee ::
+  ( MonadGuid m
+  ) =>
+  UTCTime ->
+  Id DP.Driver ->
+  Money ->
+  TransporterConfig ->
+  m DF.DriverFee
+mkDriverFee now driverId totalAmount transporterConfig = do
+  id <- generateGUID
+  let potentialStart = addUTCTime transporterConfig.driverPaymentCycleStartTime (UTCTime (utctDay now) (secondsToDiffTime 0))
+      startTime = if now >= potentialStart then potentialStart else addUTCTime (-1 * transporterConfig.driverPaymentCycleDuration) potentialStart
+      endTime = addUTCTime transporterConfig.driverPaymentCycleDuration startTime
+  return $
+    DF.DriverFee
+      { payBy = addUTCTime transporterConfig.driverPaymentCycleBuffer endTime,
+        status = DF.ONGOING,
+        createdAt = now,
+        updatedAt = now,
+        ..
+      }
+
+mkPendingPaymentProcessingKey :: UTCTime -> Text
+mkPendingPaymentProcessingKey timestamp = "DriverPendingPaymentProcessing:Timestamp:" <> show timestamp
+
+getPendingPaymentCache :: CacheFlow m r => UTCTime -> m (Maybe Bool)
+getPendingPaymentCache endTime = Hedis.get (mkPendingPaymentProcessingKey endTime)
+
+setPendingPaymentCache :: CacheFlow m r => UTCTime -> NominalDiffTime -> m ()
+setPendingPaymentCache endTime expTime = Hedis.setExp (mkPendingPaymentProcessingKey endTime) False (round expTime)
+
+mkOverduePaymentProcessingKey :: UTCTime -> Text
+mkOverduePaymentProcessingKey timestamp = "DriverOverduePaymentProcessing:Timestamp:" <> show timestamp
+
+getOverduePaymentCache :: CacheFlow m r => UTCTime -> m (Maybe Bool)
+getOverduePaymentCache endTime = Hedis.get (mkOverduePaymentProcessingKey endTime)
+
+setOverduePaymentCache :: CacheFlow m r => UTCTime -> NominalDiffTime -> m ()
+setOverduePaymentCache endTime expTime = Hedis.setExp (mkOverduePaymentProcessingKey endTime) False (round expTime)

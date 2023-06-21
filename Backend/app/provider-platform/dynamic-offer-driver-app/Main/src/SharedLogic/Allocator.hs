@@ -27,7 +27,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
 import Lib.Scheduler
 
-data AllocatorJobType = SendSearchRequestToDriver
+data AllocatorJobType = SendSearchRequestToDriver | SendPaymentReminderToDriver | UnsubscribeDriverForPaymentOverdue
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -36,6 +36,8 @@ showSingInstance ''AllocatorJobType
 instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo :: Sing (e :: AllocatorJobType) -> Text -> Maybe (AnyJobInfo AllocatorJobType)
   restoreAnyJobInfo SSendSearchRequestToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendSearchRequestToDriver jobData
+  restoreAnyJobInfo SSendPaymentReminderToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendPaymentReminderToDriver jobData
+  restoreAnyJobInfo SUnsubscribeDriverForPaymentOverdue jobData = AnyJobInfo <$> restoreJobInfo SUnsubscribeDriverForPaymentOverdue jobData
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { searchTryId :: Id DST.SearchTry,
@@ -47,3 +49,22 @@ data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
 instance JobInfoProcessor 'SendSearchRequestToDriver
 
 type instance JobContent 'SendSearchRequestToDriver = SendSearchRequestToDriverJobData
+
+data SendPaymentReminderToDriverJobData = SendPaymentReminderToDriverJobData
+  { startTime :: UTCTime,
+    endTime :: UTCTime
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SendPaymentReminderToDriver
+
+type instance JobContent 'SendPaymentReminderToDriver = SendPaymentReminderToDriverJobData
+
+newtype UnsubscribeDriverForPaymentOverdueJobData = UnsubscribeDriverForPaymentOverdueJobData
+  { startTime :: UTCTime
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'UnsubscribeDriverForPaymentOverdue
+
+type instance JobContent 'UnsubscribeDriverForPaymentOverdue = UnsubscribeDriverForPaymentOverdueJobData

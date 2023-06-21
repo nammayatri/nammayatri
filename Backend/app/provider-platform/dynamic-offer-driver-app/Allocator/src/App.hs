@@ -28,6 +28,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler
 import qualified Lib.Scheduler.JobStorageType.DB.Queries as QAllJ
 import SharedLogic.Allocator
+import SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers)
 import qualified Storage.CachedQueries.Merchant as Storage
 
@@ -45,6 +46,8 @@ allocatorHandle flowRt env =
       jobHandlers =
         emptyJobHandlerList
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendSearchRequestToDrivers)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendPaymentReminderToDriver)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . unsubscribeDriverForPaymentOverdue)
     }
 
 runDriverOfferAllocator ::

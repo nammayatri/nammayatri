@@ -14,7 +14,7 @@
 
 module Domain.Types.Merchant.TransporterConfig where
 
-import Data.Time (UTCTime)
+import Data.Time (NominalDiffTime, UTCTime)
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
 import EulerHS.Prelude hiding (id)
@@ -47,6 +47,10 @@ data TransporterConfigD u = TransporterConfig
     upwardsRecomputeBuffer :: HighPrecMeters,
     approxRideDistanceDiffThreshold :: HighPrecMeters,
     minLocationAccuracy :: Double,
+    driverPaymentCycleBuffer :: NominalDiffTime,
+    driverPaymentCycleDuration :: NominalDiffTime,
+    driverPaymentCycleStartTime :: NominalDiffTime,
+    driverPaymentReminderInterval :: NominalDiffTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

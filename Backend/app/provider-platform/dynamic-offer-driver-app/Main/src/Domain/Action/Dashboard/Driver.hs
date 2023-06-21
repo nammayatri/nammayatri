@@ -109,6 +109,7 @@ driverDocumentsInfo merchantShortId = do
           Common.enabled = incrIf fd.driverInfo.enabled acc.enabled,
           Common.blocked = incrIf (not fd.driverInfo.blocked) acc.blocked,
           Common.validDocuments = incrDocs (dlStatus == VALID) (rcStatus == VALID) acc.validDocuments,
+          Common.subscribed = incrIf fd.driverInfo.subscribed acc.subscribed,
           Common.invalidDocuments = incrDocs (dlStatus == INVALID) (rcStatus == INVALID) acc.invalidDocuments,
           Common.verificationPending = incrDocs (dlStatus == PENDING) (rcStatus == PENDING) acc.verificationPending,
           Common.verificationFailed = incrDocs (dlStatus == FAILED) (rcStatus == FAILED) acc.verificationFailed,
@@ -148,13 +149,13 @@ limitOffset mbLimit mbOffset =
   maybe identity take mbLimit . maybe identity drop mbOffset
 
 ---------------------------------------------------------------------
-listDrivers :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Flow Common.DriverListRes
-listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbBlocked mbSearchPhone mbVehicleNumberSearchString = do
+listDrivers :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Flow Common.DriverListRes
+listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhone mbVehicleNumberSearchString = do
   merchant <- findMerchantByShortId merchantShortId
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
   mbSearchPhoneDBHash <- getDbHash `traverse` mbSearchPhone
-  driversWithInfo <- Esq.runInReplica $ QPerson.findAllDriversWithInfoAndVehicle merchant.id limit offset mbVerified mbEnabled mbBlocked mbSearchPhoneDBHash mbVehicleNumberSearchString
+  driversWithInfo <- Esq.runInReplica $ QPerson.findAllDriversWithInfoAndVehicle merchant.id limit offset mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString
   items <- mapM buildDriverListItem driversWithInfo
   let count = length items
   -- should we consider filters in totalCount, e.g. count all enabled drivers?
@@ -179,6 +180,7 @@ buildDriverListItem (person, driverInformation, mbVehicle) = do
         enabled = driverInformation.enabled,
         blocked = driverInformation.blocked,
         verified = driverInformation.verified,
+        subscribed = driverInformation.subscribed,
         onRide = driverInformation.onRide,
         active = driverInformation.active
       }
@@ -376,6 +378,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         enabled = info.enabled,
         blocked = info.blocked,
         verified = info.verified,
+        subscribed = info.subscribed,
         aadhaarVerified = info.aadhaarVerified,
         canDowngradeToSedan = info.canDowngradeToSedan,
         canDowngradeToHatchback = info.canDowngradeToHatchback,

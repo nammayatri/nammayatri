@@ -64,6 +64,7 @@ type DriverListAPI =
     :> QueryParam "verified" Bool
     :> QueryParam "enabled" Bool
     :> QueryParam "blocked" Bool
+    :> QueryParam "subscribed" Bool
     :> QueryParam "phone" Text
     :> QueryParam "vehicleNumberSearchString" Text
     :> Get '[JSON] DriverListRes
@@ -85,6 +86,7 @@ data DriverListItem = DriverListItem
     phoneNo :: Maybe Text,
     enabled :: Bool,
     blocked :: Bool,
+    subscribed :: Bool,
     verified :: Bool,
     onRide :: Bool,
     active :: Bool
@@ -128,6 +130,7 @@ data DriverDocumentsInfoRes = DriverDocumentsInfoRes
     verified :: !Int,
     enabled :: !Int,
     blocked :: !Int,
+    subscribed :: !Int,
     validDocuments :: !DocumentsByStateInfo,
     invalidDocuments :: !DocumentsByStateInfo,
     verificationPending :: !DocumentsByStateInfo,
@@ -155,6 +158,7 @@ emptyInfo =
       verified = 0,
       enabled = 0,
       blocked = 0,
+      subscribed = 0,
       validDocuments = emptyDocumentsByStateInfo,
       invalidDocuments = emptyDocumentsByStateInfo,
       verificationPending = emptyDocumentsByStateInfo,
@@ -311,6 +315,7 @@ data DriverInfoRes = DriverInfoRes
     blocked :: Bool,
     verified :: Bool,
     aadhaarVerified :: Bool,
+    subscribed :: Bool,
     canDowngradeToSedan :: Bool,
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
