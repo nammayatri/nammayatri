@@ -168,6 +168,27 @@ instance IsHTTPError DriverError where
 
 instance IsAPIError DriverError
 
+data AadhaarError
+  = AadhaarAlreadyVerified
+  | TransactionIdNotFound
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''AadhaarError
+
+instance IsBaseError AadhaarError where
+  toMessage AadhaarAlreadyVerified = Just " Driver aadhar is already verified."
+  toMessage TransactionIdNotFound = Just " transaction id not found for this verification"
+
+instance IsHTTPError AadhaarError where
+  toErrorCode = \case
+    AadhaarAlreadyVerified -> "AADHAAR_ALREADY_VERIFIED"
+    TransactionIdNotFound -> "TRANSACTION_ID_NOT_FOUND"
+  toHttpCode = \case
+    AadhaarAlreadyVerified -> E400
+    TransactionIdNotFound -> E400
+
+instance IsAPIError AadhaarError
+
 --
 newtype OfferError
   = NotAllowedExtraFee Text

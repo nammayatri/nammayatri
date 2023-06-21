@@ -54,6 +54,7 @@ generateAadhaarOtp isDashboard mbMerchant personId req = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   when driverInfo.blocked $ throwError DriverAccountBlocked
+  when (driverInfo.aadhaarVerified) $ throwError AadhaarAlreadyVerified
   whenJust mbMerchant $ \merchant -> do
     -- merchant access checking
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
@@ -85,6 +86,7 @@ verifyAadhaarOtp mbMerchant personId req = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound (getId personId))
   driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound (getId personId))
   when (driverInfo.blocked) $ throwError DriverAccountBlocked
+  when (driverInfo.aadhaarVerified) $ throwError AadhaarAlreadyVerified
   whenJust mbMerchant $ \merchant -> do
     -- merchant access checking
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound (getId personId))
@@ -109,7 +111,7 @@ verifyAadhaarOtp mbMerchant personId req = do
           void $ CQDriverInfo.updateAadhaarVerifiedState (cast personId) True
         else throwError $ InternalError "Aadhaar Verification failed, Please try again"
       pure res
-    Nothing -> throwError $ InternalError "transaction Id not found ,Try again"
+    Nothing -> throwError TransactionIdNotFound
 
 makeTransactionNumberKey :: Id Person.Person -> Text
 makeTransactionNumberKey id = "AadhaarVerificationTransactionId:PersonId-" <> id.getId
