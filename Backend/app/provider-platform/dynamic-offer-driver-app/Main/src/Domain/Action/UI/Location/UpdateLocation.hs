@@ -24,6 +24,7 @@ module Domain.Action.UI.Location.UpdateLocation
 where
 
 import qualified Data.List.NonEmpty as NE
+import Domain.Types.DriverFee (DriverFeeStatus (PAYMENT_OVERDUE))
 import qualified Domain.Types.DriverInformation as DDInfo
 import Domain.Types.DriverLocation (DriverLocation)
 import qualified Domain.Types.Merchant as DM
@@ -33,6 +34,7 @@ import Environment (Flow)
 import GHC.Records.Extra
 import Kernel.External.Maps.Types
 import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer (produceMessage)
@@ -52,7 +54,10 @@ import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.DriverInformation as DInfo
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
+import Storage.Queries.DriverFee (findOldestFeeByStatus)
+import Storage.Queries.DriverInformation (updateSubscription)
 import qualified Storage.Queries.Person as QP
+import Tools.Error (DriverError (DriverUnsubscribed))
 import Tools.Metrics (CoreMetrics)
 
 type UpdateLocationReq = NonEmpty Waypoint
@@ -143,13 +148,20 @@ updateLocationHandler ::
     HasFlowEnv m r '["driverLocationUpdateTopic" ::: Text],
     MonadTime m,
     CacheFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r
   ) =>
   UpdateLocationHandle m ->
   UpdateLocationReq ->
   m APISuccess
 updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLocationUpdate" $
   withLogTag ("driverId-" <> driver.id.getId) $ do
+    lastPaymentOverdue <- runInReplica $ findOldestFeeByStatus (cast driver.id) PAYMENT_OVERDUE
+    case lastPaymentOverdue of
+      Nothing -> pure ()
+      Just _ -> do
+        Esq.runNoTransaction $ updateSubscription False (cast driver.id)
+        throwError DriverUnsubscribed
     driverInfo <- DInfo.findById (cast driver.id) >>= fromMaybeM (PersonNotFound driver.id.getId)
     logInfo $ "got location updates: " <> getId driver.id <> " " <> encodeToText waypoints
     checkLocationUpdatesRateLimit driver.id

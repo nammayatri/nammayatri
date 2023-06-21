@@ -16,7 +16,6 @@
 module Storage.Queries.DriverInformation where
 
 import Control.Applicative (liftA2)
-import Domain.Types.DriverInformation
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverLocation as DriverLocation
 import Domain.Types.Merchant (Merchant)
@@ -306,6 +305,17 @@ updateDowngradingOptions personId canDowngradeToSedan canDowngradeToHatchback ca
         DriverInformationUpdatedAt =. val now
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey personId)
+
+updateSubscription :: Bool -> Id Person.Driver -> SqlDB ()
+updateSubscription isSubscribed driverId = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverInformationSubscribed =. val isSubscribed,
+        DriverInformationUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
 updateAadhaarVerifiedState :: Id Person.Driver -> Bool -> SqlDB ()
 updateAadhaarVerifiedState personId isVerified = do
