@@ -989,6 +989,8 @@ validate (personId, _) phoneNumber = do
     let otpHash = smsCfg.credConfig.otpHash
     let altPhoneNumber = phoneNumber.mobileCountryCode <> phoneNumber.alternateNumber
     let sender = smsCfg.sender
+    let smsType = Just Sms.Transactional
+    let priority = Just Sms.High
     withLogTag ("personId_" <> getId person.id) $ do
       message <-
         MessageBuilder.buildSendAlternateNumberOTPMessage person.merchantId $
@@ -996,7 +998,7 @@ validate (personId, _) phoneNumber = do
             { otp = otpCode,
               hash = otpHash
             }
-      Sms.sendSMS person.merchantId (Sms.SendSMSReq message altPhoneNumber sender)
+      Sms.sendSMS person.merchantId (Sms.SendSMSReq message altPhoneNumber sender smsType priority)
         >>= Sms.checkSmsResult
   let verified = False
   cacheAlternateNumberInfo personId phoneNumber.alternateNumber otpCode altNoAttempt verified
@@ -1080,6 +1082,8 @@ resendOtp (personId, merchantId) req = do
   let otpHash = smsCfg.credConfig.otpHash
       altphoneNumber = counCode <> altNumber
       sender = smsCfg.sender
+      smsType = Just Sms.Transactional
+      priority = Just Sms.High
   withLogTag ("personId_" <> getId personId) $ do
     message <-
       MessageBuilder.buildSendAlternateNumberOTPMessage merchantId $
@@ -1087,7 +1091,7 @@ resendOtp (personId, merchantId) req = do
           { otp = otpCode,
             hash = otpHash
           }
-    Sms.sendSMS merchantId (Sms.SendSMSReq message altphoneNumber sender)
+    Sms.sendSMS merchantId (Sms.SendSMSReq message altphoneNumber sender smsType priority)
       >>= Sms.checkSmsResult
   updAttempts <- Redis.decrby (makeAlternateNumberAttemptsKey personId) 1
   let updAttempt = fromIntegral updAttempts

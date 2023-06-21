@@ -209,6 +209,8 @@ auth req mbBundleVersion mbClientVersion = do
         let otpHash = smsCfg.credConfig.otpHash
             phoneNumber = countryCode <> mobileNumber
             sender = smsCfg.sender
+            smsType = Just Sms.Transactional
+            priority = Just Sms.High
         withLogTag ("personId_" <> getId person.id) $ do
           message <-
             MessageBuilder.buildSendOTPMessage merchant.id $
@@ -216,7 +218,7 @@ auth req mbBundleVersion mbClientVersion = do
                 { otp = otpCode,
                   hash = otpHash
                 }
-          Sms.sendSMS person.merchantId (Sms.SendSMSReq message phoneNumber sender)
+          Sms.sendSMS person.merchantId (Sms.SendSMSReq message phoneNumber sender smsType priority)
             >>= Sms.checkSmsResult
     else logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
   return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing
@@ -468,6 +470,8 @@ resend tokenId = do
   let otpHash = smsCfg.credConfig.otpHash
       phoneNumber = countryCode <> mobileNumber
       sender = smsCfg.sender
+      smsType = Just Sms.Transactional
+      priority = Just Sms.High
   withLogTag ("personId_" <> entityId) $ do
     message <-
       MessageBuilder.buildSendOTPMessage person.merchantId $
@@ -475,7 +479,7 @@ resend tokenId = do
           { otp = otpCode,
             hash = otpHash
           }
-    Sms.sendSMS person.merchantId (Sms.SendSMSReq message phoneNumber sender)
+    Sms.sendSMS person.merchantId (Sms.SendSMSReq message phoneNumber sender smsType priority)
       >>= Sms.checkSmsResult
   DB.runTransaction $ RegistrationToken.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1) authType Nothing Nothing

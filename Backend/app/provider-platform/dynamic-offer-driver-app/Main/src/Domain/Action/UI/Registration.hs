@@ -151,6 +151,8 @@ auth req mbBundleVersion mbClientVersion = do
     let otpCode = SR.authValueHash token
         phoneNumber = countryCode <> mobileNumber
         sender = smsCfg.sender
+        smsType = Just Sms.Transactional
+        priority = Just Sms.High
     withLogTag ("personId_" <> getId person.id) $ do
       message <-
         MessageBuilder.buildSendOTPMessage person.merchantId $
@@ -158,7 +160,7 @@ auth req mbBundleVersion mbClientVersion = do
             { otp = otpCode,
               hash = otpHash
             }
-      Sms.sendSMS person.merchantId (Sms.SendSMSReq message phoneNumber sender)
+      Sms.sendSMS person.merchantId (Sms.SendSMSReq message phoneNumber sender smsType priority)
         >>= Sms.checkSmsResult
   let attempts = SR.attempts token
       authId = SR.id token
@@ -372,6 +374,8 @@ resend tokenId = do
   let otpHash = smsCfg.credConfig.otpHash
       phoneNumber = countryCode <> mobileNumber
       sender = smsCfg.sender
+      smsType = Just Sms.Transactional
+      priority = Just Sms.High
   withLogTag ("personId_" <> entityId) $ do
     message <-
       MessageBuilder.buildSendOTPMessage person.merchantId $
@@ -379,7 +383,7 @@ resend tokenId = do
           { otp = otpCode,
             hash = otpHash
           }
-    Sms.sendSMS person.merchantId (Sms.SendSMSReq message phoneNumber sender)
+    Sms.sendSMS person.merchantId (Sms.SendSMSReq message phoneNumber sender smsType priority)
       >>= Sms.checkSmsResult
   Esq.runTransaction $ QR.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1)
