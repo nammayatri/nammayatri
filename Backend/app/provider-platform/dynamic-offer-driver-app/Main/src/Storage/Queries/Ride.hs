@@ -113,23 +113,6 @@ findActiveByRBId (Id rbId) = do
         Left _ -> pure Nothing
     Nothing -> pure Nothing
 
-findAllRidesBookingsByRideId :: L.MonadFlow m => Id Merchant -> [Id Ride] -> m [(Ride, Booking)]
-findAllRidesBookingsByRideId (Id merchantId) rideIds = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamR.RideT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      res <-
-        KV.findAllWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          conditions
-      case res of
-        Right x -> traverse transformBeamRideToDomain x
-        Left _ -> pure []
-    Nothing -> pure []
-
 findAllRidesWithSeConditionsCreatedAtDesc :: L.MonadFlow m => [Se.Clause Postgres BeamR.RideT] -> m [Ride]
 findAllRidesWithSeConditionsCreatedAtDesc conditions = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -145,6 +128,58 @@ findAllRidesWithSeConditionsCreatedAtDesc conditions = do
           (Se.Desc BeamR.createdAt)
           Nothing
           Nothing
+      case res of
+        Right x -> traverse transformBeamRideToDomain x
+        Left _ -> pure []
+    Nothing -> pure []
+
+findAllDriverInfromationFromRides :: L.MonadFlow m => [Ride] -> m [DriverInformation]
+findAllDriverInfromationFromRides rides = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDI.DriverInformationT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> either (pure []) (QDI.transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamDI.driverId $ Se.In $ getId . DR.driverId <$> rides]]
+    Nothing -> pure []
+
+findAllBookingsWithSeConditions :: L.MonadFlow m => [Se.Clause Postgres BeamB.BookingT] -> m [Booking]
+findAllBookingsWithSeConditions conditions = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamB.BookingT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      res <- KV.findAllWithKVConnector dbConf' updatedMeshConfig conditions
+      case res of
+        Right x -> catMaybes <$> traverse QB.transformBeamBookingToDomain x
+        _ -> pure []
+    Nothing -> pure []
+
+findAllBookingsWithSeConditionsCreatedAtDesc :: L.MonadFlow m => [Se.Clause Postgres BeamB.BookingT] -> m [Booking]
+findAllBookingsWithSeConditionsCreatedAtDesc conditions = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamB.BookingT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      res <- KV.findAllWithOptionsKVConnector dbConf' updatedMeshConfig conditions (Se.Desc BeamB.createdAt) Nothing Nothing
+      case res of
+        Right x -> catMaybes <$> traverse QB.transformBeamBookingToDomain x
+        _ -> pure []
+    Nothing -> pure []
+
+findAllRidesWithSeConditions :: L.MonadFlow m => [Se.Clause Postgres BeamR.RideT] -> m [Ride]
+findAllRidesWithSeConditions conditions = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamR.RideT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      res <-
+        KV.findAllWithKVConnector
+          dbConf'
+          updatedMeshConfig
+          conditions
       case res of
         Right x -> traverse transformBeamRideToDomain x
         Left _ -> pure []
