@@ -63,19 +63,15 @@ findByMerchantIdAndDocumentType merchantId documentType = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamOnboardingDocumentConfigToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamODC.merchantId $ Se.Eq $ getId merchantId, Se.Is BeamODC.documentType $ Se.Eq documentType]]
     Nothing -> pure Nothing
 
--- update :: OnboardingDocumentConfig -> SqlDB ()
--- update config = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ OnboardingDocumentConfigCheckExtraction =. val config.checkExtraction,
---         OnboardingDocumentConfigCheckExpiry =. val config.checkExpiry,
---         OnboardingDocumentConfigValidVehicleClasses =. val (PostgresList config.validVehicleClasses),
---         OnboardingDocumentConfigVehicleClassCheckType =. val config.vehicleClassCheckType,
---         OnboardingDocumentConfigUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. OnboardingDocumentConfigTId ==. val (toKey (config.merchantId, config.documentType))
+--TODO @Vijay Gupta, update the following function.
+findAllByMerchantId :: L.MonadFlow m => Id Merchant -> m [OnboardingDocumentConfig]
+findAllByMerchantId merchantId = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamODC.OnboardingDocumentConfigT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbCOnf' -> either (pure []) (transformBeamOnboardingDocumentConfigToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamODC.merchantId $ Se.Eq $ getId merchantId]
+    Nothing -> pure []
 
 update :: (L.MonadFlow m, MonadTime m) => OnboardingDocumentConfig -> m (MeshResult ())
 update config = do

@@ -26,6 +26,7 @@ import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
+import qualified Domain.Types.FareProduct as FareProductD
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
@@ -52,6 +53,7 @@ data SearchRequestSpecialZoneT f = SearchRequestSpecialZoneT
     providerId :: B.C f Text,
     fromLocationId :: B.C f Text,
     toLocationId :: B.C f Text,
+    area :: B.C f (Maybe FareProductD.Area),
     bapId :: B.C f Text,
     bapUri :: B.C f Text,
     estimatedDistance :: B.C f Meters,
@@ -99,6 +101,7 @@ searchRequestSpecialZoneTMod =
       providerId = B.fieldNamed "provider_id",
       fromLocationId = B.fieldNamed "from_location_id",
       toLocationId = B.fieldNamed "to_location_id",
+      area = B.fieldNamed "area",
       bapId = B.fieldNamed "bap_id",
       bapUri = B.fieldNamed "bap_uri",
       estimatedDistance = B.fieldNamed "estimated_distance",
@@ -129,6 +132,7 @@ defaultSearchRequestSpecialZone = do
       providerId = "",
       fromLocationId = "",
       toLocationId = "",
+      area = Nothing,
       bapId = "",
       bapUri = "",
       estimatedDistance = "",

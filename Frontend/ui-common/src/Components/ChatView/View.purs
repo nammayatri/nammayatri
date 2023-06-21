@@ -1,14 +1,14 @@
-{- 
+{-
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 module Components.ChatView.View where
@@ -28,19 +28,19 @@ import Data.Maybe (fromMaybe, Maybe(..))
 import JBridge (renderBase64Image, scrollToBottom, addMediaFile)
 import Components.ChatView.Controller (Action(..), Config(..), ChatComponent)
 import Common.Types.App
-import Styles.Colors (white900) as Color
+import Common.Styles.Colors (white900) as Color
 import PrestoDOM.Elements.Elements (progressBar)
 import PrestoDOM.Events (afterRender)
 
-view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
-view push config = 
+view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+view push config =
   linearLayout
   [ height if config.spanParent then MATCH_PARENT else (V 410)
   , width MATCH_PARENT
   , orientation VERTICAL
   , alignParentBottom "true,-1"
   , clickable true
-  , cornerRadii $ Corners 24.0 true true false false 
+  , cornerRadii $ Corners 24.0 true true false false
   , gravity BOTTOM
   , stroke if config.showStroke then ("1," <> config.grey800) else ""
   , background config.white900
@@ -86,12 +86,12 @@ chatHeaderView config push =
   ]
 
 headerNameView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-headerNameView config push = 
+headerNameView config push =
   linearLayout
   [ height WRAP_CONTENT
-  , width (V (((screenWidth unit)/100)* (getConfig config.userConfig.appType).margin )) 
+  , width (V (((screenWidth unit)/100)* (getConfig config.userConfig.appType).margin ))
   , orientation VERTICAL
-  ][textView 
+  ][textView
     [ text config.userConfig.userName
     , textSize FontSize.a_16
     , color config.black800
@@ -111,7 +111,7 @@ headerNameView config push =
   ]
 
 headerActionView ::forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-headerActionView config push = 
+headerActionView config push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -169,16 +169,16 @@ headerActionView config push =
        , textSize FontSize.a_16
        , fontStyle $ FontStyle.medium LanguageStyle
        ]
-    ]  
+    ]
   ]
 
 chatBodyView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 chatBodyView config push =
-  if (length config.messages) == 0 then 
+  if (length config.messages) == 0 then
     emptyChatView config push
-  else 
+  else
     chatView config push
-  
+
 chatView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 chatView config push =
   linearLayout
@@ -190,7 +190,7 @@ chatView config push =
       , width MATCH_PARENT
       , id (getNewIDWithTag "ChatScrollView")
       , scrollBarY false
-      ] 
+      ]
       [ linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
@@ -198,7 +198,7 @@ chatView config push =
         ][linearLayout
          [ height WRAP_CONTENT
          , width MATCH_PARENT
-         , orientation VERTICAL 
+         , orientation VERTICAL
          , padding (PaddingHorizontal 16 16)
          ](mapWithIndex (\index item -> chatComponent config push item (if (config.messagesSize /= "-1") then (show index == config.messagesSize ) else (index == (length config.messages - 1))) (config.userConfig.appType)) (config.messages))
          , if (length config.suggestionsList) > 0 then suggestionsView config push else dummyTextView
@@ -221,7 +221,7 @@ chatFooterView config push =
      , background config.grey900
      , margin $ MarginTop 16
      ][]
-    , linearLayout 
+    , linearLayout
       [ height $ V 48
       , width MATCH_PARENT
       , padding (PaddingHorizontal 16 8)
@@ -232,7 +232,7 @@ chatFooterView config push =
       , orientation HORIZONTAL
       ][ editText
          [ weight 1.0
-         , height $ V 48 
+         , height $ V 48
          , id (getNewIDWithTag "ChatInputEditText")
          , background config.grey800
          , cornerRadius 24.0
@@ -252,25 +252,25 @@ chatFooterView config push =
          , onClick push (const (SendMessage))
          ][ imageView
             [ imageWithFallback if config.sendMessageActive then "ic_send_blue,https://assets.juspay.in/nammayatri/images/common/ic_send_blue.png" else "ic_send,https://assets.juspay.in/nammayatri/images/common/ic_send.png"
-            , height $ V 20 
-            , width $ V 20 
-            ] 
+            , height $ V 20
+            , width $ V 20
+            ]
          ]
       ]
-  ]  
+  ]
 
 emptyChatView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 emptyChatView config push =
   linearLayout
   [ height if config.spanParent then MATCH_PARENT else (V 240)
   , width MATCH_PARENT
-  ] 
+  ]
   [ linearLayout
      [ height WRAP_CONTENT
      , width MATCH_PARENT
      , orientation VERTICAL
      , background config.white900
-     ]([ textView 
+     ]([ textView
        [ text $ if config.userConfig.appType == "Customer" && null config.suggestionsList && null config.messages then config.emptyChatHeader else config.suggestionHeader
        , color config.black700
        , textSize FontSize.a_14
@@ -282,8 +282,8 @@ emptyChatView config push =
        , fontStyle $ FontStyle.medium LanguageStyle
        ]
      ] <> if (length config.suggestionsList) > 0 then [suggestionsView config push] else [])
-  ] 
-  
+  ]
+
 suggestionsView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 suggestionsView config push =
     PrestoAnim.animationSet [ fadeInWithDelay config.suggestionDelay if config.spanParent then true else false ]
@@ -304,14 +304,14 @@ suggestionsView config push =
       , orientation VERTICAL
       ] (mapWithIndex (\index item -> quickMessageView config item (if index == (length config.suggestionsList-1) then true else false) push) (config.suggestionsList))
     ]
-    
+
 dummyTextView :: forall w . PrestoDOM (Effect Unit) w
-dummyTextView = 
+dummyTextView =
   textView
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   ]
-  
+
 quickMessageView :: forall w. Config -> String -> Boolean -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 quickMessageView config message isLastItem push =
   linearLayout
@@ -351,7 +351,7 @@ chatComponent state push config isLastItem userType =
   , gravity (getChatConfig state config.sentBy isLastItem (STR.length config.timeStamp > 0)).gravity
   , orientation VERTICAL
   , onAnimationEnd (\action ->
-      if isLastItem then do
+      if isLastItem || state.spanParent then do
         _ <- scrollToBottom (getNewIDWithTag "ChatScrollView")
         pure unit
       else
@@ -431,20 +431,20 @@ chatComponent state push config isLastItem userType =
        , fontStyle $ FontStyle.regular LanguageStyle
        ]
   ]
-  
+
 getConfig :: String -> {margin :: Int, customerVisibility :: Visibility, driverVisibility :: Visibility}
-getConfig appType = 
+getConfig appType =
   if appType == "Customer" then
     {
       margin : 60,
       customerVisibility : VISIBLE,
-      driverVisibility : GONE 
+      driverVisibility : GONE
     }
-  else 
+  else
     {
       margin : 30,
       customerVisibility : GONE,
-      driverVisibility : VISIBLE 
+      driverVisibility : VISIBLE
     }
 
 getChatConfig :: Config -> String -> Boolean -> Boolean -> {margin :: Margin, gravity :: Gravity, background :: String, cornerRadii :: Corners, textColor :: String}

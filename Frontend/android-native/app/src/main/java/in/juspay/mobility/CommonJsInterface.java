@@ -61,6 +61,8 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Base64;
@@ -1484,8 +1486,11 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                 Intent httpIntent = new Intent(Intent.ACTION_VIEW);
                 httpIntent.setData(Uri.parse(url));
                 activity.startActivity(httpIntent);
-            } catch (Exception e) {
-                Log.e(LOG_TAG, "Exception occurred while calling WebView", e);
+            } catch (ActivityNotFoundException e) {
+                Toast.makeText(context, context.getString(R.string.no_enabled_browser), Toast.LENGTH_LONG).show();
+                firebaseLogEvent("exception_no_activity_found_for_intent");
+            } catch (Exception e){
+                firebaseLogEvent("exception_in_openUrlInApp");
             }
         });
     }
@@ -2575,6 +2580,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         regToken = sharedPref.getString(context.getResources().getString(R.string.REGISTERATION_TOKEN), "null");
         baseUrl = sharedPref.getString("BASE_URL", "null");
         String version = sharedPref.getString("VERSION_NAME", "null");
+        String deviceDetails = sharedPref.getString("DEVICE_DETAILS", "null");
         System.out.println("BaseUrl" + baseUrl);
         try {
             String url = baseUrl + "/serviceability/origin";
@@ -2583,6 +2589,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             connection.setRequestProperty("Content-Type", "application/json");
             connection.setRequestProperty("token", regToken);
             connection.setRequestProperty("x-client-version", version);
+            connection.setRequestProperty("x-device",deviceDetails);
 
             JSONObject payload = new JSONObject();
 
@@ -3135,7 +3142,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     sendIntent.setType("text/plain");
                    if (thumbnailBitmap != null &&  Build.VERSION.SDK_INT > 28) {
                        Uri thumbnailUri = getImageUri(context, thumbnailBitmap);
-                       ClipData clipData = ClipData.newUri(context.getContentResolver(), "Thumbnail Image", thumbnailUri);
+                       ClipData clipData = ClipData.newUri(context.getContentResolver(), "ThumbnailImage", thumbnailUri);
                        sendIntent.setClipData(clipData);
                        sendIntent.setType("image/*");
                    }
@@ -3156,7 +3163,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         try {
             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, bytes);
-            String path = MediaStore.Images.Media.insertImage(context.getContentResolver(), bitmap, "Thumbnail Image", null);
+            String path = MediaStore.Images.Media.insertImage(context.getContentResolver(), bitmap, "ThumbnailImage", null);
             return Uri.parse(path);
         } catch (Exception e) {
             return null;
@@ -3438,8 +3445,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     }
                     JSONObject sourceCoordinates = (JSONObject) coordinates.get(0);
                     JSONObject destCoordinates = (JSONObject) coordinates.get(coordinates.length()-1);
-                    double sourceLong = sourceCoordinates.getDouble("lat");
-                    double sourceLat = sourceCoordinates.getDouble("lng");
+                    double sourceLong = sourceCoordinates.getDouble("lng");
+                    double sourceLat = sourceCoordinates.getDouble("lat");
                     double destLat = destCoordinates.getDouble("lat");
                     double destLong = destCoordinates.getDouble("lng");
                     if (sourceLat != 0.0 && sourceLong != 0.0 && destLat != 0.0 && destLong != 0.0) {
@@ -4243,10 +4250,12 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     private String getAPIResponse(String url) {
         if (url.equals("") || url == null) return "";
         StringBuilder result = new StringBuilder();
+        String deviceDetails = sharedPref.getString("DEVICE_DETAILS", "null");
         try {
             HttpURLConnection connection = (HttpURLConnection) (new URL(url).openConnection());
             connection.setRequestMethod("GET");
             connection.setRequestProperty("token", getKeyInNativeSharedPrefKeys("REGISTERATION_TOKEN"));
+            connection.setRequestProperty("x-device",deviceDetails);
             connection.connect();
             int respCode = connection.getResponseCode();
             InputStreamReader respReader;
@@ -4301,6 +4310,16 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
                     storeCallBContact, contacts);
             dynamicUII.addJsToWebView(javascript);
+        }
+    }
+
+    @JavascriptInterface
+    public void performHapticFeedback() {
+        Vibrator vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+
+        if (vibrator != null && vibrator.hasVibrator()) {
+            VibrationEffect effect = VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE);
+            vibrator.vibrate(effect);
         }
     }
 

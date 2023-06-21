@@ -44,7 +44,7 @@ import Screens.Types as ST
 import Services.API (RideBookingListRes(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
-import Types.App (GlobalState)
+import Types.App (GlobalState, defaultGlobalState)
 import Screens.CustomerUtils.MyRidesScreen.ComponentConfig
 
 screen :: ST.MyRidesScreenState -> PrestoList.ListItem -> Screen Action ST.MyRidesScreenState ScreenOutput
@@ -58,7 +58,7 @@ screen initialState listItemm =
   , globalEvents : [
        globalOnScroll "MyRidesScreen",
         ( \push -> do
-                    _ <- launchAff $ EHC.flowRunner $ getPastRides RideBookingListAPIResponseAction push initialState
+                    _ <- launchAff $ EHC.flowRunner defaultGlobalState $ getPastRides RideBookingListAPIResponseAction push initialState
                     pure $ pure unit
         )
   ]

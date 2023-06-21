@@ -34,16 +34,10 @@ library
       API.ProviderPlatform.DynamicOfferDriver.Message
       API.ProviderPlatform.DynamicOfferDriver.Ride
       API.ProviderPlatform.DynamicOfferDriver.Volunteer
-      API.ProviderPlatform.StaticOfferDriver
-      API.ProviderPlatform.StaticOfferDriver.Booking
-      API.ProviderPlatform.StaticOfferDriver.Driver
-      API.ProviderPlatform.StaticOfferDriver.Merchant
-      API.ProviderPlatform.StaticOfferDriver.Ride
       API.SpecialZone
       App
       ProviderPlatformClient.DynamicOfferDriver
       ProviderPlatformClient.SpecialZone
-      ProviderPlatformClient.StaticOfferDriver
       RiderPlatformClient.RiderApp
   other-modules:
       Paths_provider_dashboard
@@ -108,7 +102,6 @@ library
     , servant-openapi3
     , servant-server
     , special-zone
-    , static-offer-driver-app
     , template-haskell
     , text
     , time

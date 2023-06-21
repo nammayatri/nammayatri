@@ -27,33 +27,47 @@ import Servant hiding (Unauthorized, throwError)
 type API =
   "merchant"
     :> ( Common.MerchantUpdateAPI
+           :<|> Common.MerchantCommonConfigAPI
            :<|> Common.MerchantCommonConfigUpdateAPI
+           :<|> Common.DriverPoolConfigAPI
            :<|> Common.DriverPoolConfigUpdateAPI
            :<|> Common.DriverPoolConfigCreateAPI
+           :<|> Common.DriverIntelligentPoolConfigAPI
            :<|> Common.DriverIntelligentPoolConfigUpdateAPI
+           :<|> Common.OnboardingDocumentConfigAPI
            :<|> Common.OnboardingDocumentConfigUpdateAPI
            :<|> Common.OnboardingDocumentConfigCreateAPI
+           :<|> Common.ServiceUsageConfigAPI
            :<|> Common.MapsServiceConfigUpdateAPI
            :<|> Common.MapsServiceUsageConfigUpdateAPI
            :<|> Common.SmsServiceConfigUpdateAPI
            :<|> Common.SmsServiceUsageConfigUpdateAPI
            :<|> Common.VerificationServiceConfigUpdateAPI
+           :<|> Common.CreateFPDriverExtraFee
+           :<|> Common.UpdateFPDriverExtraFee
        )
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   merchantUpdate merchantId
+    :<|> merchantCommonConfig merchantId
     :<|> merchantCommonConfigUpdate merchantId
+    :<|> driverPoolConfig merchantId
     :<|> driverPoolConfigUpdate merchantId
     :<|> driverPoolConfigCreate merchantId
+    :<|> driverIntelligentPoolConfig merchantId
     :<|> driverIntelligentPoolConfigUpdate merchantId
+    :<|> onboardingDocumentConfig merchantId
     :<|> onboardingDocumentConfigUpdate merchantId
     :<|> onboardingDocumentConfigCreate merchantId
+    :<|> serviceUsageConfig merchantId
     :<|> mapsServiceConfigUpdate merchantId
     :<|> mapsServiceUsageConfigUpdate merchantId
     :<|> smsServiceConfigUpdate merchantId
     :<|> smsServiceUsageConfigUpdate merchantId
     :<|> verificationServiceConfigUpdate merchantId
+    :<|> createFPDriverExtraFee merchantId
+    :<|> updateFPDriverExtraFee merchantId
 
 merchantUpdate ::
   ShortId DM.Merchant ->
@@ -61,11 +75,22 @@ merchantUpdate ::
   FlowHandler Common.MerchantUpdateRes
 merchantUpdate merchantShortId = withFlowHandlerAPI . DMerchant.merchantUpdate merchantShortId
 
+merchantCommonConfig ::
+  ShortId DM.Merchant ->
+  FlowHandler Common.MerchantCommonConfigRes
+merchantCommonConfig = withFlowHandlerAPI . DMerchant.merchantCommonConfig
+
 merchantCommonConfigUpdate ::
   ShortId DM.Merchant ->
   Common.MerchantCommonConfigUpdateReq ->
   FlowHandler APISuccess
 merchantCommonConfigUpdate merchantShortId = withFlowHandlerAPI . DMerchant.merchantCommonConfigUpdate merchantShortId
+
+driverPoolConfig ::
+  ShortId DM.Merchant ->
+  Maybe Meters ->
+  FlowHandler Common.DriverPoolConfigRes
+driverPoolConfig merchantShortId = withFlowHandlerAPI . DMerchant.driverPoolConfig merchantShortId
 
 driverPoolConfigUpdate ::
   ShortId DM.Merchant ->
@@ -81,11 +106,22 @@ driverPoolConfigCreate ::
   FlowHandler APISuccess
 driverPoolConfigCreate merchantShortId tripDistance = withFlowHandlerAPI . DMerchant.driverPoolConfigCreate merchantShortId tripDistance
 
+driverIntelligentPoolConfig ::
+  ShortId DM.Merchant ->
+  FlowHandler Common.DriverIntelligentPoolConfigRes
+driverIntelligentPoolConfig = withFlowHandlerAPI . DMerchant.driverIntelligentPoolConfig
+
 driverIntelligentPoolConfigUpdate ::
   ShortId DM.Merchant ->
   Common.DriverIntelligentPoolConfigUpdateReq ->
   FlowHandler APISuccess
 driverIntelligentPoolConfigUpdate merchantShortId = withFlowHandlerAPI . DMerchant.driverIntelligentPoolConfigUpdate merchantShortId
+
+onboardingDocumentConfig ::
+  ShortId DM.Merchant ->
+  Maybe Common.DocumentType ->
+  FlowHandler Common.OnboardingDocumentConfigRes
+onboardingDocumentConfig merchantShortId = withFlowHandlerAPI . DMerchant.onboardingDocumentConfig merchantShortId
 
 onboardingDocumentConfigUpdate ::
   ShortId DM.Merchant ->
@@ -100,6 +136,11 @@ onboardingDocumentConfigCreate ::
   Common.OnboardingDocumentConfigCreateReq ->
   FlowHandler APISuccess
 onboardingDocumentConfigCreate merchantShortId documentType = withFlowHandlerAPI . DMerchant.onboardingDocumentConfigCreate merchantShortId documentType
+
+serviceUsageConfig ::
+  ShortId DM.Merchant ->
+  FlowHandler Common.ServiceUsageConfigRes
+serviceUsageConfig = withFlowHandlerAPI . DMerchant.serviceUsageConfig
 
 mapsServiceConfigUpdate ::
   ShortId DM.Merchant ->
@@ -130,3 +171,9 @@ verificationServiceConfigUpdate ::
   Common.VerificationServiceConfigUpdateReq ->
   FlowHandler APISuccess
 verificationServiceConfigUpdate merchantShortId = withFlowHandlerAPI . DMerchant.verificationServiceConfigUpdate merchantShortId
+
+createFPDriverExtraFee :: ShortId DM.Merchant -> Id Common.FarePolicy -> Meters -> Common.CreateFPDriverExtraFeeReq -> FlowHandler APISuccess
+createFPDriverExtraFee merchantShortId farePolicyId startDistance req = withFlowHandlerAPI $ DMerchant.createFPDriverExtraFee merchantShortId (cast farePolicyId) startDistance req
+
+updateFPDriverExtraFee :: ShortId DM.Merchant -> Id Common.FarePolicy -> Meters -> Common.CreateFPDriverExtraFeeReq -> FlowHandler APISuccess
+updateFPDriverExtraFee merchantShortId farePolicyId startDistance req = withFlowHandlerAPI $ DMerchant.updateFPDriverExtraFee merchantShortId (cast farePolicyId) startDistance req

@@ -34,6 +34,7 @@ data QuoteSpecialZone = QuoteSpecialZone
     updatedAt :: UTCTime,
     validTill :: UTCTime,
     estimatedFare :: Money,
+    specialLocationTag :: Maybe Text,
     fareParams :: Params.FareParameters
   }
   deriving (Generic, Show)

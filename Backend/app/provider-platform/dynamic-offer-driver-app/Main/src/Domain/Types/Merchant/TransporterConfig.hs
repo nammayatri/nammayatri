@@ -43,13 +43,13 @@ data TransporterConfigD u = TransporterConfig
     onboardingRetryTimeInHours :: Int,
     checkImageExtractionForDashboard :: Bool,
     searchRepeatLimit :: Int,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime,
     actualRideDistanceDiffThreshold :: HighPrecMeters,
     upwardsRecomputeBuffer :: HighPrecMeters,
     approxRideDistanceDiffThreshold :: HighPrecMeters,
     driverLeaderBoardExpiry :: Maybe Seconds,
-    minLocationAccuracy :: Double
+    minLocationAccuracy :: Double,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
   }
   deriving (Generic, Show)
 

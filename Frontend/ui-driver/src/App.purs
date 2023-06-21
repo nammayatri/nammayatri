@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -54,7 +54,7 @@ import Screens.Types (HomeScreenStage(..))
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
-newtype GlobalState = GlobalState { 
+newtype GlobalState = GlobalState {
     splashScreen :: SplashScreenState
   , chooseLanguageScreen :: ChooseLanguageScreenState
   , driverProfileScreen :: DriverProfileScreenState
@@ -162,13 +162,13 @@ data ScreenType =
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
-data MY_RIDES_SCREEN_OUTPUT = MY_RIDE RideHistoryScreenState 
-                            | HOME_SCREEN 
-                            | PROFILE_SCREEN 
+data MY_RIDES_SCREEN_OUTPUT = MY_RIDE RideHistoryScreenState
+                            | HOME_SCREEN
+                            | PROFILE_SCREEN
                             | GO_TO_REFERRAL_SCREEN
-                            | REFRESH RideHistoryScreenState 
-                            | LOADER_OUTPUT RideHistoryScreenState 
-                            | FILTER String 
+                            | REFRESH RideHistoryScreenState
+                            | LOADER_OUTPUT RideHistoryScreenState
+                            | FILTER String
                             | GO_TO_TRIP_DETAILS IndividualRideCardState
                             | NOTIFICATION_FLOW
                             | SELECTED_TAB RideHistoryScreenState
@@ -183,14 +183,14 @@ data RIDES_SELECTION_SCREEN_OUTPUT = REFRESH_RIDES RideSelectionScreenState
                                    | LOADER_RIDES_OUTPUT RideSelectionScreenState
                                    | SELECT_RIDE RideSelectionScreenState
 
-data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN 
-                                    | VEHICLE_DETAILS_SCREEN 
-                                    | ABOUT_US_SCREEN 
-                                    | GO_TO_LOGOUT 
-                                    | SELECT_LANGUAGE_SCREEN 
-                                    | HELP_AND_SUPPORT_SCREEN 
-                                    | GO_TO_HOME_FROM_PROFILE 
-                                    | GO_TO_DRIVER_HISTORY_SCREEN 
+data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN
+                                    | VEHICLE_DETAILS_SCREEN
+                                    | ABOUT_US_SCREEN
+                                    | GO_TO_LOGOUT
+                                    | SELECT_LANGUAGE_SCREEN
+                                    | HELP_AND_SUPPORT_SCREEN
+                                    | GO_TO_HOME_FROM_PROFILE
+                                    | GO_TO_DRIVER_HISTORY_SCREEN
                                     | GO_TO_EDIT_BANK_DETAIL_SCREEN
                                     | ON_BOARDING_FLOW
                                     | NOTIFICATIONS_SCREEN
@@ -208,14 +208,14 @@ data DRIVER_DETAILS_SCREEN_OUTPUT = VERIFY_OTP DriverDetailsScreenState
 data VEHICLE_DETAILS_SCREEN_OUTPUT = UPDATE_VEHICLE_INFO VehicleDetailsScreenState
 data ABOUT_US_SCREEN_OUTPUT = GO_TO_DRIVER_HOME_SCREEN
 data SELECT_LANGUAGE_SCREEN_OUTPUT = CHANGE_LANGUAGE
-data HELP_AND_SUPPORT_SCREEN_OUTPUT = WRITE_TO_US_SCREEN 
+data HELP_AND_SUPPORT_SCREEN_OUTPUT = WRITE_TO_US_SCREEN
                                     | REPORT_ISSUE_CHAT_SCREEN CategoryListType
                                     | RIDE_SELECTION_SCREEN CategoryListType
-                                    | REMOVE_ISSUE_SCREEN String HelpAndSupportScreenState 
-                                    | RESOLVED_ISSUE_SCREEN HelpAndSupportScreenState 
-                                    | ON_GOING_ISSUE_SCREEN HelpAndSupportScreenState 
-                                    | ISSUE_LIST_GO_BACK_SCREEN HelpAndSupportScreenState 
-                                 
+                                    | REMOVE_ISSUE_SCREEN String HelpAndSupportScreenState
+                                    | RESOLVED_ISSUE_SCREEN HelpAndSupportScreenState
+                                    | ON_GOING_ISSUE_SCREEN HelpAndSupportScreenState
+                                    | ISSUE_LIST_GO_BACK_SCREEN HelpAndSupportScreenState
+
 
 data WRITE_TO_US_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FLOW
 data REGISTRATION_SCREENOUTPUT = UPLOAD_DRIVER_LICENSE
@@ -233,12 +233,12 @@ data TRIP_DETAILS_SCREEN_OUTPUT = ON_SUBMIT | GO_TO_HOME_SCREEN | OPEN_HELP_AND_
 data PERMISSIONS_SCREEN_OUTPUT = DRIVER_HOME_SCREEN
 
 data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
-                          | GO_TO_RIDES_SCREEN 
+                          | GO_TO_RIDES_SCREEN
                           | GO_TO_REFERRAL_SCREEN_FROM_HOME_SCREEN
                           | GO_TO_HELP_AND_SUPPORT_SCREEN
                           | GO_TO_START_RIDE {id :: String, otp :: String, lat :: String, lon :: String} HomeScreenState
-                          | GO_TO_CANCEL_RIDE {id :: String, info :: String , reason :: String} 
-                          | GO_TO_END_RIDE {id :: String, lat :: String , lon :: String } 
+                          | GO_TO_CANCEL_RIDE {id :: String, info :: String , reason :: String}
+                          | GO_TO_END_RIDE {id :: String, lat :: String , lon :: String }
                           | DRIVER_AVAILABILITY_STATUS DriverStatus
                           | REFRESH_HOME_SCREEN_FLOW
                           | RELOAD HomeScreenState
@@ -247,9 +247,9 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | NOTIFY_CUSTOMER HomeScreenState
                           | UPDATE_STAGE HomeScreenStage
                           | GO_TO_NOTIFICATIONS
-                          | ADD_ALTERNATE_HOME 
-                          | GO_TO_START_ZONE_RIDE {otp :: String, lat :: String, lon :: String} 
-                          
+                          | ADD_ALTERNATE_HOME
+                          | GO_TO_START_ZONE_RIDE {otp :: String, lat :: String, lon :: String}
+
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 
 data RIDE_DETAIL_SCREENOUTPUT = GO_TO_HOME_FROM_RIDE_DETAIL | SHOW_ROUTE_IN_RIDE_DETAIL
@@ -267,11 +267,12 @@ data ENTER_OTP_SCREEN_OUTPUT = RETRY EnterOTPScreenState | DRIVER_INFO_API_CALL 
 data NO_INTERNET_SCREEN_OUTPUT = REFRESH_INTERNET | TURN_ON_GPS | CHECK_INTERNET
 data POPUP_SCREEN_OUTPUT = POPUP_REQUEST_RIDE String Number
 data DRIVER_RIDE_RATING_SCREEN_OUTPUT = CloseScreen | SendCustomerFeedBack DriverRideRatingScreenState
-data NOTIFICATIONS_SCREEN_OUTPUT = REFRESH_SCREEN NotificationsScreenState 
-                                    | LOAD_NOTIFICATIONS NotificationsScreenState 
-                                    | GO_HOME_SCREEN 
-                                    | GO_REFERRAL_SCREEN 
-                                    | GO_RIDE_HISTORY_SCREEN 
+data NOTIFICATIONS_SCREEN_OUTPUT = REFRESH_SCREEN NotificationsScreenState
+                                    | LOAD_NOTIFICATIONS NotificationsScreenState
+                                    | GO_HOME_SCREEN
+                                    | GO_REFERRAL_SCREEN
+                                    | GO_RIDE_HISTORY_SCREEN
                                     | GO_PROFILE_SCREEN
+                                    | CHECK_RIDE_FLOW_STATUS
 
 data BOOKING_OPTIONS_SCREEN_OUTPUT = SELECT_CAB BookingOptionsScreenState | GO_TO_PROFILE

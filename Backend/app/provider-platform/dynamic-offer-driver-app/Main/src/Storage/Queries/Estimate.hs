@@ -17,8 +17,6 @@ module Storage.Queries.Estimate where
 import Domain.Types.Estimate as Domain
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
--- import Kernel.Storage.Esqueleto as Esq
-
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -26,9 +24,6 @@ import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as BeamE
 import Storage.Tabular.Estimate ()
-
--- create :: Estimate -> SqlDB ()
--- create = Esq.create
 
 create :: L.MonadFlow m => Domain.Estimate -> m ()
 create estimate = do
@@ -41,12 +36,6 @@ create estimate = do
 
 createMany :: L.MonadFlow m => [Estimate] -> m ()
 createMany = traverse_ create
-
--- createMany :: [Estimate] -> SqlDB ()
--- createMany = Esq.createMany
-
--- findById :: Transactionable m => Id Estimate -> m (Maybe Estimate)
--- findById = Esq.findById
 
 findById :: L.MonadFlow m => Id Estimate -> m (Maybe Estimate)
 findById (Id estimateId) = do
@@ -66,9 +55,9 @@ transformBeamEstimateToDomain BeamE.EstimateT {..} = do
       minFare = minFare,
       maxFare = maxFare,
       estimateBreakupList = estimateBreakupList,
-      -- nightShiftRate = NightShiftRate nightShiftMultiplier nightShiftStart nightShiftEnd,
       nightShiftInfo = NightShiftInfo <$> nightShiftCharge <*> oldNightShiftCharge <*> nightShiftStart <*> nightShiftEnd,
       waitingCharges = WaitingCharges waitingChargePerMin waitingOrPickupCharges,
+      specialLocationTag = specialLocationTag,
       createdAt = createdAt
     }
 
@@ -87,5 +76,6 @@ transformDomainEstimateToBeam Estimate {..} = do
       nightShiftEnd = nightShiftEnd <$> nightShiftInfo,
       waitingChargePerMin = waitingChargePerMin waitingCharges,
       waitingOrPickupCharges = waitingOrPickupCharges waitingCharges,
+      specialLocationTag = specialLocationTag,
       createdAt = createdAt
     }

@@ -1,21 +1,26 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Styles.Colors where
+module Styles.Colors
+    ( module Styles.Colors
+    , module Common.Styles.Colors
+    )
+    where
 
 import Styles.Types
+import Common.Styles.Colors
 
 -- Text Color
 
@@ -85,17 +90,13 @@ primaryBG = "#204480"
 primaryBGDisable :: Color
 primaryBGDisable = "#BAC5D8"
 
-
-black :: Color
-black = "#000000"
-
-blackOpacity50 :: Color 
+blackOpacity50 :: Color
 blackOpacity50 = "#50000000"
 
 blackOpacity80 :: Color
 blackOpacity80 = "#80000000"
 
-blackOpacity00 :: Color 
+blackOpacity00 :: Color
 blackOpacity00 = "#00000000"
 
 greyLight :: Color
@@ -124,9 +125,6 @@ greyDarker = "#D6D6D6"
 
 borderListItem :: Color
 borderListItem = "#33484848"
-
-borderColorLight :: Color
-borderColorLight = "#e4e4e4"
 
 notificationColor :: Color
 notificationColor = "#F3454545"
@@ -191,9 +189,6 @@ yellowText = "#FDD836"
 tripDetailTime :: Color
 tripDetailTime = "#313644"
 
-primaryButtonColor :: Color
-primaryButtonColor = "#FDD836"
-
 paymentDescriptionColor :: Color
 paymentDescriptionColor = "#363636"
 
@@ -217,9 +212,6 @@ blueViolet = "#6200ee"
 
 blueViolet38 :: Color
 blueViolet38 = "#C39EF9"
-
-blueGrey :: Color
-blueGrey = "#9899a1"
 
 filterBorder :: Color
 filterBorder = "#cbcbcf"
@@ -259,9 +251,6 @@ grayDarker =  "#777777"
 
 charcoalReyBorder :: Color
 charcoalReyBorder = "#1e323643"
-
-warningRed :: Color
-warningRed  = "#f04c31"
 
 leftSizeBlack :: Color
 leftSizeBlack = "#212121"
@@ -308,7 +297,7 @@ greenCircleColor = "#2CBC1D"
 redCircleColor :: Color
 redCircleColor = "#E94040"
 
-redRoman :: Color 
+redRoman :: Color
 redRoman = "#DF5A56"
 
 yellowRadler :: Color
@@ -324,9 +313,6 @@ textPrimary = "#323643"
 
 buttonTextPrimary :: Color
 buttonTextPrimary = "#FDD836"
-
-textSecondary :: Color
-textSecondary = "#5B5E69"
 
 primaryButtonBg :: Color
 primaryButtonBg = "#323643"
@@ -373,56 +359,17 @@ blueBtn = "#0066FF"
 grey700 :: Color
 grey700 = "#F4F4F6"
 
-grey800 :: Color
-grey800 = "#F1F1F1"
-
-grey900 :: Color
-grey900 = "#E5E7EB"
-
-black500 :: Color
-black500 = "#B9BABE"
-
-black600 :: Color
-black600 = "#A7A7A7"
-
-black700 :: Color
-black700 = "#6D7280"
-
-black800 :: Color
-black800 = "#454545"
-
-black900 :: Color
-black900 = "#2C2F3A"
-
 yellow800 :: Color
 yellow800 = "#FEEBB9"
-
-yellow900 :: Color
-yellow900 = "#FCC32C"
-
-white900 :: Color
-white900 = "#FFFFFF"
 
 lightWhite :: Color
 lightWhite = "#f7f5f5"
 
-blue600 :: Color
-blue600 = "#F4F7FF"
-
 grey92 :: Color
 grey92 = "#EBEBEB"
 
-blue800 :: Color
-blue800 = "#2194FF"
-
-blue900 :: Color
-blue900 = "#0066FF"
-
 greyBackground :: Color
 greyBackground = "#F2F2F2"
-
-lightMaroon :: Color
-lightMaroon = "#E45454"
 
 bg_color :: Color
 bg_color = "#F7F9FB"
@@ -430,16 +377,13 @@ bg_color = "#F7F9FB"
 grey :: Color
 grey = "#999"
 
-redOpacity50 :: Color 
+redOpacity50 :: Color
 redOpacity50  = "#50E55454"
 
-red :: Color 
-red = "#E55454"
-
-highlightBorderColor :: Color 
+highlightBorderColor :: Color
 highlightBorderColor = "#2167ff"
 
-bg_grey :: Color 
+bg_grey :: Color
 bg_grey = "#F6F6F6"
 
 separatorViewColor :: Color
@@ -456,12 +400,6 @@ greySmoke = "#E6E6E6"
 blackLessTrans :: Color
 blackLessTrans = "#99000000"
 
-black9000 :: Color
-black9000 = "#CC2C2F3A"
-
-greyDavy :: Color
-greyDavy = "#555555"
-
 blackLightGrey :: Color
 blackLightGrey = "#949494"
 
@@ -474,11 +412,8 @@ lightGreyBlue = "#E9EEF2F6"
 lightBlack900 :: Color
 lightBlack900 = "#992C2F3A"
 
-mint :: Color 
+mint :: Color
 mint = "#0D53BB6F"
-
-black650 :: Color 
-black650 = "#868B98"
 
 golden :: Color
 golden = "#E9BE4D"
@@ -486,7 +421,7 @@ golden = "#E9BE4D"
 greenGrey :: Color
 greenGrey = "#268C6E"
 
-transparentGrey :: Color 
+transparentGrey :: Color
 transparentGrey = "#66888888"
 
 transparent :: Color

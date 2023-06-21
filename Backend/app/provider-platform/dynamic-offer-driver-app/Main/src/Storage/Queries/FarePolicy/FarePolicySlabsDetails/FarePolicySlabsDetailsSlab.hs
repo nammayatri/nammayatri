@@ -96,7 +96,14 @@ transformBeamFarePolicyProgressiveDetailsToDomain BeamFPSS.FarePolicySlabsDetail
               { waitingCharge = waitingCharge',
                 freeWaitingTime = freeWaitingTime'
               },
-        nightShiftCharge = nightShiftCharge
+        nightShiftCharge = nightShiftCharge,
+        platformFeeInfo =
+          ((,,) <$> platformFeeCharge <*> platformFeeCgst <*> platformFeeSgst) <&> \(platformFeeCharge', platformFeeCgst', platformFeeSgst') ->
+            DFP.PlatformFeeInfo
+              { platformFeeCharge = platformFeeCharge',
+                cgst = platformFeeCgst',
+                sgst = platformFeeSgst'
+              }
       }
     )
 
@@ -107,6 +114,9 @@ transformDomainFarePolicySlabsDetailsSlabToBeam (KTI.Id farePolicyId, DFP.FPSlab
       farePolicyId = farePolicyId,
       startDistance = startDistance,
       baseFare = baseFare,
+      platformFeeCharge = DFP.platformFeeCharge <$> platformFeeInfo,
+      platformFeeCgst = DFP.cgst <$> platformFeeInfo,
+      platformFeeSgst = DFP.sgst <$> platformFeeInfo,
       waitingCharge = DFP.waitingCharge <$> waitingChargeInfo,
       nightShiftCharge = nightShiftCharge,
       freeWatingTime = DFP.freeWaitingTime <$> waitingChargeInfo

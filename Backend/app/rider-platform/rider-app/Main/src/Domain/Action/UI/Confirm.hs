@@ -20,6 +20,7 @@ where
 
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as DQuote
 import Kernel.Prelude
@@ -35,10 +36,8 @@ import qualified Storage.Queries.BookingCancellationReason as QBCR
 import Tools.Metrics (CoreMetrics)
 import qualified Tools.Notifications as Notify
 
--- domain types
-
-confirm :: (EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Id DQuote.Quote -> m SConfirm.DConfirmRes
-confirm = SConfirm.confirm
+confirm :: (EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Id DQuote.Quote -> Maybe (Id DMPM.MerchantPaymentMethod) -> m SConfirm.DConfirmRes
+confirm personId quoteId paymentMethodId = SConfirm.confirm SConfirm.DConfirmReq {..}
 
 -- cancel booking when QUOTE_EXPIRED on bpp side, or other EXTERNAL_API_CALL_ERROR catched
 cancelBooking :: (HasCacheConfig r, EncFlow m r, EsqDBFlow m r, HedisFlow m r, CoreMetrics m) => DRB.Booking -> m ()
@@ -55,6 +54,7 @@ cancelBooking booking = do
         DBCR.BookingCancellationReason
           { bookingId = bookingId,
             rideId = Nothing,
+            merchantId = Just booking.merchantId,
             source = DBCR.ByApplication,
             reasonCode = Nothing,
             reasonStage = Nothing,

@@ -16,8 +16,6 @@ let
           "${../dev/sql-seed/pre-init.sql}:/docker-entrypoint-initdb.d/0-pre-init.sql:Z"
           "${../dev/sql-seed/rider-app-seed.sql}:/docker-entrypoint-initdb.d/1-rider-app-seed.sql:Z"
           "${../dev/local-testing-data/rider-app.sql}:/docker-entrypoint-initdb.d/2-rider-app-testing-data.sql:Z"
-          "${../dev/sql-seed/static-offer-driver-app-seed.sql}:/docker-entrypoint-initdb.d/1-static-offer-driver-app-seed.sql:Z"
-          "${../dev/local-testing-data/static-offer-driver-app.sql}:/docker-entrypoint-initdb.d/2-static-offer-driver-app-testing-data.sql:Z"
           "${../dev/sql-seed/public-transport-rider-platform-seed.sql}:/docker-entrypoint-initdb.d/1-public-transport-rider-platform-seed.sql:Z"
           "${../dev/local-testing-data/public-transport-rider-platform.sql}:/docker-entrypoint-initdb.d/2-public-transport-rider-platform-testing-data.sql:Z"
           "${../dev/sql-seed/mock-registry-seed.sql}:/docker-entrypoint-initdb.d/1-mock-registry-seed.sql:Z"

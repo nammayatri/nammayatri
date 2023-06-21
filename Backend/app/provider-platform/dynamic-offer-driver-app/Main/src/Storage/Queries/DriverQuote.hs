@@ -35,6 +35,16 @@ import qualified Storage.Queries.FareParameters as SQFP
 import Storage.Tabular.DriverQuote
 import qualified Storage.Tabular.FareParameters as Fare
 
+-- TODO @Vijay Gupta - update the following function
+-- create :: Domain.DriverQuote -> SqlDB ()
+-- create dQuote = Esq.runTransaction $
+--   withFullEntity dQuote $ \(dQuoteT, (fareParams', fareParamsDetais)) -> do
+--     Esq.create' fareParams'
+--     case fareParamsDetais of
+--       FareParamsT.ProgressiveDetailsT fppdt -> Esq.create' fppdt
+--       FareParamsT.SlabDetailsT -> return ()
+--     Esq.create' dQuoteT
+
 create :: L.MonadFlow m => Domain.DriverQuote -> m (MeshResult ())
 create dQuote = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -184,7 +194,8 @@ transformBeamDriverQuoteToDomain BeamDQ.DriverQuoteT {..} = do
               validTill = T.localTimeToUTC T.utc validTill,
               estimatedFare = estimatedFare,
               fareParams = fromJust fp, -- this should take a default value?
-              providerId = Id providerId
+              providerId = Id providerId,
+              specialLocationTag = specialLocationTag
             }
     else pure Nothing
 
@@ -208,5 +219,6 @@ transformDomainDriverQuoteToBeam Domain.DriverQuote {..} =
       BeamDQ.validTill = T.utcToLocalTime T.utc validTill,
       BeamDQ.estimatedFare = estimatedFare,
       BeamDQ.fareParametersId = getId fareParams.id,
-      BeamDQ.providerId = getId providerId
+      BeamDQ.providerId = getId providerId,
+      BeamDQ.specialLocationTag = specialLocationTag
     }

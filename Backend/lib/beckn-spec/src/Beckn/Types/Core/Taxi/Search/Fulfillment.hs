@@ -39,9 +39,8 @@ data FulfillmentInfo = FulfillmentInfo
 instance ToSchema FulfillmentInfo where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
-data Tags = Tags
-  { auto_assign_enabled :: Bool,
-    customer_language :: Maybe Language
+newtype Tags = Tags
+  { customer_language :: Maybe Language
   }
   deriving (Generic, Show)
 
@@ -58,7 +57,6 @@ tagsJSONOptions :: Options
 tagsJSONOptions =
   defaultOptions
     { fieldLabelModifier = \case
-        "auto_assign_enabled" -> "./komn/auto_assign_enabled"
         "customer_language" -> "./komn/customer_language"
         a -> a
     }

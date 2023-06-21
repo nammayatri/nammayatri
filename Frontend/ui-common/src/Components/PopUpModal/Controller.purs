@@ -1,21 +1,21 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
 module Components.PopUpModal.Controller where
 
-import Styles.Colors as Color
+import Common.Styles.Colors as Color
 import PrestoDOM (Padding(..), Margin(..), Gravity(..), Visibility(..), Length(..))
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -23,10 +23,10 @@ import Common.Types.App
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 
-data Action = OnButton1Click 
-            | OnButton2Click 
-            | NoAction 
-            | ETextController PrimaryEditTextController.Action 
+data Action = OnButton1Click
+            | OnButton2Click
+            | NoAction
+            | ETextController PrimaryEditTextController.Action
             | CountDown Int String String String
             | OnImageClick
             | Tipbtnclick Int Int
@@ -57,7 +57,9 @@ type Config = {
     contactViewPadding :: Padding,
     contactViewMargin :: Margin,
     dismissPopup :: Boolean,
-    padding :: Padding
+    padding :: Padding,
+    dismissIconVisibility :: Visibility,
+    dismissIconMargin :: Margin
 }
 
 type ContactViewConfig = {
@@ -94,11 +96,11 @@ type ButtonConfig = {
   fontStyle :: String
 }
 
-type DismissPopupConfig = 
+type DismissPopupConfig =
   { imageUrl :: String
   , height :: Length
-  , width :: Length 
-  , margin :: Margin 
+  , width :: Length
+  , margin :: Margin
   , alpha :: Number
   , padding :: Padding
   , visibility :: Visibility
@@ -109,12 +111,12 @@ type CoverImageConfig =
     visibility :: Visibility
   , imageUrl :: String
   , height :: Length
-  , width :: Length 
-  , margin :: Margin 
+  , width :: Length
+  , margin :: Margin
   , padding :: Padding
   }
 
-config :: Config 
+config :: Config
 config = {
   optionButtonOrientation: "HORIZONTAL"
   , activeIndex : 1
@@ -152,7 +154,7 @@ config = {
   , tipButton: {
      background : Color.white900
     , text : "Button1"
-    , strokeColor : Color.black900 
+    , strokeColor : Color.black900
     , color : Color.black900
     , fontSize : FontSize.a_14
     , visibility : true
@@ -164,11 +166,11 @@ config = {
     , enableTimer : false
     , timerID : ""
     , fontStyle : FontStyle.bold LanguageStyle
-  } 
+  }
   , option1 : {
       background : Color.white900
     , text : "Button1"
-    , strokeColor : Color.black900 
+    , strokeColor : Color.black900
     , color : Color.black900
     , fontSize : FontSize.a_14
     , visibility : true
@@ -197,7 +199,7 @@ config = {
     , timerID : ""
     , fontStyle : FontStyle.bold LanguageStyle
     }
-    , dismissPopupConfig : 
+    , dismissPopupConfig :
     { imageUrl : "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
     , height : WRAP_CONTENT
     , width : WRAP_CONTENT
@@ -216,7 +218,7 @@ config = {
     , margin : (Margin 0 0 0 0)
     , padding : (Padding 0 0 0 0)
     },
-    contactViewConfig : 
+    contactViewConfig :
     {
        nameInitials: "",
        fullName: "",
@@ -226,4 +228,6 @@ config = {
     , contactViewPadding : (Padding 23 16 23 16)
     , contactViewMargin : (Margin 16 12 16 32)
     , dismissPopup:false
+    , dismissIconVisibility : GONE
+    , dismissIconMargin : Margin 0 0 0 0
 }

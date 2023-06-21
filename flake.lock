@@ -39,14 +39,6 @@
         "common": [
           "common"
         ],
-        "flake-parts": [
-          "common",
-          "flake-parts"
-        ],
-        "nixpkgs": [
-          "common",
-          "nixpkgs"
-        ],
         "shared-kernel": [
           "shared-kernel"
         ]
@@ -243,11 +235,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1685470074,
-        "narHash": "sha256-0vdewKY4Vmx476Qg5qd2voyuL7ZssqOUlQeNJCuvs3Q=",
+        "lastModified": 1686790910,
+        "narHash": "sha256-vnfx5Uy2ef57/tavvHZ9eiVDpLUy5+7AYThPMtr1LSE=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "9b0393630068e688795bedd46c49df1a0bbc7c0a",
+        "rev": "ac9490062cf3caddbf25be3ba9281ce9ae58537b",
         "type": "github"
       },
       "original": {
@@ -446,11 +438,11 @@
     "easy-purescript-nix": {
       "flake": false,
       "locked": {
-        "lastModified": 1679861376,
-        "narHash": "sha256-LLqaLPJNiap2U8I77K5XVPGJA/Be30Z8lyGOyYXmBlc=",
+        "lastModified": 1686810822,
+        "narHash": "sha256-rv++OJWEDLFaasLlRx8Ys+PVrvirXK3rTOQtLO7h+OU=",
         "owner": "justinwoo",
         "repo": "easy-purescript-nix",
-        "rev": "0c10ff170461aed0c336f5c21ed0f430c2c3574b",
+        "rev": "26b3845c5405e490127203e9ade15c87b8373c86",
         "type": "github"
       },
       "original": {
@@ -550,11 +542,11 @@
         "sequelize": "sequelize"
       },
       "locked": {
-        "lastModified": 1685661687,
-        "narHash": "sha256-QVBsg/GtxB25hNvGvQLLKlCQ4vm0swEFyq8f6vwZoVQ=",
+        "lastModified": 1686833766,
+        "narHash": "sha256-qbaixw86Xf6GqAbUz2iNNvSBF/M9ogEu8D1K2aPGAIY=",
         "ref": "ny-compatible",
-        "rev": "d7648a633173d048c67e01c0cce712fdb227e7cd",
-        "revCount": 2116,
+        "rev": "b36d5b37e1a8ebbd257cf6884cc2647741cf0755",
+        "revCount": 2117,
         "type": "git",
         "url": "ssh://git@ssh.bitbucket.juspay.net/iris/euler-hs"
       },
@@ -1092,17 +1084,16 @@
     "hedis": {
       "flake": false,
       "locked": {
-        "lastModified": 1672223380,
-        "narHash": "sha256-Jbc0YgzMjFRHDNvciTzVrj6s1kxd6ErlxcHxKkQu+2U=",
-        "ref": "cluster",
-        "rev": "f8b11e0512b864f165a4a086713b41a0e3d622ea",
-        "revCount": 571,
+        "lastModified": 1685620412,
+        "narHash": "sha256-cPRZRbR76M7fBNSXcrSOqLlIcs2KSj/Ynf0AdZ46qrE=",
+        "ref": "refs/heads/master",
+        "rev": "92a3d5ab73dcb0ea11139a01d6f2950a8b8e7e0e",
+        "revCount": 712,
         "type": "git",
         "url": "https://github.com/juspay/hedis"
       },
       "original": {
-        "ref": "cluster",
-        "rev": "f8b11e0512b864f165a4a086713b41a0e3d622ea",
+        "rev": "92a3d5ab73dcb0ea11139a01d6f2950a8b8e7e0e",
         "type": "git",
         "url": "https://github.com/juspay/hedis"
       }
@@ -2200,11 +2191,11 @@
     },
     "process-compose-flake": {
       "locked": {
-        "lastModified": 1680797953,
-        "narHash": "sha256-lFYbfId1IX6jh/wUf+gt3LyvE9HblS4hcBQcougSzX0=",
+        "lastModified": 1686771612,
+        "narHash": "sha256-J1rKoEZpw/IyOdr+3UbwyRr2H2mkjvgQAab/71L/hos=",
         "owner": "Platonic-Systems",
         "repo": "process-compose-flake",
-        "rev": "aee1b8d126a5efe5945513eb2fb343f3d68dca4b",
+        "rev": "ef453a6ce5deb13f90ebcebcbf25e01fdf2c7505",
         "type": "github"
       },
       "original": {
@@ -2303,11 +2294,11 @@
         "prometheus-haskell": "prometheus-haskell"
       },
       "locked": {
-        "lastModified": 1686041360,
-        "narHash": "sha256-9LZDWOEHsfCW+JBMrMjk3NZTJ9nZd6XdZhYKHPFEfZ0=",
+        "lastModified": 1686834287,
+        "narHash": "sha256-TTrZFtMntxemMtR4lRCPyNFK9awYqbYekKA871O+aTI=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "fa9c9f9f19a7b45ac53e44c2f939b6997c3d39cf",
+        "rev": "6ddb4fbfc12286ab5b60adb919e211085b845b0c",
         "type": "github"
       },
       "original": {

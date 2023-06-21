@@ -352,7 +352,7 @@ data ActualRoute = ActualRoute
     lon :: Double,
     timestamp :: UTCTime,
     accuracy :: Maybe Double,
-    rideStatus :: Status
+    rideStatus :: Maybe Status
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

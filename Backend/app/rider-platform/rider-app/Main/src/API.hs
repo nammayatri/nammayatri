@@ -26,9 +26,14 @@ import qualified API.MetroBeckn as MetroBeckn
 import qualified API.UI as UI
 import qualified Data.ByteString as BS
 import Data.OpenApi
+import qualified Domain.Action.UI.Payment as Payment
+import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude
-import Kernel.Utils.Servant.Client
+import qualified Kernel.External.Payment.Juspay.Webhook as Juspay
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import Kernel.Utils.Servant.BasicAuth ()
 import Kernel.Utils.Servant.HTML
 import Servant hiding (serveDirectoryWebApp, throwError)
 import Servant.OpenApi
@@ -43,6 +48,9 @@ type MainAPI =
   UI.API
     :<|> Beckn.API
     :<|> MetroBeckn.API
+    :<|> ( Capture "merchantId" (ShortId DM.Merchant)
+             :> Juspay.JuspayWebhookAPI
+         )
     :<|> Dashboard.API
 
 handler :: FlowServer API
@@ -57,6 +65,7 @@ mainServer =
   UI.handler
     :<|> Beckn.handler
     :<|> MetroBeckn.handler
+    :<|> juspayWebhookHandler
     :<|> Dashboard.handler
 
 type SwaggerAPI = "swagger" :> Get '[HTML] BS.ByteString
@@ -79,3 +88,11 @@ writeSwaggerHTMLFlow = lift $ BS.readFile "swagger/index.html"
 
 writeOpenAPIFlow :: FlowServer OpenAPI
 writeOpenAPIFlow = pure openAPI
+
+juspayWebhookHandler ::
+  ShortId DM.Merchant ->
+  BasicAuthData ->
+  Value ->
+  FlowHandler AckResponse
+juspayWebhookHandler merchantShortId secret =
+  withFlowHandlerAPI . Payment.juspayWebhookHandler merchantShortId secret

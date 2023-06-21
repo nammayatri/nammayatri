@@ -84,6 +84,7 @@ buildQuoteInfo item = do
       estimatedFare = roundToIntegral item.price.value
       estimatedTotalFare = roundToIntegral item.price.offered_value
       descriptions = item.quote_terms
+      specialLocationTag = item.tags >>= (.special_location_tag)
   validatePrices estimatedFare estimatedTotalFare
   -- if we get here, the discount >= 0, estimatedFare >= estimatedTotalFare
   let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedFare - estimatedTotalFare

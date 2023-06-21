@@ -180,9 +180,11 @@ findAllRideItems ::
   Maybe (ShortId Ride) ->
   Maybe DbHash ->
   Maybe Text ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
   UTCTime ->
   m [RideItem]
-findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhone now = do
+findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhone mbFrom mbTo now = do
   res <- Esq.findAll $ do
     booking :& ride :& person <-
       from $
@@ -202,6 +204,8 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
         &&. whenJust_ mbRideShortId (\rideShortId -> ride ^. Ride.RideShortId ==. val rideShortId.getShortId)
         &&. whenJust_ mbCustomerPhoneDBHash (\hash -> person ^. Person.PersonMobileNumberHash ==. val (Just hash))
         &&. whenJust_ mbDriverPhone (\driverMobileNumber -> ride ^. Ride.RideDriverMobileNumber ==. val driverMobileNumber)
+        &&. whenJust_ mbFrom (\defaultFrom -> ride ^. Ride.RideCreatedAt >=. val defaultFrom)
+        &&. whenJust_ mbTo (\defaultTo -> ride ^. Ride.RideCreatedAt <=. val defaultTo)
     limit $ fromIntegral limitVal
     offset $ fromIntegral offsetVal
     return
@@ -242,3 +246,16 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
 --   where
 --     mkCount [counter] = counter
 --     mkCount _ = 0
+
+findRiderIdByRideId :: Transactionable m => Id Ride -> m (Maybe (Id Person))
+findRiderIdByRideId rideId = findOne $ do
+  ride :& booking <-
+    from $
+      table @RideT
+        `innerJoin` table @BookingT
+          `Esq.on` ( \(ride :& booking) ->
+                       ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
+                   )
+  where_ $
+    ride ^. RideTId ==. val (toKey rideId)
+  pure $ booking ^. BookingRiderId

@@ -24,6 +24,7 @@ import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Interface.Types
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types
+import Kernel.External.Payment.Interface as Payment
 import Kernel.External.SMS as Sms
 import Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
@@ -31,7 +32,13 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Text.Show as Show
 
-data ServiceName = MapsService Maps.MapsService | SmsService Sms.SmsService | WhatsappService Whatsapp.WhatsappService | CallService Call.CallService | NotificationService Notification.NotificationService
+data ServiceName
+  = MapsService Maps.MapsService
+  | SmsService Sms.SmsService
+  | WhatsappService Whatsapp.WhatsappService
+  | CallService Call.CallService
+  | NotificationService Notification.NotificationService
+  | PaymentService Payment.PaymentService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -41,9 +48,10 @@ instance Show ServiceName where
   show (WhatsappService s) = "Whatsapp_" <> show s
   show (CallService s) = "Call_" <> show s
   show (NotificationService s) = "Notification_" <> show s
+  show (PaymentService s) = "Payment_" <> show s
 
 instance Read ServiceName where
-  readsPrec d' r' =
+  readsPrec d' =
     readParen
       (d' > app_prec)
       ( \r ->
@@ -67,8 +75,11 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Notification_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (PaymentService v1, r2)
+                 | r1 <- stripPrefix "Payment_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
-      r'
     where
       app_prec = 10
       stripPrefix pref r = bool [] [List.drop (length pref) r] $ List.isPrefixOf pref r
@@ -79,6 +90,7 @@ data ServiceConfigD (s :: UsageSafety)
   | WhatsappServiceConfig !WhatsappServiceConfig
   | CallServiceConfig !CallServiceConfig
   | NotificationServiceConfig !NotificationServiceConfig
+  | PaymentServiceConfig !PaymentServiceConfig
   deriving (Generic, Eq)
 
 type ServiceConfig = ServiceConfigD 'Safe
@@ -117,6 +129,8 @@ getServiceName msc = case msc.serviceConfig of
   NotificationServiceConfig notificationCfg -> case notificationCfg of
     Notification.FCMConfig _ -> NotificationService Notification.FCM
     Notification.PayTMConfig _ -> NotificationService Notification.PayTM
+  PaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig _ -> PaymentService Payment.Juspay
 
 buildMerchantServiceConfig ::
   MonadTime m =>

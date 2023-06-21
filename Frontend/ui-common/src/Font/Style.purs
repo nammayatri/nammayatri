@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -20,16 +20,19 @@ import Styles.Types (FontStyle)
 import Halogen.VDom.DOM.Prop (Prop)
 import Engineering.Helpers.Commons (os)
 import PrestoDOM (fontStyle, lineHeight, textSize)
-import Prelude ((==),($),(/=))
-import Storage (getValueToLocalStore, KeyStore(..))
+import Prelude (Unit, unit, (==),($),(/=))
 import Common.Types.App
+import JBridge as JBridge
+
+getLanguageFromLocalStore :: Unit -> String
+getLanguageFromLocalStore _ = JBridge.getKeyInSharedPrefKeys "LANGUAGE_KEY"
 
 italic :: FontStyle
 italic = fontByOS "PlusJakartaSans-Italic" "PlusJakartaSans-Italic" "Arial"
 
 light :: LazyCheck -> FontStyle
 light style = do
-  case (getValueToLocalStore LANGUAGE_KEY) of
+  case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS "PlusJakartaSans-Light" "PlusJakartaSans-Light" "Arial"
     "KN_IN" -> fontByOS "NotoSansKannada-Light" "NotoSansKannada-Light" "Arial"
     "HI_IN" -> fontByOS "PlusJakartaSans-Light" "PlusJakartaSans-Light" "Arial"
@@ -40,7 +43,7 @@ lightItalic = fontByOS "PlusJakartaSans-LightItalic" "PlusJakartaSans-LightItali
 
 extraLight :: LazyCheck -> FontStyle
 extraLight style = do
-  case (getValueToLocalStore LANGUAGE_KEY) of
+  case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS "PlusJakartaSans-ExtraLight" "PlusJakartaSans-ExtraLight" "Arial"
     "KN_IN" -> fontByOS "NotoSansKannada-ExtraLight" "NotoSansKannada-ExtraLight" "Arial"
     "HI_IN" -> fontByOS "PlusJakartaSans-ExtraLight" "PlusJakartaSans-ExtraLight" "Arial"
@@ -51,7 +54,7 @@ extraLightItalic = fontByOS "PlusJakartaSans-ExtraLightItalic" "PlusJakartaSans-
 
 regular :: LazyCheck -> FontStyle
 regular style = do
-  case (getValueToLocalStore LANGUAGE_KEY) of
+  case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS "PlusJakartaSans-Regular" "PlusJakartaSans-Regular" "Arial"
     "KN_IN" -> fontByOS "NotoSansKannada-Regular" "NotoSansKannada-Regular" "Arial"
     "HI_IN" -> fontByOS "PlusJakartaSans-Regular" "PlusJakartaSans-Regular" "Arial"
@@ -59,7 +62,7 @@ regular style = do
 
 medium :: LazyCheck -> FontStyle
 medium style = do
-  case (getValueToLocalStore LANGUAGE_KEY) of
+  case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS "PlusJakartaSans-Medium" "PlusJakartaSans-Medium" "Arial"
     "KN_IN" -> fontByOS "NotoSansKannada-Medium" "NotoSansKannada-Medium" "Arial"
     "HI_IN" -> fontByOS "PlusJakartaSans-Medium" "PlusJakartaSans-Medium" "Arial"
@@ -70,18 +73,18 @@ mediumItalic = fontByOS "PlusJakartaSans-MediumItalic" "PlusJakartaSans-MediumIt
 
 semiBold :: LazyCheck -> FontStyle
 semiBold style = do
-  case (getValueToLocalStore LANGUAGE_KEY) of
+  case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS "PlusJakartaSans-SemiBold" "PlusJakartaSans-SemiBold" "Arial"
     "KN_IN" -> fontByOS "NotoSansKannada-SemiBold" "NotoSansKannada-SemiBold" "Arial"
     "HI_IN" -> fontByOS "PlusJakartaSans-SemiBold" "PlusJakartaSans-SemiBold" "Arial"
     _ -> fontByOS "PlusJakartaSans-SemiBold" "PlusJakartaSans-SemiBold" "Arial"
 
 semiBoldItalic :: FontStyle
-semiBoldItalic = fontByOS "PlusJakartaSans-SemiBoldItalic" "PlusJakartaSans-SemiBoldItalic" "Arial" 
+semiBoldItalic = fontByOS "PlusJakartaSans-SemiBoldItalic" "PlusJakartaSans-SemiBoldItalic" "Arial"
 
 bold :: LazyCheck -> FontStyle
 bold style = do
-  case (getValueToLocalStore LANGUAGE_KEY) of
+  case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS "PlusJakartaSans-Bold" "PlusJakartaSans-Bold" "Arial"
     "KN_IN" -> fontByOS "NotoSansKannada-Bold" "NotoSansKannada-Bold" "Arial"
     "HI_IN" -> fontByOS "PlusJakartaSans-Bold" "PlusJakartaSans-Bold" "Arial"
@@ -92,7 +95,7 @@ boldItalic = fontByOS "PlusJakartaSans-BoldItalic" "PlusJakartaSans-BoldItalic" 
 
 extraBold :: LazyCheck -> FontStyle
 extraBold style = do
-  case (getValueToLocalStore LANGUAGE_KEY) of
+  case (getLanguageFromLocalStore unit) of
     "EN_US" -> fontByOS "PlusJakartaSans-ExtraBold" "PlusJakartaSans-ExtraBold" "Arial"
     "KN_IN" -> fontByOS "NotoSansKannada-ExtraBold" "NotoSansKannada-ExtraBold" "Arial"
     "HI_IN" -> fontByOS "PlusJakartaSans-ExtraBold" "PlusJakartaSans-ExtraBold" "Arial"
@@ -141,7 +144,7 @@ body1 typography = [
   fontStyle $ medium LanguageStyle
 , textSize FontSize.a_14
 , lineHeight "18"
-] 
+]
 
 body2 :: LazyCheck -> forall properties. (Array (Prop properties))
 body2 typography = [

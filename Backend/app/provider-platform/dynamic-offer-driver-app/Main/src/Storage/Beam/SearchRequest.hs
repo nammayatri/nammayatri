@@ -25,7 +25,7 @@ import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
--- import qualified Domain.Types.SearchRequest as Domain
+import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Vehicle.Variant as Variant (Variant)
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
@@ -42,27 +42,24 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be BaseUrl where
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be BaseUrl
 
--- instance FromBackendRow Postgres Money
-
 data SearchRequestT f = SearchRequestT
   { id :: B.C f Text,
     transactionId :: B.C f Text,
     providerId :: B.C f Text,
     fromLocationId :: B.C f Text,
     toLocationId :: B.C f Text,
+    area :: B.C f (Maybe FareProductD.Area),
     bapId :: B.C f Text,
     bapUri :: B.C f Text,
     estimatedDistance :: B.C f Meters,
     estimatedDuration :: B.C f Seconds,
     customerLanguage :: B.C f (Maybe Maps.Language),
     device :: B.C f (Maybe Text),
-    autoAssignEnabled :: B.C f Bool,
+    autoAssignEnabled :: B.C f (Maybe Bool),
+    specialLocationTag :: B.C f (Maybe Text),
     createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
-
--- instance IsString Domain.SearchRequestStatus where
---   fromString = show
 
 instance IsString Variant.Variant where
   fromString = show
@@ -94,8 +91,6 @@ instance ToJSON SearchRequest where
 
 deriving stock instance Show SearchRequest
 
--- deriving stock instance Read Money
-
 searchRequestTMod :: SearchRequestT (B.FieldModification (B.TableField SearchRequestT))
 searchRequestTMod =
   B.tableModification
@@ -104,6 +99,7 @@ searchRequestTMod =
       providerId = B.fieldNamed "provider_id",
       fromLocationId = B.fieldNamed "from_location_id",
       toLocationId = B.fieldNamed "to_location_id",
+      area = B.fieldNamed "area",
       bapId = B.fieldNamed "bap_id",
       bapUri = B.fieldNamed "bap_uri",
       estimatedDistance = B.fieldNamed "estimated_distance",
@@ -111,6 +107,7 @@ searchRequestTMod =
       customerLanguage = B.fieldNamed "customer_language",
       device = B.fieldNamed "device",
       autoAssignEnabled = B.fieldNamed "auto_assign_enabled",
+      specialLocationTag = B.fieldNamed "special_location_tag",
       createdAt = B.fieldNamed "created_at"
     }
 
@@ -124,32 +121,6 @@ searchRequestToHSModifiers =
 searchRequestToPSModifiers :: M.Map Text (A.Value -> A.Value)
 searchRequestToPSModifiers =
   M.empty
-
--- defaultSearchRequest :: SearchRequest
--- defaultSearchRequest =
---   SearchRequestT
---     { id = "",
---       transactionId = "",
---       messageId = "",
---       estimateId = "",
---       startTime = defaultUTCDate,
---       validTill = defaultUTCDate,
---       providerId = "",
---       fromLocationId = "",
---       toLocationId = "",
---       bapId = "",
---       bapUri = "",
---       estimatedDistance = "",
---       estimatedDuration = "",
---       customerExtraFee = Nothing,
---       device = Nothing,
---       status = "",
---       vehicleVariant = "",
---       searchRepeatCounter = 0,
---       autoAssignEnabled = False,
---       createdAt = defaultUTCDate,
---       updatedAt = defaultUTCDate
---     }
 
 instance Serialize SearchRequest where
   put = error "undefined"

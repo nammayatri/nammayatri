@@ -43,6 +43,7 @@ import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as Fare
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
@@ -197,12 +198,14 @@ sendRideCompletedUpdateToBAP ::
   DRB.Booking ->
   SRide.Ride ->
   Fare.FareParameters ->
+  Maybe DMPM.PaymentMethodInfo ->
+  Maybe Text ->
   m ()
-sendRideCompletedUpdateToBAP booking ride fareParams = do
+sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl = do
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  let rideCompletedBuildReq = ACL.RideCompletedBuildReq {ride, fareParams}
+  let rideCompletedBuildReq = ACL.RideCompletedBuildReq {ride, fareParams, paymentMethodInfo, paymentUrl}
   rideCompletedMsg <- ACL.buildOnUpdateMessage rideCompletedBuildReq
 
   retryConfig <- asks (.longDurationRetryCfg)

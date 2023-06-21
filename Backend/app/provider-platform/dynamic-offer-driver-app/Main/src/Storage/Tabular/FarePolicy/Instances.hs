@@ -74,7 +74,6 @@ instance FromTType FullFarePolicyT Domain.FarePolicy where
     return $
       Domain.FarePolicy
         { id = Id id,
-          merchantId = fromKey merchantId,
           farePolicyDetails = det,
           ..
         }
@@ -86,7 +85,6 @@ instance ToTType FullFarePolicyT Domain.FarePolicy where
           Domain.SlabsDetails det -> SlabsDetailsT $ toTType . (id,) <$> toList det.slabs
     ( FarePolicyT
         { id = getId id,
-          merchantId = toKey merchantId,
           farePolicyType = Domain.getFarePolicyType farePolicy,
           nightShiftStart = nightShiftBounds <&> (.nightShiftStart),
           nightShiftEnd = nightShiftBounds <&> (.nightShiftEnd),

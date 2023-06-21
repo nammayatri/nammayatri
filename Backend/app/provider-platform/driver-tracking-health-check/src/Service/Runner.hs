@@ -18,6 +18,7 @@ module Service.Runner where
 import qualified API as HC
 import Data.Either
 import Data.List.NonEmpty (nonEmpty)
+import Domain.Types.DriverInformation (DriverMode (..))
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.Person as SP
 import Environment (Flow)
@@ -26,7 +27,6 @@ import Kernel.External.Notification.FCM.Types (FCMNotificationType (TRIGGER_SERV
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.SMS.MyValueFirst.Flow as SF
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (lPush, rPop)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
@@ -34,7 +34,6 @@ import Kernel.Types.Error (PersonError (PersonFieldNotPresent, PersonNotFound))
 import Kernel.Types.Id (Id, cast)
 import Kernel.Utils.Common
 import Kernel.Utils.Service
-import SharedLogic.TransporterConfig
 import qualified Storage.Queries.DriverInformation as DrInfo
 import qualified Storage.Queries.Person as SQP
 import Tools.Notifications
@@ -80,8 +79,7 @@ driverDevicePingService = startService "driverDevicePingService" do
     withLogTag driverId.getId do
       log INFO "Ping driver"
       driver <- SQP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-      fcmConfig <- findFCMConfigByMerchantId driver.merchantId
-      notifyDevice fcmConfig{FCM.fcmTokenKeyPrefix = "transporter-healthcheck"} TRIGGER_SERVICE "You were inactive" "Please check the app" driverId (Just token)
+      notifyDevice driver.merchantId TRIGGER_SERVICE "You were inactive" "Please check the app" driverId (Just token)
   asks (.notificationMinDelay)
     >>= threadDelay . (.getMicroseconds)
 
@@ -101,8 +99,8 @@ driverMakingInactiveService = startService "driverMakingInactiveService" $ withR
       mobileNumber' <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
       countryCode <- driver.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
       log INFO "Make driver inactive"
-      Esq.runTransaction $
-        DrInfo.updateActivity (cast driver.id) False
+      -- Esq.runTransaction $
+      DrInfo.updateActivity (cast driver.id) False (Just OFFLINE)
 
       smsCfg <- asks (.smsCfg)
       driverInactiveSmsTemplate <- asks (.driverInactiveSmsTemplate)

@@ -161,6 +161,7 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
             shortDescription = shortDescription,
             label = label,
             likeCount = likeCount,
+            viewCount = viewCount,
             mediaFiles = mediaFiles,
             merchantId = merchantId,
             createdAt = createdAt
@@ -184,14 +185,6 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
       let messageTranslations' = filter (\messageTranslation' -> messageTranslation'.messageId == msg.id) messageTranslations
        in acc <> ((\messageTranslation' -> (msgRep, rawMessageFromMessage msg, messageTranslation')) <$> messageTranslations')
 
--- findByDriverIdMessageIdAndLanguage :: Transactionable m => Id P.Driver -> Id Msg.Message -> Language -> m (Maybe (MessageReport, Msg.RawMessage, Maybe MTD.MessageTranslation))
--- findByDriverIdMessageIdAndLanguage driverId messageId language = do
---   Esq.findOne $ do
---     (messageReport :& message :& mbMessageTranslation) <- from (fullMessage language)
---     where_ $
---       messageReport ^. MessageReportTId ==. val (toKey (messageId, driverId))
---     return (messageReport, message, mbMessageTranslation)
-
 findByDriverIdMessageIdAndLanguage :: L.MonadFlow m => Id P.Driver -> Id Msg.Message -> Language -> m (Maybe (MessageReport, RawMessage, Maybe MTD.MessageTranslation))
 findByDriverIdMessageIdAndLanguage driverId messageId language = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -209,14 +202,6 @@ findByDriverIdMessageIdAndLanguage driverId messageId language = do
         Nothing -> pure Nothing
     Nothing -> pure Nothing
 
--- findByMessageIdAndDriverId :: Transactionable m => Id Msg.Message -> Id P.Driver -> m (Maybe MessageReport)
--- findByMessageIdAndDriverId messageId driverId =
---   Esq.findOne $ do
---     messageReport <- from $ table @MessageReportT
---     where_ $
---       messageReport ^. MessageReportTId ==. val (toKey (messageId, driverId))
---     return messageReport
-
 findByMessageIdAndDriverId :: L.MonadFlow m => Id Msg.Message -> Id P.Driver -> m (Maybe MessageReport)
 findByMessageIdAndDriverId (Id messageId) (Id driverId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -225,33 +210,6 @@ findByMessageIdAndDriverId (Id messageId) (Id driverId) = do
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamMessageReportToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamMR.messageId $ Se.Eq messageId, Se.Is BeamMR.driverId $ Se.Eq driverId]]
     Nothing -> pure Nothing
-
--- findByMessageIdAndStatusWithLimitAndOffset ::
---   Transactionable m =>
---   Maybe Int ->
---   Maybe Int ->
---   Id Msg.Message ->
---   Maybe DeliveryStatus ->
---   m [(MessageReport, P.Person)]
--- findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset messageId mbDeliveryStatus = do
---   findAll $ do
---     (messageReport :& person) <-
---       from $
---         table @MessageReportT
---           `innerJoin` table @PT.PersonT
---             `Esq.on` ( \(messageReport :& person) ->
---                          messageReport ^. MessageReportDriverId ==. person ^. PT.PersonTId
---                      )
---     where_ $
---       messageReport ^. MessageReportMessageId ==. val (toKey messageId)
---         &&. if isJust mbDeliveryStatus then messageReport ^. MessageReportDeliveryStatus ==. val (fromMaybe Success mbDeliveryStatus) else val True
---     orderBy [desc $ messageReport ^. MessageReportCreatedAt]
---     limit limitVal
---     offset offsetVal
---     return (messageReport, person)
---   where
---     limitVal = min (maybe 10 fromIntegral mbLimit) 20
---     offsetVal = maybe 0 fromIntegral mbOffset
 
 findByMessageIdAndStatusWithLimitAndOffset ::
   (L.MonadFlow m, Log m) =>
@@ -305,19 +263,6 @@ findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset (Id messageID) mbDel
       let messageReports' = filter (\messageReport -> getId messageReport.driverId == getId person'.id) messageReports
        in acc <> ((\messageReport -> (messageReport, person')) <$> messageReports')
 
--- getMessageCountByStatus :: Transactionable m => Id Msg.Message -> DeliveryStatus -> m Int
--- getMessageCountByStatus messageId status =
---   mkCount <$> do
---     Esq.findAll $ do
---       messageReport <- from $ table @MessageReportT
---       where_ $
---         messageReport ^. MessageReportMessageId ==. val (toKey messageId)
---           &&. messageReport ^. MessageReportDeliveryStatus ==. val status
---       return (countRows :: SqlExpr (Esq.Value Int))
---   where
---     mkCount [counter] = counter
---     mkCount _ = 0
-
 getMessageCountByStatus :: L.MonadFlow m => Id Msg.Message -> DeliveryStatus -> m Int
 getMessageCountByStatus (Id messageID) status = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -334,19 +279,6 @@ getMessageCountByStatus (Id messageID) status = do
       pure (either (const 0) (fromMaybe 0) resp)
     Left _ -> pure 0
 
--- getMessageCountByReadStatus :: Transactionable m => Id Msg.Message -> m Int
--- getMessageCountByReadStatus messageId =
---   mkCount <$> do
---     Esq.findAll $ do
---       messageReport <- from $ table @MessageReportT
---       where_ $
---         messageReport ^. MessageReportMessageId ==. val (toKey messageId)
---           &&. messageReport ^. MessageReportReadStatus
---       return (countRows :: SqlExpr (Esq.Value Int))
---   where
---     mkCount [counter] = counter
---     mkCount _ = 0
-
 getMessageCountByReadStatus :: L.MonadFlow m => Id Msg.Message -> m Int
 getMessageCountByReadStatus (Id messageID) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -362,20 +294,6 @@ getMessageCountByReadStatus (Id messageID) = do
                   B.all_ (meshModelTableEntity @BeamMR.MessageReportT @Postgres @(DatabaseWith BeamMR.MessageReportT))
       pure (either (const 0) (fromMaybe 0) resp)
     Left _ -> pure 0
-
--- updateSeenAndReplyByMessageIdAndDriverId :: Id Msg.Message -> Id P.Driver -> Bool -> Maybe Text -> SqlDB ()
--- updateSeenAndReplyByMessageIdAndDriverId messageId driverId readStatus reply = do
---   now <- getCurrentTime
---   Esq.update $ \mr -> do
---     set
---       mr
---       [ MessageReportReadStatus =. val readStatus,
---         MessageReportReply =. val reply,
---         MessageReportUpdatedAt =. val now
---       ]
---     where_ $
---       mr ^. MessageReportMessageId ==. val (toKey messageId)
---         &&. mr ^. MessageReportDriverId ==. val (toKey $ cast driverId)
 
 updateSeenAndReplyByMessageIdAndDriverId :: (L.MonadFlow m, MonadTime m) => Id Msg.Message -> Id P.Driver -> Bool -> Maybe Text -> m (MeshResult ())
 updateSeenAndReplyByMessageIdAndDriverId messageId driverId readStatus reply = do
@@ -394,20 +312,6 @@ updateSeenAndReplyByMessageIdAndDriverId messageId driverId readStatus reply = d
         ]
         [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
-
--- updateMessageLikeByMessageIdAndDriverIdAndReadStatus :: Id Msg.Message -> Id P.Driver -> SqlDB ()
--- updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId driverId = do
---   now <- getCurrentTime
---   Esq.update $ \mr -> do
---     set
---       mr
---       [ MessageReportLikeStatus =. not_ (mr ^. MessageReportLikeStatus),
---         MessageReportUpdatedAt =. val now
---       ]
---     where_ $
---       mr ^. MessageReportMessageId ==. val (toKey messageId)
---         &&. mr ^. MessageReportDriverId ==. val (toKey $ cast driverId)
---         &&. mr ^. MessageReportReadStatus ==. val True
 
 updateMessageLikeByMessageIdAndDriverIdAndReadStatus :: (L.MonadFlow m, MonadTime m) => Id Msg.Message -> Id P.Driver -> m ()
 updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId driverId = do
@@ -432,19 +336,6 @@ updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId driverId = do
         Nothing -> pure ()
     Nothing -> pure ()
 
--- updateDeliveryStatusByMessageIdAndDriverId :: Id Msg.Message -> Id P.Driver -> DeliveryStatus -> SqlDB ()
--- updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = do
---   now <- getCurrentTime
---   Esq.update $ \mr -> do
---     set
---       mr
---       [ MessageReportDeliveryStatus =. val deliveryStatus,
---         MessageReportUpdatedAt =. val now
---       ]
---     where_ $
---       mr ^. MessageReportMessageId ==. val (toKey messageId)
---         &&. mr ^. MessageReportDriverId ==. val (toKey $ cast driverId)
-
 updateDeliveryStatusByMessageIdAndDriverId :: (L.MonadFlow m, MonadTime m) => Id Msg.Message -> Id P.Driver -> DeliveryStatus -> m (MeshResult ())
 updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -461,12 +352,6 @@ updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = d
         ]
         [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
-
--- deleteByPersonId :: Id P.Person -> SqlDB ()
--- deleteByPersonId personId =
---   Esq.delete $ do
---     messagereport <- from $ table @MessageReportT
---     where_ $ messagereport ^. MessageReportDriverId ==. val (toKey personId)
 
 deleteByPersonId :: L.MonadFlow m => Id P.Person -> m ()
 deleteByPersonId (Id personId) = do

@@ -17,6 +17,7 @@ module Environment where
 import Control.Monad.Catch (bracket)
 import Kernel.Mock.ExternalAPI
 import Kernel.Storage.Hedis
+import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
@@ -47,6 +48,7 @@ data AppEnv = AppEnv
     statusWaitTimeSec :: Seconds,
     callbackWaitTimeMilliSec :: Milliseconds,
     loggerConfig :: LoggerConfig,
+    coreMetrics :: CoreMetricsContainer,
     authEntity :: AuthenticatingEntity',
     hedisEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
@@ -60,6 +62,7 @@ data AppEnv = AppEnv
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv config@AppCfg {..} = do
   hedisEnv <- connectHedis hedisCfg ("mock_public_transport_provider_platform" <>)
+  coreMetrics <- registerCoreMetricsContainer
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv

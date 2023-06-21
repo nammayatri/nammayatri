@@ -40,6 +40,7 @@ mkPersist
       shortDescription Text
       label Text Maybe
       likeCount Int
+      viewCount Int
       mediaFiles (PostgresList MediaFileTId)
       merchantId MerchantTId
       createdAt UTCTime

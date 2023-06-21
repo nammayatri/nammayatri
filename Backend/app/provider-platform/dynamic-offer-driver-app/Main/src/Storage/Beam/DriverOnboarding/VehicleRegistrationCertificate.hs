@@ -76,16 +76,6 @@ instance IsString Domain.VerificationStatus where
 -- instance IsString DbHash where
 --   fromString = show
 
-instance FromField [Text] where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be [Text] where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Text]
-
-instance FromBackendRow Postgres [Text]
-
 data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
   { id :: B.C f Text,
     documentImageId :: B.C f Text,

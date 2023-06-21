@@ -35,6 +35,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     driverOfferMerchantId :: Text,
     geoHashPrecisionValue :: Int,
     signingPublicKey :: Base64,
+    cipherText :: Maybe Base64,
     signatureExpiry :: Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

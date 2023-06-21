@@ -28,6 +28,7 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres (Postgres)
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Booking as Domain
+import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Vehicle.Variant as Veh
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
@@ -64,7 +65,9 @@ data BookingT f = BookingT
     quoteId :: B.C f Text,
     status :: B.C f Domain.BookingStatus,
     bookingType :: B.C f Domain.BookingType,
+    specialLocationTag :: B.C f (Maybe Text),
     specialZoneOtpCode :: B.C f (Maybe Text),
+    area :: B.C f (Maybe FareProductD.Area),
     providerId :: B.C f Text,
     primaryExophone :: B.C f Text,
     bapId :: B.C f Text,
@@ -80,6 +83,7 @@ data BookingT f = BookingT
     estimatedDuration :: B.C f Seconds,
     fareParametersId :: B.C f Text,
     riderName :: B.C f (Maybe Text),
+    paymentMethodId :: B.C f (Maybe Text),
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
@@ -124,8 +128,6 @@ instance ToJSON Booking where
 
 deriving stock instance Show Booking
 
--- deriving stock instance Read Money
-
 bookingTMod :: BookingT (B.FieldModification (B.TableField BookingT))
 bookingTMod =
   B.tableModification
@@ -133,8 +135,10 @@ bookingTMod =
       transactionId = B.fieldNamed "transaction_id",
       quoteId = B.fieldNamed "quote_id",
       status = B.fieldNamed "status",
+      specialLocationTag = B.fieldNamed "special_location_tag",
       bookingType = B.fieldNamed "booking_type",
       specialZoneOtpCode = B.fieldNamed "special_zone_otp_code",
+      area = B.fieldNamed "area",
       providerId = B.fieldNamed "provider_id",
       primaryExophone = B.fieldNamed "primary_exophone",
       bapId = B.fieldNamed "bap_id",
@@ -151,6 +155,7 @@ bookingTMod =
       fareParametersId = B.fieldNamed "fare_parameters_id",
       riderName = B.fieldNamed "rider_name",
       createdAt = B.fieldNamed "created_at",
+      paymentMethodId = B.fieldNamed "payment_method_id",
       updatedAt = B.fieldNamed "updated_at"
     }
 

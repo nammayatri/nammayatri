@@ -296,7 +296,10 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnSelection key index)) state
   let
     rideOtp = if (index + 1) > (length state.props.rideOtp) then ( take 4 (state.props.rideOtp <> key)) else (take index (state.props.rideOtp)) <> key <> (take 4 (drop (index+1) state.props.rideOtp))
     focusIndex = length rideOtp
-  continue state { props = state.props { rideOtp = rideOtp, enterOtpFocusIndex = focusIndex ,otpIncorrect = false} }
+    newState = state { props = state.props { rideOtp = rideOtp, enterOtpFocusIndex = focusIndex ,otpIncorrect = false} }
+    exitAction = if state.props.zoneRideBooking then StartZoneRide newState else StartRide newState
+  if ((length rideOtp) >= 4  && (not state.props.otpAttemptsExceeded)) then updateAndExit newState exitAction
+  else continue newState
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickBack text)) state = do
   let
     rideOtp = (if length( text ) > 0 then (take (length ( text ) - 1 ) text) else "" )

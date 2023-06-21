@@ -16,6 +16,7 @@
 module Screens.ContactUsScreen.ScreenData where
 
 import Screens.Types(ContactUsScreenState)
+import Data.Maybe(Maybe(..))
 
 initData :: ContactUsScreenState
 initData = {
@@ -23,7 +24,8 @@ initData = {
     email : "",
     subject : "",
     description : "",
-    bookingId : ""
+    bookingId : "",
+    errorMessage : Nothing
   },
   props: {
     btnActive : false,

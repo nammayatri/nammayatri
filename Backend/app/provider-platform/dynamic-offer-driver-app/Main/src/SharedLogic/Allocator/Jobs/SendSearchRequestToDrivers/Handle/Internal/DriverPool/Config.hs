@@ -14,6 +14,7 @@
 
 module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
   ( DriverPoolBatchesConfig (..),
+    BatchSplitByPickupDistance (..),
     HasDriverPoolBatchesConfig,
     PoolSortingType (..),
   )
@@ -22,6 +23,12 @@ where
 import EulerHS.Prelude hiding (id)
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
+
+data BatchSplitByPickupDistance = BatchSplitByPickupDistance
+  { batchSplitSize :: Int,
+    batchSplitDelay :: Seconds
+  }
+  deriving (Generic, Show, Read, FromJSON, ToJSON, Eq)
 
 data DriverPoolBatchesConfig = DriverPoolBatchesConfig
   { driverBatchSize :: Int,

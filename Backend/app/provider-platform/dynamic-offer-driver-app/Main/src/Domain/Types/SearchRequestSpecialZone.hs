@@ -15,6 +15,7 @@
 
 module Domain.Types.SearchRequestSpecialZone where
 
+import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Kernel.Prelude
@@ -31,6 +32,7 @@ data SearchRequestSpecialZone = SearchRequestSpecialZone
     providerId :: Id DM.Merchant,
     fromLocation :: DLoc.SearchReqLocation,
     toLocation :: DLoc.SearchReqLocation,
+    area :: Maybe FareProductD.Area,
     bapId :: Text,
     bapUri :: BaseUrl,
     estimatedDistance :: Meters,

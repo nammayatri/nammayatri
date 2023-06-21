@@ -22,7 +22,6 @@ import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
-import qualified Data.Vector as V
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
@@ -62,16 +61,6 @@ instance FromBackendRow Postgres Domain.IssueStatus
 
 instance IsString Domain.IssueStatus where
   fromString = show
-
-instance FromField [Text] where
-  fromField f mbValue = V.toList <$> fromField f mbValue
-
-instance HasSqlValueSyntax be (V.Vector Text) => HasSqlValueSyntax be [Text] where
-  sqlValueSyntax x = sqlValueSyntax (V.fromList x)
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Text]
-
-instance FromBackendRow Postgres [Text]
 
 data IssueReportT f = IssueReportT
   { id :: B.C f Text,

@@ -29,9 +29,7 @@ import qualified Data.Vector as V
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
+import Database.Beam.Postgres (Postgres)
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import Domain.Types.Common
@@ -42,7 +40,7 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Kernel.Utils.Common (encodeToText)
-import Lib.Utils (fromFieldJSON)
+import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Vehicle ()
@@ -56,7 +54,6 @@ instance FromField Domain.EstimateBreakup where
   fromField = fromFieldJSON
 
 fromFieldEstimateBreakUp ::
-  -- (Typeable a, Read a) =>
   DPSF.Field ->
   Maybe ByteString ->
   DPSF.Conversion [Domain.EstimateBreakup]
@@ -66,18 +63,11 @@ fromFieldEstimateBreakUp f mbValue = case mbValue of
     Just res -> pure res
     Nothing -> DPSF.returnError DPSF.ConversionFailed f "Could not 'read' value for 'Rule'."
 
--- Nothing -> pure Unrestricted
--- -- Just _ -> (Regions . V.toList) <$> (fromField f mbValue)
--- Just _ -> (Regions . V.toList) <$> (fromField f mbValue)
-
 instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [Domain.EstimateBreakup] where
   sqlValueSyntax estimateBreakupList =
     let unsafeEstimateBreakupList = coerce @[Domain.EstimateBreakup] @[Domain.EstimateBreakupD 'Unsafe] $ estimateBreakupList
         x = encodeToText <$> unsafeEstimateBreakupList
      in sqlValueSyntax (V.fromList x)
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be [Domain.EstimateBreakup] where
---   sqlValueSyntax = autoSqlValueSyntax
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Domain.EstimateBreakup]
 
@@ -92,9 +82,9 @@ data EstimateT f = EstimateT
     oldNightShiftCharge :: B.C f (Maybe Centesimal),
     nightShiftStart :: B.C f (Maybe TimeOfDay),
     nightShiftEnd :: B.C f (Maybe TimeOfDay),
-    -- waitingTimeEstimatedThreshold :: B.C f (Maybe Seconds),
     waitingChargePerMin :: B.C f (Maybe Money),
     waitingOrPickupCharges :: B.C f (Maybe Money),
+    specialLocationTag :: B.C f (Maybe Text),
     createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
@@ -144,9 +134,9 @@ estimateTMod =
       oldNightShiftCharge = B.fieldNamed "night_shift_multiplier",
       nightShiftStart = B.fieldNamed "night_shift_start",
       nightShiftEnd = B.fieldNamed "night_shift_end",
-      -- waitingTimeEstimatedThreshold = B.fieldNamed "waiting_time_estimated_threshold",
       waitingChargePerMin = B.fieldNamed "waiting_charge_per_min",
       waitingOrPickupCharges = B.fieldNamed "waiting_or_pickup_charges",
+      specialLocationTag = B.fieldNamed "special_location_tag",
       createdAt = B.fieldNamed "created_at"
     }
 

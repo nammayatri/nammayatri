@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -23,13 +23,13 @@ import Effect.Class (liftEffect)
 -- import JBridge as JBridge
 import Presto.Core.Flow (doAff)
 import Presto.Core.Types.Language.Flow as Flow
-import Types.App  (FlowBT, GlobalState)
+import Common.Types.App  (FlowBT)
 
 
-modifyState :: (GlobalState → GlobalState) -> FlowBT String Unit
+modifyState :: forall st. (st → st ) -> FlowBT String st Unit
 modifyState a = void $ lift $ lift $ Flow.modifyState a
 
-getState :: FlowBT String GlobalState
+getState :: forall st. FlowBT String st st
 getState = lift $ lift $ Flow.getState
 
 -- toggleLoader :: Boolean -> FlowBT String Unit
@@ -44,7 +44,7 @@ getState = lift $ lift $ Flow.getState
 -- getTime :: FlowBT String String
 -- getTime = lift $ lift $ Utils.getTime
 
-liftFlowBT :: forall val . (Effect val)  -> FlowBT String val
+liftFlowBT :: forall val st. Effect val -> FlowBT String st val
 liftFlowBT effVal = lift $ lift $ doAff do liftEffect (effVal)
 
 -- getCurrentLatLong :: FlowBT String JBridge.LocationLatLong

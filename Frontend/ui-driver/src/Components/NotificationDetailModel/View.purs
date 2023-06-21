@@ -17,6 +17,7 @@ module Components.NotificationDetailModel.View where
 
 import Animation (screenAnimationFadeInOut)
 import Common.Types.App (LazyCheck(..))
+import Types.App (defaultGlobalState)
 import Components.NotificationDetailModel.Controller (Action(..), fetchTitleAndUrl)
 import Components.PopUpModal as PopUpModal
 import Control.Monad.Except (runExceptT)
@@ -53,7 +54,7 @@ view push state =
         , afterRender
             ( \action -> do
                 _ <- push action
-                void $ launchAff $ flowRunner $ runExceptT $ runBackT
+                void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT
                   $ do
                       case state.notificationNotSeen of
                         true -> do

@@ -253,7 +253,8 @@ data MessageDeliveryInfoResponse = MessageDeliveryInfoResponse
     queued :: Int,
     sending :: Int,
     seen :: Int,
-    liked :: Int
+    liked :: Int,
+    viewed :: Int
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

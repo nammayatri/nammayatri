@@ -14,11 +14,13 @@
 
 module Beckn.ACL.OnSearch where
 
+import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.Common.VehicleVariant as Common
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
 import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..), BreakupPrice (..), ItemTags (night_shift_charge))
 import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Estimate as DEst
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
 
@@ -61,11 +63,14 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
             rides_completed = 0, --FIXME
             rides_confirmed = 0 --FIXME
           }
+      payments = Just $ mkPayment <$> paymentMethodsInfo
+      -- TODO For backwards compatibility, remove it. Only payments field used in logic.
       payment =
         OS.Payment
-          { collected_by = "BPP",
+          { collected_by = OS.BPP,
             _type = OS.ON_FULFILLMENT,
-            time = OS.TimeDuration "P2A" -- FIXME: what is this?
+            time = OS.TimeDuration "P2A", -- FIXME: what is this?
+            instrument = Nothing
           }
   let providerSpec =
         OS.Provider
@@ -79,7 +84,8 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
             fulfillments,
             contacts,
             tags,
-            payment
+            payment,
+            payments
           }
   OS.OnSearchMessage $
     OS.Catalog
@@ -160,7 +166,8 @@ mkQuoteEntities start end estInfo = do
                     night_shift_start = estimate.nightShiftInfo <&> (.nightShiftStart),
                     night_shift_end = estimate.nightShiftInfo <&> (.nightShiftEnd),
                     waiting_charge_per_min = estimate.waitingCharges.waitingChargePerMin,
-                    drivers_location = toList estInfo.driverLatLongs
+                    drivers_location = toList estInfo.driverLatLongs,
+                    special_location_tag = estimate.specialLocationTag
                   },
             base_distance = Nothing,
             base_duration = Nothing
@@ -211,7 +218,8 @@ mkQuoteEntitiesSpecialZone start end it = do
                     night_shift_start = Nothing,
                     night_shift_end = Nothing,
                     waiting_charge_per_min = Nothing,
-                    drivers_location = []
+                    drivers_location = [],
+                    special_location_tag = it.specialLocationTag
                   },
             base_distance = Nothing,
             base_duration = Nothing
@@ -241,3 +249,12 @@ castVariant Variant.SUV = Common.SUV
 castVariant Variant.AUTO_RICKSHAW = Common.AUTO_RICKSHAW
 castVariant Variant.TAXI = Common.TAXI
 castVariant Variant.TAXI_PLUS = Common.TAXI_PLUS
+
+mkPayment :: DMPM.PaymentMethodInfo -> OS.Payment
+mkPayment DMPM.PaymentMethodInfo {..} =
+  OS.Payment
+    { collected_by = Common.castDPaymentCollector collectedBy,
+      _type = Common.castDPaymentType paymentType,
+      instrument = Just $ Common.castDPaymentInstrument paymentInstrument,
+      time = OS.TimeDuration "P2A" -- FIXME: what is this?
+    }

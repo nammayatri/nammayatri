@@ -49,9 +49,7 @@ import qualified Tools.Metrics as Metrics
 
 data OneWaySearchReq = OneWaySearchReq
   { origin :: DSearch.SearchReqLocation,
-    destination :: DSearch.SearchReqLocation,
-    autoAssignEnabled :: Maybe Bool, -- TODO: should be non-null
-    autoAssignEnabledV2 :: Maybe Bool
+    destination :: DSearch.SearchReqLocation
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -63,7 +61,6 @@ data OneWaySearchRes = OneWaySearchRes
     gatewayUrl :: BaseUrl,
     searchRequestExpiry :: UTCTime,
     city :: Text,
-    autoAssignEnabled :: Bool,
     customerLanguage :: Maybe Maps.Language,
     device :: Maybe Text,
     shortestRouteInfo :: Maybe Maps.RouteInfo
@@ -121,8 +118,6 @@ oneWaySearch personId req bundleVersion clientVersion device = do
       clientVersion
       device
       shortestRouteDuration
-      (fromMaybe False req.autoAssignEnabled)
-      (fromMaybe False req.autoAssignEnabledV2)
   Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId
@@ -139,7 +134,6 @@ oneWaySearch personId req bundleVersion clientVersion device = do
             gatewayUrl = merchant.gatewayUrl,
             searchRequestExpiry = searchRequest.validTill,
             city = merchant.city,
-            autoAssignEnabled = fromMaybe False req.autoAssignEnabled,
             customerLanguage = searchRequest.language,
             device,
             shortestRouteInfo

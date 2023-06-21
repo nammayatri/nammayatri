@@ -38,4 +38,5 @@
     <string name="select_date">തീയതി തിരഞ്ഞെടുക്കുക</string>
     <string name="new_ride_req">പുതിയ റൈഡ് അഭ്യർത്ഥന</string>
     <string name="new_ride_available_for_offering">ഓഫറിനായി പുതിയ റൈഡ് ലഭ്യമാണ്</string>
+    <string name="no_enabled_browser">നിങ്ങളുടെ ഉപകരണത്തിൽ പ്രവർത്തനക്ഷമമാക്കിയ ബ്രൗസറൊന്നും കണ്ടെത്തിയില്ല, ദയവായി ഒരു ബ്രൗസർ പ്രവർത്തനക്ഷമമാക്കുക അല്ലെങ്കിൽ ഇൻസ്റ്റാൾ ചെയ്യുക</string>
 </resources>

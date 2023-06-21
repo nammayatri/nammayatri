@@ -22,7 +22,6 @@ import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize hiding (label)
 import qualified Data.Time as Time
-import qualified Data.Vector as V
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
@@ -58,6 +57,7 @@ data MessageT f = MessageT
     shortDescription :: B.C f Text,
     label :: B.C f (Maybe Text),
     likeCount :: B.C f Int,
+    viewCount :: B.C f Int,
     mediaFiles :: B.C f [Text],
     merchantId :: B.C f Text,
     createdAt :: B.C f Time.LocalTime
@@ -82,16 +82,6 @@ instance FromJSON Message where
 
 instance ToJSON Message where
   toJSON = A.genericToJSON A.defaultOptions
-
-instance FromField [Text] where
-  fromField f mbValue = V.toList <$> fromField f mbValue
-
-instance HasSqlValueSyntax be (V.Vector Text) => HasSqlValueSyntax be [Text] where
-  sqlValueSyntax x = sqlValueSyntax (V.fromList x)
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Text]
-
-instance FromBackendRow Postgres [Text]
 
 instance FromField Domain.MessageType where
   fromField = fromFieldEnum
@@ -122,6 +112,7 @@ messageTMod =
       shortDescription = B.fieldNamed "short_description",
       label = B.fieldNamed "label",
       likeCount = B.fieldNamed "like_count",
+      viewCount = B.fieldNamed "view_count",
       mediaFiles = B.fieldNamed "media_files",
       merchantId = B.fieldNamed "merchant_id",
       createdAt = B.fieldNamed "created_at"

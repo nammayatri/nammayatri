@@ -2,9 +2,9 @@ let common = ../generic/common.dhall
 
 let appCfg = ./dynamic-offer-driver-app.dhall
 
-let sec = ./secrets/static-offer-driver-app.dhall
+let sec = ./secrets/dynamic-offer-driver-app.dhall
 
-let transporter = ./static-offer-driver-app.dhall
+let transporter = ./dynamic-offer-driver-app.dhall
 
 let schedulerConfig =
       { loggerConfig =

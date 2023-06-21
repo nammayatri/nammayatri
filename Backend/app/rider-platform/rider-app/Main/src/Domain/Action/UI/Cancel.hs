@@ -87,16 +87,19 @@ cancel bookingId _ req = do
     throwError $ RideInvalidStatus "Cannot cancel this ride"
   when (booking.status == SRB.NEW) $ throwError (BookingInvalidStatus "NEW")
   bppBookingId <- fromMaybeM (BookingFieldNotPresent "bppBookingId") booking.bppBookingId
-  ride <- Esq.runInReplica $ QR.findActiveByRBId booking.id >>= fromMaybeM (RideDoesNotExist $ "BookingId: " <> booking.id.getId)
-  res <- try @_ @SomeException (CallBPP.callGetDriverLocation ride.trackingUrl)
+  mRide <- Esq.runInReplica $ QR.findActiveByRBId booking.id
   cancellationReason <-
-    case res of
-      Right res' -> do
-        disToPickup <- driverDistanceToPickup booking.merchantId (getCoordinates res'.currPoint) (getCoordinates booking.fromLocation)
-        buildBookingCancelationReason (Just res'.currPoint) (Just disToPickup)
-      Left err -> do
-        logTagInfo "DriverLocationFetchFailed" $ show err
-        buildBookingCancelationReason Nothing Nothing
+    case mRide of
+      Just ride -> do
+        res <- try @_ @SomeException (CallBPP.callGetDriverLocation ride.trackingUrl)
+        case res of
+          Right res' -> do
+            disToPickup <- driverDistanceToPickup booking.merchantId (getCoordinates res'.currPoint) (getCoordinates booking.fromLocation)
+            buildBookingCancelationReason (Just res'.currPoint) (Just disToPickup) (Just booking.merchantId)
+          Left err -> do
+            logTagInfo "DriverLocationFetchFailed" $ show err
+            buildBookingCancelationReason Nothing Nothing (Just booking.merchantId)
+      Nothing -> buildBookingCancelationReason Nothing Nothing (Just booking.merchantId)
   DB.runTransaction $ QBCR.upsert cancellationReason
   return $
     CancelRes
@@ -108,12 +111,13 @@ cancel bookingId _ req = do
         city = merchant.city
       }
   where
-    buildBookingCancelationReason currentDriverLocation disToPickup = do
+    buildBookingCancelationReason currentDriverLocation disToPickup merchantId = do
       let CancelReq {..} = req
       return $
         SBCR.BookingCancellationReason
           { bookingId = bookingId,
             rideId = Nothing,
+            merchantId = merchantId,
             source = SBCR.ByUser,
             reasonCode = Just reasonCode,
             reasonStage = Just reasonStage,

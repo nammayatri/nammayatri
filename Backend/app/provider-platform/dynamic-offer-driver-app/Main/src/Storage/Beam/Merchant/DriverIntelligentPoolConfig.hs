@@ -96,6 +96,7 @@ instance IsString SWC.SlidingWindowOptions where
 
 data DriverIntelligentPoolConfigT f = DriverIntelligentPoolConfigT
   { merchantId :: B.C f Text,
+    actualPickupDistanceWeightage :: B.C f Int,
     availabilityTimeWeightage :: B.C f Int,
     availabilityTimeWindowOption :: B.C f SWC.SlidingWindowOptions,
     acceptanceRatioWeightage :: B.C f Int,
@@ -146,6 +147,7 @@ driverIntelligentPoolConfigTMod :: DriverIntelligentPoolConfigT (B.FieldModifica
 driverIntelligentPoolConfigTMod =
   B.tableModification
     { merchantId = B.fieldNamed "merchant_id",
+      actualPickupDistanceWeightage = B.fieldNamed "actual_pickup_distance_weightage",
       availabilityTimeWeightage = B.fieldNamed "availability_time_weightage",
       availabilityTimeWindowOption = B.fieldNamed "availability_time_window_option",
       acceptanceRatioWeightage = B.fieldNamed "acceptance_ratio_weightage",

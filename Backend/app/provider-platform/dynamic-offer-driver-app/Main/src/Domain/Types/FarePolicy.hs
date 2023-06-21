@@ -24,8 +24,8 @@ import Domain.Types.Common
 import Domain.Types.FarePolicy.DriverExtraFeeBounds as Reexport
 import Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicySlabsDetails as Reexport
-import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Vehicle.Variant as Variant
+import Domain.Types.Merchant
+import Domain.Types.Vehicle.Variant
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id (Id)
@@ -34,14 +34,13 @@ import Kernel.Types.Id (Id)
 
 data FarePolicyD (s :: UsageSafety) = FarePolicy
   { id :: Id FarePolicy,
-    merchantId :: Id DM.Merchant,
-    vehicleVariant :: Variant.Variant,
     driverExtraFeeBounds :: Maybe (NonEmpty DriverExtraFeeBounds),
     serviceCharge :: Maybe Money,
     nightShiftBounds :: Maybe NightShiftBounds,
     allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,
     govtCharges :: Maybe Double,
     farePolicyDetails :: FarePolicyDetailsD s,
+    description :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -54,7 +53,7 @@ instance FromJSON (FarePolicyD 'Unsafe)
 instance ToJSON (FarePolicyD 'Unsafe)
 
 data FarePolicyDetailsD (s :: UsageSafety) = ProgressiveDetails (FPProgressiveDetailsD s) | SlabsDetails (FPSlabsDetailsD s)
-  deriving (Generic)
+  deriving (Generic, Show)
 
 type FarePolicyDetails = FarePolicyDetailsD 'Safe
 
@@ -81,33 +80,22 @@ getFarePolicyType farePolicy = case farePolicy.farePolicyDetails of
   ProgressiveDetails _ -> Progressive
   SlabsDetails _ -> Slabs
 
------------------------------------------------------------------------------------------------------------------------------------------
-------------------------------------------------APIEntity--------------------------------------------------------------------------------
------------------------------------------------------------------------------------------------------------------------------------------
-
-data FarePolicyAPIEntity = FarePolicyAPIEntity
+data FullFarePolicy = FullFarePolicy
   { id :: Id FarePolicy,
-    vehicleVariant :: Variant.Variant,
+    merchantId :: Id Merchant,
+    vehicleVariant :: Variant,
     driverExtraFeeBounds :: Maybe (NonEmpty DriverExtraFeeBounds),
     serviceCharge :: Maybe Money,
     nightShiftBounds :: Maybe NightShiftBounds,
     allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,
     govtCharges :: Maybe Double,
-    farePolicyDetails :: FarePolicyDetailsAPIEntity
+    farePolicyDetails :: FarePolicyDetails,
+    description :: Maybe Text,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show)
 
-data FarePolicyDetailsAPIEntity = ProgressiveDetailsAPIEntity FPProgressiveDetailsAPIEntity | SlabsDetailsAPIEntity FPSlabsDetailsAPIEntity
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-makeFarePolicyAPIEntity :: FarePolicy -> FarePolicyAPIEntity
-makeFarePolicyAPIEntity FarePolicy {..} =
-  FarePolicyAPIEntity
-    { farePolicyDetails = makeFarePolicyDetailsAPIEntity farePolicyDetails,
-      ..
-    }
-  where
-    makeFarePolicyDetailsAPIEntity :: FarePolicyDetails -> FarePolicyDetailsAPIEntity
-    makeFarePolicyDetailsAPIEntity = \case
-      ProgressiveDetails det -> ProgressiveDetailsAPIEntity $ makeFPProgressiveDetailsAPIEntity det
-      SlabsDetails det -> SlabsDetailsAPIEntity $ makeFPSlabsDetailsAPIEntity det
+farePolicyToFullFarePolicy :: Id Merchant -> Variant -> FarePolicy -> FullFarePolicy
+farePolicyToFullFarePolicy merchantId vehicleVariant FarePolicy {..} =
+  FullFarePolicy {..}

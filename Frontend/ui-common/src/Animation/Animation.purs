@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -21,7 +21,7 @@ import Prelude (Unit, negate, unit, ($), (/))
 import PrestoDOM (PrestoDOM)
 import PrestoDOM.Animation (Interpolator, toRotation)
 import PrestoDOM.Animation as PrestoAnim
-import Animation.Config
+import Common.Animation.Config
 
 
 animateTime :: Int
@@ -31,7 +31,7 @@ interpolator :: PrestoAnim.Interpolator
 interpolator = PrestoAnim.Bezier 0.1 0.4 0.4 0.9
 
 translateInXAnim :: AnimConfig -> PrestoAnim.Animation
-translateInXAnim config = 
+translateInXAnim config =
     PrestoAnim.Animation
     [ PrestoAnim.duration animateTime
     , PrestoAnim.fromX config.fromX
@@ -41,7 +41,7 @@ translateInXAnim config =
     ] config.ifAnim
 
 translateOutXAnim :: AnimConfig -> PrestoAnim.Animation
-translateOutXAnim config = 
+translateOutXAnim config =
     PrestoAnim.Animation
     [ PrestoAnim.duration animateTime
     , PrestoAnim.toX config.toX
@@ -50,7 +50,7 @@ translateOutXAnim config =
     ] config.ifAnim
 
 translateInYAnim :: AnimConfig -> PrestoAnim.Animation
-translateInYAnim config = 
+translateInYAnim config =
     PrestoAnim.Animation
     [ PrestoAnim.duration animateTime
     , PrestoAnim.fromY config.fromY
@@ -60,40 +60,40 @@ translateInYAnim config =
     ] config.ifAnim
 
 translateOutYAnim :: AnimConfig -> PrestoAnim.Animation
-translateOutYAnim config = 
+translateOutYAnim config =
     PrestoAnim.Animation
     [ PrestoAnim.duration animateTime
     , PrestoAnim.toY config.toY
     , PrestoAnim.tag "slideOut"
     , PrestoAnim.interpolator interpolator
     ] config.ifAnim
-    
+
 duration :: Int
 duration = 5000
 
-delay :: Int 
+delay :: Int
 delay = 1000
 
 loaderAnim :: AnimConfig -> PrestoAnim.Animation
-loaderAnim config = 
+loaderAnim config =
    PrestoAnim.Animation
    [ PrestoAnim.duration config.duration
     , PrestoAnim.fromX config.fromX
     , PrestoAnim.toX config.toX
     , PrestoAnim.repeatCount config.repeatCount --PrestoAnim.Infinite
-    , PrestoAnim.interpolator config.interpolator -- $ PrestoAnim.Bezier 0.94 0.94 1.0 1.0 
+    , PrestoAnim.interpolator config.interpolator -- $ PrestoAnim.Bezier 0.94 0.94 1.0 1.0
    ] config.ifAnim
-   
+
 screenAnimation :: forall w. PrestoDOM (Effect Unit) w -> PrestoDOM (Effect Unit) w
-screenAnimation screen = 
+screenAnimation screen =
     PrestoAnim.entryAnimationSetForward [ translateInXForwardAnim true, fadeIn true]
     $ PrestoAnim.exitAnimationSetForward [ translateOutXForwardAnim true, fadeOut true]
     $ PrestoAnim.entryAnimationSetBackward [translateInXBackwardAnim true, fadeIn true]
-    $ PrestoAnim.exitAnimationSetBackward [translateOutXBackwardAnim true, fadeOut true] 
+    $ PrestoAnim.exitAnimationSetBackward [translateOutXBackwardAnim true, fadeOut true]
       screen
 
 listExpandingAnimation :: AnimConfig -> PrestoAnim.Animation
-listExpandingAnimation config = 
+listExpandingAnimation config =
    PrestoAnim.Animation
    [ PrestoAnim.duration 200
     , PrestoAnim.fromScaleY config.fromScaleY
@@ -101,12 +101,12 @@ listExpandingAnimation config =
     , PrestoAnim.fromY config.fromY
     , PrestoAnim.toY config.toY
     , PrestoAnim.repeatCount config.repeatCount--(PrestoAnim.Repeat 0)
-    , PrestoAnim.interpolator $ PrestoAnim.Bezier 0.0 0.0 1.0 1.0 
+    , PrestoAnim.interpolator $ PrestoAnim.Bezier 0.0 0.0 1.0 1.0
    ] config.ifAnim
 
 translateYAnim :: AnimConfig -> PrestoAnim.Animation
 translateYAnim config =
-   PrestoAnim.Animation 
+   PrestoAnim.Animation
     [ PrestoAnim.duration 200
     , PrestoAnim.fromY config.fromY
     , PrestoAnim.toY config.toY
@@ -116,7 +116,7 @@ translateYAnim config =
 
 scaleYAnim :: AnimConfig -> PrestoAnim.Animation
 scaleYAnim config =
-   PrestoAnim.Animation 
+   PrestoAnim.Animation
     [ PrestoAnim.duration 200
     , PrestoAnim.fromScaleY config.fromScaleY
     , PrestoAnim.toScaleY config.toScaleY
@@ -126,7 +126,7 @@ scaleYAnim config =
 
 scaleAnim :: AnimConfig -> PrestoAnim.Animation
 scaleAnim config =
-   PrestoAnim.Animation 
+   PrestoAnim.Animation
     [ PrestoAnim.duration 300
     , PrestoAnim.fromScaleY config.fromScaleY
     , PrestoAnim.toScaleY config.toScaleY
@@ -134,20 +134,20 @@ scaleAnim config =
     , PrestoAnim.toScaleX config.toScaleX
     , PrestoAnim.interpolator interpolator
     ] config.ifAnim
-    
+
 rotateAnim :: AnimConfig -> PrestoAnim.Animation
-rotateAnim config = 
+rotateAnim config =
   PrestoAnim.Animation
     [ PrestoAnim.duration config.duration
     , PrestoAnim.delay config.delay
     , PrestoAnim.fromRotation config.fromRotation
     , PrestoAnim.toRotation config.toRotation
     , PrestoAnim.repeatCount PrestoAnim.Infinite
-    ] config.ifAnim 
+    ] config.ifAnim
 
 
 translateInXForwardAnim :: Boolean -> PrestoAnim.Animation
-translateInXForwardAnim = 
+translateInXForwardAnim =
   PrestoAnim.Animation
     [ PrestoAnim.duration 350
     , PrestoAnim.fromX $ screenWidth unit / 4
@@ -156,7 +156,7 @@ translateInXForwardAnim =
     , PrestoAnim.repeatCount PrestoAnim.NoRepeat
     ]
 translateInXBackwardAnim :: Boolean -> PrestoAnim.Animation
-translateInXBackwardAnim = 
+translateInXBackwardAnim =
   PrestoAnim.Animation
     [ PrestoAnim.duration 350
     , PrestoAnim.fromX $ - screenWidth unit / 5
@@ -189,7 +189,7 @@ translateInXBackwardFadeAnimWithDelay delay =
     , PrestoAnim.delay delay
     ]
 translateOutXForwardAnim :: Boolean -> PrestoAnim.Animation
-translateOutXForwardAnim = 
+translateOutXForwardAnim =
   PrestoAnim.Animation
     [ PrestoAnim.duration 350
     , PrestoAnim.fromX 0
@@ -198,7 +198,7 @@ translateOutXForwardAnim =
     , PrestoAnim.repeatCount PrestoAnim.NoRepeat
     ]
 translateOutXBackwardAnim :: Boolean -> PrestoAnim.Animation
-translateOutXBackwardAnim = 
+translateOutXBackwardAnim =
   PrestoAnim.Animation
     [ PrestoAnim.duration 350
     , PrestoAnim.fromX 0
@@ -219,7 +219,7 @@ fadeInWithDelay dalay =
 
 translateYAnimFromTopWithAlpha:: AnimConfig -> PrestoAnim.Animation
 translateYAnimFromTopWithAlpha config =
-   PrestoAnim.Animation 
+   PrestoAnim.Animation
     [ PrestoAnim.duration config.duration
     , PrestoAnim.delay config.delay
     , PrestoAnim.fromY config.fromY
@@ -232,7 +232,7 @@ translateYAnimFromTopWithAlpha config =
 
 translateYAnimFromTop :: AnimConfig -> PrestoAnim.Animation
 translateYAnimFromTop config =
-   PrestoAnim.Animation 
+   PrestoAnim.Animation
     [ PrestoAnim.duration config.duration
     , PrestoAnim.delay config.delay
     , PrestoAnim.fromY config.fromY
@@ -242,7 +242,7 @@ translateYAnimFromTop config =
 
 removeYAnimFromTop:: AnimConfig -> PrestoAnim.Animation
 removeYAnimFromTop config =
-   PrestoAnim.Animation 
+   PrestoAnim.Animation
     [ PrestoAnim.duration config.duration
     , PrestoAnim.delay config.delay
     , PrestoAnim.fromY config.fromY
@@ -254,7 +254,7 @@ removeYAnimFromTop config =
     ] config.ifAnim
 
 fadeIn :: Boolean -> PrestoAnim.Animation
-fadeIn ifAnim = 
+fadeIn ifAnim =
   PrestoAnim.Animation
     [ PrestoAnim.duration 250
     , PrestoAnim.toAlpha 1.0
@@ -265,7 +265,7 @@ fadeIn ifAnim =
     ] ifAnim
 
 fadeOut :: Boolean -> PrestoAnim.Animation
-fadeOut ifAnim = 
+fadeOut ifAnim =
   PrestoAnim.Animation
     [ PrestoAnim.duration 250
     , PrestoAnim.toAlpha 0.0
@@ -276,14 +276,14 @@ fadeOut ifAnim =
     ] ifAnim
 
 rotateAnimInfi :: AnimConfig -> PrestoAnim.Animation
-rotateAnimInfi config = 
+rotateAnimInfi config =
   PrestoAnim.Animation
     [ PrestoAnim.duration 1000
     , PrestoAnim.delay 0
     , PrestoAnim.fromRotation config.fromRotation
     , PrestoAnim.toRotation config.toRotation
     , PrestoAnim.repeatCount PrestoAnim.Infinite
-    ] config.ifAnim 
+    ] config.ifAnim
 
 translateInXSidebarAnim :: Boolean -> PrestoAnim.Animation
 translateInXSidebarAnim =
@@ -306,9 +306,9 @@ translateOutXSidebarAnim =
     ]
 
 screenAnimationFadeInOut :: forall w. PrestoDOM (Effect Unit) w -> PrestoDOM (Effect Unit) w
-screenAnimationFadeInOut screen = 
+screenAnimationFadeInOut screen =
     PrestoAnim.entryAnimationSetForward [fadeIn true]
     $ PrestoAnim.exitAnimationSetForward [fadeOut true]
     $ PrestoAnim.entryAnimationSetBackward [fadeIn true]
-    $ PrestoAnim.exitAnimationSetBackward [fadeOut true] 
+    $ PrestoAnim.exitAnimationSetBackward [fadeOut true]
       screen

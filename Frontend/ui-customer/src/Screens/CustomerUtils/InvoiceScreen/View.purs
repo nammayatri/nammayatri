@@ -129,7 +129,7 @@ amountBreakupView state =
                   [ text case item.fareType of
                       "BASE_FARE" -> (getString BASE_FARES) <> " (" <> state.data.selectedItem.baseDistance <> ")"
                       "EXTRA_DISTANCE_FARE" -> getString NOMINAL_FARE
-                      "DRIVER_SELECTED_FARE" -> getString NOMINAL_FARE
+                      "DRIVER_SELECTED_FARE" -> getString DRIVER_ADDITIONS
                       "TOTAL_FARE" -> getString TOTAL_PAID
                       "DEAD_KILOMETER_FARE" -> getString PICKUP_CHARGE
                       "PICKUP_CHARGES" -> getString PICKUP_CHARGE

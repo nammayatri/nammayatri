@@ -14,7 +14,9 @@
 
 module Beckn.ACL.Init (buildInitReq) where
 
+import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.Init as Init
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.VehicleVariant as VehVar
 import Environment
 import Kernel.External.Maps.Types (LatLong)
@@ -60,7 +62,7 @@ buildInitMessage res = do
           Init.Order
             { items = [mkOrderItem mbBppItemId itemCode],
               fulfillment = mkFulfillmentInfo res.fromLoc res.toLoc res.startTime res.maxEstimatedDistance,
-              payment = mkPayment
+              payment = mkPayment res.paymentMethodInfo
             }
       }
   where
@@ -118,10 +120,19 @@ mkFulfillmentInfo fromLoc mbToLoc startTime maxDistance =
               }
     }
 
-mkPayment :: Init.Payment
-mkPayment =
+mkPayment :: Maybe DMPM.PaymentMethodInfo -> Init.Payment
+mkPayment (Just DMPM.PaymentMethodInfo {..}) =
   Init.Payment
-    { collected_by = "BAP",
+    { collected_by = Common.castDPaymentCollector collectedBy,
+      _type = Common.castDPaymentType paymentType,
+      instrument = Just $ Common.castDPaymentInstrument paymentInstrument,
+      time = Init.TimeDuration "P2A" -- FIXME: what is this?
+    }
+-- for backward compatibility
+mkPayment Nothing =
+  Init.Payment
+    { collected_by = Init.BAP,
       _type = Init.ON_FULFILLMENT,
-      time = Init.TimeDuration "P2D"
+      instrument = Nothing,
+      time = Init.TimeDuration "P2A" -- FIXME: what is this?
     }

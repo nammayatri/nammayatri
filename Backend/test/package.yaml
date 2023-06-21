@@ -55,7 +55,6 @@ dependencies:
   - mock-fcm
   - mock-google
   - rider-app
-  - static-offer-driver-app
   - beckn-gateway
   - mobility-core
   - mock-registry
@@ -92,7 +91,6 @@ dependencies:
   - mock-public-transport-provider-platform
   - search-result-aggregator
   - public-transport-search-consumer
-  - static-offer-driver-app-allocator
   - driver-tracking-healthcheck
   - dynamic-offer-driver-app
   - location-updates

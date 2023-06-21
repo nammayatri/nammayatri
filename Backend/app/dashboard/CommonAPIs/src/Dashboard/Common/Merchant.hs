@@ -56,6 +56,8 @@ data MerchantEndpoint
   | SmsServiceConfigUpdateEndpoint
   | SmsServiceConfigUsageUpdateEndpoint
   | VerificationServiceConfigUpdateEndpoint
+  | CreateFPDriverExtraFeeEndpoint
+  | UpdateFPDriverExtraFeeEndpoint
   deriving (Show, Read)
 
 derivePersistField "MerchantEndpoint"
@@ -486,6 +488,31 @@ newtype IdfyCfgUpdateTReq = IdfyCfgUpdateTReq
 instance HideSecrets IdfyCfgUpdateReq where
   type ReqWithoutSecrets IdfyCfgUpdateReq = IdfyCfgUpdateTReq
   hideSecrets IdfyCfgUpdateReq {..} = IdfyCfgUpdateTReq {..}
+
+---------------------------------------------------------
+-- merchant service usage config ------------------------
+
+type ServiceUsageConfigAPI =
+  "serviceUsageConfig"
+    :> Get '[JSON] ServiceUsageConfigRes
+
+-- Fields with one possible value (verificationService, initiateCall, whatsappProvidersPriorityList) not included here
+data ServiceUsageConfigRes = ServiceUsageConfigRes
+  { getDistances :: Maps.MapsService,
+    getEstimatedPickupDistances :: Maybe Maps.MapsService,
+    getRoutes :: Maps.MapsService,
+    getPickupRoutes :: Maybe Maps.MapsService,
+    getTripRoutes :: Maybe Maps.MapsService,
+    snapToRoad :: Maps.MapsService,
+    getPlaceName :: Maps.MapsService,
+    getPlaceDetails :: Maps.MapsService,
+    autoComplete :: Maps.MapsService,
+    smsProvidersPriorityList :: [SMS.SmsService],
+    updatedAt :: UTCTime,
+    createdAt :: UTCTime
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 ---------------------------------------------------------
 -- merchant maps service config usage update ------------

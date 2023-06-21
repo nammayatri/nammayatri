@@ -41,6 +41,7 @@ import qualified "rider-app" Domain.Types.Booking as SRB
 import qualified "rider-app" Domain.Types.Booking.API as DB
 import qualified "rider-app" Domain.Types.Estimate as DEstimate
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
+import qualified "rider-app" Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified "rider-app" Domain.Types.Person as DP
 import qualified "rider-app" Domain.Types.Quote as Quote
 import qualified "rider-app" Domain.Types.RegistrationToken as DTR
@@ -80,6 +81,7 @@ newtype BookingsAPIs = BookingsAPIs
 
 data MerchantAPIs = MerchantAPIs
   { merchantUpdate :: Merchant.MerchantUpdateReq -> Euler.EulerClient APISuccess,
+    serviceUsageConfig :: Euler.EulerClient Merchant.ServiceUsageConfigRes,
     mapsServiceConfigUpdate :: Merchant.MapsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
     mapsServiceUsageConfigUpdate :: Merchant.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
     smsServiceConfigUpdate :: Merchant.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
@@ -88,7 +90,7 @@ data MerchantAPIs = MerchantAPIs
 
 data RidesAPIs = RidesAPIs
   { shareRideInfo :: Id Ride.Ride -> Euler.EulerClient Ride.ShareRideInfoRes,
-    rideList :: Maybe Int -> Maybe Int -> Maybe Ride.BookingStatus -> Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Euler.EulerClient Ride.RideListRes,
+    rideList :: Maybe Int -> Maybe Int -> Maybe Ride.BookingStatus -> Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Ride.RideListRes,
     tripRoute :: Id Ride.Ride -> Double -> Double -> Euler.EulerClient Maps.GetRoutesResp,
     rideInfo :: Id Ride.Ride -> Euler.EulerClient Ride.RideInfoRes,
     multipleRideCancel :: DCM.MultipleRideCancelReq -> Euler.EulerClient APISuccess
@@ -135,7 +137,7 @@ data SelectAPIs = SelectAPIs
   }
 
 newtype ConfirmAPIs = ConfirmAPIs
-  { rconfirm :: Id DP.Person -> Id Quote.Quote -> Euler.EulerClient UC.ConfirmRes
+  { rconfirm :: Id DP.Person -> Id Quote.Quote -> Maybe (Id DMPM.MerchantPaymentMethod) -> Euler.EulerClient UC.ConfirmRes
   }
 
 data BookingAPIs = BookingAPIs
@@ -246,6 +248,7 @@ mkAppBackendAPIs merchantId token = do
     cancelBooking = cancelBookingClient
 
     merchantUpdate
+      :<|> serviceUsageConfig
       :<|> mapsServiceConfigUpdate
       :<|> mapsServiceUsageConfigUpdate
       :<|> smsServiceConfigUpdate

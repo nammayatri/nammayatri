@@ -76,21 +76,24 @@ data RideInfoRes = RideInfoRes
     customerName :: Maybe Text,
     customerPhoneNo :: Maybe Text,
     rideOtp :: Text,
-    fromLocation :: BookingLocation,
-    toLocation :: Maybe BookingLocation,
+    customerPickupLocation :: BookingLocation,
+    customerDropLocation :: Maybe BookingLocation,
     driverName :: Text,
     driverPhoneNo :: Maybe Text,
     driverRegisteredAt :: UTCTime,
-    vehicleNumber :: Text,
+    vehicleNo :: Text,
     vehicleModel :: Text,
     rideBookingTime :: UTCTime,
-    driverArrivalTime :: Maybe UTCTime,
+    actualDriverArrivalTime :: Maybe UTCTime,
     rideStartTime :: Maybe UTCTime,
     rideEndTime :: Maybe UTCTime,
+    rideDistanceEstimated :: Maybe HighPrecMeters,
+    rideDistanceActual :: Maybe HighPrecMeters,
     chargeableDistance :: Maybe HighPrecMeters,
     estimatedFare :: Money,
     actualFare :: Maybe Money,
-    rideDuration :: Maybe Minutes,
+    estimatedRideDuration :: Maybe Seconds,
+    rideDuration :: Maybe Seconds,
     cancelledTime :: Maybe UTCTime,
     cancelledBy :: Maybe CancellationSource
   }
@@ -144,6 +147,8 @@ type RideListAPI =
     :> QueryParam "rideShortId" (ShortId Ride)
     :> QueryParam "customerPhoneNo" Text
     :> QueryParam "driverPhoneNo" Text
+    :> QueryParam "from" UTCTime
+    :> QueryParam "to" UTCTime
     :> Get '[JSON] RideListRes
 
 data RideListRes = RideListRes

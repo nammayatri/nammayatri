@@ -261,21 +261,22 @@ findAllDriversByIdsFirstNameAsc merchantId driverIds = do
   driverInfos <- getDriverInfos driverLocs
   vehicle <- getVehicles driverInfos
   drivers <- getDrivers vehicle
+  logDebug $ "FindAllDriversByIdsFirstNameAsc - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vec:- " <> show (length vehicle) <> " Drivers:- " <> show (length drivers)
   return (linkArrays driverLocs driverInfos vehicle drivers)
 
 linkArrays :: [DriverLocation] -> [DriverInformation] -> [Vehicle] -> [Person] -> [FullDriver]
 linkArrays driverLocations driverInformations vehicles persons =
-  let locationHashMap = buildLocationHashMap driverLocations
+  let personHashMap = buildPersonHashMap persons
       vehicleHashMap = buildVehicleHashMap vehicles
       driverInfoHashMap = buildDriverInfoHashMap driverInformations
-   in map (buildFullDriver locationHashMap vehicleHashMap driverInfoHashMap) persons
+   in mapMaybe (buildFullDriver personHashMap vehicleHashMap driverInfoHashMap) driverLocations
 
 linkArrayList :: [DriverLocation] -> [DriverInformation] -> [Vehicle] -> [Person] -> LatLong -> Maybe Variant -> [(Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Double, Variant, Maybe DriverInfo.DriverMode)]
 linkArrayList driverLocations driverInformations vehicles persons LatLong {..} mbVariant =
-  let locationHashMap = buildLocationHashMap driverLocations
+  let personHashMap = buildPersonHashMap persons
       driverInfoHashMap = buildDriverInfoHashMap driverInformations
       vehicleHashMap = buildVehicleHashMap vehicles
-   in mapMaybe (buildFullDriverList locationHashMap vehicleHashMap driverInfoHashMap LatLong {..} mbVariant) persons
+   in mapMaybe (buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap LatLong {..} mbVariant) driverLocations
 
 buildLocationHashMap :: [DriverLocation] -> HashMap.HashMap Text DriverLocation
 buildLocationHashMap driverLocations =
@@ -289,13 +290,13 @@ buildVehicleHashMap :: [Vehicle] -> HashMap.HashMap Text Vehicle
 buildVehicleHashMap vehicles =
   HashMap.fromList $ map (\v -> (v.driverId.getId, v)) vehicles
 
-buildFullDriver :: HashMap.HashMap Text DriverLocation -> HashMap.HashMap Text Vehicle -> HashMap.HashMap Text DriverInformation -> Person -> FullDriver
-buildFullDriver locationHashMap vehicleHashMap driverInfoHashMap person =
-  let driverId' = person.id.getId
-      location = HashMap.lookupDefault (error "Location not found") driverId' locationHashMap
-      vehicle = HashMap.lookupDefault (error "Vehicle not found") driverId' vehicleHashMap
-      info = HashMap.lookupDefault (error "Person not found") driverId' driverInfoHashMap
-   in mkFullDriver (person, location, info, vehicle)
+buildFullDriver :: HashMap.HashMap Text Person -> HashMap.HashMap Text Vehicle -> HashMap.HashMap Text DriverInformation -> DriverLocation -> Maybe FullDriver
+buildFullDriver personHashMap vehicleHashMap driverInfoHashMap location = do
+  let driverId' = location.driverId.getId
+  person <- HashMap.lookup driverId' personHashMap
+  vehicle <- HashMap.lookup driverId' vehicleHashMap
+  info <- HashMap.lookup driverId' driverInfoHashMap
+  Just $ mkFullDriver (person, location, info, vehicle)
 
 -- getDriverLocs ::
 --   Transactionable m =>
@@ -369,6 +370,20 @@ getDriverInfos driverLocs = do
     Nothing -> pure []
   where
     personKeys = getId <$> fetchDriverIDsFromLocations driverLocs
+
+getOnRideStuckDriverIds :: Transactionable m => m [DriverInformation]
+getOnRideStuckDriverIds = do
+  Esq.findAll $ do
+    driverInfos <- from $ table @DriverInformationT
+    where_ $
+      driverInfos ^. DriverInformationOnRide ==. val True
+        &&. not_ (driverInfos ^. DriverInformationDriverId `in_` rideSubQuery)
+    return driverInfos
+  where
+    rideSubQuery = subList_select $ do
+      r <- from $ table @RideT
+      where_ (r ^. RideStatus `in_` valList [Ride.INPROGRESS, Ride.NEW])
+      pure (r ^. RideDriverId)
 
 -- getVehicles ::
 --   Transactionable m =>
@@ -834,7 +849,9 @@ fetchDriverInfo merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumb
           mbMobileNumberDbHashWithCode
           ( \(mobileNumberDbHash, mobileCountryCode) ->
               person ^. PersonMobileCountryCode ==. val (Just mobileCountryCode)
-                &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
+                &&. ( person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
+                        ||. person ^. PersonAlternateMobileNumberHash ==. val (Just mobileNumberDbHash)
+                    )
           )
         &&. whenJust_ mbVehicleNumber (\vehicleNumber -> mbVehicle ?. VehicleRegistrationNo ==. just (val vehicleNumber))
         &&. whenJust_ mbDlNumberHash (\dlNumberHash -> mbDriverLicense ?. DriverLicenseLicenseNumberHash ==. just (val dlNumberHash))
@@ -1453,8 +1470,9 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide m
     driverInfos <- getDriverInfosWithCond driverLocs onlyNotOnRide False
     vehicle <- getVehiclesWithCond driverInfos
     drivers <- getDrivers vehicle
+    logDebug $ "GetNearestDriver - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicles:- " <> show (length vehicle) <> " Drivers:- " <> show (length drivers)
     return (linkArrayList driverLocs driverInfos vehicle drivers LatLong {..} mbVariant)
-
+  logDebug $ "GetNearestDrivers Result:- " <> show (length res)
   return (makeNearestDriversResult =<< res)
   where
     makeNearestDriversResult :: (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Double, Variant, Maybe DriverInfo.DriverMode) -> [NearestDriversResult]
@@ -1472,28 +1490,28 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide m
       where
         getResult var cond = [NearestDriversResult (cast personId) mbDeviceToken mblang onRide (roundToIntegral dist) var dlat dlon mode | cond]
 
-buildFullDriverList :: HashMap.HashMap Text DriverLocation -> HashMap.HashMap Text Vehicle -> HashMap.HashMap Text DriverInformation -> LatLong -> Maybe Variant -> Person -> Maybe (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Double, Variant, Maybe DriverInfo.DriverMode)
-buildFullDriverList locationHashMap vehicleHashMap driverInfoHashMap LatLong {..} mbVariant person =
-  let driverId' = person.id.getId
-      location = HashMap.lookupDefault (error "Location not found") driverId' locationHashMap
-      vehicle = HashMap.lookupDefault (error "Vehicle not found") driverId' vehicleHashMap
-      info = HashMap.lookupDefault (error "Person not found") driverId' driverInfoHashMap
-      dist = realToFrac $ distanceBetweenInMeters LatLong {..} LatLong {lat = location.lat, lon = location.lon}
-   in if Mb.isNothing mbVariant || Just vehicle.variant == mbVariant
-        || ( case mbVariant of
-               Just SEDAN ->
-                 info.canDowngradeToSedan
-                   && vehicle.variant == SUV
-               Just HATCHBACK ->
-                 info.canDowngradeToHatchback
-                   && (vehicle.variant == SUV || vehicle.variant == SEDAN)
-               Just TAXI ->
-                 info.canDowngradeToTaxi
-                   && vehicle.variant == TAXI_PLUS
-               _ -> False
-           )
-        then Just (person.id, person.deviceToken, person.language, info.onRide, info.canDowngradeToSedan, info.canDowngradeToHatchback, info.canDowngradeToTaxi, dist, location.lat, location.lon, vehicle.variant, info.mode)
-        else Nothing
+buildFullDriverList :: HashMap.HashMap Text Person -> HashMap.HashMap Text Vehicle -> HashMap.HashMap Text DriverInformation -> LatLong -> Maybe Variant -> DriverLocation -> Maybe (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Double, Variant, Maybe DriverInfo.DriverMode)
+buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap LatLong {..} mbVariant location = do
+  let driverId' = location.driverId.getId
+  person <- HashMap.lookup driverId' personHashMap
+  vehicle <- HashMap.lookup driverId' vehicleHashMap
+  info <- HashMap.lookup driverId' driverInfoHashMap
+  let dist = realToFrac $ distanceBetweenInMeters LatLong {..} LatLong {lat = location.lat, lon = location.lon}
+  if Mb.isNothing mbVariant || Just vehicle.variant == mbVariant
+    || ( case mbVariant of
+           Just SEDAN ->
+             info.canDowngradeToSedan
+               && vehicle.variant == SUV
+           Just HATCHBACK ->
+             info.canDowngradeToHatchback
+               && (vehicle.variant == SUV || vehicle.variant == SEDAN)
+           Just TAXI ->
+             info.canDowngradeToTaxi
+               && vehicle.variant == TAXI_PLUS
+           _ -> False
+       )
+    then Just (person.id, person.deviceToken, person.language, info.onRide, info.canDowngradeToSedan, info.canDowngradeToHatchback, info.canDowngradeToTaxi, dist, location.lat, location.lon, vehicle.variant, info.mode)
+    else Nothing
 
 getDriverLocsWithCond ::
   (L.MonadFlow m, MonadTime m) =>
@@ -1623,7 +1641,9 @@ getNearestDriversCurrentlyOnRide mbVariant LatLong {..} radiusMeters merchantId 
     driverQuote <- getDriverQuote drivers
     bookingInfo <- getBookingInfo driverQuote
     bookingLocation <- getBookingLocs bookingInfo
+    logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicle:- " <> show (length vehicles) <> " Drivers:- " <> show (length drivers) <> " Dquotes:- " <> show (length driverQuote) <> " BInfos:- " <> show (length bookingInfo) <> " BLocs:- " <> show (length bookingLocation)
     return (linkArrayListForOnRide driverQuote bookingInfo bookingLocation driverLocs driverInfos vehicles drivers LatLong {..} onRideRadius mbVariant)
+  logDebug $ "GetNearestDriversCurrentlyOnRide Result:- " <> show (length res)
   return (makeNearestDriversResult =<< res)
   where
     makeNearestDriversResult :: (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double, Maybe DriverInfo.DriverMode) -> [NearestDriversResultCurrentlyOnRide]
@@ -1779,35 +1799,36 @@ buildBookingLocsHashMap bookinglocs =
   HashMap.fromList $ map (\loc -> (loc.id.getId, loc)) bookinglocs
 
 buildFullDriverListOnRide :: HashMap.HashMap Text DriverQuote -> HashMap.HashMap Text Booking.Booking -> HashMap.HashMap Text BookingLocation -> HashMap.HashMap Text DriverLocation -> HashMap.HashMap Text DriverInformation -> HashMap.HashMap Text Person -> LatLong -> Double -> Maybe Variant -> Vehicle -> Maybe (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double, Maybe DriverInfo.DriverMode)
-buildFullDriverListOnRide quotesHashMap bookingHashMap bookingLocsHashMap locationHashMap driverInfoHashMap personHashMap latLon onRideRadius mbVariant vehicle =
+buildFullDriverListOnRide quotesHashMap bookingHashMap bookingLocsHashMap locationHashMap driverInfoHashMap personHashMap latLon onRideRadius mbVariant vehicle = do
   let driverId' = vehicle.driverId.getId
-      location = HashMap.lookupDefault (error "Location not found") driverId' locationHashMap
-      quote = HashMap.lookupDefault (error "Quote not found") driverId' quotesHashMap
-      booking = HashMap.lookupDefault (error "Booking not found") quote.id.getId bookingHashMap
-      bookingLocation = HashMap.lookupDefault (error "Booking Location not found") booking.toLocation.id.getId bookingLocsHashMap
-      info = HashMap.lookupDefault (error "Info not found") driverId' driverInfoHashMap
-      person = HashMap.lookupDefault (error "Person not found") driverId' personHashMap
-      driverLocationPoint = LatLong {lat = location.lat, lon = location.lon}
+  location <- HashMap.lookup driverId' locationHashMap
+  quote <- HashMap.lookup driverId' quotesHashMap
+  booking <- HashMap.lookup quote.id.getId bookingHashMap
+  bookingLocation <- HashMap.lookup booking.toLocation.id.getId bookingLocsHashMap
+  info <- HashMap.lookup driverId' driverInfoHashMap
+  person <- HashMap.lookup driverId' personHashMap
+  let driverLocationPoint = LatLong {lat = location.lat, lon = location.lon}
       destinationPoint = LatLong {lat = bookingLocation.lat, lon = bookingLocation.lon}
       distanceFromDriverToDestination = realToFrac $ distanceBetweenInMeters driverLocationPoint destinationPoint
       distanceFromDestinationToPickup = realToFrac $ distanceBetweenInMeters latLon destinationPoint
       onRideRadiusValidity = (distanceFromDriverToDestination + distanceFromDestinationToPickup) < onRideRadius
-   in if onRideRadiusValidity
-        && Mb.isNothing mbVariant || Just vehicle.variant == mbVariant
-          || ( case mbVariant of
-                 Just SEDAN ->
-                   info.canDowngradeToSedan
-                     && vehicle.variant == SUV
-                 Just HATCHBACK ->
-                   info.canDowngradeToHatchback
-                     && (vehicle.variant == SUV || vehicle.variant == SEDAN)
-                 Just TAXI ->
-                   info.canDowngradeToTaxi
-                     && vehicle.variant == TAXI_PLUS
-                 _ -> False
-             )
-        then Just (person.id, person.deviceToken, person.language, info.onRide, info.canDowngradeToSedan, info.canDowngradeToHatchback, info.canDowngradeToTaxi, location.lat, location.lon, vehicle.variant, bookingLocation.lat, bookingLocation.lon, distanceFromDriverToDestination + distanceFromDestinationToPickup, distanceFromDriverToDestination, info.mode)
-        else Nothing
+  if onRideRadiusValidity
+    && ( Mb.isNothing mbVariant || Just vehicle.variant == mbVariant
+           || ( case mbVariant of
+                  Just SEDAN ->
+                    info.canDowngradeToSedan
+                      && vehicle.variant == SUV
+                  Just HATCHBACK ->
+                    info.canDowngradeToHatchback
+                      && (vehicle.variant == SUV || vehicle.variant == SEDAN)
+                  Just TAXI ->
+                    info.canDowngradeToTaxi
+                      && vehicle.variant == TAXI_PLUS
+                  _ -> False
+              )
+       )
+    then Just (person.id, person.deviceToken, person.language, info.onRide, info.canDowngradeToSedan, info.canDowngradeToHatchback, info.canDowngradeToTaxi, location.lat, location.lon, vehicle.variant, bookingLocation.lat, bookingLocation.lon, distanceFromDriverToDestination + distanceFromDestinationToPickup, distanceFromDriverToDestination, info.mode)
+    else Nothing
 
 updateAlternateMobileNumberAndCode :: (L.MonadFlow m, MonadTime m) => Person -> m (MeshResult ())
 updateAlternateMobileNumberAndCode person = do

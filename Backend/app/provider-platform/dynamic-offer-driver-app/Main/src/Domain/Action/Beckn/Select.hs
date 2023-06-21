@@ -29,7 +29,8 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import Environment
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
+-- import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (addUTCTime, fromMaybeM, logDebug, throwError)
@@ -39,7 +40,7 @@ import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import SharedLogic.DriverPool (getDriverPoolConfig)
 import SharedLogic.FareCalculator
-import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
+import SharedLogic.FarePolicy
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.SearchRequest as QSR
@@ -54,7 +55,7 @@ data DSelectReq = DSelectReq
     bapUri :: BaseUrl,
     pickupTime :: UTCTime,
     estimateId :: Id DEst.Estimate,
-    autoAssignEnabled :: Maybe Bool,
+    autoAssignEnabled :: Bool,
     customerExtraFee :: Maybe Money
   }
 
@@ -62,7 +63,7 @@ handler :: DM.Merchant -> DSelectReq -> DEst.Estimate -> Flow ()
 handler merchant sReq estimate = do
   let merchantId = merchant.id
   searchReq <- QSR.findById estimate.requestId >>= fromMaybeM (SearchRequestNotFound estimate.requestId.getId)
-  farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchant.id estimate.vehicleVariant >>= fromMaybeM NoFarePolicy
+  farePolicy <- getFarePolicy merchantId estimate.vehicleVariant searchReq.area
 
   searchTry <- createNewSearchTry farePolicy searchReq
   driverPoolConfig <- getDriverPoolConfig merchantId searchReq.estimatedDistance
@@ -81,7 +82,8 @@ handler merchant sReq estimate = do
       --         estimatedRideDistance = searchReq.estimatedDistance,
       --         driverExtraFeeBounds = driverExtraFeeBounds
       --       }
-      Esq.runTransaction $ whenJust sReq.autoAssignEnabled $ QSR.updateAutoAssign searchReq.id
+      -- Esq.runTransaction $ do
+      when sReq.autoAssignEnabled $ QSR.updateAutoAssign searchReq.id sReq.autoAssignEnabled
       createJobIn' @_ @'SendSearchRequestToDriver inTime maxShards $
         SendSearchRequestToDriverJobData
           { searchTryId = searchTry.id,
@@ -90,7 +92,7 @@ handler merchant sReq estimate = do
           }
     _ -> return ()
   where
-    createNewSearchTry :: DFP.FarePolicy -> DSR.SearchRequest -> Flow DST.SearchTry
+    createNewSearchTry :: DFP.FullFarePolicy -> DSR.SearchRequest -> Flow DST.SearchTry
     createNewSearchTry farePolicy searchReq = do
       mbLastSearchTry <- QST.findLastByRequestId searchReq.id
       fareParams <-
@@ -134,6 +136,9 @@ buildSearchTry ::
   ( MonadTime m,
     MonadGuid m,
     MonadReader r m,
+    MonadFlow m,
+    MonadReader r m,
+    HasEsqEnv m r,
     HasField "searchRequestExpirationSeconds" r NominalDiffTime
   ) =>
   Id DM.Merchant ->
@@ -150,13 +155,14 @@ buildSearchTry merchantId searchReqId estimate sReq baseFare distance duration s
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
-  let validTill_ = searchRequestExpirationSeconds `addUTCTime` now
+  let validTill_ = searchRequestExpirationSeconds `addUTCTime` sReq.pickupTime
       customerExtraFee = sReq.customerExtraFee
   pure
     DST.SearchTry
       { id = id_,
         requestId = searchReqId,
         estimateId = estimate.id,
+        merchantId = Just merchantId,
         messageId = sReq.messageId,
         startTime = sReq.pickupTime,
         validTill = validTill_,

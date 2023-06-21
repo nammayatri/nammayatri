@@ -168,8 +168,9 @@ select bapToken quoteId =
   void . callBAP . selectQuote2 bapToken quoteId $
     AppSelect.DSelectReq
       { customerExtraFee = Just 10,
-        autoAssignEnabled = Just False,
-        autoAssignEnabledV2 = Nothing
+        autoAssignEnabled = False,
+        autoAssignEnabledV2 = Nothing,
+        paymentMethodId = Nothing
       }
 
 getNearbySearchRequestForDriver :: DriverTestData -> Id AppEstimate.Estimate -> ClientsM (NonEmpty SearchRequestForDriverAPIEntity)
@@ -207,7 +208,7 @@ getQuotesByEstimateId appToken estimateId =
 
 confirmWithCheck :: Text -> Id AppQuote.Quote -> ClientsM (Id AppRB.Booking, TRB.Booking, TRide.Ride)
 confirmWithCheck appToken quoteId = do
-  bBookingId <- fmap (.bookingId) $ callBAP $ BapAPI.appConfirmRide appToken quoteId
+  bBookingId <- fmap (.bookingId) $ callBAP $ BapAPI.appConfirmRide appToken quoteId Nothing
 
   void . pollDesc "booking exists" $ do
     initRB <- getBAPBooking bBookingId

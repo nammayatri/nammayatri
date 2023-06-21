@@ -108,10 +108,10 @@ import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
 import SharedLogic.DriverMode as DMode
 import SharedLogic.DriverPool as DP
 import SharedLogic.FareCalculator
+import SharedLogic.FarePolicy
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
-import qualified Storage.CachedQueries.FarePolicy as FarePolicyS (findByMerchantIdAndVariant)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
@@ -394,10 +394,12 @@ createDriverDetails personId adminId merchantId = do
         DriverInfo.DriverInformation
           { driverId = personId,
             adminId = Just adminId,
+            merchantId = Just merchantId,
             active = False,
             onRide = False,
             enabled = True,
             blocked = False,
+            numOfLocks = 0,
             verified = False,
             referralCode = Nothing,
             canDowngradeToSedan = False,
@@ -720,8 +722,7 @@ getNearbySearchRequests (driverId, merchantId) = do
       -- searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
       searchRequest <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
       popupDelaySeconds <- DP.getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
-      return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry popupDelaySeconds
-
+      return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry popupDelaySeconds (Seconds 0) -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
@@ -795,7 +796,7 @@ respondQuote (driverId, _) req = do
       case req.response of
         Pulled -> throwError UnexpectedResponseValue
         Accept -> do
-          when searchReq.autoAssignEnabled $ CS.incrementSearchRequestLockCounter searchReq.id
+          when (searchReq.autoAssignEnabled == Just True) $ CS.incrementSearchRequestLockCounter searchTryId
           logDebug $ "offered fare: " <> show req.offeredFare
           whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
           when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
@@ -803,7 +804,7 @@ respondQuote (driverId, _) req = do
           -- quoteCount <- Esq.runInReplica $ QDrQt.countAllBySTId searchTry.id
           quoteCount <- QDrQt.countAllBySTId searchTry.id
           when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
-          farePolicy <- FarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM NoFarePolicy
+          farePolicy <- getFarePolicy organization.id sReqFD.vehicleVariant searchReq.area
           let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
           whenJust mbOfferedFare $ \off ->
             whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->
@@ -824,7 +825,7 @@ respondQuote (driverId, _) req = do
           _ <- QDrQt.create driverQuote
           _ <- QSRD.updateDriverResponse sReqFD.id req.response
           QDFS.updateStatus sReqFD.driverId DDFS.OFFERED_QUOTE {quoteId = driverQuote.id, validTill = driverQuote.validTill}
-          let shouldPullFCMForOthers = (quoteCount + 1) >= quoteLimit || searchReq.autoAssignEnabled
+          let shouldPullFCMForOthers = (quoteCount + 1) >= quoteLimit || (searchReq.autoAssignEnabled == Just True)
           driverFCMPulledList <- if shouldPullFCMForOthers then QSRD.findAllActiveWithoutRespBySearchTryId searchTryId else pure []
           -- Adding +1 in quoteCount because one more quote added above (QDrQt.create driverQuote)
           sendRemoveRideRequestNotification driverFCMPulledList organization.id driverQuote
@@ -874,7 +875,8 @@ respondQuote (driverId, _) req = do
             validTill = addUTCTime driverQuoteExpirationSeconds now,
             providerId = searchReq.providerId,
             estimatedFare,
-            fareParams
+            fareParams,
+            specialLocationTag = searchReq.specialLocationTag
           }
     thereAreActiveQuotes = do
       driverUnlockDelay <- asks (.driverUnlockDelay)

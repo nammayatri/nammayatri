@@ -69,6 +69,7 @@ library
       Beckn.Types.Core.Taxi.API.Search
       Beckn.Types.Core.Taxi.API.Select
       Beckn.Types.Core.Taxi.API.Track
+      Beckn.Types.Core.Taxi.API.Update
       Beckn.Types.Core.Taxi.Cancel.Req
       Beckn.Types.Core.Taxi.Common.Address
       Beckn.Types.Core.Taxi.Common.CancellationSource
@@ -76,6 +77,9 @@ library
       Beckn.Types.Core.Taxi.Common.FareProductType
       Beckn.Types.Core.Taxi.Common.Gps
       Beckn.Types.Core.Taxi.Common.ItemCode
+      Beckn.Types.Core.Taxi.Common.Payment
+      Beckn.Types.Core.Taxi.Common.PaymentCollector
+      Beckn.Types.Core.Taxi.Common.PaymentInstrument
       Beckn.Types.Core.Taxi.Common.PaymentType
       Beckn.Types.Core.Taxi.Common.Price
       Beckn.Types.Core.Taxi.Common.TimeDuration
@@ -93,7 +97,6 @@ library
       Beckn.Types.Core.Taxi.Init.Fulfillment
       Beckn.Types.Core.Taxi.Init.Location
       Beckn.Types.Core.Taxi.Init.Order
-      Beckn.Types.Core.Taxi.Init.Payment
       Beckn.Types.Core.Taxi.Init.StartInfo
       Beckn.Types.Core.Taxi.Init.StopInfo
       Beckn.Types.Core.Taxi.OnConfirm
@@ -122,7 +125,6 @@ library
       Beckn.Types.Core.Taxi.OnSearch.Item
       Beckn.Types.Core.Taxi.OnSearch.Location
       Beckn.Types.Core.Taxi.OnSearch.Offer
-      Beckn.Types.Core.Taxi.OnSearch.Payment
       Beckn.Types.Core.Taxi.OnSearch.Price
       Beckn.Types.Core.Taxi.OnSearch.Provider
       Beckn.Types.Core.Taxi.OnSearch.ProviderLocation
@@ -155,6 +157,7 @@ library
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
+      Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent.Payment
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent
       Beckn.Types.Core.Taxi.Rating
       Beckn.Types.Core.Taxi.Rating.FeedbackForm
@@ -173,6 +176,11 @@ library
       Beckn.Types.Core.Taxi.Select.StartInfo
       Beckn.Types.Core.Taxi.Track
       Beckn.Types.Core.Taxi.Track.Order
+      Beckn.Types.Core.Taxi.Update
+      Beckn.Types.Core.Taxi.Update.UpdateEvent
+      Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent
+      Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent.Payment
+      Beckn.Types.Core.Taxi.Update.UpdateEvent.UpdateEventType
   other-modules:
       Paths_beckn_spec
   hs-source-dirs:

@@ -18,27 +18,16 @@ import Domain.Types.SearchRequest as Domain
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
--- import Kernel.Storage.Esqueleto as Esq
-
--- import Kernel.Utils.Common
-
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+-- import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest as BeamSR
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
-import Storage.Tabular.SearchRequest
+-- import Storage.Tabular.SearchRequest
 import Storage.Tabular.SearchRequest.SearchReqLocation ()
-
--- create :: SearchRequest -> SqlDB ()
--- create dsReq = Esq.runTransaction $
---   withFullEntity dsReq $ \(sReq, fromLoc, toLoc) -> do
---     Esq.create' fromLoc
---     Esq.create' toLoc
---     Esq.create' sReq
 
 createDSReq :: L.MonadFlow m => SearchRequest -> m (MeshResult ())
 createDSReq sReq = do
@@ -55,19 +44,6 @@ create dsReq = do
   _ <- QSRL.create dsReq.fromLocation
   QSRL.create dsReq.toLocation
 
--- findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
--- findById searchRequestId = buildDType $
---   fmap (fmap $ extractSolidType @Domain.SearchRequest) $
---     Esq.findOne' $ do
---       (sReq :& sFromLoc :& sToLoc) <-
---         from
---           ( table @SearchRequestT
---               `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& loc1) -> s ^. SearchRequestFromLocationId ==. loc1 ^. SearchReqLocationTId)
---               `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& _ :& loc2) -> s ^. SearchRequestToLocationId ==. loc2 ^. SearchReqLocationTId)
---           )
---       where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
---       pure (sReq, sFromLoc, sToLoc)
-
 findById :: L.MonadFlow m => Id SearchRequest -> m (Maybe SearchRequest)
 findById (Id searchRequestId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -80,62 +56,6 @@ findById (Id searchRequestId) = do
         Right (Just x) -> transformBeamSearchRequestToDomain x
         _ -> pure Nothing
     Nothing -> pure Nothing
-
--- findById' :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
--- findById' searchRequestId = Esq.buildDType . runMaybeT $ do
---   searchRequest <- Esq.findByIdM @SearchRequestT $ toKey searchRequestId
---   fetchFullSearchRequestM searchRequest
-
--- fetchFullSearchRequestM ::
---   Transactionable m =>
---   SearchRequestT ->
---   MaybeT (DTypeBuilder m) (SolidType FullSearchRequestT)
--- fetchFullSearchRequestM searchRequest@SearchRequestT {..} = do
---   fromLocation <- Esq.findByIdM @SearchReqLocationT fromLocationId
---   toLocation <- Esq.findByIdM @SearchReqLocationT toLocationId
---   pure $ extractSolidType @SearchRequest (searchRequest, fromLocation, toLocation)
-
--- updateStatus ::
---   Id SearchRequest ->
---   SearchRequestStatus ->
---   SqlDB ()
--- updateStatus searchId status_ = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ SearchRequestUpdatedAt =. val now,
---         SearchRequestStatus =. val status_
---       ]
---     where_ $ tbl ^. SearchRequestTId ==. val (toKey searchId)
-
--- updateStatus :: (L.MonadFlow m, MonadTime m) => Id SearchRequest -> SearchRequestStatus -> m (MeshResult ())
--- updateStatus (Id searchId) status_ = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
--- let modelName = Se.modelTableName @BeamSR.SearchRequestT
--- let updatedMeshConfig = setMeshConfig modelName
---   now <- getCurrentTime
---   case dbConf of
---     Just dbConf' ->
---       KV.updateWoReturningWithKVConnector
---         dbConf'
---         updatedMeshConfig
---         [ Se.Set BeamSR.status status_,
---           Se.Set BeamSR.updatedAt now
---         ]
---         [Se.Is BeamSR.id (Se.Eq searchId)]
---     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
-
--- getRequestIdfromTransactionId ::
---   (Transactionable m) =>
---   Id SearchRequest ->
---   m (Maybe (Id SearchRequest))
--- getRequestIdfromTransactionId tId = do
---   findOne $ do
---     searchT <- from $ table @SearchRequestT
---     where_ $
---       searchT ^. SearchRequestTransactionId ==. val (getId tId)
---     return $ searchT ^. SearchRequestTId
 
 getRequestIdfromTransactionId :: L.MonadFlow m => Id SearchRequest -> m (Maybe (Id SearchRequest))
 getRequestIdfromTransactionId (Id tId) = do
@@ -153,45 +73,6 @@ getRequestIdfromTransactionId (Id tId) = do
         _ -> pure Nothing
     Nothing -> pure Nothing
 
--- getSearchRequestStatusOrValidTill ::
---   (Transactionable m) =>
---   Id SearchRequest ->
---   m (Maybe (UTCTime, SearchRequestStatus))
--- getSearchRequestStatusOrValidTill searchRequestId = do
---   findOne $ do
---     searchT <- from $ table @SearchRequestT
---     where_ $
---       searchT ^. SearchRequestTId ==. val (toKey searchRequestId)
---     return (searchT ^. SearchRequestValidTill, searchT ^. SearchRequestStatus)
-
--- getSearchRequestStatusOrValidTill :: L.MonadFlow m => Id SearchRequest -> m (Maybe (UTCTime, SearchRequestStatus))
--- getSearchRequestStatusOrValidTill (Id searchReqId) = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
--- let modelName = Se.modelTableName @BeamSR.SearchRequestT
--- let updatedMeshConfig = setMeshConfig modelName
---   case dbConf of
---     Just dbCOnf' -> do
---       sr <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSR.id $ Se.Eq searchReqId]
---       case sr of
---         Left _ -> pure Nothing
---         Right x -> do
---           sr' <- traverse transformBeamSearchRequestToDomain x
---           let srData = (,) <$> (Domain.validTill <$> sr') <*> (Domain.status <$> sr')
---           pure srData
---     Nothing -> pure Nothing
-
--- findActiveByTransactionId ::
---   (Transactionable m) =>
---   Text ->
---   m (Maybe (Id SearchRequest))
--- findActiveByTransactionId transactionId = do
---   findOne $ do
---     searchT <- from $ table @SearchRequestT
---     where_ $
---       searchT ^. SearchRequestTransactionId ==. val transactionId
---         &&. searchT ^. SearchRequestStatus ==. val Domain.ACTIVE
---     return $ searchT ^. SearchRequestTId
-
 findByTransactionId :: L.MonadFlow m => Text -> m (Maybe (Id SearchRequest))
 findByTransactionId transactionId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -208,6 +89,25 @@ findByTransactionId transactionId = do
         _ -> pure Nothing
     Nothing -> pure Nothing
 
+updateAutoAssign ::
+  L.MonadFlow m =>
+  Id SearchRequest ->
+  Bool ->
+  m ()
+updateAutoAssign searchRequestId autoAssignedEnabled = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSR.SearchRequestT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' ->
+      void $
+        KV.updateWoReturningWithKVConnector
+          dbConf'
+          updatedMeshConfig
+          [Se.Set BeamSR.autoAssignEnabled $ Just $ autoAssignedEnabled]
+          [Se.Is BeamSR.id (Se.Eq $ getId searchRequestId)]
+    Nothing -> pure ()
+
 transformBeamSearchRequestToDomain :: L.MonadFlow m => BeamSR.SearchRequest -> m (Maybe SearchRequest)
 transformBeamSearchRequestToDomain BeamSR.SearchRequestT {..} = do
   fl <- QSRL.findById (Id fromLocationId)
@@ -223,6 +123,7 @@ transformBeamSearchRequestToDomain BeamSR.SearchRequestT {..} = do
               providerId = Id providerId,
               fromLocation = fromJust fl,
               toLocation = fromJust tl,
+              area = area,
               bapId = bapId,
               bapUri = pUrl,
               estimatedDistance = estimatedDistance,
@@ -230,6 +131,7 @@ transformBeamSearchRequestToDomain BeamSR.SearchRequestT {..} = do
               customerLanguage = customerLanguage,
               device = device,
               createdAt = createdAt,
+              specialLocationTag = specialLocationTag,
               autoAssignEnabled = autoAssignEnabled
             }
     else pure Nothing
@@ -242,6 +144,7 @@ transformDomainSearchRequestToBeam SearchRequest {..} =
       BeamSR.providerId = getId providerId,
       BeamSR.fromLocationId = getId fromLocation.id,
       BeamSR.toLocationId = getId toLocation.id,
+      BeamSR.area = area,
       BeamSR.bapId = bapId,
       BeamSR.bapUri = showBaseUrl bapUri,
       BeamSR.estimatedDistance = estimatedDistance,
@@ -249,28 +152,18 @@ transformDomainSearchRequestToBeam SearchRequest {..} =
       BeamSR.customerLanguage = customerLanguage,
       BeamSR.device = device,
       BeamSR.createdAt = createdAt,
-      BeamSR.autoAssignEnabled = autoAssignEnabled
+      BeamSR.autoAssignEnabled = autoAssignEnabled,
+      BeamSR.specialLocationTag = specialLocationTag
     }
 
--- findByTransactionId ::
---   (Transactionable m) =>
---   Text ->
---   m (Maybe (Id SearchRequest))
--- findByTransactionId transactionId = do
---   findOne $ do
---     searchReqT <- from $ table @SearchRequestT
---     where_ $
---       searchReqT ^. SearchRequestTransactionId ==. val transactionId
---     return $ searchReqT ^. SearchRequestTId
-
-updateAutoAssign ::
-  Id SearchRequest ->
-  Bool ->
-  SqlDB ()
-updateAutoAssign searchRequestId autoAssignedEnabled = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ SearchRequestAutoAssignEnabled =. val autoAssignedEnabled
-      ]
-    where_ $ tbl ^. SearchRequestTId ==. val (toKey searchRequestId)
+-- updateAutoAssign ::
+--   Id SearchRequest ->
+--   Bool ->
+--   SqlDB ()
+-- updateAutoAssign searchRequestId autoAssignedEnabled = do
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ SearchRequestAutoAssignEnabled =. val (Just autoAssignedEnabled)
+--       ]
+--     where_ $ tbl ^. SearchRequestTId ==. val (toKey searchRequestId)

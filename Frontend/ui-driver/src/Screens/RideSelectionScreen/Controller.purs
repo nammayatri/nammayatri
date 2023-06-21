@@ -166,7 +166,9 @@ rideHistoryListTransformer list categoryAction =
     , driverName : toPropValue ride.driverName
     , destination  : toPropValue (decodeAddress (ride.toLocation) false)
     , shortRideId  : toPropValue ((getString TRIP_ID )<> ": " <> ride.shortRideId)
-    , rideDistance : toPropValue ((parseFloat (toNumber (fromMaybe 0 ride.chargeableDistance) / 1000.0) 2) <> " km " <> (getString RIDE))
+    , rideDistance : toPropValue $ (parseFloat (toNumber (fromMaybe 0 ride.chargeableDistance) / 1000.0) 2) <> " km Ride" <> case ride.riderName of
+                                      Just name -> " with " <> name
+                                      Nothing -> ""
     , vehicleColor : toPropValue ride.vehicleColor
     , vehicleModel : toPropValue ride.vehicleModel
     , amountColor  : toPropValue (case (ride.status) of

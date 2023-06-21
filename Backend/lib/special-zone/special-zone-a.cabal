@@ -22,10 +22,13 @@ source-repository head
 library
   exposed-modules:
       Lib.Queries.SpecialLocation
+      Lib.Queries.SpecialLocationPriority
       Lib.Queries.TagCategoryMapping
       Lib.Tabular.SpecialLocation
+      Lib.Tabular.SpecialLocationPriority
       Lib.Tabular.TagCategoryMapping
       Lib.Types.SpecialLocation
+      Lib.Types.SpecialLocationPriority
       Lib.Types.TagCategoryMapping
   other-modules:
       Paths_special_zone_a

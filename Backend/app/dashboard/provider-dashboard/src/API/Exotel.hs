@@ -29,7 +29,6 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Utils.Common (MonadFlow, decodeFromText, fork, logTagInfo, throwError, withFlowHandlerAPI)
 import qualified ProviderPlatformClient.DynamicOfferDriver as Client
-import qualified ProviderPlatformClient.StaticOfferDriver as Client
 import qualified RiderPlatformClient.RiderApp as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
@@ -90,7 +89,6 @@ exotelHeartbeat incomingExotelToken req = withFlowHandlerAPI $ do
   pure Success
   where
     callExotelHeartbeat DSN.APP_BACKEND = Client.callRiderAppExotelApi (.exotelHeartbeat) req
-    callExotelHeartbeat DSN.BECKN_TRANSPORT = Client.callStaticOfferDriverAppExotelApi (.exotelHeartbeat) req
     callExotelHeartbeat DSN.DRIVER_OFFER_BPP = Client.callDynamicOfferDriverAppExotelApi (.exotelHeartbeat) req
     callExotelHeartbeat _ = throwError $ InternalError "Exotel is not configured with Special Zone server"
 

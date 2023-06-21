@@ -27,6 +27,7 @@ data FPSlabsDetailsSlabD (s :: UsageSafety) = FPSlabsDetailsSlab
   { startDistance :: Meters,
     baseFare :: Money,
     waitingChargeInfo :: Maybe WaitingChargeInfo,
+    platformFeeInfo :: Maybe PlatformFeeInfo,
     nightShiftCharge :: Maybe NightShiftCharge
   }
   deriving (Generic, Show, Eq, ToSchema)
@@ -37,6 +38,16 @@ instance FromJSON (FPSlabsDetailsSlabD 'Unsafe)
 
 instance ToJSON (FPSlabsDetailsSlabD 'Unsafe)
 
+data PlatformFeeCharge = ProgressivePlatformFee HighPrecMoney | ConstantPlatformFee Money
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema, Read)
+
+data PlatformFeeInfo = PlatformFeeInfo
+  { platformFeeCharge :: PlatformFeeCharge,
+    cgst :: Double,
+    sgst :: Double
+  }
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+
 -----------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------APIEntity--------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------
@@ -45,6 +56,7 @@ data FPSlabsDetailsSlabAPIEntity = FPSlabsDetailsSlabAPIEntity
   { startDistance :: Meters,
     baseFare :: Money,
     waitingChargeInfo :: Maybe WaitingChargeInfo,
+    platformFeeInfo :: Maybe PlatformFeeInfo,
     nightShiftCharge :: Maybe NightShiftCharge
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)

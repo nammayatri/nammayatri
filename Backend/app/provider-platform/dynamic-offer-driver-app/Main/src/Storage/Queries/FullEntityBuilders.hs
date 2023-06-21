@@ -38,6 +38,7 @@ import Storage.Tabular.Booking.BookingLocation
 import qualified Storage.Tabular.DriverQuote as DriverQuote
 import qualified Storage.Tabular.FareParameters as FareParams
 import qualified Storage.Tabular.FareParameters.FareParametersProgressiveDetails as FareParametersProgressiveDetails
+import qualified Storage.Tabular.FareParameters.FareParametersSlabDetails as FareParametersSlabDetails
 import qualified Storage.Tabular.FareParameters.Instances as FareParams
 -- import qualified Storage.Tabular.FarePolicy as FarePolicy
 -- import qualified Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails as FarePolicyProgressiveDetails
@@ -66,7 +67,10 @@ getFullFareParamsData fareParamsT@FareParams.FareParametersT {..} = do
         MaybeT $
           fmap FareParams.ProgressiveDetailsT
             <$> Esq.findById' @FareParametersProgressiveDetails.FareParametersProgressiveDetailsT (Id id)
-      FareParams.Slab -> MaybeT . return $ Just FareParams.SlabDetailsT
+      FareParams.Slab ->
+        MaybeT $
+          fmap FareParams.SlabDetailsT
+            <$> Esq.findById' @FareParametersSlabDetails.FareParametersSlabDetailsT (Id id)
     return (fareParamsT, fareParamsDet)
 
 buildFullFareParameters ::

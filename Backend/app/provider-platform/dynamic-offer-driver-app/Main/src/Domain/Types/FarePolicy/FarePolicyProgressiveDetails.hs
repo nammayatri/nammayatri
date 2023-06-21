@@ -32,7 +32,7 @@ data FPProgressiveDetailsD (s :: UsageSafety) = FPProgressiveDetails
     waitingChargeInfo :: Maybe WaitingChargeInfo,
     nightShiftCharge :: Maybe NightShiftCharge
   }
-  deriving (Generic)
+  deriving (Generic, Show)
 
 type FPProgressiveDetails = FPProgressiveDetailsD 'Safe
 

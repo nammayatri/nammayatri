@@ -25,9 +25,7 @@ import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
+import Database.Beam.Postgres (Postgres)
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.SearchTry as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant (Variant)
@@ -65,12 +63,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be BaseUrl where
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be BaseUrl
 
--- instance FromBackendRow Postgres Money
-
 data SearchTryT f = SearchTryT
   { id :: B.C f Text,
     messageId :: B.C f Text,
     requestId :: B.C f Text,
+    merchantId :: B.C f (Maybe Text),
     startTime :: B.C f Time.UTCTime,
     validTill :: B.C f Time.UTCTime,
     estimateId :: B.C f Text,
@@ -84,9 +81,6 @@ data SearchTryT f = SearchTryT
     updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
-
--- instance IsString Domain.SearchTryStatus where
---   fromString = show
 
 instance IsString Variant.Variant where
   fromString = show
@@ -118,8 +112,6 @@ instance ToJSON SearchTry where
 
 deriving stock instance Show SearchTry
 
--- deriving stock instance Read Money
-
 searchTryTMod :: SearchTryT (B.FieldModification (B.TableField SearchTryT))
 searchTryTMod =
   B.tableModification
@@ -127,6 +119,7 @@ searchTryTMod =
       messageId = B.fieldNamed "message_id",
       requestId = B.fieldNamed "request_id",
       estimateId = B.fieldNamed "estimate_id",
+      merchantId = B.fieldNamed "merchant_id",
       startTime = B.fieldNamed "start_time",
       validTill = B.fieldNamed "valid_till",
       baseFare = B.fieldNamed "base_fare",
@@ -149,32 +142,6 @@ searchTryToHSModifiers =
 searchTryToPSModifiers :: M.Map Text (A.Value -> A.Value)
 searchTryToPSModifiers =
   M.empty
-
--- defaultSearchTry :: SearchTry
--- defaultSearchTry =
---   SearchTryT
---     { id = "",
---       transactionId = "",
---       messageId = "",
---       estimateId = "",
---       startTime = defaultUTCDate,
---       validTill = defaultUTCDate,
---       providerId = "",
---       fromLocationId = "",
---       toLocationId = "",
---       bapId = "",
---       bapUri = "",
---       estimatedDistance = "",
---       estimatedDuration = "",
---       customerExtraFee = Nothing,
---       device = Nothing,
---       status = "",
---       vehicleVariant = "",
---       searchRepeatCounter = 0,
---       autoAssignEnabled = False,
---       createdAt = defaultUTCDate,
---       updatedAt = defaultUTCDate
---     }
 
 instance Serialize SearchTry where
   put = error "undefined"

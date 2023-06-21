@@ -18,7 +18,7 @@ module Screens.CustomerUtils.ContactUsScreen.ComponentConfig where
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), isJust)
 import Data.String as DS 
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
@@ -94,6 +94,7 @@ primaryEditTextConfigEmail state = let
         , placeholder = "example@xyz.com"
         }
       , background = Color.white900
+      , showErrorLabel = (isJust state.data.errorMessage)
       , topLabel
         { text = (getString YOUR_EMAIL_ID)
         , textSize = FontSize.a_12
@@ -101,6 +102,14 @@ primaryEditTextConfigEmail state = let
         , fontStyle = FontStyle.regular LanguageStyle
         }  
       , margin = (Margin 10 32 10 0)
+      , errorLabel{
+          text = case state.data.errorMessage of 
+            Just ST.EMAIL_EXISTS -> "Email already exists"
+            Just ST.INVALID_EMAIL -> "Please enter a valid email"
+            Nothing -> ""
+        , fontStyle = FontStyle.regular LanguageStyle
+        , color = Color.textDanger
+        }
       } 
     in primaryEditTextConfig'
 

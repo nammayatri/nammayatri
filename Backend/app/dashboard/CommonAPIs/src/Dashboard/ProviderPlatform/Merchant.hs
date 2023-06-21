@@ -19,6 +19,7 @@ module Dashboard.ProviderPlatform.Merchant
   )
 where
 
+import qualified Dashboard.Common as Common
 import Dashboard.Common.Merchant as Reexport
 import Data.Aeson
 import qualified Data.Bifunctor as BF
@@ -28,6 +29,7 @@ import Data.Text.Encoding as DT
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Common
+import Kernel.Types.Id
 import Kernel.Types.Predicate
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Types.Value
@@ -101,6 +103,40 @@ instance HideSecrets MerchantUpdateReq where
       }
 
 ---------------------------------------------------------
+-- merchant common config -------------------------------
+
+type MerchantCommonConfigAPI =
+  "config"
+    :> "common"
+    :> Get '[JSON] MerchantCommonConfigRes
+
+data MerchantCommonConfigRes = MerchantCommonConfigRes
+  { pickupLocThreshold :: Meters,
+    dropLocThreshold :: Meters,
+    rideTimeEstimatedThreshold :: Seconds,
+    includeDriverCurrentlyOnRide :: Bool,
+    defaultPopupDelay :: Seconds,
+    popupDelayToAddAsPenalty :: Maybe Seconds,
+    thresholdCancellationScore :: Maybe Int,
+    minRidesForCancellationScore :: Maybe Int,
+    mediaFileUrlPattern :: Text,
+    mediaFileSizeUpperLimit :: Int,
+    onboardingTryLimit :: Int,
+    onboardingRetryTimeInHours :: Int,
+    checkImageExtractionForDashboard :: Bool,
+    searchRepeatLimit :: Int,
+    actualRideDistanceDiffThreshold :: HighPrecMeters,
+    upwardsRecomputeBuffer :: HighPrecMeters,
+    approxRideDistanceDiffThreshold :: HighPrecMeters,
+    driverLeaderBoardExpiry :: Maybe Seconds,
+    minLocationAccuracy :: Double,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+---------------------------------------------------------
 -- merchant common config update ------------------------
 
 type MerchantCommonConfigUpdateAPI =
@@ -120,7 +156,6 @@ data MerchantCommonConfigUpdateReq = MerchantCommonConfigUpdateReq
     minRidesForCancellationScore :: Maybe (OptionalValue Int),
     mediaFileUrlPattern :: Maybe (MandatoryValue Text),
     mediaFileSizeUpperLimit :: Maybe (MandatoryValue Int),
-    waitingTimeEstimatedThreshold :: Maybe (MandatoryValue Minutes),
     onboardingTryLimit :: Maybe (MandatoryValue Int),
     onboardingRetryTimeInHours :: Maybe (MandatoryValue Int),
     checkImageExtractionForDashboard :: Maybe (MandatoryValue Bool),
@@ -143,11 +178,49 @@ validateMerchantCommonConfigUpdateReq MerchantCommonConfigUpdateReq {..} =
       validateField "mediaFileUrlPattern" mediaFileUrlPattern $ InMaybe $ InValue $ MinLength 1,
       validateField "mediaFileSizeUpperLimit" mediaFileSizeUpperLimit $ InMaybe $ InValue $ Min @Int 1,
       validateField "minRidesForCancellationScore" minRidesForCancellationScore $ InMaybe $ InValue $ Min @Int 0,
-      validateField "waitingTimeEstimatedThreshold" waitingTimeEstimatedThreshold $ InMaybe $ InValue $ Min @Minutes 0,
       validateField "onboardingTryLimit" onboardingTryLimit $ InMaybe $ InValue $ Min @Int 0,
       validateField "onboardingRetryTimeInHours" onboardingRetryTimeInHours $ InMaybe $ InValue $ Min @Int 0,
       validateField "searchRepeatLimit" searchRepeatLimit $ InMaybe $ InValue $ Min @Int 0
     ]
+
+---------------------------------------------------------
+-- merchant driver pool config  -------------------------
+
+type DriverPoolConfigAPI =
+  "config"
+    :> "driverPool"
+    :> QueryParam "tripDistance" Meters
+    :> Get '[JSON] DriverPoolConfigRes
+
+type DriverPoolConfigRes = [DriverPoolConfigItem]
+
+data DriverPoolConfigItem = DriverPoolConfigItem
+  { minRadiusOfSearch :: Meters,
+    maxRadiusOfSearch :: Meters,
+    radiusStepSize :: Meters,
+    driverPositionInfoExpiry :: Maybe Seconds,
+    actualDistanceThreshold :: Maybe Meters,
+    maxDriverQuotesRequired :: Int,
+    driverQuoteLimit :: Int,
+    driverRequestCountLimit :: Int,
+    driverBatchSize :: Int,
+    maxNumberOfBatches :: Int,
+    maxParallelSearchRequests :: Int,
+    poolSortingType :: PoolSortingType,
+    singleBatchProcessTime :: Seconds,
+    tripDistance :: Meters,
+    radiusShrinkValueForDriversOnRide :: Int,
+    driverToDestinationDistanceThreshold :: Meters,
+    driverToDestinationDuration :: Seconds,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PoolSortingType = Intelligent | Random
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 ---------------------------------------------------------
 -- merchant driver pool config update -------------------
@@ -173,17 +246,14 @@ data DriverPoolConfigUpdateReq = DriverPoolConfigUpdateReq
     maxNumberOfBatches :: Maybe (MandatoryValue Int),
     maxParallelSearchRequests :: Maybe (MandatoryValue Int),
     poolSortingType :: Maybe (MandatoryValue PoolSortingType),
-    singleBatchProcessTime :: Maybe (MandatoryValue Seconds)
+    singleBatchProcessTime :: Maybe (MandatoryValue Seconds),
+    distanceBasedBatchSplit :: Maybe (MandatoryValue [BatchSplitByPickupDistance])
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets DriverPoolConfigUpdateReq where
   hideSecrets = identity
-
-data PoolSortingType = Intelligent | Random
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 validateDriverPoolConfigUpdateReq :: Validate DriverPoolConfigUpdateReq
 validateDriverPoolConfigUpdateReq DriverPoolConfigUpdateReq {..} =
@@ -213,6 +283,13 @@ type DriverPoolConfigCreateAPI =
     :> ReqBody '[JSON] DriverPoolConfigCreateReq
     :> Post '[JSON] APISuccess
 
+data BatchSplitByPickupDistance = BatchSplitByPickupDistance
+  { batchSplitSize :: Int,
+    batchSplitDelay :: Seconds
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DriverPoolConfigCreateReq = DriverPoolConfigCreateReq
   { minRadiusOfSearch :: Meters,
     maxRadiusOfSearch :: Meters,
@@ -226,6 +303,7 @@ data DriverPoolConfigCreateReq = DriverPoolConfigCreateReq
     maxNumberOfBatches :: Int,
     maxParallelSearchRequests :: Int,
     poolSortingType :: PoolSortingType,
+    distanceBasedBatchSplit :: [BatchSplitByPickupDistance],
     singleBatchProcessTime :: Seconds,
     radiusShrinkValueForDriversOnRide :: Int,
     driverToDestinationDistanceThreshold :: Meters,
@@ -256,6 +334,35 @@ validateDriverPoolConfigCreateReq DriverPoolConfigCreateReq {..} =
       validateField "driverToDestinationDistanceThreshold" driverToDestinationDistanceThreshold $ Min @Meters 1,
       validateField "driverToDestinationDuration" driverToDestinationDuration $ Min @Seconds 1
     ]
+
+---------------------------------------------------------
+-- merchant driver intelligent pool config --------------
+
+type DriverIntelligentPoolConfigAPI =
+  "config"
+    :> "driverIntelligentPool"
+    :> Get '[JSON] DriverIntelligentPoolConfigRes
+
+data DriverIntelligentPoolConfigRes = DriverIntelligentPoolConfigRes
+  { availabilityTimeWeightage :: Int,
+    availabilityTimeWindowOption :: SWC.SlidingWindowOptions,
+    acceptanceRatioWeightage :: Int,
+    acceptanceRatioWindowOption :: SWC.SlidingWindowOptions,
+    cancellationRatioWeightage :: Int,
+    cancellationRatioWindowOption :: SWC.SlidingWindowOptions,
+    minQuotesToQualifyForIntelligentPool :: Int,
+    minQuotesToQualifyForIntelligentPoolWindowOption :: SWC.SlidingWindowOptions,
+    intelligentPoolPercentage :: Maybe Int,
+    speedNormalizer :: Double,
+    driverSpeedWeightage :: Int,
+    minLocationUpdates :: Int,
+    locationUpdateSampleTime :: Minutes,
+    defaultDriverSpeed :: Double,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 ---------------------------------------------------------
 -- merchant driver intelligent pool config update -------
@@ -319,6 +426,47 @@ validateSlidingWindowOptions SWC.SlidingWindowOptions {..} =
 ---------------------------------------------------------
 -- merchant onboarding document config update -----------
 
+type OnboardingDocumentConfigAPI =
+  "config"
+    :> "onboardingDocument"
+    :> QueryParam "documentType" DocumentType
+    :> Get '[JSON] OnboardingDocumentConfigRes
+
+type OnboardingDocumentConfigRes = [OnboardingDocumentConfigItem]
+
+data OnboardingDocumentConfigItem = OnboardingDocumentConfigItem
+  { documentType :: DocumentType,
+    checkExtraction :: Bool,
+    checkExpiry :: Bool,
+    validVehicleClasses :: [Text],
+    vehicleClassCheckType :: VehicleClassCheckType,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VehicleClassCheckType = Infix | Prefix | Suffix
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DocumentType = RC | DL | RCInsurance
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+instance FromHttpApiData DocumentType where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = BF.first T.pack . eitherDecode . BSL.fromStrict
+
+instance ToHttpApiData DocumentType where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
+
+---------------------------------------------------------
+-- merchant onboarding document config update -----------
+
 type OnboardingDocumentConfigUpdateAPI =
   "config"
     :> "onboardingDocument"
@@ -338,24 +486,6 @@ data OnboardingDocumentConfigUpdateReq = OnboardingDocumentConfigUpdateReq
 
 instance HideSecrets OnboardingDocumentConfigUpdateReq where
   hideSecrets = identity
-
-data VehicleClassCheckType = Infix | Prefix | Suffix
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data DocumentType = RC | DL | RCInsurance
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToParamSchema)
-
-instance FromHttpApiData DocumentType where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = BF.first T.pack . eitherDecode . BSL.fromStrict
-
-instance ToHttpApiData DocumentType where
-  toUrlPiece = DT.decodeUtf8 . toHeader
-  toQueryParam = toUrlPiece
-  toHeader = BSL.toStrict . encode
 
 validateOnboardingDocumentConfigUpdateReq :: Validate OnboardingDocumentConfigUpdateReq
 validateOnboardingDocumentConfigUpdateReq OnboardingDocumentConfigUpdateReq {..} =
@@ -387,3 +517,39 @@ instance HideSecrets OnboardingDocumentConfigCreateReq where
 validateOnboardingDocumentConfigCreateReq :: Validate OnboardingDocumentConfigCreateReq
 validateOnboardingDocumentConfigCreateReq OnboardingDocumentConfigCreateReq {..} =
   validateField "validVehicleClasses" validVehicleClasses $ InList $ MinLength 1
+
+---------------------------------------------------------
+-- Create Fare Policy -----------------------------------
+
+type CreateFPDriverExtraFee =
+  "config"
+    :> "farePolicy"
+    :> Capture "farePolicyId" (Id Common.FarePolicy)
+    :> "driverExtraFeeBounds"
+    :> "create"
+    :> MandatoryQueryParam "startDistance" Meters
+    :> ReqBody '[JSON] CreateFPDriverExtraFeeReq
+    :> Post '[JSON] APISuccess
+
+data CreateFPDriverExtraFeeReq = CreateFPDriverExtraFeeReq
+  { minFee :: Money,
+    maxFee :: Money
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets CreateFPDriverExtraFeeReq where
+  hideSecrets = identity
+
+---------------------------------------------------------
+-- Update Fare Policy -----------------------------------
+
+type UpdateFPDriverExtraFee =
+  "config"
+    :> "farePolicy"
+    :> Capture "farePolicyId" (Id Common.FarePolicy)
+    :> "driverExtraFeeBounds"
+    :> "update"
+    :> MandatoryQueryParam "startDistance" Meters
+    :> ReqBody '[JSON] CreateFPDriverExtraFeeReq
+    :> Post '[JSON] APISuccess

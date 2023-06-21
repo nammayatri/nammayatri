@@ -1,9 +1,6 @@
 packages:
   app/beckn-cli
-  app/provider-platform/static-offer-driver-app/Main
-  app/provider-platform/static-offer-driver-app/Allocator
   app/provider-platform/driver-tracking-health-check
-  app/provider-platform/static-offer-driver-app/Scheduler
   app/provider-platform/dynamic-offer-driver-app/Main
   app/provider-platform/dynamic-offer-driver-app/Allocator
   app/rider-platform/rider-app/Main

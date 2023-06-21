@@ -75,6 +75,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
   { id :: B.C f Text,
     requestId :: B.C f Text,
     searchTryId :: B.C f Text,
+    merchantId :: B.C f (Maybe Text),
     startTime :: B.C f Time.UTCTime,
     actualDistanceToPickup :: B.C f Meters,
     straightLineDistanceToPickup :: B.C f Meters,
@@ -96,6 +97,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     driverAvailableTime :: B.C f (Maybe Double),
     parallelSearchRequestCount :: B.C f (Maybe Int),
     driverSpeed :: B.C f (Maybe Double),
+    keepHiddenForSeconds :: B.C f Seconds,
     mode :: B.C f (Maybe D.DriverMode),
     createdAt :: B.C f Time.LocalTime
   }
@@ -158,6 +160,7 @@ searchRequestForDriverTMod =
     { id = B.fieldNamed "id",
       requestId = B.fieldNamed "search_request_id",
       searchTryId = B.fieldNamed "search_try_id",
+      merchantId = B.fieldNamed "merchant_id",
       startTime = B.fieldNamed "start_time",
       actualDistanceToPickup = B.fieldNamed "actual_distance_to_pickup",
       straightLineDistanceToPickup = B.fieldNamed "straight_line_distance_to_pickup",
@@ -179,6 +182,7 @@ searchRequestForDriverTMod =
       driverAvailableTime = B.fieldNamed "driver_available_time",
       parallelSearchRequestCount = B.fieldNamed "parallel_search_request_count",
       driverSpeed = B.fieldNamed "driver_speed",
+      keepHiddenForSeconds = B.fieldNamed "keep_hidden_for_seconds",
       mode = B.fieldNamed "mode",
       createdAt = B.fieldNamed "created_at"
     }

@@ -46,6 +46,7 @@ mkPersist
       estimatedFare Common.Money
       fareParametersId Fare.FareParametersTId
       estimatedFinishTime UTCTime
+      specialLocationTag Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

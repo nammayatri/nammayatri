@@ -15,6 +15,7 @@
 module Domain.Types.DriverOffer where
 
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.Merchant as DMerchant
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -25,6 +26,7 @@ data BPPQuote
 data DriverOffer = DriverOffer
   { id :: Id DriverOffer,
     estimateId :: Id DEstimate.Estimate,
+    merchantId :: Maybe (Id DMerchant.Merchant),
     driverName :: Text,
     durationToPickup :: Int, -- Seconds?
     distanceToPickup :: HighPrecMeters,

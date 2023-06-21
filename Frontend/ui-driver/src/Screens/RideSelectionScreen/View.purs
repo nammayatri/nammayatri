@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -50,9 +50,10 @@ import PrestoDOM.List as PrestoList
 import Components.PrimaryButton (view) as PrimaryButton
 import Services.Backend as Remote
 import Effect.Aff (launchAff)
+import Types.App (defaultGlobalState)
 
 screen :: RideSelectionScreenState -> PrestoList.ListItem -> Screen Action RideSelectionScreenState ScreenOutput
-screen initialState rideListItem = 
+screen initialState rideListItem =
   { initialState : initialState {
       shimmerLoader = AnimatedIn
     }
@@ -61,7 +62,7 @@ screen initialState rideListItem =
   , globalEvents : [
       globalOnScroll "RideSelectionScreen"
     , (\ push -> do
-                 _ <- launchAff $ flowRunner $ runExceptT $ runBackT $ do
+                 _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
                    (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "8" (show initialState.offsetValue) "false" "COMPLETED"
                    lift $ lift $ doAff do liftEffect $ push $ RideHistoryAPIResponseAction rideHistoryResponse.list
                  pure $ pure unit
@@ -196,7 +197,7 @@ selectARideHeader state push =
    ]
 
 ridesView :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> RideSelectionScreenState -> PrestoDOM (Effect Unit) w
-ridesView rideListItem push state = 
+ridesView rideListItem push state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -270,7 +271,7 @@ ridesView rideListItem push state =
       ]
    ]
 
-  
+
 shimmerData :: Int -> ItemState
 shimmerData i =
   { id   : toPropValue ""
@@ -294,8 +295,8 @@ shimmerData i =
   , ride_distance_visibility : toPropValue "visible"
   }
 
-getCategoryName :: String -> String 
-getCategoryName categoryName = case categoryName of 
+getCategoryName :: String -> String
+getCategoryName categoryName = case categoryName of
   "LOST_AND_FOUND" -> (getString REPORT_LOST_ITEM)
   "RIDE_RELATED" -> (getString RIDE_RELATED_ISSUE)
   "APP_RELATED" -> (getString APP_RELATED_ISSUE)

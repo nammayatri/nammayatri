@@ -104,8 +104,7 @@ generateSearchRequest = do
                         end = Nothing,
                         tags =
                           API.Tags
-                            { auto_assign_enabled = False,
-                              customer_language = Nothing
+                            { customer_language = Nothing
                             }
                       }
                 },

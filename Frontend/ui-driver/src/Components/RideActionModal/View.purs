@@ -34,7 +34,7 @@ import Styles.Colors as Color
 import Engineering.Helpers.Commons (screenWidth)
 import Screens.Types (HomeScreenStage(..))
 import JBridge (getVersionCode)
-import MerchantConfigs.Utils(getMerchant, Merchant(..))
+import Merchant.Utils(getMerchant, Merchant(..))
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 

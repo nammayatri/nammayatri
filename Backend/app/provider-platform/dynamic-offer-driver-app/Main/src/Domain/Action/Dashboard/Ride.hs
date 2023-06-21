@@ -31,6 +31,7 @@ import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.CancellationReason as DCReason
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
@@ -47,6 +48,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified SharedLogic.CallBAP as CallBAP
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.CallStatus as QCallStatus
@@ -114,11 +116,11 @@ buildRideListItem QRide.RideItem {..} = do
 getActualRoute :: MonadFlow m => Common.DriverEdaKafka -> m Common.ActualRoute
 getActualRoute Common.DriverEdaKafka {..} =
   case (lat, lon, ts, acc, rideStatus) of
-    (Just lat_, Just lon_, ts_, acc_, Just rideStatus_) -> do
+    (Just lat_, Just lon_, ts_, acc_, rideStatus_) -> do
       lat' <- readMaybe lat_ & fromMaybeM (InvalidRequest "Couldn't find driver's location.")
       lon' <- readMaybe lon_ & fromMaybeM (InvalidRequest "Couldn't find driver's location.")
       let acc' = readMaybe $ fromMaybe "" acc_
-      rideStatus' <- readMaybe rideStatus_ & fromMaybeM (InvalidRequest "Couldn't find rideStatus")
+      let rideStatus' = readMaybe $ fromMaybe "" rideStatus_
       logInfo $ "Driver's hearbeat's timestamp received from clickhouse " <> show ts_ -- can be removed after running once in prod
       ts' <- Time.parseTimeM True Time.defaultTimeLocale "%Y-%m-%d %H:%M:%S%Q" ts_ & fromMaybeM (InvalidRequest "Couldn't find driver's timestamp.")
       pure $ Common.ActualRoute lat' lon' ts' acc' rideStatus'
@@ -317,8 +319,15 @@ syncCompletedRide ride booking = do
   let fareParametersId = fromMaybe booking.fareParams.id ride.fareParametersId
   -- fareParameters <- runInReplica $ QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
   fareParameters <- QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
+
+  mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
+    CQMPM.findByIdAndMerchantId paymentMethodId booking.providerId
+      >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+  let mbPaymentUrl = DMPM.getPostpaidPaymentUrl =<< mbPaymentMethod
+  let mbPaymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+
   handle (errHandler ride.status booking.status "ride completed") $
-    CallBAP.sendRideCompletedUpdateToBAP booking ride fareParameters
+    CallBAP.sendRideCompletedUpdateToBAP booking ride fareParameters mbPaymentMethodInfo mbPaymentUrl
   pure $ Common.RideSyncRes Common.RIDE_COMPLETED "Success. Sent ride completed update to bap"
 
 ---------------------------------------------------------------------
@@ -383,8 +392,15 @@ syncCompletedMultipleRide ride booking = do
   let fareParametersId = fromMaybe booking.fareParams.id ride.fareParametersId
   -- fareParameters <- runInReplica $ QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
   fareParameters <- QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
+
+  mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
+    CQMPM.findByIdAndMerchantId paymentMethodId booking.providerId
+      >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+  let mbPaymentUrl = DMPM.getPostpaidPaymentUrl =<< mbPaymentMethod
+  let mbPaymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+
   handle (errHandler ride.status booking.status "ride completed") $
-    CallBAP.sendRideCompletedUpdateToBAP booking ride fareParameters
+    CallBAP.sendRideCompletedUpdateToBAP booking ride fareParameters mbPaymentMethodInfo mbPaymentUrl
   pure $ Common.MultipleRideData {newStatus = Common.RIDE_COMPLETED, message = "Success. Sent ride completed update to bap", rideId = cast @DRide.Ride @Common.Ride ride.id}
 
 errHandler :: DRide.RideStatus -> DBooking.BookingStatus -> Text -> SomeException -> Flow ()

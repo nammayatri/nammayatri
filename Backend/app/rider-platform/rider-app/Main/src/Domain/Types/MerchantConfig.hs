@@ -30,6 +30,8 @@ data MerchantConfig = MerchantConfig
     fraudBookingCancelledByDriverCountWindow :: SWC.SlidingWindowOptions,
     fraudSearchCountThreshold :: Int,
     fraudSearchCountWindow :: SWC.SlidingWindowOptions,
+    fraudRideCountThreshold :: Int,
+    fraudRideCountWindow :: SWC.SlidingWindowOptions,
     enabled :: Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON)
