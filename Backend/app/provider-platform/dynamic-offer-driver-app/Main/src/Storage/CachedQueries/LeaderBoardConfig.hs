@@ -15,22 +15,24 @@
 module Storage.CachedQueries.LeaderBoardConfig where
 
 import Domain.Types.LeaderBoardConfig
+import Domain.Types.Merchant
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Id
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.LeaderBoardConfig as Queries
 
-findLeaderBoardConfigbyType :: (CacheFlow m r, Esq.EsqDBFlow m r) => LeaderBoardType -> m (Maybe LeaderBoardConfigs)
-findLeaderBoardConfigbyType leaderBType =
-  Hedis.safeGet (makeLeaderBoardConfigKey leaderBType) >>= \case
+findLeaderBoardConfigbyType :: (CacheFlow m r, Esq.EsqDBFlow m r) => LeaderBoardType -> Id Merchant -> m (Maybe LeaderBoardConfigs)
+findLeaderBoardConfigbyType leaderBType merchantId =
+  Hedis.safeGet (makeLeaderBoardConfigKey leaderBType merchantId) >>= \case
     Just config -> pure $ Just config
-    Nothing -> flip whenJust (cacheLeaderBoardConfig leaderBType) /=<< Queries.findLeaderBoardConfigbyType leaderBType
+    Nothing -> flip whenJust (cacheLeaderBoardConfig leaderBType merchantId) /=<< Queries.findLeaderBoardConfigbyType leaderBType merchantId
 
-makeLeaderBoardConfigKey :: LeaderBoardType -> Text
-makeLeaderBoardConfigKey leaderBType = "LBCFG:" <> show leaderBType
+makeLeaderBoardConfigKey :: LeaderBoardType -> Id Merchant -> Text
+makeLeaderBoardConfigKey leaderBType merchantId = "LBCFG:" <> merchantId.getId <> ":" <> show leaderBType
 
-cacheLeaderBoardConfig :: (CacheFlow m r) => LeaderBoardType -> LeaderBoardConfigs -> m ()
-cacheLeaderBoardConfig leaderBType lbConfig = do
+cacheLeaderBoardConfig :: (CacheFlow m r) => LeaderBoardType -> Id Merchant -> LeaderBoardConfigs -> m ()
+cacheLeaderBoardConfig leaderBType merchantId lbConfig = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.setExp (makeLeaderBoardConfigKey leaderBType) lbConfig expTime
+  Hedis.setExp (makeLeaderBoardConfigKey leaderBType merchantId) lbConfig expTime

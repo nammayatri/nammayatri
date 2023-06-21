@@ -14,6 +14,7 @@
 
 module Domain.Types.LeaderBoardConfig where
 
+import qualified Domain.Types.Merchant as DMerchant
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -29,6 +30,8 @@ data LeaderBoardConfigs = LeaderBoardConfigs
     numberOfSets :: Int,
     leaderBoardExpiry :: Seconds,
     zScoreBase :: Int,
-    leaderBoardLengthLimit :: Integer
+    leaderBoardLengthLimit :: Integer,
+    isEnabled :: Bool,
+    merchantId :: Id DMerchant.Merchant
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
