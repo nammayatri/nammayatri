@@ -54,15 +54,16 @@ getDailyDriverLeaderBoard ::
   (Id Person, Id DM.Merchant) ->
   Day ->
   m LeaderBoardRes
-getDailyDriverLeaderBoard (personId, _) day = do
+getDailyDriverLeaderBoard (personId, merchantId) day = do
   now <- getCurrentTime
   let currentDate = RideEndInt.getCurrentDate now
   let dateDiff = diffDays currentDate day
-  dailyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.DAILY >>= fromMaybeM (InternalError "Leaderboard configs not present")
+  dailyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.DAILY merchantId >>= fromMaybeM (InternalError "Leaderboard configs not present")
+  unless dailyLeaderBoardConfig.isEnabled . throwError $ InvalidRequest "Leaderboard Not Available"
   let numberOfSets = fromIntegral dailyLeaderBoardConfig.numberOfSets
   when (dateDiff > numberOfSets - 1 || dateDiff < 0) $
     throwError $ InvalidRequest "Date outside Range"
-  driversWithScoresMap :: [(Text, Double)] <- concat <$> Redis.withNonCriticalRedis (Redis.get $ RideEndInt.makeCachedDailyDriverLeaderBoardKey day)
+  driversWithScoresMap :: [(Text, Double)] <- concat <$> Redis.withNonCriticalRedis (Redis.get $ RideEndInt.makeCachedDailyDriverLeaderBoardKey merchantId day)
   let driverIds = map (Id . fst) driversWithScoresMap
   driverNamesMap :: HM.Map Text (Maybe Text) <- HM.fromList . map (\driver -> (driver.id.getId, getPersonFullName driver)) <$> QPerson.getDriversByIdIn driverIds
   (drivers', isCurrentDriverInTop) <-
@@ -87,12 +88,12 @@ getDailyDriverLeaderBoard (personId, _) day = do
   if not isCurrentDriverInTop && dateDiff == 0
     then do
       person <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-      mbCurrPersonRank <- Redis.withNonCriticalRedis $ Redis.zRevRank (RideEndInt.makeDailyDriverLeaderBoardKey day) personId.getId
-      mbCurrDriverZscore <- Redis.withNonCriticalRedis $ Redis.zScore (RideEndInt.makeDailyDriverLeaderBoardKey day) personId.getId
+      mbCurrPersonRank <- Redis.withNonCriticalRedis $ Redis.zRevRank (RideEndInt.makeDailyDriverLeaderBoardKey merchantId day) personId.getId
+      mbCurrDriverZscore <- Redis.withNonCriticalRedis $ Redis.zScore (RideEndInt.makeDailyDriverLeaderBoardKey merchantId day) personId.getId
       let currentDriverScore = fromMaybe 0 mbCurrDriverZscore
       currPersonRank <-
         case mbCurrPersonRank of
-          Nothing -> Redis.withNonCriticalRedis $ Redis.zCard (RideEndInt.makeDailyDriverLeaderBoardKey day)
+          Nothing -> Redis.withNonCriticalRedis $ Redis.zCard (RideEndInt.makeDailyDriverLeaderBoardKey merchantId day)
           Just rank -> pure rank
       let (currPersonTotalRides, currPersonTotalDistance) = RideEndInt.getRidesAndDistancefromZscore currentDriverScore dailyLeaderBoardConfig.zScoreBase
       currPersonFullName <- getPersonFullName person & fromMaybeM (PersonFieldNotPresent "firstName")
@@ -106,19 +107,20 @@ getWeeklyDriverLeaderBoard ::
   Day ->
   Day ->
   m LeaderBoardRes
-getWeeklyDriverLeaderBoard (personId, _) fromDate toDate = do
+getWeeklyDriverLeaderBoard (personId, merchantId) fromDate toDate = do
   now <- getCurrentTime
   let currentDate = RideEndInt.getCurrentDate now
   let (currWeekNumber, _) = sundayStartWeek currentDate
   let (reqWeekNumber, reqDayIndex) = sundayStartWeek fromDate
   let weekDiff = currWeekNumber - reqWeekNumber
-  weeklyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.WEEKLY >>= fromMaybeM (InternalError "Leaderboard configs not present")
+  weeklyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.WEEKLY merchantId >>= fromMaybeM (InternalError "Leaderboard configs not present")
+  unless weeklyLeaderBoardConfig.isEnabled . throwError $ InvalidRequest "Leaderboard Not Available"
   let numberOfSets = weeklyLeaderBoardConfig.numberOfSets
   when (weekDiff > numberOfSets - 1 || weekDiff < 0) $
     throwError $ InvalidRequest "Week outside Range"
-  when (diffDays toDate fromDate /= 6 && reqDayIndex /= 0) $
+  when (diffDays toDate fromDate /= 6 || reqDayIndex /= 0) $
     throwError $ InvalidRequest "Invalid Input"
-  driversWithScoresMap :: [(Text, Double)] <- concat <$> Redis.withNonCriticalRedis (Redis.get $ RideEndInt.makeCachedWeeklyDriverLeaderBoardKey fromDate toDate)
+  driversWithScoresMap :: [(Text, Double)] <- concat <$> Redis.withNonCriticalRedis (Redis.get $ RideEndInt.makeCachedWeeklyDriverLeaderBoardKey merchantId fromDate toDate)
   let driverIds = map (Id . fst) driversWithScoresMap
   driverNamesMap <- HM.fromList . map (\driver -> (driver.id.getId, getPersonFullName driver)) <$> QPerson.getDriversByIdIn driverIds
   (drivers', isCurrentDriverInTop) <-
@@ -143,12 +145,12 @@ getWeeklyDriverLeaderBoard (personId, _) fromDate toDate = do
   if not isCurrentDriverInTop && weekDiff == 0
     then do
       person <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-      mbCurrPersonRank <- Redis.withNonCriticalRedis $ Redis.zRevRank (RideEndInt.makeWeeklyDriverLeaderBoardKey fromDate toDate) personId.getId
-      mbCurrDriverZscore <- Redis.withNonCriticalRedis $ Redis.zScore (RideEndInt.makeWeeklyDriverLeaderBoardKey fromDate toDate) personId.getId
+      mbCurrPersonRank <- Redis.withNonCriticalRedis $ Redis.zRevRank (RideEndInt.makeWeeklyDriverLeaderBoardKey merchantId fromDate toDate) personId.getId
+      mbCurrDriverZscore <- Redis.withNonCriticalRedis $ Redis.zScore (RideEndInt.makeWeeklyDriverLeaderBoardKey merchantId fromDate toDate) personId.getId
       let currDriverZscore = fromMaybe 0 mbCurrDriverZscore
       currPersonRank <-
         case mbCurrPersonRank of
-          Nothing -> Redis.withNonCriticalRedis $ Redis.zCard (RideEndInt.makeWeeklyDriverLeaderBoardKey fromDate toDate)
+          Nothing -> Redis.withNonCriticalRedis $ Redis.zCard (RideEndInt.makeWeeklyDriverLeaderBoardKey merchantId fromDate toDate)
           Just rank -> pure rank
       let (currPersonTotalRides, currPersonTotalDistance) = RideEndInt.getRidesAndDistancefromZscore currDriverZscore weeklyLeaderBoardConfig.zScoreBase
       currPersonFullName <- getPersonFullName person & fromMaybeM (PersonFieldNotPresent "firstName")
