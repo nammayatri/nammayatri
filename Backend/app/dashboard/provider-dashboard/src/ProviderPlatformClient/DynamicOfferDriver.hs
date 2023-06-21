@@ -58,6 +58,7 @@ data DriverOfferAPIs = DriverOfferAPIs
 
 data DriversAPIs = DriversAPIs
   { driverDocumentsInfo :: Euler.EulerClient Driver.DriverDocumentsInfoRes,
+    driverAadhaarInfo :: Id Driver.Driver -> Euler.EulerClient Driver.DriverAadhaarInfoRes,
     listDrivers :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Euler.EulerClient Driver.DriverListRes,
     driverActivity :: Euler.EulerClient Driver.DriverActivityRes,
     enableDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
@@ -174,6 +175,7 @@ mkDriverOfferAPIs merchantId token = do
       :<|> issueClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
 
     driverDocumentsInfo
+      :<|> driverAadhaarInfo
       :<|> listDrivers
       :<|> driverActivity
       :<|> enableDriver

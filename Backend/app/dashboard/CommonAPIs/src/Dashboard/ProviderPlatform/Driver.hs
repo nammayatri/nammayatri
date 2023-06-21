@@ -164,6 +164,25 @@ emptyInfo =
     }
 
 ---------------------------------------------------------
+-- driver aadhaar Info api ----------------------------------------
+
+type DriverAadhaarInfoAPI =
+  Capture "driverId" (Id Driver)
+    :> "aadhaarInfo"
+    :> Get '[JSON] DriverAadhaarInfoRes
+
+data DriverAadhaarInfoRes = DriverAadhaarInfoRes
+  { driverName :: Text,
+    driverGender :: Text,
+    driverDob :: Text,
+    driverImage :: Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-------------------------------------
+
+---------------------------------------------------------
 -- driver activity --------------------------------------
 
 type DriverActivityAPI =
@@ -291,6 +310,7 @@ data DriverInfoRes = DriverInfoRes
     enabled :: Bool,
     blocked :: Bool,
     verified :: Bool,
+    aadhaarVerified :: Bool,
     canDowngradeToSedan :: Bool,
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,

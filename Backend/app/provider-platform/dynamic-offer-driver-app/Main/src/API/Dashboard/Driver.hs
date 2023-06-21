@@ -28,6 +28,7 @@ import Servant hiding (throwError)
 type API =
   "driver"
     :> ( Common.DriverDocumentsInfoAPI
+           :<|> Common.DriverAadhaarInfoAPI
            :<|> Common.DriverListAPI
            :<|> Common.DriverActivityAPI
            :<|> Common.EnableDriverAPI
@@ -50,6 +51,7 @@ type API =
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   driverDocumentsInfo merchantId
+    :<|> driverAadhaarInfo merchantId
     :<|> listDrivers merchantId
     :<|> driverActivity merchantId
     :<|> enableDriver merchantId
@@ -70,6 +72,9 @@ handler merchantId =
 
 driverDocumentsInfo :: ShortId DM.Merchant -> FlowHandler Common.DriverDocumentsInfoRes
 driverDocumentsInfo = withFlowHandlerAPI . DDriver.driverDocumentsInfo
+
+driverAadhaarInfo :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler Common.DriverAadhaarInfoRes
+driverAadhaarInfo merchantShortId = withFlowHandlerAPI . DDriver.driverAadhaarInfo merchantShortId
 
 listDrivers :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> FlowHandler Common.DriverListRes
 listDrivers merchantShortId mbLimit mbOffset verified enabled blocked vechicleNumberSearchString =

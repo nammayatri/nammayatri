@@ -38,6 +38,7 @@ import "lib-dashboard" Tools.Auth.Merchant
 type API =
   "driver"
     :> ( DriverDocumentsInfoAPI
+           :<|> DriverAadhaarInfoAPI
            :<|> DriverListAPI
            :<|> DriverActivityAPI
            :<|> EnableDriverAPI
@@ -60,6 +61,10 @@ type API =
 type DriverDocumentsInfoAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'DOCUMENTS_INFO
     :> Common.DriverDocumentsInfoAPI
+
+type DriverAadhaarInfoAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'AADHAAR_INFO
+    :> Common.DriverAadhaarInfoAPI
 
 type DriverListAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'LIST
@@ -128,6 +133,7 @@ type ClearOnRideStuckDrivers =
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   driverDocuments merchantId
+    :<|> driverAadhaarInfo merchantId
     :<|> listDriver merchantId
     :<|> driverActivity merchantId
     :<|> enableDriver merchantId
@@ -162,6 +168,11 @@ driverDocuments :: ShortId DM.Merchant -> ApiTokenInfo -> FlowHandler Common.Dri
 driverDocuments merchantShortId apiTokenInfo = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.drivers.driverDocumentsInfo)
+
+driverAadhaarInfo :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler Common.DriverAadhaarInfoRes
+driverAadhaarInfo merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.driverAadhaarInfo) driverId
 
 listDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> FlowHandler Common.DriverListRes
 listDriver merchantShortId apiTokenInfo mbLimit mbOffset verified enabled blocked phone mbVehicleNumberSearchString = withFlowHandlerAPI $ do

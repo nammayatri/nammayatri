@@ -15,10 +15,11 @@
 module Storage.Queries.DriverOnboarding.AadhaarVerification where
 
 import Domain.Types.DriverOnboarding.AadhaarVerification
+import Domain.Types.Person (Person)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Storage.Tabular.DriverOnboarding.AadhaarVerification ()
+import Storage.Tabular.DriverOnboarding.AadhaarVerification
 
 create :: AadhaarVerification -> Esq.SqlDB ()
 create = Esq.create
@@ -28,3 +29,13 @@ findById ::
   Id AadhaarVerification ->
   m (Maybe AadhaarVerification)
 findById = Esq.findById
+
+findByDriverId ::
+  Transactionable m =>
+  Id Person ->
+  m (Maybe AadhaarVerification)
+findByDriverId driverId = do
+  findOne $ do
+    aadhaar <- from $ table @AadhaarVerificationT
+    where_ $ aadhaar ^. AadhaarVerificationDriverId ==. val (toKey driverId)
+    return aadhaar

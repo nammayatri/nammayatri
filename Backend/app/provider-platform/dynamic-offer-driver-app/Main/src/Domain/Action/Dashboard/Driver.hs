@@ -15,6 +15,7 @@
 
 module Domain.Action.Dashboard.Driver
   ( driverDocumentsInfo,
+    driverAadhaarInfo,
     listDrivers,
     driverActivity,
     enableDriver,
@@ -63,6 +64,7 @@ import qualified SharedLogic.DriverLocation as DLoc
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.DriverInformation as CQDriverInfo
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
+import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as AV
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverOnboarding.Status as QDocStatus
@@ -182,6 +184,28 @@ buildDriverListItem (person, driverInformation, mbVehicle) = do
       }
 
 ---------------------------------------------------------------------
+driverAadhaarInfo :: ShortId DM.Merchant -> Id Common.Driver -> Flow Common.DriverAadhaarInfoRes
+driverAadhaarInfo merchantShortId driverId = do
+  merchant <- findMerchantByShortId merchantShortId
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- merchant access checking
+  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  driverInf <- CQDriverInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+  unless (driverInf.aadhaarVerified) $ throwError $ InvalidRequest "Person aadhaar verification is pending"
+  res <- AV.findByDriverId personId
+  case res of
+    Just aadhaarData -> do
+      pure
+        Common.DriverAadhaarInfoRes
+          { driverName = aadhaarData.driverName,
+            driverGender = aadhaarData.driverGender,
+            driverDob = aadhaarData.driverDob,
+            driverImage = aadhaarData.driverImage
+          }
+    Nothing -> throwError $ InvalidRequest "no aadhaar data is found"
+
+---------------------------------- -----------------------------------
 driverActivity :: ShortId DM.Merchant -> Flow Common.DriverActivityRes
 driverActivity merchantShortId = do
   merchant <- findMerchantByShortId merchantShortId
@@ -352,6 +376,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         enabled = info.enabled,
         blocked = info.blocked,
         verified = info.verified,
+        aadhaarVerified = info.aadhaarVerified,
         canDowngradeToSedan = info.canDowngradeToSedan,
         canDowngradeToHatchback = info.canDowngradeToHatchback,
         canDowngradeToTaxi = info.canDowngradeToTaxi,
