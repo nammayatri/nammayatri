@@ -137,7 +137,7 @@ eval (IndividualRideCardAction (IndividualRideCardController.Select index)) stat
       selectedItem = (fromMaybe dummyCard (filteredRideList !! index))
   }
 eval Loader state = do
-  exit $ LoaderOutput state
+  exit $ LoaderOutput state{loaderButtonVisibility = false}
 
 eval (RideHistoryAPIResponseAction rideList) state = do
   let bufferCardDataPrestoList = (rideHistoryListTransformer rideList)
