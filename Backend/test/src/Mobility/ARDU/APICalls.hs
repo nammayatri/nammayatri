@@ -84,7 +84,7 @@ ui = do
       :<|> locationClient
       :<|> rideClient = client (Proxy :: Proxy UIAPI)
 
-    _ :<|> (_ :<|> _ :<|> rideStart :<|> rideEnd :<|> rideCancel) = rideClient
+    _ :<|> (_ :<|> _ :<|> _ :<|> rideStart :<|> rideEnd :<|> _ :<|> rideCancel) = rideClient
 
     ( _
         :<|> _

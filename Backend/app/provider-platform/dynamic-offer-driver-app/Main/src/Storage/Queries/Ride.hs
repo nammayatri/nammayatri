@@ -163,8 +163,8 @@ getInProgressOrNewRideIdAndStatusByDriverId driverId = do
     pure (ride ^. RideId, ride ^. RideStatus)
   pure $ first Id <$> mbTuple
 
-getActiveByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
-getActiveByDriverId driverId = Esq.findOne $ do
+findActiveByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
+findActiveByDriverId driverId = Esq.findOne $ do
   ride <- from $ table @RideT
   where_ $
     ride ^. RideDriverId ==. val (toKey driverId)

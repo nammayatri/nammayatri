@@ -43,7 +43,6 @@ import EulerHS.Prelude hiding (id, pi)
 import Kernel.External.Maps
 import Kernel.Prelude (roundToIntegral)
 import Kernel.Tools.Metrics.CoreMetrics
-import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
@@ -65,8 +64,9 @@ data EndRideReq = DriverReq DriverEndRideReq | DashboardReq DashboardEndRideReq 
 
 data DriverEndRideReq = DriverEndRideReq
   { point :: LatLong,
-    requestor :: DP.Person,
-    numberOfDeviation :: Maybe Bool
+    numberOfDeviation :: Maybe Bool, -- FIXME is it the same as routeDeviated?
+    routeDeviated :: Bool,
+    requestor :: DP.Person
   }
 
 data DashboardEndRideReq = DashboardEndRideReq
@@ -127,8 +127,8 @@ driverEndRide ::
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverEndRideReq ->
-  m APISuccess.APISuccess
-driverEndRide handle rideId req = do
+  m ()
+driverEndRide handle rideId req =
   withLogTag ("requestorId-" <> req.requestor.id.getId)
     . endRide handle rideId
     $ DriverReq req
@@ -138,7 +138,7 @@ callBasedEndRide ::
   ServiceHandle m ->
   Id DRide.Ride ->
   CallBasedEndRideReq ->
-  m APISuccess.APISuccess
+  m ()
 callBasedEndRide handle rideId = endRide handle rideId . CallBasedReq
 
 dashboardEndRide ::
@@ -146,7 +146,7 @@ dashboardEndRide ::
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardEndRideReq ->
-  m APISuccess.APISuccess
+  m ()
 dashboardEndRide handle rideId req =
   withLogTag ("merchantId-" <> req.merchantId.getId)
     . endRide handle rideId
@@ -157,7 +157,7 @@ endRide ::
   ServiceHandle m ->
   Id DRide.Ride ->
   EndRideReq ->
-  m APISuccess.APISuccess
+  m ()
 endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId) do
   rideOld <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = rideOld.driverId
@@ -178,19 +178,20 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
 
   unless (rideOld.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
 
-  tripEndPoint <- case req of
+  (tripEndPoint, routeDeviated) <- case req of
     DriverReq driverReq -> do
       logTagInfo "driver -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
-      pure driverReq.point
+      pure (driverReq.point, driverReq.routeDeviated)
     DashboardReq dashboardReq -> do
       logTagInfo "dashboard -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
-      case dashboardReq.point of
+      point <- case dashboardReq.point of
         Just point -> pure point
         Nothing -> do
           driverLocation <- findDriverLoc booking.providerId driverId >>= fromMaybeM LocationNotFound
           pure $ getCoordinates driverLocation
+      return (point, True)
     CallBasedReq _ -> do
-      pure $ getCoordinates booking.toLocation
+      pure (getCoordinates booking.toLocation, True)
 
   whenWithLocationUpdatesLock driverId $ do
     -- here we update the current ride, so below we fetch the updated version
@@ -205,7 +206,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
     pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold booking ride tripEndPoint thresholdConfig
     (chargeableDistance, finalFare, mbUpdatedFareParams) <-
       if distanceCalculationFailed
-        then calculateFinalValuesForFailedDistanceCalculations handle booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig
+        then calculateFinalValuesForFailedDistanceCalculations handle booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig routeDeviated
         else calculateFinalValuesForCorrectDistanceCalculations handle booking ride booking.maxEstimatedDistance pickupDropOutsideOfThreshold thresholdConfig
     let newFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
     let updRide =
@@ -229,7 +230,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
     let mbPaymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
 
     withTimeAPI "endRide" "notifyCompleteToBAP" $ notifyCompleteToBAP booking updRide newFareParams mbPaymentMethodInfo mbPaymentUrl
-  return APISuccess.Success
+  return ()
   where
     getDeviations endRideReq = case endRideReq of
       DriverReq request -> request.numberOfDeviation
@@ -313,13 +314,17 @@ calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDist
             else recalculateFareForDistance handle booking ride (roundToIntegral ride.traveledDistance)
 
 calculateFinalValuesForFailedDistanceCalculations ::
-  (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> Bool -> DTConf.TransporterConfig -> m (Meters, Money, Maybe FareParameters)
-calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig = do
+  (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> Bool -> DTConf.TransporterConfig -> Bool -> m (Meters, Money, Maybe FareParameters)
+calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig routeDeviated = do
   let tripStartPoint = case ride.tripStartPos of
         Nothing -> getCoordinates booking.fromLocation
         Just tripStartPos -> tripStartPos
-  interpolatedPoints <- getInterpolatedPoints ride.driverId
-  approxTraveledDistance <- getDistanceBetweenPoints tripStartPoint tripEndPoint interpolatedPoints
+  approxTraveledDistance <-
+    if routeDeviated
+      then do
+        interpolatedPoints <- getInterpolatedPoints ride.driverId
+        getDistanceBetweenPoints tripStartPoint tripEndPoint interpolatedPoints
+      else return booking.estimatedDistance
   logTagInfo "endRide" $ "approxTraveledDistance: " <> show approxTraveledDistance
   distanceDiff <- getDistanceDiff booking approxTraveledDistance
 
