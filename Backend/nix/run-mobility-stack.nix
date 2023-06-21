@@ -24,9 +24,9 @@ _:
           image-api-helper-exe.command = getExe "image-api-helper-exe";
           kafka-consumers-exe = {
             command = getExe "kafka-consumers-exe";
-            environment = [
-              "CONSUMER_TYPE=AVAILABILITY_TIME"
-            ];
+            environment = {
+              CONSUMER_TYPE = "AVAILABILITY_TIME";
+            };
           };
           mock-fcm-exe.command = getExe "mock-fcm-exe";
           mock-google-exe.command = getExe "mock-google-exe";
@@ -42,15 +42,18 @@ _:
           search-result-aggregator-exe.command = getExe "search-result-aggregator-exe";
           special-zone-exe.command = getExe "special-zone-exe";
         };
+      common = {
+        port = 7812; # process-compose Swagger API is served here.
+      };
     in
     {
       process-compose = {
         run-mobility-stack-nix = {
-          port = 7812; # process-compose Swagger API is served here.
+          imports = [ common ];
           settings.processes = buildConfig exeGetters.nix;
         };
         run-mobility-stack-dev = {
-          port = 7812; # process-compose Swagger API is served here.
+          imports = [ common ];
           settings.processes = buildConfig exeGetters.cabal;
         };
       };
