@@ -42,7 +42,6 @@ import Environment (Flow)
 import EulerHS.Prelude hiding (id, pi)
 import Kernel.External.Maps
 import Kernel.Prelude (roundToIntegral)
-import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
@@ -63,6 +62,7 @@ data EndRideReq = DriverReq DriverEndRideReq | DashboardReq DashboardEndRideReq 
 
 data DriverEndRideReq = DriverEndRideReq
   { point :: LatLong,
+    routeDeviated :: Bool,
     requestor :: DP.Person
   }
 
@@ -124,7 +124,7 @@ driverEndRide ::
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverEndRideReq ->
-  m APISuccess.APISuccess
+  m ()
 driverEndRide handle rideId req =
   withLogTag ("requestorId-" <> req.requestor.id.getId)
     . endRide handle rideId
@@ -135,7 +135,7 @@ callBasedEndRide ::
   ServiceHandle m ->
   Id DRide.Ride ->
   CallBasedEndRideReq ->
-  m APISuccess.APISuccess
+  m ()
 callBasedEndRide handle rideId = endRide handle rideId . CallBasedReq
 
 dashboardEndRide ::
@@ -143,7 +143,7 @@ dashboardEndRide ::
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardEndRideReq ->
-  m APISuccess.APISuccess
+  m ()
 dashboardEndRide handle rideId req =
   withLogTag ("merchantId-" <> req.merchantId.getId)
     . endRide handle rideId
@@ -154,7 +154,7 @@ endRide ::
   ServiceHandle m ->
   Id DRide.Ride ->
   EndRideReq ->
-  m APISuccess.APISuccess
+  m ()
 endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId) do
   rideOld <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = rideOld.driverId
@@ -175,19 +175,20 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
 
   unless (rideOld.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
 
-  tripEndPoint <- case req of
+  (tripEndPoint, routeDeviated) <- case req of
     DriverReq driverReq -> do
       logTagInfo "driver -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
-      pure driverReq.point
+      pure (driverReq.point, driverReq.routeDeviated)
     DashboardReq dashboardReq -> do
       logTagInfo "dashboard -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
-      case dashboardReq.point of
+      point <- case dashboardReq.point of
         Just point -> pure point
         Nothing -> do
           driverLocation <- findDriverLoc booking.providerId driverId >>= fromMaybeM LocationNotFound
           pure $ getCoordinates driverLocation
+      return (point, True)
     CallBasedReq _ -> do
-      pure $ getCoordinates booking.toLocation
+      pure (getCoordinates booking.toLocation, True)
 
   whenWithLocationUpdatesLock driverId $ do
     -- here we update the current ride, so below we fetch the updated version
@@ -202,7 +203,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
     pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold handle booking ride tripEndPoint
     (chargeableDistance, finalFare, mbUpdatedFareParams) <-
       if distanceCalculationFailed
-        then calculateFinalValuesForFailedDistanceCalculations handle booking ride tripEndPoint pickupDropOutsideOfThreshold
+        then calculateFinalValuesForFailedDistanceCalculations handle booking ride tripEndPoint pickupDropOutsideOfThreshold routeDeviated
         else calculateFinalValuesForCorrectDistanceCalculations handle booking ride booking.maxEstimatedDistance pickupDropOutsideOfThreshold
     let newFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
     let updRide =
@@ -225,7 +226,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
     let mbPaymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
 
     notifyCompleteToBAP booking updRide newFareParams mbPaymentMethodInfo mbPaymentUrl
-  return APISuccess.Success
+  return ()
 
 recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> m (Meters, Money, Maybe FareParameters)
 recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance = do
@@ -307,13 +308,17 @@ calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDist
             else recalculateFareForDistance handle booking ride (roundToIntegral ride.traveledDistance)
 
 calculateFinalValuesForFailedDistanceCalculations ::
-  (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> Bool -> m (Meters, Money, Maybe FareParameters)
-calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} booking ride tripEndPoint pickupDropOutsideOfThreshold = do
+  (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> Bool -> Bool -> m (Meters, Money, Maybe FareParameters)
+calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} booking ride tripEndPoint pickupDropOutsideOfThreshold routeDeviated = do
   let tripStartPoint = case ride.tripStartPos of
         Nothing -> getCoordinates booking.fromLocation
         Just tripStartPos -> tripStartPos
-  interpolatedPoints <- getInterpolatedPoints ride.driverId
-  approxTraveledDistance <- getDistanceBetweenPoints tripStartPoint tripEndPoint interpolatedPoints
+  approxTraveledDistance <-
+    if routeDeviated
+      then do
+        interpolatedPoints <- getInterpolatedPoints ride.driverId
+        getDistanceBetweenPoints tripStartPoint tripEndPoint interpolatedPoints
+      else return booking.estimatedDistance
   logTagInfo "endRide" $ "approxTraveledDistance: " <> show approxTraveledDistance
   distanceDiff <- getDistanceDiff booking approxTraveledDistance
   thresholdConfig <- findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")

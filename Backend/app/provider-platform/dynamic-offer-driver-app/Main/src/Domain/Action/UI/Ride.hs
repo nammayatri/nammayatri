@@ -17,6 +17,7 @@ module Domain.Action.UI.Ride
   ( DriverRideRes (..),
     DriverRideListRes (..),
     OTPRideReq (..),
+    getCurrentRideInfo,
     listDriverRides,
     arrivedAtPickup,
     otpRideCreate,
@@ -113,6 +114,19 @@ newtype DriverRideListRes = DriverRideListRes
   { list :: [DriverRideRes]
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+getCurrentRideInfo ::
+  (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  Id DP.Person ->
+  m DriverRideRes
+getCurrentRideInfo driverId = do
+  ride <- runInReplica $ QRide.findActiveByDriverId driverId >>= fromMaybeM (RideDoesNotExist $ "driverId-" <> driverId.getId)
+  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound $ ride.bookingId.getId)
+  rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
+  rideRating <- runInReplica $ QR.findRatingForRide ride.id
+  driverNumber <- RD.getDriverNumber rideDetail
+  mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
+  pure $ mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking)
 
 listDriverRides ::
   (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>

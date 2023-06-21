@@ -15,6 +15,7 @@
 module API.UI.Ride
   ( StartRideReq (..),
     EndRideReq (..),
+    EndRide2Req (..),
     CancelRideReq (..),
     DRide.DriverRideListRes (..),
     DRide.DriverRideRes (..),
@@ -38,7 +39,7 @@ import Environment
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
-import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
@@ -64,6 +65,9 @@ type API =
                     :> QueryParam "status" Ride.RideStatus
                     :> QueryParam "day" Day
                     :> Get '[JSON] DRide.DriverRideListRes
+                    :<|> "current"
+                    :> TokenAuth
+                    :> Get '[JSON] DRide.DriverRideRes
                     :<|> TokenAuth
                     :> Capture "rideId" (Id Ride.Ride)
                     :> "arrived"
@@ -79,6 +83,11 @@ type API =
                     :> Capture "rideId" (Id Ride.Ride)
                     :> "end"
                     :> ReqBody '[JSON] EndRideReq
+                    :> Post '[JSON] APISuccess
+                    :<|> TokenAuth
+                    :> Capture "rideId" (Id Ride.Ride)
+                    :> "end2"
+                    :> ReqBody '[JSON] EndRide2Req
                     :> Post '[JSON] APISuccess
                     :<|> TokenAuth
                     :> Capture "rideId" (Id Ride.Ride)
@@ -99,6 +108,12 @@ newtype EndRideReq = EndRideReq
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
+data EndRide2Req = EndRide2Req
+  { point :: LatLong,
+    routeDeviated :: Bool
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
 data CancelRideReq = CancelRideReq
   { reasonCode :: CancellationReasonCode,
     additionalInfo :: Maybe Text
@@ -109,9 +124,11 @@ handler :: FlowServer API
 handler =
   otpRideCreateAndStart
     :<|> ( listDriverRides
+             :<|> getCurrentRideInfo
              :<|> arrivedAtPickup
              :<|> startRide
              :<|> endRide
+             :<|> endRide2
              :<|> cancelRide
          )
 
@@ -137,14 +154,29 @@ otpRideCreateAndStart (requestorId, merchantId) req@DRide.OTPRideReq {..} = with
 endRide :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> EndRideReq -> FlowHandler APISuccess
 endRide (requestorId, merchantId) rideId EndRideReq {point} = withFlowHandlerAPI $ do
   requestor <- findPerson requestorId
-  let driverReq = RideEnd.DriverEndRideReq {point, requestor}
+  let driverReq = RideEnd.DriverEndRideReq {point, requestor, routeDeviated = True}
   shandle <- RideEnd.buildEndRideHandle merchantId
   RideEnd.driverEndRide shandle rideId driverReq
+  return Success
+
+endRide2 :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> EndRide2Req -> FlowHandler APISuccess
+endRide2 (requestorId, merchantId) rideId EndRide2Req {..} = withFlowHandlerAPI $ do
+  requestor <- findPerson requestorId
+  let driverReq = RideEnd.DriverEndRideReq {..}
+  shandle <- RideEnd.buildEndRideHandle merchantId
+  fork "End ride processing" $
+    RideEnd.driverEndRide shandle rideId driverReq
+  return Success
 
 cancelRide :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> CancelRideReq -> FlowHandler APISuccess
 cancelRide (personId, _) rideId CancelRideReq {reasonCode, additionalInfo} = withFlowHandlerAPI $ do
   let driverReq = RideCancel.CancelRideReq {reasonCode, additionalInfo}
   RideCancel.driverCancelRideHandler RideCancel.cancelRideHandle personId rideId driverReq
+
+getCurrentRideInfo ::
+  (Id SP.Person, Id Merchant.Merchant) ->
+  FlowHandler DRide.DriverRideRes
+getCurrentRideInfo (driverId, _) = withFlowHandlerAPI $ DRide.getCurrentRideInfo driverId
 
 listDriverRides ::
   (Id SP.Person, Id Merchant.Merchant) ->
