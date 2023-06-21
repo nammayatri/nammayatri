@@ -16,13 +16,17 @@
 module Storage.Queries.Estimate where
 
 import Data.Tuple.Extra
-import Domain.Types.Estimate
+import Domain.Types.Estimate as DE
 import Domain.Types.SearchRequest
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
-import Kernel.Types.Id (Id (getId))
+import Kernel.Types.Id (Id (Id, getId))
+import qualified Storage.Beam.Estimate as BeamE
+import qualified Storage.Queries.EstimateBreakup as QEB
 import Storage.Queries.FullEntityBuilders (buildFullEstimate)
+import qualified Storage.Queries.TripTerms as QTT
 import Storage.Tabular.Estimate
 import Storage.Tabular.TripTerms
 
@@ -118,3 +122,86 @@ updateStatusByRequestId searchId status_ = do
         EstimateStatus =. val status_
       ]
     where_ $ tbl ^. EstimateRequestId ==. val (toKey searchId)
+
+transformBeamEstimateToDomain :: L.MonadFlow m => BeamE.Estimate -> m (Maybe Estimate)
+transformBeamEstimateToDomain e@BeamE.EstimateT {..} = do
+  etB <- QEB.findAllByEstimateId' (Id e.bppEstimateId)
+  trip <- if isJust e.tripTermsId then QTT.findById'' (Id (fromJust e.tripTermsId)) else pure Nothing
+  pUrl <- parseBaseUrl providerUrl
+  let totalFareRange =
+        DE.FareRange
+          { minFare = roundToIntegral minTotalFare,
+            maxFare = roundToIntegral maxTotalFare
+          }
+  pure $
+    Just $
+      Estimate
+        { id = Id id,
+          requestId = Id requestId,
+          merchantId = Id <$> merchantId,
+          bppEstimateId = Id bppEstimateId,
+          discount = roundToIntegral <$> discount,
+          estimatedFare = roundToIntegral estimatedFare,
+          estimatedTotalFare = roundToIntegral estimatedTotalFare,
+          totalFareRange = totalFareRange,
+          estimatedDuration = estimatedDuration,
+          estimatedDistance = estimatedDistance,
+          device = device,
+          providerId = providerId,
+          providerUrl = pUrl,
+          providerName = providerName,
+          providerMobileNumber = providerMobileNumber,
+          providerCompletedRidesCount = providerCompletedRidesCount,
+          vehicleVariant = vehicleVariant,
+          tripTerms = trip,
+          estimateBreakupList = etB,
+          nightShiftInfo =
+            ((,,,) <$> nightShiftCharge <*> oldNightShiftCharge <*> nightShiftStart <*> nightShiftEnd)
+              <&> \(nightShiftCharge', oldNightShiftCharge', nightShiftStart', nightShiftEnd') ->
+                DE.NightShiftInfo
+                  { nightShiftCharge = nightShiftCharge',
+                    oldNightShiftCharge = oldNightShiftCharge',
+                    nightShiftStart = nightShiftStart',
+                    nightShiftEnd = nightShiftEnd'
+                  },
+          status = status,
+          waitingCharges = DE.WaitingCharges waitingChargePerMin,
+          driversLocation = driversLocation,
+          specialLocationTag = specialLocationTag,
+          updatedAt = updatedAt,
+          createdAt = createdAt
+        }
+
+transformDomainEstimateToBeam :: Estimate -> BeamE.Estimate
+transformDomainEstimateToBeam Estimate {..} =
+  BeamE.defaultEstimate
+    { BeamE.id = getId id,
+      BeamE.requestId = getId requestId,
+      BeamE.merchantId = getId <$> merchantId,
+      BeamE.bppEstimateId = getId bppEstimateId,
+      BeamE.estimatedFare = realToFrac estimatedFare,
+      BeamE.discount = realToFrac <$> discount,
+      BeamE.estimatedTotalFare = realToFrac estimatedTotalFare,
+      BeamE.minTotalFare = realToFrac totalFareRange.minFare,
+      BeamE.maxTotalFare = realToFrac totalFareRange.maxFare,
+      BeamE.estimatedDuration = estimatedDuration,
+      BeamE.estimatedDistance = estimatedDistance,
+      BeamE.device = device,
+      BeamE.providerId = providerId,
+      BeamE.providerUrl = showBaseUrl providerUrl,
+      BeamE.providerName = providerName,
+      BeamE.providerMobileNumber = providerMobileNumber,
+      BeamE.providerCompletedRidesCount = providerCompletedRidesCount,
+      BeamE.vehicleVariant = vehicleVariant,
+      BeamE.driversLocation = driversLocation,
+      BeamE.tripTermsId = getId <$> (tripTerms <&> (.id)),
+      BeamE.nightShiftCharge = nightShiftInfo <&> (.nightShiftCharge),
+      BeamE.oldNightShiftCharge = nightShiftInfo <&> (.oldNightShiftCharge),
+      BeamE.nightShiftStart = nightShiftInfo <&> (.nightShiftStart),
+      BeamE.nightShiftEnd = nightShiftInfo <&> (.nightShiftEnd),
+      BeamE.status = status,
+      BeamE.waitingChargePerMin = waitingCharges.waitingChargePerMin,
+      BeamE.specialLocationTag = specialLocationTag,
+      BeamE.updatedAt = updatedAt,
+      BeamE.createdAt = createdAt
+    }

@@ -16,6 +16,7 @@
 module Storage.Queries.EstimateBreakup where
 
 import Domain.Types.Estimate
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
@@ -27,3 +28,6 @@ findAllByEstimateId estimateId =
     estimateBreakup <- from $ table @SEB.EstimateBreakupT
     where_ $ estimateBreakup ^. EstimateBreakupEstimateId ==. val (toKey estimateId)
     return estimateBreakup
+
+findAllByEstimateId' :: L.MonadFlow m => Id Estimate -> m [EstimateBreakup]
+findAllByEstimateId' _ = error "Not implemented"
