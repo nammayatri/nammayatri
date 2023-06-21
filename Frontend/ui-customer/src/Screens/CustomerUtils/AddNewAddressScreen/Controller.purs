@@ -312,7 +312,7 @@ getLocation prediction = {
   , fullAddress : dummyAddress
   , locationItemType : Just PREDICTION
   , distance : Just (fromMetersToKm (fromMaybe 0 (prediction ^. _distance)))
-  , showDistance : checkShowDistance (fromMaybe 0 (prediction ^. _distance))
+  , showDistance : Just $ checkShowDistance (fromMaybe 0 (prediction ^. _distance))
 }
 
 encodeAddressDescription :: AddNewAddressScreenState -> SavedReqLocationAPIEntity
@@ -371,7 +371,7 @@ getSavedLocations savedLocation =  (map (\ (SavedReqLocationAPIEntity item) ->
 , fullAddress : getAddressFromSaved (SavedReqLocationAPIEntity item)
 , locationItemType : Just SAVED_LOCATION
 , distance : Nothing
-, showDistance : false
+, showDistance : Just false
 }) savedLocation )
 
 getSavedTags :: (Array SavedReqLocationAPIEntity) -> Array String

@@ -76,7 +76,7 @@ dummy_data = [
     , fullAddress : LocationListItem.dummyAddress
     , locationItemType : Nothing
     , distance : Nothing
-    , showDistance : false
+    , showDistance : Just false
     }
   , { prefixImageUrl : "ny_ic_recent_search,https://assets.juspay.in/nammayatri/images/user/ny_ic_recent_search.png"
     , postfixImageUrl : "ny_ic_fav,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav.png"
@@ -100,7 +100,7 @@ dummy_data = [
     , fullAddress : LocationListItem.dummyAddress
     , locationItemType : Nothing
     , distance : Nothing
-    , showDistance : false
+    , showDistance : Just false
     }
   , { prefixImageUrl : "ny_ic_loc_grey,https://assets.juspay.in/nammayatri/images/user/ny_ic_loc_grey.png"
     , postfixImageUrl : "ny_ic_fav,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav.png"
@@ -124,6 +124,6 @@ dummy_data = [
     , fullAddress : LocationListItem.dummyAddress
     , locationItemType : Nothing
     , distance : Nothing
-    , showDistance : false
+    , showDistance : Just false
     }
 ]

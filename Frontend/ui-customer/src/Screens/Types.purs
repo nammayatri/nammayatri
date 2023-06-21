@@ -937,7 +937,7 @@ type LocationListItemState = {
   , fullAddress :: Address
   , locationItemType :: Maybe LocationItemType
   , distance :: Maybe String
-  , showDistance :: Boolean
+  , showDistance :: Maybe Boolean
 }
 
 data LocationItemType = RECENTS | PREDICTION | SAVED_LOCATION

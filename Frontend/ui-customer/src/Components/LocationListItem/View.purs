@@ -62,7 +62,7 @@ view push config =
                 , text $ fromMaybe "" config.distance
                 , textSize FontSize.a_11
                 , gravity CENTER
-                , visibility $ if config.showDistance then VISIBLE else GONE
+                , visibility $ if config.showDistance == Just true then VISIBLE else GONE
                 ]
               ]
           , linearLayout

@@ -169,7 +169,7 @@ savedLocationsView push state =
               , fullAddress : item.fullAddress
               , locationItemType : Just ST.SAVED_LOCATION
               , distance : Nothing
-              , showDistance : false
+              , showDistance : Just false
             }))state.data.savedLocations)
         , linearLayout
           [ height $ V 100
