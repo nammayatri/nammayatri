@@ -30,6 +30,7 @@ data UserAccessType
 
 data UserActionType
   = DOCUMENTS_INFO
+  | AADHAAR_INFO
   | LIST
   | ACTIVITY
   | ENABLE
