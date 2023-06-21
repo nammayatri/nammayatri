@@ -179,75 +179,75 @@ view push state =
         ) (const AfterRender)
       , onBackPressed push (const BackPressed)
       ][ Anim.screenAnimationFadeInOut $
-          driverMapsHeaderView push state
-        , rideActionModelView push state
+          linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , weight 1.0
+            , orientation VERTICAL
+            , background Color.white900
+            ,cornerRadius 50.0
+            ][  linearLayout
+                [ width MATCH_PARENT
+                , height $ V 2
+                , background Color.greyTextColor
+                , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then GONE else VISIBLE
+                , alpha 0.1
+                ][]
+              , frameLayout
+                [ width MATCH_PARENT
+                , height MATCH_PARENT
+                ][  googleMap state
+                  -- , linearLayout
+                  --   [ height MATCH_PARENT
+                  --   , width MATCH_PARENT
+                  --   , background Color.blackLessTrans
+                  --   ][]
+                  , if state.props.driverStatusSet == ST.Offline then offlineView push state else dummyTextView
+                  , linearLayout
+                   [ width MATCH_PARENT
+                   , height WRAP_CONTENT
+                   , orientation VERTICAL ]
+                   [ linearLayout
+                      [
+                        width MATCH_PARENT
+                      , height WRAP_CONTENT
+                      , orientation VERTICAL
+                      , PP.cornerRadii $ PTD.Corners 24.0  false false true true
+                      , background $ Color.white900
+                      , stroke $ (if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then "0," else "1,") <> "#E5E7EB"
+                      ][
+                        driverDetail2 push state
+                        , driverActivityStatus state
+                        -- , updateLocationAndLastUpdatedView2 state push
+                        , statsModel2 push state
+                      ]
+                  -- , if not state.props.statusOnline then showOfflineStatus push state else dummyTextView
+                    , linearLayout[
+                      width MATCH_PARENT
+                      , height WRAP_CONTENT
+                      , gravity RIGHT
+                      , orientation VERTICAL
+                      , weight 1.0
+                      ][
+                        if not state.props.rideActionModal && (state.props.driverStatusSet == ST.Online || state.props.driverStatusSet == ST.Silent)  then updateLocationAndLastUpdatedView2 state push else dummyTextView
+                        , viewRecenterAndSupport state push
+                      ]
+                    ]
+                  , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True") then genderBannerView state push else linearLayout[][]
+                  ]
+              ]
+        , bottomNavBar push state
         ]
       , if (getValueToLocalNativeStore PROFILE_DEMO) /= "false" then profileDemoView state push else linearLayout[][]
       , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
+      , if state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted then  rideActionModelView push state else dummyTextView
       , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView
       , if state.props.endRidePopUp then endRidePopView push state else dummyTextView
-      , if state.props.cancelConfirmationPopup then cancelConfirmation push state else dummyTextView
-      , if state.props.cancelRideModalShow then cancelRidePopUpView push state else dummyTextView
       , if state.props.currentStage == ChatWithCustomer then chatView push state else dummyTextView
       , if state.props.silentPopUpView then popupModelSilentAsk push state else dummyTextView
-  ]
-
-driverMapsHeaderView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-driverMapsHeaderView push state = 
-  linearLayout
-  [ width MATCH_PARENT
-  , height MATCH_PARENT
-  , orientation VERTICAL
-  ][ linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , weight 1.0
-      , orientation VERTICAL
-      , background Color.white900
-      ,cornerRadius 50.0
-      ][ linearLayout
-          [ width MATCH_PARENT
-          , height $ V 2
-          , background Color.greyTextColor
-          , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then GONE else VISIBLE
-          , alpha 0.1
-          ][]
-        , frameLayout
-          [ width MATCH_PARENT
-          , height MATCH_PARENT
-          ][  googleMap state
-            , if state.props.driverStatusSet == Offline then offlineView push state else dummyTextView
-            , linearLayout
-              [ width MATCH_PARENT
-              , height WRAP_CONTENT
-              , orientation VERTICAL 
-              ][ linearLayout
-                  [ width MATCH_PARENT
-                  , height WRAP_CONTENT  
-                  , orientation VERTICAL
-                  , PP.cornerRadii $ PTD.Corners 24.0  false false true true
-                  , background $ Color.white900
-                  , stroke $ (if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then "0," else "1,") <> "#E5E7EB"
-                  ][  driverDetail push state
-                    , driverActivityStatus state
-                    , statsModel push state      
-                  ]
-              , linearLayout
-                [ width MATCH_PARENT
-                , height WRAP_CONTENT
-                , gravity RIGHT
-                , orientation VERTICAL
-                , weight 1.0
-                ][  if not state.props.rideActionModal && (state.props.driverStatusSet == Online || state.props.driverStatusSet == Silent)  then updateLocationAndLastUpdatedView state push else dummyTextView
-                  , viewRecenterAndSupport state push
-                ]
-              ]
-            , alternateNumberOrOTPView state push
-            , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True") then genderBannerView state push else linearLayout[][]
-            ]
-        ]
-        , bottomNavBar push state 
-  ]
+      ] <> if state.props.cancelRideModalShow then [cancelRidePopUpView push state] else []
+        <>  if state.props.cancelConfirmationPopup then [cancelConfirmation push state] else []
+        )
 
 alternateNumberOrOTPView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 alternateNumberOrOTPView state push =

@@ -266,7 +266,7 @@ getTitle listOptions =
     DRIVER_MOBILE_INFO -> (getString MOBILE_NUMBER)
     DRIVER_LICENCE_INFO -> (getString DRIVING_LICENSE)
     DRIVER_ALTERNATE_MOBILE_INFO -> (getString ALTERNATE_MOBILE_NUMBER)
-    GENDER_INFO -> (getString GENDER)
+    -- GENDER_INFO -> (getString GENDER)
 
 getValue :: ListOptions -> DriverDetailsScreenState -> String
 getValue listOptions state =
@@ -275,7 +275,7 @@ getValue listOptions state =
     DRIVER_MOBILE_INFO -> (fromMaybe "" (state.data.driverMobile))
     DRIVER_LICENCE_INFO -> state.data.drivingLicenseNo
     DRIVER_ALTERNATE_MOBILE_INFO -> (fromMaybe "" state.data.driverAlternateMobile)
-    GENDER_INFO -> (fromMaybe (getString SET_NOW) ( state.data.driverGender))
+    -- GENDER_INFO -> (fromMaybe (getString SET_NOW) ( state.data.driverGender))
 
 dummyCancelReason :: OptionButtonList
 dummyCancelReason = 

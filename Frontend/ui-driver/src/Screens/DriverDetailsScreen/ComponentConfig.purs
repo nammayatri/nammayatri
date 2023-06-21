@@ -205,7 +205,8 @@ enterMobileNumberState state = let
       in inAppModalConfig'
 
 
-data ListOptions = DRIVER_NAME_INFO | DRIVER_MOBILE_INFO | DRIVER_LICENCE_INFO | DRIVER_ALTERNATE_MOBILE_INFO | GENDER_INFO
+data ListOptions = DRIVER_NAME_INFO | DRIVER_MOBILE_INFO | DRIVER_LICENCE_INFO | DRIVER_ALTERNATE_MOBILE_INFO 
+-- removed GENDER_INFO
 derive instance genericListOptions :: Generic ListOptions _
 instance eqListOptions :: Eq ListOptions where eq = genericEq
 
@@ -221,6 +222,6 @@ optionList state =
       {title:DRIVER_NAME_INFO, value:"" , editButtonReq : false},
       {title:DRIVER_MOBILE_INFO, value:"" ,editButtonReq : false},
       {title:DRIVER_LICENCE_INFO, value:"",editButtonReq : false},
-      {title:DRIVER_ALTERNATE_MOBILE_INFO, value:"" ,editButtonReq : isJust state.data.driverAlternateMobile},
-      {title:GENDER_INFO,value:"", editButtonReq : isJust state.data.driverGender}
+      {title:DRIVER_ALTERNATE_MOBILE_INFO, value:"" ,editButtonReq : isJust state.data.driverAlternateMobile}
+      -- {title:GENDER_INFO,value:"", editButtonReq : isJust state.data.driverGender}
     ]

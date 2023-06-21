@@ -239,17 +239,19 @@ driverSubsection push state option =
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , margin (MarginTop 10)
-  , color case option.title of
-              GENDER_INFO -> case state.data.driverGender of
-                        Just _ -> Color.black800
-                        _ -> Color.blue900
-              _ -> Color.black800
+  , color Color.black800
+              -- case option.title of
+              -- GENDER_INFO -> case state.data.driverGender of
+              --           Just _ -> Color.black800
+              --           _ -> Color.blue900
+              -- _ -> Color.black800
   , text (getValue option.title state)
-  , onClick push case option.title of
-              GENDER_INFO -> case state.data.driverGender of
-                        Just _ -> (const NoAction)
-                        _ -> (const GenderSelectionOpen)
-              _ -> (const NoAction)
+  , onClick push (const NoAction)
+              -- case option.title of
+              -- GENDER_INFO -> case state.data.driverGender of
+              --           Just _ -> (const NoAction)
+              --           _ -> (const GenderSelectionOpen)
+              -- _ -> (const NoAction)
   ] <> FontStyle.body1 TypoGraphy
   ),
   linearLayout[
@@ -267,7 +269,7 @@ driverSubsection push state option =
   , color Color.blue900
   , margin (Margin 0 10 20 0)
   , onClick push case option.title of
-                GENDER_INFO -> (const GenderSelectionOpen)
+                -- GENDER_INFO -> (const GenderSelectionOpen)
                 DRIVER_ALTERNATE_MOBILE_INFO -> (const ClickEditAlternateNumber)
                 _ -> (const NoAction)
   ] <> FontStyle.body1 TypoGraphy
