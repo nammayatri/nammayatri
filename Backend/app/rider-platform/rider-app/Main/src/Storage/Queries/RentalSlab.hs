@@ -15,11 +15,32 @@
 module Storage.Queries.RentalSlab where
 
 import Domain.Types.RentalSlab
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import qualified Storage.Beam.RentalSlab as BeamRS
 import Storage.Tabular.RentalSlab
 
 findById' :: (MonadThrow m, Log m, Transactionable m) => Id RentalSlab -> DTypeBuilder m (Maybe RentalSlabT)
 findById' = Esq.findById'
+
+findById :: (L.MonadFlow m) => Id RentalSlab -> m (Maybe RentalSlab)
+findById = error "findById not implemented"
+
+transformBeamRentalSlabToDomain :: BeamRS.RentalSlab -> RentalSlab
+transformBeamRentalSlabToDomain BeamRS.RentalSlabT {..} = do
+  RentalSlab
+    { id = Id id,
+      baseDistance = baseDistance,
+      baseDuration = baseDuration
+    }
+
+transformDomainRentalSlabToBeam :: RentalSlab -> BeamRS.RentalSlab
+transformDomainRentalSlabToBeam RentalSlab {..} =
+  BeamRS.defaultRentalSlab
+    { BeamRS.id = getId id,
+      BeamRS.baseDistance = baseDistance,
+      BeamRS.baseDuration = baseDuration
+    }

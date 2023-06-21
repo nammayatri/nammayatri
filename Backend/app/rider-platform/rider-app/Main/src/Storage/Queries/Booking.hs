@@ -31,6 +31,7 @@ import Kernel.Utils.Error
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Queries.Booking.BookingLocation as QBBL
 import Storage.Queries.FullEntityBuilders (buildFullBooking)
+import Storage.Queries.RentalSlab as QueryRS
 import qualified Storage.Queries.TripTerms as QTT
 import Storage.Tabular.Booking
 import qualified Storage.Tabular.Booking as RB
@@ -316,15 +317,19 @@ cancelBookings bookingIds now = do
       ]
     where_ $ tbl ^. BookingTId `in_` valList (toKey <$> bookingIds)
 
--- lets update this when the queries are completed
 transformBeamBookingToDomain :: (L.MonadFlow m, Log m) => BeamB.Booking -> m (Maybe Booking)
 transformBeamBookingToDomain BeamB.BookingT {..} = do
   fl <- QBBL.findById (Id fromLocationId)
   tt <- if isJust tripTermsId then QTT.findById'' (Id (fromJust tripTermsId)) else pure Nothing
   pUrl <- parseBaseUrl providerUrl
+  rentalDetails <- do
+    res <- QueryRS.findById (Id (fromJust rentalSlabId))
+    case res of
+      Just rentalSlab -> pure $ Just $ DRB.RentalDetails rentalSlab
+      Nothing -> pure Nothing
   bookingDetails <- case fareProductType of
     DFF.ONE_WAY -> DRB.OneWayDetails <$> buildOneWayDetails toLocationId
-    DFF.RENTAL -> DRB.RentalDetails <$> error "" -- findById' rentalSlabId
+    DFF.RENTAL -> pure (fromJust rentalDetails)
     DFF.DRIVER_OFFER -> DRB.OneWayDetails <$> buildOneWayDetails toLocationId
     DFF.ONE_WAY_SPECIAL_ZONE -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId
   if isJust fl && isJust tt

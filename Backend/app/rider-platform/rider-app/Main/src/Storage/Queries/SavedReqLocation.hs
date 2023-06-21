@@ -19,6 +19,7 @@ import Domain.Types.SavedReqLocation
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Storage.Beam.SavedReqLocation as BeamSRL
 import Storage.Tabular.SavedReqLocation
 
 create :: SavedReqLocation -> SqlDB ()
@@ -55,3 +56,47 @@ deleteAllByRiderId personId = do
   Esq.delete $ do
     saveReqLocation <- from $ table @SavedReqLocationT
     where_ (saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey personId))
+
+transformBeamSavedReqLocationToDomain :: BeamSRL.SavedReqLocation -> SavedReqLocation
+transformBeamSavedReqLocationToDomain BeamSRL.SavedReqLocationT {..} = do
+  SavedReqLocation
+    { id = Id id,
+      lat = lat,
+      lon = lon,
+      street = street,
+      door = door,
+      city = city,
+      state = state,
+      country = country,
+      building = building,
+      areaCode = areaCode,
+      area = area,
+      createdAt = createdAt,
+      updatedAt = updatedAt,
+      tag = tag,
+      riderId = Id riderId,
+      placeId = placeId,
+      ward = ward
+    }
+
+transformDomainSavedReqLocationToBeam :: SavedReqLocation -> BeamSRL.SavedReqLocation
+transformDomainSavedReqLocationToBeam SavedReqLocation {..} =
+  BeamSRL.defaultSavedReqLocation
+    { BeamSRL.id = getId id,
+      BeamSRL.lat = lat,
+      BeamSRL.lon = lon,
+      BeamSRL.street = street,
+      BeamSRL.door = door,
+      BeamSRL.city = city,
+      BeamSRL.state = state,
+      BeamSRL.country = country,
+      BeamSRL.building = building,
+      BeamSRL.areaCode = areaCode,
+      BeamSRL.area = area,
+      BeamSRL.createdAt = createdAt,
+      BeamSRL.updatedAt = updatedAt,
+      BeamSRL.tag = tag,
+      BeamSRL.riderId = getId riderId,
+      BeamSRL.placeId = placeId,
+      BeamSRL.ward = ward
+    }

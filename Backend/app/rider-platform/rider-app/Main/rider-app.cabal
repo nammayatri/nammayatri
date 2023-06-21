@@ -272,6 +272,7 @@ library
       Storage.Queries.Ride
       Storage.Queries.SavedReqLocation
       Storage.Queries.SearchRequest
+      Storage.Queries.SearchRequest.SearchReqLocation
       Storage.Queries.Sos
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.TripTerms

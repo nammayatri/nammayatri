@@ -15,11 +15,30 @@
 module Storage.Queries.SpecialZoneQuote where
 
 import Domain.Types.SpecialZoneQuote
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import qualified Storage.Beam.SpecialZoneQuote as BeamSZQ
 import Storage.Tabular.SpecialZoneQuote
 
 findById' :: (MonadThrow m, Log m, Transactionable m) => Id SpecialZoneQuote -> DTypeBuilder m (Maybe SpecialZoneQuoteT)
 findById' = Esq.findById'
+
+findById :: (L.MonadFlow m) => Id SpecialZoneQuote -> m (Maybe SpecialZoneQuote)
+findById = error "findById not implemented"
+
+transformBeamSpecialZoneQuoteToDomain :: BeamSZQ.SpecialZoneQuote -> SpecialZoneQuote
+transformBeamSpecialZoneQuoteToDomain BeamSZQ.SpecialZoneQuoteT {..} = do
+  SpecialZoneQuote
+    { id = Id id,
+      quoteId = quoteId
+    }
+
+transformDomainSpecialZoneQuoteToBeam :: SpecialZoneQuote -> BeamSZQ.SpecialZoneQuote
+transformDomainSpecialZoneQuoteToBeam SpecialZoneQuote {..} =
+  BeamSZQ.defaultSpecialZoneQuote
+    { BeamSZQ.id = getId id,
+      BeamSZQ.quoteId = quoteId
+    }

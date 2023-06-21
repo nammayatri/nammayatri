@@ -19,11 +19,13 @@ import Domain.Types.Booking.Type (Booking)
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
+import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import qualified Storage.Beam.Ride as BeamR
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.Person as Person
 import Storage.Tabular.Ride as Ride
@@ -259,3 +261,67 @@ findRiderIdByRideId rideId = findOne $ do
   where_ $
     ride ^. RideTId ==. val (toKey rideId)
   pure $ booking ^. BookingRiderId
+
+transformBeamRideToDomain :: L.MonadFlow m => BeamR.Ride -> m Ride
+transformBeamRideToDomain BeamR.RideT {..} = do
+  tUrl <- parseBaseUrl `mapM` trackingUrl
+  pure $
+    Ride
+      { id = Id id,
+        bppRideId = Id bppRideId,
+        bookingId = Id bookingId,
+        shortId = ShortId shortId,
+        merchantId = Id <$> merchantId,
+        status = status,
+        driverName = driverName,
+        driverRating = driverRating,
+        driverMobileNumber = driverMobileNumber,
+        driverRegisteredAt = driverRegisteredAt,
+        vehicleNumber = vehicleNumber,
+        vehicleModel = vehicleModel,
+        vehicleColor = vehicleColor,
+        vehicleVariant = vehicleVariant,
+        otp = otp,
+        trackingUrl = tUrl,
+        fare = roundToIntegral <$> fare,
+        totalFare = roundToIntegral <$> totalFare,
+        chargeableDistance = chargeableDistance,
+        traveledDistance = traveledDistance,
+        driverArrivalTime = driverArrivalTime,
+        rideStartTime = rideStartTime,
+        rideEndTime = rideEndTime,
+        rideRating = rideRating,
+        createdAt = createdAt,
+        updatedAt = updatedAt
+      }
+
+transformDomainRideToBeam :: Ride -> BeamR.Ride
+transformDomainRideToBeam Ride {..} =
+  BeamR.defaultRide
+    { BeamR.id = getId id,
+      BeamR.bppRideId = getId bppRideId,
+      BeamR.bookingId = getId bookingId,
+      BeamR.shortId = getShortId shortId,
+      BeamR.merchantId = getId <$> merchantId,
+      BeamR.status = status,
+      BeamR.driverName = driverName,
+      BeamR.driverRating = driverRating,
+      BeamR.driverMobileNumber = driverMobileNumber,
+      BeamR.driverRegisteredAt = driverRegisteredAt,
+      BeamR.vehicleNumber = vehicleNumber,
+      BeamR.vehicleModel = vehicleModel,
+      BeamR.vehicleColor = vehicleColor,
+      BeamR.vehicleVariant = vehicleVariant,
+      BeamR.otp = otp,
+      BeamR.trackingUrl = showBaseUrl <$> trackingUrl,
+      BeamR.fare = realToFrac <$> fare,
+      BeamR.totalFare = realToFrac <$> totalFare,
+      BeamR.chargeableDistance = chargeableDistance,
+      BeamR.traveledDistance = traveledDistance,
+      BeamR.driverArrivalTime = driverArrivalTime,
+      BeamR.rideStartTime = rideStartTime,
+      BeamR.rideEndTime = rideEndTime,
+      BeamR.rideRating = rideRating,
+      BeamR.createdAt = createdAt,
+      BeamR.updatedAt = updatedAt
+    }

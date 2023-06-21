@@ -19,6 +19,7 @@ import Domain.Types.Webengage
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Storage.Beam.Webengage as BeamW
 import Storage.Tabular.Webengage
 
 create :: Webengage -> SqlDB ()
@@ -33,3 +34,29 @@ findByInfoMsgId infoMessageId =
     webengage <- from $ table @WebengageT
     where_ $ webengage ^. WebengageInfoMessageId ==. val infoMessageId
     return webengage
+
+transformBeamWebengageToDomain :: BeamW.Webengage -> Webengage
+transformBeamWebengageToDomain BeamW.WebengageT {..} = do
+  Webengage
+    { id = Id id,
+      version = version,
+      contentTemplateId = contentTemplateId,
+      principalEntityId = principalEntityId,
+      infoMessageId = infoMessageId,
+      webMessageId = webMessageId,
+      toNumber = toNumber,
+      status = status
+    }
+
+transformDomainWebengageToBeam :: Webengage -> BeamW.Webengage
+transformDomainWebengageToBeam Webengage {..} =
+  BeamW.defaultWebengage
+    { BeamW.id = getId id,
+      BeamW.version = version,
+      BeamW.contentTemplateId = contentTemplateId,
+      BeamW.principalEntityId = principalEntityId,
+      BeamW.infoMessageId = infoMessageId,
+      BeamW.webMessageId = webMessageId,
+      BeamW.toNumber = toNumber,
+      BeamW.status = status
+    }

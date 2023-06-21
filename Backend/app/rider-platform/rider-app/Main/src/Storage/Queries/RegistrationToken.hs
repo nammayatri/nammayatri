@@ -20,6 +20,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import qualified Storage.Beam.RegistrationToken as BeamRT
 import Storage.Tabular.RegistrationToken
 
 create :: RegistrationToken -> SqlDB ()
@@ -90,3 +91,43 @@ findAllByPersonId (Id personId) =
     registrationToken <- from $ table @RegistrationTokenT
     where_ $ registrationToken ^. RegistrationTokenEntityId ==. val personId
     return registrationToken
+
+transformBeamRegistrationTokenToDomain :: BeamRT.RegistrationToken -> RegistrationToken
+transformBeamRegistrationTokenToDomain BeamRT.RegistrationTokenT {..} = do
+  RegistrationToken
+    { id = Id id,
+      token = token,
+      attempts = attempts,
+      authMedium = authMedium,
+      authType = authType,
+      authValueHash = authValueHash,
+      verified = verified,
+      authExpiry = authExpiry,
+      tokenExpiry = tokenExpiry,
+      entityId = entityId,
+      merchantId = merchantId,
+      entityType = entityType,
+      createdAt = createdAt,
+      updatedAt = updatedAt,
+      info = info
+    }
+
+transformDomainRegistrationTokenToBeam :: RegistrationToken -> BeamRT.RegistrationToken
+transformDomainRegistrationTokenToBeam RegistrationToken {..} =
+  BeamRT.defaultRegistrationToken
+    { BeamRT.id = getId id,
+      BeamRT.token = token,
+      BeamRT.attempts = attempts,
+      BeamRT.authMedium = authMedium,
+      BeamRT.authType = authType,
+      BeamRT.authValueHash = authValueHash,
+      BeamRT.verified = verified,
+      BeamRT.authExpiry = authExpiry,
+      BeamRT.tokenExpiry = tokenExpiry,
+      BeamRT.entityId = entityId,
+      BeamRT.merchantId = merchantId,
+      BeamRT.entityType = entityType,
+      BeamRT.createdAt = createdAt,
+      BeamRT.updatedAt = updatedAt,
+      BeamRT.info = info
+    }

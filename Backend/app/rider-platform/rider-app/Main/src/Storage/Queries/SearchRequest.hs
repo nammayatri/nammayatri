@@ -19,10 +19,14 @@ import Domain.Types.Merchant.MerchantPaymentMethod (MerchantPaymentMethod)
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Domain.Types.Person (Person)
 import Domain.Types.SearchRequest
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Version
+import qualified Storage.Beam.SearchRequest as BeamSR
+import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
 import Storage.Tabular.SearchRequest
 import Storage.Tabular.SearchRequest.SearchReqLocation
 
@@ -109,3 +113,62 @@ updatePaymentMethods searchReqId availablePaymentMethods =
       [ SearchRequestAvailablePaymentMethods =. val (PostgresList $ toKey <$> availablePaymentMethods)
       ]
     where_ $ tbl ^. SearchRequestId ==. val (getId searchReqId)
+
+transformBeamSearchRequestToDomain :: (L.MonadFlow m, Log m) => BeamSR.SearchRequest -> m (Maybe SearchRequest)
+transformBeamSearchRequestToDomain BeamSR.SearchRequestT {..} = do
+  bundleVersion' <- forM bundleVersion readVersion
+  clientVersion' <- forM clientVersion readVersion
+  fl <- QSRL.findById (Id fromLocationId)
+  tl <- QSRL.findById (Id (fromJust toLocationId))
+  if isJust fl && isJust tl
+    then
+      pure $
+        Just
+          SearchRequest
+            { id = Id id,
+              startTime = startTime,
+              validTill = validTill,
+              riderId = Id riderId,
+              fromLocation = fromJust fl,
+              toLocation = tl,
+              distance = HighPrecMeters <$> distance,
+              maxDistance = HighPrecMeters <$> maxDistance,
+              estimatedRideDuration = estimatedRideDuration,
+              device = device,
+              merchantId = Id merchantId,
+              bundleVersion = bundleVersion',
+              clientVersion = clientVersion',
+              language = language,
+              customerExtraFee = customerExtraFee,
+              autoAssignEnabled = autoAssignEnabled,
+              autoAssignEnabledV2 = autoAssignEnabledV2,
+              availablePaymentMethods = Id <$> availablePaymentMethods,
+              selectedPaymentMethodId = Id <$> selectedPaymentMethodId,
+              createdAt = createdAt
+            }
+    else pure Nothing
+
+transformDomainSearchRequestToBeam :: SearchRequest -> BeamSR.SearchRequest
+transformDomainSearchRequestToBeam SearchRequest {..} =
+  BeamSR.defaultSearchRequest
+    { BeamSR.id = getId id,
+      BeamSR.startTime = startTime,
+      BeamSR.validTill = validTill,
+      BeamSR.riderId = getId riderId,
+      BeamSR.fromLocationId = getId fromLocation.id,
+      BeamSR.toLocationId = getId <$> (toLocation <&> (.id)),
+      BeamSR.distance = getHighPrecMeters <$> distance,
+      BeamSR.maxDistance = getHighPrecMeters <$> maxDistance,
+      BeamSR.estimatedRideDuration = estimatedRideDuration,
+      BeamSR.device = device,
+      BeamSR.merchantId = getId merchantId,
+      BeamSR.bundleVersion = versionToText <$> bundleVersion,
+      BeamSR.clientVersion = versionToText <$> clientVersion,
+      BeamSR.language = language,
+      BeamSR.customerExtraFee = customerExtraFee,
+      BeamSR.autoAssignEnabled = autoAssignEnabled,
+      BeamSR.autoAssignEnabledV2 = autoAssignEnabledV2,
+      BeamSR.availablePaymentMethods = getId <$> availablePaymentMethods,
+      BeamSR.selectedPaymentMethodId = getId <$> selectedPaymentMethodId,
+      BeamSR.createdAt = createdAt
+    }

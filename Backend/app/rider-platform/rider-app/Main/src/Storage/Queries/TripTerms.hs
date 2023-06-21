@@ -14,12 +14,13 @@
 
 module Storage.Queries.TripTerms where
 
-import Domain.Types.TripTerms
+import Domain.Types.TripTerms as DTT
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import qualified Storage.Beam.TripTerms as BeamTT
 import Storage.Tabular.TripTerms
 
 findById' :: (MonadThrow m, Log m, Transactionable m) => Id TripTerms -> DTypeBuilder m (Maybe TripTermsT)
@@ -27,3 +28,17 @@ findById' = Esq.findById'
 
 findById'' :: L.MonadFlow m => Id TripTerms -> m (Maybe TripTerms)
 findById'' _ = error "Not implemented"
+
+transformBeamTripTermsToDomain :: BeamTT.TripTerms -> TripTerms
+transformBeamTripTermsToDomain BeamTT.TripTermsT {..} = do
+  TripTerms
+    { id = Id id,
+      descriptions = DTT.splitDescriptions descriptions
+    }
+
+transformDomainTripTermsToBeam :: TripTerms -> BeamTT.TripTerms
+transformDomainTripTermsToBeam TripTerms {..} =
+  BeamTT.defaultTripTerms
+    { BeamTT.id = getId id,
+      BeamTT.descriptions = DTT.intercalateDescriptions descriptions
+    }
