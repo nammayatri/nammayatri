@@ -16,7 +16,33 @@ module Storage.Queries.OnSearchEvent where
 
 import Domain.Types.OnSearchEvent
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import qualified Storage.Beam.OnSearchEvent as BeamOSE
 import Storage.Tabular.OnSearchEvent ()
 
 create :: OnSearchEvent -> SqlDB ()
 create = Esq.create
+
+transformBeamOnSearchEventToDomain :: BeamOSE.OnSearchEvent -> OnSearchEvent
+transformBeamOnSearchEventToDomain BeamOSE.OnSearchEventT {..} = do
+  OnSearchEvent
+    { id = Id id,
+      bppId = bppId,
+      messageId = messageId,
+      errorCode = errorCode,
+      errorType = errorType,
+      errorMessage = errorMessage,
+      createdAt = createdAt
+    }
+
+transformDomainOnSearchEventToBeam :: OnSearchEvent -> BeamOSE.OnSearchEvent
+transformDomainOnSearchEventToBeam OnSearchEvent {..} =
+  BeamOSE.defaultOnSearchEvent
+    { BeamOSE.id = getId id,
+      BeamOSE.bppId = bppId,
+      BeamOSE.messageId = messageId,
+      BeamOSE.errorCode = errorCode,
+      BeamOSE.errorType = errorType,
+      BeamOSE.errorMessage = errorMessage,
+      BeamOSE.createdAt = createdAt
+    }

@@ -16,10 +16,12 @@
 module Storage.Queries.EstimateBreakup where
 
 import Domain.Types.Estimate
+import qualified Domain.Types.Estimate as DEB
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Storage.Beam.EstimateBreakup as BeamEB
 import Storage.Tabular.EstimateBreakup as SEB
 
 findAllByEstimateId :: (Transactionable m) => Id Estimate -> DTypeBuilder m [EstimateBreakupT]
@@ -31,3 +33,27 @@ findAllByEstimateId estimateId =
 
 findAllByEstimateId' :: L.MonadFlow m => Id Estimate -> m [EstimateBreakup]
 findAllByEstimateId' _ = error "Not implemented"
+
+transformBeamEstimateBreakupToDomain :: BeamEB.EstimateBreakup -> EstimateBreakup
+transformBeamEstimateBreakupToDomain BeamEB.EstimateBreakupT {..} = do
+  let price =
+        DEB.EstimateBreakupPrice
+          { currency = priceCurrency,
+            value = roundToIntegral priceValue
+          }
+  EstimateBreakup
+    { id = Id id,
+      estimateId = Id estimateId,
+      title = title,
+      price = price
+    }
+
+transformDomainEstimateBreakupToBeam :: EstimateBreakup -> BeamEB.EstimateBreakup
+transformDomainEstimateBreakupToBeam EstimateBreakup {..} =
+  BeamEB.defaultEstimateBreakup
+    { BeamEB.id = getId id,
+      BeamEB.estimateId = getId estimateId,
+      BeamEB.title = title,
+      BeamEB.priceCurrency = price.currency,
+      BeamEB.priceValue = realToFrac price.value
+    }

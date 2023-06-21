@@ -19,6 +19,7 @@ import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.MerchantConfig as DMC
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
+import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import Kernel.External.Maps (Language)
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
@@ -27,6 +28,8 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.Version
+import Kernel.Utils.Version
+import qualified Storage.Beam.Person as BeamP
 import Storage.Tabular.Booking
 import Storage.Tabular.Person
 import Storage.Tabular.Ride
@@ -358,3 +361,82 @@ fetchRidesCount personId =
         person ^. PersonTId ==. val (toKey personId)
           &&. person ^. PersonRole ==. val USER
       pure mbRidesCount
+
+transformBeamPersonToDomain :: (L.MonadFlow m, Log m) => BeamP.Person -> m Person
+transformBeamPersonToDomain BeamP.PersonT {..} = do
+  bundleVersion' <- forM bundleVersion readVersion
+  clientVersion' <- forM clientVersion readVersion
+  pure $
+    Person
+      { id = Id id,
+        firstName = firstName,
+        middleName = middleName,
+        lastName = lastName,
+        role = role,
+        gender = gender,
+        identifierType = identifierType,
+        email = EncryptedHashed <$> (Encrypted <$> emailEncrypted) <*> emailHash,
+        unencryptedMobileNumber = unencryptedMobileNumber,
+        mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
+        mobileCountryCode = mobileCountryCode,
+        passwordHash = passwordHash,
+        identifier = identifier,
+        rating = rating,
+        language = language,
+        isNew = isNew,
+        enabled = enabled,
+        blocked = blocked,
+        deviceToken = deviceToken,
+        notificationToken = notificationToken,
+        description = description,
+        merchantId = Id merchantId,
+        whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
+        referralCode = referralCode,
+        referredAt = referredAt,
+        hasTakenValidRide = hasTakenValidRide,
+        blockedAt = blockedAt,
+        blockedByRuleId = Id <$> blockedByRuleId,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+        bundleVersion = bundleVersion',
+        clientVersion = clientVersion'
+      }
+
+transformDomainPersonToBeam :: Person -> BeamP.Person
+transformDomainPersonToBeam Person {..} =
+  BeamP.defaultPerson
+    { BeamP.id = getId id,
+      BeamP.firstName = firstName,
+      BeamP.middleName = middleName,
+      BeamP.lastName = lastName,
+      BeamP.role = role,
+      BeamP.gender = gender,
+      BeamP.identifierType = identifierType,
+      BeamP.emailEncrypted = email <&> unEncrypted . (.encrypted),
+      BeamP.emailHash = email <&> (.hash),
+      BeamP.unencryptedMobileNumber = unencryptedMobileNumber,
+      BeamP.mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
+      BeamP.mobileNumberHash = mobileNumber <&> (.hash),
+      BeamP.mobileCountryCode = mobileCountryCode,
+      BeamP.passwordHash = passwordHash,
+      BeamP.identifier = identifier,
+      BeamP.rating = rating,
+      BeamP.language = language,
+      BeamP.isNew = isNew,
+      BeamP.enabled = enabled,
+      BeamP.blocked = blocked,
+      BeamP.deviceToken = deviceToken,
+      BeamP.notificationToken = notificationToken,
+      BeamP.description = description,
+      BeamP.merchantId = getId merchantId,
+      BeamP.whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
+      BeamP.referralCode = referralCode,
+      BeamP.referredAt = referredAt,
+      BeamP.hasTakenValidRide = hasTakenValidRide,
+      BeamP.blockedAt = blockedAt,
+      BeamP.blockedByRuleId = getId <$> blockedByRuleId,
+      BeamP.createdAt = createdAt,
+      BeamP.updatedAt = updatedAt,
+      BeamP.bundleVersion = versionToText <$> bundleVersion,
+      BeamP.clientVersion = versionToText <$> clientVersion
+    }

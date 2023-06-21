@@ -20,6 +20,7 @@ import Domain.Types.Person (Person)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Storage.Beam.Issue as BeamI
 import Storage.Tabular.Issue
 import Storage.Tabular.Person
 
@@ -67,3 +68,29 @@ findAllIssue merchantId mbLimit mbOffset fromDate toDate = Esq.findAll $ do
   where
     limitVal = min (maybe 10 fromIntegral mbLimit) 10
     offsetVal = maybe 0 fromIntegral mbOffset
+
+transformBeamIssueToDomain :: BeamI.Issue -> Issue
+transformBeamIssueToDomain BeamI.IssueT {..} = do
+  Issue
+    { id = Id id,
+      customerId = Id customerId,
+      bookingId = Id <$> bookingId,
+      contactEmail = contactEmail,
+      reason = reason,
+      description = description,
+      createdAt = createdAt,
+      updatedAt = updatedAt
+    }
+
+transformDomainIssueToBeam :: Issue -> BeamI.Issue
+transformDomainIssueToBeam Issue {..} =
+  BeamI.defaultIssue
+    { BeamI.id = getId id,
+      BeamI.customerId = getId customerId,
+      BeamI.bookingId = getId <$> bookingId,
+      BeamI.contactEmail = contactEmail,
+      BeamI.reason = reason,
+      BeamI.description = description,
+      BeamI.createdAt = createdAt,
+      BeamI.updatedAt = updatedAt
+    }

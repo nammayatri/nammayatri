@@ -21,6 +21,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import qualified Storage.Beam.FarePolicy.FareBreakup as BeamFB
 import Storage.Tabular.FarePolicy.FareBreakup
 
 createMany :: [FareBreakup] -> SqlDB ()
@@ -32,3 +33,21 @@ findAllByBookingId bookingId =
     fareBreakup <- from $ table @FareBreakupT
     where_ $ fareBreakup ^. FareBreakupBookingId ==. val (toKey bookingId)
     return fareBreakup
+
+transformBeamFareBreakupToDomain :: BeamFB.FareBreakup -> FareBreakup
+transformBeamFareBreakupToDomain BeamFB.FareBreakupT {..} = do
+  FareBreakup
+    { id = Id id,
+      bookingId = Id bookingId,
+      description = description,
+      amount = amount
+    }
+
+transformDomainFareBreakupToBeam :: FareBreakup -> BeamFB.FareBreakup
+transformDomainFareBreakupToBeam FareBreakup {..} =
+  BeamFB.defaultFareBreakup
+    { BeamFB.id = getId id,
+      BeamFB.bookingId = getId bookingId,
+      BeamFB.description = description,
+      BeamFB.amount = amount
+    }

@@ -12,21 +12,26 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-missing-fields #-}
 
 module Storage.Queries.Booking where
 
 import Domain.Types.Booking as DRB
 import Domain.Types.Estimate (Estimate)
+import Domain.Types.FarePolicy.FareProductType as DFF
 import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Utils.Error
 import qualified Storage.Beam.Booking as BeamB
+import qualified Storage.Queries.Booking.BookingLocation as QBBL
 import Storage.Queries.FullEntityBuilders (buildFullBooking)
+import qualified Storage.Queries.TripTerms as QTT
 import Storage.Tabular.Booking
 import qualified Storage.Tabular.Booking as RB
 import qualified Storage.Tabular.Booking.BookingLocation as Loc
@@ -311,65 +316,66 @@ cancelBookings bookingIds now = do
       ]
     where_ $ tbl ^. BookingTId `in_` valList (toKey <$> bookingIds)
 
--- transformBeamBookingToDomain :: L.MonadFlow m => BeamB.Booking -> m (Maybe Booking)
--- transformBeamBookingToDomain BeamB.BookingT {..} = do
---   fl <- QBBL.findById (Id fromLocationId)
---   tt <- if isJust tripTermsId then QTT.findById'' (Id (fromJust tripTermsId)) else pure Nothing
---   pUrl <- parseBaseUrl providerUrl
---   bookingDetails <- case fareProductType of
---       OneWayDetailsT toLocT -> DRB.OneWayDetails <$> buildOneWayDetails toLocT
---       RentalDetailsT rentalSlabT -> DRB.RentalDetails <$> fromTType rentalSlabT
---       DriverOfferDetailsT toLocT -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocT
---       OneWaySpecialZoneDetailsT toLocT -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocT
---   if isJust fl && isJust fl && isJust tt
---     then
---       pure $
---         Just
---           Booking
---             { id = Id id,
---               transactionId = transactionId,
---               bppBookingId = Id <$> bppBookingId,
---               quoteId = Id <$> quoteId,
---               paymentMethodId = Id <$> paymentMethodId,
---               paymentUrl = paymentUrl,
---               status = status,
---               providerId = providerId,
---               providerUrl = pUrl,
---               providerName = providerName,
---               providerMobileNumber = providerMobileNumber,
---               primaryExophone = primaryExophone,
---               startTime = startTime,
---               riderId = Id riderId,
---               fromLocation = fromJust fl,
---               estimatedFare = roundToIntegral estimatedFare,
---               discount = roundToIntegral <$> discount,
---               estimatedTotalFare = roundToIntegral estimatedTotalFare,
---               vehicleVariant = vehicleVariant,
---               -- bookingDetails = bookingDetails,
---               tripTerms = tt,
---               merchantId = Id merchantId,
---               specialLocationTag = specialLocationTag,
---               createdAt = createdAt,
---               updatedAt = updatedAt
---             }
---     else pure Nothing
---     where
---       buildOneWayDetails toLocT = do
---         toLocation <- fromTType toLocT
---         distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
---         pure
---           DRB.OneWayBookingDetails
---             { toLocation,
---               distance = distance'
---             }
---       buildOneWaySpecialZoneDetails toLocT = do
---         toLocation <- fromTType toLocT
---         distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
---         pure
---           DRB.OneWaySpecialZoneBookingDetails
---             { distance = distance',
---               ..
---             }
+-- lets update this when the queries are completed
+transformBeamBookingToDomain :: (L.MonadFlow m, Log m) => BeamB.Booking -> m (Maybe Booking)
+transformBeamBookingToDomain BeamB.BookingT {..} = do
+  fl <- QBBL.findById (Id fromLocationId)
+  tt <- if isJust tripTermsId then QTT.findById'' (Id (fromJust tripTermsId)) else pure Nothing
+  pUrl <- parseBaseUrl providerUrl
+  bookingDetails <- case fareProductType of
+    DFF.ONE_WAY -> DRB.OneWayDetails <$> buildOneWayDetails toLocationId
+    DFF.RENTAL -> DRB.RentalDetails <$> error "" -- findById' rentalSlabId
+    DFF.DRIVER_OFFER -> DRB.OneWayDetails <$> buildOneWayDetails toLocationId
+    DFF.ONE_WAY_SPECIAL_ZONE -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId
+  if isJust fl && isJust tt
+    then
+      pure $
+        Just
+          Booking
+            { id = Id id,
+              transactionId = transactionId,
+              bppBookingId = Id <$> bppBookingId,
+              quoteId = Id <$> quoteId,
+              paymentMethodId = Id <$> paymentMethodId,
+              paymentUrl = paymentUrl,
+              status = status,
+              providerId = providerId,
+              providerUrl = pUrl,
+              providerName = providerName,
+              providerMobileNumber = providerMobileNumber,
+              primaryExophone = primaryExophone,
+              startTime = startTime,
+              riderId = Id riderId,
+              fromLocation = fromJust fl,
+              estimatedFare = roundToIntegral estimatedFare,
+              discount = roundToIntegral <$> discount,
+              estimatedTotalFare = roundToIntegral estimatedTotalFare,
+              vehicleVariant = vehicleVariant,
+              bookingDetails = bookingDetails,
+              tripTerms = tt,
+              merchantId = Id merchantId,
+              specialLocationTag = specialLocationTag,
+              createdAt = createdAt,
+              updatedAt = updatedAt
+            }
+    else pure Nothing
+  where
+    buildOneWayDetails _ = do
+      toLocation <- QBBL.findById (Id (fromJust toLocationId))
+      distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
+      pure
+        DRB.OneWayBookingDetails
+          { toLocation = fromJust toLocation,
+            distance = distance'
+          }
+    buildOneWaySpecialZoneDetails _ = do
+      toLocation <- error ""
+      distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
+      pure
+        DRB.OneWaySpecialZoneBookingDetails
+          { distance = distance',
+            ..
+          }
 
 transformDomainBookingToBeam :: Booking -> BeamB.Booking
 transformDomainBookingToBeam DRB.Booking {..} =

@@ -18,6 +18,8 @@ import Domain.Types.Geometry
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id (Id (..))
+import qualified Storage.Beam.Geometry as BeamG
 import Storage.Tabular.Geometry
 
 findGeometriesContaining :: Transactionable m => LatLong -> [Text] -> m [Geometry]
@@ -33,3 +35,17 @@ someGeometriesContain :: Transactionable m => LatLong -> [Text] -> m Bool
 someGeometriesContain gps regions = do
   geometries <- findGeometriesContaining gps regions
   pure $ not $ null geometries
+
+transformBeamGeometryToDomain :: BeamG.Geometry -> Geometry
+transformBeamGeometryToDomain BeamG.GeometryT {..} = do
+  Geometry
+    { id = Id id,
+      region = region
+    }
+
+transformDomainGeometryToBeam :: Geometry -> BeamG.Geometry
+transformDomainGeometryToBeam Geometry {..} =
+  BeamG.GeometryT
+    { BeamG.id = getId id,
+      BeamG.region = region
+    }

@@ -21,12 +21,15 @@ module Storage.Queries.Merchant
 where
 
 import Domain.Types.Merchant as DOrg
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (findById)
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Types.Geofencing as Geo
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
 import Kernel.Utils.Common
+import qualified Storage.Beam.Merchant as BeamM
 import Storage.Tabular.Merchant
 
 findById :: Transactionable m => Id Merchant -> m (Maybe Merchant)
@@ -62,3 +65,58 @@ update merchant = do
         MerchantUpdatedAt =. val now
       ]
     where_ $ tbl ^. MerchantTId ==. val (toKey merchant.id)
+
+transformBeamMerchantToDomain :: L.MonadFlow m => BeamM.Merchant -> m Merchant
+transformBeamMerchantToDomain BeamM.MerchantT {..} = do
+  gwUrl <- parseBaseUrl gatewayUrl
+  regUrl <- parseBaseUrl registryUrl
+  doBaseUrl <- parseBaseUrl driverOfferBaseUrl
+  let geofencingConfig =
+        Geo.GeofencingConfig
+          { origin = originRestriction,
+            destination = destinationRestriction
+          }
+  pure $
+    Merchant
+      { id = Id id,
+        subscriberId = ShortId subscriberId,
+        shortId = ShortId shortId,
+        name = name,
+        city = city,
+        geofencingConfig = geofencingConfig,
+        gatewayUrl = gwUrl,
+        registryUrl = regUrl,
+        driverOfferBaseUrl = doBaseUrl,
+        driverOfferApiKey = driverOfferApiKey,
+        driverOfferMerchantId = driverOfferMerchantId,
+        geoHashPrecisionValue = geoHashPrecisionValue,
+        signingPublicKey = signingPublicKey,
+        cipherText = cipherText,
+        signatureExpiry = signatureExpiry,
+        createdAt = createdAt,
+        updatedAt = updatedAt
+      }
+
+transformDomainMerchantToBeam :: Merchant -> BeamM.Merchant
+transformDomainMerchantToBeam Merchant {..} = do
+  let Geo.GeofencingConfig {..} = geofencingConfig
+  BeamM.defaultMerchant
+    { BeamM.id = getId id,
+      BeamM.subscriberId = getShortId subscriberId,
+      BeamM.shortId = getShortId shortId,
+      BeamM.name = name,
+      BeamM.city = city,
+      BeamM.originRestriction = origin,
+      BeamM.destinationRestriction = destination,
+      BeamM.gatewayUrl = showBaseUrl gatewayUrl,
+      BeamM.registryUrl = showBaseUrl registryUrl,
+      BeamM.driverOfferBaseUrl = showBaseUrl driverOfferBaseUrl,
+      BeamM.driverOfferApiKey = driverOfferApiKey,
+      BeamM.driverOfferMerchantId = driverOfferMerchantId,
+      BeamM.geoHashPrecisionValue = geoHashPrecisionValue,
+      BeamM.signingPublicKey = signingPublicKey,
+      BeamM.cipherText = cipherText,
+      BeamM.signatureExpiry = signatureExpiry,
+      BeamM.createdAt = createdAt,
+      BeamM.updatedAt = updatedAt
+    }

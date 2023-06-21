@@ -26,6 +26,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (findById)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Storage.Beam.MerchantConfig as BeamMC
 import Storage.Tabular.MerchantConfig
 
 findAllByMerchantId :: Transactionable m => Id Merchant -> m [DMC.MerchantConfig]
@@ -36,3 +37,37 @@ findAllByMerchantId merchantId =
       config ^. MerchantConfigMerchantId ==. val (toKey merchantId)
         &&. config ^. MerchantConfigEnabled ==. val True
     return config
+
+transformBeamMerchantConfigToDomain :: BeamMC.MerchantConfig -> MerchantConfig
+transformBeamMerchantConfigToDomain BeamMC.MerchantConfigT {..} = do
+  MerchantConfig
+    { id = Id id,
+      merchantId = Id merchantId,
+      fraudBookingCancellationCountThreshold = fraudBookingCancellationCountThreshold,
+      fraudBookingCancellationCountWindow = fraudBookingCancellationCountWindow,
+      fraudBookingTotalCountThreshold = fraudBookingTotalCountThreshold,
+      fraudBookingCancelledByDriverCountThreshold = fraudBookingCancelledByDriverCountThreshold,
+      fraudBookingCancelledByDriverCountWindow = fraudBookingCancelledByDriverCountWindow,
+      fraudSearchCountThreshold = fraudSearchCountThreshold,
+      fraudSearchCountWindow = fraudSearchCountWindow,
+      fraudRideCountThreshold = fraudRideCountThreshold,
+      fraudRideCountWindow = fraudRideCountWindow,
+      enabled = enabled
+    }
+
+transformDomainMerchantConfigToBeam :: MerchantConfig -> BeamMC.MerchantConfig
+transformDomainMerchantConfigToBeam MerchantConfig {..} =
+  BeamMC.defaultMerchantConfig
+    { BeamMC.id = getId id,
+      BeamMC.merchantId = getId merchantId,
+      BeamMC.fraudBookingCancellationCountThreshold = fraudBookingCancellationCountThreshold,
+      BeamMC.fraudBookingCancellationCountWindow = fraudBookingCancellationCountWindow,
+      BeamMC.fraudBookingTotalCountThreshold = fraudBookingTotalCountThreshold,
+      BeamMC.fraudBookingCancelledByDriverCountThreshold = fraudBookingCancelledByDriverCountThreshold,
+      BeamMC.fraudBookingCancelledByDriverCountWindow = fraudBookingCancelledByDriverCountWindow,
+      BeamMC.fraudSearchCountThreshold = fraudSearchCountThreshold,
+      BeamMC.fraudSearchCountWindow = fraudSearchCountWindow,
+      BeamMC.fraudRideCountThreshold = fraudRideCountThreshold,
+      BeamMC.fraudRideCountWindow = fraudRideCountWindow,
+      BeamMC.enabled = enabled
+    }
