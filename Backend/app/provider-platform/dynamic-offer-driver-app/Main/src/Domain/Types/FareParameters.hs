@@ -43,8 +43,10 @@ data FParamsProgressiveDetails = FParamsProgressiveDetails
   }
   deriving (Generic, Show, Eq, PrettyShow)
 
-newtype FParamsSlabDetails = FParamsSlabDetails
-  { platformFee :: Maybe Money
+data FParamsSlabDetails = FParamsSlabDetails
+  { platformFee :: Maybe Money,
+    sgst :: Maybe Money,
+    cgst :: Maybe Money
   }
   deriving (Generic, Show, Eq, PrettyShow)
 
