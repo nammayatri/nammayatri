@@ -38,9 +38,10 @@ import Font.Style as FontStyle
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), const, map, (==), (||), (/), unit, bind, (-), (<>), (<<<), pure, discard, show, (&&), void, negate, not)
+import Prelude (Unit, ($), const, map, (==), (||), (/), unit, bind, (-), (<>), (<=),(<<<), pure, discard, show, (&&), void, negate, not)
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, scrollBarY)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout)
 import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle)
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(..), optionList)
 import Screens.Types as ST
@@ -54,6 +55,9 @@ import PrestoDOM.Animation as PrestoAnim
 import Animation.Config as AnimConfig
 import Data.Maybe (Maybe(..), isJust)
 import Components.GenericHeader.View as GenericHeader
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import PrestoDOM.Properties (cornerRadii)
+
 
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
@@ -113,6 +117,76 @@ profileView push state =
             ]
         ]
     ]
+
+
+driverRideDetailsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+driverRideDetailsView state push = 
+  linearLayout
+    [  height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , margin $ MarginTop 40
+    ][ textView
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , margin $ MarginLeft 16
+        , text "Summary"
+        , textSize FontSize.a_16
+        , color Color.black900
+        , fontStyle $ FontStyle.semiBold LanguageStyle
+        ]
+      , linearLayout  
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , margin $ Margin 12 12 12 12
+        , background Color.blue600
+        , cornerRadius 10.0
+        ][ infoTileView state {primaryText: "₹45,67,892", subText: "Earned on NY", postImgVisibility : false, seperatorView : false}
+        , linearLayout
+            [ height MATCH_PARENT
+            , width (V 1)
+            , margin (Margin 0 16 0 16)
+            , background Color.lightGreyShade
+            ][]
+        , infoTileView state {primaryText: "₹52,000", subText: "Namma Bonus", postImgVisibility : false, seperatorView : false}
+        ]
+      , linearLayout  
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , margin $ Margin 10 12 10 12
+        ][ infoTileView state {primaryText: "4.9", subText: "rated by 392 users", postImgVisibility : true, seperatorView : true}
+          , infoTileView state {primaryText: "502", subText: "Trips Completed", postImgVisibility : false, seperatorView : true}
+        ]
+      , horizontalScrollView
+           [ width MATCH_PARENT
+           , height MATCH_PARENT
+           , orientation HORIZONTAL
+           ][ linearLayout
+                [ width WRAP_CONTENT
+                , height WRAP_CONTENT
+                , cornerRadius 20.0
+                , background Color.blue600
+                ][ textView
+                    [ text "243"
+                    , width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , textSize FontSize.a_14
+                    , fontStyle $ FontStyle.bold LanguageStyle
+                    , color Color.black900
+                    ]
+                  , textView
+                    [ text "Late Night Trips"
+                    , width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , textSize FontSize.a_12
+                    -- , fontStyle $ FontStyle.bold LanguageStyle
+                    , color Color.black700
+                    ]
+                ]
+           ]
+    ]
+
+
 
 headerView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 headerView state push = 
@@ -662,3 +736,54 @@ dummyTextView =
  ]
 
 addAnimation state = PrestoAnim.animationSet [ Anim.fadeOut (state.props.screenType == ST.AUTO_DETAILS), Anim.fadeOut (state.props.screenType == ST.DRIVER_DETAILS), Anim.fadeIn (state.props.screenType == ST.AUTO_DETAILS), Anim.fadeOut (state.props.screenType == ST.DRIVER_DETAILS), Anim.fadeIn (state.props.screenType == ST.DRIVER_DETAILS)] 
+
+infoTileView :: forall w. ST.DriverProfileScreenState -> {primaryText :: String, subText :: String, postImgVisibility :: Boolean, seperatorView :: Boolean } -> PrestoDOM (Effect Unit) w
+infoTileView state config = 
+  linearLayout
+    [ weight 1.0
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , margin $ if config.seperatorView then MarginHorizontal 6 6 else MarginHorizontal 0 0
+    , background Color.blue600
+    , padding $ Padding 16 16 16 16
+    , cornerRadius 10.0
+    ][ linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , orientation HORIZONTAL
+          , gravity CENTER_VERTICAL
+          ][  textView 
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , text config.primaryText
+              , margin (MarginLeft 7)
+              , fontStyle $ FontStyle.bold LanguageStyle
+              , textSize FontSize.a_22
+              , color Color.black900
+              ]
+            , linearLayout
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , margin $ MarginLeft 9 
+                , visibility if config.postImgVisibility then VISIBLE else GONE
+                ](mapWithIndex (\index item -> 
+                    linearLayout
+                    [ height WRAP_CONTENT
+                    , width WRAP_CONTENT
+                    , margin (MarginRight 2)
+                    ][imageView
+                        [ height $ V 13
+                        , width $ V 13
+                        , imageWithFallback if item <= 5 then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png" else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
+                        ]
+                    ]) [1,2,3,4,5])
+          ]
+      , textView 
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , text config.subText
+        , margin (MarginLeft 7)
+        , textSize FontSize.a_14
+        , color Color.black700
+        ]
+    ]
