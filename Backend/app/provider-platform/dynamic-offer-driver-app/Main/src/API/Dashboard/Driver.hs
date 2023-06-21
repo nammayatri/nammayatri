@@ -76,9 +76,9 @@ driverDocumentsInfo = withFlowHandlerAPI . DDriver.driverDocumentsInfo
 driverAadhaarInfo :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler Common.DriverAadhaarInfoRes
 driverAadhaarInfo merchantShortId = withFlowHandlerAPI . DDriver.driverAadhaarInfo merchantShortId
 
-listDrivers :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> FlowHandler Common.DriverListRes
-listDrivers merchantShortId mbLimit mbOffset verified enabled blocked vechicleNumberSearchString =
-  withFlowHandlerAPI . DDriver.listDrivers merchantShortId mbLimit mbOffset verified enabled blocked vechicleNumberSearchString
+listDrivers :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> FlowHandler Common.DriverListRes
+listDrivers merchantShortId mbLimit mbOffset verified enabled blocked mbSubscribed vechicleNumberSearchString =
+  withFlowHandlerAPI . DDriver.listDrivers merchantShortId mbLimit mbOffset verified enabled blocked mbSubscribed vechicleNumberSearchString
 
 driverActivity :: ShortId DM.Merchant -> FlowHandler Common.DriverActivityRes
 driverActivity = withFlowHandlerAPI . DDriver.driverActivity

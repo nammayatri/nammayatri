@@ -43,6 +43,7 @@ mkPersist
       blocked Bool
       numOfLocks Int
       verified Bool
+      subscribed Bool
       lastEnabledOn UTCTime Maybe
       referralCode Text Maybe
       canDowngradeToSedan Bool

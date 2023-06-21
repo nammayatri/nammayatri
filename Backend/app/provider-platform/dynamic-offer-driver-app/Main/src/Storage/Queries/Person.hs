@@ -80,10 +80,11 @@ findAllDriversWithInfoAndVehicle ::
   Maybe Bool ->
   Maybe Bool ->
   Maybe Bool ->
+  Maybe Bool ->
   Maybe DbHash ->
   Maybe Text ->
   m [(Person, DriverInformation, Maybe Vehicle)]
-findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnabled mbBlocked mbSearchPhoneDBHash mbVehicleNumberSearchString = do
+findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString = do
   Esq.findAll $ do
     person :& info :& mbVeh <-
       from $
@@ -103,6 +104,7 @@ findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnab
         &&. maybe (val True) (\verified -> info ^. DriverInformationVerified ==. val verified) mbVerified
         &&. maybe (val True) (\enabled -> info ^. DriverInformationEnabled ==. val enabled) mbEnabled
         &&. maybe (val True) (\blocked -> info ^. DriverInformationBlocked ==. val blocked) mbBlocked
+        &&. maybe (val True) (\subscribed -> info ^. DriverInformationSubscribed ==. val subscribed) mbSubscribed
         &&. maybe (val True) (\searchStrDBHash -> person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)) mbSearchPhoneDBHash
     limit $ fromIntegral limitVal
     offset $ fromIntegral offsetVal
@@ -790,6 +792,7 @@ getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide = do
         &&. ((Esq.isNothing (driverInfos ^. DriverInformationMode) &&. driverInfos ^. DriverInformationActive) ||. (not_ (Esq.isNothing (driverInfos ^. DriverInformationMode)) &&. (driverInfos ^. DriverInformationMode ==. val (Just DriverInfo.SILENT) ||. driverInfos ^. DriverInformationMode ==. val (Just DriverInfo.ONLINE))))
         &&. (if onlyNotOnRide then not_ (driverInfos ^. DriverInformationOnRide) else if onlyOnRide then driverInfos ^. DriverInformationOnRide else val True)
         &&. not_ (driverInfos ^. DriverInformationBlocked)
+        &&. (driverInfos ^. DriverInformationSubscribed)
     return driverInfos
   where
     personsKeys = toKey . cast <$> fetchDriverIDsFromLocations driverLocs
