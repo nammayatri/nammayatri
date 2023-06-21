@@ -31,7 +31,7 @@ import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto as Esq hiding (findById)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Logging
@@ -166,20 +166,26 @@ updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
 --     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
 updateBlockedState :: (L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> m (MeshResult ())
-updateBlockedState (Id driverId) isBlocked = do
+updateBlockedState driverId isBlocked = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamDI.DriverInformationT
   let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
+  driverInfo <- findById driverId
+  let numOfLocks' = case driverInfo of
+        Just driverInfoResult -> driverInfoResult.numOfLocks
+        Nothing -> 0
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
         updatedMeshConfig
-        [ Se.Set BeamDI.blocked isBlocked,
-          Se.Set BeamDI.updatedAt now
-        ]
-        [Se.Is BeamDI.driverId (Se.Eq driverId)]
+        ( [ Se.Set BeamDI.blocked isBlocked,
+            Se.Set BeamDI.updatedAt now
+          ]
+            <> ([Se.Set BeamDI.numOfLocks (numOfLocks' + 1) | isBlocked])
+        )
+        [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 verifyAndEnableDriver :: (L.MonadFlow m, MonadTime m) => Id Person -> m (MeshResult ())

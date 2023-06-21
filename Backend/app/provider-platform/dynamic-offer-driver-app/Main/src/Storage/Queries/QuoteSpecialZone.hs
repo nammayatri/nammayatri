@@ -88,7 +88,7 @@ countAllByRequestId searchReqID = do
 --       `Esq.on` ( \(rb :& farePars) ->
 --                    rb ^. QuoteSpecialZoneFareParametersId ==. farePars ^. Fare.FareParametersTId
 --                )
--- TODOD @Vijay Gupta, please check the following function if it needs any change
+-- TODOD @Vijay Gupta, please check the following function if it needs any change Done
 -- create :: QuoteSpecialZone -> SqlDB ()
 -- create quote = Esq.runTransaction $
 --   withFullEntity quote $ \(quoteT, (fareParams', fareParamsDetais)) -> do

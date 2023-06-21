@@ -35,7 +35,7 @@ import qualified Storage.Queries.FareParameters as SQFP
 import Storage.Tabular.DriverQuote
 import qualified Storage.Tabular.FareParameters as Fare
 
--- TODO @Vijay Gupta - update the following function
+-- TODO @Vijay Gupta - update the following function Done
 -- create :: Domain.DriverQuote -> SqlDB ()
 -- create dQuote = Esq.runTransaction $
 --   withFullEntity dQuote $ \(dQuoteT, (fareParams', fareParamsDetais)) -> do

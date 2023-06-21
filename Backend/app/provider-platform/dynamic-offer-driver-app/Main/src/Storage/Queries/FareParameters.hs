@@ -37,7 +37,8 @@ create fareParameters = do
       case fareParameters.fareParametersDetails of
         ProgressiveDetails fppdt -> do
           void $ KV.createWoReturingKVConnector dbConf' updatedMeshConfig (BeamFPPD.transformDomainFareParametersProgressiveDetailsToBeam (fareParameters.id, fppdt))
-        _ -> pure ()
+        SlabDetails fpsdt -> do
+          void $ KV.createWoReturingKVConnector dbConf' updatedMeshConfig (BeamFPSD.transformDomainFareParametersSlabDetailsToBeam (fareParameters.id, fpsdt))
     Nothing -> pure ()
 
 findById :: L.MonadFlow m => Id FareParameters -> m (Maybe FareParameters)
@@ -54,7 +55,7 @@ findById (Id fareParametersId) = do
     -- either (pure Nothing) (transformBeamFareParametersToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]
     Nothing -> pure Nothing
 
--- TODO @Vijay Gupta, Change the following query.
+-- TODO @Vijay Gupta, Change the following query. Done
 -- create :: FareParameters -> SqlDB ()
 -- create fareParams =
 --   withFullEntity fareParams $ \(fareParams', fareParamsDetais) -> do

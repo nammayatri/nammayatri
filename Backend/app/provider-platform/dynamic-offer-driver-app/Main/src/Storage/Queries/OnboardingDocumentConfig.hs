@@ -63,7 +63,7 @@ findByMerchantIdAndDocumentType merchantId documentType = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamOnboardingDocumentConfigToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamODC.merchantId $ Se.Eq $ getId merchantId, Se.Is BeamODC.documentType $ Se.Eq documentType]]
     Nothing -> pure Nothing
 
---TODO @Vijay Gupta, update the following function.
+--TODO @Vijay Gupta, update the following function. Done
 findAllByMerchantId :: L.MonadFlow m => Id Merchant -> m [OnboardingDocumentConfig]
 findAllByMerchantId merchantId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
