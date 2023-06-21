@@ -241,6 +241,7 @@ library
       Storage.CachedQueries.Person.PersonFlowStatus
       Storage.Queries.BlackListOrg
       Storage.Queries.Booking
+      Storage.Queries.Booking.BookingLocation
       Storage.Queries.BookingCancellationReason
       Storage.Queries.CallbackRequest
       Storage.Queries.CallStatus
