@@ -25,6 +25,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
+import Storage.Tabular.Merchant (MerchantTId)
 
 derivePersistField "Domain.LeaderBoardType"
 
@@ -38,6 +39,8 @@ mkPersist
       leaderBoardExpiry Seconds
       zScoreBase Int
       leaderBoardLengthLimit Int
+      isEnabled Bool
+      merchantId MerchantTId
       Primary id
       deriving Generic
     |]
@@ -53,6 +56,7 @@ instance FromTType LeaderBoardConfigsT Domain.LeaderBoardConfigs where
       Domain.LeaderBoardConfigs
         { id = Id id,
           leaderBoardLengthLimit = fromIntegral leaderBoardLengthLimit,
+          merchantId = fromKey merchantId,
           ..
         }
 
@@ -61,5 +65,6 @@ instance ToTType LeaderBoardConfigsT Domain.LeaderBoardConfigs where
     LeaderBoardConfigsT
       { id = getId id,
         leaderBoardLengthLimit = fromIntegral leaderBoardLengthLimit,
+        merchantId = toKey merchantId,
         ..
       }

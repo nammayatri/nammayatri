@@ -15,12 +15,17 @@
 module Storage.Queries.LeaderBoardConfig where
 
 import Domain.Types.LeaderBoardConfig
+import Domain.Types.Merchant
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
 import Storage.Tabular.LeaderBoardConfig
 
-findLeaderBoardConfigbyType :: (Transactionable m) => LeaderBoardType -> m (Maybe LeaderBoardConfigs)
-findLeaderBoardConfigbyType leaderBType = Esq.findOne $ do
+findLeaderBoardConfigbyType :: (Transactionable m) => LeaderBoardType -> Id Merchant -> m (Maybe LeaderBoardConfigs)
+findLeaderBoardConfigbyType leaderBType merchantId = Esq.findOne $ do
   leaderBoardConfig <- from $ table @LeaderBoardConfigsT
-  where_ $ leaderBoardConfig ^. LeaderBoardConfigsLeaderBoardType ==. val leaderBType
+  where_ $
+    leaderBoardConfig ^. LeaderBoardConfigsLeaderBoardType ==. val leaderBType
+      &&. leaderBoardConfig ^. LeaderBoardConfigsMerchantId ==. val (toKey merchantId)
+
   pure leaderBoardConfig
