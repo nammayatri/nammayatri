@@ -45,7 +45,8 @@ initData = {
     imageUrl : "",
     mediaType : Nothing,
     likeCount : 0,
-    likeStatus : false
+    likeStatus : false,
+    viewCount : 0
   },
   notifsDetailModelVisibility : GONE,
   loadMore : false,

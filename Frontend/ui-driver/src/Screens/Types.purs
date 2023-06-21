@@ -1153,7 +1153,8 @@ type NotificationDetailModelState = {
   imageUrl :: String,
   mediaType :: Maybe MediaType,
   likeCount :: Int,
-  likeStatus :: Boolean
+  likeStatus :: Boolean,
+  viewCount :: Int
 }
 
 type YoutubeData = {
