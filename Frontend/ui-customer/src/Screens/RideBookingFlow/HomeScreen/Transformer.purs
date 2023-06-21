@@ -73,7 +73,7 @@ getLocation prediction = {
   , fullAddress : dummyAddress
   , locationItemType : Just PREDICTION
   , distance : Just (fromMetersToKm (fromMaybe 0 (prediction ^._distance)))
-  , showDistance : checkShowDistance (fromMaybe 0 (prediction ^._distance))
+  , showDistance : Just $ checkShowDistance (fromMaybe 0 (prediction ^._distance))
 }
 
 checkShowDistance :: Int ->  Boolean
