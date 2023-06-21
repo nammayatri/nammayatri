@@ -276,6 +276,7 @@ genderBannerView state push =
     , orientation VERTICAL
     , margin (Margin 10 10 10 10)
     , gravity BOTTOM
+    , visibility GONE
     ][     
     linearLayout
       [ height WRAP_CONTENT
