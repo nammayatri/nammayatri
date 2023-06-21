@@ -18,9 +18,10 @@ module Components.PrimaryButton.View where
 import Effect (Effect)
 import Prelude (Unit, bind, const, discard, pure, unit, ($), (&&), (==))
 import Components.PrimaryButton.Controller (Action(..), Config)
-import PrestoDOM (Length(..), Orientation(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback)
+import PrestoDOM-- (Length(..), Orientation(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback)
 import JBridge (startLottieProcess, toggleBtnLoader, getKeyInSharedPrefKeys)
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
+import Styles.Colors as Color
 
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -28,8 +29,11 @@ view push config =
  relativeLayout
   [ height config.height
   , width config.width
-  , cornerRadius  config.cornerRadius
+  , cornerRadius  300.0
   , background config.background
+  , disableClickFeedback false
+  , rippleColor Color.greyShade
+  , enableRoundedRipple 300.0
   , clickable if config.enableLoader then false else config.isClickable
   , gravity config.gravity
   , margin config.margin

@@ -28,7 +28,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Merchant.Utils (getValueFromConfig)
 import Prelude (Unit, const, unit, ($), (*), (/), (<>), (==), (||), (&&), (/=))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, visibility, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, text, textSize, textView, width, weight, ellipsize, maxLines, imageWithFallback, scrollView, scrollBarY)
+import PrestoDOM --(Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, visibility, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, text, textSize, textView, width, weight, ellipsize, maxLines, imageWithFallback, scrollView, scrollBarY)
 import PrestoDOM.Animation as PrestoAnim
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
@@ -82,6 +82,7 @@ settingsView state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
+  , cornerRadius 10.0
   , padding (Padding 18 24 18 8)
   , orientation VERTICAL
   ][
@@ -236,7 +237,14 @@ settingsMenuView item push  =
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
   , disableClickFeedback false
+  , cornerRadius 10.0
+  , stroke $ "1,"<> Color.grey900
   , padding (Padding 0 16 16 16 )
+  , margin (Margin 20 20 20 20)
+  , disableClickFeedback false
+  , rippleColor Color.filterDisableButtonColor
+  , translationZ 800.0
+  , enableRoundedRipple 80.0--true
   , onClick push $ ( const case item.tag of
                               SETTINGS_RIDES          -> PastRides
                               SETTINGS_FAVOURITES     -> GoToFavourites
@@ -257,6 +265,10 @@ settingsMenuView item push  =
       , height WRAP_CONTENT
       , text item.text
       , textSize FontSize.a_18
+      -- , cornerRadius 10.0
+      -- , disableClickFeedback false
+      -- , rippleColor Color.filterDisableButtonColor
+      -- , enableRoundedRipple false
       , color Color.charcoalGrey
       , fontStyle $ FontStyle.medium LanguageStyle
       , padding (PaddingLeft 20)
