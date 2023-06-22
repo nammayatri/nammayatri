@@ -34,8 +34,8 @@ mkPersist
     FareParametersSlabDetailsT sql=fare_parameters_slab_details
       fareParametersId FareParametersTId
       platformFee Money Maybe
-      sgst Money Maybe
-      cgst Money Maybe
+      sgst HighPrecMoney Maybe
+      cgst HighPrecMoney Maybe
 
       Primary fareParametersId
       deriving Generic
