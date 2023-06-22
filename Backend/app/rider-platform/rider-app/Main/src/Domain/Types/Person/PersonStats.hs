@@ -12,10 +12,23 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Main (main) where
+module Domain.Types.Person.PersonStats where
 
-import "kafka-consumers" App (startKafkaConsumer)
-import Prelude
+import Domain.Types.Person
+import Kernel.Prelude
+import Kernel.Types.Id
 
-main :: IO ()
-main = startKafkaConsumer
+data PersonStats = PersonStats
+  { personId :: Id Person,
+    userCancelledRides :: Int,
+    driverCancelledRides :: Int,
+    completedRides :: Int,
+    weekendRides :: Int,
+    weekdayRides :: Int,
+    offPeakRides :: Int,
+    eveningPeakRides :: Int,
+    morningPeakRides :: Int,
+    weekendPeakRides :: Int,
+    updatedAt :: UTCTime
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)

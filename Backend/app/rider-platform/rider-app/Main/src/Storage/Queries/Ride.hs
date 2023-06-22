@@ -76,6 +76,13 @@ updateRideRating rideId rideRating = do
 findById :: Transactionable m => Id Ride -> m (Maybe Ride)
 findById = Esq.findById
 
+findAllCompletedRides :: Transactionable m => m [Ride]
+findAllCompletedRides = do
+  findAll $ do
+    rides <- from $ table @RideT
+    where_ $ rides ^. RideStatus ==. val COMPLETED
+    return rides
+
 findByBPPRideId :: Transactionable m => Id BPPRide -> m (Maybe Ride)
 findByBPPRideId bppRideId_ =
   findOne $ do
@@ -114,6 +121,23 @@ findAllByRBId bookingId =
     ride <- from $ table @RideT
     where_ $ ride ^. RideBookingId ==. val (toKey bookingId)
     orderBy [desc $ ride ^. RideCreatedAt]
+    return ride
+
+findLatestCompletedRide :: Transactionable m => Id Person -> m (Maybe Ride)
+findLatestCompletedRide riderId =
+  Esq.findOne $ do
+    (ride :& booking) <-
+      from $
+        table @RideT
+          `innerJoin` table @BookingT
+            `Esq.on` ( \(ride :& booking) ->
+                         ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
+                     )
+    Esq.where_ $
+      ride ^. RideStatus ==. val COMPLETED
+        &&. booking ^. BookingRiderId ==. val (toKey riderId)
+    Esq.limit 1
+    Esq.orderBy [Esq.desc $ ride ^. RideCreatedAt]
     return ride
 
 updateDriverArrival :: Id Ride -> SqlDB ()
@@ -230,22 +254,44 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
     mkRideItem (person, ride, bookingStatus) = do
       RideItem {..}
 
--- countRides :: Transactionable m => Id Merchant -> m Int
--- countRides merchantId =
---   mkCount <$> do
---     Esq.findAll $ do
---       (_ride :& booking) <-
---         from $
---           table @RideT
---             `innerJoin` table @BookingT
---               `Esq.on` ( \(ride :& booking) ->
---                            ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
---                        )
---       where_ $ booking ^. BookingMerchantId ==. val (toKey merchantId)
---       return (countRows :: SqlExpr (Esq.Value Int))
---   where
---     mkCount [counter] = counter
---     mkCount _ = 0
+countRidesByRiderId :: Transactionable m => Id Person -> m Int
+countRidesByRiderId riderId =
+  mkCount <$> do
+    Esq.findAll $ do
+      (ride :& booking) <-
+        from $
+          table @RideT
+            `innerJoin` table @BookingT
+              `Esq.on` ( \(ride :& booking) ->
+                           ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
+                       )
+      where_ $
+        ride ^. RideStatus ==. val Ride.COMPLETED
+          &&. booking ^. BookingRiderId ==. val (toKey riderId)
+      return (countRows :: SqlExpr (Esq.Value Int))
+  where
+    mkCount [counter] = counter
+    mkCount _ = 0
+
+countRidesFromDateToNowByRiderId :: Transactionable m => Id Person -> UTCTime -> m Int
+countRidesFromDateToNowByRiderId riderId date = do
+  mkCount <$> do
+    Esq.findAll $ do
+      (ride :& booking) <-
+        from $
+          table @RideT
+            `innerJoin` table @BookingT
+              `Esq.on` ( \(ride :& booking) ->
+                           ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
+                       )
+      where_ $
+        ride ^. RideStatus ==. val Ride.COMPLETED
+          &&. booking ^. BookingRiderId ==. val (toKey riderId)
+          &&. ride ^. RideCreatedAt >. val date
+      return (countRows :: SqlExpr (Esq.Value Int))
+  where
+    mkCount [counter] = counter
+    mkCount _ = 0
 
 findRiderIdByRideId :: Transactionable m => Id Ride -> m (Maybe (Id Person))
 findRiderIdByRideId rideId = findOne $ do

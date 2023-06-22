@@ -77,6 +77,17 @@ findAllByPerson perId = Esq.buildDType $ do
     return (searchRequest, sFromLoc, mbSToLoc)
   pure $ extractSolidType @SearchRequest <$> fullSearchRequestsT
 
+findLatestSearchRequest :: Transactionable m => Id Person -> m (Maybe SearchRequest)
+findLatestSearchRequest riderId = Esq.buildDType $ do
+  fullSearchRequestT <- Esq.findOne' $ do
+    (searchRequest :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
+    Esq.where_ $
+      searchRequest ^. SearchRequestRiderId ==. val (toKey riderId)
+    Esq.limit 1
+    Esq.orderBy [Esq.desc $ searchRequest ^. SearchRequestCreatedAt]
+    return (searchRequest, sFromLoc, mbSToLoc)
+  pure $ extractSolidType @SearchRequest <$> fullSearchRequestT
+
 updateCustomerExtraFeeAndPaymentMethod :: Id SearchRequest -> Maybe Money -> Maybe (Id DMPM.MerchantPaymentMethod) -> SqlDB ()
 updateCustomerExtraFeeAndPaymentMethod searchReqId customerExtraFee paymentMethodId =
   Esq.update $ \tbl -> do

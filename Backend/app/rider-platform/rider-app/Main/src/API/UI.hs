@@ -23,6 +23,7 @@ import qualified API.UI.Booking as Booking
 import qualified API.UI.Call as Call
 import qualified API.UI.Cancel as Cancel
 import qualified API.UI.CancellationReason as CancellationReason
+import qualified API.UI.CleverTap as CleverTap
 import qualified API.UI.Confirm as Confirm
 import qualified API.UI.CustomerSupport as CustomerSupport
 import qualified API.UI.Feedback as Feedback
@@ -79,6 +80,7 @@ type API =
            :<|> Whatsapp.API
            :<|> Sos.API
            :<|> AppInstalls.API
+           :<|> CleverTap.API
        )
 
 handler :: FlowServer API
@@ -111,3 +113,4 @@ handler =
     :<|> Whatsapp.handler
     :<|> Sos.handler
     :<|> AppInstalls.handler
+    :<|> CleverTap.handler

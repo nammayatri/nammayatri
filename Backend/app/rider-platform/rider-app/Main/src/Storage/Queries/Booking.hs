@@ -303,7 +303,16 @@ cancelBookings bookingIds now = do
   Esq.update $ \tbl -> do
     set
       tbl
-      [ BookingStatus =. val CANCELLED,
+      [ BookingStatus =. val DRB.CANCELLED,
         BookingUpdatedAt =. val now
       ]
     where_ $ tbl ^. BookingTId `in_` valList (toKey <$> bookingIds)
+
+findAllCancelledBookingIdsByRider :: Transactionable m => Id Person -> m [Id Booking]
+findAllCancelledBookingIdsByRider riderId = do
+  Esq.findAll $ do
+    booking <- from $ table @BookingT
+    where_ $
+      booking ^. BookingRiderId ==. val (toKey riderId)
+        &&. booking ^. BookingStatus ==. val DRB.CANCELLED
+    pure $ booking ^. BookingTId

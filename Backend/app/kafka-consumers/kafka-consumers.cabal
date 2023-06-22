@@ -28,6 +28,7 @@ library
       Consumer.AvailabilityTime.Types
       Consumer.BroadcastMessage.Processor
       Consumer.Flow
+      Consumer.PersonStats.Processor
       Environment
   other-modules:
       Paths_kafka_consumers
@@ -86,6 +87,7 @@ library
     , persistent-postgresql
     , record-dot-preprocessor
     , record-hasfield
+    , rider-app
     , servant-server
     , streamly
     , template-haskell

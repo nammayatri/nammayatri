@@ -27,7 +27,7 @@ import Kernel.Utils.App (lookupDeploymentVersion)
 import Kernel.Utils.Dhall
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client
-import Storage.CachedQueries.CacheConfig
+import "dynamic-offer-driver-app" Storage.CachedQueries.CacheConfig as CC
 import System.Environment (lookupEnv)
 import Prelude (show)
 
@@ -59,13 +59,14 @@ instance FromDhall ConsumerConfig where
         Nothing -> noAutoCommit
         Just v -> autoCommit (Millis $ fromIntegral v)
 
-data ConsumerType = AVAILABILITY_TIME | BROADCAST_MESSAGE deriving (Generic, FromDhall, Read)
+data ConsumerType = AVAILABILITY_TIME | BROADCAST_MESSAGE | PERSON_STATS deriving (Generic, FromDhall, Read)
 
 type ConsumerRecordD = ConsumerRecord (Maybe ByteString) (Maybe ByteString)
 
 instance Show ConsumerType where
   show AVAILABILITY_TIME = "availability-time"
   show BROADCAST_MESSAGE = "broadcast-message"
+  show PERSON_STATS = "person-stats"
 
 type Seconds = Integer
 
@@ -86,7 +87,7 @@ data AppCfg = AppCfg
     availabilityTimeWindowOption :: SWC.SlidingWindowOptions,
     granualityPeriodType :: PeriodType,
     loggerConfig :: LoggerConfig,
-    cacheConfig :: CacheConfig,
+    cacheConfig :: CC.CacheConfig,
     httpClientOptions :: HttpClientOptions,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool
@@ -112,7 +113,7 @@ data AppEnv = AppEnv
     loggerEnv :: LoggerEnv,
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
-    cacheConfig :: CacheConfig,
+    cacheConfig :: CC.CacheConfig,
     coreMetrics :: Metrics.CoreMetricsContainer,
     version :: Metrics.DeploymentVersion,
     enableRedisLatencyLogging :: Bool,

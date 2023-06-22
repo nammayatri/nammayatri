@@ -45,3 +45,16 @@ upsert cancellationReason =
       BookingCancellationReasonReasonStage =. val (cancellationReason.reasonStage),
       BookingCancellationReasonAdditionalInfo =. val (cancellationReason.additionalInfo)
     ]
+
+countCancelledBookingsByRiderId :: Transactionable m => [Id Booking] -> CancellationSource -> m Int
+countCancelledBookingsByRiderId bookingIds cancellationSource = do
+  mkCount <$> do
+    Esq.findAll $ do
+      bookingCancellationReason <- from $ table @BookingCancellationReasonT
+      where_ $
+        bookingCancellationReason ^. BookingCancellationReasonSource ==. val cancellationSource
+          &&. bookingCancellationReason ^. BookingCancellationReasonBookingId `in_` valList (toKey <$> bookingIds)
+      return (countRows :: SqlExpr (Esq.Value Int))
+  where
+    mkCount [counter] = counter
+    mkCount _ = 0

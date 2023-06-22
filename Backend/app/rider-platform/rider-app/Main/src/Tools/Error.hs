@@ -109,3 +109,21 @@ instance IsHTTPError MerchantPaymentMethodError where
     MerchantPaymentMethodDoesNotExist _ -> E400
 
 instance IsAPIError MerchantPaymentMethodError
+
+newtype PersonStatsError
+  = PersonStatsNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''PersonStatsError
+
+instance IsBaseError PersonStatsError where
+  toMessage = \case
+    PersonStatsNotFound personId -> Just $ "Person stats with personId \"" <> show personId <> "\" not found."
+
+instance IsHTTPError PersonStatsError where
+  toErrorCode = \case
+    PersonStatsNotFound _ -> "PERSON_STATS_NOT_FOUND"
+  toHttpCode = \case
+    PersonStatsNotFound _ -> E500
+
+instance IsAPIError PersonStatsError
