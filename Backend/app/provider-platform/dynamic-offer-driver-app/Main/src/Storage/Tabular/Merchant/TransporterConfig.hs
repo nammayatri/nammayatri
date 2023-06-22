@@ -57,11 +57,9 @@ mkPersist
       actualRideDistanceDiffThreshold Centesimal
       upwardsRecomputeBuffer Centesimal
       approxRideDistanceDiffThreshold Centesimal
-      driverLeaderBoardExpiry Seconds Maybe
       minLocationAccuracy Double
       createdAt UTCTime
       updatedAt UTCTime
-
       Primary merchantId
       deriving Generic
     |]

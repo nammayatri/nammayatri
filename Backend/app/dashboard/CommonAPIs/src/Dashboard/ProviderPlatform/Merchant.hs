@@ -128,7 +128,6 @@ data MerchantCommonConfigRes = MerchantCommonConfigRes
     actualRideDistanceDiffThreshold :: HighPrecMeters,
     upwardsRecomputeBuffer :: HighPrecMeters,
     approxRideDistanceDiffThreshold :: HighPrecMeters,
-    driverLeaderBoardExpiry :: Maybe Seconds,
     minLocationAccuracy :: Double,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
