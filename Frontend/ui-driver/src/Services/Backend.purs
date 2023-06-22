@@ -423,8 +423,8 @@ updateDriverInfoBT payload = do
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
 
-mkUpdateDriverInfoReq :: UpdateDriverInfoReq
-mkUpdateDriverInfoReq = UpdateDriverInfoReq {
+mkUpdateDriverInfoReq :: String -> UpdateDriverInfoReq
+mkUpdateDriverInfoReq dummy = UpdateDriverInfoReq {
        "middleName": Nothing,
        "firstName" : Nothing,
        "lastName"  : Nothing,

@@ -50,7 +50,7 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Screens as ScreenNames
 import Helpers.Utils (getVehicleType)
-
+import Debug(spy)
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -65,7 +65,11 @@ screen initialState =
         pure unit
       pure $ pure unit
     )]
-  , eval
+  , eval:
+      \state action -> do
+        let _ = spy "DriverProfileScreen action " state
+        let _ = spy "DriverProfileScreen state " action
+        eval state action
   }
 
 view
