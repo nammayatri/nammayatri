@@ -17,15 +17,16 @@ module Lib.Payment.API
   )
 where
 
+import GHC.Base (Symbol)
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Types.Id
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Servant
 
-type API ride =
+type API (entityId :: Symbol) entity =
   "payment"
-    :> ( Capture "rideId" (Id ride)
+    :> ( Capture entityId (Id entity)
            :> "createOrder"
            :> Post '[JSON] Payment.CreateOrderResp
            :<|> Capture "orderId" (Id DOrder.PaymentOrder)

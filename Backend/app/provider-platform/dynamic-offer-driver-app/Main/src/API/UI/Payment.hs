@@ -33,7 +33,7 @@ import Tools.Auth
 
 type API =
   TokenAuth
-    :> Payment.API DOrder.PaymentOrder
+    :> Payment.API "orderId" DOrder.PaymentOrder
 
 handler :: FlowServer API
 handler authInfo =

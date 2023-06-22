@@ -34,7 +34,7 @@ import Tools.Auth
 
 type API =
   TokenAuth
-    :> Payment.API DRide.Ride
+    :> Payment.API "rideId" DRide.Ride
 
 handler :: FlowServer API
 handler authInfo =
