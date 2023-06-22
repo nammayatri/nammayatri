@@ -97,7 +97,7 @@ foreign import renderBase64Image :: String -> String -> Boolean -> Effect Unit
 foreign import setScaleType :: String -> String -> String -> Effect Unit
 foreign import copyToClipboard :: String -> Unit
 foreign import drawRoute :: Locations -> String -> String -> Boolean -> String -> String -> Int -> String -> String -> String -> SpecialLocationTag -> Effect Unit
-foreign import updateRouteMarker :: Locations -> String -> String -> String -> String -> SpecialLocationTag -> Effect Unit
+foreign import updateRouteMarker :: UpdateRouteMarker -> Effect Unit
 foreign import isCoordOnPath :: Locations -> Number -> Number -> Int -> Effect IsLocationOnPath
 foreign import updateRoute :: Locations -> String -> String -> SpecialLocationTag -> Effect Unit
 -- -- foreign import drawActualRoute :: String -> String -> Locations -> Effect Int
@@ -330,6 +330,15 @@ type Location = {
   lat :: Number,
   lng :: Number,
   place :: String
+}
+
+type UpdateRouteMarker = {
+    locations :: Locations
+  , sourceName :: String
+  , destName :: String
+  , sourceIcon :: String
+  , destIcon :: String
+  , specialLocation :: SpecialLocationTag
 }
 -- type Point = Array Number
 

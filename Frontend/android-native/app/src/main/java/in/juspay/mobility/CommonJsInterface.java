@@ -2851,20 +2851,19 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
         ImageView pointer = customMarkerView.findViewById(R.id.pointer_img);
         try {
-                if (imageName.equals("ny_ic_dest_marker")) {
-                    pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_dest_marker));
+            if (imageName.equals("ny_ic_dest_marker")) {
+                pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_dest_marker));
             } else if(imageName.equals("ny_ic_zone_pickup_marker")){
-                    pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_zone_pickup_marker));
+                pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_zone_pickup_marker));
             } else if(imageName.equals("ny_ic_customer_current_location")){
-                    pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_customer_current_location));
-                    ViewGroup.LayoutParams layoutParams = (ViewGroup.LayoutParams) pointer.getLayoutParams();
-                    layoutParams.height = 160;
-                    layoutParams.width = 160;
-                    pointer.setLayoutParams(layoutParams);
-             }
-            else{
-                    pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_src_marker));
-                }
+                pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_customer_current_location));
+                ViewGroup.LayoutParams layoutParams = (ViewGroup.LayoutParams) pointer.getLayoutParams();
+                layoutParams.height = 160;
+                layoutParams.width = 160;
+                pointer.setLayoutParams(layoutParams);
+            } else {
+                pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_src_marker));
+            }
         } catch (Exception e) {
             Log.e("Exception in rendering Image", e.toString());
         }
@@ -3628,20 +3627,25 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void updateRouteMarker(final String json, String sourceName, String destinationName, String sourceMarker, String destinationMarker, final String specialLocation) {
+    public void updateRouteMarker(final String json) {
         if (activity != null) {
             activity.runOnUiThread(() -> {
                 try {
                     if (googleMap != null) {
                         JSONObject jsonObject = new JSONObject(json);
-                        JSONArray coordinates = jsonObject.getJSONArray("points");
-                        JSONObject specialLocationObject = new JSONObject(specialLocation);
+                        JSONObject coor = (JSONObject) jsonObject.getJSONObject("locations");
+                        JSONArray coordinates = coor.getJSONArray("points");
+                        String sourceName = jsonObject.getString("sourceName");
+                        String destinationName = jsonObject.getString("destName");
+                        String sourceMarker = jsonObject.getString("sourceIcon");
+                        String destinationMarker = jsonObject.getString("destIcon");
+                        JSONObject specialLocationObject = jsonObject.getJSONObject("specialLocation");
                         String sourceTag = specialLocationObject.getString("sourceSpecialTagIcon");
                         String destinationTag = specialLocationObject.getString("destSpecialTagIcon");
                         if (coordinates.length() > 0) {
                             JSONObject sourceCoordinates = (JSONObject) coordinates.get(0);
                             JSONObject destCoordinates = (JSONObject) coordinates.get(coordinates.length() - 1);
-                            if ((sourceMarker != null && !sourceMarker.equals("")) && (!sourceName.equals("") || !sourceTag.equals(""))) {
+                            if (!sourceMarker.equals("") && (!sourceName.equals("") || !sourceTag.equals(""))) {
                                 removeMarker(sourceMarker);
                                 LatLng sourceLatLng = new LatLng(sourceCoordinates.getDouble("lat"), sourceCoordinates.getDouble("lng"));
                                 MarkerOptions markerObj = new MarkerOptions()
@@ -3651,7 +3655,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                                 Marker marker = googleMap.addMarker(markerObj);
                                 markers.put(sourceMarker, marker);
                             }
-                            if ((destinationMarker != null && !destinationMarker.equals("")) && (!destinationName.equals("") || !destinationTag.equals(""))) {
+                            if (!destinationMarker.equals("") && (!destinationName.equals("") || !destinationTag.equals(""))) {
                                 removeMarker(destinationMarker);
                                 LatLng destinationLatLng = new LatLng(destCoordinates.getDouble("lat"), destCoordinates.getDouble("lng"));
                                 MarkerOptions markerObj = new MarkerOptions()

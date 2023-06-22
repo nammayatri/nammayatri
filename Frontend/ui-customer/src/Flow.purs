@@ -74,7 +74,7 @@ import Foreign.Class (class Encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import Resources.Constants (getSearchRadius)
 import Merchant.Utils as MU
-import Screens.RideBookingFlow.HomeScreen.Config (specialLocationIcons, specialLocationConfig)
+import Screens.RideBookingFlow.HomeScreen.Config (specialLocationIcons, specialLocationConfig, updateRouteMarkerConfig)
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload refreshFlow = do
@@ -690,7 +690,7 @@ homeScreenFlow = do
             destSpecialTagIcon = specialLocationIcons state.props.zoneType.destinationTag
             srcMarker = (Remote.normalRoute "").srcMarker
             destMarker = (Remote.normalRoute "").destMarker
-        lift $ lift $ liftFlow $ updateRouteMarker (Remote.walkCoordinate state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong) state.data.source state.data.destination srcMarker destMarker (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon)
+        lift $ lift $ liftFlow $ updateRouteMarker $ updateRouteMarkerConfig (Remote.walkCoordinate state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong) state.data.source state.data.destination srcMarker destMarker (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon)
         homeScreenFlow
     GET_SELECT_LIST state -> do
       when (isLocalStageOn QuoteList) $ do
