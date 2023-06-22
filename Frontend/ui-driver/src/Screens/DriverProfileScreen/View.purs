@@ -159,13 +159,21 @@ driverRideDetailsView state push =
         ]
       , horizontalScrollView
            [ width MATCH_PARENT
-           , height MATCH_PARENT
+           , height WRAP_CONTENT
            , orientation HORIZONTAL
            ][ linearLayout
+               [ width MATCH_PARENT
+               , height MATCH_PARENT
+               , orientation HORIZONTAL
+               ][
+            linearLayout
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
                 , cornerRadius 20.0
                 , background Color.blue600
+                , padding $ Padding 12 10 12 10
+                , gravity CENTER_VERTICAL
+                , margin $ MarginHorizontal 16 10
                 ][ textView
                     [ text "243"
                     , width WRAP_CONTENT
@@ -173,6 +181,7 @@ driverRideDetailsView state push =
                     , textSize FontSize.a_14
                     , fontStyle $ FontStyle.bold LanguageStyle
                     , color Color.black900
+                    , margin $ MarginRight 4
                     ]
                   , textView
                     [ text "Late Night Trips"
@@ -183,10 +192,88 @@ driverRideDetailsView state push =
                     , color Color.black700
                     ]
                 ]
+               ]
            ]
+      , badgeLayoutView state
     ]
 
+badgeLayoutView :: forall w. ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+badgeLayoutView state = 
+  horizontalScrollView
+           [ width MATCH_PARENT
+           , height WRAP_CONTENT
+           , orientation HORIZONTAL
+           , margin $ Margin 16 12 16 12
+           ][ linearLayout
+               [ width MATCH_PARENT
+               , height MATCH_PARENT
+               , orientation HORIZONTAL
+               ](map(\item -> badgeView item)(getBadgeData state))
+           ]
 
+badgeView :: forall w. {badgeImage :: String, primaryText :: String, subText :: String} -> PrestoDOM (Effect Unit) w
+badgeView state = 
+  linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , background Color.blue600
+    , cornerRadius 15.0
+    , padding $ Padding 25 10 25 12
+    , margin $ MarginRight 16
+    ][ imageView
+        [ width $ V 100
+        , height $ V 100
+        , imageWithFallback state.badgeImage
+        ]
+     , textView  
+        [ text state.primaryText
+        , layoutGravity "center_horizontal"
+        , textSize FontSize.a_16
+        , color Color.black900
+        , fontStyle $ FontStyle.bold LanguageStyle
+        , height WRAP_CONTENT
+        ]
+     , textView  
+        [ text state.subText
+        , layoutGravity "center_horizontal"
+        , textSize FontSize.a_14
+        , color Color.black800
+        , height WRAP_CONTENT
+        , fontStyle $ FontStyle.medium LanguageStyle
+        ]
+    ]
+
+getBadgeData :: ST.DriverProfileScreenState -> Array {badgeImage :: String, primaryText :: String, subText :: String}
+getBadgeData state = [{badgeImage: "ny_ic_five_star_badge,https://assets.juspay.in/nammayatri/images/driver/ny_ic_five_star_badge.png"
+                     , primaryText: "5-Star Rides"
+                     , subText: "235"
+                      },
+                      {badgeImage: "ny_ic_safe_ride,https://assets.juspay.in/nammayatri/images/driver/ny_ic_safe_ride.png"
+                     , primaryText: "Safe Rides"
+                     , subText: "235"
+                      },
+                      {badgeImage: "ny_ic_clean_auto_badge,https://assets.juspay.in/nammayatri/images/driver/ny_ic_clean_auto_badge.png"
+                     , primaryText: "Clean Auto"
+                     , subText: "235"
+                      },
+                      {badgeImage: "ny_ic_expert_driver,https://assets.juspay.in/nammayatri/images/driver/ny_ic_expert_driver.png"
+                     , primaryText: "Expert Driving"
+                     , subText: "235"
+                      },
+                      {badgeImage: "ny_ic_navigator_badge,https://assets.juspay.in/nammayatri/images/driver/ny_ic_navigator_badge.png"
+                     , primaryText: "Navigator"
+                     , subText: "235"
+                      },
+                      {badgeImage: "ny_ic_ontime_badge,https://assets.juspay.in/nammayatri/images/driver/ny_ic_ontime_badge.png"
+                     , primaryText: "On Time"
+                     , subText: "235"
+                      },
+                      {badgeImage: "ny_ic_polite_driver_badge,https://assets.juspay.in/nammayatri/images/driver/ny_ic_polite_driver_badge.png"
+                     , primaryText: "Professional"
+                     , subText: "235"
+                      }
+                      ]
 
 headerView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 headerView state push = 
@@ -253,7 +340,7 @@ driverDetailsView push state =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  ][]
+  ][ driverRideDetailsView state push ]
 
 autoDetailsView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w 
 autoDetailsView push state = 
