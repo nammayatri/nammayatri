@@ -13,23 +13,21 @@
 -}
 {-# LANGUAGE TypeApplications #-}
 
-module Storage.Queries.Message.MessageReport where
+module Lib.Storage.Queries.Message.MessageReport where
 
-import qualified Domain.Types.Message.Message as Msg
-import Domain.Types.Message.MessageReport
-import qualified Domain.Types.Message.MessageTranslation as MTD
-import qualified Domain.Types.Person as P
 import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
-import Storage.Tabular.Message.Instances ()
-import qualified Storage.Tabular.Message.Message as M
-import Storage.Tabular.Message.MessageReport
-import qualified Storage.Tabular.Message.MessageTranslation as MT
-import qualified Storage.Tabular.Person as PT
+import qualified Lib.Domain.Types.Message.Message as Msg
+import Lib.Domain.Types.Message.MessageReport
+import qualified Lib.Domain.Types.Message.MessageTranslation as MTD
+import Lib.Storage.Tabular.Message.Instances ()
+import qualified Lib.Storage.Tabular.Message.Message as M
+import Lib.Storage.Tabular.Message.MessageReport
+import qualified Lib.Storage.Tabular.Message.MessageTranslation as MT
 
 createMany :: [MessageReport] -> SqlDB ()
 createMany = Esq.createMany
@@ -57,33 +55,33 @@ fullMessage lang =
                      &&. messageTranslation ?. MT.MessageTranslationLanguage ==. val (Just lang)
                )
 
-findByDriverIdAndLanguage :: Transactionable m => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, Msg.RawMessage, Maybe MTD.MessageTranslation)]
-findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
+findByPersonIdAndLanguage :: Transactionable m => Id Person -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, Msg.RawMessage, Maybe MTD.MessageTranslation)]
+findByPersonIdAndLanguage personId language mbLimit mbOffset = do
   let limitVal = min (fromMaybe 10 mbLimit) 10
       offsetVal = fromMaybe 0 mbOffset
   Esq.findAll $ do
     (messageReport :& message :& mbMessageTranslation) <- from (fullMessage language)
     where_ $
-      messageReport ^. MessageReportDriverId ==. val (toKey $ cast driverId)
+      messageReport ^. MessageReportPersonId ==. val personId.getId
     orderBy [desc $ messageReport ^. MessageReportCreatedAt]
     limit $ fromIntegral limitVal
     offset $ fromIntegral offsetVal
     return (messageReport, message, mbMessageTranslation)
 
-findByDriverIdMessageIdAndLanguage :: Transactionable m => Id P.Driver -> Id Msg.Message -> Language -> m (Maybe (MessageReport, Msg.RawMessage, Maybe MTD.MessageTranslation))
-findByDriverIdMessageIdAndLanguage driverId messageId language = do
+findByPersonIdMessageIdAndLanguage :: Transactionable m => Id Person -> Id Msg.Message -> Language -> m (Maybe (MessageReport, Msg.RawMessage, Maybe MTD.MessageTranslation))
+findByPersonIdMessageIdAndLanguage personId messageId language = do
   Esq.findOne $ do
     (messageReport :& message :& mbMessageTranslation) <- from (fullMessage language)
     where_ $
-      messageReport ^. MessageReportTId ==. val (toKey (messageId, driverId))
+      messageReport ^. MessageReportTId ==. val (toKey (messageId, personId.getId))
     return (messageReport, message, mbMessageTranslation)
 
-findByMessageIdAndDriverId :: Transactionable m => Id Msg.Message -> Id P.Driver -> m (Maybe MessageReport)
-findByMessageIdAndDriverId messageId driverId =
+findByMessageIdAndPersonId :: Transactionable m => Id Msg.Message -> Id Person -> m (Maybe MessageReport)
+findByMessageIdAndPersonId messageId personId =
   Esq.findOne $ do
     messageReport <- from $ table @MessageReportT
     where_ $
-      messageReport ^. MessageReportTId ==. val (toKey (messageId, driverId))
+      messageReport ^. MessageReportTId ==. val (toKey (messageId, personId.getId))
     return messageReport
 
 findByMessageIdAndStatusWithLimitAndOffset ::
@@ -92,23 +90,19 @@ findByMessageIdAndStatusWithLimitAndOffset ::
   Maybe Int ->
   Id Msg.Message ->
   Maybe DeliveryStatus ->
-  m [(MessageReport, P.Person)]
+  m [MessageReport]
 findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset messageId mbDeliveryStatus = do
   findAll $ do
-    (messageReport :& person) <-
+    messageReport <-
       from $
         table @MessageReportT
-          `innerJoin` table @PT.PersonT
-            `Esq.on` ( \(messageReport :& person) ->
-                         messageReport ^. MessageReportDriverId ==. person ^. PT.PersonTId
-                     )
     where_ $
       messageReport ^. MessageReportMessageId ==. val (toKey messageId)
         &&. if isJust mbDeliveryStatus then messageReport ^. MessageReportDeliveryStatus ==. val (fromMaybe Success mbDeliveryStatus) else val True
     orderBy [desc $ messageReport ^. MessageReportCreatedAt]
     limit limitVal
     offset offsetVal
-    return (messageReport, person)
+    return messageReport
   where
     limitVal = min (maybe 10 fromIntegral mbLimit) 20
     offsetVal = maybe 0 fromIntegral mbOffset
@@ -139,8 +133,8 @@ getMessageCountByReadStatus messageId =
     mkCount [counter] = counter
     mkCount _ = 0
 
-updateSeenAndReplyByMessageIdAndDriverId :: Id Msg.Message -> Id P.Driver -> Bool -> Maybe Text -> SqlDB ()
-updateSeenAndReplyByMessageIdAndDriverId messageId driverId readStatus reply = do
+updateSeenAndReplyByMessageIdAndPersonId :: Id Msg.Message -> Id Person -> Bool -> Maybe Text -> SqlDB ()
+updateSeenAndReplyByMessageIdAndPersonId messageId personId readStatus reply = do
   now <- getCurrentTime
   Esq.update $ \mr -> do
     set
@@ -151,10 +145,10 @@ updateSeenAndReplyByMessageIdAndDriverId messageId driverId readStatus reply = d
       ]
     where_ $
       mr ^. MessageReportMessageId ==. val (toKey messageId)
-        &&. mr ^. MessageReportDriverId ==. val (toKey $ cast driverId)
+        &&. mr ^. MessageReportPersonId ==. val personId.getId
 
-updateMessageLikeByMessageIdAndDriverIdAndReadStatus :: Id Msg.Message -> Id P.Driver -> SqlDB ()
-updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId driverId = do
+updateMessageLikeByMessageIdAndPersonIdAndReadStatus :: Id Msg.Message -> Id Person -> SqlDB ()
+updateMessageLikeByMessageIdAndPersonIdAndReadStatus messageId personId = do
   now <- getCurrentTime
   Esq.update $ \mr -> do
     set
@@ -164,11 +158,11 @@ updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId driverId = do
       ]
     where_ $
       mr ^. MessageReportMessageId ==. val (toKey messageId)
-        &&. mr ^. MessageReportDriverId ==. val (toKey $ cast driverId)
+        &&. mr ^. MessageReportPersonId ==. val personId.getId
         &&. mr ^. MessageReportReadStatus ==. val True
 
-updateDeliveryStatusByMessageIdAndDriverId :: Id Msg.Message -> Id P.Driver -> DeliveryStatus -> SqlDB ()
-updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = do
+updateDeliveryStatusByMessageIdAndPersonId :: Id Msg.Message -> Id Person -> DeliveryStatus -> SqlDB ()
+updateDeliveryStatusByMessageIdAndPersonId messageId personId deliveryStatus = do
   now <- getCurrentTime
   Esq.update $ \mr -> do
     set
@@ -178,10 +172,10 @@ updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = d
       ]
     where_ $
       mr ^. MessageReportMessageId ==. val (toKey messageId)
-        &&. mr ^. MessageReportDriverId ==. val (toKey $ cast driverId)
+        &&. mr ^. MessageReportPersonId ==. val personId.getId
 
-deleteByPersonId :: Id P.Person -> SqlDB ()
+deleteByPersonId :: Id Person -> SqlDB ()
 deleteByPersonId personId =
   Esq.delete $ do
     messagereport <- from $ table @MessageReportT
-    where_ $ messagereport ^. MessageReportDriverId ==. val (toKey personId)
+    where_ $ messagereport ^. MessageReportPersonId ==. val personId.getId

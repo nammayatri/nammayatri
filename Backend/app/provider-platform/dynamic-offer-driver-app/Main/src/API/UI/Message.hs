@@ -14,70 +14,54 @@
 
 module API.UI.Message where
 
-import qualified Domain.Action.UI.Message as DMessage
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Message.Message as Message
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.APISuccess
+import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Utils.Common (fromMaybeM, withFlowHandlerAPI)
+import qualified Lib.API.Message as MSG
+import qualified Lib.Domain.Action.UI.Message as DMessage
+import qualified Lib.Domain.Types.Message.Message as Message
 import Servant
+import qualified Storage.Queries.Person as Person
 import Tools.Auth
 
 type API =
-  "message"
-    :> ( "list"
-           :> TokenAuth
-           :> QueryParam "limit" Int
-           :> QueryParam "offset" Int
-           :> Get '[JSON] [DMessage.MessageAPIEntityResponse]
-           :<|> Capture "messageId" (Id Message.Message)
-             :> "seen"
-             :> TokenAuth
-             :> Put '[JSON] APISuccess
-           :<|> Capture "messageId" (Id Message.Message)
-             :> "like"
-             :> TokenAuth
-             :> Put '[JSON] APISuccess
-           :<|> Capture "messageId" (Id Message.Message)
-             :> "response"
-             :> TokenAuth
-             :> ReqBody '[JSON] DMessage.MessageReplyReq
-             :> Put '[JSON] APISuccess
-           :<|> "media" -- TODO : need to remove this apis once S3 is done.
-             :> MandatoryQueryParam "filePath" Text
-             :> TokenAuth
-             :> Get '[JSON] Text
-           :<|> Capture "messageId" (Id Message.Message)
-             :> TokenAuth
-             :> Get '[JSON] DMessage.MessageAPIEntityResponse
-       )
+  TokenAuth
+    :> MSG.UiAPI
 
 handler :: FlowServer API
-handler =
-  messageList
-    :<|> messageSeen
-    :<|> messageLiked
-    :<|> messageResponse
-    :<|> fetchMedia
-    :<|> getMessage
+handler = wrapperHandler
+  where
+    wrapperHandler (pid, mid) =
+      messageList (pid, mid)
+        :<|> messageSeen (pid, mid)
+        :<|> messageLiked (pid, mid)
+        :<|> messageResponse (pid, mid)
+        :<|> fetchMedia (pid, mid)
+        :<|> getMessage (pid, mid)
 
 messageList :: (Id SP.Person, Id DM.Merchant) -> Maybe Int -> Maybe Int -> FlowHandler [DMessage.MessageAPIEntityResponse]
-messageList (driverId, merchantId) mbLimit = withFlowHandlerAPI . DMessage.messageList (driverId, merchantId) mbLimit
+messageList (driverId, merchantId) mbLimit mbOffset = withFlowHandlerAPI $ do
+  person <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  DMessage.messageList (cast driverId, cast merchantId) mbLimit mbOffset person.language
 
-getMessage :: Id Message.Message -> (Id SP.Person, Id DM.Merchant) -> FlowHandler DMessage.MessageAPIEntityResponse
-getMessage msgId (driverId, merchantId) = withFlowHandlerAPI $ DMessage.getMessage (driverId, merchantId) msgId
+getMessage :: (Id SP.Person, Id DM.Merchant) -> Id Message.Message -> FlowHandler DMessage.MessageAPIEntityResponse
+getMessage (driverId, merchantId) msgId = withFlowHandlerAPI $ do
+  person <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  DMessage.getMessage (cast driverId, cast merchantId) msgId person.language
 
-messageSeen :: Id Message.Message -> (Id SP.Person, Id DM.Merchant) -> FlowHandler APISuccess
-messageSeen msgId (driverId, merchantId) = withFlowHandlerAPI $ DMessage.messageSeen (driverId, merchantId) msgId
+messageSeen :: (Id SP.Person, Id DM.Merchant) -> Id Message.Message -> FlowHandler APISuccess
+messageSeen (driverId, merchantId) msgId = withFlowHandlerAPI $ DMessage.messageSeen (cast driverId, cast merchantId) msgId
 
-messageLiked :: Id Message.Message -> (Id SP.Person, Id DM.Merchant) -> FlowHandler APISuccess
-messageLiked msgId (driverId, merchantId) = withFlowHandlerAPI $ DMessage.messageLiked (driverId, merchantId) msgId
+messageLiked :: (Id SP.Person, Id DM.Merchant) -> Id Message.Message -> FlowHandler APISuccess
+messageLiked (driverId, merchantId) msgId = withFlowHandlerAPI $ do DMessage.messageLiked (cast driverId, cast merchantId) msgId
 
-messageResponse :: Id Message.Message -> (Id SP.Person, Id DM.Merchant) -> DMessage.MessageReplyReq -> FlowHandler APISuccess
-messageResponse msgId (driverId, merchantId) = withFlowHandlerAPI . DMessage.messageResponse (driverId, merchantId) msgId
+messageResponse :: (Id SP.Person, Id DM.Merchant) -> Id Message.Message -> DMessage.MessageReplyReq -> FlowHandler APISuccess
+messageResponse (driverId, merchantId) msgId messageReplyReq = withFlowHandlerAPI $ DMessage.messageResponse (cast driverId, cast merchantId) msgId messageReplyReq
 
-fetchMedia :: Text -> (Id SP.Person, Id DM.Merchant) -> FlowHandler Text
-fetchMedia filePath (driverId, merchantId) = withFlowHandlerAPI $ DMessage.fetchMedia (driverId, merchantId) filePath
+fetchMedia :: (Id SP.Person, Id DM.Merchant) -> Text -> FlowHandler Text
+fetchMedia (driverId, merchantId) filePath = withFlowHandlerAPI $ DMessage.fetchMedia (cast driverId, cast merchantId) filePath

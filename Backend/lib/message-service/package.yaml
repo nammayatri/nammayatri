@@ -1,20 +1,17 @@
-name: dynamic-offer-driver-app
+name: message-service
 version: 0.1.0.0
-github: "nammayatri/nammayatri"
+github: “nammayatri/nammayatri”
 license: AllRightsReserved
-author: "nammayatri"
-maintainer: "nammayatri"
-copyright: "2023 Juspay Technologies Private Limited"
-
+author: “nammayatri”
+maintainer: “nammayatri”
+copyright: “2023 Juspay Technologies Private Limited”
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
 # category:            Web
-
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
 description: Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
-
 default-extensions:
   - ConstraintKinds
   - DataKinds
@@ -49,7 +46,6 @@ default-extensions:
   - UndecidableInstances
   - StandaloneDeriving
   - PackageImports
-
 dependencies:
   - aeson
   - base >= 4.7 && < 5
@@ -94,13 +90,10 @@ dependencies:
   - singletons
   - cassava
   - vector
-  - geohash == 1.0.1
-
 ghc-options:
   - -fwrite-ide-info
   - -hiedir=.hie
   - -fplugin=RecordDotPreprocessor
-
 library:
   source-dirs: src
   ghc-options:
@@ -111,23 +104,3 @@ library:
     - -Werror
   dependencies:
     - mobility-core
-    - beckn-spec
-    - location-updates
-    - special-zone-a
-    - payment
-    - message-service
-
-executables:
-  dynamic-offer-driver-app-exe:
-    main: Main.hs
-    source-dirs: server
-    other-modules: []
-    ghc-options:
-      - -threaded
-      - -rtsopts
-      - '"-with-rtsopts=-N -T"'
-    dependencies:
-      - dynamic-offer-driver-app
-      - mobility-core
-      - beckn-spec
-      - beckn-services

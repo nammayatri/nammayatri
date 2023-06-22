@@ -12,15 +12,16 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.Message.Message where
+module Lib.Domain.Types.Message.Message where
 
 import Data.Map as HM
 import Data.OpenApi hiding (description, title)
-import qualified Domain.Types.MediaFile as MF
-import Domain.Types.Merchant (Merchant)
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Id
+import qualified Lib.Domain.Types.MediaFile as MF
+
+data Merchant
 
 data MessageType = Action Text | Read deriving (Generic, ToJSON, FromJSON, ToSchema, Read, Show)
 

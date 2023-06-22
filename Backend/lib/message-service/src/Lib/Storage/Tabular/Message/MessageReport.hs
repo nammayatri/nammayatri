@@ -18,16 +18,14 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.Message.MessageReport where
+module Lib.Storage.Tabular.Message.MessageReport where
 
-import qualified Domain.Types.Message.Message as Msg
-import qualified Domain.Types.Message.MessageReport as Domain
-import Domain.Types.Person (Driver)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
-import qualified Storage.Tabular.Message.Message as Msg
-import Storage.Tabular.Person (PersonTId)
+import qualified Lib.Domain.Types.Message.Message as Msg
+import qualified Lib.Domain.Types.Message.MessageReport as Domain
+import qualified Lib.Storage.Tabular.Message.Message as Msg
 
 derivePersistField "Domain.DeliveryStatus"
 
@@ -36,7 +34,7 @@ mkPersist
   [defaultQQ|
     MessageReportT sql=message_report
       messageId Msg.MessageTId
-      driverId PersonTId
+      personId Text
       deliveryStatus Domain.DeliveryStatus
       readStatus Bool
       likeStatus Bool
@@ -44,21 +42,21 @@ mkPersist
       messageDynamicFields Domain.MessageDynamicFieldsType
       updatedAt UTCTime
       createdAt UTCTime
-      Primary messageId driverId
+      Primary messageId personId
       deriving Generic
     |]
 
 instance TEntityKey MessageReportT where
-  type DomainKey MessageReportT = (Id Msg.Message, Id Driver)
-  fromKey (MessageReportTKey _messageId _driverId) = (fromKey _messageId, cast (fromKey _driverId))
-  toKey (messageId, driverId) = MessageReportTKey (toKey messageId) (toKey $ cast driverId)
+  type DomainKey MessageReportT = (Id Msg.Message, Text)
+  fromKey (MessageReportTKey _messageId _personId) = (fromKey _messageId, _personId)
+  toKey (messageId, personId) = MessageReportTKey (toKey messageId) personId
 
 instance FromTType MessageReportT Domain.MessageReport where
   fromTType MessageReportT {..} = do
     return $
       Domain.MessageReport
         { messageId = fromKey messageId,
-          driverId = cast $ fromKey driverId,
+          personId = Id personId,
           ..
         }
 
@@ -66,6 +64,6 @@ instance ToTType MessageReportT Domain.MessageReport where
   toTType Domain.MessageReport {..} =
     MessageReportT
       { messageId = toKey messageId,
-        driverId = toKey $ cast driverId,
+        personId = personId.getId,
         ..
       }

@@ -90,6 +90,7 @@ library:
     - -Wincomplete-uni-patterns
   dependencies:
     - dynamic-offer-driver-app
+    - message-service
 
 executables:
   kafka-consumers-exe:

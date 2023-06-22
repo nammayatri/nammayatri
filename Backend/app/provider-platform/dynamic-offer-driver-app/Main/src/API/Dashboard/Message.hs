@@ -15,26 +15,25 @@
 module API.Dashboard.Message where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
-import qualified Domain.Action.Dashboard.Message as DMessage
 import qualified Domain.Types.Merchant as DM
 import Environment
+import Kernel.External.Encryption
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI)
+import qualified Lib.API.Message as ADM
+import qualified Lib.Domain.Action.Dashboard.Message as DMessage
+import qualified Lib.Domain.Types.Message.Message as Domain
+import qualified Lib.Domain.Types.Message.MessageReport as Domain
 import Servant hiding (throwError)
+import SharedLogic.Merchant (findMerchantByShortId)
+import Storage.CachedQueries.Merchant.TransporterConfig as QTC
+import Storage.Queries.Person (findAllDriverIdExceptProvided, findDriverByIdsIn)
 
 type API =
-  "message"
-    :> ( Common.UploadFileAPI
-           :<|> Common.AddLinkAPI
-           :<|> Common.AddMessageAPI
-           :<|> Common.SendMessageAPI
-           :<|> Common.MessageListAPI
-           :<|> Common.MessageInfoAPI
-           :<|> Common.MessageDeliveryInfoAPI
-           :<|> Common.MessageReceiverListAPI
-       )
+  ADM.DashboardAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
@@ -47,30 +46,60 @@ handler merchantId =
     :<|> messageDeliveryInfo merchantId
     :<|> messageReceiverList merchantId
 
+sendMessageHandle :: DMessage.ServiceHandle Flow
+sendMessageHandle =
+  DMessage.ServiceHandle
+    { findAllPersonIdExceptProvided = castFindAllDriverIdExceptProvided,
+      findPersonInIds = castFindPersonInIds
+    }
+
+castFindPersonInIds :: (Transactionable m, Monad m, EncFlow m r) => [Id Domain.Person] -> m [Domain.Person]
+castFindPersonInIds mdPersonIds = do
+  drivers' <- findDriverByIdsIn (map cast mdPersonIds)
+  drivers <- mapM decrypt drivers'
+  pure $ map castPerson drivers
+  where
+    castPerson person = Domain.Person (cast person.id) person.firstName person.mobileNumber
+
+castFindAllDriverIdExceptProvided :: Transactionable m => Id Domain.Merchant -> [Id Domain.Person] -> m [Id Domain.Person]
+castFindAllDriverIdExceptProvided mdMerchantId lsMdDriverId = map cast <$> findAllDriverIdExceptProvided (cast mdMerchantId) (map cast lsMdDriverId)
+
 addLinkAsMedia :: ShortId DM.Merchant -> Common.AddLinkAsMedia -> FlowHandler Common.UploadFileResponse
-addLinkAsMedia merchantShortId = withFlowHandlerAPI . DMessage.addLinkAsMedia merchantShortId
+addLinkAsMedia merchantShortId req = withFlowHandlerAPI $ do
+  _ <- findMerchantByShortId merchantShortId
+  DMessage.addLinkAsMedia req
 
 uploadFile :: ShortId DM.Merchant -> Common.UploadFileRequest -> FlowHandler Common.UploadFileResponse
-uploadFile merchantShortId = withFlowHandlerAPI . DMessage.uploadFile merchantShortId
+uploadFile merchantShortId commonFileReq = withFlowHandlerAPI $ do
+  merchant <- findMerchantByShortId merchantShortId
+  transporterConfig <- QTC.findByMerchantId merchant.id
+  DMessage.uploadFile commonFileReq (cast merchant.id) transporterConfig
 
 addMessage :: ShortId DM.Merchant -> Common.AddMessageRequest -> FlowHandler Common.AddMessageResponse
-addMessage merchantShortId = withFlowHandlerAPI . DMessage.addMessage merchantShortId
+addMessage merchantShortId req = withFlowHandlerAPI $ do
+  merchant <- findMerchantByShortId merchantShortId
+  DMessage.addMessage req (cast merchant.id)
 
 sendMessage :: ShortId DM.Merchant -> Common.SendMessageRequest -> FlowHandler APISuccess
-sendMessage merchantShortId = withFlowHandlerAPI . DMessage.sendMessage merchantShortId
+sendMessage merchantShortId req = withFlowHandlerAPI $ do
+  merchant <- findMerchantByShortId merchantShortId
+  DMessage.sendMessage req (cast merchant.id) sendMessageHandle
 
 messageList :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> FlowHandler Common.MessageListResponse
-messageList merchantShortId mbLimit =
-  withFlowHandlerAPI . DMessage.messageList merchantShortId mbLimit
+messageList merchantShortId mbLimit mbOffset = withFlowHandlerAPI $ do
+  merchant <- findMerchantByShortId merchantShortId
+  DMessage.messageList mbLimit mbOffset (cast merchant.id)
 
 messageInfo :: ShortId DM.Merchant -> Id Common.Message -> FlowHandler Common.MessageInfoResponse
-messageInfo merchantShortId =
-  withFlowHandlerAPI . DMessage.messageInfo merchantShortId . cast
+messageInfo merchantShortId msgId = withFlowHandlerAPI $ do
+  _ <- findMerchantByShortId merchantShortId
+  DMessage.messageInfo (cast msgId)
 
 messageDeliveryInfo :: ShortId DM.Merchant -> Id Common.Message -> FlowHandler Common.MessageDeliveryInfoResponse
-messageDeliveryInfo merchantShortId =
-  withFlowHandlerAPI . DMessage.messageDeliveryInfo merchantShortId . cast
+messageDeliveryInfo merchantShortId msgId = withFlowHandlerAPI $ do
+  _ <- findMerchantByShortId merchantShortId
+  DMessage.messageDeliveryInfo (cast msgId)
 
 messageReceiverList :: ShortId DM.Merchant -> Id Common.Message -> Maybe Text -> Maybe Common.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> FlowHandler Common.MessageReceiverListResponse
-messageReceiverList merchantShortId messageId number status limit =
-  withFlowHandlerAPI . DMessage.messageReceiverList merchantShortId (cast messageId) number status limit
+messageReceiverList _ messageId _ status mbOffset mbLimit = withFlowHandlerAPI $ do
+  DMessage.messageReceiverList sendMessageHandle (cast messageId) status mbOffset mbLimit

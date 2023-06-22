@@ -18,14 +18,13 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.Message.Message where
+module Lib.Storage.Tabular.Message.Message where
 
-import qualified Domain.Types.Message.Message as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
-import Storage.Tabular.MediaFile (MediaFileTId)
-import Storage.Tabular.Merchant (MerchantTId)
+import qualified Lib.Domain.Types.Message.Message as Domain
+import Lib.Storage.Tabular.MediaFile (MediaFileTId)
 
 derivePersistField "Domain.MessageType"
 
@@ -42,7 +41,7 @@ mkPersist
       likeCount Int
       viewCount Int
       mediaFiles (PostgresList MediaFileTId)
-      merchantId MerchantTId
+      merchantId Text
       createdAt UTCTime
       Primary id
       deriving Generic

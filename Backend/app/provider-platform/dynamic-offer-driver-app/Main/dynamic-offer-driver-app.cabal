@@ -99,7 +99,6 @@ library
       Domain.Action.Dashboard.Exotel
       Domain.Action.Dashboard.Issue
       Domain.Action.Dashboard.Merchant
-      Domain.Action.Dashboard.Message
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.Volunteer
       Domain.Action.Internal.DriverReferee
@@ -121,7 +120,6 @@ library
       Domain.Action.UI.Location
       Domain.Action.UI.Location.UpdateLocation
       Domain.Action.UI.Maps
-      Domain.Action.UI.Message
       Domain.Action.UI.OnMessage
       Domain.Action.UI.OrgAdmin
       Domain.Action.UI.Payment
@@ -190,9 +188,6 @@ library
       Domain.Types.Merchant.MerchantServiceUsageConfig
       Domain.Types.Merchant.OnboardingDocumentConfig
       Domain.Types.Merchant.TransporterConfig
-      Domain.Types.Message.Message
-      Domain.Types.Message.MessageReport
-      Domain.Types.Message.MessageTranslation
       Domain.Types.Person
       Domain.Types.QuoteSpecialZone
       Domain.Types.Rating
@@ -307,9 +302,6 @@ library
       Storage.Queries.Merchant.MerchantServiceUsageConfig
       Storage.Queries.Merchant.OnboardingDocumentConfig
       Storage.Queries.Merchant.TransporterConfig
-      Storage.Queries.Message.Message
-      Storage.Queries.Message.MessageReport
-      Storage.Queries.Message.MessageTranslation
       Storage.Queries.Person
       Storage.Queries.QuoteSpecialZone
       Storage.Queries.Rating
@@ -377,10 +369,6 @@ library
       Storage.Tabular.Merchant.MerchantServiceUsageConfig
       Storage.Tabular.Merchant.OnboardingDocumentConfig
       Storage.Tabular.Merchant.TransporterConfig
-      Storage.Tabular.Message.Instances
-      Storage.Tabular.Message.Message
-      Storage.Tabular.Message.MessageReport
-      Storage.Tabular.Message.MessageTranslation
       Storage.Tabular.Person
       Storage.Tabular.QuoteSpecialZone
       Storage.Tabular.Rating
@@ -472,6 +460,7 @@ library
     , http-client
     , lens
     , location-updates
+    , message-service
     , mobility-core
     , openapi3
     , payment

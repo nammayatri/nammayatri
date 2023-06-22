@@ -12,22 +12,27 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.Message.MessageReport where
+module Lib.Domain.Types.Message.MessageReport where
 
 import qualified Data.Map as M
 import Data.OpenApi
-import qualified Domain.Types.Message.Message as Msg
-import Domain.Types.Person (Driver)
 import Kernel.Prelude
 import Kernel.Types.Id
+import qualified Lib.Domain.Types.Message.Message as Msg
 
 type MessageDynamicFieldsType = M.Map Text Text
 
 data DeliveryStatus = Success | Failed | Queued | Sending deriving (Generic, ToSchema, Show, Read, ToJSON, FromJSON)
 
+data Person = Person
+  { id :: Id Person,
+    firstName :: Text,
+    mobileNumber :: Maybe Text
+  }
+
 data MessageReport = MessageReport
   { messageId :: Id Msg.Message,
-    driverId :: Id Driver,
+    personId :: Id Person,
     deliveryStatus :: DeliveryStatus,
     readStatus :: Bool,
     likeStatus :: Bool,

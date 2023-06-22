@@ -945,3 +945,13 @@ updateAlternateMobileNumberAndCode person = do
         PersonUpdatedAt =. val now
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey person.id)
+
+findDriverByIdsIn ::
+  Transactionable m =>
+  [Id Person.Person] ->
+  m [Person.Person]
+findDriverByIdsIn personIds = do
+  findAll $ do
+    person <- from $ table @TPerson.PersonT
+    where_ $ person ^. TPerson.PersonTId `in_` valList (toKey <$> personIds)
+    return person

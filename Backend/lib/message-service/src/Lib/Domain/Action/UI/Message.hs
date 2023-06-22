@@ -12,28 +12,27 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Action.UI.Message where
+module Lib.Domain.Action.UI.Message where
 
 import qualified AWS.S3 as S3
 import Data.OpenApi hiding (description, info, title, url)
 import qualified Data.Text as T
-import qualified Domain.Types.MediaFile as MF
-import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Message.Message as Domain
-import qualified Domain.Types.Person as SP
-import Environment
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Types (Language (ENGLISH))
+import Kernel.External.Types
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.APISuccess
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.IOLogging
 import Kernel.Utils.JSON (stripPrefixUnderscoreIfAny)
-import qualified Storage.Queries.MediaFile as MFQ
-import qualified Storage.Queries.Message.Message as MQ
-import qualified Storage.Queries.Message.MessageReport as MRQ
-import qualified Storage.Queries.Person as QP
-import Tools.Error
+import qualified Lib.Domain.Types.MediaFile as MF
+import qualified Lib.Domain.Types.Message.Message as Domain
+import qualified Lib.Domain.Types.Message.MessageReport as Domain
+import qualified Lib.Storage.Queries.MediaFile as MFQ
+import Lib.Storage.Queries.Message.Message as MQ
+import qualified Lib.Storage.Queries.Message.MessageReport as MRQ
 
 data MediaFileApiResponse = MediaFileApiResponse
   { url :: Text,
@@ -63,10 +62,9 @@ instance ToJSON MessageAPIEntityResponse where
 newtype MessageReplyReq = MessageReplyReq {reply :: Text}
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
-messageList :: (Id SP.Person, Id DM.Merchant) -> Maybe Int -> Maybe Int -> Flow [MessageAPIEntityResponse]
-messageList (driverId, _) mbLimit mbOffset = do
-  person <- Esq.runInReplica (QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId))
-  messageDetails <- Esq.runInReplica $ MRQ.findByDriverIdAndLanguage (cast driverId) (fromMaybe ENGLISH person.language) mbLimit mbOffset
+messageList :: (MonadFlow m, EsqDBReplicaFlow m r, EsqDBFlow m r) => (Id Domain.Person, Id Domain.Merchant) -> Maybe Int -> Maybe Int -> Maybe Language -> m [MessageAPIEntityResponse]
+messageList (personId, _) mbLimit mbOffset personLanguage = do
+  messageDetails <- Esq.runInReplica $ MRQ.findByPersonIdAndLanguage (cast personId) (fromMaybe ENGLISH personLanguage) mbLimit mbOffset
   mapM makeMessageAPIEntity messageDetails
   where
     makeMessageAPIEntity (messageReport, rawMessage, messageTranslation) = do
@@ -87,12 +85,11 @@ messageList (driverId, _) mbLimit mbOffset = do
             mediaFiles = mediaFilesApiType
           }
 
-getMessage :: (Id SP.Person, Id DM.Merchant) -> Id Domain.Message -> Flow MessageAPIEntityResponse
-getMessage (driverId, _) messageId = do
-  person <- Esq.runInReplica (QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId))
+getMessage :: (MonadFlow m, EsqDBReplicaFlow m r, EsqDBFlow m r) => (Id Domain.Person, Id Domain.Merchant) -> Id Domain.Message -> Maybe Language -> m MessageAPIEntityResponse
+getMessage (personId, _) messageId personLanguage = do
   messageDetails <-
     Esq.runInReplica $
-      MRQ.findByDriverIdMessageIdAndLanguage (cast driverId) messageId (fromMaybe ENGLISH person.language)
+      MRQ.findByPersonIdMessageIdAndLanguage (cast personId) messageId (fromMaybe ENGLISH personLanguage)
         >>= fromMaybeM (InvalidRequest "Message not found")
   makeMessageAPIEntity messageDetails
   where
@@ -114,33 +111,30 @@ getMessage (driverId, _) messageId = do
             mediaFiles = mediaFilesApiType
           }
 
-fetchMedia :: (Id SP.Person, Id DM.Merchant) -> Text -> Flow Text
-fetchMedia (driverId, _) filePath = do
-  _ <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+fetchMedia :: (MonadFlow m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) => (Id Domain.Person, Id Domain.Merchant) -> Text -> m Text
+fetchMedia (_, _) filePath = do
   S3.get $ T.unpack filePath
 
-messageSeen :: (Id SP.Person, Id DM.Merchant) -> Id Domain.Message -> Flow APISuccess
-messageSeen (driverId, _) messageId = do
-  messageDetails <- Esq.runInReplica $ MRQ.findByMessageIdAndDriverId messageId (cast driverId) >>= fromMaybeM (InvalidRequest "Message not found")
+messageSeen :: (MonadFlow m, MonadReader r m, EsqDBReplicaFlow m r, HasField "esqDBEnv" r EsqDBEnv, HasField "loggerEnv" r LoggerEnv) => (Id Domain.Person, Id Domain.Merchant) -> Id Domain.Message -> m APISuccess
+messageSeen (personId, _) messageId = do
+  messageDetails <- Esq.runInReplica $ MRQ.findByMessageIdAndPersonId messageId (cast personId) >>= fromMaybeM (InvalidRequest "Message not found")
   Esq.runTransaction $ do
     when (not messageDetails.readStatus) $ MQ.updateMessageViewCount messageId 1
-    MRQ.updateSeenAndReplyByMessageIdAndDriverId messageId (cast driverId) True Nothing
+    MRQ.updateSeenAndReplyByMessageIdAndPersonId messageId (cast personId) True Nothing
   return Success
 
-messageLiked :: (Id SP.Person, Id DM.Merchant) -> Id Domain.Message -> Flow APISuccess
-messageLiked (driverId, _) messageId = do
-  _ <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  messageDetails <- Esq.runInReplica $ MRQ.findByMessageIdAndDriverId messageId (cast driverId) >>= fromMaybeM (InvalidRequest "Message not found")
+messageLiked :: (MonadFlow m, EsqDBReplicaFlow m r, EsqDBFlow m r) => (Id Domain.Person, Id Domain.Merchant) -> Id Domain.Message -> m APISuccess
+messageLiked (personId, _) messageId = do
+  messageDetails <- Esq.runInReplica $ MRQ.findByMessageIdAndPersonId messageId (cast personId) >>= fromMaybeM (InvalidRequest "Message not found")
   unless (messageDetails.readStatus) $
     throwError $ InvalidRequest "Message is not seen"
   let val = if messageDetails.likeStatus then (-1) else 1
   Esq.runTransaction $ do
     when messageDetails.readStatus $ MQ.updateMessageLikeCount messageId val
-    MRQ.updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId (cast driverId)
+    MRQ.updateMessageLikeByMessageIdAndPersonIdAndReadStatus messageId (cast personId)
   return Success
 
-messageResponse :: (Id SP.Person, Id DM.Merchant) -> Id Domain.Message -> MessageReplyReq -> Flow APISuccess
-messageResponse (driverId, _) messageId MessageReplyReq {..} = do
-  _ <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  Esq.runTransaction $ MRQ.updateSeenAndReplyByMessageIdAndDriverId messageId (cast driverId) True (Just reply)
+messageResponse :: (MonadFlow m, MonadReader r m, HasField "esqDBEnv" r EsqDBEnv, HasField "loggerEnv" r LoggerEnv) => (Id Domain.Person, Id Domain.Merchant) -> Id Domain.Message -> MessageReplyReq -> m APISuccess
+messageResponse (personId, _) messageId MessageReplyReq {..} = do
+  Esq.runTransaction $ MRQ.updateSeenAndReplyByMessageIdAndPersonId messageId (cast personId) True (Just reply)
   return Success

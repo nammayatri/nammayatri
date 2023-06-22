@@ -12,12 +12,12 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.Message.MessageTranslation where
+module Lib.Domain.Types.Message.MessageTranslation where
 
-import qualified Domain.Types.Message.Message as Msg
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Id
+import qualified Lib.Domain.Types.Message.Message as Msg
 
 data MessageTranslation = MessageTranslation
   { messageId :: Id Msg.Message,

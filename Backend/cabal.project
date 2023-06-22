@@ -28,6 +28,7 @@ packages:
   lib/payment
   lib/shared-services
   lib/location-updates
+  lib/message-service
   lib/special-zone
   lib/scheduler
   test

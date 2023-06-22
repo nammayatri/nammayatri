@@ -18,7 +18,6 @@ import qualified Data.Text as T
 import Domain.Types.Booking (Booking)
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.Merchant
-import Domain.Types.Message.Message as Message
 import Domain.Types.Person as Person
 import Domain.Types.RegistrationToken as RegToken
 import Domain.Types.SearchRequestForDriver
@@ -31,6 +30,7 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Domain.Types.Message.Message as Message
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import Storage.CachedQueries.Merchant.TransporterConfig
 

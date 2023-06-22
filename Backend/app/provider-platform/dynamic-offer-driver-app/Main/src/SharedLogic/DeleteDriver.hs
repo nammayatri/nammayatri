@@ -25,6 +25,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Storage.Queries.Message.MessageReport as QMessage
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as CQDriverInfo
@@ -39,7 +40,6 @@ import qualified Storage.Queries.DriverOnboarding.Image as QImage
 import qualified Storage.Queries.DriverQuote as QDriverQuote
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Issue.IssueReport as QIssueReport
-import qualified Storage.Queries.Message.MessageReport as QMessage
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Ride as QRide
@@ -74,7 +74,7 @@ deleteDriver merchantShortId reqDriverId = do
     QVehicle.deleteById reqDriverId
     QDriverInfo.deleteById (cast reqDriverId)
     QDriverFlowStatus.deleteById reqDriverId
-    QMessage.deleteByPersonId reqDriverId
+    QMessage.deleteByPersonId (cast reqDriverId)
     QIssueReport.deleteByPersonId reqDriverId
     QPerson.deleteById reqDriverId
   runInLocationDB $ QDriverLocation.deleteById reqDriverId

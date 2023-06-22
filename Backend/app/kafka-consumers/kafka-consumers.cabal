@@ -80,6 +80,7 @@ library
     , hashmap
     , hedis
     , hw-kafka-client
+    , message-service
     , mobility-core
     , monad-control
     , persistent
