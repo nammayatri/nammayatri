@@ -28,6 +28,8 @@ where
 
 import Domain.Types.Exophone
 import qualified Domain.Types.Merchant as DM
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
@@ -95,7 +97,8 @@ makePhoneKey phone = "CachedQueries:Exophones:Phone-" <> phone
 patternKey :: Text
 patternKey = "CachedQueries:Exophones:*"
 
-create :: Exophone -> Esq.SqlDB ()
+-- create :: Exophone -> Esq.SqlDB ()
+create :: L.MonadFlow m => Exophone -> m (MeshResult ())
 create = Queries.create
 
 updateAffectedPhones :: [Text] -> Esq.SqlDB ()

@@ -17,16 +17,16 @@ module Storage.CachedQueries.Person.PersonFlowStatus where
 
 import Domain.Types.Person
 import Domain.Types.Person.PersonFlowStatus
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Person.PersonFlowStatus as Queries
-import qualified EulerHS.Language as L
-import EulerHS.KVConnector.Types
 
-create :: (L.MonadFlow m) => PersonFlowStatus -> m (MeshResult ())
+create :: L.MonadFlow m => PersonFlowStatus -> m (MeshResult ())
 create = Queries.create
 
 getStatus :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person -> m (Maybe FlowStatus)

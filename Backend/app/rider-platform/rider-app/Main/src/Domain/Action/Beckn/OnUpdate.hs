@@ -253,7 +253,7 @@ onUpdate ValidatedRideAssignedReq {..} = do
   ride <- buildRide
   DB.runTransaction $ do
     QRB.updateStatus booking.id SRB.TRIP_ASSIGNED
-    QRide.create ride
+    _ <- QRide.create ride
     QPFS.updateStatus booking.riderId DPFS.RIDE_PICKUP {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, otp, vehicleNumber, fromLocation = Maps.getCoordinates booking.fromLocation, driverLocation = Nothing}
   QPFS.clearCache booking.riderId
   Notify.notifyOnRideAssigned booking ride

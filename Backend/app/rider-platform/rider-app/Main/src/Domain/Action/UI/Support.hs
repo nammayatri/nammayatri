@@ -96,8 +96,8 @@ callbackRequest :: EsqDBFlow m r => Id Person.Person -> m APISuccess
 callbackRequest personId = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   newCallbackRequest <- buildCallbackRequest person
-  runTransaction $
-    QCallback.create newCallbackRequest
+  -- runTransaction $
+  _ <- QCallback.create newCallbackRequest
   return Success
 
 buildCallbackRequest :: MonadFlow m => Person.Person -> m DCallback.CallbackRequest

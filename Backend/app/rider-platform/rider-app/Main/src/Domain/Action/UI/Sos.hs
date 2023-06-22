@@ -54,7 +54,8 @@ newtype SosRes = SosRes
 createSosDetails :: (EsqDBFlow m r, EncFlow m r) => Id Person.Person -> SosReq -> m SosRes
 createSosDetails personId req = do
   sosDetails <- buildSosDetails personId req
-  runTransaction $ QSos.create sosDetails
+  -- runTransaction $ QSos.create sosDetails
+  _ <- QSos.create sosDetails
   return $
     SosRes
       { sosId = sosDetails.id

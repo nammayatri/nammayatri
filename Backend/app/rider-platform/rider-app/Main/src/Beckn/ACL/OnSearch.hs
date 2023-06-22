@@ -27,7 +27,7 @@ import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (id, state, unpack)
 import Kernel.Prelude
 import Kernel.Product.Validation.Context (validateContext)
-import Kernel.Storage.Esqueleto (runTransaction)
+-- import Kernel.Storage.Esqueleto (runTransaction)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common hiding (id)
@@ -85,7 +85,8 @@ logOnSearchEvent (BecknCallbackReq context (leftToMaybe -> mbErr)) = do
   let errorType = show.(._type) <$> mbErr
   let errorCode = (.code) <$> mbErr
   let errorMessage = (.message) =<< mbErr
-  runTransaction $
+  -- runTransaction $
+  void $
     OnSearchEvent.create $
       OnSearchEvent {..}
 

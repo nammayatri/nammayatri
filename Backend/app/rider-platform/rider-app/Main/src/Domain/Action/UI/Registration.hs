@@ -203,7 +203,8 @@ auth req mbBundleVersion mbClientVersion = do
   if person.enabled && not person.blocked
     then do
       DB.runTransaction $ Person.updatePersonVersions person mbBundleVersion mbClientVersion
-      DB.runTransaction (RegistrationToken.create regToken)
+      -- DB.runTransaction (RegistrationToken.create regToken)
+      _ <- RegistrationToken.create regToken
       when (isNothing useFakeOtpM) $ do
         let otpCode = SR.authValueHash regToken
         let otpHash = smsCfg.credConfig.otpHash
@@ -256,7 +257,8 @@ signatureAuth req mbBundleVersion mbClientVersion = do
   if person.enabled && not person.blocked
     then do
       DB.runTransaction $ Person.updatePersonVersions person mbBundleVersion mbClientVersion
-      DB.runTransaction (RegistrationToken.create regToken)
+      -- DB.runTransaction (RegistrationToken.create regToken)
+      _ <- RegistrationToken.create regToken
       mbEncEmail <- encrypt `mapM` req.email
       DB.runTransaction $ do
         RegistrationToken.setDirectAuth regToken.id
@@ -432,9 +434,9 @@ getRegistrationTokenE tokenId =
 createPerson :: (EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, Redis.HedisFlow m r, CacheFlow m r) => AuthReq -> Text -> Maybe Text -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> m SP.Person
 createPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion merchantId = do
   person <- buildPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion merchantId
-  DB.runTransaction $ do
-    Person.create person
-    QDFS.create $ makeIdlePersonFlowStatus person
+  -- DB.runTransaction $ do
+  _ <- Person.create person
+  _ <- QDFS.create $ makeIdlePersonFlowStatus person
   pure person
   where
     makeIdlePersonFlowStatus person =

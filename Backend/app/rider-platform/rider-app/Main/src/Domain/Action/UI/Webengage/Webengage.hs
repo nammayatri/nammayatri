@@ -93,7 +93,8 @@ callInfobip req = withTransactionIdLogTag' req.metadata.messageId $ do
   let infoMessage = head infoBipRes.messages
   let status = Just infoMessage.status.groupName
   webengage <- buildWebengage version entityId templetId infoMessage.messageId webMsgId personId.getId status
-  runTransaction $ QWeb.create webengage
+  -- runTransaction $ QWeb.create webengage
+  _ <- QWeb.create webengage
   return $
     WebengageRes
       { status = "sms_accepted"

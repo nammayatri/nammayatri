@@ -62,8 +62,8 @@ createSavedReqLocation riderId sreq = do
   unless (null savedLocations) $ throwError $ InvalidRequest "Location with this tag already exists"
   now <- getCurrentTime
   location <- buildSavedReqLocation sreq now riderId
-  runTransaction $
-    QSavedReqLocation.create location
+  -- runTransaction $
+  _ <- QSavedReqLocation.create location
   return APISuccess.Success
 
 getSavedReqLocations :: EsqDBReplicaFlow m r => Id Person.Person -> m SavedReqLocationsListRes

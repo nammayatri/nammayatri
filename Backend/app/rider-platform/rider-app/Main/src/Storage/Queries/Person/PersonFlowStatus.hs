@@ -30,10 +30,10 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.Person.PersonFlowStatus as BeamPFS
 import Storage.Tabular.Person.PersonFlowStatus
-import Lib.Utils
 
 create :: L.MonadFlow m => DPFS.PersonFlowStatus -> m (MeshResult ())
 create personFlowStatus = do

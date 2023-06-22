@@ -29,12 +29,12 @@ import qualified Storage.Beam.Webengage as BeamW
 import Storage.Tabular.Webengage
 
 create :: L.MonadFlow m => Webengage -> m (MeshResult ())
-create Webengage = do
+create webengage = do
   dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamW.WebEngageT
+  let modelName = Se.modelTableName @BeamW.WebengageT
   let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainWebengageToBeam Webengage)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainWebengageToBeam webengage)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById :: Transactionable m => Id Webengage -> m (Maybe Webengage)

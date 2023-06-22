@@ -18,10 +18,10 @@ import Storage.Tabular.Sos
 create :: L.MonadFlow m => Sos.Sos -> m (MeshResult ())
 create sos = do
   dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamS.Sos
+  let modelName = Se.modelTableName @BeamS.SosT
   let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRideToBeam sos)
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainSosToBeam sos)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 updateStatus :: Id Sos.Sos -> Sos.SosStatus -> SqlDB ()
