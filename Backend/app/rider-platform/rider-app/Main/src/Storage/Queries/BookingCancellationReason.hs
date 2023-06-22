@@ -16,10 +16,15 @@ module Storage.Queries.BookingCancellationReason where
 
 import Domain.Types.Booking
 import Domain.Types.BookingCancellationReason
+import qualified EulerHS.KVConnector.Flow as KV
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Lib.Utils
+import qualified Sequelize as Se
 import qualified Storage.Beam.BookingCancellationReason as BeamBCR
 import Storage.Tabular.BookingCancellationReason
 
@@ -47,6 +52,30 @@ upsert cancellationReason =
       BookingCancellationReasonReasonStage =. val (cancellationReason.reasonStage),
       BookingCancellationReasonAdditionalInfo =. val (cancellationReason.additionalInfo)
     ]
+
+upsert' :: L.MonadFlow m => BookingCancellationReason -> m ()
+upsert' cancellationReason = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamBCR.BookingCancellationReasonT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbCOnf' -> do
+      res <- either (pure Nothing) (transformBeamBookingCancellationReasonToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamBCR.bookingId $ Se.Eq (getId cancellationReason.bookingId)]
+      if isJust res
+        then
+          void $
+            KV.updateWoReturningWithKVConnector
+              dbCOnf'
+              updatedMeshConfig
+              [ Se.Set BeamBCR.rideId (getId <$> cancellationReason.rideId),
+                Se.Set BeamBCR.source cancellationReason.source,
+                Se.Set BeamBCR.reasonCode cancellationReason.reasonCode,
+                Se.Set BeamBCR.reasonStage cancellationReason.reasonStage,
+                Se.Set BeamBCR.additionalInfo cancellationReason.additionalInfo
+              ]
+              [Se.Is BeamBCR.bookingId (Se.Eq $ getId cancellationReason.bookingId)]
+        else void $ KV.createWoReturingKVConnector dbCOnf' updatedMeshConfig (transformDomainBookingCancellationReasonToBeam cancellationReason)
+    Nothing -> pure ()
 
 transformBeamBookingCancellationReasonToDomain :: BeamBCR.BookingCancellationReason -> BookingCancellationReason
 transformBeamBookingCancellationReasonToDomain BeamBCR.BookingCancellationReasonT {..} = do

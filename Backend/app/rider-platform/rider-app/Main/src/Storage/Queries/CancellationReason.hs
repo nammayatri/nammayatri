@@ -16,8 +16,13 @@ module Storage.Queries.CancellationReason where
 
 import Domain.Types.CancellationReason
 import qualified Domain.Types.CancellationReason as Domain
+import qualified EulerHS.KVConnector.Flow as KV
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Lib.Utils
+import qualified Sequelize as Se
 import qualified Storage.Beam.CancellationReason as BeamCR
 import Storage.Tabular.CancellationReason
 
@@ -33,6 +38,19 @@ findAll cancStage =
           OnAssign -> cancellationReason ^. CancellationReasonOnAssign
     orderBy [desc $ cancellationReason ^. CancellationReasonPriority]
     return cancellationReason
+
+findAll' :: L.MonadFlow m => CancellationStage -> m [CancellationReason]
+findAll' cancStage = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  seCaseCondition <- case cancStage of
+    OnSearch -> pure $ Se.Is BeamCR.onSearch $ Se.Eq True
+    OnConfirm -> pure $ Se.Is BeamCR.onConfirm $ Se.Eq True
+    OnAssign -> pure $ Se.Is BeamCR.onAssign $ Se.Eq True
+  let modelName = Se.modelTableName @BeamCR.CancellationReasonT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> either (pure []) (transformBeamCancellationReasonToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamCR.enabled $ Se.Eq True, seCaseCondition]] (Se.Desc BeamCR.priority) Nothing Nothing
+    Nothing -> pure []
 
 transformBeamCancellationReasonToDomain :: BeamCR.CancellationReason -> CancellationReason
 transformBeamCancellationReasonToDomain BeamCR.CancellationReasonT {..} = do
