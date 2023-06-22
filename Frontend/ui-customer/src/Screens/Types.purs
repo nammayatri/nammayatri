@@ -976,7 +976,7 @@ type Fares = {
 
 type FareComponent = {
   fareType :: String
-, price :: Int
+, price :: String
 , title :: String
 }
 

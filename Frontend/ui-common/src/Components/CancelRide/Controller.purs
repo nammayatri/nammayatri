@@ -33,6 +33,7 @@ data Action = Button1 PrimaryButtonController.Action
 type Config = {
     cancelRideReasons :: Array CancellationReasons
     , primaryButtonTextConfig :: PrimaryButtonTextConfig
+    , cornerRadius :: Number
     , activeIndex :: Maybe Int
     , activeReasonCode :: Maybe String
     , isCancelButtonActive :: Boolean
@@ -67,6 +68,7 @@ config =
             firstText : "Go Back"
           , secondText : "Cancel Ride"
         }
+    , cornerRadius : 8.0
     , activeIndex : Nothing  
     , activeReasonCode : Nothing
     , isCancelButtonActive : false

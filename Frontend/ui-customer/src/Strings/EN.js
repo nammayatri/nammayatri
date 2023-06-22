@@ -463,5 +463,7 @@ const englishStrings = {
   "REASON_FOR_DELETING_ACCOUNT" : "Reason for deleting account*",
   "SUBMIT_REQUEST" : "Submit Request",
   "PLEASE_ENTER_A_VALID_EMAIL" : "Please enter a valid email",
-  "PLATFORM_FEE" : "Platform Fee"
+  "PLATFORM_FEE" : "Platform Fee",
+  "FINDING_QUOTES_TEXT": "Searching for cabs around",
+  "PLEASE_WAIT": "Please wait!"
 }

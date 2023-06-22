@@ -40,6 +40,7 @@ type FareDetails =
   , priceDetails :: PriceDetails
   , visibility :: Visibility
   , textStyle :: Style
+  , currency :: String
   }
 
 type PriceDetails = 
@@ -69,6 +70,7 @@ config =
     , color : Color.black700
     , visibility : VISIBLE
     , margin : (Margin 0 0 0 0)
+    , currency : "₹"
     , priceDetails : {
         text : 0
       , textStyle : SubHeading1

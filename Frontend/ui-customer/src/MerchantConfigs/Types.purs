@@ -6,18 +6,23 @@ type AppConfig =
   {
     primaryTextColor :: String,
     primaryBackground :: String,
-    searchLocationTheme :: String,
+    currency :: String,
     estimateConfirmText :: String,
     autoConfirmingLoaderColor :: String,
     quoteListModelBackground :: String,
     quoteListModel :: QuoteListConfig,
     profileBackground :: String,
+    isGradient :: String,
+    gradient :: Array String,
+    showPickUpandDrop :: Boolean,
     profileName :: String,
     profileImage :: String,
     profileCompletion :: String,
     feedbackBackground :: String,
     sideBarList :: Array String,
     rateCardColor :: String,
+    showHamMenu :: Boolean,
+    showQuoteFindingText :: Boolean,
     nyBrandingVisibility :: Boolean,
     fontType :: String,
     languageList :: Array Language,
@@ -30,9 +35,63 @@ type AppConfig =
     merchantLogo :: String,
     logs :: Array String,
     showCorporateAddress :: Boolean,
+    searchLocationConfig :: SearchLocationConfig,
+    quoteListItemConfig :: QuoteListItemConfig,
+    alertDialogPrimaryColor :: String,
+    driverInfoConfig :: DriverInfoConfig,
+    ratingConfig :: RatingConfig,
+    primaryButtonCornerRadius :: Number,
+    cancelSearchTextColor :: String,
+    cancelReasonConfig :: CancelReasonConfig,
     terminateBtnConfig :: TerminateBtnConfig,
     showDeleteAccount :: Boolean
   } 
+
+type QuoteListItemConfig = {
+  primaryButtonCorner :: Number,
+  expiresColor :: String,
+  driverImagebg :: String,
+  vehicleHeight :: Int,
+  vehicleWidth :: Int
+}
+
+type RatingConfig = {
+  secondaryButtonTextColor :: String,
+  secondaryButtonStroke :: String,
+  buttonCornerRadius :: Number
+}
+
+type CancelReasonConfig = {
+  secondaryButtonTextColor :: String,
+  secondaryButtonStroke :: String,
+  buttonCornerRadius :: Number
+}
+
+type DriverInfoConfig = {
+  ratingTextColor :: String,
+  ratingBackground :: String,
+  ratingStroke :: String,
+  ratingCornerRadius :: Number,
+  callBackground :: String,
+  callButtonStroke :: String,
+  cardStroke :: String,
+  otpStroke :: String,
+  showIndNumberPlate :: Boolean,
+  callHeight :: Int,
+  callWidth :: Int
+}
+
+type SearchLocationConfig = {
+  searchLocationTheme :: String, 
+  setLocationOnMapColor :: String, 
+  strokeColor :: String,
+  enableLocationTagbar :: String,
+  resultsCardCornerRadius :: Number,
+  showRateCardDetails :: Boolean,
+  lottieHeight :: Int,
+  lottieWidth :: Int,
+  primaryButtonHeight :: Int
+}
 
 type QuoteListConfig = {
   backgroundColor :: String,
@@ -41,7 +100,14 @@ type QuoteListConfig = {
   otpTextBackground :: String,
   otpBackground :: String,
   otpTextColor :: String,
-  otpTitleColor :: String
+  otpTitleColor :: String,
+  selectRideTextColor :: String,
+  lineImage :: String,
+  lottieHeight :: Int,
+  lottieWidth :: Int,
+  topMargin :: Int,
+  noQuotesImageHeight :: Int,
+  noQuotesImageWidth :: Int
 }
 
 type Language =  {

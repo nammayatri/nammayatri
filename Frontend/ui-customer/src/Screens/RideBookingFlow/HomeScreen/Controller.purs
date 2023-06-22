@@ -941,6 +941,7 @@ eval (RateRideButtonActionController (PrimaryButtonController.OnClick)) state = 
           dummyRideRatingState
             { driverName = state.data.driverInfoCardState.driverName
             , rideId = state.data.driverInfoCardState.rideId
+            , appConfig = state.data.config
             }
         }
       }

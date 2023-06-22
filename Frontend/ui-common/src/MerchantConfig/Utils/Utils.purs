@@ -35,6 +35,7 @@ data Merchant
   | JATRISAATHI
   | YATRI
   | PAYTM
+  | PASSCULTURE
 
 derive instance genericMerchant :: Generic Merchant _
 
@@ -56,16 +57,21 @@ decodeMerchantId :: Foreign -> Maybe Merchant
 decodeMerchantId = hush <<< runExcept <<< decode
 
 getAppConfig :: FlowBT String AppConfig
-getAppConfig = liftFlowBT $ getAppConfigEff
+getAppConfig = liftFlowBT $ getAppConfig_
 
-getAppConfigEff :: Effect AppConfig
-getAppConfigEff  = do
+getAppConfig_ :: Effect AppConfig
+getAppConfig_  = do
   config' <- getConfig
+  _ <- pure $ spy "config' ---->>> "  config'
   pure $
     case config' of
       Just config -> do
         case runExcept (decode (encode config )) of
-            Right (_ :: AppConfig) -> config
-            Left _ -> DefaultConfig.config
+            Right (obj :: AppConfig) -> do
+                let _ =  spy "config ---->>> right "  ""
+                config
+            Left err -> do
+                let _  =  spy "config ---->>> left "  ""
+                DefaultConfig.config
       Nothing -> do
             DefaultConfig.config

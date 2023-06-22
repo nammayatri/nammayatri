@@ -885,7 +885,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 textViewPrice.setTextSize(5);
                 textViewPrice.setPadding(0, 0, 0, 10);
                 textViewPrice.setTextColor(Color.parseColor("#454545"));
-                textViewPrice.setText("₹ " + value);
+                textViewPrice.setText(value);
                 linearLayout.addView(textViewPrice);
 
                 fareBreakupElements.addView(linearLayout);

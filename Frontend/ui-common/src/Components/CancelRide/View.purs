@@ -44,6 +44,7 @@ import JBridge(requestKeyboardShow, hideKeyboardOnNavigation)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import MerchantConfig.Utils(getValueFromConfig)
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -340,7 +341,9 @@ firstPrimaryButtonConfig config = let
       {textConfig
       { text = config.primaryButtonTextConfig.firstText
       , color = config.config.primaryBackground}
-      , background = config.config.popupBackground
+      , background = Color.white900
+      , isGradient = false
+      , cornerRadius = config.cornerRadius
       , stroke = "1," <> config.config.primaryBackground
       , width = V ((screenWidth unit/2)-30)
       , id = "Button1"
@@ -354,13 +357,15 @@ secondPrimaryButtonConfig config = let
     config'
        {textConfig
         { text = config.primaryButtonTextConfig.secondText
-        , color = config.config.primaryTextColor}
+        , color =  if (not config.isCancelButtonActive) && getValueFromConfig "isGradient" == "true" then "#696A6F" else config.config.primaryTextColor}
         , width = V ((screenWidth unit/2)-30)
+        , isGradient = if (not config.isCancelButtonActive) then false else if getValueFromConfig "isGradient" == "true" then true else false
+        , cornerRadius = config.cornerRadius
         , id = "Button2"
-        , alpha = if(config.isCancelButtonActive) then 1.0  else 0.5
+        , alpha = if(config.isCancelButtonActive) || (getValueFromConfig "isGradient" == "true") then 1.0  else 0.5
         , isClickable = config.isCancelButtonActive
-        , background = config.config.primaryBackground
-        , stroke = "1," <> config.config.primaryBackground
+        , background = if (not config.isCancelButtonActive) && getValueFromConfig "isGradient" == "true" then "#F1F1F4" else config.config.primaryBackground
+        , stroke = (if getValueFromConfig "isGradient" == "true" then "0," else "1,") <> config.config.primaryBackground
        }
   in primaryButtonConfig'
 

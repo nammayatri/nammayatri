@@ -57,6 +57,7 @@ import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion)
+import Engineering.Helpers.LogEvent (logEvent)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (adjustViewWithKeyboard) as HU
@@ -87,7 +88,6 @@ import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage)
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
-import Engineering.Helpers.LogEvent (logEvent)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -655,7 +655,7 @@ requestInfoCardView push state =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         ]
-        [ RequestInfoCard.view (push <<< RequestInfoCardAction)  ]
+        [ RequestInfoCard.view (push <<< RequestInfoCardAction) state ]
 
 buttonLayout :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 buttonLayout state push =
@@ -1041,13 +1041,13 @@ rideCompletedCardView state push =
             , gravity CENTER
             ]
             [ textView $
-                [ text $ "₹" <> show state.data.finalAmount
+                [ text $ state.data.config.currency <> show state.data.finalAmount
                 , color Color.black800
                 , width WRAP_CONTENT
                 , height WRAP_CONTENT
                 ] <> FontStyle.priceFont LanguageStyle
             , textView $ 
-                [ textFromHtml $ "<strike> ₹" <> (show state.data.driverInfoCardState.price) <> "</strike>"
+                [ textFromHtml $ "<strike>" <> state.data.config.currency <> " " <> (show state.data.driverInfoCardState.price) <> "</strike>"
                 , margin $ Margin 8 5 0 0
                 , width WRAP_CONTENT
                 , height WRAP_CONTENT
@@ -1123,6 +1123,7 @@ topLeftIconView state push =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation HORIZONTAL
+      , visibility if state.data.config.showHamMenu then VISIBLE else GONE
       , margin (Margin 16 48 0 0)
       ][
         linearLayout
@@ -1194,7 +1195,7 @@ suggestedPriceView push state =
         , gravity CENTER
         , margin $ MarginTop if os == "IOS" then 10 else 0
         ][  textView $ 
-            [ text $ if state.data.rateCard.additionalFare == 0 then "₹" <> (show state.data.suggestedAmount) else  "₹" <> (show state.data.suggestedAmount) <> "-" <> "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))
+            [ text $ if state.data.rateCard.additionalFare == 0 then state.data.config.currency <> (show state.data.suggestedAmount) else  state.data.config.currency <> (show state.data.suggestedAmount) <> "-" <> state.data.config.currency <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))
             , color Color.black800
             , margin $ MarginTop 8
             , gravity CENTER_HORIZONTAL
@@ -1497,6 +1498,7 @@ confirmPickUpLocationView push state =
             , gravity CENTER_HORIZONTAL
             , height WRAP_CONTENT
             , width MATCH_PARENT
+            , cornerRadius state.data.config.primaryButtonCornerRadius
             ] <> FontStyle.h1 TypoGraphy
         , if  ((getMerchant FunctionCall == JATRISAATHI) && state.props.isSpecialZone ) then  nearByPickUpPointsView state push else currentLocationView push state
         , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfirmPickupConfig state)
@@ -1553,7 +1555,7 @@ loaderView push state =
                 , width MATCH_PARENT
                 , height WRAP_CONTENT
                 , padding (Padding 0 20 0 16)
-                , color Color.red
+                , color state.data.config.cancelSearchTextColor
                 , gravity CENTER
                 ] <> FontStyle.paragraphText TypoGraphy
         ]
@@ -1740,8 +1742,8 @@ lottieLoaderView state push =
   lottieAnimationView
     [ id $ getNewIDWithTag "1234567890"
     , afterRender (\_ -> pure $ startLottieProcess ((getAssetsBaseUrl FunctionCall) <> "lottie/ic_vehicle_processing.json") (getNewIDWithTag "1234567890") true 0.6 "Default") (const unit)
-    , height $ V 96
-    , width $ V 96
+    , height $ V state.data.config.searchLocationConfig.lottieHeight
+    , width $ V state.data.config.searchLocationConfig.lottieWidth
     ]
 
 getEstimate :: forall action. (GetQuotesRes -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
@@ -1973,7 +1975,7 @@ notinPickUpZoneView push state =
         , gravity CENTER
         , margin $ MarginTop if os == "IOS" then 10 else 0
         ][  textView $
-            [ text $ if state.data.rateCard.additionalFare == 0 then "₹" <> (show state.data.suggestedAmount) else  "₹" <> (show state.data.suggestedAmount) <> "-" <> "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))
+            [ text $ if state.data.rateCard.additionalFare == 0 then (getValueFromConfig "currency") <> (show state.data.suggestedAmount) else  (getValueFromConfig "currency") <> (show state.data.suggestedAmount) <> "-" <> (getValueFromConfig "currency") <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))
             , color Color.black800
             , margin $ MarginTop 8
             , gravity CENTER_HORIZONTAL

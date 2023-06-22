@@ -17,7 +17,7 @@ module Components.PrimaryButton.View where
 import Effect (Effect)
 import Prelude (Unit, bind, const, discard, pure, unit, ($), (&&), (==), (<>))
 import Components.PrimaryButton.Controller (Action(..), Config)
-import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, gradient)
 import JBridge (startLottieProcess, toggleBtnLoader, getKeyInSharedPrefKeys)
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
 import MerchantConfig.Utils (getValueFromConfig)
@@ -41,7 +41,7 @@ view push config =
         , visibility config.visibility
         ]
         [ linearLayout
-            [ height config.height
+            ([ height config.height
             , width config.width
             , cornerRadius config.cornerRadius
             , background config.background
@@ -63,7 +63,7 @@ view push config =
                 (const NoAction)
             , alpha if config.enableLoader then 0.5 else config.alpha
             , stroke config.stroke
-            ]
+            ]  <> if config.isGradient then [gradient config.gradient] else [background config.background])
             [ linearLayout
                 [ width config.width
                 , height config.height

@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name" translatable="false">Pass Culture</string>
+    <string name="client_id" translatable="false">passcultureprovider</string>
+    <string name="service" translatable="false">passculture</string>
+    <string name="bodyText" translatable="false">Yatri Partner collects location data to enable share your location to monitor driver current location, even when the app is closed or not in use.</string>
+    <string name="dev_port" translatable="false">8083</string>
+</resources>

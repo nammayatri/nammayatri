@@ -36,6 +36,7 @@ import Screens.TripDetailsScreen.ComponentConfig
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import MerchantConfig.Utils(getValueFromConfig)
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput 
 screen initialState = 
@@ -201,7 +202,7 @@ tripDetailsView state =
       , gravity RIGHT
       , orientation VERTICAL
       ][  textView $
-          [ text $ "₹" <> ( show state.data.totalAmount)
+          [ text $ (getValueFromConfig "currency") <> ( show state.data.totalAmount)
           , color Color.black
           ] <> FontStyle.body14 TypoGraphy
         , textView $

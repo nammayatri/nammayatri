@@ -19,6 +19,7 @@ import Common.Types.App
 
 import Animation (translateYAnimFromTop)
 import Animation.Config (translateFullYAnimWithDurationConfig, translateYAnimHomeConfig, Direction(..))
+import Common.Types.App (LazyCheck(..))
 import Components.LocationListItem as LocationListItem
 import Components.LocationTagBar as LocationTagBar
 import Components.PrimaryButton as PrimaryButton
@@ -28,25 +29,25 @@ import Data.Function (flip)
 import Data.Maybe (Maybe(..))
 import Debug (spy)
 import Effect (Effect)
+import Effect.Exception (stack)
 import Engineering.Helpers.Commons (getNewIDWithTag, os, safeMarginBottom, safeMarginTop, screenHeight, screenWidth, isPreviousVersion)
+import Engineering.Helpers.LogEvent (logEvent)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils ( debounceFunction, getLocationName, getPreviousVersion)
+import Helpers.Utils (debounceFunction, getLocationName, getPreviousVersion)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import JBridge (getBtnLoader, requestKeyboardShow, getCurrentPosition, firebaseLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Prelude ((<>))
 import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/=), (<<<), (<>), (==), (||), not)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, inputTypeI, clickable, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants (getDelayForAutoComplete)
 import Screens.Types (SearchLocationModelType(..), LocationListItemState)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Common.Types.App (LazyCheck(..))
-import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude ((<>))
-import Engineering.Helpers.LogEvent (logEvent)
 
 view :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -64,7 +65,7 @@ view push state =
           linearLayout
           [ height $ V ((screenHeight unit)/ 7)
           , width MATCH_PARENT
-          , background state.homeScreenConfig.searchLocationTheme
+          , background state.homeScreenConfig.searchLocationConfig.searchLocationTheme
           , clickable case state.isSearchLocation of 
               LocateOnMap -> false 
               _ -> true 
@@ -115,7 +116,7 @@ view push state =
                 , cornerRadius 8.0
                 , clickable true
                 , margin (Margin 16 20 16 10)
-                , stroke "1,#E5E7EB"
+                , stroke state.homeScreenConfig.searchLocationConfig.strokeColor
                 ][  sourceDestinationImageView state
                   , sourceDestinationEditTextView state push
                   ]
@@ -366,9 +367,9 @@ searchResultsView state push =
     scrollView
     [ height  MATCH_PARENT
     , width MATCH_PARENT
-    , cornerRadius 20.0
+    , cornerRadius state.homeScreenConfig.searchLocationConfig.resultsCardCornerRadius
     , padding (PaddingVertical 10 60)
-    , stroke "1,#E5E7EB"
+    , stroke state.homeScreenConfig.searchLocationConfig.strokeColor
     , background Color.white900
     , scrollBarY false
     ][  linearLayout
@@ -405,9 +406,9 @@ primaryButtonConfig state =
         { text = if state.isSearchLocation == LocateOnMap then if state.isSource == Just true then (getString CONFIRM_PICKUP_LOCATION) else (getString CONFIRM_DROP_LOCATION) else ""
         , color = state.homeScreenConfig.primaryTextColor
         }
-      , height = V 60
+      , height = V state.homeScreenConfig.searchLocationConfig.primaryButtonHeight
       , gravity = CENTER
-      , cornerRadius = 8.0
+      , cornerRadius = state.homeScreenConfig.primaryButtonCornerRadius
       , background = state.homeScreenConfig.primaryBackground
       , margin = (MarginHorizontal 16 16)
       , isClickable = true
@@ -421,6 +422,7 @@ savedLocationBar state push =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , margin $ MarginBottom 10
+  , visibility if state.homeScreenConfig.searchLocationConfig.enableLocationTagbar == "true" then VISIBLE else GONE
   ][ linearLayout
      [ width MATCH_PARENT
      , height WRAP_CONTENT
@@ -512,7 +514,7 @@ bottomBtnsView state push =
                             , width WRAP_CONTENT
                             , text item.text
                             , gravity CENTER
-                            , color Color.black700
+                            , color item.color
                             , padding (Padding 10 16 10 16)
                             , onClick
                                 ( \action ->
@@ -540,9 +542,9 @@ bottomBtnsView state push =
             $ btnData state
         )]
 
-btnData :: SearchLocationModelState -> Array { text :: String, imageUrl :: String, action :: Action, buttonType :: String }
+btnData :: SearchLocationModelState -> Array { text :: String, imageUrl :: String, action :: Action, buttonType :: String, color :: String }
 btnData state =
-  [ { text: (getString SET_LOCATION_ON_MAP), imageUrl: "ny_ic_locate_on_map," <> (getAssetStoreLink FunctionCall) <> "ny_ic_locate_on_map.png", action: SetLocationOnMap, buttonType: "LocateOnMap" }
+  [ { text: (getString SET_LOCATION_ON_MAP), imageUrl: "ny_ic_locate_on_map," <> (getAssetStoreLink FunctionCall) <> "ny_ic_locate_on_map.png", action: SetLocationOnMap, buttonType: "LocateOnMap", color : state.homeScreenConfig.searchLocationConfig.setLocationOnMapColor }
   -- , { text: (getString CURRENT_LOCATION), imageUrl: "ny_ic_current_location," <> (getAssetStoreLink FunctionCall) <> "ny_ic_current_location.png", action: SetCurrentLocation, buttonType: "CurrentLocation" }
   ]
 

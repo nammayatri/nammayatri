@@ -59,6 +59,7 @@ import MerchantConfig.Utils as MU
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import MerchantConfig.Utils(getValueFromConfig)
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -109,11 +110,13 @@ skipButtonConfig state =
       config
         { textConfig
           { text = (getString SKIP)
-          , color = state.data.config.rateCardColor
+          , color = state.data.config.ratingConfig.secondaryButtonTextColor
           }
         , width = V (EHC.screenWidth unit / 4)
         , background = Color.white900
-        , stroke = ("1," <> state.data.config.rateCardColor)
+        , isGradient = false
+        , cornerRadius = state.data.config.ratingConfig.buttonCornerRadius
+        , stroke = state.data.config.ratingConfig.secondaryButtonStroke
         , margin = (Margin 0 0 0 0)
         , id = "SkipRatingButton"
         , enableLoader = (JB.getBtnLoader "SkipRatingButton")
@@ -225,7 +228,7 @@ whereToButtonConfig state =
       , isPrefixImage = true
       , background = state.data.config.primaryBackground
       , prefixImageConfig
-        { imageUrl = if (MU.getMerchant FunctionCall) == MU.PAYTM then "ny_ic_bent_right_arrow_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_bent_right_arrow_white.png" else  "ny_ic_bent_right_arrow," <> (getAssetStoreLink FunctionCall) <> "ny_ic_bent_right_arrow.png"
+        { imageUrl = "ny_ic_bent_right_arrow," <> (getAssetStoreLink FunctionCall) <> "ny_ic_bent_right_arrow.png"
         , height = V 16
         , width = V 21
         , margin = (Margin 17 0 17 0)
@@ -244,6 +247,7 @@ primaryButtonRequestRideConfig state =
           { text = (getString REQUEST_RIDE)
           ,  color = state.data.config.primaryTextColor
           }
+        , cornerRadius = state.data.config.primaryButtonCornerRadius
         , margin = (Margin 0 32 0 0)
         , id = "RequestRideButton"
         , enableLoader = (JB.getBtnLoader "RequestRideButton")
@@ -262,6 +266,7 @@ primaryButtonConfirmPickupConfig state =
           { text = (getString CONFIRM_LOCATION)
           , color = state.data.config.primaryTextColor
           }
+        , cornerRadius = state.data.config.primaryButtonCornerRadius
         , margin = (Margin 0 22 0 0)
         , id = "ConfirmLocationButton"
         , background = state.data.config.primaryBackground
@@ -279,6 +284,7 @@ rateRideButtonConfig state =
           { text = (getString RATE_YOUR_DRIVER)
           ,  color = state.data.config.primaryTextColor 
           }
+        , cornerRadius = state.data.config.ratingConfig.buttonCornerRadius
         , background = state.data.config.rateCardColor
         , margin = (MarginLeft 12)
         , id = "RateYourDriverButton"
@@ -302,6 +308,7 @@ cancelRidePopUpConfig state =
         , activeIndex = state.props.cancelRideActiveIndex
         , activeReasonCode = Just state.props.cancelReasonCode
         , isLimitExceeded = ((DS.length (state.props.cancelDescription)) >= 100)
+        , cornerRadius = (getValueFromConfig "primaryButtonCornerRadius")
         , isCancelButtonActive =
           ( case state.props.cancelRideActiveIndex of
               Just cancelRideIndex -> true
@@ -370,7 +377,7 @@ logOutPopUpModelConfig state =
               , padding = (Padding 16 12 16 12)
             },
           option1 {
-            text = if (state.props.customerTip.tipForDriver == 0) then ( if(isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITHOUT_TIP)else (getString SEARCH_AGAIN_WITHOUT_A_TIP)) else ((if (isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITH)else(getString SEARCH_AGAIN_WITH) ) <> " + ₹"<> (fromMaybe "" (["0", "10", "20", "30"] DA.!! state.props.customerTip.tipActiveIndex))) <>" "<>(getString TIP)
+            text = if (state.props.customerTip.tipForDriver == 0) then ( if(isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITHOUT_TIP)else (getString SEARCH_AGAIN_WITHOUT_A_TIP)) else ((if (isLocalStageOn ST.QuoteList) then (getString TRY_AGAIN_WITH)else(getString SEARCH_AGAIN_WITH) ) <> " + " <> (getValueFromConfig "currency") <> (fromMaybe "" (["0", "10", "20", "30"] DA.!! state.props.customerTip.tipActiveIndex))) <>" "<>(getString TIP)
           , width = MATCH_PARENT
           , color = state.data.config.primaryTextColor
           , strokeColor = state.data.config.primaryBackground
@@ -524,14 +531,16 @@ rateCardConfig state =
     config' = RateCard.config
     rateCardConfig' =
       config'
-        { baseFare = "₹" <> HU.toString (state.data.rateCard.baseFare)
-        , extraFare = "₹" <> HU.toString (state.data.rateCard.extraFare)
+        { baseFare = state.data.config.currency <> HU.toString (state.data.rateCard.baseFare)
+        , extraFare = state.data.config.currency <> HU.toString (state.data.rateCard.extraFare)
         , nightCharges = state.data.rateCard.nightCharges
-        , pickUpCharges = "₹" <> HU.toString (state.data.rateCard.pickUpCharges)
-        , additionalFare = "₹" <> HU.toString (state.data.rateCard.additionalFare)
+        , pickUpCharges = state.data.config.currency <> HU.toString (state.data.rateCard.pickUpCharges)
+        , additionalFare = state.data.config.currency <> HU.toString (state.data.rateCard.additionalFare)
         , nightShiftMultiplier = HU.toString (state.data.rateCard.nightShiftMultiplier)
         , currentRateCardType = state.data.rateCard.currentRateCardType
         , onFirstPage = state.data.rateCard.onFirstPage
+        , showDetails = state.data.config.searchLocationConfig.showRateCardDetails
+        , alertDialogPrimaryColor = state.data.config.alertDialogPrimaryColor
         }
   in
     rateCardConfig'
@@ -543,7 +552,7 @@ estimateChangedPopupConfig state =
     popUpConfig' =
       config'
         { primaryText { text = (getString ESTIMATES_CHANGED) }
-        , secondaryText { text = (getString ESTIMATES_REVISED_TO) <> "₹" <> (show state.data.suggestedAmount) <> "-" <> "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare)) }
+        , secondaryText { text = (getString ESTIMATES_REVISED_TO) <> (getValueFromConfig "currency") <> (show state.data.suggestedAmount) <> "-" <> (getValueFromConfig "currency") <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare)) }
         , option1 { 
             background = state.data.config.primaryTextColor
           , strokeColor = state.data.config.primaryBackground

@@ -140,7 +140,7 @@ public class WidgetService extends Service {
 
                 // Update text for fare and distanceToPickup
 
-                fareTextView.setText("₹" + fare);
+                fareTextView.setText(sharedPref.getString("CURRENCY", "₹") + fare);
                 if (distanceToPickup > 1000) {
                     distanceTextView.setText((df.format(distanceToPickup / 1000)) + " km pickup");
                 } else {

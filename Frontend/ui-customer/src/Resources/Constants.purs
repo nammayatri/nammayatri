@@ -18,7 +18,7 @@ module Resources.Constants where
 import Data.Array (filter, length, null, reverse, (!!), head, all)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), Replacement(..), contains, joinWith, replaceAll, split, trim)
-import Prelude (map, (&&), (-), (<>), (==), (>), ($), (+), (/=), (<), (/))
+import Prelude (map, show, (&&), (-), (<>), (==), (>), ($), (+), (/=), (<), (/))
 import Screens.Types as ST 
 import Data.Lens ((^.))
 import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), SavedReqLocationAPIEntity(..), FareBreakupAPIEntity(..))
@@ -27,6 +27,7 @@ import Language.Types (STR(..))
 import Accessor (_description, _amount)
 import Helpers.Utils (toString, parseFloat)
 import Data.Int (toNumber)
+import MerchantConfig.Utils(getValueFromConfig)
 
 type Language
   = { name :: String
@@ -193,7 +194,7 @@ getFaresList fares baseDistance =
   map
     ( \(FareBreakupAPIEntity item) ->
           { fareType : item.description
-          , price : if item.description == "BASE_FARE" then (item.amount + getFareFromArray fares "EXTRA_DISTANCE_FARE") else item.amount
+          , price :(getValueFromConfig "currency") <> " " <> show (if item.description == "BASE_FARE" then (item.amount + getFareFromArray fares "EXTRA_DISTANCE_FARE") else item.amount)
           , title : case item.description of
                       "BASE_FARE" -> (getEN BASE_FARES) <> " (" <> baseDistance <> ")"
                       "EXTRA_DISTANCE_FARE" -> getEN NOMINAL_FARE

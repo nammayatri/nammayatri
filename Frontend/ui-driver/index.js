@@ -106,7 +106,11 @@ window.onMerchantEvent = function (event, payload) {
       window.merchantID = "YATRI"
     } else if(clientPaylod.payload.clientId == "jatrisaathiprovider" || clientPaylod.payload.clientId == "jatrisaathidriver"){
       window.merchantID = "JATRISAATHI"
-    }else {
+    }else if (clientPaylod.payload.clientId.includes("provider")){
+      var merchant = clientPaylod.payload.clientId.replace("mobility","")
+      merchant = merchant.replace("provider","");
+      window.merchantID = merchant.toUpperCase();
+    } else {
       // window.merchantID = clientPaylod.payload.clientId.toUpperCase();
       window.merchantID = "NAMMAYATRI";
     }

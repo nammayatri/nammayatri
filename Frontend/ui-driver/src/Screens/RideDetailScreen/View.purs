@@ -40,6 +40,7 @@ import Common.Types.App
 import Types.App (defaultGlobalState)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Prelude ((<>))
+import MerchantConfig.Utils(getValueFromConfig)
 
 screen :: ST.RideDetailScreenState -> Screen Action ST.RideDetailScreenState ScreenOutput
 screen initialState =
@@ -145,7 +146,7 @@ totalAmount state =
  ][ textView
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
-  , text "₹"
+  , text (getValueFromConfig "currency")
   , color Color.black
   , margin (MarginRight 2)
   , textSize FontSize.a_44

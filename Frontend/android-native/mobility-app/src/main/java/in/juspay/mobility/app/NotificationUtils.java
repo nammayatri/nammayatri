@@ -193,6 +193,7 @@ public class NotificationUtils extends AppCompatActivity {
                     sheetData.putString("searchRequestId", entity_payload.getString("searchRequestId"));
                     sheetData.putString("searchRequestValidTill", entity_payload.getString("searchRequestValidTill"));
                     sheetData.putInt("baseFare", entity_payload.getInt("baseFare"));
+                    sheetData.putString("currency", sharedPref.getString("CURRENCY", "₹"));
                     sheetData.putInt("distanceToPickup", entity_payload.getInt("distanceToPickup"));
                     sheetData.putString("durationToPickup", entity_payload.getString("durationToPickup"));
                     sheetData.putInt("distanceTobeCovered", entity_payload.getInt("distance"));

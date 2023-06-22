@@ -12,6 +12,7 @@ public class SheetModel {
     private final String pickUpDistance;
     private final String distanceToBeCovered;
     private final String sourceArea;
+    private final String currency;
     private final String sourceAddress;
     private final String destinationArea;
     private final String destinationAddress;
@@ -39,6 +40,7 @@ public class SheetModel {
                       String searchRequestId,
                       String destinationArea,
                       String sourceArea,
+                      String currency,
                       int startTime,
                       int driverMinExtraFee,
                       int driverMaxExtraFee,
@@ -67,6 +69,7 @@ public class SheetModel {
         this.buttonIncreasePriceClickable = true;
         this.buttonDecreasePriceAlpha = 0.5f;
         this.buttonDecreasePriceClickable = false;
+        this.currency = currency;
     }
 
     public int getOfferedPrice() {
@@ -111,6 +114,10 @@ public class SheetModel {
 
     public int getBaseFare() {
         return baseFare;
+    }
+
+    public String getCurrency () {
+        return currency;
     }
 
     public String getRequestId() {

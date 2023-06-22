@@ -6,19 +6,75 @@ config :: AppConfig
 config =
   { primaryTextColor: "#FCC32C"
   , primaryBackground: "#2C2F3A"
-  , searchLocationTheme: "#2C2F3A"
   , estimateConfirmText: "Request a NammaYatri Ride"
   , autoConfirmingLoaderColor: "#80B2FF"
   , quoteListModelBackground: "#2C2F3A"
+  , currency: "₹"
+  , isGradient: "false"
+  , primaryButtonCornerRadius: 8.0
+  , gradient: []
+  , showPickUpandDrop: true
+  , alertDialogPrimaryColor: "#2194FF"
+  , cancelSearchTextColor: "#E55454"
+  , showHamMenu : true
+  , showQuoteFindingText : false
+  , quoteListItemConfig: 
+    { primaryButtonCorner: 8.0
+    , expiresColor: "#E55454"
+    , driverImagebg: "#F1F1F1"
+    , vehicleHeight: 37
+    , vehicleWidth: 40
+    }
   , quoteListModel:
-      { backgroundColor: "#2C2F3A"
-      , textColor: "#FFFFFF"
-      , loaderColor: "#80B2FF"
-      , otpTextBackground : "#2C2F3A"
-      , otpBackground: "#F1F1F1"
-      , otpTextColor: "#FFFFFF"
-      , otpTitleColor : "#6D7280"
-      }
+    { backgroundColor: "#2C2F3A"
+    , textColor: "#FFFFFF"
+    , loaderColor: "#80B2FF"
+    , otpTextBackground : "#2C2F3A"
+    , otpBackground: "#F1F1F1"
+    , otpTextColor: "#FFFFFF"
+    , otpTitleColor : "#6D7280"
+    , selectRideTextColor: "#2C2F3A"
+    , lineImage : "ic_line"
+    , lottieHeight : 300
+    , lottieWidth : 300
+    , topMargin : 100
+    , noQuotesImageHeight: 115
+    , noQuotesImageWidth : 137
+    }
+  , searchLocationConfig : 
+    { searchLocationTheme: "#2C2F3A"
+    , setLocationOnMapColor:"#6D7280"
+    , strokeColor: "1,#E5E7EB"
+    , enableLocationTagbar : "true"
+    , resultsCardCornerRadius : 20.0
+    , showRateCardDetails : true
+    , lottieHeight : 96
+    , lottieWidth : 96
+    , primaryButtonHeight : 60
+    }
+  , driverInfoConfig : 
+    { ratingTextColor: "#454545"
+    , ratingBackground: "#F1F1F1"
+    , ratingStroke: "0,#717171"
+    , ratingCornerRadius: 6.0
+    , callBackground: "#2053BB6F"
+    , callButtonStroke: "0,#EB0055" 
+    , cardStroke: "1,#E5E7EB"
+    , otpStroke: "0,#717171"
+    , showIndNumberPlate: true
+    , callHeight: 24
+    , callWidth: 24
+    }
+  , ratingConfig : 
+    { secondaryButtonTextColor : "#2C2F3A"
+    , secondaryButtonStroke : "1,#2C2F3A"
+    , buttonCornerRadius : 8.0
+    }
+  , cancelReasonConfig : 
+    { secondaryButtonTextColor : "#2C2F3A"
+    , secondaryButtonStroke : "1,#2C2F3A"
+    , buttonCornerRadius : 8.0
+    }
   , profileBackground: "#2C2F3A"
   , profileName: "#FFFFFF"
   , profileImage: "#012A72"

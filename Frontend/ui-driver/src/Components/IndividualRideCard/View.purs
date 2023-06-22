@@ -31,6 +31,7 @@ import Styles.Colors as Color
 import Common.Types.App
 import PrestoDOM.Properties (orientation, visibility, width)
 import Helpers.Utils (getCommonAssetStoreLink)
+import MerchantConfig.Utils(getValueFromConfig)
 
 view :: forall w .  (RideHistoryScreen.Action  -> Effect Unit)  -> PrestoDOM (Effect Unit) w
 view push =
@@ -148,7 +149,7 @@ rideDetails showTripId =
       , gravity RIGHT 
       ][
         textView $
-          [ text "₹"
+          [ text (getValueFromConfig "currency")
           , PrestoList.colorHolder "amountColor"
           ] <> FontStyle.body11 TypoGraphy
         , textView $
