@@ -32,6 +32,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import Screens.SelectLanguageScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
+import Debug(spy)
 
 screen :: ST.SelectLanguageScreenState -> Screen Action ST.SelectLanguageScreenState ScreenOutput
 screen initialState =
@@ -39,7 +40,11 @@ screen initialState =
   , view
   , name : "SelectLanguageScreen"
   , globalEvents : []
-  , eval
+  , eval:
+      \state action -> do
+        let _ = spy "SelectLanguageScreen action " action
+        let _ = spy "SelectLanguageScreen state " state
+        eval state action
   }
 
 view
