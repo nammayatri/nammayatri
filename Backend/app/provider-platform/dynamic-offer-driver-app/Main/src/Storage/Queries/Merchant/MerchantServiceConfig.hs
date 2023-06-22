@@ -153,8 +153,24 @@ transformDomainMerchantServiceConfigToBeam :: MerchantServiceConfig -> BeamMSC.M
 transformDomainMerchantServiceConfigToBeam MerchantServiceConfig {..} =
   BeamMSC.MerchantServiceConfigT
     { BeamMSC.merchantId = getId merchantId,
-      BeamMSC.serviceName = fst $ getServiceNameConfigJSON' serviceConfig,
-      BeamMSC.configJSON = snd $ getServiceNameConfigJSON' serviceConfig,
+      BeamMSC.serviceName = fst $ getServiceNameConfigJson serviceConfig,
+      BeamMSC.configJSON = snd $ getServiceNameConfigJson serviceConfig,
       BeamMSC.updatedAt = updatedAt,
       BeamMSC.createdAt = createdAt
     }
+  where
+    getServiceNameConfigJson :: Domain.ServiceConfig -> (Domain.ServiceName, A.Value)
+    getServiceNameConfigJson = \case
+      Domain.MapsServiceConfig mapsCfg -> case mapsCfg of
+        Maps.GoogleConfig cfg -> (Domain.MapsService Maps.Google, toJSON cfg)
+        Maps.OSRMConfig cfg -> (Domain.MapsService Maps.OSRM, toJSON cfg)
+        Maps.MMIConfig cfg -> (Domain.MapsService Maps.MMI, toJSON cfg)
+      Domain.SmsServiceConfig smsCfg -> case smsCfg of
+        Sms.ExotelSmsConfig cfg -> (Domain.SmsService Sms.ExotelSms, toJSON cfg)
+        Sms.MyValueFirstConfig cfg -> (Domain.SmsService Sms.MyValueFirst, toJSON cfg)
+      Domain.WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
+        Whatsapp.GupShupConfig cfg -> (Domain.WhatsappService Whatsapp.GupShup, toJSON cfg)
+      Domain.VerificationServiceConfig verificationCfg -> case verificationCfg of
+        Verification.IdfyConfig cfg -> (Domain.VerificationService Verification.Idfy, toJSON cfg)
+      Domain.CallServiceConfig callCfg -> case callCfg of
+        Call.ExotelConfig cfg -> (Domain.CallService Call.Exotel, toJSON cfg)
