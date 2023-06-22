@@ -223,7 +223,7 @@ tripDetailsView state =
               , imageWithFallback $ "ny_ic_profile_image," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_profile_image.png"
               ]
             , imageView
-              [ imageWithFallback $ "ic_vehicle_side," <> (getCommonAssetStoreLink FunctionCall) <> "ic_vehicle_side.png"
+              [ imageWithFallback $ "ny_ic_auto," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_auto.png"
               , width (V 40)
               , height (V 40)
               ]

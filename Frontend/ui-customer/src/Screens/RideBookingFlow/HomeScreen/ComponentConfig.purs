@@ -683,7 +683,9 @@ ratingCardViewState state = { props:
                             , showFareBreakUp: false
                             , enableFeedback: true
                             }
-                        , data: state.data.previousRideRatingState
+                        , data : state.data.previousRideRatingState{
+                          appConfig = state.data.config
+                        }
                         }
 
 searchLocationModelViewState :: ST.HomeScreenState -> SearchLocationModel.SearchLocationModelState

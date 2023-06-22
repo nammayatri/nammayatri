@@ -1231,8 +1231,9 @@ getFinalAmount (RideBookingRes resp) =
 tripDetailsScreenFlow :: Boolean ->  FlowBT String Unit
 tripDetailsScreenFlow fromMyRides = do
   (GlobalState state) <- getState
+  config <- getAppConfig
   expiryTime <- pure $ (getExpiryTime state.tripDetailsScreen.data.selectedItem.rideEndTimeUTC isForLostAndFound)
-  modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {props{fromMyRides = fromMyRides, canConnectWithDriver = (expiryTime <= 86400)}}) -- expiryTime < 24hrs or 86400 seconds
+  modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {props{fromMyRides = fromMyRides, canConnectWithDriver = (expiryTime <= 86400)}, data{config = config}}) -- expiryTime < 24hrs or 86400 seconds
   flow <- UI.tripDetailsScreen
   case flow of
     GO_TO_HELPSCREEN -> helpAndSupportScreenFlow
@@ -1261,6 +1262,8 @@ tripDetailsScreenFlow fromMyRides = do
 
 invoiceScreenFlow :: FlowBT String Unit
 invoiceScreenFlow = do
+  config <- getAppConfig
+  modifyScreenState $ InvoiceScreenStateType (\invoiceScreen -> invoiceScreen{data{config = config}})
   flow <- UI.invoiceScreen
   (GlobalState newState) <- getState
   case flow of

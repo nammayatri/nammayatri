@@ -194,7 +194,7 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @Override
     public void reset() {
-        if (receivers != null){
+        if (receivers != null) {
             receivers.deRegister(bridgeComponents.getContext());
             receivers = null;
         }
@@ -1383,12 +1383,19 @@ public class MobilityCommonBridge extends HyperBridge {
         InputStream inputStreams;
         String fileNameWithExe = fileName;
         int idx = fileName.lastIndexOf(".");
-        fileName = idx == -1 ? fileName : fileName.substring(0,idx);
+        fileName = idx == -1 ? fileName : fileName.substring(0, idx);
         boolean isCheckAssets = (context.getResources().getIdentifier(fileName, "raw", context.getPackageName()) == 0);
         if (isCheckAssets) {
-            inputStreams = context.getAssets().open(fileNameWithExe);
+            try {
+                inputStreams = context.getAssets().open(fileNameWithExe);
+            } catch (Exception e) {
+                inputStreams = null;
+            }
             if (inputStreams == null) {
-                inputStreams = context.getAssets().open("juspay/" + fileNameWithExe);
+                try {
+                    inputStreams = context.getAssets().open("juspay/" + fileNameWithExe);
+                } catch (Exception ignored) {
+                }
             }
             return (inputStreams != null);
         } else {
@@ -1637,7 +1644,7 @@ public class MobilityCommonBridge extends HyperBridge {
                     if (!isGpsEnabled) {
                         invokeOnEvent(bridgeComponents.getJsCallback(), "onLocationChanged");
                     } else {
-                        callLocationCallBack(bridgeComponents.getJsCallback(),"true");
+                        callLocationCallBack(bridgeComponents.getJsCallback(), "true");
                     }
                 }
             };

@@ -390,7 +390,7 @@ quoteListView state push =
         , width MATCH_PARENT
         , orientation VERTICAL
         ](map (\item ->
-            QuoteListItem.view (push <<< QuoteListItemActionController) item) state.quoteListModel)
+            QuoteListItem.view (push <<< QuoteListItemActionController) item{appConfig = state.appConfig}) state.quoteListModel)
     ]
 
 ---------------------------- primaryButtonView ---------------------------------

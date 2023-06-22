@@ -1292,10 +1292,8 @@ export const startLottieProcess = function (rawJson) {
             var fileName = rawJson.substr(rawJson.lastIndexOf("/") + 1);
             console.log("fileName ",fileName);
             if (JBridge.isFilePresentDeep) {
-              console.log("isFilePresentDeep ",JBridge.isFilePresentDeep(fileName));
               lottieName = JBridge.isFilePresentDeep(fileName) ? (fileName.slice(0,fileName.lastIndexOf("."))) : rawJson;
             } else {
-              console.log("isFilePresent ",JBridge.isFilePresent(fileName));
               lottieName = JBridge.isFilePresent(fileName) ? (fileName.slice(0,fileName.lastIndexOf("."))) : rawJson;
             }
             console.log("rawJson ",lottieName);

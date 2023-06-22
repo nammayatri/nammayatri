@@ -107,7 +107,7 @@ profilePictureLayout state push =
                 , layoutGravity "center"
                 , cornerRadius 45.0
                 , id (EHC.getNewIDWithTag "EditProfileImage")
-                , imageWithFallback $ "ny_ic_profile_image," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_profile_image.png"
+                , imageWithFallback $ "ny_ic_profile_image," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_profile_image.png"
                 -- TODO : after 15 aug
                 -- , afterRender push (const RenderBase64Image)
                 ]
