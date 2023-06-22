@@ -16,7 +16,6 @@ module Storage.Queries.Booking where
 
 import Domain.Types.Booking
 import Domain.Types.DriverQuote as DDQ
-import Domain.Types.Geometry
 import Domain.Types.Merchant
 import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchTry as DST
@@ -34,7 +33,6 @@ import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Queries.Booking.BookingLocation as QBBL
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.FareParameters as QueriesFP
-import Storage.Queries.Geometry
 
 createBooking :: L.MonadFlow m => Booking -> m (MeshResult ())
 createBooking booking = do
@@ -216,21 +214,6 @@ cancelBookings bookingIds now = do
         ]
         [Se.Is BeamB.id (Se.In $ getId <$> bookingIds)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
-
-findAllBookings :: L.MonadFlow m => m [Id Geometry]
-findAllBookings = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamB.BookingT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findAllWithKVConnector dbConf' updatedMeshConfig []
-      case result of
-        Left _ -> pure []
-        Right geometries -> do
-          let booking = transformBeamGeometryToDomain <$> geometries
-          pure $ Domain.Types.Geometry.id <$> booking
-    Nothing -> pure []
 
 transformBeamBookingToDomain :: L.MonadFlow m => BeamB.Booking -> m (Maybe Booking)
 transformBeamBookingToDomain BeamB.BookingT {..} = do

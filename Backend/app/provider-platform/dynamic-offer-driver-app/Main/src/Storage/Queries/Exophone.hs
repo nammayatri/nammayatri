@@ -113,46 +113,6 @@ updateAffectedPhones primaryPhones = do
       ]
     where_ $ isPrimaryDown !=. tbl ^. ExophoneIsPrimaryDown
 
--- updateAffectedPhones' :: (L.MonadFlow m, MonadTime m) => [Text] -> m (MeshResult ())
--- updateAffectedPhones' primaryPhones = do
---   let indianMobileCode = "+91"
---   now <- getCurrentTime
---   let primaryPhonesList = valList primaryPhones
---   dbConf <- L.getOption KBT.PsqlDbCfg
---   case dbConf of
---     Just dbConf' -> do
---       conn <- L.getOrInitSqlConn dbConf'
---       case conn of
---         Right c -> do
-
---     Nothing -> pure (error "DB Config not found")
-
--- updateAffectedPhones' :: (L.MonadFlow m, MonadTime m) => [Text] -> m (MeshResult ())
--- updateAffectedPhones' primaryPhones = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
--- let modelName = Se.modelTableName @BeamE.ExophoneT
--- let updatedMeshConfig = setMeshConfig modelName
---   now <- getCurrentTime
---   let indianMobileCode = "+91"
---   -- let isPrimaryDown = Se.Or [ Se.Is BeamE.primaryPhone $ Se.In primaryPhones, Se.Is (indianMobileCode ++ BeamE.primaryPhone) $ Se.In primaryPhones ]
---   let isPrimaryDown = Se.Or [ Se.Is BeamE.primaryPhone $ Se.In primaryPhones, Se.Is (\eT@BeamE.ExophoneT {..} -> (primaryPhone eT) ++ indianMobileCode) $ Se.In primaryPhones ]
---   case dbConf of
---     Just dbConf' ->
---       KV.updateWoReturningWithKVConnector
---         dbConf'
---         updatedMeshConfig
---         [ Se.Set BeamE.isPrimaryDown isPrimaryDown,
---           Se.Set BeamE.updatedAt now
---         ]
---         [Se.Is BeamE.isPrimaryDown (Se.Eq isPrimaryDown)]
---     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
-
--- deleteByMerchantId :: Id DM.Merchant -> SqlDB ()
--- deleteByMerchantId merchantId = do
---   Esq.delete $ do
---     exophone <- from $ table @ExophoneT
---     where_ $ exophone ^. ExophoneMerchantId ==. val (toKey merchantId)
-
 deleteByMerchantId :: L.MonadFlow m => Id DM.Merchant -> m ()
 deleteByMerchantId (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg

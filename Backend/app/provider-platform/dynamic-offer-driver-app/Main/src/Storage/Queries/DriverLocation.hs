@@ -19,15 +19,7 @@
 
 module Storage.Queries.DriverLocation where
 
--- import qualified Database.Beam.Query as B
-
--- import qualified EulerHS.KVConnector.Flow as KV
--- import EulerHS.KVConnector.Types
-
 import Data.Maybe as Mb
--- import qualified EulerHS.KVConnector.Flow as KV
--- import EulerHS.KVConnector.Types
-
 import Data.Time (addUTCTime)
 import qualified Database.Beam as B
 import Database.Beam.Postgres

@@ -52,15 +52,6 @@ create quote = do
       void $ KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainQuoteSpecialZoneToBeam quote)
     Nothing -> pure ()
 
--- countAllByRequestId :: Transactionable m => Id SearchRequestSpecialZone -> m Int32
--- countAllByRequestId searchReqId = do
---   fmap (fromMaybe 0) $
---     Esq.findOne $ do
---       dQuote <- from $ table @QuoteSpecialZoneT
---       where_ $
---         dQuote ^. QuoteSpecialZoneSearchRequestId ==. val (toKey searchReqId)
---       pure (countRows @Int32)
-
 countAllByRequestId :: L.MonadFlow m => Id SearchRequestSpecialZone -> m Int
 countAllByRequestId searchReqID = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -77,26 +68,6 @@ countAllByRequestId searchReqID = do
       pure (either (const 0) (fromMaybe 0) resp)
     Left _ -> pure 0
 
--- baseQuoteSpecialZoneQuery ::
---   From
---     ( SqlExpr (Entity QuoteSpecialZoneT)
---         :& SqlExpr (Entity Fare.FareParametersT)
---     )
--- baseQuoteSpecialZoneQuery =
---   table @QuoteSpecialZoneT
---     `innerJoin` table @Fare.FareParametersT
---       `Esq.on` ( \(rb :& farePars) ->
---                    rb ^. QuoteSpecialZoneFareParametersId ==. farePars ^. Fare.FareParametersTId
---                )
--- TODOD @Vijay Gupta, please check the following function if it needs any change
--- create :: QuoteSpecialZone -> SqlDB ()
--- create quote = Esq.runTransaction $
---   withFullEntity quote $ \(quoteT, (fareParams', fareParamsDetais)) -> do
---     Esq.create' fareParams'
---     case fareParamsDetais of
---       FareParamsT.ProgressiveDetailsT fppdt -> Esq.create' fppdt
---       FareParamsT.SlabDetailsT fpsdt -> Esq.create' fpsdt
---     Esq.create' quoteT
 findById :: (L.MonadFlow m) => Id QuoteSpecialZone -> m (Maybe QuoteSpecialZone)
 findById (Id dQuoteId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg

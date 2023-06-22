@@ -210,6 +210,14 @@ getDriversWithOutdatedLocationsToMakeInactive before = do
   driverInfos <- getDriverInformations driverLocations
   getDriversList driverInfos
 
+getDriversWithOutdatedLocationsToMakeInactive' :: (L.MonadFlow m, Log m, MonadTime m) => UTCTime -> m [Person]
+getDriversWithOutdatedLocationsToMakeInactive' before = do
+  driverLocations <- QueriesDL.getDriverLocations before
+  driverInfos <- getDriverInfos driverLocations
+  drivers <- getDriversList driverInfos
+  logDebug $ "GetDriversWithOutdatedLocationsToMakeInactive - DLoc:- " <> show (length driverLocations) <> " DInfo:- " <> show (length driverInfos) <> " Drivers:- " <> show (length drivers)
+  return drivers
+
 findAllDriversByIdsFirstNameAsc ::
   (Transactionable m, Functor m, L.MonadFlow m) =>
   Id Merchant ->
@@ -568,42 +576,42 @@ findAllPersonWithSeConditions conditions = do
         _ -> pure []
     Nothing -> pure []
 
-findAllDriversByIdsFirstNameAsc' ::
-  (L.MonadFlow m, Log m) =>
-  Id Merchant ->
-  [Id Person] ->
-  m [FullDriver]
-findAllDriversByIdsFirstNameAsc' (Id merchantId) driverIds = do
-  let personSeCondition =
-        [ Se.And
-            [ Se.Is BeamP.role $ Se.Eq Person.DRIVER,
-              Se.Is BeamP.id $ Se.In $ getId <$> driverIds,
-              Se.Is BeamP.merchantId $ Se.Eq merchantId
-            ]
-        ]
-  personList <- findAllPersonWithSeConditionsNameAsc personSeCondition
-  let dlSeCondition = [Se.Is BeamDL.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
-  let infoSeCondition = [Se.Is BeamDI.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
-  let vehicleSeCondition = [Se.Is BeamV.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
-  dlList <- findAllDriverLocationWithSeConditions dlSeCondition
-  infoList <- findAllDriverInformationWithSeConditions infoSeCondition
-  vehicleList <- findAllVehiclesWithSeConditions vehicleSeCondition
-  let pDl = foldl' (getPersonWithlocation dlList) [] personList
-  let pDlInfo = foldl' (getPersonWithInfo infoList) [] pDl
-  let pDlInfoVeh = foldl' (getPersonWithVehicle vehicleList) [] pDlInfo
-  pure $ map mkFullDriver pDlInfoVeh
-  where
-    getPersonWithlocation dlList acc person' =
-      let dlList' = filter (\dl -> dl.driverId == person'.id) dlList
-       in acc <> ((\dl -> (person', dl)) <$> dlList')
+-- findAllDriversByIdsFirstNameAsc' ::
+--   (L.MonadFlow m, Log m) =>
+--   Id Merchant ->
+--   [Id Person] ->
+--   m [FullDriver]
+-- findAllDriversByIdsFirstNameAsc' (Id merchantId) driverIds = do
+--   let personSeCondition =
+--         [ Se.And
+--             [ Se.Is BeamP.role $ Se.Eq Person.DRIVER,
+--               Se.Is BeamP.id $ Se.In $ getId <$> driverIds,
+--               Se.Is BeamP.merchantId $ Se.Eq merchantId
+--             ]
+--         ]
+--   personList <- findAllPersonWithSeConditionsNameAsc personSeCondition
+--   let dlSeCondition = [Se.Is BeamDL.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
+--   let infoSeCondition = [Se.Is BeamDI.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
+--   let vehicleSeCondition = [Se.Is BeamV.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
+--   dlList <- findAllDriverLocationWithSeConditions dlSeCondition
+--   infoList <- findAllDriverInformationWithSeConditions infoSeCondition
+--   vehicleList <- findAllVehiclesWithSeConditions vehicleSeCondition
+--   let pDl = foldl' (getPersonWithlocation dlList) [] personList
+--   let pDlInfo = foldl' (getPersonWithInfo infoList) [] pDl
+--   let pDlInfoVeh = foldl' (getPersonWithVehicle vehicleList) [] pDlInfo
+--   pure $ map mkFullDriver pDlInfoVeh
+--   where
+--     getPersonWithlocation dlList acc person' =
+--       let dlList' = filter (\dl -> dl.driverId == person'.id) dlList
+--        in acc <> ((\dl -> (person', dl)) <$> dlList')
 
-    getPersonWithInfo infoList acc (person', dl') =
-      let infoList' = filter (\info -> info.driverId == person'.id) infoList
-       in acc <> ((\info -> (person', dl', info)) <$> infoList')
+--     getPersonWithInfo infoList acc (person', dl') =
+--       let infoList' = filter (\info -> info.driverId == person'.id) infoList
+--        in acc <> ((\info -> (person', dl', info)) <$> infoList')
 
-    getPersonWithVehicle vehicleList acc (person', dl', info') =
-      let vehicleList' = filter (\vehicle -> vehicle.driverId == person'.id) vehicleList
-       in acc <> ((\vehicle -> (person', dl', info', vehicle)) <$> vehicleList')
+--     getPersonWithVehicle vehicleList acc (person', dl', info') =
+--       let vehicleList' = filter (\vehicle -> vehicle.driverId == person'.id) vehicleList
+--        in acc <> ((\vehicle -> (person', dl', info', vehicle)) <$> vehicleList')
 
 data DriverWithRidesCount = DriverWithRidesCount
   { person :: Person,
@@ -792,18 +800,18 @@ findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber_ (Id merch
         _ -> pure Nothing
     Nothing -> pure Nothing
 
-personDriverTable ::
-  From
-    ( Table PersonT
-        :& Table DriverInformationT
-    )
-personDriverTable =
-  table @PersonT
-    `innerJoin` table @DriverInformationT
-    `Esq.on` ( \(person :& driver) ->
-                 person ^. PersonTId ==. driver ^. DriverInformationDriverId
-                   &&. Esq.not_ (driver ^. DriverInformationBlocked)
-             )
+-- personDriverTable ::
+--   From
+--     ( Table PersonT
+--         :& Table DriverInformationT
+--     )
+-- personDriverTable =
+--   table @PersonT
+--     `innerJoin` table @DriverInformationT
+--     `Esq.on` ( \(person :& driver) ->
+--                  person ^. PersonTId ==. driver ^. DriverInformationDriverId
+--                    &&. Esq.not_ (driver ^. DriverInformationBlocked)
+--              )
 
 findAllDriverIdExceptProvided :: (L.MonadFlow m, Log m) => Id Merchant -> [Id Driver] -> m [Id Driver]
 findAllDriverIdExceptProvided (Id merchantId) driverIdsToBeExcluded = do
@@ -1212,115 +1220,115 @@ linkArrayListForOnRide driverQuotes bookings bookingLocs driverLocations driverI
       driverInfoHashMap = buildDriverInfoHashMap driverInformations
    in mapMaybe (buildFullDriverListOnRide quotesHashMap bookingHashMap bookingLocsHashMap locationHashMap driverInfoHashMap personHashMap LatLong {..} onRideRadius mbVariant) vehicles
 
-getNearestDriversCurrentlyOnRide' :: (L.MonadFlow m, Log m, MonadTime m) => Maybe Variant -> Int -> Id Merchant -> Maybe Seconds -> Int -> m [NearestDriversResultCurrentlyOnRide]
-getNearestDriversCurrentlyOnRide' mbVariant radiusMeters (Id merchantId') mbDriverPositionInfoExpiry reduceRadiusValue = do
-  now <- getCurrentTime
+-- getNearestDriversCurrentlyOnRide' :: (L.MonadFlow m, Log m, MonadTime m) => Maybe Variant -> Int -> Id Merchant -> Maybe Seconds -> Int -> m [NearestDriversResultCurrentlyOnRide]
+-- getNearestDriversCurrentlyOnRide' mbVariant radiusMeters (Id merchantId') mbDriverPositionInfoExpiry reduceRadiusValue = do
+--   now <- getCurrentTime
 
-  let onRideRadius = (fromIntegral (radiusMeters - reduceRadiusValue) :: Double)
-  let personSeCondition =
-        [ Se.And
-            [ Se.Is BeamP.role $ Se.Eq Person.DRIVER,
-              Se.Is BeamP.merchantId $ Se.Eq merchantId'
-            ]
-        ]
-  personList <- findAllPersonWithSeConditionsNameAsc personSeCondition
-  dlList <- QueriesDL.findAllDriverLocations ((Person.id :: PersonE e -> Id Person) <$> personList) mbDriverPositionInfoExpiry now
+--   let onRideRadius = (fromIntegral (radiusMeters - reduceRadiusValue) :: Double)
+--   let personSeCondition =
+--         [ Se.And
+--             [ Se.Is BeamP.role $ Se.Eq Person.DRIVER,
+--               Se.Is BeamP.merchantId $ Se.Eq merchantId'
+--             ]
+--         ]
+--   personList <- findAllPersonWithSeConditionsNameAsc personSeCondition
+--   dlList <- QueriesDL.findAllDriverLocations ((Person.id :: PersonE e -> Id Person) <$> personList) mbDriverPositionInfoExpiry now
 
-  let diConditions =
-        [ Se.And
-            [ Se.Is BeamDI.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList,
-              Se.Or
-                [ Se.And
-                    [ Se.Is BeamDI.mode $ Se.Eq Nothing,
-                      Se.Is BeamDI.active $ Se.Eq True
-                    ],
-                  Se.And
-                    [ Se.Is BeamDI.mode $ Se.Not $ Se.Eq Nothing,
-                      Se.Or
-                        [ Se.Is BeamDI.mode $ Se.Eq $ Just DriverInfo.SILENT,
-                          Se.Is BeamDI.mode $ Se.Eq $ Just DriverInfo.ONLINE
-                        ]
-                    ]
-                ],
-              Se.Is BeamDI.onRide $ Se.Eq True,
-              Se.Is BeamDI.blocked $ Se.Eq False
-            ]
-        ]
-  driverInfoList <- findAllDriverInformationWithSeConditions diConditions
+--   let diConditions =
+--         [ Se.And
+--             [ Se.Is BeamDI.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList,
+--               Se.Or
+--                 [ Se.And
+--                     [ Se.Is BeamDI.mode $ Se.Eq Nothing,
+--                       Se.Is BeamDI.active $ Se.Eq True
+--                     ],
+--                   Se.And
+--                     [ Se.Is BeamDI.mode $ Se.Not $ Se.Eq Nothing,
+--                       Se.Or
+--                         [ Se.Is BeamDI.mode $ Se.Eq $ Just DriverInfo.SILENT,
+--                           Se.Is BeamDI.mode $ Se.Eq $ Just DriverInfo.ONLINE
+--                         ]
+--                     ]
+--                 ],
+--               Se.Is BeamDI.onRide $ Se.Eq True,
+--               Se.Is BeamDI.blocked $ Se.Eq False
+--             ]
+--         ]
+--   driverInfoList <- findAllDriverInformationWithSeConditions diConditions
 
-  let vehicleSeCondition = [Se.Is BeamV.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
-  vehicleList <- findAllVehiclesWithSeConditions vehicleSeCondition
+--   let vehicleSeCondition = [Se.Is BeamV.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
+--   vehicleList <- findAllVehiclesWithSeConditions vehicleSeCondition
 
-  let dqSeConditions = [Se.Is BeamDQ.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
-  driverQuoteList <- findAllDriverQuoteWithSeConditions dqSeConditions
+--   let dqSeConditions = [Se.Is BeamDQ.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
+--   driverQuoteList <- findAllDriverQuoteWithSeConditions dqSeConditions
 
-  let bookingSeConditions =
-        [ Se.And
-            [ Se.Is BeamB.quoteId $ Se.In $ getId . DriverQuote.id <$> driverQuoteList,
-              Se.Is BeamB.status $ Se.Eq Booking.TRIP_ASSIGNED
-            ]
-        ]
-  bookingList <- findAllBookingsWithSeConditions bookingSeConditions
+--   let bookingSeConditions =
+--         [ Se.And
+--             [ Se.Is BeamB.quoteId $ Se.In $ getId . DriverQuote.id <$> driverQuoteList,
+--               Se.Is BeamB.status $ Se.Eq Booking.TRIP_ASSIGNED
+--             ]
+--         ]
+--   bookingList <- findAllBookingsWithSeConditions bookingSeConditions
 
-  let pDl = foldl' (getPersonWithlocation dlList) [] personList
-  let pDlInfo = foldl' (getPersonWithInfo driverInfoList) [] pDl
-  let pDlInfoVeh = foldl' (getPersonDInfoDLVehicle mbVariant vehicleList) [] pDlInfo
-  let pDlInfoVehQuote = foldl' (getPersonDInfoDLVehQuote driverQuoteList) [] pDlInfoVeh
-  let pDlInfoVehQuoteBooking = foldl' (getPersonDInfoDLVehQuoteBooking bookingList) [] pDlInfoVehQuote
-  let pDlInfoVehQuoteBooking' = map (\(person', dl', info', vehicle', _, booking') -> (person'.id, person'.deviceToken, person'.language, info'.onRide, info'.canDowngradeToSedan, info'.canDowngradeToHatchback, info'.canDowngradeToTaxi, dl'.lat, dl'.lon, vehicle'.variant, booking'.toLocation.lat, booking'.toLocation.lat, onRideRadius, onRideRadius, info'.mode)) pDlInfoVehQuoteBooking
-  pure $ makeNearestDriversResult =<< pDlInfoVehQuoteBooking'
-  where
-    getPersonWithlocation dlList acc person' =
-      let dlList' = filter (\dl -> dl.driverId == person'.id) dlList
-       in acc <> ((\dl -> (person', dl)) <$> dlList')
+--   let pDl = foldl' (getPersonWithlocation dlList) [] personList
+--   let pDlInfo = foldl' (getPersonWithInfo driverInfoList) [] pDl
+--   let pDlInfoVeh = foldl' (getPersonDInfoDLVehicle mbVariant vehicleList) [] pDlInfo
+--   let pDlInfoVehQuote = foldl' (getPersonDInfoDLVehQuote driverQuoteList) [] pDlInfoVeh
+--   let pDlInfoVehQuoteBooking = foldl' (getPersonDInfoDLVehQuoteBooking bookingList) [] pDlInfoVehQuote
+--   let pDlInfoVehQuoteBooking' = map (\(person', dl', info', vehicle', _, booking') -> (person'.id, person'.deviceToken, person'.language, info'.onRide, info'.canDowngradeToSedan, info'.canDowngradeToHatchback, info'.canDowngradeToTaxi, dl'.lat, dl'.lon, vehicle'.variant, booking'.toLocation.lat, booking'.toLocation.lat, onRideRadius, onRideRadius, info'.mode)) pDlInfoVehQuoteBooking
+--   pure $ makeNearestDriversResult =<< pDlInfoVehQuoteBooking'
+--   where
+--     getPersonWithlocation dlList acc person' =
+--       let dlList' = filter (\dl -> dl.driverId == person'.id) dlList
+--        in acc <> ((\dl -> (person', dl)) <$> dlList')
 
-    getPersonWithInfo driverInfoList acc (person', dl') =
-      let driverInfoList' = filter (\info -> info.driverId == person'.id) driverInfoList
-       in acc <> ((\info -> (person', dl', info)) <$> driverInfoList')
+--     getPersonWithInfo driverInfoList acc (person', dl') =
+--       let driverInfoList' = filter (\info -> info.driverId == person'.id) driverInfoList
+--        in acc <> ((\info -> (person', dl', info)) <$> driverInfoList')
 
-    getPersonDInfoDLVehicle mbVariant' vehicleList acc (person', dl', info') =
-      let vehicleList' =
-            filter
-              ( \vehicle ->
-                  ( Kernel.Prelude.isNothing mbVariant'
-                      || ( Kernel.Prelude.isNothing mbVariant
-                             || ( Just vehicle.variant == mbVariant'
-                                    || ( case mbVariant' of
-                                           Just SEDAN -> info'.canDowngradeToSedan && vehicle.variant == SUV
-                                           Just HATCHBACK -> info'.canDowngradeToHatchback && (vehicle.variant == SEDAN || vehicle.variant == SUV)
-                                           Just TAXI -> info'.canDowngradeToTaxi && vehicle.variant == TAXI_PLUS
-                                           _ -> False
-                                       )
-                                )
-                         )
-                  )
-                    && (vehicle.driverId == person'.id)
-              )
-              vehicleList
-       in acc <> ((\vehicle -> (person', dl', info', vehicle)) <$> vehicleList')
+--     getPersonDInfoDLVehicle mbVariant' vehicleList acc (person', dl', info') =
+--       let vehicleList' =
+--             filter
+--               ( \vehicle ->
+--                   ( Kernel.Prelude.isNothing mbVariant'
+--                       || ( Kernel.Prelude.isNothing mbVariant
+--                              || ( Just vehicle.variant == mbVariant'
+--                                     || ( case mbVariant' of
+--                                            Just SEDAN -> info'.canDowngradeToSedan && vehicle.variant == SUV
+--                                            Just HATCHBACK -> info'.canDowngradeToHatchback && (vehicle.variant == SEDAN || vehicle.variant == SUV)
+--                                            Just TAXI -> info'.canDowngradeToTaxi && vehicle.variant == TAXI_PLUS
+--                                            _ -> False
+--                                        )
+--                                 )
+--                          )
+--                   )
+--                     && (vehicle.driverId == person'.id)
+--               )
+--               vehicleList
+--        in acc <> ((\vehicle -> (person', dl', info', vehicle)) <$> vehicleList')
 
-    getPersonDInfoDLVehQuote driverQuoteList acc (person', dl', info', vehicle') =
-      let driverQuoteList' = filter (\quote -> quote.driverId == person'.id) driverQuoteList
-       in acc <> ((\quote -> (person', dl', info', vehicle', quote)) <$> driverQuoteList')
+--     getPersonDInfoDLVehQuote driverQuoteList acc (person', dl', info', vehicle') =
+--       let driverQuoteList' = filter (\quote -> quote.driverId == person'.id) driverQuoteList
+--        in acc <> ((\quote -> (person', dl', info', vehicle', quote)) <$> driverQuoteList')
 
-    getPersonDInfoDLVehQuoteBooking bookingList acc (person', dl', info', vehicle', quote') =
-      let bookingList' = filter (\booking -> booking.quoteId == getId quote'.id) bookingList
-       in acc <> ((\booking -> (person', dl', info', vehicle', quote', booking)) <$> bookingList')
+--     getPersonDInfoDLVehQuoteBooking bookingList acc (person', dl', info', vehicle', quote') =
+--       let bookingList' = filter (\booking -> booking.quoteId == getId quote'.id) bookingList
+--        in acc <> ((\booking -> (person', dl', info', vehicle', quote', booking)) <$> bookingList')
 
-    makeNearestDriversResult :: (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double, Maybe DriverInfo.DriverMode) -> [NearestDriversResultCurrentlyOnRide]
-    makeNearestDriversResult (personId, mbDeviceToken, mblang, onRide, canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, dlat, dlon, variant, destinationEndLat, destinationEndLon, dist :: Double, distanceFromDriverToDestination :: Double, mode) =
-      case mbVariant of
-        Nothing -> do
-          let autoResult = getResult AUTO_RICKSHAW $ variant == AUTO_RICKSHAW
-              suvResult = getResult SUV $ variant == SUV
-              sedanResult = getResult SEDAN $ variant == SEDAN || (variant == SUV && canDowngradeToSedan)
-              hatchbackResult = getResult HATCHBACK $ variant == HATCHBACK || ((variant == SUV || variant == SEDAN) && canDowngradeToHatchback)
-              taxiPlusResult = getResult TAXI_PLUS $ variant == TAXI_PLUS
-              taxiResult = getResult TAXI $ variant == TAXI || (variant == TAXI_PLUS && canDowngradeToTaxi)
-          autoResult <> suvResult <> sedanResult <> hatchbackResult <> taxiResult <> taxiPlusResult
-        Just poolVariant -> getResult poolVariant True
-      where
-        getResult var cond = [NearestDriversResultCurrentlyOnRide (cast personId) mbDeviceToken mblang onRide dlat dlon var destinationEndLat destinationEndLon (roundToIntegral dist) (roundToIntegral distanceFromDriverToDestination) mode | cond]
+--     makeNearestDriversResult :: (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double, Maybe DriverInfo.DriverMode) -> [NearestDriversResultCurrentlyOnRide]
+--     makeNearestDriversResult (personId, mbDeviceToken, mblang, onRide, canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, dlat, dlon, variant, destinationEndLat, destinationEndLon, dist :: Double, distanceFromDriverToDestination :: Double, mode) =
+--       case mbVariant of
+--         Nothing -> do
+--           let autoResult = getResult AUTO_RICKSHAW $ variant == AUTO_RICKSHAW
+--               suvResult = getResult SUV $ variant == SUV
+--               sedanResult = getResult SEDAN $ variant == SEDAN || (variant == SUV && canDowngradeToSedan)
+--               hatchbackResult = getResult HATCHBACK $ variant == HATCHBACK || ((variant == SUV || variant == SEDAN) && canDowngradeToHatchback)
+--               taxiPlusResult = getResult TAXI_PLUS $ variant == TAXI_PLUS
+--               taxiResult = getResult TAXI $ variant == TAXI || (variant == TAXI_PLUS && canDowngradeToTaxi)
+--           autoResult <> suvResult <> sedanResult <> hatchbackResult <> taxiResult <> taxiPlusResult
+--         Just poolVariant -> getResult poolVariant True
+--       where
+--         getResult var cond = [NearestDriversResultCurrentlyOnRide (cast personId) mbDeviceToken mblang onRide dlat dlon var destinationEndLat destinationEndLon (roundToIntegral dist) (roundToIntegral distanceFromDriverToDestination) mode | cond]
 
 buildDriverInfoHashMap :: [DriverInformation] -> HashMap.HashMap Text DriverInformation
 buildDriverInfoHashMap driverInfo =

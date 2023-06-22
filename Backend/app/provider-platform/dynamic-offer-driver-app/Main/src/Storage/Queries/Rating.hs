@@ -28,9 +28,6 @@ import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Rating as BeamR
 
--- create :: Rating -> SqlDB ()
--- create = Esq.create
-
 create :: L.MonadFlow m => DR.Rating -> m (MeshResult ())
 create rating = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -39,20 +36,6 @@ create rating = do
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRatingToBeam rating)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
-
--- updateRating :: Id Rating -> Id Person -> Int -> Maybe Text -> SqlDB ()
--- updateRating ratingId driverId newRatingValue newFeedbackDetails = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ RatingRatingValue =. val newRatingValue,
---         RatingFeedbackDetails =. val newFeedbackDetails,
---         RatingUpdatedAt =. val now
---       ]
---     where_ $
---       tbl ^. RatingTId ==. val (toKey ratingId)
---         &&. tbl ^. RatingDriverId ==. val (toKey driverId)
 
 updateRating :: (L.MonadFlow m, MonadTime m) => Id Rating -> Id Person -> Int -> Maybe Text -> m (MeshResult ())
 updateRating (Id ratingId) (Id driverId) newRatingValue newFeedbackDetails = do
@@ -72,13 +55,6 @@ updateRating (Id ratingId) (Id driverId) newRatingValue newFeedbackDetails = do
         [Se.And [Se.Is BeamR.id (Se.Eq ratingId), Se.Is BeamR.driverId (Se.Eq driverId)]]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
--- findAllRatingsForPerson :: Transactionable m => Id Person -> m [Rating]
--- findAllRatingsForPerson driverId =
---   findAll $ do
---     rating <- from $ table @RatingT
---     where_ $ rating ^. RatingDriverId ==. val (toKey driverId)
---     return rating
-
 findAllRatingsForPerson :: L.MonadFlow m => Id Person -> m [Rating]
 findAllRatingsForPerson driverId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -87,12 +63,6 @@ findAllRatingsForPerson driverId = do
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamRatingToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamR.driverId $ Se.Eq $ getId driverId]
     Nothing -> pure []
-
--- findRatingForRide :: Transactionable m => Id Ride -> m (Maybe Rating)
--- findRatingForRide rideId = findOne $ do
---   rating <- from $ table @RatingT
---   where_ $ rating ^. RatingRideId ==. val (toKey rideId)
---   pure rating
 
 findRatingForRide :: L.MonadFlow m => Id Ride -> m (Maybe Rating)
 findRatingForRide (Id rideId) = do
