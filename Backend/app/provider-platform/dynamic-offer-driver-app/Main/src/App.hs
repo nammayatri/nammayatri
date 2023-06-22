@@ -25,6 +25,7 @@ import qualified EulerHS.Runtime as R
 import Kernel.Beam.Connection.Flow (prepareConnection)
 import Kernel.Beam.Connection.Types (ConnectionConfig (..))
 import Kernel.Exit
+import Kernel.External.AadhaarVerification.Gridline.Config
 import Kernel.External.Verification.Interface.Idfy
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
 import qualified Kernel.Tools.Metrics.Init as Metrics
@@ -88,7 +89,8 @@ runDynamicOfferDriverApp' appCfg = do
             $ catMaybes
               [ Just (Nothing, prepareAuthManagers flowRt appEnv allSubscriberIds),
                 (Nothing,) <$> mkS3MbManager flowRt appEnv appCfg.s3Config,
-                Just (Just 20000, prepareIdfyHttpManager 20000)
+                Just (Just 20000, prepareIdfyHttpManager 20000),
+                Just (Just 150000, prepareGridlineHttpManager 150000)
               ]
 
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
