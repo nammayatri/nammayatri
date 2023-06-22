@@ -20,11 +20,13 @@ module Storage.Queries.Person.PersonFlowStatus
 where
 
 import Domain.Types.Person
+import Domain.Types.Person.PersonFlowStatus
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import qualified Storage.Beam.Person.PersonFlowStatus as BeamPFS
 import Storage.Tabular.Person.PersonFlowStatus
 
 create :: DPFS.PersonFlowStatus -> SqlDB ()
@@ -67,3 +69,19 @@ updateToIdleMultiple personIds now = do
         PersonFlowStatusFlowStatus =. val DPFS.IDLE
       ]
     where_ $ tbl ^. PersonFlowStatusTId `in_` valList (toKey <$> personIds)
+
+transformBeamPersonFlowStatusToDomain :: BeamPFS.PersonFlowStatus -> PersonFlowStatus
+transformBeamPersonFlowStatusToDomain BeamPFS.PersonFlowStatusT {..} = do
+  PersonFlowStatus
+    { personId = Id personId,
+      flowStatus = flowStatus,
+      updatedAt = updatedAt
+    }
+
+transformDomainPersonFlowStatusToBeam :: PersonFlowStatus -> BeamPFS.PersonFlowStatus
+transformDomainPersonFlowStatusToBeam PersonFlowStatus {..} =
+  BeamPFS.defaultPersonFlowStatus
+    { BeamPFS.personId = getId personId,
+      BeamPFS.flowStatus = flowStatus,
+      BeamPFS.updatedAt = updatedAt
+    }

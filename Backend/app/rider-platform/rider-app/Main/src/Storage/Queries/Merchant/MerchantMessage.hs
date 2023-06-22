@@ -20,13 +20,34 @@ module Storage.Queries.Merchant.MerchantMessage
 where
 
 import Domain.Types.Merchant as DOrg
-import Domain.Types.Merchant.MerchantMessage (MerchantMessage, MessageKey)
+import Domain.Types.Merchant.MerchantMessage
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (findById)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Storage.Beam.Merchant.MerchantMessage as BeamMM
 import Storage.Tabular.Merchant.MerchantMessage ()
 
 findByMerchantIdAndMessageKey :: Transactionable m => Id Merchant -> MessageKey -> m (Maybe MerchantMessage)
 findByMerchantIdAndMessageKey merchantId messageKey =
   Esq.findById (merchantId, messageKey)
+
+transformBeamMerchantMessageToDomain :: BeamMM.MerchantMessage -> MerchantMessage
+transformBeamMerchantMessageToDomain BeamMM.MerchantMessageT {..} = do
+  MerchantMessage
+    { merchantId = Id merchantId,
+      messageKey = messageKey,
+      message = message,
+      updatedAt = updatedAt,
+      createdAt = createdAt
+    }
+
+transformDomainMerchantMessageToBeam :: MerchantMessage -> BeamMM.MerchantMessage
+transformDomainMerchantMessageToBeam MerchantMessage {..} =
+  BeamMM.defaultMerchantMessage
+    { BeamMM.merchantId = getId merchantId,
+      BeamMM.messageKey = messageKey,
+      BeamMM.message = message,
+      BeamMM.updatedAt = updatedAt,
+      BeamMM.createdAt = createdAt
+    }

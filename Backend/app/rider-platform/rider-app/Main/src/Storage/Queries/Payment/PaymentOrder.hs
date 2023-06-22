@@ -14,11 +14,16 @@
 
 module Storage.Queries.Payment.PaymentOrder where
 
+import Domain.Types.Payment.PaymentOrder
 import qualified Domain.Types.Payment.PaymentOrder as DOrder
+import qualified EulerHS.Language as L
+import Kernel.External.Encryption
+import qualified Kernel.External.Payment.Juspay.Types as Payment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common (getCurrentTime)
+import qualified Storage.Beam.Payment.PaymentOrder as BeamPO
 import Storage.Tabular.Payment.PaymentOrder
 
 findById :: Transactionable m => Id DOrder.PaymentOrder -> m (Maybe DOrder.PaymentOrder)
@@ -44,3 +49,52 @@ updateStatus order = do
         PaymentOrderUpdatedAt =. val now
       ]
     where_ $ tbl ^. PaymentOrderId ==. val order.id.getId
+
+transformBeamPaymentOrderToDomain :: L.MonadFlow m => BeamPO.PaymentOrder -> m PaymentOrder
+transformBeamPaymentOrderToDomain p@BeamPO.PaymentOrderT {..} = do
+  paymentLinks <- parsePaymentLinks' p
+  pure $
+    PaymentOrder
+      { id = Id id,
+        shortId = ShortId shortId,
+        customerId = Id customerId,
+        merchantId = Id merchantId,
+        amount = amount,
+        currency = currency,
+        status = status,
+        paymentLinks = paymentLinks,
+        clientAuthToken = EncryptedHashed (Encrypted clientAuthTokenEncrypted) clientAuthTokenHash,
+        clientAuthTokenExpiry = clientAuthTokenExpiry,
+        getUpiDeepLinksOption = getUpiDeepLinksOption,
+        environment = environment,
+        createdAt = createdAt,
+        updatedAt = updatedAt
+      }
+  where
+    parsePaymentLinks' obj = do
+      web <- parseBaseUrl `mapM` obj.webPaymentLink
+      iframe <- parseBaseUrl `mapM` obj.iframePaymentLink
+      mobile <- parseBaseUrl `mapM` obj.mobilePaymentLink
+      pure Payment.PaymentLinks {..}
+
+transformDomainPaymentOrderToBeam :: PaymentOrder -> BeamPO.PaymentOrder
+transformDomainPaymentOrderToBeam PaymentOrder {..} =
+  BeamPO.defaultPaymentOrder
+    { BeamPO.id = getId id,
+      BeamPO.shortId = getShortId shortId,
+      BeamPO.customerId = getId customerId,
+      BeamPO.merchantId = getId merchantId,
+      BeamPO.amount = amount,
+      BeamPO.currency = currency,
+      BeamPO.status = status,
+      BeamPO.webPaymentLink = showBaseUrl <$> paymentLinks.web,
+      BeamPO.iframePaymentLink = showBaseUrl <$> paymentLinks.iframe,
+      BeamPO.mobilePaymentLink = showBaseUrl <$> paymentLinks.mobile,
+      BeamPO.clientAuthTokenEncrypted = clientAuthToken & unEncrypted . (.encrypted),
+      BeamPO.clientAuthTokenHash = clientAuthToken.hash,
+      BeamPO.clientAuthTokenExpiry = clientAuthTokenExpiry,
+      BeamPO.getUpiDeepLinksOption = getUpiDeepLinksOption,
+      BeamPO.environment = environment,
+      BeamPO.createdAt = createdAt,
+      BeamPO.updatedAt = updatedAt
+    }

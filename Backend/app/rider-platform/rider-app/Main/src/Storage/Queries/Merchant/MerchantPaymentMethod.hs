@@ -25,6 +25,7 @@ import Domain.Types.Merchant.MerchantPaymentMethod
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Storage.Beam.Merchant.MerchantPaymentMethod as BeamMPM
 import Storage.Tabular.Merchant.MerchantPaymentMethod
 
 findAllByMerchantId :: Transactionable m => Id Merchant -> m [MerchantPaymentMethod]
@@ -35,3 +36,29 @@ findAllByMerchantId merchantId =
       merchantPaymentMethod ^. MerchantPaymentMethodMerchantId ==. val (toKey merchantId)
     orderBy [desc $ merchantPaymentMethod ^. MerchantPaymentMethodPriority]
     return merchantPaymentMethod
+
+transformBeamMerchantPaymentMethodToDomain :: BeamMPM.MerchantPaymentMethod -> MerchantPaymentMethod
+transformBeamMerchantPaymentMethodToDomain BeamMPM.MerchantPaymentMethodT {..} = do
+  MerchantPaymentMethod
+    { id = Id id,
+      merchantId = Id merchantId,
+      paymentType = paymentType,
+      paymentInstrument = paymentInstrument,
+      collectedBy = collectedBy,
+      priority = priority,
+      updatedAt = updatedAt,
+      createdAt = createdAt
+    }
+
+transformDomainMerchantPaymentMethodToBeam :: MerchantPaymentMethod -> BeamMPM.MerchantPaymentMethod
+transformDomainMerchantPaymentMethodToBeam MerchantPaymentMethod {..} =
+  BeamMPM.defaultMerchantPaymentMethod
+    { BeamMPM.id = getId id,
+      BeamMPM.merchantId = getId merchantId,
+      BeamMPM.paymentType = paymentType,
+      BeamMPM.paymentInstrument = paymentInstrument,
+      BeamMPM.collectedBy = collectedBy,
+      BeamMPM.priority = priority,
+      BeamMPM.updatedAt = updatedAt,
+      BeamMPM.createdAt = createdAt
+    }

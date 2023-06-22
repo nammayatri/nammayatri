@@ -26,6 +26,7 @@ import Kernel.Storage.Esqueleto hiding (findById)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import qualified Storage.Beam.Merchant.MerchantServiceUsageConfig as BeamMSUC
 import Storage.Tabular.Merchant.MerchantServiceUsageConfig
 
 findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
@@ -55,3 +56,47 @@ updateMerchantServiceUsageConfig MerchantServiceUsageConfig {..} = do
       ]
     where_ $
       tbl ^. MerchantServiceUsageConfigTId ==. val (toKey merchantId)
+
+transformBeamMerchantServiceUsageConfigToDomain :: BeamMSUC.MerchantServiceUsageConfig -> MerchantServiceUsageConfig
+transformBeamMerchantServiceUsageConfigToDomain BeamMSUC.MerchantServiceUsageConfigT {..} = do
+  MerchantServiceUsageConfig
+    { merchantId = Id merchantId,
+      initiateCall = initiateCall,
+      notifyPerson = notifyPerson,
+      getDistances = getDistances,
+      getRoutes = getRoutes,
+      snapToRoad = snapToRoad,
+      getPlaceName = getPlaceName,
+      getPickupRoutes = getPickupRoutes,
+      getTripRoutes = getTripRoutes,
+      getPlaceDetails = getPlaceDetails,
+      autoComplete = autoComplete,
+      getDistancesForCancelRide = getDistancesForCancelRide,
+      smsProvidersPriorityList = smsProvidersPriorityList,
+      whatsappProvidersPriorityList = whatsappProvidersPriorityList,
+      useFraudDetection = useFraudDetection,
+      updatedAt = updatedAt,
+      createdAt = createdAt
+    }
+
+transformDomainMerchantServiceUsageConfigToBeam :: MerchantServiceUsageConfig -> BeamMSUC.MerchantServiceUsageConfig
+transformDomainMerchantServiceUsageConfigToBeam MerchantServiceUsageConfig {..} =
+  BeamMSUC.defaultMerchantServiceUsageConfig
+    { BeamMSUC.merchantId = getId merchantId,
+      BeamMSUC.initiateCall = initiateCall,
+      BeamMSUC.notifyPerson = notifyPerson,
+      BeamMSUC.getDistances = getDistances,
+      BeamMSUC.getRoutes = getRoutes,
+      BeamMSUC.snapToRoad = snapToRoad,
+      BeamMSUC.getPlaceName = getPlaceName,
+      BeamMSUC.getPickupRoutes = getPickupRoutes,
+      BeamMSUC.getTripRoutes = getTripRoutes,
+      BeamMSUC.getPlaceDetails = getPlaceDetails,
+      BeamMSUC.autoComplete = autoComplete,
+      BeamMSUC.getDistancesForCancelRide = getDistancesForCancelRide,
+      BeamMSUC.smsProvidersPriorityList = smsProvidersPriorityList,
+      BeamMSUC.whatsappProvidersPriorityList = whatsappProvidersPriorityList,
+      BeamMSUC.useFraudDetection = useFraudDetection,
+      BeamMSUC.updatedAt = updatedAt,
+      BeamMSUC.createdAt = createdAt
+    }

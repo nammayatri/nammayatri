@@ -17,7 +17,9 @@ module Storage.Queries.Payment.PaymentTransaction where
 import Domain.Types.Payment.PaymentTransaction as DTransaction
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
 import Kernel.Utils.Common (getCurrentTime)
+import qualified Storage.Beam.Payment.PaymentTransaction as BeamPT
 import Storage.Tabular.Payment.PaymentTransaction
 
 create :: PaymentTransaction -> SqlDB ()
@@ -49,3 +51,47 @@ findByTxnUUID txnUUID =
     transaction <- from $ table @PaymentTransactionT
     where_ $ transaction ^. PaymentTransactionTxnUUID ==. val txnUUID
     return transaction
+
+transformBeamPaymentTransactionToDomain :: BeamPT.PaymentTransaction -> PaymentTransaction
+transformBeamPaymentTransactionToDomain BeamPT.PaymentTransactionT {..} = do
+  PaymentTransaction
+    { id = Id id,
+      txnUUID = txnUUID,
+      paymentMethodType = paymentMethodType,
+      paymentMethod = paymentMethod,
+      respMessage = respMessage,
+      respCode = respCode,
+      gatewayReferenceId = gatewayReferenceId,
+      orderId = Id orderId,
+      merchantId = Id merchantId,
+      amount = amount,
+      currency = currency,
+      dateCreated = dateCreated,
+      statusId = statusId,
+      status = status,
+      juspayResponse = juspayResponse,
+      createdAt = createdAt,
+      updatedAt = updatedAt
+    }
+
+transformDomainPaymentTransactionToBeam :: PaymentTransaction -> BeamPT.PaymentTransaction
+transformDomainPaymentTransactionToBeam PaymentTransaction {..} =
+  BeamPT.defaultPaymentTransaction
+    { BeamPT.id = getId id,
+      BeamPT.txnUUID = txnUUID,
+      BeamPT.paymentMethodType = paymentMethodType,
+      BeamPT.paymentMethod = paymentMethod,
+      BeamPT.respMessage = respMessage,
+      BeamPT.respCode = respCode,
+      BeamPT.gatewayReferenceId = gatewayReferenceId,
+      BeamPT.orderId = getId orderId,
+      BeamPT.merchantId = getId merchantId,
+      BeamPT.amount = amount,
+      BeamPT.currency = currency,
+      BeamPT.dateCreated = dateCreated,
+      BeamPT.statusId = statusId,
+      BeamPT.status = status,
+      BeamPT.juspayResponse = juspayResponse,
+      BeamPT.createdAt = createdAt,
+      BeamPT.updatedAt = updatedAt
+    }

@@ -23,6 +23,8 @@ where
 import Domain.Types.Maps.PlaceNameCache
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import qualified Storage.Beam.Maps.PlaceNameCache as BeamPNC
 import Storage.Tabular.Maps.PlaceNameCache
 
 create :: PlaceNameCache -> SqlDB ()
@@ -42,3 +44,29 @@ findPlaceByGeoHash geoHash =
     where_ $ placeNameCache ^. PlaceNameCacheGeoHash ==. val (Just geoHash)
 
     return placeNameCache
+
+transformBeamPlaceNameCacheToDomain :: BeamPNC.PlaceNameCache -> PlaceNameCache
+transformBeamPlaceNameCacheToDomain BeamPNC.PlaceNameCacheT {..} = do
+  PlaceNameCache
+    { id = Id id,
+      formattedAddress = formattedAddress,
+      plusCode = plusCode,
+      lat = lat,
+      lon = lon,
+      placeId = placeId,
+      addressComponents = addressComponents,
+      geoHash = geoHash
+    }
+
+transformDomainPlaceNameCacheToBeam :: PlaceNameCache -> BeamPNC.PlaceNameCache
+transformDomainPlaceNameCacheToBeam PlaceNameCache {..} =
+  BeamPNC.defaultPlaceNameCache
+    { BeamPNC.id = getId id,
+      BeamPNC.formattedAddress = formattedAddress,
+      BeamPNC.plusCode = plusCode,
+      BeamPNC.lat = lat,
+      BeamPNC.lon = lon,
+      BeamPNC.placeId = placeId,
+      BeamPNC.addressComponents = addressComponents,
+      BeamPNC.geoHash = geoHash
+    }

@@ -16,9 +16,11 @@ module Storage.Queries.Person.PersonDefaultEmergencyNumber where
 
 import Domain.Types.Person
 import Domain.Types.Person.PersonDefaultEmergencyNumber
+import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Storage.Beam.Person.PersonDefaultEmergencyNumber as BeamPDEN
 import Storage.Tabular.Person.PersonDefaultEmergencyNumber
 
 replaceAll :: Id Person -> [PersonDefaultEmergencyNumber] -> SqlDB ()
@@ -38,3 +40,24 @@ findAllByPersonId personId =
     where_ $
       personENT ^. PersonDefaultEmergencyNumberTId ==. val (toKey personId)
     return personENT
+
+transformBeamPersonDefaultEmergencyNumberToDomain :: BeamPDEN.PersonDefaultEmergencyNumber -> PersonDefaultEmergencyNumber
+transformBeamPersonDefaultEmergencyNumberToDomain BeamPDEN.PersonDefaultEmergencyNumberT {..} = do
+  PersonDefaultEmergencyNumber
+    { personId = Id personId,
+      name = name,
+      mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
+      mobileCountryCode = mobileCountryCode,
+      createdAt = createdAt
+    }
+
+transformDomainPersonDefaultEmergencyNumberToBeam :: PersonDefaultEmergencyNumber -> BeamPDEN.PersonDefaultEmergencyNumber
+transformDomainPersonDefaultEmergencyNumberToBeam PersonDefaultEmergencyNumber {..} =
+  BeamPDEN.defaultPersonDefaultEmergencyNumber
+    { BeamPDEN.personId = getId personId,
+      BeamPDEN.name = name,
+      BeamPDEN.mobileCountryCode = mobileCountryCode,
+      BeamPDEN.mobileNumberHash = mobileNumber.hash,
+      BeamPDEN.mobileNumberEncrypted = unEncrypted (mobileNumber.encrypted),
+      BeamPDEN.createdAt = createdAt
+    }
