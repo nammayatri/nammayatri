@@ -19,11 +19,13 @@ import Kernel.Prelude
 import Kernel.Types.Id
 
 data Category
-  = SureMetro
+  = SureShoppingMall
+  | SureMetro
   | SureAirport
   | SureSchool
   | SureHospital
   | SureStation
+  | UnSureShoppingMall
   | UnSureMetro
   | UnSureAirport
   | UnSureSchool
