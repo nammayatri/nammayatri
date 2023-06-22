@@ -489,5 +489,6 @@ const englishStrings = {
   "METRO_RIDE" : "Metro Ride",
   "GO_BACK_TEXT" : "Go Back",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST": "The driver preferred your special request and is just ",
-  "WE_URGE_YOU_NOT_TO_CANCEL": "m away. We urge you not to cancel."
+  "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST": "The driver preferred your special request and has travelled ",
+  "AND_HAS_TRAVELLED": " km."
 }

@@ -151,15 +151,22 @@ cancelAppConfig state = let
       }
   }
   in popUpConfig'
-      where distanceString = getDistanceString state.data.driverInfoCardState.distance $ fromMaybe 0 state.data.driverInfoCardState.initDistance
+      where distanceString = getDistanceString state.data.driverInfoCardState.distance (fromMaybe 0 state.data.driverInfoCardState.initDistance) state.props.zoneType.priorityTag
 
 
-getDistanceString :: Int -> Int -> Maybe String
-getDistanceString currDistance initDistance
+getDistanceString :: Int -> Int -> ZoneType -> Maybe String
+getDistanceString currDistance initDistance zoneType
   | currDistance <= 15 = Just $ getString DRIVER_IS_NEAR_YOUR_LOCATION
-  | currDistance <= 500 = Just $ getString YOUR_DRIVER_IS_JUST <> show currDistance <> getString M_AWAY
+  | currDistance <= 500 = Just $ (if zoneType == METRO then
+                                    getString DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST
+                                  else
+                                    getString YOUR_DRIVER_IS_JUST
+                                 ) <> show currDistance <> getString M_AWAY
   | currDistance > initDistance = Just $ getString DRIVER_MIGHT_BE_TAKING_ALTERNATE_ROUTE
-  | currDistance < initDistance = Just $ getString DRIVER_HAS_ALREADY_TRAVELLED <> getKmMeter (initDistance - currDistance) <> if (getValueToLocalStore LANGUAGE_KEY) == "EN_US" then "." else getString HAS_TRAVELLED
+  | currDistance < initDistance = Just $ if zoneType == METRO then
+                                          getString DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST <> getKmMeter (initDistance - currDistance) <> getString AND_HAS_TRAVELLED
+                                         else
+                                          getString DRIVER_HAS_ALREADY_TRAVELLED <> getKmMeter (initDistance - currDistance) <> if (getValueToLocalStore LANGUAGE_KEY) == "EN_US" then "." else getString HAS_TRAVELLED
   | otherwise =  Nothing
 
 skipButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
@@ -907,50 +914,6 @@ chooseYourRideConfig state = ChooseYourRide.config
     quoteList = state.data.specialZoneQuoteList
   }
 
-cancelConfirmationConfig :: ST.HomeScreenState -> PopUpModal.Config
-cancelConfirmationConfig state = let
-  config' = PopUpModal.config
-  popUpConfig' = config'{
-    gravity = CENTER,
-    margin = MarginHorizontal 24 24 ,
-    buttonLayoutMargin = Margin 16 0 16 20 ,
-    primaryText {
-      text = (getString DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST) <> (show state.data.driverInfoCardState.distance) <> (getString WE_URGE_YOU_NOT_TO_CANCEL)
-    , margin = Margin 16 24 16 24
-    , fontStyle = FontStyle.semiBold LanguageStyle
-    },
-    secondaryText {visibility = GONE},
-    option1 {
-      text = (getString CONTINUE)
-    , fontSize = FontSize.a_16
-    , width = V $ (((EHC.screenWidth unit)-92)/2)
-    , isClickable = state.data.cancelRideConfirmationData.continueEnabled
-    , timerValue = state.data.cancelRideConfirmationData.delayInSeconds
-    , enableTimer = true
-    , background = Color.white900
-    , strokeColor = Color.black500
-    , color = Color.black700
-    },
-    option2 {
-      text = (getString GO_BACK_TEXT)
-    , margin = MarginLeft 12
-    , fontSize = FontSize.a_16
-    , width = V $ (((EHC.screenWidth unit)-92)/2)
-    , color = Color.yellow900
-    , strokeColor = Color.black900
-    , background = Color.black900
-    },
-    backgroundClickable = false,
-    cornerRadius = (Corners 15.0 true true true true),
-    coverImageConfig {
-      imageUrl = "ny_ic_driver_near,https://assets.juspay.in/nammayatri/images/driver/ny_ic_driver_near.png"
-    , visibility = VISIBLE
-    , margin = Margin 16 20 16 0
-    , height = V 178
-    }
-  }
-  in popUpConfig'
-
 specialLocationIcons :: ZoneType -> String
 specialLocationIcons tag =
   case tag of
@@ -961,4 +924,14 @@ specialLocationConfig :: String -> String -> JB.SpecialLocationTag
 specialLocationConfig srcIcon destIcon = {
     sourceSpecialTagIcon : srcIcon
   , destSpecialTagIcon : destIcon
+}
+
+updateRouteMarkerConfig :: JB.Locations -> String -> String -> String -> String -> JB.SpecialLocationTag -> JB.UpdateRouteMarker
+updateRouteMarkerConfig locations sourceName destName sourceIcon destIcon specialLocation = {
+    locations : locations
+  , sourceName : sourceName
+  , destName : destName
+  , sourceIcon : sourceIcon
+  , destIcon : destIcon
+  , specialLocation : specialLocation
 }

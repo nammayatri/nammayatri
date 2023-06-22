@@ -554,19 +554,9 @@ export const drawRoute = function (data) {
 };
 
 export const updateRouteMarker = function (data) {
-  return function (sourceName) {
-    return function (destName) {
-      return function (sourceIcon) {
-        return function (destIcon) {
-          return function (specialLocation) {
-            return function () {
-              if (window.JBridge.updateRouteMarker) {
-                return window.JBridge.updateRouteMarker(JSON.stringify(data), sourceName, destName, sourceIcon, destIcon, JSON.stringify(specialLocation));
-              }
-            }
-          }
-        }
-      }
+  return function () {
+    if (window.JBridge.updateRouteMarker) {
+      return window.JBridge.updateRouteMarker(JSON.stringify(data));
     }
   }
 }

@@ -593,21 +593,6 @@ data Action = NoAction
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
-eval (PopUpModalCancelConfirmationAction (PopUpModal.OnButton2Click)) state = do
-  _ <- pure $ clearTimer state.data.cancelRideConfirmationData.timerID
-  continue state {props{cancelRideConfirmationPopup = false}, data{cancelRideConfirmationData{timerID = "" , continueEnabled=false, enableTimer=false}}}
-
-eval (PopUpModalCancelConfirmationAction (PopUpModal.OnButton1Click)) state = do
-  _ <- pure $ performHapticFeedback unit
-  continue state { props {cancelRideConfirmationPopup = false, isCancelRide = true, cancellationReasons = cancelReasons "", cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "" } }
-
-eval (PopUpModalCancelConfirmationAction (PopUpModal.CountDown seconds id status timerID)) state = do
-  if status == "EXPIRED" && seconds == 0 then do
-    _ <- pure $ clearTimer timerID
-    continue state { data { cancelRideConfirmationData{delayInSeconds = 0, timerID = "", continueEnabled = true}}}
-  else
-    continue state { data {cancelRideConfirmationData{delayInSeconds = seconds + 1, timerID = timerID, continueEnabled = false}}}
-
 eval SearchForSelectedLocation state =
   updateAndExit state{props{isPopUp = NoPopUp}} $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = TryAgain, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
 
@@ -1024,11 +1009,8 @@ eval (CancelSearchAction PopUpModal.OnButton1Click) state = do continue state {p
 eval (CancelSearchAction PopUpModal.OnButton2Click) state = do
   continue state { props { isCancelRide = true, cancellationReasons = cancelReasons "", cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "", cancelSearchCallDriver = false } }
 
-eval (DriverInfoCardActionController (DriverInfoCardController.CancelRide infoCard)) state = do
-  if state.props.zoneType.priorityTag == METRO then
-    continue state{ props{ cancelRideConfirmationPopup = true } }
-  else do
-    continue state { props { cancelSearchCallDriver = true } }
+eval (DriverInfoCardActionController (DriverInfoCardController.CancelRide infoCard)) state =
+  continue state { props { cancelSearchCallDriver = true } }
 
 eval (DriverInfoCardActionController (DriverInfoCardController.LocationTracking)) state = do
   _ <- pure $ performHapticFeedback unit

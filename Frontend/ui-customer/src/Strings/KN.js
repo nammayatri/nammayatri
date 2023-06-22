@@ -483,5 +483,6 @@ const kannadaStrings = {
   "METRO_RIDE" : "ಮೆಟ್ರೋ ಸವಾರಿ",
   "GO_BACK_TEXT": "ಹಿಂದೆ ಹೋಗು",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST": "ಚಾಲಕ ನಿಮ್ಮ ವಿಶೇಷ ವಿನಂತಿಯನ್ನು ಆದ್ಯತೆ ನೀಡಿದ್ದಾರೆ ಮತ್ತು ಕೇವಲ ",
-  "WE_URGE_YOU_NOT_TO_CANCEL": "ಮೀ ದೂರದಲ್ಲಿದೆ. ರೈಡ್ ಅನ್ನು ರದ್ದುಗೊಳಿಸದಂತೆ ನಾವು ನಿಮ್ಮನ್ನು ಒತ್ತಾಯಿಸುತ್ತೇವೆ"
+  "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST": "ಚಾಲಕರು ನಿಮ್ಮ ವಿಶೇಷ ವಿನಂತಿಯನ್ನು ಆದ್ಯತೆ ನೀಡಿದ್ದಾರೆ ಮತ್ತು ಈಗಾಗಲೇ ",
+  "AND_HAS_TRAVELLED": " ಕಿಮೀ ಪ್ರಯಾಣಿಸಿದ್ದಾರೆ."
 }
