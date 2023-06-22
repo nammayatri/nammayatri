@@ -97,7 +97,7 @@ generateToken SP.Person {..} = do
   -- FIXME We should also cleanup old token from Redis
   runTransaction $ do
     RegistrationToken.deleteByPersonId id
-    RegistrationToken.create regToken
+  _ <- RegistrationToken.create regToken
   pure $ regToken.token
 
 logout :: (EsqDBFlow m r) => (Id SP.Person, Id Merchant.Merchant) -> m LogoutRes

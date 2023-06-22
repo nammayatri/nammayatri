@@ -23,10 +23,10 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common (getCurrentTime)
+import Lib.Utils
+import qualified Sequelize as Se
 import qualified Storage.Beam.Payment.PaymentTransaction as BeamPT
 import Storage.Tabular.Payment.PaymentTransaction
-import qualified Sequelize as Se
-import Lib.Utils
 
 create :: L.MonadFlow m => PaymentTransaction -> m (MeshResult ())
 create paymentTransaction = do

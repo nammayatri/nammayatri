@@ -27,9 +27,9 @@ import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
 import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
-import Kernel.Types.Id
 import qualified Storage.Beam.Maps.PlaceNameCache as BeamPNC
 import Storage.Tabular.Maps.PlaceNameCache
 
