@@ -108,9 +108,9 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
       let platformFeeCaption = "PLATFORM_FEE"
           mbPlatformFeeItem = mkBreakupItem platformFeeCaption . mkPrice <$> det.platformFee
           sgstCaption = "SGST"
-          mbSgstItem = mkBreakupItem sgstCaption . mkPrice <$> det.sgst
+          mbSgstItem = mkBreakupItem sgstCaption . mkPrice . roundToIntegral <$> det.sgst
           cgstCaption = "CGST"
-          mbCgstItem = mkBreakupItem cgstCaption . mkPrice <$> det.cgst
+          mbCgstItem = mkBreakupItem cgstCaption . mkPrice . roundToIntegral <$> det.cgst
       catMaybes [mbPlatformFeeItem, mbSgstItem, mbCgstItem]
 
 -- TODO: make some tests for it
@@ -266,15 +266,15 @@ calculateFareParameters params = do
                 ProgressivePlatformFee charge -> fromIntegral fullCompleteRideCost * realToFrac charge
                 ConstantPlatformFee charge -> fromIntegral charge
           FParamsSlabDetails
-            { platformFee = Just . roundToIntegral $ baseFee, -- when we round each component separately, rounding errors will increase
-              cgst = Just . roundToIntegral $ baseFee * platformFeeInfo'.cgst,
-              sgst = Just . roundToIntegral $ baseFee * platformFeeInfo'.sgst
+            { platformFee = Just . roundToIntegral $ baseFee,
+              cgst = Just . realToFrac $ baseFee * platformFeeInfo'.cgst,
+              sgst = Just . realToFrac $ baseFee * platformFeeInfo'.sgst
             }
 
 countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (Money, Money, Money)
 countFullFareOfParamsDetails = \case
   DFParams.ProgressiveDetails det -> (fromMaybe 0 det.extraKmFare, det.deadKmFare, 0) -- (partOfNightShiftCharge, notPartOfNightShiftCharge)
-  DFParams.SlabDetails det -> (0, 0, fromMaybe 0 det.platformFee + fromMaybe 0 det.sgst + fromMaybe 0 det.cgst)
+  DFParams.SlabDetails det -> (0, 0, fromMaybe 0 det.platformFee + roundToIntegral (fromMaybe 0 det.sgst + fromMaybe 0 det.cgst))
 
 isNightShift ::
   DFP.NightShiftBounds ->
