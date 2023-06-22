@@ -15,16 +15,16 @@
 module Storage.Queries.Payment.PaymentTransaction where
 
 import Domain.Types.Payment.PaymentTransaction as DTransaction
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common (getCurrentTime)
 import qualified Storage.Beam.Payment.PaymentTransaction as BeamPT
 import Storage.Tabular.Payment.PaymentTransaction
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
-import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import qualified Sequelize as Se
 import Lib.Utils
 
