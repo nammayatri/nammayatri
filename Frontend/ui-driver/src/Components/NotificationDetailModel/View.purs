@@ -51,7 +51,7 @@ view push state =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , clickable true
-        , afterRender
+        , onAnimationEnd
             ( \action -> do
                 if state.notificationNotSeen then push IncreaseViewCount else pure unit
                 _ <- push action
