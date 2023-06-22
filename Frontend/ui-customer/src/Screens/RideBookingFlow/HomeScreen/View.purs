@@ -58,10 +58,10 @@ import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (adjustViewWithKeyboard) as HU
 import Helpers.Utils (decodeErrorMessage, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, consumingBackPress, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, waitingCountdownTimer)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getCurrentPosition, getExtendedPath, getHeightFromPercent, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, toast, updateRoute)
-import Helpers.Utils (adjustViewWithKeyboard) as HU
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -806,8 +806,8 @@ homeScreenView push state =
 homeScreenTopIconView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 homeScreenTopIconView push state =
   homeScreenAnimation TOP_BOTTOM
-    $ -- 1000 (-100) 0 0 true $ PrestoAnim.Bezier 0.37 0.0 0.63 1.0] $
-      linearLayout
+    $
+    linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , margin (Margin 16 26 16 0)
@@ -875,6 +875,115 @@ homeScreenTopIconView push state =
                 ] <> FontStyle.body7 LanguageStyle
             ]
         ]
+     -- 1000 (-100) 0 0 true $ PrestoAnim.Bezier 0.37 0.0 0.63 1.0] $ 
+    --  linearLayout
+    --     [ height WRAP_CONTENT
+    --     , width MATCH_PARENT
+    --     , orientation VERTICAL
+    --     ]
+    --     [ linearLayout
+    --         [ width MATCH_PARENT
+    --         , height WRAP_CONTENT
+    --         , background Color.white900
+    --         , orientation HORIZONTAL
+    --         , gravity LEFT
+    --         , visibility if state.data.config.terminateBtnConfig.visibility then VISIBLE else GONE
+    --         ]
+    --         [ linearLayout
+    --             [ width WRAP_CONTENT
+    --             , height WRAP_CONTENT
+    --             , margin $ MarginLeft 16
+    --             , padding $ Padding 6 6 6 6
+    --             , gravity CENTER_VERTICAL
+    --             , onClick push (const TerminateApp)
+    --             ]
+    --             [ imageView
+    --                 [ imageWithFallback state.data.config.terminateBtnConfig.imageUrl
+    --                 , height $ V 20
+    --                 , width $ V 20
+    --                 , margin $ MarginRight 10
+    --                 ]
+    --             , textView
+    --                 $ [ width WRAP_CONTENT
+    --                   , height WRAP_CONTENT
+    --                   , gravity CENTER_VERTICAL
+    --                   , text state.data.config.terminateBtnConfig.title
+    --                   , color Color.black900
+    --                   ]
+    --                 <> FontStyle.tags TypoGraphy
+    --             ]
+    --         ]
+    --     , linearLayout
+    --         [ height WRAP_CONTENT
+    --         , width MATCH_PARENT
+    --         , orientation HORIZONTAL
+    --         , cornerRadius 8.0
+    --         , background Color.white900
+    --         , visibility if state.props.rideRequestFlow then GONE else VISIBLE
+    --         , stroke $ "1," <> Color.grey900
+    --         , gravity CENTER_VERTICAL
+    --         , margin (Margin 16 26 16 0)
+    --         , padding (Padding 0 16 16 16)
+    --         ]
+    --         [ linearLayout
+    --             [ width WRAP_CONTENT -- $ V 54
+    --             , height MATCH_PARENT
+    --             , gravity CENTER
+    --             , disableClickFeedback true
+    --             , clickable if state.props.currentStage == SearchLocationModel then false else true
+    --             , onClick push $ const OpenSettings
+    --             ]
+    --             [ imageView
+    --                 [ imageWithFallback if ((getValueFromConfig "showDashboard") == "true") && (checkVersion "LazyCheck") then "ic_menu_notify," <> (getAssetStoreLink FunctionCall) <> "ic_menu_notify.png" else "ny_ic_hamburger," <> (getAssetStoreLink FunctionCall) <> "ny_ic_hamburger.png"
+    --                 , height $ V 24
+    --                 , width $ V 24
+    --                 , margin (Margin 16 16 16 16)
+    --                 ]
+    --             ]
+    --         , linearLayout
+    --             [ height $ V 42
+    --             , width $ V 1
+    --             , background Color.grey900
+    --             ]
+    --             []
+    --         , imageView
+    --             [ imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
+    --             , height $ V 20
+    --             , width $ V 20
+    --             , margin (Margin 5 5 5 5)
+    --             , onClick push (const $ OpenSearchLocation)
+    --             , gravity BOTTOM
+    --             ]
+    --         , linearLayout
+    --             [ orientation VERTICAL
+    --             , width MATCH_PARENT
+    --             , height WRAP_CONTENT
+    --             , disableClickFeedback true
+    --             , onClick push (const $ OpenSearchLocation)
+    --             ]
+    --             [ textView
+    --                 $ [ height WRAP_CONTENT
+    --                   , width MATCH_PARENT
+    --                   , text (getString PICK_UP_LOCATION)
+    --                   , color Color.black800
+    --                   , gravity LEFT
+    --                   , lineHeight "16"
+    --                   ]
+    --                 <> FontStyle.body3 LanguageStyle
+    --             , textView
+    --                 $ [ height WRAP_CONTENT
+    --                   , width MATCH_PARENT
+    --                   , text if state.data.source /= "" then state.data.source else (getString CURRENT_LOCATION)
+    --                   , maxLines 1
+    --                   , ellipsize true
+    --                   , color Color.black800
+    --                   , gravity LEFT
+    --                   , lineHeight "23"
+    --                   ]
+    --                 <> FontStyle.body7 LanguageStyle
+    --             ]
+    --         ]
+    --     ]
   where
   homeScreenAnimation direction = PrestoAnim.animationSet [ translateYAnimFromTop $ translateYAnimHomeConfig direction ]
 

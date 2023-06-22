@@ -398,7 +398,7 @@ public class MainActivity extends AppCompatActivity {
                     hyperServices.process(json);
                 } else if (event.equals("process_result")) {
                     try {
-                        JSONObject payload1 = json.getJSONObject(PaymentConstants.PAYLOAD);
+                        JSONObject payload1 = jsonObject.getJSONObject(PaymentConstants.PAYLOAD);
                         if (payload1.getString("action").equals("terminate")) {
                             Intent startMain = new Intent(Intent.ACTION_MAIN);
                             startMain.addCategory(Intent.CATEGORY_HOME);

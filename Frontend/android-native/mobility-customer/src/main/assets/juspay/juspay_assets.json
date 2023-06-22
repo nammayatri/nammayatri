@@ -44,6 +44,7 @@
       "ny_ic_icon": true,
       "round_corner_layout": true,
       "ic_grey_border": true,
-      "progress_loader": true
+      "progress_loader": true,
+      "ny_ic_chevron_left_double": true
    }
 }

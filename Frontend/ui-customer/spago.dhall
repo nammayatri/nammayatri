@@ -26,6 +26,7 @@ to generate this file without the comments in this block.
   , "foreign"
   , "foreign-generic"
   , "free"
+  , "functions"
   , "halogen-vdom"
   , "integers"
   , "maybe"

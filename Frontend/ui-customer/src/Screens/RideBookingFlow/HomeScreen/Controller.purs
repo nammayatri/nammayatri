@@ -54,6 +54,7 @@ import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array ((!!), filter, null, snoc, length, head, last, sortBy, union)
+import Data.Function.Uncurried (runFn3)
 import Data.Int (toNumber, round)
 import Data.Int (toNumber, round, fromString)
 import Data.Int (toNumber, round, fromString)
@@ -76,7 +77,7 @@ import Merchant.Utils (Merchant(..), getMerchant)
 import Merchant.Utils (getMerchant, getValueFromConfig)
 import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/))
 import Presto.Core.Types.API (ErrorResponse)
-import PrestoDOM (Eval, Visibility(..), continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM (Eval, Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resources.Constants (encodeAddress)
 import Screens (ScreenName(..), getScreen)
@@ -94,7 +95,7 @@ instance showAction :: Show Action where
   show _ = ""
 
 instance loggableAction :: Loggable Action where
-  performLog action appId  = pure unit --case action of
+  performLog = defaultPerformLog --case action of
     -- AfterRender -> trackAppScreenRender appId "screen" (getScreen HOME_SCREEN)
     -- BackPressed -> trackAppBackPress appId (getScreen HOME_SCREEN)
     -- CancelSearch -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "cancel_search"
@@ -577,12 +578,17 @@ data Action = NoAction
             | IsMockLocation String
             | MenuButtonActionController MenuButtonController.Action
             | ChooseYourRideAction ChooseYourRideController.Action
+            | TerminateApp
           
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
 eval CheckFlowStatusAction state = exit $ CheckFlowStatus state
+
+eval TerminateApp state = do 
+  pure $ runFn3 emitJOSEvent "java" "onEvent" "action,terminate"
+  continue state
 
 eval (IsMockLocation isMock) state = do
   _ <- pure $ spy "IsMockLocation" isMock
@@ -727,7 +733,7 @@ eval BackPressed state = do
                           else if state.props.emergencyHelpModal then continue state {props {emergencyHelpModal = false}}
                           else if state.props.callSupportPopUp then continue state {props {callSupportPopUp = false}}
                           else do 
-                              pure $ unsafePerformEffect $ runEffectFn3 emitJOSEvent "java" "onEvent" "action,terminate"
+                              pure $ runFn3 emitJOSEvent "java" "onEvent" "action,terminate"
                               continue state
 
 eval GoBackToSearchLocationModal state = do
@@ -836,7 +842,7 @@ eval (SettingSideBarActionController (SettingSideBarController.OnClose)) state =
       else case state.data.settingSideBar.opened of
                 SettingSideBarController.CLOSED -> do
                                                     if state.props.currentStage == HomeScreen then do
-                                                      pure $ unsafePerformEffect $ runEffectFn3 emitJOSEvent "java" "onEvent" "action,terminate"
+                                                      pure $ runFn3 emitJOSEvent "java" "onEvent" "action,terminate"
                                                       continue state
                                                       else continueWithCmd state [pure $ BackPressed]
                 _                               -> continue state {data{settingSideBar{opened = SettingSideBarController.CLOSING}}}

@@ -117,7 +117,6 @@ logoView state =
               [ height $ V 48
               , width $ V 60
               , imageWithFallback if state.appConfig.nyBrandingVisibility then "ny_ic_paytm_logo," <> (getAssetStoreLink FunctionCall) <> "ny_ic_paytm_logo.png" else "ic_launcher," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_launcher.png"
-              , visibility if state.appConfig.nyBrandingVisibility then VISIBLE else GONE
               ]
           ]
 
@@ -155,7 +154,8 @@ bottomLinksView state =
             [ imageView
                 [ height $ V 20
                 , width $ V 20
-                , imageWithFallback $ "ic_launcher," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_launcher.png"
+                , imageUrl "ic_launcher"
+                -- , imageWithFallback $ "ic_launcher," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_launcher.png"
                 ]
             , textView
                 $ [ text $ "namma yatri"

@@ -25,7 +25,12 @@ config =
   , otpBackground: "#F5F9FE"
   , otpTextColor: "#101010"
   , rateCardColor: "#00B8F5"
-  , nyBrandingVisibility: true
+  , nyBrandingVisibility: false
   , fontType: "System"
   , confirmPickUpLocationBorder: "#101010"
+  , terminateBtnConfig : {
+            visibility: true, 
+            title : "Paytm",
+            imageUrl : "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
+        }
   }

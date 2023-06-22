@@ -24,7 +24,8 @@ type AppConfig =
     rateCardColor :: String,
     nyBrandingVisibility :: Boolean,
     fontType :: String,
-    confirmPickUpLocationBorder ::String
+    confirmPickUpLocationBorder ::String,
+    terminateBtnConfig :: TerminateBtnConfig
   } 
 
 type QuoteListConfig = {
@@ -32,3 +33,9 @@ type QuoteListConfig = {
   textColor :: String,
   loaderColor :: String
 }
+
+type TerminateBtnConfig = {
+            visibility :: Boolean, 
+            title :: String,
+            imageUrl :: String
+        }

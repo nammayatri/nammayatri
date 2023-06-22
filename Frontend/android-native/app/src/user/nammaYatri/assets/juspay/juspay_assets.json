@@ -199,6 +199,7 @@
       "rounded_corner_background" : true,
       "separator_silent_mode" : true,
       "silent_popup_background" : true,
-      "widget_close_gradient" : true
+      "widget_close_gradient" : true,
+      "ny_ic_chevron_left_double": true
    }
 }
