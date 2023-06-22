@@ -20,19 +20,31 @@ module Storage.Queries.BlackListOrg
 where
 
 import Domain.Types.BlackListOrg
+import qualified EulerHS.KVConnector.Flow as KV
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Types.Registry.Subscriber (Subscriber)
+import Lib.Utils
+import qualified Sequelize as Se
 import qualified Storage.Beam.BlackListOrg as BeamBLO
-import Storage.Tabular.BlackListOrg
 
-findBySubscriberId :: Transactionable m => ShortId Subscriber -> m (Maybe BlackListOrg)
+-- findBySubscriberId :: Transactionable m => ShortId Subscriber -> m (Maybe BlackListOrg)
+-- findBySubscriberId subscriberId = do
+--   findOne $ do
+--     org <- from $ table @BlackListOrgT
+--     where_ $ org ^. BlackListOrgSubscriberId ==. val (getShortId subscriberId)
+--     return org
+
+findBySubscriberId :: L.MonadFlow m => ShortId Subscriber -> m (Maybe BlackListOrg)
 findBySubscriberId subscriberId = do
-  findOne $ do
-    org <- from $ table @BlackListOrgT
-    where_ $ org ^. BlackListOrgSubscriberId ==. val (getShortId subscriberId)
-    return org
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamBLO.BlackListOrgT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> either (pure Nothing) (transformBeamBlackListOrgToDomain <$>) <$> KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamBLO.subscriberId $ Se.Eq $ getShortId subscriberId]
+    Nothing -> pure Nothing
 
 transformBeamBlackListOrgToDomain :: BeamBLO.BlackListOrg -> BlackListOrg
 transformBeamBlackListOrgToDomain BeamBLO.BlackListOrgT {..} = do
