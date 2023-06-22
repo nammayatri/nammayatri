@@ -125,11 +125,10 @@ driverRideDetailsView state push =
     [  height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , margin $ MarginTop 40
+      , margin $ Margin 16 40 16 0
     ][ textView
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
-        , margin $ MarginLeft 16
         , text "Summary"
         , textSize FontSize.a_16
         , color Color.black900
@@ -138,24 +137,24 @@ driverRideDetailsView state push =
       , linearLayout  
         [ width MATCH_PARENT
         , height WRAP_CONTENT
-        , margin $ Margin 12 12 12 12
+        , margin $ Margin 0 12 0 12
         , background Color.blue600
         , cornerRadius 10.0
-        ][ infoTileView state {primaryText: "₹45,67,892", subText: "Earned on NY", postImgVisibility : false, seperatorView : false}
+        ][ infoTileView state {primaryText: "₹45,67,892", subText: "Earned on NY", postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
         , linearLayout
             [ height MATCH_PARENT
             , width (V 1)
             , margin (Margin 0 16 0 16)
             , background Color.lightGreyShade
             ][]
-        , infoTileView state {primaryText: "₹52,000", subText: "Namma Bonus", postImgVisibility : false, seperatorView : false}
+        , infoTileView state {primaryText: "₹52,000", subText: "Namma Bonus", postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
         ]
       , linearLayout  
         [ width MATCH_PARENT
         , height WRAP_CONTENT
-        , margin $ Margin 10 12 10 12
-        ][ infoTileView state {primaryText: "4.9", subText: "rated by 392 users", postImgVisibility : true, seperatorView : true}
-          , infoTileView state {primaryText: "502", subText: "Trips Completed", postImgVisibility : false, seperatorView : true}
+        , margin $ Margin 0 12 0 12
+        ][ infoTileView state {primaryText: "4.9", subText: "rated by 392 users", postImgVisibility : true, seperatorView : true, margin : MarginRight 12}
+          , infoTileView state {primaryText: "502", subText: "Trips Completed", postImgVisibility : false, seperatorView : true, margin : MarginLeft 6}
         ]
       , horizontalScrollView
            [ width MATCH_PARENT
@@ -173,7 +172,7 @@ driverRideDetailsView state push =
                 , background Color.blue600
                 , padding $ Padding 12 10 12 10
                 , gravity CENTER_VERTICAL
-                , margin $ MarginHorizontal 16 10
+                -- , margin $ MarginHorizontal 16 10
                 ][ textView
                     [ text "243"
                     , width WRAP_CONTENT
@@ -203,7 +202,7 @@ badgeLayoutView state =
            [ width MATCH_PARENT
            , height WRAP_CONTENT
            , orientation HORIZONTAL
-           , margin $ Margin 16 12 16 12
+           , margin $ Margin 0 12 0 12
            ][ linearLayout
                [ width MATCH_PARENT
                , height MATCH_PARENT
@@ -445,34 +444,35 @@ tabImageView state push =
   , padding $ PaddingVertical 32 32
   , background Color.blue600
   , orientation HORIZONTAL
-  ][  PrestoAnim.animationSet [ Anim.scaleAndTransitionAnim $ autoAnimConfig (state.props.screenType == ST.DRIVER_DETAILS)
-  , Anim.scaleAndTransitionAnim $ autoAnimConfig1 ( (state.props.screenType == ST.AUTO_DETAILS))] $ 
-    imageView
-      [height $ V 88
-      , width $ V 88 
-      , cornerRadius 44.0
-      , margin $ MarginRight 10
-      , onClick push $ const AfterRender
-      , alpha if (state.props.screenType == ST.DRIVER_DETAILS) then 1.0 else 0.4
-      , imageWithFallback "ny_ic_user,https://assets.juspay.in/nammayatri/images/user/ny_ic_user.png" --change the link once uploaded to asset
-      ]
-  ,  PrestoAnim.animationSet [ Anim.scaleAnim1 $ autoAnimConfig1 (state.props.screenType == ST.AUTO_DETAILS)
-  , Anim.scaleAndTransitionAnim $ autoAnimConfig1 ( (state.props.screenType == ST.DRIVER_DETAILS))] $ 
-   linearLayout
-      [ height $ V 88
-      , width $ V 88
-      , cornerRadius 44.0
-      , background Color.white900
-      , onClick push $ const AfterRender
-      , gravity CENTER
-      , alpha if (state.props.screenType == ST.AUTO_DETAILS) then 1.0 else 0.4
-      ][  imageView 
-          [ imageWithFallback "ny_ic_auto_side_view,https://assets.juspay.in/nammayatri/images/common/ic_navigation_blue11.png" --change this image link after uploading in asset store
-          , height $ V 68
-          , width $ V 68
+  ][  PrestoAnim.animationSet 
+      [ Anim.motionMagnifyAnim $ (scaleUpConfig (state.props.screenType == ST.DRIVER_DETAILS)) {fromX = -44 , toX = 44}
+      , Anim.motionMagnifyAnim $ (scaleDownConfig (state.props.screenType == ST.AUTO_DETAILS)) {fromX = 44 , toX = -44}
+      ] $ imageView
+          [ height $ V 88
+          , width $ V 88 
+          , cornerRadius 44.0
+          , margin $ MarginRight 10
+          , onClick push $ const AfterRender
+          , alpha if (state.props.screenType == ST.DRIVER_DETAILS) then 1.0 else 0.4
+          , imageWithFallback "ny_ic_user,https://assets.juspay.in/nammayatri/images/user/ny_ic_user.png" --change the link once uploaded to asset
           ]
-      ]
-
+  ,  PrestoAnim.animationSet 
+    [ Anim.motionMagnifyAnim $ (scaleUpConfig (state.props.screenType == ST.AUTO_DETAILS)) {fromX = 44 , toX = -44}
+    , Anim.motionMagnifyAnim $ (scaleDownConfig (state.props.screenType == ST.DRIVER_DETAILS)) {fromX = -44 , toX = 44}
+    ] $ linearLayout
+        [ height $ V 88
+        , width $ V 88
+        , cornerRadius 44.0
+        , background Color.white900
+        , onClick push $ const AfterRender
+        , gravity CENTER
+        , alpha if (state.props.screenType == ST.AUTO_DETAILS) then 1.0 else 0.4
+        ][  imageView 
+            [ imageWithFallback "ny_ic_auto_side_view,https://assets.juspay.in/nammayatri/images/common/ic_navigation_blue11.png" --change this image link after uploading in asset store
+            , height $ V 68
+            , width $ V 68
+            ]
+        ]
   ]
 
 
@@ -547,7 +547,7 @@ autoDetailsArray state = [
 
 infoCard :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> {key :: String, value :: String , infoImageUrl :: String, postfixImage :: String, showInfoImage :: Boolean , showPostfixImage :: Boolean , valueColor :: String, action :: Action } -> PrestoDOM (Effect Unit) w 
 infoCard state push config = 
-  linearLayout
+  (addAnimation state) $ linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation HORIZONTAL
@@ -556,20 +556,20 @@ infoCard state push config =
   , margin $ MarginBottom 12
   , cornerRadius 10.0
   , background Color.blue600
-  ][  (addAnimation state) $ textView
+  ][  textView
       [ text config.key
       , textSize FontSize.a_12
       , fontStyle $ FontStyle.regular LanguageStyle
       , color Color.black700 
       ]
-    , (addAnimation state) $ imageView
+    , imageView
       [ imageWithFallback config.infoImageUrl
       , height $ V 24
       , width $ V 24
       , visibility if config.showInfoImage then VISIBLE else GONE
       , onClick push $ const config.action
       ]
-    , (addAnimation state) $ linearLayout
+    , linearLayout
       [ height WRAP_CONTENT
       , weight 1.0
       , gravity RIGHT 
@@ -596,42 +596,37 @@ infoCard state push config =
 autoSummaryArray :: String -> Array {key :: String, value :: String , infoImageUrl :: String, postfixImage :: String, showInfoImage :: Boolean , showPostfixImage :: Boolean , action :: Action, valueColor :: String}
 autoSummaryArray state = [{key : "Travelled on Namma Yatri", value : "10,254km" , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
 
-autoAnimConfig :: Boolean ->  AnimConfig.AnimConfig
-autoAnimConfig state =
-  let
+scaleUpConfig :: Boolean -> AnimConfig.AnimConfig
+scaleUpConfig ifAnim = 
+  let 
     config = AnimConfig.animConfig
-    autoAnimConfig' =
+    animConfig' = 
       config
-        { duration = 400
-        , toScaleX = 1.0
-        , toScaleY = 1.0
+        { duration = 400 
+        , toScaleX = 1.0 
+        , toScaleY = 1.0 
         , fromScaleY = 0.5
         , fromScaleX = 0.5
-        , fromX = (-46)
-        , toX = 46
-        , ifAnim = state
+        , ifAnim = ifAnim
         }
-  in
-    autoAnimConfig'
+  in 
+    animConfig'
 
-autoAnimConfig1 :: Boolean ->  AnimConfig.AnimConfig
-autoAnimConfig1 state =
-  let
+scaleDownConfig :: Boolean -> AnimConfig.AnimConfig
+scaleDownConfig ifAnim = 
+  let 
     config = AnimConfig.animConfig
-    autoAnimConfig' =
+    animConfig' = 
       config
-        { duration = 400
+        { duration = 400 
         , toScaleX = 0.5
-        , toScaleY = 0.5
+        , toScaleY = 0.5 
         , fromScaleY = 1.0
         , fromScaleX = 1.0
-        , fromX = 46
-        , toX = - 46
-        , ifAnim = true
+        , ifAnim = ifAnim
         }
-  in
-    autoAnimConfig'
-
+  in 
+    animConfig'
 
 -- showLiveStatsDashboard :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
 -- showLiveStatsDashboard push state =
@@ -824,13 +819,13 @@ dummyTextView =
 
 addAnimation state = PrestoAnim.animationSet [ Anim.fadeOut (state.props.screenType == ST.AUTO_DETAILS), Anim.fadeOut (state.props.screenType == ST.DRIVER_DETAILS), Anim.fadeIn (state.props.screenType == ST.AUTO_DETAILS), Anim.fadeOut (state.props.screenType == ST.DRIVER_DETAILS), Anim.fadeIn (state.props.screenType == ST.DRIVER_DETAILS)] 
 
-infoTileView :: forall w. ST.DriverProfileScreenState -> {primaryText :: String, subText :: String, postImgVisibility :: Boolean, seperatorView :: Boolean } -> PrestoDOM (Effect Unit) w
+infoTileView :: forall w. ST.DriverProfileScreenState -> {primaryText :: String, subText :: String, postImgVisibility :: Boolean, seperatorView :: Boolean, margin :: Margin } -> PrestoDOM (Effect Unit) w
 infoTileView state config = 
-  linearLayout
+  (addAnimation state) $ linearLayout
     [ weight 1.0
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , margin $ if config.seperatorView then MarginHorizontal 6 6 else MarginHorizontal 0 0
+    , margin $ config.margin
     , background Color.blue600
     , padding $ Padding 16 16 16 16
     , cornerRadius 10.0

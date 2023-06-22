@@ -124,42 +124,31 @@ scaleYAnim config =
     , PrestoAnim.interpolator interpolator
     ] config.ifAnim
 
--- scaleAnim :: AnimConfig -> PrestoAnim.Animation
--- scaleAnim config =
---    PrestoAnim.Animation
---     [ PrestoAnim.duration 300
---     , PrestoAnim.fromScaleY config.fromScaleY
---     , PrestoAnim.toScaleY config.toScaleY
---     , PrestoAnim.fromScaleX config.fromScaleX
---     , PrestoAnim.toScaleX config.toScaleX
---     , PrestoAnim.interpolator interpolator
---     ] config.ifAnim
-
-scaleAndTransitionAnim :: AnimConfig -> PrestoAnim.Animation
-scaleAndTransitionAnim config =
+scaleAnim :: AnimConfig -> PrestoAnim.Animation
+scaleAnim config =
    PrestoAnim.Animation
-    [ PrestoAnim.duration config.duration
+    [ PrestoAnim.duration 300
     , PrestoAnim.fromScaleY config.fromScaleY
     , PrestoAnim.toScaleY config.toScaleY
     , PrestoAnim.fromScaleX config.fromScaleX
     , PrestoAnim.toScaleX config.toScaleX
     , PrestoAnim.interpolator interpolator
-    , PrestoAnim.fromX config.fromX --(-46)
-    , PrestoAnim.toX config.fromY --(46)
     ] config.ifAnim
 
-scaleAnim1 :: AnimConfig -> PrestoAnim.Animation
-scaleAnim1 config =
+motionMagnifyAnim :: AnimConfig -> PrestoAnim.Animation
+motionMagnifyAnim config =
    PrestoAnim.Animation
-    [ PrestoAnim.duration config.duration
-    , PrestoAnim.fromScaleY config.toScaleY
-    , PrestoAnim.toScaleY config.fromScaleY
-    , PrestoAnim.fromScaleX config.toScaleX
-    , PrestoAnim.toScaleX config.fromScaleX
+    [ PrestoAnim.duration 400
+    , PrestoAnim.fromScaleY config.fromScaleY
+    , PrestoAnim.toScaleY config.toScaleY
+    , PrestoAnim.fromScaleX config.fromScaleX
+    , PrestoAnim.toScaleX config.toScaleX
     , PrestoAnim.interpolator interpolator
-    , PrestoAnim.fromX config.fromX --(46) 
-    , PrestoAnim.toX config.fromY --(-46) 
+    , PrestoAnim.fromX config.fromX
+    , PrestoAnim.toX config.toX
     ] config.ifAnim
+
+
 rotateAnim :: AnimConfig -> PrestoAnim.Animation
 rotateAnim config =
   PrestoAnim.Animation
