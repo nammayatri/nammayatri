@@ -157,7 +157,7 @@ enterOTPFlow = do
       setValueToLocalStore DRIVER_ID driverId
       setValueToLocalStore REGISTERATION_TOKEN resp.token -- add from response
       void $ lift $ lift $ toggleLoader false
-      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT mkUpdateDriverInfoReq
+      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT $ mkUpdateDriverInfoReq ""
       getDriverInfoFlow
     RETRY updatedState -> do
       modifyScreenState $ EnterOTPScreenType (\enterOTPScreen -> updatedState)
@@ -275,7 +275,7 @@ updateDriverVersion dbClientVersion dbBundleVersion = do
         Version clientVersion' = fromMaybe (Version clientVersion) dbClientVersion
     if any (_ == -1) [clientVersion.minor, clientVersion.major, clientVersion.maintenance,bundleVersion.minor,bundleVersion.major,bundleVersion.maintenance] then pure unit
       else if ( bundleVersion' /= bundleVersion || clientVersion' /= clientVersion)  then do
-      let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq
+      let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq ""
           requiredData = initialData{clientVersion = Just (Version clientVersion),bundleVersion = Just (Version bundleVersion)}
       (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)
       pure unit
@@ -681,7 +681,7 @@ driverDetailsFlow = do
 
     DRIVER_GENDER state -> do
         let genderSelected = state.data.driverGender
-        let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq
+        let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq ""
             requiredData = initialData{gender = genderSelected}
         (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)       
         pure $ toast (getString GENDER_UPDATED)
@@ -697,7 +697,7 @@ vehicleDetailsFlow = do
   action <- UI.vehicleDetailsScreen
   case action of
     UPDATE_VEHICLE_INFO  updatedState -> do
-      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT mkUpdateDriverInfoReq
+      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT $ mkUpdateDriverInfoReq ""
       vehicleDetailsFlow
 
 aboutUsFlow :: FlowBT String Unit
@@ -712,7 +712,7 @@ selectLanguageFlow = do
   action <- UI.selectLanguageScreen
   case action of
     CHANGE_LANGUAGE -> do
-      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT mkUpdateDriverInfoReq
+      (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT $ mkUpdateDriverInfoReq ""
       driverProfileFlow
 
 bookingOptionsFlow :: FlowBT String Unit
@@ -723,7 +723,7 @@ bookingOptionsFlow = do
       let toSedan = (filter (\item -> item.vehicleVariant == "SEDAN" && item.isSelected) state.data.downgradeOptions) !! 0
           toHatchBack = (filter (\item -> item.vehicleVariant == "HATCHBACK" && item.isSelected) state.data.downgradeOptions) !! 0
           toTaxi = (filter (\item -> item.vehicleVariant == "TAXI" && item.isSelected) state.data.downgradeOptions) !! 0
-      let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq
+      let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq ""
           requiredData = initialData{canDowngradeToSedan = Just (isJust toSedan),canDowngradeToHatchback = Just (isJust toHatchBack) ,canDowngradeToTaxi = Just (isJust toTaxi)}
       (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT ((UpdateDriverInfoReq) requiredData)
       modifyScreenState $ BookingOptionsScreenType (\bookingOptions -> BookingOptionsScreenData.initData)

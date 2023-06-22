@@ -22,7 +22,6 @@ import PrestoDOM.Types.Core (class Loggable)
 import Components.SelectMenuButton as MenuButton
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
-
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
 import Screens (ScreenName(..), getScreen)
 
