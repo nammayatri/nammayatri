@@ -57,19 +57,6 @@ instance IsString Domain.EstimateStatus where
 instance IsString TimeOfDay where
   fromString = show
 
-instance FromField VehVar.VehicleVariant where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be VehVar.VehicleVariant where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be VehVar.VehicleVariant
-
-instance FromBackendRow Postgres VehVar.VehicleVariant
-
-instance IsString VehVar.VehicleVariant where
-  fromString = show
-
 instance FromField [LatLong] where
   fromField = fromFieldEnum
 

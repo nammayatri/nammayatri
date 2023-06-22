@@ -19,6 +19,7 @@ import Database.Beam.Postgres.Syntax
 import qualified Database.Beam.Query as BQ
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
+import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.KVConnector.Types (MeshConfig (..))
 import qualified EulerHS.Language as L
 import Kernel.External.Encryption
@@ -290,6 +291,19 @@ instance IsString Payment.TransactionStatus where
   fromString = show
 
 deriving stock instance Ord Payment.TransactionStatus
+
+instance FromField VehVar.VehicleVariant where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be VehVar.VehicleVariant where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be VehVar.VehicleVariant
+
+instance FromBackendRow Postgres VehVar.VehicleVariant
+
+instance IsString VehVar.VehicleVariant where
+  fromString = show
 
 fromFieldEnum ::
   (Typeable a, Read a) =>

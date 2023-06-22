@@ -67,19 +67,6 @@ instance FromBackendRow Postgres DQuote.FareProductType
 instance IsString DQuote.FareProductType where
   fromString = show
 
-instance FromField VehVar.VehicleVariant where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be VehVar.VehicleVariant where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be VehVar.VehicleVariant
-
-instance FromBackendRow Postgres VehVar.VehicleVariant
-
-instance IsString VehVar.VehicleVariant where
-  fromString = show
-
 data BookingT f = BookingT
   { id :: B.C f Text,
     transactionId :: B.C f Text,
@@ -131,6 +118,8 @@ instance FromJSON Booking where
 
 instance ToJSON Booking where
   toJSON = A.genericToJSON A.defaultOptions
+
+deriving stock instance Show Booking
 
 bookingTMod :: BookingT (B.FieldModification (B.TableField BookingT))
 bookingTMod =

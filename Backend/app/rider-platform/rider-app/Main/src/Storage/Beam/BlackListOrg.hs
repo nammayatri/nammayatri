@@ -78,6 +78,8 @@ instance ToJSON BlackListOrg where
 
 deriving stock instance Ord Domain.BlackListOrgType
 
+deriving stock instance Show BlackListOrg
+
 blackListOrgTMod :: BlackListOrgT (B.FieldModification (B.TableField BlackListOrgT))
 blackListOrgTMod =
   B.tableModification
