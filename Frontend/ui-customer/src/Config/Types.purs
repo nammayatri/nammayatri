@@ -24,6 +24,7 @@ type AppConfig =
     rateCardColor :: String,
     nyBrandingVisibility :: Boolean,
     fontType :: String,
+    merchantBrandingVisibility :: Boolean,
     confirmPickUpLocationBorder ::String,
     terminateBtnConfig :: TerminateBtnConfig
   } 

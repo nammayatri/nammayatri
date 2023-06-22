@@ -20,8 +20,9 @@ window.getMerchantConfig = function () {
         otpBackground : "#F5F9FE",
         otpTextColor : "#101010",
         rateCardColor : "#00B8F5",
-        nyBrandingVisibility: false,
+        nyBrandingVisibility: true,
         fontType : "System",
+        merchantBrandingVisibility : false,
         confirmPickUpLocationBorder : "#101010",
         terminateBtnConfig : {
             visibility: true, 

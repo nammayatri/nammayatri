@@ -423,7 +423,7 @@ driverInfoView push state =
               , width MATCH_PARENT
               , gravity CENTER
               , margin (Margin 16 12 16 0)
-              , visibility if state.data.config.nyBrandingVisibility then VISIBLE else GONE
+              , visibility if state.data.config.merchantBrandingVisibility then VISIBLE else GONE
             ][ imageView
                 [ height $ V 19
                 , width $ V 60

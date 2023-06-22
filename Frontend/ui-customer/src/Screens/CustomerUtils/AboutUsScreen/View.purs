@@ -57,7 +57,7 @@ view push state =
     , gravity CENTER
     , afterRender push (const AfterRender)
     ][  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
-      , if (not state.appConfig.nyBrandingVisibility) then 
+      , if (not state.appConfig.merchantBrandingVisibility) then 
           linearLayout
           [ height $ V 1
           , width MATCH_PARENT
@@ -97,7 +97,7 @@ topTextView state =
         , width WRAP_CONTENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        , visibility if state.appConfig.nyBrandingVisibility then GONE else VISIBLE
+        , visibility if state.appConfig.merchantBrandingVisibility then GONE else VISIBLE
         ][  softwareLicenseView
           , termsAndConditionsView state
           , privacyPolicyView state
@@ -116,7 +116,7 @@ logoView state =
         ][  imageView
               [ height $ V 48
               , width $ V 60
-              , imageWithFallback if state.appConfig.nyBrandingVisibility then "ny_ic_paytm_logo," <> (getAssetStoreLink FunctionCall) <> "ny_ic_paytm_logo.png" else "ic_launcher," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_launcher.png"
+              , imageWithFallback if state.appConfig.merchantBrandingVisibility then "ny_ic_paytm_logo," <> (getAssetStoreLink FunctionCall) <> "ny_ic_paytm_logo.png" else "ic_launcher," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_launcher.png"
               ]
           ]
 
@@ -134,7 +134,7 @@ bottomLinksView state =
         , width MATCH_PARENT
         , orientation VERTICAL
         , gravity CENTER
-        , visibility if state.appConfig.nyBrandingVisibility then VISIBLE else GONE
+        , visibility if state.appConfig.merchantBrandingVisibility then VISIBLE else GONE
         ]
         [ textView
             $ [ height WRAP_CONTENT
