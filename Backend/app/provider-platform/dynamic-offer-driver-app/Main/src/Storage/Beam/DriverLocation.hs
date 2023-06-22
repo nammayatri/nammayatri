@@ -82,11 +82,6 @@ data DriverLocationT f = DriverLocationT
   }
   deriving (Generic, B.Beamable)
 
-data AtlasDB f = AtlasDB
-  { driverLocation :: f (B.TableEntity DriverLocationT)
-  }
-  deriving (Generic, B.Database be)
-
 dLocationTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity DriverLocationT)
 dLocationTable =
   B.setEntitySchema (Just "atlas_driver_offer_bpp")
