@@ -19,36 +19,18 @@ import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Kernel.Types.Id as KTI
-import Kernel.Utils.Common
 import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as BeamFPSS
 import Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
 
 findAll' ::
-  ( Transactionable m,
-    Monad m,
-    MonadThrow m,
-    Log m
-  ) =>
-  Id DFP.FarePolicy ->
-  DTypeBuilder m [FarePolicySlabsDetailsSlabT]
-findAll' farePolicyId = do
-  Esq.findAll' $ do
-    farePolicySlabsDetailsSlab <- from $ table @FarePolicySlabsDetailsSlabT
-    where_ $
-      farePolicySlabsDetailsSlab ^. FarePolicySlabsDetailsSlabFarePolicyId ==. val (toKey farePolicyId)
-    orderBy [asc $ farePolicySlabsDetailsSlab ^. FarePolicySlabsDetailsSlabStartDistance]
-    return farePolicySlabsDetailsSlab
-
-findAll'' ::
   L.MonadFlow m =>
   Id DFP.FarePolicy ->
   m [FullFarePolicySlabsDetailsSlab]
-findAll'' (Id farePolicyId) = do
+findAll' (Id farePolicyId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamFPSS.FarePolicySlabsDetailsSlabT
   let updatedMeshConfig = setMeshConfig modelName
@@ -56,27 +38,20 @@ findAll'' (Id farePolicyId) = do
     Just dbCOnf' -> either (pure []) (transformBeamFarePolicyProgressiveDetailsToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]
     Nothing -> pure []
 
-findById'' ::
-  (L.MonadFlow m) =>
-  Id DFP.FarePolicy ->
-  m (Maybe FullFarePolicySlabsDetailsSlab)
-findById'' (Id farePolicyId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamFPSS.FarePolicySlabsDetailsSlabT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamFarePolicyProgressiveDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]
-    Nothing -> pure Nothing
+-- findById'' ::
+--   (L.MonadFlow m) =>
+--   Id DFP.FarePolicy ->
+--   m (Maybe FullFarePolicySlabsDetailsSlab)
+-- findById'' (Id farePolicyId) = do
+--   dbConf <- L.getOption KBT.PsqlDbCfg
+--   let modelName = Se.modelTableName @BeamFPSS.FarePolicySlabsDetailsSlabT
+--   let updatedMeshConfig = setMeshConfig modelName
+--   case dbConf of
+--     Just dbCOnf' -> either (pure Nothing) (transformBeamFarePolicyProgressiveDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]
+--     Nothing -> pure Nothing
 
-deleteAll' :: Id DFP.FarePolicy -> FullEntitySqlDB ()
-deleteAll' farePolicyId =
-  Esq.delete' $ do
-    farePolicySlabsDetailsSlab <- from $ table @FarePolicySlabsDetailsSlabT
-    where_ $
-      farePolicySlabsDetailsSlab ^. FarePolicySlabsDetailsSlabFarePolicyId ==. val (toKey farePolicyId)
-
-deleteAll'' :: L.MonadFlow m => Id DFP.FarePolicy -> m ()
-deleteAll'' (Id farePolicyId) = do
+deleteAll' :: L.MonadFlow m => Id DFP.FarePolicy -> m ()
+deleteAll' (Id farePolicyId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamFPSS.FarePolicySlabsDetailsSlabT
   let updatedMeshConfig = setMeshConfig modelName

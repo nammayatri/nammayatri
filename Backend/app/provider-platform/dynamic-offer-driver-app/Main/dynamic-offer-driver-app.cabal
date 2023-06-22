@@ -237,6 +237,7 @@ library
       Storage.Beam.BusinessEvent
       Storage.Beam.CallStatus
       Storage.Beam.CancellationReason
+      Storage.Beam.Common
       Storage.Beam.Driver.DriverFlowStatus
       Storage.Beam.DriverInformation
       Storage.Beam.DriverLocation

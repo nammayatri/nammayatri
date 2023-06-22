@@ -115,6 +115,20 @@ updateAffectedPhones primaryPhones = do
 
 -- updateAffectedPhones' :: (L.MonadFlow m, MonadTime m) => [Text] -> m (MeshResult ())
 -- updateAffectedPhones' primaryPhones = do
+--   let indianMobileCode = "+91"
+--   now <- getCurrentTime
+--   let primaryPhonesList = valList primaryPhones
+--   dbConf <- L.getOption KBT.PsqlDbCfg
+--   case dbConf of
+--     Just dbConf' -> do
+--       conn <- L.getOrInitSqlConn dbConf'
+--       case conn of
+--         Right c -> do
+
+--     Nothing -> pure (error "DB Config not found")
+
+-- updateAffectedPhones' :: (L.MonadFlow m, MonadTime m) => [Text] -> m (MeshResult ())
+-- updateAffectedPhones' primaryPhones = do
 --   dbConf <- L.getOption KBT.PsqlDbCfg
 -- let modelName = Se.modelTableName @BeamE.ExophoneT
 -- let updatedMeshConfig = setMeshConfig modelName

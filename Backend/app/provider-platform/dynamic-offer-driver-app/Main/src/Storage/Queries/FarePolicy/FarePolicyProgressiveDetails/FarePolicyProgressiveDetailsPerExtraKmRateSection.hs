@@ -74,6 +74,20 @@ deleteAll' farePolicyId =
     where_ $
       farePolicyProgressiveDetailsPerExtraKmFareSection ^. FarePolicyProgressiveDetailsPerExtraKmRateSectionFarePolicyId ==. val (toKey farePolicyId)
 
+deleteAll'' :: L.MonadFlow m => Id DFP.FarePolicy -> m ()
+deleteAll'' (Id farePolicyId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSectionT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' ->
+      void $
+        KV.deleteWithKVConnector
+          dbConf'
+          updatedMeshConfig
+          [Se.Is BeamFPPDP.farePolicyId $ Se.Eq farePolicyId]
+    Nothing -> pure ()
+
 transformBeamFarePolicyProgressiveDetailsPerExtraKmRateSectionToDomain :: BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSection -> FullFarePolicyProgressiveDetailsPerExtraKmRateSection
 transformBeamFarePolicyProgressiveDetailsPerExtraKmRateSectionToDomain BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSectionT {..} = do
   ( KTI.Id farePolicyId,

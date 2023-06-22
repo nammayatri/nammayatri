@@ -177,20 +177,39 @@ deleteById (Id driverId) = do
 --         DriverStatsTotalDistance =. (tbl ^. DriverStatsTotalDistance) +. val rideDist
 --       ]
 --     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
+findTotalRides :: L.MonadFlow m => Id Driver -> m (Int, Meters)
+findTotalRides (Id driverId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDS.DriverStatsT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      res <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamDS.driverId (Se.Eq driverId)]
+      case res of
+        Left _ -> pure (0, 0)
+        Right x -> do
+          case x of
+            Nothing -> pure (0, 0)
+            Just x' -> do
+              let x'' = Domain.totalRides $ transformBeamDriverStatsToDomain x'
+              let y' = Domain.totalDistance $ transformBeamDriverStatsToDomain x'
+              pure (x'', y')
+    Nothing -> pure $ error "DB Config not found"
 
 incrementTotalRidesAndTotalDist :: (L.MonadFlow m) => Id Driver -> Meters -> m (MeshResult ())
 incrementTotalRidesAndTotalDist (Id driverId') rideDist = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamDS.DriverStatsT
   let updatedMeshConfig = setMeshConfig modelName
+  (x, y) <- findTotalRides (Id driverId')
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
         dbConf'
         updatedMeshConfig
         --[ Se.Set BeamDS.totalRides $ 1,
-        [ Se.Set (\BeamDS.DriverStatsT {..} -> totalRides) 1,
-          Se.Set BeamDS.totalDistance rideDist
+        [ Se.Set (\BeamDS.DriverStatsT {..} -> totalRides) (x + 1),
+          Se.Set BeamDS.totalDistance (rideDist + y)
         ]
         [Se.Is BeamDS.driverId (Se.Eq driverId')]
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
