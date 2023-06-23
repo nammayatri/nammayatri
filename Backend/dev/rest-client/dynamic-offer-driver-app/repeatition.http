@@ -157,19 +157,27 @@ token: {{token1}}
 ###
 
 # @name offerQuote1
-POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/offer
+POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/respond
 token: {{token1}}
 content-type: application/json
 
 {
     "offeredFare": 10,
-    "searchTryId": "{{nearbySearchRequest1.response.body.searchRequestsForDriver[0].searchTryId}}"
+    "searchTryId": "{{nearbySearchRequest1.response.body.searchRequestsForDriver[0].searchTryId}}",
+    "response" : "Accept"
 }
 
 ###
 
 # @name selectedQuotes1
 GET {{app-host}}/estimate/{{estimateId}}/quotes
+content-type: application/json
+token: {{app-token}}
+
+###
+
+# @name cancelSearch1
+POST {{app-host}}/estimate/{{estimateId}}/cancel
 content-type: application/json
 token: {{app-token}}
 
@@ -212,8 +220,10 @@ token: {{token1}}
 
 ###
 
+@rideId1 = {{driverList1.response.body.list[0].id}}
+
 # @name rideCancelByDriver1
-POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/cancel
+POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId1}}/cancel
 token: {{token1}}
 content-type: application/json
 
@@ -223,8 +233,6 @@ content-type: application/json
 }
 
 ###
-
-@rideId = {{driverList1.response.body.list[0].id}}
 @otp = {{list1.response.body.list[0].rideList[0].rideOtp}}
 
 # @name nearbySearchRequest2
@@ -234,19 +242,27 @@ token: {{token2}}
 ###
 
 # @name offerQuote2
-POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/offer
+POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/respond
 token: {{token2}}
 content-type: application/json
 
 {
     "offeredFare": 10,
-    "searchTryId": "{{nearbySearchRequest2.response.body.searchRequestsForDriver[0].searchTryId}}"
+    "searchTryId": "{{nearbySearchRequest2.response.body.searchRequestsForDriver[0].searchTryId}}",
+    "response" : "Accept"
 }
 
 ###
 
 # @name selectedQuotes2
 GET {{app-host}}/estimate/{{estimateId}}/quotes
+content-type: application/json
+token: {{app-token}}
+
+###
+
+# @name cancelSearch2
+POST {{app-host}}/estimate/{{estimateId}}/cancel
 content-type: application/json
 token: {{app-token}}
 
@@ -293,7 +309,7 @@ token: {{token2}}
 @otp2 = {{list2.response.body.list[0].rideList[0].rideOtp}}
 
 # @name startRide
-POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/start
+POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId2}}/start
 token: {{token2}}
 content-type: application/json
 
@@ -387,7 +403,7 @@ content-type: application/json
 ###
 
 # @name rideEnd
-POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/end
+POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId2}}/end
 token: {{token2}}
 content-type: application/json
 

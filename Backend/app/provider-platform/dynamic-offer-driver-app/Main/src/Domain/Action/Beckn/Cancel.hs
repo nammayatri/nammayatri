@@ -47,6 +47,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Person as QPers
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
@@ -151,6 +152,7 @@ cancelSearch merchantId req searchRequestId = do
   DB.runTransaction $ do
     QST.cancelActiveTriesByRequestId searchRequestId
     QSRD.setInactiveBySRId searchRequestId
+    QDQ.setInactiveBySRId searchRequestId
   for_ driverSearchReqs $ \driverReq -> do
     driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
     Notify.notifyOnCancelSearchRequest merchantId driverReq.driverId driver_.deviceToken driverReq.searchTryId
