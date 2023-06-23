@@ -52,6 +52,7 @@ mkPersist
       whatsappProvidersPriorityList (PostgresList WhatsappService)
       verificationService VerificationService
       aadhaarVerificationService AadhaarVerificationService
+      faceVerificationService VerificationService
       updatedAt UTCTime
       createdAt UTCTime
       Primary merchantId
