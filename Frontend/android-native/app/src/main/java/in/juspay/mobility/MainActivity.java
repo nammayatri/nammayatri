@@ -584,12 +584,13 @@ public class MainActivity extends AppCompatActivity {
     public void triggerPopUPMain(String id, String type) {
 
         try {
-            System.out.println("Calling function triggerPopUP1 from main to main try");
-//            CommonJsInterface.callingStoreCall(juspayServicesGlobal.getDuiCallback()());
-            JSONObject payload = new JSONObject().put("service", getService()).put("requestId", UUID.randomUUID()).put("payload", new JSONObject().put("action", "showPopup").put("id", id).put("popType", type));
-            System.out.println("payload internet " + payload);
+            if (hyperServices != null && hyperServices.isInitialised()) {
+                System.out.println("Calling function triggerPopUP1 from main to main try");
+                JSONObject payload = new JSONObject().put("service", getService()).put("requestId", UUID.randomUUID()).put("payload", new JSONObject().put("action", "showPopup").put("id", id).put("popType", type));
+                System.out.println("payload internet " + payload);
                 hyperServices.process(payload);
-            System.out.println("Calling function triggerPopUP1 from main to main try after");
+                System.out.println("Calling function triggerPopUP1 from main to main try after");
+            }
         } catch (Exception e) {
             System.out.println("Calling function triggerPopUP1 from main to main catch : " + e);
             e.printStackTrace();
@@ -609,8 +610,10 @@ public class MainActivity extends AppCompatActivity {
             {
                 CommonJsInterface.callingStoreCallBackPopUp(juspayServicesGlobal.getDuiCallback(), entity_payload);
             }else {
-                hyperServices.process(new JSONObject().put("service", getService()).put("requestId", UUID.randomUUID()).put("payload", new JSONObject().put("action", "showPopup").put("id", id).put("popType", type).put("entityPayload", entity_payload)));
-                System.out.println("Calling function triggerAllocationPopUpMain from main to main try after");
+                if (hyperServices != null && hyperServices.isInitialised()) {
+                    hyperServices.process(new JSONObject().put("service", getService()).put("requestId", UUID.randomUUID()).put("payload", new JSONObject().put("action", "showPopup").put("id", id).put("popType", type).put("entityPayload", entity_payload)));
+                    System.out.println("Calling function triggerAllocationPopUpMain from main to main try after");
+                }
             }
         } catch (Exception e) {
             System.out.println("Calling function triggerAllocationPopUpMain from main to main catch : " + e);
@@ -886,7 +889,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onNewIntent(Intent intent) {
         Intent pendingIntent = intent;
-        if (pendingIntent != null && pendingIntent.hasExtra("NOTIFICATION_DATA")) {
+        if (pendingIntent != null && pendingIntent.hasExtra("NOTIFICATION_DATA") && hyperServices != null && hyperServices.isInitialised()) {
             String data = pendingIntent.getExtras().getString("NOTIFICATION_DATA");
             try {
                 JSONObject jsonData = new JSONObject(data);
