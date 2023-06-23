@@ -22,6 +22,7 @@ import Domain.Types.Booking.BookingLocation
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverLocation as DriverLocation
 import Domain.Types.DriverQuote as DriverQuote
+import Domain.Types.MediaFile
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.Ride as Ride
@@ -947,3 +948,11 @@ updateAlternateMobileNumberAndCode person = do
         PersonUpdatedAt =. val now
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey person.id)
+
+updateMediaId :: Id Person -> Maybe (Id MediaFile) -> SqlDB ()
+updateMediaId driverId faceImageId =
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [PersonFaceImageId =. val (toKey <$> faceImageId)]
+    where_ $ tbl ^. PersonTId ==. val (toKey $ cast driverId)

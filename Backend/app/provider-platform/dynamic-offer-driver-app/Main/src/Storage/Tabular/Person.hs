@@ -29,6 +29,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Common (Centesimal)
 import Kernel.Types.Id
 import Kernel.Utils.Version
+import Storage.Tabular.MediaFile (MediaFileTId)
 import Storage.Tabular.Merchant (MerchantTId)
 
 derivePersistField "Domain.Role"
@@ -72,6 +73,7 @@ mkPersist
       updatedAt UTCTime
       bundleVersion Text Maybe
       clientVersion Text Maybe
+      faceImageId MediaFileTId Maybe
       Primary id
       deriving Generic
     |]
@@ -90,6 +92,7 @@ instance FromTType PersonT Domain.Person where
         { id = Id id,
           mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
           merchantId = fromKey merchantId,
+          faceImageId = fromKey <$> faceImageId,
           bundleVersion = bundleVersion',
           clientVersion = clientVersion',
           alternateMobileNumber = EncryptedHashed <$> (Encrypted <$> alternateMobileNumberEncrypted) <*> alternateMobileNumberHash,
@@ -104,6 +107,7 @@ instance ToTType PersonT Domain.Person where
         mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
         mobileNumberHash = mobileNumber <&> (.hash),
         merchantId = toKey merchantId,
+        faceImageId = toKey <$> faceImageId,
         bundleVersion = versionToText <$> bundleVersion,
         clientVersion = versionToText <$> clientVersion,
         alternateMobileNumberEncrypted = alternateMobileNumber <&> unEncrypted . (.encrypted),

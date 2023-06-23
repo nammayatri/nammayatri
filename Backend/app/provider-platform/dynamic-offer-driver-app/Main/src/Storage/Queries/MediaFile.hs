@@ -33,3 +33,6 @@ findAllIn mfList =
     mediaFile <- from $ table @MediaFileT
     where_ $ mediaFile ^. MediaFileId `in_` valList (map getId mfList)
     return mediaFile
+
+deleteById :: Id MediaFile -> SqlDB ()
+deleteById = Esq.deleteByKey @MediaFileT
