@@ -17,6 +17,7 @@ module Storage.Queries.DriverQuote where
 import Data.Int (Int32)
 import qualified Domain.Types.DriverQuote as Domain
 import Domain.Types.Person
+import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -62,6 +63,11 @@ setInactiveBySTId :: Id DST.SearchTry -> SqlDB ()
 setInactiveBySTId searchTryId = Esq.update $ \p -> do
   set p [DriverQuoteStatus =. val Domain.Inactive]
   where_ $ p ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
+
+setInactiveBySRId :: Id DSR.SearchRequest -> SqlDB ()
+setInactiveBySRId searchReqId = Esq.update $ \p -> do
+  set p [DriverQuoteStatus =. val Domain.Inactive]
+  where_ $ p ^. DriverQuoteRequestId ==. val (toKey searchReqId)
 
 findActiveQuotesByDriverId :: (Transactionable m, MonadTime m) => Id Person -> Seconds -> m [Domain.DriverQuote]
 findActiveQuotesByDriverId driverId driverUnlockDelay = do

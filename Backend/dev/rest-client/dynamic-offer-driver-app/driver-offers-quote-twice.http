@@ -179,7 +179,7 @@ token: {{token1}}
 ###
 
 # @name offerQuote
-POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/offer
+POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/respond
 token: {{token1}}
 content-type: application/json
 
@@ -190,11 +190,12 @@ content-type: application/json
 
 ###
 # @name offerQuote
-POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/offer
+POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/respond
 token: {{token1}}
 content-type: application/json
 
 {
     "offeredFare": 30,
-    "searchTryId": "{{nearbySearchRequest.response.body.searchRequests[1].searchTryId}}"
+    "searchTryId": "{{nearbySearchRequest.response.body.searchRequests[1].searchTryId}}",
+    "response" : "Accept"
 }
