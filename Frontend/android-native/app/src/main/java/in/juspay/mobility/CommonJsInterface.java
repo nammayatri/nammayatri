@@ -3844,10 +3844,14 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public void generatePDF(String str, String format) throws JSONException {
         invoice = str;
         invoiceType = format;
-        if ((ActivityCompat.checkSelfPermission(activity, READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(activity, WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)) {
-            downloadPDF(str, activity, context);
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) {
+            if ((ActivityCompat.checkSelfPermission(activity, READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ActivityCompat.checkSelfPermission(activity, WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)) {
+                downloadPDF(str, activity, context);
+            } else {
+                ActivityCompat.requestPermissions(activity, new String[]{WRITE_EXTERNAL_STORAGE}, 67);
+            }
         } else {
-            ActivityCompat.requestPermissions(activity, new String[]{WRITE_EXTERNAL_STORAGE}, 67);
+            downloadPDF(str, activity, context);
         }
     }
 
@@ -4032,9 +4036,10 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             }
             fileNameformat = fileNameformat + selectedItem.getString("date") + selectedItem.getString("rideStartTime") + ".pdf";
             String fileName = fileNameformat.replaceAll(":",".");
-            File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName);
             try {
-                pdfDocument.writeTo(new FileOutputStream(file));
+                File file = checkAndGetFileName(fileName);
+                FileOutputStream fos = new FileOutputStream(file);
+                pdfDocument.writeTo(fos);
                 Uri path = FileProvider.getUriForFile(context.getApplicationContext(), context.getApplicationInfo().packageName + ".fileProvider", file);
                 Intent pdfOpenintent = new Intent(Intent.ACTION_VIEW);
                 pdfOpenintent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -4321,6 +4326,18 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             VibrationEffect effect = VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE);
             vibrator.vibrate(effect);
         }
+    }
+
+    public static File checkAndGetFileName(String fileName) {
+        File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName + ".pdf");
+        int i = 1;
+        while (file.exists()) {
+            String updatedFile = fileName + "_(" + i + ")" + ".pdf";
+            file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), updatedFile);
+            i++;
+
+        }
+        return file;
     }
 
 }
