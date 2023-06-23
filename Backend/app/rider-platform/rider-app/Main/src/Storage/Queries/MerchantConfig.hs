@@ -22,10 +22,15 @@ where
 
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.MerchantConfig as DMC
+import qualified EulerHS.KVConnector.Flow as KV
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (findById)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Lib.Utils
+import qualified Sequelize as Se
 import qualified Storage.Beam.MerchantConfig as BeamMC
 import Storage.Tabular.MerchantConfig
 
@@ -37,6 +42,15 @@ findAllByMerchantId merchantId =
       config ^. MerchantConfigMerchantId ==. val (toKey merchantId)
         &&. config ^. MerchantConfigEnabled ==. val True
     return config
+
+findAllByMerchantId' :: L.MonadFlow m => Id Merchant -> m [DMC.MerchantConfig]
+findAllByMerchantId' (Id merchantId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMC.MerchantConfigT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbCOnf' -> either (pure []) (transformBeamMerchantConfigToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamMC.merchantId $ Se.Eq merchantId]
+    Nothing -> pure []
 
 transformBeamMerchantConfigToDomain :: BeamMC.MerchantConfig -> MerchantConfig
 transformBeamMerchantConfigToDomain BeamMC.MerchantConfigT {..} = do
