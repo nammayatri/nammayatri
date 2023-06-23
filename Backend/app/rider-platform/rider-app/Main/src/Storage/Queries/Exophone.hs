@@ -57,17 +57,6 @@ findAllMerchantIdsByPhone phone = do
       pure $ DE.merchantId <$> res
     Nothing -> pure []
 
-findAllMerchantIdsByPhone :: L.MonadFlow m => Text -> m [Id DM.Merchant]
-findAllMerchantIdsByPhone phone = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamE.ExophoneT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      res <- either (pure []) (transformBeamExophoneToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Or [Se.Is BeamE.primaryPhone $ Se.Eq phone, Se.Is BeamE.backupPhone $ Se.Eq phone]]
-      pure $ DE.merchantId <$> res
-    Nothing -> pure []
-
 findAllByPhone :: Transactionable m => Text -> m [Exophone]
 findAllByPhone phone = do
   findAll $ do
