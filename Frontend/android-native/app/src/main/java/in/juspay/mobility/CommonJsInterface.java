@@ -152,6 +152,7 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
+import com.clevertap.android.sdk.CleverTapAPI;
 //import com.google.android.material.snackbar.Snackbar;
 //import com.google.firebase.installations.FirebaseInstallations;
 import com.google.android.libraries.places.api.model.AutocompleteSessionToken;
@@ -254,7 +255,7 @@ import com.facebook.appevents.AppEventsLogger;
 
 public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.core.JSI {
 
-
+    private static SharedPreferences sharedPrefs;
     private static final String LOG_TAG = "Beckn_JsInterface";
     private static final String LOCATE_ON_MAP = "LocateOnMap";
     private static final String DISCOUNT_END = "Discount End Date";
@@ -1544,6 +1545,58 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     @JavascriptInterface
     public void firebaseUserID(String id) {
         mFirebaseAnalytics.setUserId(id);
+    }
+
+    CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(context);
+
+    @JavascriptInterface
+    public void setCleverTapUserData(String key, String value){
+        HashMap<String, Object> profileUpdate = new HashMap<String, Object>();
+        try {
+            profileUpdate.put(key,value);
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error sending user data: " + e);
+        }
+        
+        if (clevertapDefaultInstance!=null) {
+            clevertapDefaultInstance.onUserLogin(profileUpdate);
+            sharedPrefs = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            String fcmRegId = sharedPrefs.getString("FCM_TOKEN", "null");
+            clevertapDefaultInstance.pushFcmRegistrationId(fcmRegId, true);
+        }
+    }
+
+    @JavascriptInterface
+    public void setCleverTapUserProp (String key, String value){
+        HashMap<String, Object> profileUpdate = new HashMap<String, Object>();
+        try {
+            profileUpdate.put(key,value);
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error sending user data: " + e);
+        }
+        if (clevertapDefaultInstance!=null)
+            clevertapDefaultInstance.pushProfile(profileUpdate);
+    }
+
+
+    @JavascriptInterface
+    public void cleverTapCustomEvent(String event){
+        if (clevertapDefaultInstance!=null)
+            clevertapDefaultInstance.pushEvent(event);
+    }
+
+    @JavascriptInterface
+    public void cleverTapCustomEventWithParams(String event, String paramKey, String paramValue){
+        HashMap<String, Object> mapCustomEvent = new HashMap<String, Object>();
+        mapCustomEvent.put(paramKey,paramValue);
+        if (clevertapDefaultInstance!=null)
+            clevertapDefaultInstance.pushEvent(event,mapCustomEvent);
+    }
+
+    @JavascriptInterface
+    public void cleverTapSetLocation(){
+        Location location = clevertapDefaultInstance.getLocation();
+        clevertapDefaultInstance.setLocation(location);
     }
 
     @JavascriptInterface
