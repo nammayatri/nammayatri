@@ -62,6 +62,7 @@ data DriverInformationE e = DriverInformation
     numOfLocks :: Int,
     verified :: Bool,
     subscribed :: Bool,
+    paymentPending :: Bool,
     referralCode :: Maybe (EncryptedHashedField e Text),
     lastEnabledOn :: Maybe UTCTime,
     canDowngradeToSedan :: Bool,

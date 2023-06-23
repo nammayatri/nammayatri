@@ -497,3 +497,16 @@ updateAadhaarVerifiedState personId isVerified = do
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast personId)
 
+updatePendingPayment ::
+  Bool ->
+  Id Person.Driver ->
+  SqlDB ()
+updatePendingPayment isPending driverId = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverInformationPaymentPending =. val isPending,
+        DriverInformationUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)

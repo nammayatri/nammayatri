@@ -18,13 +18,31 @@ import Domain.Types.DriverFee
 import Domain.Types.Person
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
-import Kernel.Types.Common (Money)
+import Kernel.Types.Common (HighPrecMoney, Money)
 import Kernel.Types.Id
-import Kernel.Types.Time
 import Storage.Tabular.DriverFee
 
 create :: DriverFee -> SqlDB ()
 create = Esq.create
+
+findById :: Transactionable m => Id DriverFee -> m (Maybe DriverFee)
+findById = Esq.findById
+
+findByShortId :: Transactionable m => ShortId DriverFee -> m (Maybe DriverFee)
+findByShortId shortId = do
+  findOne $ do
+    driverFee <- from $ table @DriverFeeT
+    where_ $ driverFee ^. DriverFeeShortId ==. val (getShortId shortId)
+    return driverFee
+
+findPendingFeesByDriverFeeId :: Transactionable m => Id DriverFee -> m (Maybe DriverFee)
+findPendingFeesByDriverFeeId driverFeeId = do
+  findOne $ do
+    driverFee <- from $ table @DriverFeeT
+    where_ $
+      driverFee ^. DriverFeeId ==. val (getId driverFeeId)
+        &&. driverFee ^. DriverFeeStatus `in_` valList [PAYMENT_PENDING, PAYMENT_OVERDUE]
+    return driverFee
 
 findLatestFeeByDriverId :: Transactionable m => Id Driver -> m (Maybe DriverFee)
 findLatestFeeByDriverId driverId = do
@@ -57,21 +75,23 @@ findFeesInRangeWithStatus startTime endTime status = do
         &&. driverFee ^. DriverFeeStatus ==. val status
     return driverFee
 
-updateFee :: Id DriverFee -> Money -> SqlDB ()
-updateFee driverFeeId totalAmount = do
-  now <- getCurrentTime
+updateFee :: Id DriverFee -> Money -> Money -> HighPrecMoney -> HighPrecMoney -> UTCTime -> SqlDB ()
+updateFee driverFeeId govtCharges platformFee cgst sgst now = do
   Esq.update $ \tbl -> do
     set
       tbl
-      [ DriverFeeTotalAmount =. val totalAmount,
+      [ DriverFeeGovtCharges =. val govtCharges,
+        DriverFeePlatformFee =. val platformFee,
+        DriverFeeCgst =. val cgst,
+        DriverFeeSgst =. val sgst,
         DriverFeeStatus =. val ONGOING,
+        DriverFeeNumRides +=. val 1, -- in the api, num_rides needed without cost contribution?
         DriverFeeUpdatedAt =. val now
       ]
     where_ $ tbl ^. DriverFeeId ==. val (getId driverFeeId)
 
-updateStatus :: DriverFeeStatus -> Id DriverFee -> SqlDB ()
-updateStatus status driverFeeId = do
-  now <- getCurrentTime
+updateStatus :: DriverFeeStatus -> Id DriverFee -> UTCTime -> SqlDB ()
+updateStatus status driverFeeId now = do
   Esq.update $ \tbl -> do
     set
       tbl

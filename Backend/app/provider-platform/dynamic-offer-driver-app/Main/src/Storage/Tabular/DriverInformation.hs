@@ -44,6 +44,7 @@ mkPersist
       numOfLocks Int
       verified Bool
       subscribed Bool
+      paymentPending Bool
       lastEnabledOn UTCTime Maybe
       referralCode Text Maybe
       canDowngradeToSedan Bool

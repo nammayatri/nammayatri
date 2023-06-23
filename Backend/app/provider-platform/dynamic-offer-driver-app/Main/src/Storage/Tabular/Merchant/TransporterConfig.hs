@@ -58,11 +58,11 @@ mkPersist
       actualRideDistanceDiffThreshold Centesimal
       upwardsRecomputeBuffer Centesimal
       approxRideDistanceDiffThreshold Centesimal
-      driverLeaderBoardExpiry Seconds Maybe
       driverPaymentCycleBuffer Seconds
       driverPaymentCycleDuration Seconds
       driverPaymentCycleStartTime Seconds
       driverPaymentReminderInterval Seconds
+      timeDiffFromUtc Seconds
       minLocationAccuracy Double
       createdAt UTCTime
       updatedAt UTCTime
