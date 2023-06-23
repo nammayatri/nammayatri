@@ -45,4 +45,6 @@
     <string name="RideRequested" translatable="false">RideRequested</string>
     <string name="RIDE_REQUEST_TIME" translatable="false">RIDE_REQUEST_TIME</string>
     <string name="REGISTRATION_APPROVED" translatable="false">REGISTRATION_APPROVED</string>
+    <string name="ReAllocated" translatable="false">ReAllocated</string>
+    <string name="FINDING_QUOTES_START_TIME" translatable="false">FINDING_QUOTES_START_TIME</string>
 </resources>
