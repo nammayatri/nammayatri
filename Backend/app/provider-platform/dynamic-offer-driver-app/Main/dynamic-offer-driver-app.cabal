@@ -220,7 +220,6 @@ library
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers
       SharedLogic.CallBAP
-      SharedLogic.CancelSearch
       SharedLogic.DeleteDriver
       SharedLogic.DriverFee
       SharedLogic.DriverLocation
@@ -239,6 +238,7 @@ library
       SharedLogic.MessageBuilder
       SharedLogic.Person
       SharedLogic.Ride
+      SharedLogic.SearchTryLocker
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.DriverInformation
       Storage.CachedQueries.Exophone

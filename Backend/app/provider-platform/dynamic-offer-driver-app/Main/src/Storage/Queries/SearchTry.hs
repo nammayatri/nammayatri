@@ -41,16 +41,18 @@ findLastByRequestId searchReqId = do
     Esq.limit 1
     return searchTryT
 
-findActiveTriesByRequestId ::
+findActiveTryByRequestId ::
   (Transactionable m) =>
   Id SearchRequest ->
-  m [SearchTry]
-findActiveTriesByRequestId searchReqId = do
-  Esq.findAll $ do
+  m (Maybe SearchTry)
+findActiveTryByRequestId searchReqId = do
+  Esq.findOne $ do
     searchTryT <- from $ table @SearchTryT
     where_ $
       searchTryT ^. SearchTryRequestId ==. val (toKey searchReqId)
         &&. searchTryT ^. SearchTryStatus ==. val ACTIVE
+    Esq.orderBy [Esq.desc $ searchTryT ^. SearchTrySearchRepeatCounter]
+    Esq.limit 1
     return searchTryT
 
 cancelActiveTriesByRequestId ::
