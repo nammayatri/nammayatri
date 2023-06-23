@@ -18,11 +18,16 @@ module Storage.Queries.Estimate where
 import Data.Tuple.Extra
 import Domain.Types.Estimate as DE
 import Domain.Types.SearchRequest
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id (Id (Id, getId))
+import Lib.Utils
+import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as BeamE
 import qualified Storage.Queries.EstimateBreakup as QEB
 import Storage.Queries.FullEntityBuilders (buildFullEstimate)
@@ -68,6 +73,19 @@ findById estimateId = Esq.buildDType $ do
     pure (estimate, mbTripTerms)
   mapM buildFullEstimate mbFullEstimateT
 
+findById' :: L.MonadFlow m => Id Estimate -> m (Maybe Estimate)
+findById' (Id estimateId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamE.EstimateT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbCOnf' -> do
+      res <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamE.id $ Se.Eq estimateId]
+      case res of
+        Right (Just x) -> transformBeamEstimateToDomain x
+        _ -> pure Nothing
+    Nothing -> pure Nothing
+
 findAllBySRId :: Transactionable m => Id SearchRequest -> m [Estimate]
 findAllBySRId searchRequestId = Esq.buildDType $ do
   fullEstimateTs <- Esq.findAll' $ do
@@ -76,6 +94,19 @@ findAllBySRId searchRequestId = Esq.buildDType $ do
     pure (estimate, mbTripTerms)
   mapM buildFullEstimate fullEstimateTs
 
+findAllBySRId' :: L.MonadFlow m => Id SearchRequest -> m [Estimate]
+findAllBySRId' (Id searchRequestId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamE.EstimateT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbCOnf' -> do
+      res <- KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamE.requestId $ Se.Eq searchRequestId]
+      case res of
+        Right x -> catMaybes <$> traverse transformBeamEstimateToDomain x
+        _ -> pure []
+    Nothing -> pure []
+
 findByBPPEstimateId :: Transactionable m => Id BPPEstimate -> m (Maybe Estimate)
 findByBPPEstimateId bppEstimateId_ = Esq.buildDType $ do
   mbFullEstimateT <- Esq.findOne' $ do
@@ -83,6 +114,19 @@ findByBPPEstimateId bppEstimateId_ = Esq.buildDType $ do
     where_ $ estimate ^. EstimateBppEstimateId ==. val (getId bppEstimateId_)
     pure (estimate, mbTripTerms)
   mapM buildFullEstimate mbFullEstimateT
+
+findByBPPEstimateId' :: L.MonadFlow m => Id BPPEstimate -> m (Maybe Estimate)
+findByBPPEstimateId' (Id bppEstimateId_) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamE.EstimateT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbCOnf' -> do
+      res <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamE.bppEstimateId $ Se.Eq bppEstimateId_]
+      case res of
+        Right (Just x) -> transformBeamEstimateToDomain x
+        _ -> pure Nothing
+    Nothing -> pure Nothing
 
 updateStatus ::
   Id Estimate ->
@@ -98,6 +142,23 @@ updateStatus estimateId status_ = do
       ]
     where_ $ tbl ^. EstimateId ==. val (getId estimateId)
 
+updateStatusByBppEstimateId' :: (L.MonadFlow m, MonadTime m) => Id BPPEstimate -> EstimateStatus -> m (MeshResult ())
+updateStatusByBppEstimateId' (Id bppEstimateId_) status_ = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamE.EstimateT
+  let updatedMeshConfig = setMeshConfig modelName
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        updatedMeshConfig
+        [ Se.Set BeamE.updatedAt now,
+          Se.Set BeamE.status status_
+        ]
+        [Se.Is BeamE.bppEstimateId (Se.Eq bppEstimateId_)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 getStatus ::
   (Transactionable m) =>
   Id Estimate ->
@@ -108,6 +169,21 @@ getStatus estimateId = do
     where_ $
       estimateT ^. EstimateId ==. val (getId estimateId)
     return $ estimateT ^. EstimateStatus
+
+getStatus' :: L.MonadFlow m => Id Estimate -> m (Maybe EstimateStatus)
+getStatus' (Id estimateId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamE.EstimateT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbCOnf' -> do
+      res <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamE.id $ Se.Eq estimateId]
+      case res of
+        Right (Just x) -> do
+          eStatus <- transformBeamEstimateToDomain x
+          pure $ DE.status <$> eStatus
+        _ -> pure Nothing
+    Nothing -> pure Nothing
 
 updateStatusByRequestId ::
   Id SearchRequest ->
@@ -122,6 +198,23 @@ updateStatusByRequestId searchId status_ = do
         EstimateStatus =. val status_
       ]
     where_ $ tbl ^. EstimateRequestId ==. val (toKey searchId)
+
+updateStatusByRequestId' :: (L.MonadFlow m, MonadTime m) => Id SearchRequest -> EstimateStatus -> m (MeshResult ())
+updateStatusByRequestId' (Id searchId) status_ = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamE.EstimateT
+  let updatedMeshConfig = setMeshConfig modelName
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        updatedMeshConfig
+        [ Se.Set BeamE.updatedAt now,
+          Se.Set BeamE.status status_
+        ]
+        [Se.Is BeamE.requestId (Se.Eq searchId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 transformBeamEstimateToDomain :: L.MonadFlow m => BeamE.Estimate -> m (Maybe Estimate)
 transformBeamEstimateToDomain e@BeamE.EstimateT {..} = do

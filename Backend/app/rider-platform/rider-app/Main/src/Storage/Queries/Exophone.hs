@@ -20,17 +20,35 @@ module Storage.Queries.Exophone
     #-}
 where
 
-import Domain.Types.Exophone
+import qualified Database.Beam as B
+import Domain.Types.Exophone as DE
 import qualified Domain.Types.Merchant as DM
+import qualified EulerHS.KVConnector.Flow as KV
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Utils
+import qualified Sequelize as Se
+import Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Exophone as BeamE
 import Storage.Tabular.Exophone
 
 create :: Exophone -> SqlDB ()
 create = Esq.create
+
+findAllMerchantIdsByPhone :: L.MonadFlow m => Text -> m [Id DM.Merchant]
+findAllMerchantIdsByPhone phone = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamE.ExophoneT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      res <- either (pure []) (transformBeamExophoneToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Or [Se.Is BeamE.primaryPhone $ Se.Eq phone, Se.Is BeamE.backupPhone $ Se.Eq phone]]
+      pure $ DE.merchantId <$> res
+    Nothing -> pure []
 
 findAllByPhone :: Transactionable m => Text -> m [Exophone]
 findAllByPhone phone = do
@@ -46,6 +64,16 @@ findAllByPhone phone = do
           ||. exophone1 ^. ExophoneBackupPhone ==. val phone
       return (exophone1 ^. ExophoneMerchantId)
 
+findAllByPhone' :: L.MonadFlow m => Text -> m [Exophone]
+findAllByPhone' phone = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamE.ExophoneT
+  let updatedMeshConfig = setMeshConfig modelName
+  merchIds <- findAllMerchantIdsByPhone phone
+  case dbConf of
+    Just dbConf' -> either (pure []) (transformBeamExophoneToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamE.merchantId $ Se.In $ getId <$> merchIds]
+    Nothing -> pure []
+
 findAllByMerchantId :: Transactionable m => Id DM.Merchant -> m [Exophone]
 findAllByMerchantId merchantId = do
   findAll $ do
@@ -53,8 +81,26 @@ findAllByMerchantId merchantId = do
     where_ $ exophone ^. ExophoneMerchantId ==. val (toKey merchantId)
     return exophone
 
+findAllByMerchantId' :: L.MonadFlow m => Id DM.Merchant -> m [Exophone]
+findAllByMerchantId' merchantId = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamE.ExophoneT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> either (pure []) (transformBeamExophoneToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamE.merchantId $ Se.Eq $ getId merchantId]
+    Nothing -> pure []
+
 findAllExophones :: Transactionable m => m [Exophone]
 findAllExophones = findAll $ from $ table @ExophoneT
+
+findAllExophones' :: L.MonadFlow m => m [Exophone]
+findAllExophones' = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamE.ExophoneT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> either (pure []) (transformBeamExophoneToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig []
+    Nothing -> pure []
 
 updateAffectedPhones :: [Text] -> SqlDB ()
 updateAffectedPhones primaryPhones = do
@@ -72,11 +118,73 @@ updateAffectedPhones primaryPhones = do
       ]
     where_ $ isPrimaryDown !=. tbl ^. ExophoneIsPrimaryDown
 
+updateAffectedPhonesHelper :: (L.MonadFlow m, MonadTime m) => [Text] -> m Bool
+updateAffectedPhonesHelper primaryNumbers = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let indianMobileCode = "+91"
+  conn <- L.getOrInitSqlConn (fromJust dbConf)
+  case conn of
+    Right c -> do
+      geoms <-
+        L.runDB c $
+          L.findRow $
+            B.select $
+              B.limit_ 1 $
+                B.filter_'
+                  ( \BeamE.ExophoneT {..} ->
+                      B.sqlBool_ (primaryPhone `B.in_` (B.val_ <$> primaryNumbers))
+                        B.||?. B.sqlBool_ (B.concat_ [indianMobileCode, primaryPhone] `B.in_` (B.val_ <$> primaryNumbers))
+                  )
+                  $ B.all_ (BeamCommon.exophone BeamCommon.atlasDB)
+      case geoms of
+        Right (Just _) -> do
+          pure True
+        _ -> pure False
+    Left _ -> pure (error "DB Config not found")
+
+updateAffectedPhones' :: (L.MonadFlow m, MonadTime m) => [Text] -> m ()
+updateAffectedPhones' primaryPhones = do
+  now <- getCurrentTime
+  isPrimary <- updateAffectedPhonesHelper primaryPhones
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      conn <- L.getOrInitSqlConn dbConf'
+      case conn of
+        Right c -> do
+          _ <-
+            L.runDB c $
+              L.updateRows $
+                B.update
+                  (BeamCommon.exophone BeamCommon.atlasDB)
+                  ( \BeamE.ExophoneT {..} ->
+                      (isPrimaryDown B.<-. B.val_ isPrimary)
+                        <> (updatedAt B.<-. B.val_ now)
+                  )
+                  (\BeamE.ExophoneT {..} -> isPrimaryDown B.==. B.val_ isPrimary)
+          void $ pure Nothing
+        Left _ -> pure (error "DB Config not found")
+    Nothing -> pure (error "DB Config not found")
+
 deleteByMerchantId :: Id DM.Merchant -> SqlDB ()
 deleteByMerchantId merchantId = do
   Esq.delete $ do
     exophone <- from $ table @ExophoneT
     where_ $ exophone ^. ExophoneMerchantId ==. val (toKey merchantId)
+
+deleteByMerchantId' :: L.MonadFlow m => Id DM.Merchant -> m ()
+deleteByMerchantId' (Id merchantId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamE.ExophoneT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' ->
+      void $
+        KV.deleteWithKVConnector
+          dbConf'
+          updatedMeshConfig
+          [Se.Is BeamE.merchantId (Se.Eq merchantId)]
+    Nothing -> pure ()
 
 transformBeamExophoneToDomain :: BeamE.Exophone -> Exophone
 transformBeamExophoneToDomain BeamE.ExophoneT {..} = do

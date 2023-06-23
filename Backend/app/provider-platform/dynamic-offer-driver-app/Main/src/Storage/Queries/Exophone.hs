@@ -60,13 +60,25 @@ create exophone = do
 --           ||. exophone1 ^. ExophoneBackupPhone ==. val phone
 --       return (exophone1 ^. ExophoneMerchantId)
 
+findAllMerchantIdsByPhone :: L.MonadFlow m => Text -> m [Id DM.Merchant]
+findAllMerchantIdsByPhone phone = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamE.ExophoneT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      res <- either (pure []) (transformBeamExophoneToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Or [Se.Is BeamE.primaryPhone $ Se.Eq phone, Se.Is BeamE.backupPhone $ Se.Eq phone]]
+      pure $ DE.merchantId <$> res
+    Nothing -> pure []
+
 findAllByPhone :: L.MonadFlow m => Text -> m [Exophone]
 findAllByPhone phone = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamE.ExophoneT
   let updatedMeshConfig = setMeshConfig modelName
+  merchIds <- findAllMerchantIdsByPhone phone
   case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamExophoneToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Or [Se.Is BeamE.primaryPhone $ Se.Eq phone, Se.Is BeamE.backupPhone $ Se.Eq phone]]
+    Just dbConf' -> either (pure []) (transformBeamExophoneToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamE.merchantId $ Se.In $ getId <$> merchIds]
     Nothing -> pure []
 
 -- findAllByMerchantId :: Transactionable m => Id DM.Merchant -> m [Exophone]

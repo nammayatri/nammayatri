@@ -17,10 +17,14 @@ module Storage.Queries.EstimateBreakup where
 
 import Domain.Types.Estimate
 import qualified Domain.Types.Estimate as DEB
+import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Lib.Utils
+import qualified Sequelize as Se
 import qualified Storage.Beam.EstimateBreakup as BeamEB
 import Storage.Tabular.EstimateBreakup as SEB
 
@@ -32,7 +36,13 @@ findAllByEstimateId estimateId =
     return estimateBreakup
 
 findAllByEstimateId' :: L.MonadFlow m => Id Estimate -> m [EstimateBreakup]
-findAllByEstimateId' _ = error "Not implemented"
+findAllByEstimateId' (Id estimateId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamEB.EstimateBreakupT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> either (pure []) (transformBeamEstimateBreakupToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamEB.estimateId $ Se.Eq estimateId]
+    Nothing -> pure []
 
 transformBeamEstimateBreakupToDomain :: BeamEB.EstimateBreakup -> EstimateBreakup
 transformBeamEstimateBreakupToDomain BeamEB.EstimateBreakupT {..} = do
