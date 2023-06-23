@@ -23,6 +23,9 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 
+import com.clevertap.android.sdk.CleverTapAPI;
+import com.clevertap.android.sdk.pushnotification.NotificationInfo;
+import com.clevertap.android.sdk.pushnotification.fcm.CTFcmMessageHandler;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
@@ -36,6 +39,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.net.ssl.HttpsURLConnection;
@@ -59,6 +63,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         String deviceToken = newToken;
         SharedPreferences sharedPref = this.getSharedPreferences(
                 this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        CleverTapAPI.getDefaultInstance(this).pushFcmRegistrationId(newToken,true);
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putString("FCM_TOKEN", newToken);
         editor.apply();
@@ -73,93 +78,211 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     @Override
     public void onMessageReceived(@NonNull RemoteMessage remoteMessage){
         firebaseLogEventWithParams("notification_received","type",remoteMessage.getData().get("notification_type"));
-
         super.onMessageReceived(remoteMessage);
         Log.e("onMessageReceived", remoteMessage.getData().toString());
         JSONObject payload = new JSONObject();
         JSONObject notification_payload = null;
         JSONObject entity_payload = null;
         try {
-            payload.put("notification_type", remoteMessage.getData().get("notification_type"));
-            payload.put("entity_ids", remoteMessage.getData().get("entity_ids"));
-            payload.put("entity_type", remoteMessage.getData().get("entity_type"));
-            payload.put("show_notification", remoteMessage.getData().get("show_notification"));
-
-            String title;
-            String body;
-            String icon;
-            String imageUrl;
-
-            if (remoteMessage.getData().containsKey("notification_json")) {
-                notification_payload = new JSONObject(remoteMessage.getData().get("notification_json"));
-            }
-            if (remoteMessage.getData().containsKey("entity_data") && remoteMessage.getData().get("notification_type").equals("NEW_RIDE_AVAILABLE") ) {
-                entity_payload = new JSONObject(remoteMessage.getData().get("entity_data"));
-            }
-
-            RemoteMessage.Notification notification = remoteMessage.getNotification();
-            if (notification != null) {
-                title = notification.getTitle();
-                body = notification.getBody();
-                icon = notification.getIcon();
-                imageUrl = remoteMessage.getData().get("image-url");
-            } else {
-                title = notification_payload.get("title").toString();
-                body = notification_payload.get("body").toString();
-                icon = notification_payload.get("icon").toString();
-                if (notification_payload.has("imageUrl")) {
-                    imageUrl = notification_payload.get("imageUrl").toString();
-                } else {
-                    imageUrl = null;
+            if (remoteMessage.getData().size() > 0) {
+                Bundle extras = new Bundle();
+                for (Map.Entry<String, String> entry : remoteMessage.getData().entrySet()) {
+                    extras.putString(entry.getKey(), entry.getValue());
                 }
-            }
 
-            if (notification_payload != null || notification != null) {
-                SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                String notificationType = (String) payload.get("notification_type");
-                stopChatService(notificationType,sharedPref);
-                switch (notificationType) {
-                    case NotificationTypes.DRIVER_NOTIFY:
-                        if (remoteMessage.getData().containsKey("driver_notification_payload")) {
-                            showOverlayMessage(new JSONObject(remoteMessage.getData().get("driver_notification_payload")));
-                        }
-                        break;
+                CleverTapAPI.getDefaultInstance(this).pushNotificationViewedEvent(extras);
 
-                    case NotificationTypes.TRIGGER_SERVICE :
-                        if (merchantType.equals("DRIVER")) {
-                            FirebaseAnalytics.getInstance(this).logEvent("notification_trigger_service", new Bundle());
-                            rideRequestUtils.restartLocationService(this);
-                        }
-                        break;
+                NotificationInfo info = CleverTapAPI.getNotificationInfo(extras);
 
-                    case NotificationTypes.NEW_RIDE_AVAILABLE :
-                        sharedPref.edit().putString(getString(R.string.RIDE_STATUS), getString(R.string.NEW_RIDE_AVAILABLE)).apply();
-                        if (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onPause") || sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy")) ){
-                            startWidgetService(null, payload, entity_payload);
-                        }else{
-                            NotificationUtils.showAllocationNotification(this, title, body, payload, imageUrl, entity_payload);
-                        }
-                        break;
+                if (info.fromCleverTap) {
+                    new CTFcmMessageHandler().createNotification(getApplicationContext(), remoteMessage);
+                } else {
 
-                    case NotificationTypes.CLEARED_FARE :
-                        sharedPref.edit().putString(getString(R.string.CLEAR_FARE), String.valueOf(payload.get(getString(R.string.entity_ids)))).apply();
-                        NotificationUtils.showAllocationNotification(this, title, body, payload, imageUrl, entity_payload);
-                        startWidgetService("CLEAR_FARE", payload, entity_payload);
-                        break;
+                    payload.put("notification_type", remoteMessage.getData().get("notification_type"));
+                    payload.put("entity_ids", remoteMessage.getData().get("entity_ids"));
+                    payload.put("entity_type", remoteMessage.getData().get("entity_type"));
+                    payload.put("show_notification", remoteMessage.getData().get("show_notification"));
 
-                    case NotificationTypes.CANCELLED_PRODUCT :
-                        NotificationUtils.showNotification(this, title, body, payload, imageUrl);
-                        sharedPref.edit().putString(getResources().getString(R.string.IS_RIDE_ACTIVE), "false").apply();
-                        if (sharedPref.getString("MAPS_OPENED", "null").equals("true")){
-                            startMainActivity();
+                    String title;
+                    String body;
+                    String icon;
+                    String imageUrl;
+
+                    if (remoteMessage.getData().containsKey("notification_json")) {
+                        notification_payload = new JSONObject(remoteMessage.getData().get("notification_json"));
+                    }
+                    if (remoteMessage.getData().containsKey("entity_data") && remoteMessage.getData().get("notification_type").equals("NEW_RIDE_AVAILABLE")) {
+                        entity_payload = new JSONObject(remoteMessage.getData().get("entity_data"));
+                    }
+
+                    RemoteMessage.Notification notification = remoteMessage.getNotification();
+                    if (notification != null) {
+                        title = notification.getTitle();
+                        body = notification.getBody();
+                        icon = notification.getIcon();
+                        imageUrl = remoteMessage.getData().get("image-url");
+                    } else {
+                        title = notification_payload.get("title").toString();
+                        body = notification_payload.get("body").toString();
+                        icon = notification_payload.get("icon").toString();
+                        if (notification_payload.has("imageUrl")) {
+                            imageUrl = notification_payload.get("imageUrl").toString();
                         } else {
-                            startWidgetService(getString(R.string.ride_cancelled), payload, entity_payload);
+                            imageUrl = null;
                         }
-                        break;
+                    }
 
-                    case NotificationTypes.DRIVER_QUOTE_INCOMING :
-                        if (sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause")) {
-                            NotificationUtils.showNotification(this, title, body, payload, imageUrl);
+                    if (notification_payload != null || notification != null) {
+                        SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                        String notificationType = (String) payload.get("notification_type");
+                        stopChatService(notificationType, sharedPref);
+                        switch (notificationType) {
+                            case NotificationTypes.DRIVER_NOTIFY:
+                                if (remoteMessage.getData().containsKey("driver_notification_payload")) {
+                                    showOverlayMessage(new JSONObject(remoteMessage.getData().get("driver_notification_payload")));
+                                }
+                                break;
+
+                            case NotificationTypes.TRIGGER_SERVICE:
+                                if (merchantType.equals("DRIVER")) {
+                                    FirebaseAnalytics.getInstance(this).logEvent("notification_trigger_service", new Bundle());
+                                    rideRequestUtils.restartLocationService(this);
+                                }
+                                break;
+
+                            case NotificationTypes.NEW_RIDE_AVAILABLE:
+                                sharedPref.edit().putString(getString(R.string.RIDE_STATUS), getString(R.string.NEW_RIDE_AVAILABLE)).apply();
+                                if (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onPause") || sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy"))) {
+                                    startWidgetService(null, payload, entity_payload);
+                                } else {
+                                    NotificationUtils.showAllocationNotification(this, title, body, payload, imageUrl, entity_payload);
+                                }
+                                break;
+
+                            case NotificationTypes.CLEARED_FARE:
+                                sharedPref.edit().putString(getString(R.string.CLEAR_FARE), String.valueOf(payload.get(getString(R.string.entity_ids)))).apply();
+                                NotificationUtils.showAllocationNotification(this, title, body, payload, imageUrl, entity_payload);
+                                startWidgetService("CLEAR_FARE", payload, entity_payload);
+                                break;
+
+                            case NotificationTypes.CANCELLED_PRODUCT:
+                                NotificationUtils.showNotification(this, title, body, payload, imageUrl);
+                                sharedPref.edit().putString(getResources().getString(R.string.IS_RIDE_ACTIVE), "false").apply();
+                                if (sharedPref.getString("MAPS_OPENED", "null").equals("true")) {
+                                    startMainActivity();
+                                } else {
+                                    startWidgetService(getString(R.string.ride_cancelled), payload, entity_payload);
+                                }
+                                break;
+
+                            case NotificationTypes.DRIVER_QUOTE_INCOMING:
+                                if (sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause")) {
+                                    NotificationUtils.showNotification(this, title, body, payload, imageUrl);
+                                }
+                                break;
+
+                            case NotificationTypes.TRIP_FINISHED:
+                                NotificationUtils.showNotification(this, title, body, payload, imageUrl);
+                                if (merchantType.equals("USER")) {
+                                    sharedPref.edit().putInt("RIDE_COUNT", sharedPref.getInt("RIDE_COUNT", 0) + 1).apply();
+                                    sharedPref.edit().putString("COMPLETED_RIDE_COUNT", String.valueOf(sharedPref.getInt("RIDE_COUNT", 0))).apply();
+                                }
+                                break;
+
+                            case NotificationTypes.DRIVER_ASSIGNMENT:
+                                NotificationUtils.showNotification(this, title, body, payload, imageUrl);
+                                sharedPref.edit().putString(getResources().getString(R.string.IS_RIDE_ACTIVE), "true").apply();
+                                sharedPref.edit().putString(getString(R.string.RIDE_STATUS), getString(R.string.DRIVER_ASSIGNMENT)).apply();
+                                startMainActivity();
+                                break;
+
+                            case NotificationTypes.BUNDLE_UPDATE:
+                                try {
+                                    if (MainActivity.getInstance() != null) {
+                                        MainActivity.getInstance().showAlertForUpdate();
+                                    } else {
+                                        firebaseLogEventWithParams("unable_to_update_bundle", "reason", "Main Activity instance is null");
+                                    }
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                    firebaseLogEventWithParams("exception_in_bundle_update _fcm", "exception", e.toString());
+                                }
+                                break;
+
+                            case NotificationTypes.CANCELLED_SEARCH_REQUEST:
+                                sharedPref.edit().putString(getString(R.string.CANCELLED_SEARCH_REQUEST), String.valueOf(payload.get(getString(R.string.entity_ids)))).apply();
+                                NotificationUtils.showAllocationNotification(this, title, body, payload, imageUrl, entity_payload);
+                                startWidgetService("CLEAR_FARE", payload, entity_payload);
+                                break;
+
+                            case NotificationTypes.NEW_MESSAGE:
+                                sharedPref.edit().putString("ALERT_RECEIVED", "true").apply();
+                                NotificationUtils.showNotification(this, title, body, payload, imageUrl);
+                                break;
+
+                            case NotificationTypes.REGISTRATION_APPROVED:
+                                sharedPref.edit().putString(getString(R.string.REGISTRATION_APPROVED), "true").apply();
+                                break;
+
+                            case NotificationTypes.REFERRAL_ACTIVATED:
+                                sharedPref.edit().putString("REFERRAL_ACTIVATED", "true").apply();
+                                break;
+
+                            case NotificationTypes.UPDATE_STORAGE:
+                                if (notification_payload.has("storage_key") && notification_payload.has("storage_value")) {
+                                    String storage_key = notification_payload.get("storage_key").toString();
+                                    String storage_value = notification_payload.get("storage_value").toString();
+                                    if (storage_key.equals("update_driver_status") && merchantType.equals("DRIVER")) {
+                                        boolean status = storage_value.equals("SILENT") || storage_value.equals("ONLINE");
+                                        rideRequestUtils.updateDriverStatus(status, storage_value, this, true);
+                                    } else
+                                        sharedPref.edit().putString(storage_key, storage_value).apply();
+                                }
+                                NotificationUtils.showAllocationNotification(this, title, body, payload, imageUrl, entity_payload);
+                                break;
+
+                            case NotificationTypes.CALL_API:
+                                try {
+                                    String endPoint = notification_payload.get("endpoint").toString();
+                                    String method = notification_payload.get("method").toString();
+                                    JSONObject reqBody = (JSONObject) notification_payload.get("reqBody");
+                                    if (endPoint != null && method != null) {
+                                        reqBody = reqBody != null ? reqBody : null;
+                                        rideRequestUtils.callAPIViaFCM(endPoint, reqBody, method, this);
+                                    }
+
+                                } catch (Exception e) {
+
+                                }
+                            case NotificationTypes.CHAT_MESSAGE:
+                                try {
+                                    String appState = null;
+                                    String stage = null;
+                                    if (sharedPref != null)
+                                        appState = sharedPref.getString("ACTIVITY_STATUS", "null");
+                                    if (sharedPref != null)
+                                        stage = sharedPref.getString("LOCAL_STAGE", "null");
+                                    final boolean condition = appState.equals("onResume") && !(stage.equals("ChatWithDriver")) && !BuildConfig.MERCHANT_TYPE.equals("DRIVER");
+                                    if (condition) {
+                                        getApplicationContext().getMainLooper();
+                                        String notificationId = String.valueOf(rand.nextInt(1000000));
+                                        MainActivity.showInAppNotification(title, body, CommonJsInterface.storeCallBackOpenChatScreen, "", "", "", "", notificationId, 5000, getApplicationContext());
+                                    }
+                                    if (appState.equals("onDestroy") || appState.equals("onPause")) {
+                                        NotificationUtils.createChatNotification(title, body, getApplicationContext());
+                                    }
+                                } catch (Exception e) {
+                                    Log.e("MyFirebaseMessagingService", "Error in CHAT_MESSAGE " + e);
+                                }
+                                break;
+
+                            default:
+                                if (payload.get("show_notification").equals("true")) {
+                                    NotificationUtils.showNotification(this, title, body, payload, imageUrl);
+                                } else {
+                                    // Silent notification
+                                }
+                                break;
                         }
                         break;
 
@@ -278,6 +401,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             // Silent notification
                         }
                         break;
+                    }
                 }
             }
         } catch (Exception e) {

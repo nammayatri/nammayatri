@@ -40,13 +40,13 @@ repositories {
 }
 
 android {
-    compileSdkVersion 31
+    compileSdkVersion 33
     buildToolsVersion "30.0.3"
     namespace "in.juspay.mobility"
 
     defaultConfig {
         minSdkVersion 23
-        targetSdkVersion 31
+        targetSdkVersion 33
         versionCode 100
         versionName "1.2.9"
         multiDexEnabled true
@@ -109,6 +109,9 @@ android {
             resValue "string", "facebook_app_id", properties.getProperty("FACEBOOK_APP_ID","")
             resValue "string", "facebook_client_token", properties.getProperty("FACEBOOK_CLIENT_TOKEN","")
             resValue "string", "fb_login_protocol_scheme", properties.getProperty("FB_LOGIN_PROTOCOL_SCHEMA","")
+            resValue "string", "clevertap_account_id", properties.getProperty("CLEVERTAP_ACCOUNT_ID","")
+            resValue "string", "clevertap_token", properties.getProperty("CLEVERTAP_TOKEN","")
+            resValue "string", "clevertap_region", properties.getProperty("CLEVERTAP_REGION","")
             dimension "mode"
         }
         dev {
@@ -121,6 +124,9 @@ android {
             resValue "string", "facebook_app_id", properties.getProperty("FACEBOOK_APP_ID","")
             resValue "string", "facebook_client_token", properties.getProperty("FACEBOOK_CLIENT_TOKEN","")
             resValue "string", "fb_login_protocol_scheme", properties.getProperty("FB_LOGIN_PROTOCOL_SCHEMA","")
+            resValue "string", "clevertap_account_id", properties.getProperty("CLEVERTAP_ACCOUNT_ID","")
+            resValue "string", "clevertap_token", properties.getProperty("CLEVERTAP_TOKEN","")
+            resValue "string", "clevertap_region", properties.getProperty("CLEVERTAP_REGION","")
             dimension "mode"
         }
         ny_ {
@@ -247,6 +253,9 @@ dependencies {
     implementation 'com.facebook.android:facebook-android-sdk:14.0.0'
     api 'com.theartofdev.edmodo:android-image-cropper:2.8.0'
     implementation 'com.github.bumptech.glide:glide:4.15.1'
+    implementation 'androidx.core:core:1.4.0'
+    implementation 'com.clevertap.android:clevertap-android-sdk:5.0.0'
+    implementation 'com.android.installreferrer:installreferrer:2.2'
 }
 
 def tmpSource        = "/tmp/juspay"

@@ -40,7 +40,7 @@ import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, bundleVersion
 import Foreign.Class (class Encode)
 import Foreign.Class (encode)
 import Helpers.Utils (hideSplash, getDistanceBwCordinates, adjustViewWithKeyboard, decodeErrorCode, getObjFromLocal, differenceOfLocationLists, filterRecentSearches, setText', seperateByWhiteSpaces, getNewTrackingId, checkPrediction, getRecentSearches, addToRecentSearches, saveRecents, clearWaitingTimer, toString, parseFloat, getCurrentLocationsObjFromLocal, addToPrevCurrLoc, saveCurrentLocations, getCurrentDate, getPrediction, getCurrentLocationMarker, parseNewContacts, getMerchant, Merchant(..), drawPolygon,requestKeyboardShow, removeLabelFromMarker, sortPredctionByDistance, withinTimeRange)
-import JBridge (metaLogEvent, currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, loaderText, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, toggleLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker, generateSessionId, stopChatListenerService, updateRouteMarker)
+import JBridge (metaLogEvent, currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, loaderText, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, toggleLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker, generateSessionId, stopChatListenerService, updateRouteMarker, setCleverTapUserProp, setCleverTapUserData, cleverTapSetLocation)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -85,9 +85,11 @@ baseAppFlow gPayload refreshFlow = do
       customerId = (getValueToLocalStore CUSTOMER_ID)
   versionCode <- lift $ lift $ liftFlow $ getVersionCode
   versionName <- lift $ lift $ liftFlow $ getVersionName
+  void $ pure $ setCleverTapUserProp "App Version" versionName
   checkVersion versionCode versionName
   setValueToLocalStore VERSION_NAME $ concatString $ Arr.take 3 $ split (Pattern ".") versionName
   setValueToLocalStore BUNDLE_VERSION bundle
+  void $ pure $ setCleverTapUserProp "Bundle version" bundle
   setValueToLocalNativeStore BUNDLE_VERSION bundle
   _ <- pure $ setValueToLocalStore TRACKING_DRIVER "False"
   _ <- pure $ setValueToLocalStore TRACKING_ENABLED "True"
@@ -145,6 +147,7 @@ getIosVersion merchant =
 
 checkVersion :: Int -> String -> FlowBT String Unit
 checkVersion versioncodeAndroid versionName= do
+  void $ pure $ setCleverTapUserProp "Platform" os
   let updatedIOSversion = getIosVersion (getMerchant FunctionCall)
   if os /= "IOS" && versioncodeAndroid < (getLatestAndroidVersion (getMerchant FunctionCall)) then do
     lift $ lift $ doAff do liftEffect hideSplash
@@ -311,8 +314,23 @@ currentFlowStatus = do
       else do
         resp <- lift $ lift $ Remote.updateProfile (Remote.mkUpdateProfileRequest)
         pure unit
+      void $ pure $ setCleverTapUserData "Name" ((fromMaybe "" response.firstName) <> " " <> (fromMaybe "" response.middleName) <> " " <> (fromMaybe "" response.lastName))
+
+      if (fromMaybe "UNKNOWN" (response.gender) /= "UNKNOWN") then do
+        void $ pure $ setCleverTapUserData "gender" (fromMaybe "" response.gender)
+        pure unit
+        else pure unit
+      if (isJust response.language) then do
+        _ <- pure $ spy "testing" (fromMaybe "" response.language)
+        void $ pure $ setCleverTapUserProp "Preferred Language" (fromMaybe "" response.language)
+        pure unit
+        else pure unit
+      void $ pure $ setCleverTapUserData "Identity" (getValueToLocalStore CUSTOMER_ID)
+      void $ pure $ setCleverTapUserData "Phone" ("+91" <> (getValueToLocalStore MOBILE_NUMBER))
+
       setValueToLocalStore REFERRAL_STATUS  $ if response.hasTakenRide then "HAS_TAKEN_RIDE" else if (response.referralCode /= Nothing && not response.hasTakenRide) then "REFERRED_NOT_TAKEN_RIDE" else "NOT_REFERRED_NOT_TAKEN_RIDE"
       setValueToLocalStore HAS_TAKEN_FIRST_RIDE if response.hasTakenRide then "true" else "false"
+      void $ pure $ setCleverTapUserProp "First ride taken" if response.hasTakenRide then "true" else "false"
       if (((fromMaybe "" response.firstName) == "" ) && not (isJust response.firstName)) then do
         _ <- updateLocalStage HomeScreen
         lift $ lift $ doAff do liftEffect hideSplash
@@ -325,6 +343,7 @@ currentFlowStatus = do
         else pure unit
       if isJust response.email then do
         setValueToLocalStore USER_EMAIL $ fromMaybe "" response.email
+        void $ pure $ setCleverTapUserData "Email" (fromMaybe "" response.email)
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{email = Just (fromMaybe "" response.email)}}})
         else pure unit
 
@@ -386,6 +405,7 @@ chooseLanguageScreenFlow = do
   case flow of
     NextScreen language -> do
                             setValueToLocalStore LANGUAGE_KEY language
+                            void $ pure $ setCleverTapUserProp "Preferred Language" language
                             _ <- lift $ lift $ liftFlow $(firebaseLogEventWithParams "ny_user_lang_choose" "language" (language))
                             enterMobileNumberScreenFlow
     Refresh state -> chooseLanguageScreenFlow
@@ -428,6 +448,7 @@ enterMobileNumberScreenFlow = do
                         customerId = ((response.person)^. _id)
                     _ <- lift $ lift $ setLogField "customer_id" $ encode (customerId)
                     setValueToLocalStore CUSTOMER_ID customerId
+                    void $ pure $ setCleverTapUserData "Identity" (getValueToLocalStore CUSTOMER_ID)
                     setValueToLocalStore REGISTERATION_TOKEN response.token
                     currentFlowStatus
               Left err -> do
@@ -449,6 +470,7 @@ enterMobileNumberScreenFlow = do
                 enterMobileNumberScreenFlow
     GoToOTP state -> do
             setValueToLocalStore MOBILE_NUMBER (state.data.mobileNumber)
+            void $ pure $ setCleverTapUserData "Phone" ("+91" <> (getValueToLocalStore MOBILE_NUMBER))
             (TriggerOTPResp triggerOtpResp) <- Remote.triggerOTPBT (Remote.makeTriggerOTPReq state.data.mobileNumber)
             modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen { data { tokenId = triggerOtpResp.authId, attempts = triggerOtpResp.attempts}, props {enterOTP = true,resendEnable = true}})
             modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{data{settingSideBar{number = state.data.mobileNumber}}})
@@ -476,10 +498,12 @@ accountSetUpScreenFlow = do
       let gender = getGenderValue state.data.gender
       let (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest
           requiredData = initialData{firstName = (Just state.data.name),gender = gender}
+      void $ pure $ setCleverTapUserData "gender" (fromMaybe "" gender)
       resp <- lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
       case resp of
         Right response -> do
           setValueToLocalStore USER_NAME state.data.name
+          void $ pure $ setCleverTapUserData "Name" (getValueToLocalStore USER_NAME)
           case gender of
             Just value -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{gender = Just value}}, props{isBanner = false}})
             Nothing    -> pure unit
@@ -501,6 +525,7 @@ homeScreenFlow :: FlowBT String Unit
 homeScreenFlow = do
   (GlobalState currentState) <- getState
   _ <- checkAndUpdateSavedLocations currentState.homeScreen
+  _ <- pure $ cleverTapSetLocation unit
   -- TODO: REQUIRED ONCE WE NEED TO STORE RECENT CURRENTLOCATIONS
   -- resp <- lift $ lift $ getCurrentLocationsObjFromLocal currentState.homeScreen
   -- modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{previousCurrentLocations = resp}})
