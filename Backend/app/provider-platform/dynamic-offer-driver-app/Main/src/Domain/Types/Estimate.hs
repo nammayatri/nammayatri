@@ -92,7 +92,7 @@ deriving instance FromJSON (EstimateBreakupPriceD 'Unsafe)
 
 deriving instance ToJSON (EstimateBreakupPriceD 'Unsafe)
 
-deriving instance Read (EstimateBreakupPrice)
+deriving instance Read EstimateBreakupPrice
 
 deriving instance FromJSON (EstimateBreakupPriceD 'Safe)
 

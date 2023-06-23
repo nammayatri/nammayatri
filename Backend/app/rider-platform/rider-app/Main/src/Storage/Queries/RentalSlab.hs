@@ -15,11 +15,15 @@
 module Storage.Queries.RentalSlab where
 
 import Domain.Types.RentalSlab
+import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Lib.Utils
+import qualified Sequelize as Se
 import qualified Storage.Beam.RentalSlab as BeamRS
 import Storage.Tabular.RentalSlab
 
@@ -27,7 +31,14 @@ findById' :: (MonadThrow m, Log m, Transactionable m) => Id RentalSlab -> DTypeB
 findById' = Esq.findById'
 
 findById :: (L.MonadFlow m) => Id RentalSlab -> m (Maybe RentalSlab)
-findById = error "findById not implemented"
+findById rentalSlabId = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamRS.RentalSlabT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      either (pure Nothing) (transformBeamRentalSlabToDomain <$>) <$> KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamRS.id $ Se.Eq (getId rentalSlabId)]
+    Nothing -> pure Nothing
 
 transformBeamRentalSlabToDomain :: BeamRS.RentalSlab -> RentalSlab
 transformBeamRentalSlabToDomain BeamRS.RentalSlabT {..} = do

@@ -16,9 +16,14 @@ module Storage.Queries.SavedReqLocation where
 
 import Domain.Types.Person (Person)
 import Domain.Types.SavedReqLocation
+import qualified EulerHS.KVConnector.Flow as KV
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Lib.Utils
+import qualified Sequelize as Se
 import qualified Storage.Beam.SavedReqLocation as BeamSRL
 import Storage.Tabular.SavedReqLocation
 
@@ -34,6 +39,15 @@ findAllByRiderId perId =
     orderBy [desc $ saveReqLocation ^. SavedReqLocationUpdatedAt]
     return saveReqLocation
 
+findAllByRiderId' :: L.MonadFlow m => Id Person -> m [SavedReqLocation]
+findAllByRiderId' perId = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSRL.SavedReqLocationT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbCOnf' -> either (pure []) (transformBeamSavedReqLocationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSRL.riderId $ Se.Eq (getId perId)]
+    Nothing -> pure []
+
 deleteByRiderIdAndTag :: Id Person -> Text -> SqlDB ()
 deleteByRiderIdAndTag perId addressTag = do
   Esq.delete $ do
@@ -41,6 +55,20 @@ deleteByRiderIdAndTag perId addressTag = do
     where_ $
       (saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey perId))
         &&. (saveReqLocation ^. SavedReqLocationTag ==. val addressTag)
+
+deleteByRiderIdAndTag' :: L.MonadFlow m => Id Person -> Text -> m ()
+deleteByRiderIdAndTag' perId addressTag = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSRL.SavedReqLocationT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' ->
+      void $
+        KV.deleteAllReturningWithKVConnector
+          dbConf'
+          updatedMeshConfig
+          [Se.And [Se.Is BeamSRL.riderId (Se.Eq (getId perId)), Se.Is BeamSRL.tag (Se.Eq addressTag)]]
+    Nothing -> pure ()
 
 findAllByRiderIdAndTag :: Transactionable m => Id Person -> Text -> m [SavedReqLocation]
 findAllByRiderIdAndTag perId addressTag =
@@ -51,11 +79,34 @@ findAllByRiderIdAndTag perId addressTag =
         &&. (saveReqLocation ^. SavedReqLocationTag ==. val addressTag)
     return saveReqLocation
 
+findAllByRiderIdAndTag' :: L.MonadFlow m => Id Person -> Text -> m [SavedReqLocation]
+findAllByRiderIdAndTag' perId addressTag = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSRL.SavedReqLocationT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbCOnf' -> either (pure []) (transformBeamSavedReqLocationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamSRL.riderId (Se.Eq (getId perId)), Se.Is BeamSRL.tag (Se.Eq addressTag)]]
+    Nothing -> pure []
+
 deleteAllByRiderId :: Id Person -> SqlDB ()
 deleteAllByRiderId personId = do
   Esq.delete $ do
     saveReqLocation <- from $ table @SavedReqLocationT
     where_ (saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey personId))
+
+deleteAllByRiderId' :: L.MonadFlow m => Id Person -> m ()
+deleteAllByRiderId' personId = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSRL.SavedReqLocationT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' ->
+      void $
+        KV.deleteAllReturningWithKVConnector
+          dbConf'
+          updatedMeshConfig
+          [Se.Is BeamSRL.riderId (Se.Eq (getId personId))]
+    Nothing -> pure ()
 
 transformBeamSavedReqLocationToDomain :: BeamSRL.SavedReqLocation -> SavedReqLocation
 transformBeamSavedReqLocationToDomain BeamSRL.SavedReqLocationT {..} = do

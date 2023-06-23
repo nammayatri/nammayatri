@@ -21,13 +21,17 @@ import Domain.Types.Estimate
 import Domain.Types.FarePolicy.FareProductType as DFFP
 import Domain.Types.Quote as DQ
 import Domain.Types.SearchRequest
+import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Error
+import Lib.Utils
+import qualified Sequelize as Se
 import qualified Storage.Beam.Quote as BeamQ
 import Storage.Queries.FullEntityBuilders (buildFullQuote)
 import Storage.Queries.RentalSlab as QueryRS
@@ -95,6 +99,18 @@ fullQuoteTable =
                    quote ^. QuoteSpecialZoneQuoteId ==. mbspecialZoneQuote ?. SpecialZoneQuoteTId
                )
 
+-- findByMobileNumberAndMerchantId' :: (L.MonadFlow m, Log m) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
+-- findByMobileNumberAndMerchantId' countryCode mobileNumberHash (Id merchantId) = do
+--   dbConf <- L.getOption KBT.PsqlDbCfg
+--   let modelName = Se.modelTableName @BeamP.PersonT
+--   let updatedMeshConfig = setMeshConfig modelName
+--   case dbConf of
+--     Just dbConf' -> do
+--       result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
+--       case result of
+--         Right (Just p) -> transformBeamPersonToDomain p
+--         _ -> pure Nothing
+--     Nothing -> pure Nothing
 findById :: Transactionable m => Id Quote -> m (Maybe Quote)
 findById quoteId = Esq.buildDType $ do
   mbFullQuoteT <- Esq.findOne' $ do
@@ -102,6 +118,19 @@ findById quoteId = Esq.buildDType $ do
     where_ $ quote ^. QuoteTId ==. val (toKey quoteId)
     pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote)
   join <$> mapM buildFullQuote mbFullQuoteT
+
+findById' :: (L.MonadFlow m, Log m) => Id Quote -> m (Maybe Quote)
+findById' quoteId = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamQ.QuoteT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamQ.id $ Se.Eq (getId quoteId)]
+      case result of
+        Right (Just q) -> transformBeamQuoteToDomain q
+        _ -> pure Nothing
+    Nothing -> pure Nothing
 
 findByBppIdAndBPPQuoteId :: Transactionable m => Text -> Id BPPQuote -> m (Maybe Quote)
 findByBppIdAndBPPQuoteId bppId bppQuoteId = buildDType $ do
@@ -113,6 +142,21 @@ findByBppIdAndBPPQuoteId bppId bppQuoteId = buildDType $ do
     pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote)
   join <$> mapM buildFullQuote mbFullQuoteT
 
+-- lets check this query as bppquoteId is needed to find driver offer in domain
+
+-- findByBppIdAndBPPQuoteId' :: (L.MonadFlow m, Log m) => Text -> Id BPPQuote -> m (Maybe Quote)
+-- findByBppIdAndBPPQuoteId' bppId bppQuoteId = do
+--   dbConf <- L.getOption KBT.PsqlDbCfg
+--   let modelName = Se.modelTableName @BeamQ.QuoteT
+--   let updatedMeshConfig = setMeshConfig modelName
+--   case dbConf of
+--     Just dbConf' -> do
+--       result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamQ.providerId $ Se.Eq bppId]]
+--       case result of
+--         Right (Just q) -> transformBeamQuoteToDomain q
+--         _ -> pure Nothing
+--     Nothing -> pure Nothing
+
 findAllBySRId :: Transactionable m => Id SearchRequest -> m [Quote]
 findAllBySRId searchRequestId = Esq.buildDType $ do
   fullQuoteTs <- Esq.findAll' $ do
@@ -120,6 +164,19 @@ findAllBySRId searchRequestId = Esq.buildDType $ do
     where_ $ quote ^. QuoteRequestId ==. val (toKey searchRequestId)
     pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote)
   catMaybes <$> mapM buildFullQuote fullQuoteTs
+
+findAllBySRId' :: (L.MonadFlow m, Log m) => Id SearchRequest -> m [Quote]
+findAllBySRId' searchRequestId = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamQ.QuoteT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      result <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamQ.requestId $ Se.Eq (getId searchRequestId)]]
+      case result of
+        Right res -> catMaybes <$> traverse transformBeamQuoteToDomain res
+        _ -> pure []
+    Nothing -> pure []
 
 findAllByEstimateId :: Transactionable m => Id Estimate -> m [Quote]
 findAllByEstimateId estimateId = buildDType $ do
@@ -151,6 +208,19 @@ findDOfferByEstimateId' estimateId =
     driverOffer <- from $ table @DriverOfferT
     where_ $ driverOffer ^. DriverOfferEstimateId ==. val (toKey estimateId)
     return driverOffer
+
+-- findDOfferByEstimateId'' :: (L.MonadFlow m, Log m) => Id Estimate -> m [DriverOffer]
+-- findDOfferByEstimateId'' estimateId = do
+--   dbConf <- L.getOption KBT.PsqlDbCfg
+--   let modelName = Se.modelTableName @BeamDO.DriverOfferT
+--   let updatedMeshConfig = setMeshConfig modelName
+--   case dbConf of
+--     Just dbConf' -> do
+--       result <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamDO.estimateId $ Se.Eq (getId estimateId)]]
+--       case result of
+--         Right res -> catMaybes <$> traverse transformBeamDriverOfferToDomain res
+--         _ -> pure []
+--     Nothing -> pure []
 
 findQuotesByDriverOfferId' :: Transactionable m => Id DriverOffer -> DTypeBuilder m (Maybe QuoteT)
 findQuotesByDriverOfferId' driverOfferId = Esq.findOne' $ do

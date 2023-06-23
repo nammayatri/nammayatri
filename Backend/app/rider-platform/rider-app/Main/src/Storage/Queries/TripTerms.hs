@@ -15,11 +15,15 @@
 module Storage.Queries.TripTerms where
 
 import Domain.Types.TripTerms as DTT
+import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Lib.Utils
+import qualified Sequelize as Se
 import qualified Storage.Beam.TripTerms as BeamTT
 import Storage.Tabular.TripTerms
 
@@ -27,7 +31,13 @@ findById' :: (MonadThrow m, Log m, Transactionable m) => Id TripTerms -> DTypeBu
 findById' = Esq.findById'
 
 findById'' :: L.MonadFlow m => Id TripTerms -> m (Maybe TripTerms)
-findById'' _ = error "Not implemented"
+findById'' tripTermsId = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamTT.TripTermsT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamTripTermsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamTT.id $ Se.Eq (getId tripTermsId)]
+    Nothing -> pure Nothing
 
 transformBeamTripTermsToDomain :: BeamTT.TripTerms -> TripTerms
 transformBeamTripTermsToDomain BeamTT.TripTermsT {..} = do

@@ -15,11 +15,15 @@
 module Storage.Queries.SpecialZoneQuote where
 
 import Domain.Types.SpecialZoneQuote
+import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Lib.Utils
+import qualified Sequelize as Se
 import qualified Storage.Beam.SpecialZoneQuote as BeamSZQ
 import Storage.Tabular.SpecialZoneQuote
 
@@ -27,7 +31,13 @@ findById' :: (MonadThrow m, Log m, Transactionable m) => Id SpecialZoneQuote -> 
 findById' = Esq.findById'
 
 findById :: (L.MonadFlow m) => Id SpecialZoneQuote -> m (Maybe SpecialZoneQuote)
-findById = error "findById not implemented"
+findById specialZoneQuoteId = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSZQ.SpecialZoneQuoteT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamSpecialZoneQuoteToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSZQ.id $ Se.Eq (getId specialZoneQuoteId)]
+    Nothing -> pure Nothing
 
 transformBeamSpecialZoneQuoteToDomain :: BeamSZQ.SpecialZoneQuote -> SpecialZoneQuote
 transformBeamSpecialZoneQuoteToDomain BeamSZQ.SpecialZoneQuoteT {..} = do

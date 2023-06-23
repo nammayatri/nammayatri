@@ -16,9 +16,14 @@
 module Storage.Queries.Webengage where
 
 import Domain.Types.Webengage
+import qualified EulerHS.KVConnector.Flow as KV
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Lib.Utils
+import qualified Sequelize as Se
 import qualified Storage.Beam.Webengage as BeamW
 import Storage.Tabular.Webengage
 
@@ -28,12 +33,30 @@ create = Esq.create
 findById :: Transactionable m => Id Webengage -> m (Maybe Webengage)
 findById = Esq.findById
 
+findById' :: L.MonadFlow m => Id Webengage -> m (Maybe Webengage)
+findById' webengageId = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamW.WebengageT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamWebengageToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamW.id $ Se.Eq (getId webengageId)]
+    Nothing -> pure Nothing
+
 findByInfoMsgId :: Transactionable m => Text -> m (Maybe Webengage)
 findByInfoMsgId infoMessageId =
   Esq.findOne $ do
     webengage <- from $ table @WebengageT
     where_ $ webengage ^. WebengageInfoMessageId ==. val infoMessageId
     return webengage
+
+findByInfoMsgId' :: L.MonadFlow m => Text -> m (Maybe Webengage)
+findByInfoMsgId' infoMessageId = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamW.WebengageT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamWebengageToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamW.infoMessageId $ Se.Eq infoMessageId]
+    Nothing -> pure Nothing
 
 transformBeamWebengageToDomain :: BeamW.Webengage -> Webengage
 transformBeamWebengageToDomain BeamW.WebengageT {..} = do

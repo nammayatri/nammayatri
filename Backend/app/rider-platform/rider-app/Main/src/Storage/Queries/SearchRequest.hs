@@ -19,12 +19,17 @@ import Domain.Types.Merchant.MerchantPaymentMethod (MerchantPaymentMethod)
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Domain.Types.Person (Person)
 import Domain.Types.SearchRequest
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Version
+import Lib.Utils
+import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest as BeamSR
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
 import Storage.Tabular.SearchRequest
@@ -62,6 +67,19 @@ findById searchRequestId = Esq.buildDType $ do
     pure (sReq, sFromLoc, mbSToLoc)
   pure $ extractSolidType @SearchRequest <$> mbFullSearchReqT
 
+findById' :: (L.MonadFlow m, Log m) => Id SearchRequest -> m (Maybe SearchRequest)
+findById' (Id searchRequestId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSR.SearchRequestT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbCOnf' -> do
+      sR <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSR.id $ Se.Eq searchRequestId]
+      case sR of
+        Right (Just x) -> transformBeamSearchRequestToDomain x
+        _ -> pure Nothing
+    Nothing -> pure Nothing
+
 findByPersonId :: Transactionable m => Id Person -> Id SearchRequest -> m (Maybe SearchRequest)
 findByPersonId personId searchRequestId = Esq.buildDType $ do
   mbFullSearchReqT <- Esq.findOne' $ do
@@ -72,6 +90,19 @@ findByPersonId personId searchRequestId = Esq.buildDType $ do
     return (searchRequest, sFromLoc, mbSToLoc)
   pure $ extractSolidType @SearchRequest <$> mbFullSearchReqT
 
+findByPersonId' :: (L.MonadFlow m, Log m) => Id Person -> Id SearchRequest -> m (Maybe SearchRequest)
+findByPersonId' (Id personId) (Id searchRequestId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSR.SearchRequestT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbCOnf' -> do
+      sR <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamSR.id $ Se.Eq searchRequestId, Se.Is BeamSR.riderId $ Se.Eq personId]]
+      case sR of
+        Right (Just x) -> transformBeamSearchRequestToDomain x
+        _ -> pure Nothing
+    Nothing -> pure Nothing
+
 findAllByPerson :: Transactionable m => Id Person -> m [SearchRequest]
 findAllByPerson perId = Esq.buildDType $ do
   fullSearchRequestsT <- Esq.findAll' $ do
@@ -80,6 +111,19 @@ findAllByPerson perId = Esq.buildDType $ do
       searchRequest ^. SearchRequestRiderId ==. val (toKey perId)
     return (searchRequest, sFromLoc, mbSToLoc)
   pure $ extractSolidType @SearchRequest <$> fullSearchRequestsT
+
+findAllByPerson' :: (L.MonadFlow m, Log m) => Id Person -> m [SearchRequest]
+findAllByPerson' (Id personId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSR.SearchRequestT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbCOnf' -> do
+      sR <- KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSR.riderId $ Se.Eq personId]
+      case sR of
+        Right x -> catMaybes <$> traverse transformBeamSearchRequestToDomain x
+        _ -> pure []
+    Nothing -> pure []
 
 updateCustomerExtraFeeAndPaymentMethod :: Id SearchRequest -> Maybe Money -> Maybe (Id DMPM.MerchantPaymentMethod) -> SqlDB ()
 updateCustomerExtraFeeAndPaymentMethod searchReqId customerExtraFee paymentMethodId =
@@ -90,6 +134,22 @@ updateCustomerExtraFeeAndPaymentMethod searchReqId customerExtraFee paymentMetho
         SearchRequestSelectedPaymentMethodId =. val (toKey <$> paymentMethodId)
       ]
     where_ $ tbl ^. SearchRequestId ==. val (getId searchReqId)
+
+updateCustomerExtraFeeAndPaymentMethod' :: L.MonadFlow m => Id SearchRequest -> Maybe Money -> Maybe (Id DMPM.MerchantPaymentMethod) -> m (MeshResult ())
+updateCustomerExtraFeeAndPaymentMethod' (Id searchReqId) customerExtraFee paymentMethodId = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSR.SearchRequestT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        updatedMeshConfig
+        [ Se.Set BeamSR.customerExtraFee customerExtraFee,
+          Se.Set BeamSR.selectedPaymentMethodId (getId <$> paymentMethodId)
+        ]
+        [Se.Is BeamSR.id (Se.Eq searchReqId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 updateAutoAssign ::
   Id SearchRequest ->
@@ -105,6 +165,22 @@ updateAutoAssign searchRequestId autoAssignedEnabled autoAssignedEnabledV2 =
       ]
     where_ $ tbl ^. SearchRequestTId ==. val (toKey searchRequestId)
 
+updateAutoAssign' :: L.MonadFlow m => Id SearchRequest -> Bool -> Bool -> m (MeshResult ())
+updateAutoAssign' (Id searchRequestId) autoAssignedEnabled autoAssignedEnabledV2 = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSR.SearchRequestT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        updatedMeshConfig
+        [ Se.Set BeamSR.autoAssignEnabled $ Just autoAssignedEnabled,
+          Se.Set BeamSR.autoAssignEnabledV2 $ Just autoAssignedEnabledV2
+        ]
+        [Se.Is BeamSR.id (Se.Eq searchRequestId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 updatePaymentMethods :: Id SearchRequest -> [Id MerchantPaymentMethod] -> SqlDB ()
 updatePaymentMethods searchReqId availablePaymentMethods =
   Esq.update $ \tbl -> do
@@ -113,6 +189,21 @@ updatePaymentMethods searchReqId availablePaymentMethods =
       [ SearchRequestAvailablePaymentMethods =. val (PostgresList $ toKey <$> availablePaymentMethods)
       ]
     where_ $ tbl ^. SearchRequestId ==. val (getId searchReqId)
+
+updatePaymentMethods' :: L.MonadFlow m => Id SearchRequest -> [Id MerchantPaymentMethod] -> m (MeshResult ())
+updatePaymentMethods' (Id searchReqId) availablePaymentMethods = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSR.SearchRequestT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        updatedMeshConfig
+        [ Se.Set BeamSR.availablePaymentMethods (getId <$> availablePaymentMethods)
+        ]
+        [Se.Is BeamSR.id (Se.Eq searchReqId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 transformBeamSearchRequestToDomain :: (L.MonadFlow m, Log m) => BeamSR.SearchRequest -> m (Maybe SearchRequest)
 transformBeamSearchRequestToDomain BeamSR.SearchRequestT {..} = do
