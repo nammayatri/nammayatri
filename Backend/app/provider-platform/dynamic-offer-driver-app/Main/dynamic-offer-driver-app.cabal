@@ -197,6 +197,7 @@ library
       Domain.Types.Message.Message
       Domain.Types.Message.MessageReport
       Domain.Types.Message.MessageTranslation
+      Domain.Types.MetaData
       Domain.Types.Person
       Domain.Types.QuoteSpecialZone
       Domain.Types.Rating
@@ -314,6 +315,7 @@ library
       Storage.Queries.Message.Message
       Storage.Queries.Message.MessageReport
       Storage.Queries.Message.MessageTranslation
+      Storage.Queries.MetaData
       Storage.Queries.Person
       Storage.Queries.QuoteSpecialZone
       Storage.Queries.Rating
@@ -385,6 +387,7 @@ library
       Storage.Tabular.Message.Message
       Storage.Tabular.Message.MessageReport
       Storage.Tabular.Message.MessageTranslation
+      Storage.Tabular.MetaData
       Storage.Tabular.Person
       Storage.Tabular.QuoteSpecialZone
       Storage.Tabular.Rating
