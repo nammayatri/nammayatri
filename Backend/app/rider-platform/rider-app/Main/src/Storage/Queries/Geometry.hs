@@ -14,11 +14,16 @@
 
 module Storage.Queries.Geometry where
 
+import qualified Database.Beam as B
 import Domain.Types.Geometry
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id (Id (..))
+import Lib.Utils
+import Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Geometry as BeamG
 import Storage.Tabular.Geometry
 
@@ -31,9 +36,24 @@ findGeometriesContaining gps regions =
         &&. containsPoint (gps.lon, gps.lat)
     return geometry
 
+findGeometriesContaining' :: forall m. (L.MonadFlow m) => LatLong -> [Text] -> m [Geometry]
+findGeometriesContaining' gps regions = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  conn <- L.getOrInitSqlConn (fromJust dbConf)
+  case conn of
+    Right c -> do
+      geoms <- L.runDB c $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lon, gps.lat) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
+      pure (either (const []) (transformBeamGeometryToDomain <$>) geoms)
+    Left _ -> pure []
+
 someGeometriesContain :: Transactionable m => LatLong -> [Text] -> m Bool
 someGeometriesContain gps regions = do
   geometries <- findGeometriesContaining gps regions
+  pure $ not $ null geometries
+
+someGeometriesContain' :: forall m. (L.MonadFlow m) => LatLong -> [Text] -> m Bool
+someGeometriesContain' gps regions = do
+  geometries <- findGeometriesContaining' gps regions
   pure $ not $ null geometries
 
 transformBeamGeometryToDomain :: BeamG.Geometry -> Geometry

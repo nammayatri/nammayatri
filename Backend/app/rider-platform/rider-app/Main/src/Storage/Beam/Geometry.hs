@@ -24,6 +24,7 @@ import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
+import qualified Database.Beam.Schema.Tables as B
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
@@ -63,6 +64,12 @@ geometryTMod =
     { id = B.fieldNamed "id",
       region = B.fieldNamed "region"
     }
+
+geometryTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity GeometryT)
+geometryTable =
+  B.setEntitySchema (Just "atlas_app")
+    <> B.setEntityName "geometry"
+    <> B.modifyTableFields geometryTMod
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty

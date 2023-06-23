@@ -17,10 +17,15 @@ module Storage.Queries.FareBreakup where
 
 import Domain.Types.Booking.Type
 import Domain.Types.FarePolicy.FareBreakup
+import qualified EulerHS.KVConnector.Flow as KV
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Lib.Utils
+import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FareBreakup as BeamFB
 import Storage.Tabular.FarePolicy.FareBreakup
 
@@ -33,6 +38,15 @@ findAllByBookingId bookingId =
     fareBreakup <- from $ table @FareBreakupT
     where_ $ fareBreakup ^. FareBreakupBookingId ==. val (toKey bookingId)
     return fareBreakup
+
+findAllByBookingId' :: L.MonadFlow m => Id Booking -> m [FareBreakup]
+findAllByBookingId' bookingId = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamFB.FareBreakupT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> either (pure []) (transformBeamFareBreakupToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamFB.bookingId $ Se.Eq $ getId bookingId]
+    Nothing -> pure []
 
 transformBeamFareBreakupToDomain :: BeamFB.FareBreakup -> FareBreakup
 transformBeamFareBreakupToDomain BeamFB.FareBreakupT {..} = do
