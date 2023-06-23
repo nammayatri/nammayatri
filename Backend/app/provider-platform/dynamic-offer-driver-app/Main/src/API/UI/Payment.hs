@@ -19,6 +19,7 @@ module API.UI.Payment
 where
 
 import qualified Domain.Action.UI.Payment as DPayment
+import Domain.Types.DriverFee
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DP
 import Environment
@@ -33,15 +34,15 @@ import Tools.Auth
 
 type API =
   TokenAuth
-    :> Payment.API "orderId" DOrder.PaymentOrder
+    :> Payment.API "driverFeeId" DriverFee
 
 handler :: FlowServer API
 handler authInfo =
   createOrder authInfo
     :<|> getStatus authInfo
 
-createOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DOrder.PaymentOrder -> FlowHandler Payment.CreateOrderResp
-createOrder tokenDetails rideId = withFlowHandlerAPI $ DPayment.createOrder tokenDetails rideId
+createOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DriverFee -> FlowHandler Payment.CreateOrderResp
+createOrder tokenDetails driverFeeId = withFlowHandlerAPI $ DPayment.createOrder tokenDetails driverFeeId
 
 getStatus :: (Id DP.Person, Id Merchant.Merchant) -> Id DOrder.PaymentOrder -> FlowHandler DPayment.PaymentStatusResp
 getStatus tokenDetails orderId = withFlowHandlerAPI $ DPayment.getStatus tokenDetails orderId

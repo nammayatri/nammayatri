@@ -19,6 +19,7 @@ module SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
 where
 
 import qualified Control.Monad.Catch as C
+import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.DriverFee
 import Domain.Types.Merchant.TransporterConfig (TransporterConfig)
 import Domain.Types.Person
@@ -28,14 +29,15 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Error
-import Kernel.Types.Id (Id, cast)
-import Kernel.Utils.Common (EsqDBFlow, Log (withLogTag), MonadFlow, MonadTime (getCurrentTime), addUTCTime, fromMaybeM, logError, logInfo, throwError)
+import Kernel.Types.Id (cast)
+import Kernel.Utils.Common (EsqDBFlow, Log (withLogTag), MonadFlow, MonadTime (getCurrentTime), Seconds, addUTCTime, fromMaybeM, logError, logInfo, secondsToNominalDiffTime, throwError)
 import Lib.Scheduler
 import SharedLogic.Allocator
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
+import Storage.CachedQueries.DriverInformation (updatePendingPayment, updateSubscription)
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
+import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import Storage.Queries.DriverFee
-import Storage.Queries.DriverInformation (updateSubscription)
 import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Notifications as Notify
 
@@ -53,28 +55,28 @@ sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
   let jobData = jobInfo.jobData
       startTime = jobData.startTime
       endTime = jobData.endTime
-  (driverFees, driverFeeIds, feeZipDriver) <- calcDriverFeeAttr ONGOING startTime endTime
-  if not $ null driverFees
-    then do
-      for_ feeZipDriver $ \(driverFee, mbDriver) -> do
-        case mbDriver of
-          Nothing -> do
-            logInfo "Driver Not found. This should not be possible."
-            throwError (InternalError "Driver Not Found") -- Unreachable
-          Just driver -> do
-            let paymentTitle = "Payment Pending"
-                paymentMessage = "Payment of Rs. " <> show driverFee.totalAmount.getMoney <> " is pending. Pay by " <> show driverFee.payBy <> " to avoid being blocked."
-            (Notify.sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.PAYMENT_PENDING paymentTitle paymentMessage driver.id driver.deviceToken) `C.catchAll` \e -> C.mask_ $ logError $ "FCM for payment reminder to driver id " <> driver.id.getId <> " failed. Error: " <> show e
-      Esq.runNoTransaction $ mapM_ (updateStatus PAYMENT_PENDING) driverFeeIds
-      case listToMaybe driverFees of
-        Nothing -> return Complete
-        Just driverFee -> do
-          driver <- Esq.runInReplica $ QPerson.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
-          transporterConfig <- SCT.findByMerchantId driver.merchantId >>= fromMaybeM (TransporterConfigNotFound driver.merchantId.getId)
-          ReSchedule <$> getRescheduledTime transporterConfig
-    else do
-      logInfo "No ongoing payment found."
-      return Complete
+      now = jobData.now
+  feeZipDriver <- calcDriverFeeAttr ONGOING startTime endTime
+  when (null feeZipDriver) $ logInfo "No ongoing payment found."
+  for_ feeZipDriver $ \(driverFee, mbDriver) -> do
+    case mbDriver of
+      Nothing -> do
+        logInfo "Driver Not found. This should not be possible."
+        throwError (InternalError "Driver Not Found") -- Unreachable
+      Just driver -> do
+        let pendingAmount = driverFee.govtCharges + driverFee.platformFee + round driverFee.cgst + round driverFee.sgst
+            paymentTitle = "Payment Pending"
+            paymentMessage = "Payment of " <> show pendingAmount.getMoney <> " is pending for " <> show driverFee.numRides <> " ride(s) with a deadline of " <> show driverFee.payBy <> ". Pay by " <> show driverFee.payBy <> " to avoid being blocked."
+        (Notify.sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.PAYMENT_PENDING paymentTitle paymentMessage driver.id driver.deviceToken) `C.catchAll` \e -> C.mask_ $ logError $ "FCM for payment reminder to driver id " <> driver.id.getId <> " failed. Error: " <> show e
+  forM_ feeZipDriver $ \(driverFee, mbPerson) -> do
+    Esq.runNoTransaction $ updateStatus PAYMENT_PENDING driverFee.id now
+    whenJust mbPerson $ \person -> updatePendingPayment True (cast person.id)
+  case listToMaybe feeZipDriver of
+    Nothing -> return Complete
+    Just (driverFee, _) -> do
+      driver <- Esq.runInReplica $ QPerson.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
+      transporterConfig <- SCT.findByMerchantId driver.merchantId >>= fromMaybeM (TransporterConfigNotFound driver.merchantId.getId)
+      ReSchedule <$> getRescheduledTime transporterConfig
 
 unsubscribeDriverForPaymentOverdue ::
   ( MonadFlow m,
@@ -89,34 +91,38 @@ unsubscribeDriverForPaymentOverdue ::
 unsubscribeDriverForPaymentOverdue Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
       startTime = jobData.startTime
-  now <- getCurrentTime
-  (driverFees, _, feeZipDriver) <- calcDriverFeeAttr PAYMENT_PENDING startTime now
-  if not $ null driverFees
-    then do
-      for_ feeZipDriver $ \(driverFee, mbDriver) -> do
-        case mbDriver of
-          Nothing -> do
-            logInfo "Driver Not found. This should not be possible."
-            throwError (InternalError "Driver Not Found") -- Unreachable
-          Just driver -> do
-            let paymentTitle = "Blocked - Payment Overdue"
-                paymentMessage = "Sorry, you are blocked from taking rides as payment of Rs. " <> show driverFee.totalAmount.getMoney <> " is outstanding. Please pay the balance to get unblocked."
-            (Notify.sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.PAYMENT_OVERDUE paymentTitle paymentMessage driver.id driver.deviceToken) `C.catchAll` \e -> C.mask_ $ logError $ "FCM for removing subsciption of driver id " <> driver.id.getId <> " failed. Error: " <> show e
-      forM_ feeZipDriver $ \(driverFee, mbPerson) -> Esq.runTransaction $ do
-        updateStatus PAYMENT_OVERDUE driverFee.id
-        whenJust mbPerson $ \person -> updateSubscription False (cast person.id)
-    else do
-      logInfo "No ongoing payment found."
+  nowUtc <- getCurrentTime
+  let now = getLocalTime nowUtc jobData.timeDiff
+  feeZipDriver <- calcDriverFeeAttr PAYMENT_PENDING startTime now
+  when (null feeZipDriver) $ logInfo "No pending payment found."
+  for_ feeZipDriver $ \(driverFee, mbDriver) -> do
+    case mbDriver of
+      Nothing -> do
+        logInfo "Driver Not found. This should not be possible."
+        throwError (InternalError "Driver Not Found") -- Unreachable
+      Just driver -> do
+        let pendingAmount = driverFee.govtCharges + driverFee.platformFee + round driverFee.cgst + round driverFee.sgst
+        let paymentTitle = "Blocked - Payment Overdue"
+            paymentMessage = "Sorry, you are blocked from taking rides as payment of " <> show pendingAmount.getMoney <> " is pending for " <> show driverFee.numRides <> " ride(s) with a deadline of " <> show driverFee.payBy <> ". Please pay the balance amount to get unblocked."
+        (Notify.sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.PAYMENT_OVERDUE paymentTitle paymentMessage driver.id driver.deviceToken) `C.catchAll` \e -> C.mask_ $ logError $ "FCM for removing subsciption of driver id " <> driver.id.getId <> " failed. Error: " <> show e
+  forM_ feeZipDriver $ \(driverFee, mbPerson) -> do
+    Esq.runTransaction $ do
+      updateStatus PAYMENT_OVERDUE driverFee.id now
+      whenJust mbPerson $ \person -> do
+        QDFS.updateStatus (cast person.id) (DDFS.PAYMENT_OVERDUE driverFee.id driverFee.govtCharges driverFee.platformFee driverFee.cgst driverFee.sgst)
+    whenJust mbPerson $ \person -> updateSubscription False (cast person.id) -- fix later: take tabular updates inside transaction
   return Complete
 
-calcDriverFeeAttr :: (MonadFlow m, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) => DriverFeeStatus -> UTCTime -> UTCTime -> m ([DriverFee], [Id DriverFee], [(DriverFee, Maybe Person)])
+calcDriverFeeAttr :: (MonadFlow m, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) => DriverFeeStatus -> UTCTime -> UTCTime -> m [(DriverFee, Maybe Person)]
 calcDriverFeeAttr driverFeeStatus startTime endTime = do
   driverFees <- findFeesInRangeWithStatus startTime endTime driverFeeStatus
-  let driverFeeIds = (.id) <$> driverFees
-      relevantDriverIds = (.driverId) <$> driverFees
+  let relevantDriverIds = (.driverId) <$> driverFees
   relevantDrivers <- mapM (Esq.runInReplica . QPerson.findById) (cast <$> relevantDriverIds)
-  let feeZipDriver = zip driverFees relevantDrivers
-  return (driverFees, driverFeeIds, feeZipDriver)
+  return $ zip driverFees relevantDrivers
 
 getRescheduledTime :: (MonadFlow m) => TransporterConfig -> m UTCTime
-getRescheduledTime tc = addUTCTime tc.driverPaymentReminderInterval <$> getCurrentTime
+getRescheduledTime tc = do
+  addUTCTime tc.driverPaymentReminderInterval <$> getCurrentTime
+
+getLocalTime :: UTCTime -> Seconds -> UTCTime
+getLocalTime utcTime seconds = addUTCTime (secondsToNominalDiffTime seconds) utcTime

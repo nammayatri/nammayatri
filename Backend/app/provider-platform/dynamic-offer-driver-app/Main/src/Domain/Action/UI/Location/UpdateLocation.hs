@@ -24,6 +24,7 @@ module Domain.Action.UI.Location.UpdateLocation
 where
 
 import qualified Data.List.NonEmpty as NE
+import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.DriverFee (DriverFeeStatus (PAYMENT_OVERDUE))
 import qualified Domain.Types.DriverInformation as DDInfo
 import Domain.Types.DriverLocation (DriverLocation)
@@ -52,10 +53,11 @@ import qualified SharedLogic.DriverLocation as DrLoc
 import SharedLogic.DriverPool (updateDriverSpeedInRedis)
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig (CacheFlow)
+import Storage.CachedQueries.DriverInformation (updateSubscription)
 import qualified Storage.CachedQueries.DriverInformation as DInfo
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
+import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import Storage.Queries.DriverFee (findOldestFeeByStatus)
-import Storage.Queries.DriverInformation (updateSubscription)
 import qualified Storage.Queries.Person as QP
 import Tools.Error (DriverError (DriverUnsubscribed))
 import Tools.Metrics (CoreMetrics)
@@ -159,8 +161,9 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
     lastPaymentOverdue <- runInReplica $ findOldestFeeByStatus (cast driver.id) PAYMENT_OVERDUE
     case lastPaymentOverdue of
       Nothing -> pure ()
-      Just _ -> do
-        Esq.runNoTransaction $ updateSubscription False (cast driver.id)
+      Just lpo -> do
+        updateSubscription False (cast driver.id)
+        Esq.runNoTransaction $ do QDFS.updateStatus (cast driver.id) (DDFS.PAYMENT_OVERDUE lpo.id lpo.govtCharges lpo.platformFee lpo.cgst lpo.sgst)
         throwError DriverUnsubscribed
     driverInfo <- DInfo.findById (cast driver.id) >>= fromMaybeM (PersonNotFound driver.id.getId)
     logInfo $ "got location updates: " <> getId driver.id <> " " <> encodeToText waypoints

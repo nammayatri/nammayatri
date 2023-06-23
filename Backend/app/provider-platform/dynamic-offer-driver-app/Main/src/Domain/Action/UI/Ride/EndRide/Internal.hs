@@ -26,7 +26,7 @@ module Domain.Action.UI.Ride.EndRide.Internal
   )
 where
 
-import Data.Time hiding (getCurrentTime)
+import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
@@ -109,15 +109,16 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId newFare
           Nothing -> pure ()
 
   transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
-  let govtCharges = newFareParams.govtCharges
-  let platformFee = case newFareParams.fareParametersDetails of
-        DFare.ProgressiveDetails _ -> Nothing
-        DFare.SlabDetails fpDetails -> fpDetails.platformFee
-  let driverRideFee = fromMaybe 0 govtCharges + fromMaybe 0 platformFee
-  now <- getCurrentTime
+  let govtCharges = fromMaybe 0 newFareParams.govtCharges
+  let (platformFee, cgst, sgst) = case newFareParams.fareParametersDetails of
+        DFare.ProgressiveDetails _ -> (0, 0, 0)
+        DFare.SlabDetails fpDetails -> (fromMaybe 0 fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst)
+  let totalDriverFee = fromIntegral govtCharges + fromIntegral platformFee + cgst + sgst
+  nowUtc <- getCurrentTime
+  let now = getLocalTime nowUtc transporterConfig.timeDiffFromUtc
   lastDriverFee <- QDF.findLatestFeeByDriverId driverId
-  driverFee <- mkDriverFee now driverId driverRideFee transporterConfig
-  let rideDate = getCurrentDate now
+  driverFee <- mkDriverFee now driverId govtCharges platformFee cgst sgst transporterConfig
+  let rideDate = getCurrentDate nowUtc
   Esq.runTransaction $ do
     whenJust mbRiderDetails $ \riderDetails ->
       when shouldUpdateRideComplete (QRD.updateHasTakenValidRide riderDetails.id)
@@ -131,11 +132,11 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId newFare
     if driverInfo.active
       then QDFS.updateStatus ride.driverId DDFS.ACTIVE
       else QDFS.updateStatus ride.driverId DDFS.IDLE
-    unless (driverRideFee <= 0) $ do
+    unless (totalDriverFee <= 0) $ do
       case lastDriverFee of
         Just ldFee ->
           if now >= ldFee.startTime && now < ldFee.endTime
-            then QDF.updateFee ldFee.id (ldFee.totalAmount + driverRideFee)
+            then QDF.updateFee ldFee.id ldFee.govtCharges ldFee.platformFee ldFee.cgst ldFee.sgst now
             else QDF.create driverFee
         Nothing -> QDF.create driverFee
   DLoc.updateOnRide driverId False merchantId
@@ -149,7 +150,7 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId newFare
     updateDriverWeeklyZscore ride rideDate weekStartDate weekEndDate driverWeeklyZscore ride.chargeableDistance merchantId
   DLoc.updateOnRideCacheForCancelledOrEndRide driverId merchantId
   SRide.clearCache $ cast driverId
-  unless (driverRideFee <= 0) $ do
+  unless (totalDriverFee <= 0) $ do
     maxShards <- asks (.maxShards)
     isPendingPaymentJobScheduled <- getPendingPaymentCache driverFee.endTime
     let pendingPaymentJobTs = diffUTCTime driverFee.endTime now
@@ -159,7 +160,8 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId newFare
           createJobIn @_ @'SendPaymentReminderToDriver pendingPaymentJobTs maxShards $
             SendPaymentReminderToDriverJobData
               { startTime = driverFee.startTime,
-                endTime = driverFee.endTime
+                endTime = driverFee.endTime,
+                now = now
               }
         setPendingPaymentCache driverFee.endTime pendingPaymentJobTs
       _ -> pure ()
@@ -171,7 +173,8 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId newFare
         Esq.runNoTransaction $
           createJobIn @_ @'UnsubscribeDriverForPaymentOverdue overduePaymentJobTs maxShards $
             UnsubscribeDriverForPaymentOverdueJobData
-              { startTime = driverFee.startTime
+              { startTime = driverFee.startTime,
+                timeDiff = transporterConfig.timeDiffFromUtc
               }
         setOverduePaymentCache driverFee.endTime overduePaymentJobTs
       _ -> pure ()
@@ -242,6 +245,9 @@ getCurrentDate time =
   let currentDate = localDay $ utcToLocalTime timeZoneIST time
    in currentDate
 
+getLocalTime :: UTCTime -> Seconds -> UTCTime
+getLocalTime utcTime seconds = addUTCTime (secondsToNominalDiffTime seconds) utcTime
+
 putDiffMetric :: (Metrics.HasBPPMetrics m r, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Money -> Meters -> m ()
 putDiffMetric merchantId money mtrs = do
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -299,15 +305,19 @@ _ `safeMod` 0 = 0
 a `safeMod` b = a `mod` b
 
 mkDriverFee ::
-  ( MonadGuid m
+  ( MonadFlow m
   ) =>
   UTCTime ->
   Id DP.Driver ->
   Money ->
+  Money ->
+  HighPrecMoney ->
+  HighPrecMoney ->
   TransporterConfig ->
   m DF.DriverFee
-mkDriverFee now driverId totalAmount transporterConfig = do
+mkDriverFee now driverId govtCharges platformFee cgst sgst transporterConfig = do
   id <- generateGUID
+  shortId <- generateShortId
   let potentialStart = addUTCTime transporterConfig.driverPaymentCycleStartTime (UTCTime (utctDay now) (secondsToDiffTime 0))
       startTime = if now >= potentialStart then potentialStart else addUTCTime (-1 * transporterConfig.driverPaymentCycleDuration) potentialStart
       endTime = addUTCTime transporterConfig.driverPaymentCycleDuration startTime
@@ -315,6 +325,7 @@ mkDriverFee now driverId totalAmount transporterConfig = do
     DF.DriverFee
       { payBy = addUTCTime transporterConfig.driverPaymentCycleBuffer endTime,
         status = DF.ONGOING,
+        numRides = 1,
         createdAt = now,
         updatedAt = now,
         ..
