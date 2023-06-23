@@ -33,6 +33,7 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.location.LocationManager;
+import android.app.NotificationManager;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.ConnectivityManager;
@@ -97,6 +98,7 @@ import com.google.android.play.core.appupdate.AppUpdateManagerFactory;
 import com.google.android.play.core.install.model.AppUpdateType;
 import com.google.android.play.core.install.model.UpdateAvailability;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.clevertap.android.sdk.CleverTapAPI;
 // import com.google.firebase.database.DataSnapshot;
 // import com.google.firebase.database.DatabaseError;
 // import com.google.firebase.database.DatabaseReference;
@@ -349,7 +351,10 @@ public class MainActivity extends AppCompatActivity {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
-
+        CleverTapAPI cleverTap = CleverTapAPI.getDefaultInstance(getApplicationContext());
+        CleverTapAPI.createNotificationChannel(getApplicationContext(),"NammaYatri","NammaYatri","notification",NotificationManager.IMPORTANCE_MAX,true);
+        CleverTapAPI.setDebugLevel(CleverTapAPI.LogLevel.VERBOSE);
+        cleverTap.enableDeviceNetworkInfoReporting(true);
 
         sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         sharedPref.edit().putString("DEVICE_DETAILS", getDeviceDetails()).apply();

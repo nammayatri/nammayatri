@@ -45,10 +45,22 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="${isUsesCleartextTraffic}"
-        tools:replace="android:allowBackup">
+        tools:replace="android:allowBackup"
+        android:name="com.clevertap.android.sdk.Application">
 
         <meta-data android:name="com.facebook.sdk.ApplicationId" android:value="@string/facebook_app_id"/>
         <meta-data android:name="com.facebook.sdk.ClientToken" android:value="@string/facebook_client_token"/>
+
+        <meta-data
+            android:name="CLEVERTAP_ACCOUNT_ID"
+            android:value="@string/clevertap_account_id"/>
+        <meta-data
+            android:name="CLEVERTAP_TOKEN"
+            android:value="@string/clevertap_token"/>
+
+        <meta-data
+            android:name="CLEVERTAP_REGION"
+            android:value="@string/clevertap_region"/>
 
         <activity
             android:name="com.facebook.FacebookActivity"
@@ -125,6 +137,12 @@
             </intent-filter>
         </receiver>
 
+        <receiver
+            android:name="com.clevertap.android.sdk.pushnotification.CTPushNotificationReceiver"
+            android:exported="false"
+            android:enabled="true">
+        </receiver>
+
         <activity
             android:name=".utils.CheckPermissionOverlay"
             android:exported="false"
@@ -153,7 +171,7 @@
         <service
             android:name=".utils.MyFirebaseMessagingService"
             android:largeHeap= "true"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>

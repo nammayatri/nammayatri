@@ -188,6 +188,11 @@ foreign import goBackPrevWebPage ::  String -> Effect Unit
 foreign import storeMainFiberOb :: forall a. Fiber a -> Effect Unit
 foreign import getMainFiber :: forall f a. Fn2 (f -> Maybe f) (Maybe f) (Maybe (Fiber a))
 foreign import detectPhoneNumbers :: forall action. (action -> Effect Unit) -> (String  -> action) -> Effect Unit
+foreign import setCleverTapUserData :: String -> String -> Unit
+foreign import setCleverTapUserProp :: String -> String -> Unit
+foreign import cleverTapCustomEvent :: String -> Unit 
+foreign import cleverTapCustomEventWithParams :: String -> String -> String -> Effect Unit
+foreign import cleverTapSetLocation :: Unit -> Effect Unit
 
 -- -- keyStoreEntryPresent :: String -> Flow Boolean
 -- -- keyStoreEntryPresent = liftFlow <<< _keyStoreEntryPresent
