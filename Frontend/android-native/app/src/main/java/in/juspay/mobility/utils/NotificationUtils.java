@@ -1,4 +1,4 @@
-/* 
+/*
  *  Copyright 2022-23, Juspay India Pvt Ltd
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
  *  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
@@ -377,13 +377,7 @@ public class NotificationUtils extends AppCompatActivity {
             if (ALLOCATION_TYPE.equals(notificationType)) {
                 System.out.println("showNotification:- "+ notificationType);
                 channelId = RINGING_CHANNEL_ID;
-            } else if (TRIP_CHANNEL_ID.equals(notificationType) ) {
-                System.out.println("showNotification:- "+ notificationType);
-                channelId = notificationType;
-            }else if (CANCELLED_PRODUCT.equals(notificationType) ) {
-                System.out.println("showNotification:- "+ notificationType);
-                channelId = notificationType;
-            } else if(DRIVER_HAS_REACHED.equals(notificationType)){
+            } else if (TRIP_CHANNEL_ID.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || DRIVER_HAS_REACHED.equals(notificationType)) {
                 System.out.println("showNotification:- "+ notificationType);
                 channelId = notificationType;
             }else{
@@ -424,9 +418,9 @@ public class NotificationUtils extends AppCompatActivity {
                } else if (notificationType.equals(TRIP_CHANNEL_ID)){
                    notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.notify_otp_sound);
                    mBuilder.setSound(notificationSound);
-               }else if (notificationType.equals(CANCELLED_PRODUCT)){
-                notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.cancel_notification_sound);
-                mBuilder.setSound(notificationSound);
+               }else if (notificationType.equals(CANCELLED_PRODUCT) || notificationType.equals(REALLOCATE_PRODUCT)){
+                   notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.cancel_notification_sound);
+                   mBuilder.setSound(notificationSound);
                 }else{
                    notificationSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
                }
@@ -459,11 +453,14 @@ public class NotificationUtils extends AppCompatActivity {
                 else
                     mFirebaseAnalytics.logEvent("ride_completed",params);
             }
-            if (CANCELLED_PRODUCT.equals(notificationType) ) {
+            if (CANCELLED_PRODUCT.equals(notificationType) || REALLOCATE_PRODUCT.equals(notificationType) ) {
                 Bundle params = new Bundle();
                 mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
                 if (key.equals("USER"))
-                    mFirebaseAnalytics.logEvent("ny_user_ride_cancelled",params);
+                    if (CANCELLED_PRODUCT.equals(notificationType))
+                        mFirebaseAnalytics.logEvent("ny_user_ride_cancelled",params);
+                    else
+                        mFirebaseAnalytics.logEvent("ny_user_ride_reallocation",params);
                 else
                     mFirebaseAnalytics.logEvent("ride_cancelled",params);
                 if (key.equals("DRIVER") && msg.contains("Customer had to cancel your ride")){
@@ -484,7 +481,7 @@ public class NotificationUtils extends AppCompatActivity {
                 }
             }
             notificationId ++;
-            if (DRIVER_ASSIGNMENT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || DRIVER_REACHED.equals(notificationType)) {
+            if (DRIVER_ASSIGNMENT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || DRIVER_REACHED.equals(notificationType) || REALLOCATE_PRODUCT.equals(notificationType)) {
                 for(int i =0;i<notificationCallback.size();i++) {
                     notificationCallback.get(i).triggerPop((data.getString("entity_ids")),(data.getString("notification_type")));
                 }

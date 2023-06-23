@@ -1,4 +1,4 @@
-/* 
+/*
  *  Copyright 2022-23, Juspay India Pvt Ltd
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
  *  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
@@ -32,6 +32,10 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.net.ssl.HttpsURLConnection;
@@ -92,7 +96,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             if (remoteMessage.getData().containsKey("entity_data") && remoteMessage.getData().get("notification_type").equals("NEW_RIDE_AVAILABLE") ) {
                 entity_payload = new JSONObject(remoteMessage.getData().get("entity_data"));
             }
-            
+
             RemoteMessage.Notification notification = remoteMessage.getNotification();
             if (notification != null) {
                 title = notification.getTitle();
@@ -231,7 +235,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             }
 
                         }catch (Exception e) {
-
+                            e.printStackTrace();
                         }
                     case NotificationTypes.CHAT_MESSAGE :
                         try{
@@ -253,6 +257,20 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         }
                         break;
 
+                    case NotificationTypes.REALLOCATE_PRODUCT :
+                        try{
+                            if (sharedPref.getString("REALLOCATE_PRODUCT_ENABLED", "false").equals("false")) break;
+                            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
+                            dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+                            String getCurrTime = dateFormat.format(new Date());
+                            sharedPref.edit().putString(getString(R.string.FINDING_QUOTES_START_TIME), getCurrTime).apply();
+                            sharedPref.edit().putString(getString(R.string.LOCAL_STAGE),getString(R.string.ReAllocated)).apply();
+                            NotificationUtils.showNotification(this, title, body, payload, imageUrl);
+                            sharedPref.edit().putString(getResources().getString(R.string.IS_RIDE_ACTIVE), "false").apply();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        break;
                     default:
                         if (payload.get("show_notification").equals("true")) {
                             NotificationUtils.showNotification(this, title, body, payload, imageUrl);
@@ -293,7 +311,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     String orderUrl ;
                     if (merchantType.equals("DRIVER")) {
                         orderUrl = baseUrl + "/driver/profile";
-                    } 
+                    }
                     else {
                         orderUrl = baseUrl + "/profile";
                         }
@@ -331,7 +349,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         result.append(inputLine);
                     }
                     System.out.print("in result : " + result.toString());
-                
+
                 } catch (Exception ignored) {
                     System.out.println("Catch in updateFCMToken : " +ignored);
                 }
@@ -380,7 +398,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     }
 
     private void stopChatService(String notificationType, SharedPreferences sharedPref){
-        if(notificationType.equals("TRIP_FINISHED") || notificationType.equals("CANCELLED_PRODUCT") || notificationType.equals("TRIP_STARTED")) {
+        if(notificationType.equals("TRIP_FINISHED") || notificationType.equals("CANCELLED_PRODUCT") || notificationType.equals("TRIP_STARTED") || notificationType.equals("REALLOCATE_PRODUCT")) {
             try{
                 Intent chatListenerService = new Intent(this, ChatService.class);
                 this.stopService(chatListenerService);
@@ -410,5 +428,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         private static final String CALL_API = "CALL_API";
         private static final String CHAT_MESSAGE = "CHAT_MESSAGE";
         private static final String DRIVER_NOTIFY = "DRIVER_NOTIFY";
+        private static final String REALLOCATE_PRODUCT = "REALLOCATE_PRODUCT";
     }
 }
