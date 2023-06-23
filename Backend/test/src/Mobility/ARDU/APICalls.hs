@@ -50,6 +50,7 @@ data DriverAPIs = DriverAPIs
     offerQuote :: RegToken -> DriverAPI.DriverOfferReq -> ClientM APISuccess,
     respondQuote :: RegToken -> DriverAPI.DriverRespondReq -> ClientM APISuccess,
     setDriverOnline :: Text -> Bool -> Maybe TDI.DriverMode -> ClientM APISuccess,
+    updateMetaData :: RegToken -> DriverAPI.MetaDataReq -> ClientM APISuccess,
     validate :: Text -> DriverAPI.DriverAlternateNumberReq -> ClientM DriverAPI.DriverAlternateNumberRes,
     verifyAuth :: Text -> DriverAPI.DriverAlternateNumberOtpReq -> ClientM APISuccess,
     resendOtp :: Text -> DriverAPI.DriverAlternateNumberReq -> ClientM DriverAPI.ResendAuth,
@@ -98,6 +99,7 @@ ui = do
                         :<|> _
                         :<|> _
                       )
+               :<|> updateMetaData
                :<|> ( validate
                         :<|> verifyAuth
                         :<|> resendOtp
