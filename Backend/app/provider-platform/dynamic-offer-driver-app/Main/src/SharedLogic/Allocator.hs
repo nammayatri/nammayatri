@@ -22,7 +22,7 @@ import Data.Singletons.TH
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
-import Kernel.Types.Common (Meters)
+import Kernel.Types.Common (Meters, Seconds)
 import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
 import Lib.Scheduler
@@ -52,7 +52,8 @@ type instance JobContent 'SendSearchRequestToDriver = SendSearchRequestToDriverJ
 
 data SendPaymentReminderToDriverJobData = SendPaymentReminderToDriverJobData
   { startTime :: UTCTime,
-    endTime :: UTCTime
+    endTime :: UTCTime,
+    now :: UTCTime
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -60,8 +61,9 @@ instance JobInfoProcessor 'SendPaymentReminderToDriver
 
 type instance JobContent 'SendPaymentReminderToDriver = SendPaymentReminderToDriverJobData
 
-newtype UnsubscribeDriverForPaymentOverdueJobData = UnsubscribeDriverForPaymentOverdueJobData
-  { startTime :: UTCTime
+data UnsubscribeDriverForPaymentOverdueJobData = UnsubscribeDriverForPaymentOverdueJobData
+  { startTime :: UTCTime,
+    timeDiff :: Seconds
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

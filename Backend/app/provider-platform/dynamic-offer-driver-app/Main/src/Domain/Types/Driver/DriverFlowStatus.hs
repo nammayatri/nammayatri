@@ -20,11 +20,13 @@ where
 
 import Data.Aeson (Options (..), SumEncoding (..), defaultOptions)
 import Data.OpenApi
+import Domain.Types.DriverFee (DriverFee)
 import qualified Domain.Types.DriverQuote as DQ
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
+import Kernel.Types.Common (HighPrecMoney, Money)
 import Kernel.Types.Id
 
 -- Warning: This whole thing is for frontend use only, don't make any backend logic based on this.
@@ -49,6 +51,13 @@ data FlowStatus
       }
   | ON_RIDE
       { rideId :: Id DRide.Ride
+      }
+  | PAYMENT_OVERDUE
+      { driverFeeId :: Id DriverFee,
+        govtCharges :: Money,
+        platformFee :: Money,
+        cgst :: HighPrecMoney,
+        sgst :: HighPrecMoney
       }
   deriving (Show, Eq, Generic)
 

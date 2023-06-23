@@ -23,9 +23,9 @@ module Storage.Tabular.DriverFee where
 import Control.Monad
 import Data.Time (UTCTime)
 import qualified Domain.Types.DriverFee as Domain
-import EulerHS.Prelude (Generic, Text, ($))
+import EulerHS.Prelude (Generic, Int, Text, ($))
 import Kernel.Storage.Esqueleto
-import Kernel.Types.Common (Money)
+import Kernel.Types.Common (HighPrecMoney, Money)
 import Kernel.Types.Id
 import Storage.Tabular.Person (PersonTId)
 
@@ -36,11 +36,16 @@ mkPersist
   [defaultQQ|
     DriverFeeT sql=driver_fee
       id Text
+      shortId Text
       driverId PersonTId
-      totalAmount Money
+      govtCharges Money
+      platformFee Money
+      cgst HighPrecMoney
+      sgst HighPrecMoney
       payBy UTCTime
       startTime UTCTime
       endTime UTCTime
+      numRides Int
       status Domain.DriverFeeStatus
       createdAt UTCTime
       updatedAt UTCTime
@@ -59,6 +64,7 @@ instance FromTType DriverFeeT Domain.DriverFee where
       Domain.DriverFee
         { id = Id id,
           driverId = cast $ fromKey driverId,
+          shortId = ShortId shortId,
           ..
         }
 
@@ -67,5 +73,6 @@ instance ToTType DriverFeeT Domain.DriverFee where
     DriverFeeT
       { driverId = toKey $ cast driverId,
         id = getId id,
+        shortId = getShortId shortId,
         ..
       }

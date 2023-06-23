@@ -71,6 +71,16 @@ updateOnRide driverId onRide = do
   clearDriverInfoCache driverId
   Esq.runTransaction $ Queries.updateOnRide driverId onRide
 
+updatePendingPayment :: (CacheFlow m r, Esq.EsqDBFlow m r) => Bool -> Id Person.Driver -> m ()
+updatePendingPayment isPending driverId = do
+  clearDriverInfoCache driverId
+  Esq.runTransaction $ Queries.updatePendingPayment isPending driverId
+
+updateSubscription :: (CacheFlow m r, Esq.EsqDBFlow m r) => Bool -> Id Person.Driver -> m ()
+updateSubscription isSubscribed driverId = do
+  clearDriverInfoCache driverId
+  Esq.runTransaction $ Queries.updateSubscription isSubscribed driverId
+
 -- this function created because all queries wishfully should be in one transaction
 updateNotOnRideMultiple :: [Id Person.Driver] -> Esq.SqlDB ()
 updateNotOnRideMultiple = Queries.updateNotOnRideMultiple

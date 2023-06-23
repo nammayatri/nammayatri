@@ -179,6 +179,7 @@ createDriverDetails personId merchantId = do
             numOfLocks = 0,
             verified = False,
             subscribed = True,
+            paymentPending = False,
             referralCode = Nothing,
             lastEnabledOn = Nothing,
             canDowngradeToSedan = False,

@@ -20,12 +20,17 @@ module Domain.Action.UI.Payment
   )
 where
 
+import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
+import Domain.Types.DriverFee
+import qualified Domain.Types.DriverFee as DF
+import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
+import qualified Kernel.External.Payment.Juspay.Types as Juspay
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (Value)
 import Kernel.Types.Common hiding (id)
@@ -34,11 +39,15 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
-import qualified Lib.Payment.Domain.Types.PaymentOrder as DPayment
 import Servant (BasicAuthData)
 import SharedLogic.Merchant
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
+import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
+import qualified Storage.Queries.DriverFee as QDF
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import Tools.Metrics
@@ -48,27 +57,32 @@ import qualified Tools.Payment as Payment
 
 createOrder ::
   (Id DP.Person, Id DM.Merchant) ->
-  Id DPayment.PaymentOrder ->
+  Id DriverFee ->
   Flow Payment.CreateOrderResp
-createOrder (personId, merchantId) orderId = do
-  person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
-  let customerEmail = fromMaybe "test@juspay.in" person.email
-  customerPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
-  shortId <- generateShortId
+createOrder (driverId, merchantId) driverFeeId = do
+  driverFee <- runInReplica $ QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound $ getId driverFeeId)
+  when (driverFee.status `elem` [CLEARED, EXEMPTED]) $ throwError (DriverFeeAlreadySettled $ getId driverFeeId)
+  driver <- runInReplica $ QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound $ getId driverFee.driverId)
+  unless (driver.id == driverId) $ throwError NotAnExecutor
+  driverPhone <- driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+  let driverEmail = fromMaybe "test@juspay.in" driver.email
+  pendingFees <- QDF.findPendingFeesByDriverFeeId driverFee.id >>= fromMaybeM (DriverFeeNotFound $ getId driverFeeId)
+  let pendingAmount = fromIntegral pendingFees.govtCharges + fromIntegral pendingFees.platformFee + pendingFees.cgst + pendingFees.sgst
   let createOrderReq =
         Payment.CreateOrderReq
-          { orderShortId = shortId.getShortId, -- FIXME change type to ShortId -- should be Alphanumeric with character length less than 18.
-            amount = 10, -- FIXME
-            customerId = person.id.getId,
-            customerEmail,
-            customerPhone,
-            paymentPageClientId = person.id.getId, -- FIXME
-            customerFirstName = Just person.firstName,
-            customerLastName = person.lastName
+          { orderShortId = driverFee.shortId.getShortId,
+            amount = round pendingAmount,
+            customerId = driver.id.getId,
+            customerEmail = driverEmail,
+            customerPhone = driverPhone,
+            paymentPageClientId = driver.id.getId,
+            customerFirstName = Just driver.firstName,
+            customerLastName = driver.lastName
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
-      commonPersonId = cast @DP.Person @DPayment.Person personId
+      commonPersonId = cast @DP.Person @DPayment.Person driver.id
+      orderId = cast @DriverFee @DOrder.PaymentOrder driverFee.id
       createOrderCall = Payment.createOrder merchantId -- api call
   DPayment.createOrderService commonMerchantId commonPersonId orderId createOrderReq createOrderCall
 
@@ -87,9 +101,26 @@ getStatus ::
 getStatus (personId, merchantId) orderId = do
   let commonPersonId = cast @DP.Person @DPayment.Person personId
       orderStatusCall = Payment.orderStatus merchantId -- api call
-  DPayment.orderStatusService commonPersonId orderId orderStatusCall
+  paymentStatus <- DPayment.orderStatusService commonPersonId orderId orderStatusCall
+  driverInfo <- QDI.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+  transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+  case paymentStatus.status of
+    Juspay.CHARGED -> do
+      CDI.updatePendingPayment False (cast personId)
+      Esq.runTransaction $ processPaymentTransactions (cast personId) (cast orderId) driverInfo transporterConfig.timeDiffFromUtc
+    _ -> pure ()
+  pure paymentStatus
 
 -- webhook ----------------------------------------------------------
+
+processPaymentTransactions :: Id DP.Driver -> Id DriverFee -> DriverInformation -> Seconds -> SqlDB ()
+processPaymentTransactions driverId driverFeeId driverInfo timeDiff = do
+  nowUtc <- getCurrentTime
+  let now = getLocalTime nowUtc timeDiff
+  QDF.updateStatus DF.CLEARED driverFeeId now
+  if driverInfo.active
+    then QDFS.updateStatus (cast driverId) DDFS.ACTIVE
+    else QDFS.updateStatus (cast driverId) DDFS.IDLE
 
 juspayWebhookHandler ::
   ShortId DM.Merchant ->
@@ -104,5 +135,19 @@ juspayWebhookHandler merchantShortId authData value = do
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
   case merchantServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig psc -> do
-      Juspay.orderStatusWebhook psc DPayment.juspayWebhookService authData value
+      orderStatusContent <- Juspay.orderStatusWebhook psc DPayment.juspayWebhookService authData value
+      case orderStatusContent of
+        Nothing -> throwError $ InternalError "Order Contents not found."
+        Just osc -> do
+          let driverFeeId = Id osc.order.order_id
+          driverFee <- QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound driverFeeId.getId)
+          driverInfo <- QDI.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound driverFee.driverId.getId)
+          transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+          unless (osc.order.status /= Juspay.CHARGED) $ do
+            CDI.updatePendingPayment False driverFee.driverId
+            Esq.runTransaction $ processPaymentTransactions driverFee.driverId driverFee.id driverInfo transporterConfig.timeDiffFromUtc
+          pure Ack
     _ -> throwError $ InternalError "Unknown Service Config"
+
+getLocalTime :: UTCTime -> Seconds -> UTCTime
+getLocalTime utcTime seconds = addUTCTime (secondsToNominalDiffTime seconds) utcTime
