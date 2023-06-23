@@ -37,10 +37,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified SharedLogic.CallBAP as BP
-import qualified SharedLogic.CancelSearch as CS
 import qualified SharedLogic.DriverLocation as DLoc
 import qualified SharedLogic.DriverMode as DMode
 import qualified SharedLogic.Ride as SRide
+import qualified SharedLogic.SearchTryLocker as CS
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QRB
@@ -53,7 +53,6 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
-import Storage.Queries.SearchTry (findActiveTriesByRequestId)
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import Tools.Metrics
@@ -145,17 +144,17 @@ cancelSearch ::
   Id DSR.SearchRequest ->
   m ()
 cancelSearch merchantId req searchRequestId = do
-  searchTries <- findActiveTriesByRequestId searchRequestId
-  mapM_ (\st -> CS.lockSearchRequest st.id) searchTries
-  driverSearchReqs <- QSRD.findAllActiveBySRId searchRequestId
-  logTagInfo ("transactionId-" <> req.transactionId) "Search Request Cancellation"
-  DB.runTransaction $ do
-    QST.cancelActiveTriesByRequestId searchRequestId
-    QSRD.setInactiveBySRId searchRequestId
-    QDQ.setInactiveBySRId searchRequestId
-  for_ driverSearchReqs $ \driverReq -> do
-    driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
-    Notify.notifyOnCancelSearchRequest merchantId driverReq.driverId driver_.deviceToken driverReq.searchTryId
+  searchTry <- QST.findActiveTryByRequestId searchRequestId >>= fromMaybeM (SearchTryDoesNotExist $ "searchRequestId-" <> searchRequestId.getId)
+  CS.whenSearchTryCancellable searchTry.id $ do
+    driverSearchReqs <- QSRD.findAllActiveBySRId searchRequestId
+    logTagInfo ("transactionId-" <> req.transactionId) "Search Request Cancellation"
+    DB.runTransaction $ do
+      QST.cancelActiveTriesByRequestId searchRequestId
+      QSRD.setInactiveBySRId searchRequestId
+      QDQ.setInactiveBySRId searchRequestId
+    for_ driverSearchReqs $ \driverReq -> do
+      driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
+      Notify.notifyOnCancelSearchRequest merchantId driverReq.driverId driver_.deviceToken driverReq.searchTryId
 
 validateCancelSearchRequest ::
   ( EsqDBFlow m r
