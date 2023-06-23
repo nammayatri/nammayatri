@@ -25,6 +25,7 @@ import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
+import qualified Database.Beam.Schema.Tables as B
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
@@ -63,6 +64,12 @@ instance ToJSON Exophone where
   toJSON = A.genericToJSON A.defaultOptions
 
 deriving stock instance Show Exophone
+
+dExophone :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity ExophoneT)
+dExophone =
+  B.setEntitySchema (Just "atlas_driver_offer_bpp")
+    <> B.setEntityName "exophone"
+    <> B.modifyTableFields exophoneTMod
 
 exophoneTMod :: ExophoneT (B.FieldModification (B.TableField ExophoneT))
 exophoneTMod =

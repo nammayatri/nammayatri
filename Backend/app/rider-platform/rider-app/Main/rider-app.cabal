@@ -197,6 +197,7 @@ library
       Storage.Beam.CallbackRequest
       Storage.Beam.CallStatus
       Storage.Beam.CancellationReason
+      Storage.Beam.Common
       Storage.Beam.DriverOffer
       Storage.Beam.Estimate
       Storage.Beam.EstimateBreakup
