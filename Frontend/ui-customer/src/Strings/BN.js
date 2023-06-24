@@ -466,5 +466,6 @@ const bengaliStrings = {
   "METRO_RIDE": "মেট্রো রাইড",
   "GO_BACK_TEXT": "ফিরে যাও",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST": "ড্রাইভার আপনার বিশেষ অনুরোধ পছন্দ করেছে এবং মাত্র ",
-  "WE_URGE_YOU_NOT_TO_CANCEL": " মিটার দূরে। আমরা আপনাকে রাইড বাতিল না করার জন্য অনুরোধ করছি"
+  "WE_URGE_YOU_NOT_TO_CANCEL": " মিটার দূরে। আমরা আপনাকে রাইড বাতিল না করার জন্য অনুরোধ করছি",
+  "PLEASE_FIND_REVISED_FARE_ESTIMATE": "অনুগ্রহ করে সংশোধিত আনুমানিক ভাড়া খুঁজুন। রাতের চার্জ দিনের চার্জের 1.5 গুণ।"
 }

@@ -593,8 +593,9 @@ data Action = NoAction
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
-eval SearchForSelectedLocation state =
-  updateAndExit state{props{isPopUp = NoPopUp}} $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = TryAgain, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
+eval SearchForSelectedLocation state = do
+  let currentStage = if state.props.searchAfterEstimate then TryAgain else FindingEstimate
+  updateAndExit state{props{isPopUp = NoPopUp}} $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = currentStage, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
 
 eval CheckFlowStatusAction state = exit $ CheckFlowStatus state
 

@@ -484,5 +484,6 @@ const kannadaStrings = {
   "GO_BACK_TEXT": "ಹಿಂದೆ ಹೋಗು",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST": "ಚಾಲಕ ನಿಮ್ಮ ವಿಶೇಷ ವಿನಂತಿಯನ್ನು ಆದ್ಯತೆ ನೀಡಿದ್ದಾರೆ ಮತ್ತು ಕೇವಲ ",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST": "ಚಾಲಕರು ನಿಮ್ಮ ವಿಶೇಷ ವಿನಂತಿಯನ್ನು ಆದ್ಯತೆ ನೀಡಿದ್ದಾರೆ ಮತ್ತು ಈಗಾಗಲೇ ",
-  "AND_HAS_TRAVELLED": " ಕಿಮೀ ಪ್ರಯಾಣಿಸಿದ್ದಾರೆ."
+  "AND_HAS_TRAVELLED": " ಕಿಮೀ ಪ್ರಯಾಣಿಸಿದ್ದಾರೆ.",
+  "PLEASE_FIND_REVISED_FARE_ESTIMATE": "ದಯವಿಟ್ಟು ಪರಿಷ್ಕೃತ ಅಂದಾಜು ದರವನ್ನು ಕಂಡುಹಿಡಿಯಿರಿ. ರಾತ್ರಿ ಶುಲ್ಕಗಳು ದಿನದ ಶುಲ್ಕಕ್ಕಿಂತ 1.5 ಪಟ್ಟು ಹೆಚ್ಚು."
 }
