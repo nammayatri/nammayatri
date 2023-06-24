@@ -605,6 +605,7 @@ type HomeScreenStateProps =
   , cancelSearchCallDriver :: Boolean
   , zoneType :: SpecialTags
   , cancelRideConfirmationPopup :: Boolean
+  , searchAfterEstimate :: Boolean
   }
 
 type SpecialTags = {

@@ -490,5 +490,6 @@ const hindiStrings = {
   "GO_BACK_TEXT": "पीछे जाएं",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST": "ड्राइवर ने आपके विशेष अनुरोध को प्राथमिकता दी और वह केवल ",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST": "ड्राइवर ने आपके विशेष अनुरोध को प्राथमिकता दी और पहले ही ",
-  "AND_HAS_TRAVELLED": " किमी की यात्रा कर चुका है।"
+  "AND_HAS_TRAVELLED": " किमी की यात्रा कर चुका है।",
+  "PLEASE_FIND_REVISED_FARE_ESTIMATE": "कृपया संशोधित अनुमानित किराया ज्ञात करें। रात का शुल्क दिन के शुल्क का 1.5 गुना है।"
 }
