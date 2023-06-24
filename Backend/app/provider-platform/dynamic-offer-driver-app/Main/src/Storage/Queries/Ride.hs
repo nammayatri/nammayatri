@@ -276,8 +276,8 @@ getCountByStatus merchantId = do
 --     mkCount [counter] = counter
 --     mkCount _ = 0
 
-getRidesForDate :: Transactionable m => Id Person -> Day -> m [Ride]
-getRidesForDate driverId date = Esq.findAll $ do
+getRidesForDate :: Transactionable m => Id Person -> Day -> Seconds -> m [Ride]
+getRidesForDate driverId date diffTime = Esq.findAll $ do
   ride <- from $ table @RideT
   where_ $
     ride ^. RideDriverId ==. val (toKey driverId)
@@ -286,8 +286,8 @@ getRidesForDate driverId date = Esq.findAll $ do
       &&. ride ^. RideStatus ==. val Ride.COMPLETED
   return ride
   where
-    minDayTime = UTCTime (addDays (-1) date) 66600
-    maxDayTime = UTCTime date 66600
+    minDayTime = UTCTime (addDays (-1) date) (86400 - secondsToDiffTime (toInteger diffTime.getSeconds))
+    maxDayTime = UTCTime date (secondsToDiffTime $ toInteger diffTime.getSeconds)
 
 updateArrival :: Id Ride -> SqlDB ()
 updateArrival rideId = do

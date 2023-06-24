@@ -38,6 +38,7 @@ mkPersist
       id Text
       shortId Text
       driverId PersonTId
+      totalEarnings Money
       govtCharges Money
       platformFee Money
       cgst HighPrecMoney

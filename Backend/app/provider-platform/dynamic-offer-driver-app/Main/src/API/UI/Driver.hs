@@ -117,6 +117,14 @@ type API =
                         :> TokenAuth
                         :> Delete '[JSON] APISuccess
                   )
+             :<|> "payments"
+               :> "history"
+               :> TokenAuth
+               :> QueryParam "from" Day -- rides with window start date >= from
+               :> QueryParam "to" Day -- rides with window end date <= to
+               :> QueryParam "limit" Int
+               :> QueryParam "offset" Int
+               :> Get '[JSON] [DDriver.DriverPaymentHistoryResp]
          )
 
 handler :: FlowServer API
@@ -139,6 +147,7 @@ handler =
                       :<|> resendOtp
                       :<|> remove
                   )
+             :<|> getDriverPayments
          )
 
 createDriver :: SP.Person -> DDriver.OnboardDriverReq -> FlowHandler DDriver.OnboardDriverRes
@@ -193,3 +202,6 @@ resendOtp req = withFlowHandlerAPI . DDriver.resendOtp req
 
 remove :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler APISuccess
 remove = withFlowHandlerAPI . DDriver.remove
+
+getDriverPayments :: (Id SP.Person, Id Merchant.Merchant) -> Maybe Day -> Maybe Day -> Maybe Int -> Maybe Int -> FlowHandler [DDriver.DriverPaymentHistoryResp]
+getDriverPayments mbFrom mbTo mbLimit mbOffset = withFlowHandlerAPI . DDriver.getDriverPayments mbFrom mbTo mbLimit mbOffset

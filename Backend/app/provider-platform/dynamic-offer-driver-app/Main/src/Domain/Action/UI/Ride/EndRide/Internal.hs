@@ -117,7 +117,7 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId newFare
   nowUtc <- getCurrentTime
   let now = getLocalTime nowUtc transporterConfig.timeDiffFromUtc
   lastDriverFee <- QDF.findLatestFeeByDriverId driverId
-  driverFee <- mkDriverFee now driverId govtCharges platformFee cgst sgst transporterConfig
+  driverFee <- mkDriverFee now driverId ride.fare govtCharges platformFee cgst sgst transporterConfig
   let rideDate = getCurrentDate nowUtc
   Esq.runTransaction $ do
     whenJust mbRiderDetails $ \riderDetails ->
@@ -136,7 +136,7 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId newFare
       case lastDriverFee of
         Just ldFee ->
           if now >= ldFee.startTime && now < ldFee.endTime
-            then QDF.updateFee ldFee.id ldFee.govtCharges ldFee.platformFee ldFee.cgst ldFee.sgst now
+            then QDF.updateFee ldFee.id ride.fare ldFee.govtCharges ldFee.platformFee ldFee.cgst ldFee.sgst now
             else QDF.create driverFee
         Nothing -> QDF.create driverFee
   DLoc.updateOnRide driverId False merchantId
@@ -309,13 +309,14 @@ mkDriverFee ::
   ) =>
   UTCTime ->
   Id DP.Driver ->
+  Maybe Money ->
   Money ->
   Money ->
   HighPrecMoney ->
   HighPrecMoney ->
   TransporterConfig ->
   m DF.DriverFee
-mkDriverFee now driverId govtCharges platformFee cgst sgst transporterConfig = do
+mkDriverFee now driverId rideFare govtCharges platformFee cgst sgst transporterConfig = do
   id <- generateGUID
   shortId <- generateShortId
   let potentialStart = addUTCTime transporterConfig.driverPaymentCycleStartTime (UTCTime (utctDay now) (secondsToDiffTime 0))
@@ -328,6 +329,7 @@ mkDriverFee now driverId govtCharges platformFee cgst sgst transporterConfig = d
         numRides = 1,
         createdAt = now,
         updatedAt = now,
+        totalEarnings = fromMaybe 0 rideFare,
         ..
       }
 
