@@ -75,8 +75,21 @@ findFeesInRangeWithStatus startTime endTime status = do
         &&. driverFee ^. DriverFeeStatus ==. val status
     return driverFee
 
-updateFee :: Id DriverFee -> Money -> Money -> HighPrecMoney -> HighPrecMoney -> UTCTime -> SqlDB ()
-updateFee driverFeeId govtCharges platformFee cgst sgst now = do
+findWindowsWithStatus :: Transactionable m => UTCTime -> UTCTime -> DriverFeeStatus -> Int -> Int -> m [DriverFee]
+findWindowsWithStatus startTime endTime status limitVal offsetVal = do
+  findAll $ do
+    driverFee <- from $ table @DriverFeeT
+    where_ $
+      driverFee ^. DriverFeeStartTime >=. val startTime
+        &&. driverFee ^. DriverFeeEndTime <=. val endTime
+        &&. driverFee ^. DriverFeeStatus ==. val status
+    limit $ fromIntegral limitVal
+    offset $ fromIntegral offsetVal
+    return driverFee
+
+updateFee :: Id DriverFee -> Maybe Money -> Money -> Money -> HighPrecMoney -> HighPrecMoney -> UTCTime -> SqlDB ()
+updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now = do
+  let fare = fromMaybe 0 mbFare
   Esq.update $ \tbl -> do
     set
       tbl
@@ -85,6 +98,7 @@ updateFee driverFeeId govtCharges platformFee cgst sgst now = do
         DriverFeeCgst =. val cgst,
         DriverFeeSgst =. val sgst,
         DriverFeeStatus =. val ONGOING,
+        DriverFeeTotalEarnings +=. val fare,
         DriverFeeNumRides +=. val 1, -- in the api, num_rides needed without cost contribution?
         DriverFeeUpdatedAt =. val now
       ]

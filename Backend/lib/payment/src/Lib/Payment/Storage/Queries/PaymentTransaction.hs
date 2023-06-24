@@ -52,6 +52,13 @@ findByTxnUUID txnUUID =
     where_ $ transaction ^. PaymentTransactionTxnUUID ==. val (Just txnUUID)
     return transaction
 
+findAllByOrderId :: Transactionable m => Id PaymentOrder -> m [PaymentTransaction]
+findAllByOrderId orderId =
+  findAll $ do
+    transaction <- from $ table @PaymentTransactionT
+    where_ $ transaction ^. PaymentTransactionOrderId ==. val (toKey orderId)
+    return transaction
+
 findNewTransactionByOrderId :: Transactionable m => Id PaymentOrder -> m (Maybe PaymentTransaction)
 findNewTransactionByOrderId orderId =
   findOne $ do

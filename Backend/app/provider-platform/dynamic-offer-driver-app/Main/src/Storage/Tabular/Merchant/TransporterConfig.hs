@@ -92,7 +92,7 @@ instance FromTType TransporterConfigT Domain.TransporterConfig where
           driverPaymentCycleBuffer = secondsToNominalDiffTime driverPaymentCycleBuffer,
           driverPaymentCycleDuration = secondsToNominalDiffTime driverPaymentCycleDuration,
           driverPaymentCycleStartTime = secondsToNominalDiffTime driverPaymentCycleStartTime,
-          driverPaymentReminderInterval = secondsToNominalDiffTime driverPaymentCycleStartTime,
+          driverPaymentReminderInterval = secondsToNominalDiffTime driverPaymentReminderInterval,
           ..
         }
 

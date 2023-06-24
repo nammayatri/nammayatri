@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.driver_fee
 (   id character(36) NOT NULL PRIMARY KEY,
     short_id character(36) NOT NULL,
     driver_id character varying(255) NOT NULL REFERENCES atlas_driver_offer_bpp.person(id),
+    total_earnings INT NOT NULL,
     num_rides integer NOT NULL,
     govt_charges integer NOT NULL,
     platform_fee integer NOT NULL,

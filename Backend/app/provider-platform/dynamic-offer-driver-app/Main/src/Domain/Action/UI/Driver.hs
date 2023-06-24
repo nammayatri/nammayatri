@@ -31,6 +31,7 @@ module Domain.Action.UI.Driver
     DriverAlternateNumberRes (..),
     DriverAlternateNumberOtpReq (..),
     ResendAuth (..),
+    DriverPaymentHistoryResp,
     getInformation,
     setActivity,
     listDriver,
@@ -47,13 +48,15 @@ module Domain.Action.UI.Driver
     verifyAuth,
     resendOtp,
     remove,
+    getDriverPayments,
     DriverInfo.DriverMode,
   )
 where
 
 import Data.OpenApi (ToSchema)
-import Data.Time (Day)
+import Data.Time (Day, UTCTime (UTCTime, utctDay), fromGregorian)
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
+import qualified Domain.Types.DriverFee as DDF
 import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverQuote as DDrQuote
@@ -83,6 +86,7 @@ import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import qualified Kernel.External.Notification.FCM.Types as FCM
+import Kernel.External.Payment.Interface
 import qualified Kernel.External.SMS.MyValueFirst.Flow as SF
 import qualified Kernel.External.SMS.MyValueFirst.Types as SMS
 import Kernel.Prelude (NominalDiffTime)
@@ -104,6 +108,8 @@ import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
+import Lib.Payment.Domain.Types.PaymentTransaction
+import Lib.Payment.Storage.Queries.PaymentTransaction
 import SharedLogic.CallBAP (sendDriverOffer)
 import qualified SharedLogic.CancelSearch as CS
 import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
@@ -117,6 +123,7 @@ import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
+import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverReferral as QDR
@@ -330,6 +337,28 @@ data ResendAuth = ResendAuth
 
 newtype DriverAlternateNumberRes = DriverAlternateNumberRes
   { attempts :: Int
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data DriverPaymentHistoryResp = DriverPaymentHistoryResp
+  { date :: Day, -- window start day
+    totalRides :: Int,
+    totalEarnings :: Money,
+    charges :: Money,
+    chargesBreakup :: [DriverPaymentBreakup],
+    txnInfo :: [DriverTxnInfo]
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data DriverPaymentBreakup = DriverPaymentBreakup
+  { component :: Text,
+    amount :: HighPrecMoney
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data DriverTxnInfo = DriverTxnInfo
+  { id :: Id PaymentTransaction,
+    status :: TransactionStatus
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -895,12 +924,13 @@ respondQuote (driverId, _) req = do
         Notify.notifyDriverClearedFare orgId driverReq.driverId driverReq.searchTryId driverQuote.estimatedFare driver_.deviceToken
 
 getStats ::
-  (EsqDBReplicaFlow m r, EncFlow m r) =>
+  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>
   (Id SP.Person, Id DM.Merchant) ->
   Day ->
   m DriverStatsRes
-getStats (driverId, _) date = do
-  rides <- runInReplica $ QRide.getRidesForDate driverId date
+getStats (driverId, merchantId) date = do
+  transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+  rides <- runInReplica $ QRide.getRidesForDate driverId date transporterConfig.timeDiffFromUtc
   let fareParamId = mapMaybe (.fareParametersId) rides
   fareParameters <- (runInReplica . QFP.findAllIn) fareParamId
   return $
@@ -1122,3 +1152,54 @@ remove (personId, _) = do
   Esq.runTransaction $ do
     QPerson.updateAlternateMobileNumberAndCode driver
   return Success
+
+getDriverPayments :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Maybe Day -> Maybe Day -> Maybe Int -> Maybe Int -> m [DriverPaymentHistoryResp]
+getDriverPayments (_, merchantId_) mbFrom mbTo mbLimit mbOffset = do
+  let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit -- TODO move to common code
+      offset = fromMaybe 0 mbOffset
+      defaultFrom = fromMaybe (fromGregorian 2020 1 1) mbFrom
+  nowUtc <- getCurrentTime
+  transporterConfig <- CQTC.findByMerchantId merchantId_ >>= fromMaybeM (TransporterConfigNotFound merchantId_.getId)
+  let now = utctDay $ getLocalTime nowUtc transporterConfig.timeDiffFromUtc
+      from = fromMaybe defaultFrom mbFrom
+      to = fromMaybe now mbTo
+  let windowStartTime = UTCTime from 0
+      windowEndTime = addUTCTime (86399 + transporterConfig.driverPaymentCycleDuration) (UTCTime to 0)
+  driverFees <- runInReplica $ QDF.findWindowsWithStatus windowStartTime windowEndTime DDF.CLEARED limit offset
+  mapM buildPaymentResp driverFees
+  where
+    maxLimit = 20
+    defaultLimit = 10
+
+    buildPaymentResp DDF.DriverFee {..} = do
+      let date = utctDay startTime
+          totalRides = numRides
+          charges = round $ fromIntegral govtCharges + fromIntegral platformFee + cgst + sgst
+          chargesBreakup = mkChargesBreakup govtCharges platformFee cgst sgst
+      transactionDetails <- findAllByOrderId (cast id)
+      let txnInfo = map mkDriverTxnInfo transactionDetails
+      return DriverPaymentHistoryResp {..}
+
+    mkDriverTxnInfo PaymentTransaction {..} = DriverTxnInfo {..}
+
+    mkChargesBreakup govtCharges platformFee cgst sgst =
+      [ DriverPaymentBreakup
+          { component = "Government Charges",
+            amount = fromIntegral govtCharges
+          },
+        DriverPaymentBreakup
+          { component = "Platform Fee",
+            amount = fromIntegral platformFee
+          },
+        DriverPaymentBreakup
+          { component = "CGST",
+            amount = cgst
+          },
+        DriverPaymentBreakup
+          { component = "SGST",
+            amount = sgst
+          }
+      ]
+
+    getLocalTime :: UTCTime -> Seconds -> UTCTime
+    getLocalTime utcTime seconds = addUTCTime (secondsToNominalDiffTime seconds) utcTime
