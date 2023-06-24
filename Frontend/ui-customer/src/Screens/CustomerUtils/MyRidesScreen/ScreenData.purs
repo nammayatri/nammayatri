@@ -99,3 +99,4 @@ dummyIndividualCard = {
   , zoneType : NOZONE
   , vehicleVariant : Nothing
 }
+ 
