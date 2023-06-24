@@ -252,7 +252,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                                     }
 
                                 } catch (Exception e) {
-
+                                    e.printStackTrace();
                                 }
                             case NotificationTypes.CHAT_MESSAGE:
                                 try {
@@ -276,6 +276,21 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                                 }
                                 break;
 
+                            case NotificationTypes.REALLOCATE_PRODUCT:
+                                try {
+                                    if (sharedPref.getString("REALLOCATE_PRODUCT_ENABLED", "false").equals("false"))
+                                        break;
+                                    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
+                                    dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+                                    String getCurrTime = dateFormat.format(new Date());
+                                    sharedPref.edit().putString(getString(R.string.FINDING_QUOTES_START_TIME), getCurrTime).apply();
+                                    sharedPref.edit().putString(getString(R.string.LOCAL_STAGE), getString(R.string.ReAllocated)).apply();
+                                    NotificationUtils.showNotification(this, title, body, payload, imageUrl);
+                                    sharedPref.edit().putString(getResources().getString(R.string.IS_RIDE_ACTIVE), "false").apply();
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                                break;
                             default:
                                 if (payload.get("show_notification").equals("true")) {
                                     NotificationUtils.showNotification(this, title, body, payload, imageUrl);
@@ -284,123 +299,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                                 }
                                 break;
                         }
-                        break;
-
-                    case NotificationTypes.TRIP_FINISHED :
-                        NotificationUtils.showNotification(this, title, body, payload, imageUrl);
-                        if (merchantType.equals("USER")){
-                            sharedPref.edit().putInt("RIDE_COUNT", sharedPref.getInt("RIDE_COUNT", 0) + 1).apply();
-                            sharedPref.edit().putString("COMPLETED_RIDE_COUNT", String.valueOf(sharedPref.getInt("RIDE_COUNT", 0))).apply();
-                        }
-                        break;
-
-                    case NotificationTypes.DRIVER_ASSIGNMENT :
-                        NotificationUtils.showNotification(this, title, body, payload, imageUrl);
-                        sharedPref.edit().putString(getResources().getString(R.string.IS_RIDE_ACTIVE), "true").apply();
-                        sharedPref.edit().putString(getString(R.string.RIDE_STATUS), getString(R.string.DRIVER_ASSIGNMENT)).apply();
-                        startMainActivity();
-                        break;
-
-                    case NotificationTypes.BUNDLE_UPDATE :
-                        try{
-                            if (MainActivity.getInstance() != null) {
-                                MainActivity.getInstance().showAlertForUpdate();
-                            }
-                            else {
-                                firebaseLogEventWithParams("unable_to_update_bundle","reason","Main Activity instance is null");
-                            }
-                        } catch (Exception e){
-                            e.printStackTrace();
-                            firebaseLogEventWithParams("exception_in_bundle_update _fcm","exception",e.toString());
-                        }
-                        break;
-
-                    case NotificationTypes.CANCELLED_SEARCH_REQUEST :
-                        sharedPref.edit().putString(getString(R.string.CANCELLED_SEARCH_REQUEST), String.valueOf(payload.get(getString(R.string.entity_ids)))).apply();
-                        NotificationUtils.showAllocationNotification(this, title, body, payload, imageUrl, entity_payload);
-                        startWidgetService("CLEAR_FARE", payload, entity_payload);
-                        break;
-
-                    case NotificationTypes.NEW_MESSAGE :
-                        sharedPref.edit().putString("ALERT_RECEIVED", "true").apply();
-                        NotificationUtils.showNotification(this, title, body, payload, imageUrl);
-                        break;
-
-                    case NotificationTypes.REGISTRATION_APPROVED :
-                        sharedPref.edit().putString(getString(R.string.REGISTRATION_APPROVED), "true").apply();
-                        break;
-
-                    case NotificationTypes.REFERRAL_ACTIVATED :
-                        sharedPref.edit().putString("REFERRAL_ACTIVATED", "true").apply();
-                        break;
-
-                    case NotificationTypes.UPDATE_STORAGE :
-                        if(notification_payload.has("storage_key") && notification_payload.has("storage_value")) {
-                            String storage_key = notification_payload.get("storage_key").toString();
-                            String storage_value = notification_payload.get("storage_value").toString();
-                            if(storage_key.equals("update_driver_status") && merchantType.equals("DRIVER")){
-                                boolean status = storage_value.equals("SILENT") || storage_value.equals("ONLINE") ;
-                                rideRequestUtils.updateDriverStatus(status, storage_value, this, true);
-                            }
-                            else sharedPref.edit().putString(storage_key, storage_value).apply();
-                        }
-                        NotificationUtils.showAllocationNotification(this, title, body, payload, imageUrl, entity_payload);
-                        break;
-
-                    case NotificationTypes.CALL_API :
-                        try {
-                            String endPoint = notification_payload.get("endpoint").toString();
-                            String method = notification_payload.get("method").toString();
-                            JSONObject reqBody =(JSONObject) notification_payload.get("reqBody");
-                            if (endPoint != null && method != null){
-                                reqBody = reqBody != null ? reqBody : null;
-                                rideRequestUtils.callAPIViaFCM(endPoint, reqBody, method, this);
-                            }
-
-                        }catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    case NotificationTypes.CHAT_MESSAGE :
-                        try{
-                            String appState = null;
-                            String stage = null;
-                            if(sharedPref != null) appState = sharedPref.getString("ACTIVITY_STATUS", "null");
-                            if(sharedPref != null) stage = sharedPref.getString("LOCAL_STAGE", "null");
-                            final boolean condition = appState.equals("onResume") && !(stage.equals("ChatWithDriver")) && !BuildConfig.MERCHANT_TYPE.equals("DRIVER");
-                            if(condition) {
-                                getApplicationContext().getMainLooper();
-                                String notificationId = String.valueOf(rand.nextInt(1000000));
-                                MainActivity.showInAppNotification(title, body, CommonJsInterface.storeCallBackOpenChatScreen,"", "", "", "", notificationId, 5000, getApplicationContext());
-                            }
-                            if(appState.equals("onDestroy") || appState.equals("onPause")) {
-                                NotificationUtils.createChatNotification(title,body,getApplicationContext());
-                            }
-                        } catch (Exception e) {
-                            Log.e("MyFirebaseMessagingService", "Error in CHAT_MESSAGE " + e);
-                        }
-                        break;
-
-                    case NotificationTypes.REALLOCATE_PRODUCT :
-                        try{
-                            if (sharedPref.getString("REALLOCATE_PRODUCT_ENABLED", "false").equals("false")) break;
-                            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
-                            dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-                            String getCurrTime = dateFormat.format(new Date());
-                            sharedPref.edit().putString(getString(R.string.FINDING_QUOTES_START_TIME), getCurrTime).apply();
-                            sharedPref.edit().putString(getString(R.string.LOCAL_STAGE),getString(R.string.ReAllocated)).apply();
-                            NotificationUtils.showNotification(this, title, body, payload, imageUrl);
-                            sharedPref.edit().putString(getResources().getString(R.string.IS_RIDE_ACTIVE), "false").apply();
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                        break;
-                    default:
-                        if (payload.get("show_notification").equals("true")) {
-                            NotificationUtils.showNotification(this, title, body, payload, imageUrl);
-                        } else {
-                            // Silent notification
-                        }
-                        break;
                     }
                 }
             }
