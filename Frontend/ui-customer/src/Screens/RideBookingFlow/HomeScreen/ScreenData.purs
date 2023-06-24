@@ -159,6 +159,7 @@ initData = {
     , cancelSearchCallDriver : false
     , zoneType : dummyZoneType
     , cancelRideConfirmationPopup : false
+    , searchAfterEstimate : false
     }
 }
 

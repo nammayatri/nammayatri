@@ -490,5 +490,6 @@ const englishStrings = {
   "GO_BACK_TEXT" : "Go Back",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST": "The driver preferred your special request and is just ",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST": "The driver preferred your special request and has travelled ",
-  "AND_HAS_TRAVELLED": " km."
+  "AND_HAS_TRAVELLED": " km.",
+  "PLEASE_FIND_REVISED_FARE_ESTIMATE": "Please find the Revised Estimated Fare. Night charges are 1.5 times the day charges."
 }

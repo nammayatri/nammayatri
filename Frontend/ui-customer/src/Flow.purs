@@ -38,7 +38,7 @@ import Engineering.Helpers.BackTrack (getState)
 import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, bundleVersion, getExpiryTime,stringToVersion, convertUTCtoISC, getCurrentUTC)
 import Foreign.Class (class Encode)
 import Foreign.Class (encode)
-import Helpers.Utils (hideSplash, getDistanceBwCordinates, adjustViewWithKeyboard, decodeErrorCode, getObjFromLocal, differenceOfLocationLists, filterRecentSearches, setText', seperateByWhiteSpaces, getNewTrackingId, checkPrediction, getRecentSearches, addToRecentSearches, saveRecents, clearWaitingTimer, toString, parseFloat, getCurrentLocationsObjFromLocal, addToPrevCurrLoc, saveCurrentLocations, getCurrentDate, getPrediction, getCurrentLocationMarker, parseNewContacts, getMerchant, Merchant(..), drawPolygon,requestKeyboardShow, removeLabelFromMarker, sortPredctionByDistance)
+import Helpers.Utils (hideSplash, getDistanceBwCordinates, adjustViewWithKeyboard, decodeErrorCode, getObjFromLocal, differenceOfLocationLists, filterRecentSearches, setText', seperateByWhiteSpaces, getNewTrackingId, checkPrediction, getRecentSearches, addToRecentSearches, saveRecents, clearWaitingTimer, toString, parseFloat, getCurrentLocationsObjFromLocal, addToPrevCurrLoc, saveCurrentLocations, getCurrentDate, getPrediction, getCurrentLocationMarker, parseNewContacts, getMerchant, Merchant(..), drawPolygon,requestKeyboardShow, removeLabelFromMarker, sortPredctionByDistance, withinTimeRange)
 import JBridge (metaLogEvent, currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, loaderText, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, toggleLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker, generateSessionId, stopChatListenerService, updateRouteMarker)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -576,17 +576,25 @@ homeScreenFlow = do
       setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
       when (getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") do
         void $ pure $ firebaseLogEvent "ny_user_auto_confirm"
-      void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
 
-      response <- lift $ lift $ Remote.selectEstimate (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing)) (state.props.estimateId)
-      case response of
-        Right res -> do
-          updateLocalStage FindingQuotes
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck") } })
-        Left err -> do
-          void $ pure $ firebaseLogEvent "ny_user_estimate_expired"
-          updateLocalStage FindEstimateAndSearch
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { currentStage = FindEstimateAndSearch } })
+      let currentTime = (convertUTCtoISC (getCurrentUTC "") "HH:mm:ss")
+          findingQuotesTime = convertUTCtoISC (getValueToLocalNativeStore FINDING_QUOTES_START_TIME) "HH:mm:ss"
+      if withinTimeRange findingQuotesTime currentTime "22:00:00" || withinTimeRange findingQuotesTime currentTime "05:00:00" then do
+        void $ pure $ toast (getString PLEASE_FIND_REVISED_FARE_ESTIMATE)
+        void $ pure $ firebaseLogEvent "ny_user_new_estimate_after_night_charges_applicable"
+        updateLocalStage FindEstimateAndSearch
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { currentStage = FindEstimateAndSearch, searchAfterEstimate = false } })
+      else do
+        void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
+        response <- lift $ lift $ Remote.selectEstimate (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing)) (state.props.estimateId)
+        case response of
+          Right res -> do
+            updateLocalStage FindingQuotes
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck") } })
+          Left err -> do
+            void $ pure $ firebaseLogEvent "ny_user_estimate_expired"
+            updateLocalStage FindEstimateAndSearch
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { currentStage = FindEstimateAndSearch, searchAfterEstimate = true } })
       homeScreenFlow
     LOCATION_SELECTED item addToRecents -> do
         void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)  -- TODO : Handlde Loader in IOS Side

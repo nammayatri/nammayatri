@@ -642,7 +642,7 @@ estimateChangedPopupConfig state =
     popUpConfig' =
       config'
         { primaryText { text = (getString ESTIMATES_CHANGED) }
-        , secondaryText { text = (getString ESTIMATES_REVISED_TO) <> "₹" <> (show state.data.suggestedAmount) <> "-" <> "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare)) }
+        , secondaryText { text = (getString ESTIMATES_REVISED_TO) <> "₹" <> (show state.data.suggestedAmount) <> if state.data.rateCard.additionalFare > 0 then "-" <> "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare)) else "" }
         , option1 { text = (getString GO_HOME_) }
         , option2 { text = (getString CONTINUE) }
         }
