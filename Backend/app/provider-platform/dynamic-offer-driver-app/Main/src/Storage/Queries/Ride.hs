@@ -405,13 +405,13 @@ getCountByStatus merchantId = do
       pure (either (const []) Prelude.id resp)
     Left _ -> pure []
 
-getRidesForDate :: (L.MonadFlow m, MonadTime m) => Id Person -> Day -> m [Ride]
-getRidesForDate driverId date = do
+getRidesForDate :: (L.MonadFlow m, MonadTime m) => Id Person -> Day -> Seconds -> m [Ride]
+getRidesForDate driverId date diffTime = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
   let updatedMeshConfig = setMeshConfig modelName
-  let minDayTime = UTCTime (addDays (-1) date) 66600
-  let maxDayTime = UTCTime date 66600
+  let minDayTime = UTCTime (addDays (-1) date) (86400 - secondsToDiffTime (toInteger diffTime.getSeconds))
+  let maxDayTime = UTCTime date (secondsToDiffTime $ toInteger diffTime.getSeconds)
   case dbConf of
     Just dbConf' -> do
       ridesResult <-
@@ -429,6 +429,7 @@ getRidesForDate driverId date = do
         Left _ -> pure []
         Right rides -> mapM transformBeamRideToDomain rides
     Nothing -> pure []
+
 
 updateArrival :: (L.MonadFlow m, MonadTime m) => Id Ride -> m (MeshResult ())
 updateArrival rideId = do

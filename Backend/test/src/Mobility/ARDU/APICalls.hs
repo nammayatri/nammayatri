@@ -103,6 +103,7 @@ ui = do
                         :<|> resendOtp
                         :<|> remove
                       )
+               :<|> _
              ) = driverClient
 
     (_ :<|> updateLocation) = locationClient

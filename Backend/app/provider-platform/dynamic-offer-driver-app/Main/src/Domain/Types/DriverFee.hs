@@ -30,12 +30,13 @@ data DriverFee = DriverFee
     sgst :: HighPrecMoney,
     numRides :: Int,
     payBy :: UTCTime,
+    totalEarnings :: Money,
     startTime :: UTCTime,
     endTime :: UTCTime,
     status :: DriverFeeStatus,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic)
+  deriving (Generic, Show)
 
 data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED deriving (Read, Show, Eq)
