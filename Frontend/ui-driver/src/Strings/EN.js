@@ -477,5 +477,15 @@ const englishStrings = {
   REGISTERED_ADDRESS_DESCRIPTION : "Juspay Technologies Private Limited <br> Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala Bengaluru, Karnataka- 560095, India.",
   REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL : "Website: <u>https://nammayatri.in/</u>",
   ZONE_CANCEL_TEXT_DROP : "Your customer is probably in a rush to reach the metro station on time! \n We urge you not to cancel.",
-  ZONE_CANCEL_TEXT_PICKUP : "Your customer is probably in a rush to reach their destination. \n We urge you not to cancel."
+  ZONE_CANCEL_TEXT_PICKUP : "Your customer is probably in a rush to reach their destination. \n We urge you not to cancel.",
+  ENTER_AADHAAR_NUMBER : "Enter Aadhaar Number/UID",
+  ENTER_AADHAAR_OTP_ : "Enter Aadhaar OTP",
+  AADHAAR_LINKING_REQUIRED : "Aadhaar linking required",
+  AADHAAR_LINKING_REQUIRED_DESCRIPTION : "To start driving for Yatri Sathi, please \n link your Aadhaar ID",
+  BY_CLICKING_THIS_YOU_WILL_BE_AGREEING_TO_OUR_TC : "By clicking Continue, you agree to our ",
+  TERMS_AND_CONDITIONS_SHORT : "T&C",
+  TC_TAIL : "",
+  OTP_SENT_TO_AADHAAR_NUMBER: "OTP sent to mobile number linked with your aadhar",
+  ENTER_SIX_DIGIT_OTP : "Enter six digit OTP",
+  LINK_AADHAAR_ID : "Link Aadhaar ID"
 }

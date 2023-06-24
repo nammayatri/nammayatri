@@ -475,6 +475,14 @@ const kannadaStrings = {
   REGISTERED_ADDRESS_DESCRIPTION : "ಜಸ್ಪೇ ಟೆಕ್ನಾಲಜೀಸ್ ಪ್ರೈವೇಟ್ ಲಿಮಿಟೆಡ್ <br> ಸ್ಟಾಲಿಯನ್ ಬಿಸಿನೆಸ್ ಸೆಂಟರ್, ನಂ. 444, 3ನೇ ಮತ್ತು 4ನೇ ಮಹಡಿ, 18ನೇ ಮುಖ್ಯ ರಸ್ತೆ, 6ನೇ ಬ್ಲಾಕ್, ಕೋರಮಂಗಲ ಬೆಂಗಳೂರು, ಕರ್ನಾಟಕ- 560095, ಭಾರತ",
   REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL : "ವೆಬ್‌ಸೈಟ್ : <u>https://nammayatri.in/</u>",
   ZONE_CANCEL_TEXT_DROP : "ನಿಮ್ಮ ಗ್ರಾಹಕರು ಬಹುಶಃ ಸಮಯಕ್ಕೆ ಸರಿಯಾಗಿ ಮೆಟ್ರೋ ನಿಲ್ದಾಣವನ್ನು ತಲುಪುವ ಧಾವಂತದಲ್ಲಿದ್ದಾರೆ! \n ರದ್ದು ಮಾಡದಂತೆ ನಾವು ನಿಮ್ಮನ್ನು ಒತ್ತಾಯಿಸುತ್ತೇವೆ.",
-  ZONE_CANCEL_TEXT_PICKUP : "ನಿಮ್ಮ ಗ್ರಾಹಕರು ಬಹುಶಃ ತಮ್ಮ ಗಮ್ಯಸ್ಥಾನವನ್ನು ತಲುಪುವ ಆತುರದಲ್ಲಿರುತ್ತಾರೆ. \n ರದ್ದು ಮಾಡದಂತೆ ನಾವು ನಿಮ್ಮನ್ನು ಒತ್ತಾಯಿಸುತ್ತೇವೆ."
-
+  ZONE_CANCEL_TEXT_PICKUP : "ನಿಮ್ಮ ಗ್ರಾಹಕರು ಬಹುಶಃ ತಮ್ಮ ಗಮ್ಯಸ್ಥಾನವನ್ನು ತಲುಪುವ ಆತುರದಲ್ಲಿರುತ್ತಾರೆ. \n ರದ್ದು ಮಾಡದಂತೆ ನಾವು ನಿಮ್ಮನ್ನು ಒತ್ತಾಯಿಸುತ್ತೇವೆ.",
+  ENTER_AADHAAR_NUMBER : "ಆಧಾರ್ ಸಂಖ್ಯೆ/ಯುಐಡಿ ನಮೂದಿಸಿ",
+  ENTER_AADHAAR_OTP : "ಆಧಾರ್ OTP ನಮೂದಿಸಿ",
+  AADHAAR_LINKING_REQUIRED : "আধার লিঙ্ক করা আবশ্যক",
+  AADHAAR_LINKING_REQUIRED_DESCRIPTION : "যাত্রী সাথীর জন্য গাড়ি চালানো শুরু করতে, দয়া করে \n আপনার আধার আইডি লিঙ্ক করুন",
+  BY_CLICKING_THIS_YOU_WILL_BE_AGREEING_TO_OUR_TC : "চালিয়ে যান ক্লিক করে, আপনি আমাদের সাথে সম্মত হন ",
+  TERMS_AND_CONDITIONS_SHORT : "T&C",
+  OTP_SENT_TO_AADHAAR_NUMBER: "আপনার আধারের সাথে লিঙ্ক করা মোবাইল নম্বরে OTP পাঠানো হয়েছে",
+  ENTER_SIX_DIGIT_OTP : "ছয় সংখ্যার ওটিপি লিখুন",
+  LINK_AADHAAR_ID : "ಲಿಂಕ್ ಆಧಾರ್ ಐಡಿ"
 }

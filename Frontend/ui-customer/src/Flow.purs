@@ -38,7 +38,7 @@ import Engineering.Helpers.BackTrack (getState)
 import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, bundleVersion, getExpiryTime,stringToVersion, convertUTCtoISC, getCurrentUTC)
 import Foreign.Class (class Encode)
 import Foreign.Class (encode)
-import Helpers.Utils (hideSplash, getDistanceBwCordinates, adjustViewWithKeyboard, decodeErrorCode, getObjFromLocal, differenceOfLocationLists, filterRecentSearches, setText', seperateByWhiteSpaces, getNewTrackingId, checkPrediction, getRecentSearches, addToRecentSearches, saveRecents, clearWaitingTimer, toString, parseFloat, getCurrentLocationsObjFromLocal, addToPrevCurrLoc, saveCurrentLocations, getCurrentDate, getPrediction, getCurrentLocationMarker, parseNewContacts, getMerchant, Merchant(..), drawPolygon,requestKeyboardShow, removeLabelFromMarker, sortPredctionByDistance)
+import Helpers.Utils (hideSplash, getDistanceBwCordinates, adjustViewWithKeyboard, decodeErrorCode, getObjFromLocal, differenceOfLocationLists, filterRecentSearches, setText, seperateByWhiteSpaces, getNewTrackingId, checkPrediction, getRecentSearches, addToRecentSearches, saveRecents, clearWaitingTimer, toString, parseFloat, getCurrentLocationsObjFromLocal, addToPrevCurrLoc, saveCurrentLocations, getCurrentDate, getPrediction, getCurrentLocationMarker, parseNewContacts, getMerchant, Merchant(..), drawPolygon,requestKeyboardShow, removeLabelFromMarker, sortPredctionByDistance)
 import JBridge (metaLogEvent, currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, loaderText, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, toggleLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker, generateSessionId, stopChatListenerService, updateRouteMarker)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -423,7 +423,7 @@ enterMobileNumberScreenFlow = do
                     setValueToLocalStore REGISTERATION_TOKEN response.token
                     currentFlowStatus
               Left err -> do
-                _ <- lift $ lift $ liftFlow (setText' (getNewIDWithTag "EnterOTPNumberEditText") "" )
+                pure $ setText (getNewIDWithTag "EnterOTPNumberEditText") ""
                 let errResp = err.response
                     codeMessage = decodeErrorCode errResp.errorMessage
                 if ( err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
@@ -1410,7 +1410,7 @@ myProfileScreenFlow = do
           let codeMessage = decodeErrorCode errResponse.errorMessage
           case codeMessage of
             "PERSON_EMAIL_ALREADY_EXISTS" -> do
-              _ <- lift $ lift $ liftFlow (setText' (getNewIDWithTag "EmailEditText") "" )
+              pure $ setText (getNewIDWithTag "EmailEditText") ""
               modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState -> myProfileScreenState{props{isEmailValid = false, updateProfile = true}, data{errorMessage = Just EMAIL_EXISTS, name = state.data.name, editedName = state.data.editedName, emailId = state.data.emailId, gender = state.data.gender, editedGender = state.data.editedGender}})
             _ -> pure $ toast (getString ERROR_OCCURED)
           myProfileScreenFlow
@@ -1640,7 +1640,7 @@ addNewAddressScreenFlow input = do
                   }
                 } )
           _    ,  _     -> do
-            _ <- lift $ lift $ liftFlow (setText' (getNewIDWithTag "SavedLocationEditText") item.description )
+            pure $ setText (getNewIDWithTag "SavedLocationEditText") item.description
             _ <- pure $ hideKeyboardOnNavigation true
             modifyScreenState $ AddNewAddressScreenStateType (\addNewAddressScreen ->
               addNewAddressScreen

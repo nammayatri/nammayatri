@@ -32,7 +32,7 @@ import Data.String (length)
 import Data.String.CodeUnits (charAt)
 import Data.Maybe(Maybe(..))
 import Services.Config (getSupportNumber)
-import Engineering.Helpers.Commons (getNewIDWithTag,getExpiryTime,setText')
+import Engineering.Helpers.Commons (getNewIDWithTag,getExpiryTime,setText)
 import Storage(KeyStore(..),getValueToLocalStore)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -131,19 +131,15 @@ eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
   _ <- pure $ showDialer (getSupportNumber "")
   continue state
 eval (AlternateMobileNumberAction (ReferralMobileNumberController.OnBackClick)) state = do
-  if state.props.enterOtp then do 
-    continueWithCmd state{props{enterOtp = false, buttonVisibilty = true}} [do
-      _ <- setText' (getNewIDWithTag "Referalnumber") state.data.mobileNumber
-      pure Dummy
-    ]
+  if state.props.enterOtp then do
+    _ <- pure $ setText (getNewIDWithTag "Referalnumber") state.data.mobileNumber
+    continue state{props{enterOtp = false, buttonVisibilty = true}}
   else continue state{props{enterMobileNumberView=false}}
 eval (AlternateMobileNumberAction (ReferralMobileNumberController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = do 
   if state.props.enterOtp then exit $ AddMobileNumber state 
-  else do 
-    continueWithCmd state [do
-      setText' (getNewIDWithTag "Referalnumber") ""
-      pure $ ExitGoToEnterOtp 
-    ]
+  else do
+    _ <- pure $ setText (getNewIDWithTag "Referalnumber") ""
+    exit $ GoToEnterOtp state 
    
 eval (ExitGoToEnterOtp) state = exit $ GoToEnterOtp state  
 eval (AlternateMobileNumberAction (ReferralMobileNumberController.PrimaryEditTextActionController (PrimaryEditTextController.TextChanged valId newVal))) state = do 

@@ -102,6 +102,7 @@
       "notification_count_background" : true,
       "ny_ic_aadhaar" : true,
       "ny_ic_aadhaar_lg" : true,
+      "ny_ic_aadhaar_logo" : true,
       "ny_ic_about" : true,
       "ny_ic_account_active" : true,
       "ny_ic_account_inactive" : true,

@@ -42,7 +42,7 @@ import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Effect.Class (liftEffect)
 import Effect.Console (logShow)
 import Engineering.Helpers.Commons (liftFlow, os, isPreviousVersion)
-import Engineering.Helpers.Commons (parseFloat, setText') as ReExport
+import Engineering.Helpers.Commons (parseFloat, setText) as ReExport
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Generic (Foreign, decodeJSON, encodeJSON, decode)
 import Juspay.OTP.Reader (initiateSMSRetriever)

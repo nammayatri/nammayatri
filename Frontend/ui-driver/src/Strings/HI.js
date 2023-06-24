@@ -479,6 +479,14 @@ const hindiStrings = {
   REGISTERED_ADDRESS_DESCRIPTION : "जस्पे टेक्नोलॉजीज प्राइवेट लिमिटेड <br> स्टैलियन बिजनेस सेंटर, नंबर 444, तीसरी और चौथी मंजिल, 18वीं मेन, 6वां ब्लॉक, कोरमंगला बेंगलुरु, कर्नाटक- 560095, भारत।",
   REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL : "वेबसाइट : <u>https://nammayatri.in/</u>",
   ZONE_CANCEL_TEXT_DROP : "आपका ग्राहक शायद समय पर मेट्रो स्टेशन पहुंचने की हड़बड़ी में है! \n हम आपसे अनुरोध करते हैं कि रद्द न करें।",
-  ZONE_CANCEL_TEXT_PICKUP : "आपका ग्राहक शायद अपने गंतव्य तक पहुंचने की हड़बड़ी में है। \n हम आपसे अनुरोध करते हैं कि रद्द न करें।"
-
+  ZONE_CANCEL_TEXT_PICKUP : "आपका ग्राहक शायद अपने गंतव्य तक पहुंचने की हड़बड़ी में है। \n हम आपसे अनुरोध करते हैं कि रद्द न करें।",
+  ENTER_AADHAAR_NUMBER : "Enter Aadhaar Number/UID",
+  AADHAAR_LINKING_REQUIRED : "आधार लिंक करना आवश्यक है",
+  AADHAAR_LINKING_REQUIRED_DESCRIPTION: "यात्री साथी के लिए ड्राइविंग शुरू करने के लिए, कृपया अपना आधार आईडी लिंक करें",
+  BY_CLICKING_THIS_YOU_WILL_BE_AGREEING_TO_OUR_TC: "जारी रखें पर क्लिक करके, आप हमारी बात से सहमत हैं",
+  TERMS_AND_CONDITIONS_SHORT : "नियम एवं शर्तें",
+  TC_TAIL : "",
+  OTP_SENT_TO_AADHAAR_NUMBER: "आपके आधार से जुड़े मोबाइल नंबर पर ओटीपी भेजा गया",
+  ENTER_SIX_DIGIT_OTP : "छह अंकीय ओटीपी दर्ज करें",
+  LINK_AADHAAR_ID : "आधार आईडी लिंक करें"
 }

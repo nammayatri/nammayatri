@@ -24,8 +24,8 @@ import Data.String (length)
 import Data.String.CodeUnits (charAt)
 import Debug (spy)
 import Engineering.Helpers.Commons (getNewIDWithTag, os, clearTimer)
-import Helpers.Utils (setText')
-import JBridge (hideKeyboardOnNavigation, toast, toggleBtnLoader, minimizeApp, firebaseLogEvent)
+import Helpers.Utils (setText)
+import JBridge (hideKeyboardOnNavigation, toast, toggleBtnLoader,minimizeApp, firebaseLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -110,14 +110,11 @@ data Action = EnterOTP
 
 eval :: Action -> EnterMobileNumberScreenState -> Eval Action ScreenOutput EnterMobileNumberScreenState
 
-eval (MobileNumberButtonAction PrimaryButtonController.OnClick) state = continueWithCmd state [
-        do
-            _ <- pure $ firebaseLogEvent "ny_user_otp_triggered"
-            _ <- pure $ hideKeyboardOnNavigation true
-            let value = (if os == "IOS" then "" else " ")
-            _ <- (setText' (getNewIDWithTag "EnterOTPNumberEditText") value )
-            pure $ ContinueCommand
-]
+eval (MobileNumberButtonAction PrimaryButtonController.OnClick) state = do
+    pure $ firebaseLogEvent "ny_user_otp_triggered"
+    pure $ hideKeyboardOnNavigation true
+    pure $ setText (getNewIDWithTag "EnterOTPNumberEditText") ""
+    exit $ GoToOTP state
 
 eval (StepsHeaderModelAC StepsHeaderModelController.OnArrowClick) state = continueWithCmd state [ do pure $ BackPressed state.props.enterOTP]
 

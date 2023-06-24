@@ -150,3 +150,9 @@ onCall _ = (getBaseUrl "") <> "/onCall"
 
 likeMessage :: String -> String
 likeMessage messageId = (getBaseUrl "") <> "/message/" <> messageId <> "/like"
+
+triggerAadhaarOTP :: String -> String
+triggerAadhaarOTP _ = (getBaseUrl "") <> "/driver/register/generateAadhaarOtp"
+
+verifyAadhaarOTP :: String -> String
+verifyAadhaarOTP _ = (getBaseUrl "") <> "/driver/register/verifyAadhaarOtp"

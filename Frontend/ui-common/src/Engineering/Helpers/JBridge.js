@@ -503,15 +503,11 @@ export const addMarkerImpl = function (title) {
 
 
 export const removeMarker = function (title) {
-    try{
-      return function () {
-        console.log("I AM HERE to remove marker------------------");
-        window.JBridge.removeMarker(title);
-        return true;
-      };
-  }
-  catch(e)
-  {
+  try {
+    console.log("I AM HERE to remove marker------------------");
+    window.JBridge.removeMarker(title);
+    return true;
+  } catch (e) {
     console.log(e);
     console.log("error in removeMarker----------------------------------");
   }
@@ -890,7 +886,8 @@ export const metaLogEvent = function (event) {
 }
 
 export const hideKeyboardOnNavigation = function (permission) {
-  window.JBridge.hideKeyboardOnNavigation(permission);
+  if (permission)
+    window.JBridge.hideKeyboardOnNavigation(permission);
 };
 
 export const onEvent = function (payload) {

@@ -11,7 +11,7 @@ import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRend
 import Screens (ScreenName(..), getScreen)
 import JBridge (toast, loaderText, toggleLoader)
 import Screens.Types (EmergencyContactsScreenState , ContactDetail, NewContacts)
-import Helpers.Utils (storeCallBackContacts, parseNewContacts, contactPermission, setText', toString)
+import Helpers.Utils (storeCallBackContacts, parseNewContacts, contactPermission, setText, toString)
 import Data.Array (length, filter, snoc, elem, null, unionBy, elem, head, tail, catMaybes, (!!), take, last)
 import Log (printLog)
 import Screens.EmergencyContactsScreen.Transformer (getContactList)
@@ -187,11 +187,9 @@ eval (ContactListAction(ContactListController.GenericHeaderActionController Gene
 
 eval (ContactListAction(ContactListController.ContactTextChanged value)) state = continue state { data { editedText = value } }
 
-eval (ContactListAction ContactListController.ClearText) state = continueWithCmd state { data { editedText = "" } }
-  [do
-    _ <- (setText' (getNewIDWithTag "contactEditText") "")
-    pure NoAction
-  ]
+eval (ContactListAction ContactListController.ClearText) state = do
+  pure $ setText (getNewIDWithTag "contactEditText") ""
+  continue state { data { editedText = "" } }
 
 eval (ContactListAction(ContactListController.ContactSelected contact)) state = do
   let item = if ((DS.length contact.number) > 10 && (DS.length contact.number) <= 12 && ((DS.take 1 contact.number) == "0" || (DS.take 2 contact.number) == "91")) then

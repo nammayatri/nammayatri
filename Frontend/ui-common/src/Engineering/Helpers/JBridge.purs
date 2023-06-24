@@ -87,7 +87,7 @@ foreign import setFCMToken :: forall action. (action -> Effect Unit) -> (String 
 foreign import openUrlInApp  :: String -> Effect Unit
 foreign import openUrlInMailApp  :: String -> Effect Unit
 foreign import addMarkerImpl :: String -> Number -> Number -> Int -> Number -> Number -> Effect Boolean
-foreign import removeMarker :: String -> Effect Unit
+foreign import removeMarker :: String -> Unit
 -- foreign import parseAddress      :: String -> Address
 foreign import disableActionEditText :: String -> Unit
 foreign import uploadFile :: Unit -> Effect Unit

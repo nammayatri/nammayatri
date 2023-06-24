@@ -98,6 +98,7 @@ initData = {
         silentPopUpView : false, 
         zoneRideBooking : true,
         showGenderBanner : false,
-        notRemoveBanner : true
+        notRemoveBanner : true,
+        showlinkAadhaarPopup : true
     }
 }
