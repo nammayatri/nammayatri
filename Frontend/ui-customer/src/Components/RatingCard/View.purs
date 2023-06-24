@@ -1,4 +1,4 @@
-{-
+s{-
 
   Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -39,7 +39,7 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Screens.Types(Stage(..), ZoneType(..))
 import Common.Types.App
-
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 
 view :: forall w. (Action -> Effect Unit) -> RatingCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -100,28 +100,23 @@ view push state =
                 , height WRAP_CONTENT
                 , gravity CENTER
                 , orientation HORIZONTAL
-                ][  textView
+                ][  textView $
                     [ height WRAP_CONTENT
                     , width WRAP_CONTENT
-                    , textSize FontSize.a_22
                     , text (getString RIDE_COMPLETED)
                     , color Color.black800
-                    , fontStyle $ FontStyle.bold LanguageStyle
                     , gravity CENTER
                     , lineHeight "28"
-                    ]
+                    ] <> FontStyle.h1 TypoGraphy
                   ]
-              , textView
+              , textView $ 
                   [ height WRAP_CONTENT
                   , width MATCH_PARENT
-                  , textSize FontSize.a_14
                   , text (getString HOPE_YOUR_RIDE_WAS_HASSLE_FREE)
                   , color Color.black700
-                  , fontStyle $ FontStyle.regular LanguageStyle
                   , gravity CENTER
-                  , lineHeight "18"
                   , margin (MarginVertical 2 24)
-                  ]
+                  ] <> FontStyle.paragraphText LanguageStyle
                 ] <> (if (state.props.showFareBreakUp) then [tripDetailsView state push]  else [])
                   <> (if (not state.props.showFareBreakUp) then [horizontalLine state] else [])
                   <> ([starRatingView state push])
@@ -171,28 +166,26 @@ editTextView state push =
   , orientation HORIZONTAL
   , margin $ MarginBottom 24
   , padding $ Padding 16 16 16 16
-  ][  imageView
-      [ imageWithFallback "ny_ic_message_square,https://assets.juspay.in/nammayatri/images/common/ny_ic_message_square.png"
-      , height $ V 16
-      , width $ V 16
-      , margin $ if os == "ANDROID" then MarginRight 9 else  Margin 0 6 9 0
-      ]
+  ][  imageView 
+      [ imageWithFallback $ "ny_ic_message_square," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_message_square.png"
+      , height $ V 16 
+      , width $ V 16 
+      , margin $ if os == "ANDROID" then MarginRight 9 else  Margin 0 6 9 0 
+      ]                   
     , (if os == "ANDROID" then editText else multiLineEditText)
       $
       [ height MATCH_PARENT
       , width $ WRAP_CONTENT
       , gravity LEFT
       , padding $ Padding 0 0 0 0
-      , textSize FontSize.a_12
       , background Color.grey800
-      , color Color.black
-      , fontStyle $ FontStyle.regular LanguageStyle
+      , color Color.black 
       , hint (getString HELP_US_WITH_YOUR_FEEDBACK)
       , weight 1.0
       , pattern "[^\n]*,255"
-      , singleLine false
-      , onChange push FeedbackChanged
-      ]
+      , singleLine false 
+      , onChange push FeedbackChanged 
+      ] <> FontStyle.body3 LanguageStyle
 
   ]
 
@@ -219,8 +212,7 @@ rideRatingButtonConfig state = let
     primaryButtonConfig' = config
       { textConfig
         { text = (getString SUBMIT_FEEDBACK)
-        , color = Color.yellow900
-        , textSize = FontSize.a_16
+        , color = state.data.appConfig.primaryTextColor
         , width = MATCH_PARENT
         }
       , isClickable = if state.data.rating < 1 then false else true
@@ -229,7 +221,7 @@ rideRatingButtonConfig state = let
       , height = (V 48)
       , gravity = CENTER_VERTICAL
       , cornerRadius = 8.0
-      , background = Color.black900
+      , background = state.data.appConfig.primaryBackground
       , id = "RideRatingButton"
       , enableLoader = (getBtnLoader "RightRatingButton")
       }
@@ -243,13 +235,11 @@ skipButtonConfig state = let
   skipButtonConfig' = config
     { textConfig
       { text = (getString SKIP)
-      , color = Color.black700
-      , fontStyle = FontStyle.bold LanguageStyle
-      , textSize = FontSize.a_16
+      , color = state.data.appConfig.rateCardColor
       }
     , width = V ( screenWidth unit / 4)
-    , background = Color.white900
-    , stroke = ("1," <> Color.black500)
+    , background = Color.white900 
+    , stroke = ("1," <> state.data.appConfig.rateCardColor)
     , margin = (MarginRight 12)
     , id = "SkipCurrentRatingButton"
     , enableLoader = (getBtnLoader "SkipCurrentRatingButton")
@@ -269,18 +259,15 @@ starRatingView state push =
     , padding (PaddingVertical 16 16)
     , cornerRadius 8.0
     , stroke if state.props.showFareBreakUp then ("1,"<>Color.grey900) else ("0,"<>Color.grey900)
-    ][textView
+    ][textView $
         [ height WRAP_CONTENT
         , width $ V (screenWidth unit - 64)
-        , textSize FontSize.a_16
         , text (getText state)
         , color Color.black800
         , maxLines 2
-        , fontStyle $ FontStyle.semiBold LanguageStyle
         , gravity CENTER
-        , lineHeight "20"
         , margin (MarginBottom 16)
-        ]
+        ] <> FontStyle.subHeading2 LanguageStyle
     , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -294,7 +281,7 @@ starRatingView state push =
                           ][imageView
                               [ height $ V 30
                               , width $ V 30
-                              , imageWithFallback if item <= state.data.rating then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png" else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
+                              , imageWithFallback if item <= state.data.rating then "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_active.png" else "ny_ic_star_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_inactive.png"
                               ]
                           ]) [1,2,3,4,5])
     ]
@@ -308,29 +295,25 @@ fareBreakUpConfig state = let
       {
           fareDetails = [] -- ToDo :: send the fareDetails from the View file which is using this component.
         , headingText = (getString VIEW_BREAKDOWN)
-        , totalAmount = {
-            text : (getString TOTAL_AMOUNT)
-            , textSize : FontSize.a_16
-            , fontStyle : FontStyle.semiBold LanguageStyle
-            , color : Color.black800
-            , margin : (Margin 0 0 0 12)
-            , visibility : VISIBLE
-            , priceDetails : {
-                text : state.data.finalAmount
-              , textSize : FontSize.a_16
-              , fontStyle : FontStyle.semiBold LanguageStyle
-              , offeredFare : state.data.offeredFare
-              , distanceDifference : state.data.distanceDifference
+        , totalAmount { 
+            text = (getString TOTAL_AMOUNT)
+            , color = Color.black800
+            , margin = (Margin 0 0 0 12)
+            , visibility = VISIBLE
+            , priceDetails{
+                text = state.data.finalAmount
+              , offeredFare = state.data.offeredFare
+              , distanceDifference = state.data.distanceDifference
               }
             }
-        , rideDetails = {
-              destination : state.data.destination
-            , destinationTitle :(fromMaybe "" ((split (Pattern ",") (state.data.destination)) !! 0))
-            , source :state.data.source
-            , sourceTitle : (fromMaybe "" ((split (Pattern ",") (state.data.source)) !! 0))
-            , rideStartTime : state.data.rideStartTime
-            , rideStartDate : state.data.rideStartDate
-            , estimatedDistance : state.props.estimatedDistance
+        , rideDetails {
+              destination = state.data.destination
+            , destinationTitle =(fromMaybe "" ((split (Pattern ",") (state.data.destination)) !! 0)) 
+            , source =state.data.source   
+            , sourceTitle = (fromMaybe "" ((split (Pattern ",") (state.data.source)) !! 0))
+            , rideStartTime = state.data.rideStartTime
+            , rideStartDate = state.data.rideStartDate
+            , estimatedDistance = state.props.estimatedDistance
         }
       }
   in fareBreakUpConfig'
@@ -346,45 +329,41 @@ sourceToDestinationConfig state = let
     , sourceMargin = (Margin 0 0 0 14)
     , lineMargin = (Margin 19 7 0 0)
     , sourceImageConfig {
-        imageUrl = "ny_ic_source_dot,https://assets.juspay.in/nammayatri/images/common/ny_ic_source_dot.png"
-      , height = V 33
-      , width = V 33
+        imageUrl = "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
+      , height = V 33 
+      , width = V 33 
       , margin = (Margin 4 0 0 0)
       }
     , rideStartedAtConfig {
         text = state.data.rideStartTime
-      , textSize = FontSize.a_12
       , visibility = VISIBLE
       , padding = (Padding 1 1 1 1)
       , margin = (Margin 5 2 0 0)
       }
     , sourceTextConfig {
         text = state.data.source
-      , textSize = FontSize.a_14
       , padding = (Padding 2 0 2 2)
       , margin = (Margin 5 0 15 0)
-      , fontStyle = FontStyle.medium LanguageStyle
       , ellipsize = true
       , maxLines = 1
+      , textStyle = FontStyle.Body1
       }
     , destinationImageConfig {
-        imageUrl = "ic_location_marker,https://assets.juspay.in/nammayatri/images/user/ic_location_marker.png"
+        imageUrl = "ic_location_marker," <> (getAssetStoreLink FunctionCall) <> "ic_location_marker.png"
       , height = V 17
       , width = V 14
       , margin = (Margin 13 2 0 0)
       }
     , destinationTextConfig {
         text = state.data.destination
-      , textSize = FontSize.a_14
       , padding = (Padding 2 0 2 2)
       , margin = (Margin 14 0 15 0)
       , maxLines = 1
-      , fontStyle = FontStyle.medium LanguageStyle
       , ellipsize = true
+      , textStyle = FontStyle.Body1
       }
     , rideEndedAtConfig {
         text  = state.data.rideEndTime
-      , textSize = FontSize.a_12
       , visibility = VISIBLE
       , padding = (Padding 1 1 1 1)
       , margin = (Margin 13 2 0 0)

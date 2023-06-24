@@ -89,8 +89,8 @@ const hindiStrings = {
   "LANGUAGE": "भाषा",
   "OTP": "ओटीपी",
   "PAYMENT_METHOD": "भुगतान का तरीका",
-  "PAYMENT_METHOD_STRING": "नकद/किसी भी UPI ऐप का उपयोग करें",
-  "CANCEL_RIDE": "सवारी रद्द करें",
+  "PAYMENT_METHOD_STRING": "कैश / यूपीआई ऐप का इस्तेमाल करें",
+  "CANCEL_RIDE": "मेरी राइड रद्द करें",
   "SUPPORT": "सहायता",
   "PICKUP_AND_DROP": "पिकअप और ड्रॉप",
   "CANCELLED": "रद्द",
@@ -490,5 +490,6 @@ const hindiStrings = {
   "GO_BACK_TEXT": "पीछे जाएं",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST": "ड्राइवर ने आपके विशेष अनुरोध को प्राथमिकता दी और वह केवल ",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST": "ड्राइवर ने आपके विशेष अनुरोध को प्राथमिकता दी और पहले ही ",
-  "AND_HAS_TRAVELLED": " किमी की यात्रा कर चुका है।"
+  "AND_HAS_TRAVELLED": " किमी की यात्रा कर चुका है।",
+  "PLATFORM_FEE" : "प्लेटफार्म शुल्क"
 }

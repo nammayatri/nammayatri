@@ -21,6 +21,8 @@ import Common.Types.App (OptionButtonList)
 import PrestoDOM ( Length(..) )
 import Font.Size as FontSize
 import Styles.Colors as Color
+import MerchantConfig.DefaultConfig as DC
+import MerchantConfig.Types (AppConfig)
 
 
 data Action = Button1 PrimaryButtonController.Action
@@ -47,6 +49,7 @@ type Config = {
     , hint :: String
     , strings :: StringConfig
     , topLeftIcon :: Boolean
+    , config :: AppConfig
 }
 
 type StringConfig = {
@@ -115,4 +118,5 @@ config =
     , primaryButtonVisibility : true
     , secondaryButtonVisibility : true
     , topLeftIcon : false
+    , config : DC.config
 }

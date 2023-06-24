@@ -20,6 +20,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.FareBreakUp as FareBreakUp
 import Components.SourceToDestination as SourceToDestination
 import Data.Maybe
+import MerchantConfig.Types
 
 data Action = NoAction
             | BackPressed
@@ -64,4 +65,5 @@ type RatingCardData =
   , offeredFare :: Int
   , distanceDifference :: Int
   , feedback :: String
+  , appConfig :: AppConfig
   }

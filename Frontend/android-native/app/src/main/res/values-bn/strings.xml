@@ -27,7 +27,7 @@
     <string name="location">অবস্থান</string>
     <string name="phone">ফোন</string>
     <string name="includes_pickup_charges_10">পিকআপ চার্জ ₹ 10 অন্তর্ভুক্ত</string>
-    <string name="away" >দূরে</string>
+    <string name="away">দূরে</string>
     <string name="we_made_you_online">আমরা আপনাকে অনলাইনে তৈরি করেছি</string>
     <string name="location_is_turned_on">অবস্থান চালু করা হয়</string>
     <string name="waiting_for_gps_signal">জিপিএস সিগন্যালের জন্য অপেক্ষা করছি</string>

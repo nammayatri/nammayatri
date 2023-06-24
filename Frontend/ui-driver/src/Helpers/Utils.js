@@ -382,6 +382,7 @@ export const storeCallBackForNotification = function (cb) {
           var callback = callbackMapper.map(function (notificationType) {
             cb(action(notificationType))();
           });
+          window.onResumeListeners = [];
           JBridge.storeCallBackForNotification(callback);
       }
   }}
@@ -609,4 +610,9 @@ const zoneConfig = {
     "cancelText" : "ZONE_CANCEL_TEXT_DROP",
     "cancelConfirmImage" : "ic_cancelride_metro_drop,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_drop.png"
   } //More zoneConfigs can be added
+}
+
+
+export const getMerchantId = function(id) {
+  return window.merchantID;
 }

@@ -23,10 +23,12 @@ import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.SelectLanguageScreen.View as SelectLanguageScreen
 import Types.App (GlobalState(..), FlowBT, SELECT_LANGUAGE_SCREEN_OUTPUT(..))
+import MerchantConfig.Utils (getAppConfig)
 
 selectLanguageScreen :: FlowBT String SELECT_LANGUAGE_SCREEN_OUTPUT
 selectLanguageScreen = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ SelectLanguageScreen.screen state.selectedLanguageScreen
+  config <- getAppConfig
+  action <- lift $ lift $ runScreen $ SelectLanguageScreen.screen state.selectedLanguageScreen{data{config = config}}
   case action of
     GoBack -> App.BackT $ App.NoBack <$> pure CHANGE_LANGUAGE

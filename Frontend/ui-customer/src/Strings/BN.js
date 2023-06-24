@@ -88,7 +88,7 @@ const bengaliStrings = {
   "LANGUAGE": "ভাষা",
   "OTP": "ওটিপি",
   "PAYMENT_METHOD": "অর্থপ্রদানের পদ্ধতি",
-  "PAYMENT_METHOD_STRING": "নগদ / কোনও ইউপিআই অ্যাপ্লিকেশন অ্যাপ্লিকেশন করুন করুন",
+  "PAYMENT_METHOD_STRING": "নগদ / UPI অ্যাপ ব্যবহার করুন",
   "CANCEL_RIDE": "যাত্রা বাতিল করুন",
   "SUPPORT": "সমর্থন",
   "PICKUP_AND_DROP": "পিকআপ এবং ড্রপ",
@@ -466,5 +466,6 @@ const bengaliStrings = {
   "METRO_RIDE": "মেট্রো রাইড",
   "GO_BACK_TEXT": "ফিরে যাও",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST": "ড্রাইভার আপনার বিশেষ অনুরোধ পছন্দ করেছে এবং মাত্র ",
-  "WE_URGE_YOU_NOT_TO_CANCEL": " মিটার দূরে। আমরা আপনাকে রাইড বাতিল না করার জন্য অনুরোধ করছি"
+  "WE_URGE_YOU_NOT_TO_CANCEL": " মিটার দূরে। আমরা আপনাকে রাইড বাতিল না করার জন্য অনুরোধ করছি",
+  "PLATFORM_FEE" : "প্ল্যাটফর্ম ফি"
 }

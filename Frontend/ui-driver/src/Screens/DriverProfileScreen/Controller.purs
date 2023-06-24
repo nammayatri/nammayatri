@@ -34,6 +34,11 @@ import Services.Backend (dummyVehicleObject)
 import Storage (setValueToLocalNativeStore, KeyStore(..))
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(LIVE_STATS_DASHBOARD))
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>), (/=), (==))
+import Engineering.Helpers.LogEvent (logEvent)
+import Effect.Unsafe (unsafePerformEffect)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -106,7 +111,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
     "Rides" -> exit $ GoToDriverHistoryScreen
     "Alert" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
+      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
       exit $ GoToNotifications
     "Contest" -> do
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"

@@ -18,9 +18,10 @@ module Screens.PermissionScreen.View where
 import Components.ErrorModal as ErrorModal
 import Components.PrimaryButton as PrimaryButton
 import Effect (Effect)
-import Engineering.Helpers.Commons as EHC 
+import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -58,7 +59,7 @@ view triggertype push state =
      , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
      , gravity CENTER
      , afterRender push (const AfterRender)
-     ][ if triggertype == "INTERNET_ACTION" then ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig) else if triggertype == "LOCATION_DISABLED" then locationAccessPermissionView push state else  textView[]]  
+     ][ if triggertype == "INTERNET_ACTION" then ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig state) else if triggertype == "LOCATION_DISABLED" then locationAccessPermissionView push state else  textView[]]  
    ]
   
 locationAccessPermissionView :: forall w. (Action -> Effect Unit) -> ST.PermissionScreenState -> PrestoDOM (Effect Unit) w 
@@ -115,7 +116,7 @@ buttonView push state  =
   , height WRAP_CONTENT
   , width MATCH_PARENT
   , alignParentBottom "true,-1"
-  ][  PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig)
+  ][  PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
   -- ,  textView $
   --     [ text (getString DENY_ACCESS)
   --     , width MATCH_PARENT

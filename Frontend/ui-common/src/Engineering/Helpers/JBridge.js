@@ -404,10 +404,12 @@ export const datePicker = function (label)
 export const setFCMToken = function (cb) {
   return function (action) {
     return function () {
-      var callback = callbackMapper.map(function (id) {
-        cb(action(id))();
-      });
-      return window.JBridge.setFCMToken(callback);
+      if (window.JBridge.setFCMToken) {
+        var callback = callbackMapper.map(function (id) {
+          cb(action(id))();
+        });
+        return window.JBridge.setFCMToken(callback);
+      }
     };
   };
   // JBridge.setFCMToken();
@@ -568,19 +570,10 @@ export const updateRoute = function (data) {
         return function () {
           if (window.JBridge.updateRoute) {
             var json = JSON.stringify(data);
-            try {
-              console.log("I AM HERE ------------------ IN UPDATE ROUTE");
-              return window.JBridge.updateRoute(json, destMarker, eta, JSON.stringify(specialLocation));
-            } catch (err) {
-              console.log("Catch error" + err);
-              /*
-              * This Function is deprecated on 12 Jan - 2023
-              * Remove this function once it is not begin used.
-              */
-              return window.JBridge.updateRoute(json, destMarker, eta);
-            }
+            console.log("I AM HERE ------------------ IN UPDATE ROUTE");
+            return window.JBridge.updateRoute(json, destMarker, eta, JSON.stringify(specialLocation));
           }
-        };
+        }
       };
     };
   };
@@ -612,18 +605,16 @@ export const storeCallBackOpenChatScreen = function (cb) {
             var callback = callbackMapper.map(function(){
               cb(action)();
             });
+            var openChatScreen = function(){
+              cb(action)();
+            };
+            window.openChatScreen = openChatScreen;
             if(window.JBridge.storeCallBackOpenChatScreen) {
               window.JBridge.storeCallBackOpenChatScreen(callback);
             }
         };
       };
   };
-
-export const openChatScreen = function() {
-  if (window.JBridge.openChatScreen) {
-    window.JBridge.openChatScreen();
-  }
-}
 
 export const startChatListenerService = function() {
   if (JBridge.startChatListenerService) {
@@ -878,8 +869,10 @@ export const firebaseLogEventWithTwoParams = function (event) {
 };
 
 export const firebaseLogEvent = function (str) {
-  if (window.JBridge.firebaseLogEvent){
-      window.JBridge.firebaseLogEvent(str);
+  return function () {
+    if (window.JBridge.firebaseLogEvent){
+        window.JBridge.firebaseLogEvent(str);
+    }
   }
 };
 
@@ -926,14 +919,20 @@ export const _onEventWithCB = function (payload) {
 // exports.getSessionInfo = JSON.parse(JBridge.getDeviceInfo());
 
 export const getKeyInSharedPrefKeys = function (key) {
-  return window.JBridge.getKeysInSharedPrefs(key);
+  if (JBridge.getKeysInSharedPref){
+    return JBridge.getKeysInSharedPref(key);
+  }
+  return JBridge.getKeysInSharedPrefs(key);
 };
 
 export const getKeyInNativeSharedPrefKeys = function (key) {
+  if (JBridge.getKeysInSharedPref) {
+    return JBridge.getKeysInSharedPref(key);
+  }
   if (window.__OS == "IOS") {
-    return window.JBridge.getKeysInSharedPrefs(key);
-  } else {
-    return window.JBridge.getKeyInNativeSharedPrefKeys(key);
+    return JBridge.getKeysInSharedPrefs(key);
+  } else { 
+    return JBridge.getKeyInNativeSharedPrefKeys(key);
   }
 };
 
@@ -945,11 +944,7 @@ export const setKeyInSharedPrefKeysImpl = function (key) {
 
 export const setEnvInNativeSharedPrefKeysImpl = function (key) {
   return function (value) {
-    if (window.__OS == "IOS") {
-      window.JBridge.setKeysInSharedPrefs(key, value);
-    } else {
-      window.JBridge.setEnvInNativeSharedPrefKeys(key, value);
-    }
+      JBridge.setKeysInSharedPrefs(key, value);
   };
 };
 
@@ -960,19 +955,11 @@ export const setEnvInNativeSharedPrefKeysImpl = function (key) {
 // };
 
 export const removeKeysInSharedPrefs = function (key) {
-  if (window.__OS == "IOS") {
-    return window.JBridge.removeFromSharedPrefs(key);
-  } else {
-    return window.JBridge.removeKeysInSharedPrefs(key);
-  }
+    return JBridge.removeFromSharedPrefs(key);
 };
 
 export const removeKeysInNativeSharedPrefs = function (key) {
-  if (window.__OS == "IOS") {
-    window.JBridge.removeFromSharedPrefs(key);
-  } else {
-    window.JBridge.removeKeysInNativeSharedPrefs(key);
-  }
+    JBridge.removeFromSharedPrefs(key);
 };
 
 export const toggleLoaderImpl = function (showLoader) {
@@ -1033,12 +1020,19 @@ export const storeCallBackDriverLocationPermission = function (cb) {
   try {
   return function (action) {
       return function () {
+          var locationCallBack = function () {
+            var isPermissionEnabled = isLocationPermissionEnabled()() && isLocationEnabled()()
+            cb(action (isPermissionEnabled))();
+          };
           var callback = callbackMapper.map(function (isLocationPermissionGranted) {
-              cb(action (isLocationPermissionGranted))();
+            cb(action (isLocationPermissionGranted))();
           });
-          console.log("In storeCallBackDriverLocationPermission ---------- + " + action);
+          if (window.onResumeListeners){
+            window.onResumeListeners.push(locationCallBack);
+          };
           window.JBridge.storeCallBackDriverLocationPermission(callback);
-      }
+          console.log("In storeCallBackDriverLocationPermission ---------- + " + action);
+      }    
   }}
   catch (error){
       console.log("Error occurred in storeCallBackDriverLocationPermission ------", error);
@@ -1083,12 +1077,18 @@ export const storeCallBackOverlayPermission = function (cb) {
           var callback = callbackMapper.map(function (isOverlayPermission) {
               cb(action (isOverlayPermission))();
           });
-          console.log("In storeCallBackOverlapPermission ---------- + " + action);
-          window.JBridge.storeCallBackOverlayPermission(callback);
-      }
+          var overlayCallBack = function () {
+            var isPermissionEnabled = JBridge.isOverlayPermissionEnabled()
+            cb(action (isPermissionEnabled))();
+          }
+          if (window.onResumeListeners){
+            window.onResumeListeners.push(overlayCallBack);
+          }
+          console.log("In storeCallBackOverlayPermission ---------- + " + action);
+      }    
   }}
   catch (error){
-      console.log("Error occurred in storeCallBackOverlapPermission ------", error);
+      console.log("Error occurred in storeCallBackOverlayPermission ------", error);
   }
 }
 
@@ -1099,9 +1099,15 @@ export const storeCallBackBatteryUsagePermission = function (cb) {
           var callback = callbackMapper.map(function (isPermissionEnabled) {
               cb(action (isPermissionEnabled))();
           });
+          var batteryCallBack = function () {
+            var isPermissionEnabled = JBridge.isBatteryPermissionEnabled()
+            cb(action (isPermissionEnabled))();
+          }
+          if (window.onResumeListeners){
+            window.onResumeListeners.push(batteryCallBack);
+          }
           console.log("In storeCallBackBatteryUsagePermission ---------- + " + action);
-          window.JBridge.storeCallBackBatteryUsagePermission(callback);
-      }
+      }    
   }}
   catch (error){
       console.log("Error occurred in storeCallBackBatteryUsagePermission ------", error);
@@ -1193,20 +1199,12 @@ export const requestKeyboardShow = function(id) {
   JBridge.requestKeyboardShow(id);
 }
 
-export const locateOnMap = function (str) {
-  return function (lat) {
-    return function (lon) {
-      return function (geoJson) {
-        return function (coodinates) {
-          try {
-            return JBridge.locateOnMap(str, lat, lon, geoJson, JSON.stringify(coodinates));
-          } catch (err) {
-            return JBridge.locateOnMap(str, lat, lon);
-          }s
-        };
-      };
-    };
-  };
+export const locateOnMap = function (str, lat, lon, geoJson, coodinates) {
+  try {
+    return JBridge.locateOnMap(str, lat, lon, geoJson, JSON.stringify(coodinates));
+  } catch (err) {
+    return JBridge.locateOnMap(str, lat, lon);
+  }
 };
 
 export const exitLocateOnMap = function(str){
@@ -1306,16 +1304,18 @@ export const startLottieProcess = function (rawJson) {
     return function (loop) {
       return function (speed) {
         return function (scaleType){
+          console.log("rawJson ",rawJson);
           if (JBridge.startLottieProcess) {
-            try {
-              return JBridge.startLottieProcess(rawJson,lottieId, loop, speed, scaleType);
-            } catch (err) {
-              /*
-              * This Function is deprecated on 12 Jan - 2023
-              * Remove this function once it is not begin used.
-              */
-              return JBridge.startLottieProcess(rawJson,lottieId, loop, speed);
+            var lottieName = "";
+            var fileName = rawJson.substr(rawJson.lastIndexOf("/") + 1);
+            console.log("fileName ",fileName);
+            if (JBridge.isFilePresentDeep) {
+              lottieName = JBridge.isFilePresentDeep(fileName) ? (fileName.slice(0,fileName.lastIndexOf("."))) : rawJson;
+            } else {
+              lottieName = JBridge.isFilePresent(fileName) ? (fileName.slice(0,fileName.lastIndexOf("."))) : rawJson;
             }
+            console.log("rawJson ",lottieName);
+            return JBridge.startLottieProcess(lottieName,lottieId, loop, speed, scaleType);
           }
         };
       };
@@ -1446,3 +1446,31 @@ export const detectPhoneNumbers = function (cb) {
     };
   };
 };
+export const emitJOSEvent = function (mapp,eventType,payload) {
+  var event = payload.split(",");
+  var resultPayload = {};
+  if (event[0] == "event") {
+    resultPayload = {
+      event : event[1]
+    }
+  } else if (event[0] == "action") {
+    resultPayload = {
+      event : "process_result",
+      payload : {
+        action : event[1]
+      }
+    }
+  }
+  JOS.emitEvent(mapp)(eventType)(JSON.stringify(resultPayload))()()
+}
+
+export const getMerchantConfig = function (just) {
+  return function (nothing) {
+    return function () {
+      if (typeof window.appConfig !== "undefined") {
+        return just(window.appConfig);
+      }
+      return nothing;
+    }
+  }
+}

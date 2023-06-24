@@ -45,6 +45,7 @@ import Data.String (length, trim)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Common.Types.App (LazyCheck(..))
 import Screens.HelpAndSupportScreen.ScreenData (initData)
+import MerchantConfig.DefaultConfig as DC
 
 instance showAction :: Show Action where
     show _ = ""
@@ -252,7 +253,8 @@ myRideListTransform listRes = filter (\item -> (item.data.status == "COMPLETED")
           rideId : ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._id),
           tripId : ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._shortRideId),
           bookingId : ride.id,
-          faresList :  getFaresList ride.fareBreakup baseDistanceVal,
+          faresList : updatedFareList,
+          config : DC.config,
           email : "",
           description : "",
           accountStatus : ACTIVE

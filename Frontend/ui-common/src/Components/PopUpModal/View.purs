@@ -45,7 +45,6 @@ view push state =
     , background Color.black9000
     , afterRender
         ( \action -> do
-            _ <- push action
             if (state.option2.enableTimer || state.option1.enableTimer) then do
               let
                 timerValue' = if state.option2.enableTimer then state.option2.timerValue else state.option1.timerValue
@@ -109,17 +108,15 @@ view push state =
             , height WRAP_CONTENT
             , orientation HORIZONTAL
             ]
-            [ textView
+            [ textView $
                 [ text $ state.primaryText.text
-                , textSize $ state.primaryText.fontSize
-                , fontStyle $ state.primaryText.fontStyle
                 , color $ state.primaryText.color
                 , margin $ state.primaryText.margin
                 , gravity $ state.primaryText.gravity
                 , width if state.dismissPopupConfig.visibility == VISIBLE then WRAP_CONTENT else MATCH_PARENT
                 , height WRAP_CONTENT
                 , visibility $ state.primaryText.visibility
-                ]
+                ] <> (FontStyle.getFontStyle state.primaryText.textStyle LanguageStyle)
             , linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
@@ -142,18 +139,16 @@ view push state =
                     ]
                 ]
             ]
-        , textView
+        , textView $
             [ width MATCH_PARENT
             , height WRAP_CONTENT
-            , fontStyle $ FontStyle.medium LanguageStyle
             , color $ state.secondaryText.color
-            , textSize FontSize.a_15
             , gravity $ state.secondaryText.gravity
             , padding state.secondaryText.padding
             , margin $ state.secondaryText.margin
             , text $ state.secondaryText.text
             , visibility $ state.secondaryText.visibility
-            ]
+            ] <> FontStyle.body1 TypoGraphy
         , contactView push state
         , linearLayout
             [ height WRAP_CONTENT
@@ -194,15 +189,13 @@ view push state =
                         )
                         (const OnButton1Click)
                     ]
-                    [ textView
+                    [ textView $
                         [ width WRAP_CONTENT
                         , height WRAP_CONTENT
                         , text $ if state.option1.enableTimer && state.option1.timerValue > 0 then (state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else state.option1.text
                         , color $ state.option1.color
-                        , fontStyle $ state.option1.fontStyle
-                        , textSize state.option1.fontSize
                         , gravity CENTER
-                        ]
+                        ] <> (FontStyle.getFontStyle state.option1.textStyle LanguageStyle)
                     ]
                 , linearLayout
                     [ if state.option1.visibility then width state.option2.width else weight 1.0
@@ -225,15 +218,13 @@ view push state =
                     , clickable state.option2.isClickable
                     , alpha (if state.option2.isClickable then 1.0 else 0.5)
                     ]
-                    [ textView
+                    [ textView $ 
                         [ width WRAP_CONTENT
                         , height WRAP_CONTENT
                         , text $ if state.option2.enableTimer && state.option2.timerValue > 0 then (state.option2.text <> " (" <> (show state.option2.timerValue) <> ")") else state.option2.text
                         , color state.option2.color
-                        , fontStyle $ state.option2.fontStyle
-                        , textSize state.option2.fontSize
                         , gravity CENTER
-                        ]
+                        ] <> (FontStyle.getFontStyle state.option2.textStyle LanguageStyle)
                     ]
                 ]
             ]
@@ -257,10 +248,9 @@ tipsView push state =
               , weight 1.0
               , margin $ state.tipButton.margin
               ]
-              [ textView
+              [ textView $
                   [ text $ ("" <> item)
                   , color $ state.tipButton.color
-                  , textSize $ state.tipButton.fontSize
                   , visibility if state.tipButton.visibility then VISIBLE else GONE
                   , clickable $ state.tipButton.isClickable
                   , stroke $ "1," <> (if (state.activeIndex == index) then Color.blue800 else Color.grey900)
@@ -268,10 +258,9 @@ tipsView push state =
                   , width WRAP_CONTENT
                   , height WRAP_CONTENT
                   , padding state.tipButton.padding
-                  , fontStyle $ state.tipButton.fontStyle
                   , onClick push $ const $ Tipbtnclick index (fromMaybe 100 (state.customerTipArrayWithValues !! index))
                   , background (if (state.activeIndex == index) then Color.blue600 else state.tipButton.background)
-                  ]
+                  ] <> (FontStyle.getFontStyle state.tipButton.textStyle LanguageStyle)
               ]
         )
         (state.customerTipArray)
@@ -309,24 +298,20 @@ contactView push state =
             , cornerRadius 12.0
             , gravity CENTER
             ]
-            [ textView
+            [ textView $
                 [ text state.contactViewConfig.nameInitials
                 , color Color.black800
-                , textSize FontSize.a_12
-                ]
+                ] <> FontStyle.body3 TypoGraphy
             ]
         , linearLayout
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , padding state.contactViewConfig.padding
             ]
-            [ textView
+            [ textView $
                 [ text state.contactViewConfig.fullName
                 , color Color.black800
-                , textSize FontSize.a_16
-                , lineHeight "20"
-                , fontStyle $ FontStyle.semiBold LanguageStyle
-                ]
+                ] <> FontStyle.subHeading1 TypoGraphy
             ]
         ]
     ]

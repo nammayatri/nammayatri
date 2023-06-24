@@ -88,8 +88,8 @@ const kannadaStrings = {
   "LANGUAGE": "ಭಾಷೆಗಳು",
   "OTP": "ಒತ್ತು",
   "PAYMENT_METHOD": "ಪಾವತಿ ವಿಧಾನ",
-  "PAYMENT_METHOD_STRING": "ನಗದು / ಯಾವುದೇ UPI ಅಪ್ಲಿಕೇಶನ್ ಬಳಸಿ",
-  "CANCEL_RIDE": "ಸವಾರಿ ರದ್ದುಗೊಳಿಸಿ",
+  "PAYMENT_METHOD_STRING": "ನಗದು / UPI ಅಪ್ಲಿಕೇಶನ್ ಬಳಸಿ",
+  "CANCEL_RIDE": "ನನ್ನ ಸವಾರಿಯನ್ನು ರದ್ದುಮಾಡಿ",
   "SUPPORT": "ಬೆಂಬಲ",
   "PICKUP_AND_DROP": "ಪಿಕಪ್ ಮತ್ತು ಡ್ರಾಪ್",
   "CANCELLED": "ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ",
@@ -484,5 +484,6 @@ const kannadaStrings = {
   "GO_BACK_TEXT": "ಹಿಂದೆ ಹೋಗು",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST": "ಚಾಲಕ ನಿಮ್ಮ ವಿಶೇಷ ವಿನಂತಿಯನ್ನು ಆದ್ಯತೆ ನೀಡಿದ್ದಾರೆ ಮತ್ತು ಕೇವಲ ",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST": "ಚಾಲಕರು ನಿಮ್ಮ ವಿಶೇಷ ವಿನಂತಿಯನ್ನು ಆದ್ಯತೆ ನೀಡಿದ್ದಾರೆ ಮತ್ತು ಈಗಾಗಲೇ ",
-  "AND_HAS_TRAVELLED": " ಕಿಮೀ ಪ್ರಯಾಣಿಸಿದ್ದಾರೆ."
+  "AND_HAS_TRAVELLED": " ಕಿಮೀ ಪ್ರಯಾಣಿಸಿದ್ದಾರೆ.",
+  "PLATFORM_FEE" : "ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಶುಲ್ಕ"
 }

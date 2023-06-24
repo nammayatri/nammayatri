@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Main where
 
 import Common.Types.App (GlobalPayload)
@@ -62,10 +61,12 @@ main event = do
         pure unit
 
 onEvent :: String -> Effect Unit
-onEvent "onBackPressed" = do
-  _ <- pure $ JBridge.toggleBtnLoader "" false
-  PrestoDom.processEvent "onBackPressedEvent" unit
-onEvent _ = pure unit
+onEvent event = do
+  _ <- pure $ toggleBtnLoader "" false
+  case event of 
+    "onBackPressed" -> do
+      PrestoDom.processEvent "onBackPressedEvent" unit
+    _ -> pure unit
 
 onConnectivityEvent :: String -> Effect Unit
 onConnectivityEvent triggertype = do

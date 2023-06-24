@@ -88,7 +88,7 @@ const englishStrings = {
   "LANGUAGE": "Language",
   "OTP": "OTP",
   "PAYMENT_METHOD": "Payment Method",
-  "PAYMENT_METHOD_STRING": "Cash / Use any UPI app",
+  "PAYMENT_METHOD_STRING": "Cash / Use UPI app",
   "CANCEL_RIDE": "Cancel Ride",
   "SUPPORT": "Support",
   "PICKUP_AND_DROP": "Pickup and Drop",
@@ -490,5 +490,6 @@ const englishStrings = {
   "GO_BACK_TEXT" : "Go Back",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST": "The driver preferred your special request and is just ",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST": "The driver preferred your special request and has travelled ",
-  "AND_HAS_TRAVELLED": " km."
+  "AND_HAS_TRAVELLED": " km.",
+  "PLATFORM_FEE" : "Platform Fee"
 }

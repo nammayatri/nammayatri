@@ -87,8 +87,8 @@ const malayalamStrings = {
   "LANGUAGE": "ഭാഷ",
   "OTP": "OTP",
   "PAYMENT_METHOD": "പണമടയ്ക്കൽ രീതി",
-  "PAYMENT_METHOD_STRING": "ക്യാഷ് / യുപിഐ ",
-  "CANCEL_RIDE": "സവാരി റദ്ദാക്കുക",
+  "PAYMENT_METHOD_STRING": "പണം / UPI ആപ്പ് ഉപയോഗിക്കുക",
+  "CANCEL_RIDE": "എന്റെ റൈഡ് റദ്ദാക്കുക",
   "SUPPORT": "സപ്പോർട്ട്",
   "PICKUP_AND_DROP": "പിക്കപ്പ്, ഡ്രോപ്പ്",
   "CANCELLED": "റദ്ദാക്കി",
@@ -466,5 +466,6 @@ const malayalamStrings = {
   "METRO_RIDE" : "മെട്രോ റൈഡ്",
   "GO_BACK_TEXT": "മടങ്ങിപ്പോവുക",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST": "ഡ്രൈവർ നിങ്ങളുടെ പ്രത്യേക അഭ്യർത്ഥന തിരഞ്ഞെടുത്തു, അത് ",
-  "WE_URGE_YOU_NOT_TO_CANCEL": " മീറ്റർ അകലെയാണ്. യാത്ര റദ്ദാക്കരുതെന്ന് ഞങ്ങൾ നിങ്ങളോട് അഭ്യർത്ഥിക്കുന്നു"
+  "WE_URGE_YOU_NOT_TO_CANCEL": " മീറ്റർ അകലെയാണ്. യാത്ര റദ്ദാക്കരുതെന്ന് ഞങ്ങൾ നിങ്ങളോട് അഭ്യർത്ഥിക്കുന്നു",
+  "PLATFORM_FEE" : "പ്ലാറ്റ്ഫോം ഫീസ്"
 }

@@ -41,9 +41,7 @@ primaryEditTextConfig dummy = let
       , margin = (Margin 0 0 0 0)
       , id = getNewIDWithTag "submit_chat_edit_text"
       , editText
-        { fontStyle = FontStyle.medium LanguageStyle
-        , textSize = FontSize.a_16
-        , placeholder = (getString REPORT_ISSUE_CHAT_PLACEHOLDER)
+        { placeholder = (getString REPORT_ISSUE_CHAT_PLACEHOLDER)
         , singleLine = false
         }
       }
@@ -75,7 +73,7 @@ addAudioModelConfig state =
         {
           editTextVisibility = VISIBLE
         -- , dismissPopupConfig { visibility = VISIBLE, height = V 12, width = V 12, margin = (Margin 0 21 22 0), padding = (Padding 8 8 8 8) }
-        , eTextConfig { editText { placeholder = (getString ENTER_YOUR_COMMENT), fontStyle = FontStyle.medium LanguageStyle, textSize = FontSize.a_14 }, topLabel { visibility = GONE, fontStyle = FontStyle.medium LanguageStyle, text = (getString ENTER_YOUR_COMMENT), color = Color.black900 }, margin = (Margin 16 16 16 0) }
+        , eTextConfig { editText { placeholder = (getString ENTER_YOUR_COMMENT), text = (getString ENTER_YOUR_COMMENT), color = Color.black900 }, margin = (Margin 16 16 16 0) }
         , primaryText { text = (getString ADD_A_COMMENT) }
         , secondaryText { visibility = GONE }
         -- , option1 { visibility = false }
@@ -85,8 +83,6 @@ addAudioModelConfig state =
           , color = Color.blue800
           , strokeColor = Color.white900
           , padding = (Padding 16 0 16 0)
-          , fontSize = FontSize.a_16
-          , fontStyle = FontStyle.medium LanguageStyle
           -- , isClickable = state.commentBtnActive
           }
         -- , cornerRadius = (Corners 15.0 true true true true)
@@ -100,8 +96,7 @@ doneButtonConfig state = let
     primaryButtonConfig' = config
       { textConfig
       { text = (getString PLACE_CALL)
-      , color = Color.primaryButtonColor
-      , textSize = FontSize.a_18}
+      , color = Color.primaryButtonColor}
       , cornerRadius = 8.0
       , background = Color.black900
       , height = (V 60)
@@ -114,8 +109,7 @@ cancelButtonConfig state = let
     primaryButtonConfig' = config
       { textConfig
       { text = (getString CANCEL)
-      , color = Color.black700
-      , textSize = FontSize.a_18}
+      , color = Color.black700}
       , cornerRadius = 8.0
       , background = Color.white900
       , stroke = "1,"<>Color.black700

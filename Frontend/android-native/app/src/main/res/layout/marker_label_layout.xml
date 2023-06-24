@@ -40,7 +40,7 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:src="@drawable/ny_ic_dest_marker"
-            android:id="@+id/pointer_img"/>
+            android:id="@+id/pointer_img" />
     </LinearLayout>
 
 </LinearLayout>

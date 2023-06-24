@@ -15,7 +15,7 @@
 
 module Components.UpdateErrorModal.View where
 
-import Prelude (Unit, const, (<<<), ($), (-), unit)
+import Prelude (Unit, const, (<<<), ($), (-), unit, (<>))
 import Effect (Effect)
 import Components.UpdateErrorModal.Controller (Action(..), Config)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, layoutGravity, alpha, scrollView, cornerRadius, visibility, stroke, onBackPressed, relativeLayout, imageWithFallback)
@@ -23,6 +23,8 @@ import Common.Styles.Colors as Color
 import PrestoDOM.Properties(cornerRadii)
 import Engineering.Helpers.Commons (screenWidth)
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import Font.Style as FontStyle
+import Common.Types.App (LazyCheck(..))
 
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -50,17 +52,15 @@ errorView config push =
       , margin config.starterLayout.margin
       , gravity CENTER
       , cornerRadii $ Corners 10.0 false true true false
-      ][  textView
+      ][  textView $
           [ height config.textConfig.height
           , text config.textConfig.text
           , padding config.textConfig.padding
           , margin config.textConfig.margin
           , gravity config.textConfig.gravity
           , color config.textConfig.color
-          , textSize config.textConfig.textSize
           , weight config.textConfig.weight
-          , fontStyle config.textConfig.fontStyle
-          ],
+          ] <> (FontStyle.getFontStyle config.textConfig.textStyle LanguageStyle),
           imageView
           [ width config.imageConfig.width
           , height config.imageConfig.height

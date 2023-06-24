@@ -17,6 +17,8 @@ module Styles.Colors where
 
 import Styles.Types
 
+import MerchantConfig.Utils (getValueFromConfig)
+
 -- Text Color
 
 textListItemTitle :: Color
@@ -297,10 +299,10 @@ redCircleColor :: Color
 redCircleColor = "#E94040"
 
 black800 :: Color
-black800 = "#454545"
+black800 = getValueFromConfig "black800"
 
 black900 :: Color
-black900 = "#2C2F3A"
+black900 = getValueFromConfig "black900"
 
 blackLightGrey :: Color
 blackLightGrey = "#949494"
@@ -366,7 +368,7 @@ pinkPantone :: Color
 pinkPantone = "#f5c6c6"
 
 red :: Color
-red = "#E55454"
+red = getValueFromConfig "red"
 
 yellow800 :: Color
 yellow800 = "#FEEBB9"
