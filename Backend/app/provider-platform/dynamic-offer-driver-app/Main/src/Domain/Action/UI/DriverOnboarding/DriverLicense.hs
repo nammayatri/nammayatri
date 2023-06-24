@@ -189,11 +189,10 @@ onVerifyDL verificationReq output = do
   person <- Person.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
   let key = dlCacheKey person.id
   extractedDlAndOperatingCity <- Redis.safeGet key
+  void $ Redis.del key
   case (output.status, verificationReq.issueDateOnDoc, extractedDlAndOperatingCity, verificationReq.driverDateOfBirth) of
     (Just status, Just issueDate, Just (extractedDL, operatingCity), Just dob) | status == "id_not_found" -> dlNotFoundFallback issueDate (extractedDL, operatingCity) dob verificationReq person
-    _ -> do
-      void $ Redis.del key
-      linkDl person
+    _ -> linkDl person
   where
     linkDl :: Person.Person -> Flow AckResponse
     linkDl person = do
