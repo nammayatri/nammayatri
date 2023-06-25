@@ -1116,16 +1116,7 @@ suggestedPriceView push state =
             pure unit
         )
         (const NoAction)
-  ][  textView
-      [ text $ getString REQUEST_AUTO_RIDE
-      , textSize FontSize.a_22
-      , color Color.black800
-      , gravity CENTER_HORIZONTAL
-      , height WRAP_CONTENT
-      , width MATCH_PARENT
-      , fontStyle $ FontStyle.bold LanguageStyle
-      ]
-    , linearLayout
+  ][  linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation HORIZONTAL
