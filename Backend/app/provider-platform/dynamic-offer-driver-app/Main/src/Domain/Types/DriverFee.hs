@@ -14,9 +14,8 @@
 
 module Domain.Types.DriverFee where
 
-import Data.Time (UTCTime)
 import Domain.Types.Person (Driver)
-import EulerHS.Prelude (Eq, Generic, Int, Read, Show)
+import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney, Money)
 import Kernel.Types.Id
 
@@ -25,9 +24,7 @@ data DriverFee = DriverFee
     shortId :: ShortId DriverFee,
     driverId :: Id Driver,
     govtCharges :: Money,
-    platformFee :: Money,
-    cgst :: HighPrecMoney,
-    sgst :: HighPrecMoney,
+    platformFee :: PlatformFee,
     numRides :: Int,
     payBy :: UTCTime,
     totalEarnings :: Money,
@@ -38,5 +35,12 @@ data DriverFee = DriverFee
     updatedAt :: UTCTime
   }
   deriving (Generic, Show)
+
+data PlatformFee = PlatformFee
+  { fee :: Money,
+    cgst :: HighPrecMoney,
+    sgst :: HighPrecMoney
+  }
+  deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
 data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED deriving (Read, Show, Eq)

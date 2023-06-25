@@ -68,23 +68,35 @@ getStatus (Id personId) = do
           pure fs
     Nothing -> pure Nothing
 
+clearPaymentStatus :: (L.MonadFlow m, MonadTime m) => Id Person -> Bool -> m ()
+clearPaymentStatus personId isActive = do
+  let status = if isActive then DDFS.ACTIVE else DDFS.IDLE
+  updateStatus' False personId status
+
 updateStatus :: (L.MonadFlow m, MonadTime m) => Id Person -> DDFS.FlowStatus -> m ()
-updateStatus (Id personId) flowStatus = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDFS.DriverFlowStatusT
-  let updatedMeshConfig = setMeshConfig modelName
-  now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      void $
-        KV.updateWoReturningWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [ Se.Set BeamDFS.flowStatus flowStatus,
-            Se.Set BeamDFS.updatedAt now
-          ]
-          [Se.Is BeamDFS.personId $ Se.Eq personId]
+updateStatus = updateStatus' True
+
+updateStatus' :: (L.MonadFlow m, MonadTime m) => Bool -> Id Person -> DDFS.FlowStatus -> m ()
+updateStatus' checkForPayment personId flowStatus = do
+  driverStatus <- getStatus personId
+  case driverStatus of
     Nothing -> pure ()
+    Just ds -> when (not checkForPayment || not (isPaymentOverdue ds)) $ do
+      dbConf <- L.getOption KBT.PsqlDbCfg
+      let modelName = Se.modelTableName @BeamDFS.DriverFlowStatusT
+      let updatedMeshConfig = setMeshConfig modelName
+      now <- getCurrentTime
+      case dbConf of
+        Just dbConf' ->
+          void $
+            KV.updateWoReturningWithKVConnector
+              dbConf'
+              updatedMeshConfig
+              [ Se.Set BeamDFS.flowStatus flowStatus,
+                Se.Set BeamDFS.updatedAt now
+              ]
+              [Se.Is BeamDFS.personId $ Se.Eq (getId personId)]
+        Nothing -> pure ()
 
 transformBeamDriverFlowStatusToDomain :: BeamDFS.DriverFlowStatus -> DriverFlowStatus
 transformBeamDriverFlowStatusToDomain BeamDFS.DriverFlowStatusT {..} = do

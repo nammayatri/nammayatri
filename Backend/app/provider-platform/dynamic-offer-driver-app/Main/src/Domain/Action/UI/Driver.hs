@@ -1202,8 +1202,8 @@ getDriverPayments (_, merchantId_) mbFrom mbTo mbLimit mbOffset = do
     buildPaymentResp DDF.DriverFee {..} = do
       let date = utctDay startTime
           totalRides = numRides
-          charges = round $ fromIntegral govtCharges + fromIntegral platformFee + cgst + sgst
-          chargesBreakup = mkChargesBreakup govtCharges platformFee cgst sgst
+          charges = round $ fromIntegral govtCharges + fromIntegral platformFee.fee + platformFee.cgst + platformFee.sgst
+          chargesBreakup = mkChargesBreakup govtCharges platformFee.fee platformFee.cgst platformFee.sgst
       transactionDetails <- findAllByOrderId (cast id)
       let txnInfo = map mkDriverTxnInfo transactionDetails
       return DriverPaymentHistoryResp {..}

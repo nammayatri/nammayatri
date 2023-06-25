@@ -64,6 +64,7 @@ mkPersist
       driverPaymentReminderInterval Seconds
       timeDiffFromUtc Seconds
       minLocationAccuracy Double
+      subscription Bool
       createdAt UTCTime
       updatedAt UTCTime
       Primary merchantId

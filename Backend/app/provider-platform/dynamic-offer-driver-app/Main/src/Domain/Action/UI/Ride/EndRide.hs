@@ -79,7 +79,7 @@ data ServiceHandle m = ServiceHandle
   { findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     getMerchant :: Id DM.Merchant -> m (Maybe DM.Merchant),
-    endRideTransaction :: Id DP.Driver -> Id SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> FareParameters -> Id DM.Merchant -> m (),
+    endRideTransaction :: Id DP.Driver -> Id SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> FareParameters -> DTConf.TransporterConfig -> Id DM.Merchant -> m (),
     notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> Maybe DMPM.PaymentMethodInfo -> Maybe Text -> m (),
     getFarePolicy :: Id DM.Merchant -> DVeh.Variant -> Maybe DFareProduct.Area -> m DFP.FullFarePolicy,
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
@@ -198,12 +198,12 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
 
     distanceCalculationFailed <- isDistanceCalculationFailed driverId
     when distanceCalculationFailed $ logWarning $ "Failed to calculate distance for this ride: " <> ride.id.getId
-
-    pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold handle booking ride tripEndPoint
+    thresholdConfig <- findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
+    pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold booking ride tripEndPoint thresholdConfig
     (chargeableDistance, finalFare, mbUpdatedFareParams) <-
       if distanceCalculationFailed
-        then calculateFinalValuesForFailedDistanceCalculations handle booking ride tripEndPoint pickupDropOutsideOfThreshold
-        else calculateFinalValuesForCorrectDistanceCalculations handle booking ride booking.maxEstimatedDistance pickupDropOutsideOfThreshold
+        then calculateFinalValuesForFailedDistanceCalculations handle booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig
+        else calculateFinalValuesForCorrectDistanceCalculations handle booking ride booking.maxEstimatedDistance pickupDropOutsideOfThreshold thresholdConfig
     let newFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
     let updRide =
           ride{tripEndTime = Just now,
@@ -215,7 +215,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                pickupDropOutsideOfThreshold = Just pickupDropOutsideOfThreshold
               }
     -- we need to store fareParams only when they changed
-    endRideTransaction (cast @DP.Person @DP.Driver driverId) booking.id updRide mbUpdatedFareParams booking.riderId newFareParams booking.providerId
+    endRideTransaction (cast @DP.Person @DP.Driver driverId) booking.id updRide mbUpdatedFareParams booking.riderId newFareParams thresholdConfig booking.providerId
     clearInterpolatedPoints driverId
 
     mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
@@ -256,10 +256,9 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance = do
   putDiffMetric merchantId fareDiff distanceDiff
   return (recalcDistance, finalFare, Just fareParams)
 
-isPickupDropOutsideOfThreshold :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> m Bool
-isPickupDropOutsideOfThreshold ServiceHandle {..} booking ride tripEndPoint = do
+isPickupDropOutsideOfThreshold :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => SRB.Booking -> DRide.Ride -> LatLong -> DTConf.TransporterConfig -> m Bool
+isPickupDropOutsideOfThreshold booking ride tripEndPoint thresholdConfig = do
   let mbTripStartLoc = ride.tripStartPos
-  thresholdConfig <- findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
   -- for old trips with mbTripStartLoc = Nothing we always recalculate fare
   case mbTripStartLoc of
     Nothing -> pure True
@@ -288,10 +287,9 @@ getDistanceDiff booking distance = do
   pure $ metersToHighPrecMeters rideDistanceDifference
 
 calculateFinalValuesForCorrectDistanceCalculations ::
-  (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Maybe HighPrecMeters -> Bool -> m (Meters, Money, Maybe FareParameters)
-calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDistance pickupDropOutsideOfThreshold = do
+  (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Maybe HighPrecMeters -> Bool -> DTConf.TransporterConfig -> m (Meters, Money, Maybe FareParameters)
+calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDistance pickupDropOutsideOfThreshold thresholdConfig = do
   distanceDiff <- getDistanceDiff booking (highPrecMetersToMeters ride.traveledDistance)
-  thresholdConfig <- handle.findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
   let maxDistance = fromMaybe ride.traveledDistance mbMaxDistance + thresholdConfig.actualRideDistanceDiffThreshold
   if not pickupDropOutsideOfThreshold
     then
@@ -307,8 +305,8 @@ calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDist
             else recalculateFareForDistance handle booking ride (roundToIntegral ride.traveledDistance)
 
 calculateFinalValuesForFailedDistanceCalculations ::
-  (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> Bool -> m (Meters, Money, Maybe FareParameters)
-calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} booking ride tripEndPoint pickupDropOutsideOfThreshold = do
+  (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> Bool -> DTConf.TransporterConfig -> m (Meters, Money, Maybe FareParameters)
+calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig = do
   let tripStartPoint = case ride.tripStartPos of
         Nothing -> getCoordinates booking.fromLocation
         Just tripStartPos -> tripStartPos
@@ -316,7 +314,6 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
   approxTraveledDistance <- getDistanceBetweenPoints tripStartPoint tripEndPoint interpolatedPoints
   logTagInfo "endRide" $ "approxTraveledDistance: " <> show approxTraveledDistance
   distanceDiff <- getDistanceDiff booking approxTraveledDistance
-  thresholdConfig <- findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
 
   if not pickupDropOutsideOfThreshold
     then recalculateFareForDistance handle booking ride booking.estimatedDistance

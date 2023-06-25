@@ -25,7 +25,7 @@ where
 
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
-import Domain.Types.DriverFee (DriverFeeStatus (PAYMENT_OVERDUE))
+import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DDInfo
 import Domain.Types.DriverLocation (DriverLocation)
 import qualified Domain.Types.Merchant as DM
@@ -156,17 +156,18 @@ updateLocationHandler ::
   m APISuccess
 updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLocationUpdate" $
   withLogTag ("driverId-" <> driver.id.getId) $ do
-    lastPaymentOverdue <- runInReplica $ findOldestFeeByStatus (cast driver.id) PAYMENT_OVERDUE
-    case lastPaymentOverdue of
-      Nothing -> pure ()
-      Just lpo -> do
-        updateSubscription False (cast driver.id)
-        Esq.runNoTransaction $ do QDFS.updateStatus (cast driver.id) (DDFS.PAYMENT_OVERDUE lpo.id lpo.govtCharges lpo.platformFee lpo.cgst lpo.sgst)
-        throwError DriverUnsubscribed
+    thresholdConfig <- QTConf.findByMerchantId driver.merchantId >>= fromMaybeM (TransporterConfigNotFound driver.merchantId.getId)
+    when (thresholdConfig.subscription) $ do
+      lastPaymentOverdue <- runInReplica $ findOldestFeeByStatus (cast driver.id) PAYMENT_OVERDUE
+      case lastPaymentOverdue of
+        Nothing -> pure ()
+        Just lpo -> do
+          updateSubscription False (cast driver.id)
+          Esq.runNoTransaction $ do QDFS.updateStatus (cast driver.id) $ DDFS.PAYMENT_OVERDUE lpo.id lpo.govtCharges $ PlatformFee lpo.platformFee.fee lpo.platformFee.cgst lpo.platformFee.sgst
+          throwError DriverUnsubscribed
     driverInfo <- DInfo.findById (cast driver.id) >>= fromMaybeM (PersonNotFound driver.id.getId)
     logInfo $ "got location updates: " <> getId driver.id <> " " <> encodeToText waypoints
     checkLocationUpdatesRateLimit driver.id
-    thresholdConfig <- QTConf.findByMerchantId driver.merchantId >>= fromMaybeM (TransporterConfigNotFound driver.merchantId.getId)
     let minLocationAccuracy = thresholdConfig.minLocationAccuracy
     unless (driver.role == Person.DRIVER) $ throwError AccessDenied
     LocUpd.whenWithLocationUpdatesLock driver.id $ do
