@@ -486,9 +486,7 @@ setActivity (personId, _) isActive mode = do
   driverStatus <- QDFS.getStatus personId >>= fromMaybeM (PersonNotFound personId.getId)
   logInfo $ "driverStatus " <> show driverStatus
   unless (driverStatus `notElem` [DDFS.IDLE, DDFS.ACTIVE, DDFS.SILENT]) $ do
-    Esq.runTransaction $
-      QDFS.updateStatus personId $
-        DMode.getDriverStatus mode isActive
+    Esq.runNoTransaction $ QDFS.updateStatus personId (DMode.getDriverStatus mode isActive)
   pure APISuccess.Success
 
 listDriver :: (EsqDBReplicaFlow m r, EncFlow m r) => SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> m ListDriverRes
@@ -1174,8 +1172,8 @@ getDriverPayments (_, merchantId_) mbFrom mbTo mbLimit mbOffset = do
     buildPaymentResp DDF.DriverFee {..} = do
       let date = utctDay startTime
           totalRides = numRides
-          charges = round $ fromIntegral govtCharges + fromIntegral platformFee + cgst + sgst
-          chargesBreakup = mkChargesBreakup govtCharges platformFee cgst sgst
+          charges = round $ fromIntegral govtCharges + fromIntegral platformFee.fee + platformFee.cgst + platformFee.sgst
+          chargesBreakup = mkChargesBreakup govtCharges platformFee.fee platformFee.cgst platformFee.sgst
       transactionDetails <- findAllByOrderId (cast id)
       let txnInfo = map mkDriverTxnInfo transactionDetails
       return DriverPaymentHistoryResp {..}

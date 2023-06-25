@@ -15,18 +15,19 @@
 module Domain.Types.Driver.DriverFlowStatus
   ( FlowStatus (..),
     DriverFlowStatus (..),
+    isPaymentOverdue,
   )
 where
 
 import Data.Aeson (Options (..), SumEncoding (..), defaultOptions)
 import Data.OpenApi
-import Domain.Types.DriverFee (DriverFee)
+import Domain.Types.DriverFee (DriverFee, PlatformFee)
 import qualified Domain.Types.DriverQuote as DQ
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
-import Kernel.Types.Common (HighPrecMoney, Money)
+import Kernel.Types.Common (Money)
 import Kernel.Types.Id
 
 -- Warning: This whole thing is for frontend use only, don't make any backend logic based on this.
@@ -55,9 +56,7 @@ data FlowStatus
   | PAYMENT_OVERDUE
       { driverFeeId :: Id DriverFee,
         govtCharges :: Money,
-        platformFee :: Money,
-        cgst :: HighPrecMoney,
-        sgst :: HighPrecMoney
+        platformFee :: PlatformFee
       }
   deriving (Show, Eq, Generic)
 
@@ -86,3 +85,8 @@ data DriverFlowStatus = DriverFlowStatus
     updatedAt :: UTCTime
   }
   deriving (Show, Eq, Generic)
+
+isPaymentOverdue :: FlowStatus -> Bool
+isPaymentOverdue flowStatus = case flowStatus of
+  PAYMENT_OVERDUE {} -> True
+  _ -> False
