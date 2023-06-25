@@ -66,6 +66,7 @@ instance FromTType DriverFeeT Domain.DriverFee where
         { id = Id id,
           driverId = cast $ fromKey driverId,
           shortId = ShortId shortId,
+          platformFee = Domain.PlatformFee platformFee cgst sgst,
           ..
         }
 
@@ -75,5 +76,8 @@ instance ToTType DriverFeeT Domain.DriverFee where
       { driverId = toKey $ cast driverId,
         id = getId id,
         shortId = getShortId shortId,
+        platformFee = platformFee.fee,
+        cgst = platformFee.cgst,
+        sgst = platformFee.sgst,
         ..
       }

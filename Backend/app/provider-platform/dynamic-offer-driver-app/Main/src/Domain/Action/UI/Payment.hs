@@ -20,7 +20,6 @@ module Domain.Action.UI.Payment
   )
 where
 
-import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverFee as DF
 import Domain.Types.DriverInformation (DriverInformation)
@@ -67,7 +66,7 @@ createOrder (driverId, merchantId) driverFeeId = do
   driverPhone <- driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   let driverEmail = fromMaybe "test@juspay.in" driver.email
   pendingFees <- QDF.findPendingFeesByDriverFeeId driverFee.id >>= fromMaybeM (DriverFeeNotFound $ getId driverFeeId)
-  let pendingAmount = fromIntegral pendingFees.govtCharges + fromIntegral pendingFees.platformFee + pendingFees.cgst + pendingFees.sgst
+  let pendingAmount = fromIntegral pendingFees.govtCharges + fromIntegral pendingFees.platformFee.fee + pendingFees.platformFee.cgst + pendingFees.platformFee.sgst
   let createOrderReq =
         Payment.CreateOrderReq
           { orderShortId = driverFee.shortId.getShortId,
@@ -118,9 +117,7 @@ processPaymentTransactions driverId driverFeeId driverInfo timeDiff = do
   nowUtc <- getCurrentTime
   let now = getLocalTime nowUtc timeDiff
   QDF.updateStatus DF.CLEARED driverFeeId now
-  if driverInfo.active
-    then QDFS.updateStatus (cast driverId) DDFS.ACTIVE
-    else QDFS.updateStatus (cast driverId) DDFS.IDLE
+  QDFS.clearPaymentStatus (cast driverId) driverInfo.active
 
 juspayWebhookHandler ::
   ShortId DM.Merchant ->

@@ -14,6 +14,7 @@
 
 module Storage.Queries.Driver.DriverFlowStatus where
 
+import Domain.Types.Driver.DriverFlowStatus (isPaymentOverdue)
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.Person
 import Kernel.Prelude
@@ -39,13 +40,25 @@ getStatus personId = do
       driverFlowStatus ^. DriverFlowStatusTId ==. val (toKey personId)
     return $ driverFlowStatus ^. DriverFlowStatusFlowStatus
 
+clearPaymentStatus :: Id Person -> Bool -> SqlDB ()
+clearPaymentStatus personId isActive = do
+  let status = if isActive then DDFS.ACTIVE else DDFS.IDLE
+  updateStatus' False personId status
+
 updateStatus :: Id Person -> DDFS.FlowStatus -> SqlDB ()
-updateStatus personId flowStatus = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ DriverFlowStatusUpdatedAt =. val now,
-        DriverFlowStatusFlowStatus =. val flowStatus
-      ]
-    where_ $ tbl ^. DriverFlowStatusTId ==. val (toKey personId)
+updateStatus = updateStatus' True
+
+updateStatus' :: Bool -> Id Person -> DDFS.FlowStatus -> SqlDB ()
+updateStatus' checkForPayment personId flowStatus = do
+  driverStatus <- getStatus personId
+  case driverStatus of
+    Nothing -> pure ()
+    Just ds -> when (not checkForPayment || not (isPaymentOverdue ds)) $ do
+      now <- getCurrentTime
+      Esq.update $ \tbl -> do
+        set
+          tbl
+          [ DriverFlowStatusUpdatedAt =. val now,
+            DriverFlowStatusFlowStatus =. val flowStatus
+          ]
+        where_ $ tbl ^. DriverFlowStatusTId ==. val (toKey personId)
