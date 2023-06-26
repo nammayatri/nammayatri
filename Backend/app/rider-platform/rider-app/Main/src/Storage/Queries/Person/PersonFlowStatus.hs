@@ -27,13 +27,11 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.Person.PersonFlowStatus as BeamPFS
-import Storage.Tabular.Person.PersonFlowStatus
 
 create :: L.MonadFlow m => DPFS.PersonFlowStatus -> m (MeshResult ())
 create personFlowStatus = do
@@ -44,43 +42,97 @@ create personFlowStatus = do
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainPersonFlowStatusToBeam personFlowStatus)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-getStatus ::
-  (Transactionable m) =>
-  Id Person ->
-  m (Maybe DPFS.FlowStatus)
-getStatus personId = do
-  findOne $ do
-    personFlowStatus <- from $ table @PersonFlowStatusT
-    where_ $
-      personFlowStatus ^. PersonFlowStatusTId ==. val (toKey personId)
-    return $ personFlowStatus ^. PersonFlowStatusFlowStatus
+-- getStatus ::
+--   (Transactionable m) =>
+--   Id Person ->
+--   m (Maybe DPFS.FlowStatus)
+-- getStatus personId = do
+--   findOne $ do
+--     personFlowStatus <- from $ table @PersonFlowStatusT
+--     where_ $
+--       personFlowStatus ^. PersonFlowStatusTId ==. val (toKey personId)
+--     return $ personFlowStatus ^. PersonFlowStatusFlowStatus
 
-updateStatus :: Id Person -> DPFS.FlowStatus -> SqlDB ()
-updateStatus personId flowStatus = do
+getStatus :: L.MonadFlow m => Id Person -> m (Maybe DPFS.FlowStatus)
+getStatus (Id personId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamPFS.PersonFlowStatusT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      personFlowStatus <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamPFS.personId $ Se.Eq personId]
+      case personFlowStatus of
+        Left _ -> pure Nothing
+        Right result -> do
+          let personFlowStatusData = transformBeamPersonFlowStatusToDomain <$> result
+          let flowStatusData = DPFS.flowStatus <$> personFlowStatusData
+          pure flowStatusData
+    Nothing -> pure Nothing
+
+-- updateStatus :: Id Person -> DPFS.FlowStatus -> SqlDB ()
+-- updateStatus personId flowStatus = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ PersonFlowStatusUpdatedAt =. val now,
+--         PersonFlowStatusFlowStatus =. val flowStatus
+--       ]
+--     where_ $ tbl ^. PersonFlowStatusTId ==. val (toKey personId)
+
+updateStatus :: (L.MonadFlow m, MonadTime m) => Id Person -> DPFS.FlowStatus -> m (MeshResult ())
+updateStatus (Id personId) flowStatus = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamPFS.PersonFlowStatusT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonFlowStatusUpdatedAt =. val now,
-        PersonFlowStatusFlowStatus =. val flowStatus
-      ]
-    where_ $ tbl ^. PersonFlowStatusTId ==. val (toKey personId)
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        updatedMeshConfig
+        [Se.Set BeamPFS.flowStatus flowStatus, Se.Set BeamPFS.updatedAt now]
+        [Se.Is BeamPFS.personId $ Se.Eq personId]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-deleteByPersonId :: Id Person -> SqlDB ()
-deleteByPersonId personId = do
-  Esq.delete $ do
-    personFlowStatus <- from $ table @PersonFlowStatusT
-    where_ (personFlowStatus ^. PersonFlowStatusTId ==. val (toKey personId))
+-- deleteByPersonId :: Id Person -> SqlDB ()
+-- deleteByPersonId personId = do
+--   Esq.delete $ do
+--     personFlowStatus <- from $ table @PersonFlowStatusT
+--     where_ (personFlowStatus ^. PersonFlowStatusTId ==. val (toKey personId))
 
-updateToIdleMultiple :: [Id Person] -> UTCTime -> SqlDB ()
+deleteByPersonId :: L.MonadFlow m => Id Person -> m ()
+deleteByPersonId (Id personId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamPFS.PersonFlowStatusT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> void $ KV.deleteWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamPFS.personId $ Se.Eq personId]
+    Nothing -> pure ()
+
+-- updateToIdleMultiple :: [Id Person] -> UTCTime -> SqlDB ()
+-- updateToIdleMultiple personIds now = do
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ PersonFlowStatusUpdatedAt =. val now,
+--         PersonFlowStatusFlowStatus =. val DPFS.IDLE
+--       ]
+--     where_ $ tbl ^. PersonFlowStatusTId `in_` valList (toKey <$> personIds)
+
+updateToIdleMultiple :: L.MonadFlow m => [Id Person] -> UTCTime -> m (MeshResult ())
 updateToIdleMultiple personIds now = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonFlowStatusUpdatedAt =. val now,
-        PersonFlowStatusFlowStatus =. val DPFS.IDLE
-      ]
-    where_ $ tbl ^. PersonFlowStatusTId `in_` valList (toKey <$> personIds)
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamPFS.PersonFlowStatusT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        updatedMeshConfig
+        [Se.Set BeamPFS.flowStatus DPFS.IDLE, Se.Set BeamPFS.updatedAt now]
+        [Se.Is BeamPFS.personId $ Se.In (getId <$> personIds)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 transformBeamPersonFlowStatusToDomain :: BeamPFS.PersonFlowStatus -> PersonFlowStatus
 transformBeamPersonFlowStatusToDomain BeamPFS.PersonFlowStatusT {..} = do

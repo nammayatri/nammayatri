@@ -16,30 +16,73 @@ module Storage.Queries.Person.PersonDefaultEmergencyNumber where
 
 import Domain.Types.Person
 import Domain.Types.Person.PersonDefaultEmergencyNumber
+-- import Kernel.Storage.Esqueleto as Esq
+
+-- import Storage.Tabular.Person.PersonDefaultEmergencyNumber
+-- import EulerHS.KVConnector.Types
+
+import qualified EulerHS.KVConnector.Flow as KV
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Lib.Utils (setMeshConfig)
+import qualified Sequelize as Se
 import qualified Storage.Beam.Person.PersonDefaultEmergencyNumber as BeamPDEN
-import Storage.Tabular.Person.PersonDefaultEmergencyNumber
 
-replaceAll :: Id Person -> [PersonDefaultEmergencyNumber] -> SqlDB ()
-replaceAll personId pdenList = do
-  Esq.delete $ do
-    personENT <- from $ table @PersonDefaultEmergencyNumberT
-    where_ $ personENT ^. PersonDefaultEmergencyNumberTId ==. val (toKey personId)
-  Esq.createMany pdenList
+-- replaceAll :: Id Person -> [PersonDefaultEmergencyNumber] -> SqlDB ()
+-- replaceAll personId pdenList = do
+--   Esq.delete $ do
+--     personENT <- from $ table @PersonDefaultEmergencyNumberT
+--     where_ $ personENT ^. PersonDefaultEmergencyNumberTId ==. val (toKey personId)
+--   Esq.createMany pdenList
 
-findAllByPersonId ::
-  Transactionable m =>
-  Id Person ->
-  m [PersonDefaultEmergencyNumber]
-findAllByPersonId personId =
-  Esq.findAll $ do
-    personENT <- from $ table @PersonDefaultEmergencyNumberT
-    where_ $
-      personENT ^. PersonDefaultEmergencyNumberTId ==. val (toKey personId)
-    return personENT
+create :: L.MonadFlow m => PersonDefaultEmergencyNumber -> m ()
+create pden = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamPDEN.PersonDefaultEmergencyNumberT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainPersonDefaultEmergencyNumberToBeam pden)
+    Nothing -> pure ()
+
+createMany :: L.MonadFlow m => [PersonDefaultEmergencyNumber] -> m ()
+createMany = traverse_ create
+
+replaceALL :: L.MonadFlow m => Id Person -> [PersonDefaultEmergencyNumber] -> m ()
+replaceALL (Id personId) pdenList = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamPDEN.PersonDefaultEmergencyNumberT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> void $ KV.deleteWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamPDEN.personId $ Se.Eq personId]
+    Nothing -> pure ()
+  createMany pdenList
+
+-- findAllByPersonId ::
+--   Transactionable m =>
+--   Id Person ->
+--   m [PersonDefaultEmergencyNumber]
+-- findAllByPersonId personId =
+--   Esq.findAll $ do
+--     personENT <- from $ table @PersonDefaultEmergencyNumberT
+--     where_ $
+--       personENT ^. PersonDefaultEmergencyNumberTId ==. val (toKey personId)
+--     return personENT
+
+findAllByPersonId :: L.MonadFlow m => Id Person -> m [PersonDefaultEmergencyNumber]
+findAllByPersonId (Id personId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamPDEN.PersonDefaultEmergencyNumberT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      pden <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamPDEN.personId $ Se.Eq personId]
+      case pden of
+        Right result -> pure $ transformBeamPersonDefaultEmergencyNumberToDomain <$> result
+        Left _ -> pure []
+    Nothing -> pure []
 
 transformBeamPersonDefaultEmergencyNumberToDomain :: BeamPDEN.PersonDefaultEmergencyNumber -> PersonDefaultEmergencyNumber
 transformBeamPersonDefaultEmergencyNumberToDomain BeamPDEN.PersonDefaultEmergencyNumberT {..} = do

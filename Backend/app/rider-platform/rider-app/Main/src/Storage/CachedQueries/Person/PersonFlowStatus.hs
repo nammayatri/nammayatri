@@ -23,6 +23,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
+import Kernel.Types.Time
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Person.PersonFlowStatus as Queries
 
@@ -35,13 +36,14 @@ getStatus personId =
     Just a -> return a
     Nothing -> flip whenJust (cachedStatus personId) /=<< Queries.getStatus personId
 
-updateStatus :: Id Person -> FlowStatus -> Esq.SqlDB ()
+--updateStatus :: Id Person -> FlowStatus -> Esq.SqlDB ()
+updateStatus :: (L.MonadFlow m, MonadTime m) => Id Person -> FlowStatus -> m (MeshResult ())
 updateStatus = Queries.updateStatus
 
-deleteByPersonId :: Id Person -> Esq.SqlDB ()
+deleteByPersonId :: L.MonadFlow m => Id Person -> m ()
 deleteByPersonId = Queries.deleteByPersonId
 
-updateToIdleMultiple :: [Id Person] -> UTCTime -> Esq.SqlDB ()
+updateToIdleMultiple :: L.MonadFlow m => [Id Person] -> UTCTime -> m (MeshResult ())
 updateToIdleMultiple = Queries.updateToIdleMultiple
 
 cachedStatus :: CacheFlow m r => Id Person -> FlowStatus -> m ()
