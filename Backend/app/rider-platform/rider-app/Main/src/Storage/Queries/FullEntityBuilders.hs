@@ -15,7 +15,7 @@
 
 module Storage.Queries.FullEntityBuilders where
 
-import Domain.Types.Booking as Booking
+import Domain.Types.Booking.Type as Booking
 import Domain.Types.Estimate
 import Domain.Types.FarePolicy.FareProductType
 import Domain.Types.Quote as Quote

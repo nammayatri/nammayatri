@@ -566,10 +566,12 @@ findStuckRideItems (Id merchantId) bookingIds now = do
           Left _ -> pure []
           Right x -> traverse transformBeamRideToDomain x
       bookings <- do
+        let modelNameB = Se.modelTableName @BeamB.BookingT
+        let updatedMeshConfigB = setMeshConfig modelNameB
         res <-
           KV.findAllWithKVConnector
             dbCOnf'
-            updatedMeshConfig
+            updatedMeshConfigB
             [ Se.And
                 [ Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <$> rides,
                   Se.Is BeamB.providerId $ Se.Eq merchantId,

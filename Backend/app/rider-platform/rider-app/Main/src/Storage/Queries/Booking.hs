@@ -17,8 +17,8 @@ module Storage.Queries.Booking where
 
 import Control.Applicative
 import Data.Time (addUTCTime)
-import Domain.Types.Booking as DRB
 import Domain.Types.Booking.Type as Domain
+import qualified Domain.Types.Booking.Type as DRB
 import Domain.Types.Estimate (Estimate)
 import Domain.Types.FarePolicy.FareProductType as DFF
 import qualified Domain.Types.FarePolicy.FareProductType as DQuote
