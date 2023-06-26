@@ -16,21 +16,22 @@
 module Screens.Types where
 
 import Common.Types.App as Common
+import Components.ChatView.Controller as ChatView
+import Components.PaymentHistoryListItem.Controller as PaymentHistoryListItem
 import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
-import Data.Generic.Rep (class Generic)
+import Components.RecordAudioModel.Controller as RecordAudioModel
 import Data.Eq.Generic (genericEq)
-import Data.Show.Generic (genericShow)
+import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
+import Data.Show.Generic (genericShow)
 import Foreign.Class (class Decode, class Encode)
 import Halogen.VDom.DOM.Prop (PropValue)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
-import PrestoDOM (Visibility, LetterSpacing)
+import PrestoDOM (LetterSpacing, Visibility, visibility)
 import Services.APITypes (Route, Status, MediaType)
 import Styles.Types (FontSize)
-import Components.ChatView.Controller as ChatView
-import Components.RecordAudioModel.Controller as RecordAudioModel
 
 type EditTextInLabelState =
  {
@@ -377,8 +378,23 @@ type RideHistoryScreenState =
     offsetValue :: Int,
     loaderButtonVisibility :: Boolean,
     loadMoreDisabled :: Boolean,
-    recievedResponse :: Boolean
+    recievedResponse :: Boolean,
+    datePickerState :: DatePickerState,
+    props :: RideHistoryScreenStateProps
+  , data :: RideHistoryScreenStateData
   }
+type DatePickerState = {
+  activeIndex :: Int
+, selectedItem :: Common.DateObj
+}
+type RideHistoryScreenStateProps = {
+    showDatePicker :: Boolean
+ , showPaymentHistory :: Boolean
+} 
+type RideHistoryScreenStateData = {
+    pastDays :: Int
+  , paymentHistory :: PaymentHistoryModelState
+} 
 
 type RideSelectionScreenState =
   {
@@ -1233,3 +1249,7 @@ data IllustrationType = Image | Lottie
 derive instance genericIllustrationType:: Generic IllustrationType _
 instance showIllustrationType :: Show IllustrationType where show = genericShow
 instance eqIllustrationType :: Eq IllustrationType where eq = genericEq
+
+type PaymentHistoryModelState = {
+  paymentHistoryList :: Array PaymentHistoryListItem.Config
+}

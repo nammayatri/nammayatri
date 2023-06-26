@@ -400,6 +400,17 @@ export const getcurrentdate = function (string) {
   return today;
 }
 
+export const getDatebyCount = function (count) {
+  var today = new Date();
+  today.setDate(today.getDate() - count);
+  var dd = String(today.getDate()).padStart(2, '0');
+  var mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
+  var yyyy = today.getFullYear();
+
+  today = yyyy + '-' + mm + '-' + dd;
+  return today;
+}
+
 export const hideSplash = JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"hide_splash"}))()
 
 export const currentPosition = function (str) {

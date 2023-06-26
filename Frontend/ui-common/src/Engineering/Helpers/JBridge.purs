@@ -24,9 +24,11 @@ import Presto.Core.Flow (Flow)
 import Engineering.Helpers.Commons (liftFlow)
 import Data.Maybe (Maybe(..))
 -- import Common.Types.App (Place)
+import Common.Types.App (DateObj)
 -- import Types.APIv2 (Address)
 -- import Foreign (Foreign)
 import Control.Monad.Except (runExcept)
+import Effect.Uncurried (EffectFn3)
 -- import Data.Maybe (Maybe(..))
 import Data.Generic.Rep (class Generic)
 import Data.Newtype (class Newtype)
@@ -38,6 +40,7 @@ import Engineering.Helpers.Commons (screenHeight, screenWidth)
 import Helpers.Utils (parseFloat)
 import Data.Int (toNumber)
 import Data.Function.Uncurried (Fn2(..))
+import Data.Function.Uncurried (Fn1)
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
 -- -- foreign import _createKeyStoreEntry :: String -> String -> (Effect Unit) -> (String -> Effect Unit) -> Effect Unit
@@ -194,6 +197,11 @@ foreign import cleverTapCustomEvent :: String -> Unit
 foreign import cleverTapCustomEventWithParams :: String -> String -> String -> Effect Unit
 foreign import cleverTapSetLocation :: Unit -> Effect Unit
 
+foreign import getAllDates :: Fn1 Int (Array DateObj)
+
+foreign import getDateFromObj :: Fn1 DateObj String
+
+foreign import horizontalScrollToPos :: EffectFn3 String String Int Unit
 -- -- keyStoreEntryPresent :: String -> Flow Boolean
 -- -- keyStoreEntryPresent = liftFlow <<< _keyStoreEntryPresent
 

@@ -176,6 +176,7 @@ data MY_RIDES_SCREEN_OUTPUT = MY_RIDE RideHistoryScreenState
                             | GO_TO_TRIP_DETAILS IndividualRideCardState
                             | NOTIFICATION_FLOW
                             | SELECTED_TAB RideHistoryScreenState
+                            | OPEN_PAYMENT_HISTORY RideHistoryScreenState
 
 data REFERRAL_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN
                             | GO_TO_RIDES_SCREEN_FROM_REFERRAL_SCREEN

@@ -15,8 +15,7 @@
 
 module Screens.RideHistoryScreen.ScreenData where
 
-import Screens.Types (AnimationState(..), RideHistoryScreenState, BottomNavBarState)
-import PrestoDOM.Types.Core (toPropValue)
+import Screens.Types (AnimationState(..), RideHistoryScreenState)
 
 initData :: RideHistoryScreenState
 initData = {
@@ -46,5 +45,23 @@ initData = {
     destination : ""
   },
   offsetValue: 0,
-  loaderButtonVisibility: false
+  loaderButtonVisibility: false,
+  datePickerState : {
+    activeIndex : 14 -- based on no of dates we are showing
+  , selectedItem : {
+      date : 0
+    , month : ""
+    , year : 0
+  }
+  }
+  , data : {
+    pastDays : 7
+  , paymentHistory : {
+    paymentHistoryList : []
+  }
+  }
+  , props : {
+    showDatePicker : false
+  , showPaymentHistory : false
+  }
 }
