@@ -21,16 +21,36 @@ where
 
 import Domain.Types.Merchant as DOrg
 import Domain.Types.Merchant.MerchantMessage
+-- import Kernel.Storage.Esqueleto hiding (findById)
+-- import qualified Kernel.Storage.Esqueleto as Esq
+
+import qualified EulerHS.KVConnector.Flow as KV
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto hiding (findById)
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Lib.Utils (setMeshConfig)
+import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantMessage as BeamMM
 import Storage.Tabular.Merchant.MerchantMessage ()
 
-findByMerchantIdAndMessageKey :: Transactionable m => Id Merchant -> MessageKey -> m (Maybe MerchantMessage)
-findByMerchantIdAndMessageKey merchantId messageKey =
-  Esq.findById (merchantId, messageKey)
+-- findByMerchantIdAndMessageKey :: Transactionable m => Id Merchant -> MessageKey -> m (Maybe MerchantMessage)
+-- findByMerchantIdAndMessageKey merchantId messageKey =
+--   Esq.findById (merchantId, messageKey)
+
+findByMerchantIdAndMessageKey :: L.MonadFlow m => Id Merchant -> MessageKey -> m (Maybe MerchantMessage)
+findByMerchantIdAndMessageKey (Id merchantId) messageKey = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMM.MerchantMessageT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' ->
+      either (pure Nothing) (transformBeamMerchantMessageToDomain <$>)
+        <$> KV.findWithKVConnector
+          dbConf'
+          updatedMeshConfig
+          [Se.And [Se.Is BeamMM.merchantId $ Se.Eq merchantId, Se.Is BeamMM.messageKey $ Se.Eq messageKey]]
+    Nothing -> pure Nothing
 
 transformBeamMerchantMessageToDomain :: BeamMM.MerchantMessage -> MerchantMessage
 transformBeamMerchantMessageToDomain BeamMM.MerchantMessageT {..} = do

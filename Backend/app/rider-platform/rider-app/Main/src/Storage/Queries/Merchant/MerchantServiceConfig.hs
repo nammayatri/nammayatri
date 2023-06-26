@@ -25,7 +25,12 @@ import qualified Data.Aeson as A
 import Domain.Types.Merchant as DOrg
 import Domain.Types.Merchant.MerchantServiceConfig
 import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
+-- import Kernel.Storage.Esqueleto
+-- import qualified Kernel.Storage.Esqueleto as Esq
+
+import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import qualified Kernel.External.Call as Call
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
@@ -35,32 +40,69 @@ import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.SMS.Interface as Sms
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude as P
-import Kernel.Storage.Esqueleto
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Error
+import Lib.Utils (setMeshConfig)
+import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantServiceConfig as BeamMSC
 import Storage.Tabular.Merchant.MerchantServiceConfig
 import Tools.Error
 
-findByMerchantIdAndService :: Transactionable m => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)
-findByMerchantIdAndService merchantId serviceName =
-  Esq.findOne $ do
-    merchantServiceConfig <- from $ table @MerchantServiceConfigT
-    where_ $
-      merchantServiceConfig ^. MerchantServiceConfigTId ==. val (toKey (merchantId, serviceName))
-    return merchantServiceConfig
+-- findByMerchantIdAndService :: Transactionable m => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)
+-- findByMerchantIdAndService merchantId serviceName =
+--   Esq.findOne $ do
+--     merchantServiceConfig <- from $ table @MerchantServiceConfigT
+--     where_ $
+--       merchantServiceConfig ^. MerchantServiceConfigTId ==. val (toKey (merchantId, serviceName))
+--     return merchantServiceConfig
 
-upsertMerchantServiceConfig :: MerchantServiceConfig -> SqlDB ()
+findByMerchantIdAndService :: (L.MonadFlow m, Log m) => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)
+findByMerchantIdAndService (Id merchantId) serviceName = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMSC.MerchantServiceConfigT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamMSC.merchantId $ Se.Eq merchantId, Se.Is BeamMSC.serviceName $ Se.Eq serviceName]]
+      case result of
+        Left _ -> pure Nothing
+        Right msc -> mapM transformBeamMerchantServiceConfigToDomain msc
+    Nothing -> pure Nothing
+
+-- upsertMerchantServiceConfig :: MerchantServiceConfig -> SqlDB ()
+-- upsertMerchantServiceConfig merchantServiceConfig = do
+--   now <- getCurrentTime
+--   let (_serviceName, configJSON) = getServiceNameConfigJSON merchantServiceConfig.serviceConfig
+--   Esq.upsert
+--     merchantServiceConfig
+--     [ MerchantServiceConfigConfigJSON =. val configJSON,
+--       MerchantServiceConfigUpdatedAt =. val now
+--     ]
+
+upsertMerchantServiceConfig :: (L.MonadFlow m, Log m, MonadTime m) => MerchantServiceConfig -> m ()
 upsertMerchantServiceConfig merchantServiceConfig = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMSC.MerchantServiceConfigT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
-  let (_serviceName, configJSON) = getServiceNameConfigJSON merchantServiceConfig.serviceConfig
-  Esq.upsert
-    merchantServiceConfig
-    [ MerchantServiceConfigConfigJSON =. val configJSON,
-      MerchantServiceConfigUpdatedAt =. val now
-    ]
+  let (_serviceName, configJSON) = getServiceNameConfigJSON' merchantServiceConfig.serviceConfig
+  case dbConf of
+    Just dbCOnf' -> do
+      res <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamMSC.merchantId $ Se.Eq (getId merchantServiceConfig.merchantId)]
+      case res of
+        Right res' -> do
+          if isJust res'
+            then
+              void $
+                KV.updateWoReturningWithKVConnector
+                  dbCOnf'
+                  updatedMeshConfig
+                  [Se.Set BeamMSC.configJSON configJSON, Se.Set BeamMSC.updatedAt now]
+                  [Se.Is BeamMSC.merchantId $ Se.Eq $ getId merchantServiceConfig.merchantId]
+            else void $ KV.createWoReturingKVConnector dbCOnf' updatedMeshConfig (transformDomainMerchantServiceConfigToBeam merchantServiceConfig)
+        Left _ -> pure ()
+    Nothing -> pure ()
 
 transformBeamMerchantServiceConfigToDomain :: (L.MonadFlow m, Log m) => BeamMSC.MerchantServiceConfig -> m MerchantServiceConfig
 transformBeamMerchantServiceConfigToDomain BeamMSC.MerchantServiceConfigT {..} = do
@@ -92,14 +134,14 @@ transformDomainMerchantServiceConfigToBeam :: MerchantServiceConfig -> BeamMSC.M
 transformDomainMerchantServiceConfigToBeam MerchantServiceConfig {..} =
   BeamMSC.MerchantServiceConfigT
     { BeamMSC.merchantId = getId merchantId,
-      BeamMSC.serviceName = fst $ getServiceNameConfigJSON' serviceConfig,
-      BeamMSC.configJSON = snd $ getServiceNameConfigJSON' serviceConfig,
+      BeamMSC.serviceName = fst $ getServiceNameConfigJson serviceConfig,
+      BeamMSC.configJSON = snd $ getServiceNameConfigJson serviceConfig,
       BeamMSC.updatedAt = updatedAt,
       BeamMSC.createdAt = createdAt
     }
   where
-    getServiceNameConfigJSON' :: Domain.ServiceConfig -> (Domain.ServiceName, A.Value)
-    getServiceNameConfigJSON' = \case
+    getServiceNameConfigJson :: Domain.ServiceConfig -> (Domain.ServiceName, A.Value)
+    getServiceNameConfigJson = \case
       Domain.MapsServiceConfig mapsCfg -> case mapsCfg of
         Maps.GoogleConfig cfg -> (Domain.MapsService Maps.Google, toJSON cfg)
         Maps.OSRMConfig cfg -> (Domain.MapsService Maps.OSRM, toJSON cfg)

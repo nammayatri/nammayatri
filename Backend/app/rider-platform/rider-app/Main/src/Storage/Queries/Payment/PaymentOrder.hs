@@ -23,23 +23,47 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Juspay.Types as Payment
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Kernel.Utils.Common (getCurrentTime)
-import Lib.Utils
+import Kernel.Utils.Common (MonadTime, getCurrentTime)
+import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Payment.PaymentOrder as BeamPO
-import Storage.Tabular.Payment.PaymentOrder
 
-findById :: Transactionable m => Id DOrder.PaymentOrder -> m (Maybe DOrder.PaymentOrder)
-findById = Esq.findById
+-- findById :: Transactionable m => Id DOrder.PaymentOrder -> m (Maybe DOrder.PaymentOrder)
+-- findById = Esq.findById
 
-findByShortId :: Transactionable m => ShortId DOrder.PaymentOrder -> m (Maybe DOrder.PaymentOrder)
-findByShortId shortId =
-  findOne $ do
-    order <- from $ table @PaymentOrderT
-    where_ $ order ^. PaymentOrderShortId ==. val (getShortId shortId)
-    return order
+findById :: L.MonadFlow m => Id DOrder.PaymentOrder -> m (Maybe DOrder.PaymentOrder)
+findById (Id paymentOrderId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamPO.PaymentOrderT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      res <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamPO.id $ Se.Eq paymentOrderId]
+      case res of
+        Right po -> mapM transformBeamPaymentOrderToDomain po
+        Left _ -> pure Nothing
+    Nothing -> pure Nothing
+
+-- findByShortId :: Transactionable m => ShortId DOrder.PaymentOrder -> m (Maybe DOrder.PaymentOrder)
+-- findByShortId shortId =
+--   findOne $ do
+--     order <- from $ table @PaymentOrderT
+--     where_ $ order ^. PaymentOrderShortId ==. val (getShortId shortId)
+--     return order
+
+findByShortId :: L.MonadFlow m => ShortId DOrder.PaymentOrder -> m (Maybe DOrder.PaymentOrder)
+findByShortId (ShortId paymentOrderShortId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamPO.PaymentOrderT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      res <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamPO.shortId $ Se.Eq paymentOrderShortId]
+      case res of
+        Right po -> mapM transformBeamPaymentOrderToDomain po
+        Left _ -> pure Nothing
+    Nothing -> pure Nothing
 
 create :: L.MonadFlow m => DOrder.PaymentOrder -> m (MeshResult ())
 create paymentOrder = do
@@ -50,16 +74,31 @@ create paymentOrder = do
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainPaymentOrderToBeam paymentOrder)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-updateStatus :: DOrder.PaymentOrder -> SqlDB ()
+-- updateStatus :: DOrder.PaymentOrder -> SqlDB ()
+-- updateStatus order = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ PaymentOrderStatus =. val order.status,
+--         PaymentOrderUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. PaymentOrderId ==. val order.id.getId
+
+updateStatus :: (L.MonadFlow m, MonadTime m) => DOrder.PaymentOrder -> m (MeshResult ())
 updateStatus order = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamPO.PaymentOrderT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PaymentOrderStatus =. val order.status,
-        PaymentOrderUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PaymentOrderId ==. val order.id.getId
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        updatedMeshConfig
+        [Se.Set BeamPO.status order.status, Se.Set BeamPO.updatedAt now]
+        [Se.Is BeamPO.id (Se.Eq $ getId order.id)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 transformBeamPaymentOrderToDomain :: L.MonadFlow m => BeamPO.PaymentOrder -> m PaymentOrder
 transformBeamPaymentOrderToDomain p@BeamPO.PaymentOrderT {..} = do

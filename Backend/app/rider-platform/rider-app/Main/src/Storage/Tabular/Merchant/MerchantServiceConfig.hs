@@ -21,6 +21,7 @@
 
 module Storage.Tabular.Merchant.MerchantServiceConfig where
 
+import qualified Data.Aeson as A
 import qualified Domain.Types.Merchant as Domain
 import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
 import qualified Kernel.External.Call as Call
@@ -103,3 +104,22 @@ getServiceNameConfigJSON = \case
     Notification.PayTMConfig cfg -> (Domain.NotificationService Notification.PayTM, encodeToText cfg)
   Domain.PaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> (Domain.PaymentService Payment.Juspay, encodeToText cfg)
+
+getServiceNameConfigJSON' :: Domain.ServiceConfig -> (Domain.ServiceName, A.Value)
+getServiceNameConfigJSON' = \case
+  Domain.MapsServiceConfig mapsCfg -> case mapsCfg of
+    Maps.GoogleConfig cfg -> (Domain.MapsService Maps.Google, toJSON cfg)
+    Maps.OSRMConfig cfg -> (Domain.MapsService Maps.OSRM, toJSON cfg)
+    Maps.MMIConfig cfg -> (Domain.MapsService Maps.MMI, toJSON cfg)
+  Domain.SmsServiceConfig smsCfg -> case smsCfg of
+    Sms.ExotelSmsConfig cfg -> (Domain.SmsService Sms.ExotelSms, toJSON cfg)
+    Sms.MyValueFirstConfig cfg -> (Domain.SmsService Sms.MyValueFirst, toJSON cfg)
+  Domain.WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
+    Whatsapp.GupShupConfig cfg -> (Domain.WhatsappService Whatsapp.GupShup, toJSON cfg)
+  Domain.CallServiceConfig callCfg -> case callCfg of
+    Call.ExotelConfig cfg -> (Domain.CallService Call.Exotel, toJSON cfg)
+  Domain.NotificationServiceConfig notificationCfg -> case notificationCfg of
+    Notification.FCMConfig cfg -> (Domain.NotificationService Notification.FCM, toJSON cfg)
+    Notification.PayTMConfig cfg -> (Domain.NotificationService Notification.PayTM, toJSON cfg)
+  Domain.PaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig cfg -> (Domain.PaymentService Payment.Juspay, toJSON cfg)

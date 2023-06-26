@@ -21,41 +21,76 @@ where
 
 import Domain.Types.Merchant as DOrg
 import Domain.Types.Merchant.MerchantServiceUsageConfig
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto hiding (findById)
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Lib.Utils (setMeshConfig)
+import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantServiceUsageConfig as BeamMSUC
-import Storage.Tabular.Merchant.MerchantServiceUsageConfig
 
-findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
-findByMerchantId merchId =
-  Esq.findOne $ do
-    merchantMapsCfg <- from $ table @MerchantServiceUsageConfigT
-    where_ $
-      merchantMapsCfg ^. MerchantServiceUsageConfigTId ==. val (toKey merchId)
-    return merchantMapsCfg
+-- findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
+-- findByMerchantId merchId =
+--   Esq.findOne $ do
+--     merchantMapsCfg <- from $ table @MerchantServiceUsageConfigT
+--     where_ $
+--       merchantMapsCfg ^. MerchantServiceUsageConfigTId ==. val (toKey merchId)
+--     return merchantMapsCfg
 
-updateMerchantServiceUsageConfig ::
-  MerchantServiceUsageConfig ->
-  SqlDB ()
+findByMerchantId :: L.MonadFlow m => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
+findByMerchantId (Id merchantId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMSUC.MerchantServiceUsageConfigT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> either (pure Nothing) (transformBeamMerchantServiceUsageConfigToDomain <$>) <$> KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamMSUC.merchantId $ Se.Eq merchantId]
+    Nothing -> pure Nothing
+
+-- updateMerchantServiceUsageConfig ::
+--   MerchantServiceUsageConfig ->
+--   SqlDB ()
+-- updateMerchantServiceUsageConfig MerchantServiceUsageConfig {..} = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ MerchantServiceUsageConfigGetDistances =. val getDistances,
+--         MerchantServiceUsageConfigGetRoutes =. val getRoutes,
+--         MerchantServiceUsageConfigSnapToRoad =. val snapToRoad,
+--         MerchantServiceUsageConfigGetPlaceName =. val getPlaceName,
+--         MerchantServiceUsageConfigGetPlaceDetails =. val getPlaceDetails,
+--         MerchantServiceUsageConfigAutoComplete =. val autoComplete,
+--         MerchantServiceUsageConfigSmsProvidersPriorityList =. val (PostgresList smsProvidersPriorityList),
+--         MerchantServiceUsageConfigUpdatedAt =. val now
+--       ]
+--     where_ $
+--       tbl ^. MerchantServiceUsageConfigTId ==. val (toKey merchantId)
+
+updateMerchantServiceUsageConfig :: (L.MonadFlow m, MonadTime m) => MerchantServiceUsageConfig -> m (MeshResult ())
 updateMerchantServiceUsageConfig MerchantServiceUsageConfig {..} = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMSUC.MerchantServiceUsageConfigT
+  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ MerchantServiceUsageConfigGetDistances =. val getDistances,
-        MerchantServiceUsageConfigGetRoutes =. val getRoutes,
-        MerchantServiceUsageConfigSnapToRoad =. val snapToRoad,
-        MerchantServiceUsageConfigGetPlaceName =. val getPlaceName,
-        MerchantServiceUsageConfigGetPlaceDetails =. val getPlaceDetails,
-        MerchantServiceUsageConfigAutoComplete =. val autoComplete,
-        MerchantServiceUsageConfigSmsProvidersPriorityList =. val (PostgresList smsProvidersPriorityList),
-        MerchantServiceUsageConfigUpdatedAt =. val now
-      ]
-    where_ $
-      tbl ^. MerchantServiceUsageConfigTId ==. val (toKey merchantId)
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        updatedMeshConfig
+        [ Se.Set BeamMSUC.getDistances getDistances,
+          Se.Set BeamMSUC.getRoutes getRoutes,
+          Se.Set BeamMSUC.snapToRoad snapToRoad,
+          Se.Set BeamMSUC.getPlaceName getPlaceName,
+          Se.Set BeamMSUC.getPlaceDetails getPlaceDetails,
+          Se.Set BeamMSUC.autoComplete autoComplete,
+          Se.Set BeamMSUC.smsProvidersPriorityList smsProvidersPriorityList,
+          Se.Set BeamMSUC.updatedAt now
+        ]
+        [Se.Is BeamMSUC.merchantId (Se.Eq $ getId merchantId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 transformBeamMerchantServiceUsageConfigToDomain :: BeamMSUC.MerchantServiceUsageConfig -> MerchantServiceUsageConfig
 transformBeamMerchantServiceUsageConfigToDomain BeamMSUC.MerchantServiceUsageConfigT {..} = do
