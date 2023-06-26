@@ -501,5 +501,6 @@ const hindiStrings = {
   "IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL" : "ऐसा लगता है कि इसमें सामान्य से ज़्यादा समय लग रहा है।",
   "CONTINUE_SEARCH_WITH" : "के साथ खोज जारी रखें",
   "CONTINUING_SEARCH_WITH" : "से तलाश जारी है",
-  "SEARCHING_WITH" : "से खोज रहे हैं"
+  "SEARCHING_WITH" : "से खोज रहे हैं",
+  "THE_DESTINATION_IS_TOO_CLOSE" : "गंतव्य एक ऑटो बुक करने के लिए बहुत करीब है। कृपया सुनिश्चित करें कि आपके पास एक अलग पिकअप और ड्रॉप है।"
 }

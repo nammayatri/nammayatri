@@ -1414,8 +1414,7 @@ eval (ShortDistanceActionController (PopUpModal.OnButton2Click)) state = do
 eval (ShortDistanceActionController (PopUpModal.OnButton1Click)) state = do
   _ <- pure $ performHapticFeedback unit
   _ <- pure $ updateLocalStage SearchLocationModel
-  continue state{props{isSource = Just false, isPopUp = NoPopUp, rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSearchLocation = SearchLocation}}
-
+  continue state{data {destination = "", destinationAddress = dummyAddress},props{isSource = Just false, isPopUp = NoPopUp, rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSearchLocation = SearchLocation, destinationLat = 0.0, destinationLong = 0.0}}
 
 eval (EstimateChangedPopUpController (PopUpModal.OnButton1Click)) state = exit GoToHome
 

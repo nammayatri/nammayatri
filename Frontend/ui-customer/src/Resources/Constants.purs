@@ -223,3 +223,6 @@ getFilteredFares = filter (\(FareBreakupAPIEntity item) -> (all (_ /=  item.desc
 
 getKmMeter :: Int -> String
 getKmMeter distance = if (distance < 1000) then toString distance <> " m" else (parseFloat ((toNumber distance)/ 1000.0)) 2 <> " km"
+    
+getMinThresholdDist :: Int
+getMinThresholdDist = 10

@@ -475,5 +475,6 @@ const bengaliStrings = {
   "IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL" : "এটি স্বাভাবিকের চেয়ে বেশি সময় নিচ্ছে বলে মনে হচ্ছে।",
   "CONTINUE_SEARCH_WITH" : "এর সাথে অনুসন্ধান চালিয়ে যান",
   "CONTINUING_SEARCH_WITH" : "সঙ্গে অনুসন্ধান অব্যাহত",
-  "SEARCHING_WITH" : "সঙ্গে অনুসন্ধান"
+  "SEARCHING_WITH" : "সঙ্গে অনুসন্ধান",
+  "THE_DESTINATION_IS_TOO_CLOSE" : "অটো বুক করার জন্য গন্তব্য খুব কাছাকাছি। আপনার কাছে আলাদা পিকআপ এবং ড্রপ আছে তা নিশ্চিত করুন"
 }

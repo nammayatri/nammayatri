@@ -475,5 +475,6 @@ const malayalamStrings = {
   "IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL" : "ഇതിന് പതിവിലും കൂടുതൽ സമയമെടുക്കുന്നതായി തോന്നുന്നു.",
   "CONTINUE_SEARCH_WITH" : "ഉപയോഗിച്ച് തിരയൽ തുടരുക",
   "CONTINUING_SEARCH_WITH" : "ഉപയോഗിച്ച് തിരയൽ തുടരുന്നു",
-  "SEARCHING_WITH" : "ഉപയോഗിച്ച് തിരയുന്നു"
+  "SEARCHING_WITH" : "ഉപയോഗിച്ച് തിരയുന്നു",
+  "THE_DESTINATION_IS_TOO_CLOSE" : "ഒരു ഓട്ടോ ബുക്ക് ചെയ്യാൻ വളരെ അടുത്താണ് ലക്ഷ്യസ്ഥാനം. നിങ്ങൾക്ക് മറ്റൊരു പിക്കപ്പും ഡ്രോപ്പും ഉണ്ടെന്ന് ഉറപ്പാക്കുക"
 }

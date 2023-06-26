@@ -4555,4 +4555,11 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         return file;
     }
 
+    @JavascriptInterface
+    public int getDistBetweenTwoPoints(double sourceLat, double sourceLong, double destLat, double destLong) {
+        LatLng source = new LatLng(sourceLat, sourceLong);
+        LatLng destination = new LatLng(destLat, destLong);;
+        return (int) Math.round(SphericalUtil.computeDistanceBetween(source, destination));
+    }
+
 }

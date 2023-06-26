@@ -1486,3 +1486,19 @@ export const cleverTapSetLocation = function () {
       return window.JBridge.cleverTapSetLocation();
     }
 }
+
+export const getDistBetweenTwoPoints = function (sourceLat) {
+  return function (sourceLong) {
+    return function (destinationLat){
+      return function (destinationLong){
+        try{
+          if(JBridge.getDistBetweenTwoPoints){
+            return JBridge.getDistBetweenTwoPoints(sourceLat, sourceLong, destinationLat, destinationLong);
+          }
+        }catch (err){
+          console.log("getDistBetweenTwoPoints " + err);
+        }
+      }
+    }
+  }
+}

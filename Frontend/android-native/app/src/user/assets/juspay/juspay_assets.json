@@ -77,6 +77,7 @@
       "ic_share_blue" : true,
       "ic_share_location" : true,
       "ic_waiting_image" : true,
+      "ny_ic_similar_pickup_drop" : true,
       "label_shadow" : true,
       "loader_overlay" : true,
       "notification_count_background" : true,

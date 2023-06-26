@@ -498,5 +498,6 @@ const englishStrings = {
   "IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL" : "It seems to be taking longer than usual.",
   "CONTINUE_SEARCH_WITH" : "Continue Search with",
   "CONTINUING_SEARCH_WITH" : "Continuing search with",
-  "SEARCHING_WITH" : "Searching with"
+  "SEARCHING_WITH" : "Searching with",
+  "THE_DESTINATION_IS_TOO_CLOSE" : "The destination is too close to book an auto. Please ensure you have a different pickup and drop."
 }
