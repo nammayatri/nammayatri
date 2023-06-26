@@ -265,7 +265,8 @@ type DriverProfileScreenProps = {
   logoutModalView :: Boolean,
   showLiveDashboard :: Boolean,
   screenType :: DriverProfileScreenType,
-  openSettings :: Boolean
+  openSettings :: Boolean,
+  updateDetails :: Boolean
 }
 
 data DriverProfileScreenType = DRIVER_DETAILS | AUTO_DETAILS | SETTINGS

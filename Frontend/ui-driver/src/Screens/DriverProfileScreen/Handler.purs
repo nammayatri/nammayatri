@@ -56,11 +56,17 @@ driverProfileScreen = do
     
     GoToAboutUsScreen -> App.BackT $ App.BackPoint <$> pure ABOUT_US_SCREEN
     GoToLogout -> App.BackT $ App.BackPoint <$> pure GO_TO_LOGOUT
-    GoToHelpAndSupportScreen -> App.BackT $ App.BackPoint <$> pure HELP_AND_SUPPORT_SCREEN
+    GoToHelpAndSupportScreen state -> do 
+      modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> state)
+      App.BackT $ App.BackPoint <$> pure HELP_AND_SUPPORT_SCREEN
     GoToHomeScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_HOME_FROM_PROFILE
     GoToReferralScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_REFERRAL_SCREEN_FROM_DRIVER_PROFILE_SCREEN
-    GoToDriverHistoryScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_DRIVER_HISTORY_SCREEN
-    GoToSelectLanguageScreen -> App.BackT $ App.BackPoint <$> pure SELECT_LANGUAGE_SCREEN
+    GoToDriverHistoryScreen state -> do 
+      modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> state)
+      App.BackT $ App.BackPoint <$> pure GO_TO_DRIVER_HISTORY_SCREEN
+    GoToSelectLanguageScreen state -> do 
+      modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> state)
+      App.BackT $ App.BackPoint <$> pure SELECT_LANGUAGE_SCREEN
     OnBoardingFlow -> App.BackT $ App.BackPoint <$> pure ON_BOARDING_FLOW
     GoToNotifications -> App.BackT $ App.BackPoint <$> pure NOTIFICATIONS_SCREEN
     GoToBookingOptions state -> App.BackT $ App.NoBack <$> pure (GO_TO_BOOKING_OPTIONS_SCREEN state)

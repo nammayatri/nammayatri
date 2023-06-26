@@ -161,7 +161,7 @@ initData = {
     , isbanner : true
     , callSupportPopUp : false
     , isMockLocation: false
-    , isSpecialZone : false
+    , isSpecialZone : true
     , defaultPickUpPoint : ""
     }
 }

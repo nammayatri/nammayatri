@@ -35,6 +35,7 @@ import Storage (setValueToLocalNativeStore, KeyStore(..))
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(LIVE_STATS_DASHBOARD))
 import Components.GenericHeader.Controller as GenericHeaderController
+import Components.PrimaryEditText.Controller as PrimaryEditTextController
 
 instance showAction :: Show Action where
   show _ = ""
@@ -70,9 +71,9 @@ instance loggableAction :: Loggable Action where
 data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | GoToVehicleDetailsScreen DriverProfileScreenState
                     | GoToBookingOptions DriverProfileScreenState
-                    | GoToSelectLanguageScreen
-                    | GoToHelpAndSupportScreen
-                    | GoToDriverHistoryScreen
+                    | GoToSelectLanguageScreen DriverProfileScreenState
+                    | GoToHelpAndSupportScreen DriverProfileScreenState
+                    | GoToDriverHistoryScreen DriverProfileScreenState
                     | GoToNotifications
                     | GoToAboutUsScreen
                     | OnBoardingFlow
@@ -91,6 +92,7 @@ data Action = BackPressed Boolean
             | HideLiveDashboard String
             | ChangeScreen DriverProfileScreenType
             | GenericHeaderAC GenericHeaderController.Action
+            | PrimaryEditTextAC PrimaryEditTextController.Action
             | UpdateValue String
             | OpenSettings 
 
@@ -104,13 +106,14 @@ eval (BackPressed flag) state = if state.props.logoutModalView then continue $ s
                                   _ <- pure $ goBackPrevWebPage (getNewIDWithTag "webview")
                                   pure NoAction
                                 ]
-                                else if state.props.screenType == SETTINGS then continue state{props{screenType = AUTO_DETAILS}}
+                                else if state.props.openSettings then continue state{props{openSettings = false}}
+                                
                                 else exit GoBack
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do 
   case screen of
     "Home" -> exit $ GoToHomeScreen
-    "Rides" -> exit $ GoToDriverHistoryScreen
+    "Rides" -> exit $ GoToDriverHistoryScreen state
     "Alert" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
@@ -126,8 +129,8 @@ eval (OptionClick optionIndex) state = do
     Data.DRIVER_VEHICLE_DETAILS -> exit $ GoToVehicleDetailsScreen state
     Data.DRIVER_BANK_DETAILS -> continue state
     Data.DRIVER_BOOKING_OPTIONS -> exit $ GoToBookingOptions state
-    Data.MULTI_LANGUAGE -> exit $ GoToSelectLanguageScreen
-    Data.HELP_AND_FAQS -> exit $ GoToHelpAndSupportScreen
+    Data.MULTI_LANGUAGE -> exit $ GoToSelectLanguageScreen state
+    Data.HELP_AND_FAQS -> exit $ GoToHelpAndSupportScreen state
     Data.ABOUT_APP -> exit $ GoToAboutUsScreen
     Data.DRIVER_LOGOUT -> continue $ (state {props = state.props {logoutModalView = true}})
     Data.REFER -> exit $ OnBoardingFlow 
@@ -158,9 +161,9 @@ eval (GetDriverInfoResponse (GetDriverInfoResp driverProfileResp)) state = do
 
 eval (ChangeScreen screenType) state = continue state{props{ screenType = screenType }}
 
-eval OpenSettings state = continue state{props{screenType = SETTINGS}}
+eval OpenSettings state = continue state{props{openSettings = true}}
 
-eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = continue state{ props { screenType = AUTO_DETAILS }}
+eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = continue state{ props { openSettings = false }}
 
 eval _ state = continue state
 

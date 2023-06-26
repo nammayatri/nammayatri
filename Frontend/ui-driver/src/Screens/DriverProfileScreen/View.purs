@@ -55,6 +55,7 @@ import PrestoDOM.Animation as PrestoAnim
 import Animation.Config as AnimConfig
 import Data.Maybe (Maybe(..), isJust)
 import Components.GenericHeader.View as GenericHeader
+import Components.PrimaryEditText.View as PrimaryEditText
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import PrestoDOM.Properties (cornerRadii)
 
@@ -78,21 +79,36 @@ screen initialState =
 
 view  :: forall w. (Action -> Effect Unit)  -> ST.DriverProfileScreenState  -> PrestoDOM (Effect Unit) w
 view push state =
-  linearLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  , onBackPressed push (const BackPressed state)
-  , background Color.white900
-  , padding $ PaddingBottom 24
-  ][ if state.props.openSettings then settingsView state push else profileView push state]
+  frameLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    ][  linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , onBackPressed push (const BackPressed state)
+        , background Color.white900
+        , visibility if state.props.updateDetails then GONE else VISIBLE
+        , padding $ PaddingBottom 24
+        ][  settingsView state push
+          , profileView push state]
+      , linearLayout
+        [ width MATCH_PARENT
+        , height MATCH_PARENT
+        , background Color.lightBlack900
+        , visibility if state.props.logoutModalView == true then VISIBLE else GONE
+        ][ PopUpModal.view (push <<<PopUpModalAction) (logoutPopUp state) ]
+      , if state.props.showLiveDashboard then showLiveStatsDashboard push state else dummyTextView 
+      , if state.props.updateDetails then updateDetailsView state push else dummyTextView]
 
 profileView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w 
 profileView push state = 
+  PrestoAnim.animationSet [Anim.fadeIn (not state.props.openSettings)] $
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
+  , visibility $ if state.props.openSettings then GONE else VISIBLE
   ][  headerView state push 
     , scrollView
       [ height WRAP_CONTENT
@@ -287,7 +303,6 @@ headerView state push =
       , height $ V 30
       , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left.png"
       , onClick push $ const (BackPressed true)
-      , margin $ MarginLeft 5
       ]
     , textView
       [ weight 1.0
@@ -452,7 +467,7 @@ tabImageView state push =
           , width $ V 88 
           , cornerRadius 44.0
           , margin $ MarginRight 10
-          , onClick push $ const AfterRender
+          , onClick push $ const $ ChangeScreen ST.DRIVER_DETAILS
           , alpha if (state.props.screenType == ST.DRIVER_DETAILS) then 1.0 else 0.4
           , imageWithFallback "ny_ic_user,https://assets.juspay.in/nammayatri/images/user/ny_ic_user.png" --change the link once uploaded to asset
           ]
@@ -464,7 +479,7 @@ tabImageView state push =
         , width $ V 88
         , cornerRadius 44.0
         , background Color.white900
-        , onClick push $ const AfterRender
+        , onClick push $ const $ ChangeScreen ST.AUTO_DETAILS
         , gravity CENTER
         , alpha if (state.props.screenType == ST.AUTO_DETAILS) then 1.0 else 0.4
         ][  imageView 
@@ -628,24 +643,26 @@ scaleDownConfig ifAnim =
   in 
     animConfig'
 
--- showLiveStatsDashboard :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
--- showLiveStatsDashboard push state =
---   linearLayout
---   [ height MATCH_PARENT
---   , width MATCH_PARENT
---   , background Color.grey800
---   , afterRender
---         ( \action -> do
---             JB.initialWebViewSetUp push (getNewIDWithTag "webview") HideLiveDashboard
---             pure unit
---         )
---         (const NoAction)
---   ] [ webView
---       [ height MATCH_PARENT
---       , width MATCH_PARENT
---       , id (getNewIDWithTag "webview")
---       , url if (isPreviousVersion (getValueToLocalStore VERSION_NAME) ("1.2.8")) then "https://nammayatri.in/open/" else "https://nammayatri.in/open?source=in-app"
---       ]]
+
+
+showLiveStatsDashboard :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+showLiveStatsDashboard push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , background Color.grey800
+  , afterRender
+        ( \action -> do
+            JB.initialWebViewSetUp push (getNewIDWithTag "webview") HideLiveDashboard
+            pure unit
+        )
+        (const NoAction)
+  ] [ webView
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , id (getNewIDWithTag "webview")
+      , url if (isPreviousVersion (getValueToLocalStore VERSION_NAME) ("1.2.8")) then "https://nammayatri.in/open/" else "https://nammayatri.in/open?source=in-app"
+      ]]
 
 -- ------------------------------------------------- profilePictureLayout ------------------------------
 -- profilePictureLayout :: ST.DriverProfileScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
@@ -702,7 +719,7 @@ profileOptionsLayout state push =
     , padding $ Padding 0 10 0 5
     ] (mapWithIndex
         (\index optionItem ->
-            linearLayout
+            (addAnimation state) $ linearLayout
             ([ width MATCH_PARENT
             , height WRAP_CONTENT
             , orientation VERTICAL
@@ -786,10 +803,13 @@ ratingView state=
   ]
 
 settingsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit )-> PrestoDOM (Effect Unit) w
-settingsView state push = linearLayout[
+settingsView state push = 
+  PrestoAnim.animationSet [Anim.fadeIn (state.props.openSettings)]$ 
+  linearLayout[
     height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
+  , visibility $ if state.props.openSettings then VISIBLE else GONE
   ][  GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
   , linearLayout
     [ height $ V 1 
@@ -869,3 +889,13 @@ infoTileView state config =
         , color Color.black700
         ]
     ]
+
+updateDetailsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit )-> PrestoDOM (Effect Unit) w
+updateDetailsView state push = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  ][  GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
+    , PrimaryEditText.view (push <<< PrimaryEditTextAC) (primaryEditTextConfig state)
+  ]
