@@ -48,3 +48,4 @@ Or did you test this change manually (provide relevant screenshots)?
 - [ ] I reviewed submitted code
 - [ ] I added unit tests for my changes where possible
 - [ ] I added a [CHANGELOG](/CHANGELOG.md) entry if applicable
+- [ ] No leak detected in leakcanary
