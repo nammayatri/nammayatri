@@ -50,8 +50,8 @@ create pden = do
 createMany :: L.MonadFlow m => [PersonDefaultEmergencyNumber] -> m ()
 createMany = traverse_ create
 
-replaceALL :: L.MonadFlow m => Id Person -> [PersonDefaultEmergencyNumber] -> m ()
-replaceALL (Id personId) pdenList = do
+replaceAll :: L.MonadFlow m => Id Person -> [PersonDefaultEmergencyNumber] -> m ()
+replaceAll (Id personId) pdenList = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamPDEN.PersonDefaultEmergencyNumberT
   let updatedMeshConfig = setMeshConfig modelName

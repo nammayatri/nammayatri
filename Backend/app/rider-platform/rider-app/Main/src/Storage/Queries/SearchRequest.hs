@@ -44,12 +44,16 @@ import Storage.Tabular.SearchRequest.SearchReqLocation
 --     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRideToBeam SearchRequest)
 --     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-create :: SearchRequest -> SqlDB ()
-create dsReq = Esq.runTransaction $
-  withFullEntity dsReq $ \(sReq, fromLoc, mbToLoc) -> do
-    Esq.create' fromLoc
-    traverse_ Esq.create' mbToLoc
-    Esq.create' sReq
+-- create :: SearchRequest -> SqlDB ()
+-- create dsReq = Esq.runTransaction $
+--   withFullEntity dsReq $ \(sReq, fromLoc, mbToLoc) -> do
+--     Esq.create' fromLoc
+--     traverse_ Esq.create' mbToLoc
+--     Esq.create' sReq
+
+-- need to be implemented and changed at reference
+create :: (L.MonadFlow m, Log m) => SearchRequest -> m (MeshResult ())
+create = error "create' not implemented"
 
 fullSearchRequestTable ::
   From
@@ -68,16 +72,16 @@ fullSearchRequestTable =
                    s ^. SearchRequestToLocationId ==. mbLoc2 ?. SearchReqLocationTId
                )
 
-findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
-findById searchRequestId = Esq.buildDType $ do
-  mbFullSearchReqT <- Esq.findOne' $ do
-    (sReq :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
-    where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
-    pure (sReq, sFromLoc, mbSToLoc)
-  pure $ extractSolidType @SearchRequest <$> mbFullSearchReqT
+-- findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
+-- findById searchRequestId = Esq.buildDType $ do
+--   mbFullSearchReqT <- Esq.findOne' $ do
+--     (sReq :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
+--     where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
+--     pure (sReq, sFromLoc, mbSToLoc)
+--   pure $ extractSolidType @SearchRequest <$> mbFullSearchReqT
 
-findById' :: (L.MonadFlow m, Log m) => Id SearchRequest -> m (Maybe SearchRequest)
-findById' (Id searchRequestId) = do
+findById :: (L.MonadFlow m, Log m) => Id SearchRequest -> m (Maybe SearchRequest)
+findById (Id searchRequestId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSR.SearchRequestT
   let updatedMeshConfig = setMeshConfig modelName
@@ -134,18 +138,18 @@ findAllByPerson' (Id personId) = do
         _ -> pure []
     Nothing -> pure []
 
-updateCustomerExtraFeeAndPaymentMethod :: Id SearchRequest -> Maybe Money -> Maybe (Id DMPM.MerchantPaymentMethod) -> SqlDB ()
-updateCustomerExtraFeeAndPaymentMethod searchReqId customerExtraFee paymentMethodId =
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ SearchRequestCustomerExtraFee =. val customerExtraFee,
-        SearchRequestSelectedPaymentMethodId =. val (toKey <$> paymentMethodId)
-      ]
-    where_ $ tbl ^. SearchRequestId ==. val (getId searchReqId)
+-- updateCustomerExtraFeeAndPaymentMethod :: Id SearchRequest -> Maybe Money -> Maybe (Id DMPM.MerchantPaymentMethod) -> SqlDB ()
+-- updateCustomerExtraFeeAndPaymentMethod searchReqId customerExtraFee paymentMethodId =
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ SearchRequestCustomerExtraFee =. val customerExtraFee,
+--         SearchRequestSelectedPaymentMethodId =. val (toKey <$> paymentMethodId)
+--       ]
+--     where_ $ tbl ^. SearchRequestId ==. val (getId searchReqId)
 
-updateCustomerExtraFeeAndPaymentMethod' :: L.MonadFlow m => Id SearchRequest -> Maybe Money -> Maybe (Id DMPM.MerchantPaymentMethod) -> m (MeshResult ())
-updateCustomerExtraFeeAndPaymentMethod' (Id searchReqId) customerExtraFee paymentMethodId = do
+updateCustomerExtraFeeAndPaymentMethod :: L.MonadFlow m => Id SearchRequest -> Maybe Money -> Maybe (Id DMPM.MerchantPaymentMethod) -> m (MeshResult ())
+updateCustomerExtraFeeAndPaymentMethod (Id searchReqId) customerExtraFee paymentMethodId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSR.SearchRequestT
   let updatedMeshConfig = setMeshConfig modelName
@@ -160,22 +164,22 @@ updateCustomerExtraFeeAndPaymentMethod' (Id searchReqId) customerExtraFee paymen
         [Se.Is BeamSR.id (Se.Eq searchReqId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-updateAutoAssign ::
-  Id SearchRequest ->
-  Bool ->
-  Bool ->
-  SqlDB ()
-updateAutoAssign searchRequestId autoAssignedEnabled autoAssignedEnabledV2 =
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ SearchRequestAutoAssignEnabled =. val (Just autoAssignedEnabled),
-        SearchRequestAutoAssignEnabledV2 =. val (Just autoAssignedEnabledV2)
-      ]
-    where_ $ tbl ^. SearchRequestTId ==. val (toKey searchRequestId)
+-- updateAutoAssign ::
+--   Id SearchRequest ->
+--   Bool ->
+--   Bool ->
+--   SqlDB ()
+-- updateAutoAssign searchRequestId autoAssignedEnabled autoAssignedEnabledV2 =
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ SearchRequestAutoAssignEnabled =. val (Just autoAssignedEnabled),
+--         SearchRequestAutoAssignEnabledV2 =. val (Just autoAssignedEnabledV2)
+--       ]
+--     where_ $ tbl ^. SearchRequestTId ==. val (toKey searchRequestId)
 
-updateAutoAssign' :: L.MonadFlow m => Id SearchRequest -> Bool -> Bool -> m (MeshResult ())
-updateAutoAssign' (Id searchRequestId) autoAssignedEnabled autoAssignedEnabledV2 = do
+updateAutoAssign :: L.MonadFlow m => Id SearchRequest -> Bool -> Bool -> m (MeshResult ())
+updateAutoAssign (Id searchRequestId) autoAssignedEnabled autoAssignedEnabledV2 = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSR.SearchRequestT
   let updatedMeshConfig = setMeshConfig modelName
@@ -190,17 +194,17 @@ updateAutoAssign' (Id searchRequestId) autoAssignedEnabled autoAssignedEnabledV2
         [Se.Is BeamSR.id (Se.Eq searchRequestId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-updatePaymentMethods :: Id SearchRequest -> [Id MerchantPaymentMethod] -> SqlDB ()
-updatePaymentMethods searchReqId availablePaymentMethods =
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ SearchRequestAvailablePaymentMethods =. val (PostgresList $ toKey <$> availablePaymentMethods)
-      ]
-    where_ $ tbl ^. SearchRequestId ==. val (getId searchReqId)
+-- updatePaymentMethods :: Id SearchRequest -> [Id MerchantPaymentMethod] -> SqlDB ()
+-- updatePaymentMethods searchReqId availablePaymentMethods =
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ SearchRequestAvailablePaymentMethods =. val (PostgresList $ toKey <$> availablePaymentMethods)
+--       ]
+--     where_ $ tbl ^. SearchRequestId ==. val (getId searchReqId)
 
-updatePaymentMethods' :: L.MonadFlow m => Id SearchRequest -> [Id MerchantPaymentMethod] -> m (MeshResult ())
-updatePaymentMethods' (Id searchReqId) availablePaymentMethods = do
+updatePaymentMethods :: L.MonadFlow m => Id SearchRequest -> [Id MerchantPaymentMethod] -> m (MeshResult ())
+updatePaymentMethods (Id searchReqId) availablePaymentMethods = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSR.SearchRequestT
   let updatedMeshConfig = setMeshConfig modelName

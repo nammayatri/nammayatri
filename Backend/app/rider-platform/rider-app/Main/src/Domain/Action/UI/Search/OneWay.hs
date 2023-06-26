@@ -27,7 +27,7 @@ import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.SearchRequest as DSearchReq
 import Kernel.Prelude
 import Kernel.Serviceability
-import qualified Kernel.Storage.Esqueleto as DB
+-- import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Common hiding (id)
@@ -121,9 +121,9 @@ oneWaySearch personId req bundleVersion clientVersion device = do
   Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId
-  DB.runTransaction $ do
-    QSearchRequest.create searchRequest
-    QPFS.updateStatus person.id DPFS.SEARCHING {requestId = searchRequest.id, validTill = searchRequest.validTill}
+  -- DB.runTransaction $ do
+  _ <- QSearchRequest.create searchRequest
+  _ <- QPFS.updateStatus person.id DPFS.SEARCHING {requestId = searchRequest.id, validTill = searchRequest.validTill}
   QPFS.clearCache person.id
   let dSearchRes =
         OneWaySearchRes

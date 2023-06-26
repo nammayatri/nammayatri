@@ -18,6 +18,7 @@ module Storage.Queries.EstimateBreakup where
 import Domain.Types.Estimate
 import qualified Domain.Types.Estimate as DEB
 import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
@@ -27,6 +28,15 @@ import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.EstimateBreakup as BeamEB
 import Storage.Tabular.EstimateBreakup as SEB
+
+create :: L.MonadFlow m => EstimateBreakup -> m (MeshResult ())
+create estimate = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamEB.EstimateBreakupT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainEstimateBreakupToBeam estimate)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findAllByEstimateId :: (Transactionable m) => Id Estimate -> DTypeBuilder m [EstimateBreakupT]
 findAllByEstimateId estimateId =

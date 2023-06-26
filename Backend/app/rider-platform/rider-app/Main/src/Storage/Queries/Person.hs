@@ -495,14 +495,14 @@ updatePersonalInfo' (Id personId) mbFirstName mbMiddleName mbLastName mbReferral
         [Se.Is BeamP.id (Se.Eq personId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-deleteById :: Id Person -> SqlDB ()
-deleteById personId = do
-  Esq.delete $ do
-    person <- from $ table @PersonT
-    where_ (person ^. PersonId ==. val (getId personId))
+-- deleteById :: Id Person -> SqlDB ()
+-- deleteById personId = do
+--   Esq.delete $ do
+--     person <- from $ table @PersonT
+--     where_ (person ^. PersonId ==. val (getId personId))
 
-deleteById' :: L.MonadFlow m => Id Person -> m ()
-deleteById' (Id personId) = do
+deleteById :: L.MonadFlow m => Id Person -> m ()
+deleteById (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
   let updatedMeshConfig = setMeshConfig modelName
@@ -515,19 +515,19 @@ deleteById' (Id personId) = do
           [Se.Is BeamP.id (Se.Eq personId)]
     Nothing -> pure ()
 
-updateHasTakenValidRide :: Id Person -> SqlDB ()
-updateHasTakenValidRide personId = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonHasTakenValidRide =. val True,
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonId ==. val (getId personId)
+-- updateHasTakenValidRide :: Id Person -> SqlDB ()
+-- updateHasTakenValidRide personId = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ PersonHasTakenValidRide =. val True,
+--         PersonUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. PersonId ==. val (getId personId)
 
-updateHasTakenValidRide' :: (L.MonadFlow m, MonadTime m) => Id Person -> m (MeshResult ())
-updateHasTakenValidRide' (Id personId) = do
+updateHasTakenValidRide :: (L.MonadFlow m, MonadTime m) => Id Person -> m (MeshResult ())
+updateHasTakenValidRide (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
   let updatedMeshConfig = setMeshConfig modelName

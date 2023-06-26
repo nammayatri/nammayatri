@@ -16,6 +16,7 @@ module Storage.Queries.TripTerms where
 
 import Domain.Types.TripTerms as DTT
 import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
@@ -26,6 +27,15 @@ import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.TripTerms as BeamTT
 import Storage.Tabular.TripTerms
+
+create :: L.MonadFlow m => TripTerms -> m (MeshResult ())
+create tripTerms = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamTT.TripTermsT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainTripTermsToBeam tripTerms)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById' :: (MonadThrow m, Log m, Transactionable m) => Id TripTerms -> DTypeBuilder m (Maybe TripTermsT)
 findById' = Esq.findById'

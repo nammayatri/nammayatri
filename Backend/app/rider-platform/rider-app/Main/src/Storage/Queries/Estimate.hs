@@ -15,7 +15,7 @@
 
 module Storage.Queries.Estimate where
 
-import Data.Tuple.Extra
+-- import Data.Tuple.Extra
 import Domain.Types.Estimate as DE
 import Domain.Types.SearchRequest
 import qualified EulerHS.KVConnector.Flow as KV
@@ -23,7 +23,7 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto as Esq hiding (create)
 import Kernel.Types.Common
 import Kernel.Types.Id (Id (Id, getId))
 import Lib.Utils
@@ -40,32 +40,42 @@ import Storage.Tabular.TripTerms
 -- import EulerHS.KVConnector.Types
 -- import Lib.Utils (setMeshConfig)
 
--- create :: L.MonadFlow m => Estimate -> m (MeshResult ())
--- create Estimate = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
---   let modelName = Se.modelTableName @BeamR.RideT
---   let updatedMeshConfig = setMeshConfig modelName
---   case dbConf of
---     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRideToBeam Estimate)
---     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+createEstimate :: L.MonadFlow m => Estimate -> m (MeshResult ())
+createEstimate estimate = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamE.EstimateT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainEstimateToBeam estimate)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
--- order of creating entites make sense!
-create :: Estimate -> SqlDB ()
-create estimate =
-  Esq.withFullEntity estimate $ \(estimateT, estimateBreakupT, mbTripTermsT) -> do
-    traverse_ Esq.create' mbTripTermsT
-    Esq.create' estimateT
-    traverse_ Esq.create' estimateBreakupT
+create :: L.MonadFlow m => Estimate -> m ()
+create estimate = do
+  _ <- traverse_ QTT.create estimate.tripTerms
+  _ <- createEstimate estimate
+  traverse_ QEB.create estimate.estimateBreakupList
 
-createMany :: [Estimate] -> SqlDB ()
-createMany estimates =
-  Esq.withFullEntities estimates $ \list -> do
-    let estimateTs = map fst3 list
-        estimateBreakupT = map snd3 list
-        tripTermsTs = mapMaybe thd3 list
-    Esq.createMany' tripTermsTs
-    Esq.createMany' estimateTs
-    traverse_ Esq.createMany' estimateBreakupT
+-- -- order of creating entites make sense!
+-- create :: Estimate -> SqlDB ()
+-- create estimate =
+--   Esq.withFullEntity estimate $ \(estimateT, estimateBreakupT, mbTripTermsT) -> do
+--     traverse_ Esq.create' mbTripTermsT
+--     Esq.create' estimateT
+--     traverse_ Esq.create' estimateBreakupT
+
+-- createMany :: [Estimate] -> SqlDB ()
+-- createMany estimates =
+--   Esq.withFullEntities estimates $ \list -> do
+--     let estimateTs = map fst3 list
+--         estimateBreakupT = map snd3 list
+--         tripTermsTs = mapMaybe thd3 list
+--     Esq.createMany' tripTermsTs
+--     Esq.createMany' estimateTs
+--     traverse_ Esq.createMany' estimateBreakupT
+
+createMany :: L.MonadFlow m => [Estimate] -> m ()
+createMany estimates = do
+  traverse_ create estimates
 
 fullEstimateTable ::
   From
@@ -142,22 +152,22 @@ findByBPPEstimateId' (Id bppEstimateId_) = do
         _ -> pure Nothing
     Nothing -> pure Nothing
 
-updateStatus ::
-  Id Estimate ->
-  EstimateStatus ->
-  SqlDB ()
-updateStatus estimateId status_ = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ EstimateUpdatedAt =. val now,
-        EstimateStatus =. val status_
-      ]
-    where_ $ tbl ^. EstimateId ==. val (getId estimateId)
+-- updateStatus ::
+--   Id Estimate ->
+--   EstimateStatus ->
+--   SqlDB ()
+-- updateStatus estimateId status_ = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ EstimateUpdatedAt =. val now,
+--         EstimateStatus =. val status_
+--       ]
+--     where_ $ tbl ^. EstimateId ==. val (getId estimateId)
 
-updateStatus' :: (L.MonadFlow m, MonadTime m) => Id Estimate -> EstimateStatus -> m (MeshResult ())
-updateStatus' (Id estimateId) status_ = do
+updateStatus :: (L.MonadFlow m, MonadTime m) => Id Estimate -> EstimateStatus -> m (MeshResult ())
+updateStatus (Id estimateId) status_ = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamE.EstimateT
   let updatedMeshConfig = setMeshConfig modelName
@@ -199,22 +209,22 @@ getStatus' (Id estimateId) = do
         _ -> pure Nothing
     Nothing -> pure Nothing
 
-updateStatusByRequestId ::
-  Id SearchRequest ->
-  EstimateStatus ->
-  SqlDB ()
-updateStatusByRequestId searchId status_ = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ EstimateUpdatedAt =. val now,
-        EstimateStatus =. val status_
-      ]
-    where_ $ tbl ^. EstimateRequestId ==. val (toKey searchId)
+-- updateStatusByRequestId ::
+--   Id SearchRequest ->
+--   EstimateStatus ->
+--   SqlDB ()
+-- updateStatusByRequestId searchId status_ = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ EstimateUpdatedAt =. val now,
+--         EstimateStatus =. val status_
+--       ]
+--     where_ $ tbl ^. EstimateRequestId ==. val (toKey searchId)
 
-updateStatusByRequestId' :: (L.MonadFlow m, MonadTime m) => Id SearchRequest -> EstimateStatus -> m (MeshResult ())
-updateStatusByRequestId' (Id searchId) status_ = do
+updateStatusByRequestId :: (L.MonadFlow m, MonadTime m) => Id SearchRequest -> EstimateStatus -> m (MeshResult ())
+updateStatusByRequestId (Id searchId) status_ = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamE.EstimateT
   let updatedMeshConfig = setMeshConfig modelName

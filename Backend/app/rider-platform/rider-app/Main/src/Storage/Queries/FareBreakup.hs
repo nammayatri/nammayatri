@@ -21,7 +21,7 @@ import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto as Esq hiding (create)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Lib.Utils
@@ -29,8 +29,20 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FareBreakup as BeamFB
 import Storage.Tabular.FarePolicy.FareBreakup
 
-createMany :: [FareBreakup] -> SqlDB ()
-createMany = Esq.createMany
+-- createMany :: [FareBreakup] -> SqlDB ()
+-- createMany = Esq.createMany
+
+create :: L.MonadFlow m => FareBreakup -> m ()
+create fareBreakup = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamFB.FareBreakupT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainFareBreakupToBeam fareBreakup)
+    Nothing -> pure ()
+
+createMany :: L.MonadFlow m => [FareBreakup] -> m ()
+createMany = traverse_ create
 
 findAllByBookingId :: (MonadThrow m, Log m, Transactionable m) => Id Booking -> m [FareBreakup]
 findAllByBookingId bookingId =

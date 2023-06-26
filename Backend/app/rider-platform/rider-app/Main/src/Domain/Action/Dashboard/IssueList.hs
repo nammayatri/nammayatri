@@ -64,7 +64,8 @@ mobileIndianCode = "+91"
 getIssueList :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Flow IssueListRes
 getIssueList merchantShortId mbLimit mbOffset mbmobileCountryCode mbMobileNumber mbFrom mbTo = do
   now <- getCurrentTime
-  merchant <- runInReplica $ QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  -- merchant <- runInReplica $ QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   let toDate = fromMaybe now mbTo
   let fromDate = fromMaybe (addUTCTime (negate nominalDay) now) mbFrom
   case mbMobileNumber of

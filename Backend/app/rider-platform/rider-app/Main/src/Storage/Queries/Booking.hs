@@ -63,19 +63,23 @@ create booking =
       OneWaySpecialZoneDetailsT toLocT -> Esq.create' toLocT
     Esq.create' bookingT
 
-updateStatus :: Id Booking -> BookingStatus -> SqlDB ()
-updateStatus rbId rbStatus = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ RB.BookingUpdatedAt =. val now,
-        RB.BookingStatus =. val rbStatus
-      ]
-    where_ $ tbl ^. RB.BookingId ==. val (getId rbId)
+-- create this and update the reference
+create' :: (L.MonadFlow m, MonadTime m) => Booking -> m (MeshResult ())
+create' = error "create' not implemented"
 
-updateStatus' :: (L.MonadFlow m, MonadTime m) => Id Booking -> BookingStatus -> m (MeshResult ())
-updateStatus' rbId rbStatus = do
+-- updateStatus :: Id Booking -> BookingStatus -> SqlDB ()
+-- updateStatus rbId rbStatus = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ RB.BookingUpdatedAt =. val now,
+--         RB.BookingStatus =. val rbStatus
+--       ]
+--     where_ $ tbl ^. RB.BookingId ==. val (getId rbId)
+
+updateStatus :: (L.MonadFlow m, MonadTime m) => Id Booking -> BookingStatus -> m (MeshResult ())
+updateStatus rbId rbStatus = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamB.BookingT
   let updatedMeshConfig = setMeshConfig modelName
@@ -174,27 +178,33 @@ fullBookingTable =
                    s ^. RB.BookingRentalSlabId ==. mbRentalSlab ?. RentalSlab.RentalSlabTId
                )
 
-findLatestByRiderIdAndStatus :: Transactionable m => Id Person -> [BookingStatus] -> m (Maybe BookingStatus)
-findLatestByRiderIdAndStatus riderId statusList =
-  Esq.findOne $ do
-    booking <- from $ table @BookingT
-    where_ $
-      booking ^. RB.BookingRiderId ==. val (toKey riderId)
-        &&. booking ^. RB.BookingStatus `in_` valList statusList
-    orderBy [desc $ booking ^. RB.BookingCreatedAt]
-    limit 1
-    pure $ booking ^. RB.BookingStatus
+-- findLatestByRiderIdAndStatus :: Transactionable m => Id Person -> [BookingStatus] -> m (Maybe BookingStatus)
+-- findLatestByRiderIdAndStatus riderId statusList =
+--   Esq.findOne $ do
+--     booking <- from $ table @BookingT
+--     where_ $
+--       booking ^. RB.BookingRiderId ==. val (toKey riderId)
+--         &&. booking ^. RB.BookingStatus `in_` valList statusList
+--     orderBy [desc $ booking ^. RB.BookingCreatedAt]
+--     limit 1
+--     pure $ booking ^. RB.BookingStatus
 
-findLatestByRiderIdAndStatus' :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Booking)
-findLatestByRiderIdAndStatus' (Id bookingId) = do
+findLatestByRiderIdAndStatus :: (L.MonadFlow m, Log m) => Id Person -> [BookingStatus] -> m (Maybe BookingStatus)
+findLatestByRiderIdAndStatus (Id bookingId) bookingStatus = do
   dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamB.BookingT
-  let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findAllWithOptionsKVConnector dbConf' updatedMeshConfig [Se.Is BeamB.id $ Se.Eq bookingId] (Se.Desc BeamB.createdAt) (Just 1) Nothing
+      let modelName = Se.modelTableName @BeamB.BookingT
+          updatedMeshConfig = setMeshConfig modelName
+          options = [Se.Is BeamB.id $ Se.Eq bookingId, Se.Is BeamB.status $ Se.In bookingStatus]
+          sortBy = Se.Desc BeamB.createdAt
+          limit' = Just 1
+      result <- KV.findAllWithOptionsKVConnector dbConf' updatedMeshConfig options sortBy limit' Nothing
       case result of
-        Right (x : _) -> transformBeamBookingToDomain x
+        Right (x : _) ->
+          transformBeamBookingToDomain x >>= \case
+            Just b -> pure (Just (DRB.status b))
+            Nothing -> pure Nothing
         _ -> pure Nothing
     _ -> pure Nothing
 
@@ -468,33 +478,34 @@ updatePaymentInfo' rbId estimatedFare discount estimatedTotalFare mbPaymentUrl =
         [Se.Is BeamB.id (Se.Eq $ getId rbId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-updatePaymentUrl :: Id Booking -> Text -> SqlDB ()
-updatePaymentUrl bookingId paymentUrl = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ RB.BookingPaymentUrl =. val (Just paymentUrl),
-        RB.BookingUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. RB.BookingId ==. val (getId bookingId)
+-- updatePaymentUrl :: Id Booking -> Text -> SqlDB ()
+-- updatePaymentUrl bookingId paymentUrl = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ RB.BookingPaymentUrl =. val (Just paymentUrl),
+--         RB.BookingUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. RB.BookingId ==. val (getId bookingId)
 
-updatePaymentUrl' :: (L.MonadFlow m, MonadTime m) => Id Booking -> Text -> m (MeshResult ())
-updatePaymentUrl' bookingId paymentUrl = do
+updatePaymentUrl :: (L.MonadFlow m, MonadTime m) => Id Booking -> Text -> m ()
+updatePaymentUrl bookingId paymentUrl = do
   now <- getCurrentTime
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamB.BookingT
   let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamB.paymentUrl (Just paymentUrl),
-          Se.Set BeamB.updatedAt now
-        ]
-        [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+      void $
+        KV.updateWoReturningWithKVConnector
+          dbConf'
+          updatedMeshConfig
+          [ Se.Set BeamB.paymentUrl (Just paymentUrl),
+            Se.Set BeamB.updatedAt now
+          ]
+          [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+    Nothing -> pure ()
 
 findAllByPersonIdLimitOffset ::
   Transactionable m =>
@@ -566,31 +577,32 @@ findStuckBookings' (Id merchantId) bookingIds now = do
         _ -> pure []
     Nothing -> pure []
 
-cancelBookings :: [Id Booking] -> UTCTime -> SqlDB ()
-cancelBookings bookingIds now = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ BookingStatus =. val CANCELLED,
-        BookingUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. BookingTId `in_` valList (toKey <$> bookingIds)
+-- cancelBookings :: [Id Booking] -> UTCTime -> SqlDB ()
+-- cancelBookings bookingIds now = do
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ BookingStatus =. val CANCELLED,
+--         BookingUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. BookingTId `in_` valList (toKey <$> bookingIds)
 
-cancelBookings' :: (L.MonadFlow m, MonadTime m) => [Id Booking] -> UTCTime -> m (MeshResult ())
-cancelBookings' bookingIds now = do
+cancelBookings :: (L.MonadFlow m, MonadTime m) => [Id Booking] -> UTCTime -> m ()
+cancelBookings bookingIds now = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamB.BookingT
   let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamB.status CANCELLED,
-          Se.Set BeamB.updatedAt now
-        ]
-        [Se.Is BeamB.id (Se.In $ getId <$> bookingIds)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+      void $
+        KV.updateWoReturningWithKVConnector
+          dbConf'
+          updatedMeshConfig
+          [ Se.Set BeamB.status CANCELLED,
+            Se.Set BeamB.updatedAt now
+          ]
+          [Se.Is BeamB.id (Se.In $ getId <$> bookingIds)]
+    Nothing -> pure ()
 
 transformBeamBookingToDomain :: (L.MonadFlow m, Log m) => BeamB.Booking -> m (Maybe Booking)
 transformBeamBookingToDomain BeamB.BookingT {..} = do

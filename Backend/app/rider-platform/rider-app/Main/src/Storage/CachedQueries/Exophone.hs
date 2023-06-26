@@ -104,5 +104,5 @@ create = Queries.create
 updateAffectedPhones :: [Text] -> Esq.SqlDB ()
 updateAffectedPhones = Queries.updateAffectedPhones
 
-deleteByMerchantId :: Id DM.Merchant -> Esq.SqlDB ()
+deleteByMerchantId :: L.MonadFlow m => Id DM.Merchant -> m ()
 deleteByMerchantId = Queries.deleteByMerchantId

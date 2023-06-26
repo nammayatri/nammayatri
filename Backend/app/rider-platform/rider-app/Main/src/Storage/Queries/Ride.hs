@@ -47,22 +47,22 @@ create ride = do
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRideToBeam ride)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-updateStatus ::
-  Id Ride ->
-  RideStatus ->
-  SqlDB ()
-updateStatus rideId status_ = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ RideUpdatedAt =. val now,
-        RideStatus =. val status_
-      ]
-    where_ $ tbl ^. RideId ==. val (getId rideId)
+-- updateStatus ::
+--   Id Ride ->
+--   RideStatus ->
+--   SqlDB ()
+-- updateStatus rideId status_ = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ RideUpdatedAt =. val now,
+--         RideStatus =. val status_
+--       ]
+--     where_ $ tbl ^. RideId ==. val (getId rideId)
 
-updateStatus' :: (L.MonadFlow m, MonadTime m) => Id Ride -> RideStatus -> m (MeshResult ())
-updateStatus' rideId status = do
+updateStatus :: (L.MonadFlow m, MonadTime m) => Id Ride -> RideStatus -> m (MeshResult ())
+updateStatus rideId status = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
   let updatedMeshConfig = setMeshConfig modelName
@@ -109,22 +109,22 @@ updateTrackingUrl' rideId url = do
         [Se.Is BeamR.id (Se.Eq $ getId rideId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-updateRideRating ::
-  Id Ride ->
-  Int ->
-  SqlDB ()
-updateRideRating rideId rideRating = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ RideUpdatedAt =. val now,
-        RideRideRating =. val (Just rideRating)
-      ]
-    where_ $ tbl ^. RideId ==. val (getId rideId)
+-- updateRideRating ::
+--   Id Ride ->
+--   Int ->
+--   SqlDB ()
+-- updateRideRating rideId rideRating = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ RideUpdatedAt =. val now,
+--         RideRideRating =. val (Just rideRating)
+--       ]
+--     where_ $ tbl ^. RideId ==. val (getId rideId)
 
-updateRideRating' :: (L.MonadFlow m, MonadTime m) => Id Ride -> Int -> m (MeshResult ())
-updateRideRating' rideId rideRating = do
+updateRideRating :: (L.MonadFlow m, MonadTime m) => Id Ride -> Int -> m (MeshResult ())
+updateRideRating rideId rideRating = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
   let updatedMeshConfig = setMeshConfig modelName
@@ -176,24 +176,24 @@ findByBPPRideId' bppRideId_ = do
         Left _ -> pure Nothing
     Nothing -> pure Nothing
 
-updateMultiple :: Id Ride -> Ride -> SqlDB ()
-updateMultiple rideId ride = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ RideUpdatedAt =. val now,
-        RideStatus =. val ride.status,
-        RideFare =. val (realToFrac <$> ride.fare),
-        RideTotalFare =. val (realToFrac <$> ride.totalFare),
-        RideChargeableDistance =. val ride.chargeableDistance,
-        RideRideStartTime =. val ride.rideStartTime,
-        RideRideEndTime =. val ride.rideEndTime
-      ]
-    where_ $ tbl ^. RideId ==. val (getId rideId)
+-- updateMultiple :: Id Ride -> Ride -> SqlDB ()
+-- updateMultiple rideId ride = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ RideUpdatedAt =. val now,
+--         RideStatus =. val ride.status,
+--         RideFare =. val (realToFrac <$> ride.fare),
+--         RideTotalFare =. val (realToFrac <$> ride.totalFare),
+--         RideChargeableDistance =. val ride.chargeableDistance,
+--         RideRideStartTime =. val ride.rideStartTime,
+--         RideRideEndTime =. val ride.rideEndTime
+--       ]
+--     where_ $ tbl ^. RideId ==. val (getId rideId)
 
-updateMultiple' :: (L.MonadFlow m, MonadTime m) => Id Ride -> Ride -> m (MeshResult ())
-updateMultiple' rideId ride = do
+updateMultiple :: (L.MonadFlow m, MonadTime m) => Id Ride -> Ride -> m (MeshResult ())
+updateMultiple rideId ride = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
   let updatedMeshConfig = setMeshConfig modelName
@@ -360,32 +360,32 @@ findStuckRideItems' (Id merchantId) bookingIds now = do
 
     mkStuckRideItem (rideId, bookingId, riderId) = StuckRideItem {..}
 
-cancelRides :: [Id Ride] -> UTCTime -> SqlDB ()
-cancelRides rideIds now = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ RideStatus =. val CANCELLED,
-        RideUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. RideTId `in_` valList (toKey <$> rideIds)
+-- cancelRides :: [Id Ride] -> UTCTime -> SqlDB ()
+-- cancelRides rideIds now = do
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ RideStatus =. val CANCELLED,
+--         RideUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. RideTId `in_` valList (toKey <$> rideIds)
 
-cancelRides' :: (L.MonadFlow m, MonadTime m) => [Id Ride] -> m (MeshResult ())
-cancelRides' rideIds = do
+cancelRides :: (L.MonadFlow m, MonadTime m) => [Id Ride] -> UTCTime -> m ()
+cancelRides rideIds now = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
   let updatedMeshConfig = setMeshConfig modelName
-  now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamR.status Ride.CANCELLED,
-          Se.Set BeamR.updatedAt now
-        ]
-        [Se.Is BeamR.id (Se.In $ getId <$> rideIds)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+      void $
+        KV.updateWoReturningWithKVConnector
+          dbConf'
+          updatedMeshConfig
+          [ Se.Set BeamR.status Ride.CANCELLED,
+            Se.Set BeamR.updatedAt now
+          ]
+          [Se.Is BeamR.id (Se.In $ getId <$> rideIds)]
+    Nothing -> pure ()
 
 data RideItem = RideItem
   { person :: Person,

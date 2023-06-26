@@ -37,6 +37,7 @@ import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.VehicleVariant
 import Environment
+import qualified EulerHS.Language as L
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
@@ -233,6 +234,7 @@ data BreakupPriceInfo = BreakupPriceInfo
 onUpdate ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
+    L.MonadFlow m,
     EncFlow m r,
     EsqDBReplicaFlow m r,
     CoreMetrics m,
@@ -251,10 +253,10 @@ onUpdate ::
   m ()
 onUpdate ValidatedRideAssignedReq {..} = do
   ride <- buildRide
-  DB.runTransaction $ do
-    QRB.updateStatus booking.id SRB.TRIP_ASSIGNED
-    _ <- QRide.create ride
-    QPFS.updateStatus booking.riderId DPFS.RIDE_PICKUP {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, otp, vehicleNumber, fromLocation = Maps.getCoordinates booking.fromLocation, driverLocation = Nothing}
+  -- DB.runTransaction $ do
+  _ <- QRB.updateStatus booking.id SRB.TRIP_ASSIGNED
+  _ <- QRide.create ride
+  _ <- QPFS.updateStatus booking.riderId DPFS.RIDE_PICKUP {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, otp, vehicleNumber, fromLocation = Maps.getCoordinates booking.fromLocation, driverLocation = Nothing}
   QPFS.clearCache booking.riderId
   Notify.notifyOnRideAssigned booking ride
   withLongRetry $ CallBPP.callTrack booking ride
@@ -291,9 +293,9 @@ onUpdate ValidatedRideStartedReq {..} = do
              rideStartTime = Just rideStartTime,
              rideEndTime = Nothing
             }
-  DB.runTransaction $ do
-    QRide.updateMultiple updRideForStartReq.id updRideForStartReq
-    QPFS.updateStatus booking.riderId DPFS.RIDE_STARTED {rideId = ride.id, bookingId = booking.id, trackingUrl = ride.trackingUrl, driverLocation = Nothing}
+  -- DB.runTransaction $ do
+  _ <- QRide.updateMultiple updRideForStartReq.id updRideForStartReq
+  _ <- QPFS.updateStatus booking.riderId DPFS.RIDE_STARTED {rideId = ride.id, bookingId = booking.id, trackingUrl = ride.trackingUrl, driverLocation = Nothing}
   QPFS.clearCache booking.riderId
   Notify.notifyOnRideStarted booking ride
 onUpdate ValidatedRideCompletedReq {..} = do
@@ -314,14 +316,13 @@ onUpdate ValidatedRideCompletedReq {..} = do
         case minTripDistanceForReferralCfg of
           Just distance -> updRide.chargeableDistance >= Just distance && not person.hasTakenValidRide
           Nothing -> True
-  DB.runTransaction $ do
-    when shouldUpdateRideComplete $
-      QP.updateHasTakenValidRide booking.riderId
-    QRB.updateStatus booking.id SRB.COMPLETED
-    whenJust paymentUrl $ QRB.updatePaymentUrl booking.id
-    QRide.updateMultiple updRide.id updRide
-    QFareBreakup.createMany breakups
-    QPFS.updateStatus booking.riderId DPFS.PENDING_RATING {rideId = ride.id}
+  -- DB.runTransaction $ do
+  when shouldUpdateRideComplete $ void $ QP.updateHasTakenValidRide booking.riderId
+  _ <- QRB.updateStatus booking.id SRB.COMPLETED
+  whenJust paymentUrl $ QRB.updatePaymentUrl booking.id
+  _ <- QRide.updateMultiple updRide.id updRide
+  _ <- QFareBreakup.createMany breakups
+  void $ QPFS.updateStatus booking.riderId DPFS.PENDING_RATING {rideId = ride.id}
   QPFS.clearCache booking.riderId
   -- uncomment for update api test; booking.paymentMethodId should be present
   -- whenJust booking.paymentMethodId $ \paymentMethodId -> do
@@ -363,22 +364,22 @@ onUpdate ValidatedBookingCancelledReq {..} = do
   fork "incrementing fraud counters" $ do
     mFraudDetected <- SMC.anyFraudDetected booking.riderId booking.merchantId merchantConfigs
     whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id)
-  DB.runTransaction $ do
-    QRB.updateStatus booking.id SRB.CANCELLED
-    whenJust mbRide $ \ride -> QRide.updateStatus ride.id SRide.CANCELLED
-    unless (cancellationSource == SBCR.ByUser) $
-      QBCR.upsert bookingCancellationReason
-    QPFS.updateStatus booking.riderId DPFS.IDLE
+  -- DB.runTransaction $ do
+  _ <- QRB.updateStatus booking.id SRB.CANCELLED
+  whenJust mbRide $ \ride -> void $ QRide.updateStatus ride.id SRide.CANCELLED
+  unless (cancellationSource == SBCR.ByUser) $
+    QBCR.upsert bookingCancellationReason
+  _ <- QPFS.updateStatus booking.riderId DPFS.IDLE
   QPFS.clearCache booking.riderId
   -- notify customer
   Notify.notifyOnBookingCancelled booking cancellationSource
 onUpdate ValidatedBookingReallocationReq {..} = do
   mbRide <- QRide.findActiveByRBId booking.id
   bookingCancellationReason <- buildBookingCancellationReason booking.id (mbRide <&> (.id)) reallocationSource booking.merchantId
-  DB.runTransaction $ do
-    QRB.updateStatus booking.id SRB.AWAITING_REASSIGNMENT
-    QRide.updateStatus ride.id SRide.CANCELLED
-    QBCR.upsert bookingCancellationReason
+  -- DB.runTransaction $ do
+  _ <- QRB.updateStatus booking.id SRB.AWAITING_REASSIGNMENT
+  _ <- QRide.updateStatus ride.id SRide.CANCELLED
+  QBCR.upsert bookingCancellationReason
   -- notify customer
   Notify.notifyOnBookingReallocated booking
 onUpdate ValidatedDriverArrivedReq {..} = do
@@ -391,12 +392,12 @@ onUpdate ValidatedEstimateRepetitionReq {..} = do
   bookingCancellationReason <- buildBookingCancellationReason booking.id (Just ride.id) cancellationSource booking.merchantId
   logTagInfo ("EstimateId-" <> getId estimate.id) "Estimate repetition."
 
-  DB.runTransaction $ do
-    QEstimate.updateStatus estimate.id DEstimate.DRIVER_QUOTE_REQUESTED
-    QRB.updateStatus booking.id SRB.REALLOCATED
-    QRide.updateStatus ride.id SRide.CANCELLED
-    QBCR.upsert bookingCancellationReason
-    QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, validTill = searchReq.validTill}
+  -- DB.runTransaction $ do
+  _ <- QEstimate.updateStatus estimate.id DEstimate.DRIVER_QUOTE_REQUESTED
+  _ <- QRB.updateStatus booking.id SRB.REALLOCATED
+  _ <- QRide.updateStatus ride.id SRide.CANCELLED
+  _ <- QBCR.upsert bookingCancellationReason
+  _ <- QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, validTill = searchReq.validTill}
   QPFS.clearCache searchReq.riderId
   -- notify customer
   Notify.notifyOnEstimatedReallocated booking estimate.id

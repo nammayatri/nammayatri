@@ -95,14 +95,14 @@ findAllByRiderIdAndTag' perId addressTag = do
     Just dbCOnf' -> either (pure []) (transformBeamSavedReqLocationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamSRL.riderId (Se.Eq (getId perId)), Se.Is BeamSRL.tag (Se.Eq addressTag)]]
     Nothing -> pure []
 
-deleteAllByRiderId :: Id Person -> SqlDB ()
-deleteAllByRiderId personId = do
-  Esq.delete $ do
-    saveReqLocation <- from $ table @SavedReqLocationT
-    where_ (saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey personId))
+-- deleteAllByRiderId :: Id Person -> SqlDB ()
+-- deleteAllByRiderId personId = do
+--   Esq.delete $ do
+--     saveReqLocation <- from $ table @SavedReqLocationT
+--     where_ (saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey personId))
 
-deleteAllByRiderId' :: L.MonadFlow m => Id Person -> m ()
-deleteAllByRiderId' personId = do
+deleteAllByRiderId :: L.MonadFlow m => Id Person -> m ()
+deleteAllByRiderId personId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSRL.SavedReqLocationT
   let updatedMeshConfig = setMeshConfig modelName

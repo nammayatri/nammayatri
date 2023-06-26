@@ -24,7 +24,7 @@ import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as DQuote
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as DB
+-- import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Id
@@ -44,9 +44,9 @@ cancelBooking :: (HasCacheConfig r, EncFlow m r, EsqDBFlow m r, HedisFlow m r, C
 cancelBooking booking = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
   bookingCancellationReason <- buildBookingCancellationReason booking.id
-  DB.runTransaction $ do
-    QRideB.updateStatus booking.id DRB.CANCELLED
-    QBCR.upsert bookingCancellationReason
+  -- DB.runTransaction $ do
+  _ <- QRideB.updateStatus booking.id DRB.CANCELLED
+  _ <- QBCR.upsert bookingCancellationReason
   Notify.notifyOnBookingCancelled booking DBCR.ByApplication
   where
     buildBookingCancellationReason bookingId = do

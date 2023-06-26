@@ -187,7 +187,8 @@ rideInfo merchantShortId reqRideId = do
       mbQuote <- runInReplica $ QQuote.findById quoteId
       case mbQuote of
         Just quote -> do
-          mbSearchReq <- runInReplica $ QSearch.findById quote.requestId
+          -- mbSearchReq <- runInReplica $ QSearch.findById quote.requestId
+          mbSearchReq <- QSearch.findById quote.requestId
           case mbSearchReq of
             Just searchReq -> pure searchReq.estimatedRideDuration
             Nothing -> pure Nothing
@@ -265,11 +266,11 @@ bookingCancel BookingCancelledReq {..} = do
   mbRide <- QRide.findActiveByRBId booking.id
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCReason.ByMerchant)
   let bookingCancellationReason = buildBookingCancellationReason booking.id (mbRide <&> (.id)) booking.merchantId
-  runTransaction $ do
-    QRB.updateStatus booking.id DTB.CANCELLED
-    whenJust mbRide $ \ride -> QRide.updateStatus ride.id DRide.CANCELLED
-    QBCReason.upsert bookingCancellationReason
-    QPFS.updateStatus booking.riderId DPFS.IDLE
+  -- runTransaction $ do
+  _ <- QRB.updateStatus booking.id DTB.CANCELLED
+  _ <- whenJust mbRide $ \ride -> void $ QRide.updateStatus ride.id DRide.CANCELLED
+  _ <- QBCReason.upsert bookingCancellationReason
+  void $ QPFS.updateStatus booking.riderId DPFS.IDLE
   where
     isBookingCancellable booking =
       booking.status `elem` [DTB.NEW, DTB.CONFIRMED, DTB.AWAITING_REASSIGNMENT, DTB.TRIP_ASSIGNED]

@@ -48,20 +48,20 @@ findByRideBookingId rideBookingId =
     where_ $ rideBookingCancellationReason ^. BookingCancellationReasonBookingId ==. val (toKey rideBookingId)
     return rideBookingCancellationReason
 
-upsert :: BookingCancellationReason -> SqlDB ()
-upsert cancellationReason =
-  Esq.upsert
-    cancellationReason
-    [ BookingCancellationReasonBookingId =. val (toKey cancellationReason.bookingId),
-      BookingCancellationReasonRideId =. val (toKey <$> cancellationReason.rideId),
-      BookingCancellationReasonSource =. val (cancellationReason.source),
-      BookingCancellationReasonReasonCode =. val (toKey <$> cancellationReason.reasonCode),
-      BookingCancellationReasonReasonStage =. val (cancellationReason.reasonStage),
-      BookingCancellationReasonAdditionalInfo =. val (cancellationReason.additionalInfo)
-    ]
+-- upsert :: BookingCancellationReason -> SqlDB ()
+-- upsert cancellationReason =
+--   Esq.upsert
+--     cancellationReason
+--     [ BookingCancellationReasonBookingId =. val (toKey cancellationReason.bookingId),
+--       BookingCancellationReasonRideId =. val (toKey <$> cancellationReason.rideId),
+--       BookingCancellationReasonSource =. val (cancellationReason.source),
+--       BookingCancellationReasonReasonCode =. val (toKey <$> cancellationReason.reasonCode),
+--       BookingCancellationReasonReasonStage =. val (cancellationReason.reasonStage),
+--       BookingCancellationReasonAdditionalInfo =. val (cancellationReason.additionalInfo)
+--     ]
 
-upsert' :: L.MonadFlow m => BookingCancellationReason -> m ()
-upsert' cancellationReason = do
+upsert :: L.MonadFlow m => BookingCancellationReason -> m ()
+upsert cancellationReason = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamBCR.BookingCancellationReasonT
   let updatedMeshConfig = setMeshConfig modelName

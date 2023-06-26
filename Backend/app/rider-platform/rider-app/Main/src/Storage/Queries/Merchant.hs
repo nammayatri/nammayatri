@@ -53,15 +53,15 @@ findById' (Id merchantId) = do
         _ -> pure Nothing
     Nothing -> pure Nothing
 
-findByShortId :: Transactionable m => ShortId Merchant -> m (Maybe Merchant)
-findByShortId shortId_ = do
-  findOne $ do
-    merchant <- from $ table @MerchantT
-    where_ $ merchant ^. MerchantShortId ==. val (getShortId shortId_)
-    return merchant
+-- findByShortId :: Transactionable m => ShortId Merchant -> m (Maybe Merchant)
+-- findByShortId shortId_ = do
+--   findOne $ do
+--     merchant <- from $ table @MerchantT
+--     where_ $ merchant ^. MerchantShortId ==. val (getShortId shortId_)
+--     return merchant
 
-findByShortId' :: L.MonadFlow m => ShortId Merchant -> m (Maybe Merchant)
-findByShortId' shortId_ = do
+findByShortId :: L.MonadFlow m => ShortId Merchant -> m (Maybe Merchant)
+findByShortId shortId_ = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamM.MerchantT
   let updatedMeshConfig = setMeshConfig modelName
@@ -110,21 +110,21 @@ findAll' = do
         _ -> pure []
     Nothing -> pure []
 
-update :: Merchant -> SqlDB ()
-update merchant = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ MerchantName =. val merchant.name,
-        MerchantGatewayUrl =. val (showBaseUrl merchant.gatewayUrl),
-        MerchantRegistryUrl =. val (showBaseUrl merchant.registryUrl),
-        MerchantUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. MerchantTId ==. val (toKey merchant.id)
+-- update :: Merchant -> SqlDB ()
+-- update merchant = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ MerchantName =. val merchant.name,
+--         MerchantGatewayUrl =. val (showBaseUrl merchant.gatewayUrl),
+--         MerchantRegistryUrl =. val (showBaseUrl merchant.registryUrl),
+--         MerchantUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. MerchantTId ==. val (toKey merchant.id)
 
-update' :: (L.MonadFlow m, MonadTime m) => Merchant -> m (MeshResult ())
-update' org = do
+update :: (L.MonadFlow m, MonadTime m) => Merchant -> m (MeshResult ())
+update org = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamM.MerchantT
   let updatedMeshConfig = setMeshConfig modelName

@@ -26,8 +26,9 @@ where
 import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.Merchant
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
@@ -86,5 +87,5 @@ makeShortIdKey shortId = "CachedQueries:Merchant:ShortId-" <> shortId.getShortId
 makeSubscriberIdKey :: ShortId Subscriber -> Text
 makeSubscriberIdKey subscriberId = "CachedQueries:Merchant:SubscriberId-" <> subscriberId.getShortId
 
-update :: Merchant -> Esq.SqlDB ()
+update :: (L.MonadFlow m, MonadTime m) => Merchant -> m (MeshResult ())
 update = Queries.update

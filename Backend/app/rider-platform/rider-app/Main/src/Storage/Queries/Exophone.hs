@@ -173,14 +173,14 @@ updateAffectedPhones' primaryPhones = do
         Left _ -> pure (error "DB Config not found")
     Nothing -> pure (error "DB Config not found")
 
-deleteByMerchantId :: Id DM.Merchant -> SqlDB ()
-deleteByMerchantId merchantId = do
-  Esq.delete $ do
-    exophone <- from $ table @ExophoneT
-    where_ $ exophone ^. ExophoneMerchantId ==. val (toKey merchantId)
+-- deleteByMerchantId :: Id DM.Merchant -> SqlDB ()
+-- deleteByMerchantId merchantId = do
+--   Esq.delete $ do
+--     exophone <- from $ table @ExophoneT
+--     where_ $ exophone ^. ExophoneMerchantId ==. val (toKey merchantId)
 
-deleteByMerchantId' :: L.MonadFlow m => Id DM.Merchant -> m ()
-deleteByMerchantId' (Id merchantId) = do
+deleteByMerchantId :: L.MonadFlow m => Id DM.Merchant -> m ()
+deleteByMerchantId (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamE.ExophoneT
   let updatedMeshConfig = setMeshConfig modelName

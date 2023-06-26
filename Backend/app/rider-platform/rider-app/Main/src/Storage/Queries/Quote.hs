@@ -22,6 +22,7 @@ import Domain.Types.FarePolicy.FareProductType as DFFP
 import Domain.Types.Quote as DQ
 import Domain.Types.SearchRequest
 import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
@@ -80,6 +81,9 @@ createMany quotes =
     Esq.createMany' mbTripTermsTs
     traverse_ createDetails quoteDetailsTs
     Esq.createMany' quoteTs
+
+createMany' :: L.MonadFlow m => [Quote] -> m (MeshResult ())
+createMany' = error "createMany' not implemented make sure to implement and change the ' where its being used"
 
 fullQuoteTable ::
   From

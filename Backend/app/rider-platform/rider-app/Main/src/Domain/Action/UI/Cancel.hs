@@ -33,7 +33,6 @@ import qualified Domain.Types.Ride as Ride
 import Domain.Types.SearchRequest (SearchRequest)
 import Kernel.External.Maps
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Id
@@ -100,7 +99,8 @@ cancel bookingId _ req = do
             logTagInfo "DriverLocationFetchFailed" $ show err
             buildBookingCancelationReason Nothing Nothing (Just booking.merchantId)
       Nothing -> buildBookingCancelationReason Nothing Nothing (Just booking.merchantId)
-  DB.runTransaction $ QBCR.upsert cancellationReason
+  -- DB.runTransaction $ QBCR.upsert cancellationReason
+  QBCR.upsert cancellationReason
   return $
     CancelRes
       { bppBookingId = bppBookingId,
@@ -168,13 +168,16 @@ cancelSearch ::
   m ()
 cancelSearch personId dcr = do
   if dcr.estimateStatus == DEstimate.GOT_DRIVER_QUOTE
-    then Esq.runTransaction $ do
-      Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
-      QEstimate.updateStatus dcr.estimateId DEstimate.DRIVER_QUOTE_CANCELLED
+    then -- then Esq.runTransaction $ do
+    do
+      -- Esq.runTransaction $
+      _ <- QPFS.updateStatus personId DPFS.IDLE
+      void $ QEstimate.updateStatus dcr.estimateId DEstimate.DRIVER_QUOTE_CANCELLED
     else do
-      Esq.runTransaction $ do
-        Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
-        QEstimate.updateStatus dcr.estimateId DEstimate.CANCELLED
+      -- Esq.runTransaction $ do
+      -- Esq.runTransaction $
+      _ <- QPFS.updateStatus personId DPFS.IDLE
+      void $ QEstimate.updateStatus dcr.estimateId DEstimate.CANCELLED
   QPFS.clearCache personId
 
 driverDistanceToPickup ::

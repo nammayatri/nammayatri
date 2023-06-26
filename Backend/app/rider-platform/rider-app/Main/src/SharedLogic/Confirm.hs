@@ -17,7 +17,7 @@ import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
-import qualified Kernel.Storage.Esqueleto as DB
+-- import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -97,10 +97,10 @@ confirm DConfirmReq {..} = do
       throwError (InvalidRequest "Payment method not allowed")
     pure paymentMethod
 
-  DB.runTransaction $ do
-    QRideB.create booking
-    QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill}
-    QEstimate.updateStatusByRequestId quote.requestId DEstimate.COMPLETED
+  -- DB.runTransaction $ do
+  _ <- QRideB.create' booking
+  _ <- QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill}
+  _ <- QEstimate.updateStatusByRequestId quote.requestId DEstimate.COMPLETED
   QPFS.clearCache searchRequest.riderId
   return $
     DConfirmRes

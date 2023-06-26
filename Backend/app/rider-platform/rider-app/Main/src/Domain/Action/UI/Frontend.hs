@@ -79,21 +79,25 @@ getPersonFlowStatus personId mIsPolling = do
       if now < personStatus.validTill
         then return $ GetPersonFlowStatusRes Nothing personStatus
         else do
-          Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
+          -- Esq.runTransaction $
+          _ <- QPFS.updateStatus personId DPFS.IDLE
           return $ GetPersonFlowStatusRes (Just personStatus) DPFS.IDLE
 
 notifyEvent :: (CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m) => Id DP.Person -> NotifyEventReq -> m NotifyEventResp
 notifyEvent personId req = do
-  case req.event of
-    RATE_DRIVER_SKIPPED -> backToIDLE
+  _ <- case req.event of
+    RATE_DRIVER_SKIPPED -> QPFS.updateStatus personId DPFS.IDLE
     SEARCH_CANCELLED -> do
-      activeBooking <- Esq.runInReplica $ QB.findLatestByRiderIdAndStatus personId DRB.activeBookingStatus
+      -- activeBooking <- Esq.runInReplica $ QB.findLatestByRiderIdAndStatus personId DRB.activeBookingStatus
+      activeBooking <- QB.findLatestByRiderIdAndStatus personId DRB.activeBookingStatus
       whenJust activeBooking $ \_ -> throwError (InvalidRequest "ACTIVE_BOOKING_EXISTS")
-      backToIDLE
+      QPFS.updateStatus personId DPFS.IDLE
   QPFS.clearCache personId
   pure APISuccess.Success
-  where
-    backToIDLE = Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
+
+-- where
+-- backToIDLE = Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
+-- backToIDLE = QPFS.updateStatus personId DPFS.IDLE
 
 handleRideTracking ::
   ( CacheFlow m r,
@@ -154,7 +158,8 @@ handleRideTracking _ _ status = return $ GetPersonFlowStatusRes Nothing status
 
 updateStatus :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id DP.Person -> DPFS.FlowStatus -> m ()
 updateStatus personId updatedStatus = do
-  Esq.runTransaction $ QPFS.updateStatus personId updatedStatus
+  -- Esq.runTransaction $ QPFS.updateStatus personId updatedStatus
+  _ <- QPFS.updateStatus personId updatedStatus
   QPFS.clearCache personId
 
 getTrackUrl :: (Esq.EsqDBReplicaFlow m r, MonadFlow m) => Id SRide.Ride -> Maybe BaseUrl -> m (Maybe BaseUrl)

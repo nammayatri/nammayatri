@@ -37,7 +37,7 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DPerson
 import Environment
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
+-- import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
@@ -92,7 +92,8 @@ selectResult (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . 
 
 cancelSearch :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler DSelect.CancelAPIResponse
 cancelSearch (personId, _) estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  activeBooking <- Esq.runInReplica $ QRB.findLatestByRiderIdAndStatus personId SRB.activeBookingStatus
+  -- activeBooking <- Esq.runInReplica $ QRB.findLatestByRiderIdAndStatus personId SRB.activeBookingStatus
+  activeBooking <- QRB.findLatestByRiderIdAndStatus personId SRB.activeBookingStatus
   if isJust activeBooking
     then do
       logTagInfo "Booking already created while cancelling estimate." estimateId.getId

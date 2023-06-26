@@ -31,7 +31,7 @@ import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
 import Environment
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as DB
+-- import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.Common hiding (id)
@@ -100,10 +100,10 @@ onSelect OnSelectValidatedReq {..} = do
   now <- getCurrentTime
   quotes <- traverse (buildSelectedQuote estimate providerInfo now searchRequest.merchantId) quotesInfo
   logPretty DEBUG "quotes" quotes
-  DB.runTransaction $ do
-    QQuote.createMany quotes
-    QPFS.updateStatus searchRequest.riderId DPFS.DRIVER_OFFERED_QUOTE {estimateId = estimate.id, validTill = searchRequest.validTill}
-    QEstimate.updateStatus estimate.id DEstimate.GOT_DRIVER_QUOTE
+  -- DB.runTransaction $ do
+  _ <- QQuote.createMany' quotes
+  _ <- QPFS.updateStatus searchRequest.riderId DPFS.DRIVER_OFFERED_QUOTE {estimateId = estimate.id, validTill = searchRequest.validTill}
+  void $ QEstimate.updateStatus estimate.id DEstimate.GOT_DRIVER_QUOTE
   QPFS.clearCache searchRequest.riderId
 
   if searchRequest.autoAssignEnabledV2 == Just True

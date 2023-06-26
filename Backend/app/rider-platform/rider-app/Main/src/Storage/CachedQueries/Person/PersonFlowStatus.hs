@@ -55,6 +55,6 @@ cachedStatus personId flowStatus = do
 makeFlowStatusKey :: Id Person -> Text
 makeFlowStatusKey personId = "CachedQueries:Person:FlowStatus-" <> personId.getId
 
-clearCache :: CacheFlow m r => Id Person -> m ()
+clearCache :: L.MonadFlow m => CacheFlow m r => Id Person -> m ()
 clearCache personId = do
   Hedis.del (makeFlowStatusKey personId)

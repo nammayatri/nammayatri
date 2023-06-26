@@ -28,6 +28,7 @@ import qualified Domain.Types.Payment.PaymentTransaction as DTransaction
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
+import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
 import Kernel.Prelude
@@ -62,7 +63,8 @@ createOrder ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    L.MonadFlow m
   ) =>
   (Id DP.Person, Id DM.Merchant) ->
   Id DRide.Ride ->
@@ -77,7 +79,8 @@ createOrder (personId, merchantId) rideId = do
   unless (person.id == riderId) $ throwError (InvalidRequest "Invalid riderId")
   customerEmail <- person.email & fromMaybeM (PersonFieldNotPresent "email") >>= decrypt
   customerPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
-  existingOrder <- runInReplica $ QOrder.findById $ cast @DRide.Ride @DOrder.PaymentOrder rideId
+  -- existingOrder <- runInReplica $ QOrder.findById $ cast @DRide.Ride @DOrder.PaymentOrder rideId
+  existingOrder <- QOrder.findById $ cast @DRide.Ride @DOrder.PaymentOrder rideId
   whenJust existingOrder \_ -> throwError (InvalidRequest "Payment order already exists")
   let createOrderReq =
         Payment.CreateOrderReq
@@ -92,8 +95,8 @@ createOrder (personId, merchantId) rideId = do
           }
   createOrderResp <- Payment.createOrder merchantId createOrderReq
   paymentOrder <- buildPaymentOrder merchantId personId totalFare ride createOrderResp
-  Esq.runTransaction $
-    QOrder.create paymentOrder
+  -- Esq.runTransaction $
+  void $ QOrder.create paymentOrder
   pure createOrderResp
 
 buildPaymentOrder :: EncFlow m r => Id DM.Merchant -> Id DP.Person -> Money -> DRide.Ride -> Payment.CreateOrderResp -> m DOrder.PaymentOrder
@@ -122,6 +125,7 @@ buildPaymentOrder merchantId personId totalFare ride resp = do
 getStatus ::
   ( CacheFlow m r,
     EsqDBReplicaFlow m r,
+    L.MonadFlow m,
     EsqDBFlow m r,
     EncFlow m r,
     CoreMetrics m
@@ -130,7 +134,8 @@ getStatus ::
   Id DOrder.PaymentOrder ->
   m PaymentStatusResp
 getStatus (personId, merchantId) orderId = do
-  order <- runInReplica $ QOrder.findById orderId >>= fromMaybeM (PaymentOrderDoesNotExist orderId.getId)
+  -- order <- runInReplica $ QOrder.findById orderId >>= fromMaybeM (PaymentOrderDoesNotExist orderId.getId)
+  order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderDoesNotExist orderId.getId)
   unless (personId == order.customerId) $ throwError (InvalidRequest "Invalid riderId")
   let orderStatusReq = Payment.OrderStatusReq {orderShortId = order.shortId.getShortId}
   orderStatusResp <- Payment.orderStatus merchantId orderStatusReq
@@ -157,6 +162,7 @@ buildPaymentTransaction order Payment.OrderStatusResp {..} respDump = do
 
 updateOrderTransaction ::
   ( EsqDBReplicaFlow m r,
+    L.MonadFlow m,
     EsqDBFlow m r,
     CoreMetrics m
   ) =>
@@ -165,14 +171,15 @@ updateOrderTransaction ::
   Maybe Text ->
   m ()
 updateOrderTransaction order resp respDump = do
-  mbTransaction <- runInReplica $ QTransaction.findByTxnUUID resp.transactionUUID
+  -- mbTransaction <- runInReplica $ QTransaction.findByTxnUUID resp.transactionUUID
+  mbTransaction <- QTransaction.findByTxnUUID resp.transactionUUID
   let updOrder = order{status = resp.transactionStatus}
   case mbTransaction of
     Nothing -> do
       transaction <- buildPaymentTransaction order resp respDump
-      Esq.runTransaction $ do
-        QTransaction.create transaction
-        when (order.status /= updOrder.status) $ QOrder.updateStatus updOrder
+      -- Esq.runTransaction $ do
+      _ <- QTransaction.create transaction
+      when (order.status /= updOrder.status) $ void $ QOrder.updateStatus updOrder
     Just transaction -> do
       let updTransaction =
             transaction{statusId = resp.transactionStatusId,
@@ -186,9 +193,9 @@ updateOrderTransaction order resp respDump = do
                         currency = resp.currency,
                         juspayResponse = respDump
                        }
-      Esq.runTransaction $ do
-        QTransaction.updateMultiple updTransaction
-        when (order.status /= updOrder.status) $ QOrder.updateStatus updOrder
+      -- Esq.runTransaction $ do
+      _ <- QTransaction.updateMultiple updTransaction
+      when (order.status /= updOrder.status) $ void $ QOrder.updateStatus updOrder
 
 ---------------------------------------------------------------------
 juspayWebhookHandler ::
@@ -217,6 +224,7 @@ orderStatus ::
   m AckResponse
 orderStatus resp respDump = do
   let orderShortId = ShortId resp.orderShortId
-  order <- runInReplica $ QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderNotFound resp.orderShortId)
+  -- order <- runInReplica $ QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderNotFound resp.orderShortId)
+  order <- QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderNotFound resp.orderShortId)
   updateOrderTransaction order resp $ Just respDump
   return Ack

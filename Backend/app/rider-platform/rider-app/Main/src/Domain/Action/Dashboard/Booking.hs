@@ -55,11 +55,11 @@ stuckBookingsCancel merchantShortId req = do
   let bcReasonsWithRides = (\item -> mkBookingCancellationReason (merchant.id) Common.rideStuckCode (Just item.rideId) item.bookingId) <$> stuckRideItems
   let allStuckBookingIds = stuckBookingIds <> (stuckRideItems <&> (.bookingId))
   let stuckPersonIds = stuckRideItems <&> (.riderId)
-  Esq.runTransaction $ do
-    QRide.cancelRides (stuckRideItems <&> (.rideId)) now
-    QBooking.cancelBookings allStuckBookingIds now
-    for_ (bcReasons <> bcReasonsWithRides) QBCR.upsert
-    QPFS.updateToIdleMultiple stuckPersonIds now
+  -- Esq.runTransaction $ do
+  _ <- QRide.cancelRides (stuckRideItems <&> (.rideId)) now
+  _ <- QBooking.cancelBookings allStuckBookingIds now
+  for_ (bcReasons <> bcReasonsWithRides) QBCR.upsert
+  _ <- QPFS.updateToIdleMultiple stuckPersonIds now
   void $ QPFS.clearCache `mapM` stuckPersonIds
   logTagInfo "dashboard -> stuckBookingsCancel: " $ show allStuckBookingIds
   pure $ mkStuckBookingsCancelRes stuckBookingIds stuckRideItems

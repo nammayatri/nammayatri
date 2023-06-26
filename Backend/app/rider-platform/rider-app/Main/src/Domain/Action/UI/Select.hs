@@ -40,7 +40,6 @@ import Domain.Types.VehicleVariant (VehicleVariant)
 import Environment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (runInReplica)
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -123,12 +122,12 @@ select personId estimateId req@DSelectReq {..} = do
   merchant <- QM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   when ((searchRequest.validTill) < now) $
     throwError SearchRequestExpired
-  Esq.runTransaction $ do
-    QSearchRequest.updateAutoAssign searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2)
-    QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, validTill = searchRequest.validTill}
-    QEstimate.updateStatus estimateId DEstimate.DRIVER_QUOTE_REQUESTED
-    when (isJust req.customerExtraFee || isJust req.paymentMethodId) $ do
-      QSearchRequest.updateCustomerExtraFeeAndPaymentMethod searchRequest.id req.customerExtraFee req.paymentMethodId
+  -- Esq.runTransaction $ do
+  _ <- QSearchRequest.updateAutoAssign searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2)
+  _ <- QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, validTill = searchRequest.validTill}
+  _ <- QEstimate.updateStatus estimateId DEstimate.DRIVER_QUOTE_REQUESTED
+  when (isJust req.customerExtraFee || isJust req.paymentMethodId) $ do
+    void $ QSearchRequest.updateCustomerExtraFeeAndPaymentMethod searchRequest.id req.customerExtraFee req.paymentMethodId
   QPFS.clearCache searchRequest.riderId
   pure
     DSelectRes

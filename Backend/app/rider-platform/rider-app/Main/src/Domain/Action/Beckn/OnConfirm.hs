@@ -46,8 +46,8 @@ onConfirm ValidatedOnConfirmReq {..} = do
   whenJust specialZoneOtp $ \otp ->
     DB.runTransaction $ do
       QRB.updateOtpCodeBookingId booking.id otp
-  DB.runTransaction $ do
-    QRB.updateStatus booking.id DRB.CONFIRMED
+  -- DB.runTransaction $ do
+  void $ QRB.updateStatus booking.id DRB.CONFIRMED
 
 validateRequest :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => OnConfirmReq -> m ValidatedOnConfirmReq
 validateRequest OnConfirmReq {..} = do
