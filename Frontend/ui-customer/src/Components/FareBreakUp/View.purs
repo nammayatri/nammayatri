@@ -35,6 +35,7 @@ import Data.Maybe
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import MerchantConfig.Utils (getValueFromConfig)
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -189,11 +190,10 @@ fareBreakUpListView numberOfViews state push =
       , width MATCH_PARENT
       , gravity RIGHT
       ][  textView $ 
-          [ text $ "₹" <> (show state.priceDetails.text)
+          [ text $ (getValueFromConfig "currency") <> (show state.priceDetails.text)
           , color state.color
           ] <> (FontStyle.getFontStyle state.priceDetails.textStyle LanguageStyle)
       ]
-
   ]
 
 
@@ -229,14 +229,14 @@ fareBreakUpView state estimatedDistance push =
                   , visibility if state.priceDetails.text /= state.priceDetails.offeredFare then VISIBLE else GONE
                   ]
                 , textView (
-                  [ text $ "₹" <> show state.priceDetails.text
+                  [ text $ state.currency <> show state.priceDetails.text
                   , color Color.black800
                   , height WRAP_CONTENT
                   , width WRAP_CONTENT
                   , lineHeight "20"
                   ] <> FontStyle.subHeading2 TypoGraphy)
                 , textView (
-                  [ textFromHtml $ "<strike> ₹ " <> (show state.priceDetails.offeredFare) <> "</strike>"
+                  [ textFromHtml $ "<strike> " <> state.currency <> " " <> (show state.priceDetails.offeredFare) <> "</strike>"
                   , height WRAP_CONTENT
                   , width WRAP_CONTENT
                   , color Color.black600

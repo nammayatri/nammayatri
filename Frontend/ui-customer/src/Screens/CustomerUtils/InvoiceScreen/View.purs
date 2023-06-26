@@ -32,6 +32,7 @@ import Screens.InvoiceScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Helpers.Utils (isHaveFare)
+import MerchantConfig.Utils (getValueFromConfig)
 
 screen :: ST.InvoiceScreenState -> Screen Action ST.InvoiceScreenState ScreenOutput
 screen initialState =
@@ -151,7 +152,7 @@ amountBreakupView state =
                   , orientation HORIZONTAL
                   ]
                   [ textView $
-                      [ text $ "₹ " <> (show item.price)
+                      [ text $ item.price
                       , alignParentRight "true,-1"
                       , color Color.black800
                       , height WRAP_CONTENT

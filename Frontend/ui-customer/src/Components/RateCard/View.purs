@@ -96,7 +96,7 @@ view push config =
          ]
       ,linearLayout
         [ width MATCH_PARENT
-        , height $ V 350
+        , height $ V if config.showDetails then 350 else 250
         , orientation HORIZONTAL
         ][PrestoAnim.animationSet [ if config.currentRateCardType == DefaultRateCard then (translateInXBackwardAnim config.onFirstPage) else (translateInXForwardAnim true) ] $
           if config.currentRateCardType == DefaultRateCard then defaultRateCardView push config 
@@ -110,7 +110,7 @@ view push config =
       ][ textView
         [ width MATCH_PARENT
         , height WRAP_CONTENT
-        , color Color.blue800
+        , color config.alertDialogPrimaryColor
         , gravity CENTER
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , text if config.currentRateCardType == DefaultRateCard then (getString GOT_IT) else (getString GO_BACK_)
@@ -254,6 +254,7 @@ defaultRateCardView push config =
         , imageView
         [ width MATCH_PARENT
         , height $ V 2 
+        , visibility if config.showDetails then VISIBLE else GONE
         , imageWithFallback $ "ny_ic_horizontal_dash," <> (getAssetStoreLink FunctionCall) <> "ny_ic_horizontal_dash.png"
         , margin (Margin 20 12 20 0)
         ]
@@ -263,6 +264,7 @@ defaultRateCardView push config =
           , orientation HORIZONTAL
           , margin (MarginVertical 12 12)
           , padding (Padding 20 0 20 0)
+          , visibility if config.showDetails then VISIBLE else GONE
           , onClick push (const GoToDriverAddition)
         ][
           textView
@@ -296,6 +298,7 @@ defaultRateCardView push config =
         ,linearLayout 
           [ height $ V 1
           , width MATCH_PARENT
+          , visibility if config.showDetails then VISIBLE else GONE
           , background Color.grey800
           , margin (Margin 16 0 16 0)
           ][]
@@ -303,6 +306,7 @@ defaultRateCardView push config =
         [ width MATCH_PARENT
           , height WRAP_CONTENT
           , orientation HORIZONTAL
+          , visibility if config.showDetails then VISIBLE else GONE
           , margin (MarginVertical 12 12)
           , padding (Padding 20 0 20 0)
           , onClick push (const GoToFareUpdate)

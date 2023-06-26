@@ -9,7 +9,7 @@
 package in.juspay.mobility.app;
 
 public class SheetModel {
-    private String pickUpDistance, distanceToBeCovered, sourceArea, sourceAddress, destinationArea, destinationAddress, requestId, searchRequestId, specialLocationTag;
+    private String pickUpDistance, distanceToBeCovered, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, requestId, searchRequestId, specialLocationTag;
     private int baseFare, reqExpiryTime, startTime, updatedAmount, offeredPrice, driverMinExtraFee, driverMaxExtraFee, rideRequestPopupDelayDuration, negotiationUnit, customerExtraFee;
     private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha;
     private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable;
@@ -23,6 +23,7 @@ public class SheetModel {
                       String searchRequestId,
                       String destinationArea,
                       String sourceArea,
+                      String currency,
                       int startTime,
                       int driverMinExtraFee,
                       int driverMaxExtraFee,
@@ -50,6 +51,7 @@ public class SheetModel {
         this.buttonIncreasePriceClickable = true;
         this.buttonDecreasePriceAlpha = 0.5f;
         this.buttonDecreasePriceClickable = false;
+        this.currency = currency;
         this.specialLocationTag = specialLocationTag;
         this.customerExtraFee = customerExtraFee;
     }
@@ -96,6 +98,10 @@ public class SheetModel {
 
     public int getBaseFare() {
         return baseFare;
+    }
+
+    public String getCurrency () {
+        return currency;
     }
 
     public String getRequestId() {

@@ -35,10 +35,11 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude ((<>))
 import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, clickable, color, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, text, textSize, textView, visibility, weight, width, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, clickable, color, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
+import MerchantConfig.Utils (getValueFromConfig)
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -123,8 +124,8 @@ imageData =
     else {imageUrl : "ny_ic_wallet," <> (getAssetStoreLink FunctionCall) <> "ny_ic_wallet.png", height : (V 24) , width : (V 24)}
     
 ---------------------------- sourceDestinationImageView ---------------------------------
-sourceDestinationImageView :: forall w . PrestoDOM (Effect Unit) w
-sourceDestinationImageView  =
+sourceDestinationImageView :: forall w . QuoteListModelState -> PrestoDOM (Effect Unit) w
+sourceDestinationImageView state =
   linearLayout
     [ height MATCH_PARENT
     , width WRAP_CONTENT
@@ -139,7 +140,7 @@ sourceDestinationImageView  =
       , imageView
         [ height $ V 27
         , width $ V 15
-        , imageUrl if os == "IOS" then (if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_line_img" else "ny_ic_line_img") else "ic_line"
+        , imageUrl if os == "IOS" then (if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_line_img" else "ny_ic_line_img") else state.appConfig.quoteListModel.lineImage
         , margin if os == "IOS" then (Margin 0 0 0 0) else (Margin 7 0 0 0)
         ]
       , imageView
@@ -200,17 +201,35 @@ findingRidesView state push =
   , width MATCH_PARENT
   , gravity CENTER_HORIZONTAL
   , visibility if null state.quoteListModel && getValueToLocalStore LOCAL_STAGE == "FindingQuotes" then VISIBLE else GONE
-  , margin $ MarginTop 100
+  , margin $ MarginTop state.appConfig.quoteListModel.topMargin
   , clickable true
+  , orientation VERTICAL
   ][
     lottieAnimationView
       [ id $ getNewIDWithTag "1234567893"
       , afterRender (\action-> do
                     _ <- pure $ startLottieProcess ((getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_with_text.json") (getNewIDWithTag "1234567893") true 0.6 "Default"
                     pure unit)(const NoAction)
-      , height $ V 300
-      , width $ V 300
+      , height $ V state.appConfig.quoteListModel.lottieHeight
+      , width $ V state.appConfig.quoteListModel.lottieWidth
       ]
+  , textView 
+    [ text (getString PLEASE_WAIT)
+    , color "#7C7C7C"
+    , visibility if state.appConfig.showQuoteFindingText then VISIBLE else GONE
+    , textSize FontSize.a_17
+    , margin $ MarginTop 22
+    , lineHeight "25"
+    , fontStyle $ FontStyle.regular LanguageStyle
+    ]
+  , textView 
+    [ text (getString FINDING_QUOTES_TEXT)
+    , color "#7C7C7C"
+    , visibility if state.appConfig.showQuoteFindingText then VISIBLE else GONE
+    , textSize FontSize.a_17
+    , lineHeight "25"
+    , fontStyle $ FontStyle.regular LanguageStyle
+    ]
   ]
 
 
@@ -230,7 +249,7 @@ selectRideAndConfirmView state push =
   ][textView (
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
-    , color state.appConfig.quoteListModel.textColor
+    , color state.appConfig.quoteListModel.selectRideTextColor
     , text case getValueToLocalStore AUTO_SELECTING of
        "CANCELLED_AUTO_ASSIGN" -> "Select a Ride"
        "false"                 -> "Select a Ride"
@@ -331,7 +350,7 @@ quoteListTopSheetView state push =
                       , margin $ MarginTop 7
                       ]
                   ]
-                , sourceDestinationImageView
+                , sourceDestinationImageView state
                 , sourceDestinationTextView state push
                 ]
             ]
@@ -353,8 +372,8 @@ noQuotesErrorModel state =
       , orientation VERTICAL
       , gravity CENTER
       ][imageView
-        [ height $ V 115
-        , width $ V 137
+        [ height $ V state.appConfig.quoteListModel.noQuotesImageHeight
+        , width $ V state.appConfig.quoteListModel.noQuotesImageWidth
         , imageWithFallback $ "ny_ic_no_quotes," <> (getAssetStoreLink FunctionCall) <> "ny_ic_no_quotes.png"
         , padding (Padding 0 0 0 0)
         ]
@@ -507,7 +526,7 @@ checkVisibility state =
 setText :: QuoteListModelState -> String
 setText state =
   case state.selectedQuote ,(null state.quoteListModel) of
-    Just _ ,_                           -> (getString CONFIRM_FOR) <> "₹ " <> getPrice state
+    Just _ ,_                           -> (getString CONFIRM_FOR) <> (getValueFromConfig "currency") <> " " <> getPrice state
     Nothing , true                      -> (getString GO_HOME_)
     _,_                                 -> ""
 

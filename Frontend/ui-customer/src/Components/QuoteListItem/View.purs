@@ -15,32 +15,33 @@
 
 module Components.QuoteListItem.View where
 
+import Common.Types.App
+
 import Animation (translateInXForwardAnim)
+import Common.Types.App (LazyCheck(..))
 import Components.QuoteListItem.Controller (Action(..), QuoteListItemState)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Maybe (Maybe(..))
+import Data.Number (ceil)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, os, countDown)
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import JBridge (startTimerWithTime)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Data.Number (ceil)
-import JBridge(startTimerWithTime)
 import Prelude (Unit, bind, const, discard, pure, show, unit, ($), (/=), (<>), (==))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, lineHeight, margin, orientation, onClick, padding, stroke, text, textSize, textView, width, weight, frameLayout, disableClickFeedback, visibility, alpha, clickable, imageWithFallback)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, disableClickFeedback, fontStyle, frameLayout, gradient, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
-import Common.Types.App
 import Types.App (defaultGlobalState)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Common.Types.App (LazyCheck(..))
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListItemState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -114,15 +115,15 @@ driverImageView state =
       imageView
         [ margin (MarginLeft 27)
       , cornerRadius 18.0
-      , background Color.grey800
+      , background state.appConfig.quoteListItemConfig.driverImagebg
       , width (V 36)
       , height (V 36)
       , imageWithFallback ""
 
         ]
       , imageView
-        [ height $ V 37
-        , width $ V 40
+        [ height $ V state.appConfig.quoteListItemConfig.vehicleHeight
+        , width $ V state.appConfig.quoteListItemConfig.vehicleWidth
         , cornerRadius 20.0
         , imageWithFallback if state.vehicleType == "auto" then "ny_ic_auto_quote_list," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto_quote_list.png" else "ny_ic_auto_quote_list," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto_quote_list.png"
         , weight 1.0
@@ -163,7 +164,7 @@ priceView state push =
     ][  textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text $ "₹ " <> state.price
+        , text $ state.appConfig.currency <> " " <> state.price
         , color Color.black800
         , lineHeight "28"
         ] <> FontStyle.body10 TypoGraphy
@@ -181,8 +182,9 @@ timerView state push =
       , width WRAP_CONTENT
       , text $ case (getValueToLocalStore LANGUAGE_KEY) of
             "EN_US" -> (getString EXPIRES_IN ) <>" : " <> state.timer <> "s"
+            "FR_FR" -> (getString EXPIRES_IN ) <>" : " <> state.timer <> "s"
             _ -> state.timer <> "s " <> (getString EXPIRES_IN )
-      , color Color.red
+      , color state.appConfig.quoteListItemConfig.expiresColor
       , gravity CENTER
       ] <> FontStyle.body3 LanguageStyle)
   ]
@@ -212,16 +214,16 @@ driverNameAndTimeView state =
 primaryButtonView :: QuoteListItemState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 primaryButtonView state push =
  linearLayout
-  [ height WRAP_CONTENT
+  ([ height WRAP_CONTENT
   , width MATCH_PARENT
-  , background state.appConfig.primaryBackground
   , padding $ PaddingVertical 14 14
   , margin $ MarginTop 24
   , visibility if state.selectedQuote == Just state.id then VISIBLE else GONE
-  , cornerRadius 8.0
+  , cornerRadius state.appConfig.quoteListItemConfig.primaryButtonCorner
   , onClick push $ const ConfirmRide
   , gravity CENTER
-  ][ textView (
+  ] <> if state.appConfig.isGradient == "true" then [gradient (Linear 90.0 state.appConfig.gradient)] else [background state.appConfig.primaryBackground])
+  [ textView (
      [ width WRAP_CONTENT
      , height WRAP_CONTENT
      , text (getString CONFIRM_RIDE_)

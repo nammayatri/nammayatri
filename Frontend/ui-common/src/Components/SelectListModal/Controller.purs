@@ -41,6 +41,7 @@ type Config = {
     , primaryButtonVisibility :: Boolean
     , secondaryButtonVisibility :: Boolean
     , activeIndex :: Maybe Int
+    , cornerRadius :: Number
     , activeReasonCode :: Maybe String
     , isSelectButtonActive :: Boolean
     , isMandatoryTextHidden :: Boolean
@@ -93,6 +94,7 @@ config =
         }
     , activeIndex : Nothing  
     , activeReasonCode : Nothing
+    , cornerRadius : 8.0
     , isSelectButtonActive : false
     , isMandatoryTextHidden : true
     , isLimitExceeded : false

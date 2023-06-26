@@ -46,6 +46,7 @@ import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Engineering.Helpers.LogEvent (logEvent)
 import Effect.Unsafe
+import MerchantConfig.Utils (getValueFromConfig)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -181,7 +182,7 @@ myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropVal
     time : toPropValue (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A"),
     source : toPropValue (decodeAddress (Booking ride.fromLocation)),
     destination : toPropValue (decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation))),
-    totalAmount : toPropValue ("₹ " <> show (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice))),
+    totalAmount : toPropValue ((getValueFromConfig "currency") <> " " <> show (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice))),
     cardVisibility : toPropValue "visible",
     shimmerVisibility : toPropValue "gone",
     driverImage : toPropValue $ "ny_ic_user," <> (getAssetStoreLink FunctionCall) <> "ny_ic_user.png",
@@ -215,7 +216,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
     time :  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A"),
     source :  decodeAddress (Booking ride.fromLocation),
     destination : decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation)),
-    totalAmount :  ("₹ " <> show (fromMaybe (0) rideDetails.computedPrice)),
+    totalAmount :  ((getValueFromConfig "currency") <> " " <> show (fromMaybe (0) rideDetails.computedPrice)),
     cardVisibility :  "visible",
     shimmerVisibility :  "gone",
     driverImage :  "ny_ic_user," <> (getAssetStoreLink FunctionCall) <> "ny_ic_user.png",
@@ -238,7 +239,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
   , faresList : updatedFareList
   , baseFare : fares.baseFare
   , pickupCharges : fares.pickupCharges
-  , extraFare : "₹ " <> show (getFareFromArray ride.fareBreakup "EXTRA_DISTANCE_FARE")
+  , extraFare : (getValueFromConfig "currency") <> " " <> show (getFareFromArray ride.fareBreakup "EXTRA_DISTANCE_FARE")
   , waitingCharges : fares.waitingCharges
   , baseDistance : baseDistanceVal
   , extraDistance : getKmMeter $  (\a -> if a < 0 then - a else a) ((fromMaybe 0 (rideDetails.chargeableRideDistance)) - (fromMaybe 0 (((ride.bookingDetails)^._contents)^._estimatedDistance)))
@@ -261,10 +262,10 @@ matchRidebyId rideOne rideTwo = rideOne.bookingId == rideTwo.bookingId
 
 getFares ∷ Array FareBreakupAPIEntity → Fares
 getFares fares = {
-  baseFare : "₹ " <> show (((getFareFromArray fares "BASE_FARE") + (getFareFromArray fares "EXTRA_DISTANCE_FARE")) - 10)
-, pickupCharges : "₹ 10.0"
-, waitingCharges : "₹ " <> show (getFareFromArray fares "WAITING_CHARGES")
-, nominalFare : "₹ " <> show (getFareFromArray fares "DRIVER_SELECTED_FARE")
+  baseFare :(getValueFromConfig "currency") <>  " " <> show (((getFareFromArray fares "BASE_FARE") + (getFareFromArray fares "EXTRA_DISTANCE_FARE")) - 10)
+, pickupCharges : (getValueFromConfig "currency") <> " 10.0"
+, waitingCharges : (getValueFromConfig "currency") <> " " <> show (getFareFromArray fares "WAITING_CHARGES")
+, nominalFare : (getValueFromConfig "currency") <> " " <> show (getFareFromArray fares "DRIVER_SELECTED_FARE")
 }
 
 

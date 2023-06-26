@@ -20,9 +20,10 @@ import Effect (Effect)
 import Font.Style as FontStyle
 import LoaderOverlay.Controller (Action, ScreenOutput, eval)
 import LoaderOverlay.ScreenData (LoaderOverlayState)
-import Prelude (Unit, ($), (<>))
+import Prelude (Unit, ($), (<>), (/=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, background, cornerRadius, gravity, height, linearLayout, margin, orientation, padding, progressBar, stroke, text, textView, width, color)
 import Styles.Colors as Color
+import MerchantConfig.Utils(getValueFromConfig)
 
 screen :: LoaderOverlayState -> ScopedScreen Action LoaderOverlayState ScreenOutput
 screen initialState =
@@ -54,17 +55,19 @@ view _ state =
     ][ progressBar
       [ height $ V 60
       , width $ V 60
-      , stroke Color.black900
+      , stroke if (getValueFromConfig "loaderColor") /= "" then (getValueFromConfig "loaderColor") else Color.black900
       ]
     , textView $ 
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
+      , gravity CENTER
       , text state.data.title
       , color Color.black900
       ] <> FontStyle.h0 LanguageStyle
     , textView $ 
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
+      , gravity CENTER
       , text state.data.subTitle
       , color Color.black900
       ] <> FontStyle.subHeading2 LanguageStyle

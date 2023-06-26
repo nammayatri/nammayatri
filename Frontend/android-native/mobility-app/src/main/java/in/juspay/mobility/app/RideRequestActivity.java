@@ -53,6 +53,7 @@ public class RideRequestActivity extends AppCompatActivity {
     private ArrayList<TextView> indicatorTextList;
     private ArrayList<LinearProgressIndicator> progressIndicatorsList;
     private ArrayList<LinearLayout> indicatorList;
+    private SharedPreferences sharedPref;
 
     public static RideRequestActivity getInstance() {
         return instance;
@@ -66,6 +67,8 @@ public class RideRequestActivity extends AppCompatActivity {
         viewPager2 = findViewById(R.id.viewPager);
         sheetAdapter.setViewPager(viewPager2);
         viewPager2.setAdapter(sheetAdapter);
+        if (sharedPref == null)
+            sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         if (getIntent() != null) {
             addToList(getIntent().getExtras());
         }
@@ -100,6 +103,7 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID)),
                     rideRequestBundle.getString("destinationArea"),
                     rideRequestBundle.getString("sourceArea"),
+                    rideRequestBundle.getString("currency"),
                     time,
                     rideRequestBundle.getInt("driverMinExtraFee"),
                     rideRequestBundle.getInt("driverMaxExtraFee"),
@@ -350,7 +354,7 @@ public class RideRequestActivity extends AppCompatActivity {
                     progressIndicatorsList.get(i).setTrackColor(getColor(R.color.grey900));
                 }
                 if (i < sheetArrayList.size()) {
-                    indicatorTextList.get(i).setText("₹" + (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
+                    indicatorTextList.get(i).setText(sharedPref.getString("CURRENCY", "₹") + (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
                     progressIndicatorsList.get(i).setVisibility(View.VISIBLE);
                 } else {
                     indicatorTextList.get(i).setText("--");

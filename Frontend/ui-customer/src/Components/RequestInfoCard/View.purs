@@ -15,23 +15,25 @@
 
 module Components.RequestInfoCard.View where
 
+import Common.Types.App
+
+import Common.Types.App (LazyCheck(..))
 import Components.RequestInfoCard.Controller (Action(..))
-import Prelude ((*), Unit, ($), const, (/), unit, (-))
 import Effect (Effect)
-import PrestoDOM (PrestoDOM, Orientation(..), Gravity(..), Padding(..), Margin(..), Length(..), margin, padding, orientation, height, width, linearLayout, imageView, imageUrl, text, textView, textSize, fontStyle, gravity, onClick, color, background, lineHeight, cornerRadius, weight, onBackPressed, imageWithFallback)
-import Styles.Colors as Color
+import Engineering.Helpers.Commons (screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Common.Types.App
-import Engineering.Helpers.Commons (screenWidth)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import Common.Types.App (LazyCheck(..))
+import Prelude ((*), Unit, ($), const, (/), unit, (-))
 import Prelude ((<>))
+import PrestoDOM (PrestoDOM, Orientation(..), Gravity(..), Padding(..), Margin(..), Length(..), margin, padding, orientation, height, width, linearLayout, imageView, imageUrl, text, textView, textSize, fontStyle, gravity, onClick, color, background, lineHeight, cornerRadius, weight, onBackPressed, imageWithFallback)
+import Screens.Types (HomeScreenState)
+import Styles.Colors as Color
 
-view :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-view push = 
+view :: forall w. (Action -> Effect Unit) -> HomeScreenState ->PrestoDOM (Effect Unit) w 
+view push state = 
   linearLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
@@ -84,7 +86,7 @@ view push =
         ], textView $
             [ width MATCH_PARENT
             , height WRAP_CONTENT
-            , color Color.blue800
+            , color state.data.config.alertDialogPrimaryColor
             , gravity CENTER
             , text (getString GOT_IT)
             , padding (Padding 0 28 0 20)

@@ -18,6 +18,7 @@ module Font.Style where
 
 import Common.Types.App
 import Data.Eq.Generic (genericEq)
+import MerchantConfig.Utils (getValueFromConfig)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Effect (Effect)
@@ -51,81 +52,110 @@ decodeFont :: Foreign -> Maybe FontType
 decodeFont = hush <<< runExcept <<< decode
 
 italic :: FontStyle
-italic = fontByOS "PlusJakartaSans-Italic" "PlusJakartaSans-Italic" "Arial"
+italic = do 
+  let font = getValueFromConfig "fontName"
+  fontByOS (font <> "-Italic") (font <> "-Italic") "Arial"
 
 light :: LazyCheck -> FontStyle
 light style = do
+  let font = getValueFromConfig "fontName"
+  let fontKn = getValueFromConfig "fontKannada"
   case (getLanguageFromLocalStore unit) of
-    "EN_US" -> fontByOS "PlusJakartaSans-Light" "PlusJakartaSans-Light" "Arial"
-    "KN_IN" -> fontByOS "NotoSansKannada-Light" "NotoSansKannada-Light" "Arial"
-    "HI_IN" -> fontByOS "PlusJakartaSans-Light" "PlusJakartaSans-Light" "Arial"
-    _ -> fontByOS "PlusJakartaSans-Light" "PlusJakartaSans-Light" "Arial"
+    "EN_US" -> fontByOS (font <> "-Light") (font <> "-Light") "Arial"
+    "KN_IN" -> fontByOS (fontKn <> "-Light") (fontKn <> "-Light") "Arial"
+    "HI_IN" -> fontByOS (font <> "-Light") (font <> "-Light") "Arial"
+    _ -> fontByOS (font <> "-Light") (font <> "-Light") "Arial"
 
 lightItalic :: FontStyle
-lightItalic = fontByOS "PlusJakartaSans-LightItalic" "PlusJakartaSans-LightItalic" "Arial"
+lightItalic = do 
+  let font = getValueFromConfig "fontName"
+  fontByOS (font <> "-LightItalic") (font <> "-LightItalic") "Arial"
 
 extraLight :: LazyCheck -> FontStyle
 extraLight style = do
+  let font = getValueFromConfig "fontName"
+  let fontKn = getValueFromConfig "fontKannada"
   case (getLanguageFromLocalStore unit) of
-    "EN_US" -> fontByOS "PlusJakartaSans-ExtraLight" "PlusJakartaSans-ExtraLight" "Arial"
-    "KN_IN" -> fontByOS "NotoSansKannada-ExtraLight" "NotoSansKannada-ExtraLight" "Arial"
-    "HI_IN" -> fontByOS "PlusJakartaSans-ExtraLight" "PlusJakartaSans-ExtraLight" "Arial"
-    _ -> fontByOS "PlusJakartaSans-ExtraLight" "PlusJakartaSans-ExtraLight" "Arial"
+    "EN_US" -> fontByOS (font <> "-ExtraLight") (font <> "-ExtraLight") "Arial"
+    "KN_IN" -> fontByOS (fontKn <> "-ExtraLight") (fontKn <> "-ExtraLight") "Arial"
+    "HI_IN" -> fontByOS (font <> "-ExtraLight") (font <> "-ExtraLight") "Arial"
+    _ -> fontByOS (font <> "-ExtraLight") (font <> "-ExtraLight") "Arial"
 
 extraLightItalic :: FontStyle
-extraLightItalic = fontByOS "PlusJakartaSans-ExtraLightItalic" "PlusJakartaSans-ExtraLightItalic" "Arial"
+extraLightItalic = do 
+  let font = getValueFromConfig "fontName"
+  fontByOS (font <> "-ExtraLightItalic") (font <> "-ExtraLightItalic") "Arial"
 
 regular :: LazyCheck -> FontStyle
 regular style = do
+  let font = getValueFromConfig "fontName"
+  let fontKn = getValueFromConfig "fontKannada"
   case (getLanguageFromLocalStore unit) of
-    "EN_US" -> fontByOS "PlusJakartaSans-Regular" "PlusJakartaSans-Regular" "Arial"
-    "KN_IN" -> fontByOS "NotoSansKannada-Regular" "NotoSansKannada-Regular" "Arial"
-    "HI_IN" -> fontByOS "PlusJakartaSans-Regular" "PlusJakartaSans-Regular" "Arial"
-    _ -> fontByOS "PlusJakartaSans-Regular" "PlusJakartaSans-Regular" "Arial"
+    "EN_US" -> fontByOS (font <> "-Regular") (font <> "-Regular") "Arial"
+    "KN_IN" -> fontByOS (fontKn <> "-Regular") (fontKn <> "-Regular") "Arial"
+    "HI_IN" -> fontByOS (font <> "-Regular") (font <> "-Regular") "Arial"
+    _ -> fontByOS (font <> "-Regular") (font <> "-Regular") "Arial"
 
 medium :: LazyCheck -> FontStyle
 medium style = do
+  let font = getValueFromConfig "fontName"
+  let fontKn = getValueFromConfig "fontKannada"
   case (getLanguageFromLocalStore unit) of
-    "EN_US" -> fontByOS "PlusJakartaSans-Medium" "PlusJakartaSans-Medium" "Arial"
-    "KN_IN" -> fontByOS "NotoSansKannada-Medium" "NotoSansKannada-Medium" "Arial"
-    "HI_IN" -> fontByOS "PlusJakartaSans-Medium" "PlusJakartaSans-Medium" "Arial"
-    _ -> fontByOS "PlusJakartaSans-Medium" "PlusJakartaSans-Medium" "Arial"
+    "EN_US" -> fontByOS (font <> "-Medium") (font <> "-Medium") "Arial"
+    "KN_IN" -> fontByOS (fontKn <> "-Medium") (fontKn <> "-Medium") "Arial"
+    "HI_IN" -> fontByOS (font <> "-Medium") (font <> "-Medium") "Arial"
+    _ -> fontByOS (font <> "-Medium") (font <> "-Medium") "Arial"
 
 mediumItalic :: FontStyle
-mediumItalic = fontByOS "PlusJakartaSans-MediumItalic" "PlusJakartaSans-MediumItalic" "Arial"
+mediumItalic = do
+  let font = getValueFromConfig "fontName"
+  fontByOS (font <> "-MediumItalic") (font <> "-MediumItalic") "Arial"
 
 semiBold :: LazyCheck -> FontStyle
 semiBold style = do
+  let font = getValueFromConfig "fontName"
+  let fontKn = getValueFromConfig "fontKannada"
   case (getLanguageFromLocalStore unit) of
-    "EN_US" -> fontByOS "PlusJakartaSans-SemiBold" "PlusJakartaSans-SemiBold" "Arial"
-    "KN_IN" -> fontByOS "NotoSansKannada-SemiBold" "NotoSansKannada-SemiBold" "Arial"
-    "HI_IN" -> fontByOS "PlusJakartaSans-SemiBold" "PlusJakartaSans-SemiBold" "Arial"
-    _ -> fontByOS "PlusJakartaSans-SemiBold" "PlusJakartaSans-SemiBold" "Arial"
+    "EN_US" -> fontByOS (font <> "-SemiBold") (font <> "-SemiBold") "Arial"
+    "KN_IN" -> fontByOS (fontKn <> "-SemiBold") (fontKn <> "-SemiBold") "Arial"
+    "HI_IN" -> fontByOS (font <> "-SemiBold") (font <> "-SemiBold") "Arial"
+    _ -> fontByOS (font <> "-SemiBold") (font <> "-SemiBold") "Arial"
 
 semiBoldItalic :: FontStyle
-semiBoldItalic = fontByOS "PlusJakartaSans-SemiBoldItalic" "PlusJakartaSans-SemiBoldItalic" "Arial"
+semiBoldItalic = do 
+  let font = getValueFromConfig "fontName"
+  fontByOS (font <> "-SemiBoldItalic") (font <> "-SemiBoldItalic") "Arial"
 
 bold :: LazyCheck -> FontStyle
 bold style = do
+  let font = getValueFromConfig "fontName"
+  let fontKn = getValueFromConfig "fontKannada"
   case (getLanguageFromLocalStore unit) of
-    "EN_US" -> fontByOS "PlusJakartaSans-Bold" "PlusJakartaSans-Bold" "Arial"
-    "KN_IN" -> fontByOS "NotoSansKannada-Bold" "NotoSansKannada-Bold" "Arial"
-    "HI_IN" -> fontByOS "PlusJakartaSans-Bold" "PlusJakartaSans-Bold" "Arial"
-    _ -> fontByOS "PlusJakartaSans-Bold" "PlusJakartaSans-Bold" "Arial"
+    "EN_US" -> fontByOS (font <> "-Bold") (font <> "-Bold") "Arial"
+    "KN_IN" -> fontByOS (fontKn <> "-Bold") (fontKn <> "-Bold") "Arial"
+    "HI_IN" -> fontByOS (font <> "-Bold") (font <> "-Bold") "Arial"
+    _ -> fontByOS (font <> "-Bold") (font <> "-Bold") "Arial"
 
 boldItalic :: FontStyle
-boldItalic = fontByOS "PlusJakartaSans-BoldItalic" "PlusJakartaSans-BoldItalic" "Arial"
+boldItalic = do 
+  let font = getValueFromConfig "fontName"
+  fontByOS (font <> "-BoldItalic") (font <> "-BoldItalic") "Arial"
 
 extraBold :: LazyCheck -> FontStyle
 extraBold style = do
+  let font = getValueFromConfig "fontName"
+  let fontKn = getValueFromConfig "fontKannada"
   case (getLanguageFromLocalStore unit) of
-    "EN_US" -> fontByOS "PlusJakartaSans-ExtraBold" "PlusJakartaSans-ExtraBold" "Arial"
-    "KN_IN" -> fontByOS "NotoSansKannada-ExtraBold" "NotoSansKannada-ExtraBold" "Arial"
-    "HI_IN" -> fontByOS "PlusJakartaSans-ExtraBold" "PlusJakartaSans-ExtraBold" "Arial"
-    _ -> fontByOS "PlusJakartaSans-ExtraBold" "PlusJakartaSans-ExtraBold" "Arial"
+    "EN_US" -> fontByOS (font <> "-ExtraBold") (font <> "-ExtraBold") "Arial"
+    "KN_IN" -> fontByOS (fontKn <> "-ExtraBold") (fontKn <> "-ExtraBold") "Arial"
+    "HI_IN" -> fontByOS (font <> "-ExtraBold") (font <> "-ExtraBold") "Arial"
+    _ -> fontByOS (font <> "-ExtraBold") (font <> "-ExtraBold") "Arial"
 
 extraBoldItalic :: FontStyle
-extraBoldItalic = fontByOS "PlusJakartaSans-ExtraBoldItalic" "PlusJakartaSans-ExtraBoldItalic" "Arial"
+extraBoldItalic = do
+  let font = getValueFromConfig "fontName"
+  let fontKn = getValueFromConfig "fontKannada"
+  fontByOS (font <> "-ExtraBoldItalic") (font <> "-ExtraBoldItalic") "Arial"
 
 h1 :: LazyCheck -> forall properties. (Array (Prop properties))
 h1 typography = [

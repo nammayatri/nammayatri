@@ -73,6 +73,9 @@ public class Utils {
             case "ML_IN":
                 locale = new Locale("ml");
                 break;
+            case "FR_FR":
+                locale = new Locale("fr");
+                break;
             default:
                 return;
         }

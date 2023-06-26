@@ -27,7 +27,9 @@ type Config = {
     nightCharges :: Boolean,
     nightShiftMultiplier :: String, 
     currentRateCardType :: RateCardType,
-    onFirstPage :: Boolean
+    onFirstPage :: Boolean,
+    showDetails :: Boolean,
+    alertDialogPrimaryColor :: String
 }
 
 config :: Config 
@@ -39,5 +41,7 @@ config = {
     nightCharges : false,
     nightShiftMultiplier : "1.5",
     currentRateCardType : DefaultRateCard,
-    onFirstPage : false
+    onFirstPage : false,
+    showDetails : true,
+    alertDialogPrimaryColor: "#2194FF"
 }

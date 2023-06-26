@@ -39,6 +39,7 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge (getVersionCode)
 import Helpers.Utils (getCommonAssetStoreLink)
 import Styles.Colors as Color
+import MerchantConfig.Utils(getValueFromConfig)
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -87,6 +88,7 @@ getCurrentAndroidVersion merchant =
     YATRI -> 47 
     JATRISAATHI -> 1
     PAYTM -> 1
+    PASSCULTURE -> 1
 
 checkVersionForChat :: Int -> Boolean
 checkVersionForChat reqVersion =
@@ -390,7 +392,7 @@ estimatedFareView push config =
       , textView $ 
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text ("₹" <> (show config.estimatedRideFare))
+        , text ((getValueFromConfig "currency") <> (show config.estimatedRideFare))
         , color Color.black900
         , ellipsize true
         , singleLine true

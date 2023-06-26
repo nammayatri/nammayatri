@@ -51,7 +51,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
 import MerchantConfig.DefaultConfig as DC
-import MerchantConfig.Utils (Merchant(..), getAppConfig, getMerchant)
+import MerchantConfig.Utils (Merchant(..), getAppConfig, getMerchant, getValueFromConfig)
 import MerchantConfig.Utils (getAppConfig)
 import ModifyScreenState (modifyScreenState, updateRideDetails)
 import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>))
@@ -184,7 +184,12 @@ getIosVersion merchant =
                      minorUpdateIndex : 1,
                      patchUpdateIndex : 0,
                      enableForceUpdateIOS : false
-                    }                  
+                    }   
+    PASSCULTURE ->  { majorUpdateIndex : 0,
+                     minorUpdateIndex : 1,
+                     patchUpdateIndex : 0,
+                     enableForceUpdateIOS : false
+                    }                
 
 
 checkVersion :: Int -> String -> FlowBT String Unit
@@ -220,6 +225,7 @@ getLatestAndroidVersion merchant =
     YATRI -> 49
     JATRISAATHI -> 2
     PAYTM -> 1
+    PASSCULTURE -> 1
 
 forceIOSupdate :: Int -> Int -> Int -> IosVersion -> Boolean
 forceIOSupdate c_maj c_min c_patch updatedIOSversion=
@@ -1055,7 +1061,7 @@ homeScreenFlow = do
     GO_TO_INVOICE_ updatedState -> do
       let prevRideState = updatedState.data.previousRideRatingState
       let finalAmount = show prevRideState.finalAmount
-      modifyScreenState $ InvoiceScreenStateType (\invoiceScreen -> invoiceScreen {props{fromHomeScreen= true},data{totalAmount = ("₹ " <> finalAmount), date = prevRideState.dateDDMMYY, tripCharges = ("₹ " <> finalAmount), selectedItem {date = prevRideState.dateDDMMYY, bookingId = prevRideState.bookingId,rideStartTime = prevRideState.rideStartTime, rideEndTime = prevRideState.rideEndTime, rideId = prevRideState.rideId, shortRideId = prevRideState.shortRideId,vehicleNumber = prevRideState.vehicleNumber,time = prevRideState.rideStartTime,source = prevRideState.source,destination = prevRideState.destination,driverName = prevRideState.driverName,totalAmount = ("₹ " <> finalAmount)}, config = updatedState.data.config}})
+      modifyScreenState $ InvoiceScreenStateType (\invoiceScreen -> invoiceScreen {props{fromHomeScreen= true},data{totalAmount = ((getValueFromConfig "currency") <> " " <> finalAmount), date = prevRideState.dateDDMMYY, tripCharges = ((getValueFromConfig "currency") <> " " <> finalAmount), selectedItem {date = prevRideState.dateDDMMYY, bookingId = prevRideState.bookingId,rideStartTime = prevRideState.rideStartTime, rideEndTime = prevRideState.rideEndTime, rideId = prevRideState.rideId, shortRideId = prevRideState.shortRideId,vehicleNumber = prevRideState.vehicleNumber,time = prevRideState.rideStartTime,source = prevRideState.source,destination = prevRideState.destination,driverName = prevRideState.driverName,totalAmount = ((getValueFromConfig "currency") <> " " <> finalAmount)}, config = updatedState.data.config}})
       invoiceScreenFlow
 
     CHECK_FOR_DUPLICATE_SAVED_LOCATION state -> do

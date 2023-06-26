@@ -32,6 +32,7 @@ import Language.Strings (getString)
 import Language.Types(STR(..))
 import Engineering.Helpers.Commons (screenWidth)
 import Common.Types.App
+import MerchantConfig.Utils(getValueFromConfig)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -96,7 +97,7 @@ earningsView config push =
             ]<> FontStyle.tags TypoGraphy
          , textView $ 
             [ height config.textConfig.height
-            , text  $ "₹" <> (show  $ config.totalEarningsOfDay)
+            , text  $ (getValueFromConfig "currency") <> (show  $ config.totalEarningsOfDay)
             , gravity config.textConfig.gravity
             , color config.textConfig.color
             -- , weight config.textConfig.weight

@@ -95,6 +95,7 @@ window.onMerchantEvent = function (event, payload) {
   console = top.console;
   console.log(payload);
   var clientPaylod = JSON.parse(payload);
+  var clientId = clientPaylod.payload.clientId
   if (event == "initiate") {
     let payload = {
       event: "initiate_result"
@@ -104,17 +105,18 @@ window.onMerchantEvent = function (event, payload) {
       , errorMessage: ""
       , errorCode: ""
     }
-    if (clientPaylod.payload.clientId == "open-kochi") {
+    if (clientId == "open-kochi") {
       window.merchantID = "YATRI"
-    } else if(clientPaylod.payload.clientId == "jatrisaathiprovider" || clientPaylod.payload.clientId == "jatrisaathidriver"){
+    } else if(clientId == "jatrisaathiprovider" || clientId == "jatrisaathidriver"){
       window.merchantID = "JATRISAATHI"
-    }else {
+    }else if (clientId.includes("provider")){
+      var merchant = clientId.replace("mobility","")
+      merchant = merchant.replace("provider","");
+      window.merchantID = merchant.toUpperCase();
+    } else {
       // window.merchantID = clientPaylod.payload.clientId.toUpperCase();
       window.merchantID = "NAMMAYATRI";
     }
-    console.log(window.merchantID);
-    var header = {"x-client-id" : "nammayatripartner"};
-    JBridge.setAnalyticsHeader(JSON.stringify(header));
     JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
   } else if (event == "process") {
     window.__payload.sdkVersion = "2.0.1"

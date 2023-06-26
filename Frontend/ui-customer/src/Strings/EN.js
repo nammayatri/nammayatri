@@ -491,5 +491,7 @@ const englishStrings = {
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST": "The driver preferred your special request and is just ",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST": "The driver preferred your special request and has travelled ",
   "AND_HAS_TRAVELLED": " km.",
-  "PLATFORM_FEE" : "Platform Fee"
+  "PLATFORM_FEE" : "Platform Fee",
+  "FINDING_QUOTES_TEXT": "Searching for cabs around",
+  "PLEASE_WAIT": "Please wait!"
 }
