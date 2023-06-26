@@ -118,6 +118,8 @@ buildEstimate searchReqId startTime dist specialLocationTag farePolicy = do
             || breakup.title == "SERVICE_CHARGE"
             || breakup.title == "WAITING_OR_PICKUP_CHARGES"
             || breakup.title == "PLATFORM_FEE"
+            || breakup.title == "SGST"
+            || breakup.title == "CGST"
             || breakup.title == "FIXED_GOVERNMENT_RATE"
 
 mkAdditionalBreakups :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> Meters -> FullFarePolicy -> [breakupItem]
