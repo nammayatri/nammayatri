@@ -391,7 +391,8 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , clientVersion         :: Maybe Version
     , bundleVersion         :: Maybe Version
     , gender                :: Maybe String
-    , numberOfRides :: Maybe Int
+    , numberOfRides         :: Maybe Int
+    , paymentPending        :: Boolean
     }
 
 
@@ -1658,3 +1659,120 @@ instance standardEncodeOnCallRes :: StandardEncode OnCallRes where standardEncod
 instance showOnCallRes :: Show OnCallRes where show = genericShow
 instance decodeOnCallRes :: Decode OnCallRes where decode = defaultDecode
 instance encodeOnCallRes :: Encode OnCallRes where encode = defaultEncode
+
+
+-- order status api
+
+data CreateOrderReq = CreateOrderReq String
+
+newtype CreateOrderRes = CreateOrderRes
+  {
+    sdk_payload :: PaymentPagePayload,
+    status :: String ,
+    id :: String,
+    order_id :: String,
+    payment_links :: PaymentLinks
+  }
+
+newtype PaymentPagePayload = PaymentPagePayload
+  {
+    requestId :: String,
+    service :: String,
+    payload :: PayPayload
+  }
+
+newtype PayPayload = PayPayload
+  {
+    action :: String,
+    amount :: String,
+    clientAuthToken :: String,
+    clientAuthTokenExpiry :: String,
+    clientId :: String,
+    currency :: String,
+    customerEmail :: String,
+    customerId :: String,
+    customerPhone :: String,
+    description :: String,
+    environment :: String,
+    firstName :: String,
+    lastName :: String,
+    merchantId :: String,
+    options_getUpiDeepLinks :: Maybe Boolean,
+    orderId :: String,
+    returnUrl :: String
+  }
+
+newtype PaymentLinks = PaymentLinks
+  {
+    web :: Maybe String,
+    iframe :: Maybe String,
+    mobile :: Maybe String
+  }
+
+instance makeCreateOrderReq :: RestEndpoint CreateOrderReq CreateOrderRes where
+ makeRequest reqBody@(CreateOrderReq estimateId) headers = defaultMakeRequest POST (EP.createOrder estimateId) headers reqBody
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericCreateOrderReq :: Generic CreateOrderReq _
+instance standardEncodeCreateOrderReq :: StandardEncode CreateOrderReq where standardEncode (CreateOrderReq dummy) = standardEncode dummy
+instance showCreateOrderReq :: Show CreateOrderReq where show = genericShow
+instance decodeCreateOrderReq :: Decode CreateOrderReq where decode = defaultDecode
+instance encodeCreateOrderReq :: Encode CreateOrderReq where encode = defaultEncode
+
+derive instance genericPaymentLinks :: Generic PaymentLinks _
+derive instance newtypePaymentLinks :: Newtype PaymentLinks _
+instance standardEncodePaymentLinks :: StandardEncode PaymentLinks where standardEncode (PaymentLinks id) = standardEncode id
+instance showPaymentLinks :: Show PaymentLinks where show = genericShow
+instance decodePaymentLinks :: Decode PaymentLinks where decode = defaultDecode
+instance encodePaymentLinks :: Encode PaymentLinks where encode = defaultEncode
+
+derive instance genericCreateOrderRes :: Generic CreateOrderRes _
+derive instance newtypeCreateOrderRes :: Newtype CreateOrderRes _
+instance standardEncodeCreateOrderRes :: StandardEncode CreateOrderRes where standardEncode (CreateOrderRes res) = standardEncode res
+instance showCreateOrderRes :: Show CreateOrderRes where show = genericShow
+instance decodeCreateOrderRes :: Decode CreateOrderRes where decode = defaultDecode
+instance encodeCreateOrderRes :: Encode CreateOrderRes where encode = defaultEncode
+
+derive instance genericPayPayload :: Generic PayPayload _
+derive instance newtypePayPayload :: Newtype PayPayload _
+instance standardEncodePayPayload :: StandardEncode PayPayload where standardEncode (PayPayload id) = standardEncode id
+instance showPayPayload :: Show PayPayload where show = genericShow
+instance decodePayPayload :: Decode PayPayload where decode = defaultDecode
+instance encodePayPayload :: Encode PayPayload where encode = defaultEncode
+
+derive instance genericPaymentPagePayload :: Generic PaymentPagePayload _
+derive instance newtypePaymentPagePayload :: Newtype PaymentPagePayload _
+instance standardEncodePaymentPagePayload :: StandardEncode PaymentPagePayload where standardEncode (PaymentPagePayload id) = standardEncode id
+instance showPaymentPagePayload :: Show PaymentPagePayload where show = genericShow
+instance decodePaymentPagePayload :: Decode PaymentPagePayload where decode = defaultDecode
+instance encodePaymentPagePayload :: Encode PaymentPagePayload where encode = defaultEncode
+
+
+
+-- order status
+
+data OrderStatusReq = OrderStatusReq String
+
+newtype OrderStatusRes = OrderStatusRes
+  {
+    status :: String
+  }
+
+instance makeOrderStatusReq :: RestEndpoint OrderStatusReq OrderStatusRes where
+ makeRequest reqBody@(OrderStatusReq orderId) headers = defaultMakeRequest POST (EP.orderStatus orderId) headers reqBody
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericOrderStatusReq :: Generic OrderStatusReq _
+instance standardEncodeOrderStatusReq :: StandardEncode OrderStatusReq where standardEncode (OrderStatusReq dummy) = standardEncode dummy
+instance showOrderStatusReq :: Show OrderStatusReq where show = genericShow
+instance decodeOrderStatusReq :: Decode OrderStatusReq where decode = defaultDecode
+instance encodeOrderStatusReq :: Encode OrderStatusReq where encode = defaultEncode
+
+derive instance genericOrderStatusRes :: Generic OrderStatusRes _
+derive instance newtypeOrderStatusRes :: Newtype OrderStatusRes _
+instance standardEncodeOrderStatusRes :: StandardEncode OrderStatusRes where standardEncode (OrderStatusRes res) = standardEncode res
+instance showOrderStatusRes :: Show OrderStatusRes where show = genericShow
+instance decodeOrderStatusRes :: Decode OrderStatusRes where decode = defaultDecode
+instance encodeOrderStatusRes :: Encode OrderStatusRes where encode = defaultEncode 

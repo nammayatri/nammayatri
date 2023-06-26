@@ -840,3 +840,15 @@ makeOnCallReq rideID = OnCallReq {
     "rideId" : rideID
 }
 
+createPaymentOrder dummy = do
+    headers <- getHeaders ""
+    withAPIResult (EP.createOrder dummy) unwrapResponse $ callAPI headers (CreateOrderReq dummy)
+    where
+        unwrapResponse (x) = x
+
+
+paymentOrderStatus orderId = do
+    headers <- getHeaders ""
+    withAPIResult (EP.orderStatus orderId) unwrapResponse $ callAPI headers (OrderStatusReq orderId)
+    where
+        unwrapResponse (x) = x

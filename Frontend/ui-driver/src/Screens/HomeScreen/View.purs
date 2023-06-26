@@ -24,6 +24,7 @@ import Components.SelectListModal as SelectListModal
 import Components.InAppKeyboardModal as InAppKeyboardModal
 import Components.PopUpModal as PopUpModal
 import Components.RideActionModal as RideActionModal
+import Components.MakePaymentModal as MakePaymentModal
 import Components.StatsModel as StatsModel
 import Components.ChatView as ChatView
 import Data.Array as DA
@@ -73,6 +74,7 @@ import Screens.HomeScreen.ComponentConfig
 import Screens as ScreenNames
 import Merchant.Utils (getValueFromConfig)
 import Engineering.Helpers.Commons (flowRunner)
+import Components.RateCard as RateCard
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -184,12 +186,14 @@ view push state =
         ]
       , if (getValueToLocalNativeStore PROFILE_DEMO) /= "false" then profileDemoView state push else linearLayout[][]
       , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
+      , if state.data.paymentState.makePaymentModal then makePaymentModal push state else dummyTextView
       , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView
       , if state.props.endRidePopUp then endRidePopView push state else dummyTextView
       , if state.props.cancelConfirmationPopup then cancelConfirmation push state else dummyTextView
       , if state.props.cancelRideModalShow then cancelRidePopUpView push state else dummyTextView
       , if state.props.currentStage == ChatWithCustomer then chatView push state else dummyTextView
       , if state.props.silentPopUpView then popupModelSilentAsk push state else dummyTextView
+      , if state.data.paymentState.showRateCard then rateCardView push state else dummyTextView
   ]
 
 driverMapsHeaderView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -244,10 +248,31 @@ driverMapsHeaderView push state =
               ]
             , alternateNumberOrOTPView state push
             , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True") then genderBannerView state push else linearLayout[][]
+            , if state.data.paymentState.paymentStatusBanner then paymentStatusBanner state push else dummyTextView
             ]
         ]
         , bottomNavBar push state 
   ]
+
+rateCardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+rateCardView push state =
+  PrestoAnim.animationSet [ Anim.fadeIn true ] $ 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  ][ RateCard.view (push <<< RateCardAC) (rateCardState state) ]
+
+paymentStatusBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+paymentStatusBanner state push =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation HORIZONTAL
+  , background Color.transparent
+  , padding $ Padding 10 0 10 16
+  , gravity BOTTOM
+  ][ Banner.view (push <<< PaymentBannerAC) (paymentStatusConfig state)]
+
 
 alternateNumberOrOTPView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 alternateNumberOrOTPView state push =
@@ -447,7 +472,7 @@ offlineView push state =
                     [ height $ V 132
                     , width $ V 132
                     , cornerRadius 75.0
-                    , background "#53BB6F"
+                    , background Color.darkMint
                     , onClick  push  (const $ SwitchDriverStatus Online)
                     ][]
                   , textView
@@ -759,6 +784,10 @@ showOfflineStatus push state =
           ]
       ]
   ]
+
+makePaymentModal :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+makePaymentModal push state = MakePaymentModal.view (push <<< MakePaymentModalAC) (makePaymentState state)
+
 
 goOfflineModal :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 goOfflineModal push state =

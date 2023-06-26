@@ -30,25 +30,30 @@ import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.Eq.Generic (genericEq)
 import Control.Monad.Except (runExcept)
 import Data.Array.NonEmpty (fromArray)
-import Data.Either (hush)
+import Data.Either (hush, Either(..))
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as DS
 import Data.Traversable (traverse)
 import Effect (Effect)
-import Effect.Aff (error, killFiber, launchAff, launchAff_)
+import Effect.Aff (error, killFiber, launchAff, launchAff_, makeAff, nonCanceler)
 import Effect.Class (liftEffect)
 import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode, decode)
 import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
-import Prelude (Unit, bind, pure, discard, unit, void, ($), identity, (<*>), (<#>), (+), (<>))
+import Prelude (Unit, bind, pure, discard, unit, void, ($), identity, (<*>), (<#>), (+), (<>), (*>), (>>>))
 import Prelude (class Eq, class Show, (<<<))
 import Prelude (map, (*), (-), (/))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import Data.String (Pattern(..), split)
+import Services.APITypes (PaymentPagePayload)
+import Presto.Core.Types.Language.Flow (Flow, doAff)
+import Types.App (FlowBT)
+import Control.Monad.Except.Trans (lift)
+import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
 
 -- import Control.Monad.Except (runExcept)
 -- import Data.Array.NonEmpty (fromArray)
@@ -234,3 +239,20 @@ getSpecialZoneConfig prop tag = do
         "PriorityPickup" -> getZoneTagConfig prop (pickup <> "_Pickup")
         "PriorityDrop" -> getZoneTagConfig prop (drop <> "_Drop")
         _ -> ""
+
+type AffSuccess s = (s -> Effect Unit)
+type MicroAPPInvokeSignature = String -> (AffSuccess String) ->  Effect Unit
+
+
+foreign import startPP1 :: MicroAPPInvokeSignature
+
+startPP'' :: forall a. PaymentPagePayload -> Flow a String
+startPP'' payload = do
+  response <- doAff $ makeAff (\cb -> (startPP1 (encodeJSON payload) (Right >>> cb) ) *> pure nonCanceler)
+  pure $ response
+
+
+startPP :: PaymentPagePayload -> FlowBT String String
+startPP payload = do
+  action <- lift $ lift $ startPP'' payload
+  pure action

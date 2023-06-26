@@ -433,3 +433,6 @@ red100 = "#10E55454"
 
 green600 :: Color
 green600 = "#269574"
+
+orange900 :: Color
+orange900 = "#FF8533"

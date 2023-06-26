@@ -14,9 +14,21 @@
 -}
 
 module Components.RateCard.Controller where
-import Screens.Types(RateCardType(..))
 
-data Action = Close | BackPressed | NoAction | GoToDefaultStart | GoToDriverAddition | GoToFareUpdate
+import Data.Generic.Rep (class Generic)
+import Data.Eq.Generic (genericEq)
+import Data.Show.Generic (genericShow)
+import Prelude (class Eq, class Show)
+import Common.Types.App (RateCardType(..), FareList(..))
+import Components.PrimaryButton as PrimaryButton
+
+data Action = Close 
+              | BackPressed 
+              | NoAction 
+              | GoToDefaultStart 
+              | GoToDriverAddition 
+              | GoToFareUpdate 
+              | PrimaryButtonAC PrimaryButton.Action
 
 
 type Config = {
@@ -27,7 +39,15 @@ type Config = {
     nightCharges :: Boolean,
     nightShiftMultiplier :: String, 
     currentRateCardType :: RateCardType,
-    onFirstPage :: Boolean
+    onFirstPage :: Boolean,
+    title :: String,
+    description :: String,
+    buttonText :: String,
+    applicableCharges :: String,
+    primaryButtonText :: String,
+    fareList :: Array FareList,
+    otherOptions :: Array FareList,
+    additionalStrings :: Array FareList
 }
 
 config :: Config 
@@ -39,5 +59,13 @@ config = {
     nightCharges : false,
     nightShiftMultiplier : "1.5",
     currentRateCardType : DefaultRateCard,
-    onFirstPage : false
+    onFirstPage : false,
+    title : "",
+    description : "",
+    buttonText : "Got It!",
+    primaryButtonText : "",
+    applicableCharges : "",
+    fareList : [],
+    otherOptions : [],
+    additionalStrings : []
 }

@@ -150,3 +150,9 @@ onCall _ = (getBaseUrl "") <> "/onCall"
 
 likeMessage :: String -> String
 likeMessage messageId = (getBaseUrl "") <> "/message/" <> messageId <> "/like"
+
+createOrder :: String -> String
+createOrder id = (getBaseUrl "37") <> "/payment/" <> id <>"/createOrder"
+
+orderStatus :: String -> String
+orderStatus orderId = (getBaseUrl "37") <> "/payment/" <> orderId <>"/status"

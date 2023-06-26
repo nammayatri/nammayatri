@@ -146,3 +146,20 @@ instance encodeVersion  :: Encode Version where encode = defaultEncode
 -- derive instance newtypeLocationLatLong :: Newtype LocationLatLong _
 -- instance encodeLocationLatLong :: Encode LocationLatLong where encode = defaultEncode
 -- instance decodeLocationLatLong :: Decode LocationLatLong where decode = defaultDecode
+
+data RateCardType = DefaultRateCard | DriverAddition | FareUpdate | PaymentFareBreakup
+derive instance genericRateCardType :: Generic RateCardType _
+instance eqRateCardType :: Eq RateCardType where eq = genericEq
+
+type FareList = {
+  key :: String,
+  val :: String
+}
+
+data PaymentStatus = Success | Pending | Failed
+
+derive instance genericPaymentStatus :: Generic PaymentStatus _
+instance showPaymentStatus :: Show PaymentStatus where show = genericShow
+instance decodePaymentStatus :: Decode PaymentStatus where decode = defaultDecode
+instance encodePaymentStatus  :: Encode PaymentStatus where encode = defaultEncode
+instance eqPaymentStatus :: Eq PaymentStatus where eq = genericEq
