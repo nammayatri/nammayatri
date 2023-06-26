@@ -13,6 +13,7 @@ window.getMerchantConfig = function () {
     "addFavouriteScreenBackArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png",
     "popupBackground" : "#FFFFFF",
     "apiLoaderLottie": "primary_button_loader.json",
+    "addFavouriteScreenBackArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png",
     "primaryTextColor": "#FCC32C",
     "primaryBackground": "#2C2F3A",
     "showCorporateAddress" : false,

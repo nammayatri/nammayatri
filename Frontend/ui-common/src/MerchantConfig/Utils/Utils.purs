@@ -63,17 +63,12 @@ getAppConfig = liftFlowBT $ getAppConfig_
 getAppConfig_ :: Effect AppConfig
 getAppConfig_  = do
   config' <- getConfig
-  _ <- pure $ spy "config' ---->>> "  config'
   pure $
     case config' of
       Just config -> do
         case runExcept (decode (encode config )) of
-            Right (obj :: AppConfig) -> do
-                let _ =  spy "config ---->>> right "  ""
-                config
-            Left err -> do
-                let _  =  spy "config ---->>> left "  ""
-                DefaultConfig.config
+            Right (obj :: AppConfig) -> config
+            Left err ->DefaultConfig.config
       Nothing -> do
             DefaultConfig.config
 

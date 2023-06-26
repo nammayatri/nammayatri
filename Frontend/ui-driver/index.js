@@ -223,11 +223,11 @@ window["onEvent'"] = function (event, args) {
   } else if (event == "onResume") {
     window.onResume();
     refreshFlow();
-  }
-  else if (event == "onDestroy") {
+  } else if (event == "onDestroy") {
     if (JBridge.onDestroy){
       JBridge.onDestroy();
     }
+}
 }
 
 function refreshFlow(){
@@ -258,9 +258,10 @@ if (typeof window.JOS != "undefined") {
 }
 
 var sessionInfo = JSON.parse(JBridge.getDeviceInfo())
-if(sessionInfo.package_name.includes("debug")){
+
+if (sessionInfo.package_name.includes("debug")) {
   logger.enableLogger();
-}else{
+} else {
   logger.disableLogger();
 }
 

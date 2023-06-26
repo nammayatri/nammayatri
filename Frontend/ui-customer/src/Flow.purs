@@ -197,7 +197,7 @@ checkVersion versioncodeAndroid versionName= do
   logField_ <- lift $ lift $ getLogFields
   let updatedIOSversion = getIosVersion (getMerchant FunctionCall)
   if os /= "IOS" && versioncodeAndroid < (getLatestAndroidVersion (getMerchant FunctionCall)) then do
-    pure $ runFn3 emitJOSEvent "java" "onEvent" "event,event,hide_loader"
+    pure $ runFn3 emitJOSEvent "java" "onEvent" "event,hide_loader"
     _ <- UI.handleAppUpdatePopUp
     _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_app_update_pop_up_view"
     checkVersion versioncodeAndroid versionName

@@ -371,7 +371,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void initApp() {
 
-        hyperServices = new HyperServices(this, findViewById(in.juspay.mobility.app.R.id.cl_dui_container));
+        hyperServices = new HyperServices(this, findViewById(R.id.cl_dui_container));
         final JSONObject json = new JSONObject();
         JSONObject payload = new JSONObject();
 

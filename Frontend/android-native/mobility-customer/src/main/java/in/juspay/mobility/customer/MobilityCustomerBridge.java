@@ -425,7 +425,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                         .title("")
                         .position(new LatLng(lat, lng))
                         .anchor(0.49f, 0.78f)
-                        .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(name, "ny_ic_zone_pickup_marker","null")));
+                        .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(name, "ny_ic_zone_pickup_marker",null)));
                 Marker m = googleMap.addMarker(markerOptionsObj);
                 if (m != null) {
                     m.hideInfoWindow();
