@@ -106,6 +106,7 @@ getStatus (personId, merchantId) orderId = do
   case paymentStatus.status of
     Juspay.CHARGED -> do
       CDI.updatePendingPayment False (cast personId)
+      CDI.updateSubscription True (cast personId)
       Esq.runTransaction $ processPaymentTransactions (cast personId) (cast orderId) driverInfo transporterConfig.timeDiffFromUtc
     _ -> pure ()
   pure paymentStatus
@@ -142,6 +143,7 @@ juspayWebhookHandler merchantShortId authData value = do
           transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
           unless (osc.order.status /= Juspay.CHARGED) $ do
             CDI.updatePendingPayment False driverFee.driverId
+            CDI.updateSubscription True driverFee.driverId
             Esq.runTransaction $ processPaymentTransactions driverFee.driverId driverFee.id driverInfo transporterConfig.timeDiffFromUtc
           pure Ack
     _ -> throwError $ InternalError "Unknown Service Config"

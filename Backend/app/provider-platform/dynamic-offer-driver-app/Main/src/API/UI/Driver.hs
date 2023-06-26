@@ -37,6 +37,7 @@ where
 
 import Data.Time (Day)
 import qualified Domain.Action.UI.Driver as DDriver
+import Domain.Types.DriverFee (DriverFeeStatus)
 import Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as SP
@@ -122,6 +123,7 @@ type API =
                :> TokenAuth
                :> QueryParam "from" Day -- rides with window start date >= from
                :> QueryParam "to" Day -- rides with window end date <= to
+               :> QueryParam "status" DriverFeeStatus
                :> QueryParam "limit" Int
                :> QueryParam "offset" Int
                :> Get '[JSON] [DDriver.DriverPaymentHistoryResp]
@@ -203,5 +205,5 @@ resendOtp req = withFlowHandlerAPI . DDriver.resendOtp req
 remove :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler APISuccess
 remove = withFlowHandlerAPI . DDriver.remove
 
-getDriverPayments :: (Id SP.Person, Id Merchant.Merchant) -> Maybe Day -> Maybe Day -> Maybe Int -> Maybe Int -> FlowHandler [DDriver.DriverPaymentHistoryResp]
-getDriverPayments mbFrom mbTo mbLimit mbOffset = withFlowHandlerAPI . DDriver.getDriverPayments mbFrom mbTo mbLimit mbOffset
+getDriverPayments :: (Id SP.Person, Id Merchant.Merchant) -> Maybe Day -> Maybe Day -> Maybe DriverFeeStatus -> Maybe Int -> Maybe Int -> FlowHandler [DDriver.DriverPaymentHistoryResp]
+getDriverPayments mbFrom mbTo mbStatus mbLimit mbOffset = withFlowHandlerAPI . DDriver.getDriverPayments mbFrom mbTo mbStatus mbLimit mbOffset

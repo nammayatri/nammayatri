@@ -14,10 +14,16 @@
 
 module Domain.Types.DriverFee where
 
+import Data.Aeson
+import qualified Data.Bifunctor as BF
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
 import Domain.Types.Person (Driver)
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney, Money)
 import Kernel.Types.Id
+import Servant.API
 
 data DriverFee = DriverFee
   { id :: Id DriverFee,
@@ -43,4 +49,14 @@ data PlatformFee = PlatformFee
   }
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
-data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED deriving (Read, Show, Eq)
+data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED | INACTIVE deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
+
+instance FromHttpApiData DriverFeeStatus where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = BF.first T.pack . eitherDecode . BSL.fromStrict
+
+instance ToHttpApiData DriverFeeStatus where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode

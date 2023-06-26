@@ -33,6 +33,7 @@ import Kernel.Types.Id (cast)
 import Kernel.Utils.Common (EsqDBFlow, Log (withLogTag), MonadFlow, MonadTime (getCurrentTime), Seconds, addUTCTime, fromMaybeM, logError, logInfo, secondsToNominalDiffTime, throwError)
 import Lib.Scheduler
 import SharedLogic.Allocator
+import SharedLogic.DriverFee
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import Storage.CachedQueries.DriverInformation (updatePendingPayment, updateSubscription)
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
@@ -55,7 +56,8 @@ sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
   let jobData = jobInfo.jobData
       startTime = jobData.startTime
       endTime = jobData.endTime
-      now = jobData.now
+  nowUtc <- getCurrentTime
+  let now = getLocalTime nowUtc jobData.timeDiff
   feeZipDriver <- calcDriverFeeAttr ONGOING startTime endTime
   when (null feeZipDriver) $ logInfo "No ongoing payment found."
   for_ feeZipDriver $ \(driverFee, mbDriver) -> do
@@ -69,8 +71,14 @@ sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
             paymentMessage = "Payment of " <> show pendingAmount.getMoney <> " is pending for " <> show driverFee.numRides <> " ride(s) with a deadline of " <> show driverFee.payBy <> ". Pay by " <> show driverFee.payBy <> " to avoid being blocked."
         (Notify.sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.PAYMENT_PENDING paymentTitle paymentMessage driver.id driver.deviceToken) `C.catchAll` \e -> C.mask_ $ logError $ "FCM for payment reminder to driver id " <> driver.id.getId <> " failed. Error: " <> show e
   forM_ feeZipDriver $ \(driverFee, mbPerson) -> do
-    Esq.runNoTransaction $ updateStatus PAYMENT_PENDING driverFee.id now
-    whenJust mbPerson $ \person -> updatePendingPayment True (cast person.id)
+    whenJust mbPerson $ \person -> do
+      overdueFee <- Esq.runInReplica $ findOldestFeeByStatus (cast person.id) PAYMENT_OVERDUE
+      case overdueFee of
+        Nothing -> do
+          Esq.runTransaction $ updateStatus PAYMENT_PENDING driverFee.id now
+          updatePendingPayment True (cast person.id)
+        Just oDFee -> do
+          mergeDriverFee driverFee oDFee now
   case listToMaybe feeZipDriver of
     Nothing -> return Complete
     Just (driverFee, _) -> do
@@ -109,7 +117,7 @@ unsubscribeDriverForPaymentOverdue Job {id, jobInfo} = withLogTag ("JobId-" <> i
     Esq.runTransaction $ do
       updateStatus PAYMENT_OVERDUE driverFee.id now
       whenJust mbPerson $ \person -> do
-        QDFS.updateStatus (cast person.id) $ DDFS.PAYMENT_OVERDUE driverFee.id driverFee.govtCharges $ PlatformFee driverFee.platformFee.fee driverFee.platformFee.cgst driverFee.platformFee.sgst
+        QDFS.updateStatus (cast person.id) DDFS.PAYMENT_OVERDUE
     whenJust mbPerson $ \person -> updateSubscription False (cast person.id) -- fix later: take tabular updates inside transaction
   return Complete
 

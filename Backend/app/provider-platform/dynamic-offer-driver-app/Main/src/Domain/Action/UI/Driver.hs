@@ -342,6 +342,8 @@ newtype DriverAlternateNumberRes = DriverAlternateNumberRes
 
 data DriverPaymentHistoryResp = DriverPaymentHistoryResp
   { date :: Day, -- window start day
+    driverFeeId :: Id DDF.DriverFee,
+    status :: DDF.DriverFeeStatus,
     totalRides :: Int,
     totalEarnings :: Money,
     charges :: Money,
@@ -1151,8 +1153,8 @@ remove (personId, _) = do
     QPerson.updateAlternateMobileNumberAndCode driver
   return Success
 
-getDriverPayments :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Maybe Day -> Maybe Day -> Maybe Int -> Maybe Int -> m [DriverPaymentHistoryResp]
-getDriverPayments (_, merchantId_) mbFrom mbTo mbLimit mbOffset = do
+getDriverPayments :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Maybe Day -> Maybe Day -> Maybe DDF.DriverFeeStatus -> Maybe Int -> Maybe Int -> m [DriverPaymentHistoryResp]
+getDriverPayments (_, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset = do
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit -- TODO move to common code
       offset = fromMaybe 0 mbOffset
       defaultFrom = fromMaybe (fromGregorian 2020 1 1) mbFrom
@@ -1163,7 +1165,7 @@ getDriverPayments (_, merchantId_) mbFrom mbTo mbLimit mbOffset = do
       to = fromMaybe now mbTo
   let windowStartTime = UTCTime from 0
       windowEndTime = addUTCTime (86399 + transporterConfig.driverPaymentCycleDuration) (UTCTime to 0)
-  driverFees <- runInReplica $ QDF.findWindowsWithStatus windowStartTime windowEndTime DDF.CLEARED limit offset
+  driverFees <- runInReplica $ QDF.findWindowsWithStatus windowStartTime windowEndTime mbStatus limit offset
   mapM buildPaymentResp driverFees
   where
     maxLimit = 20
@@ -1171,6 +1173,7 @@ getDriverPayments (_, merchantId_) mbFrom mbTo mbLimit mbOffset = do
 
     buildPaymentResp DDF.DriverFee {..} = do
       let date = utctDay startTime
+          driverFeeId = id
           totalRides = numRides
           charges = round $ fromIntegral govtCharges + fromIntegral platformFee.fee + platformFee.cgst + platformFee.sgst
           chargesBreakup = mkChargesBreakup govtCharges platformFee.fee platformFee.cgst platformFee.sgst
