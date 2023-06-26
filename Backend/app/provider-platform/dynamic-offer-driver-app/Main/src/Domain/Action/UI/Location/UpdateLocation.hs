@@ -165,8 +165,7 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
       lastPaymentPending <- runInReplica $ findOldestFeeByStatus (cast driver.id) PAYMENT_PENDING
       case (lastPaymentOverdue, lastPaymentPending) of
         (Just lpo, Just lpp) -> do
-          nowUtc <- getCurrentTime
-          let now = getLocalTime nowUtc thresholdConfig.timeDiffFromUtc
+          now <- getLocalCurrentTime thresholdConfig.timeDiffFromUtc
           mergeDriverFee lpo lpp now
         (Just _, Nothing) -> do
           updateSubscription False (cast driver.id)
@@ -212,9 +211,6 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
             mbRideIdAndStatus
 
     pure Success
-  where
-    getLocalTime :: UTCTime -> Seconds -> UTCTime
-    getLocalTime utcTime seconds = addUTCTime (secondsToNominalDiffTime seconds) utcTime
 
 checkLocationUpdatesRateLimit ::
   ( Redis.HedisFlow m r,
