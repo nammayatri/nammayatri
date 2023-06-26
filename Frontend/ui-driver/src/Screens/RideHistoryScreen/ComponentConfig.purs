@@ -16,15 +16,14 @@
 module Screens.RideHistoryScreen.ComponentConfig where
 
 
-import Common.Types.App
-import Language.Strings
-import PrestoDOM
-
+import Common.Types.App (LazyCheck(..))
+import Language.Strings (getString)
+import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Components.ErrorModal as ErrorModal
+import Components.GenericHeader as GenericHeader
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Types (STR(..))
-import Screens.Types (RideHistoryScreenState)
 import Screens.Types as ST
 import Styles.Colors as Color
 

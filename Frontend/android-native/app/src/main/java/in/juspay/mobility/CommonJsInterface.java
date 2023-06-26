@@ -84,6 +84,7 @@ import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.widget.DatePicker;
 import android.widget.EditText;
+import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.NumberPicker;
@@ -3908,6 +3909,23 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             ScrollView scrollView = activity.findViewById(Integer.parseInt(id));
             if (scrollView != null) {
                 scrollView.fullScroll(View.FOCUS_DOWN);
+            }
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error in scroll to Bottom : " + e);
+        }
+    }
+
+    @JavascriptInterface
+    public void horizontalScrollToPos(final String id, final String childId) {
+        try {
+            HorizontalScrollView scrollView = activity.findViewById(Integer.parseInt(id));
+            View child = activity.findViewById(Integer.parseInt(childId));
+            final int x;
+            final int y;
+            x = child.getLeft();
+            y = child.getTop();
+            if (scrollView != null){
+                scrollView.scrollTo(x,y);
             }
         } catch (Exception e) {
             Log.e(LOG_TAG, "Error in scroll to Bottom : " + e);

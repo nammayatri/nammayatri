@@ -111,7 +111,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         super.onCreate();
         key = getApplicationContext().getResources().getString(R.string.service);
     }
-
     public class OverlayBinder extends Binder {
         public OverlaySheetService getService () {
             return OverlaySheetService.this;

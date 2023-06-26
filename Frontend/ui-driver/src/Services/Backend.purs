@@ -15,36 +15,37 @@
 
 module Services.Backend where
 
-import Services.Config as SC
+import Data.Maybe
+import Services.APITypes
+
+import Common.Types.App (Version(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
-import Common.Types.App (Version(..))
 import Data.Either (Either(..), either)
-import Presto.Core.Types.API (Header(..), Headers(..))
-import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
-import Helpers.Utils (decodeErrorCode, decodeErrorMessage, toString,getTime)
+import Data.String as DS
+import Debug (spy)
+import Effect.Class (liftEffect)
+import Engineering.Helpers.Commons (liftFlow, bundleVersion)
 import Foreign.Generic (encode)
-import JBridge (setKeyInSharedPrefKeys,toast,factoryResetApp, toggleLoader, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService)
+import Helpers.Utils (decodeErrorCode, decodeErrorMessage, toString, getTime)
+import JBridge (setKeyInSharedPrefKeys, toast, factoryResetApp, toggleLoader, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService)
 import Juspay.OTP.Reader as Readers
-import Types.ModifyScreenState(modifyScreenState)
-import Types.App (GlobalState, FlowBT, ScreenType(..))
-import Services.APITypes
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Log (printLog)
 import Prelude (bind, discard, pure, unit, ($), ($>), (&&), (*>), (<<<), (=<<), (==), void, map, show, class Show)
+import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
+import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
+import Screens.Types (DriverStatus)
+import Services.Config as SC
+import Services.EndPoints as EP
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalStore, getValueToLocalNativeStore)
+import Storage (getValueToLocalStore, KeyStore(..))
 import Tracker (trackApiCallFlow, trackExceptionFlow)
 import Tracker.Labels (Label(..))
 import Tracker.Types as Tracker
-import Services.EndPoints as EP
-import Engineering.Helpers.Commons (liftFlow, bundleVersion)
-import Data.Maybe
-import Data.String as DS
-import Log (printLog)
-import Effect.Class (liftEffect)
-import Storage (getValueToLocalStore, KeyStore(..))
-import Screens.Types (DriverStatus)
-import Debug (spy)
+import Types.App (FlowBT, GlobalState(..), ScreenType(..))
+import Types.ModifyScreenState (modifyScreenState)
 
 getHeaders :: String -> Flow GlobalState Headers
 getHeaders dummy = do
@@ -400,17 +401,17 @@ makeOfferRideReq requestId offeredFare = OfferRideReq
 
 --------------------------------- getRideHistoryResp -------------------------------------------------------------------------
 
-getRideHistoryReq limit offset onlyActive status = do
+getRideHistoryReq limit offset onlyActive status day = do
         headers <- getHeaders ""
-        withAPIResult (EP.getRideHistory limit offset onlyActive status) unwrapResponse $ callAPI headers (GetRidesHistoryReq limit offset onlyActive status)
+        withAPIResult (EP.getRideHistory limit offset onlyActive status day) unwrapResponse $ callAPI headers (GetRidesHistoryReq limit offset onlyActive status day)
     where
         unwrapResponse (x) = x
 
 
-getRideHistoryReqBT :: String -> String -> String -> String -> FlowBT String GetRidesHistoryResp
-getRideHistoryReqBT limit offset onlyActive status = do
+getRideHistoryReqBT :: String -> String -> String -> String -> String -> FlowBT String GetRidesHistoryResp
+getRideHistoryReqBT limit offset onlyActive status day= do
         headers <- lift $ lift $ getHeaders ""
-        withAPIResultBT (EP.getRideHistory limit offset onlyActive status) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetRidesHistoryReq limit offset onlyActive status))
+        withAPIResultBT (EP.getRideHistory limit offset onlyActive status day) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetRidesHistoryReq limit offset onlyActive status day))
     where
     errorHandler (ErrorPayload errorPayload) =  do
         BackT $ pure GoBack
@@ -851,4 +852,11 @@ paymentOrderStatus orderId = do
     headers <- getHeaders ""
     withAPIResult (EP.orderStatus orderId) unwrapResponse $ callAPI headers (OrderStatusReq orderId)
     where
+
+    
+getPaymentHistory :: String -> String -> Flow GlobalState (Either ErrorResponse GetPaymentHistoryResp)
+getPaymentHistory from to = do
+      headers <- getHeaders ""
+      withAPIResult (EP.paymentHistory from to) unwrapResponse (callAPI headers (GetPaymentHistoryReq from to))
+   where
         unwrapResponse (x) = x

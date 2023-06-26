@@ -56,6 +56,9 @@ rideHistory = do
     SelectedTab updatedState -> do
       modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{currentTab = updatedState.currentTab, offsetValue = 0})
       App.BackT $ App.BackPoint <$> (pure $ SELECTED_TAB updatedState)
+    OpenPaymentHistoryScreen updatedState -> do
+      modifyScreenState $ RideHistoryScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ OPEN_PAYMENT_HISTORY updatedState)
 rideHistoryItem :: IndividualRideCardState
 rideHistoryItem = {
     date : "31/05/2022",

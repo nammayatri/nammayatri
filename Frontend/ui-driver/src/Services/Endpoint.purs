@@ -15,7 +15,7 @@
 
 module Services.EndPoints where
 
-import Prelude ((<>), show)
+import Prelude (show, (<>), (==))
 import Services.Config (getBaseUrl)
 
 
@@ -49,11 +49,11 @@ logout dummyString = (getBaseUrl "") <> "/auth/logout"
 getDriverInfo :: String -> String
 getDriverInfo dummyString = (getBaseUrl "") <> "/driver/profile"
 
-getRideHistory :: String -> String -> String -> String -> String
-getRideHistory limit offset isActive status = do
+getRideHistory :: String -> String -> String -> String -> String -> String
+getRideHistory limit offset isActive status day= do
   case status of
     "null" -> (getBaseUrl "") <> "/driver/ride/list?limit="<>limit<>"&offset="<>offset<>"&onlyActive="<>isActive
-    _ -> (getBaseUrl "") <> "/driver/ride/list?limit="<>limit<>"&offset="<>offset<>"&onlyActive="<>isActive<>"&status="<>(show status)
+    _ -> (getBaseUrl "") <> "/driver/ride/list?onlyActive="<>isActive<>"&status="<> (show status) <> if day == "null" then "" else "&day=" <> day
 
 offerRide :: String -> String 
 offerRide dummyString = (getBaseUrl "") <> "/driver/searchRequest/quote/offer"
@@ -156,3 +156,6 @@ createOrder id = (getBaseUrl "37") <> "/payment/" <> id <>"/createOrder"
 
 orderStatus :: String -> String
 orderStatus orderId = (getBaseUrl "37") <> "/payment/" <> orderId <>"/status"
+
+paymentHistory :: String -> String -> String
+paymentHistory from to = (getBaseUrl "") <> "/payments/history?from=" <> from <> "&to=" <> to

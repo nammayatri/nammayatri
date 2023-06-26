@@ -163,3 +163,9 @@ instance showPaymentStatus :: Show PaymentStatus where show = genericShow
 instance decodePaymentStatus :: Decode PaymentStatus where decode = defaultDecode
 instance encodePaymentStatus  :: Encode PaymentStatus where encode = defaultEncode
 instance eqPaymentStatus :: Eq PaymentStatus where eq = genericEq
+
+type DateObj = {
+  date :: Int
+, month :: String
+, year :: Int
+}

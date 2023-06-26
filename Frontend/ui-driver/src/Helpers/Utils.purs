@@ -19,26 +19,24 @@ module Helpers.Utils
     ) where
 
 -- import Prelude (Unit, bind, discard, identity, pure, show, unit, void, ($), (<#>), (<$>), (<*>), (<<<), (<>), (>>=))
-import Screens.Types (AllocationData, YoutubeData)
-import Language.Strings (getString)
-import Language.Types(STR(..))
-import Data.Array ((!!)) as DA
-import Data.String (Pattern(..), split) as DS
-import Data.Number (pi, sin, cos, asin, sqrt)
 
--- import Math
-import Data.Eq.Generic (genericEq)
 import Control.Monad.Except (runExcept)
+import Data.Array ((!!)) as DA
 import Data.Array.NonEmpty (fromArray)
 import Data.Either (hush, Either(..))
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..))
+import Data.Number (pi, sin, cos, asin, sqrt)
+import Data.Show.Generic (genericShow)
+import Data.String (Pattern(..), split) as DS
 import Data.String as DS
 import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Aff (error, killFiber, launchAff, launchAff_, makeAff, nonCanceler)
 import Effect.Class (liftEffect)
+import Engineering.Helpers.Commons (parseFloat, setText', getCurrentUTC) as ReExport
 import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode, decode)
 import Juspay.OTP.Reader (initiateSMSRetriever)
@@ -81,6 +79,7 @@ import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
 -- foreign import get10sTimer :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 -- -- foreign import getCurrentLatLongImpl  :: Effect String
 import Engineering.Helpers.Commons (parseFloat, setText', convertUTCtoISC, getCurrentUTC) as ReExport
+import Screens.Types (AllocationData, YoutubeData)
 
 
 foreign import shuffle :: forall a. Array a -> Array a
@@ -105,6 +104,7 @@ foreign import storeCallBackForNotification :: forall action. (action -> Effect 
 foreign import secondsLeft :: String -> Int
 foreign import objectToAllocationType :: String -> AllocationData
 foreign import getcurrentdate :: String -> String
+foreign import getDatebyCount :: Int -> String
 foreign import launchAppSettings :: Unit -> Effect Unit
 foreign import setYoutubePlayer :: YoutubeData -> String -> String -> Unit
 foreign import getTimeStampString :: String -> String

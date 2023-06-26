@@ -57,6 +57,9 @@ lightMaroon = "#E45454"
 red :: Color
 red = "#E55454"
 
+red100 :: Color
+red100 = "#FEF8F8"
+
 white900 :: Color
 white900 = "#FFFFFF"
 
@@ -79,3 +82,9 @@ warningRed  = "#f04c31"
 
 green900 :: Color 
 green900 = "#53BB6F"
+
+yellow100 :: Color
+yellow100 = "#FFFDF7"
+
+green100 :: Color
+green100 = "#F8FCF9"

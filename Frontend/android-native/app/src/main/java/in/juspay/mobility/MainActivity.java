@@ -675,7 +675,7 @@ public class MainActivity extends AppCompatActivity {
             public void run() {
                 if(Settings.canDrawOverlays(MainActivity.this)){
                     try {
-                        if (juspayServicesGlobal.getDynamicUI() != null){
+                         if (juspayServicesGlobal.getDynamicUI() != null){
                             CommonJsInterface.callingStoreCallBackOverlayPermission(juspayServicesGlobal.getDuiCallback(), "true");
                         }
                     } catch (Exception e) {
