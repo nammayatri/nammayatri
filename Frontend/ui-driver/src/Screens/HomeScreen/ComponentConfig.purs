@@ -385,12 +385,12 @@ paymentStatusConfig state =
     config = Banner.config
     config' = config
       { 
-        backgroundColor = Color.grey900,
-        title = "We will notify when your payment is successful",
-        titleColor = Color.orange900,
-        actionText = "Continue taking rides",
-        actionTextColor = Color.orange900,
-        imageUrl = "ny_ic_driver_gender_banner,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_driver_gender_banner.png",
+        backgroundColor = state.data.paymentState.bannerBG,
+        title = state.data.paymentState.bannerTitle,
+        titleColor = state.data.paymentState.bannerTitleColor,
+        actionText = state.data.paymentState.banneActionText,
+        actionTextColor = state.data.paymentState.actionTextColor,
+        imageUrl = state.data.paymentState.bannerImage,
         isBanner = true
       }
   in config'

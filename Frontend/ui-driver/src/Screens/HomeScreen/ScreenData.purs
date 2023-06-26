@@ -79,7 +79,15 @@ initData = {
           makePaymentModal : true,
           showRateCard : false,
           paymentStatusBanner : false,
-          paymentStatus : Common.Success
+          paymentStatus : Common.Success,
+          driverFeeId : "",
+          bannerBG : "",
+          bannerTitle : "",
+          bannerTitleColor : "",
+          banneActionText : "",
+          actionTextColor : "",
+          bannerImage : "",
+          showBannerImage : false
         }
     },
     props: {

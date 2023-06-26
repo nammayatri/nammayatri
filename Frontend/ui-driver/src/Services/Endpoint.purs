@@ -17,6 +17,7 @@ module Services.EndPoints where
 
 import Prelude (show, (<>), (==))
 import Services.Config (getBaseUrl)
+import Data.Maybe(Maybe(..))
 
 
 triggerOTP :: String -> String
@@ -157,5 +158,7 @@ createOrder id = (getBaseUrl "37") <> "/payment/" <> id <>"/createOrder"
 orderStatus :: String -> String
 orderStatus orderId = (getBaseUrl "37") <> "/payment/" <> orderId <>"/status"
 
-paymentHistory :: String -> String -> String
-paymentHistory from to = (getBaseUrl "") <> "/payments/history?from=" <> from <> "&to=" <> to
+paymentHistory :: String -> String -> Maybe String -> String
+paymentHistory from to status = case status of
+  Nothing -> (getBaseUrl "") <> "/driver/payments/history?from=" <> from <> "&to=" <> to
+  Just status' -> (getBaseUrl "") <> "/driver/payments/history" <> "?status=" <> (show status')

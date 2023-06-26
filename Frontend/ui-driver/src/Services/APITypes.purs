@@ -1779,17 +1779,18 @@ instance encodeOrderStatusRes :: Encode OrderStatusRes where encode = defaultEnc
 
 -- payment history
 
-data GetPaymentHistoryReq = GetPaymentHistoryReq String String
+data GetPaymentHistoryReq = GetPaymentHistoryReq String String (Maybe String)
 
 newtype GetPaymentHistoryResp = GetPaymentHistoryResp (Array PaymentDetailsEntity)
 
 newtype PaymentDetailsEntity = PaymentDetailsEntity {
     date :: String
   , totalRides :: Int
-  , totalEarning :: Number
-  , charges :: Number
+  , totalEarnings :: Int
+  , charges :: Int
   , chargesBreakup :: Array PaymnetBreakUp
-  , txnInfo :: TxnInfo
+  , txnInfo :: Array TxnInfo
+  , driverFeeId :: String
 }
 
 newtype PaymnetBreakUp = PaymnetBreakUp {
@@ -1807,7 +1808,7 @@ data PaymentStatus = PENDING
   | FAILED
 
 instance makeGetPaymentHistoryReq :: RestEndpoint GetPaymentHistoryReq GetPaymentHistoryResp where
- makeRequest reqBody@(GetPaymentHistoryReq from to) headers = defaultMakeRequest GET (EP.paymentHistory from to) headers reqBody
+ makeRequest reqBody@(GetPaymentHistoryReq from to status) headers = defaultMakeRequest GET (EP.paymentHistory from to status) headers reqBody
  decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 

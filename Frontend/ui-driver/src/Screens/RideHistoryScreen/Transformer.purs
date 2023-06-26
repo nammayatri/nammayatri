@@ -3,22 +3,28 @@ module Screens.RideHistoryScreen.Transformer where
 import Prelude
 
 import Components.PaymentHistoryListItem.Controller as PaymentHistoryListItem
-import Data.Lens ((^.))
-import Services.APITypes (PaymentDetailsEntity(..), PaymentStatus(..), PaymnetBreakUp(..))
-import Services.Accessor (_id, _status)
+import Services.APITypes (PaymentDetailsEntity(..), PaymentStatus(..), PaymnetBreakUp(..), TxnInfo(..))
+import Data.Array as DA
+import Data.Maybe (Maybe(..))
 
 getPaymentHistoryItemList :: Array PaymentDetailsEntity -> Array PaymentHistoryListItem.Config
 getPaymentHistoryItemList _ = dummy --map (\item -> getPaymentHistoryItem item)
 
 getPaymentHistoryItem :: PaymentDetailsEntity -> PaymentHistoryListItem.Config
-getPaymentHistoryItem (PaymentDetailsEntity item) = {
+getPaymentHistoryItem (PaymentDetailsEntity item) =
+  let firstTxnInfo = (item.txnInfo) DA.!! 0
+  in  {
     isSelected : false
     , charges : item.charges
-    , totalEarning : item.totalEarning
+    , totalEarning : item.totalEarnings
     , totalRides : item.totalRides
     , date : item.date
-    , status : (item.txnInfo) ^. _status
-    , id : (item.txnInfo) ^. _id
+    , status : case firstTxnInfo of
+                Just (TxnInfo item) -> item.status
+                Nothing -> PENDING
+    , id : case firstTxnInfo of
+                Just (TxnInfo item) -> item.id
+                Nothing -> ""
     , paymentBreakUp : (\(PaymnetBreakUp charge) -> {
         description: charge.component
         , amount : charge.amount
@@ -28,8 +34,8 @@ getPaymentHistoryItem (PaymentDetailsEntity item) = {
 dummy :: Array PaymentHistoryListItem.Config
 dummy = [
   {isSelected : false
-    , charges : 140.0
-    , totalEarning : 2500.0
+    , charges : 140
+    , totalEarning : 2500
     , totalRides : 13
     , date : "2023-04-12"
     , status : PENDING
@@ -39,8 +45,8 @@ dummy = [
         , amount : charge.amount
     }) <$> dummyArray},
   {isSelected : false
-    , charges : 140.0
-    , totalEarning : 2500.0
+    , charges : 140
+    , totalEarning : 2500
     , totalRides : 13
     , date : "2023-04-12"
     , status : PENDING
@@ -50,8 +56,8 @@ dummy = [
         , amount : charge.amount
     }) <$> dummyArray},
   {isSelected : false
-    , charges : 140.0
-    , totalEarning : 2500.0
+    , charges : 140
+    , totalEarning : 2500
     , totalRides : 13
     , date : "2023-04-12"
     , status : PENDING
@@ -61,8 +67,8 @@ dummy = [
         , amount : charge.amount
     }) <$> dummyArray},
   {isSelected : false
-    , charges : 140.0
-    , totalEarning : 2500.0
+    , charges : 140
+    , totalEarning : 2500
     , totalRides : 13
     , date : "2023-04-12"
     , status : PENDING
@@ -72,8 +78,8 @@ dummy = [
         , amount : charge.amount
     }) <$> dummyArray},
   {isSelected : false
-    , charges : 140.0
-    , totalEarning : 2500.0
+    , charges : 140
+    , totalEarning : 2500
     , totalRides : 13
     , date : "2023-04-12"
     , status : PENDING
@@ -83,8 +89,8 @@ dummy = [
         , amount : charge.amount
     }) <$> dummyArray},
   {isSelected : false
-    , charges : 140.0
-    , totalEarning : 2500.0
+    , charges : 140
+    , totalEarning : 2500
     , totalRides : 13
     , date : "2023-04-12"
     , status : SUCCESS
@@ -94,8 +100,8 @@ dummy = [
         , amount : charge.amount
     }) <$> dummyArray},
   {isSelected : false
-    , charges : 140.0
-    , totalEarning : 2500.0
+    , charges : 140
+    , totalEarning : 2500
     , totalRides : 13
     , date : "2023-04-12"
     , status : PENDING
@@ -105,8 +111,8 @@ dummy = [
         , amount : charge.amount
     }) <$> dummyArray},
   {isSelected : false
-    , charges : 140.0
-    , totalEarning : 2500.0
+    , charges : 140
+    , totalEarning : 2500
     , totalRides : 13
     , date : "2023-04-12"
     , status : FAILED
@@ -116,8 +122,8 @@ dummy = [
         , amount : charge.amount
     }) <$> dummyArray},
   {isSelected : false
-    , charges : 140.0
-    , totalEarning : 2500.0
+    , charges : 140
+    , totalEarning : 2500
     , totalRides : 13
     , date : "2023-04-12"
     , status : SUCCESS

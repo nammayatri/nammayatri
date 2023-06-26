@@ -7,8 +7,8 @@ data Action
 
 type Config
   = { isSelected :: Boolean
-    , charges :: Number
-    , totalEarning :: Number
+    , charges :: Int
+    , totalEarning :: Int
     , totalRides :: Int
     , date :: String
     , status :: PaymentStatus

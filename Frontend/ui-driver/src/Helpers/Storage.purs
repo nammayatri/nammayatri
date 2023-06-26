@@ -69,6 +69,7 @@ data KeyStore = USER_NAME
                 | DEVICE_DETAILS
                 | HAS_TAKEN_FIRST_RIDE
                 | IS_BANNER_ACTIVE
+                | SHOW_PAYMENT_MODAL
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

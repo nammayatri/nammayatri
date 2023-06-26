@@ -631,7 +631,15 @@ type PaymentState = {
   makePaymentModal :: Boolean,
   showRateCard :: Boolean,
   paymentStatusBanner :: Boolean,
-  paymentStatus :: Common.PaymentStatus
+  paymentStatus :: Common.PaymentStatus,
+  driverFeeId :: String,
+  bannerBG :: String,
+  bannerTitle :: String,
+  bannerTitleColor :: String,
+  banneActionText :: String,
+  actionTextColor :: String,
+  bannerImage :: String,
+  showBannerImage :: Boolean
 }
 
 type CancelRidePopUpData = {
