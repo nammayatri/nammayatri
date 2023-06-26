@@ -156,8 +156,8 @@ updateStatus estimateId status_ = do
       ]
     where_ $ tbl ^. EstimateId ==. val (getId estimateId)
 
-updateStatusByBppEstimateId' :: (L.MonadFlow m, MonadTime m) => Id BPPEstimate -> EstimateStatus -> m (MeshResult ())
-updateStatusByBppEstimateId' (Id bppEstimateId_) status_ = do
+updateStatus' :: (L.MonadFlow m, MonadTime m) => Id Estimate -> EstimateStatus -> m (MeshResult ())
+updateStatus' (Id estimateId) status_ = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamE.EstimateT
   let updatedMeshConfig = setMeshConfig modelName
@@ -170,7 +170,7 @@ updateStatusByBppEstimateId' (Id bppEstimateId_) status_ = do
         [ Se.Set BeamE.updatedAt now,
           Se.Set BeamE.status status_
         ]
-        [Se.Is BeamE.bppEstimateId (Se.Eq bppEstimateId_)]
+        [Se.Is BeamE.id (Se.Eq estimateId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 getStatus ::
