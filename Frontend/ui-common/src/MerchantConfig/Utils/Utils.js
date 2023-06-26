@@ -4,6 +4,7 @@ const englishStrings = require("./../../src/Strings/EN.js");
 const bengaliStrings = require("./../../src/Strings/BN.js");
 const malayalamStrings = require("./../../src/Strings/ML.js");
 const tamilStrings = require("./../../src/Strings/TA.js");
+const frenchStrings = require("./../../src/Strings/FR.js")
 
 
 export const getStringFromConfig = function (key) {
@@ -35,6 +36,8 @@ function getStringFromCommon(key) {
       return malayalamStrings.getStringValue(key);
     case "TA_IN":
       return tamilStrings.getStringValue(key);
+    case "FR_FR":
+      return frenchStrings.getStringValue(key);
     default:
       return englishStrings.getStringValue(key);
   }
@@ -57,6 +60,8 @@ export const getMerchantString = function(key) {
       return window.appConfig.malayalamStrings[key];
     case "TA_IN":
       return window.appConfig.tamilStrings[key];
+    case "FR_FR":
+      return window.appConfig.frenchStrings[key];
     default:
       return window.appConfig.englishStrings[key];
   }

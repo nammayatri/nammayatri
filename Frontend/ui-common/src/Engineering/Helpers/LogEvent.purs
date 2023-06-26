@@ -16,6 +16,7 @@ import Presto.Core.Types.Language.Flow (Flow , doAff)
 import JBridge (firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams)
 import Log (rootLevelKeyWithRefId)
 import Effect.Class (liftEffect)
+import Debug
 
 foreign import getLogDestination :: Effect (Array String)
 
@@ -24,13 +25,14 @@ isElement logBrand logBrands = isJust $ find (\el -> el == logBrand) logBrands
 
 triggerLog :: String -> Object Foreign -> String -> Effect Unit 
 triggerLog event logField logDestination = case logDestination of  
-  "JUSPAY" -> do 
+  "FIREBASE" -> do 
     _ <- firebaseLogEvent event 
     pure unit 
-  "FIREBASE" -> do 
+  "JUSPAY" -> do 
     let 
       eventObject = insert "event" (encode event) empty
       foreignObject = rootLevelKeyWithRefId logField
+    _ <-pure $ spy "JUSPAY" event
     _ <- trackActionObject Tracker.User Tracker.Info ON_EVENT eventObject foreignObject
     pure unit 
   _ -> do  

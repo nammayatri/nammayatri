@@ -117,9 +117,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private void updateTipView(SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
             if (model.getCustomerTip() > 0) {
-                holder.customerTipText.setText("₹ " + model.getCustomerTip() + " " + getString(R.string.tip_included));
+                holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") +" " + model.getCustomerTip() + " " + getString(R.string.tip_included));
                 holder.customerTipBlock.setVisibility(View.VISIBLE);
-                holder.textIncludesCharges.setText(getString(R.string.includes_pickup_charges_10) + " " + getString(R.string.and) + " ₹" + model.getCustomerTip() + " Tip");
+                holder.textIncludesCharges.setText(getString(R.string.includes_pickup_charges_10) + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " Tip");
             } else {
                 holder.customerTipBlock.setVisibility(View.GONE);
                 holder.textIncludesCharges.setText(getString(R.string.includes_pickup_charges_10));
@@ -163,6 +163,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 case "inc":
                     updateIndicators();
                     holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
+                    holder.currency.setText(String.valueOf(model.getCurrency()));
                     updateIncreaseDecreaseButtons(holder, model);
                     return;
                 case "time":
@@ -173,6 +174,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
 
             holder.pickUpDistance.setText(model.getPickUpDistance() + " km ");
             holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
+            holder.currency.setText(String.valueOf(model.getCurrency()));
             holder.distanceToBeCovered.setText(model.getDistanceToBeCovered() + " km");
             holder.sourceArea.setText(model.getSourceArea());
             holder.sourceAddress.setText(model.getSourceAddress());
@@ -436,6 +438,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     String searchRequestId = rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID));
                     String searchRequestValidTill = rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQ_VALID_TILL));
                     int baseFare = rideRequestBundle.getInt(getResources().getString(R.string.BASE_FARE));
+                    String currency = rideRequestBundle.getString("currency");
                     float distanceToPickup = (float) rideRequestBundle.getInt(getResources().getString(R.string.DISTANCE_TO_PICKUP));
                     float distanceTobeCovered = (float) rideRequestBundle.getInt(getResources().getString(R.string.DISTANCE_TO_BE_COVERED));
                     String addressPickUp = rideRequestBundle.getString(getResources().getString(R.string.ADDRESS_PICKUP));
@@ -469,6 +472,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             searchRequestId,
                             destinationArea,
                             sourceArea,
+                            currency,
                             time,
                             driverMinExtraFee,
                             driverMaxExtraFee,
@@ -810,7 +814,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     shimmerTipList.get(i).startShimmer();
                 }
                 if (i < sheetArrayList.size()) {
-                    indicatorTextList.get(i).setText("₹" + (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
+                    indicatorTextList.get(i).setText(sharedPref.getString("CURRENCY", "₹") + (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
                     progressIndicatorsList.get(i).setVisibility(View.VISIBLE);
 
                     if (viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i)) && sheetArrayList.get(i).getCustomerTip() > 0) {

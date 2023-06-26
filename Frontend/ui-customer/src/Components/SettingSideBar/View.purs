@@ -109,11 +109,11 @@ getPreviousVersion _ =
     case getMerchant FunctionCall of 
       NAMMAYATRI -> "1.2.5"
       JATRISAATHI -> "0.0.0"
-      _ -> "1.0.0"
+      _ -> "0.0.0"
     else do 
       case getMerchant FunctionCall of 
         JATRISAATHI -> "0.0.0"
-        _ -> "1.2.1"
+        _ -> "0.0.0"
 
 separator :: forall w. PrestoDOM (Effect Unit) w
 separator = linearLayout

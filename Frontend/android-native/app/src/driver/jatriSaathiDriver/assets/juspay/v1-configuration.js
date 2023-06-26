@@ -7,6 +7,10 @@ window.getMerchantConfig = function () {
     "SPECIAL_ZONE_OTP_VIEW": "true",
     "StringKeys": ["WELCOME_TEXT", "ABOUT_TEXT", "NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM"],
     "fontType": "Assets",
+    "currency": "₹",
+    "isGradient" : "false",
+    "gradient": [],
+    "addFavouriteScreenBackArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png",
     "popupBackground" : "#FFFFFF",
     "apiLoaderLottie": "primary_button_loader.json",
     "primaryTextColor": "#FCC32C",
@@ -53,5 +57,7 @@ window.getMerchantConfig = function () {
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "আপনার অবস্থান আমাদের সিস্টেমকে ট্যাক্সি দ্বারা আশেপাশের সমস্ত স্থান ম্যাপ করতে এবং আপনাকে দ্রুততম রাইড করতে সাহায্য করে৷"
     },
     "logs": ["JUSPAY","FIREBASE"]
+    , "fontName" : "PlusJakartaSans"
+    , "fontKannada" : "NotoSansKannada"
   })
 }

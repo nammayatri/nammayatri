@@ -218,6 +218,7 @@ getAssetStoreLink lazy = case (getMerchant lazy) of
   JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/driver/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/driver/images/"
   PAYTM -> "https://assets.juspay.in/beckn/mobilitypaytm/driver/"
+  PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/driver/images"
 
 getAssetsBaseUrl :: LazyCheck -> String
 getAssetsBaseUrl lazy = case (getMerchant lazy) of
@@ -225,6 +226,7 @@ getAssetsBaseUrl lazy = case (getMerchant lazy) of
   JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/driver/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/driver/"
   PAYTM -> "https://assets.juspay.in/beckn/mobilitypaytm/"
+  PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/driver"
 
 getCommonAssetStoreLink :: LazyCheck -> String
 getCommonAssetStoreLink lazy = case (getMerchant lazy) of
@@ -232,3 +234,4 @@ getCommonAssetStoreLink lazy = case (getMerchant lazy) of
   JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/yatricommon/images/"
   PAYTM -> "https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/"
+  PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/passculturecommon/"

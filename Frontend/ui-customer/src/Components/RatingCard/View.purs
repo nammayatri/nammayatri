@@ -30,7 +30,7 @@ import Font.Style as FontStyle
 import JBridge (getBtnLoader, getKeyInSharedPrefKeys)
 import Language.Strings (getString, getKey, LANGUAGE_KEY(..))
 import Language.Types (STR(..))
-import Prelude (Unit, const, unit, ($), (-), (<<<), (<=), (<>), (==), (<), (/), (/=), not, (&&))
+import Prelude (Unit, const, unit, ($), (-), (<<<), (<=), (<>), (==), (<), (/), (/=), not, (&&), (||))
 import PrestoDOM (Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, visibility, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, imageUrl, imageView, inputType, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, singleLine, stroke, text, textSize, textView, weight, width, multiLineEditText, pattern, maxLines, editText, imageWithFallback, scrollBarY, scrollView)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
@@ -212,16 +212,17 @@ rideRatingButtonConfig state = let
     primaryButtonConfig' = config
       { textConfig
         { text = (getString SUBMIT_FEEDBACK)
-        , color = state.data.appConfig.primaryTextColor
+        , color = if state.data.rating < 1 && state.data.appConfig.isGradient == "true" then "#696A6F" else state.data.appConfig.primaryTextColor
         , width = MATCH_PARENT
         }
       , isClickable = if state.data.rating < 1 then false else true
-      , alpha = if state.data.rating < 1 then 0.4 else 1.0
+      , alpha = if not (state.data.rating < 1) || state.data.appConfig.isGradient == "true" then 1.0 else 0.4
       , margin = (Margin 0 0 0 0)
       , height = (V 48)
       , gravity = CENTER_VERTICAL
-      , cornerRadius = 8.0
-      , background = state.data.appConfig.primaryBackground
+      , isGradient = if state.data.rating < 1 then false else if state.data.appConfig.isGradient == "true" then true else false
+      , cornerRadius = state.data.appConfig.ratingConfig.buttonCornerRadius
+      , background = if state.data.rating < 1 && state.data.appConfig.isGradient == "true" then "#F1F1F4" else state.data.appConfig.primaryBackground
       , id = "RideRatingButton"
       , enableLoader = (getBtnLoader "RightRatingButton")
       }
@@ -235,11 +236,13 @@ skipButtonConfig state = let
   skipButtonConfig' = config
     { textConfig
       { text = (getString SKIP)
-      , color = state.data.appConfig.rateCardColor
+      , color = state.data.appConfig.ratingConfig.secondaryButtonTextColor
       }
+    , isGradient = false
+    , cornerRadius = state.data.appConfig.ratingConfig.buttonCornerRadius
+    , stroke = state.data.appConfig.ratingConfig.secondaryButtonStroke
     , width = V ( screenWidth unit / 4)
     , background = Color.white900 
-    , stroke = ("1," <> state.data.appConfig.rateCardColor)
     , margin = (MarginRight 12)
     , id = "SkipCurrentRatingButton"
     , enableLoader = (getBtnLoader "SkipCurrentRatingButton")
@@ -300,6 +303,7 @@ fareBreakUpConfig state = let
             , color = Color.black800
             , margin = (Margin 0 0 0 12)
             , visibility = VISIBLE
+            , currency = state.data.appConfig.currency
             , priceDetails{
                 text = state.data.finalAmount
               , offeredFare = state.data.offeredFare

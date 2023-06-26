@@ -17,8 +17,9 @@ module Components.PrimaryButton.Controller where
 
 import Font.Size as FontSize
 import Font.Style (Style(..))
-import Prelude ((<>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), height, width)
+import Prelude ((<>), (==))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Gradient(..), height, width)
+import MerchantConfig.Utils(getValueFromConfig)
 import Common.Styles.Colors as Color
 import Common.Types.App
 
@@ -44,6 +45,8 @@ type Config =
     , prefixImageConfig :: ImageConfig
     , id :: String
     , enableLoader :: Boolean
+    , isGradient :: Boolean
+    , gradient :: Gradient
   }
 
 type TextConfig =
@@ -109,4 +112,6 @@ config =   {
     }
   , id : ""
   , enableLoader : false
+  , isGradient : if (getValueFromConfig "isGradient") == "true" then true else false
+  , gradient : (Linear 90.0 (getValueFromConfig "gradient"))
   }

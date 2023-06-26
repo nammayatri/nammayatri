@@ -340,6 +340,9 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public void initiateLocationServiceClient() {
+        if (receivers == null) {
+            receivers = new Receivers();
+        }
         receivers.initReceiver(bridgeComponents);
         if (!isLocationPermissionEnabled()) return;
         resolvableLocationSettingsReq();
@@ -1439,7 +1442,7 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     @SuppressLint("DiscouragedApi")
-    public boolean isFilePresentDeep(String fileName) throws IOException {
+    public boolean isFilePresentDeep(String fileName) {
         Context context = bridgeComponents.getContext();
         InputStream inputStreams;
         String fileNameWithExe = fileName;
@@ -1754,8 +1757,12 @@ public class MobilityCommonBridge extends HyperBridge {
         }
 
         public void deRegister(Context context) {
-            context.unregisterReceiver(gpsReceiver);
-            context.unregisterReceiver(internetActionReceiver);
+            try {
+                context.unregisterReceiver(gpsReceiver);
+                context.unregisterReceiver(internetActionReceiver);
+            } catch (Exception ignored) {
+
+            }
         }
     }
 }

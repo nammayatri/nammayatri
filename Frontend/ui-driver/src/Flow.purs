@@ -85,7 +85,7 @@ import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OU
 import Screens.HomeScreen.ComponentConfig (specialLocationConfig)
 import Types.ModifyScreenState (modifyScreenState, updateStage)
 import Screens.DriverProfileScreen.Controller (getDowngradeOptionsSelected)
-import MerchantConfig.Utils(getMerchant, Merchant(..))
+import MerchantConfig.Utils(getMerchant, Merchant(..), getValueFromConfig)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import Control.Monad.Trans.Class (lift)
 import Engineering.Helpers.LogEvent (logEvent)
@@ -98,6 +98,7 @@ baseAppFlow baseFlow = do
     cacheAppParameters versionCode
     when baseFlow $ void $ UI.splashScreen state.splashScreen
     let regToken = getValueToLocalStore REGISTERATION_TOKEN
+    setValueToLocalStore CURRENCY (getValueFromConfig "currency")
     if isTokenValid regToken
       then do
         setValueToLocalNativeStore REGISTERATION_TOKEN regToken
@@ -138,6 +139,7 @@ getLatestAndroidVersion merchant =
     YATRI -> 48 
     JATRISAATHI -> 2
     PAYTM -> 1
+    PASSCULTURE -> 1
 
 ifNotRegistered :: Unit -> Boolean
 ifNotRegistered _ = getValueToLocalStore REGISTERATION_TOKEN == "__failed"

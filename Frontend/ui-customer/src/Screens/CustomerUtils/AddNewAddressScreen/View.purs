@@ -115,7 +115,7 @@ view push state =
         [ height $ V ((EHC.screenHeight unit) / 7)
         , width MATCH_PARENT
         , clickable true
-        , background state.data.config.searchLocationTheme
+        , background state.data.config.searchLocationConfig.searchLocationTheme
         , padding (Padding 0 EHC.safeMarginTop 0 0)
         ][]
       , GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)

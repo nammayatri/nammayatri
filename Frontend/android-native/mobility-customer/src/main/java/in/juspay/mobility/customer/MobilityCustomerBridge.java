@@ -425,7 +425,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                         .title("")
                         .position(new LatLng(lat, lng))
                         .anchor(0.49f, 0.78f)
-                        .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(name, "ny_ic_zone_pickup_marker")));
+                        .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(name, "ny_ic_zone_pickup_marker","null")));
                 Marker m = googleMap.addMarker(markerOptionsObj);
                 if (m != null) {
                     m.hideInfoWindow();
@@ -888,7 +888,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 textViewPrice.setTextSize(5);
                 textViewPrice.setPadding(0, 0, 0, 10);
                 textViewPrice.setTextColor(Color.parseColor("#454545"));
-                textViewPrice.setText("₹ " + value);
+                textViewPrice.setText(value);
                 linearLayout.addView(textViewPrice);
 
                 fareBreakupElements.addView(linearLayout);

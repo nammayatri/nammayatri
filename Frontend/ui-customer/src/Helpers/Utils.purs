@@ -349,7 +349,7 @@ getPreviousVersion _ =
       _ -> "1.0.0"
     else case getMerchant FunctionCall of
         JATRISAATHI -> "0.0.0"
-        _ -> "1.2.0"
+        _ -> "0.0.0"
 
 rotateArray :: forall a. Array a -> Int -> Array a
 rotateArray arr times =
@@ -379,6 +379,7 @@ getAssetStoreLink lazy = case (getMerchant lazy) of
   JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/user/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/user/images/"
   PAYTM -> "https://assets.juspay.in/beckn/mobilitypaytm/user/"
+  PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/user/images/"
 
 getCommonAssetStoreLink :: LazyCheck -> String
 getCommonAssetStoreLink lazy = case (getMerchant lazy) of
@@ -386,6 +387,7 @@ getCommonAssetStoreLink lazy = case (getMerchant lazy) of
   JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/yatricommon/images/"
   PAYTM -> "https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/"
+  PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/passculturecommon/"
 
 getAssetsBaseUrl :: LazyCheck -> String
 getAssetsBaseUrl lazy = case (getMerchant lazy) of
@@ -393,6 +395,7 @@ getAssetsBaseUrl lazy = case (getMerchant lazy) of
   JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/user/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/user/"
   PAYTM -> "https://assets.juspay.in/beckn/mobilitypaytm/user/"
+  PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/user/"
 
 showCarouselScreen :: LazyCheck -> Boolean
 showCarouselScreen a = os == "ANDROID" && (getMerchant FunctionCall) == NAMMAYATRI
