@@ -53,7 +53,7 @@ getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
 
 getLocation :: Prediction -> LocationListItemState
-getLocation predcition = {
+getLocation prediction = {
     prefixImageUrl : "ny_ic_loc_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_loc_grey.png"
   , postfixImageUrl : "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png"
   , postfixImageVisibility : true
@@ -102,6 +102,7 @@ getQuote (QuoteAPIEntity quoteEntity) = do
     , vehicleType : "auto"
     , driverName : quoteDetails.driverName
     , selectedQuote : Nothing
+    , appConfig : DC.config
     }
 
 getDriverInfo :: RideBookingRes -> Boolean -> DriverInfoCard

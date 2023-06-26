@@ -34,6 +34,7 @@ import Screens.RideHistoryScreen.Controller (Action(..)) as RideHistoryScreen
 import Screens.Types (IndividualRideCardState)
 import Styles.Colors as Color
 import Common.Types.App
+import Helpers.Utils (getCommonAssetStoreLink)
 
 view :: forall w .  (RideHistoryScreen.Action  -> Effect Unit)  -> PrestoDOM (Effect Unit) w
 view push =
@@ -300,7 +301,7 @@ sourceAndDestination =
           , width MATCH_PARENT
           , margin $ MarginBottom 26
           ][  imageView
-              [ imageWithFallback "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
+              [ imageWithFallback $  "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
               , height $ V 19
               , width $ V 17
               ]
@@ -337,7 +338,7 @@ sourceAndDestination =
 
 distanceAndCustomerName :: forall w. PrestoDOM (Effect Unit) w 
 distanceAndCustomerName = 
-  textView
+  textView $
     [ PrestoList.textHolder "rideDistance"
     , height WRAP_CONTENT
     , color Color.black700

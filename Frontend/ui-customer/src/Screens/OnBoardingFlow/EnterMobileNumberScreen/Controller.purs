@@ -24,7 +24,7 @@ import Data.String (length)
 import Data.String.CodeUnits (charAt)
 import Debug (spy)
 import Engineering.Helpers.Commons (getNewIDWithTag, os, clearTimer)
-import Helpers.Utils (setText')
+import Helpers.Utils (setText', showCarouselScreen)
 import JBridge (hideKeyboardOnNavigation, toast, toggleBtnLoader, minimizeApp, firebaseLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -37,7 +37,6 @@ import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (EnterMobileNumberScreenState)
 import Storage (KeyStore(..), setValueToLocalNativeStore)
-import Merchant.Utils as MU
 import Common.Types.App (LazyCheck(..)) as Lazy
 import Engineering.Helpers.LogEvent (logEvent)
 import Effect.Unsafe
@@ -183,7 +182,7 @@ eval (BackPressed flag) state = do
       let newState = state {props{enterOTP =  false,letterSpacing = PX 1.0},data{otp = ""}}
       _ <- pure $ hideKeyboardOnNavigation true
       if state.props.enterOTP then exit $ GoBack newState
-        else if MU.showCarouselScreen Lazy.FunctionCall then exit $ GoToWelcomeScreen newState{data{mobileNumber = ""}} 
+        else if showCarouselScreen Lazy.FunctionCall then exit $ GoToWelcomeScreen newState{data{mobileNumber = ""}} 
             else do 
                 void $ pure $ minimizeApp ""
                 continue state

@@ -18,7 +18,7 @@ module Components.PrimaryEditText.Controller where
 import Prelude((<>))
 import Font.Size as FontSize
 import Common.Styles.Colors as Color
-import Font.Style (Style(..))
+import Font.Style (Style(..)) 
 import Data.Maybe(Maybe(..))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), LetterSpacing(..))
 import Common.Types.App
@@ -52,8 +52,7 @@ type ConstantFieldConfig = {
   , height :: Length
   , gravity :: Gravity
   , text :: String
-  , fontStyle :: String
-  , textSize :: Int
+  , textStyle :: Style
   , color :: String
   , padding :: Padding
   , margin :: Margin
@@ -159,11 +158,9 @@ config = {
   , height : MATCH_PARENT
   , gravity : CENTER
   , text : "+91"
-  , fontStyle : FontStyle.bold LanguageStyle
-  , textSize : FontSize.a_14
+  , textStyle : ParagraphText
   , color : Color.black800
   , padding : Padding 0 0 0 0
   , margin : Margin 10 0 0 0
   }
-
 }

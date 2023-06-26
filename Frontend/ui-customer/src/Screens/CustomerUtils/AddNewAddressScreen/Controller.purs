@@ -17,6 +17,7 @@ module Screens.AddNewAddressScreen.Controller where
 
 import Prelude
 import Accessor (_description, _place_id, _distance)
+import Common.Types.App (LazyCheck (..))
 import Components.GenericHeader as GenericHeader
 import Components.LocationListItem as LocationListItemController
 import Components.PrimaryButton as PrimaryButton

@@ -772,8 +772,7 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public void updateRouteMarker(final String json) {
-        if (activity != null) {
-            activity.runOnUiThread(() -> {
+            ExecutorManager.runOnMainThread(() -> {
                 try {
                     if (googleMap != null) {
                         JSONObject jsonObject = new JSONObject(json);
@@ -815,7 +814,6 @@ public class MobilityCommonBridge extends HyperBridge {
                     e.printStackTrace();
                 }
             });
-        }
     }
 
     @SuppressLint({"UseCompatLoadingForDrawables", "SetTextI18n"})
@@ -838,7 +836,7 @@ public class MobilityCommonBridge extends HyperBridge {
             if (specialLocationTagIcon != null) {
                 ImageView specialTagImage = customMarkerView.findViewById(R.id.zone_image);
                 specialTagImage.setVisibility(View.VISIBLE);
-                int imageID = context.getResources().getIdentifier(specialLocationTagIcon, "drawable", activity.getPackageName());
+                int imageID = context.getResources().getIdentifier(specialLocationTagIcon, "drawable", bridgeComponents.getContext().getPackageName());
                 BitmapDrawable bitmapdraw = (BitmapDrawable) context.getResources().getDrawable(imageID);
                 specialTagImage.setImageDrawable(bitmapdraw);
             }
@@ -1632,6 +1630,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 }
             }
         } catch (Exception e) {
+            Log.e(OTHERS, "Error in scroll to Bottom : " + e);
             Log.e(OTHERS, "Error in scroll to Bottom : " + e);
         }
     }

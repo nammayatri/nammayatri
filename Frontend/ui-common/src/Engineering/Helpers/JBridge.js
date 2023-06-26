@@ -1463,14 +1463,3 @@ export const emitJOSEvent = function (mapp,eventType,payload) {
   }
   JOS.emitEvent(mapp)(eventType)(JSON.stringify(resultPayload))()()
 }
-
-export const getMerchantConfig = function (just) {
-  return function (nothing) {
-    return function () {
-      if (typeof window.appConfig !== "undefined") {
-        return just(window.appConfig);
-      }
-      return nothing;
-    }
-  }
-}

@@ -142,7 +142,7 @@ public class RideRequestActivity extends AppCompatActivity {
             holder.textIncPrice.setText(String.valueOf(model.getNegotiationUnit()));
             holder.textDecPrice.setText(String.valueOf(model.getNegotiationUnit()));
             if (holder.specialLocationTag != null){
-                rideRequestUtils.setSpecialZoneAttrs(holder, model.getspecialLocationTag(), RideRequestActivity.this);
+                RideRequestUtils.setSpecialZoneAttrs(holder, model.getspecialLocationTag(), RideRequestActivity.this);
             }
             if (model.getDriverMaxExtraFee() == 0) {
                 holder.buttonIncreasePrice.setVisibility(View.GONE);

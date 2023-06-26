@@ -202,7 +202,7 @@ getSpecialZoneConfig prop tag = do
   case tag of
     Nothing -> ""
     Just tag' -> do
-      let arr = split (Pattern "_") tag'
+      let arr = DS.split (DS.Pattern "_") tag'
       let pickup = fromMaybe "" (arr DA.!! 0)
       let drop = fromMaybe "" (arr DA.!! 1)
       let priority = fromMaybe "" (arr DA.!! 2)

@@ -67,18 +67,16 @@ editTextLayout push config =
 
 constantField :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 constantField push config = 
-  textView
+  textView $ 
   [ width config.constantField.width
   , height config.constantField.height
   , gravity config.constantField.gravity
   , text config.constantField.text
-  , fontStyle config.constantField.fontStyle
-  , textSize config.constantField.textSize
   , color config.constantField.color
   , padding config.constantField.padding
   , margin config.constantField.margin
   , visibility if config.showConstantField then VISIBLE else GONE
-  ]
+  ] <> (FontStyle.getFontStyle config.constantField.textStyle LanguageStyle)
 
 
 

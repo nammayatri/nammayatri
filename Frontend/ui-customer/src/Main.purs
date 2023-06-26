@@ -62,7 +62,7 @@ main event = do
 
 onEvent :: String -> Effect Unit
 onEvent event = do
-  _ <- pure $ toggleBtnLoader "" false
+  _ <- pure $ JBridge.toggleBtnLoader "" false
   case event of 
     "onBackPressed" -> do
       PrestoDom.processEvent "onBackPressedEvent" unit

@@ -30,8 +30,8 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Int(fromString, toNumber)
 import Data.Number(fromString) as NUM
 import Data.String (Pattern(..), split)
-import Helpers.Utils (setRefreshing, setEnabled, parseFloat, getSpecialZoneConfig, convertUTCtoISC)
-import Engineering.Helpers.Commons (getNewIDWithTag, strToBool)
+import Helpers.Utils (setRefreshing, setEnabled, parseFloat, getSpecialZoneConfig)
+import Engineering.Helpers.Commons (getNewIDWithTag, strToBool, convertUTCtoISC)
 import Data.Int (ceil)
 import Styles.Colors as Color
 import Log

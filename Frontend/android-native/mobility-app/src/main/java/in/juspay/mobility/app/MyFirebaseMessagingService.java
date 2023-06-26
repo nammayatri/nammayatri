@@ -32,8 +32,12 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.Locale;
 import java.util.Random;
+import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -230,7 +234,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         String storage_value = notification_payload.get("storage_value").toString();
                         if(storage_key.equals("update_driver_status") && merchantType.equals("DRIVER")){
                                 boolean status = storage_value.equals("SILENT") || storage_value.equals("ONLINE") ;
-                                rideRequestUtils.updateDriverStatus(status, storage_value, this, true);
+                                RideRequestUtils.updateDriverStatus(status, storage_value, this, true);
                         } else sharedPref.edit().putString(storage_key, storage_value).apply();
                     }
                     NotificationUtils.showAllocationNotification(this, payload, entity_payload);

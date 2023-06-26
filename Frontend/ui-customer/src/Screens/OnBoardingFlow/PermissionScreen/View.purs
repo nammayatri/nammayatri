@@ -103,7 +103,7 @@ locationAccessPermissionView push state =
           , gravity CENTER
           , margin $ MarginBottom 15
           ]
-        , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig)
+        , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
       ]
 
       

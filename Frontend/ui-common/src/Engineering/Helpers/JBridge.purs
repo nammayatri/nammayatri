@@ -88,7 +88,7 @@ foreign import getVersionName   :: Effect String
 -- foreign import getManufacturerName :: Unit -> String
 foreign import getAndroidVersion :: Effect Int
 -- foreign import showQrCodeImpl      :: String -> String -> Effect Unit
--- foreign import scanQrCode       :: forall action. String -> (action -> Effect Unit) ->  (String -> action) -> Effect Unit
+-- foreign import scanQrCode       :: forall action. String MerchantConfig.Utils-> (action -> Effect Unit) ->  (String -> action) -> Effect Unit
 -- foreign import timePicker       :: forall action. (action -> Effect Unit) -> (Int -> Int -> action) -> Effect Unit
 foreign import datePicker       :: forall action. String -> (action -> Effect Unit)  -> (Int -> Int -> Int -> action) -> Effect Unit
 foreign import setFCMToken :: forall action. (action -> Effect Unit) -> (String  -> action) -> Effect Unit
@@ -201,8 +201,6 @@ foreign import getMainFiber :: forall f a. Fn2 (f -> Maybe f) (Maybe f) (Maybe (
 foreign import detectPhoneNumbers :: forall action. (action -> Effect Unit) -> (String  -> action) -> Effect Unit
 
 foreign import emitJOSEvent :: Fn3 String String String Unit
-
-foreign import getMerchantConfig :: forall a. (a -> Maybe a) -> (Maybe a) -> Effect (Maybe a)
 
 -- -- keyStoreEntryPresent :: String -> Flow Boolean
 -- -- keyStoreEntryPresent = liftFlow <<< _keyStoreEntryPresent
@@ -334,9 +332,6 @@ type IsLocationOnPath = {
   , eta :: Int
   , distance :: Int
 }
-
-getConfig :: forall  a. Effect (Maybe a)
-getConfig = getMerchantConfig Just Nothing
 
 type Location = {
   lat :: Number,

@@ -161,9 +161,9 @@ public class NotificationUtils extends AppCompatActivity {
                 final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
                 f.setTimeZone(TimeZone.getTimeZone("IST"));
                 String currTime = f.format(new Date());
-                boolean rideReqExpired = (rideRequestUtils.calculateExpireTimer(expiryTime, currTime))<=1;
-                Log.e(TAG, "TimeDifference : " + (rideRequestUtils.calculateExpireTimer(expiryTime, currTime)));
-                if (rideRequestUtils.calculateExpireTimer(expiryTime, currTime) > 2){
+                boolean rideReqExpired = (RideRequestUtils.calculateExpireTimer(expiryTime, currTime))<=1;
+                Log.e(TAG, "TimeDifference : " + (RideRequestUtils.calculateExpireTimer(expiryTime, currTime)));
+                if (RideRequestUtils.calculateExpireTimer(expiryTime, currTime) > 2){
                     if (checkPermission(context)) {
                         //Starting OverlaySheetService
                         if (binder == null) {
@@ -229,7 +229,7 @@ public class NotificationUtils extends AppCompatActivity {
                     }
                 } else {
                     Bundle overlayParams = new Bundle();
-                    String expireTimer = String.valueOf(rideRequestUtils.calculateExpireTimer(expiryTime, currTime));
+                    String expireTimer = String.valueOf(RideRequestUtils.calculateExpireTimer(expiryTime, currTime));
                     System.out.println("expired notification" + " <> " + currTime + " <> " + expiryTime + " <> " + expireTimer + " <> " + searchRequestId + " <> " + sharedPref.getString("DRIVER_ID","null"));
                     overlayParams.putString("current_time", currTime);
                     overlayParams.putString("expiry_time", expiryTime);

@@ -94,8 +94,8 @@ mobileNumberEditTextConfig state = let
       , showConstantField = true
       , constantField { 
           color = if state.props.mNumberEdtFocused then Color.black800 else Color.grey900 
-        , textSize = FontSize.a_16
         , padding = PaddingBottom 1
+        , textStyle = FontStyle.SubHeading2
         }
       }
     in primaryEditTextConfig'

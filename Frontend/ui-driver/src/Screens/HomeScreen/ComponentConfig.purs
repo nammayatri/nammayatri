@@ -22,7 +22,6 @@ import Components.SelectListModal as SelectListModal
 import Components.Banner as Banner
 import Language.Strings
 import Common.Types.App (LazyCheck(..))
-import Components.CancelRide as CancelRide
 import Components.ChatView as ChatView
 import Components.InAppKeyboardModal as InAppKeyboardModal
 import Components.PopUpModal as PopUpModal

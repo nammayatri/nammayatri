@@ -53,7 +53,7 @@ import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||))
+import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||),(&&))
 import Presto.Core.Flow (Flow, doAff)
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, CarouselModel)
 import Services.API (Prediction)

@@ -181,7 +181,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             holder.textIncPrice.setText(String.valueOf(model.getNegotiationUnit()));
             holder.textDecPrice.setText(String.valueOf(model.getNegotiationUnit()));
             if (holder.specialLocationTag != null){
-                rideRequestUtils.setSpecialZoneAttrs(holder, model.getspecialLocationTag(), OverlaySheetService.this);
+                RideRequestUtils.setSpecialZoneAttrs(holder, model.getspecialLocationTag(), OverlaySheetService.this);
             }
             if (model.getDriverMaxExtraFee() == 0) {
                 holder.buttonIncreasePrice.setVisibility(View.GONE);
@@ -451,7 +451,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "us"));
                     f.setTimeZone(TimeZone.getTimeZone("UTC"));
                     String getCurrTime = f.format(new Date());
-                    int calculatedTime = rideRequestUtils.calculateExpireTimer(searchRequestValidTill,getCurrTime);
+                    int calculatedTime = RideRequestUtils.calculateExpireTimer(searchRequestValidTill,getCurrTime);
                     if (sharedPref == null)
                         sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                     int negotiationUnit = Integer.parseInt(sharedPref.getString("NEGOTIATION_UNIT", "10"));

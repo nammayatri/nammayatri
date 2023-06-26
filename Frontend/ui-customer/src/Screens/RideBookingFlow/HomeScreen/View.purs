@@ -21,6 +21,7 @@ import Animation (fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromT
 import Animation.Config (Direction(..), translateFullYAnimWithDurationConfig, translateYAnimHomeConfig)
 import Components.Banner.View as Banner
 import Components.Banner.Controller as BannerConfig
+import Components.ChatView as ChatView
 import Common.Types.App (LazyCheck(..))
 import Components.SelectListModal as CancelRidePopUp
 import Components.ChooseYourRide as ChooseYourRide
@@ -1278,8 +1279,8 @@ suggestedPriceView push state =
                           , height WRAP_CONTENT
                           , orientation VERTICAL
                           , visibility if state.data.showPreferences then VISIBLE else GONE
-                          ][showMenuButtonView push (getString AUTO_ASSIGN_DRIVER) "ny_ic_faster,https://assets.juspay.in/nammayatri/images/user/ny_ic_faster.png" true,
-                            showMenuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png" false]
+                          ][ showMenuButtonView push (getString AUTO_ASSIGN_DRIVER) "ny_ic_faster,https://assets.juspay.in/nammayatri/images/user/ny_ic_faster.png" true state,
+                            showMenuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png" false state]
                       ]
 
                   ]

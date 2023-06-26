@@ -65,3 +65,14 @@ export const getMerchantString = function(key) {
 export const getMerchantId = function(id) {
   return window.merchantID;
 }
+
+export const getMerchantConfig = function (just) {
+  return function (nothing) {
+    return function () {
+      if (typeof window.appConfig !== "undefined") {
+        return just(window.appConfig);
+      }
+      return nothing;
+    }
+  }
+}

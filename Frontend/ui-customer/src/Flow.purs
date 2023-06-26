@@ -45,8 +45,8 @@ import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, bundleVersion, getExpiryTime,stringToVersion, convertUTCtoISC, getCurrentUTC)
 import Foreign.Class (class Encode)
 import Foreign.Class (encode)
-import Helpers.Utils (hideSplash, getDistanceBwCordinates, adjustViewWithKeyboard, decodeErrorCode, getObjFromLocal, differenceOfLocationLists, filterRecentSearches, setText', seperateByWhiteSpaces, getNewTrackingId, checkPrediction, getRecentSearches, addToRecentSearches, saveRecents, clearWaitingTimer, toString, parseFloat, getCurrentLocationsObjFromLocal, addToPrevCurrLoc, saveCurrentLocations, getCurrentDate, getPrediction, getCurrentLocationMarker, parseNewContacts, getMerchant, Merchant(..), drawPolygon,requestKeyboardShow, removeLabelFromMarker, sortPredctionByDistance, getMobileNumber, getAssetStoreLink, getCommonAssetStoreLink)
-import JBridge (metaLogEvent, currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker, generateSessionId, stopChatListenerService, updateRouteMarker)
+import Helpers.Utils (getDistanceBwCordinates, adjustViewWithKeyboard, decodeErrorCode, getObjFromLocal, differenceOfLocationLists, filterRecentSearches, setText', seperateByWhiteSpaces, getNewTrackingId, checkPrediction, getRecentSearches, addToRecentSearches, saveRecents, clearWaitingTimer, toString, parseFloat, getCurrentLocationsObjFromLocal, addToPrevCurrLoc, saveCurrentLocations, getCurrentDate, getPrediction, getCurrentLocationMarker, parseNewContacts, drawPolygon,requestKeyboardShow, removeLabelFromMarker, sortPredctionByDistance, getMobileNumber, getAssetStoreLink, getCommonAssetStoreLink, showCarouselScreen)
+import JBridge (metaLogEvent, currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker, generateSessionId, stopChatListenerService, updateRouteMarker, toggleBtnLoader, emitJOSEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -86,11 +86,15 @@ import Control.Monad.Except (runExcept)
 import Foreign.Class (class Encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import Resources.Constants (getSearchRadius)
-import Merchant.Utils as MU
+import MerchantConfig.Utils as MU
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationIcons, specialLocationConfig, updateRouteMarkerConfig)
+import Engineering.Helpers.LogEvent
+import Engineering.Helpers.Utils (loaderText, toggleLoader)
+import Effect.Uncurried (runEffectFn5, runEffectFn2)
+import Data.Function.Uncurried (runFn3)
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
-baseAppFlow gPayload refreshFlow = do
+baseAppFlow (GlobalPayload gPayload) refreshFlow = do
   logField_ <- lift $ lift $ getLogFields
   _ <- pure $ printLog "Global Payload" gPayload
   (GlobalState state) <- getState
@@ -143,7 +147,7 @@ baseAppFlow gPayload refreshFlow = do
             Left err -> do
               pure $ runFn3 emitJOSEvent "java" "onEvent" "event,signature_auth_failed"
               pure unit
-        Nothing -> if (MU.showCarouselScreen FunctionCall) then welcomeScreenFlow else enterMobileNumberScreenFlow
+        Nothing -> if (showCarouselScreen FunctionCall) then welcomeScreenFlow else enterMobileNumberScreenFlow
 
 concatString :: Array String -> String
 concatString arr = case uncons arr of
@@ -352,10 +356,10 @@ currentFlowStatus = do
       updateCustomerVersion dbClientVersion dbBundleVersion
       if isJust response.language then do
         when (getKeyByLanguage (fromMaybe "ENGLISH" response.language) /= (getValueToLocalNativeStore LANGUAGE_KEY)) $ do
-          resp <- lift $ lift $ Remote.updateProfile (Remote.mkUpdateProfileRequest)
+          resp <- lift $ lift $ Remote.updateProfile (Remote.mkUpdateProfileRequest FunctionCall)
           pure unit
       else do
-        resp <- lift $ lift $ Remote.updateProfile (Remote.mkUpdateProfileRequest)
+        resp <- lift $ lift $ Remote.updateProfile (Remote.mkUpdateProfileRequest FunctionCall)
         pure unit
       setValueToLocalStore REFERRAL_STATUS  $ if response.hasTakenRide then "HAS_TAKEN_RIDE" else if (response.referralCode /= Nothing && not response.hasTakenRide) then "REFERRED_NOT_TAKEN_RIDE" else "NOT_REFERRED_NOT_TAKEN_RIDE"
       setValueToLocalStore HAS_TAKEN_FIRST_RIDE if response.hasTakenRide then "true" else "false"
@@ -441,7 +445,7 @@ updateCustomerVersion dbClientVersion dbBundleVersion = do
         Version clientVersion' = fromMaybe (Version clientVersion) dbClientVersion
     if any (_ == -1) [clientVersion.minor, clientVersion.major, clientVersion.maintenance,bundleVersion.minor,bundleVersion.major,bundleVersion.maintenance] then pure unit
       else if ( bundleVersion' /= bundleVersion || clientVersion' /= clientVersion)  then do
-      let (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest
+      let (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest FunctionCall
           requiredData = initialData{clientVersion = Just (Version clientVersion), bundleVersion = Just (Version bundleVersion)}
       resp <- lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
       pure unit
@@ -505,7 +509,7 @@ enterMobileNumberScreenFlow = do
 
 welcomeScreenFlow :: FlowBT String Unit
 welcomeScreenFlow = do
-  lift $ lift $ doAff do liftEffect hideSplash
+  pure $ runFn3 emitJOSEvent "java" "onEvent" "event,hide_loader"
   flow <- UI.welcomeScreen
   case flow of
     GoToMobileNumberScreen -> enterMobileNumberScreenFlow
@@ -520,7 +524,7 @@ accountSetUpScreenFlow = do
     GO_HOME state -> do
       void $ lift $ lift $ toggleLoader false
       let gender = getGenderValue state.data.gender
-      let (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest
+      let (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest FunctionCall
           requiredData = initialData{firstName = (Just state.data.name),gender = gender}
       resp <- lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
       case resp of
@@ -793,7 +797,7 @@ homeScreenFlow = do
             _ <- pure $ removeAllPolylines ""
             _ <- pure $ spy "INSIDE ELSE IF OF ONGOING" state.props.currentStage
             _ <- updateLocalStage HomeScreen
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props { isBanner = state.props.isBanner}})
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}}})
             homeScreenFlow
           else homeScreenFlow
     CANCEL_RIDE_REQUEST state -> do
@@ -803,7 +807,7 @@ homeScreenFlow = do
       _ <- pure $ clearWaitingTimer <$> state.props.waitingTimeTimerIds
       liftFlowBT $ logEvent logField_ "ny_user_ride_cancelled_by_user" 
       liftFlowBT $ logEvent logField_ $ "ny_user_cancellation_reason: " <> state.props.cancelReasonCode
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props { isbanner = state.props.isbanner}})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}}})
       homeScreenFlow
     FCM_NOTIFICATION notification state-> do
         let rideID = state.data.driverInfoCardState.rideId
@@ -865,7 +869,7 @@ homeScreenFlow = do
                                       _ <- updateLocalStage HomeScreen
                                       removeChatService ""
                                       setValueToLocalStore PICKUP_DISTANCE "0"
-                                      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}, driverInfoCardState{initDistance = Nothing}},props { isBanner = state.props.isBanner}})
+                                      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}, driverInfoCardState{initDistance = Nothing}}})
                                       _ <- pure $ clearWaitingTimer <$> state.props.waitingTimeTimerIds
                                       homeScreenFlow
             "DRIVER_ASSIGNMENT"   -> if (not (isLocalStageOn RideAccepted || isLocalStageOn RideStarted )) then do
@@ -891,7 +895,7 @@ homeScreenFlow = do
     SUBMIT_RATING state -> do
       _ <- Remote.rideFeedbackBT (Remote.makeFeedBackReq (state.data.previousRideRatingState.rating) (state.data.previousRideRatingState.rideId) (state.data.previousRideRatingState.feedback))
       _ <- updateLocalStage HomeScreen
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props { isBanner = state.props.isBanner}})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}}})
       if state.data.previousRideRatingState.rating == 5 then do
         _ <- pure $ launchInAppRatingPopup unit
         pure unit
@@ -1379,7 +1383,7 @@ selectLanguageScreenFlow = do
                                 setValueToLocalStore LANGUAGE_KEY (state.props.selectedLanguage)
                                 logField_ <- lift $ lift $ getLogFields
                                 _ <- lift $ lift $ liftFlow $(logEventWithParams logField_ "ny_user_lang_selec" "language" (state.props.selectedLanguage))
-                                resp <- lift $ lift $ Remote.updateProfile (Remote.mkUpdateProfileRequest "")
+                                resp <- lift $ lift $ Remote.updateProfile (Remote.mkUpdateProfileRequest FunctionCall)
                                 modifyScreenState $ SelectLanguageScreenStateType (\selectLanguageScreen -> SelectLanguageScreenData.initData)
                                 homeScreenFlow
     GO_TO_HOME_SCREEN     -> homeScreenFlow
@@ -1772,7 +1776,7 @@ referralScreenFlow = do
   flow <- UI.referralScreen
   case flow of
     UPDATE_REFERRAL referralCode -> do
-      let (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest
+      let (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest FunctionCall
           requiredData = initialData{referralCode = (Just referralCode)}
       res <- lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
       case res of

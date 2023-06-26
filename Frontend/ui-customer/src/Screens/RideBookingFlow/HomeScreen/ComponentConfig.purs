@@ -115,25 +115,22 @@ cancelAppConfig state = let
         text = case distanceString of
                   Just distanceString  -> distanceString <> getString PLEASE_CONTACT_THE_DRIVER_BEFORE_CANCELLING
                   Nothing -> getString DRIVER_IS_NOT_MOVING_Q <> getString WOULD_YOU_LIKE_TO_CHECK_WITH_THE_DRIVER_BEFORE_CANCELLING
-      , margin = Margin 16 20 16 20
-      , fontSize = FontSize.a_18},
+      , margin = Margin 16 20 16 20},
       secondaryText { visibility = GONE },
       option1 {
         text = getString CALL_DRIVER
-      , fontSize = FontSize.a_16
       , color = Color.yellow900
       , background = Color.black900
       , strokeColor = Color.transparent
-      , fontStyle = FontStyle.semiBold LanguageStyle
+      , textStyle = FontStyle.SubHeading1
       , width = MATCH_PARENT
       },
       option2 {
         text = getString CANCEL_RIDE
-      , fontSize = FontSize.a_16
+      , textStyle = FontStyle.SubHeading1
       , color = Color.black700
       , background = Color.white900
       , strokeColor = Color.transparent
-      , fontStyle = FontStyle.semiBold LanguageStyle
       , width = MATCH_PARENT
       , margin = Margin 0 0 0 0
       },
@@ -265,7 +262,7 @@ fareBreakUpConfig state =
           , source = state.data.driverInfoCardState.source
           , sourceTitle = (fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.driverInfoCardState.source)) DA.!! 0))
           , rideStartTime = state.data.startedAt
-          , rideStartDate = ((fromMaybe "" ((DS.split (DS.Pattern ",") (HU.convertUTCtoISC (state.data.startedAtUTC) "llll")) DA.!! 0)) <> ", " <> (HU.convertUTCtoISC (state.data.startedAtUTC) "Do MMM"))
+          , rideStartDate = ((fromMaybe "" ((DS.split (DS.Pattern ",") (EHC.convertUTCtoISC (state.data.startedAtUTC) "llll")) DA.!! 0)) <> ", " <> (EHC.convertUTCtoISC (state.data.startedAtUTC) "Do MMM"))
           , estimatedDistance = state.props.estimatedDistance
           }
         }

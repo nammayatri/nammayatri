@@ -36,6 +36,8 @@ import PrestoDOM.Properties (cornerRadii, cornerRadius)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (HomeScreenStage(..))
 import Storage (KeyStore(..), getValueToLocalStore)
+import JBridge (getVersionCode)
+import Helpers.Utils (getCommonAssetStoreLink)
 import Styles.Colors as Color
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w

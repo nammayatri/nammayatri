@@ -115,13 +115,13 @@ titleAndETA push state =
   , gravity CENTER_VERTICAL
   , padding $ Padding 16 20 16 16
   , visibility $ if ((state.props.currentStage /= RideAccepted && (secondsToHms state.data.eta) == "") || (state.props.currentStage == RideStarted && (spy "estimatedTimeABCD" state.props.estimatedTime == "--"))) then GONE else VISIBLE
-  ][ textView
+  ][ textView $ 
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , text $ if state.props.currentStage == RideAccepted then getString BOARD_THE_FIRST_TAXI else "ETA: " <> if state.props.isSpecialZone then (state.props.estimatedTime) else (secondsToHms state.data.eta)
       , color Color.black800
       -- , fontSize FontSize.a_22
-      ] <> FontStyle.h2 TypoGraphy)
+      ] <> FontStyle.h2 TypoGraphy
   ]
 
 dropPointView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w

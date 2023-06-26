@@ -272,7 +272,7 @@ public class RideRequestUtils {
     }
 
 
-    public JSONObject getZoneConfig(String tag, Context context){
+    public static  JSONObject getZoneConfig(String tag, Context context){
         try {
             String key = "";
             String[] arrOfStr = tag.split("_");
@@ -299,7 +299,7 @@ public class RideRequestUtils {
         }
     }
 
-    public void setSpecialZoneAttrs(SheetAdapter.SheetViewHolder holder, String specialLocationTag, Context context) {
+    public static void setSpecialZoneAttrs(SheetAdapter.SheetViewHolder holder, String specialLocationTag, Context context) {
         try{
             JSONObject zoneConfig = getZoneConfig(specialLocationTag,context);
             holder.specialLocationTag.setCardBackgroundColor(Color.parseColor(zoneConfig.get("backgroundColor").toString()));
@@ -318,7 +318,7 @@ public class RideRequestUtils {
         }
     }
 
-    public void updateDriverStatus(Boolean status, String mode, Context context, Boolean startWidget) {
+    public static void updateDriverStatus(Boolean status, String mode, Context context, Boolean startWidget) {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() ->
         {

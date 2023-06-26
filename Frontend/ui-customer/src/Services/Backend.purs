@@ -19,7 +19,7 @@ import Services.API
 
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
-import Common.Types.App (Version(..), SignatureAuthData(..))
+import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck (..))
 import Data.Either (Either(..), either)
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Engineering.Helpers.Commons (liftFlow, os, bundleVersion)
@@ -501,8 +501,8 @@ updateProfile (UpdateProfileReq payload) = do
     where
         unwrapResponse (x) = x
 
-mkUpdateProfileRequest :: UpdateProfileReq
-mkUpdateProfileRequest =
+mkUpdateProfileRequest :: LazyCheck -> UpdateProfileReq
+mkUpdateProfileRequest _ =
     UpdateProfileReq{
           middleName : Nothing
         , lastName : Nothing

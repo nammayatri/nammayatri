@@ -337,7 +337,7 @@ primaryButtons push config =
     , PrimaryButton.view (push <<< Button2) (secondaryButtonConfig config)]
 
 
-radioButton :: forall w. Config -> (Action -> Effect Unit) -> Int -> CancellationReasons -> PrestoDOM (Effect Unit) w
+radioButton :: forall w. Config -> (Action -> Effect Unit) -> Int -> OptionButtonList -> PrestoDOM (Effect Unit) w
 radioButton config push index item =
   linearLayout
     [ height MATCH_PARENT
@@ -372,7 +372,7 @@ radioButton config push index item =
       , width WRAP_CONTENT
       , orientation VERTICAL
       , margin $ MarginLeft 10
-      ][ textView
+      ][ textView $
           [ text item.description
           , padding $ PaddingBottom 5
           , color Color.black900
@@ -380,14 +380,15 @@ radioButton config push index item =
         , textView $
           [ text $ fromMaybe "" item.subtext
           , color Color.black650
-          , visibility $ case index == activeIndex of 
-                            true -> if item.subtext == Nothing then GONE else VISIBLE
-                            false -> GONE
+          , visibility $ case config.activeIndex of 
+                            Just activeIndex' -> if (activeIndex' == index) then if item.subtext == Nothing then GONE else VISIBLE else GONE
+                            Nothing -> GONE
           ] <> font config.activeIndex 
       ]
-    ] where font index = case index of
-            Just activeIndex' -> if index == activeIndex' then FontStyle.body4 LanguageStyle else FontStyle.paragraphText LanguageStyle
-            Nothing -> FontStyle.paragraphText LanguageStyle
+    ] where 
+        font activeIndex = case activeIndex of
+                        Just activeIndex' -> if index == activeIndex' then FontStyle.body4 LanguageStyle else FontStyle.paragraphText LanguageStyle
+                        Nothing -> FontStyle.paragraphText LanguageStyle
 
 
 primaryButtonConfig :: Config -> PrimaryButtonConfig.Config

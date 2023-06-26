@@ -17,7 +17,6 @@ import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Foreign.Generic (decode, encode)
-import JBridge (getConfig)
 import MerchantConfig.Types (AppConfig)
 import MerchantConfig.DefaultConfig as DefaultConfig
 import Types.App (FlowBT)
@@ -29,6 +28,8 @@ foreign import getValueFromConfig :: forall a. String -> a
 foreign import getENStrings :: String -> String
 
 foreign import getMerchantId :: String -> Foreign
+
+foreign import getMerchantConfig :: forall a. (a -> Maybe a) -> (Maybe a) -> Effect (Maybe a)
 
 data Merchant
   = NAMMAYATRI
@@ -69,3 +70,7 @@ getAppConfigEff  = do
             Left _ -> DefaultConfig.config
       Nothing -> do
             DefaultConfig.config
+
+getConfig :: forall  a. Effect (Maybe a)
+getConfig = getMerchantConfig Just Nothing
+

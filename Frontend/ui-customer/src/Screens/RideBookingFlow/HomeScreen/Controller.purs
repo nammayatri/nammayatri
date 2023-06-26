@@ -19,6 +19,7 @@ import Accessor (_estimatedFare, _estimateId, _vehicleVariant, _status, _estimat
 import Common.Types.App (OptionButtonList, LazyCheck(..))
 import Components.Banner as Banner
 import Components.SelectListModal.Controller as CancelRidePopUp
+import Components.ChatView.Controller as ChatView
 import Components.ChooseVehicle as ChooseVehicleController
 import Components.ChooseYourRide as ChooseYourRide
 import Components.ChooseYourRide.Controller as ChooseYourRideController
@@ -62,12 +63,12 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os, getExpiryTime, convertUTCtoISC, getCurrentUTC)
-import Helpers.Utils (Merchant(..), addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, getMerchant, performHapticFeedback)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable)
+import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, performHapticFeedback)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
-import Merchant.Utils (getValueFromConfig)
+import MerchantConfig.Utils (getValueFromConfig,getMerchant, Merchant(..))
 import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+))
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, Visibility(..), continue, continueWithCmd, exit, updateAndExit, updateWithCmdAndExit, defaultPerformLog)
@@ -88,6 +89,7 @@ import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import MerchantConfig.DefaultConfig as DC
 import Effect.Unsafe (unsafePerformEffect)
+import Effect.Uncurried (runEffectFn5)
 import Engineering.Helpers.LogEvent (logEvent,logEventWithTwoParams)
 
 instance showAction :: Show Action where
