@@ -1,6 +1,6 @@
 window.getMerchantConfig = function () {
   return JSON.stringify({
-    "StringKeys": ["REQUEST_AUTO_RIDE", "CONFIRM_RIDE_", "PAYMENT_METHOD_STRING", "PAY_DRIVER_USING_CASH_OR_UPI"],
+    "StringKeys": ["REQUEST_AUTO_RIDE", "CONFIRM_RIDE_", "PAYMENT_METHOD_STRING", "PAY_DRIVER_USING_CASH_OR_UPI", "PAY_DRIVER_USING_CASH_OR_UPI_"],
     "isReferralEnabled": "false",
     "showBookingPreference": "true",
     "showRateCard": "true",
@@ -112,14 +112,16 @@ window.getMerchantConfig = function () {
     "englishStrings": {
       "REQUEST_AUTO_RIDE": "Request Taxi Ride" ,
       "CONFIRM_RIDE_": "Confirm Ride",
-      "PAYMENT_METHOD_STRING": "Cash",
-      "PAY_DRIVER_USING_CASH_OR_UPI": "Pay driver using Cash"
+      "PAYMENT_METHOD_STRING": "Pass Culture Wallet",
+      "PAY_DRIVER_USING_CASH_OR_UPI": "Pay driver using Pass Culture Wallet",
+      "PAY_DRIVER_USING_CASH_OR_UPI_": "Already paid using Pass Culture Wallet"
     },
     "frenchStrings": {
       "REQUEST_AUTO_RIDE": "Demande de trajet",
       "CONFIRM_RIDE_" : "Confirmer Ride",
-      "PAYMENT_METHOD_STRING": "Espèces",
-      "PAY_DRIVER_USING_CASH_OR_UPI" : "Payer le conducteur en espèces"
+      "PAYMENT_METHOD_STRING": "Porte-monnaie Pass Culture",
+      "PAY_DRIVER_USING_CASH_OR_UPI" : "Payer le conducteur en espèces",
+      "PAY_DRIVER_USING_CASH_OR_UPI_" : "Déjà payé avec Pass Culture Wallet",
     } ,
     "languageList": [{
       "name": "English",

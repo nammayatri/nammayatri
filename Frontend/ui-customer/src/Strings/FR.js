@@ -249,6 +249,7 @@ export function getStringValue(key) {
     "RATE_YOUR_RIDE_WITH" : "Notez votre trajet avec ",
     "VIEW_BREAKDOWN" : "Voir la panne",
     "PAY_DRIVER_USING_CASH_OR_UPI" : "Payer le conducteur en espèces au UPI",
+    "PAY_DRIVER_USING_CASH_OR_UPI_" : "Payer le conducteur en espèces au UPI",
     "RATE_YOUR_DRIVER" : "Évaluez votre conducteur",
     "MY_RIDES" : "Mes manèges",
     "RIDE_DETAILS" : "Détails de conduite",

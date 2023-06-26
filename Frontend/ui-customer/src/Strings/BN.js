@@ -243,6 +243,7 @@ const bengaliStrings = {
   "RATE_YOUR_RIDE_WITH": "এর সাথে আপনার রাইড রেট করুন",
   "VIEW_BREAKDOWN": "ব্রেকডাউন দেখুন",
   "PAY_DRIVER_USING_CASH_OR_UPI": "নগদ/ইউপিআই ব্যবহার করে ড্রাইভারকে অর্থ প্রদান করুন",
+  "PAY_DRIVER_USING_CASH_OR_UPI_": "নগদ/ইউপিআই ব্যবহার করে ড্রাইভারকে অর্থ প্রদান করুন",
   "RATE_YOUR_DRIVER": "আপনার ড্রাইভারকে রেট দিন",
   "MY_RIDES": "আমার রাইডস",
   "RIDE_DETAILS": "রাইডের বিবরণ",

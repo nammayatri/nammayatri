@@ -31,6 +31,7 @@ import Control.Monad.Free (Free)
 import Control.Monad.Except.Trans (ExceptT)
 import Presto.Core.Types.Language.Flow (FlowWrapper)
 import Control.Transformers.Back.Trans (BackT)
+import Data.Maybe (Maybe(..))
 
 type FlowBT e st a = BackT (ExceptT e (Free (FlowWrapper st))) a
 
@@ -114,12 +115,26 @@ newtype Payload = Payload
   , environment :: String
   , notificationData :: Maybe NotificationData
   , signatureAuthData :: Maybe SignatureAuthData
+  , search_type :: Maybe String
+  , source :: Maybe LocationData
+  , destination :: Maybe LocationData
   }
+
+newtype LocationData = LocationData {
+    lat :: Number
+  , lon :: Number
+  , name :: String
+}
 
 derive instance newPayload :: Newtype Payload _
 derive instance genericPayload :: Generic Payload _
 instance decodePayload :: Decode Payload where decode = defaultDecode
 instance encodePayload :: Encode Payload where encode = defaultEncode
+
+derive instance newLocationData :: Newtype LocationData _
+derive instance genericLocationData :: Generic LocationData _
+instance decodeLocationData :: Decode LocationData where decode = defaultDecode
+instance encodeLocationData :: Encode LocationData where encode = defaultEncode
 
 type OptionButtonList = {
     reasonCode :: String,
@@ -141,6 +156,20 @@ instance standardEncodeVersion :: StandardEncode Version where standardEncode (V
 instance showVersion :: Show Version where show = genericShow
 instance decodeVersion :: Decode Version where decode = defaultDecode
 instance encodeVersion  :: Encode Version where encode = defaultEncode
+
+newtype EventPayload = EventPayload {
+    event :: String
+  , payload :: Maybe InnerPayload
+}
+
+type InnerPayload = {
+    action :: String
+  , trip_amount :: Maybe Int
+  , trip_id :: Maybe String
+}
+
+derive instance genericEventPayload :: Generic EventPayload _
+instance encodeEventPayload  :: Encode EventPayload where encode = defaultEncode
 
 -- newtype LocationLatLong = LocationLatLong
 --   { lat :: String

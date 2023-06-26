@@ -20,20 +20,25 @@ module Helpers.Utils
     where
 
 import Accessor (_distance_meters)
-import Common.Types.App (LazyCheck(..))
+import Accessor (_distance_meters)
+import Common.Types.App (EventPayload(..), LazyCheck(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Free (resume)
 import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!))
+import Data.Array (sortBy)
 import Data.Array.NonEmpty (fromArray)
 import Data.Date (Date)
 import Data.Either (Either(..), hush)
 import Data.Eq.Generic (genericEq)
 import Data.Foldable (or)
+import Data.Function.Uncurried (runFn3)
 import Data.Generic.Rep (class Generic)
+import Data.Lens ((^.))
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Number (fromString, pi, sin, cos, sqrt, asin)
+import Data.Ord (comparing)
 import Data.Profunctor.Strong (first)
 import Data.Show.Generic (genericShow)
 import Data.String as DS
@@ -46,28 +51,25 @@ import Effect.Class (liftEffect)
 import Effect.Console (logShow)
 import Engineering.Helpers.Commons (flowRunnerWithState, isPreviousVersion, liftFlow, os)
 import Engineering.Helpers.Commons (parseFloat, setText') as ReExport
-import Foreign.Class (class Decode, class Encode)
+import Foreign.Class (class Decode, class Encode, encode)
 import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
 import Foreign.Generic (decode)
+import JBridge (emitJOSEvent)
 import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||),(&&))
+import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||), (&&))
 import Presto.Core.Flow (Flow, doAff)
-import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, CarouselModel)
-import Services.API (Prediction)
-import Types.App (GlobalState)
-import Data.Array (sortBy)
-import Data.Ord (comparing)
-import Data.Lens ((^.))
-import Accessor (_distance_meters)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..))
+import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, CarouselModel)
+import Services.API (Prediction)
 import Services.API (Prediction)
 import Types.App (GlobalState(..))
+import Types.App (GlobalState)
 import Unsafe.Coerce (unsafeCoerce)
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
@@ -399,3 +401,13 @@ getAssetsBaseUrl lazy = case (getMerchant lazy) of
 
 showCarouselScreen :: LazyCheck -> Boolean
 showCarouselScreen a = os == "ANDROID" && (getMerchant FunctionCall) == NAMMAYATRI
+
+termiateApp :: Unit -> Unit
+termiateApp _ = runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload {
+    event : "process_result"
+  , payload : Just {
+    action : "terminate"
+  , trip_amount : Nothing
+  , trip_id : Nothing
+  }
+}  

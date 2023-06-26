@@ -242,6 +242,7 @@ const malayalamStrings = {
   "RATE_YOUR_RIDE_WITH": "- ഉം ആയുള്ള താങ്കളുടെ സവാരി റേറ്റ് ചെയ്യൂ",
   "VIEW_BREAKDOWN": "വിഘടിച്ചു കാണുക",
   "PAY_DRIVER_USING_CASH_OR_UPI": "ക്യാഷ്/യുപിഐ ഉപയോഗിച്ച് ഡ്രൈവർക്ക് പണം നൽകുക",
+  "PAY_DRIVER_USING_CASH_OR_UPI_": "ക്യാഷ്/യുപിഐ ഉപയോഗിച്ച് ഡ്രൈവർക്ക് പണം നൽകുക",
   "RATE_YOUR_DRIVER": "റേറ്റ് ചെയ്യുക",
   "MY_RIDES": "എന്റെ റൈഡുകൾ",
   "RIDE_DETAILS": "റൈഡിന്റെ വിശദാംശങ്ങൾ",

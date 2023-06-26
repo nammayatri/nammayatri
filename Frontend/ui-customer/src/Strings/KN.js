@@ -248,6 +248,7 @@ const kannadaStrings = {
   "RATE_YOUR_RIDE_WITH": " ಜೊತೆಗೆ ನಿಮ್ಮ ಸವಾರಿಯನ್ನು ರೇಟ್ ಮಾಡಿ",
   "VIEW_BREAKDOWN": "ವಿಭಜನೆಯನ್ನು ವೀಕ್ಷಿಸಿ",
   "PAY_DRIVER_USING_CASH_OR_UPI": "Cash/UPI ಬಳಸಿಕೊಂಡು ಚಾಲಕನಿಗೆ ಪಾವತಿಸಿ",
+  "PAY_DRIVER_USING_CASH_OR_UPI_": "Cash/UPI ಬಳಸಿಕೊಂಡು ಚಾಲಕನಿಗೆ ಪಾವತಿಸಿ",
   "RATE_YOUR_DRIVER": "ನಿಮ್ಮ ಡ್ರೈವರ್ ಅನ್ನು ರೇಟ್ ಮಾಡಿ",
   "MY_RIDES": "ನನ್ನ ಸವಾರಿಗಳು",
   "RIDE_ID": "ರೈಡ್ ಐಡಿ",

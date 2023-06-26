@@ -248,6 +248,7 @@ const englishStrings = {
   "RATE_YOUR_RIDE_WITH": "Rate your ride with ",
   "VIEW_BREAKDOWN": "View Breakdown",
   "PAY_DRIVER_USING_CASH_OR_UPI": "Pay Driver using Cash/UPI",
+  "PAY_DRIVER_USING_CASH_OR_UPI_": "Pay Driver using Cash/UPI",
   "RATE_YOUR_DRIVER": "Rate Your Driver",
   "MY_RIDES": "My Rides",
   "RIDE_DETAILS": "Ride Details",

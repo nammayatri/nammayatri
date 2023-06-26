@@ -450,7 +450,6 @@ public class MainActivity extends AppCompatActivity {
                         } break;
                     default:
                         Log.e(LOG_TAG, "json_payload" + json);
-                        hyperServices.process(json);
                 }
             }
         });

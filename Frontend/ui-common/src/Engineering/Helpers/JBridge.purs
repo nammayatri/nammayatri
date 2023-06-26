@@ -23,9 +23,9 @@ import Effect.Aff (Fiber)
 import Presto.Core.Flow (Flow)
 import Engineering.Helpers.Commons (liftFlow)
 import Data.Maybe (Maybe(..))
--- import Common.Types.App (Place)
+import Common.Types.App (EventPayload(..))
 -- import Types.APIv2 (Address)
--- import Foreign (Foreign)
+import Foreign (Foreign)
 import Control.Monad.Except (runExcept)
 -- import Data.Maybe (Maybe(..))
 import Data.Generic.Rep (class Generic)
@@ -34,7 +34,7 @@ import Foreign.Class (class Decode, class Encode)
 import Foreign.Generic (decodeJSON)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Data.Either (Either(..))
-import Engineering.Helpers.Commons (screenHeight, screenWidth, flowRunnerWithState)
+import Engineering.Helpers.Commons (screenHeight, screenWidth, flowRunnerWithState, parseFloat)
 import Effect.Uncurried (EffectFn3, EffectFn2, EffectFn1, runEffectFn1, EffectFn5)
 import Data.Maybe (Maybe(..))
 -- import LoaderOverlay.Handler as UI
@@ -42,13 +42,12 @@ import Data.Maybe (Maybe(..))
 -- import Effect.Class (liftEffect)
 -- import PrestoDOM.Core(terminateUI)
 import Presto.Core.Types.Language.Flow
-import Types.App (GlobalState(..))
 import Engineering.Helpers.Commons (screenHeight, screenWidth)
-import Helpers.Utils (parseFloat)
 import Data.Int (toNumber)
 import Data.Function.Uncurried (Fn2(..))
 import Effect.Uncurried (EffectFn3, EffectFn2)
-import Data.Function.Uncurried (Fn3)
+import Data.Function.Uncurried (Fn3, runFn3)
+import Foreign.Class (encode)
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
 -- -- foreign import _createKeyStoreEntry :: String -> String -> (Effect Unit) -> (String -> Effect Unit) -> Effect Unit
@@ -200,7 +199,7 @@ foreign import storeMainFiberOb :: forall a. Fiber a -> Effect Unit
 foreign import getMainFiber :: forall f a. Fn2 (f -> Maybe f) (Maybe f) (Maybe (Fiber a))
 foreign import detectPhoneNumbers :: forall action. (action -> Effect Unit) -> (String  -> action) -> Effect Unit
 
-foreign import emitJOSEvent :: Fn3 String String String Unit
+foreign import emitJOSEvent :: Fn3 String String Foreign Unit
 
 -- -- keyStoreEntryPresent :: String -> Flow Boolean
 -- -- keyStoreEntryPresent = liftFlow <<< _keyStoreEntryPresent
@@ -377,3 +376,14 @@ fromMetersToKm :: Int -> String
 fromMetersToKm distanceInMeters
   | distanceInMeters >= 1000 = parseFloat (toNumber distanceInMeters / 1000.0) 1 <> " km"
   | otherwise = show distanceInMeters <> " m"
+
+hideLoader :: Unit ->  Effect Unit
+hideLoader _ = do
+  pure $ runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload {
+    event : "hide_loader"
+  , payload : Just {
+    action : "terminate"
+  , trip_amount : Nothing
+  , trip_id : Nothing
+  }
+}

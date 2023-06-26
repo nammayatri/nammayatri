@@ -16,9 +16,8 @@
 module Screens.HomeScreen.Controller where
 
 import Accessor (_estimatedFare, _estimateId, _vehicleVariant, _status, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _selectedQuotes, _specialLocationTag)
-import Common.Types.App (OptionButtonList, LazyCheck(..))
+import Common.Types.App (OptionButtonList, LazyCheck(..), EventPayload(..))
 import Components.Banner as Banner
-import Components.SelectListModal.Controller as CancelRidePopUp
 import Components.ChatView.Controller as ChatView
 import Components.ChooseVehicle as ChooseVehicleController
 import Components.ChooseYourRide as ChooseYourRide
@@ -47,14 +46,17 @@ import Components.RequestInfoCard as RequestInfoCard
 import Components.SaveFavouriteCard as SaveFavouriteCardController
 import Components.SavedLocationCard.Controller as SavedLocationCardController
 import Components.SearchLocationModel.Controller as SearchLocationModelController
+import Components.SelectListModal.Controller as CancelRidePopUp
 import Components.SettingSideBar.Controller as SettingSideBarController
 import Components.SourceToDestination.Controller as SourceToDestinationController
 import Control.Monad.Except.Trans (runExceptT)
+import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
+import Control.Transformers.Back.Trans (runBackT)
 import Data.Array ((!!), filter, null, snoc, length, head, last, sortBy, union)
-import Data.Int (toNumber, round, fromString)
 import Data.Function.Uncurried (runFn3)
+import Data.Int (toNumber, round, fromString)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Number (fromString) as NUM
@@ -62,13 +64,17 @@ import Data.String as STR
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
+import Effect.Uncurried (runEffectFn5)
+import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os, getExpiryTime, convertUTCtoISC, getCurrentUTC)
-import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, performHapticFeedback)
+import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
+import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, performHapticFeedback, termiateApp)
 import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
-import MerchantConfig.Utils (getValueFromConfig,getMerchant, Merchant(..))
+import MerchantConfig.DefaultConfig as DC
+import MerchantConfig.Utils (getValueFromConfig, getMerchant, Merchant(..))
 import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+))
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, Visibility(..), continue, continueWithCmd, exit, updateAndExit, updateWithCmdAndExit, defaultPerformLog)
@@ -85,12 +91,7 @@ import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
 import Types.App (defaultGlobalState)
-import Control.Monad.Except.Trans (runExceptT)
-import Control.Transformers.Back.Trans (runBackT)
-import MerchantConfig.DefaultConfig as DC
-import Effect.Unsafe (unsafePerformEffect)
-import Effect.Uncurried (runEffectFn5)
-import Engineering.Helpers.LogEvent (logEvent,logEventWithTwoParams)
+import Foreign.Class (encode)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -603,7 +604,7 @@ eval SearchForSelectedLocation state =
 eval CheckFlowStatusAction state = exit $ CheckFlowStatus state
 
 eval TerminateApp state = do 
-  pure $ runFn3 emitJOSEvent "java" "onEvent" "action,terminate"
+  pure $ termiateApp unit
   continue state
 
 eval (IsMockLocation isMock) state = do
@@ -772,7 +773,7 @@ eval BackPressed state = do
                           else if state.props.emergencyHelpModal then continue state {props {emergencyHelpModal = false}}
                           else if state.props.callSupportPopUp then continue state {props {callSupportPopUp = false}}
                           else do 
-                              pure $ runFn3 emitJOSEvent "java" "onEvent" "action,terminate"
+                              pure $ termiateApp unit
                               continue state
 
 eval GoBackToSearchLocationModal state = do
@@ -886,7 +887,7 @@ eval (SettingSideBarActionController (SettingSideBarController.OnClose)) state =
       else case state.data.settingSideBar.opened of
                 SettingSideBarController.CLOSED -> do
                                                     if state.props.currentStage == HomeScreen then do
-                                                      pure $ runFn3 emitJOSEvent "java" "onEvent" "action,terminate"
+                                                      pure $ termiateApp unit
                                                       continue state
                                                       else continueWithCmd state [pure $ BackPressed]
                 _                               -> continue state {data{settingSideBar{opened = SettingSideBarController.CLOSING}}}
@@ -952,6 +953,14 @@ eval (RateRideButtonActionController (PrimaryButtonController.OnClick)) state = 
 eval (SkipButtonActionController (PrimaryButtonController.OnClick)) state = do
   _ <- pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
   _ <- pure $ setValueToLocalStore RATING_SKIPPED "true"
+  _ <- pure $ runFn3 emitJOSEvent "java" "onEvent" $ encode $ EventPayload {
+                                          event : "process_result"
+                                        , payload : Just {
+                                          action : "feedback_skipped"
+                                        , trip_amount : Nothing
+                                        , trip_id : Nothing
+                                        }
+                                        }
   updateAndExit state GoToHome
 
 eval OpenSettings state = do

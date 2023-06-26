@@ -248,6 +248,7 @@ const hindiStrings = {
   "RATE_YOUR_RIDE_WITH": " के साथ अपनी राइड को रेट करें",
   "VIEW_BREAKDOWN": "ब्रेकडाउन देखें",
   "PAY_DRIVER_USING_CASH_OR_UPI": "Cash/UPI का उपयोग कर ड्राइवर को भुगतान करें",
+  "PAY_DRIVER_USING_CASH_OR_UPI_": "Cash/UPI का उपयोग कर ड्राइवर को भुगतान करें",
   "RATE_YOUR_DRIVER": "अपने ड्राइवर को रेट करें",
   "MY_RIDES": "मेरी सवारी",
   "RIDE_ID": "सवारी आईडी",

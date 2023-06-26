@@ -1447,19 +1447,20 @@ export const detectPhoneNumbers = function (cb) {
   };
 };
 export const emitJOSEvent = function (mapp,eventType,payload) {
-  var event = payload.split(",");
-  var resultPayload = {};
-  if (event[0] == "event") {
-    resultPayload = {
-      event : event[1]
-    }
-  } else if (event[0] == "action") {
-    resultPayload = {
-      event : "process_result",
-      payload : {
-        action : event[1]
-      }
-    }
-  }
-  JOS.emitEvent(mapp)(eventType)(JSON.stringify(resultPayload))()()
+  console.log("payload" , payload);
+  // var event = payload.split(",");
+  // var resultPayload = {};
+  // if (event[0] == "event") {
+  //   resultPayload = {
+  //     event : event[1]
+  //   }
+  // } else if (event[0] == "action") {
+  //   resultPayload = {
+  //     event : "process_result",
+  //     payload : {
+  //       action : event[1]
+  //     }
+  //   }
+  // }
+  JOS.emitEvent(mapp)(eventType)(JSON.stringify(payload))()()
 }

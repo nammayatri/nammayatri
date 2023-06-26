@@ -1037,7 +1037,7 @@ rideCompletedCardView state push =
                 ] <> FontStyle.h0 LanguageStyle
             ]
         , textView $
-            [ text $ getString PAY_DRIVER_USING_CASH_OR_UPI
+            [ text $ getString PAY_DRIVER_USING_CASH_OR_UPI_
             , lineHeight "20"
             , width MATCH_PARENT
             , gravity CENTER_HORIZONTAL
