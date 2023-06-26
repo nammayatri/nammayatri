@@ -15,7 +15,7 @@
 
 module Screens.Types where
 
-import Common.Types.App (OptionButtonList)
+import Common.Types.App as Common
 import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
 import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
@@ -602,8 +602,21 @@ type HomeScreenData =  {
   messagesSize :: String,
   suggestionsList :: Array String,
   messageToBeSent :: String,
-  driverAlternateMobile :: Maybe String
+  driverAlternateMobile :: Maybe String,
+  paymentState :: PaymentState
  }
+
+type PaymentState = {
+  rideCount :: Int,
+  totalMoneyCollected :: Int,
+  payableAndGST :: Int,
+  platFromFee :: Int,
+  date :: String,
+  makePaymentModal :: Boolean,
+  showRateCard :: Boolean,
+  paymentStatusBanner :: Boolean,
+  paymentStatus :: Common.PaymentStatus
+}
 
 type CancelRidePopUpData = {
   delayInSeconds :: Int,
@@ -613,7 +626,7 @@ type CancelRidePopUpData = {
 }
 
 type CancelRideModalData = {
-  selectionOptions :: Array OptionButtonList,
+  selectionOptions :: Array Common.OptionButtonList,
   activeIndex ::Maybe Int,
   selectedReasonCode :: String,
   selectedReasonDescription :: String,
@@ -622,7 +635,7 @@ type CancelRideModalData = {
 }
 
 type GenderSelectionModalData = {
-  selectionOptions :: Array OptionButtonList,
+  selectionOptions :: Array Common.OptionButtonList,
   activeIndex ::Maybe Int,
   selectedReasonCode :: String,
   selectedReasonDescription :: String,
@@ -1196,3 +1209,27 @@ type BookingOptionsScreenData = {
 type BookingOptionsScreenProps = {
   isBtnActive :: Boolean
 }
+
+type AcknowledgementScreenState = {
+  data :: AcknowledgementScreenData,
+  props :: AcknowledgementScreenProps
+}
+
+type AcknowledgementScreenData = {
+  illustrationAsset :: String,
+  title :: Maybe String,
+  description ::Maybe String,
+  primaryButtonText :: Maybe String
+}
+
+type AcknowledgementScreenProps = {
+  primaryButtonVisibility :: Visibility,
+  paymentStatus :: Common.PaymentStatus,
+  illustrationType :: IllustrationType
+}
+
+data IllustrationType = Image | Lottie
+
+derive instance genericIllustrationType:: Generic IllustrationType _
+instance showIllustrationType :: Show IllustrationType where show = genericShow
+instance eqIllustrationType :: Eq IllustrationType where eq = genericEq

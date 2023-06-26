@@ -19,6 +19,7 @@ import Screens.Types
 import Prelude(negate)
 import Services.APITypes(Status(..))
 import Data.Maybe
+import Common.Types.App as Common
 
 initData :: HomeScreenState
 initData = {
@@ -68,7 +69,18 @@ initData = {
         messages : [],
         messagesSize : "",
         suggestionsList : [],
-        messageToBeSent : ""
+        messageToBeSent : "",
+        paymentState : {
+          rideCount : 0,
+          totalMoneyCollected : 0,
+          payableAndGST : 0,
+          platFromFee : 0,
+          date : "",
+          makePaymentModal : true,
+          showRateCard : false,
+          paymentStatusBanner : false,
+          paymentStatus : Common.Success
+        }
     },
     props: {
         statusOnline : true,

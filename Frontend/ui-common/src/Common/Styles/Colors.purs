@@ -77,3 +77,5 @@ textSecondary = "#5B5E69"
 warningRed :: Color
 warningRed  = "#f04c31"
 
+green900 :: Color 
+green900 = "#53BB6F"

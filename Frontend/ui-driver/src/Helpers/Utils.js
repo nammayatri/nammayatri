@@ -610,3 +610,36 @@ const zoneConfig = {
     "cancelConfirmImage" : "ic_cancelride_metro_drop,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_drop.png"
   } //More zoneConfigs can be added
 }
+
+export const startPP1 = function (payload) {
+	return function (sc) {
+		return function () {
+			var cb = function (code) {
+				return function (_response) {
+					return function () {
+            var response = JSON.parse(_response);
+						console.log("%cHyperpay Response ","background:darkblue;color:white;font-size:13px;padding:2px", response);                                                               
+						sc(response.payload.payload.status.value0)();
+					}
+				}
+			}
+			if (JOS) {      
+				try {
+					payload = JSON.parse(payload);                    
+					console.log("%cHyperpay Request ", "background:darkblue;color:white;font-size:13px;padding:2px", payload);
+
+					if (JOS.isMAppPresent("in.juspay.hyperpay")()){
+            console.log("inside process call");
+						JOS.emitEvent("in.juspay.hyperpay")("onMerchantEvent")(["process",JSON.stringify(payload)])(cb)();
+					} else {
+            sc("FAIL")();
+					}
+				} catch (err) {
+					console.error("Hyperpay Request not sent : ", err);
+				}
+			}else{
+            sc("FAIL")();
+        }
+		}
+	}
+}

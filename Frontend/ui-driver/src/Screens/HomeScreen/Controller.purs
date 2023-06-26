@@ -23,6 +23,7 @@ import Components.InAppKeyboardModal as InAppKeyboardModal
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButtonController
 import Components.RideActionModal as RideActionModal
+import Components.MakePaymentModal as MakePaymentModal
 import Components.ChatView as ChatView
 import Components.StatsModel.Controller (Action) as StatsModelController
 import Control.Monad.State (state)
@@ -53,6 +54,7 @@ import Services.Config (getCustomerNumber)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
+import Components.RateCard as RateCard
 
 instance showAction :: Show Action where
   show _ = ""
@@ -166,8 +168,9 @@ instance loggableAction :: Loggable Action where
     ZoneOtpAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "zone_otp"
     TriggerMaps -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "trigger_maps"
     RemoveGenderBanner -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "gender_banner"
-
-
+    MakePaymentModalAC act -> pure unit
+    RateCardAC act -> pure unit
+    PaymentBannerAC act -> pure unit
 
 
 data ScreenOutput =   Refresh ST.HomeScreenState
@@ -189,6 +192,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | StartZoneRide ST.HomeScreenState 
                     | CallCustomer ST.HomeScreenState
                     | GotoEditGenderScreen
+                    | OpenPaymentPage ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -230,7 +234,11 @@ data Action = NoAction
             | ZoneOtpAction
             | TriggerMaps
             | GenderBannerModal Banner.Action
+            | PaymentBannerAC Banner.Action
             | RemoveGenderBanner
+            | MakePaymentModalAC MakePaymentModal.Action
+            | RateCardAC RateCard.Action
+  
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -338,6 +346,14 @@ eval (RideActionModalAction (RideActionModal.CallCustomer)) state = continueWith
   _ <- (firebaseLogEventWithTwoParams "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID))
   pure NoAction
   ]
+
+eval (MakePaymentModalAC (MakePaymentModal.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = exit $ OpenPaymentPage state
+
+eval (MakePaymentModalAC (MakePaymentModal.Cancel)) state = continue state{data { paymentState {makePaymentModal = false}}}
+
+eval (MakePaymentModalAC (MakePaymentModal.Info)) state = continue state{data { paymentState {showRateCard = true}}}
+
+eval (RateCardAC (RateCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = continue state{data { paymentState {showRateCard = false}}}
 
 eval (OpenChatScreen) state = do
   continueWithCmd state{props{openChatScreen = false}} [do
@@ -548,6 +564,8 @@ eval ZoneOtpAction state = do
 eval HelpAndSupportScreen state = exit $ GoToHelpAndSupportScreen
 
 eval (GenderBannerModal (Banner.OnClick)) state = exit $ GotoEditGenderScreen
+
+eval (PaymentBannerAC (Banner.OnClick)) state = continue state {data { paymentState {paymentStatusBanner = false}}}
 
 eval RemoveGenderBanner state = do
   _ <- pure $ setValueToLocalStore IS_BANNER_ACTIVE "False"

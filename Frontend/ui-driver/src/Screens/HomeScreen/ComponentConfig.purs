@@ -16,7 +16,7 @@
 module Screens.HomeScreen.ComponentConfig where
 
 import Language.Strings (getString)
-import Prelude(unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||))
+import Prelude(unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), show)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Visibility(..))
 import Components.SelectListModal as SelectListModal
 import Components.Banner as Banner
@@ -38,6 +38,9 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge as JB
+import Components.MakePaymentModal as MakePaymentModal
+import Components.RateCard as RateCard
+import Common.Types.App as CommonTypes
 
 
 --------------------------------- rideActionModalConfig -------------------------------------
@@ -329,3 +332,65 @@ specialLocationConfig srcIcon destIcon = {
     sourceSpecialTagIcon : srcIcon
   , destSpecialTagIcon : destIcon
 }
+
+makePaymentState :: ST.HomeScreenState -> MakePaymentModal.MakePaymentModalState
+makePaymentState state = {
+  title : getString GREAT_JOB,
+  description : getString YOU_HAVE_COMPLETED_RIDES_YESTERDAY,
+  description2 : getString TO_CONTINUE_USING_YATRI_SATHI,
+  okButtontext : "Pay ₹" <> (show state.data.paymentState.payableAndGST) <> " now",
+  cancelButtonText : getString LATER,
+  ridesCount : state.data.paymentState.rideCount,
+  feeItem : [
+    { feeType : MakePaymentModal.TOTAL_COLLECTED,
+      title : getString TOTAL_MONEY_COLLECTED,
+      val : state.data.paymentState.totalMoneyCollected},
+    { feeType : MakePaymentModal.EARNED_OF_THE_DAY,
+      title : getString FARE_EARNED_OF_THE_DAY,
+      val : (state.data.paymentState.totalMoneyCollected - state.data.paymentState.payableAndGST)},
+    { feeType : MakePaymentModal.GST_PAYABLE,
+      title : getString GST_PLUS_PAYABLE,
+      val : state.data.paymentState.payableAndGST}
+  ]
+}
+
+rateCardState :: ST.HomeScreenState -> RateCard.Config
+rateCardState state =
+  let
+    config' = RateCard.config
+    rateCardConfig' =
+      config'
+        { title = getString FEE_BREAKUP
+        , description = getString YATRI_SATHI_FEE_PAYABLE_FOR_DATE
+        , buttonText = getString VIEW_DETAILS
+        , currentRateCardType = CommonTypes.PaymentFareBreakup
+        , primaryButtonText = getString GOT_IT
+        , additionalStrings = [
+          {key : "FEE_CORRESPONDING_to_DISTANCE", val : getString FEE_CORRESPONDING_TO_THE_DISTANCE},
+          {key : "GOT_IT", val : getString GOT_IT},
+          {key : "TOTAL_PAYABLE", val : getString TOTAL_PAYABLE},
+          {key : "TOTAL_PAYABLE_VAL", val : "₹" <> (show state.data.paymentState.payableAndGST)}]
+          
+        , fareList = [
+          {key : getString PLATFORM_FEE , val : "₹" <> (show state.data.paymentState.platFromFee)},
+          {key : getString GST , val : "₹" <> show (state.data.paymentState.payableAndGST - state.data.paymentState.platFromFee)}]
+
+        }
+  in
+    rateCardConfig'
+
+paymentStatusConfig :: ST.HomeScreenState -> Banner.Config
+paymentStatusConfig state = 
+  let 
+    config = Banner.config
+    config' = config
+      { 
+        backgroundColor = Color.grey900,
+        title = "We will notify when your payment is successful",
+        titleColor = Color.orange900,
+        actionText = "Continue taking rides",
+        actionTextColor = Color.orange900,
+        imageUrl = "ny_ic_driver_gender_banner,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_driver_gender_banner.png",
+        isBanner = true
+      }
+  in config'

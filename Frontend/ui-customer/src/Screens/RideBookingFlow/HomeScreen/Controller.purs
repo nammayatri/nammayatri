@@ -16,7 +16,7 @@
 module Screens.HomeScreen.Controller where
 
 import Accessor (_estimatedFare, _estimateId, _vehicleVariant, _status, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _selectedQuotes, _specialLocationTag)
-import Common.Types.App (OptionButtonList, LazyCheck(..))
+import Common.Types.App (OptionButtonList, LazyCheck(..), RateCardType(..))
 import Components.Banner as Banner
 import Components.SelectListModal.Controller as CancelRidePopUp
 import Components.ChooseVehicle as ChooseVehicleController
@@ -78,7 +78,7 @@ import Screens.AddNewAddressScreen.Controller (validTag, getSavedTagsFromHome)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity, dummyZoneType)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList)
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (HomeScreenState, Location, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), RateCardType(..), CallType(..), ZoneType(..), SpecialTags, TipViewStage(..))
+import Screens.Types (HomeScreenState, Location, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), CallType(..), ZoneType(..), SpecialTags, TipViewStage(..))
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
