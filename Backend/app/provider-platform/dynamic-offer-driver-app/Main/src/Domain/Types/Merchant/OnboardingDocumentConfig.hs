@@ -12,9 +12,10 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.OnboardingDocumentConfig where
+module Domain.Types.Merchant.OnboardingDocumentConfig where
 
 import Domain.Types.Merchant (Merchant)
+import Domain.Types.Vehicle (Variant)
 import Kernel.Prelude
 import Kernel.Types.Id
 
@@ -22,13 +23,21 @@ data VehicleClassCheckType = Infix | Prefix | Suffix deriving (Generic, ToJSON, 
 
 data DocumentType = RC | DL | RCInsurance deriving (Generic, ToJSON, FromJSON, Read, Eq, Ord, Show)
 
--- ProviderConfig?
+data SupportedVehicleClasses = DLValidClasses [Text] | RCValidClasses [VehicleClassVariantMap] deriving (Generic, ToJSON, FromJSON, Show)
+
+data VehicleClassVariantMap = VehicleClassVariantMap
+  { vehicleClass :: Text,
+    vehicleCapacity :: Maybe Int,
+    vehicleVariant :: Variant
+  }
+  deriving (Generic, ToJSON, FromJSON, Show)
+
 data OnboardingDocumentConfig = OnboardingDocumentConfig
   { merchantId :: Id Merchant,
     documentType :: DocumentType,
     checkExtraction :: Bool,
     checkExpiry :: Bool,
-    validVehicleClasses :: [Text],
+    supportedVehicleClasses :: SupportedVehicleClasses,
     vehicleClassCheckType :: VehicleClassCheckType,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

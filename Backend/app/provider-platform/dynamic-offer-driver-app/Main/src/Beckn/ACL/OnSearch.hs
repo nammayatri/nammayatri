@@ -15,13 +15,11 @@
 module Beckn.ACL.OnSearch where
 
 import qualified Beckn.ACL.Common as Common
-import qualified Beckn.Types.Core.Taxi.Common.VehicleVariant as Common
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
 import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..), BreakupPrice (..), ItemTags (night_shift_charge))
 import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
-import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
 
 autoOneWayCategory :: OS.Category
@@ -125,7 +123,7 @@ currency' = "INR"
 mkQuoteEntities :: OS.StartInfo -> OS.StopInfo -> DSearch.EstimateInfo -> QuoteEntities
 mkQuoteEntities start end estInfo = do
   let estimate = estInfo.estimate
-      variant = castVariant estimate.vehicleVariant
+      variant = Common.castVariant estimate.vehicleVariant
       minPriceDecimalValue = OS.DecimalValue $ toRational estimate.minFare
       maxPriceDecimalValue = OS.DecimalValue $ toRational estimate.maxFare
       estimateBreakupList = buildEstimateBreakUpList <$> estimate.estimateBreakupList
@@ -134,7 +132,7 @@ mkQuoteEntities start end estInfo = do
           { start,
             end = Just end,
             id = "ARDU_" <> show estimate.vehicleVariant,
-            vehicle = OS.FulfillmentVehicle {category = castVariant estimate.vehicleVariant}
+            vehicle = OS.FulfillmentVehicle {category = Common.castVariant estimate.vehicleVariant}
           }
       item =
         OS.Item
@@ -179,14 +177,14 @@ mkQuoteEntities start end estInfo = do
 
 mkQuoteEntitiesSpecialZone :: OS.StartInfo -> OS.StopInfo -> DSearch.SpecialZoneQuoteInfo -> QuoteEntities
 mkQuoteEntitiesSpecialZone start end it = do
-  let variant = castVariant it.vehicleVariant
+  let variant = Common.castVariant it.vehicleVariant
       estimatedFare = OS.DecimalValue $ toRational it.estimatedFare
       fulfillment =
         OS.FulfillmentInfo
           { start,
             end = Just end,
             id = "fulf_" <> show it.quoteId,
-            vehicle = OS.FulfillmentVehicle {category = castVariant it.vehicleVariant}
+            vehicle = OS.FulfillmentVehicle {category = Common.castVariant it.vehicleVariant}
           }
       item =
         OS.Item
@@ -241,14 +239,6 @@ buildEstimateBreakUpList DEst.EstimateBreakup {..} = do
             value = realToFrac price.value
           }
     }
-
-castVariant :: Variant.Variant -> Common.VehicleVariant
-castVariant Variant.SEDAN = Common.SEDAN
-castVariant Variant.HATCHBACK = Common.HATCHBACK
-castVariant Variant.SUV = Common.SUV
-castVariant Variant.AUTO_RICKSHAW = Common.AUTO_RICKSHAW
-castVariant Variant.TAXI = Common.TAXI
-castVariant Variant.TAXI_PLUS = Common.TAXI_PLUS
 
 mkPayment :: DMPM.PaymentMethodInfo -> OS.Payment
 mkPayment DMPM.PaymentMethodInfo {..} =

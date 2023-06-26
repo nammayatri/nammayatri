@@ -18,9 +18,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.LeaderBoardConfig where
+module Storage.Tabular.Merchant.LeaderBoardConfig where
 
-import qualified Domain.Types.LeaderBoardConfig as Domain
+import qualified Domain.Types.Merchant.LeaderBoardConfig as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Common hiding (id)

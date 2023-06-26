@@ -22,6 +22,7 @@ module Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate where
 
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.VehicleRegistrationCertificate as Domain
+import Domain.Types.Vehicle
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
@@ -29,6 +30,7 @@ import Kernel.Types.Id
 import Storage.Tabular.DriverOnboarding.Image (ImageTId)
 
 derivePersistField "Domain.VerificationStatus"
+derivePersistField "Variant"
 
 mkPersist
   defaultSqlSettings
@@ -43,6 +45,7 @@ mkPersist
       pucExpiry UTCTime Maybe
       insuranceValidity  UTCTime Maybe
       vehicleClass Text Maybe
+      vehicleVariant Variant Maybe
       vehicleManufacturer Text Maybe
       vehicleCapacity Int Maybe
       vehicleModel Text Maybe
