@@ -14,7 +14,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
-module Storage.CachedQueries.OnboardingDocumentConfig
+module Storage.CachedQueries.Merchant.OnboardingDocumentConfig
   ( findAllByMerchantId,
     findByMerchantIdAndDocumentType,
     clearCache,
@@ -24,14 +24,14 @@ module Storage.CachedQueries.OnboardingDocumentConfig
 where
 
 import Domain.Types.Merchant (Merchant)
-import Domain.Types.OnboardingDocumentConfig as DTO
+import Domain.Types.Merchant.OnboardingDocumentConfig as DTO
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.Queries.OnboardingDocumentConfig as Queries
+import qualified Storage.Queries.Merchant.OnboardingDocumentConfig as Queries
 
 create :: OnboardingDocumentConfig -> Esq.SqlDB ()
 create = Queries.create

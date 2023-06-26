@@ -178,21 +178,21 @@ library
       Domain.Types.Issue.IssueOption
       Domain.Types.Issue.IssueReport
       Domain.Types.Issue.IssueTranslation
-      Domain.Types.LeaderBoardConfig
       Domain.Types.Maps.PlaceNameCache
       Domain.Types.MediaFile
       Domain.Types.Merchant
       Domain.Types.Merchant.DriverIntelligentPoolConfig
       Domain.Types.Merchant.DriverPoolConfig
+      Domain.Types.Merchant.LeaderBoardConfig
       Domain.Types.Merchant.MerchantMessage
       Domain.Types.Merchant.MerchantPaymentMethod
       Domain.Types.Merchant.MerchantServiceConfig
       Domain.Types.Merchant.MerchantServiceUsageConfig
+      Domain.Types.Merchant.OnboardingDocumentConfig
       Domain.Types.Merchant.TransporterConfig
       Domain.Types.Message.Message
       Domain.Types.Message.MessageReport
       Domain.Types.Message.MessageTranslation
-      Domain.Types.OnboardingDocumentConfig
       Domain.Types.Person
       Domain.Types.QuoteSpecialZone
       Domain.Types.Rating
@@ -247,18 +247,18 @@ library
       Storage.CachedQueries.Issue.IssueCategory
       Storage.CachedQueries.Issue.IssueOption
       Storage.CachedQueries.Issue.IssueReport
-      Storage.CachedQueries.LeaderBoardConfig
       Storage.CachedQueries.Maps.PlaceNameCache
       Storage.CachedQueries.MediaFile
       Storage.CachedQueries.Merchant
       Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig
       Storage.CachedQueries.Merchant.DriverPoolConfig
+      Storage.CachedQueries.Merchant.LeaderBoardConfig
       Storage.CachedQueries.Merchant.MerchantMessage
       Storage.CachedQueries.Merchant.MerchantPaymentMethod
       Storage.CachedQueries.Merchant.MerchantServiceConfig
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
+      Storage.CachedQueries.Merchant.OnboardingDocumentConfig
       Storage.CachedQueries.Merchant.TransporterConfig
-      Storage.CachedQueries.OnboardingDocumentConfig
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation
       Storage.Queries.BookingCancellationReason
@@ -295,21 +295,21 @@ library
       Storage.Queries.Issue.IssueCategory
       Storage.Queries.Issue.IssueOption
       Storage.Queries.Issue.IssueReport
-      Storage.Queries.LeaderBoardConfig
       Storage.Queries.Maps.PlaceNameCache
       Storage.Queries.MediaFile
       Storage.Queries.Merchant
       Storage.Queries.Merchant.DriverIntelligentPoolConfig
       Storage.Queries.Merchant.DriverPoolConfig
+      Storage.Queries.Merchant.LeaderBoardConfig
       Storage.Queries.Merchant.MerchantMessage
       Storage.Queries.Merchant.MerchantPaymentMethod
       Storage.Queries.Merchant.MerchantServiceConfig
       Storage.Queries.Merchant.MerchantServiceUsageConfig
+      Storage.Queries.Merchant.OnboardingDocumentConfig
       Storage.Queries.Merchant.TransporterConfig
       Storage.Queries.Message.Message
       Storage.Queries.Message.MessageReport
       Storage.Queries.Message.MessageTranslation
-      Storage.Queries.OnboardingDocumentConfig
       Storage.Queries.Person
       Storage.Queries.QuoteSpecialZone
       Storage.Queries.Rating
@@ -365,22 +365,22 @@ library
       Storage.Tabular.Issue.IssueOption
       Storage.Tabular.Issue.IssueReport
       Storage.Tabular.Issue.IssueTranslation
-      Storage.Tabular.LeaderBoardConfig
       Storage.Tabular.Maps.PlaceNameCache
       Storage.Tabular.MediaFile
       Storage.Tabular.Merchant
       Storage.Tabular.Merchant.DriverIntelligentPoolConfig
       Storage.Tabular.Merchant.DriverPoolConfig
+      Storage.Tabular.Merchant.LeaderBoardConfig
       Storage.Tabular.Merchant.MerchantMessage
       Storage.Tabular.Merchant.MerchantPaymentMethod
       Storage.Tabular.Merchant.MerchantServiceConfig
       Storage.Tabular.Merchant.MerchantServiceUsageConfig
+      Storage.Tabular.Merchant.OnboardingDocumentConfig
       Storage.Tabular.Merchant.TransporterConfig
       Storage.Tabular.Message.Instances
       Storage.Tabular.Message.Message
       Storage.Tabular.Message.MessageReport
       Storage.Tabular.Message.MessageTranslation
-      Storage.Tabular.OnboardingDocumentConfig
       Storage.Tabular.Person
       Storage.Tabular.QuoteSpecialZone
       Storage.Tabular.Rating

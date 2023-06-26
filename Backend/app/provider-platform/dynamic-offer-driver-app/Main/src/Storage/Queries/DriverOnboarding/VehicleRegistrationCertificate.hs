@@ -34,6 +34,7 @@ upsert a@VehicleRegistrationCertificate {..} =
       VehicleRegistrationCertificatePucExpiry =. val pucExpiry,
       VehicleRegistrationCertificateInsuranceValidity =. val insuranceValidity,
       VehicleRegistrationCertificateVehicleClass =. val vehicleClass,
+      VehicleRegistrationCertificateVehicleVariant =. val vehicleVariant,
       VehicleRegistrationCertificateVehicleManufacturer =. val vehicleManufacturer,
       VehicleRegistrationCertificateVehicleCapacity =. val vehicleCapacity,
       VehicleRegistrationCertificateVehicleModel =. val vehicleModel,

@@ -12,26 +12,20 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.LeaderBoardConfig where
+module Storage.Queries.Merchant.LeaderBoardConfig where
 
-import qualified Domain.Types.Merchant as DMerchant
+import Domain.Types.Merchant
+import Domain.Types.Merchant.LeaderBoardConfig
 import Kernel.Prelude
-import Kernel.Types.Common
+import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Storage.Tabular.Merchant.LeaderBoardConfig
 
-data LeaderBoardType
-  = WEEKLY
-  | DAILY
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Read, Show)
+findLeaderBoardConfigbyType :: (Transactionable m) => LeaderBoardType -> Id Merchant -> m (Maybe LeaderBoardConfigs)
+findLeaderBoardConfigbyType leaderBType merchantId = Esq.findOne $ do
+  leaderBoardConfig <- from $ table @LeaderBoardConfigsT
+  where_ $
+    leaderBoardConfig ^. LeaderBoardConfigsLeaderBoardType ==. val leaderBType
+      &&. leaderBoardConfig ^. LeaderBoardConfigsMerchantId ==. val (toKey merchantId)
 
-data LeaderBoardConfigs = LeaderBoardConfigs
-  { id :: Id LeaderBoardConfigs,
-    leaderBoardType :: LeaderBoardType,
-    numberOfSets :: Int,
-    leaderBoardExpiry :: Seconds,
-    zScoreBase :: Int,
-    leaderBoardLengthLimit :: Integer,
-    isEnabled :: Bool,
-    merchantId :: Id DMerchant.Merchant
-  }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  pure leaderBoardConfig

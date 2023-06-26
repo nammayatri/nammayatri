@@ -32,8 +32,8 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.FareParameters as DFare
-import qualified Domain.Types.LeaderBoardConfig as LConfig
 import Domain.Types.Merchant
+import qualified Domain.Types.Merchant.LeaderBoardConfig as LConfig
 import Domain.Types.Merchant.TransporterConfig
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as Ride
@@ -55,8 +55,8 @@ import SharedLogic.FareCalculator
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as CDI
-import Storage.CachedQueries.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant as CQM
+import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS

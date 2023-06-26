@@ -13,7 +13,7 @@
 -}
 {-# LANGUAGE TypeApplications #-}
 
-module Storage.Queries.OnboardingDocumentConfig
+module Storage.Queries.Merchant.OnboardingDocumentConfig
   {-# WARNING
     "This module contains direct calls to the table. \
   \ But most likely you need a version from CachedQueries with caching results feature."
@@ -21,12 +21,12 @@ module Storage.Queries.OnboardingDocumentConfig
 where
 
 import Domain.Types.Merchant
-import Domain.Types.OnboardingDocumentConfig
+import Domain.Types.Merchant.OnboardingDocumentConfig
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Tabular.OnboardingDocumentConfig
+import Storage.Tabular.Merchant.OnboardingDocumentConfig
 
 create :: OnboardingDocumentConfig -> SqlDB ()
 create = Esq.create
@@ -42,12 +42,13 @@ findAllByMerchantId merchantId =
 update :: OnboardingDocumentConfig -> SqlDB ()
 update config = do
   now <- getCurrentTime
+  let supportedClassJson = getConfigJSON config.supportedVehicleClasses
   Esq.update $ \tbl -> do
     set
       tbl
       [ OnboardingDocumentConfigCheckExtraction =. val config.checkExtraction,
         OnboardingDocumentConfigCheckExpiry =. val config.checkExpiry,
-        OnboardingDocumentConfigValidVehicleClasses =. val (PostgresList config.validVehicleClasses),
+        OnboardingDocumentConfigSupportedVehicleClassesJSON =. val supportedClassJson,
         OnboardingDocumentConfigVehicleClassCheckType =. val config.vehicleClassCheckType,
         OnboardingDocumentConfigUpdatedAt =. val now
       ]
