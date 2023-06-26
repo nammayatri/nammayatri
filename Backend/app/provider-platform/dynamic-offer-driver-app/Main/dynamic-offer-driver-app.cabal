@@ -222,6 +222,7 @@ library
       SharedLogic.CallBAP
       SharedLogic.CancelSearch
       SharedLogic.DeleteDriver
+      SharedLogic.DriverFee
       SharedLogic.DriverLocation
       SharedLogic.DriverMode
       SharedLogic.DriverOnboarding

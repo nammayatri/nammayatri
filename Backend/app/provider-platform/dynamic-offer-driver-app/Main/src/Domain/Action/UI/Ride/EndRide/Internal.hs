@@ -291,7 +291,7 @@ createDriverFee merchantId driverId rideFare newFareParams nowUtc maxShards = do
             SendPaymentReminderToDriverJobData
               { startTime = driverFee.startTime,
                 endTime = driverFee.endTime,
-                now = now
+                timeDiff = transporterConfig.timeDiffFromUtc
               }
         setPendingPaymentCache driverFee.endTime pendingPaymentJobTs
       _ -> pure ()
