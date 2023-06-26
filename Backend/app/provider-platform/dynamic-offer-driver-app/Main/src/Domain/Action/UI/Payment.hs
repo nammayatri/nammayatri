@@ -116,8 +116,7 @@ getStatus (personId, merchantId) orderId = do
 
 processPaymentTransactions :: Id DP.Driver -> Id DriverFee -> DriverInformation -> Seconds -> SqlDB ()
 processPaymentTransactions driverId driverFeeId driverInfo timeDiff = do
-  nowUtc <- getCurrentTime
-  let now = getLocalTime nowUtc timeDiff
+  now <- getLocalCurrentTime timeDiff
   QDF.updateStatus DF.CLEARED driverFeeId now
   QDFS.clearPaymentStatus (cast driverId) driverInfo.active
 
@@ -148,6 +147,3 @@ juspayWebhookHandler merchantShortId authData value = do
             Esq.runTransaction $ processPaymentTransactions driverFee.driverId driverFee.id driverInfo transporterConfig.timeDiffFromUtc
           pure Ack
     _ -> throwError $ InternalError "Unknown Service Config"
-
-getLocalTime :: UTCTime -> Seconds -> UTCTime
-getLocalTime utcTime seconds = addUTCTime (secondsToNominalDiffTime seconds) utcTime

@@ -1158,11 +1158,11 @@ getDriverPayments (personId, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset 
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit -- TODO move to common code
       offset = fromMaybe 0 mbOffset
       defaultFrom = fromMaybe (fromGregorian 2020 1 1) mbFrom
-  nowUtc <- getCurrentTime
   transporterConfig <- CQTC.findByMerchantId merchantId_ >>= fromMaybeM (TransporterConfigNotFound merchantId_.getId)
-  let now = utctDay $ getLocalTime nowUtc transporterConfig.timeDiffFromUtc
+  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  let today = utctDay now
       from = fromMaybe defaultFrom mbFrom
-      to = fromMaybe now mbTo
+      to = fromMaybe today mbTo
   let windowStartTime = UTCTime from 0
       windowEndTime = addUTCTime (86399 + transporterConfig.driverPaymentCycleDuration) (UTCTime to 0)
   driverFees <- runInReplica $ QDF.findWindowsWithStatus personId windowStartTime windowEndTime mbStatus limit offset
@@ -1201,6 +1201,3 @@ getDriverPayments (personId, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset 
             amount = sgst
           }
       ]
-
-    getLocalTime :: UTCTime -> Seconds -> UTCTime
-    getLocalTime utcTime seconds = addUTCTime (secondsToNominalDiffTime seconds) utcTime

@@ -129,7 +129,7 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId newFare
       then QDFS.updateStatus ride.driverId DDFS.ACTIVE
       else QDFS.updateStatus ride.driverId DDFS.IDLE
   DLoc.updateOnRide driverId False merchantId
-  when (thresholdConfig.subscription) $ createDriverFee merchantId driverId ride.fare newFareParams nowUtc maxShards
+  when (thresholdConfig.subscription) $ createDriverFee merchantId driverId ride.fare newFareParams maxShards
   fork "Updating ZScore for driver" . Hedis.withNonCriticalRedis $ do
     driverZscore <- Hedis.zScore (makeDailyDriverLeaderBoardKey merchantId rideDate) $ ride.driverId.getId
     updateDriverDailyZscore ride rideDate driverZscore ride.chargeableDistance merchantId
@@ -207,9 +207,6 @@ getCurrentDate time =
   let currentDate = localDay $ utcToLocalTime timeZoneIST time
    in currentDate
 
-getLocalTime :: UTCTime -> Seconds -> UTCTime
-getLocalTime utcTime seconds = addUTCTime (secondsToNominalDiffTime seconds) utcTime
-
 putDiffMetric :: (Metrics.HasBPPMetrics m r, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Money -> Meters -> m ()
 putDiffMetric merchantId money mtrs = do
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -266,15 +263,15 @@ safeMod :: Int -> Int -> Int
 _ `safeMod` 0 = 0
 a `safeMod` b = a `mod` b
 
-createDriverFee :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Id DP.Driver -> Maybe Money -> DFare.FareParameters -> UTCTime -> Int -> m ()
-createDriverFee merchantId driverId rideFare newFareParams nowUtc maxShards = do
+createDriverFee :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Id DP.Driver -> Maybe Money -> DFare.FareParameters -> Int -> m ()
+createDriverFee merchantId driverId rideFare newFareParams maxShards = do
   transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   let govtCharges = fromMaybe 0 newFareParams.govtCharges
   let (platformFee, cgst, sgst) = case newFareParams.fareParametersDetails of
         DFare.ProgressiveDetails _ -> (0, 0, 0)
         DFare.SlabDetails fpDetails -> (fromMaybe 0 fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst)
   let totalDriverFee = fromIntegral govtCharges + fromIntegral platformFee + cgst + sgst
-  let now = getLocalTime nowUtc transporterConfig.timeDiffFromUtc
+  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   lastDriverFee <- QDF.findLatestFeeByDriverId driverId
   driverFee <- mkDriverFee now driverId rideFare govtCharges platformFee cgst sgst transporterConfig
   unless (totalDriverFee <= 0) $ do
