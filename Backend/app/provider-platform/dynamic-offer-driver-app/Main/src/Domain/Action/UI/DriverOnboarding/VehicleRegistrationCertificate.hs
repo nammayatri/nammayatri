@@ -73,12 +73,12 @@ data DriverRCReq = DriverRCReq
 
 type DriverRCRes = APISuccess
 
-validateDriverRCReq :: Validate DriverRCReq
-validateDriverRCReq DriverRCReq {..} =
+validateDriverRCReq :: Text -> Validate DriverRCReq
+validateDriverRCReq rcNumberPrefix DriverRCReq {..} =
   sequenceA_
     [validateField "vehicleRegistrationCertNumber" vehicleRegistrationCertNumber certNum]
   where
-    certNum = LengthInRange 5 12 `And` ("KA" <> star (latinUC \/ digit \/ ","))
+    certNum = LengthInRange 5 12 `And` (string (T.unpack rcNumberPrefix) <> star (latinUC \/ digit \/ ","))
 
 verifyRC ::
   Bool ->
@@ -87,8 +87,9 @@ verifyRC ::
   DriverRCReq ->
   Flow DriverRCRes
 verifyRC isDashboard mbMerchant (personId, _) req@DriverRCReq {..} = do
-  runRequestValidation validateDriverRCReq req
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  onboardingDocumentConfig <- SCO.findByMerchantIdAndDocumentType person.merchantId ODC.RC >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantId.getId (show ODC.RC))
+  runRequestValidation (validateDriverRCReq onboardingDocumentConfig.rcNumberPrefix) req
   driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   when driverInfo.blocked $ throwError DriverAccountBlocked
   whenJust mbMerchant $ \merchant -> do
@@ -100,7 +101,6 @@ verifyRC isDashboard mbMerchant (personId, _) req@DriverRCReq {..} = do
   when (null operatingCity') $
     throwError $ InvalidOperatingCity req.operatingCity
   transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
-  onboardingDocumentConfig <- SCO.findByMerchantIdAndDocumentType person.merchantId ODC.RC >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantId.getId (show ODC.RC))
   when
     ( isNothing dateOfRegistration && onboardingDocumentConfig.checkExtraction
         && (not isDashboard || transporterConfig.checkImageExtractionForDashboard)

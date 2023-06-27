@@ -50,6 +50,7 @@ update config = do
         OnboardingDocumentConfigCheckExpiry =. val config.checkExpiry,
         OnboardingDocumentConfigSupportedVehicleClassesJSON =. val supportedClassJson,
         OnboardingDocumentConfigVehicleClassCheckType =. val config.vehicleClassCheckType,
+        OnboardingDocumentConfigRcNumberPrefix =. val config.rcNumberPrefix,
         OnboardingDocumentConfigUpdatedAt =. val now
       ]
     where_ $ tbl ^. OnboardingDocumentConfigTId ==. val (toKey (config.merchantId, config.documentType))

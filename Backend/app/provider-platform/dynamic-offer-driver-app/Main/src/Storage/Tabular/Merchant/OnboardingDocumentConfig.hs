@@ -43,6 +43,7 @@ mkPersist
       checkExtraction Bool
       checkExpiry Bool
       supportedVehicleClassesJSON Text sql=supported_vehicle_classes_json
+      rcNumberPrefix Text
       vehicleClassCheckType Domain.VehicleClassCheckType
       createdAt UTCTime
       updatedAt UTCTime

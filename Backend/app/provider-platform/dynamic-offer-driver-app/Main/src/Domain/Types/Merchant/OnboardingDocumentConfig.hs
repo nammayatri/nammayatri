@@ -39,6 +39,7 @@ data OnboardingDocumentConfig = OnboardingDocumentConfig
     checkExpiry :: Bool,
     supportedVehicleClasses :: SupportedVehicleClasses,
     vehicleClassCheckType :: VehicleClassCheckType,
+    rcNumberPrefix :: Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
