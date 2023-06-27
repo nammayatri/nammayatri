@@ -1154,7 +1154,7 @@ remove (personId, _) = do
   return Success
 
 getDriverPayments :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Maybe Day -> Maybe Day -> Maybe DDF.DriverFeeStatus -> Maybe Int -> Maybe Int -> m [DriverPaymentHistoryResp]
-getDriverPayments (_, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset = do
+getDriverPayments (personId, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset = do
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit -- TODO move to common code
       offset = fromMaybe 0 mbOffset
       defaultFrom = fromMaybe (fromGregorian 2020 1 1) mbFrom
@@ -1165,7 +1165,7 @@ getDriverPayments (_, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset = do
       to = fromMaybe now mbTo
   let windowStartTime = UTCTime from 0
       windowEndTime = addUTCTime (86399 + transporterConfig.driverPaymentCycleDuration) (UTCTime to 0)
-  driverFees <- runInReplica $ QDF.findWindowsWithStatus windowStartTime windowEndTime mbStatus limit offset
+  driverFees <- runInReplica $ QDF.findWindowsWithStatus personId windowStartTime windowEndTime mbStatus limit offset
   mapM buildPaymentResp driverFees
   where
     maxLimit = 20
