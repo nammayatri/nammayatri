@@ -169,6 +169,7 @@ auth req mbBundleVersion mbClientVersion = do
 createDriverDetails :: Id SP.Person -> Id DO.Merchant -> Esq.SqlDB ()
 createDriverDetails personId merchantId = do
   now <- getCurrentTime
+  let driverId = cast personId
   let driverInfo =
         DriverInfo.DriverInformation
           { driverId = personId,
@@ -194,10 +195,6 @@ createDriverDetails personId merchantId = do
           }
   QDriverStats.createInitialDriverStats driverId
   QD.create driverInfo
-  QDriverLocation.create personId initLatLong now merchantId
-  where
-    initLatLong = LatLong 0 0
-    driverId = cast personId
 
 makePerson :: EncFlow m r => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> m SP.Person
 makePerson req mbBundleVersion mbClientVersion merchantId = do
@@ -276,10 +273,12 @@ verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, EsqLocDBFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> m SP.Person
 createDriverWithDetails req mbBundleVersion mbClientVersion merchantId = do
   person <- makePerson req mbBundleVersion mbClientVersion merchantId
+  now <- getCurrentTime
   DB.runTransaction $ do
     QP.create person
     QDFS.create $ makeIdleDriverFlowStatus person
-  runInLocationDB $ createDriverDetails (person.id) merchantId
+    createDriverDetails (person.id) merchantId
+  runInLocationDB $ QDriverLocation.create person.id initLatLong now merchantId
   pure person
   where
     makeIdleDriverFlowStatus person =
@@ -288,6 +287,7 @@ createDriverWithDetails req mbBundleVersion mbClientVersion merchantId = do
           flowStatus = DDFS.IDLE,
           updatedAt = person.updatedAt
         }
+    initLatLong = LatLong 0 0
 
 verify ::
   ( HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
