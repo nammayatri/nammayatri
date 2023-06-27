@@ -547,7 +547,9 @@ eval ZoneOtpAction state = do
 
 eval HelpAndSupportScreen state = exit $ GoToHelpAndSupportScreen
 
-eval (GenderBannerModal (Banner.OnClick)) state = exit $ GotoEditGenderScreen
+eval (GenderBannerModal (Banner.OnClick)) state = do
+  _ <- pure $ firebaseLogEvent "ny_driver_gender_banner_click"
+  exit $ GotoEditGenderScreen
 
 eval RemoveGenderBanner state = do
   _ <- pure $ setValueToLocalStore IS_BANNER_ACTIVE "False"

@@ -495,7 +495,7 @@ accountSetUpScreenFlow = do
   case flow of
     GO_HOME state -> do
       void $ lift $ lift $ toggleLoader false
-      let gender = getGenderValue state.data.gender
+      let gender = state.data.gender
       let (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest
           requiredData = initialData{firstName = (Just state.data.name),gender = gender}
       void $ pure $ setCleverTapUserData "gender" (fromMaybe "" gender)
