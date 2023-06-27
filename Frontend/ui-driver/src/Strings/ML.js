@@ -507,5 +507,6 @@ const mlStrings = {
   SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "ചില സാങ്കേതിക പ്രശ്നം സംഭവിച്ചു, ദയവായി പിന്നീട് വീണ്ടും ശ്രമിക്കുക",
   OTHERS : "മറ്റുള്ളവ",
   ENTER_SECOND_SIM_NUMBER : "രണ്ടാമത്തെ സിം നമ്പർ നൽകുക",
-  ALTERNATE_NUMBER : "ഇതര നമ്പർ"
+  ALTERNATE_NUMBER : "ഇതര നമ്പർ",
+  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "നിങ്ങൾക്ക് സംസാരിക്കാൻ കഴിയുന്ന ഭാഷകൾ തിരഞ്ഞെടുക്കുക"
 }

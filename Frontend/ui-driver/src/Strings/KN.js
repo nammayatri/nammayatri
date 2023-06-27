@@ -500,5 +500,6 @@ const kannadaStrings = {
   SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "ಕೆಲವು ತಾಂತ್ರಿಕ ಸಮಸ್ಯೆ ಸಂಭವಿಸಿದೆ, ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
   OTHERS : "ಇತರರು",
   ENTER_SECOND_SIM_NUMBER : "ಎರಡನೇ ಸಿಮ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ",
-  ALTERNATE_NUMBER : "ಪರ್ಯಾಯ ಸಂಖ್ಯೆ"
+  ALTERNATE_NUMBER : "ಪರ್ಯಾಯ ಸಂಖ್ಯೆ",
+  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "ನೀವು ಮಾತನಾಡಬಹುದಾದ ಭಾಷೆಗಳನ್ನು ಆಯ್ಕೆಮಾಡಿ"
 }

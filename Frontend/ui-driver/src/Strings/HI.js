@@ -504,5 +504,6 @@ const hindiStrings = {
   SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "कुछ तकनीकी समस्या हुई है, कृपया बाद में दोबारा प्रयास करें",
   OTHERS : "अन्य",
   ENTER_SECOND_SIM_NUMBER : "दूसरा सिम नंबर दर्ज करें",
-  ALTERNATE_NUMBER : "वैकल्पिक नंबर"
+  ALTERNATE_NUMBER : "वैकल्पिक नंबर",
+  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "वे भाषाएँ चुनें जिन्हें आप बोल सकते हैं"
 }

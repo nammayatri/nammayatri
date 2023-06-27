@@ -15,7 +15,7 @@
 
 module Screens.Types where
 
-import Common.Types.App (OptionButtonList)
+import Common.Types.App (OptionButtonList,CheckBoxOptions)
 import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
 import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
@@ -258,7 +258,10 @@ type DriverProfileScreenData = {
   alterNumberEditableText :: Boolean,
   driverEditAlternateMobile :: Maybe String,
   otpLimit :: Int,
-  otpBackAlternateNumber :: Maybe String
+  otpBackAlternateNumber :: Maybe String,
+  gender :: Maybe String,
+  driverGender :: Maybe String,
+  languageList :: Array CheckBoxOptions
 }
 
 type VehicleP = {
@@ -283,7 +286,8 @@ type DriverProfileScreenProps = {
   checkAlternateNumber :: Boolean,
   isEditAlternateMobile :: Boolean,
   numberExistError :: Boolean,
-  mNumberEdtFocused :: Boolean
+  mNumberEdtFocused :: Boolean,
+  updateLanguages :: Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 

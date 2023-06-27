@@ -499,5 +499,6 @@ const tamilStrings = {
   SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "சில தொழில்நுட்பச் சிக்கல் ஏற்பட்டுள்ளது, பிறகு முயற்சிக்கவும்",
   OTHERS : "மற்றவைகள்",
   ENTER_SECOND_SIM_NUMBER : "இரண்டாவது சிம் எண்ணை உள்ளிடவும்",
-  ALTERNATE_NUMBER : "மாற்று எண்"
+  ALTERNATE_NUMBER : "மாற்று எண்",
+  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "நீங்கள் பேசக்கூடிய மொழிகளைத் தேர்ந்தெடுக்கவும்"
 }

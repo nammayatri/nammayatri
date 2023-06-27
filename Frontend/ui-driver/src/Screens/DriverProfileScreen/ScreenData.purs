@@ -28,6 +28,7 @@ import Language.Types (STR(..)) as STR
 import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfileScreenType(..))
 import Merchant.Utils (getMerchant, Merchant(..))
 import Prelude (class Eq, unit, (<>), (==), (||), (/=))
+import Common.Types.App (CheckBoxOptions)
 
 initData :: DriverProfileScreenState
 initData = {
@@ -50,7 +51,9 @@ initData = {
     alterNumberEditableText : false,
     driverEditAlternateMobile : Nothing,
     otpLimit : 5,
-    otpBackAlternateNumber : Nothing
+    otpBackAlternateNumber : Nothing,
+    gender : Nothing,
+    languageList : languagesChoices
     },
   props: {
     logoutModalView: false,
@@ -69,7 +72,8 @@ initData = {
     alternateMobileOtp : "",
     isEditAlternateMobile : false,
     numberExistError : false,
-    mNumberEdtFocused : false
+    mNumberEdtFocused : false,
+    updateLanguages : true
    }
 }
 
@@ -101,3 +105,31 @@ optionList dummy =
     ]
 
 
+languagesChoices :: Array CheckBoxOptions
+languagesChoices =
+  [ { value : "EN_US"
+    , text : "English"
+    , subText : "ಆಂಗ್ಲ"
+    , isSelected : false
+    }
+  , { value: "KN_IN"
+    , text: "ಕನ್ನಡ"
+    , subText : "Kannada"
+    , isSelected : false
+    }
+  , { value: "HI_IN"
+    , text: "हिंदी"
+    , subText : "Hindi"
+    , isSelected : false
+    }
+  , { value: "TA_IN"
+    , text: "தமிழ்"
+    , subText : "Tamil"
+    , isSelected : false
+    }
+  , { value: "TE_IN"
+    , text: "తెలుగు"
+    , subText : "Telugu"
+    , isSelected : false
+    }
+  ]
