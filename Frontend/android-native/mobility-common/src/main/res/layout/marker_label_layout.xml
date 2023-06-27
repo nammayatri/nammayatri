@@ -24,7 +24,6 @@
             android:textSize="12dp"
             android:lineHeight="16dp"
             android:textColor="#454545"
-            android:fontFamily="@font/plus_jakartasans_regular"
             android:textFontWeight="400"
             android:gravity="center"
             android:id="@+id/marker_text"/>
