@@ -15,7 +15,7 @@
 
 module Screens.HomeScreen.View where
 
-import Screens.RideBookingFlow.HomeScreen.Config (autoAnimConfig,chooseYourRideConfig, menuButtonConfig, cancelRidePopUpConfig, distanceOusideLimitsConfig, driverInfoCardViewState, emergencyHelpModelViewState, estimateChangedPopupConfig, fareBreakUpConfig, logOutPopUpModelConfig, previousRideRatingViewState, primaryButtonConfirmPickupConfig, primaryButtonRequestRideConfig, quoteListModelViewState, rateCardConfig, rateRideButtonConfig, ratingCardViewState, searchLocationModelViewState, shareAppConfig, shortDistanceConfig, skipButtonConfig, sourceUnserviceableConfig, whereToButtonConfig, chatViewConfig, metersToKm, callSupportConfig,genderBannerConfig,cancelAppConfig, specialLocationIcons, specialLocationConfig)
+import Screens.RideBookingFlow.HomeScreen.Config (autoAnimConfig,chooseYourRideConfig, menuButtonConfig, cancelRidePopUpConfig, distanceOusideLimitsConfig, driverInfoCardViewState, emergencyHelpModelViewState, estimateChangedPopupConfig, fareBreakUpConfig, logOutPopUpModelConfig, previousRideRatingViewState, primaryButtonConfirmPickupConfig, primaryButtonRequestRideConfig, quoteListModelViewState, rateCardConfig, rateRideButtonConfig, ratingCardViewState, searchLocationModelViewState, shareAppConfig, shortDistanceConfig, skipButtonConfig, sourceUnserviceableConfig, whereToButtonConfig, chatViewConfig, metersToKm, callSupportConfig,genderBannerConfig,cancelAppConfig, specialLocationIcons, specialLocationConfig, requestInfoCardConfig)
 import Accessor (_lat, _lon, _selectedQuotes, _fareProductType)
 import Animation (fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromTopWithAlpha, fadeIn)
 import Animation.Config (Direction(..), translateFullYAnimWithDurationConfig, translateYAnimHomeConfig)
@@ -657,7 +657,7 @@ requestInfoCardView push state =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         ]
-        [ RequestInfoCard.view (push <<< RequestInfoCardAction)  ]
+        [ RequestInfoCard.view (push <<< RequestInfoCardAction) (requestInfoCardConfig FunctionCall) ]
 
 buttonLayout :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 buttonLayout state push =

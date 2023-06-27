@@ -896,6 +896,7 @@ newtype DriverProfileStatsResp = DriverProfileStatsResp
     {
       totalRidesOfDay :: Int
     , totalEarningsOfDay :: Int
+    , bonusEarning :: Int
     }
 
 instance makeGetDriverProfileStatsReq :: RestEndpoint DriverProfileStatsReq DriverProfileStatsResp where

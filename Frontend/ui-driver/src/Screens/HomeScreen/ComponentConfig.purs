@@ -24,6 +24,7 @@ import Components.PopUpModal as PopUpModal
 import Components.RideActionModal as RideActionModal
 import Components.StatsModel as StatsModel
 import Components.ChatView as ChatView
+import Components.RequestInfoCard as RequestInfoCard
 import Data.Array as DA
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as DS
@@ -38,6 +39,8 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge as JB
+import Common.Types.App (LazyCheck(..))
+
 
 
 --------------------------------- rideActionModalConfig -------------------------------------
@@ -120,9 +123,11 @@ statsModelConfig state =
     config' = config
       { countTextConfig { text = getString TRIP_COUNT }
       , earningsTextConfig { text = getString TODAYS_EARNINGS }
-      , textConfig {  text = "" }
+      , bonusTextConfig { text = getString BONUS_EARNED }
+      , textConfig { text = "" }
       , totalRidesOfDay = state.data.totalRidesOfDay
       , totalEarningsOfDay = state.data.totalEarningsOfDay
+      , bonusEarned = state.data.bonusEarned
       }
   in config'
 
@@ -329,3 +334,28 @@ specialLocationConfig srcIcon destIcon = {
     sourceSpecialTagIcon : srcIcon
   , destSpecialTagIcon : destIcon
 }
+
+requestInfoCardConfig :: LazyCheck -> RequestInfoCard.Config
+requestInfoCardConfig _ = let
+  config = RequestInfoCard.config
+  requestInfoCardConfig' = config{
+    title {
+      text = getString WHAT_IS_NAMMA_YATRI_BONUS
+    }
+  , primaryText {
+      text = getString BONUS_PRIMARY_TEXT
+    }
+  , secondaryText {
+      text = getString BONUS_SECONDARY_TEXT,
+      visibility = VISIBLE
+    }
+  , imageConfig {
+      imageUrl = "ny_ic_bonus,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_bonus.png",
+      height = V 122,
+      width = V 116
+    }
+  , buttonConfig {
+      text = getString GOT_IT
+    }
+  }
+  in requestInfoCardConfig'

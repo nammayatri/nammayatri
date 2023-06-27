@@ -53,7 +53,8 @@ const jatriSathiConfigs = {
     DOCUMENT_LINK : "https://docs.google.com/document/d/19pQUgTWXBqcM7bjy4SU1-z33r-iXsdPMfZggBTXbdR4",
     APP_LINK : "",
     PRIVACY_POLICY_LINK : "https://docs.google.com/document/d/1-bcjLOZ_gR0Rda2BNmkKnqVds8Pm23v1e7JbSDdM70E",
-    SPECIAL_ZONE_OTP_VIEW : "true"
+    SPECIAL_ZONE_OTP_VIEW : "true",
+    BONUS_EARNED : "false"
 }
 
 const bengaliStrings = {
