@@ -1193,7 +1193,8 @@ getDriverPayments (_, merchantId_) mbFrom mbTo mbLimit mbOffset = do
       to = fromMaybe now mbTo
   let windowStartTime = UTCTime from 0
       windowEndTime = addUTCTime (86399 + transporterConfig.driverPaymentCycleDuration) (UTCTime to 0)
-  driverFees <- runInReplica $ QDF.findWindowsWithStatus windowStartTime windowEndTime DDF.CLEARED limit offset
+  -- driverFees <- runInReplica $ QDF.findWindowsWithStatus windowStartTime windowEndTime DDF.CLEARED limit offset
+  driverFees <- QDF.findWindowsWithStatus windowStartTime windowEndTime DDF.CLEARED limit offset
   mapM buildPaymentResp driverFees
   where
     maxLimit = 20

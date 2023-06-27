@@ -50,10 +50,11 @@ updateEnabledState driverId isEnabled = do
   clearDriverInfoCache driverId
   Queries.updateEnabledState driverId isEnabled
 
-updateAadhaarVerifiedState :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Bool -> m ()
+updateAadhaarVerifiedState :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> m ()
 updateAadhaarVerifiedState driverId isVerified = do
   clearDriverInfoCache driverId
-  Esq.runNoTransaction $ Queries.updateAadhaarVerifiedState driverId isVerified
+  -- Esq.runNoTransaction $ Queries.updateAadhaarVerifiedState driverId isVerified
+  void $ Queries.updateAadhaarVerifiedState driverId isVerified
 
 updateEnabledVerifiedState :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> Bool -> m (MeshResult ())
 updateEnabledVerifiedState driverId isEnabled isVerified = do
@@ -75,16 +76,17 @@ updateOnRide driverId onRide = do
   clearDriverInfoCache driverId
   Queries.updateOnRide driverId onRide
 
-updatePendingPayment :: (CacheFlow m r, Esq.EsqDBFlow m r) => Bool -> Id Person.Driver -> m ()
+updatePendingPayment :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Bool -> Id Person.Driver -> m ()
 updatePendingPayment isPending driverId = do
   clearDriverInfoCache driverId
-  Esq.runTransaction $ Queries.updatePendingPayment isPending driverId
+  -- Esq.runTransaction $ Queries.updatePendingPayment isPending driverId
+  void $ Queries.updatePendingPayment isPending driverId
 
-updateSubscription :: (CacheFlow m r, Esq.EsqDBFlow m r) => Bool -> Id Person.Driver -> m ()
+updateSubscription :: (CacheFlow m r, L.MonadFlow m, MonadTime m) => Bool -> Id Person.Driver -> m ()
 updateSubscription isSubscribed driverId = do
   clearDriverInfoCache driverId
   -- Esq.runTransaction $ Queries.updateSubscription isSubscribed driverId
-  Queries.updateSubscription isSubscribed driverId
+  void $ Queries.updateSubscription isSubscribed driverId
 
 -- this function created because all queries wishfully should be in one transaction
 updateNotOnRideMultiple :: (L.MonadFlow m, MonadTime m) => [Id Person.Driver] -> m (MeshResult ())

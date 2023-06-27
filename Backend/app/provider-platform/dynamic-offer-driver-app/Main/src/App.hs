@@ -16,6 +16,8 @@ module App where
 
 import AWS.S3
 import qualified App.Server as App
+import qualified Data.HashMap.Strict as HashMap
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Debug.Trace as T
 import Environment
@@ -36,6 +38,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Dhall
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.Servant.SignatureAuth (addAuthManagersToFlowRt, prepareAuthManagers)
+import Network.HTTP.Client as Http
 import Network.Wai.Handler.Warp
   ( defaultSettings,
     runSettings,
@@ -90,9 +93,15 @@ runDynamicOfferDriverApp' appCfg = do
               [ Just (Nothing, prepareAuthManagers flowRt appEnv allSubscriberIds),
                 (Nothing,) <$> mkS3MbManager flowRt appEnv appCfg.s3Config,
                 Just (Just 20000, prepareIdfyHttpManager 20000),
-                Just (Just 150000, prepareGridlineHttpManager 150000)
+                Just (Just 150000, convertToHashMap (prepareGridlineHttpManager 150000))
               ]
 
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         pure flowRt'
     runSettings settings $ App.run (App.EnvR flowRt' appEnv)
+
+convertToHashMap :: Map.Map String Http.ManagerSettings -> HashMap.HashMap Text Http.ManagerSettings
+convertToHashMap = HashMap.fromList . map convert . Map.toList
+  where
+    convert (k, v) = (toText' k, v)
+    toText' = T.pack

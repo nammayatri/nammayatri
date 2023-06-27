@@ -120,7 +120,8 @@ calcDriverFeeAttr :: (MonadFlow m, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) => D
 calcDriverFeeAttr driverFeeStatus startTime endTime = do
   driverFees <- findFeesInRangeWithStatus startTime endTime driverFeeStatus
   let relevantDriverIds = (.driverId) <$> driverFees
-  relevantDrivers <- mapM (Esq.runInReplica . QPerson.findById) (cast <$> relevantDriverIds)
+  -- relevantDrivers <- mapM (Esq.runInReplica . QPerson.findById) (cast <$> relevantDriverIds)
+  relevantDrivers <- mapM QPerson.findById (cast <$> relevantDriverIds)
   return $ zip driverFees relevantDrivers
 
 getRescheduledTime :: (MonadFlow m) => TransporterConfig -> m UTCTime

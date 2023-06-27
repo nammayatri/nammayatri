@@ -431,6 +431,93 @@ updateDowngradingOptions (Id driverId) canDowngradeToSedan canDowngradeToHatchba
         [Se.Is BeamDI.driverId (Se.Eq driverId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
+-- updateSubscription :: Bool -> Id Person.Driver -> SqlDB ()
+-- updateSubscription isSubscribed driverId = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ DriverInformationSubscribed =. val isSubscribed,
+--         DriverInformationUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
+
+updateSubscription :: (L.MonadFlow m, MonadTime m) => Bool -> Id Person.Driver -> m (MeshResult ())
+updateSubscription isSubscribed (Id driverId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDI.DriverInformationT
+  let updatedMeshConfig = setMeshConfig modelName
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        updatedMeshConfig
+        [ Se.Set BeamDI.subscribed isSubscribed,
+          Se.Set BeamDI.updatedAt now
+        ]
+        [Se.Is BeamDI.driverId (Se.Eq driverId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
+-- updateAadhaarVerifiedState :: Id Person.Driver -> Bool -> SqlDB ()
+-- updateAadhaarVerifiedState personId isVerified = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ DriverInformationAadhaarVerified =. val isVerified,
+--         DriverInformationUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast personId)
+
+updateAadhaarVerifiedState :: (L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> m (MeshResult ())
+updateAadhaarVerifiedState (Id personId) isVerified = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDI.DriverInformationT
+  let updatedMeshConfig = setMeshConfig modelName
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        updatedMeshConfig
+        [ Se.Set BeamDI.aadhaarVerified isVerified,
+          Se.Set BeamDI.updatedAt now
+        ]
+        [Se.Is BeamDI.driverId (Se.Eq personId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
+-- updatePendingPayment ::
+--   Bool ->
+--   Id Person.Driver ->
+--   SqlDB ()
+-- updatePendingPayment isPending driverId = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ DriverInformationPaymentPending =. val isPending,
+--         DriverInformationUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
+
+updatePendingPayment :: (L.MonadFlow m, MonadTime m) => Bool -> Id Person.Driver -> m (MeshResult ())
+updatePendingPayment isPending (Id driverId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDI.DriverInformationT
+  let updatedMeshConfig = setMeshConfig modelName
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        updatedMeshConfig
+        [ Se.Set BeamDI.paymentPending isPending,
+          Se.Set BeamDI.updatedAt now
+        ]
+        [Se.Is BeamDI.driverId (Se.Eq driverId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 transformBeamDriverInformationToDomain :: BeamDI.DriverInformation -> DriverInformation
 transformBeamDriverInformationToDomain BeamDI.DriverInformationT {..} = do
   DriverInformation
@@ -480,39 +567,3 @@ transformDomainDriverInformationToBeam DriverInformation {..} =
       BeamDI.createdAt = createdAt,
       BeamDI.updatedAt = updatedAt
     }
-
-updateSubscription :: Bool -> Id Person.Driver -> SqlDB ()
-updateSubscription isSubscribed driverId = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ DriverInformationSubscribed =. val isSubscribed,
-        DriverInformationUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
-
-updateAadhaarVerifiedState :: Id Person.Driver -> Bool -> SqlDB ()
-updateAadhaarVerifiedState personId isVerified = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ DriverInformationAadhaarVerified =. val isVerified,
-        DriverInformationUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast personId)
-
-updatePendingPayment ::
-  Bool ->
-  Id Person.Driver ->
-  SqlDB ()
-updatePendingPayment isPending driverId = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ DriverInformationPaymentPending =. val isPending,
-        DriverInformationUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)

@@ -87,7 +87,8 @@ getDailyDriverLeaderBoard (personId, merchantId) day = do
       (zip driversWithScoresMap [1, 2 ..])
   if not isCurrentDriverInTop && dateDiff == 0
     then do
-      person <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+      -- person <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+      person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
       mbCurrPersonRank <- Redis.withNonCriticalRedis $ Redis.zRevRank (RideEndInt.makeDailyDriverLeaderBoardKey merchantId day) personId.getId
       mbCurrDriverZscore <- Redis.withNonCriticalRedis $ Redis.zScore (RideEndInt.makeDailyDriverLeaderBoardKey merchantId day) personId.getId
       let currentDriverScore = fromMaybe 0 mbCurrDriverZscore
@@ -144,7 +145,8 @@ getWeeklyDriverLeaderBoard (personId, merchantId) fromDate toDate = do
       (zip driversWithScoresMap [1, 2 ..])
   if not isCurrentDriverInTop && weekDiff == 0
     then do
-      person <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+      -- person <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+      person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
       mbCurrPersonRank <- Redis.withNonCriticalRedis $ Redis.zRevRank (RideEndInt.makeWeeklyDriverLeaderBoardKey merchantId fromDate toDate) personId.getId
       mbCurrDriverZscore <- Redis.withNonCriticalRedis $ Redis.zScore (RideEndInt.makeWeeklyDriverLeaderBoardKey merchantId fromDate toDate) personId.getId
       let currDriverZscore = fromMaybe 0 mbCurrDriverZscore
