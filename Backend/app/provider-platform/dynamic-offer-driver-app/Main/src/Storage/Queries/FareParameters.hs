@@ -55,14 +55,28 @@ findById (Id fareParametersId) = do
     -- either (pure Nothing) (transformBeamFareParametersToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamFP.id $ Se.Eq fareParametersId]
     Nothing -> pure Nothing
 
--- TODO @Vijay Gupta, Change the following query. Done
--- create :: FareParameters -> SqlDB ()
--- create fareParams =
---   withFullEntity fareParams $ \(fareParams', fareParamsDetais) -> do
---     Esq.create' fareParams'
---     case fareParamsDetais of
---       ProgressiveDetailsT fppdt -> Esq.create' fppdt
---       SlabDetailsT fpsdt -> Esq.create' fpsdt
+findAllIn :: L.MonadFlow m => [Id FareParameters] -> m [FareParameters]
+findAllIn fareParametersIds = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamFP.FareParametersT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbCOnf' -> do
+      fp <- KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamFP.id $ Se.In $ getId <$> fareParametersIds]
+      case fp of
+        Right fp' -> catMaybes <$> traverse transformBeamFareParametersToDomain fp'
+        _ -> pure []
+    Nothing -> pure []
+
+-- findAllIn :: Transactionable m => [Id FareParameters] -> m [FareParameters]
+-- findAllIn fareParamIds =
+--   buildDType $ do
+--     res <- Esq.findAll' $ do
+--       fareParamFile <- from $ table @FareParametersT
+--       where_ $
+--         fareParamFile ^. FareParametersId `in_` valList (map getId fareParamIds)
+--       pure fareParamFile
+--     catMaybes <$> mapM buildFullFareParameters res
 
 transformBeamFareParametersToDomain :: L.MonadFlow m => BeamFP.FareParameters -> m (Maybe FareParameters)
 transformBeamFareParametersToDomain BeamFP.FareParametersT {..} = do
@@ -104,13 +118,3 @@ transformDomainFareParametersToBeam FareParameters {..} =
       BeamFP.nightShiftCharge = nightShiftCharge,
       BeamFP.fareParametersType = getFareParametersType $ FareParameters {..}
     }
-
-findAllIn :: Transactionable m => [Id FareParameters] -> m [FareParameters]
-findAllIn fareParamIds =
-  buildDType $ do
-    res <- Esq.findAll' $ do
-      fareParamFile <- from $ table @FareParametersT
-      where_ $
-        fareParamFile ^. FareParametersId `in_` valList (map getId fareParamIds)
-      pure fareParamFile
-    catMaybes <$> mapM buildFullFareParameters res

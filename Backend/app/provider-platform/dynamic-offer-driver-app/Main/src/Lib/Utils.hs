@@ -18,11 +18,13 @@ import Database.Beam.Postgres.Syntax
 import qualified Database.Beam.Query as BQ
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
+import Domain.Types.DriverFee
 import qualified Domain.Types.FarePolicy as DomainFP
 import qualified Domain.Types.FareProduct as FareProductD
 import Domain.Types.Vehicle.Variant (Variant (..))
 import EulerHS.KVConnector.Types (MeshConfig (..))
 import qualified EulerHS.Language as L
+import Kernel.External.AadhaarVerification.Types
 import Kernel.External.Encryption
 import Kernel.External.Types
 import Kernel.Prelude
@@ -274,6 +276,16 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainFP.WaitingChargeInf
 
 instance FromBackendRow Postgres DomainFP.WaitingChargeInfo
 
+instance FromField AadhaarVerificationService where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be AadhaarVerificationService where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be AadhaarVerificationService
+
+instance FromBackendRow Postgres AadhaarVerificationService
+
 fromFieldJSON ::
   (Typeable a, Read a, FromJSON a) =>
   DPSF.Field ->
@@ -306,6 +318,10 @@ instance FromField Language where
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Language
 
 deriving stock instance Ord FareProductD.Area
+
+deriving stock instance Read PlatformFee
+
+deriving stock instance Ord PlatformFee
 
 fromFieldEnum ::
   (Typeable a, Read a) =>

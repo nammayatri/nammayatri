@@ -33,8 +33,9 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.DriverRCAssociation as BeamDRCA
 -- import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as BeamVRCT
 -- import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as QVRC
-import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
+
 import Storage.Tabular.DriverOnboarding.DriverRCAssociation
+import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
 
 -- create :: DriverRCAssociation -> SqlDB ()
 -- create = Esq.create

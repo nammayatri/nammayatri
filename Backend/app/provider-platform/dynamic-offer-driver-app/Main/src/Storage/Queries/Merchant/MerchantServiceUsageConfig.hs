@@ -112,6 +112,7 @@ transformBeamMerchantServiceUsageConfigToDomain BeamMSUC.MerchantServiceUsageCon
       smsProvidersPriorityList = smsProvidersPriorityList,
       whatsappProvidersPriorityList = whatsappProvidersPriorityList,
       verificationService = verificationService,
+      aadhaarVerificationService = aadhaarVerificationService,
       updatedAt = updatedAt,
       createdAt = createdAt
     }
@@ -134,6 +135,7 @@ transformDomainMerchantServiceUsageConfigToBeam MerchantServiceUsageConfig {..} 
       BeamMSUC.smsProvidersPriorityList = smsProvidersPriorityList,
       BeamMSUC.whatsappProvidersPriorityList = whatsappProvidersPriorityList,
       BeamMSUC.verificationService = verificationService,
+      BeamMSUC.aadhaarVerificationService = aadhaarVerificationService,
       BeamMSUC.updatedAt = updatedAt,
       BeamMSUC.createdAt = createdAt
     }

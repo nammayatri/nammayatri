@@ -83,7 +83,8 @@ updatePendingPayment isPending driverId = do
 updateSubscription :: (CacheFlow m r, Esq.EsqDBFlow m r) => Bool -> Id Person.Driver -> m ()
 updateSubscription isSubscribed driverId = do
   clearDriverInfoCache driverId
-  Esq.runTransaction $ Queries.updateSubscription isSubscribed driverId
+  -- Esq.runTransaction $ Queries.updateSubscription isSubscribed driverId
+  Queries.updateSubscription isSubscribed driverId
 
 -- this function created because all queries wishfully should be in one transaction
 updateNotOnRideMultiple :: (L.MonadFlow m, MonadTime m) => [Id Person.Driver] -> m (MeshResult ())

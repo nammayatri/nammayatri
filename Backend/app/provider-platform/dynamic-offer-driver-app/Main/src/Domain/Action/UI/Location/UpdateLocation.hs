@@ -163,7 +163,8 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
         Nothing -> pure ()
         Just lpo -> do
           updateSubscription False (cast driver.id)
-          Esq.runNoTransaction $ do QDFS.updateStatus (cast driver.id) $ DDFS.PAYMENT_OVERDUE lpo.id lpo.govtCharges $ PlatformFee lpo.platformFee.fee lpo.platformFee.cgst lpo.platformFee.sgst
+          -- Esq.runNoTransaction $ do QDFS.updateStatus (cast driver.id) $ DDFS.PAYMENT_OVERDUE lpo.id lpo.govtCharges $ PlatformFee lpo.platformFee.fee lpo.platformFee.cgst lpo.platformFee.sgst
+          QDFS.updateStatus (cast driver.id) $ DDFS.PAYMENT_OVERDUE lpo.id lpo.govtCharges $ PlatformFee lpo.platformFee.fee lpo.platformFee.cgst lpo.platformFee.sgst
           throwError DriverUnsubscribed
     driverInfo <- DInfo.findById (cast driver.id) >>= fromMaybeM (PersonNotFound driver.id.getId)
     logInfo $ "got location updates: " <> getId driver.id <> " " <> encodeToText waypoints

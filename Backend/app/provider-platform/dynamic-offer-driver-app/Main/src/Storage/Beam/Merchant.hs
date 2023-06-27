@@ -90,6 +90,8 @@ data MerchantT f = MerchantT
     gstin :: B.C f (Maybe Text),
     fromTime :: B.C f (Maybe Time.UTCTime),
     toTime :: B.C f (Maybe Time.UTCTime),
+    geoHashPrecisionValue :: B.C f Int,
+    aadhaarVerificationRequired :: B.C f Bool,
     headCount :: B.C f (Maybe Int),
     status :: B.C f Domain.Status,
     city :: B.C f Text,
@@ -127,8 +129,6 @@ deriving stock instance Show Merchant
 
 deriving stock instance Ord Domain.Status
 
-deriving stock instance Read GeoRestriction
-
 deriving stock instance Ord GeoRestriction
 
 deriving stock instance Eq GeoRestriction
@@ -148,6 +148,8 @@ merchantTMod =
       fromTime = B.fieldNamed "from_time",
       toTime = B.fieldNamed "to_time",
       headCount = B.fieldNamed "head_count",
+      geoHashPrecisionValue = B.fieldNamed "geo_hash_precision_value",
+      aadhaarVerificationRequired = B.fieldNamed "aadhaar_verification_required",
       status = B.fieldNamed "status",
       city = B.fieldNamed "city",
       verified = B.fieldNamed "verified",
@@ -186,6 +188,8 @@ defaultMerchant =
       fromTime = Nothing,
       toTime = Nothing,
       headCount = Nothing,
+      geoHashPrecisionValue = 0,
+      aadhaarVerificationRequired = False,
       status = "",
       city = "",
       verified = False,

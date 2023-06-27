@@ -23,6 +23,7 @@ import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.DriverFee
 import Domain.Types.Merchant.TransporterConfig (TransporterConfig)
 import Domain.Types.Person
+import qualified EulerHS.Language as L
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -74,7 +75,8 @@ sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
   case listToMaybe feeZipDriver of
     Nothing -> return Complete
     Just (driverFee, _) -> do
-      driver <- Esq.runInReplica $ QPerson.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
+      -- driver <- Esq.runInReplica $ QPerson.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
+      driver <- QPerson.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
       transporterConfig <- SCT.findByMerchantId driver.merchantId >>= fromMaybeM (TransporterConfigNotFound driver.merchantId.getId)
       ReSchedule <$> getRescheduledTime transporterConfig
 
@@ -84,7 +86,8 @@ unsubscribeDriverForPaymentOverdue ::
     CoreMetrics m,
     HasCacheConfig r,
     EsqDBFlow m r,
-    Esq.EsqDBReplicaFlow m r
+    Esq.EsqDBReplicaFlow m r,
+    L.MonadFlow m
   ) =>
   Job 'UnsubscribeDriverForPaymentOverdue ->
   m ExecutionResult
@@ -106,10 +109,10 @@ unsubscribeDriverForPaymentOverdue Job {id, jobInfo} = withLogTag ("JobId-" <> i
             paymentMessage = "Sorry, you are blocked from taking rides as payment of " <> show pendingAmount.getMoney <> " is pending for " <> show driverFee.numRides <> " ride(s) with a deadline of " <> show driverFee.payBy <> ". Please pay the balance amount to get unblocked."
         (Notify.sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.PAYMENT_OVERDUE paymentTitle paymentMessage driver.id driver.deviceToken) `C.catchAll` \e -> C.mask_ $ logError $ "FCM for removing subsciption of driver id " <> driver.id.getId <> " failed. Error: " <> show e
   forM_ feeZipDriver $ \(driverFee, mbPerson) -> do
-    Esq.runTransaction $ do
-      updateStatus PAYMENT_OVERDUE driverFee.id now
-      whenJust mbPerson $ \person -> do
-        QDFS.updateStatus (cast person.id) $ DDFS.PAYMENT_OVERDUE driverFee.id driverFee.govtCharges $ PlatformFee driverFee.platformFee.fee driverFee.platformFee.cgst driverFee.platformFee.sgst
+    -- Esq.runTransaction $ do
+    updateStatus PAYMENT_OVERDUE driverFee.id now
+    whenJust mbPerson $ \person -> do
+      QDFS.updateStatus (cast person.id) $ DDFS.PAYMENT_OVERDUE driverFee.id driverFee.govtCharges $ PlatformFee driverFee.platformFee.fee driverFee.platformFee.cgst driverFee.platformFee.sgst
     whenJust mbPerson $ \person -> updateSubscription False (cast person.id) -- fix later: take tabular updates inside transaction
   return Complete
 

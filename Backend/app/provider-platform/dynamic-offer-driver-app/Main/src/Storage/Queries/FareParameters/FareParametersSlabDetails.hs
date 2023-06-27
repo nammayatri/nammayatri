@@ -38,7 +38,9 @@ transformBeamFareParametersSlabDetailsToDomain :: FareParametersSlabDetails -> B
 transformBeamFareParametersSlabDetailsToDomain FareParametersSlabDetailsT {..} = do
   ( KTI.Id fareParametersId,
     Domain.FParamsSlabDetails
-      { platformFee = platformFee
+      { platformFee = platformFee,
+        sgst = sgst,
+        cgst = cgst
       }
     )
 
@@ -46,5 +48,7 @@ transformDomainFareParametersSlabDetailsToBeam :: BeamFPSD.FullFareParametersSla
 transformDomainFareParametersSlabDetailsToBeam (KTI.Id fareParametersId, Domain.FParamsSlabDetails {..}) =
   FareParametersSlabDetailsT
     { fareParametersId = fareParametersId,
-      platformFee = platformFee
+      platformFee = platformFee,
+      sgst = sgst,
+      cgst = cgst
     }

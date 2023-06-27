@@ -151,8 +151,8 @@ findAllRidesBookingsByRideId (Id merchantId) rideIds = do
       let bookings' = filter (\x -> x.id == ride'.bookingId) bookings
        in acc <> ((\x -> (ride', x)) <$> bookings')
 
-findAllByDriverId :: (L.MonadFlow m, Log m) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe Ride.RideStatus -> m [(Ride, Booking)]
-findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus = do
+findAllByDriverId :: (L.MonadFlow m, Log m) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe Ride.RideStatus -> Maybe Day -> m [(Ride, Booking)]
+findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
   let updatedMeshConfig = setMeshConfig modelName
@@ -173,6 +173,7 @@ findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus = do
                       else
                         []
                           <> ([Se.Is BeamR.status $ Se.Eq (fromJust mbRideStatus) | isJust mbRideStatus])
+                          <> ([Se.And [Se.Is BeamR.tripEndTime $ Se.GreaterThanOrEq (Just (minDayTime (fromJust mbDay))), Se.Is BeamR.tripEndTime $ Se.LessThanOrEq (Just (maxDayTime (fromJust mbDay)))] | isJust mbDay])
                 )
             ]
             (Se.Desc BeamR.createdAt)
@@ -194,6 +195,8 @@ findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus = do
     getRideWithBooking bookings acc ride =
       let bookings' = filter (\b -> b.id == ride.bookingId) bookings
        in acc <> ((\b -> (ride, b)) <$> bookings')
+    minDayTime date = UTCTime (addDays (-1) date) 66600
+    maxDayTime date = UTCTime date 66600
 
 -- findAllByDriverId ::
 --   Transactionable m =>
@@ -429,7 +432,6 @@ getRidesForDate driverId date diffTime = do
         Left _ -> pure []
         Right rides -> mapM transformBeamRideToDomain rides
     Nothing -> pure []
-
 
 updateArrival :: (L.MonadFlow m, MonadTime m) => Id Ride -> m (MeshResult ())
 updateArrival rideId = do

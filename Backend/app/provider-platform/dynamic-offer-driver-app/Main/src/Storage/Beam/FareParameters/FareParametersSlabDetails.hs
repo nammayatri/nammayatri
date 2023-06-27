@@ -47,7 +47,9 @@ instance IsString Money where
 
 data FareParametersSlabDetailsT f = FareParametersSlabDetailsT
   { fareParametersId :: B.C f Text,
-    platformFee :: B.C f (Maybe Money)
+    platformFee :: B.C f (Maybe Money),
+    sgst :: B.C f (Maybe HighPrecMoney),
+    cgst :: B.C f (Maybe HighPrecMoney)
   }
   deriving (Generic, B.Beamable)
 
@@ -78,7 +80,9 @@ fareParametersSlabDetailsTMod :: FareParametersSlabDetailsT (B.FieldModification
 fareParametersSlabDetailsTMod =
   B.tableModification
     { fareParametersId = B.fieldNamed "fare_parameters_id",
-      platformFee = B.fieldNamed "platform_fee"
+      platformFee = B.fieldNamed "platform_fee",
+      sgst = B.fieldNamed "sgst",
+      cgst = B.fieldNamed "cgst"
     }
 
 instance Serialize FareParametersSlabDetails where

@@ -34,6 +34,7 @@ import Database.PostgreSQL.Simple.FromField
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import Kernel.External.AadhaarVerification.Types
 import Kernel.External.Call (CallService)
 import Kernel.External.Maps.Types
 import Kernel.External.SMS.Types
@@ -157,6 +158,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     smsProvidersPriorityList :: B.C f [SmsService],
     whatsappProvidersPriorityList :: B.C f [WhatsappService],
     verificationService :: B.C f VerificationService,
+    aadhaarVerificationService :: B.C f AadhaarVerificationService,
     updatedAt :: B.C f Time.UTCTime,
     createdAt :: B.C f Time.UTCTime
   }

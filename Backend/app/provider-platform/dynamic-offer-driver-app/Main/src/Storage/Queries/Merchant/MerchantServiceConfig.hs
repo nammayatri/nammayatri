@@ -29,9 +29,11 @@ import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 -- import qualified EulerHS.Prelude as EHP
 import qualified Kernel.Beam.Types as KBT
+import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
 import qualified Kernel.External.Call as Call
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
+import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.SMS.Interface as Sms
 import qualified Kernel.External.Verification.Interface as Verification
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
@@ -136,6 +138,8 @@ transformBeamMerchantServiceConfigToDomain BeamMSC.MerchantServiceConfigT {..} =
     Domain.WhatsappService Whatsapp.GupShup -> Domain.WhatsappServiceConfig . Whatsapp.GupShupConfig <$> valueToMaybe configJSON
     Domain.VerificationService Verification.Idfy -> Domain.VerificationServiceConfig . Verification.IdfyConfig <$> valueToMaybe configJSON
     Domain.CallService Call.Exotel -> Domain.CallServiceConfig . Call.ExotelConfig <$> valueToMaybe configJSON
+    Domain.AadhaarVerificationService AadhaarVerification.Gridline -> Domain.AadhaarVerificationServiceConfig . AadhaarVerification.GridlineConfig <$> valueToMaybe configJSON
+    Domain.PaymentService Payment.Juspay -> Domain.PaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
   pure
     MerchantServiceConfig
       { merchantId = Id merchantId,
@@ -174,3 +178,7 @@ transformDomainMerchantServiceConfigToBeam MerchantServiceConfig {..} =
         Verification.IdfyConfig cfg -> (Domain.VerificationService Verification.Idfy, toJSON cfg)
       Domain.CallServiceConfig callCfg -> case callCfg of
         Call.ExotelConfig cfg -> (Domain.CallService Call.Exotel, toJSON cfg)
+      Domain.AadhaarVerificationServiceConfig aadhaarVerificationCfg -> case aadhaarVerificationCfg of
+        AadhaarVerification.GridlineConfig cfg -> (Domain.AadhaarVerificationService AadhaarVerification.Gridline, toJSON cfg)
+      Domain.PaymentServiceConfig paymentCfg -> case paymentCfg of
+        Payment.JuspayConfig cfg -> (Domain.PaymentService Payment.Juspay, toJSON cfg)

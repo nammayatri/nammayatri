@@ -108,20 +108,21 @@ updateOnRide driverId onRide merchantId = do
         mDriverLocatation
   CDI.updateOnRide driverId onRide
 
-updateOnRideCache :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> m ()
+updateOnRideCache :: (CacheFlow m r, L.MonadFlow m) => Id Person.Driver -> m ()
 updateOnRideCache driverId = do
   driverLocation <- DLQueries.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   cacheDriverLocation driverLocation
   CDI.clearDriverInfoCache driverId
 
-updateOnRideCacheForCancelledOrEndRide :: (CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) => Id Person.Driver -> Id Merchant -> m ()
+updateOnRideCacheForCancelledOrEndRide :: (CacheFlow m r, L.MonadFlow m) => Id Person.Driver -> Id Merchant -> m ()
 updateOnRideCacheForCancelledOrEndRide driverId merchantId = do
   mbDriverLocation <- findById merchantId (cast driverId)
   maybe
     (pure ())
     ( \loc -> do
         let latLong = LatLong loc.lat loc.lon
-        void $ Esq.runTransaction $ DLQueries.upsertGpsCoord (cast driverId) latLong loc.coordinatesCalculatedAt merchantId
+        -- void $ Esq.runTransaction $ DLQueries.upsertGpsCoord (cast driverId) latLong loc.coordinatesCalculatedAt merchantId
+        void $ DLQueries.upsertGpsCoord (cast driverId) latLong loc.coordinatesCalculatedAt merchantId
     )
     mbDriverLocation
   CDI.clearDriverInfoCache driverId

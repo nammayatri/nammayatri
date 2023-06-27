@@ -112,20 +112,20 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId newFare
   nowUtc <- getCurrentTime
   maxShards <- asks (.maxShards)
   let rideDate = getCurrentDate nowUtc
-  Esq.runTransaction $ do
-    whenJust mbRiderDetails $ \riderDetails ->
-      when shouldUpdateRideComplete (QRD.updateHasTakenValidRide riderDetails.id)
-    whenJust mbFareParams QFare.create
-    QRide.updateAll ride.id ride
-    QRide.updateStatus ride.id Ride.COMPLETED
-    QRB.updateStatus bookingId SRB.COMPLETED
-    DriverStats.updateIdleTime driverId
-    DriverStats.incrementTotalRidesAndTotalDist (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
-    QDI.updateOnRide driverId False
-    if driverInfo.active
-      then QDFS.updateStatus ride.driverId DDFS.ACTIVE
-      else QDFS.updateStatus ride.driverId DDFS.IDLE
-  DLoc.updateOnRide driverId False merchantId
+  -- Esq.runTransaction $ do
+  whenJust mbRiderDetails $ \riderDetails ->
+    when shouldUpdateRideComplete (void $ QRD.updateHasTakenValidRide riderDetails.id)
+  whenJust mbFareParams QFare.create
+  _ <- QRide.updateAll ride.id ride
+  _ <- QRide.updateStatus ride.id Ride.COMPLETED
+  _ <- QRB.updateStatus bookingId SRB.COMPLETED
+  DriverStats.updateIdleTime driverId
+  _ <- DriverStats.incrementTotalRidesAndTotalDist (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
+  _ <- QDI.updateOnRide driverId False
+  if driverInfo.active
+    then QDFS.updateStatus ride.driverId DDFS.ACTIVE
+    else QDFS.updateStatus ride.driverId DDFS.IDLE
+  _ <- DLoc.updateOnRide driverId False merchantId
   when (thresholdConfig.subscription) $ createDriverFee merchantId driverId ride.fare newFareParams nowUtc maxShards
   fork "Updating ZScore for driver" . Hedis.withNonCriticalRedis $ do
     driverZscore <- Hedis.zScore (makeDailyDriverLeaderBoardKey merchantId rideDate) $ ride.driverId.getId
