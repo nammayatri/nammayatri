@@ -183,7 +183,7 @@ type EnterMobileNumberScreenStateData = {
   , tokenId :: String
   , attempts :: Int
   , otp :: String
-  , timer :: String
+  , timer :: Int
   , timerID :: String
 }
 -- ################################################ AccountSetUpScreenState ##################################################
