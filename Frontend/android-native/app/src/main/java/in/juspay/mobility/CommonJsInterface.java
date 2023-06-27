@@ -4046,6 +4046,15 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
+    public void launchDateSettings() {
+        try {
+            context.startActivity(new Intent(android.provider.Settings.ACTION_DATE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        }catch (ActivityNotFoundException e){
+            context.startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        }
+    }
+
+    @JavascriptInterface
     public void adjustViewWithKeyboard(String flag) {
         activity.runOnUiThread(() -> {
             if (flag.equals("true"))

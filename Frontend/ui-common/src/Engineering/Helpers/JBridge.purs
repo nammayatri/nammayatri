@@ -193,6 +193,7 @@ foreign import setCleverTapUserProp :: String -> String -> Unit
 foreign import cleverTapCustomEvent :: String -> Unit 
 foreign import cleverTapCustomEventWithParams :: String -> String -> String -> Effect Unit
 foreign import cleverTapSetLocation :: Unit -> Effect Unit
+foreign import launchDateSettings :: Unit -> Effect Unit
 
 -- -- keyStoreEntryPresent :: String -> Flow Boolean
 -- -- keyStoreEntryPresent = liftFlow <<< _keyStoreEntryPresent

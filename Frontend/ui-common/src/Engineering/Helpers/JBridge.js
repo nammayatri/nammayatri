@@ -1486,3 +1486,9 @@ export const cleverTapSetLocation = function () {
       return window.JBridge.cleverTapSetLocation();
     }
 }
+
+export const launchDateSettings = function (unit) {
+  if(JBridge.launchDateSettings){
+    return JBridge.launchDateSettings();
+  }
+};
