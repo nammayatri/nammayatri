@@ -21,7 +21,7 @@ module Helpers.Utils
 
 import Accessor (_distance_meters)
 import Accessor (_distance_meters)
-import Common.Types.App (EventPayload(..), LazyCheck(..))
+import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Payload(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Free (resume)
@@ -49,8 +49,10 @@ import Effect.Aff (error, killFiber, launchAff, launchAff_)
 import Effect.Aff.Compat (EffectFn1, EffectFnAff, fromEffectFnAff, runEffectFn1, runEffectFn2, runEffectFn3, EffectFn2)
 import Effect.Class (liftEffect)
 import Effect.Console (logShow)
-import Engineering.Helpers.Commons (flowRunnerWithState, isPreviousVersion, liftFlow, os)
+import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.Commons (flowRunnerWithState, getWindowVariable, isPreviousVersion, liftFlow, os)
 import Engineering.Helpers.Commons (parseFloat, setText') as ReExport
+import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Decode, class Encode, encode)
 import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
 import Foreign.Generic (decode)
@@ -59,7 +61,7 @@ import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||), (&&))
+import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||), (&&), (<$>))
 import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
@@ -402,8 +404,8 @@ getAssetsBaseUrl lazy = case (getMerchant lazy) of
 showCarouselScreen :: LazyCheck -> Boolean
 showCarouselScreen a = os == "ANDROID" && (getMerchant FunctionCall) == NAMMAYATRI
 
-termiateApp :: Unit -> Unit
-termiateApp _ = runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload {
+terminateApp :: Unit -> Unit
+terminateApp _ = runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload {
     event : "process_result"
   , payload : Just {
     action : "terminate"
@@ -411,3 +413,30 @@ termiateApp _ = runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload {
   , trip_id : Nothing
   }
 }  
+
+getGlobalPayload :: Unit -> Effect (Maybe GlobalPayload)
+getGlobalPayload _ = do
+  payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (getWindowVariable "__payload" Just Nothing)
+  pure $ hush payload
+
+getSearchType :: Unit -> String
+getSearchType _ = do 
+  let payload = unsafePerformEffect $ getGlobalPayload unit
+  case payload of
+    Just (GlobalPayload payload') -> do
+      let (Payload innerPayload) = payload'.payload
+      case innerPayload.search_type of
+        Just a -> a 
+        Nothing -> "normal_search"
+    Nothing -> "normal_search"
+
+getPaymentMethod :: Unit -> String
+getPaymentMethod _ = do 
+  let payload = unsafePerformEffect $ getGlobalPayload unit
+  case payload of
+    Just (GlobalPayload payload') -> do
+      let (Payload innerPayload) = payload'.payload
+      case innerPayload.payment_method of
+        Just a -> a 
+        Nothing -> "cash"
+    Nothing -> "cash"

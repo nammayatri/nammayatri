@@ -16,7 +16,7 @@
 module Screens.HomeScreen.Controller where
 
 import Accessor (_estimatedFare, _estimateId, _vehicleVariant, _status, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _selectedQuotes, _specialLocationTag)
-import Common.Types.App (OptionButtonList, LazyCheck(..), EventPayload(..))
+import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), OptionButtonList, Payload(..))
 import Components.Banner as Banner
 import Components.ChatView.Controller as ChatView
 import Components.ChooseVehicle as ChooseVehicleController
@@ -68,7 +68,8 @@ import Effect.Uncurried (runEffectFn5)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os, getExpiryTime, convertUTCtoISC, getCurrentUTC)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
-import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, performHapticFeedback, termiateApp)
+import Foreign.Class (encode)
+import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getSearchType, getLocationName, parseNewContacts, performHapticFeedback, saveRecents, setText', terminateApp, updateInputString, withinTimeRange)
 import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
@@ -77,7 +78,7 @@ import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Utils (getValueFromConfig, getMerchant, Merchant(..))
 import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+))
 import Presto.Core.Types.API (ErrorResponse)
-import PrestoDOM (Eval, Visibility(..), continue, continueWithCmd, exit, updateAndExit, updateWithCmdAndExit, defaultPerformLog)
+import PrestoDOM (Eval, Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resources.Constants (encodeAddress)
 import Screens (ScreenName(..), getScreen)
@@ -85,13 +86,12 @@ import Screens.AddNewAddressScreen.Controller (validTag, getSavedTagsFromHome)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity, dummyZoneType)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList)
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (HomeScreenState, Location, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), RateCardType(..), CallType(..), ZoneType(..), SpecialTags)
+import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RateCardType(..), RatingCard, SearchLocationModelType(..), SpecialTags, Stage(..), ZoneType(..))
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
 import Types.App (defaultGlobalState)
-import Foreign.Class (encode)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -593,6 +593,7 @@ data Action = NoAction
             | TriggerPermissionFlow String
             | PopUpModalCancelConfirmationAction PopUpModal.Action
             | TerminateApp
+            | DirectSearch
           
 
 
@@ -604,7 +605,7 @@ eval SearchForSelectedLocation state =
 eval CheckFlowStatusAction state = exit $ CheckFlowStatus state
 
 eval TerminateApp state = do 
-  pure $ termiateApp unit
+  pure $ terminateApp unit
   continue state
 
 eval (IsMockLocation isMock) state = do
@@ -704,15 +705,23 @@ eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) s
 eval (DriverInfoCardActionController (DriverInfoCardController.CallDriver)) state = do
   continue state {props {showCallPopUp = true }}
 
+eval DirectSearch state =continue state{props{currentStage = SearchLocationModel}}
+
 eval BackPressed state = do
   _ <- pure $ toggleBtnLoader "" false
   case state.props.currentStage of
     SearchLocationModel -> do
                             if state.props.isSaveFavourite then continueWithCmd state [pure $ (SaveFavouriteCardAction (SaveFavouriteCardController.OnClose))]
                               else do
-                                _ <- pure $ exitLocateOnMap ""
-                                _ <- pure $ hideKeyboardOnNavigation true
-                                exit $ GoToHome
+                                if state.props.isSearchLocation == LocateOnMap then do 
+                                    _ <- pure $ exitLocateOnMap ""
+                                    _ <- pure $ hideKeyboardOnNavigation true
+                                    continue state{props{isSearchLocation = SearchLocation}}
+                                  else do
+                                    if (getSearchType unit) == "direct_search" then 
+                                      pure $ terminateApp unit
+                                      else pure unit
+                                    exit $ GoToHome
     SettingPrice    -> do
                       _ <- pure $ performHapticFeedback unit
                       if state.props.showRateCard then continue state{props{showRateCard = false}}
@@ -773,7 +782,7 @@ eval BackPressed state = do
                           else if state.props.emergencyHelpModal then continue state {props {emergencyHelpModal = false}}
                           else if state.props.callSupportPopUp then continue state {props {callSupportPopUp = false}}
                           else do 
-                              pure $ termiateApp unit
+                              pure $ terminateApp unit
                               continue state
 
 eval GoBackToSearchLocationModal state = do
@@ -887,7 +896,7 @@ eval (SettingSideBarActionController (SettingSideBarController.OnClose)) state =
       else case state.data.settingSideBar.opened of
                 SettingSideBarController.CLOSED -> do
                                                     if state.props.currentStage == HomeScreen then do
-                                                      pure $ termiateApp unit
+                                                      pure $ terminateApp unit
                                                       continue state
                                                       else continueWithCmd state [pure $ BackPressed]
                 _                               -> continue state {data{settingSideBar{opened = SettingSideBarController.CLOSING}}}

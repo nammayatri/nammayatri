@@ -1,6 +1,12 @@
 window.getMerchantConfig = function () {
   return JSON.stringify({
-    "StringKeys": ["REQUEST_AUTO_RIDE", "CONFIRM_RIDE_", "PAYMENT_METHOD_STRING", "PAY_DRIVER_USING_CASH_OR_UPI", "PAY_DRIVER_USING_CASH_OR_UPI_"],
+    "StringKeys": ["REQUEST_AUTO_RIDE" ,
+                         "CONFIRM_RIDE_",
+                         "PAYMENT_METHOD_STRING_",
+                         "PAYMENT_METHOD_STRING",
+                         "PAY_DRIVER_USING_CASH_OR_UPI",
+                         "PAY_DRIVER_USING_WALLET",
+                         "PAY_DRIVER_USING_CASH_OR_UPI_"],
     "isReferralEnabled": "false",
     "showBookingPreference": "true",
     "showRateCard": "true",
@@ -112,15 +118,19 @@ window.getMerchantConfig = function () {
     "englishStrings": {
       "REQUEST_AUTO_RIDE": "Request Taxi Ride" ,
       "CONFIRM_RIDE_": "Confirm Ride",
-      "PAYMENT_METHOD_STRING": "Pass Culture Wallet",
-      "PAY_DRIVER_USING_CASH_OR_UPI": "Pay driver using Pass Culture Wallet",
+      "PAYMENT_METHOD_STRING_": "Pass Culture Wallet",
+      "PAYMENT_METHOD_STRING": "Cash",
+      "PAY_DRIVER_USING_CASH_OR_UPI": "Pay driver by Cash",
+      "PAY_DRIVER_USING_WALLET": "Pay driver using Pass Culture Wallet",
       "PAY_DRIVER_USING_CASH_OR_UPI_": "Already paid using Pass Culture Wallet"
     },
     "frenchStrings": {
       "REQUEST_AUTO_RIDE": "Demande de trajet",
       "CONFIRM_RIDE_" : "Confirmer Ride",
-      "PAYMENT_METHOD_STRING": "Porte-monnaie Pass Culture",
-      "PAY_DRIVER_USING_CASH_OR_UPI" : "Payer le conducteur en espèces",
+      "PAYMENT_METHOD_STRING": "Espèces",
+      "PAYMENT_METHOD_STRING_": "Porte-monnaie Pass Culture",
+      "PAY_DRIVER_USING_CASH_OR_UPI": "Payer le chauffeur en espèces",
+      "PAY_DRIVER_USING_WALLET" : "Payer le chauffeur avec Pass Culture Wallet",
       "PAY_DRIVER_USING_CASH_OR_UPI_" : "Déjà payé avec Pass Culture Wallet",
     } ,
     "languageList": [{
@@ -146,5 +156,7 @@ window.getMerchantConfig = function () {
       "imageUrl" : "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
   }
   , "showDeleteAccount" : false
+    , "fontName" : "Montserrat"
+    , "fontKannada" : "Montserrat"
   })
 }

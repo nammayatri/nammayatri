@@ -118,6 +118,7 @@ newtype Payload = Payload
   , search_type :: Maybe String
   , source :: Maybe LocationData
   , destination :: Maybe LocationData
+  , payment_method :: Maybe String
   }
 
 newtype LocationData = LocationData {

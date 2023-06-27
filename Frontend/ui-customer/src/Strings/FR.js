@@ -90,6 +90,7 @@ export function getStringValue(key) {
     "OTP" : "OTP",
     "PAYMENT_METHOD" : "Mode de paiement",
     "PAYMENT_METHOD_STRING" : "Cash / Utilisez n'importe quelle application UPI",
+    "PAYMENT_METHOD_STRING_" : "Cash / Utilisez n'importe quelle application UPI",
     "CANCEL_RIDE" : "Annuler le trajet",
     "SUPPORT" : "Soutien",
     "PICKUP_AND_DROP" : "Pick-up and Drop",

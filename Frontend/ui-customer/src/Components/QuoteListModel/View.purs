@@ -28,18 +28,18 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getAssetsBaseUrl)
+import Helpers.Utils (getAssetStoreLink, getAssetsBaseUrl, getCommonAssetStoreLink, getPaymentMethod)
 import Helpers.Utils (getPreviousVersion)
 import JBridge (getBtnLoader, startLottieProcess)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import MerchantConfig.Utils (getValueFromConfig)
 import Prelude ((<>))
 import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, clickable, color, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
-import MerchantConfig.Utils (getValueFromConfig)
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -107,7 +107,7 @@ paymentView state =
         , textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text (getString PAY_DRIVER_USING_CASH_OR_UPI)
+          , text $ if (getPaymentMethod unit) == "cash" then (getString PAY_DRIVER_USING_CASH_OR_UPI) else (getString PAY_DRIVER_USING_WALLET)
           , gravity CENTER_HORIZONTAL
           , color Color.black800
           ] <> FontStyle.body1 TypoGraphy

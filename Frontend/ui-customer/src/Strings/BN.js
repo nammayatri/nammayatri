@@ -89,6 +89,7 @@ const bengaliStrings = {
   "OTP": "ওটিপি",
   "PAYMENT_METHOD": "অর্থপ্রদানের পদ্ধতি",
   "PAYMENT_METHOD_STRING": "নগদ / UPI অ্যাপ ব্যবহার করুন",
+  "PAYMENT_METHOD_STRING_": "নগদ / UPI অ্যাপ ব্যবহার করুন",
   "CANCEL_RIDE": "যাত্রা বাতিল করুন",
   "SUPPORT": "সমর্থন",
   "PICKUP_AND_DROP": "পিকআপ এবং ড্রপ",

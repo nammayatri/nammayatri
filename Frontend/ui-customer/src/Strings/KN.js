@@ -89,6 +89,7 @@ const kannadaStrings = {
   "OTP": "ಒತ್ತು",
   "PAYMENT_METHOD": "ಪಾವತಿ ವಿಧಾನ",
   "PAYMENT_METHOD_STRING": "ನಗದು / UPI ಅಪ್ಲಿಕೇಶನ್ ಬಳಸಿ",
+  "PAYMENT_METHOD_STRING_": "ನಗದು / UPI ಅಪ್ಲಿಕೇಶನ್ ಬಳಸಿ",
   "CANCEL_RIDE": "ನನ್ನ ಸವಾರಿಯನ್ನು ರದ್ದುಮಾಡಿ",
   "SUPPORT": "ಬೆಂಬಲ",
   "PICKUP_AND_DROP": "ಪಿಕಪ್ ಮತ್ತು ಡ್ರಾಪ್",

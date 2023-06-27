@@ -30,18 +30,18 @@ import Data.Maybe (Maybe(..))
 import Debug (spy)
 import Effect (Effect)
 import Effect.Exception (stack)
-import Engineering.Helpers.Commons (getNewIDWithTag, os, safeMarginBottom, safeMarginTop, screenHeight, screenWidth, isPreviousVersion)
+import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenHeight, screenWidth, setText')
 import Engineering.Helpers.LogEvent (logEvent)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (debounceFunction, getLocationName, getPreviousVersion)
+import Helpers.Utils (debounceFunction, getLocationName, getPreviousVersion, getSearchType)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import JBridge (getBtnLoader, requestKeyboardShow, getCurrentPosition, firebaseLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude ((<>))
-import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/=), (<<<), (<>), (==), (||), not)
+import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/=), (<<<), (<>), (==), (||), not, discard)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants (getDelayForAutoComplete)
@@ -56,9 +56,8 @@ view push state =
       , width MATCH_PARENT
       , orientation VERTICAL
       , background case state.isSearchLocation of
-                    LocateOnMap -> Color.transparent
                     SearchLocation -> if (state.isRideServiceable) then Color.grey800 else Color.white900
-                    _           -> Color.white900 --"#FFFFFF"
+                    _           -> Color.transparent --"#FFFFFF"
       , margin $ MarginBottom (if state.isSearchLocation == LocateOnMap then bottomSpacing else 0)
       , onBackPressed push (const $ GoBack)
       ]([PrestoAnim.animationSet [translateYAnimFromTop $ translateFullYAnimWithDurationConfig 400 ] $
@@ -237,6 +236,9 @@ sourceDestinationEditTextView state push =
                                 Just true  -> (getNewIDWithTag "SourceEditText")
                                 Just false -> (getNewIDWithTag "DestinationEditText")
                                 Nothing    -> ""
+      if (getSearchType unit) == "direct_search" then 
+        setText' (getNewIDWithTag "DestinationEditText") (state.destination)
+        else pure unit
       pure unit
       ) (const NoAction)
     ][linearLayout

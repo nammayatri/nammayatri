@@ -26,6 +26,7 @@ import Data.Array as Array
 import Data.Maybe (fromMaybe)
 import Data.String (Pattern(..), split, length, take, drop)
 import Data.String.CodeUnits (fromCharArray, toCharArray)
+import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
@@ -33,7 +34,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getPaymentMethod)
 import Helpers.Utils (secondsToHms, zoneOtpExpiryTimer)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -45,8 +46,6 @@ import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (Stage(..), ZoneType(..))
-import Styles.Colors as Color
-import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Storage (isLocalStageOn)
 import Styles.Colors as Color
 
@@ -773,7 +772,7 @@ paymentMethodView push state title shouldShowIcon =
               , width $ V 20
               ]
             , textView $
-              [ text $ getString PAYMENT_METHOD_STRING
+              [ text $ if (getPaymentMethod unit) == "cash" then getString PAYMENT_METHOD_STRING else getString PAYMENT_METHOD_STRING_
               , color Color.black800
               , padding $ Padding 8 0 20 0
               ] <> FontStyle.body1 TypoGraphy

@@ -89,6 +89,7 @@ const englishStrings = {
   "OTP": "OTP",
   "PAYMENT_METHOD": "Payment Method",
   "PAYMENT_METHOD_STRING": "Cash / Use UPI app",
+  "PAYMENT_METHOD_STRING_": "Cash / Use UPI app",
   "CANCEL_RIDE": "Cancel Ride",
   "SUPPORT": "Support",
   "PICKUP_AND_DROP": "Pickup and Drop",
