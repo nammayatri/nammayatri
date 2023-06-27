@@ -191,6 +191,7 @@ content-type: application/json
   { "checkExtraction" : {"value" : false},
     "checkExpiry" : {"value" : true},
     "supportedVehicleClasses" : null,
+    "rcNumberPrefix": {"value": "KA"},
     "vehicleClassCheckType" : {"value" : "Prefix"}
   }
 
@@ -205,6 +206,7 @@ content-type: application/json
   { "checkExtraction" : false,
     "checkExpiry" : true,
     "supportedVehicleClasses" : {"documentType" : "RC", "vehicleClasses" : ["vehicleClass1", "vehicleClass2"]},
+    "rcNumberPrefix": {"value": "KA"},
     "vehicleClassCheckType" : "Suffix"
   }
 

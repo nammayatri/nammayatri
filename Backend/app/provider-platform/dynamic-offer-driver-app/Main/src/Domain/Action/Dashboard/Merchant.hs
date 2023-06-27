@@ -385,7 +385,8 @@ onboardingDocumentConfigUpdate merchantShortId reqDocumentType req = do
         config{checkExtraction = maybe config.checkExtraction (.value) req.checkExtraction,
                checkExpiry = maybe config.checkExpiry (.value) req.checkExpiry,
                supportedVehicleClasses = maybe config.supportedVehicleClasses castSupportedVehicleClasses req.supportedVehicleClasses,
-               vehicleClassCheckType = maybe config.vehicleClassCheckType (castVehicleClassCheckType . (.value)) req.vehicleClassCheckType
+               vehicleClassCheckType = maybe config.vehicleClassCheckType (castVehicleClassCheckType . (.value)) req.vehicleClassCheckType,
+               rcNumberPrefix = maybe config.rcNumberPrefix (.value) req.rcNumberPrefix
               }
   Esq.runTransaction $ do
     CQODC.update updConfig
