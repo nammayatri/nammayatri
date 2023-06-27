@@ -75,12 +75,13 @@ findFeesInRangeWithStatus startTime endTime status = do
         &&. driverFee ^. DriverFeeStatus ==. val status
     return driverFee
 
-findWindowsWithStatus :: Transactionable m => UTCTime -> UTCTime -> Maybe DriverFeeStatus -> Int -> Int -> m [DriverFee]
-findWindowsWithStatus startTime endTime mbStatus limitVal offsetVal = do
+findWindowsWithStatus :: Transactionable m => Id Person -> UTCTime -> UTCTime -> Maybe DriverFeeStatus -> Int -> Int -> m [DriverFee]
+findWindowsWithStatus driverId startTime endTime mbStatus limitVal offsetVal = do
   findAll $ do
     driverFee <- from $ table @DriverFeeT
     where_ $
-      driverFee ^. DriverFeeStartTime >=. val startTime
+      driverFee ^. DriverFeeDriverId ==. val (toKey driverId)
+        &&. driverFee ^. DriverFeeStartTime >=. val startTime
         &&. driverFee ^. DriverFeeEndTime <=. val endTime
         &&. whenJust_ mbStatus (\status -> driverFee ^. DriverFeeStatus ==. val status)
     limit $ fromIntegral limitVal
