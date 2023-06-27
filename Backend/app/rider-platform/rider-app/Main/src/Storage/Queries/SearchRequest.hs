@@ -24,7 +24,7 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+-- import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Version
@@ -32,8 +32,9 @@ import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest as BeamSR
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
-import Storage.Tabular.SearchRequest
-import Storage.Tabular.SearchRequest.SearchReqLocation
+
+-- import Storage.Tabular.SearchRequest
+-- import Storage.Tabular.SearchRequest.SearchReqLocation
 
 -- create :: L.MonadFlow m => SearchRequest -> m (MeshResult ())
 -- create SearchRequest = do
@@ -52,25 +53,41 @@ import Storage.Tabular.SearchRequest.SearchReqLocation
 --     Esq.create' sReq
 
 -- need to be implemented and changed at reference
-create :: (L.MonadFlow m, Log m) => SearchRequest -> m (MeshResult ())
-create = error "create' not implemented"
 
-fullSearchRequestTable ::
-  From
-    ( Table SearchRequestT
-        :& Table SearchReqLocationT
-        :& MbTable SearchReqLocationT
-    )
-fullSearchRequestTable =
-  table @SearchRequestT
-    `innerJoin` table @SearchReqLocationT
-      `Esq.on` ( \(s :& loc1) ->
-                   s ^. SearchRequestFromLocationId ==. loc1 ^. SearchReqLocationTId
-               )
-    `leftJoin` table @SearchReqLocationT
-      `Esq.on` ( \(s :& _ :& mbLoc2) ->
-                   s ^. SearchRequestToLocationId ==. mbLoc2 ?. SearchReqLocationTId
-               )
+createDSReq :: L.MonadFlow m => SearchRequest -> m (MeshResult ())
+createDSReq sReq = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSR.SearchRequestT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainSearchRequestToBeam sReq)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
+create :: L.MonadFlow m => SearchRequest -> m (MeshResult ())
+create dsReq = do
+  _ <- QSRL.create dsReq.fromLocation
+  _ <- traverse_ QSRL.create dsReq.toLocation
+  createDSReq dsReq
+
+-- create :: (L.MonadFlow m, Log m) => SearchRequest -> m (MeshResult ())
+-- create = error "create' not implemented"
+
+-- fullSearchRequestTable ::
+--   From
+--     ( Table SearchRequestT
+--         :& Table SearchReqLocationT
+--         :& MbTable SearchReqLocationT
+--     )
+-- fullSearchRequestTable =
+--   table @SearchRequestT
+--     `innerJoin` table @SearchReqLocationT
+--       `Esq.on` ( \(s :& loc1) ->
+--                    s ^. SearchRequestFromLocationId ==. loc1 ^. SearchReqLocationTId
+--                )
+--     `leftJoin` table @SearchReqLocationT
+--       `Esq.on` ( \(s :& _ :& mbLoc2) ->
+--                    s ^. SearchRequestToLocationId ==. mbLoc2 ?. SearchReqLocationTId
+--                )
 
 -- findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
 -- findById searchRequestId = Esq.buildDType $ do
@@ -93,18 +110,18 @@ findById (Id searchRequestId) = do
         _ -> pure Nothing
     Nothing -> pure Nothing
 
-findByPersonId :: Transactionable m => Id Person -> Id SearchRequest -> m (Maybe SearchRequest)
-findByPersonId personId searchRequestId = Esq.buildDType $ do
-  mbFullSearchReqT <- Esq.findOne' $ do
-    (searchRequest :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
-    where_ $
-      searchRequest ^. SearchRequestRiderId ==. val (toKey personId)
-        &&. searchRequest ^. SearchRequestId ==. val (getId searchRequestId)
-    return (searchRequest, sFromLoc, mbSToLoc)
-  pure $ extractSolidType @SearchRequest <$> mbFullSearchReqT
+-- findByPersonId :: Transactionable m => Id Person -> Id SearchRequest -> m (Maybe SearchRequest)
+-- findByPersonId personId searchRequestId = Esq.buildDType $ do
+--   mbFullSearchReqT <- Esq.findOne' $ do
+--     (searchRequest :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
+--     where_ $
+--       searchRequest ^. SearchRequestRiderId ==. val (toKey personId)
+--         &&. searchRequest ^. SearchRequestId ==. val (getId searchRequestId)
+--     return (searchRequest, sFromLoc, mbSToLoc)
+--   pure $ extractSolidType @SearchRequest <$> mbFullSearchReqT
 
-findByPersonId' :: (L.MonadFlow m, Log m) => Id Person -> Id SearchRequest -> m (Maybe SearchRequest)
-findByPersonId' (Id personId) (Id searchRequestId) = do
+findByPersonId :: (L.MonadFlow m, Log m) => Id Person -> Id SearchRequest -> m (Maybe SearchRequest)
+findByPersonId (Id personId) (Id searchRequestId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSR.SearchRequestT
   let updatedMeshConfig = setMeshConfig modelName
@@ -116,17 +133,17 @@ findByPersonId' (Id personId) (Id searchRequestId) = do
         _ -> pure Nothing
     Nothing -> pure Nothing
 
-findAllByPerson :: Transactionable m => Id Person -> m [SearchRequest]
-findAllByPerson perId = Esq.buildDType $ do
-  fullSearchRequestsT <- Esq.findAll' $ do
-    (searchRequest :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
-    where_ $
-      searchRequest ^. SearchRequestRiderId ==. val (toKey perId)
-    return (searchRequest, sFromLoc, mbSToLoc)
-  pure $ extractSolidType @SearchRequest <$> fullSearchRequestsT
+-- findAllByPerson :: Transactionable m => Id Person -> m [SearchRequest]
+-- findAllByPerson perId = Esq.buildDType $ do
+--   fullSearchRequestsT <- Esq.findAll' $ do
+--     (searchRequest :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
+--     where_ $
+--       searchRequest ^. SearchRequestRiderId ==. val (toKey perId)
+--     return (searchRequest, sFromLoc, mbSToLoc)
+--   pure $ extractSolidType @SearchRequest <$> fullSearchRequestsT
 
-findAllByPerson' :: (L.MonadFlow m, Log m) => Id Person -> m [SearchRequest]
-findAllByPerson' (Id personId) = do
+findAllByPerson :: (L.MonadFlow m, Log m) => Id Person -> m [SearchRequest]
+findAllByPerson (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSR.SearchRequestT
   let updatedMeshConfig = setMeshConfig modelName
