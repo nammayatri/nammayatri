@@ -159,7 +159,12 @@ data MerchantCommonConfigUpdateReq = MerchantCommonConfigUpdateReq
     onboardingTryLimit :: Maybe (MandatoryValue Int),
     onboardingRetryTimeInHours :: Maybe (MandatoryValue Int),
     checkImageExtractionForDashboard :: Maybe (MandatoryValue Bool),
-    searchRepeatLimit :: Maybe (MandatoryValue Int)
+    searchRepeatLimit :: Maybe (MandatoryValue Int),
+    driverPaymentCycleBuffer :: Maybe (MandatoryValue NominalDiffTime), -- TODO : Add in validation if reqd
+    driverPaymentCycleDuration :: Maybe (MandatoryValue NominalDiffTime),
+    driverPaymentCycleStartTime :: Maybe (MandatoryValue NominalDiffTime),
+    driverPaymentReminderInterval :: Maybe (MandatoryValue NominalDiffTime),
+    timeDiffFromUtc :: Maybe (MandatoryValue Seconds)
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

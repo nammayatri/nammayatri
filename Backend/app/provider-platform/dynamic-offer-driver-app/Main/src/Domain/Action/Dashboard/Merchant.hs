@@ -172,7 +172,12 @@ merchantCommonConfigUpdate merchantShortId req = do
                onboardingTryLimit = maybe config.onboardingTryLimit (.value) req.onboardingTryLimit,
                onboardingRetryTimeInHours = maybe config.onboardingRetryTimeInHours (.value) req.onboardingRetryTimeInHours,
                checkImageExtractionForDashboard = maybe config.checkImageExtractionForDashboard (.value) req.checkImageExtractionForDashboard,
-               searchRepeatLimit = maybe config.searchRepeatLimit (.value) req.searchRepeatLimit
+               searchRepeatLimit = maybe config.searchRepeatLimit (.value) req.searchRepeatLimit,
+               driverPaymentCycleBuffer = maybe config.driverPaymentCycleBuffer (.value) req.driverPaymentCycleBuffer,
+               driverPaymentCycleDuration = maybe config.driverPaymentCycleDuration (.value) req.driverPaymentCycleDuration,
+               driverPaymentCycleStartTime = maybe config.driverPaymentCycleStartTime (.value) req.driverPaymentCycleStartTime,
+               driverPaymentReminderInterval = maybe config.driverPaymentReminderInterval (.value) req.driverPaymentReminderInterval,
+               timeDiffFromUtc = maybe config.timeDiffFromUtc (.value) req.timeDiffFromUtc
               }
   Esq.runTransaction $ do
     CQTC.update updConfig
