@@ -287,7 +287,7 @@ getRidesForDate driverId date diffTime = Esq.findAll $ do
   return ride
   where
     minDayTime = UTCTime (addDays (-1) date) (86400 - secondsToDiffTime (toInteger diffTime.getSeconds))
-    maxDayTime = UTCTime date (secondsToDiffTime $ toInteger diffTime.getSeconds)
+    maxDayTime = UTCTime date (86400 - secondsToDiffTime (toInteger diffTime.getSeconds))
 
 updateArrival :: Id Ride -> SqlDB ()
 updateArrival rideId = do
