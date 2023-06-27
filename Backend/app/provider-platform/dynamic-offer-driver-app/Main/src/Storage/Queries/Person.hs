@@ -788,34 +788,36 @@ getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry LatLong {..} radiusM
       return driverLocs
 
 getDriverInfosWithCond ::
-  Transactionable m =>
+  (Transactionable m, EsqDBReplicaFlow m r) =>
   [DriverLocation] ->
   Bool ->
   Bool ->
   m [DriverInformation]
 getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide = do
-  Esq.findAll $ do
-    driverInfos <- from $ table @DriverInformationT
-    where_ $
-      driverInfos ^. DriverInformationDriverId `in_` valList personsKeys
-        &&. ((Esq.isNothing (driverInfos ^. DriverInformationMode) &&. driverInfos ^. DriverInformationActive) ||. (not_ (Esq.isNothing (driverInfos ^. DriverInformationMode)) &&. (driverInfos ^. DriverInformationMode ==. val (Just DriverInfo.SILENT) ||. driverInfos ^. DriverInformationMode ==. val (Just DriverInfo.ONLINE))))
-        &&. (if onlyNotOnRide then not_ (driverInfos ^. DriverInformationOnRide) else if onlyOnRide then driverInfos ^. DriverInformationOnRide else val True)
-        &&. not_ (driverInfos ^. DriverInformationBlocked)
-        &&. (driverInfos ^. DriverInformationSubscribed)
-    return driverInfos
+  runInReplica $
+    Esq.findAll $ do
+      driverInfos <- from $ table @DriverInformationT
+      where_ $
+        driverInfos ^. DriverInformationDriverId `in_` valList personsKeys
+          &&. ((Esq.isNothing (driverInfos ^. DriverInformationMode) &&. driverInfos ^. DriverInformationActive) ||. (not_ (Esq.isNothing (driverInfos ^. DriverInformationMode)) &&. (driverInfos ^. DriverInformationMode ==. val (Just DriverInfo.SILENT) ||. driverInfos ^. DriverInformationMode ==. val (Just DriverInfo.ONLINE))))
+          &&. (if onlyNotOnRide then not_ (driverInfos ^. DriverInformationOnRide) else if onlyOnRide then driverInfos ^. DriverInformationOnRide else val True)
+          &&. not_ (driverInfos ^. DriverInformationBlocked)
+          &&. (driverInfos ^. DriverInformationSubscribed)
+      return driverInfos
   where
     personsKeys = toKey . cast <$> fetchDriverIDsFromLocations driverLocs
 
 getVehiclesWithCond ::
-  Transactionable m =>
+  (Transactionable m, EsqDBReplicaFlow m r) =>
   [DriverInformation] ->
   m [Vehicle]
 getVehiclesWithCond driverInfo = do
-  Esq.findAll $ do
-    vehicles <- from $ table @VehicleT
-    where_ $
-      vehicles ^. VehicleDriverId `in_` valList personsKeys
-    return vehicles
+  runInReplica $
+    Esq.findAll $ do
+      vehicles <- from $ table @VehicleT
+      where_ $
+        vehicles ^. VehicleDriverId `in_` valList personsKeys
+      return vehicles
   where
     personsKeys = toKey . cast <$> fetchDriverIDsFromInfo driverInfo
 
