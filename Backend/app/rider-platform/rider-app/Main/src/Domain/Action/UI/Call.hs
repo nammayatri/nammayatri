@@ -161,7 +161,8 @@ getDriverMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus = do
         runInReplica (QRB.findAssignedByRiderId person.id) >>= \case
           Nothing -> getDtmfFlow dtmfNumber_ exophone.merchantId
           Just activeBooking -> return (Nothing, activeBooking)
-  ride <- runInReplica $ QRide.findActiveByRBId booking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId booking.id)
+  -- ride <- runInReplica $ QRide.findActiveByRBId booking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId booking.id)
+  ride <- QRide.findActiveByRBId booking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId booking.id)
   callId <- generateGUID
   callStatusObj <- buildCallStatus ride.id callId callSid (exotelStatusToInterfaceStatus callStatus) dtmfNumberUsed
   runTransaction $ QCallStatus.create callStatusObj

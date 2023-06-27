@@ -73,7 +73,8 @@ getDriverLoc ::
   Id SPerson.Person ->
   m GetDriverLocResp
 getDriverLoc rideId personId = do
-  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  -- ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   when
     (ride.status == COMPLETED || ride.status == CANCELLED)
     $ throwError $ RideInvalidStatus "Cannot track this ride"
@@ -119,7 +120,8 @@ getRideStatus ::
   Id SPerson.Person ->
   m GetRideStatusResp
 getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
-  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  -- ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   mbPos <-
     if ride.status == COMPLETED || ride.status == CANCELLED
       then return Nothing

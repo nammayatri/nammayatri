@@ -78,22 +78,22 @@ updateStatus rideId status = do
         [Se.Is BeamR.id (Se.Eq $ getId rideId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-updateTrackingUrl ::
-  Id Ride ->
-  BaseUrl ->
-  SqlDB ()
-updateTrackingUrl rideId url = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ RideUpdatedAt =. val now,
-        RideTrackingUrl =. val (Just $ showBaseUrl url)
-      ]
-    where_ $ tbl ^. RideId ==. val (getId rideId)
+-- updateTrackingUrl ::
+--   Id Ride ->
+--   BaseUrl ->
+--   SqlDB ()
+-- updateTrackingUrl rideId url = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ RideUpdatedAt =. val now,
+--         RideTrackingUrl =. val (Just $ showBaseUrl url)
+--       ]
+--     where_ $ tbl ^. RideId ==. val (getId rideId)
 
-updateTrackingUrl' :: (L.MonadFlow m, MonadTime m) => Id Ride -> BaseUrl -> m (MeshResult ())
-updateTrackingUrl' rideId url = do
+updateTrackingUrl :: (L.MonadFlow m, MonadTime m) => Id Ride -> BaseUrl -> m (MeshResult ())
+updateTrackingUrl rideId url = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
   let updatedMeshConfig = setMeshConfig modelName
@@ -140,11 +140,11 @@ updateRideRating rideId rideRating = do
         [Se.Is BeamR.id (Se.Eq $ getId rideId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-findById :: Transactionable m => Id Ride -> m (Maybe Ride)
-findById = Esq.findById
+-- findById :: Transactionable m => Id Ride -> m (Maybe Ride)
+-- findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id Ride -> m (Maybe Ride)
-findById' (Id rideId) = do
+findById :: L.MonadFlow m => Id Ride -> m (Maybe Ride)
+findById (Id rideId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
   let updatedMeshConfig = setMeshConfig modelName
@@ -156,15 +156,15 @@ findById' (Id rideId) = do
         Left _ -> pure Nothing
     Nothing -> pure Nothing
 
-findByBPPRideId :: Transactionable m => Id BPPRide -> m (Maybe Ride)
-findByBPPRideId bppRideId_ =
-  findOne $ do
-    ride <- from $ table @RideT
-    where_ $ ride ^. RideBppRideId ==. val (getId bppRideId_)
-    return ride
+-- findByBPPRideId :: Transactionable m => Id BPPRide -> m (Maybe Ride)
+-- findByBPPRideId bppRideId_ =
+--   findOne $ do
+--     ride <- from $ table @RideT
+--     where_ $ ride ^. RideBppRideId ==. val (getId bppRideId_)
+--     return ride
 
-findByBPPRideId' :: L.MonadFlow m => Id BPPRide -> m (Maybe Ride)
-findByBPPRideId' bppRideId_ = do
+findByBPPRideId :: L.MonadFlow m => Id BPPRide -> m (Maybe Ride)
+findByBPPRideId bppRideId_ = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
   let updatedMeshConfig = setMeshConfig modelName
@@ -214,17 +214,17 @@ updateMultiple rideId ride = do
         [Se.Is BeamR.id (Se.Eq $ getId rideId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-findActiveByRBId :: Transactionable m => Id Booking -> m (Maybe Ride)
-findActiveByRBId rbId =
-  findOne $ do
-    ride <- from $ table @RideT
-    where_ $
-      ride ^. RideBookingId ==. val (toKey rbId)
-        &&. ride ^. RideStatus !=. val CANCELLED
-    return ride
+-- findActiveByRBId :: Transactionable m => Id Booking -> m (Maybe Ride)
+-- findActiveByRBId rbId =
+--   findOne $ do
+--     ride <- from $ table @RideT
+--     where_ $
+--       ride ^. RideBookingId ==. val (toKey rbId)
+--         &&. ride ^. RideStatus !=. val CANCELLED
+--     return ride
 
-findActiveByRBId' :: L.MonadFlow m => Id Booking -> m (Maybe Ride)
-findActiveByRBId' (Id rbId) = do
+findActiveByRBId :: L.MonadFlow m => Id Booking -> m (Maybe Ride)
+findActiveByRBId (Id rbId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
   let updatedMeshConfig = setMeshConfig modelName
@@ -236,16 +236,16 @@ findActiveByRBId' (Id rbId) = do
         Left _ -> pure Nothing
     Nothing -> pure Nothing
 
-findAllByRBId :: Transactionable m => Id Booking -> m [Ride]
-findAllByRBId bookingId =
-  findAll $ do
-    ride <- from $ table @RideT
-    where_ $ ride ^. RideBookingId ==. val (toKey bookingId)
-    orderBy [desc $ ride ^. RideCreatedAt]
-    return ride
+-- findAllByRBId :: Transactionable m => Id Booking -> m [Ride]
+-- findAllByRBId bookingId =
+--   findAll $ do
+--     ride <- from $ table @RideT
+--     where_ $ ride ^. RideBookingId ==. val (toKey bookingId)
+--     orderBy [desc $ ride ^. RideCreatedAt]
+--     return ride
 
-findAllByRBId' :: L.MonadFlow m => Id Booking -> m [Ride]
-findAllByRBId' (Id bookingId) = do
+findAllByRBId :: L.MonadFlow m => Id Booking -> m [Ride]
+findAllByRBId (Id bookingId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
   let updatedMeshConfig = setMeshConfig modelName
@@ -257,19 +257,19 @@ findAllByRBId' (Id bookingId) = do
         Left _ -> pure []
     Nothing -> pure []
 
-updateDriverArrival :: Id Ride -> SqlDB ()
-updateDriverArrival rideId = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ RideDriverArrivalTime =. val (Just now),
-        RideUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. RideTId ==. val (toKey rideId)
+-- updateDriverArrival :: Id Ride -> SqlDB ()
+-- updateDriverArrival rideId = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ RideDriverArrivalTime =. val (Just now),
+--         RideUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. RideTId ==. val (toKey rideId)
 
-updateDriverArrival' :: (L.MonadFlow m, MonadTime m) => Id Ride -> m (MeshResult ())
-updateDriverArrival' rideId = do
+updateDriverArrival :: (L.MonadFlow m, MonadTime m) => Id Ride -> m (MeshResult ())
+updateDriverArrival rideId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
   let updatedMeshConfig = setMeshConfig modelName
@@ -294,27 +294,27 @@ data StuckRideItem = StuckRideItem
     riderId :: Id Person
   }
 
-findStuckRideItems :: Transactionable m => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
-findStuckRideItems merchantId bookingIds now = do
-  res <- Esq.findAll $ do
-    ride :& booking <-
-      from $
-        table @RideT
-          `innerJoin` table @BookingT
-            `Esq.on` ( \(ride :& booking) ->
-                         ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
-                     )
-    where_ $
-      booking ^. BookingMerchantId ==. val (toKey merchantId)
-        &&. booking ^. BookingTId `in_` valList (toKey <$> bookingIds)
-        &&. (ride ^. RideStatus ==. val Ride.NEW &&. upcoming6HrsCond ride now)
-    pure (ride ^. RideTId, booking ^. BookingTId, booking ^. BookingRiderId)
-  pure $ mkStuckRideItem <$> res
-  where
-    mkStuckRideItem (rideId, bookingId, riderId) = StuckRideItem {..}
+-- findStuckRideItems :: Transactionable m => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
+-- findStuckRideItems merchantId bookingIds now = do
+--   res <- Esq.findAll $ do
+--     ride :& booking <-
+--       from $
+--         table @RideT
+--           `innerJoin` table @BookingT
+--             `Esq.on` ( \(ride :& booking) ->
+--                          ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
+--                      )
+--     where_ $
+--       booking ^. BookingMerchantId ==. val (toKey merchantId)
+--         &&. booking ^. BookingTId `in_` valList (toKey <$> bookingIds)
+--         &&. (ride ^. RideStatus ==. val Ride.NEW &&. upcoming6HrsCond ride now)
+--     pure (ride ^. RideTId, booking ^. BookingTId, booking ^. BookingRiderId)
+--   pure $ mkStuckRideItem <$> res
+--   where
+--     mkStuckRideItem (rideId, bookingId, riderId) = StuckRideItem {..}
 
-findStuckRideItems' :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
-findStuckRideItems' (Id merchantId) bookingIds now = do
+findStuckRideItems :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
+findStuckRideItems (Id merchantId) bookingIds now = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
   let updatedMeshConfig = setMeshConfig modelName

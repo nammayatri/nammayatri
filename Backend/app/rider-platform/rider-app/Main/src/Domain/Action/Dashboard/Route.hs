@@ -36,7 +36,8 @@ import Tools.Maps (getTripRoutes)
 mkGetLocation :: ShortId DM.Merchant -> Id Common.Ride -> Double -> Double -> Flow GetRoutesResp
 mkGetLocation shortMerchantId rideId pickupLocationLat pickupLocationLon = do
   merchant <- QMerchant.findByShortId shortMerchantId >>= fromMaybeM (MerchantDoesNotExist shortMerchantId.getShortId)
-  ride <- runInReplica $ QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  -- ride <- runInReplica $ QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  ride <- QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (ride.status == Ride.NEW || ride.status == Ride.INPROGRESS) $ throwError (RideInvalidStatus $ show ride.status)
   booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let mbToLocation = case booking.bookingDetails of

@@ -86,7 +86,8 @@ cancel bookingId _ req = do
     throwError $ RideInvalidStatus "Cannot cancel this ride"
   when (booking.status == SRB.NEW) $ throwError (BookingInvalidStatus "NEW")
   bppBookingId <- fromMaybeM (BookingFieldNotPresent "bppBookingId") booking.bppBookingId
-  mRide <- Esq.runInReplica $ QR.findActiveByRBId booking.id
+  -- mRide <- Esq.runInReplica $ QR.findActiveByRBId booking.id
+  mRide <- QR.findActiveByRBId booking.id
   cancellationReason <-
     case mRide of
       Just ride -> do

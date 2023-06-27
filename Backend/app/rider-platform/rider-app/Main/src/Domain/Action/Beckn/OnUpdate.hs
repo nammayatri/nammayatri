@@ -40,7 +40,7 @@ import Environment
 import qualified EulerHS.Language as L
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as DB
+-- import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Storage.Hedis.Config (HedisFlow)
@@ -384,8 +384,8 @@ onUpdate ValidatedBookingReallocationReq {..} = do
   Notify.notifyOnBookingReallocated booking
 onUpdate ValidatedDriverArrivedReq {..} = do
   unless (isJust ride.driverArrivalTime) $
-    DB.runTransaction $ do
-      QRide.updateDriverArrival ride.id
+    -- DB.runTransaction $ do
+    void $ QRide.updateDriverArrival ride.id
 onUpdate ValidatedNewMessageReq {..} = do
   Notify.notifyOnNewMessage booking message
 onUpdate ValidatedEstimateRepetitionReq {..} = do

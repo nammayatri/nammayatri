@@ -166,6 +166,7 @@ getTrackUrl :: (Esq.EsqDBReplicaFlow m r, MonadFlow m) => Id SRide.Ride -> Maybe
 getTrackUrl rideId mTrackUrl = do
   case mTrackUrl of
     Nothing -> do
-      ride <- Esq.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+      -- ride <- Esq.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+      ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
       return ride.trackingUrl
     a -> return a
