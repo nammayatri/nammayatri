@@ -25,7 +25,7 @@ initData = {
     , tokenId : ""
     , attempts : 0
     , otp : ""
-    , timer : ""
+    , timer : 30
     , timerID : ""
     },
     props: {
@@ -34,7 +34,7 @@ initData = {
         btnActiveOTP :false,
         isValidMobileNumber : true,
         wrongOTP : false,
-        resendEnable : true,
+        resendEnable : false,
         capturedOtp : "",
         isReadingOTP : true,
         letterSpacing : PX 1.0,

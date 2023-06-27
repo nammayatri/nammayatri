@@ -185,13 +185,13 @@ eval (BackPressed flag) state = do
                 continue state
 
 eval (CountDown seconds id status timerID) state = do
-        _ <- pure $ printLog "timer" seconds
+        _ <- pure $ printLog "timer" $ show seconds
         if status == "EXPIRED" then do
             _ <- pure $ clearTimer timerID
-            let newState = state{data{timer = "", timerID = ""},props = state.props{resendEnable = true}}
+            let newState = state{data{timer = 15, timerID = ""},props = state.props{resendEnable = true}}
             continue newState
         else
-            continue $ state{data{timer = show seconds, timerID=timerID},props = state.props{resendEnable = false}}
+            continue $ state{data{timer = seconds, timerID=timerID},props = state.props{resendEnable = false}}
 eval (SetToken id )state = do
   _ <- pure $ spy "SetTokenSetToken" id
   _ <- pure $ setValueToLocalNativeStore FCM_TOKEN  id
