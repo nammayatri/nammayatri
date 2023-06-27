@@ -506,5 +506,6 @@ const englishStrings = {
   CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "The customer will pay ₹1.5\nfor every minute of wait time after \nfirst 3 minutes",
   OTHERS : "Others",
   ENTER_SECOND_SIM_NUMBER : "Enter Second SIM Number",
-  ALTERNATE_NUMBER : "Alternate Number"
+  ALTERNATE_NUMBER : "Alternate Number",
+  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "Select the languages you can speak"
 }

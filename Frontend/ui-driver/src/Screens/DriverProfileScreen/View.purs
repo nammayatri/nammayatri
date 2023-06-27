@@ -63,6 +63,8 @@ import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
 import Components.InAppKeyboardModal.View as InAppKeyboardModal
 import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
+import Components.CheckListView.View as CheckListView
+
 
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
@@ -96,7 +98,7 @@ view push state =
         , orientation VERTICAL
         , onBackPressed push (const BackPressed state)
         , background Color.white900
-        , visibility if state.props.updateDetails then GONE else VISIBLE
+        , visibility if state.props.updateLanguages then GONE else VISIBLE
         , padding $ PaddingBottom 24
         ][  settingsView state push
           , profileView push state]
@@ -111,6 +113,7 @@ view push state =
       , if state.props.showGenderView || state.props.alternateNumberView then driverNumberGenderView state push else dummyTextView
       , if state.props.removeAlternateNumber then PopUpModal.view (push <<<  RemoveAlternateNumberAC) (removeAlternateNumberConfig state ) else dummyTextView
       , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView]
+      , if state.props.updateLanguages then updateLanguageView state push else dummyTextView]
 
 profileView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w 
 profileView push state = 
@@ -1060,12 +1063,43 @@ infoTileView state config =
         ]
     ]
 
-updateDetailsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit )-> PrestoDOM (Effect Unit) w
-updateDetailsView state push = 
+updateLanguageView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit )-> PrestoDOM (Effect Unit) w
+updateLanguageView state push = 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , margin (MarginBottom 10)
+  ][ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
+   , languagesSpokenView state push
+   , primaryButtons state push
+  ]
+
+primaryButtons :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit )-> PrestoDOM (Effect Unit) w
+primaryButtons state push = 
+  linearLayout
+  [ 
+    orientation HORIZONTAL
+  , height MATCH_PARENT
+  , weight 1.0
+  , gravity BOTTOM
+  ] [ PrimaryButton.view (push <<< UpdateButtonClicked) (primaryButtonConfig state)
+  ]
+
+languagesSpokenView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit )-> PrestoDOM (Effect Unit) w
+languagesSpokenView state push = 
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  ][  GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
-    , PrimaryEditText.view (push <<< PrimaryEditTextAC) (primaryEditTextConfig state)
+  ][ 
+      textView 
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , text (getString SELECT_THE_LANGUAGES_YOU_CAN_SPEAK)
+        , margin (Margin 20 20 20 5)
+        , textSize FontSize.a_16
+        , color Color.black900
+        ]
+    , CheckListView.view (push <<< LanguageSelection) (checkListConfig state)
   ]

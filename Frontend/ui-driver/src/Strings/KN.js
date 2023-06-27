@@ -504,5 +504,6 @@ const kannadaStrings = {
   CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "ಗ್ರಾಹಕರು \nಮೊದಲ 3 ನಿಮಿಷಗಳ ನಂತರ ಪ್ರತಿ ನಿಮಿಷ ಕಾಯುವ ಸಮಯಕ್ಕೆ ₹1.5\n ಪಾವತಿಸುತ್ತಾರೆ.",
   OTHERS : "ಇತರರು",
   ENTER_SECOND_SIM_NUMBER : "ಎರಡನೇ ಸಿಮ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ",
-  ALTERNATE_NUMBER : "ಪರ್ಯಾಯ ಸಂಖ್ಯೆ"
+  ALTERNATE_NUMBER : "ಪರ್ಯಾಯ ಸಂಖ್ಯೆ",
+  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "ನೀವು ಮಾತನಾಡಬಹುದಾದ ಭಾಷೆಗಳನ್ನು ಆಯ್ಕೆಮಾಡಿ"
 }

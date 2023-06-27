@@ -503,5 +503,6 @@ const tamilStrings = {
   CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "முதல் 3 நிமிடங்களுக்குப் பிறகு ஒவ்வொரு நிமிட காத்திருப்பு நேரத்திற்கும் வாடிக்கையாளர் ₹1.5 செலுத்துவார்.",
   OTHERS : "மற்றவைகள்",
   ENTER_SECOND_SIM_NUMBER : "இரண்டாவது சிம் எண்ணை உள்ளிடவும்",
-  ALTERNATE_NUMBER : "மாற்று எண்"
+  ALTERNATE_NUMBER : "மாற்று எண்",
+  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "நீங்கள் பேசக்கூடிய மொழிகளைத் தேர்ந்தெடுக்கவும்"
 }

@@ -511,5 +511,6 @@ const mlStrings = {
   CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "ഉപഭോക്താവ് \nആദ്യ 3 മിനിറ്റിന് ശേഷം ഓരോ മിനിറ്റിലും കാത്തിരിപ്പ് സമയത്തിന് ₹1.5\nനൽകും.",
   OTHERS : "മറ്റുള്ളവ",
   ENTER_SECOND_SIM_NUMBER : "രണ്ടാമത്തെ സിം നമ്പർ നൽകുക",
-  ALTERNATE_NUMBER : "ഇതര നമ്പർ"
+  ALTERNATE_NUMBER : "ഇതര നമ്പർ",
+  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "നിങ്ങൾക്ക് സംസാരിക്കാൻ കഴിയുന്ന ഭാഷകൾ തിരഞ്ഞെടുക്കുക"
 }

@@ -22,7 +22,7 @@ import JBridge (firebaseLogEvent, goBackPrevWebPage, toast)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
-import Prelude (class Show, pure, unit, ($), discard, bind, (==))
+import Prelude (class Show, pure, unit, ($), discard, bind, (==), map, not)
 import PrestoDOM (Eval, continue, exit, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -45,7 +45,9 @@ import Data.String (length, take, drop)
 import Helpers.Utils (getTime,getCurrentUTC,differenceBetweenTwoUTC)
 import Data.String.CodeUnits (charAt)
 import Screens.Types as ST
-import Debug
+import Components.CheckList as CheckList
+import Common.Types.App (CheckBoxOptions)
+import Data.Array (filter)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -149,8 +151,8 @@ data Action = BackPressed Boolean
             | RemoveAlterNumber
             | RemoveAlternateNumberAC PopUpModal.Action
             | CheckBoxClick ST.Gender
-
-
+            | LanguageSelection CheckList.Action
+            | UpdateButtonClicked PrimaryButton.Action
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 
@@ -300,6 +302,13 @@ eval (InAppKeyboardModalOtp (InAppKeyboardModal.OnSelection key index)) state = 
   continue state { props = state.props { alternateMobileOtp = alternateMobileOtp, enterOtpFocusIndex = focusIndex, otpIncorrect = false } }
 
 eval (InAppKeyboardModalOtp (InAppKeyboardModal.OnClickDone text)) state = exit (VerifyAlternateNumberOTP state)
+eval (LanguageSelection (CheckList.ChangeCheckBoxSate item)) state = do
+  let languageChange = map (\ele -> if ele.value == item.value then ele{isSelected = not ele.isSelected} else ele) state.data.languageList 
+  continue state {data {languageList = languageChange}}
+
+eval (UpdateButtonClicked (PrimaryButton.OnClick)) state = do
+  let languagesSelected = getSelectedLanguages state
+  continue state
 
 eval _ state = continue state
 
@@ -355,3 +364,7 @@ getGenderName gender =
       "PREFER_NOT_TO_SAY" -> Just (getString PREFER_NOT_TO_SAY)
       _ -> Nothing
     Nothing -> Nothing
+getSelectedLanguages :: DriverProfileScreenState -> Array CheckBoxOptions
+getSelectedLanguages state = do
+  let languages = filter (\a -> a.isSelected == true) state.data.languageList
+  languages
