@@ -63,7 +63,8 @@ const nammaYatriConfigs = {
     DOCUMENT_LINK : "https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc",
     APP_LINK : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner",
     PRIVACY_POLICY_LINK : "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9",
-    SPECIAL_ZONE_OTP_VIEW : "false"
+    SPECIAL_ZONE_OTP_VIEW : "false",
+    BONUS_EARNED : "true"
 }
 
 const kannadaStrings = {
@@ -72,7 +73,8 @@ const kannadaStrings = {
     NEED_IT_TO_ENABLE_LOCATION : "ಅಪ್ಲಿಕೇಶನ್ ಮುಚ್ಚಿದಾಗ ಅಥವಾ ಬಳಕೆಯಲ್ಲಿಲ್ಲದಿದ್ದರೂ ಸಹ ಚಾಲಕ ಪ್ರಸ್ತುತ ಸ್ಥಳವನ್ನು ಮೇಲ್ವಿಚಾರಣೆ ಮಾಡಲು ನಿಮ್ಮ ಸ್ಥಳವನ್ನು ಹಂಚಿಕೊಳ್ಳಲು ಸಕ್ರಿಯಗೊಳಿಸಲು ನಮ್ಮ ಯಾತ್ರಿ ಪಾಲುದಾರರು ಸ್ಥಳ ಡೇಟಾವನ್ನು ಸಂಗ್ರಹಿಸುತ್ತಾರೆ.",
     CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER : "ಪ್ರಸ್ತುತ, ನಾವು ಕರ್ನಾಟಕ ನೋಂದಾಯಿತ ಸಂಖ್ಯೆಯನ್ನು ಮಾತ್ರ ಅನುಮತಿಸುತ್ತೇವೆ",
     YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT : "ನೀವು ನಮ್ಮ ಯಾತ್ರಿ ಬೆಂಬಲ ತಂಡಕ್ಕೆ ಕರೆ ಮಾಡಲಿರುವಿರಿ. ನೀವು ಮುಂದುವರೆಯಲು ಬಯಸುವಿರಾ?",
-    YOUR_LOCATION_HELPS_OUR_SYSTEM : "ನಿಮ್ಮ ಸ್ಥಳವು ನಮ್ಮ ಸಿಸ್ಟಂ ಅನ್ನು ಆಟೋಗಳ ಮೂಲಕ ನಕ್ಷೆ ಮಾಡಲು ಸಹಾಯ ಮಾಡುತ್ತದೆ ಮತ್ತು ನಿಮಗೆ ಸಾಧ್ಯವಿರುವ ವೇಗದ ಸವಾರಿಯನ್ನು ನೀಡುತ್ತದೆ."
+    YOUR_LOCATION_HELPS_OUR_SYSTEM : "ನಿಮ್ಮ ಸ್ಥಳವು ನಮ್ಮ ಸಿಸ್ಟಂ ಅನ್ನು ಆಟೋಗಳ ಮೂಲಕ ನಕ್ಷೆ ಮಾಡಲು ಸಹಾಯ ಮಾಡುತ್ತದೆ ಮತ್ತು ನಿಮಗೆ ಸಾಧ್ಯವಿರುವ ವೇಗದ ಸವಾರಿಯನ್ನು ನೀಡುತ್ತದೆ.",
+    WHAT_IS_NAMMA_YATRI_BONUS : "ನಮ್ಮ ಯಾತ್ರಿ ಬೋನಸ್ ಎಂದರೇನು?"
 }
 
 const hindiStrings = {
@@ -81,7 +83,8 @@ const hindiStrings = {
     NEED_IT_TO_ENABLE_LOCATION : "नम्मा यात्री पार्टनर ड्राइवर के लोकेशन की निगरानी के लिए अपना स्थान साझा करने के लिए लोकेशन डेटा एकत्र करता है, तब भी जब ऐप बंद हो या उपयोग में न हो।",
     CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER : "वर्तमान में, हम केवल कर्नाटक पंजीकृत संख्या की अनुमति देते हैं",
     YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT : "आप नम्मा यात्री सपोर्ट टीम को कॉल करने वाले हैं। क्या आप आगे बढ़ना चाहते हैं?",
-    YOUR_LOCATION_HELPS_OUR_SYSTEM : "आपका स्थान हमारे सिस्टम को आस पास के सभी ऑटो को मैप करने में सहायता कर्ता है और आपको सबसे तेज सवारी प्रदान करता है"
+    YOUR_LOCATION_HELPS_OUR_SYSTEM : "आपका स्थान हमारे सिस्टम को आस पास के सभी ऑटो को मैप करने में सहायता कर्ता है और आपको सबसे तेज सवारी प्रदान करता है",
+    WHAT_IS_NAMMA_YATRI_BONUS : "नम्मा यात्री बोनस क्या है?"
 }
 
 const englishStrings = {
@@ -90,7 +93,8 @@ const englishStrings = {
     NEED_IT_TO_ENABLE_LOCATION : "Namma Yatri Partner collect location data to enable share your location to monitor driver current location, even when the app is closed or not in use.",
     CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER : "Currently,We allow only Karnataka registered number",
     YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT : "You are about to place a call to the Namma Yatri Support Team. Do you want to proceed?",
-    YOUR_LOCATION_HELPS_OUR_SYSTEM : "Your location helps our system to map down all the near by autos and get you the quickest ride possible."
+    YOUR_LOCATION_HELPS_OUR_SYSTEM : "Your location helps our system to map down all the near by autos and get you the quickest ride possible.",
+    WHAT_IS_NAMMA_YATRI_BONUS : "What is Namma Yatri Bonus?"
 }
 
 const tamilStrings = {
@@ -99,5 +103,6 @@ const tamilStrings = {
     NEED_IT_TO_ENABLE_LOCATION : "பயன்பாடு மூடப்பட்டிருந்தாலும் கூட, இயக்கி தற்போதைய இருப்பிடத்தை கண்காணிக்க உங்கள் இருப்பிடத்தைப் பகிர்வதற்கு நம்மா யாத்ரி கூட்டாளர் இருப்பிடத் தரவை சேகரிக்கவும்",
     CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER : "தற்போது, ​​கர்நாடகா பதிவு செய்யப்பட்ட எண்ணை மட்டுமே அனுமதிக்கிறோம்",
     YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT : "நீங்கள் நம்ம யாத்ரி ஆதரவுக் குழுவிற்கு அழைப்பு விடுக்க உள்ளீர்கள். தொடர வேண்டுமா?",
-    YOUR_LOCATION_HELPS_OUR_SYSTEM : "உங்கள் இருப்பிடம் எங்கள் கணினியை ஆட்டோக்கள் மூலம் அருகிலுள்ள அனைத்து வரைபடத்தையும், விரைவாக சவாரி செய்ய உதவுகிறது."
+    YOUR_LOCATION_HELPS_OUR_SYSTEM : "உங்கள் இருப்பிடம் எங்கள் கணினியை ஆட்டோக்கள் மூலம் அருகிலுள்ள அனைத்து வரைபடத்தையும், விரைவாக சவாரி செய்ய உதவுகிறது.",
+    WHAT_IS_NAMMA_YATRI_BONUS : "நம்ம யாத்ரி போனஸ் என்றால் என்ன?"
 }

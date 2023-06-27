@@ -23,35 +23,17 @@ import Styles.Colors as Color
 import Prelude
 import Effect (Effect)
 
-data Action = NoAction
+data Action = NoAction | OnIconClick
 
 type Config =
-  { countTextConfig :: CountTextConfig,
-    earningsTextConfig :: EarningsTextConfig,
+  { countTextConfig :: TextConfig,
+    earningsTextConfig :: TextConfig,
+    bonusTextConfig :: TextConfig,
     textConfig :: TextConfig,
     totalRidesOfDay :: Int,
     totalEarningsOfDay :: Int,
+    bonusEarned :: Int,
     visibility :: Visibility
-  }
-
-type CountTextConfig =
-  { width :: Length
-  , height :: Length
-  , text :: String
-  , color :: String 
-  , visibility :: Visibility
-  , gravity :: Gravity
-  , weight :: Number
-  }
-
-type EarningsTextConfig =
-  { width :: Length
-  , height :: Length
-  , text :: String
-  , color :: String 
-  , visibility :: Visibility
-  , gravity :: Gravity
-  , weight :: Number
   }
 
 type TextConfig =
@@ -84,6 +66,15 @@ config =
     , gravity : CENTER_HORIZONTAL
     , weight : 1.0
     },
+    bonusTextConfig :
+    { width : MATCH_PARENT
+    , height : WRAP_CONTENT
+    , text : ""
+    , color : Color.green900
+    , visibility : VISIBLE
+    , gravity : CENTER_HORIZONTAL
+    , weight : 1.0
+    },
     textConfig :
     { width : MATCH_PARENT
     , height : WRAP_CONTENT
@@ -95,5 +86,6 @@ config =
     },
     totalRidesOfDay : 2,
     totalEarningsOfDay : 2,
+    bonusEarned : 0,
     visibility : VISIBLE
   }

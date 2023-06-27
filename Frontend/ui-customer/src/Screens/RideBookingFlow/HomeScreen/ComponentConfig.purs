@@ -29,6 +29,7 @@ import Components.EmergencyHelp as EmergencyHelp
 import Components.ErrorModal as ErrorModal
 import Components.FareBreakUp as FareBreakUp
 import Components.PopUpModal as PopUpModal
+import Components.RequestInfoCard as RequestInfoCard
 import Components.PrimaryButton as PrimaryButton
 import Components.SearchLocationModel as SearchLocationModel
 import Components.ChooseYourRide as ChooseYourRide
@@ -64,6 +65,7 @@ import Data.Either (Either(..))
 import Foreign.Class (class Encode)
 import Data.Array ((!!))
 import Resources.Constants (getKmMeter)
+import Common.Types.App (LazyCheck(..))
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -982,3 +984,24 @@ getTipViewText tipViewProps prefixString =
   case (getValueToLocalStore LANGUAGE_KEY) of
     "EN_US" -> prefixString <> " +₹"<>show (fromMaybe 10 (tipViewProps.customerTipArrayWithValues !! tipViewProps.activeIndex))<>" "<>(getString TIP)
     _ -> " +₹"<>show (fromMaybe 10 (tipViewProps.customerTipArrayWithValues !! tipViewProps.activeIndex))<>" "<>(getString TIP) <> " " <> prefixString
+
+requestInfoCardConfig :: LazyCheck -> RequestInfoCard.Config
+requestInfoCardConfig _ = let
+  config = RequestInfoCard.config
+  requestInfoCardConfig' = config{
+    title {
+      text = getString CHOOSE_BETWEEN_MULTIPLE_RIDES
+    }
+  , primaryText {
+      text = getString ENABLE_THIS_FEATURE_TO_CHOOSE_YOUR_RIDE
+    }
+  , imageConfig {
+      imageUrl = "ny_ic_select_offer,https://assets.juspay.in/nammayatri/images/user/ny_ic_select_offer.png",
+      height = V 122,
+      width = V 116
+    }
+  , buttonConfig {
+      text = getString GOT_IT
+    }
+  }
+  in requestInfoCardConfig'

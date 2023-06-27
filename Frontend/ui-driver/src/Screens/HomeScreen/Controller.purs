@@ -24,7 +24,8 @@ import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButtonController
 import Components.RideActionModal as RideActionModal
 import Components.ChatView as ChatView
-import Components.StatsModel.Controller (Action) as StatsModelController
+import Components.StatsModel.Controller as StatsModelController
+import Components.RequestInfoCard as RequestInfoCard
 import Control.Monad.State (state)
 import Data.Array as Array
 import Data.Int (round, toNumber, fromString)
@@ -166,7 +167,7 @@ instance loggableAction :: Loggable Action where
     ZoneOtpAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "zone_otp"
     TriggerMaps -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "trigger_maps"
     RemoveGenderBanner -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "gender_banner"
-
+    RequestInfoCardAction act -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "request_info_card"
 
 
 
@@ -231,6 +232,7 @@ data Action = NoAction
             | TriggerMaps
             | GenderBannerModal Banner.Action
             | RemoveGenderBanner
+            | RequestInfoCardAction RequestInfoCard.Action
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -247,9 +249,11 @@ eval BackPressed state = do
           else if state.props.cancelConfirmationPopup then do
             _ <- pure $ clearTimer state.data.cancelRideConfirmationPopUp.timerID
             continue state {props{cancelConfirmationPopup = false}, data{cancelRideConfirmationPopUp{timerID = "" , continueEnabled=false, enableTimer=false}}}
-              else do
-                _ <- pure $ minimizeApp ""
-                continue state
+              else if state.props.showBonusInfo then do
+                continue state { props { showBonusInfo = false } }
+                  else do
+                    _ <- pure $ minimizeApp ""
+                    continue state
 
 eval TriggerMaps state = continueWithCmd state[ do
   _ <- pure $ openNavigation 0.0 0.0 state.data.activeRide.dest_lat state.data.activeRide.dest_lon
@@ -550,6 +554,16 @@ eval HelpAndSupportScreen state = exit $ GoToHelpAndSupportScreen
 eval (GenderBannerModal (Banner.OnClick)) state = do
   _ <- pure $ firebaseLogEvent "ny_driver_gender_banner_click"
   exit $ GotoEditGenderScreen
+  
+eval (StatsModelAction StatsModelController.OnIconClick) state = continue state { props { showBonusInfo = not state.props.showBonusInfo } }
+
+eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { props { showBonusInfo = false } } 
+
+eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { props { showBonusInfo = false } } 
+
+eval (RequestInfoCardAction RequestInfoCard.NoAction) state = continue state
+
+eval (GenderBannerModal (Banner.OnClick)) state = exit $ GotoEditGenderScreen
 
 eval RemoveGenderBanner state = do
   _ <- pure $ setValueToLocalStore IS_BANNER_ACTIVE "False"

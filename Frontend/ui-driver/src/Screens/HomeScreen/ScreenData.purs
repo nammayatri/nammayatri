@@ -58,6 +58,7 @@ initData = {
         locationLastUpdatedTime : "",
         totalRidesOfDay : 2,
         totalEarningsOfDay : 2,
+        bonusEarned : 0,
         route : [],
         cancelRideConfirmationPopUp : {
           delayInSeconds : 5,
@@ -98,6 +99,7 @@ initData = {
         silentPopUpView : false, 
         zoneRideBooking : true,
         showGenderBanner : false,
-        notRemoveBanner : true
+        notRemoveBanner : true,
+        showBonusInfo : false
     }
 }
