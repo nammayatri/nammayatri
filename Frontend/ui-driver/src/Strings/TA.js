@@ -477,5 +477,6 @@ const tamilStrings = {
   ZONE_CANCEL_TEXT_PICKUP : "உங்கள் வாடிக்கையாளர் தங்கள் இலக்கை அடைவதற்கான அவசரத்தில் இருக்கலாம். \n ரத்து செய்ய வேண்டாம் என்று கேட்டுக்கொள்கிறோம்.",
   OTHERS : "மற்றவைகள்",
   ENTER_SECOND_SIM_NUMBER : "இரண்டாவது சிம் எண்ணை உள்ளிடவும்",
-  ALTERNATE_NUMBER : "மாற்று எண்"
+  ALTERNATE_NUMBER : "மாற்று எண்",
+  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "நீங்கள் பேசக்கூடிய மொழிகளைத் தேர்ந்தெடுக்கவும்"
 }

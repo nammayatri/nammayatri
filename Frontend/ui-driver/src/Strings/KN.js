@@ -478,5 +478,6 @@ const kannadaStrings = {
   ZONE_CANCEL_TEXT_PICKUP : "ನಿಮ್ಮ ಗ್ರಾಹಕರು ಬಹುಶಃ ತಮ್ಮ ಗಮ್ಯಸ್ಥಾನವನ್ನು ತಲುಪುವ ಆತುರದಲ್ಲಿರುತ್ತಾರೆ. \n ರದ್ದು ಮಾಡದಂತೆ ನಾವು ನಿಮ್ಮನ್ನು ಒತ್ತಾಯಿಸುತ್ತೇವೆ.",
   OTHERS : "ಇತರರು",
   ENTER_SECOND_SIM_NUMBER : "ಎರಡನೇ ಸಿಮ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ",
-  ALTERNATE_NUMBER : "ಪರ್ಯಾಯ ಸಂಖ್ಯೆ"
+  ALTERNATE_NUMBER : "ಪರ್ಯಾಯ ಸಂಖ್ಯೆ",
+  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "ನೀವು ಮಾತನಾಡಬಹುದಾದ ಭಾಷೆಗಳನ್ನು ಆಯ್ಕೆಮಾಡಿ"
 }

@@ -484,5 +484,6 @@ const mlStrings = {
 	ZONE_CANCEL_TEXT_PICKUP : "നിങ്ങളുടെ ഉപഭോക്താവ് അവരുടെ ലക്ഷ്യസ്ഥാനത്ത് എത്താനുള്ള തിരക്കിലായിരിക്കാം. \n റദ്ദാക്കരുതെന്ന് ഞങ്ങൾ നിങ്ങളോട് അഭ്യർത്ഥിക്കുന്നു.",
   OTHERS : "മറ്റുള്ളവ",
   ENTER_SECOND_SIM_NUMBER : "രണ്ടാമത്തെ സിം നമ്പർ നൽകുക",
-  ALTERNATE_NUMBER : "ഇതര നമ്പർ"
+  ALTERNATE_NUMBER : "ഇതര നമ്പർ",
+  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "നിങ്ങൾക്ക് സംസാരിക്കാൻ കഴിയുന്ന ഭാഷകൾ തിരഞ്ഞെടുക്കുക"
 }

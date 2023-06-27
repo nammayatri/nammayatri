@@ -18,6 +18,8 @@ module Screens.DriverProfileScreen.ComponentConfig where
 import Components.PopUpModal as PopUpModal
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryEditText as PrimaryEditText
+import Components.CheckListView as CheckListView
+import Screens.DriverProfileScreen.Controller
 import Language.Strings
 import Language.Types (STR(..))
 import PrestoDOM
@@ -234,3 +236,31 @@ enterOtpState state = let
       }
       }
       in inAppModalConfig'
+checkListConfig :: ST.DriverProfileScreenState -> CheckListView.Config
+checkListConfig state = let
+  config = CheckListView.config
+  checkListConfig' = config
+    {
+        optionsProvided = state.data.languageList
+        , isSelected = false
+        , index = 0
+    }
+ in checkListConfig'
+
+
+primaryButtonConfig1 :: ST.DriverProfileScreenState -> PrimaryButton.Config
+primaryButtonConfig1 state = let
+    config = PrimaryButton.config
+    primaryButtonConfig' = config
+      { textConfig
+      { text = (getString UPDATE)
+      , color = Color.primaryButtonColor
+      , textSize = FontSize.a_18}
+      , margin = (Margin 10 0 10 0)
+      , cornerRadius = 10.0
+      , background = Color.black900
+      , height = (V 60)
+      -- , isClickable = state.props.deleteButtonVisibility
+      , alpha = 1.0
+      }
+  in primaryButtonConfig'

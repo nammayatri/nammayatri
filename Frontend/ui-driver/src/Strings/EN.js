@@ -480,5 +480,6 @@ const englishStrings = {
   ZONE_CANCEL_TEXT_PICKUP : "Your customer is probably in a rush to reach their destination. \n We urge you not to cancel.",
   OTHERS : "Others",
   ENTER_SECOND_SIM_NUMBER : "Enter Second SIM Number",
-  ALTERNATE_NUMBER : "Alternate Number"
+  ALTERNATE_NUMBER : "Alternate Number",
+  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "Select the languages you can speak"
 }

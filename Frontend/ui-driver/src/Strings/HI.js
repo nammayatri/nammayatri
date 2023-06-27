@@ -482,5 +482,6 @@ const hindiStrings = {
   ZONE_CANCEL_TEXT_PICKUP : "आपका ग्राहक शायद अपने गंतव्य तक पहुंचने की हड़बड़ी में है। \n हम आपसे अनुरोध करते हैं कि रद्द न करें।",
   OTHERS : "अन्य",
   ENTER_SECOND_SIM_NUMBER : "दूसरा सिम नंबर दर्ज करें",
-  ALTERNATE_NUMBER : "वैकल्पिक नंबर"
+  ALTERNATE_NUMBER : "वैकल्पिक नंबर",
+  SELECT_THE_LANGUAGES_YOU_CAN_SPEAK : "वे भाषाएँ चुनें जिन्हें आप बोल सकते हैं"
 }
