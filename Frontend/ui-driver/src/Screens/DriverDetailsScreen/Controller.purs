@@ -171,7 +171,7 @@ eval (InAppKeyboardModalMobile (InAppKeyboardModal.OnSelection key index)) state
               let isValidMobileNumber = case (charAt 0 newVal) of
                                     Just a -> if a=='0' || a=='1' || a=='2' || a=='5' then false
                                               else if a=='3' || a=='4' then(
-                                                   if newVal=="4000400040" || newVal=="3000300030" then
+                                                   if newVal=="4000400040" || newVal=="3000300030" || newVal=="5000500050" then
                                                    true
                                                    else false )
                                               else true
