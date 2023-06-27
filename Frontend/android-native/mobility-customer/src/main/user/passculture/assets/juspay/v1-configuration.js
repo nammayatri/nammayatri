@@ -1,6 +1,12 @@
 window.getMerchantConfig = function () {
   return JSON.stringify({
-    "StringKeys": ["REQUEST_AUTO_RIDE", "CONFIRM_RIDE_", "PAYMENT_METHOD_STRING", "PAY_DRIVER_USING_CASH_OR_UPI"],
+    "StringKeys": ["REQUEST_AUTO_RIDE" ,
+                         "CONFIRM_RIDE_",
+                         "PAYMENT_METHOD_STRING_",
+                         "PAYMENT_METHOD_STRING",
+                         "PAY_DRIVER_USING_CASH_OR_UPI",
+                         "PAY_DRIVER_USING_WALLET",
+                         "PAY_DRIVER_USING_CASH_OR_UPI_"],
     "isReferralEnabled": "false",
     "showBookingPreference": "true",
     "showRateCard": "true",
@@ -12,14 +18,14 @@ window.getMerchantConfig = function () {
     "APP_LINK": "",
     "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F",
     "CUSTOMER_TIP": "false",
-    "isShareAppEnabled": "true",
+    "isShareAppEnabled": "false",
     "addFavouriteScreenBackArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png",
     "showPickUpandDrop": false,
     "apiLoaderLottie": "",
     "isEmergencyContacts": "true",
     "showCorporateAddress" : false,
     "isChatEnabled": "false",
-    "loaderColor": "#EB0055",
+    "loaderColor": "EB0055",
     "isGradient" : "true",
     "gradient": ["#EB0055", "#320096"],
     "primaryTextColor": "#FFFFFF",
@@ -64,7 +70,7 @@ window.getMerchantConfig = function () {
     "quoteListModel": {
       "backgroundColor": "#EB0055",
       "textColor": "#FFFFFF",
-      "loaderColor": "#80B2FF", 
+      "loaderColor": "#80B2FF",
       "otpTextBackground"  : "#FFFFFF",
       "otpBackground" : "#FFF0F6",
       "otpTextColor" : "#3C2062",
@@ -102,7 +108,7 @@ window.getMerchantConfig = function () {
     "rateCardColor": "#2C2F3A",
     "profileEditGravity" : "center",
     "nyBrandingVisibility": false,
-    "fontType": "System",
+    "fontType": "Assets",
     "black900": "#2C2F3A",
     "black800": "#454545",
     "showHamMenu" : true,
@@ -112,14 +118,20 @@ window.getMerchantConfig = function () {
     "englishStrings": {
       "REQUEST_AUTO_RIDE": "Request Taxi Ride" ,
       "CONFIRM_RIDE_": "Confirm Ride",
+      "PAYMENT_METHOD_STRING_": "Pass Culture Wallet",
       "PAYMENT_METHOD_STRING": "Cash",
-      "PAY_DRIVER_USING_CASH_OR_UPI": "Pay driver using Cash"
+      "PAY_DRIVER_USING_CASH_OR_UPI": "Pay driver by Cash",
+      "PAY_DRIVER_USING_WALLET": "Pay driver using Pass Culture Wallet",
+      "PAY_DRIVER_USING_CASH_OR_UPI_": "Already paid using Pass Culture Wallet"
     },
     "frenchStrings": {
       "REQUEST_AUTO_RIDE": "Demande de trajet",
       "CONFIRM_RIDE_" : "Confirmer Ride",
       "PAYMENT_METHOD_STRING": "Espèces",
-      "PAY_DRIVER_USING_CASH_OR_UPI" : "Payer le conducteur en espèces"
+      "PAYMENT_METHOD_STRING_": "Porte-monnaie Pass Culture",
+      "PAY_DRIVER_USING_CASH_OR_UPI": "Payer le chauffeur en espèces",
+      "PAY_DRIVER_USING_WALLET" : "Payer le chauffeur avec Pass Culture Wallet",
+      "PAY_DRIVER_USING_CASH_OR_UPI_" : "Déjà payé avec Pass Culture Wallet",
     } ,
     "languageList": [{
       "name": "English",
@@ -136,7 +148,7 @@ window.getMerchantConfig = function () {
     , "titleColor" : "#21C179"
     , "actionText" : "Update now"
     , "actionTextColor" : "#27AE5F"
-    , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
+    , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png"
     },
     "terminateBtnConfig" : {
       "visibility" : true,
@@ -144,7 +156,7 @@ window.getMerchantConfig = function () {
       "imageUrl" : "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
   }
   , "showDeleteAccount" : false
-  , "fontName" : "Montserrat"
-  , "fontKannada" : "Montserrat"
+    , "fontName" : "Montserrat"
+    , "fontKannada" : "Montserrat"
   })
 }
