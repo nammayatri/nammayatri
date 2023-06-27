@@ -169,8 +169,8 @@ eval (InAppKeyboardModalMobile (InAppKeyboardModal.OnSelection key index)) state
   continue state {data = state.data {driverAlternateMobile = (if (state.props.isEditAlternateMobile) then (state.data.driverAlternateMobile) else Nothing), driverEditAlternateMobile = Nothing }, props = state.props {checkAlternateNumber = (state.props.isEditAlternateMobile == false), numberExistError = false}}
   else if length newVal <= 10 then (do
               let isValidMobileNumber = case (charAt 0 newVal) of
-                                    Just a -> if a=='0' || a=='1' || a=='2' || a=='5' then false
-                                              else if a=='3' || a=='4' then(
+                                    Just a -> if a=='0' || a=='1' || a=='2' then false
+                                              else if a=='3' || a=='4' || a=='5' then(
                                                    if newVal=="4000400040" || newVal=="3000300030" || newVal=="5000500050" then
                                                    true
                                                    else false )
