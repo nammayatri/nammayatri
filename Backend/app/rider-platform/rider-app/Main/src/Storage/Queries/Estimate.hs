@@ -30,7 +30,7 @@ import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as BeamE
 import qualified Storage.Queries.EstimateBreakup as QEB
-import Storage.Queries.FullEntityBuilders (buildFullEstimate)
+-- import Storage.Queries.FullEntityBuilders (buildFullEstimate)
 import qualified Storage.Queries.TripTerms as QTT
 import Storage.Tabular.Estimate
 import Storage.Tabular.TripTerms
@@ -51,7 +51,7 @@ createEstimate estimate = do
 
 create :: L.MonadFlow m => Estimate -> m ()
 create estimate = do
-  _ <- traverse_ QTT.create estimate.tripTerms
+  _ <- traverse_ QTT.createTripTerms estimate.tripTerms
   _ <- createEstimate estimate
   traverse_ QEB.create estimate.estimateBreakupList
 
@@ -89,16 +89,16 @@ fullEstimateTable =
                    estimate ^. EstimateTripTermsId ==. mbTripTerms ?. TripTermsTId
                )
 
-findById :: Transactionable m => Id Estimate -> m (Maybe Estimate)
-findById estimateId = Esq.buildDType $ do
-  mbFullEstimateT <- Esq.findOne' $ do
-    (estimate :& mbTripTerms) <- from fullEstimateTable
-    where_ $ estimate ^. EstimateTId ==. val (toKey estimateId)
-    pure (estimate, mbTripTerms)
-  mapM buildFullEstimate mbFullEstimateT
+-- findById :: Transactionable m => Id Estimate -> m (Maybe Estimate)
+-- findById estimateId = Esq.buildDType $ do
+--   mbFullEstimateT <- Esq.findOne' $ do
+--     (estimate :& mbTripTerms) <- from fullEstimateTable
+--     where_ $ estimate ^. EstimateTId ==. val (toKey estimateId)
+--     pure (estimate, mbTripTerms)
+--   mapM buildFullEstimate mbFullEstimateT
 
-findById' :: L.MonadFlow m => Id Estimate -> m (Maybe Estimate)
-findById' (Id estimateId) = do
+findById :: L.MonadFlow m => Id Estimate -> m (Maybe Estimate)
+findById (Id estimateId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamE.EstimateT
   let updatedMeshConfig = setMeshConfig modelName
@@ -110,16 +110,16 @@ findById' (Id estimateId) = do
         _ -> pure Nothing
     Nothing -> pure Nothing
 
-findAllBySRId :: Transactionable m => Id SearchRequest -> m [Estimate]
-findAllBySRId searchRequestId = Esq.buildDType $ do
-  fullEstimateTs <- Esq.findAll' $ do
-    (estimate :& mbTripTerms) <- from fullEstimateTable
-    where_ $ estimate ^. EstimateRequestId ==. val (toKey searchRequestId)
-    pure (estimate, mbTripTerms)
-  mapM buildFullEstimate fullEstimateTs
+-- findAllBySRId :: Transactionable m => Id SearchRequest -> m [Estimate]
+-- findAllBySRId searchRequestId = Esq.buildDType $ do
+--   fullEstimateTs <- Esq.findAll' $ do
+--     (estimate :& mbTripTerms) <- from fullEstimateTable
+--     where_ $ estimate ^. EstimateRequestId ==. val (toKey searchRequestId)
+--     pure (estimate, mbTripTerms)
+--   mapM buildFullEstimate fullEstimateTs
 
-findAllBySRId' :: L.MonadFlow m => Id SearchRequest -> m [Estimate]
-findAllBySRId' (Id searchRequestId) = do
+findAllBySRId :: L.MonadFlow m => Id SearchRequest -> m [Estimate]
+findAllBySRId (Id searchRequestId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamE.EstimateT
   let updatedMeshConfig = setMeshConfig modelName
@@ -131,16 +131,16 @@ findAllBySRId' (Id searchRequestId) = do
         _ -> pure []
     Nothing -> pure []
 
-findByBPPEstimateId :: Transactionable m => Id BPPEstimate -> m (Maybe Estimate)
-findByBPPEstimateId bppEstimateId_ = Esq.buildDType $ do
-  mbFullEstimateT <- Esq.findOne' $ do
-    (estimate :& mbTripTerms) <- from fullEstimateTable
-    where_ $ estimate ^. EstimateBppEstimateId ==. val (getId bppEstimateId_)
-    pure (estimate, mbTripTerms)
-  mapM buildFullEstimate mbFullEstimateT
+-- findByBPPEstimateId :: Transactionable m => Id BPPEstimate -> m (Maybe Estimate)
+-- findByBPPEstimateId bppEstimateId_ = Esq.buildDType $ do
+--   mbFullEstimateT <- Esq.findOne' $ do
+--     (estimate :& mbTripTerms) <- from fullEstimateTable
+--     where_ $ estimate ^. EstimateBppEstimateId ==. val (getId bppEstimateId_)
+--     pure (estimate, mbTripTerms)
+--   mapM buildFullEstimate mbFullEstimateT
 
-findByBPPEstimateId' :: L.MonadFlow m => Id BPPEstimate -> m (Maybe Estimate)
-findByBPPEstimateId' (Id bppEstimateId_) = do
+findByBPPEstimateId :: L.MonadFlow m => Id BPPEstimate -> m (Maybe Estimate)
+findByBPPEstimateId (Id bppEstimateId_) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamE.EstimateT
   let updatedMeshConfig = setMeshConfig modelName
@@ -242,7 +242,7 @@ updateStatusByRequestId (Id searchId) status_ = do
 
 transformBeamEstimateToDomain :: L.MonadFlow m => BeamE.Estimate -> m (Maybe Estimate)
 transformBeamEstimateToDomain e@BeamE.EstimateT {..} = do
-  etB <- QEB.findAllByEstimateId' (Id e.bppEstimateId)
+  etB <- QEB.findAllByEstimateIdT (Id e.bppEstimateId)
   trip <- if isJust e.tripTermsId then QTT.findById'' (Id (fromJust e.tripTermsId)) else pure Nothing
   pUrl <- parseBaseUrl providerUrl
   let totalFareRange =

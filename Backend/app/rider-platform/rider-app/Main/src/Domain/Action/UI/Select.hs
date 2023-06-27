@@ -141,20 +141,24 @@ select personId estimateId req@DSelectReq {..} = do
 --DEPRECATED
 selectList :: (EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m SelectListRes
 selectList estimateId = do
-  estimate <- runInReplica $ QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+  -- estimate <- runInReplica $ QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+  estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
-  selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId estimateId
+  -- selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId estimateId
+  selectedQuotes <- QQuote.findAllByEstimateId estimateId
   pure $ SelectListRes $ map DQuote.makeQuoteAPIEntity selectedQuotes
 
 selectResult :: (EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m QuotesResultResponse
 selectResult estimateId = do
   res <- runMaybeT $ do
-    estimate <- MaybeT . runInReplica $ QEstimate.findById estimateId
+    -- estimate <- MaybeT . runInReplica $ QEstimate.findById estimateId
+    estimate <- MaybeT $ QEstimate.findById estimateId
     when (DEstimate.isCancelled estimate.status) $ MaybeT $ throwError $ EstimateCancelled estimate.id.getId
     bookingId <- MaybeT . runInReplica $ QBooking.findBookingIdAssignedByEstimateId estimate.id
     return $ QuotesResultResponse {bookingId = Just bookingId, selectedQuotes = Nothing}
   case res of
     Just r -> pure r
     Nothing -> do
-      selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId estimateId
+      -- selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId estimateId
+      selectedQuotes <- QQuote.findAllByEstimateId estimateId
       return $ QuotesResultResponse {bookingId = Nothing, selectedQuotes = Just $ SelectListRes $ map DQuote.makeQuoteAPIEntity selectedQuotes}

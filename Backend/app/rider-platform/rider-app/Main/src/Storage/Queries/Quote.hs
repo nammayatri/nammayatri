@@ -15,8 +15,7 @@
 
 module Storage.Queries.Quote where
 
-import Data.Tuple.Extra
-import Domain.Types.DriverOffer
+import Domain.Types.DriverOffer as DDO
 import Domain.Types.Estimate
 import Domain.Types.FarePolicy.FareProductType as DFFP
 import Domain.Types.Quote as DQ
@@ -26,114 +25,117 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+-- import Kernel.Storage.Esqueleto as Esq hiding (create)
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Error
 import Lib.Utils
 import qualified Sequelize as Se
+-- import Storage.Queries.FullEntityBuilders (buildFullQuote)
+
+-- import Storage.Tabular.Quote.Instances
+
+import qualified Storage.Beam.DriverOffer as BeamDO
 import qualified Storage.Beam.Quote as BeamQ
-import Storage.Queries.FullEntityBuilders (buildFullQuote)
+import qualified Storage.Queries.DriverOffer as QueryDO
 import Storage.Queries.RentalSlab as QueryRS
 import Storage.Queries.SpecialZoneQuote as QuerySZQ
 import qualified Storage.Queries.TripTerms as QTT
-import Storage.Tabular.DriverOffer as DriverOffer
-import Storage.Tabular.Quote hiding (distanceToNearestDriver)
-import Storage.Tabular.Quote.Instances
-import Storage.Tabular.RentalSlab
-import Storage.Tabular.SpecialZoneQuote
-import Storage.Tabular.TripTerms
 
-createDetails :: QuoteDetailsT -> FullEntitySqlDB ()
+-- createDetails :: QuoteDetailsT -> FullEntitySqlDB ()
+-- createDetails = \case
+--   OneWayDetailsT -> pure ()
+--   RentalDetailsT rentalSlabT -> do
+--     Esq.create' rentalSlabT
+--   DriverOfferDetailsT driverOfferT -> do
+--     Esq.create' driverOfferT
+--   OneWaySpecialZoneDetailsT specialZoneQuoteT -> do
+--     Esq.create' specialZoneQuoteT
+
+createDetails :: L.MonadFlow m => QuoteDetails -> m (MeshResult ())
 createDetails = \case
-  OneWayDetailsT -> pure ()
-  RentalDetailsT rentalSlabT -> do
-    Esq.create' rentalSlabT
-  DriverOfferDetailsT driverOfferT -> do
-    Esq.create' driverOfferT
-  OneWaySpecialZoneDetailsT specialZoneQuoteT -> do
-    Esq.create' specialZoneQuoteT
-
--- create :: L.MonadFlow m => Quote -> m (MeshResult ())
--- create Quote = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
---   let modelName = Se.modelTableName @BeamR.RideT
---   let updatedMeshConfig = setMeshConfig modelName
---   case dbConf of
---     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRideToBeam Quote)
---     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+  OneWayDetails _ -> pure (Right ())
+  RentalDetails rentalSlab -> do
+    QueryRS.createRentalSlab rentalSlab
+  DriverOfferDetails driverOffer -> do
+    QueryDO.createDriverOffer driverOffer
+  OneWaySpecialZoneDetails specialZoneQuote -> do
+    QuerySZQ.createSpecialZoneQuote specialZoneQuote
 
 -- order of creating entites make sense!
-create :: Quote -> SqlDB ()
-create quote =
-  Esq.withFullEntity quote $ \(quoteT, mbTripTermsT, quoteDetailsT) -> do
-    traverse_ Esq.create' mbTripTermsT
-    createDetails quoteDetailsT
-    Esq.create' quoteT
+-- create :: Quote -> SqlDB ()
+-- create quote =
+--   Esq.withFullEntity quote $ \(quoteT, mbTripTermsT, quoteDetailsT) -> do
+--     traverse_ Esq.create' mbTripTermsT
+--     createDetails quoteDetailsT
+--     Esq.create' quoteT
 
-createMany :: [Quote] -> SqlDB ()
-createMany quotes =
-  Esq.withFullEntities quotes $ \list -> do
-    let quoteTs = map fst3 list
-        mbTripTermsTs = mapMaybe snd3 list
-        quoteDetailsTs = map thd3 list
-    Esq.createMany' mbTripTermsTs
-    traverse_ createDetails quoteDetailsTs
-    Esq.createMany' quoteTs
+createQuote :: L.MonadFlow m => Quote -> m (MeshResult ())
+createQuote quote = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamQ.QuoteT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainQuoteToBeam quote)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-createMany' :: L.MonadFlow m => [Quote] -> m (MeshResult ())
-createMany' = error "createMany' not implemented make sure to implement and change the ' where its being used"
+create :: L.MonadFlow m => Quote -> m (MeshResult ())
+create quote = do
+  traverse_ QTT.createTripTerms (quote.tripTerms)
+  _ <- createDetails (quote.quoteDetails)
+  createQuote quote
 
-fullQuoteTable ::
-  From
-    ( Table QuoteT
-        :& MbTable TripTermsT
-        :& MbTable RentalSlabT
-        :& MbTable DriverOffer.DriverOfferT
-        :& MbTable SpecialZoneQuoteT
-    )
-fullQuoteTable =
-  table @QuoteT
-    `leftJoin` table @TripTermsT
-      `Esq.on` ( \(quote :& mbTripTerms) ->
-                   quote ^. QuoteTripTermsId ==. mbTripTerms ?. TripTermsTId
-               )
-    `leftJoin` table @RentalSlabT
-      `Esq.on` ( \(quote :& _ :& mbRentalSlab) ->
-                   quote ^. QuoteRentalSlabId ==. mbRentalSlab ?. RentalSlabTId
-               )
-    `leftJoin` table @DriverOfferT
-      `Esq.on` ( \(quote :& _ :& _ :& mbDriverOffer) ->
-                   quote ^. QuoteDriverOfferId ==. mbDriverOffer ?. DriverOfferTId
-               )
-    `leftJoin` table @SpecialZoneQuoteT
-      `Esq.on` ( \(quote :& _ :& _ :& _ :& mbspecialZoneQuote) ->
-                   quote ^. QuoteSpecialZoneQuoteId ==. mbspecialZoneQuote ?. SpecialZoneQuoteTId
-               )
+-- createMany :: [Quote] -> SqlDB ()
+-- createMany quotes =
+--   Esq.withFullEntities quotes $ \list -> do
+--     let quoteTs = map fst3 list
+--         mbTripTermsTs = mapMaybe snd3 list
+--         quoteDetailsTs = map thd3 list
+--     Esq.createMany' mbTripTermsTs
+--     traverse_ createDetails quoteDetailsTs
+--     Esq.createMany' quoteTs
 
--- findByMobileNumberAndMerchantId' :: (L.MonadFlow m, Log m) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
--- findByMobileNumberAndMerchantId' countryCode mobileNumberHash (Id merchantId) = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
---   let modelName = Se.modelTableName @BeamP.PersonT
---   let updatedMeshConfig = setMeshConfig modelName
---   case dbConf of
---     Just dbConf' -> do
---       result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
---       case result of
---         Right (Just p) -> transformBeamPersonToDomain p
---         _ -> pure Nothing
---     Nothing -> pure Nothing
-findById :: Transactionable m => Id Quote -> m (Maybe Quote)
-findById quoteId = Esq.buildDType $ do
-  mbFullQuoteT <- Esq.findOne' $ do
-    (quote :& mbTripTerms :& mbRentalSlab :& mbDriverOffer :& mbspecialZoneQuote) <- from fullQuoteTable
-    where_ $ quote ^. QuoteTId ==. val (toKey quoteId)
-    pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote)
-  join <$> mapM buildFullQuote mbFullQuoteT
+createMany :: L.MonadFlow m => [Quote] -> m ()
+createMany = traverse_ create
 
-findById' :: (L.MonadFlow m, Log m) => Id Quote -> m (Maybe Quote)
-findById' quoteId = do
+-- fullQuoteTable ::
+--   From
+--     ( Table QuoteT
+--         :& MbTable TripTermsT
+--         :& MbTable RentalSlabT
+--         :& MbTable DriverOffer.DriverOfferT
+--         :& MbTable SpecialZoneQuoteT
+--     )
+-- fullQuoteTable =
+--   table @QuoteT
+--     `leftJoin` table @TripTermsT
+--       `Esq.on` ( \(quote :& mbTripTerms) ->
+--                    quote ^. QuoteTripTermsId ==. mbTripTerms ?. TripTermsTId
+--                )
+--     `leftJoin` table @RentalSlabT
+--       `Esq.on` ( \(quote :& _ :& mbRentalSlab) ->
+--                    quote ^. QuoteRentalSlabId ==. mbRentalSlab ?. RentalSlabTId
+--                )
+--     `leftJoin` table @DriverOfferT
+--       `Esq.on` ( \(quote :& _ :& _ :& mbDriverOffer) ->
+--                    quote ^. QuoteDriverOfferId ==. mbDriverOffer ?. DriverOfferTId
+--                )
+--     `leftJoin` table @SpecialZoneQuoteT
+--       `Esq.on` ( \(quote :& _ :& _ :& _ :& mbspecialZoneQuote) ->
+--                    quote ^. QuoteSpecialZoneQuoteId ==. mbspecialZoneQuote ?. SpecialZoneQuoteTId
+--                )
+
+-- findById :: Transactionable m => Id Quote -> m (Maybe Quote)
+-- findById quoteId = Esq.buildDType $ do
+--   mbFullQuoteT <- Esq.findOne' $ do
+--     (quote :& mbTripTerms :& mbRentalSlab :& mbDriverOffer :& mbspecialZoneQuote) <- from fullQuoteTable
+--     where_ $ quote ^. QuoteTId ==. val (toKey quoteId)
+--     pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote)
+--   join <$> mapM buildFullQuote mbFullQuoteT
+
+findById :: (L.MonadFlow m, Log m) => Id Quote -> m (Maybe Quote)
+findById quoteId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamQ.QuoteT
   let updatedMeshConfig = setMeshConfig modelName
@@ -145,15 +147,42 @@ findById' quoteId = do
         _ -> pure Nothing
     Nothing -> pure Nothing
 
-findByBppIdAndBPPQuoteId :: Transactionable m => Text -> Id BPPQuote -> m (Maybe Quote)
-findByBppIdAndBPPQuoteId bppId bppQuoteId = buildDType $ do
-  mbFullQuoteT <- Esq.findOne' $ do
-    (quote :& mbTripTerms :& mbRentalSlab :& mbDriverOffer :& mbspecialZoneQuote) <- from fullQuoteTable
-    where_ $
-      quote ^. QuoteProviderId ==. val bppId
-        &&. mbDriverOffer ?. DriverOfferBppQuoteId ==. just (val bppQuoteId.getId)
-    pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote)
-  join <$> mapM buildFullQuote mbFullQuoteT
+-- findByBppIdAndBPPQuoteId :: Transactionable m => Text -> Id BPPQuote -> m (Maybe Quote)
+-- findByBppIdAndBPPQuoteId bppId bppQuoteId = buildDType $ do
+--   mbFullQuoteT <- Esq.findOne' $ do
+--     (quote :& mbTripTerms :& mbRentalSlab :& mbDriverOffer :& mbspecialZoneQuote) <- from fullQuoteTable
+--     where_ $
+--       quote ^. QuoteProviderId ==. val bppId
+--         &&. mbDriverOffer ?. DriverOfferBppQuoteId ==. just (val bppQuoteId.getId)
+--     pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote)
+--   join <$> mapM buildFullQuote mbFullQuoteT
+
+findByBppIdAndBPPQuoteId :: (L.MonadFlow m, Log m) => Text -> Id BPPQuote -> m (Maybe Quote)
+findByBppIdAndBPPQuoteId bppId bppQuoteId = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamQ.QuoteT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      quoteList <- do
+        quotes <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamQ.providerId $ Se.Eq bppId]
+        case quotes of
+          Right q -> catMaybes <$> traverse transformBeamQuoteToDomain q
+          _ -> pure []
+
+      dOffer <- QueryDO.findByBPPQuoteId bppQuoteId
+      let quoteWithDoOfferId = foldl' (getQuoteWithDOffer dOffer) [] quoteList
+      case quoteWithDoOfferId of
+        [] -> pure Nothing
+        (x : _) -> pure $ Just x
+    Nothing -> pure Nothing
+  where
+    getQuoteWithDOffer dOffer res quote = do
+      let doId = case quote.quoteDetails of
+            DQ.DriverOfferDetails driverOffer -> Just $ getId driverOffer.id
+            _ -> Nothing
+      let doffer' = filter (\d -> getId (d.id) == fromJust doId) dOffer
+       in res <> (quote <$ doffer')
 
 -- lets check this query as bppquoteId is needed to find driver offer in domain
 
@@ -170,16 +199,16 @@ findByBppIdAndBPPQuoteId bppId bppQuoteId = buildDType $ do
 --         _ -> pure Nothing
 --     Nothing -> pure Nothing
 
-findAllBySRId :: Transactionable m => Id SearchRequest -> m [Quote]
-findAllBySRId searchRequestId = Esq.buildDType $ do
-  fullQuoteTs <- Esq.findAll' $ do
-    (quote :& mbTripTerms :& mbRentalSlab :& mbDriverOffer :& mbspecialZoneQuote) <- from fullQuoteTable
-    where_ $ quote ^. QuoteRequestId ==. val (toKey searchRequestId)
-    pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote)
-  catMaybes <$> mapM buildFullQuote fullQuoteTs
+-- findAllBySRId :: Transactionable m => Id SearchRequest -> m [Quote]
+-- findAllBySRId searchRequestId = Esq.buildDType $ do
+--   fullQuoteTs <- Esq.findAll' $ do
+--     (quote :& mbTripTerms :& mbRentalSlab :& mbDriverOffer :& mbspecialZoneQuote) <- from fullQuoteTable
+--     where_ $ quote ^. QuoteRequestId ==. val (toKey searchRequestId)
+--     pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote)
+--   catMaybes <$> mapM buildFullQuote fullQuoteTs
 
-findAllBySRId' :: (L.MonadFlow m, Log m) => Id SearchRequest -> m [Quote]
-findAllBySRId' searchRequestId = do
+findAllBySRId :: (L.MonadFlow m, Log m) => Id SearchRequest -> m [Quote]
+findAllBySRId searchRequestId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamQ.QuoteT
   let updatedMeshConfig = setMeshConfig modelName
@@ -191,71 +220,91 @@ findAllBySRId' searchRequestId = do
         _ -> pure []
     Nothing -> pure []
 
-findAllByEstimateId :: Transactionable m => Id Estimate -> m [Quote]
-findAllByEstimateId estimateId = buildDType $ do
-  driverOfferTs <- findDOfferByEstimateId' estimateId
-  (catMaybes <$>) $ mapM buildFullQuote' driverOfferTs
-  where
-    buildFullQuote' :: Transactionable m => DriverOfferT -> DTypeBuilder m (Maybe (SolidType FullQuoteT))
-    buildFullQuote' driverOfferT = runMaybeT $ do
-      quoteT <- MaybeT $ findQuotesByDriverOfferId' (Id $ DriverOffer.id driverOfferT)
-      quoteDetailsT <- case fareProductType quoteT of
-        ONE_WAY -> pure OneWayDetailsT
-        RENTAL -> do
-          rentalSlabId <- hoistMaybe (rentalSlabId quoteT)
-          rentalSlab <- MaybeT $ Esq.findById' @RentalSlabT rentalSlabId
-          pure $ RentalDetailsT rentalSlab
-        DRIVER_OFFER -> do
-          pure (DriverOfferDetailsT driverOfferT)
-        ONE_WAY_SPECIAL_ZONE -> do
-          specialZoneQuoteId <- hoistMaybe (specialZoneQuoteId quoteT)
-          specialZoneQuoteT <- MaybeT $ Esq.findById' @SpecialZoneQuoteT specialZoneQuoteId
-          pure (OneWaySpecialZoneDetailsT specialZoneQuoteT)
-      mbTripTermsT <- forM (tripTermsId quoteT) $ \tripTermsId -> do
-        MaybeT $ Esq.findById' @TripTermsT tripTermsId
-      return $ extractSolidType @Quote (quoteT, mbTripTermsT, quoteDetailsT)
+-- findAllByEstimateId :: Transactionable m => Id Estimate -> m [Quote]
+-- findAllByEstimateId estimateId = buildDType $ do
+--   driverOfferTs <- findDOfferByEstimateId' estimateId
+--   (catMaybes <$>) $ mapM buildFullQuote' driverOfferTs
+--   where
+--     buildFullQuote' :: Transactionable m => DriverOfferT -> DTypeBuilder m (Maybe (SolidType FullQuoteT))
+--     buildFullQuote' driverOfferT = runMaybeT $ do
+--       quoteT <- MaybeT $ findQuotesByDriverOfferId' (Id $ DriverOffer.id driverOfferT)
+--       quoteDetailsT <- case fareProductType quoteT of
+--         ONE_WAY -> pure OneWayDetailsT
+--         RENTAL -> do
+--           rentalSlabId <- MaybeT $ pure (fromKey <$> rentalSlabId quoteT)
+--           rentalSlab <- MaybeT $ Esq.findById' @RentalSlabT rentalSlabId
+--           pure $ RentalDetailsT rentalSlab
+--         DRIVER_OFFER -> do
+--           pure (DriverOfferDetailsT driverOfferT)
+--         ONE_WAY_SPECIAL_ZONE -> do
+--           specialZoneQuoteId <- MaybeT $ pure (fromKey <$> specialZoneQuoteId quoteT)
+--           specialZoneQuoteT <- MaybeT $ Esq.findById' @SpecialZoneQuoteT specialZoneQuoteId
+--           pure (OneWaySpecialZoneDetailsT specialZoneQuoteT)
+--       mbTripTermsT <- forM (fromKey <$> tripTermsId quoteT) $ \tripTermsId -> do
+--         MaybeT $ Esq.findById' @TripTermsT tripTermsId
+--       return $ extractSolidType @Quote (quoteT, mbTripTermsT, quoteDetailsT)
 
-findDOfferByEstimateId' :: Transactionable m => Id Estimate -> DTypeBuilder m [DriverOfferT]
-findDOfferByEstimateId' estimateId =
-  Esq.findAll' $ do
-    driverOffer <- from $ table @DriverOfferT
-    where_ $ driverOffer ^. DriverOfferEstimateId ==. val (toKey estimateId)
-    return driverOffer
+findAllByEstimateId :: (L.MonadFlow m, Log m) => Id Estimate -> m [Quote]
+findAllByEstimateId estimateId = do
+  driverOffers <- findDOfferByEstimateId estimateId
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDO.DriverOfferT
+      updatedMeshConfig = setMeshConfig modelName
+      offerIds = map (Just . getId . DDO.id) driverOffers
+      quoteFilter = Se.Is BeamQ.driverOfferId (Se.In offerIds)
+  case dbConf of
+    Just dbConf' -> do
+      result <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [quoteFilter]
+      case result of
+        Right res -> catMaybes <$> traverse transformBeamQuoteToDomain res
+        _ -> pure []
+    Nothing -> pure []
 
--- findDOfferByEstimateId'' :: (L.MonadFlow m, Log m) => Id Estimate -> m [DriverOffer]
--- findDOfferByEstimateId'' estimateId = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
---   let modelName = Se.modelTableName @BeamDO.DriverOfferT
---   let updatedMeshConfig = setMeshConfig modelName
---   case dbConf of
---     Just dbConf' -> do
---       result <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamDO.estimateId $ Se.Eq (getId estimateId)]]
---       case result of
---         Right res -> catMaybes <$> traverse transformBeamDriverOfferToDomain res
---         _ -> pure []
---     Nothing -> pure []
+-- findDOfferByEstimateId' :: Transactionable m => Id Estimate -> DTypeBuilder m [DriverOfferT]
+-- findDOfferByEstimateId' estimateId =
+--   Esq.findAll' $ do
+--     driverOffer <- from $ table @DriverOfferT
+--     where_ $ driverOffer ^. DriverOfferEstimateId ==. val (toKey estimateId)
+--     return driverOffer
 
-findQuotesByDriverOfferId' :: Transactionable m => Id DriverOffer -> DTypeBuilder m (Maybe QuoteT)
-findQuotesByDriverOfferId' driverOfferId = Esq.findOne' $ do
-  quote <- from $ table @QuoteT
-  where_ $
-    quote ^. QuoteDriverOfferId ==. just (val (toKey driverOfferId))
-  return quote
+findDOfferByEstimateId :: (L.MonadFlow m, Log m) => Id Estimate -> m [DriverOffer]
+findDOfferByEstimateId (Id estimateId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDO.DriverOfferT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbCOnf' -> either (pure []) (QueryDO.transformBeamDriverOfferToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDO.estimateId $ Se.Eq estimateId]
+    Nothing -> pure []
+
+-- findQuotesByDriverOfferId' :: Transactionable m => Id DriverOffer -> DTypeBuilder m (Maybe QuoteT)
+-- findQuotesByDriverOfferId' driverOfferId = Esq.findOne' $ do
+--   quote <- from $ table @QuoteT
+--   where_ $
+--     quote ^. QuoteDriverOfferId ==. just (val (toKey driverOfferId))
+--   return quote
 
 -- need to complete this transformation
 transformBeamQuoteToDomain :: (L.MonadFlow m, Log m) => BeamQ.Quote -> m (Maybe Quote)
 transformBeamQuoteToDomain BeamQ.QuoteT {..} = do
   trip <- if isJust tripTermsId then QTT.findById'' (Id (fromJust tripTermsId)) else pure Nothing
   pUrl <- parseBaseUrl providerUrl
+
   rentalDetails <- do
     res <- QueryRS.findById (Id (fromJust rentalSlabId))
     case res of
       Just rentalSlab -> pure $ Just $ DQ.RentalDetails rentalSlab
       Nothing -> pure Nothing
+
   specialZoneQuote <- do
     res <- QuerySZQ.findById (Id (fromJust specialZoneQuoteId))
     case res of
       Just specialZoneQuote -> pure $ Just $ DQ.OneWaySpecialZoneDetails specialZoneQuote
+      Nothing -> pure Nothing
+
+  driverOfferDetails <- do
+    res <- QueryDO.findById (Id (fromJust driverOfferId))
+    case res of
+      Just driverOffer -> pure $ Just $ DQ.DriverOfferDetails driverOffer
       Nothing -> pure Nothing
 
   quoteDetails <- case fareProductType of
@@ -266,7 +315,7 @@ transformBeamQuoteToDomain BeamQ.QuoteT {..} = do
           { distanceToNearestDriver = distanceToNearestDriver'
           }
     DFFP.RENTAL -> pure (fromJust rentalDetails)
-    DFFP.DRIVER_OFFER -> DQ.DriverOfferDetails <$> error "" -- findById' driverOfferId
+    DFFP.DRIVER_OFFER -> pure (fromJust driverOfferDetails)
     DFFP.ONE_WAY_SPECIAL_ZONE -> pure (fromJust specialZoneQuote)
   if isJust trip
     then

@@ -170,7 +170,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   let paymentMethods = intersectPaymentMethods paymentMethodsInfo merchantPaymentMethods
   -- DB.runTransaction do
   _ <- QEstimate.createMany estimates
-  _ <- QQuote.createMany' quotes
+  _ <- QQuote.createMany quotes
   _ <- QPFS.updateStatus _searchRequest.riderId DPFS.GOT_ESTIMATE {requestId = _searchRequest.id, validTill = _searchRequest.validTill}
   _ <- QSearchReq.updatePaymentMethods _searchRequest.id (paymentMethods <&> (.id))
   QPFS.clearCache _searchRequest.riderId

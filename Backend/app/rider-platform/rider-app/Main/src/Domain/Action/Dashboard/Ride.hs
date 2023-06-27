@@ -184,7 +184,8 @@ rideInfo merchantShortId reqRideId = do
   booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   estimatedDuration <- case booking.quoteId of
     Just quoteId -> do
-      mbQuote <- runInReplica $ QQuote.findById quoteId
+      -- mbQuote <- runInReplica $ QQuote.findById quoteId
+      mbQuote <- QQuote.findById quoteId
       case mbQuote of
         Just quote -> do
           -- mbSearchReq <- runInReplica $ QSearch.findById quote.requestId

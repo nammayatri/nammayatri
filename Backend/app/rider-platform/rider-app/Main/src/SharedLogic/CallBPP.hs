@@ -25,6 +25,7 @@ import qualified Beckn.Types.Core.Taxi.API.Search as API
 import Beckn.Types.Core.Taxi.API.Select as API
 import Beckn.Types.Core.Taxi.API.Track as API
 import Beckn.Types.Core.Taxi.API.Update as API
+import qualified Data.Text as T
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Ride as DRide
 import Environment
@@ -187,7 +188,7 @@ callBecknAPIWithSignature,
     m res
 callBecknAPIWithSignature a b c d = do
   bapId <- asks (.bapSelfIds.cabs)
-  callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey bapId) Nothing a b c d
+  callBecknAPI (Just $ T.unpack $ getHttpManagerKey bapId) Nothing a b c d
 callBecknAPIWithSignatureMetro a b c d = do
   bapId <- asks (.bapSelfIds.metro)
-  callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey bapId) Nothing a b c d
+  callBecknAPI (Just $ T.unpack $ getHttpManagerKey bapId) Nothing a b c d

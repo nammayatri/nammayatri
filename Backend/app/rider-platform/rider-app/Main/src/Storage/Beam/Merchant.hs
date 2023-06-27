@@ -60,7 +60,7 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be GeoRestriction
 
 instance FromBackendRow Postgres GeoRestriction
 
-deriving stock instance Read GeoRestriction
+-- deriving stock instance Read GeoRestriction
 
 deriving stock instance Eq GeoRestriction
 

@@ -245,6 +245,7 @@ library
       Storage.Queries.CallbackRequest
       Storage.Queries.CallStatus
       Storage.Queries.CancellationReason
+      Storage.Queries.DriverOffer
       Storage.Queries.Estimate
       Storage.Queries.EstimateBreakup
       Storage.Queries.Exophone
@@ -265,11 +266,14 @@ library
       Storage.Queries.Person.PersonFlowStatus
       Storage.Queries.Quote
       Storage.Queries.RegistrationToken
+      Storage.Queries.RentalSlab
       Storage.Queries.Ride
       Storage.Queries.SavedReqLocation
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequest.SearchReqLocation
       Storage.Queries.Sos
+      Storage.Queries.SpecialZoneQuote
+      Storage.Queries.TripTerms
       Storage.Queries.Webengage
       Storage.Tabular.BlackListOrg
       Storage.Tabular.Booking

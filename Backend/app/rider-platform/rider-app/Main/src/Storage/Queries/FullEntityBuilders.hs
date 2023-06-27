@@ -16,17 +16,13 @@
 module Storage.Queries.FullEntityBuilders where
 
 import Domain.Types.Booking.Type as Booking
-import Domain.Types.Estimate
 import Domain.Types.FarePolicy.FareProductType
 import Domain.Types.Quote as Quote
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
-import Storage.Queries.EstimateBreakup as QEB
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.Booking.BookingLocation
 import Storage.Tabular.DriverOffer
-import Storage.Tabular.Estimate
-import Storage.Tabular.Estimate.Instances
 import Storage.Tabular.Quote as Quote
 import Storage.Tabular.Quote.Instances as Quote
 import Storage.Tabular.RentalSlab
@@ -57,10 +53,10 @@ buildFullBooking (bookingT@BookingT {..}, fromLocT, mbToLocT, mbTripTermsT, mbRe
     ONE_WAY_SPECIAL_ZONE -> hoistMaybe (Booking.OneWaySpecialZoneDetailsT <$> mbToLocT)
   return $ extractSolidType @Booking (bookingT, fromLocT, mbTripTermsT, bookingDetails)
 
-buildFullEstimate ::
-  Transactionable m =>
-  (EstimateT, Maybe TripTermsT) ->
-  DTypeBuilder m (SolidType FullEstimateT)
-buildFullEstimate (estimateT@EstimateT {..}, tripTermsT) = do
-  estimateBreakupT <- QEB.findAllByEstimateId' (EstimateTKey id)
-  return $ extractSolidType @Estimate (estimateT, estimateBreakupT, tripTermsT)
+-- buildFullEstimate ::
+--   Transactionable m =>
+--   (EstimateT, Maybe TripTermsT) ->
+--   DTypeBuilder m (SolidType FullEstimateT)
+-- buildFullEstimate (estimateT@EstimateT {..}, tripTermsT) = do
+--   estimateBreakupT <- QEB.findAllByEstimateId' (EstimateTKey id)
+--   return $ extractSolidType @Estimate (estimateT, estimateBreakupT, tripTermsT)

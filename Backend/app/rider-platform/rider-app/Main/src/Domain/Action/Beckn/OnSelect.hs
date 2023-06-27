@@ -33,7 +33,7 @@ import Environment
 import Kernel.Prelude
 -- import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+-- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -101,7 +101,7 @@ onSelect OnSelectValidatedReq {..} = do
   quotes <- traverse (buildSelectedQuote estimate providerInfo now searchRequest.merchantId) quotesInfo
   logPretty DEBUG "quotes" quotes
   -- DB.runTransaction $ do
-  _ <- QQuote.createMany' quotes
+  _ <- QQuote.createMany quotes
   _ <- QPFS.updateStatus searchRequest.riderId DPFS.DRIVER_OFFERED_QUOTE {estimateId = estimate.id, validTill = searchRequest.validTill}
   void $ QEstimate.updateStatus estimate.id DEstimate.GOT_DRIVER_QUOTE
   QPFS.clearCache searchRequest.riderId
@@ -210,4 +210,5 @@ validateRequest DOnSelectReq {..} = do
     duplicateCheckCond :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => [Id DDriverOffer.BPPQuote] -> Text -> m Bool
     duplicateCheckCond [] _ = return False
     duplicateCheckCond (bppQuoteId_ : _) bppId_ =
-      isJust <$> runInReplica (QQuote.findByBppIdAndBPPQuoteId bppId_ bppQuoteId_)
+      -- isJust <$> runInReplica (QQuote.findByBppIdAndBPPQuoteId bppId_ bppQuoteId_)
+      isJust <$> QQuote.findByBppIdAndBPPQuoteId bppId_ bppQuoteId_
