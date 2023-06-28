@@ -74,7 +74,7 @@ sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
       overdueFee <- Esq.runInReplica $ findOldestFeeByStatus (cast person.id) PAYMENT_OVERDUE
       case overdueFee of
         Nothing -> do
-          Esq.runTransaction $ updateStatus PAYMENT_PENDING driverFee.id now
+          Esq.runNoTransaction $ updateStatus PAYMENT_PENDING driverFee.id now
           updatePendingPayment True (cast person.id)
         Just oDFee -> do
           mergeDriverFee driverFee oDFee now
