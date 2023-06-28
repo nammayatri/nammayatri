@@ -473,7 +473,7 @@ const hindiStrings = {
   "DRIVER_WAS_TAKING_TOO_LONG_TO_REACH_THE_PICKUP_LOCATION" : "ड्राइवर को पिकअप लोकेशन तक पहुंचने में काफी समय लग रहा था।",
   "THE_PICKUP_LOCATION_ENTERED_WAS_WRONG" : "दर्ज किया गया पिकअप स्थान गलत था।",
   "YOUR_DRIVER_IS_JUST" : "आपका ड्राइवर बस",
-  "M_AWAY" : "m दूर है।",
+  "M_AWAY" : " m दूर है।",
   "DRIVER_HAS_ALREADY_TRAVELLED" : "ड्राइवर ",
   "PLEASE_CONTACT_THE_DRIVER_BEFORE_CANCELLING" : "\nकृपया कैंसिल करने से पहले ड्राइवर से संपर्क करें।",
   "CHANGE_OF_PLANS" : "प्लान में परिवर्तन",
@@ -501,5 +501,7 @@ const hindiStrings = {
   "IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL" : "ऐसा लगता है कि इसमें सामान्य से ज़्यादा समय लग रहा है।",
   "CONTINUE_SEARCH_WITH" : "के साथ खोज जारी रखें",
   "CONTINUING_SEARCH_WITH" : "से तलाश जारी है",
-  "SEARCHING_WITH" : "से खोज रहे हैं"
+  "SEARCHING_WITH" : "से खोज रहे हैं",
+  "THE_DRIVER_PREFERRED_YOUR_SPECIAL_LOCATION_AND_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ड्राइवर ने आपके विशेष स्थान को प्राथमिकता दी और वह आपके स्थान के रास्ते पर है।",
+  "DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ड्राइवर आपके स्थान के रास्ते पर है।"
 }

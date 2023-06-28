@@ -390,7 +390,7 @@ const kannadaStrings = {
   "SEARCH_AGAIN_WITHOUT_A_TIP": "ಸುಳಿವು ಇಲ್ಲದೆ ಮತ್ತೆ ಹುಡುಕಿ",
   "TRY_AGAIN_WITH": "ಇದರೊಂದಿಗೆ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
   "SEARCH_AGAIN_WITH": "ಇದರೊಂದಿಗೆ ಮತ್ತೆ ಹುಡುಕಿ",
-  "TIP": "ತುದಿ",
+  "TIP": "ಟಿಪ್",
   "START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS": "ಈ ತ್ವರಿತ ಚಾಟ್ ಸಲಹೆಗಳನ್ನು ಬಳಸಿಕೊಂಡು ನಿಮ್ಮ ಚಾಟ್ ಅನ್ನು ಪ್ರಾರಂಭಿಸಿ",
   "MESSAGE": "ಸಂದೇಶ",
   "START_YOUR_CHAT_WITH_THE_DRIVER": "ಚಾಲಕನೊಂದಿಗೆ ನಿಮ್ಮ ಚಾಟ್ ಅನ್ನು ಪ್ರಾರಂಭಿಸಿ",
@@ -467,7 +467,7 @@ const kannadaStrings = {
   "DRIVER_WAS_TAKING_TOO_LONG_TO_REACH_THE_PICKUP_LOCATION" : "ಚಾಲಕನು ಪಿಕಪ್ ಸ್ಥಳವನ್ನು ತಲುಪಲು ಬಹಳ ಸಮಯ ತೆಗೆದುಕೊಳ್ಳುತ್ತಿದ್ದನು",
   "THE_PICKUP_LOCATION_ENTERED_WAS_WRONG" : "ನಮೂದಿಸಿದ ಪಿಕಪ್ ಸ್ಥಳವು ತಪ್ಪಾಗಿದೆ",
   "YOUR_DRIVER_IS_JUST" : "ನಿಮ್ಮ ಚಾಲಕ ಕೇವಲ",
-  "M_AWAY" : "ಮೀ ದೂರದಲ್ಲಿದ್ದಾನೆ",
+  "M_AWAY" : " ಮೀ ದೂರದಲ್ಲಿದ್ದಾನೆ",
   "DRIVER_HAS_ALREADY_TRAVELLED" : "ಚಾಲಕ ಈಗಾಗಲೇ ",
   "PLEASE_CONTACT_THE_DRIVER_BEFORE_CANCELLING" : "\nರದ್ದುಗೊಳಿಸುವ ಮೊದಲು ದಯವಿಟ್ಟು ಚಾಲಕನನ್ನು ಸಂಪರ್ಕಿಸಿ",
   "CHANGE_OF_PLANS" : "ಯೋಜನೆಗಳ ಬದಲಾವಣೆ",
@@ -493,5 +493,7 @@ const kannadaStrings = {
   "IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL" : "ಇದು ಸಾಮಾನ್ಯಕ್ಕಿಂತ ಹೆಚ್ಚು ಸಮಯ ತೆಗೆದುಕೊಳ್ಳುತ್ತಿರುವಂತೆ ತೋರುತ್ತಿದೆ.",
   "CONTINUE_SEARCH_WITH" : "ಇದರೊಂದಿಗೆ ಹುಡುಕಾಟವನ್ನು ಮುಂದುವರಿಸಿ",
   "CONTINUING_SEARCH_WITH" : "ಇದರೊಂದಿಗೆ ಹುಡುಕಾಟವನ್ನು ಮುಂದುವರಿಸಲಾಗುತ್ತಿದೆ",
-  "SEARCHING_WITH" : "ಇದರೊಂದಿಗೆ ಹುಡುಕಲಾಗುತ್ತಿದೆ"
+  "SEARCHING_WITH" : "ಇದರೊಂದಿಗೆ ಹುಡುಕಲಾಗುತ್ತಿದೆ",
+  "THE_DRIVER_PREFERRED_YOUR_SPECIAL_LOCATION_AND_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ಚಾಲಕರು ನಿಮ್ಮ ನಿರ್ದಿಷ್ಟ ಸ್ಥಳಕ್ಕೆ ಆದ್ಯತೆ ನೀಡಿದ್ದಾರೆ ಮತ್ತು ನಿಮ್ಮ ಸ್ಥಳಕ್ಕೆ ಹೋಗುತ್ತಿದ್ದಾರೆ.",
+  "DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ಚಾಲಕ ನಿಮ್ಮ ಸ್ಥಳಕ್ಕೆ ಹೋಗುತ್ತಿದ್ದಾರೆ."
 }
