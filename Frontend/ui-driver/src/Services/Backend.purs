@@ -861,3 +861,11 @@ getPaymentHistory from to status = do
       withAPIResult (EP.paymentHistory from to status) unwrapResponse (callAPI headers (GetPaymentHistoryReq from to status))
    where
         unwrapResponse (x) = x
+
+
+getOrder :: String -> Flow GlobalState (Either ErrorResponse GetOrderRes)
+getOrder id = do
+      headers <- getHeaders ""
+      withAPIResult (EP.getOrder id) unwrapResponse (callAPI headers (GetOrderReq id))
+   where
+        unwrapResponse (x) = x
