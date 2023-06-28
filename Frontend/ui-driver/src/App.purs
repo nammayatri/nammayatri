@@ -196,6 +196,12 @@ data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN
                                     | NOTIFICATIONS_SCREEN
                                     | GO_TO_REFERRAL_SCREEN_FROM_DRIVER_PROFILE_SCREEN
                                     | GO_TO_BOOKING_OPTIONS_SCREEN DriverProfileScreenState
+                                    | VERIFY_OTP1 DriverProfileScreenState
+                                    | DRIVER_ALTERNATE_CALL_API1 DriverProfileScreenState
+                                    | RESEND_ALTERNATE_OTP1 DriverProfileScreenState
+                                    | ALTERNATE_NUMBER_REMOVE1 DriverProfileScreenState
+                                    | DRIVER_GENDER1 DriverProfileScreenState
+
 
 
 data DRIVER_DETAILS_SCREEN_OUTPUT = VERIFY_OTP DriverDetailsScreenState

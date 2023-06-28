@@ -469,6 +469,7 @@ const mlStrings = {
   COMPLAINTS_DESCRIPTION_ADDITIONAL : "പരാതികൾ പരിഹരിക്കുന്നതിന്, ഞങ്ങളുടെ <u>സ്വകാര്യതാ നയം</u> പരിശോധിക്കുക",
   REGISTERED_ADDRESS : "രേഖപ്പെടുത്തിയ വിലാസം",
   REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL : "സ്റ്റാലിയൻ ബിസിനസ് സെന്റർ, നമ്പർ 444, 3rd & 4th നിലകൾ, 18th മെയിൻ, 6th ബ്ലോക്ക്, കോറമംഗല, ബെംഗളൂരു, കർണാടക- 560095, ഇന്ത്യ",
+  REGISTERED_ADDRESS_DESCRIPTION : "Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala, Bengaluru, Karnataka- 560095, India",
   SELECT_YOUR_GENDER : "നിങ്ങളുടെ ലിംഗഭേദം തിരഞ്ഞെടുക്കുക",
   FEMALE : "സ്ത്രീ",
   MALE : "പുരുഷൻ",
@@ -480,5 +481,8 @@ const mlStrings = {
   CONFIRM : "സ്ഥിരീകരിക്കുക",
   GENDER_UPDATED : "ലിംഗഭേദം അപ്ഡേറ്റ് ചെയ്തു",
   ZONE_CANCEL_TEXT_DROP : "നിങ്ങളുടെ ഉപഭോക്താവ് കൃത്യസമയത്ത് മെട്രോ സ്റ്റേഷനിൽ എത്താനുള്ള തിരക്കിലായിരിക്കാം! \n റദ്ദാക്കരുതെന്ന് ഞങ്ങൾ നിങ്ങളോട് അഭ്യർത്ഥിക്കുന്നു.",
-	ZONE_CANCEL_TEXT_PICKUP : "നിങ്ങളുടെ ഉപഭോക്താവ് അവരുടെ ലക്ഷ്യസ്ഥാനത്ത് എത്താനുള്ള തിരക്കിലായിരിക്കാം. \n റദ്ദാക്കരുതെന്ന് ഞങ്ങൾ നിങ്ങളോട് അഭ്യർത്ഥിക്കുന്നു."
+	ZONE_CANCEL_TEXT_PICKUP : "നിങ്ങളുടെ ഉപഭോക്താവ് അവരുടെ ലക്ഷ്യസ്ഥാനത്ത് എത്താനുള്ള തിരക്കിലായിരിക്കാം. \n റദ്ദാക്കരുതെന്ന് ഞങ്ങൾ നിങ്ങളോട് അഭ്യർത്ഥിക്കുന്നു.",
+  OTHERS : "മറ്റുള്ളവ",
+  ENTER_SECOND_SIM_NUMBER : "രണ്ടാമത്തെ സിം നമ്പർ നൽകുക",
+  ALTERNATE_NUMBER : "ഇതര നമ്പർ"
 }
