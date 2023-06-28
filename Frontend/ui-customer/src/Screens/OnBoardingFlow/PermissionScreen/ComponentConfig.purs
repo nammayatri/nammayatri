@@ -23,8 +23,9 @@ import Font.Style as FontStyle
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude ((==))
+import Prelude ((==), (/=))
 import PrestoDOM (Length(..), Margin(..))
+import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Common.Types.App
 
@@ -64,7 +65,8 @@ primaryButtonConfig  = let
     config' = PrimaryButton.config 
     primaryButtonConfig' = config' 
       { textConfig 
-        { text = if EHC.os == "IOS" then (getString CONTINUE) else (getString GRANT_ACCESS)
+        { text = getString if EHC.os == "IOS" then CONTINUE
+                  else if (getValueToLocalStore PERMISSION_POPUP_TIRGGERED) /= "true" then ALLOW_LOCATION_ACCESS else GRANT_ACCESS
         , fontStyle = FontStyle.bold LanguageStyle
         , textSize = FontSize.a_16
         , color = Color.yellow900
