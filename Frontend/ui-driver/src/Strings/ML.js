@@ -471,6 +471,7 @@ const mlStrings = {
   COMPLAINTS_DESCRIPTION_ADDITIONAL : "പരാതികൾ പരിഹരിക്കുന്നതിന്, ഞങ്ങളുടെ <u>സ്വകാര്യതാ നയം</u> പരിശോധിക്കുക",
   REGISTERED_ADDRESS : "രേഖപ്പെടുത്തിയ വിലാസം",
   REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL : "സ്റ്റാലിയൻ ബിസിനസ് സെന്റർ, നമ്പർ 444, 3rd & 4th നിലകൾ, 18th മെയിൻ, 6th ബ്ലോക്ക്, കോറമംഗല, ബെംഗളൂരു, കർണാടക- 560095, ഇന്ത്യ",
+  REGISTERED_ADDRESS_DESCRIPTION : "Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala, Bengaluru, Karnataka- 560095, India",
   SELECT_YOUR_GENDER : "നിങ്ങളുടെ ലിംഗഭേദം തിരഞ്ഞെടുക്കുക",
   FEMALE : "സ്ത്രീ",
   MALE : "പുരുഷൻ",
@@ -504,4 +505,7 @@ const mlStrings = {
   TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER : "നിങ്ങൾ വളരെയധികം അസാധുവായ ശ്രമങ്ങൾ നടത്തി, ദയവായി പിന്നീട് വീണ്ടും ശ്രമിക്കുക",
   INVALID_REFERRAL_NUMBER : "അസാധുവായ റഫറൽ നമ്പർ",
   SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "ചില സാങ്കേതിക പ്രശ്നം സംഭവിച്ചു, ദയവായി പിന്നീട് വീണ്ടും ശ്രമിക്കുക",
+  OTHERS : "മറ്റുള്ളവ",
+  ENTER_SECOND_SIM_NUMBER : "രണ്ടാമത്തെ സിം നമ്പർ നൽകുക",
+  ALTERNATE_NUMBER : "ഇതര നമ്പർ"
 }
