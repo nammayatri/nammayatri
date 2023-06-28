@@ -33,6 +33,7 @@ import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import Domain.Types.Ride
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.VehicleVariant
@@ -45,6 +46,7 @@ import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Storage.Hedis.Config (HedisFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.MerchantConfig as SMC
 import Storage.CachedQueries.CacheConfig
@@ -58,6 +60,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
+import Tools.Event
 import Tools.Maps (LatLong)
 import Tools.Metrics (CoreMetrics)
 import qualified Tools.Notifications as Notify
@@ -246,12 +249,14 @@ onUpdate ::
       r
       '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
     HedisFlow m r,
-    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
+    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
+    EventStreamFlow m r
   ) =>
   ValidatedOnUpdateReq ->
   m ()
 onUpdate ValidatedRideAssignedReq {..} = do
   ride <- buildRide
+  triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
   DB.runTransaction $ do
     QRB.updateStatus booking.id SRB.TRIP_ASSIGNED
     QRide.create ride
@@ -292,6 +297,7 @@ onUpdate ValidatedRideStartedReq {..} = do
              rideStartTime = Just rideStartTime,
              rideEndTime = Nothing
             }
+  triggerRideStartedEvent RideEventData {ride = updRideForStartReq, personId = booking.riderId, merchantId = booking.merchantId}
   DB.runTransaction $ do
     QRide.updateMultiple updRideForStartReq.id updRideForStartReq
     QPFS.updateStatus booking.riderId DPFS.RIDE_STARTED {rideId = ride.id, bookingId = booking.id, trackingUrl = ride.trackingUrl, driverLocation = Nothing}
@@ -316,6 +322,8 @@ onUpdate ValidatedRideCompletedReq {..} = do
         case minTripDistanceForReferralCfg of
           Just distance -> updRide.chargeableDistance >= Just distance && not person.hasTakenValidRide
           Nothing -> True
+  triggerRideEndEvent RideEventData {ride = updRide, personId = booking.riderId, merchantId = booking.merchantId}
+  triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}}
   DB.runTransaction $ do
     when shouldUpdateRideComplete $
       QP.updateHasTakenValidRide booking.riderId
@@ -364,6 +372,12 @@ onUpdate ValidatedBookingCancelledReq {..} = do
   fork "incrementing fraud counters" $ do
     mFraudDetected <- SMC.anyFraudDetected booking.riderId booking.merchantId merchantConfigs
     whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id)
+  case mbRide of
+    Just ride -> do
+      triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = booking.riderId, merchantId = booking.merchantId}
+    Nothing -> do
+      logDebug "No ride found for the booking."
+  triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}}
   DB.runTransaction $ do
     unless (booking.status == SRB.CANCELLED) $ QRB.updateStatus booking.id SRB.CANCELLED
     whenJust mbRide $ \ride -> do

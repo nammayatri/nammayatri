@@ -2,6 +2,8 @@ let common = ./common.dhall
 
 let sec = ./secrets/dynamic-offer-driver-app.dhall
 
+let globalCommon = ../generic/common.dhall
+
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = 5434
@@ -78,6 +80,41 @@ let smsConfig =
       , url = "http://localhost:4343"
       , sender = "JUSPAY"
       }
+
+let sampleKafkaConfig
+    : globalCommon.kafkaConfig
+    = { topicName = "dynamic-offer-driver-events-updates"
+      , kafkaKey = "dynamic-offer-driver"
+      }
+
+let sampleLogConfig
+    : Text
+    = "log-stream"
+
+let eventStreamMappings =
+      [ { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
+        , streamConfig = globalCommon.streamConfig.KafkaStream sampleKafkaConfig
+        , eventTypes =
+          [ globalCommon.eventType.RideCreated
+          , globalCommon.eventType.RideStarted
+          , globalCommon.eventType.RideEnded
+          , globalCommon.eventType.RideCancelled
+          , globalCommon.eventType.BookingCreated
+          , globalCommon.eventType.BookingCancelled
+          , globalCommon.eventType.BookingCompleted
+          , globalCommon.eventType.SearchRequest
+          , globalCommon.eventType.Quotes
+          , globalCommon.eventType.Estimate
+          ]
+        }
+      , { streamName = globalCommon.eventStreamNameType.LOG_STREAM
+        , streamConfig = globalCommon.streamConfig.LogStream sampleLogConfig
+        , eventTypes =
+          [ globalCommon.eventType.RideEnded
+          , globalCommon.eventType.RideCancelled
+          ]
+        }
+      ]
 
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
@@ -162,4 +199,5 @@ in  { esqDBCfg
     , enablePrometheusMetricLogging = True
     , enableAPILatencyLogging = True
     , enableAPIPrometheusMetricLogging = True
+    , eventStreamMap = eventStreamMappings
     }

@@ -115,6 +115,7 @@ library:
     - location-updates
     - special-zone-a
     - payment
+    - sessionizer-metrics
 
 executables:
   dynamic-offer-driver-app-exe:

@@ -40,6 +40,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
+import Lib.SessionizerMetrics.Types.Event
 import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
@@ -62,6 +63,7 @@ import qualified Storage.Queries.RideDetails as QRideD
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Storage.Queries.Vehicle as QVeh
+import Tools.Event
 import qualified Tools.Notifications as Notify
 
 data DConfirmReq = DConfirmReq
@@ -95,7 +97,8 @@ handler ::
     CoreMetrics m,
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasLongDurationRetryCfg r c
+    HasLongDurationRetryCfg r c,
+    EventStreamFlow m r
   ) =>
   DM.Merchant ->
   DConfirmReq ->
@@ -112,6 +115,7 @@ handler transporter req quote = do
       case quote of
         Left (driver, driverQuote) -> do
           ride <- buildRide driver.id booking
+          triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = transporter.id}
           rideDetails <- buildRideDetails ride driver
           driverSearchReqs <- QSRD.findAllActiveBySTId driverQuote.searchTryId
           Esq.runTransaction $ do
