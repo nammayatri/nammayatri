@@ -16,6 +16,7 @@ module Domain.Action.UI.Payment
   ( DPayment.PaymentStatusResp (..),
     createOrder,
     getStatus,
+    getOrder,
     juspayWebhookHandler,
   )
 where
@@ -38,6 +39,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Servant (BasicAuthData)
 import SharedLogic.Merchant
 import Storage.CachedQueries.CacheConfig
@@ -84,6 +86,26 @@ createOrder (driverId, merchantId) driverFeeId = do
       orderId = cast @DriverFee @DOrder.PaymentOrder driverFee.id
       createOrderCall = Payment.createOrder merchantId -- api call
   DPayment.createOrderService commonMerchantId commonPersonId orderId createOrderReq createOrderCall
+
+getOrder ::
+  ( CacheFlow m r,
+    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    CoreMetrics m
+  ) =>
+  (Id DP.Person, Id DM.Merchant) ->
+  Id DOrder.PaymentOrder ->
+  m DOrder.PaymentOrderAPIEntity
+getOrder (personId, _) orderId = do
+  order <- runInReplica $ QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
+  unless (order.personId == cast personId) $ throwError NotAnExecutor
+  mkOrderAPIEntity order
+
+mkOrderAPIEntity :: EncFlow m r => DOrder.PaymentOrder -> m DOrder.PaymentOrderAPIEntity
+mkOrderAPIEntity DOrder.PaymentOrder {..} = do
+  clientAuthToken_ <- decrypt clientAuthToken
+  return $ DOrder.PaymentOrderAPIEntity {clientAuthToken = clientAuthToken_, ..}
 
 -- order status -----------------------------------------------------
 

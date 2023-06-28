@@ -39,4 +39,22 @@ data PaymentOrderE e = PaymentOrder
   }
   deriving (Generic)
 
+data PaymentOrderAPIEntity = PaymentOrderAPIEntity
+  { id :: Id PaymentOrder,
+    shortId :: ShortId PaymentOrder,
+    personId :: Id Person,
+    merchantId :: Id Merchant,
+    amount :: Money,
+    currency :: Payment.Currency,
+    status :: Payment.TransactionStatus,
+    paymentLinks :: Payment.PaymentLinks,
+    clientAuthToken :: Text,
+    clientAuthTokenExpiry :: UTCTime,
+    getUpiDeepLinksOption :: Maybe Bool,
+    environment :: Maybe Text,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
 type PaymentOrder = PaymentOrderE 'AsEncrypted

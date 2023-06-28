@@ -19,6 +19,7 @@ where
 
 import GHC.Base (Symbol)
 import qualified Kernel.External.Payment.Interface as Payment
+import Kernel.Types.App (MandatoryQueryParam)
 import Kernel.Types.Id
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
@@ -32,4 +33,6 @@ type API (entityId :: Symbol) entity =
            :<|> Capture "orderId" (Id DOrder.PaymentOrder)
              :> "status"
              :> Get '[JSON] DPayment.PaymentStatusResp
+           :<|> MandatoryQueryParam "orderId" (Id DOrder.PaymentOrder)
+             :> Get '[JSON] DOrder.PaymentOrderAPIEntity
        )
