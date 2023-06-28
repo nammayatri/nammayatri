@@ -92,9 +92,9 @@ import qualified Kernel.External.SMS.MyValueFirst.Flow as SF
 import qualified Kernel.External.SMS.MyValueFirst.Types as SMS
 import Kernel.Prelude (NominalDiffTime)
 import Kernel.Sms.Config
-import qualified Kernel.Storage.Esqueleto as Esq
+-- import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocDBFlow)
-import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB, runInReplica)
+-- import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB, runInReplica)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -396,7 +396,8 @@ createDriver admin req = do
   createDriverDetails person.id admin.id merchantId
   _ <- QVehicle.create vehicle
   now <- getCurrentTime
-  runInLocationDB $ QDriverLocation.create person.id initLatLong now admin.merchantId
+  -- runInLocationDB $ QDriverLocation.create person.id initLatLong now admin.merchantId
+  QDriverLocation.create person.id initLatLong now admin.merchantId
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> createDriver : ") (show person.id)
   org <-
     CQM.findById merchantId
@@ -591,7 +592,8 @@ deleteDriver admin driverId = do
   QVehicle.deleteById driverId
   QDFS.deleteById driverId
   QPerson.deleteById driverId
-  runInLocationDB $ QDriverLocation.deleteById driverId
+  -- runInLocationDB $ QDriverLocation.deleteById driverId
+  QDriverLocation.deleteById driverId
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> deleteDriver : ") (show driverId)
   return Success
 
@@ -1196,7 +1198,8 @@ getDriverPayments (personId, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset 
       to = fromMaybe today mbTo
   let windowStartTime = UTCTime from 0
       windowEndTime = addUTCTime (86399 + transporterConfig.driverPaymentCycleDuration) (UTCTime to 0)
-  driverFees <- runInReplica $ QDF.findWindowsWithStatus personId windowStartTime windowEndTime mbStatus limit offset
+  -- driverFees <- runInReplica $ QDF.findWindowsWithStatus personId windowStartTime windowEndTime mbStatus limit offset
+  driverFees <- QDF.findWindowsWithStatus personId windowStartTime windowEndTime mbStatus limit offset
   mapM buildPaymentResp driverFees
   where
     maxLimit = 20

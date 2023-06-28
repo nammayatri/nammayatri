@@ -53,7 +53,7 @@ type instance JobContent 'SendSearchRequestToDriver = SendSearchRequestToDriverJ
 data SendPaymentReminderToDriverJobData = SendPaymentReminderToDriverJobData
   { startTime :: UTCTime,
     endTime :: UTCTime,
-    now :: UTCTime
+    timeDiff :: Seconds
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

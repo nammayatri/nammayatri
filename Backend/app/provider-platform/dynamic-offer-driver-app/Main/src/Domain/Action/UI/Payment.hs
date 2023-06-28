@@ -27,6 +27,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import Environment
+import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
@@ -62,7 +63,8 @@ createOrder (driverId, merchantId) driverFeeId = do
   driverFee <- runInReplica $ QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound $ getId driverFeeId)
   when (driverFee.status `elem` [CLEARED, EXEMPTED]) $ throwError (DriverFeeAlreadySettled $ getId driverFeeId)
   when (driverFee.status `elem` [INACTIVE, ONGOING]) $ throwError (DriverFeeNotInUse $ getId driverFeeId)
-  driver <- runInReplica $ QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound $ getId driverFee.driverId)
+  -- driver <- runInReplica $ QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound $ getId driverFee.driverId)
+  driver <- QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound $ getId driverFee.driverId)
   unless (driver.id == driverId) $ throwError NotAnExecutor
   driverPhone <- driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   let driverEmail = fromMaybe "test@juspay.in" driver.email
@@ -108,13 +110,14 @@ getStatus (personId, merchantId) orderId = do
     Juspay.CHARGED -> do
       CDI.updatePendingPayment False (cast personId)
       CDI.updateSubscription True (cast personId)
-      Esq.runTransaction $ processPaymentTransactions (cast personId) (cast orderId) driverInfo transporterConfig.timeDiffFromUtc
+      -- Esq.runTransaction $ processPaymentTransactions (cast personId) (cast orderId) driverInfo transporterConfig.timeDiffFromUtc
+      processPaymentTransactions (cast personId) (cast orderId) driverInfo transporterConfig.timeDiffFromUtc
     _ -> pure ()
   pure paymentStatus
 
 -- webhook ----------------------------------------------------------
 
-processPaymentTransactions :: Id DP.Driver -> Id DriverFee -> DriverInformation -> Seconds -> SqlDB ()
+processPaymentTransactions :: (L.MonadFlow m, MonadTime m) => Id DP.Driver -> Id DriverFee -> DriverInformation -> Seconds -> m ()
 processPaymentTransactions driverId driverFeeId driverInfo timeDiff = do
   now <- getLocalCurrentTime timeDiff
   QDF.updateStatus DF.CLEARED driverFeeId now
@@ -144,6 +147,7 @@ juspayWebhookHandler merchantShortId authData value = do
           unless (osc.order.status /= Juspay.CHARGED) $ do
             CDI.updatePendingPayment False driverFee.driverId
             CDI.updateSubscription True driverFee.driverId
-            Esq.runTransaction $ processPaymentTransactions driverFee.driverId driverFee.id driverInfo transporterConfig.timeDiffFromUtc
+            -- Esq.runTransaction $ processPaymentTransactions driverFee.driverId driverFee.id driverInfo transporterConfig.timeDiffFromUtc
+            processPaymentTransactions driverFee.driverId driverFee.id driverInfo transporterConfig.timeDiffFromUtc
           pure Ack
     _ -> throwError $ InternalError "Unknown Service Config"

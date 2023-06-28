@@ -81,7 +81,8 @@ sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
   case listToMaybe feeZipDriver of
     Nothing -> return Complete
     Just (driverFee, _) -> do
-      driver <- Esq.runInReplica $ QPerson.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
+      -- driver <- Esq.runInReplica $ QPerson.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
+      driver <- QPerson.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
       transporterConfig <- SCT.findByMerchantId driver.merchantId >>= fromMaybeM (TransporterConfigNotFound driver.merchantId.getId)
       ReSchedule <$> getRescheduledTime transporterConfig
 
@@ -112,10 +113,10 @@ unsubscribeDriverForPaymentOverdue Job {id, jobInfo} = withLogTag ("JobId-" <> i
             paymentMessage = "Sorry, you are blocked from taking rides as payment of " <> show pendingAmount.getMoney <> " is pending for " <> show driverFee.numRides <> " ride(s) with a deadline of " <> show driverFee.payBy <> ". Please pay the balance amount to get unblocked."
         (Notify.sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.PAYMENT_OVERDUE paymentTitle paymentMessage driver.id driver.deviceToken) `C.catchAll` \e -> C.mask_ $ logError $ "FCM for removing subsciption of driver id " <> driver.id.getId <> " failed. Error: " <> show e
   forM_ feeZipDriver $ \(driverFee, mbPerson) -> do
-    Esq.runTransaction $ do
-      updateStatus PAYMENT_OVERDUE driverFee.id now
-      whenJust mbPerson $ \person -> do
-        QDFS.updateStatus (cast person.id) DDFS.PAYMENT_OVERDUE
+    -- Esq.runTransaction $ do
+    updateStatus PAYMENT_OVERDUE driverFee.id now
+    whenJust mbPerson $ \person -> do
+      QDFS.updateStatus (cast person.id) DDFS.PAYMENT_OVERDUE
     whenJust mbPerson $ \person -> updateSubscription False (cast person.id) -- fix later: take tabular updates inside transaction
   return Complete
 
@@ -123,7 +124,8 @@ calcDriverFeeAttr :: (MonadFlow m, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) => D
 calcDriverFeeAttr driverFeeStatus startTime endTime = do
   driverFees <- findFeesInRangeWithStatus startTime endTime driverFeeStatus
   let relevantDriverIds = (.driverId) <$> driverFees
-  relevantDrivers <- mapM (Esq.runInReplica . QPerson.findById) (cast <$> relevantDriverIds)
+  -- relevantDrivers <- mapM (Esq.runInReplica . QPerson.findById) (cast <$> relevantDriverIds)
+  relevantDrivers <- mapM QPerson.findById (cast <$> relevantDriverIds)
   return $ zip driverFees relevantDrivers
 
 getRescheduledTime :: (MonadFlow m) => TransporterConfig -> m UTCTime

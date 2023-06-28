@@ -41,10 +41,10 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
-import qualified Kernel.Storage.Esqueleto as DB
-import qualified Kernel.Storage.Esqueleto as Esq
+-- import qualified Kernel.Storage.Esqueleto as DB
+-- import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocDBFlow)
-import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB)
+-- import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Common as BC
@@ -290,7 +290,8 @@ createDriverWithDetails req mbBundleVersion mbClientVersion merchantId = do
   _ <- QP.create person
   _ <- QDFS.create $ makeIdleDriverFlowStatus person
   createDriverDetails (person.id) merchantId
-  runInLocationDB $ QDriverLocation.create person.id initLatLong now merchantId
+  -- runInLocationDB $ QDriverLocation.create person.id initLatLong now merchantId
+  QDriverLocation.create person.id initLatLong now merchantId
   pure person
   where
     makeIdleDriverFlowStatus person =
