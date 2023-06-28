@@ -19,8 +19,8 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB)
+-- import qualified Kernel.Storage.Esqueleto as Esq
+-- import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
@@ -77,7 +77,8 @@ deleteDriver merchantShortId reqDriverId = do
   QMessage.deleteByPersonId reqDriverId
   QIssueReport.deleteByPersonId reqDriverId
   QPerson.deleteById reqDriverId
-  runInLocationDB $ QDriverLocation.deleteById reqDriverId
+  -- runInLocationDB $ QDriverLocation.deleteById reqDriverId
+  QDriverLocation.deleteById reqDriverId
   CQDriverInfo.clearDriverInfoCache (cast reqDriverId)
   CQIR.invalidateIssueReportCache Nothing (Just reqDriverId)
   mapM_ (\IssueReport {id} -> CQIR.invalidateIssueReportCache (Just id) Nothing) issueReports

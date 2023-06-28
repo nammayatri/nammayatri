@@ -30,6 +30,7 @@ import Database.Beam.Postgres
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
+import Domain.Types.Vehicle
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.External.Encryption
@@ -86,6 +87,7 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     pucExpiry :: B.C f (Maybe Time.UTCTime),
     insuranceValidity :: B.C f (Maybe Time.UTCTime),
     vehicleClass :: B.C f (Maybe Text),
+    vehicleVariant :: B.C f (Maybe Variant),
     vehicleManufacturer :: B.C f (Maybe Text),
     vehicleCapacity :: B.C f (Maybe Int),
     vehicleModel :: B.C f (Maybe Text),
@@ -133,6 +135,7 @@ vehicleRegistrationCertificateTMod =
       pucExpiry = B.fieldNamed "puc_expiry",
       insuranceValidity = B.fieldNamed "insurance_validity",
       vehicleClass = B.fieldNamed "vehicle_class",
+      vehicleVariant = B.fieldNamed "vehicle_variant",
       vehicleManufacturer = B.fieldNamed "vehicle_manufacturer",
       vehicleCapacity = B.fieldNamed "vehicle_capacity",
       vehicleModel = B.fieldNamed "vehicle_model",
@@ -156,6 +159,7 @@ defaultVehicleRegistrationCertificate =
       pucExpiry = Nothing,
       insuranceValidity = Nothing,
       vehicleClass = Nothing,
+      vehicleVariant = Nothing,
       vehicleManufacturer = Nothing,
       vehicleCapacity = Nothing,
       vehicleModel = Nothing,

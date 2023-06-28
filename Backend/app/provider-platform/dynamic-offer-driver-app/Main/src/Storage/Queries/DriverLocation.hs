@@ -32,8 +32,8 @@ import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
+-- import qualified Kernel.Storage.Esqueleto as Esq
+-- import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Lib.Utils
@@ -89,11 +89,11 @@ findById (Id driverLocationId) = do
       pure (either (const Nothing) (transformBeamDriverLocationToDomain <$>) geoms)
     Left _ -> pure Nothing
 
-findByIdInReplica ::
-  (Transactionable m, EsqLocRepDBFlow m r) =>
-  Id Person ->
-  m (Maybe DriverLocation)
-findByIdInReplica id = runInLocReplica $ Esq.findById id
+-- findByIdInReplica ::
+--   (Esq.Transactionable m, EsqLocRepDBFlow m r) =>
+--   Id Person ->
+--   m (Maybe DriverLocation)
+-- findByIdInReplica id = Esq.runInLocReplica $ Esq.findById id
 
 upsertGpsCoord :: (L.MonadFlow m, MonadTime m) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m DriverLocation
 upsertGpsCoord drLocationId latLong calculationTime merchantId' = do

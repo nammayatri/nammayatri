@@ -21,13 +21,13 @@ where
 
 import Data.Aeson (Options (..), SumEncoding (..), defaultOptions)
 import Data.OpenApi
-import Domain.Types.DriverFee (DriverFee, PlatformFee)
+-- import Domain.Types.DriverFee (DriverFee, PlatformFee)
 import qualified Domain.Types.DriverQuote as DQ
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
-import Kernel.Types.Common (Money)
+-- import Kernel.Types.Common (Money)
 import Kernel.Types.Id
 
 -- Warning: This whole thing is for frontend use only, don't make any backend logic based on this.

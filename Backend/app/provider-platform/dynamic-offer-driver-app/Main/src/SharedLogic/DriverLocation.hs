@@ -23,7 +23,7 @@ import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocDBFlow, EsqLocRepDBFlow)
-import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB)
+-- import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -36,12 +36,14 @@ upsertGpsCoord :: (CacheFlow m r, L.MonadFlow m, MonadTime m, EsqLocDBFlow m r, 
 upsertGpsCoord driverId latLong calculationTime merchantId = do
   driverInfo <- CDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   if not driverInfo.onRide -- if driver not on ride directly save location updates to DB
-    then void $ runInLocationDB $ DLQueries.upsertGpsCoord driverId latLong calculationTime merchantId
+  -- then void $ runInLocationDB $ DLQueries.upsertGpsCoord driverId latLong calculationTime merchantId
+    then void $ DLQueries.upsertGpsCoord driverId latLong calculationTime merchantId
     else do
       mOldLocation <- findById merchantId driverId
       case mOldLocation of
         Nothing -> do
-          driverLocation <- runInLocationDB $ DLQueries.upsertGpsCoord driverId latLong calculationTime merchantId
+          -- driverLocation <- runInLocationDB $ DLQueries.upsertGpsCoord driverId latLong calculationTime merchantId
+          driverLocation <- DLQueries.upsertGpsCoord driverId latLong calculationTime merchantId
           cacheDriverLocation driverLocation
         Just oldLoc -> do
           now <- getCurrentTime
@@ -61,7 +63,8 @@ findById merchantId id =
         Just a ->
           return $ Just $ mkDriverLocation a merchantId
         Nothing ->
-          flip whenJust cacheDriverLocation /=<< DLQueries.findByIdInReplica id
+          -- flip whenJust cacheDriverLocation /=<< DLQueries.findByIdInReplica id
+          flip whenJust cacheDriverLocation /=<< DLQueries.findById id
 
 getDriverLocationWithoutMerchantId :: (CacheFlow m r, L.MonadFlow m) => Id Person -> m (Maybe DriverLocationWithoutMerchantId)
 getDriverLocationWithoutMerchantId = Hedis.safeGet . makeDriverLocationKey
@@ -104,7 +107,8 @@ updateOnRide driverId onRide merchantId = do
         (pure ())
         ( \loc -> do
             let latLong = LatLong loc.lat loc.lon
-            void $ Esq.runInLocationDB $ DLQueries.upsertGpsCoord (cast driverId) latLong loc.coordinatesCalculatedAt merchantId
+            -- void $ Esq.runInLocationDB $ DLQueries.upsertGpsCoord (cast driverId) latLong loc.coordinatesCalculatedAt merchantId
+            void $ DLQueries.upsertGpsCoord (cast driverId) latLong loc.coordinatesCalculatedAt merchantId
         )
         mDriverLocatation
   CDI.updateOnRide driverId onRide
@@ -122,7 +126,8 @@ updateOnRideCacheForCancelledOrEndRide driverId merchantId = do
     (pure ())
     ( \loc -> do
         let latLong = LatLong loc.lat loc.lon
-        void $ Esq.runInLocationDB $ DLQueries.upsertGpsCoord (cast driverId) latLong loc.coordinatesCalculatedAt merchantId
+        -- void $ Esq.runInLocationDB $ DLQueries.upsertGpsCoord (cast driverId) latLong loc.coordinatesCalculatedAt merchantId
+        void $ DLQueries.upsertGpsCoord (cast driverId) latLong loc.coordinatesCalculatedAt merchantId
     )
     mbDriverLocation
   CDI.clearDriverInfoCache driverId

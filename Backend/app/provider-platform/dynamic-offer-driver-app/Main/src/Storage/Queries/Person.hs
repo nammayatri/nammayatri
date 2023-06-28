@@ -475,20 +475,6 @@ getDrivers' vehicles = do
     personKeys = getId <$> fetchDriverIDsFromVehicle vehicles
 
 getDriversWithMerchID ::
-  Transactionable m =>
-  [Id Person] ->
-  m [Person]
-
-getDriversByIdIn driverIds = do
-  Esq.findAll $ do
-    persons <- from $ table @PersonT
-    where_ $
-      persons ^. PersonTId `in_` valList personIds
-    return persons
-  where
-    personIds = toKey . cast <$> driverIds
-
-getDriversWithMerchID ::
   (Transactionable m, EsqDBReplicaFlow m r) =>
   Id Merchant ->
   m [Person]

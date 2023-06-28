@@ -570,39 +570,3 @@ transformDomainDriverInformationToBeam DriverInformation {..} =
       BeamDI.createdAt = createdAt,
       BeamDI.updatedAt = updatedAt
     }
-
-updateSubscription :: Bool -> Id Person.Driver -> SqlDB ()
-updateSubscription isSubscribed driverId = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ DriverInformationSubscribed =. val isSubscribed,
-        DriverInformationUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
-
-updateAadhaarVerifiedState :: Id Person.Driver -> Bool -> SqlDB ()
-updateAadhaarVerifiedState personId isVerified = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ DriverInformationAadhaarVerified =. val isVerified,
-        DriverInformationUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast personId)
-
-updatePendingPayment ::
-  Bool ->
-  Id Person.Driver ->
-  SqlDB ()
-updatePendingPayment isPending driverId = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ DriverInformationPaymentPending =. val isPending,
-        DriverInformationUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
