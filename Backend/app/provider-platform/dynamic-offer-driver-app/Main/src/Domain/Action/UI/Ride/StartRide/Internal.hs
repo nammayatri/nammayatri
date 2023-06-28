@@ -26,20 +26,34 @@ import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow)
 import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB)
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.Ride as CQRide
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.Ride as QRide
+import Tools.Event
 
-startRideTransaction :: (CacheFlow m r, EsqDBFlow m r, EsqLocDBFlow m r) => Id SP.Person -> Id SRide.Ride -> Id SRB.Booking -> LatLong -> Id Dmerch.Merchant -> m ()
-startRideTransaction driverId rideId bookingId firstPoint merchantId = do
+startRideTransaction ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqLocDBFlow m r,
+    EventStreamFlow m r
+  ) =>
+  Id SP.Person ->
+  SRide.Ride ->
+  Id SRB.Booking ->
+  LatLong ->
+  Id Dmerch.Merchant ->
+  m ()
+startRideTransaction driverId ride bookingId firstPoint merchantId = do
+  triggerRideStartEvent RideEventData {ride = ride{status = SRide.INPROGRESS}, personId = driverId, merchantId = merchantId}
   Esq.runTransaction $ do
-    QRide.updateStatus rideId SRide.INPROGRESS
-    QRide.updateStartTimeAndLoc rideId firstPoint
-    QBE.logRideCommencedEvent (cast driverId) bookingId rideId
-    QDFS.updateStatus driverId DDFS.ON_RIDE {rideId}
+    QRide.updateStatus ride.id SRide.INPROGRESS
+    QRide.updateStartTimeAndLoc ride.id firstPoint
+    QBE.logRideCommencedEvent (cast driverId) bookingId ride.id
+    QDFS.updateStatus driverId DDFS.ON_RIDE {rideId = ride.id}
   now <- getCurrentTime
   void $ runInLocationDB $ DrLoc.upsertGpsCoord driverId firstPoint now merchantId
   CQRide.clearCache driverId

@@ -40,6 +40,7 @@ import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.CacheConfig
 import System.Environment (lookupEnv)
@@ -101,7 +102,8 @@ data AppCfg = AppCfg
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     enableAPILatencyLogging :: Bool,
-    enableAPIPrometheusMetricLogging :: Bool
+    enableAPIPrometheusMetricLogging :: Bool,
+    eventStreamMap :: [EventStreamMap]
   }
   deriving (Generic, FromDhall)
 
@@ -165,7 +167,8 @@ data AppEnv = AppEnv
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     enableAPILatencyLogging :: Bool,
-    enableAPIPrometheusMetricLogging :: Bool
+    enableAPIPrometheusMetricLogging :: Bool,
+    eventStreamMap :: [EventStreamMap]
   }
   deriving (Generic)
 

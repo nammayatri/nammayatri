@@ -277,6 +277,7 @@ library
       Tools.Auth
       Tools.Call
       Tools.Error
+      Tools.Event
       Tools.JSON
       Tools.Maps
       Tools.Metrics
@@ -361,6 +362,7 @@ library
     , servant-client-core
     , servant-openapi3
     , servant-server
+    , sessionizer-metrics
     , special-zone
     , special-zone-a
     , text

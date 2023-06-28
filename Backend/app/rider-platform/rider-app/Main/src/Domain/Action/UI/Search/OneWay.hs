@@ -34,6 +34,7 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
+import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.MerchantConfig as SMC
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerc
@@ -43,6 +44,7 @@ import Storage.Queries.Geometry
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
+import Tools.Event
 import qualified Tools.Maps as Maps
 import Tools.Metrics
 import qualified Tools.Metrics as Metrics
@@ -75,7 +77,8 @@ oneWaySearch ::
     EsqDBFlow m r,
     HedisFlow m r,
     CoreMetrics m,
-    HasBAPMetrics m r
+    HasBAPMetrics m r,
+    EventStreamFlow m r
   ) =>
   Id Person.Person ->
   OneWaySearchReq ->
@@ -121,6 +124,7 @@ oneWaySearch personId req bundleVersion clientVersion device = do
   Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId
+  triggerSearchEvent SearchEventData {searchRequest = searchRequest}
   DB.runTransaction $ do
     QSearchRequest.create searchRequest
     QPFS.updateStatus person.id DPFS.SEARCHING {requestId = searchRequest.id, validTill = searchRequest.validTill}

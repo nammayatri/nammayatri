@@ -63,6 +63,7 @@ import qualified Storage.Queries.QuoteSpecialZone as QQuoteSpecialZone
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestSpecialZone as QSearchRequestSpecialZone
 import Tools.Error
+import Tools.Event
 import qualified Tools.Maps as Maps
 import Tools.Metrics
 import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
@@ -237,6 +238,10 @@ handler merchant sReq = do
           let onlyFPWithDrivers = filter (\fp -> isJust (find (\dp -> dp.variant == fp.vehicleVariant) driverPool)) farePolicies
           searchReq <- buildSearchRequest sReq merchantId fromLocation toLocation result.distance result.duration specialLocationTag area
           estimates <- mapM (SHEst.buildEstimate searchReq.id sReq.pickupTime result.distance specialLocationTag) onlyFPWithDrivers
+          triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId}
+
+          forM_ estimates $ \est -> do
+            triggerEstimateEvent EstimateEventData {estimate = est, merchantId = merchantId}
           Esq.runTransaction $ do
             QSR.create searchReq
             QEst.createMany estimates

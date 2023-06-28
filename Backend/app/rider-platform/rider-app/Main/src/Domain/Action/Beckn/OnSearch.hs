@@ -57,6 +57,7 @@ import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Error
+import Tools.Event
 import qualified Tools.Metrics as Metrics
 
 data DOnSearchReq = DOnSearchReq
@@ -167,6 +168,8 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   quotes <- traverse (buildQuote requestId providerInfo now _searchRequest.merchantId) quotesInfo
   merchantPaymentMethods <- CQMPM.findAllByMerchantId merchant.id
   let paymentMethods = intersectPaymentMethods paymentMethodsInfo merchantPaymentMethods
+  forM_ estimates $ \est -> do
+    triggerEstimateEvent EstimateEventData {estimate = est, personId = _searchRequest.riderId, merchantId = _searchRequest.merchantId}
   DB.runTransaction do
     QEstimate.createMany estimates
     QQuote.createMany quotes

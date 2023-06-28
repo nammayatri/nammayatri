@@ -51,6 +51,7 @@ import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.GoogleTranslate
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
 import Storage.CachedQueries.CacheConfig
@@ -107,7 +108,8 @@ data AppCfg = AppCfg
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
     registryMap :: M.Map Text BaseUrl,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    eventStreamMap :: [EventStreamMap]
   }
   deriving (Generic, FromDhall)
 
@@ -162,7 +164,8 @@ data AppEnv = AppEnv
     registryMap :: M.Map Text BaseUrl,
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    eventStreamMap :: [EventStreamMap]
   }
   deriving (Generic)
 

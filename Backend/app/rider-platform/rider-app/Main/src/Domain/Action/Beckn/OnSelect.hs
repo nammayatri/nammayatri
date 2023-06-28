@@ -47,6 +47,7 @@ import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
+import Tools.Event
 import qualified Tools.Notifications as Notify
 
 data DOnSelectReq = DOnSelectReq
@@ -100,6 +101,8 @@ onSelect OnSelectValidatedReq {..} = do
   now <- getCurrentTime
   quotes <- traverse (buildSelectedQuote estimate providerInfo now searchRequest.merchantId) quotesInfo
   logPretty DEBUG "quotes" quotes
+  forM_ quotes $ \quote -> do
+    triggerQuoteEvent QuoteEventData {quote = quote, person = person, merchantId = searchRequest.merchantId}
   DB.runTransaction $ do
     QQuote.createMany quotes
     QPFS.updateStatus searchRequest.riderId DPFS.DRIVER_OFFERED_QUOTE {estimateId = estimate.id, validTill = searchRequest.validTill}
