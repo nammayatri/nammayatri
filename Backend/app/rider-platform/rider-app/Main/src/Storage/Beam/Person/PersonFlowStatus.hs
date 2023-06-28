@@ -53,7 +53,7 @@ instance FromBackendRow Postgres Domain.FlowStatus
 instance IsString Domain.FlowStatus where
   fromString = show
 
--- deriving stock instance Read Domain.FlowStatus
+deriving stock instance Ord Domain.FlowStatus
 
 data PersonFlowStatusT f = PersonFlowStatusT
   { personId :: B.C f Text,
