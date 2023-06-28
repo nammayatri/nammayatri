@@ -34,6 +34,7 @@ mkPersist
     PaymentOrderT sql=payment_order
       id Text
       shortId Text
+      paymentServiceOrderId Text
       personId Text -- PersonTId
       merchantId Text -- MerchantTId
       amount Money

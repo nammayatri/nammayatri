@@ -67,7 +67,7 @@ createOrderService merchantId personId orderId createOrderReq createOrderCall = 
       pure
         Payment.CreateOrderResp
           { status = existingOrder.status,
-            id = "ordeh_xxxxxxxxxxxxxxxxxxxx", -- not saved in db
+            id = existingOrder.paymentServiceOrderId,
             order_id = existingOrder.shortId.getShortId,
             payment_links = Just existingOrder.paymentLinks,
             sdk_payload
@@ -78,8 +78,8 @@ buildSDKPayload req order = do
   payload <- buildSDKPayloadDetails req order
   pure
     Juspay.SDKPayload
-      { requestId = "12398b5571d74c3388a74004bc24370c", -- not saved in db
-        service = "in.juspay.hyperpay", -- not saved in db
+      { requestId = Nothing,
+        service = Nothing,
         payload
       }
 
@@ -125,6 +125,7 @@ buildPaymentOrder merchantId personId orderId req resp = do
     DOrder.PaymentOrder
       { id = orderId,
         shortId = ShortId req.orderShortId,
+        paymentServiceOrderId = resp.id,
         personId,
         merchantId,
         amount = req.amount, -- FIXME resp.sdk_payload.payload.amount
