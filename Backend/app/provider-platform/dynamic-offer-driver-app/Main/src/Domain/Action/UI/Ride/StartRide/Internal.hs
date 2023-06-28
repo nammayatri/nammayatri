@@ -21,9 +21,9 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Language as L
 import Kernel.External.Maps.Types (LatLong)
-import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow)
-import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB)
+-- import qualified Kernel.Storage.Esqueleto as Esq
+-- import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow)
+-- import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified SharedLogic.Ride as CQRide
@@ -41,5 +41,6 @@ startRideTransaction driverId rideId bookingId firstPoint merchantId = do
   QBE.logRideCommencedEvent (cast driverId) bookingId rideId
   _ <- QDFS.updateStatus driverId DDFS.ON_RIDE {rideId}
   now <- getCurrentTime
-  void $ runInLocationDB $ DrLoc.upsertGpsCoord driverId firstPoint now merchantId
+  -- void $ runInLocationDB $ DrLoc.upsertGpsCoord driverId firstPoint now merchantId
+  _ <- DrLoc.upsertGpsCoord driverId firstPoint now merchantId
   CQRide.clearCache driverId
