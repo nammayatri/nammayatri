@@ -314,17 +314,27 @@ currentFlowStatus = do
       else do
         resp <- lift $ lift $ Remote.updateProfile (Remote.mkUpdateProfileRequest)
         pure unit
-      void $ pure $ setCleverTapUserData "Name" ((fromMaybe "" response.firstName) <> " " <> (fromMaybe "" response.middleName) <> " " <> (fromMaybe "" response.lastName))
 
-      if (fromMaybe "UNKNOWN" (response.gender) /= "UNKNOWN") then do
-        void $ pure $ setCleverTapUserData "gender" (fromMaybe "" response.gender)
-        pure unit
-        else pure unit
-      if (isJust response.language) then do
-        _ <- pure $ spy "testing" (fromMaybe "" response.language)
-        void $ pure $ setCleverTapUserProp "Preferred Language" (fromMaybe "" response.language)
-        pure unit
-        else pure unit
+      let middleName = case response.middleName of 
+                    Just ""  -> ""
+                    Just name -> (" " <> name)
+                    Nothing -> ""
+          lastName   = case response.lastName of 
+                    Just "" -> ""
+                    Just name -> (" " <> name)
+                    Nothing -> ""
+          name = (fromMaybe "" response.firstName) <> middleName <> lastName
+      void $ pure $ setCleverTapUserData "Name" name
+
+      when (fromMaybe "UNKNOWN" (response.gender) /= "UNKNOWN") $ do
+          case response.gender of
+              Just value -> void $ pure $ setCleverTapUserData "gender" (spy "hello" value)
+              Nothing -> pure unit
+
+      case response.language of
+          Just value -> void $ pure $ setCleverTapUserData "Preferred Language" value
+          Nothing -> pure unit
+
       void $ pure $ setCleverTapUserData "Identity" (getValueToLocalStore CUSTOMER_ID)
       void $ pure $ setCleverTapUserData "Phone" ("+91" <> (getValueToLocalStore MOBILE_NUMBER))
 
@@ -343,7 +353,9 @@ currentFlowStatus = do
         else pure unit
       if isJust response.email then do
         setValueToLocalStore USER_EMAIL $ fromMaybe "" response.email
-        void $ pure $ setCleverTapUserData "Email" (fromMaybe "" response.email)
+        case response.email of
+            Just value -> void $ pure $ setCleverTapUserData "Email" value
+            Nothing -> pure unit
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{email = Just (fromMaybe "" response.email)}}})
         else pure unit
 
@@ -495,10 +507,13 @@ accountSetUpScreenFlow = do
   case flow of
     GO_HOME state -> do
       void $ lift $ lift $ toggleLoader false
-      let gender = state.data.gender
+      let gender = getGenderValue state.data.gender
       let (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest
           requiredData = initialData{firstName = (Just state.data.name),gender = gender}
-      void $ pure $ setCleverTapUserData "gender" (fromMaybe "" gender)
+      case gender of
+          Just value -> void $ pure $ setCleverTapUserData "gender" value
+          Nothing -> pure unit
+      
       resp <- lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
       case resp of
         Right response -> do
@@ -1355,6 +1370,14 @@ selectLanguageScreenFlow = do
     UPDATE_LANGUAGE state -> do
                                 setValueToLocalStore LANGUAGE_KEY (state.props.selectedLanguage)
                                 _ <- lift $ lift $ liftFlow $(firebaseLogEventWithParams "ny_user_lang_selec" "language" (state.props.selectedLanguage))
+                                let langVal =  case (state.props.selectedLanguage) of
+                                                                                     "HI_IN" -> "HINDI"
+                                                                                     "EN_US" -> "ENGLISH"
+                                                                                     "KN_IN" -> "KANNADA"
+                                                                                     "BN_IN" -> "BENGALI"
+                                                                                     "ML_IN" -> "MALAYALAM"
+                                                                                     _ -> state.props.selectedLanguage
+                                void $ pure $ setCleverTapUserProp "Preferred Language" langVal
                                 resp <- lift $ lift $ Remote.updateProfile (Remote.mkUpdateProfileRequest)
                                 modifyScreenState $ SelectLanguageScreenStateType (\selectLanguageScreen -> SelectLanguageScreenData.initData)
                                 homeScreenFlow
