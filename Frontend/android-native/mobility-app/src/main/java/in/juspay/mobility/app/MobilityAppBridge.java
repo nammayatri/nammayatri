@@ -16,7 +16,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Gravity;
-import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -364,7 +363,7 @@ public class MobilityAppBridge extends HyperBridge {
 
     @JavascriptInterface
     public void setCleverTapUserData(String key, String value){
-        HashMap<String, Object> profileUpdate = new HashMap<String, Object>();
+        HashMap<String, Object> profileUpdate = new HashMap<>();
         try {
             profileUpdate.put(key,value);
         } catch (Exception e) {
@@ -381,7 +380,7 @@ public class MobilityAppBridge extends HyperBridge {
 
     @JavascriptInterface
     public void setCleverTapUserProp (String key, String value){
-        HashMap<String, Object> profileUpdate = new HashMap<String, Object>();
+        HashMap<String, Object> profileUpdate = new HashMap<>();
         try {
             profileUpdate.put(key,value);
         } catch (Exception e) {
@@ -400,7 +399,7 @@ public class MobilityAppBridge extends HyperBridge {
 
     @JavascriptInterface
     public void cleverTapCustomEventWithParams(String event, String paramKey, String paramValue){
-        HashMap<String, Object> mapCustomEvent = new HashMap<String, Object>();
+        HashMap<String, Object> mapCustomEvent = new HashMap<>();
         mapCustomEvent.put(paramKey,paramValue);
         if (clevertapDefaultInstance!=null)
             clevertapDefaultInstance.pushEvent(event,mapCustomEvent);

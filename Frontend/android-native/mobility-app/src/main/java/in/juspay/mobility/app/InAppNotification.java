@@ -35,7 +35,7 @@ public class InAppNotification extends AppCompatActivity {
 
     public InAppNotification(Activity activity) {
         this.activity = activity;
-        this.context = activity.getApplicationContext();;
+        this.context = activity.getApplicationContext();
         mainLayout = activity.findViewById(R.id.main_layout);
     }
 

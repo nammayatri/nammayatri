@@ -25,7 +25,7 @@ window.getMerchantConfig = function () {
     "isEmergencyContacts": "true",
     "showCorporateAddress" : false,
     "isChatEnabled": "false",
-    "loaderColor": "EB0055",
+    "loaderColor": "#EB0055",
     "isGradient" : "true",
     "gradient": ["#EB0055", "#320096"],
     "primaryTextColor": "#FFFFFF",
@@ -70,7 +70,7 @@ window.getMerchantConfig = function () {
     "quoteListModel": {
       "backgroundColor": "#EB0055",
       "textColor": "#FFFFFF",
-      "loaderColor": "#80B2FF",
+      "loaderColor": "#80B2FF", 
       "otpTextBackground"  : "#FFFFFF",
       "otpBackground" : "#FFF0F6",
       "otpTextColor" : "#3C2062",
@@ -148,10 +148,10 @@ window.getMerchantConfig = function () {
     , "titleColor" : "#21C179"
     , "actionText" : "Update now"
     , "actionTextColor" : "#27AE5F"
-    , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png"
+    , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
     },
     "terminateBtnConfig" : {
-      "visibility" : true,
+      "visibility" : true, 
       "title" : "Pass Culture",
       "imageUrl" : "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
   }

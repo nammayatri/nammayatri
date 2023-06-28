@@ -100,7 +100,6 @@ import in.juspay.mobility.app.LocationUpdateWorker;
 import in.juspay.mobility.app.NotificationUtils;
 import in.juspay.mobility.app.OverlaySheetService;
 import in.juspay.mobility.app.Utils;
-import in.juspay.mobility.app.YoutubeVideoView;
 import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.common.MobilityCommonBridge;
 import in.juspay.mobility.driver.mediaPlayer.DefaultMediaPlayerControl;
@@ -1036,19 +1035,18 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     //region Override Funtions
     @Override
     public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
-        Utils imageUtils = new Utils(bridgeComponents.getContext());
         switch (requestCode) {
             case IMAGE_CAPTURE_REQ_CODE:
                 if (resultCode == RESULT_OK) {
                     if (bridgeComponents.getActivity() != null) {
                         isUploadPopupOpen = false;
-                        imageUtils.captureImage(data, bridgeComponents.getActivity());
+                        Utils.captureImage(data, bridgeComponents.getActivity(), bridgeComponents.getContext());
                     }
                 }
                 break;
             case CropImage.CROP_IMAGE_ACTIVITY_REQUEST_CODE:
                 if (resultCode == RESULT_OK) {
-                    new Thread(() -> imageUtils.encodeImageToBase64(data)).start();
+                    new Thread(() -> Utils.encodeImageToBase64(data, bridgeComponents.getContext())).start();
                 } else if (resultCode == CropImage.CROP_IMAGE_ACTIVITY_RESULT_ERROR_CODE) {
                     CropImage.ActivityResult result = CropImage.getActivityResult(data);
                     Log.e(OVERRIDE, result.getError().toString());

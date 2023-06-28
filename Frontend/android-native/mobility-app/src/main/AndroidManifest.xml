@@ -38,10 +38,6 @@
 
     <application>
         <activity
-            android:name=".YoutubeVideoView"
-            android:exported="false"
-            android:resizeableActivity="true" />
-        <activity
             android:name=".RideRequestActivity"
             android:exported="false"
             android:resizeableActivity="false"

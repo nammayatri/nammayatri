@@ -253,8 +253,6 @@ public class NotificationUtils extends AppCompatActivity {
         }
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.N)
-    @SuppressLint("MissingPermission")
     public static void showNotification(Context context, String title, String msg, JSONObject data, String imageUrl) throws JSONException {
         Log.e(TAG, "SHOWNOTIFICATION MESSAGE");
         int smallIcon = context.getResources().getIdentifier("ic_launcher", "drawable", context.getPackageName());
@@ -267,6 +265,7 @@ public class NotificationUtils extends AppCompatActivity {
         System.out.println("Notificationn Utils Data" + data.toString());
         System.out.println("Notificationn111" + data.getString("notification_type"));
         System.out.println("Notificationn222" + (data.getString("entity_ids")));
+        System.out.println("imageUrl" + imageUrl);
         System.out.println("imageUrl" + imageUrl);
         intent.putExtra("NOTIFICATION_DATA", data.toString());
         //            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
@@ -333,7 +332,12 @@ public class NotificationUtils extends AppCompatActivity {
 //                    mBuilder.setTimeoutAfter(20000);
             System.out.println("In clean notification if");
         }
-        notificationManager.notify(notificationId, mBuilder.build());
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            Log.e(LOG_TAG, "no notification permission");
+            return;
+        } else {
+            notificationManager.notify(notificationId, mBuilder.build());
+        }
 
 
         if (TRIP_CHANNEL_ID.equals(notificationType)) {

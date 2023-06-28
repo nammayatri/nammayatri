@@ -576,8 +576,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     LatLng latLngObjMain = new LatLng(lastLatitudeValue, lastLongitudeValue);
                     googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, 17.0f));
                 } else {
-                    LatLng latLngObjMain = zoomLatLon;
-                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, 17.0f));
+                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(zoomLatLon, 17.0f));
                     googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
                 }
             });

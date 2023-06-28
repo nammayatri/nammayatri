@@ -9,25 +9,34 @@
 
 package in.juspay.mobility.app;
 
+import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.util.Log;
+
+import androidx.core.app.ActivityCompat;
 
 public class NotificationReciever extends BroadcastReceiver {
     public static String NOTIFICATION_ID = "notification-id";
     public static String NOTIFICATION = "notification";
+    private String LOG_TAG = "Beckn_Notification";
 
     public void onReceive(Context context, Intent intent) {
-        Log.i("Beckn_Notification", "Local Notification Reciever - onReceive called");
+        Log.i("", "Local Notification Reciever - onReceive called");
         NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         Notification notification = intent.getParcelableExtra(NOTIFICATION);
         // TODO :: Ask Daya to check
         int id = intent.getIntExtra(NOTIFICATION_ID, NotificationUtils.notificationId);
         NotificationUtils.notificationId++;
         assert notificationManager != null;
-        notificationManager.notify(id, notification);
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            Log.e(LOG_TAG, "no notification permission");
+        } else {
+            notificationManager.notify(id, notification);
+        }
     }
 }

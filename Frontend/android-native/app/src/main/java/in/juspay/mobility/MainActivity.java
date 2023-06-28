@@ -262,7 +262,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         if (MERCHANT_TYPE.equals("DRIVER")) {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-            new Utils(context).updateLocaleResource(sharedPref.getString(getResources().getString(in.juspay.mobility.app.R.string.LANGUAGE_KEY), "null"));
+            Utils.updateLocaleResource(sharedPref.getString(getResources().getString(in.juspay.mobility.app.R.string.LANGUAGE_KEY), "null"),context);
         } else {
             LottieAnimationView splashLottieView = findViewById(in.juspay.mobility.app.R.id.splash_lottie);
             try {
@@ -303,7 +303,7 @@ public class MainActivity extends AppCompatActivity {
         Task<AppUpdateInfo> appUpdateInfoTask = appUpdateManager.getAppUpdateInfo();
         updateType = AppUpdateType.IMMEDIATE;
         appUpdateInfoTask.addOnSuccessListener(appUpdateInfo -> {
-            if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
+            if (appUpdateInfo.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS
                     && appUpdateInfo.isUpdateTypeAllowed(updateType)) {
                 Log.d(LOG_TAG, "Inside update");
                 try {

@@ -9,8 +9,10 @@
 package in.juspay.mobility.app;
 
 public class SheetModel {
-    private String pickUpDistance, distanceToBeCovered, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, requestId, searchRequestId, specialLocationTag;
-    private int baseFare, reqExpiryTime, startTime, updatedAmount, offeredPrice, driverMinExtraFee, driverMaxExtraFee, rideRequestPopupDelayDuration, negotiationUnit, customerExtraFee;
+    private final String pickUpDistance, distanceToBeCovered, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag;
+    private String requestId;
+    private int startTime, updatedAmount, offeredPrice, customerExtraFee;
+    private final int baseFare, reqExpiryTime, driverMinExtraFee, driverMaxExtraFee, rideRequestPopupDelayDuration, negotiationUnit;
     private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha;
     private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable;
 

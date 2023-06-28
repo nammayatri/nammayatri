@@ -65,7 +65,7 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
         return sheetList.size();
     }
 
-    public class SheetViewHolder extends RecyclerView.ViewHolder{
+    public static class SheetViewHolder extends RecyclerView.ViewHolder{
         TextView pickUpDistance, acceptRejTimer, baseFare, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, zoneText, fixedFareText, customerTipText, textIncludesCharges;
         Button reqButton, rejectButton;
         View buttonDecreasePrice, buttonIncreasePrice, progressBar;

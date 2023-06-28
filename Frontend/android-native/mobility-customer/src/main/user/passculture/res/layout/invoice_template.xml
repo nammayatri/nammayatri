@@ -17,10 +17,44 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal">
 
-            <ImageView
-                android:layout_width="147px"
-                android:layout_height="47px"
-                android:src="@drawable/ny_ic_invoice_logo" />
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/medium"
+                    android:layout_marginTop="3px"
+                    android:lineHeight="28px"
+                    android:text="Hey "
+                    android:textColor="@color/Black800"
+                    android:textFontWeight="500"
+                    android:textSize="24px" />
+
+                <TextView
+                    android:id="@+id/userName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3px"
+                    android:fontFamily="@font/medium"
+                    android:lineHeight="28px"
+                    android:text=""
+                    android:textColor="@color/Black800"
+                    android:textFontWeight="500"
+                    android:textSize="24px" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3px"
+                    android:fontFamily="@font/medium"
+                    android:lineHeight="28px"
+                    android:text=", here’s your invoice"
+                    android:textColor="@color/Black800"
+                    android:textFontWeight="500"
+                    android:textSize="24px" />
+            </LinearLayout>
 
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -36,6 +70,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:fontFamily="@font/regular"
                     android:lineHeight="20px"
                     android:text="For ride taken on"
                     android:textColor="@color/Black700"
@@ -46,10 +81,11 @@
                     android:id="@+id/rideDate"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:fontFamily="@font/semibold"
                     android:lineHeight="20px"
                     android:text="Wed, 8th Nov 2022"
                     android:textColor="@color/Black800"
-                    android:textFontWeight="600"
+                    android:textFontWeight="400"
                     android:textSize="16px"
                     android:textStyle="bold" />
             </LinearLayout>
@@ -58,53 +94,18 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="1px"
-            android:layout_marginTop="31px"
+            android:layout_marginTop="27px"
             android:background="@color/Black500" />
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="28px"
-                android:lineHeight="28px"
-                android:text="Hey "
-                android:textColor="@color/Black800"
-                android:textFontWeight="500"
-                android:textSize="24px" />
-
-            <TextView
-                android:id="@+id/userName"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="28px"
-                android:lineHeight="28px"
-                android:text="Aman Maurya"
-                android:textColor="@color/Black800"
-                android:textFontWeight="500"
-                android:textSize="24px" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="28px"
-                android:lineHeight="28px"
-                android:text=", here’s your invoice"
-                android:textColor="@color/Black800"
-                android:textFontWeight="500"
-                android:textSize="24px" />
-        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="58px">
+            android:layout_marginTop="45px">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:fontFamily="@font/semibold"
                 android:lineHeight="24px"
                 android:text="Payment Details"
                 android:textColor="@color/green"
@@ -121,6 +122,7 @@
                 android:id="@+id/paymentDetail"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:fontFamily="@font/semibold"
                 android:lineHeight="24px"
                 android:text="₹220"
                 android:textColor="@color/green"
@@ -142,8 +144,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:id="@+id/fareBreakupElements"
-                android:orientation="vertical"></LinearLayout>
+                android:id="@+id/fareBreakupElements"></LinearLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -158,6 +159,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:fontFamily="@font/regular"
                     android:lineHeight="20px"
                     android:text="Final Amount Paid"
                     android:textColor="@color/Black800"
@@ -172,6 +174,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:fontFamily="@font/regular"
                     android:lineHeight="20px"
                     android:text="₹180"
                     android:textColor="@color/Black800"
@@ -185,11 +188,12 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="80px">
+            android:layout_marginTop="60px">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:fontFamily="@font/semibold"
                 android:lineHeight="24px"
                 android:text="Ride Details"
                 android:textColor="@color/green"
@@ -205,6 +209,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:fontFamily="@font/semibold"
                 android:lineHeight="24px"
                 android:text="Ride ID: "
                 android:textColor="@color/green"
@@ -216,6 +221,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:id="@+id/rideId"
+                android:fontFamily="@font/semibold"
                 android:lineHeight="24px"
                 android:text="475DGBC589"
                 android:textColor="@color/green"
@@ -241,6 +247,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:fontFamily="@font/regular"
                     android:lineHeight="20px"
                     android:text="Driver Name"
                     android:textColor="@color/Black700"
@@ -255,6 +262,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:fontFamily="@font/regular"
                     android:lineHeight="20px"
                     android:id="@+id/driverName"
                     android:text="Rajiv Kumar"
@@ -270,6 +278,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:fontFamily="@font/regular"
                     android:lineHeight="20px"
                     android:text="License Plate"
                     android:textColor="@color/Black700"
@@ -285,6 +294,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:id="@+id/lincensePlate"
+                    android:fontFamily="@font/regular"
                     android:lineHeight="20px"
                     android:text="KA05AG1110"
                     android:textColor="@color/Black700"
@@ -336,6 +346,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/regular"
                         android:lineHeight="20px"
                         android:text="8:41 AM"
                         android:textColor="@color/Black800"
@@ -346,6 +357,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/regular"
                         android:id="@+id/source"
                         android:ellipsize="end"
                         android:maxLines="2"
@@ -358,6 +370,7 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/regular"
                         android:lineHeight="20px"
                         android:text="9:21 AM"
                         android:id="@+id/rideEndTime"
@@ -369,6 +382,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/regular"
                         android:lineHeight="20px"
                         android:id="@+id/destination"
                         android:ellipsize="end"
@@ -381,14 +395,11 @@
             </LinearLayout>
         </LinearLayout>
 
-        <LinearLayout
-            android:layout_width="0px"
-            android:layout_height="0px"
-            android:layout_weight="1.0" />
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:fontFamily="@font/regular"
+            android:layout_marginTop="35px"
             android:lineHeight="16px"
             android:id="@+id/referenceText"
             android:text=""

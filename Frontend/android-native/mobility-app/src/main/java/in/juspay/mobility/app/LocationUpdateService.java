@@ -13,7 +13,6 @@ import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.KeyguardManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -32,7 +31,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-import android.os.PowerManager;
 import android.service.notification.StatusBarNotification;
 import android.util.Log;
 
@@ -51,8 +49,6 @@ import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.Priority;
 import com.google.android.gms.tasks.CancellationTokenSource;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.analytics.FirebaseAnalytics;
 
 import org.json.JSONArray;
@@ -80,7 +76,7 @@ public class LocationUpdateService extends Service {
     private static final String LOG_TAG = "LocationServices";
     private final String LOCATION_UPDATES = "LOCATION_UPDATES";
     private static final String LOCATION_PAYLOAD = "LOCATION_PAYLOAD";
-    private static String LAST_LOCATION_TIME;
+    private static final String LAST_LOCATION_TIME = "LAST_LOCATION_TIME";
     final int notificationServiceId = 15082022; // ARDU pilot launch date : DDMMYYYY
     final int alertNotificationId = 07102022;
     FusedLocationProviderClient fusedLocationProviderClient;
@@ -90,10 +86,8 @@ public class LocationUpdateService extends Service {
     double prevLat;
     double prevLon;
     boolean updated;
-    private SharedPreferences sharedPrefs;
     private static Boolean isLocationUpdating = false;
     private Timer timer;
-    private String driverStatus;
     private String gpsMethodSwitch;
     private Context context;
     private int delayForG = 500000, delayForT = 20000;
@@ -113,12 +107,12 @@ public class LocationUpdateService extends Service {
 
     enum LocationSource {
         CurrentLocation,
-        LastLocation;
+        LastLocation
     }
 
     enum TriggerFunction {
         TimerTask,
-        GoogleCallback;
+        GoogleCallback
     }
 
 
@@ -132,20 +126,15 @@ public class LocationUpdateService extends Service {
         LocationUpdateService.updateTimeCallbacks.add(timeUpdateCallback);
     }
 
-    public static void deRegisterCallback(UpdateTimeCallback timeUpdateCallback) {
-        LocationUpdateService.updateTimeCallbacks.remove(timeUpdateCallback);
-    }
-
     @Override
     public void onCreate() {
         super.onCreate();
-        boolean updated = updateConfigVariables();
+        updateConfigVariables();
         initialiseJSONObjects();
         context = getApplicationContext();
         isLocationUpdating = false;
         this.startForeground(notificationServiceId, createNotification());
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
-        updated = false;
         timer = new Timer();
         resetTimer(delayForGNew, minDispDistanceNew, delayForTNew);
     }
@@ -156,7 +145,7 @@ public class LocationUpdateService extends Service {
         startForeground(notificationServiceId, createNotification());
         initialiseJSONObjects();
         updateDeviceDetails();
-        boolean updated = updateConfigVariables();
+        updateConfigVariables();
         logEventForHealthCheck(intent);
         if (delayForGNew != delayForG || minDispDistanceNew != minDispDistance || delayForTNew != delayForT) {
             resetTimer(delayForGNew, minDispDistanceNew, delayForTNew);
@@ -205,10 +194,9 @@ public class LocationUpdateService extends Service {
         obj.put("value", value);
     }
 
-    private boolean updateConfigVariables() {
+    private void updateConfigVariables() {
         try {
-            sharedPrefs = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-            driverStatus = sharedPrefs.getString("DRIVER_STATUS", "__failed");
+            SharedPreferences sharedPrefs = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
 
             String MAX_LIMIT_TO_STORE_LOCATION_PT = "MAX_LIMIT_TO_STORE_LOCATION_PT";
             maximumLimit = Integer.parseInt(sharedPrefs.getString(MAX_LIMIT_TO_STORE_LOCATION_PT, "100"));
@@ -229,9 +217,8 @@ public class LocationUpdateService extends Service {
             gpsMethodSwitch = gpsMethod != null ? gpsMethod : "CURRENT";
 
             cancellationTokenSource = new CancellationTokenSource();
-            return true;
         } catch (Exception exception) {
-            return false;
+            Log.e(LOG_TAG, "Exception updateConfigVariables " + exception);
         }
     }
 
@@ -377,7 +364,7 @@ public class LocationUpdateService extends Service {
             String baseUrl = sharedPref.getString("BASE_URL", "null");
             String deviceDetails = sharedPref.getString("DEVICE_DETAILS", "null");
             String bufferedLocationObjects = sharedPref.getString(LOCATION_PAYLOAD, null);
-            JSONArray locationPayload = null;
+            JSONArray locationPayload;
             if (bufferedLocationObjects != null) {
                 try {
                     locationPayload = new JSONArray(bufferedLocationObjects);
@@ -394,7 +381,7 @@ public class LocationUpdateService extends Service {
             } else {
                 locationPayload = new JSONArray();
             }
-            JSONArray metaData = null;
+            JSONArray metaData;
             try {
                 metaData = new JSONArray(metaDataForLocation.toString());
             } catch (JSONException e) {
@@ -472,17 +459,13 @@ public class LocationUpdateService extends Service {
                     locationData.put("acc", accuracy);
                     locationData.put("source", locationSource);
                     if (metaData.length() != 0) locationData.put("metaData", metaData);
-                    if (locationData == null) return;
                     if (!locationData.has("pt")) return;
                     locationPayload.put(locationData);
-                    if (locationPayload == null) return;
                     updateStorage(LOCATION_PAYLOAD, locationPayload.toString());
-//                    payload.put(locationData);
-//                    if(payload == null) return;
                     Log.d("LOG_TAG", "Location payload for API call" + locationPayload);
                     System.out.println("LOCATION_UPDATE: PAYLOAD CREATED :- " + locationPayload);
-                    Log.d(LOG_TAG, "condition 1  ::: " + (token.equals("__failed")));
-                    Log.d(LOG_TAG, "condition 2  ::: " + !(token.equals("__failed")));
+                    Log.d(LOG_TAG, "condition 1  ::: " + (token.equals("null")));
+                    Log.d(LOG_TAG, "condition 2  ::: " + !(token.equals("null")));
                     Log.d(LOG_TAG, "condition 3  ::: " + sharedPref.getString("REGISTERATION_TOKEN", "null"));
                     OutputStream stream = connection.getOutputStream();
                     stream.write(locationPayload.toString().getBytes());
@@ -512,10 +495,10 @@ public class LocationUpdateService extends Service {
                         result.append(inputLine);
                     }
                     System.out.println("LOCATION_UPDATE: API result :- " + result);
-                    Log.d(LOG_TAG, "in result OVERALL " + result.toString());
+                    Log.d(LOG_TAG, "in result OVERALL " + result);
                 }
-            } catch (Exception ignored) {
-                Log.d(LOG_TAG, "Catch in callDriverCurrentLocationAPI : " + ignored);
+            } catch (Exception e) {
+                Log.d(LOG_TAG, "Catch in callDriverCurrentLocationAPI : " + e);
             }
 
             handler.post(() -> {
@@ -548,11 +531,9 @@ public class LocationUpdateService extends Service {
     /*Creating channel for sticky notification*/
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            CharSequence name = LOCATION_SERVICE;
             String LOCATION_DESCRIPTION = "LOCATION_IS_UPDATING";
-            String description = LOCATION_DESCRIPTION;
-            NotificationChannel channel = new NotificationChannel(LOCATION_UPDATES, name, NotificationManager.IMPORTANCE_MIN);
-            channel.setDescription(description);
+            NotificationChannel channel = new NotificationChannel(LOCATION_UPDATES, LOCATION_SERVICE, NotificationManager.IMPORTANCE_MIN);
+            channel.setDescription(LOCATION_DESCRIPTION);
             NotificationManager notificationManager = getSystemService(NotificationManager.class);
             notificationManager.createNotificationChannel(channel);
         }
@@ -619,14 +600,14 @@ public class LocationUpdateService extends Service {
         System.out.println("LOCATION_UPDATE: Created Location CallBack");
         locationCallback = new LocationCallback() {
             @Override
-            public void onLocationResult(LocationResult locationResult) {
+            public void onLocationResult(@NonNull LocationResult locationResult) {
                 super.onLocationResult(locationResult);
                 Location lastLocation = locationResult.getLastLocation();
                 if (lastLocation != null) {
                     updated = true;
                     Log.e("startLocationUpdates", lastLocation.getLatitude() + "/" + lastLocation.getLongitude());
-                    Double lat = lastLocation.getLatitude();
-                    Double lng = lastLocation.getLongitude();
+                    double lat = lastLocation.getLatitude();
+                    double lng = lastLocation.getLongitude();
                     float acc = lastLocation.getAccuracy();
                     lastLatitudeValue = lat;
                     lastLongitudeValue = lng;
@@ -654,10 +635,8 @@ public class LocationUpdateService extends Service {
         if (ActivityCompat.checkSelfPermission(context, ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             showAlertNotification();
             onDestroy();
-            return;
         } else if (!isLocationEnabled()) {
             updateDriverStatus(false);
-            return;
         } else {
             NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             StatusBarNotification[] currentNotifications = notificationManager.getActiveNotifications();
@@ -685,8 +664,7 @@ public class LocationUpdateService extends Service {
         timerTask = new TimerTask() {
             @Override
             public void run() {
-                driverStatus = sharedPrefs != null ? sharedPrefs.getString("DRIVER_STATUS", "__failed") : "";
-//                    if (updated == true && lastUpdatedTime != null && checkIfUpdateRequired(lastUpdatedTime)) { NEED TO HANDLE THIS MORE CONFIDENTLY
+                //                    if (updated == true && lastUpdatedTime != null && checkIfUpdateRequired(lastUpdatedTime)) { NEED TO HANDLE THIS MORE CONFIDENTLY
 //                        if (timer != null)
 //                            timer.cancel();
 //                        updated = false;
@@ -699,60 +677,44 @@ public class LocationUpdateService extends Service {
                     if (gpsMethodSwitch.equals("CURRENT")) {
                         System.out.println("LOCATION_UPDATE: CURRENT LOCATION FETCHED BY GPS");
                         fusedLocationProviderClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationTokenSource.getToken())
-                                .addOnSuccessListener(new OnSuccessListener<Location>() {
-                                    @Override
-                                    public void onSuccess(Location location) {
-                                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
-                                        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-                                        if (location != null) {
-                                            long locTimeMilliSeconds = location.getTime();
-                                            Date locTime = new Date(locTimeMilliSeconds);
-                                            String thisLocationTimeStamp = sdf.format(locTime);
-                                            boolean isLocationUpdateValid = compareCurrentAndLastTimestamp(thisLocationTimeStamp, sdf);
-                                            if (isLocationUpdateValid) {
-                                                updateStorage("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
-                                                updateStorage("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
-                                                callDriverCurrentLocationAPI(location.getLatitude(), location.getLongitude(), location.getAccuracy(), thisLocationTimeStamp, "timer_task", LocationSource.CurrentLocation.toString(), TriggerFunction.TimerTask.toString());
-                                            }
-                                        } else {
-                                            System.out.println("LOCATION_UPDATE: CURRENT LOCATION IS NULL");
-                                            callDriverCurrentLocationAPI(0.0, 0.0, 0, sdf.format(new Date()), "timer_task_null_location", LocationSource.CurrentLocation.toString(), TriggerFunction.TimerTask.toString());
+                                .addOnSuccessListener(location -> {
+                                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
+                                    sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+                                    if (location != null) {
+                                        long locTimeMilliSeconds = location.getTime();
+                                        Date locTime = new Date(locTimeMilliSeconds);
+                                        String thisLocationTimeStamp = sdf.format(locTime);
+                                        boolean isLocationUpdateValid = compareCurrentAndLastTimestamp(thisLocationTimeStamp, sdf);
+                                        if (isLocationUpdateValid) {
+                                            updateStorage("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
+                                            updateStorage("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
+                                            callDriverCurrentLocationAPI(location.getLatitude(), location.getLongitude(), location.getAccuracy(), thisLocationTimeStamp, "timer_task", LocationSource.CurrentLocation.toString(), TriggerFunction.TimerTask.toString());
                                         }
+                                    } else {
+                                        System.out.println("LOCATION_UPDATE: CURRENT LOCATION IS NULL");
+                                        callDriverCurrentLocationAPI(0.0, 0.0, 0, sdf.format(new Date()), "timer_task_null_location", LocationSource.CurrentLocation.toString(), TriggerFunction.TimerTask.toString());
                                     }
                                 })
-                                .addOnFailureListener(new OnFailureListener() {
-                                    @Override
-                                    public void onFailure(@NonNull Exception e) {
-                                        e.printStackTrace();
-                                    }
-                                });
+                                .addOnFailureListener(Throwable::printStackTrace);
                     } else {
                         System.out.println("LOCATION_UPDATE: LAST KNOWN LOCATION FETCHED BY GPS");
                         fusedLocationProviderClient.getLastLocation()
-                                .addOnSuccessListener(new OnSuccessListener<Location>() {
-                                    @Override
-                                    public void onSuccess(Location location) {
-                                        if (location != null) {
-                                            updateStorage("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
-                                            updateStorage("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
-                                            long locTimeMilliSeconds = location.getTime();
-                                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
-                                            sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-                                            Date locTime = new Date(locTimeMilliSeconds);
-                                            String thisLocationTimeStamp = sdf.format(locTime);
-                                            boolean isLocationUpdateValid = compareCurrentAndLastTimestamp(thisLocationTimeStamp, sdf);
-                                            if (isLocationUpdateValid) {
-                                                callDriverCurrentLocationAPI(location.getLatitude(), location.getLongitude(), location.getAccuracy(), thisLocationTimeStamp, "COMING FROM TIMER", LocationSource.LastLocation.toString(), TriggerFunction.TimerTask.toString());
-                                            }
+                                .addOnSuccessListener(location -> {
+                                    if (location != null) {
+                                        updateStorage("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
+                                        updateStorage("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
+                                        long locTimeMilliSeconds = location.getTime();
+                                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
+                                        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+                                        Date locTime = new Date(locTimeMilliSeconds);
+                                        String thisLocationTimeStamp = sdf.format(locTime);
+                                        boolean isLocationUpdateValid = compareCurrentAndLastTimestamp(thisLocationTimeStamp, sdf);
+                                        if (isLocationUpdateValid) {
+                                            callDriverCurrentLocationAPI(location.getLatitude(), location.getLongitude(), location.getAccuracy(), thisLocationTimeStamp, "COMING FROM TIMER", LocationSource.LastLocation.toString(), TriggerFunction.TimerTask.toString());
                                         }
                                     }
                                 })
-                                .addOnFailureListener(new OnFailureListener() {
-                                    @Override
-                                    public void onFailure(@NonNull Exception e) {
-                                        e.printStackTrace();
-                                    }
-                                });
+                                .addOnFailureListener(Throwable::printStackTrace);
                     }
 
                     System.out.println("Inside else of handler");
@@ -776,14 +738,6 @@ public class LocationUpdateService extends Service {
         isLocationUpdating = false;
     }
 
-    private boolean isScreenLocked() {
-        Context context = getApplicationContext();
-        PowerManager powerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
-        KeyguardManager myKM = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
-        boolean isPhoneLocked = myKM.inKeyguardRestrictedInputMode();
-        return isPhoneLocked || !(Build.VERSION.SDK_INT < 20 ? powerManager.isScreenOn() : powerManager.isInteractive());
-    }
-
     private String getLastLocationTimeStamp() {
         SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         return sharedPref.getString(LAST_LOCATION_TIME, null);
@@ -795,8 +749,9 @@ public class LocationUpdateService extends Service {
             try {
                 Date currentTimestamp = sdf.parse(currentTimeStamp);
                 Date lastTimestamp = sdf.parse(lastLocationTimeStamp);
-                if (currentTimestamp.compareTo(lastTimestamp) > 0) return true;
-                else return false;
+                if (currentTimestamp != null) {
+                    return currentTimestamp.compareTo(lastTimestamp) > 0;
+                }
             } catch (Exception e) {
                 return true;
             }

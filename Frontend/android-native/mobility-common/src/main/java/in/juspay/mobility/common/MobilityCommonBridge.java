@@ -779,7 +779,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 try {
                     if (googleMap != null) {
                         JSONObject jsonObject = new JSONObject(json);
-                        JSONObject coor = (JSONObject) jsonObject.getJSONObject("locations");
+                        JSONObject coor = jsonObject.getJSONObject("locations");
                         JSONArray coordinates = coor.getJSONArray("points");
                         String sourceName = jsonObject.getString("sourceName");
                         String destinationName = jsonObject.getString("destName");

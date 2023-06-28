@@ -31,16 +31,6 @@ import in.juspay.mobility.app.callbacks.CallBack;
 public class Utils {
 
     private static final String UTILS = "UTILS";
-    Context context;
-    private final FirebaseAnalytics mFirebaseAnalytics;
-    private final SharedPreferences sharedPref;
-
-    public Utils(Context context) {
-        this.context = context;
-        mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-        sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key
-        ), Context.MODE_PRIVATE);
-    }
 
     private static final ArrayList<CallBack> callBack = new ArrayList<>();
 
@@ -52,7 +42,7 @@ public class Utils {
         callBack.remove(notificationCallback);
     }
 
-    public void updateLocaleResource(String languageKey) {
+    public static void updateLocaleResource(String languageKey, Context context) {
         Locale locale;
         switch (languageKey) {
             case "HI_IN":
@@ -85,9 +75,10 @@ public class Utils {
         context.getResources().updateConfiguration(configuration, context.getResources().getDisplayMetrics());
     }
 
-    public void captureImage(@Nullable Intent data, Activity activity) {
+    public static void captureImage(@Nullable Intent data, Activity activity, Context context) {
         try {
             Uri imageUri;
+            SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             if (data == null || data.getData() == null) { //Camera
                 File image = new File(context.getFilesDir(), "IMG_" + sharedPref.getString(context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), "null") + ".jpg");
                 imageUri = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", image);
@@ -100,13 +91,14 @@ public class Utils {
         }
     }
 
-    public void startCropImageActivity(Uri imageUri, Activity activity) {
+    public static void startCropImageActivity(Uri imageUri, Activity activity) {
         CropImage.activity(imageUri)
                 .setAllowFlipping(false)
                 .start(activity);
     }
 
-    public void encodeImageToBase64(@Nullable Intent data) {
+    public static void encodeImageToBase64(@Nullable Intent data, Context context) {
+        FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
         try {
             CropImage.ActivityResult result = CropImage.getActivityResult(data);
             Uri fileUri = null;

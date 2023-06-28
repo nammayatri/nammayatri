@@ -39,7 +39,7 @@ public class VPAdapter extends RecyclerView.Adapter<VPAdapter.ViewHolder> {
         return viewPagerItemArrayList.size();
     }
 
-    public class ViewHolder extends RecyclerView.ViewHolder{
+    public static class ViewHolder extends RecyclerView.ViewHolder{
         ImageView imageView;
         TextView tvHeading, tvDesc;
         public ViewHolder(@NonNull View itemView) {

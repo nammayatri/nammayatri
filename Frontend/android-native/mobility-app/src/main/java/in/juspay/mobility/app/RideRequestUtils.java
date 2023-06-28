@@ -25,9 +25,9 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.view.View;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
@@ -40,7 +40,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -143,8 +142,7 @@ public class RideRequestUtils {
             expireTime += (Integer.parseInt(timeTempExpire[i]) * calculate);
             calculate = calculate / 60;
         }
-        if ((expireTime-currTime) > 0) return expireTime-currTime;
-        return 0;
+        return Math.max((expireTime - currTime), 0);
     }
 
     public static void createRideRequestNotification(Context context) {
@@ -274,7 +272,7 @@ public class RideRequestUtils {
 
     public static  JSONObject getZoneConfig(String tag, Context context){
         try {
-            String key = "";
+            String key;
             String[] arrOfStr = tag.split("_");
             String pickup = arrOfStr[0];
             String drop = arrOfStr[1];
@@ -356,7 +354,7 @@ public class RideRequestUtils {
                     respReader = new InputStreamReader(connection.getErrorStream());
                     Log.d(LOG_TAG, "in error "+ respReader);
                 } else {
-                    if (startWidget == true && Settings.canDrawOverlays(context)  && !sharedPref.getString(context.getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
+                    if (startWidget && Settings.canDrawOverlays(context)  && !sharedPref.getString(context.getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
                             Intent widgetService = new Intent(context, WidgetService.class);
                             context.startService(widgetService);
                     }

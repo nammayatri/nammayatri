@@ -133,27 +133,7 @@ linearLayout
     , padding (PaddingTop 4)
     , gravity CENTER
     , color config.subHeadingTextConfig.color
-    ] <> FontStyle.paragraphText TypoGraphy),
-    linearLayout
-    [
-      height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , orientation HORIZONTAL
-    , gravity LEFT
-    , margin $ MarginTop 4
-    , visibility if config.topLeftIcon then VISIBLE else GONE
-    , onClick push (const OnGoBack)
-    , padding (PaddingRight 12)
-    ][
-      imageView
-      [ height $ V 22
-      , width $ V 22
-      , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
-      , margin $ MarginTop 4
-      , color Color.black900
-      , fontStyle $ FontStyle.semiBold LanguageStyle
-      ] 
-    ]   
+    ] <> FontStyle.paragraphText TypoGraphy) 
     ,linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
