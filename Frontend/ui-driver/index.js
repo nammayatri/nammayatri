@@ -7,6 +7,8 @@ window.session_id = guid();
 window.version = __VERSION__;
 let previousDateObject = new Date();
 const refreshThreshold = 120;
+console.warn("Hello World");
+loadConfig();
 
 var jpConsumingBackpress = {
   event: "jp_consuming_backpress",
@@ -93,6 +95,7 @@ window.onMerchantEvent = function (event, payload) {
   console = top.console;
   console.log(payload);
   var clientPaylod = JSON.parse(payload);
+  var clientId = clientPaylod.payload.clientId
   if (event == "initiate") {
     let payload = {
       event: "initiate_result"
@@ -102,14 +105,18 @@ window.onMerchantEvent = function (event, payload) {
       , errorMessage: ""
       , errorCode: ""
     }
-    if (clientPaylod.payload.clientId == "open-kochi") {
-      window.merchantID = "YATRIPARTNER"
-    } else if(clientPaylod.payload.clientId == "jatrisaathiprovider" || clientPaylod.payload.clientId == "jatrisaathidriver"){
-      window.merchantID = "JATRISAATHIDRIVER"
-    }else {
-      window.merchantID = clientPaylod.payload.clientId.toUpperCase();
+    if (clientId == "open-kochi") {
+      window.merchantID = "YATRI"
+    } else if(clientId == "jatrisaathiprovider" || clientId == "jatrisaathidriver"){
+      window.merchantID = "JATRISAATHI"
+    }else if (clientId.includes("provider")){
+      var merchant = clientId.replace("mobility","")
+      merchant = merchant.replace("provider","");
+      window.merchantID = merchant.toUpperCase();
+    } else {
+      // window.merchantID = clientPaylod.payload.clientId.toUpperCase();
+      window.merchantID = "NAMMAYATRI";
     }
-    console.log(window.merchantID);
     JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
   } else if (event == "process") {
     window.__payload.sdkVersion = "2.0.1"
@@ -152,27 +159,21 @@ window.callUICallback = function () {
   }
 }
 
+window.onResumeListeners = [];
+
 window.onPause = function () {
-  if (window.eventListeners && window.eventListeners["onPause"]) {
-    if (Array.isArray(window.eventListeners["onPause"])) {
-      var onPauseEvents = window.eventListeners["onPause"];
-      onPauseEvents.forEach(function (fn) {
-        fn()();
-      })
-      window.eventListeners["onPause"] = [];
-    } else window.eventListeners["onPause"]()();
+  console.error("onEvent onPause");
+  if (JBridge.pauseMediaPlayer) {
+    JBridge.pauseMediaPlayer();
   }
 }
 
 window.onResume = function () {
-  if (window.eventListeners && window.eventListeners["onResume"]) {
-    if (Array.isArray(window.eventListeners["onResume"])) {
-      var onResumeEvents = window.eventListeners["onResume"];
-      onResumeEvents.forEach(function (fn) {
-        fn()();
-      })
-      window.eventListeners["onResume"] = [];
-    } else window.eventListeners["onResume"]()();
+  console.error("onEvent onResume");
+  if (window.onResumeListeners && Array.isArray(window.onResumeListeners)) {
+    for (let i = 0; i < window.onResumeListeners.length;i++) {
+      window.onResumeListeners[i].call();
+    }
   }
 }
 window.onActivityResult = function () {
@@ -212,13 +213,21 @@ window["onEvent'"] = function (event, args) {
   console.log(event, args);
   if (event == "onBackPressed") {
     purescript.onEvent(event)();
+  }  else if (event == "onLocationChanged") {
+    purescript.onConnectivityEvent("LOCATION_DISABLED")();
+  } else if (event == "onInternetChanged") {
+    purescript.onConnectivityEvent("INTERNET_ACTION")();
   } else if (event == "onPause") {
     previousDateObject = new Date();
     window.onPause();
   } else if (event == "onResume") {
     window.onResume();
     refreshFlow();
-  }
+  } else if (event == "onDestroy") {
+    if (JBridge.onDestroy){
+      JBridge.onDestroy();
+    }
+}
 }
 
 function refreshFlow(){
@@ -249,12 +258,42 @@ if (typeof window.JOS != "undefined") {
 }
 
 var sessionInfo = JSON.parse(JBridge.getDeviceInfo())
-if(sessionInfo.package_name.includes("debug")){
+
+if (sessionInfo.package_name.includes("debug")) {
   logger.enableLogger();
-}else{
+} else {
   logger.disableLogger();
 }
 
 function makeEvent(_type, _data) {
   return { type : _type, data : _data };
+}
+function loadConfig() {
+  if (window.appConfig) {
+    return;
+  }
+  const headID = document.getElementsByTagName("head")[0];
+  console.log(headID)
+  const newScript = document.createElement("script");
+  newScript.type = "text/javascript";
+  newScript.id = "ny-driver-configuration";
+  newScript.innerHTML = window.JBridge.loadFileInDUI("v1-configuration.js");
+  headID.appendChild(newScript);
+  try {
+      const merchantConfig = (
+          function(){
+              try {
+                  return JSON.parse(window.getMerchantConfig());
+              } catch(e){
+                  return "{}";
+              }
+          }
+      )();
+      // console.log(merchantConfig)
+      // window.appConfig = mergeDeep(defaultConfig, merchantConfig);
+      window.appConfig = merchantConfig;
+  } catch(e){
+      console.error("config parse/merge failed", e);
+      // window.appConfig = defaultConfig;
+  }
 }

@@ -35,7 +35,6 @@ cancelButtonConfig state = let
     , textConfig
       { text     = (getString I_DONT_KNOW_WHICH_RIDE)
       , color    = Color.black700
-      , textSize = FontSize.a_18
       }
     , stroke     = "1,"<>Color.black700
     , background = Color.white900
@@ -59,21 +58,15 @@ errorModalConfig = let
         text     = (getString EMPTY_RIDES)
       , margin   = (MarginBottom 7)
       , color    = Color.black900
-      , textSize = FontSize.a_18
-      , fontStyle = FontStyle.bold LanguageStyle
       }
     , errorDescriptionConfig {
         text     = (getString YOU_HAVE_NOT_TAKEN_A_TRIP_YET)
       , color    = Color.black700
-      , textSize = FontSize.a_14
-      , fontStyle = FontStyle.regular LanguageStyle
       }
     , buttonConfig {
         text     = (getString BOOK_NOW)
       , color    = Color.yellow900
       , margin   = (Margin 16 0 16 24)
-      , textSize = FontSize.a_16
-      , fontStyle  = FontStyle.medium LanguageStyle
       , visibility = GONE
       , background = Color.black900
       }

@@ -15,26 +15,29 @@
 
 module Components.QuoteListModel.View where
 
+import Common.Types.App
+
 import Animation (translateYAnimFromTop)
 import Animation.Config (translateFullYAnimWithDurationConfig)
-import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.QuoteListItem as QuoteListItem
 import Components.QuoteListModel.Controller (Action(..), QuoteListModelState)
 import Data.Array (filter, head, null, (!!) , mapWithIndex )
 import Data.Maybe (Maybe(..), fromMaybe)
 import Effect (Effect)
-import Engineering.Helpers.Commons (getNewIDWithTag, os, safeMarginTop, screenWidth,safeMarginBottom, isPreviousVersion)
+import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getAssetsBaseUrl, getCommonAssetStoreLink, getPaymentMethod)
+import Helpers.Utils (getPreviousVersion)
 import JBridge (getBtnLoader, startLottieProcess)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, bind, const, map, pure, unit, not, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, clickable, color, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, text, textSize, textView, visibility, weight, width, imageWithFallback , cornerRadius ,stroke)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, clickable, color, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, text, textSize, textView, visibility, weight, width, stroke, cornerRadius)
 import PrestoDOM.Animation as PrestoAnim
 import Storage (KeyStore(..), getValueToLocalStore)
-import Helpers.Utils (getPreviousVersion)
 import Styles.Colors as Color
 import Common.Types.App
 import Storage (isLocalStageOn)
@@ -79,7 +82,7 @@ paymentView state =
   ][  lottieAnimationView
           [ id (getNewIDWithTag "lottieLoaderAnimProgress")
           , afterRender (\action-> do
-                        _ <- pure $ startLottieProcess "progress_loader_line" (getNewIDWithTag "lottieLoaderAnimProgress") true 0.6 "CENTER_CROP"
+                        _ <- pure $ startLottieProcess ((getAssetsBaseUrl FunctionCall) <> "lottie/progress_loader_line.json") (getNewIDWithTag "lottieLoaderAnimProgress") true 0.6 "CENTER_CROP"
                         pure unit)(const NoAction)
           , height WRAP_CONTENT
           , width MATCH_PARENT
@@ -106,12 +109,10 @@ paymentView state =
         , textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text $ getString PAY_DRIVER_USING_CASH_OR_UPI
+          , text $ if (getPaymentMethod unit) == "cash" then (getString PAY_DRIVER_USING_CASH_OR_UPI) else (getString PAY_DRIVER_USING_WALLET)
           , gravity CENTER_HORIZONTAL
           , color Color.black800
-          , textSize FontSize.a_14
-          , fontStyle $ FontStyle.medium LanguageStyle
-          ]
+          ] <> FontStyle.body1 TypoGraphy
         ]
     ]
 
@@ -120,13 +121,13 @@ imageData :: { height :: Length
 , width :: Length
 , imageUrl :: String
 }
-imageData =
-  if os == "IOS" then {imageUrl : "ny_ic_wallet_rect,https://assets.juspay.in/nammayatri/images/user/ny_ic_wallet_rect.png", height : (V 15), width : (V 15)}
-    else {imageUrl : "ny_ic_wallet,https://assets.juspay.in/nammayatri/images/user/ny_ic_wallet.png", height : (V 24) , width : (V 24)}
-
+imageData = 
+  if os == "IOS" then {imageUrl : "ny_ic_wallet_rect," <> (getAssetStoreLink FunctionCall) <> "ny_ic_wallet_rect.png", height : (V 15), width : (V 15)}
+    else {imageUrl : "ny_ic_wallet," <> (getAssetStoreLink FunctionCall) <> "ny_ic_wallet.png", height : (V 24) , width : (V 24)}
+    
 ---------------------------- sourceDestinationImageView ---------------------------------
-sourceDestinationImageView :: forall w . PrestoDOM (Effect Unit) w
-sourceDestinationImageView =
+sourceDestinationImageView :: forall w . QuoteListModelState -> PrestoDOM (Effect Unit) w
+sourceDestinationImageView state =
   linearLayout
     [ height MATCH_PARENT
     , width WRAP_CONTENT
@@ -136,18 +137,18 @@ sourceDestinationImageView =
     ][ imageView
         [ height $ V 15
         , width $ V 15
-        , imageWithFallback "ny_ic_pickup,https://assets.juspay.in/nammayatri/images/user/ny_ic_pickup.png"
+        , imageWithFallback $ "ny_ic_pickup," <> (getAssetStoreLink FunctionCall) <> "ny_ic_pickup.png"
         ]
       , imageView
         [ height $ V 27
         , width $ V 15
-        , imageUrl if os == "IOS" then if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_line_img" else "ny_ic_line_img" else "ic_line"
+        , imageUrl if os == "IOS" then (if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_line_img" else "ny_ic_line_img") else state.appConfig.quoteListModel.lineImage
         , margin if os == "IOS" then (Margin 0 0 0 0) else (Margin 7 0 0 0)
         ]
       , imageView
         [ height $ V 15
         , width $ V 15
-        , imageWithFallback "ny_ic_drop,https://assets.juspay.in/nammayatri/images/user/ny_ic_drop.png"
+        , imageWithFallback $ "ny_ic_drop," <> (getAssetStoreLink FunctionCall) <> "ny_ic_drop.png"  
         ]
       ]
 
@@ -159,33 +160,29 @@ sourceDestinationTextView state push =
     , orientation VERTICAL
     , height WRAP_CONTENT
     , margin (MarginTop 5)
-    ][
-      textView
+    ][   
+      textView (
         [ height WRAP_CONTENT
         , weight 1.0
         , text state.source
-        , color Color.white900
-        , fontStyle $ FontStyle.regular LanguageStyle
+        , color state.appConfig.quoteListModel.textColor
         , padding (PaddingHorizontal 5 5)
         , margin (MarginBottom 12)
-        , textSize FontSize.a_14
         , ellipsize true
         , singleLine true
-        ]
-      , textView
+        ] <> FontStyle.paragraphText TypoGraphy)
+      , textView (
         [ height WRAP_CONTENT
         , weight 1.0
         , text state.destination
-        , color Color.white900
-        , fontStyle $ FontStyle.regular LanguageStyle
+        , color state.appConfig.quoteListModel.textColor
         , padding (PaddingHorizontal 5 5)
         , margin (MarginTop 12)
-        , textSize FontSize.a_14
         , ellipsize true
         , singleLine true
-        ]
-    ]
-
+        ] <> FontStyle.paragraphText TypoGraphy)
+    ]   
+      
 ---------------------------- quotesView ---------------------------------
 quotesView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 quotesView state push =
@@ -205,9 +202,10 @@ findingRidesView state push =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , gravity CENTER_HORIZONTAL
-  , orientation VERTICAL
   , visibility if (null state.quoteListModel && isLocalStageOn FindingQuotes) || state.findingRidesAgain then VISIBLE else GONE
+  , margin $ MarginTop state.appConfig.quoteListModel.topMargin
   , clickable true
+  , orientation VERTICAL
   ][
     linearLayout
     [ width MATCH_PARENT
@@ -219,10 +217,27 @@ findingRidesView state push =
       lottieAnimationView
       [ id (getNewIDWithTag "lottieLoaderAnim")
       , afterRender (\action-> do
-                    _ <- pure $ startLottieProcess "finding_rides_loader_with_text" (getNewIDWithTag "lottieLoaderAnim") true 0.6 "Default"
+                    _ <- pure $ startLottieProcess ((getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_with_text.json") (getNewIDWithTag "1234567893") true 0.6 "Default"
                     pure unit)(const NoAction)
-      , height $ V 300
-      , width $ V 300
+      , height $ V state.appConfig.quoteListModel.lottieHeight
+      , width $ V state.appConfig.quoteListModel.lottieWidth
+      ]
+    , textView 
+      [ text (getString PLEASE_WAIT)
+      , color "#7C7C7C"
+      , visibility if state.appConfig.showQuoteFindingText then VISIBLE else GONE
+      , textSize FontSize.a_17
+      , margin $ MarginTop 22
+      , lineHeight "25"
+      , fontStyle $ FontStyle.regular LanguageStyle
+      ]
+    , textView 
+      [ text (getString FINDING_QUOTES_TEXT)
+      , color "#7C7C7C"
+      , visibility if state.appConfig.showQuoteFindingText then VISIBLE else GONE
+      , textSize FontSize.a_17
+      , lineHeight "25"
+      , fontStyle $ FontStyle.regular LanguageStyle
       ]
     ]
   , addTipView state push
@@ -316,32 +331,33 @@ selectRideAndConfirmView state push =
   , visibility if ( null state.quoteListModel ) then GONE else VISIBLE
   ][ linearLayout[
     height WRAP_CONTENT
+  , width WRAP_CONTENT
   , weight 1.0
   , padding (Padding 16 16 0 16)
-  ][textView
+  -- , background state.appConfig.quoteListModel.backgroundColor
+  ][textView (
     [ height WRAP_CONTENT
-    , color Color.black900
-    , textSize FontSize.a_16
-    , fontStyle $ FontStyle.medium LanguageStyle
+    , width WRAP_CONTENT
+    , color state.appConfig.quoteListModel.selectRideTextColor
     , text case getValueToLocalStore AUTO_SELECTING of
        "CANCELLED_AUTO_ASSIGN" -> "Select a Ride"
        "false"                 -> "Select a Ride"
        _                       -> case (getValueToLocalStore LANGUAGE_KEY) of
-                                    _ -> "Confirming selected ride in" <> " : " <> (fromMaybe configDummy ((filter (\item -> item.id == (fromMaybe "" state.selectedQuote)) state.quoteListModel) !! 0)).timer <> "s"
+                                    _ -> "Confirming selected ride in" <> " : " <> (fromMaybe dummyQuoteList ((filter (\item -> item.id == (fromMaybe "" state.selectedQuote)) state.quoteListModel) !! 0)).timer <> "s"
                                     -- _ -> "state.timer" <> "s " <> (getString AUTO_ACCEPTING_SELECTED_RIDE) TODO :: NEED TO UPDATE LANGUAGE
-    ]]
+    ] <> FontStyle.subHeading2 TypoGraphy)]
    , linearLayout
     [ height MATCH_PARENT
     , width WRAP_CONTENT
     , gravity CENTER
-    , padding (Padding 16 12 16 12)
+    , padding (Padding 64 12 16 12)
     , onClick push $ const CancelAutoAssigning
     ][ imageView
       [ height $ V 24
       , width $ V 24
-      , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
-      , visibility if getValueToLocalStore AUTO_SELECTING == "false" || getValueToLocalStore AUTO_SELECTING == "CANCELLED_AUTO_ASSIGN" then GONE else VISIBLE
-
+      , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_close.png"
+      , visibility if getValueToLocalStore AUTO_SELECTING == "false" || getValueToLocalStore AUTO_SELECTING == "CANCELLED_AUTO_ASSIGN" then GONE else VISIBLE 
+     
       ]
     ]
   ]
@@ -360,29 +376,25 @@ paymentMethodView push state =
   , padding (Padding 16 6 16 16)
   , width WRAP_CONTENT
   , gravity LEFT
-  ][  textView
+  ][  textView (
       [ text (getString PAYMENT_METHOD)
-      , textSize FontSize.a_12
       , color Color.black700
-      , fontStyle $ FontStyle.regular LanguageStyle
-      ]
+      ] <> FontStyle.body3 TypoGraphy)
     , linearLayout
       [ orientation HORIZONTAL
       , width WRAP_CONTENT
       , height WRAP_CONTENT
       , margin (MarginTop 7)
       ][  imageView
-          [ imageWithFallback "ny_ic_wallet,https://assets.juspay.in/nammayatri/images/user/ny_ic_wallet.png"
+          [ imageWithFallback $ "ny_ic_wallet," <> (getAssetStoreLink FunctionCall) <> "ny_ic_wallet.png"
           , height $ V 20
           , width $ V 20
           ]
-        , textView
+        , textView $
           [ text (getString PAYMENT_METHOD_STRING)
           , margin (MarginLeft 8)
-          , textSize FontSize.a_14
           , color Color.black800
-          , fontStyle $ FontStyle.medium LanguageStyle
-          ]
+          ] <> FontStyle.body1 TypoGraphy
       ]
   ] -- TODO ADD PAYMENT OPTIONS
   -- , linearLayout[
@@ -404,7 +416,7 @@ quoteListTopSheetView state push =
    linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , background Color.black900
+      , background state.appConfig.quoteListModel.backgroundColor
       , padding $ PaddingTop safeMarginTop
       ][  linearLayout
           [ height MATCH_PARENT
@@ -423,11 +435,11 @@ quoteListTopSheetView state push =
                   ][  imageView
                       [ height $ V 24
                       , width $ V 24
-                      , imageWithFallback "ny_ic_close_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_close_white.png"
+                      , imageWithFallback $ if state.appConfig.nyBrandingVisibility then  "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_close.png" else "ny_ic_close_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_close_white.png"
                       , margin $ MarginTop 7
                       ]
                   ]
-                , sourceDestinationImageView
+                , sourceDestinationImageView state
                 , sourceDestinationTextView state push
                 ]
             ]
@@ -485,7 +497,7 @@ quoteListView state push =
         , width MATCH_PARENT
         , orientation VERTICAL
         ](map (\item ->
-            QuoteListItem.view (push <<< QuoteListItemActionController) item) state.quoteListModel)
+            QuoteListItem.view (push <<< QuoteListItemActionController) item{appConfig = state.appConfig}) state.quoteListModel)
     ]
 
 ---------------------------- primaryButtonView ---------------------------------
@@ -552,7 +564,6 @@ homeButtonConfig state = let
       { textConfig
         { text = (getString HOME)
         , color = Color.black900
-        , textSize = FontSize.a_16
         }
       , margin =( Margin 16 0 8 0)
       , width = V $ (screenWidth unit/4)
@@ -570,29 +581,15 @@ tryAgainButtonConfig state = let
     tryAgainButtonConfig' = config
       { textConfig
         { text = (getString TRY_AGAIN)
-        , color = Color.yellow900
-        , textSize = FontSize.a_16
+        ,  color = state.appConfig.primaryTextColor 
         }
       , margin =( Margin 8 0 16 0)
       , width = MATCH_PARENT
       , id = "TryAgainButtonQuoteList"
       , enableLoader = (getBtnLoader "TryAgainButtonQuoteList")
+      , background = state.appConfig.primaryBackground
       }
   in tryAgainButtonConfig'
-
-configDummy :: QuoteListItem.QuoteListItemState
-configDummy = {
-   seconds : 15
-  , id : ""
-  , timer : "-"
-  , timeLeft : 0
-  , driverRating : 4.0
-  , profile : ""
-  , price : "0"
-  , vehicleType : "auto"
-  , driverName : "Drive_Name"
-  , selectedQuote : Nothing
-  }
 
 
 getPrice :: QuoteListModelState -> String
@@ -604,17 +601,17 @@ getPrice state =
 
 
 dummyQuoteList :: QuoteListItem.QuoteListItemState
-dummyQuoteList = {
-   seconds : 15
-  , id : ""
-  , timer : ""
-  , timeLeft : 15
-  , driverRating : 0.0
-  , profile : ""
-  , price : ""
-  , vehicleType : "auto"
-  , driverName : ""
-  , selectedQuote : Nothing
+dummyQuoteList = QuoteListItem.config{
+   seconds = 15
+  , id = ""  
+  , timer = ""
+  , timeLeft = 15
+  , driverRating = 0.0
+  , profile = ""
+  , price = ""
+  , vehicleType = "auto"
+  , driverName = ""
+  , selectedQuote = Nothing
   }
 
 
@@ -628,7 +625,7 @@ checkVisibility state =
 setText :: QuoteListModelState -> String
 setText state =
   case state.selectedQuote ,(null state.quoteListModel) of
-    Just _ ,_                           -> (getString CONFIRM_FOR) <> "₹ " <> getPrice state
+    Just _ ,_                           -> (getString CONFIRM_FOR) <> (getValueFromConfig "currency") <> " " <> getPrice state
     Nothing , true                      -> (getString GO_HOME_)
     _,_                                 -> ""
 

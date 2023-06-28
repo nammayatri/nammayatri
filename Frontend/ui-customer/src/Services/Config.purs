@@ -51,20 +51,21 @@ getConfig = do
         , fingerprint : ""
         }
     DEV  -> Config
-        { baseUrl: getValueToLocalNativeStoreConfig "BASE_URL"
+        { baseUrl: "https://api.sandbox.beckn.juspay.in/dev/app/v2"
         , fingerprint : ""
         }
     UAT  -> Config
-        { baseUrl: getValueToLocalNativeStoreConfig "BASE_URL"
+        { baseUrl: "https://api.sandbox.beckn.juspay.in/dev/app/v2"
         , fingerprint : ""
         }
     PROD -> Config
-        { baseUrl: getValueToLocalNativeStoreConfig "BASE_URL"
+        { baseUrl: "https://api.sandbox.beckn.juspay.in/dev/app/v2"
         , fingerprint : ""
         }
 
 getMerchantId :: String -> String
-getMerchantId dummy = "NA"
+getMerchantId dummy = "NAMMA_YATRI"
+
 getEndpoint :: String -> String
 getEndpoint dummy = do
   if ((getKeyInSharedPrefKeysConfig "MOBILE_NUMBER") == "5000500050") then

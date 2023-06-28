@@ -89,8 +89,9 @@ const hindiStrings = {
   "LANGUAGE": "भाषा",
   "OTP": "ओटीपी",
   "PAYMENT_METHOD": "भुगतान का तरीका",
-  "PAYMENT_METHOD_STRING": "नकद/किसी भी UPI ऐप का उपयोग करें",
-  "CANCEL_RIDE": "सवारी रद्द करें",
+  "PAYMENT_METHOD_STRING": "कैश / यूपीआई ऐप का इस्तेमाल करें",
+  "PAYMENT_METHOD_STRING_": "कैश / यूपीआई ऐप का इस्तेमाल करें",
+  "CANCEL_RIDE": "मेरी राइड रद्द करें",
   "SUPPORT": "सहायता",
   "PICKUP_AND_DROP": "पिकअप और ड्रॉप",
   "CANCELLED": "रद्द",
@@ -248,6 +249,7 @@ const hindiStrings = {
   "RATE_YOUR_RIDE_WITH": " के साथ अपनी राइड को रेट करें",
   "VIEW_BREAKDOWN": "ब्रेकडाउन देखें",
   "PAY_DRIVER_USING_CASH_OR_UPI": "Cash/UPI का उपयोग कर ड्राइवर को भुगतान करें",
+  "PAY_DRIVER_USING_CASH_OR_UPI_": "Cash/UPI का उपयोग कर ड्राइवर को भुगतान करें",
   "RATE_YOUR_DRIVER": "अपने ड्राइवर को रेट करें",
   "MY_RIDES": "मेरी सवारी",
   "RIDE_ID": "सवारी आईडी",
@@ -501,5 +503,6 @@ const hindiStrings = {
   "IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL" : "ऐसा लगता है कि इसमें सामान्य से ज़्यादा समय लग रहा है।",
   "CONTINUE_SEARCH_WITH" : "के साथ खोज जारी रखें",
   "CONTINUING_SEARCH_WITH" : "से तलाश जारी है",
-  "SEARCHING_WITH" : "से खोज रहे हैं"
+  "SEARCHING_WITH" : "से खोज रहे हैं",
+  "PLATFORM_FEE" : "प्लेटफार्म शुल्क"
 }

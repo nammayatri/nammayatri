@@ -22,11 +22,11 @@ import Components.PrimaryEditText as PrimaryEditText
 import Effect (Effect)
 import Engineering.Helpers.Commons  as EHC
 import Font.Style as FontStyle
-import Helpers.Utils (adjustViewWithKeyboard, getPreviousVersion)
+import Helpers.Utils (adjustViewWithKeyboard, getCommonAssetStoreLink, getPreviousVersion, getAssetStoreLink)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, ($), (<<<), (<>), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, color, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, text, textFromHtml, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, color, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, text, textFromHtml, textView, visibility, weight, width, imageWithFallback)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.ReferralScreen.Controller (Action(..), ScreenOutput, eval)
@@ -65,6 +65,7 @@ view push state =
         [ height $ V 1
         , width MATCH_PARENT
         , background Color.grey900
+        , visibility if state.config.nyBrandingVisibility then GONE else VISIBLE 
         ]
         []
     , referralCodeView push state
@@ -82,7 +83,7 @@ referralCodeView push state =
     , visibility if state.showThanks then GONE else VISIBLE
     ]
     [ imageView
-        [ imageUrl if EHC.os == "IOS" then "https://assets.juspay.in/nammayatri/images/user/ny_ic_referral.png" else "ny_ic_referral"
+        [ imageWithFallback $ "ny_ic_referral," <> (getAssetStoreLink FunctionCall) <> "ny_ic_referral.png"
         , gravity CENTER
         , height $ V 112
         , width $ V 140
@@ -119,7 +120,7 @@ thanksView push state =
         , gravity CENTER_HORIZONTAL
         ]
         [ imageView
-            [ imageUrl $ if EHC.os == "IOS" then "https://assets.juspay.in/nammayatri/images/user/ny_ic_thanks.png" else "ny_ic_thanks"
+            [ imageWithFallback $ "ny_ic_thanks," <> (getAssetStoreLink FunctionCall) <> "ny_ic_thanks.png"
             , gravity CENTER
             , height $ V 230
             , width $ V 280
@@ -179,7 +180,7 @@ referenceView push state =
             [ imageView
                 [ height $ V 15
                 , width $ V 20
-                , imageUrl if state.isExpandReference then (if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_chevron_up" else "ny_ic_chevron_up")  else (if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_chevron_down" else "ny_ic_chevron_down")
+                , imageWithFallback if state.isExpandReference then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_up.png" else "ny_ic_chevron_down," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_down.png"
                 ]
             ]
         ]

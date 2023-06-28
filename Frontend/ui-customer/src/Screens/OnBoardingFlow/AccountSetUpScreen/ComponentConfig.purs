@@ -32,23 +32,19 @@ import Styles.Colors as Color
 import Common.Types.App
 import Animation.Config (AnimConfig, animConfig)
 import PrestoDOM.Animation as PrestoAnim
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Prelude ((<>))
 
 primaryButtonConfig :: ST.AccountSetUpScreenState -> PrimaryButton.Config
-primaryButtonConfig state =
-  let
-    config = PrimaryButton.config
-
-    primaryButtonConfig' =
-      config
-        { textConfig { text = (getString CONTINUE) }
-        , isClickable = state.props.btnActive
-        , alpha = if state.props.btnActive then 1.0 else 0.4
-        , margin = (Margin 0 0 0 0)
-        , enableLoader = (JB.getBtnLoader "AccountSetupScreen")
-        , id = "AccountSetupScreen"
-        }
-  in
-    primaryButtonConfig'
+primaryButtonConfig state = PrimaryButton.config
+  { textConfig { text = (getString CONTINUE) , color = state.data.config.primaryTextColor}
+  , isClickable = state.props.btnActive
+  , alpha = if state.props.btnActive then 1.0 else 0.4
+  , margin = (Margin 0 0 0 0)
+  , enableLoader = (JB.getBtnLoader "AccountSetupScreen")
+  , id = "AccountSetupScreen"
+  , background = state.data.config.primaryBackground
+  }
 
 genericHeaderConfig :: GenericHeader.Config
 genericHeaderConfig =
@@ -61,7 +57,7 @@ genericHeaderConfig =
         , prefixImageConfig
           { height = V 25
           , width = V 25
-          , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+          , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
           , margin = (Margin 12 12 12 12)
           }
         , background = Color.white900
@@ -69,8 +65,8 @@ genericHeaderConfig =
   in
     genericHeaderConfig'
 
-goBackPopUpModelConfig :: PopUpModal.Config
-goBackPopUpModelConfig =
+goBackPopUpModelConfig :: ST.AccountSetUpScreenState -> PopUpModal.Config
+goBackPopUpModelConfig state =
   let
     config' = PopUpModal.config
 
@@ -78,8 +74,18 @@ goBackPopUpModelConfig =
       config'
         { primaryText { text = (getString GO_BACK_) }
         , secondaryText { text = (getString REGISTER_USING_DIFFERENT_NUMBER) }
-        , option1 { text = (getString NO) }
-        , option2 { text = (getString YES) }
+        , option1 { 
+            background = state.data.config.popupBackground
+          , strokeColor = state.data.config.primaryBackground
+          , color = state.data.config.primaryBackground
+          , text = (getString NO)
+          }
+        , option2 { 
+            color = state.data.config.primaryTextColor
+          , strokeColor = state.data.config.primaryBackground
+          , background = state.data.config.primaryBackground
+          , text = (getString YES)
+          }
         }
   in
     popUpConfig

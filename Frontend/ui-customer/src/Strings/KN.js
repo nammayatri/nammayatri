@@ -88,8 +88,9 @@ const kannadaStrings = {
   "LANGUAGE": "ಭಾಷೆಗಳು",
   "OTP": "ಒತ್ತು",
   "PAYMENT_METHOD": "ಪಾವತಿ ವಿಧಾನ",
-  "PAYMENT_METHOD_STRING": "ನಗದು / ಯಾವುದೇ UPI ಅಪ್ಲಿಕೇಶನ್ ಬಳಸಿ",
-  "CANCEL_RIDE": "ಸವಾರಿ ರದ್ದುಗೊಳಿಸಿ",
+  "PAYMENT_METHOD_STRING": "ನಗದು / UPI ಅಪ್ಲಿಕೇಶನ್ ಬಳಸಿ",
+  "PAYMENT_METHOD_STRING_": "ನಗದು / UPI ಅಪ್ಲಿಕೇಶನ್ ಬಳಸಿ",
+  "CANCEL_RIDE": "ನನ್ನ ಸವಾರಿಯನ್ನು ರದ್ದುಮಾಡಿ",
   "SUPPORT": "ಬೆಂಬಲ",
   "PICKUP_AND_DROP": "ಪಿಕಪ್ ಮತ್ತು ಡ್ರಾಪ್",
   "CANCELLED": "ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ",
@@ -248,6 +249,7 @@ const kannadaStrings = {
   "RATE_YOUR_RIDE_WITH": " ಜೊತೆಗೆ ನಿಮ್ಮ ಸವಾರಿಯನ್ನು ರೇಟ್ ಮಾಡಿ",
   "VIEW_BREAKDOWN": "ವಿಭಜನೆಯನ್ನು ವೀಕ್ಷಿಸಿ",
   "PAY_DRIVER_USING_CASH_OR_UPI": "Cash/UPI ಬಳಸಿಕೊಂಡು ಚಾಲಕನಿಗೆ ಪಾವತಿಸಿ",
+  "PAY_DRIVER_USING_CASH_OR_UPI_": "Cash/UPI ಬಳಸಿಕೊಂಡು ಚಾಲಕನಿಗೆ ಪಾವತಿಸಿ",
   "RATE_YOUR_DRIVER": "ನಿಮ್ಮ ಡ್ರೈವರ್ ಅನ್ನು ರೇಟ್ ಮಾಡಿ",
   "MY_RIDES": "ನನ್ನ ಸವಾರಿಗಳು",
   "RIDE_ID": "ರೈಡ್ ಐಡಿ",
@@ -493,5 +495,6 @@ const kannadaStrings = {
   "IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL" : "ಇದು ಸಾಮಾನ್ಯಕ್ಕಿಂತ ಹೆಚ್ಚು ಸಮಯ ತೆಗೆದುಕೊಳ್ಳುತ್ತಿರುವಂತೆ ತೋರುತ್ತಿದೆ.",
   "CONTINUE_SEARCH_WITH" : "ಇದರೊಂದಿಗೆ ಹುಡುಕಾಟವನ್ನು ಮುಂದುವರಿಸಿ",
   "CONTINUING_SEARCH_WITH" : "ಇದರೊಂದಿಗೆ ಹುಡುಕಾಟವನ್ನು ಮುಂದುವರಿಸಲಾಗುತ್ತಿದೆ",
-  "SEARCHING_WITH" : "ಇದರೊಂದಿಗೆ ಹುಡುಕಲಾಗುತ್ತಿದೆ"
+  "SEARCHING_WITH" : "ಇದರೊಂದಿಗೆ ಹುಡುಕಲಾಗುತ್ತಿದೆ",
+  "PLATFORM_FEE" : "ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಶುಲ್ಕ"
 }

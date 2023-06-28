@@ -8,19 +8,25 @@
 
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 
-  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+  or FITNESS FOR A PARTIEHULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
 module Screens.HelpAndSupportScreen.View where
 
+import Common.Types.App
+import Screens.CustomerUtils.HelpAndSupportScreen.ComponentConfig
+
 import Animation as Anim
-import Control.Monad (void)
+import Engineering.Helpers.Utils as EHU
 import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
 import Components.PopUpModal as PopUpModal
 import Components.SourceToDestination as SourceToDestination
+import Control.Monad (void)
+import Control.Monad.Except (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
 import Data.Array as DA
 import Data.Either (Either(..))
 import Debug (spy)
@@ -30,9 +36,12 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Prelude ((<>))
 import Prelude (Unit, bind, const, discard, map, pure, unit, ($), (-), (/=), (<<<), (<=), (<>), (==), (||))
 import Presto.Core.Types.Language.Flow (Flow, doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Shadow(..), Visibility(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, shadow, stroke, text, textSize, textView, visibility, width, imageWithFallback, weight, layoutGravity, clickable, alignParentBottom, scrollView, adjustViewWithKeyboard)
@@ -48,6 +57,8 @@ import Common.Types.App
 import Screens.CustomerUtils.HelpAndSupportScreen.ComponentConfig
 import Components.PrimaryEditText as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Prelude ((<>))
 
 screen :: ST.HelpAndSupportScreenState -> Screen Action ST.HelpAndSupportScreenState ScreenOutput
 screen initialState =
@@ -73,63 +84,49 @@ screen initialState =
 view :: forall w . (Action -> Effect Unit) -> ST.HelpAndSupportScreenState -> PrestoDOM (Effect Unit) w
 view push state =
   Anim.screenAnimation $
-  relativeLayout
-  [  height MATCH_PARENT
-   , width MATCH_PARENT
-  ]([ linearLayout
-     [ height MATCH_PARENT
-     , width MATCH_PARENT
-     , orientation VERTICAL
-     , background Color.white900
-     , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
-     , onBackPressed push $ const BackPressed state.props.isCallConfirmation
-     , afterRender push (const AfterRender)
-     ][  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
-       , linearLayout
-         [ height WRAP_CONTENT
-         , width MATCH_PARENT
-         , orientation HORIZONTAL
-         , visibility if state.props.apiFailure || state.data.isNull then GONE else VISIBLE
-         , background Color.catskillWhite
-         ][  textView
-             [ text (getString YOUR_RECENT_RIDE)
-             , textSize FontSize.a_16
-             , color Color.darkDescriptionText
-             , width WRAP_CONTENT
-             , fontStyle $ FontStyle.medium LanguageStyle
-             , margin (Margin 16 12 0 12)
-             ]
-           , textView
-             [ text (getString VIEW_ALL_RIDES)
-             , alignParentRight "true,-1"
-             , textSize FontSize.a_14
-             , margin (Margin 0 14 16 14)
-             , width MATCH_PARENT
-             , gravity RIGHT
-             , fontStyle $ FontStyle.medium LanguageStyle
-             , color Color.blue900
-             , onClick push $ const ViewRides
-             ]
-           ]
-       , recentRideView state push
-       , headingView state (getString ALL_TOPICS)
-       , allTopicsView state push
-       , apiFailureView state push 
-       ]
-     , linearLayout
-       [ width MATCH_PARENT
-       , height MATCH_PARENT
-       , visibility if state.props.isCallConfirmation then VISIBLE else GONE
-       ][PopUpModal.view (push <<< PopupModelActionController) (callConfirmationPopup state)]
+ relativeLayout
+ [  height MATCH_PARENT
+  , width MATCH_PARENT
+ ]$[ linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , background Color.white900
+    , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
+    , onBackPressed push $ const BackPressed state.props.isCallConfirmation
+    , afterRender push (const AfterRender)
+    ][  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation HORIZONTAL
+        , visibility if state.props.apiFailure || state.data.isNull then GONE else VISIBLE
+        , background Color.catskillWhite
+        ][  textView $
+            [ text (getString YOUR_RECENT_RIDE)
+            , color Color.darkDescriptionText
+            , width WRAP_CONTENT
+            , margin (Margin 16 12 0 12)
+            ] <> FontStyle.subHeading2 LanguageStyle
+          , textView $
+            [ text (getString VIEW_ALL_RIDES)
+            , alignParentRight "true,-1"
+            , margin (Margin 0 14 16 14)
+            , width MATCH_PARENT
+            , gravity RIGHT
+            , color Color.blue900
+            , onClick push $ const ViewRides
+            ] <> FontStyle.body1 LanguageStyle
+          ]
+      , recentRideView state push
+      , headingView state (getString ALL_TOPICS)
+      , allTopicsView state push
+      , apiFailureView state push
+      ]
      , deleteAccountView state push
-   ] <> if state.data.accountStatus == ST.CONFIRM_REQ || state.data.accountStatus == ST.DEL_REQUESTED then 
-     [ linearLayout
-       [ width MATCH_PARENT
-       , height MATCH_PARENT
-       , background Color.lightBlack900
-       ]( [] <> if state.data.accountStatus == ST.CONFIRM_REQ then [PopUpModal.view (push <<<  PopUpModalAction) (requestDeletePopUp state )]
-           else if state.data.accountStatus == ST.DEL_REQUESTED then [PopUpModal.view (push <<< AccountDeletedModalAction) (accountDeletedPopUp state)]
-           else [])] else [])
+  ] <> (if state.props.isCallConfirmation then [PopUpModal.view (push <<< PopupModelActionController) (callConfirmationPopup state)] else [])
+    <> (if state.data.accountStatus == ST.CONFIRM_REQ then [PopUpModal.view (push <<<  PopUpModalAction) (requestDeletePopUp state )] else [])
+    <> (if state.data.accountStatus == ST.DEL_REQUESTED then [PopUpModal.view (push <<< AccountDeletedModalAction) (accountDeletedPopUp state)] else [])
 
 ------------------------------- recentRide --------------------------
 recentRideView :: ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
@@ -151,7 +148,7 @@ recentRideView state push=
     , orientation HORIZONTAL
     ][  imageView
         [ background Color.greyLight
-        , imageWithFallback "ny_ic_help_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_help_map.png"
+        , imageWithFallback $ "ny_ic_help_map," <> (getAssetStoreLink FunctionCall) <> "ny_ic_help_map.png"
         , PP.cornerRadii $ PTD.Corners 8.0 true false false false
         , height MATCH_PARENT
         , width $ V 130
@@ -179,18 +176,16 @@ recentRideView state push=
     , orientation HORIZONTAL
     , onClick push $ const ReportIssue
     ][
-    textView
+    textView $
         [ text (getString REPORT_AN_ISSUE_WITH_THIS_TRIP)
-        , textSize FontSize.a_13
         , color Color.blue900
-        , fontStyle $ FontStyle.medium LanguageStyle
-        ]
+        ] <> FontStyle.tags LanguageStyle
      ,  linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , gravity RIGHT
         ][  imageView
-            [ imageWithFallback "ny_ic_chevron_right,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_right.png"
+            [ imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
             , height $ V 15
             , width $ V 15
             ]
@@ -207,12 +202,10 @@ dateAndTimeView state =
   , orientation HORIZONTAL
   , margin (Margin 0 12 0 0)
   , gravity CENTER_VERTICAL
-  ][  textView
+  ][  textView $
       [ text state.data.date
-      , textSize FontSize.a_11
       , color Color.greyShade
-      , fontStyle $ FontStyle.medium LanguageStyle
-      ]
+      ] <> FontStyle.body16 LanguageStyle
     , linearLayout
       [ height MATCH_PARENT
       , width WRAP_CONTENT
@@ -226,12 +219,10 @@ dateAndTimeView state =
           , width (V 5)
           ][]
        ]
-    , textView
+    , textView $
       [ text state.data.time
-      , textSize FontSize.a_11
       , color Color.greyShade
-      , fontStyle $ FontStyle.medium LanguageStyle
-      ]
+      ] <> FontStyle.body16 LanguageStyle
     ]
 
 ------------------------------- driverRating --------------------------
@@ -243,12 +234,10 @@ driverRatingView state =
   , gravity CENTER_VERTICAL
   , orientation HORIZONTAL
   , margin (Margin 0 13 0 10)
-  ][  textView
+  ][  textView $
       [ text (getString YOU_RATED)
-      , textSize FontSize.a_12
       , color Color.darkDescriptionText
-      , fontStyle $ FontStyle.regular LanguageStyle
-      ]
+      ] <> FontStyle.body3 LanguageStyle
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -263,7 +252,7 @@ driverRatingView state =
                         ][imageView
                             [ height $ V 14
                             , width $ V 14
-                            , imageWithFallback if item <= state.data.rating then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png" else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
+                            , imageWithFallback if item <= state.data.rating then "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_active.png" else "ny_ic_star_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_inactive.png"
                             ]
                           ]) [1 ,2 ,3 ,4 ,5])
     ]
@@ -294,20 +283,18 @@ allTopicsView state push =
                 , height $ V 17
                 , width $ V 17
                 ]
-              , textView
+              , textView $
                 [ text item.title
-                , textSize FontSize.a_14
                 , color Color.darkDescriptionText
                 , margin (MarginLeft 13)
-                , fontStyle $ FontStyle.regular LanguageStyle
-                ]
+                ] <> FontStyle.paragraphText LanguageStyle
               , linearLayout
                 [ height WRAP_CONTENT
                 , weight 1.0
                 , gravity RIGHT
                 , layoutGravity "center_vertical"
                 ][  imageView
-                    [ imageWithFallback "ny_ic_chevron_right,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_right.png"
+                    [ imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
                     , height $ V 15
                     , width $ V 15  
                     ]
@@ -386,32 +373,25 @@ editTextView state push =
 
 headingView :: ST.HelpAndSupportScreenState -> String -> forall w . PrestoDOM (Effect Unit) w
 headingView state title =
-  textView
+  textView $
     [ text title
     , width MATCH_PARENT
     , visibility if state.props.apiFailure then GONE else VISIBLE
     , height WRAP_CONTENT
     , padding (Padding 16 12 0 12)
     , background Color.catskillWhite
-    , textSize FontSize.a_16
     , color Color.darkDescriptionText
-    ]
+    ] <> FontStyle.body5 LanguageStyle
 
 getPastRides :: forall action.( RideBookingListRes -> String -> action) -> (action -> Effect Unit) -> ST.HelpAndSupportScreenState ->  Flow GlobalState Unit
 getPastRides action push state = do
-  _ <-  JB.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
-  _ <-  JB.toggleLoader true
+  void $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+  void $ EHU.toggleLoader true
   (rideBookingListResponse) <- Remote.rideBookingList "8" "0" "false"
-
+  void $ EHU.toggleLoader false
   case rideBookingListResponse of
-      Right (RideBookingListRes  listResp) -> do
-          doAff do liftEffect $ push $ action (RideBookingListRes listResp) "success"
-          _ <-  JB.toggleLoader false
-          pure unit
-      Left (err) -> do
-        doAff do liftEffect $ push $ action (RideBookingListRes dummyListResp ) "failure"
-        _ <-  JB.toggleLoader false
-        pure unit
+      Right (RideBookingListRes  listResp) -> doAff do liftEffect $ push $ action (RideBookingListRes listResp) "success"
+      Left (err) -> doAff do liftEffect $ push $ action (RideBookingListRes dummyListResp ) "failure"
 
 dummyListResp :: forall t127.
   { list :: Array t127
@@ -435,14 +415,14 @@ topicsList :: ST.HelpAndSupportScreenState ->  Array { action :: Action
 topicsList state = [
   { action : ContactUs
   , title : (getString FOR_OTHER_ISSUES_WRITE_TO_US)
-  , image : "ny_ic_clip_board,https://assets.juspay.in/nammayatri/images/common/ny_ic_clip_board.png"
+  , image : "ny_ic_clip_board," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_clip_board.png"
   },
   { action : CallSupport
   , title : (getString CONTACT_SUPPORT)
-  , image : "ny_ic_help,https://assets.juspay.in/nammayatri/images/user/ny_ic_help.png"
-  },
-  { action : DeleteAccount
+  , image : "ny_ic_help," <> (getAssetStoreLink FunctionCall) <> "ny_ic_help.png"
+  } ] <> if state.data.config.showDeleteAccount then [
+    { action : DeleteAccount
   , title : (getString REQUEST_TO_DELETE_ACCOUNT)
   , image : "ny_ic_delete_account,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_delete_account.png"
   }
-]
+  ] else []

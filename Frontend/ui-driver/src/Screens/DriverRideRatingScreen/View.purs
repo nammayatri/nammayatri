@@ -34,7 +34,8 @@ import Effect (Effect)
 import Data.Maybe
 import Common.Types.App
 import Screens.DriverRideRatingScreen.ComponentConfig
-
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 screen :: ST.DriverRideRatingScreenState -> Screen Action ST.DriverRideRatingScreenState ScreenOutput
 screen initialState =
@@ -94,7 +95,7 @@ topCloseButtonView state push =
         ][  imageView
             [ height $ V 25
             , width $ V 25
-            , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
+            , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_close.png"
             , margin (Margin 12 12 12 12)
             ]
           ]
@@ -124,17 +125,14 @@ starRatingView state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , gravity CENTER
-    ][ textView
+    ][ textView $
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , textSize FontSize.a_16
         , text $ (getString HOW_WAS_YOUR_RIDE_WITH ) <> " " <> state.data.customerName
         , color Color.black800
-        , fontStyle $ FontStyle.semiBold LanguageStyle
         , gravity CENTER
-        , lineHeight "20"
         , margin (MarginVertical 32 18)
-        ]
+        ] <> FontStyle.subHeading1 TypoGraphy
     , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -148,7 +146,7 @@ starRatingView state push =
                           ][imageView
                               [ height $ V 30
                               , width $ V 30
-                              , imageWithFallback if index <= state.data.rating then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png" else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
+                              , imageWithFallback if index <= state.data.rating then "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_star_active.png" else "ny_ic_star_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_star_inactive.png"
                               ]
                           ]) [1,2,3,4,5])
     ]
@@ -169,7 +167,7 @@ writeCommentView state push =
         ][imageView
           [ height $ V 20
           , width $ V 20 
-          , imageWithFallback "ny_ic_message_square,https://assets.juspay.in/nammayatri/images/common/ny_ic_message_square.png"
+          , imageWithFallback $ "ny_ic_message_square," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_message_square.png"
           ]
         ]
       , editText
@@ -199,17 +197,14 @@ suggestionButtonView state push =
     , orientation VERTICAL
     , gravity CENTER
     , margin (MarginTop 40)
-    ][  textView
+    ][  textView $
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , textSize FontSize.a_16
         , text $ getString GOT_IT_TELL_US_MORE
         , color Color.black800
-        , fontStyle $ FontStyle.semiBold LanguageStyle
         , gravity CENTER
-        , lineHeight "20"
         , margin (MarginBottom 10)
-        ]
+        ] <> FontStyle.subHeading1 TypoGraphy
         , linearLayout
           [ width MATCH_PARENT
           , orientation VERTICAL  
@@ -228,18 +223,16 @@ suggestionButtonView state push =
                       , margin (MarginRight 10)
                       , onClick push (const $ FeedBackClick item)
                       , cornerRadius 7.0
-                      ][textView
+                      ][textView $
                           [ height WRAP_CONTENT
                           , width MATCH_PARENT
-                          , textSize FontSize.a_12
                           , text $ getFeedBackString item
                           , color if (item == fromMaybe ST.NOTHING state.data.activeFeedBackOption) then Color.white900 else Color.black800
-                          , fontStyle $ FontStyle.medium LanguageStyle
                           , gravity CENTER
                           , lineHeight "15"
                           , singleLine true
                           , padding (Padding 6 2 6 2)
-                          ]
+                          ] <> FontStyle.tags TypoGraphy
                         ]) (fromMaybe [] (feedbackSuggestionArray!!index)) )
                     ) feedbackSuggestionArray)
         ]

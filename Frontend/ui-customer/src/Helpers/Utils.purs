@@ -19,46 +19,60 @@ module Helpers.Utils
     )
     where
 
-import Common.Types.App (LazyCheck(..))
+import Accessor (_distance_meters)
+import Accessor (_distance_meters)
+import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Payload(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Control.Monad.Except (runExcept)
-import Data.Array (length, filter, cons, deleteAt, sortWith, drop, head, tail, (!!), null)
+import Control.Monad.Free (resume)
+import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!))
+import Data.Array (sortBy)
 import Data.Array.NonEmpty (fromArray)
 import Data.Date (Date)
 import Data.Either (Either(..), hush)
-import Data.Foldable (or)
-import Data.Generic.Rep (class Generic)
-import Data.Show.Generic (genericShow)
-import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Profunctor.Strong (first)
-import Data.String as DS
 import Data.Eq.Generic (genericEq)
+import Data.Foldable (or)
+import Data.Function.Uncurried (runFn3)
+import Data.Generic.Rep (class Generic)
+import Data.Lens ((^.))
+import Data.Lens ((^.))
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Number (fromString, pi, sin, cos, sqrt, asin)
+import Data.Ord (comparing)
+import Data.Profunctor.Strong (first)
+import Data.Show.Generic (genericShow)
+import Data.String as DS
 import Data.Traversable (traverse)
 import Debug (spy)
 import Effect (Effect)
-import Effect (Effect)
 import Effect.Aff (error, killFiber, launchAff, launchAff_)
-import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
+import Effect.Aff.Compat (EffectFn1, EffectFnAff, fromEffectFnAff, runEffectFn1, runEffectFn2, runEffectFn3, EffectFn2)
 import Effect.Class (liftEffect)
 import Effect.Console (logShow)
-import Engineering.Helpers.Commons (liftFlow, os, isPreviousVersion)
+import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.Commons (flowRunnerWithState, getWindowVariable, isPreviousVersion, liftFlow, os)
 import Engineering.Helpers.Commons (parseFloat, setText') as ReExport
-import Foreign.Class (class Decode, class Encode)
-import Foreign.Generic (Foreign, decodeJSON, encodeJSON, decode)
+import Foreign (MultipleErrors, unsafeToForeign)
+import Foreign.Class (class Decode, class Encode, encode)
+import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
+import Foreign.Generic (decode)
+import JBridge (emitJOSEvent)
 import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
-import Data.Number (fromString, pi, sin, cos, sqrt, asin)
-import Prelude (class Show, class Ord, class Eq, Unit, bind, discard, pure, unit, void, identity, not, (<*>), (<#>), (<<<), (>>>), ($), (<>), (>), show, (==), (/=), (/), (*), (-), (+), map, compare, (<), (=<<), (<=), ($))
+import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>>>), (||), (&&), (<$>))
 import Presto.Core.Flow (Flow, doAff)
+import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
+import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
+import PrestoDOM.Core (terminateUI)
+import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..))
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, CarouselModel)
 import Services.API (Prediction)
+import Services.API (Prediction)
+import Types.App (GlobalState(..))
 import Types.App (GlobalState)
-import Data.Array (sortBy)
-import Data.Ord (comparing)
-import Data.Lens ((^.))
-import Accessor (_distance_meters)
-import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
+import Unsafe.Coerce (unsafeCoerce)
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
 -- shuffle' array = do
@@ -116,8 +130,6 @@ foreign import getUTCDay :: Date -> Int
 
 foreign import makePascalCase :: String -> String
 
-foreign import hideSplash :: Effect Unit
-
 foreign import validateInputPattern :: String -> String -> Boolean
 
 foreign import decodeErrorCode :: String -> String
@@ -162,6 +174,11 @@ foreign import performHapticFeedback :: Unit -> Effect Unit
 foreign import adjustViewWithKeyboard :: String -> Effect Unit
 foreign import storeOnResumeCallback :: forall action. (action -> Effect Unit) -> action -> Effect Unit
 -- foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
+
+foreign import getMobileNumber :: EffectFn2 String String String
+
+foreign import addCarousel :: Array CarouselModel -> String -> Effect Unit
+
 data TimeUnit
   = HOUR
   | MINUTE
@@ -237,7 +254,7 @@ getObjFromLocal :: HomeScreenState -> Flow GlobalState RecentlySearchedObject
 getObjFromLocal homeScreenState = do
   (recentlySearched :: Maybe RecentlySearchedObject) <- (fetchRecents "RECENT_SEARCHES")
   case recentlySearched of
-    Just recents -> pure $ recents{predictionArray =  map (\item -> item{prefixImageUrl = "ny_ic_recent_search,https://assets.juspay.in/nammayatri/images/user/ny_ic_recent_search.png"}) (recents.predictionArray)}
+    Just recents -> pure $ recents{predictionArray =  map (\item -> item{prefixImageUrl = "ny_ic_recent_search," <> (getAssetStoreLink FunctionCall) <> "ny_ic_recent_search.png"}) (recents.predictionArray)}
     Nothing -> pure homeScreenState.data.recentSearchs
 
 getRecentSearches :: AddNewAddressScreenState -> Flow GlobalState RecentlySearchedObject
@@ -296,9 +313,9 @@ addSearchOnTop :: LocationListItemState -> Array LocationListItemState -> Array 
 addSearchOnTop prediction predictionArr = cons prediction (filter (\ ( item) -> (item.placeId) /= (prediction.placeId))(predictionArr))
 
 addToRecentSearches :: LocationListItemState -> Array LocationListItemState -> Array LocationListItemState
-addToRecentSearches prediction predictionArr =
-    let prediction' = prediction {prefixImageUrl = "ny_ic_recent_search,https://assets.juspay.in/nammayatri/images/user/ny_ic_recent_search.png", locationItemType = Just RECENTS}
-      in (if (checkPrediction prediction' predictionArr)
+addToRecentSearches prediction predictionArr = 
+    let prediction' = prediction {prefixImageUrl = "ny_ic_recent_search," <> (getAssetStoreLink FunctionCall) <> "ny_ic_recent_search.png", locationItemType = Just RECENTS}
+      in (if (checkPrediction prediction' predictionArr) 
            then (if length predictionArr == 30 then (fromMaybe [] (deleteAt 30 (cons prediction' predictionArr)))
           else (cons  prediction' predictionArr)) else addSearchOnTop prediction' predictionArr)
 
@@ -336,7 +353,7 @@ getPreviousVersion _ =
       _ -> "1.0.0"
     else case getMerchant FunctionCall of
         JATRISAATHI -> "0.0.0"
-        _ -> "1.2.0"
+        _ -> "0.0.0"
 
 rotateArray :: forall a. Array a -> Int -> Array a
 rotateArray arr times =
@@ -360,21 +377,66 @@ isHaveFare fare = not null <<< filter (\item -> item.fareType == fare)
 sortPredctionByDistance :: Array Prediction -> Array Prediction
 sortPredctionByDistance arr = sortBy (comparing (_^._distance_meters)) arr
 
-foreign import getMerchantId :: String -> Foreign
+getAssetStoreLink :: LazyCheck -> String
+getAssetStoreLink lazy = case (getMerchant lazy) of
+  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/user/images/"
+  JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/user/images/"
+  YATRI -> "https://assets.juspay.in/beckn/yatri/user/images/"
+  PAYTM -> "https://assets.juspay.in/beckn/mobilitypaytm/user/"
+  PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/user/images/"
 
-data Merchant = NAMMAYATRI | JATRISAATHI | YATRI
+getCommonAssetStoreLink :: LazyCheck -> String
+getCommonAssetStoreLink lazy = case (getMerchant lazy) of
+  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/"
+  JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/"
+  YATRI -> "https://assets.juspay.in/beckn/yatri/yatricommon/images/"
+  PAYTM -> "https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/"
+  PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/passculturecommon/"
 
-derive instance genericMerchant :: Generic Merchant _
-instance eqMerchant :: Eq Merchant where eq = genericEq
-instance encodeMerchant :: Encode Merchant where encode = defaultEnumEncode
-instance decodeMerchant:: Decode Merchant where decode = defaultEnumDecode
+getAssetsBaseUrl :: LazyCheck -> String
+getAssetsBaseUrl lazy = case (getMerchant lazy) of
+  NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/user/"
+  JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/user/"
+  YATRI -> "https://assets.juspay.in/beckn/yatri/user/"
+  PAYTM -> "https://assets.juspay.in/beckn/mobilitypaytm/user/"
+  PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/user/"
 
-getMerchant :: LazyCheck -> Merchant
-getMerchant lazy = case (decodeMerchantId (getMerchantId "")) of
-  Just merchant -> merchant
-  Nothing -> NAMMAYATRI
+showCarouselScreen :: LazyCheck -> Boolean
+showCarouselScreen a = os == "ANDROID" && (getMerchant FunctionCall) == NAMMAYATRI
 
-decodeMerchantId :: Foreign -> Maybe Merchant
-decodeMerchantId = hush <<< runExcept <<< decode
+terminateApp :: Unit -> Unit
+terminateApp _ = runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload {
+    event : "process_result"
+  , payload : Just {
+    action : "terminate"
+  , trip_amount : Nothing
+  , trip_id : Nothing
+  }
+}  
 
-foreign import addCarousel :: Array CarouselModel -> String -> Effect Unit
+getGlobalPayload :: Unit -> Effect (Maybe GlobalPayload)
+getGlobalPayload _ = do
+  payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (getWindowVariable "__payload" Just Nothing)
+  pure $ hush payload
+
+getSearchType :: Unit -> String
+getSearchType _ = do 
+  let payload = unsafePerformEffect $ getGlobalPayload unit
+  case payload of
+    Just (GlobalPayload payload') -> do
+      let (Payload innerPayload) = payload'.payload
+      case innerPayload.search_type of
+        Just a -> a 
+        Nothing -> "normal_search"
+    Nothing -> "normal_search"
+
+getPaymentMethod :: Unit -> String
+getPaymentMethod _ = do 
+  let payload = unsafePerformEffect $ getGlobalPayload unit
+  case payload of
+    Just (GlobalPayload payload') -> do
+      let (Payload innerPayload) = payload'.payload
+      case innerPayload.payment_method of
+        Just a -> a 
+        Nothing -> "cash"
+    Nothing -> "cash"

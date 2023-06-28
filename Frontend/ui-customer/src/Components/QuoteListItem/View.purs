@@ -15,29 +15,32 @@
 
 module Components.QuoteListItem.View where
 
+import Common.Types.App
+
 import Animation (translateInXForwardAnim)
+import Common.Types.App (LazyCheck(..))
 import Components.QuoteListItem.Controller (Action(..), QuoteListItemState)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Maybe (Maybe(..))
+import Data.Number (ceil)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, os, countDown)
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import JBridge (startTimerWithTime)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Data.Number (ceil)
-import JBridge(startTimerWithTime)
 import Prelude (Unit, bind, const, discard, pure, show, unit, ($), (/=), (<>), (==))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, lineHeight, margin, orientation, onClick, padding, stroke, text, textSize, textView, width, weight, frameLayout, disableClickFeedback, visibility, alpha, clickable, imageWithFallback)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, disableClickFeedback, fontStyle, frameLayout, gradient, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
-import Common.Types.App
 import Types.App (defaultGlobalState)
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListItemState -> PrestoDOM (Effect Unit) w
@@ -112,17 +115,17 @@ driverImageView state =
       imageView
         [ margin (MarginLeft 27)
       , cornerRadius 18.0
-      , background Color.grey800
+      , background state.appConfig.quoteListItemConfig.driverImagebg
       , width (V 36)
       , height (V 36)
       , imageWithFallback ""
 
         ]
       , imageView
-        [ height $ V 37
-        , width $ V 40
+        [ height $ V state.appConfig.quoteListItemConfig.vehicleHeight
+        , width $ V state.appConfig.quoteListItemConfig.vehicleWidth
         , cornerRadius 20.0
-        , imageWithFallback if state.vehicleType == "auto" then "ny_ic_auto_quote_list,https://assets.juspay.in/nammayatri/images/user/ny_ic_auto_quote_list.png" else "ny_ic_auto_quote_list,https://assets.juspay.in/nammayatri/images/user/ny_ic_auto_quote_list.png"
+        , imageWithFallback if state.vehicleType == "auto" then "ny_ic_auto_quote_list," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto_quote_list.png" else "ny_ic_auto_quote_list," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto_quote_list.png"
         , weight 1.0
         ]
       ]
@@ -140,17 +143,14 @@ driverRatingView state  =
     ][  imageView
         [ height $ V 13
         , width $ V 13
-        , imageWithFallback "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png"
+        , imageWithFallback $ "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_star_active.png"
         , margin (MarginRight 6)
         ]
-      , textView
+      , textView (
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , textSize FontSize.a_12
         , text $ if ceil state.driverRating == 0.0 then "New" else show $ ceil state.driverRating
-        , fontStyle $ FontStyle.medium LanguageStyle
-        , lineHeight "15"
-        ]
+        ] <> FontStyle.tags LanguageStyle)
     ]
 
 
@@ -161,15 +161,13 @@ priceView state push =
     , width WRAP_CONTENT
     , orientation VERTICAL
     , gravity CENTER_HORIZONTAL
-    ][  textView
+    ][  textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , textSize FontSize.a_20
-        , text $ "₹ " <> state.price
+        , text $ state.appConfig.currency <> " " <> state.price
         , color Color.black800
-        , fontStyle $ FontStyle.semiBold LanguageStyle
         , lineHeight "28"
-        ]
+        ] <> FontStyle.body10 TypoGraphy
     ]
 
 timerView :: forall w . QuoteListItemState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -179,17 +177,16 @@ timerView state push =
   , width WRAP_CONTENT
   , gravity RIGHT
   , weight 1.0
-  ][  textView
+  ][  textView (
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
-      , textSize FontSize.a_12
       , text $ case (getValueToLocalStore LANGUAGE_KEY) of
             "EN_US" -> (getString EXPIRES_IN ) <>" : " <> state.timer <> "s"
+            "FR_FR" -> (getString EXPIRES_IN ) <>" : " <> state.timer <> "s"
             _ -> state.timer <> "s " <> (getString EXPIRES_IN )
-      , color Color.red
-      , fontStyle $ FontStyle.regular LanguageStyle
+      , color state.appConfig.quoteListItemConfig.expiresColor
       , gravity CENTER
-      ]
+      ] <> FontStyle.body3 LanguageStyle)
   ]
 
 driverNameAndTimeView :: forall w . QuoteListItemState -> PrestoDOM (Effect Unit) w
@@ -200,46 +197,38 @@ driverNameAndTimeView state =
     , orientation VERTICAL
     , weight 1.0
     , margin (Margin 0 5 20 10)
-    ][  textView
+    ][  textView (
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , textSize FontSize.a_16
         , text $ if state.timeLeft == 0 then (getString NEARBY) else show state.timeLeft <> (getString MINS_AWAY)
         , color Color.black800
-        , fontStyle $ FontStyle.semiBold LanguageStyle
-        , lineHeight "24"
-        ]
-      , textView
+        ] <> FontStyle.subHeading1 LanguageStyle)
+      , textView (
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , textSize FontSize.a_12
         , text state.driverName
         , color Color.black700
-        , fontStyle $ FontStyle.medium LanguageStyle
-        , lineHeight "15"
-        ]
+        ] <> FontStyle.tags LanguageStyle)
     ]
 
 primaryButtonView :: QuoteListItemState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 primaryButtonView state push =
  linearLayout
-  [ height WRAP_CONTENT
+  ([ height WRAP_CONTENT
   , width MATCH_PARENT
-  , background Color.black900
   , padding $ PaddingVertical 14 14
   , margin $ MarginTop 24
   , visibility if state.selectedQuote == Just state.id then VISIBLE else GONE
-  , cornerRadius 8.0
+  , cornerRadius state.appConfig.quoteListItemConfig.primaryButtonCorner
   , onClick push $ const ConfirmRide
   , gravity CENTER
-  ][ textView
+  ] <> if state.appConfig.isGradient == "true" then [gradient (Linear 90.0 state.appConfig.gradient)] else [background state.appConfig.primaryBackground])
+  [ textView (
      [ width WRAP_CONTENT
      , height WRAP_CONTENT
      , text (getString CONFIRM_RIDE_)
-     , textSize FontSize.a_16
-     , color Color.yellow900
-     , fontStyle $ FontStyle.semiBold LanguageStyle
-     ]
+     , color state.appConfig.primaryTextColor
+     ] <> FontStyle.subHeading1 LanguageStyle)
   ]
 
 autoAcceptingView :: forall w . QuoteListItemState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -274,22 +263,19 @@ autoAcceptingView state push =
         , stroke ("1,#0066FF")
         , cornerRadius 5.0
         , clickable true
-        ][ textView
+        ][ textView (
             [ height MATCH_PARENT
             , weight 1.0
             , gravity CENTER_VERTICAL
             , color Color.black900
-            , textSize FontSize.a_12
-            , fontStyle $ FontStyle.medium LanguageStyle
-            , lineHeight "15"
             , text $ case (getValueToLocalStore LANGUAGE_KEY) of
                 "EN_US" -> (getString AUTO_ACCEPTING_SELECTED_RIDE) <> " : " <> state.timer <> "s"
                 _ -> state.timer <> "s " <> (getString AUTO_ACCEPTING_SELECTED_RIDE)
-            ]
+            ] <> FontStyle.tags LanguageStyle)
           , imageView
             [ height $ V 18
             , width $ V 18
-            , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
+            , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_close.png"
             , onClick push $ const CancelAutoAssigning
             ]
         ]

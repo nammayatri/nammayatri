@@ -15,7 +15,7 @@
 
 module Components.FareBreakUp.Controller where
 
-import Font.Style as FontStyle
+import Font.Style (Style(..))
 import Components.SourceToDestination.Controller as SourceToDestinationController
 import Font.Size as FontSize
 import Styles.Colors as Color
@@ -33,22 +33,21 @@ type Config =
   , rideDetails :: RideDetails
   , headingText :: String
   }
-type FareDetails =
-  { text :: String
-  , textSize :: Int
-  , fontStyle :: String
-  , color :: String
+type FareDetails = 
+  { text :: String 
+  , color :: String 
   , margin :: Margin
   , priceDetails :: PriceDetails
   , visibility :: Visibility
+  , textStyle :: Style
+  , currency :: String
   }
 
-type PriceDetails =
-  { text :: Int
-  , textSize :: Int
-  , fontStyle :: String
+type PriceDetails = 
+  { text :: Int 
   , offeredFare :: Int
   , distanceDifference :: Int
+  , textStyle :: Style
   }
 
 type RideDetails =
@@ -67,15 +66,14 @@ config =
   , headingText : "View Breakdown"
   , totalAmount :
     { text : "Total Amount"
-    , textSize : FontSize.a_16
-    , fontStyle : FontStyle.medium LanguageStyle
+    , textStyle : SubHeading1
     , color : Color.black700
     , visibility : VISIBLE
     , margin : (Margin 0 0 0 0)
+    , currency : "₹"
     , priceDetails : {
         text : 0
-      , textSize : FontSize.a_16
-      , fontStyle : FontStyle.medium LanguageStyle
+      , textStyle : SubHeading1
       , offeredFare : 0
       , distanceDifference : 0
       }

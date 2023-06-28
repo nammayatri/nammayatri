@@ -33,7 +33,8 @@ import Services.Config (getSupportNumber)
 import Debug (spy)
 import Helpers.Utils (clearTimer)
 import Storage (setValueToLocalNativeStore, KeyStore(..))
-
+import Engineering.Helpers.LogEvent (logEvent)
+import Effect.Unsafe (unsafePerformEffect)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -184,7 +185,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
     "Profile" -> exit $ GoToProfileScreen
     "Alert" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
+      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
       exit $ GoToNotifications
     _ -> continue state
 

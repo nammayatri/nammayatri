@@ -20,8 +20,7 @@ import Prelude (bind, pure, ($), (<$>), discard)
 import Screens.ChooseLanguageScreen.Controller (ScreenOutput(..))
 import Types.App (ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
-
-
+import MerchantConfig.Utils (getAppConfig)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
@@ -33,7 +32,8 @@ import Types.ModifyScreenState (modifyScreenState)
 chooseLanguage :: FlowBT String ScreenOutput
 chooseLanguage = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ ChooseLanguageScreen.screen state.chooseLanguageScreen
+  config <- getAppConfig
+  action <- lift $ lift $ runScreen $ ChooseLanguageScreen.screen state.chooseLanguageScreen{data{config = config}}
   case action of
     GoToEnterMobileScreen updateState -> do
       modifyScreenState $ ChooseLanguageScreenStateType (\chooseLanguageScreenScreen -> updateState)

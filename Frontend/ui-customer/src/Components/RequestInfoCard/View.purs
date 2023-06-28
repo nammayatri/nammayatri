@@ -15,20 +15,25 @@
 
 module Components.RequestInfoCard.View where
 
+import Common.Types.App
+
+import Common.Types.App (LazyCheck(..))
 import Components.RequestInfoCard.Controller (Action(..))
-import Prelude ((*), Unit, ($), const, (/), unit, (-))
 import Effect (Effect)
-import PrestoDOM (PrestoDOM, Orientation(..), Gravity(..), Padding(..), Margin(..), Length(..), margin, padding, orientation, height, width, linearLayout, imageView, imageUrl, text, textView, textSize, fontStyle, gravity, onClick, color, background, lineHeight, cornerRadius, weight, onBackPressed, imageWithFallback)
-import Styles.Colors as Color
+import Engineering.Helpers.Commons (screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Common.Types.App
-import Engineering.Helpers.Commons (screenWidth)
+import Prelude ((*), Unit, ($), const, (/), unit, (-))
+import Prelude ((<>))
+import PrestoDOM (PrestoDOM, Orientation(..), Gravity(..), Padding(..), Margin(..), Length(..), margin, padding, orientation, height, width, linearLayout, imageView, imageUrl, text, textView, textSize, fontStyle, gravity, onClick, color, background, lineHeight, cornerRadius, weight, onBackPressed, imageWithFallback)
+import Screens.Types (HomeScreenState)
+import Styles.Colors as Color
 
-view :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-view push = 
+view :: forall w. (Action -> Effect Unit) -> HomeScreenState ->PrestoDOM (Effect Unit) w 
+view push state = 
   linearLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
@@ -54,24 +59,20 @@ view push =
             , height WRAP_CONTENT
             , orientation VERTICAL
             ][
-                textView
+                textView$
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
                 , padding (Padding 16 24 0 0)
                 , text  (getString CHOOSE_BETWEEN_MULTIPLE_RIDES)
-                , textSize FontSize.a_16
                 , color Color.black800
-                , fontStyle $ FontStyle.semiBold LanguageStyle
-                ]
-                , textView
+                ] <> FontStyle.subHeading1 LanguageStyle
+                , textView $
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
                 , padding (Padding 16 16 0 0)
                 , text (getString ENABLE_THIS_FEATURE_TO_CHOOSE_YOUR_RIDE)
-                , fontStyle $ FontStyle.regular LanguageStyle
-                , textSize FontSize.a_14
                 , color Color.black700
-                ]
+                ] <> FontStyle.paragraphText LanguageStyle
             ]
             , linearLayout
               [ height WRAP_CONTENT
@@ -80,19 +81,17 @@ view push =
             , imageView
               [ width $ V 116
               , height $ V 122
-              , imageWithFallback "ny_ic_select_offer,https://assets.juspay.in/nammayatri/images/user/ny_ic_select_offer.png"
+              , imageWithFallback $ "ny_ic_select_offer," <> (getAssetStoreLink FunctionCall) <> "ny_ic_select_offer.png"
               ]
-        ], textView
+        ], textView $
             [ width MATCH_PARENT
             , height WRAP_CONTENT
-            , color Color.blue800
+            , color state.data.config.alertDialogPrimaryColor
             , gravity CENTER
-            , fontStyle $ FontStyle.semiBold LanguageStyle
             , text (getString GOT_IT)
-            , textSize FontSize.a_16
             , padding (Padding 0 28 0 20)
             , onClick push $ const Close
-            ]
+            ] <> FontStyle.subHeading1 LanguageStyle
      ]
 
   ]

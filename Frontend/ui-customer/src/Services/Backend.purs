@@ -8,7 +8,7 @@
 
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 
-  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+  or FITNESS FOR A PARTIcuLAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
@@ -16,25 +16,27 @@
 module Services.Backend where
 
 import Services.API
-import Services.Config as SC
+
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
-import Common.Types.App (Version(..))
+import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck (..))
 import Data.Either (Either(..), either)
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
+import Engineering.Helpers.Commons (liftFlow, os, bundleVersion)
 import Foreign.Generic (encode)
 import Helpers.Utils (decodeErrorCode, decodeErrorMessage, toString, getTime, getPreviousVersion)
-import JBridge (Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, toggleLoader, drawRoute, toggleBtnLoader)
+import JBridge (Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, drawRoute, toggleBtnLoader)
 import Juspay.OTP.Reader as Readers
 import Log (printLog)
 import ModifyScreenState (modifyScreenState)
 import Screens.Types (AccountSetUpScreenState(..), HomeScreenState(..), NewContacts)
 import Types.App (GlobalState(..), FlowBT, ScreenType(..))
 import Tracker (trackApiCallFlow, trackExceptionFlow)
-import Presto.Core.Types.API (Header(..), Headers(..))
+import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
+-- import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPayload, Method(..), defaultDecodeResponse, defaultMakeRequest, standardEncode)
 import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
 import Screens.Types (Address, Stage(..))
-import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, toggleLoader, removeAllPolylines, stopChatListenerService, SpecialLocationTag)
+import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, removeAllPolylines, stopChatListenerService, SpecialLocationTag)
 import Prelude (Unit, bind, discard, map, pure, unit, void, ($), ($>), (&&), (*>), (<<<), (=<<), (==), (<=),(||), show, (<>))
 import Storage (getValueToLocalStore, deleteValueFromLocalStore, getValueToLocalNativeStore, KeyStore(..), setValueToLocalStore)
 import Tracker.Labels (Label(..))
@@ -45,7 +47,8 @@ import Engineering.Helpers.Commons (liftFlow, os, bundleVersion, isPreviousVersi
 import Data.Array ((!!), take)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Debug (spy)
+import Services.Config as SC
+import Engineering.Helpers.Utils as EHU
 
 getHeaders :: String -> Flow GlobalState Headers
 getHeaders _ = do
@@ -176,10 +179,9 @@ withAPIResultBT' url enableCache key f errorHandler flow = do
             (lift $ lift $ (trackApiCallFlow Tracker.Network Tracker.Info NETWORK_CALL start end (err.code) (codeMessage) url "" "")) *> (errorHandler err)
 
 ---------------------------------------------------------------TriggerOTPBT Function---------------------------------------------------------------------------------------------------
-
 triggerOTPBT :: TriggerOTPReq → FlowBT String TriggerOTPResp
 triggerOTPBT payload = do
-    _ <- lift $ lift $ doAff Readers.initiateSMSRetriever
+    -- _ <- lift $ lift $ doAff Readers.initiateSMSRetriever
     headers <- getHeaders' ""
     withAPIResultBT (EP.triggerOTP "") (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
     where
@@ -194,12 +196,23 @@ triggerOTPBT payload = do
 
 
 makeTriggerOTPReq :: String -> TriggerOTPReq
-makeTriggerOTPReq mobileNumber = TriggerOTPReq
+makeTriggerOTPReq mobileNumber =
+    let merchant = SC.getMerchantId ""
+    in TriggerOTPReq
     {
       "mobileNumber"      : mobileNumber,
       "mobileCountryCode" : "+91",
-      "merchantId" : if ( SC.getMerchantId "")== "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId "")
+      "merchantId" : if merchant == "NA" then getValueToLocalNativeStore MERCHANT_ID else merchant
     }
+
+---------------------------------------------------------------TriggerSignatureOTPBT Function---------------------------------------------------------------------------------------------------
+
+triggerSignatureBasedOTP :: SignatureAuthData → Flow GlobalState (Either ErrorResponse TriggerSignatureOTPResp)
+triggerSignatureBasedOTP (SignatureAuthData signatureAuthData) = do
+    Headers headers <- getHeaders ""
+    withAPIResult (EP.triggerSignatureOTP "") unwrapResponse $ callAPI (Headers (headers <> [Header "x-sdk-authorization" signatureAuthData.signature])) (TriggerSignatureOTPReq signatureAuthData.authData)
+    where
+        unwrapResponse (x) = x
 
 ----------------------------------------------------------- ResendOTPBT Function ------------------------------------------------------------------------------------------------------
 
@@ -231,7 +244,7 @@ verifyTokenBT payload token = do
             pure $ toast (getString REQUEST_TIMED_OUT)
             else if ( errorPayload.code == 400 && codeMessage == "INVALID_AUTH_DATA") then do
                 modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber{props{wrongOTP = true}})
-                void $ lift $ lift $ toggleLoader false
+                void $ lift $ lift $ EHU.toggleLoader false
                 pure $ toast "INVALID_AUTH_DATA"
             else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then
                 pure $ toast (getString LIMIT_EXCEEDED)
@@ -313,7 +326,7 @@ placeDetailsBT (PlaceDetailsReq id) = do
     where
     errorHandler errorPayload  = do
         pure $ toast (getString ERROR_OCCURED)
-        _ <- lift $ lift $ toggleLoader false
+        _ <- lift $ lift $ EHU.toggleLoader false
         BackT $ pure GoBack
 
 -- ------------------------------------------------------------------------ GetCoordinatesBT Function --------------------------------------------------------------------------------------
@@ -329,7 +342,6 @@ placeDetailsBT (PlaceDetailsReq id) = do
 rideSearchBT :: SearchReq -> FlowBT String SearchRes
 rideSearchBT payload = do
         headers <- getHeaders' ""
-        _ <- pure $ spy "" "req for searchid"
         withAPIResultBT (EP.searchReq "") (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
     where
       errorHandler errorPayload = do
@@ -489,8 +501,8 @@ updateProfile (UpdateProfileReq payload) = do
     where
         unwrapResponse (x) = x
 
-mkUpdateProfileRequest :: UpdateProfileReq
-mkUpdateProfileRequest =
+mkUpdateProfileRequest :: LazyCheck -> UpdateProfileReq
+mkUpdateProfileRequest _ =
     UpdateProfileReq{
           middleName : Nothing
         , lastName : Nothing
@@ -723,13 +735,13 @@ type Markers = {
 
 driverTracking :: String -> Markers
 driverTracking _ = {
-    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else "ic_vehicle_nav_on_map",
+    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else "ny_ic_vehicle_nav_on_map",
     destMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "src_marker" else "ny_ic_src_marker"
 }
 
 rideTracking :: String -> Markers
 rideTracking _ = {
-    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else "ic_vehicle_nav_on_map",
+    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else "ny_ic_vehicle_nav_on_map",
     destMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "dest_marker" else "ny_ic_dest_marker"
 }
 

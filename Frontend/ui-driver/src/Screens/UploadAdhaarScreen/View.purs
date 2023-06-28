@@ -32,6 +32,8 @@ import JBridge as JB
 import Effect.Class (liftEffect)
 import Common.Types.App
 import Screens.UploadAdhaarScreen.ComponentConfig
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 screen :: ST.UploadAdhaarScreenState -> Screen Action ST.UploadAdhaarScreenState ScreenOutput
 screen initialState =
@@ -147,7 +149,7 @@ frontUploadSection state push =
       imageView
       [ width ( V 20 )
       , height ( V 20 )
-      , imageWithFallback "ny_ic_upload,https://assets.juspay.in/nammayatri/images/driver/ny_ic_upload.png"
+      , imageWithFallback $ "ny_ic_upload," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_upload.png"
       ]
     ]
   ]
@@ -183,7 +185,7 @@ backUploadSection state push =
       imageView
       [ width ( V 20 )
       , height ( V 20 )
-      , imageWithFallback "ny_ic_upload,https://assets.juspay.in/nammayatri/images/driver/ny_ic_upload.png"
+      , imageWithFallback $ "ny_ic_upload," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_upload.png"
       ]
     ]
   ]
@@ -198,7 +200,7 @@ instructionSectionView state =
       imageView
       [ width ( V 100 )
       , height ( V 100 ) 
-      , imageWithFallback "ny_ic_aadhaar,https://assets.juspay.in/nammayatri/images/driver/ny_ic_aadhaar.png"
+      , imageWithFallback $ "ny_ic_aadhaar," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_aadhaar.png"
       ]
     , textView
       ([ width WRAP_CONTENT
@@ -216,7 +218,7 @@ instructionSectionView state =
         [ width ( V 20 )
         , height ( V 20 ) 
         , margin (MarginRight 9)
-        , imageWithFallback "ny_ic_text_pointer_right,https://assets.juspay.in/nammayatri/images/driver/ny_ic_text_pointer_right.png"
+        , imageWithFallback $ "ny_ic_text_pointer_right," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_text_pointer_right.png"
         ]
       , textView
         ([ text (getString ADHAAR_INTRUCTION_PICTURE)
@@ -233,7 +235,7 @@ instructionSectionView state =
         [ width ( V 20 )
         , height ( V 20 ) 
         , margin (MarginRight 9)
-        , imageWithFallback "ny_ic_text_pointer_right,https://assets.juspay.in/nammayatri/images/driver/ny_ic_text_pointer_right.png"
+        , imageWithFallback $ "ny_ic_text_pointer_right," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_text_pointer_right.png"
         ]
       , textView
         ([ text (getString LICENSE_INSTRUCTION_CLARITY)
@@ -262,7 +264,7 @@ previewIcon state push previewType =
           [ height (V 20)
           , width (V 20)
           , margin (Margin 10 0 0 0)
-          , imageWithFallback "ny_ic_cancel,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cancel.png"
+          , imageWithFallback $ "ny_ic_cancel," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_cancel.png"
           , onClick push (const(RemoveUploadedFile previewType))
           ]
     ]

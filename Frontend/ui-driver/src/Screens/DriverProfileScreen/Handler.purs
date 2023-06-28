@@ -25,11 +25,13 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Screens.DriverProfileScreen.View as DriverProfileScreen
 import Types.App (FlowBT, GlobalState(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
+import Presto.Core.Types.Language.Flow (getLogFields)
 
 driverProfileScreen :: FlowBT String DRIVER_PROFILE_SCREEN_OUTPUT
 driverProfileScreen = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ DriverProfileScreen.screen state.driverProfileScreen
+  logField_ <- lift $ lift $ getLogFields 
+  action <- lift $ lift $ runScreen $ DriverProfileScreen.screen state.driverProfileScreen{data{logField = logField_}}
   case action of
     GoToDriverDetailsScreen updatedState -> do
       modifyScreenState $ DriverDetailsScreenStateType (\driverDetails -> 
@@ -63,5 +65,5 @@ driverProfileScreen = do
     GoToSelectLanguageScreen -> App.BackT $ App.BackPoint <$> pure SELECT_LANGUAGE_SCREEN
     OnBoardingFlow -> App.BackT $ App.BackPoint <$> pure ON_BOARDING_FLOW
     GoToNotifications -> App.BackT $ App.BackPoint <$> pure NOTIFICATIONS_SCREEN
-    GoToBookingOptions state -> App.BackT $ App.NoBack <$> pure (GO_TO_BOOKING_OPTIONS_SCREEN state)
+    GoToBookingOptions state -> App.BackT $ App.BackPoint <$> pure (GO_TO_BOOKING_OPTIONS_SCREEN state)
     GoBack -> App.BackT $ pure App.GoBack

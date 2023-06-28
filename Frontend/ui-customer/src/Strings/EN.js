@@ -88,7 +88,8 @@ const englishStrings = {
   "LANGUAGE": "Language",
   "OTP": "OTP",
   "PAYMENT_METHOD": "Payment Method",
-  "PAYMENT_METHOD_STRING": "Cash / Use any UPI app",
+  "PAYMENT_METHOD_STRING": "Cash / Use UPI app",
+  "PAYMENT_METHOD_STRING_": "Cash / Use UPI app",
   "CANCEL_RIDE": "Cancel Ride",
   "SUPPORT": "Support",
   "PICKUP_AND_DROP": "Pickup and Drop",
@@ -248,6 +249,7 @@ const englishStrings = {
   "RATE_YOUR_RIDE_WITH": "Rate your ride with ",
   "VIEW_BREAKDOWN": "View Breakdown",
   "PAY_DRIVER_USING_CASH_OR_UPI": "Pay Driver using Cash/UPI",
+  "PAY_DRIVER_USING_CASH_OR_UPI_": "Pay Driver using Cash/UPI",
   "RATE_YOUR_DRIVER": "Rate Your Driver",
   "MY_RIDES": "My Rides",
   "RIDE_DETAILS": "Ride Details",
@@ -498,5 +500,8 @@ const englishStrings = {
   "IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL" : "It seems to be taking longer than usual.",
   "CONTINUE_SEARCH_WITH" : "Continue Search with",
   "CONTINUING_SEARCH_WITH" : "Continuing search with",
-  "SEARCHING_WITH" : "Searching with"
+  "SEARCHING_WITH" : "Searching with",
+  "PLATFORM_FEE" : "Platform Fee",
+  "FINDING_QUOTES_TEXT": "Searching for cabs around",
+  "PLEASE_WAIT": "Please wait!"
 }

@@ -42,8 +42,7 @@ doneButtonConfig state = let
     primaryButtonConfig' = config
       { textConfig
       { text = (getString DONE)
-      , color = Color.primaryButtonColor
-      , textSize = FontSize.a_18}
+      , color = Color.primaryButtonColor}
       , cornerRadius = 8.0
       , background = Color.black900
       , height = (V 60)
@@ -58,11 +57,10 @@ cancelButtonConfig state = let
     primaryButtonConfig' = config
       { textConfig
       { text = (getString CANCEL)
-      , color = Color.black700
-      , textSize = FontSize.a_18}
+      , color = Color.black700}
       , cornerRadius = 8.0
       , background = Color.white900
-      , stroke = "1,"<>Color.black700
+      , stroke = "1," <> Color.black700
       , height = (V 60)
       , isClickable = true
       }

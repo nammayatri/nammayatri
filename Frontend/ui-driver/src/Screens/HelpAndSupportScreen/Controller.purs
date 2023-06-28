@@ -13,15 +13,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.HelpAndSupportScreen.Controller
-  ( Action(..)
-  , ScreenOutput(..)
-  , eval
-  , getExactTime
-  , getIssueTitle
-  , getUpdatedIssueList
-  )
-  where
+module Screens.HelpAndSupportScreen.Controller where
 
 import Prelude (class Show, pure, unit, ($), discard, bind,map,(||),(==),(&&),(/=),(>),(<>),(/))
 import PrestoDOM (Eval, continue, exit)
@@ -39,6 +31,9 @@ import Data.Array (foldr,cons,filter,reverse)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Components.IssueListFlow as IssueListFlow 
 import Screens (ScreenName(..), getScreen)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 instance showAction :: Show Action where
   show _ = ""

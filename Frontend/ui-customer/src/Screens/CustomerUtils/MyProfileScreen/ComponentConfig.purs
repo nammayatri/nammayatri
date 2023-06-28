@@ -32,10 +32,12 @@ import Styles.Colors as Color
 import Animation.Config (AnimConfig, animConfig)
 import PrestoDOM.Animation as PrestoAnim
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Prelude ((<>))
 
 genericHeaderConfig :: ST.MyProfileScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
-  config = GenericHeader.config
+  config = if state.data.config.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
   genericHeaderConfig' = config 
     {
       height = WRAP_CONTENT
@@ -44,14 +46,12 @@ genericHeaderConfig state = let
         height = (V 35)
       , width = (V 35)
       , margin = (Margin 10 17 16 15)
-      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/coomon/ny_ic_chevron_left.png"
+      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
       , padding = (Padding 5 5 5 5 )
       }
     , textConfig {
         text = if state.props.updateProfile then (getString UPDATE_PERSONAL_DETAILS) else (getString PERSONAL_DETAILS)
-      , textSize = FontSize.a_18
       , color = Color.black
-      , fontStyle = FontStyle.semiBold LanguageStyle
       }
     }
   in genericHeaderConfig'
@@ -64,14 +64,10 @@ nameEditTextConfig state = let
             margin = (Margin 16 32 16 0),
             topLabel {
                 text = (getString NAME),
-                textSize = FontSize.a_12,
-                color = Color.black900,
-                fontStyle = FontStyle.regular LanguageStyle
+                color = Color.black900
             },
             editText {
                 text = state.data.name,
-                textSize = FontSize.a_16,
-                fontStyle = FontStyle.semiBold LanguageStyle,
                 pattern = Just "[a-zA-Z ]*,30"
             },
             id = (EHC.getNewIDWithTag "UserNameEditText")
@@ -87,23 +83,18 @@ emailEditTextConfig state = let
             showErrorLabel = (not state.props.isEmailValid),
             topLabel {
                 text = (getString EMAIL_ID),
-                textSize = FontSize.a_12,
-                color = Color.black900,
-                fontStyle = FontStyle.regular LanguageStyle
+                color = Color.black900
             },
             editText {
                 text = fromMaybe "" state.data.emailId,
                 placeholder = "example@xyz.com",
-                placeholderColor = Color.black600,
-                textSize = FontSize.a_16,
-                fontStyle = FontStyle.semiBold LanguageStyle
+                placeholderColor = Color.black600
             },
             errorLabel{
               text = case state.data.errorMessage of 
                 Just ST.EMAIL_EXISTS -> "Email already exists"
                 Just ST.INVALID_EMAIL -> "Please enter a valid email"
                 Nothing -> ""
-            , fontStyle = FontStyle.regular LanguageStyle
             , color = Color.textDanger
             },
             id = (EHC.getNewIDWithTag "EmailEditText")
@@ -114,7 +105,7 @@ updateButtonConfig :: ST.MyProfileScreenState -> PrimaryButton.Config
 updateButtonConfig state = let
     config = PrimaryButton.config
     updateButtonConfig' = config 
-        { textConfig{ text = (getString UPDATE) }
+        { textConfig{ text = (getString UPDATE), color = state.data.config.primaryTextColor}
         , height = (V 48)
         , cornerRadius = 8.0
         , margin = (Margin 16 0 16 0)
@@ -122,6 +113,7 @@ updateButtonConfig state = let
         , enableLoader = (JB.getBtnLoader "PrimaryButtonUpdate")
         , isClickable = state.props.isBtnEnabled
         , alpha = if state.props.isBtnEnabled then 1.0 else 0.5
+        , background = state.data.config.primaryBackground
         }
     in updateButtonConfig'
 

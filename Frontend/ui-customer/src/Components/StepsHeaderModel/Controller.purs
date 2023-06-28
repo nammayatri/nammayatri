@@ -1,7 +1,7 @@
 module Components.StepsHeaderModel.Controller where
 
 import Screens.Types (StepsHeaderModelState)
-import Merchant.Utils as MU
+import Helpers.Utils as MU
 import Common.Types.App (LazyCheck(..)) as Lazy
 
 data Action = OnArrowClick

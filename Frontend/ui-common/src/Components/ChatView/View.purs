@@ -31,6 +31,7 @@ import Common.Types.App
 import Common.Styles.Colors (white900) as Color
 import PrestoDOM.Elements.Elements (progressBar)
 import PrestoDOM.Events (afterRender)
+import Helpers.Utils (getCommonAssetStoreLink)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -70,7 +71,7 @@ chatHeaderView config push =
          , gravity CENTER
          , onClick push (const BackPressed)
          ][ imageView
-            [ imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+            [ imageWithFallback $ "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
             , height $ V 24
             , width $ V 24
             ]
@@ -91,23 +92,19 @@ headerNameView config push =
   [ height WRAP_CONTENT
   , width (V (((screenWidth unit)/100)* (getConfig config.userConfig.appType).margin ))
   , orientation VERTICAL
-  ][textView
+  ][textView (
     [ text config.userConfig.userName
-    , textSize FontSize.a_16
     , color config.black800
-    , fontStyle $ FontStyle.semiBold LanguageStyle
     , ellipsize true
     , singleLine true
-    ]
-   ,textView
+    ] <> FontStyle.subHeading1 TypoGraphy)
+   ,textView (
     [ text config.distance
-    , textSize FontSize.a_12
     , visibility (getConfig config.userConfig.appType).customerVisibility
     , color config.black700
-    , fontStyle $ FontStyle.regular LanguageStyle
     , ellipsize true
     , singleLine true
-    ]
+    ] <> FontStyle.body3 TypoGraphy)
   ]
 
 headerActionView ::forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -126,7 +123,7 @@ headerActionView config push =
      , background config.green200
      , onClick push (const Call)
      ][ imageView
-        [ imageWithFallback "ny_ic_call,https://assets.juspay.in/nammayatri/images/common/ny_ic_call.png"
+        [ imageWithFallback $ "ny_ic_call," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_call.png"
         , height $ V 18
         , width $ V 18
         ]
@@ -142,7 +139,7 @@ headerActionView config push =
     , margin $ MarginRight 8
     , onClick push (const $ Call)
     ][ imageView
-       [ imageWithFallback "ic_phone,https://assets.juspay.in/nammayatri/images/common/ic_phone.png"
+       [ imageWithFallback $ "ic_phone," <> (getCommonAssetStoreLink FunctionCall) <> "ic_phone.png"
        , height $ V 20
        , width $ V 20
        ]
@@ -158,18 +155,16 @@ headerActionView config push =
     , cornerRadius 32.0
     , onClick push (const $ Navigate)
     ][ imageView
-       [ imageWithFallback "ic_navigation_blue,https://assets.juspay.in/nammayatri/images/common/ic_navigation_blue.png"
+       [ imageWithFallback $ "ic_navigation_blue," <> (getCommonAssetStoreLink FunctionCall) <> "ic_navigation_blue.png"
        , height $ V 20
        , width $ V 20
        , margin $ MarginRight 8
        ]
-     , textView
+     , textView (
        [ text config.mapsText
        , color config.blue900
-       , textSize FontSize.a_16
-       , fontStyle $ FontStyle.medium LanguageStyle
-       ]
-    ]
+       ] <> FontStyle.subHeading2 TypoGraphy)
+    ]  
   ]
 
 chatBodyView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -230,31 +225,29 @@ chatFooterView config push =
       , gravity CENTER_VERTICAL
       , background config.grey800
       , orientation HORIZONTAL
-      ][ editText
+      ][ editText $
          [ weight 1.0
          , height $ V 48
          , id (getNewIDWithTag "ChatInputEditText")
          , background config.grey800
          , cornerRadius 24.0
-         , textSize FontSize.a_14
          , hint $ config.hint <> " " <> fromMaybe "" ((STR.split (STR.Pattern " ") config.userConfig.userName) !! 0) <> "..."
          , singleLine true
          , hintColor config.black700
          , ellipsize true
-         , fontStyle $ FontStyle.medium LanguageStyle
          , onChange push $ TextChanged
          , pattern "[^\n]*,255"
-         ]
+         ] <> FontStyle.body1 LanguageStyle
        , linearLayout
          [ height $ V 36
          , width $ V 36
          , gravity CENTER
          , onClick push (const (SendMessage))
          ][ imageView
-            [ imageWithFallback if config.sendMessageActive then "ic_send_blue,https://assets.juspay.in/nammayatri/images/common/ic_send_blue.png" else "ic_send,https://assets.juspay.in/nammayatri/images/common/ic_send.png"
-            , height $ V 20
-            , width $ V 20
-            ]
+            [ imageWithFallback $ if config.sendMessageActive then "ic_send_blue," <> (getCommonAssetStoreLink FunctionCall) <> "ic_send_blue.png" else "ic_send," <> (getCommonAssetStoreLink FunctionCall) <> "ic_send.png"
+            , height $ V 20 
+            , width $ V 20 
+            ] 
          ]
       ]
   ]
@@ -270,10 +263,9 @@ emptyChatView config push =
      , width MATCH_PARENT
      , orientation VERTICAL
      , background config.white900
-     ]([ textView
+     ]([ textView $
        [ text $ if config.userConfig.appType == "Customer" && null config.suggestionsList && null config.messages then config.emptyChatHeader else config.suggestionHeader
        , color config.black700
-       , textSize FontSize.a_14
        , width MATCH_PARENT
        , margin (Margin 16 16 16 20)
        , maxLines 2
@@ -320,14 +312,11 @@ quickMessageView config message isLastItem push =
   , gravity LEFT
   , orientation VERTICAL
   , onClick push (if config.enableSuggestionClick then const (SendSuggestion message) else (const NoAction))
-  ][ textView
+  ][ textView $
      [ text (message)
      , color config.blue800
      , padding (Padding 12 16 12 16)
-     , textSize FontSize.a_14
-     , lineHeight "18"
-     , fontStyle $ FontStyle.medium LanguageStyle
-     ]
+     ] <> FontStyle.body1 TypoGraphy
    , linearLayout
      [ width MATCH_PARENT
      , height $ V 1

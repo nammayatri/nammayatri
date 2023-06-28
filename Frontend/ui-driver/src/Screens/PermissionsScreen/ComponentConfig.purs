@@ -32,7 +32,7 @@ primaryButtonConfig state = let
       { textConfig
       { text = (getString ALLOW_ACCESS)
       , color = Color.primaryButtonColor
-      , textSize = FontSize.a_18}
+      }
       , margin = (Margin 0 0 0 0)
       , cornerRadius = 0.0
       , background = Color.black900

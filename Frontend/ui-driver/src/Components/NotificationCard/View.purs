@@ -82,7 +82,7 @@ notificationCardView push =
                 , width $ V 40
                 ]
             ]
-        , textView
+        , textView $
             [ width MATCH_PARENT
             , height MATCH_PARENT
             , PrestoList.visibilityHolder "previewImage"
@@ -91,8 +91,7 @@ notificationCardView push =
             , cornerRadius 4.0
             , color Color.white900
             , background Color.black9000
-            , textSize FontSize.a_20
-            ]
+            ] <> FontStyle.body12 LanguageStyle
         , imageView
             [ width MATCH_PARENT
             , height $ V 159
@@ -168,15 +167,13 @@ descriptionView push =
     , margin $ MarginTop 5
     , PrestoList.visibilityHolder "descriptionVisibility"
     ]
-    [ textView
+    [ textView $
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , PrestoList.textFromHtmlHolder "description"
         , ellipsize true
         , maxLines 2
-        , textSize FontSize.a_14
-        , fontStyle $ FontStyle.regular LanguageStyle
-        ]
+        ] <> FontStyle.paragraphText LanguageStyle
     ]
 
 actionAndCount :: forall w. (NotificationsScreen.Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -187,33 +184,29 @@ actionAndCount push =
     , margin $ MarginTop 5
     , gravity CENTER_VERTICAL
     ]
-    [ textView
+    [ textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , color Color.blue900
         , PrestoList.textHolder "action1Text"
         , PrestoList.visibilityHolder "action1Visibility"
-        , fontStyle $ FontStyle.semiBold LanguageStyle
         , padding $ Padding 0 5 5 5
-        , textSize FontSize.a_14
         , PrestoList.onClickHolder push $ NotificationsScreen.NotificationCardClick <<< Action1Click
-        ]
+        ] <> FontStyle.body6 TypoGraphy
     , linearLayout
         [ height WRAP_CONTENT
         , weight 1.0
         ]
-        [ textView
+        [ textView $
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , color Color.blue900
             , margin $ MarginLeft 10
-            , textSize FontSize.a_14
             , PrestoList.textHolder "action2Text"
-            , fontStyle $ FontStyle.semiBold LanguageStyle
             , PrestoList.visibilityHolder "action2Visibility"
             , padding $ Padding 5 5 5 5
             , PrestoList.onClickHolder push $ NotificationsScreen.NotificationCardClick <<< Action2Click
-            ]
+            ] <> FontStyle.body6 TypoGraphy
         ]
     , counterView push
     ]

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tip_included"> pourboire inclus!</string>
+    <string name="ride_rejected"> Course rejetée</string>
+    <string name="request"> Demande </string>
+    <string name="decline">Déclin</string>
+    <string name="pickup">Ramasser</string>
+    <string name="trip"> Voyage </string>
+    <string name="new_ride_assigned"> Nouveau trajet attribué </string>
+    <string name="waiting_for_customer_response">En attente de réponse client </string>
+    <string name="sending_request_to_customer"> Envoi de la demande au client </string>
+    <string name="ride_assigned">Balade qui vous est attribuée !</string>
+    <string name="ride_cancelled">Course annulée </string>
+    <string name="please_allow_permission_to_capture_the_image">Veuillez autoriser les autorisations pour capturer limage</string>
+    <string name="we_have_updated_your_app_kindly_relaunch">Nous avons mis à jour votre application, lapplication va se recharger maintenant.</string>
+    <string name="okay_got_it">OK, jai compris </string>
+    <string name="upload_image">Télécharger limage</string>
+    <string name="not_interested">Pas intéressé</string>
+    <string name="too_far">Trop loin</string>
+    <string name="accept_offer">Accepter loffre</string>
+    <string name="on_another_ride">Sur un autre tour</string>
+    <string name="extra">Supplémentaire</string>
+    <string name="open_settings">1. Ouvrez les paramètres</string>
+    <string name="tap_on_permission">2. Appuyez sur Autorisations</string>
+    <string name="required_permission">3. Appuyez sur lautorisation requise</string>
+    <string name="select_allow">4. Sélectionnez Autoriser</string>
+    <string name="tap_on"> 3. Appuyez sur</string>
+    <string name="location">Emplacement</string>
+    <string name="phone"> Téléphone </string>
+    <string name="includes_pickup_charges_10">Comprend les frais de ramassage € 10</string>
+    <string name="away">loin</string>
+    <string name="we_made_you_online">Nous vous avons mis en ligne</string>
+    <string name="location_is_turned_on">La localisation est activée</string>
+    <string name="waiting_for_gps_signal">En attente du signal GPS</string>
+    <string name="your_location_is_being_updated">Votre position est en cours de mise à jour</string>
+    <string name="we_made_you_offline">Nous vous avons mis hors ligne</string>
+    <string name="location_is_turned_off_permission_is_disabled">La localisation est désactivée/lautorisation est désactivée </string>
+    <string name="ride_assigned_to_another_driver">Course attribuée à un autre conducteur </string>
+    <string name="select_date">Sélectionner une date</string>
+    <string name="chatting_is_enabled">Le chat est activé</string>
+    <string name="you_can_now_chat_with_driver">Vous pouvez maintenant discuter avec le chauffeur </string>
+    <string name="you_can_now_chat_with_customer">Vous pouvez maintenant discuter avec le client </string>
+    <string name="new_ride_req">Nouvelle demande de course </string>
+    <string name="new_ride_available_for_offering">Nouveau trajet disponible pour offrir </string>
+    <string name="and">et </string>
+    <string name="no_enabled_browser">Aucun navigateur activé trouvé sur votre appareil, veuillez activer ou installer un navigateur </string>
+</resources>

@@ -15,25 +15,13 @@
 
 module Screens.ChooseLanguageScreen.ScreenData where
 
+import MerchantConfig.DefaultConfig as DC
 import Screens.Types (ChooseLanguageScreenState)
 
 initData :: ChooseLanguageScreenState
 initData = 
   { data: 
-      {
-        languages : [
-        { name : "English"
-        , value : "EN_US"
-        , subTitle : ""
-        },
-        { name : "ಕನ್ನಡ"
-        , value : "KN_IN"
-        , subTitle : "Kannada"
-        },
-        { name : "हिंदी"
-        , value : "HI_IN"
-        , subTitle : "Hindi"
-        }]
+      { config : DC.config
         , isSelected : false
        }
     ,props:

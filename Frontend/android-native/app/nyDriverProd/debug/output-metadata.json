@@ -1,0 +1,20 @@
+{
+  "version": 3,
+  "artifactType": {
+    "type": "APK",
+    "kind": "Directory"
+  },
+  "applicationId": "in.juspay.nammayatripartner.debug",
+  "variantName": "nyDriverProdDebug",
+  "elements": [
+    {
+      "type": "SINGLE",
+      "filters": [],
+      "attributes": [],
+      "versionCode": 100,
+      "versionName": "1.2.9",
+      "outputFile": "app-nyDriver-prod-debug.apk"
+    }
+  ],
+  "elementType": "File"
+}

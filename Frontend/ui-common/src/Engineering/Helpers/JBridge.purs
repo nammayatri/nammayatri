@@ -23,9 +23,9 @@ import Effect.Aff (Fiber)
 import Presto.Core.Flow (Flow)
 import Engineering.Helpers.Commons (liftFlow)
 import Data.Maybe (Maybe(..))
--- import Common.Types.App (Place)
+import Common.Types.App (EventPayload(..))
 -- import Types.APIv2 (Address)
--- import Foreign (Foreign)
+import Foreign (Foreign)
 import Control.Monad.Except (runExcept)
 -- import Data.Maybe (Maybe(..))
 import Data.Generic.Rep (class Generic)
@@ -34,10 +34,20 @@ import Foreign.Class (class Decode, class Encode)
 import Foreign.Generic (decodeJSON)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Data.Either (Either(..))
+import Engineering.Helpers.Commons (screenHeight, screenWidth, flowRunnerWithState, parseFloat)
+import Effect.Uncurried (EffectFn3, EffectFn2, EffectFn1, runEffectFn1, EffectFn5)
+import Data.Maybe (Maybe(..))
+-- import LoaderOverlay.Handler as UI
+-- import Effect.Aff (launchAff)
+-- import Effect.Class (liftEffect)
+-- import PrestoDOM.Core(terminateUI)
+import Presto.Core.Types.Language.Flow
 import Engineering.Helpers.Commons (screenHeight, screenWidth)
-import Helpers.Utils (parseFloat)
 import Data.Int (toNumber)
 import Data.Function.Uncurried (Fn2(..))
+import Effect.Uncurried (EffectFn3, EffectFn2)
+import Data.Function.Uncurried (Fn3, runFn3)
+import Foreign.Class (encode)
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
 -- -- foreign import _createKeyStoreEntry :: String -> String -> (Effect Unit) -> (String -> Effect Unit) -> Effect Unit
@@ -62,7 +72,7 @@ import Data.Function.Uncurried (Fn2(..))
 foreign import showLoaderImpl      :: String -> Effect Unit
 -- foreign import readFile'      :: String -> Effect String
 -- foreign import showLoader'      :: String -> Effect Unit
-foreign import locateOnMap :: Boolean -> Number -> Number -> String-> Array Location -> Unit
+foreign import locateOnMap :: EffectFn5 Boolean Number Number String (Array Location) Unit
 
 foreign import exitLocateOnMap :: String -> Unit
 foreign import shareTextMessage :: String -> String -> Unit
@@ -77,7 +87,7 @@ foreign import getVersionName   :: Effect String
 -- foreign import getManufacturerName :: Unit -> String
 foreign import getAndroidVersion :: Effect Int
 -- foreign import showQrCodeImpl      :: String -> String -> Effect Unit
--- foreign import scanQrCode       :: forall action. String -> (action -> Effect Unit) ->  (String -> action) -> Effect Unit
+-- foreign import scanQrCode       :: forall action. String MerchantConfig.Utils-> (action -> Effect Unit) ->  (String -> action) -> Effect Unit
 -- foreign import timePicker       :: forall action. (action -> Effect Unit) -> (Int -> Int -> action) -> Effect Unit
 foreign import datePicker       :: forall action. String -> (action -> Effect Unit)  -> (Int -> Int -> Int -> action) -> Effect Unit
 foreign import setFCMToken :: forall action. (action -> Effect Unit) -> (String  -> action) -> Effect Unit
@@ -156,18 +166,18 @@ foreign import storeCallBackOpenChatScreen :: forall action. (action -> Effect U
 foreign import sendMessage :: String -> Unit
 foreign import scrollToBottom :: String -> Effect Unit
 foreign import metaLogEvent :: String -> Unit
-foreign import firebaseLogEvent :: String -> Unit
+foreign import firebaseLogEvent :: String -> Effect Unit
 foreign import firebaseLogEventWithParams :: String -> String -> String -> Effect Unit
 foreign import firebaseLogEventWithTwoParams :: String -> String -> String -> String -> String -> Effect Unit
 foreign import firebaseScreenNameLog :: String  -> Effect Unit
 foreign import firebaseUserID :: String  -> Effect Unit
 -- foreign import closeApp       :: String -> Effect Unit
-foreign import storeCallBackDriverLocationPermission :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
+foreign import storeCallBackDriverLocationPermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
 foreign import setStoreCallBackPopUp :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import deletePopUpCallBack :: String -> Unit
 -- foreign import requestLocationPermissionDriver :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
-foreign import storeCallBackOverlayPermission :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
-foreign import storeCallBackBatteryUsagePermission :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
+foreign import storeCallBackOverlayPermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
+foreign import storeCallBackBatteryUsagePermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
 foreign import isInternetAvailable :: Unit -> Effect Boolean
 foreign import storeCallBackInternetAction :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 
@@ -193,6 +203,8 @@ foreign import setCleverTapUserProp :: String -> String -> Unit
 foreign import cleverTapCustomEvent :: String -> Unit 
 foreign import cleverTapCustomEventWithParams :: String -> String -> String -> Effect Unit
 foreign import cleverTapSetLocation :: Unit -> Effect Unit
+
+foreign import emitJOSEvent :: Fn3 String String Foreign Unit
 
 -- -- keyStoreEntryPresent :: String -> Flow Boolean
 -- -- keyStoreEntryPresent = liftFlow <<< _keyStoreEntryPresent
@@ -276,12 +288,6 @@ addMarker title lat lng markerSize anchorV anchorV1 = (addMarkerImpl title lat l
 
 showMap :: forall action. String -> Boolean -> String -> Number -> (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Boolean
 showMap = showMapImpl --liftFlow (showMapImpl id mapType)
-
-toggleLoader :: forall st. Boolean -> Flow st Unit
-toggleLoader flag = liftFlow (toggleLoaderImpl flag)
-
-loaderText :: forall st. String -> String -> Flow st Unit
-loaderText mainTxt subTxt = liftFlow (loaderTextImpl mainTxt subTxt)
 
 -- loader :: Boolean -> Maybe LoaderMessage -> Flow GlobalState Unit
 -- loader flag message = do
@@ -375,3 +381,14 @@ fromMetersToKm :: Int -> String
 fromMetersToKm distanceInMeters
   | distanceInMeters >= 1000 = parseFloat (toNumber distanceInMeters / 1000.0) 1 <> " km"
   | otherwise = show distanceInMeters <> " m"
+
+hideLoader :: Unit ->  Effect Unit
+hideLoader _ = do
+  pure $ runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload {
+    event : "hide_loader"
+  , payload : Just {
+    action : "terminate"
+  , trip_amount : Nothing
+  , trip_id : Nothing
+  }
+}

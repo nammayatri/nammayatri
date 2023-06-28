@@ -87,8 +87,9 @@ const malayalamStrings = {
   "LANGUAGE": "ഭാഷ",
   "OTP": "OTP",
   "PAYMENT_METHOD": "പണമടയ്ക്കൽ രീതി",
-  "PAYMENT_METHOD_STRING": "ക്യാഷ് / യുപിഐ ",
-  "CANCEL_RIDE": "സവാരി റദ്ദാക്കുക",
+  "PAYMENT_METHOD_STRING": "പണം / UPI ആപ്പ് ഉപയോഗിക്കുക",
+  "PAYMENT_METHOD_STRING_": "പണം / UPI ആപ്പ് ഉപയോഗിക്കുക",
+  "CANCEL_RIDE": "എന്റെ റൈഡ് റദ്ദാക്കുക",
   "SUPPORT": "സപ്പോർട്ട്",
   "PICKUP_AND_DROP": "പിക്കപ്പ്, ഡ്രോപ്പ്",
   "CANCELLED": "റദ്ദാക്കി",
@@ -242,6 +243,7 @@ const malayalamStrings = {
   "RATE_YOUR_RIDE_WITH": "- ഉം ആയുള്ള താങ്കളുടെ സവാരി റേറ്റ് ചെയ്യൂ",
   "VIEW_BREAKDOWN": "വിഘടിച്ചു കാണുക",
   "PAY_DRIVER_USING_CASH_OR_UPI": "ക്യാഷ്/യുപിഐ ഉപയോഗിച്ച് ഡ്രൈവർക്ക് പണം നൽകുക",
+  "PAY_DRIVER_USING_CASH_OR_UPI_": "ക്യാഷ്/യുപിഐ ഉപയോഗിച്ച് ഡ്രൈവർക്ക് പണം നൽകുക",
   "RATE_YOUR_DRIVER": "റേറ്റ് ചെയ്യുക",
   "MY_RIDES": "എന്റെ റൈഡുകൾ",
   "RIDE_DETAILS": "റൈഡിന്റെ വിശദാംശങ്ങൾ",
@@ -475,5 +477,6 @@ const malayalamStrings = {
   "IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL" : "ഇതിന് പതിവിലും കൂടുതൽ സമയമെടുക്കുന്നതായി തോന്നുന്നു.",
   "CONTINUE_SEARCH_WITH" : "ഉപയോഗിച്ച് തിരയൽ തുടരുക",
   "CONTINUING_SEARCH_WITH" : "ഉപയോഗിച്ച് തിരയൽ തുടരുന്നു",
-  "SEARCHING_WITH" : "ഉപയോഗിച്ച് തിരയുന്നു"
+  "SEARCHING_WITH" : "ഉപയോഗിച്ച് തിരയുന്നു",
+  "PLATFORM_FEE" : "പ്ലാറ്റ്ഫോം ഫീസ്"
 }
