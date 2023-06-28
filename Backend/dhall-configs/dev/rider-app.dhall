@@ -145,6 +145,10 @@ in  { esqDBCfg
     , searchLimitExceedNotificationTemplate =
         "Customer with {#cust-id#} is exceeding the search limit."
     , httpClientOptions = common.httpClientOptions
+    , blockRadius = +10
+    , hotSpotGeoHashPrecision = +8
+    , maxRadiusToShowHotSpots = +2000000
+    , minFrequencyOfHotSpot = +2
     , shortDurationRetryCfg = common.shortDurationRetryCfg
     , longDurationRetryCfg = common.longDurationRetryCfg
     , authTokenCacheExpiry = +600

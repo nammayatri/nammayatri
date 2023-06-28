@@ -60,6 +60,7 @@ library
       API.UI.Feedback
       API.UI.Frontend
       API.UI.GoogleTranslate
+      API.UI.HotSpot
       API.UI.Maps
       API.UI.Payment
       API.UI.Profile
@@ -118,6 +119,7 @@ library
       Domain.Action.UI.CustomerSupport
       Domain.Action.UI.Feedback
       Domain.Action.UI.Frontend
+      Domain.Action.UI.HotSpot
       Domain.Action.UI.Maps
       Domain.Action.UI.Payment
       Domain.Action.UI.Profile
@@ -153,6 +155,7 @@ library
       Domain.Types.FarePolicy.FareBreakup
       Domain.Types.FarePolicy.FareProductType
       Domain.Types.Geometry
+      Domain.Types.HotSpot
       Domain.Types.Issue
       Domain.Types.LocationAddress
       Domain.Types.Maps.PlaceNameCache
@@ -191,6 +194,7 @@ library
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.Exophone
+      Storage.CachedQueries.Maps.LocationMapCache
       Storage.CachedQueries.Maps.PlaceNameCache
       Storage.CachedQueries.Merchant
       Storage.CachedQueries.Merchant.MerchantMessage

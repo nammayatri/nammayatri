@@ -136,6 +136,7 @@ oneWaySearch ::
     HasShortDurationRetryCfg r c,
     CoreMetrics m,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
+    HasFlowEnv m r '["hotSpotGeoHashPrecision" ::: Int],
     HasBAPMetrics m r,
     MonadProducer PublicTransportSearch m
   ) =>

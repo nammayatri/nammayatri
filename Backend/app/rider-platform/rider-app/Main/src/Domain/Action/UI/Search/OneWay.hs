@@ -21,10 +21,13 @@ module Domain.Action.UI.Search.OneWay
   )
 where
 
+import Control.Monad
+import Domain.Action.UI.HotSpot
 import qualified Domain.Action.UI.Search.Common as DSearch
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.SearchRequest as DSearchReq
+import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Serviceability
 import qualified Kernel.Storage.Esqueleto as DB
@@ -41,6 +44,7 @@ import qualified Storage.CachedQueries.MerchantConfig as QMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import Storage.Queries.Geometry
 import qualified Storage.Queries.Person as QP
+import Storage.Queries.SavedReqLocation
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 import qualified Tools.Maps as Maps
@@ -49,7 +53,8 @@ import qualified Tools.Metrics as Metrics
 
 data OneWaySearchReq = OneWaySearchReq
   { origin :: DSearch.SearchReqLocation,
-    destination :: DSearch.SearchReqLocation
+    destination :: DSearch.SearchReqLocation,
+    isSourceManuallyMoved :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -71,6 +76,7 @@ oneWaySearch ::
     EncFlow m r,
     EsqDBReplicaFlow m r,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
+    HasFlowEnv m r '["hotSpotGeoHashPrecision" ::: Int],
     HedisFlow m r,
     EsqDBFlow m r,
     HedisFlow m r,
@@ -86,7 +92,9 @@ oneWaySearch ::
 oneWaySearch personId req bundleVersion clientVersion device = do
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   merchant <- QMerc.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
-
+  mbFavourite <- findByLatLon req.origin.gps
+  let shouldUpdateCache = fromMaybe False req.isSourceManuallyMoved || isJust mbFavourite
+  Control.Monad.when shouldUpdateCache $ frequencyUpdator req.origin.gps
   validateServiceability merchant.geofencingConfig
 
   let sourceLatlong = req.origin.gps

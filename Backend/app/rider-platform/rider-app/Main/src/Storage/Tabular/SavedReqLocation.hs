@@ -47,6 +47,7 @@ mkPersist
       tag  Text
       riderId Person.PersonTId
       ward Text Maybe
+      isMoved Bool Maybe
       Primary id
       deriving Generic
     |]
