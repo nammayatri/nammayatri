@@ -501,5 +501,8 @@ const kannadaStrings = {
   WAIT_TIME : "ಕಾಯುವ ಸಮಯ",
   WAIT_TIMER : "ಟೈಮರ್ ನಿರೀಕ್ಷಿಸಿ",
   HOW_LONG_WAITED_FOR_PICKUP : "ಪಿಕಪ್‌ನಲ್ಲಿ ನೀವು ಎಷ್ಟು ಸಮಯ ಕಾಯುತ್ತಿದ್ದೀರಿ ಎಂಬುದನ್ನು ತೋರಿಸುತ್ತದೆ.",
-  CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "ಗ್ರಾಹಕರು \nಮೊದಲ 3 ನಿಮಿಷಗಳ ನಂತರ ಪ್ರತಿ ನಿಮಿಷ ಕಾಯುವ ಸಮಯಕ್ಕೆ ₹1.5\n ಪಾವತಿಸುತ್ತಾರೆ."
+  CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "ಗ್ರಾಹಕರು \nಮೊದಲ 3 ನಿಮಿಷಗಳ ನಂತರ ಪ್ರತಿ ನಿಮಿಷ ಕಾಯುವ ಸಮಯಕ್ಕೆ ₹1.5\n ಪಾವತಿಸುತ್ತಾರೆ.",
+  OTHERS : "ಇತರರು",
+  ENTER_SECOND_SIM_NUMBER : "ಎರಡನೇ ಸಿಮ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ",
+  ALTERNATE_NUMBER : "ಪರ್ಯಾಯ ಸಂಖ್ಯೆ"
 }

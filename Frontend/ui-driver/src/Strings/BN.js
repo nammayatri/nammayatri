@@ -503,6 +503,9 @@ const bengaliStrings = {
 	SOMETHING_WENT_WRONG_TRY_AGAIN_LATER : "কিছু প্রযুক্তিগত সমস্যা হয়েছে, অনুগ্রহ করে পরে আবার চেষ্টা করুন",
 	WAIT_TIME : "অপেক্ষার সময়",
 	WAIT_TIMER : "টাইমার অপেক্ষা করুন",
-    HOW_LONG_WAITED_FOR_PICKUP : "আপনি পিকআপে কতক্ষণ অপেক্ষা করেছেন তা দেখায়।",
-    CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "গ্রাহক ₹1.5\nপ্রথম 3 মিনিটের পর প্রতি মিনিট অপেক্ষার জন্য প্রদান করবেন"
+  HOW_LONG_WAITED_FOR_PICKUP : "আপনি পিকআপে কতক্ষণ অপেক্ষা করেছেন তা দেখায়।",
+  CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "গ্রাহক ₹1.5\nপ্রথম 3 মিনিটের পর প্রতি মিনিট অপেক্ষার জন্য প্রদান করবেন",
+	OTHERS : "অন্যান্য",
+	ENTER_SECOND_SIM_NUMBER : "দ্বিতীয় সিম নম্বর লিখুন",
+	ALTERNATE_NUMBER : "বিকল্প নম্বর"
 	}

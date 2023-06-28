@@ -41,8 +41,8 @@ import Language.Types (STR(..))
 import Prelude (Unit, ($), const, map, (==), (||), (/), unit, bind, (-), (<>), (<=),(<<<), pure, discard, show, (&&), void, negate, not)
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, scrollBarY)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout)
-import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke)
+import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle, checkGenderSelect, getGenderName)
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(..), optionList)
 import Screens.Types as ST
 import Services.API (GetDriverInfoReq(..), GetDriverInfoResp(..))
@@ -59,7 +59,10 @@ import Components.GenericHeader.View as GenericHeader
 import Components.PrimaryEditText.View as PrimaryEditText
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import PrestoDOM.Properties (cornerRadii)
-
+import Components.PrimaryButton as PrimaryButton
+import Components.PrimaryEditText as PrimaryEditText
+import Components.InAppKeyboardModal.View as InAppKeyboardModal
+import Components.InAppKeyboardModal.Controller as InAppKeyboardModalController
 
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
@@ -104,7 +107,10 @@ view push state =
         , visibility if state.props.logoutModalView == true then VISIBLE else GONE
         ][ PopUpModal.view (push <<<PopUpModalAction) (logoutPopUp state) ]
       , if state.props.showLiveDashboard then showLiveStatsDashboard push state else dummyTextView 
-      , if state.props.updateDetails then updateDetailsView state push else dummyTextView]
+      , if state.props.updateDetails then updateDetailsView state push else dummyTextView
+      , if state.props.showGenderView || state.props.alternateNumberView then driverNumberGenderView state push else dummyTextView
+      , if state.props.removeAlternateNumber then PopUpModal.view (push <<<  RemoveAlternateNumberAC) (removeAlternateNumberConfig state ) else dummyTextView
+      , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView]
 
 profileView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w 
 profileView push state = 
@@ -538,6 +544,7 @@ detailsView state push config =
                 [ height $ V 11
                 , width $ V 11
                 , margin $ MarginLeft 7
+                , onClick push $ const item.action
                 , imageWithFallback "ic_edit_pencil,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left.png"
                 ]]  else [])
           , linearLayout
@@ -549,13 +556,171 @@ detailsView state push config =
             ]
         ) (config.arrayList))
 
+genderOptionsArray :: ST.DriverProfileScreenState ->  Array {text :: String , value :: ST.Gender}
+genderOptionsArray _ =
+  [ {text : (getString FEMALE) , value : ST.FEMALE}
+  , {text : (getString MALE) , value : ST.MALE}
+  , {text : (getString OTHER) , value : ST.OTHER}
+  , {text : (getString PREFER_NOT_TO_SAY) , value : ST.PREFER_NOT_TO_SAY}
+  ]
+
+driverNumberGenderView :: ST.DriverProfileScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+driverNumberGenderView state push=
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , visibility VISIBLE
+  , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
+  , background Color.white900
+  , clickable true
+  ][
+    GenericHeader.view (push <<< DriverGenericHeaderAC) (driverGenericHeaderConfig state)
+  , linearLayout
+    [ height $ V 1
+    , width MATCH_PARENT
+    , background Color.grey900
+    , margin $ MarginTop 2
+    ][]
+  , textView[
+      width MATCH_PARENT
+    , height WRAP_CONTENT
+    , text $ if state.props.showGenderView then getString SELECT_YOUR_GENDER else getString ENTER_SECOND_SIM_NUMBER
+    , margin $ Margin 10 15 0 0
+    , color Color.black800
+    , textSize if state.props.showGenderView then FontSize.a_16 else FontSize.a_12
+    ]
+  , if state.props.showGenderView then genderProfileLayoutView state push else alternateNumberLayoutView state push
+  , linearLayout 
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , margin $ MarginBottom 10
+    , gravity BOTTOM
+    , orientation VERTICAL
+    ]
+    [
+      linearLayout
+      [ height $ V 1
+      , width MATCH_PARENT
+      , background Color.grey900
+      , margin $ MarginBottom 16
+      ][]
+    , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)]
+    ]
+
+genderProfileLayoutView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+genderProfileLayoutView state push = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  ][ 
+    linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , margin $ MarginHorizontal 10 10
+    ](map(\item -> showMenuButtonView state push item.text item.value)(genderOptionsArray state))
+  ]
+
+showMenuButtonView :: ST.DriverProfileScreenState -> forall w. (Action -> Effect Unit) -> String -> ST.Gender -> PrestoDOM (Effect Unit) w
+showMenuButtonView state push genderName genderType=
+  linearLayout
+  [ width $ MATCH_PARENT
+  , height $ V 56
+  , gravity CENTER
+  , margin $ (Margin 0 10 0 10)
+  , background if checkGenderSelect state.data.genderTypeSelect genderType then Color.blue600 else Color.white900
+  , stroke if checkGenderSelect state.data.genderTypeSelect genderType then ("1," <> Color.blue900) else ("1," <> Color.grey700)
+  , cornerRadius 6.0
+  , onClick push (const $ CheckBoxClick genderType)
+  ][ linearLayout
+      [ height $ V 20
+      , width $ V 20
+      , stroke if checkGenderSelect state.data.genderTypeSelect genderType then ("2," <> Color.black800) else ("2," <> Color.black600)
+      , cornerRadius 10.0
+      , gravity CENTER
+      , margin $ MarginLeft 10
+      ][  imageView
+          [ width $ V 10
+          , height $ V 10
+          , imageWithFallback "ny_ic_radio_button,https://assets.juspay.in/nammayatri/images/common/ny_ic_radio_button.png"
+          , visibility if checkGenderSelect state.data.genderTypeSelect genderType then VISIBLE else GONE
+          ]
+        ]
+    , textView
+      [ text genderName
+      , textSize FontSize.a_14
+      , width MATCH_PARENT
+      , gravity CENTER_VERTICAL
+      , color if checkGenderSelect state.data.genderTypeSelect genderType then Color.black900 else Color.black700
+      , height WRAP_CONTENT
+      , margin (MarginHorizontal 10 10)
+      , fontStyle $ FontStyle.regular LanguageStyle
+      ]
+  ]
+
+alternateNumberLayoutView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+alternateNumberLayoutView state push = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  ][ 
+    if state.data.alterNumberEditableText then
+      linearLayout[
+        width MATCH_PARENT
+      , height WRAP_CONTENT
+      , stroke ("1," <> Color.grey900)
+      , margin $ Margin 10 10 10 10
+      , padding $ Padding 16 20 16 20
+      , cornerRadius 8.0
+      ][
+        textView[
+          height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text $ "+91 " <> fromMaybe "" state.data.driverAlternateNumber
+        , color Color.black800
+        ],
+        linearLayout[
+          width MATCH_PARENT
+        , height WRAP_CONTENT
+        , gravity RIGHT
+        ][
+          textView[
+            height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text $ getString EDIT
+          , color Color.blue900
+          , onClick push $ const $ EditNumberText 
+          ],
+          textView[
+            height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text $ getString REMOVE
+          , color Color.blue900
+          , margin $ MarginHorizontal 10 10
+          , onClick push $ const $ RemoveAlterNumber 
+          ]
+        ]
+      ]
+    else 
+      linearLayout [
+        height WRAP_CONTENT,
+        width MATCH_PARENT
+      ] 
+      [PrimaryEditText.view (push <<< PrimaryEditTextActionController) (alternatePrimaryEditTextConfig state)]
+  ]
+
+enterOtpModal :: forall w . (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+enterOtpModal push state =
+  InAppKeyboardModal.view (push <<< InAppKeyboardModalOtp) (enterOtpState state)
 
 driverDetailsArray :: forall w. ST.DriverProfileScreenState -> Array {key :: String , value :: Maybe String , action :: Action, isEditable :: Boolean}
 driverDetailsArray state = [
     { key : "Name" , value : Just "Rammoorthy Parashuram" , action : NoAction , isEditable : false }
   , { key : "Mobile Number" , value : Just "9988776655" , action : NoAction , isEditable : false }
-  , { key : "Alternate Number" , value : Just "state.data.driverAlternateNumber" , action : if (isJust state.data.driverAlternateNumber) then NoAction else UpdateValue "Alternate Number" , isEditable : true}
-  , { key : "Gender" , value : Nothing , action : if (isJust state.data.gender) then NoAction else UpdateValue "Gender" , isEditable : true } ]
+  , { key : "Alternate Number" , value : state.data.driverAlternateNumber , action : UpdateAlternateNumber , isEditable : true}
+  , { key : "Gender" , value : (getGenderName state.data.driverGender) , action : SelectGender , isEditable : true } ]
 
 
 autoDetailsArray :: forall w. ST.DriverProfileScreenState -> Array {key :: String , value :: Maybe String , action :: Action, isEditable :: Boolean}

@@ -503,5 +503,8 @@ const englishStrings = {
   WAIT_TIME : "Wait Time",
   WAIT_TIMER : "Wait Timer",
   HOW_LONG_WAITED_FOR_PICKUP : "Shows you how long you\nhave waited at pickup.",
-  CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "The customer will pay ₹1.5\nfor every minute of wait time after \nfirst 3 minutes"
+  CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE : "The customer will pay ₹1.5\nfor every minute of wait time after \nfirst 3 minutes",
+  OTHERS : "Others",
+  ENTER_SECOND_SIM_NUMBER : "Enter Second SIM Number",
+  ALTERNATE_NUMBER : "Alternate Number"
 }
