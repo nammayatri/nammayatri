@@ -495,5 +495,6 @@ const kannadaStrings = {
   "CONTINUING_SEARCH_WITH" : "ಇದರೊಂದಿಗೆ ಹುಡುಕಾಟವನ್ನು ಮುಂದುವರಿಸಲಾಗುತ್ತಿದೆ",
   "SEARCHING_WITH" : "ಇದರೊಂದಿಗೆ ಹುಡುಕಲಾಗುತ್ತಿದೆ",
   "THE_DRIVER_PREFERRED_YOUR_SPECIAL_LOCATION_AND_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ಚಾಲಕರು ನಿಮ್ಮ ನಿರ್ದಿಷ್ಟ ಸ್ಥಳಕ್ಕೆ ಆದ್ಯತೆ ನೀಡಿದ್ದಾರೆ ಮತ್ತು ನಿಮ್ಮ ಸ್ಥಳಕ್ಕೆ ಹೋಗುತ್ತಿದ್ದಾರೆ.",
-  "DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ಚಾಲಕ ನಿಮ್ಮ ಸ್ಥಳಕ್ಕೆ ಹೋಗುತ್ತಿದ್ದಾರೆ."
+  "DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ಚಾಲಕ ನಿಮ್ಮ ಸ್ಥಳಕ್ಕೆ ಹೋಗುತ್ತಿದ್ದಾರೆ.",
+  "ALLOW_LOCATION_ACCESS": "ಸ್ಥಳ ಪ್ರವೇಶವನ್ನು ಅನುಮತಿಸಿ"
 }

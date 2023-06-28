@@ -478,5 +478,5 @@ const bengaliStrings = {
   "CONTINUING_SEARCH_WITH" : "সঙ্গে অনুসন্ধান অব্যাহত",
   "SEARCHING_WITH" : "সঙ্গে অনুসন্ধান",
   "THE_DRIVER_PREFERRED_YOUR_SPECIAL_LOCATION_AND_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ড্রাইভার আপনার বিশেষ অবস্থান পছন্দ করেছে এবং ইতিমধ্যেই আপনার অবস্থানের পথে রয়েছে৷",
-
+  "ALLOW_LOCATION_ACCESS": "অবস্থান অ্যাক্সেসের অনুমতি দিন"
 }

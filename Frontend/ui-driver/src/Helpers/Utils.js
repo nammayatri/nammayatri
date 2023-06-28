@@ -580,18 +580,17 @@ export const getImageUrl = function (url) {
   }
 };
 
-export const getZoneTagConfig = function (key){
-  return function(zoneType){
-    if (zoneType in zoneConfig){
-      var zoneOb = zoneConfig[zoneType];
-      if(key in zoneOb){
-        return zoneOb[key];
-      }
-      console.error("no value found for key "+ key);
+export const getZoneTagConfig = function (just, nothing, key, zoneType){
+  if (zoneType in zoneConfig){
+    var zoneOb = zoneConfig[zoneType];
+    if(key in zoneOb){
+      var prop = zoneOb[key]
+      return just(prop);
     }
-    console.error("no value found for key "+ zoneType);
-    return "";
+    console.error("No value found for key "+ key);
   }
+  console.error("No value found for key "+ zoneType);
+  return nothing;
 }
 
 const zoneConfig = {

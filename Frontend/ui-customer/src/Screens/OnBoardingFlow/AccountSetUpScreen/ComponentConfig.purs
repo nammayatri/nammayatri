@@ -40,7 +40,7 @@ primaryButtonConfig state =
 
     primaryButtonConfig' =
       config
-        { textConfig { text = (getString CONTINUE) }
+        { textConfig { text = "Let’s go!" }
         , isClickable = state.props.btnActive
         , alpha = if state.props.btnActive then 1.0 else 0.4
         , margin = (Margin 0 0 0 0)

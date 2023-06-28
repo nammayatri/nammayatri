@@ -23,10 +23,10 @@ import Effect (Effect)
 import Effect.Unsafe (unsafePerformEffect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (countDown, getSpecialZoneConfig)
+import Helpers.Utils (countDown, getSpecialZoneConfig, getRequiredTag)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, not, pure, show, unit, ($), (/=), (<>), (&&), (==), (-), (>))
+import Prelude (Unit, bind, const, not, pure, show, unit, ($), (/=), (<>), (&&), (==), (-), (>), (||))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), alpha, background, clickable, color, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, width, imageWithFallback, fontSize)
 import PrestoDOM.Properties (cornerRadii, cornerRadius)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -53,7 +53,8 @@ view push config =
        , callButton push config
        , openGoogleMap push config 
       ]
-    , if config.specialLocationTag == Maybe.Nothing then rideActionView push config else rideActionViewWithZone push config
+    , if config.specialLocationTag == Maybe.Nothing || (getRequiredTag "text" config.specialLocationTag) == Maybe.Nothing
+        then rideActionView push config else rideActionViewWithZone push config
     ]
 
 messageButton :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -174,7 +175,6 @@ rideActionView push config =
   , padding $ PaddingTop 6
   , gravity CENTER
   , stroke $ "1," <> Color.grey800
-  , visibility if config.specialLocationTag == Maybe.Nothing then VISIBLE else GONE
   ][  rideActionDataView push config
     , linearLayout
       [ width MATCH_PARENT

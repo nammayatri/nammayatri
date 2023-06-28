@@ -503,5 +503,6 @@ const hindiStrings = {
   "CONTINUING_SEARCH_WITH" : "से तलाश जारी है",
   "SEARCHING_WITH" : "से खोज रहे हैं",
   "THE_DRIVER_PREFERRED_YOUR_SPECIAL_LOCATION_AND_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ड्राइवर ने आपके विशेष स्थान को प्राथमिकता दी और वह आपके स्थान के रास्ते पर है।",
-  "DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ड्राइवर आपके स्थान के रास्ते पर है।"
+  "DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ड्राइवर आपके स्थान के रास्ते पर है।",
+  "ALLOW_LOCATION_ACCESS": "स्थान पहुंच की अनुमति दें"
 }
