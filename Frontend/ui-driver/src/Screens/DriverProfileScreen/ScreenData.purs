@@ -46,15 +46,30 @@ initData = {
     capacity : 0,
     vehicleSelected: [],
     downgradeOptions : [],
-    gender : Nothing
+    genderTypeSelect : Nothing,
+    alterNumberEditableText : false,
+    driverEditAlternateMobile : Nothing,
+    otpLimit : 5,
+    otpBackAlternateNumber : Nothing
     },
-
   props: {
     logoutModalView: false,
     showLiveDashboard : false,
     screenType : DRIVER_DETAILS,
     openSettings : false,
-    updateDetails : true
+    updateDetails : false,
+    showGenderView : false,
+    alternateNumberView : false,
+    removeAlternateNumber : false,
+    enterOtpModal : false,
+    checkAlternateNumber : true,
+    otpAttemptsExceeded: false,
+    enterOtpFocusIndex : 0,
+    otpIncorrect : false,
+    alternateMobileOtp : "",
+    isEditAlternateMobile : false,
+    numberExistError : false,
+    mNumberEdtFocused : false
    }
 }
 

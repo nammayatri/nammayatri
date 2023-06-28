@@ -253,8 +253,12 @@ type DriverProfileScreenData = {
   capacity :: Int,
   downgradeOptions :: Array String,
   vehicleSelected :: Array VehicleP,
-  driverGender :: Maybe String
-  gender :: Maybe String
+  driverGender :: Maybe String,
+  genderTypeSelect :: Maybe String,
+  alterNumberEditableText :: Boolean,
+  driverEditAlternateMobile :: Maybe String,
+  otpLimit :: Int,
+  otpBackAlternateNumber :: Maybe String
 }
 
 type VehicleP = {
@@ -267,8 +271,21 @@ type DriverProfileScreenProps = {
   showLiveDashboard :: Boolean,
   screenType :: DriverProfileScreenType,
   openSettings :: Boolean,
-  updateDetails :: Boolean
+  updateDetails :: Boolean,
+  showGenderView :: Boolean,
+  alternateNumberView :: Boolean,
+  removeAlternateNumber :: Boolean,
+  enterOtpModal :: Boolean,
+  enterOtpFocusIndex :: Int,
+  otpIncorrect :: Boolean,
+  otpAttemptsExceeded :: Boolean,
+  alternateMobileOtp :: String,
+  checkAlternateNumber :: Boolean,
+  isEditAlternateMobile :: Boolean,
+  numberExistError :: Boolean,
+  mNumberEdtFocused :: Boolean
 }
+data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
 data DriverProfileScreenType = DRIVER_DETAILS | AUTO_DETAILS | SETTINGS
 

@@ -48,6 +48,7 @@ topLabelView config =
     , singleLine true
     , margin config.topLabel.margin
     , alpha config.topLabel.alpha
+    , visibility config.topLabel.visibility
     ]  
 
 
