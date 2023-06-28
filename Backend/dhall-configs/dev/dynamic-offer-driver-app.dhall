@@ -20,6 +20,24 @@ let esqDBReplicaCfg =
       , connectSchemaName = esqDBCfg.connectSchemaName
       }
 
+let esqLocationDBCfg =
+      { connectHost = "localhost"
+      , connectPort = 5454
+      , connectUser = sec.locDBUserId
+      , connectPassword = sec.dbPassword
+      , connectDatabase = "atlas_dev_loc"
+      , connectSchemaName = "atlas_person_location"
+      }
+
+let esqLocationDBRepCfg =
+      { connectHost = esqLocationDBCfg.connectHost
+      , connectPort = 5454
+      , connectUser = esqLocationDBCfg.connectUser
+      , connectPassword = esqLocationDBCfg.connectPassword
+      , connectDatabase = esqLocationDBCfg.connectDatabase
+      , connectSchemaName = esqLocationDBCfg.connectSchemaName
+      }
+
 let clickhouseCfg =
       { username = sec.clickHouseUsername
       , host = "xxxxx"
@@ -83,6 +101,8 @@ let kafkaProducerCfg = { brokers = [ "localhost:29092" ] }
 
 in  { esqDBCfg
     , esqDBReplicaCfg
+    , esqLocationDBCfg
+    , esqLocationDBRepCfg
     , clickhouseCfg
     , hedisCfg = rcfg
     , hedisClusterCfg = rccfg
@@ -140,4 +160,6 @@ in  { esqDBCfg
     , maxShards = +5
     , enableRedisLatencyLogging = False
     , enablePrometheusMetricLogging = True
+    , enableAPILatencyLogging = True
+    , enableAPIPrometheusMetricLogging = True
     }

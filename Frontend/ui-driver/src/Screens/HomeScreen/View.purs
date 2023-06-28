@@ -268,35 +268,6 @@ alternateNumberOrOTPView state push =
         ]
       ]
 
-genderBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-genderBannerView state push = 
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , margin (Margin 10 10 10 10)
-    , gravity BOTTOM
-    , visibility GONE
-    ][     
-    linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , gravity RIGHT
-      ][  
-        imageView
-        [
-          height $ V 24
-        , width $ V 24
-        , gravity RIGHT
-        , margin (MarginRight 4)
-        , onClick push (const RemoveGenderBanner)
-        , imageWithFallback "ny_ic_grey_cross,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_grey_cross_icon.png"
-        ]
-        , genderBanner push state
-      ]
-    ]
-
 otpButtonView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
 otpButtonView state push =
   linearLayout

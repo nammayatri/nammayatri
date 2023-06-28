@@ -16,7 +16,7 @@
 module Components.SelectListModal.View where
 
 import Prelude
-import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Length(..), PrestoDOM, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, text, textSize, textView, weight, width, padding, visibility, frameLayout, stroke, scrollView, afterRender, editText, onClick, id, onChange, pattern, relativeLayout, alignParentBottom, adjustViewWithKeyboard, singleLine, hint, hintColor, multiLineEditText, disableClickFeedback, imageWithFallback )
+import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Length(..), PrestoDOM, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, text, textSize, textView, weight, width, padding, visibility, frameLayout, stroke, scrollView, afterRender, editText, onClick, id, onChange, pattern, relativeLayout, alignParentBottom, adjustViewWithKeyboard, singleLine, hint, hintColor, multiLineEditText, disableClickFeedback, imageWithFallback,onBackPressed )
 import Effect (Effect)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Gravity(..), Corners(..))
@@ -68,6 +68,7 @@ view push config =
           , orientation VERTICAL
           , background Color.white900
           , padding (Padding 20 20 20 0)
+          , onBackPressed push (const OnGoBack)
           ][  headingText config push ,
               optionListView push config
            ]

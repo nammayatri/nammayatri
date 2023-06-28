@@ -32,10 +32,13 @@ import Environment (Flow)
 import EulerHS.Prelude
 import Kernel.External.Maps.HasCoordinates
 import Kernel.External.Maps.Types
+import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow)
+import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.DatastoreLatencyCalculator
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import qualified Lib.LocationUpdates as LocUpd
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
@@ -84,7 +87,7 @@ buildStartRideHandle merchantId = do
       }
 
 driverStartRide ::
-  (MonadThrow m, Log m) =>
+  (MonadThrow m, Log m, EsqLocDBFlow m r, MonadTime m, CoreMetrics m, Monad m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverStartRideReq ->
@@ -95,7 +98,7 @@ driverStartRide handle rideId req =
     $ DriverReq req
 
 dashboardStartRide ::
-  (MonadThrow m, Log m) =>
+  (MonadThrow m, Log m, EsqLocDBFlow m r, MonadTime m, CoreMetrics m, Monad m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardStartRideReq ->
@@ -106,7 +109,7 @@ dashboardStartRide handle rideId req =
     $ DashboardReq req
 
 startRide ::
-  (MonadThrow m, Log m) =>
+  (MonadThrow m, Log m, EsqLocDBFlow m r, MonadTime m, CoreMetrics m, Monad m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   StartRideReq ->
@@ -142,9 +145,9 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
           pure $ getCoordinates driverLocation
 
   whenWithLocationUpdatesLock driverId $ do
-    startRideAndUpdateLocation driverId ride.id booking.id point booking.providerId
-    initializeDistanceCalculation ride.id driverId point
-    notifyBAPRideStarted booking ride
+    withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId ride.id booking.id point booking.providerId
+    withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation ride.id driverId point
+    withTimeAPI "startRide" "notifyBAPRideStarted" $ notifyBAPRideStarted booking ride
   pure APISuccess.Success
   where
     isValidRideStatus status = status == DRide.NEW

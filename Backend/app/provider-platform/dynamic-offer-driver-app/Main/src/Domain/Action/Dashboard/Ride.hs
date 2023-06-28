@@ -175,9 +175,8 @@ rideInfo merchantShortId reqRideId = do
   riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id")
   -- riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound rideId.getId)
   riderDetails <- QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound rideId.getId)
-  -- mDriverLocation <- runInReplica $ QDrLoc.findById driverId
-  mDriverLocation <- QDrLoc.findById driverId
-
+  -- mDriverLocation <- QDrLoc.findByIdInReplica driverId
+  mDriverLocation <- QDrLoc.findById driverId -- TODO: @Vijay, update this function
   mbBCReason <-
     if ride.status == DRide.CANCELLED
       then -- then runInReplica $ QBCReason.findByRideId rideId -- it can be Nothing if cancelled by user

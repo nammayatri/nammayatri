@@ -12,25 +12,26 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.OnboardingDocumentConfig where
+module Domain.Types.Merchant.LeaderBoardConfig where
 
-import Domain.Types.Merchant (Merchant)
+import qualified Domain.Types.Merchant as DMerchant
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
 
-data VehicleClassCheckType = Infix | Prefix | Suffix deriving (Generic, ToJSON, FromJSON, Read, Show)
+data LeaderBoardType
+  = WEEKLY
+  | DAILY
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Read, Show)
 
-data DocumentType = RC | DL | RCInsurance deriving (Generic, ToJSON, FromJSON, Read, Eq, Ord, Show)
-
--- ProviderConfig?
-data OnboardingDocumentConfig = OnboardingDocumentConfig
-  { merchantId :: Id Merchant,
-    documentType :: DocumentType,
-    checkExtraction :: Bool,
-    checkExpiry :: Bool,
-    validVehicleClasses :: [Text],
-    vehicleClassCheckType :: VehicleClassCheckType,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime
+data LeaderBoardConfigs = LeaderBoardConfigs
+  { id :: Id LeaderBoardConfigs,
+    leaderBoardType :: LeaderBoardType,
+    numberOfSets :: Int,
+    leaderBoardExpiry :: Seconds,
+    zScoreBase :: Int,
+    leaderBoardLengthLimit :: Integer,
+    isEnabled :: Bool,
+    merchantId :: Id DMerchant.Merchant
   }
-  deriving (Generic, ToJSON, FromJSON, Show)
+  deriving (Generic, ToJSON, FromJSON, ToSchema)

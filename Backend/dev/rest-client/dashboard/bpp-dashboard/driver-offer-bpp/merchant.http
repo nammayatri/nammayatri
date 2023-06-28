@@ -190,7 +190,8 @@ content-type: application/json
 
   { "checkExtraction" : {"value" : false},
     "checkExpiry" : {"value" : true},
-    "validVehicleClasses" : ["vehicleClass1", "vehicleClass2"],
+    "supportedVehicleClasses" : null,
+    "rcNumberPrefix": {"value": "KA"},
     "vehicleClassCheckType" : {"value" : "Prefix"}
   }
 
@@ -204,7 +205,8 @@ content-type: application/json
 
   { "checkExtraction" : false,
     "checkExpiry" : true,
-    "validVehicleClasses" : ["vehicleClass3", "vehicleClass4"],
+    "supportedVehicleClasses" : {"documentType" : "RC", "vehicleClasses" : ["vehicleClass1", "vehicleClass2"]},
+    "rcNumberPrefix": {"value": "KA"},
     "vehicleClassCheckType" : "Suffix"
   }
 

@@ -18,6 +18,7 @@ module API.UI
   )
 where
 
+import qualified API.UI.AppInstalls as AppInstalls
 import qualified API.UI.Booking as Booking
 import qualified API.UI.Call as Call
 import qualified API.UI.Cancel as Cancel
@@ -75,6 +76,7 @@ type API =
            :<|> Frontend.API
            :<|> Whatsapp.API
            :<|> Sos.API
+           :<|> AppInstalls.API
        )
 
 handler :: FlowServer API
@@ -105,3 +107,4 @@ handler =
     :<|> Frontend.handler
     :<|> Whatsapp.handler
     :<|> Sos.handler
+    :<|> AppInstalls.handler

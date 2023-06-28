@@ -61,6 +61,7 @@ createOrder ::
 createOrder (driverId, merchantId) driverFeeId = do
   driverFee <- runInReplica $ QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound $ getId driverFeeId)
   when (driverFee.status `elem` [CLEARED, EXEMPTED]) $ throwError (DriverFeeAlreadySettled $ getId driverFeeId)
+  when (driverFee.status `elem` [INACTIVE, ONGOING]) $ throwError (DriverFeeNotInUse $ getId driverFeeId)
   driver <- runInReplica $ QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound $ getId driverFee.driverId)
   unless (driver.id == driverId) $ throwError NotAnExecutor
   driverPhone <- driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
@@ -106,6 +107,7 @@ getStatus (personId, merchantId) orderId = do
   case paymentStatus.status of
     Juspay.CHARGED -> do
       CDI.updatePendingPayment False (cast personId)
+      CDI.updateSubscription True (cast personId)
       Esq.runTransaction $ processPaymentTransactions (cast personId) (cast orderId) driverInfo transporterConfig.timeDiffFromUtc
     _ -> pure ()
   pure paymentStatus
@@ -114,8 +116,7 @@ getStatus (personId, merchantId) orderId = do
 
 processPaymentTransactions :: Id DP.Driver -> Id DriverFee -> DriverInformation -> Seconds -> SqlDB ()
 processPaymentTransactions driverId driverFeeId driverInfo timeDiff = do
-  nowUtc <- getCurrentTime
-  let now = getLocalTime nowUtc timeDiff
+  now <- getLocalCurrentTime timeDiff
   QDF.updateStatus DF.CLEARED driverFeeId now
   QDFS.clearPaymentStatus (cast driverId) driverInfo.active
 
@@ -142,9 +143,7 @@ juspayWebhookHandler merchantShortId authData value = do
           transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
           unless (osc.order.status /= Juspay.CHARGED) $ do
             CDI.updatePendingPayment False driverFee.driverId
+            CDI.updateSubscription True driverFee.driverId
             Esq.runTransaction $ processPaymentTransactions driverFee.driverId driverFee.id driverInfo transporterConfig.timeDiffFromUtc
           pure Ack
     _ -> throwError $ InternalError "Unknown Service Config"
-
-getLocalTime :: UTCTime -> Seconds -> UTCTime
-getLocalTime utcTime seconds = addUTCTime (secondsToNominalDiffTime seconds) utcTime

@@ -268,7 +268,7 @@ onboardingDocumentConfigUpdate ::
   Common.OnboardingDocumentConfigUpdateReq ->
   FlowHandler APISuccess
 onboardingDocumentConfigUpdate merchantShortId apiTokenInfo documentType req = withFlowHandlerAPI $ do
-  runRequestValidation Common.validateOnboardingDocumentConfigUpdateReq req
+  -- runRequestValidation Common.validateOnboardingDocumentConfigUpdateReq req
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   transaction <- buildTransaction Common.OnboardingDocumentConfigUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
@@ -281,7 +281,7 @@ onboardingDocumentConfigCreate ::
   Common.OnboardingDocumentConfigCreateReq ->
   FlowHandler APISuccess
 onboardingDocumentConfigCreate merchantShortId apiTokenInfo documentType req = withFlowHandlerAPI $ do
-  runRequestValidation Common.validateOnboardingDocumentConfigCreateReq req
+  -- runRequestValidation Common.validateOnboardingDocumentConfigCreateReq req
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   transaction <- buildTransaction Common.OnboardingDocumentConfigCreateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $

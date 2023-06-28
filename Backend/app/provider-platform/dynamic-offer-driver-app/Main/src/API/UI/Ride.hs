@@ -41,6 +41,7 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.DatastoreLatencyCalculator
 import Servant
 import SharedLogic.Person (findPerson)
 import qualified Storage.Queries.Booking as QBooking
@@ -119,8 +120,8 @@ startRide :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> StartRideRe
 startRide (requestorId, merchantId) rideId StartRideReq {rideOtp, point} = withFlowHandlerAPI $ do
   requestor <- findPerson requestorId
   let driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor}
-  shandle <- RideStart.buildStartRideHandle merchantId
-  RideStart.driverStartRide shandle rideId driverReq
+  shandle <- withTimeAPI "startRide" "buildStartRideHandle" $ RideStart.buildStartRideHandle merchantId
+  withTimeAPI "startRide" "driverStartRide" $ RideStart.driverStartRide shandle rideId driverReq
 
 otpRideCreateAndStart :: (Id SP.Person, Id Merchant.Merchant) -> DRide.OTPRideReq -> FlowHandler DRide.DriverRideRes
 otpRideCreateAndStart (requestorId, merchantId) req@DRide.OTPRideReq {..} = withFlowHandlerAPI $ do
@@ -139,8 +140,8 @@ endRide :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> EndRideReq ->
 endRide (requestorId, merchantId) rideId EndRideReq {point} = withFlowHandlerAPI $ do
   requestor <- findPerson requestorId
   let driverReq = RideEnd.DriverEndRideReq {point, requestor}
-  shandle <- RideEnd.buildEndRideHandle merchantId
-  RideEnd.driverEndRide shandle rideId driverReq
+  shandle <- withTimeAPI "endRide" "buildEndRideHandle" $ RideEnd.buildEndRideHandle merchantId
+  withTimeAPI "endRide" "driverEndRide" $ RideEnd.driverEndRide shandle rideId driverReq
 
 cancelRide :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> CancelRideReq -> FlowHandler APISuccess
 cancelRide (personId, _) rideId CancelRideReq {reasonCode, additionalInfo} = withFlowHandlerAPI $ do

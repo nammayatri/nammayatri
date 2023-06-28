@@ -34,6 +34,7 @@ import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.FareParameters as DFare
 import qualified Domain.Types.LeaderBoardConfig as LConfig
 import Domain.Types.Merchant
+import qualified Domain.Types.Merchant.LeaderBoardConfig as LConfig
 import Domain.Types.Merchant.TransporterConfig
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as Ride
@@ -44,6 +45,7 @@ import Kernel.External.Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude hiding (whenJust)
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
 import Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common hiding (getCurrentTime)
 import Kernel.Types.Id
@@ -57,6 +59,7 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as CDI
 import Storage.CachedQueries.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant as CQM
+import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
@@ -77,7 +80,9 @@ endRideTransaction ::
     CacheFlow m r,
     Hedis.HedisFlow m r,
     EsqDBFlow m r,
+    EsqLocDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
+    EsqLocRepDBFlow m r,
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
     HasField "maxShards" r Int
   ) =>
@@ -204,9 +209,6 @@ getCurrentDate time =
   let currentDate = localDay $ utcToLocalTime timeZoneIST time
    in currentDate
 
-getLocalTime :: UTCTime -> Seconds -> UTCTime
-getLocalTime utcTime seconds = addUTCTime (secondsToNominalDiffTime seconds) utcTime
-
 putDiffMetric :: (Metrics.HasBPPMetrics m r, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Money -> Meters -> m ()
 putDiffMetric merchantId money mtrs = do
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -263,15 +265,15 @@ safeMod :: Int -> Int -> Int
 _ `safeMod` 0 = 0
 a `safeMod` b = a `mod` b
 
-createDriverFee :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Id DP.Driver -> Maybe Money -> DFare.FareParameters -> UTCTime -> Int -> m ()
-createDriverFee merchantId driverId rideFare newFareParams nowUtc maxShards = do
+createDriverFee :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Id DP.Driver -> Maybe Money -> DFare.FareParameters -> Int -> m ()
+createDriverFee merchantId driverId rideFare newFareParams maxShards = do
   transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   let govtCharges = fromMaybe 0 newFareParams.govtCharges
   let (platformFee, cgst, sgst) = case newFareParams.fareParametersDetails of
         DFare.ProgressiveDetails _ -> (0, 0, 0)
         DFare.SlabDetails fpDetails -> (fromMaybe 0 fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst)
   let totalDriverFee = fromIntegral govtCharges + fromIntegral platformFee + cgst + sgst
-  let now = getLocalTime nowUtc transporterConfig.timeDiffFromUtc
+  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   lastDriverFee <- QDF.findLatestFeeByDriverId driverId
   driverFee <- mkDriverFee now driverId rideFare govtCharges platformFee cgst sgst transporterConfig
   unless (totalDriverFee <= 0) $ do
@@ -291,7 +293,7 @@ createDriverFee merchantId driverId rideFare newFareParams nowUtc maxShards = do
             SendPaymentReminderToDriverJobData
               { startTime = driverFee.startTime,
                 endTime = driverFee.endTime,
-                now = now
+                timeDiff = transporterConfig.timeDiffFromUtc
               }
         setPendingPaymentCache driverFee.endTime pendingPaymentJobTs
       _ -> pure ()

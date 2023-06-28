@@ -32,6 +32,7 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common
@@ -84,6 +85,7 @@ handler ::
   ( HasCacheConfig r,
     HedisFlow m r,
     EsqDBFlow m r,
+    EsqLocDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     HedisFlow m r,
     HasPrettyLogger m r,
@@ -284,6 +286,8 @@ cancelBooking ::
   ( EsqDBFlow m r,
     HedisFlow m r,
     Esq.EsqDBReplicaFlow m r,
+    EsqLocDBFlow m r,
+    EsqLocRepDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
@@ -342,6 +346,8 @@ validateRequest ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     HedisFlow m r,
+    EsqLocDBFlow m r,
+    EsqLocRepDBFlow m r,
     HasPrettyLogger m r,
     HasHttpClientOptions r c,
     EncFlow m r,

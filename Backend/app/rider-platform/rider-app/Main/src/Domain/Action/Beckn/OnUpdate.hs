@@ -383,9 +383,12 @@ onUpdate ValidatedBookingReallocationReq {..} = do
   -- notify customer
   Notify.notifyOnBookingReallocated booking
 onUpdate ValidatedDriverArrivedReq {..} = do
+  now <- getCurrentTime
   unless (isJust ride.driverArrivalTime) $
     -- DB.runTransaction $ do
-    void $ QRide.updateDriverArrival ride.id
+    QRide.updateDriverArrival ride.id
+      QPFS.updateStatus
+      booking.riderId DPFS.DRIVER_ARRIVED {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, driverLocation = Nothing, driverArrivalTime = Just now}
 onUpdate ValidatedNewMessageReq {..} = do
   Notify.notifyOnNewMessage booking message
 onUpdate ValidatedEstimateRepetitionReq {..} = do

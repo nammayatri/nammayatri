@@ -130,17 +130,17 @@ enableDriver personId merchantId (Just rc) (Just dl) = do
       Vehicle.Vehicle
         { Vehicle.driverId = personId_,
           Vehicle.capacity = rc.vehicleCapacity,
-          Vehicle.category = Just Vehicle.AUTO_CATEGORY,
+          Vehicle.category = Vehicle.getCategory <$> rc.vehicleVariant,
           Vehicle.make = rc.vehicleManufacturer,
-          Vehicle.model = fromMaybe "" rc.vehicleModel,
+          Vehicle.model = fromMaybe "Unkown" rc.vehicleModel,
           Vehicle.size = Nothing,
           Vehicle.merchantId = merchantId_,
-          Vehicle.variant = AUTO_RICKSHAW,
-          Vehicle.color = fromMaybe "Yellow" rc.vehicleColor,
+          Vehicle.variant = fromMaybe AUTO_RICKSHAW rc.vehicleVariant, -- Value will be always Just if reaching here
+          Vehicle.color = fromMaybe "Unkown" rc.vehicleColor,
           Vehicle.energyType = rc.vehicleEnergyType,
           Vehicle.registrationNo = certificateNumber,
           Vehicle.registrationCategory = Nothing,
-          Vehicle.vehicleClass = "3WT",
+          Vehicle.vehicleClass = fromMaybe "Unkown" rc.vehicleClass,
           Vehicle.createdAt = now,
           Vehicle.updatedAt = now
         }

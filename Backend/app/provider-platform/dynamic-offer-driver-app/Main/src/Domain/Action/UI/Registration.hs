@@ -41,7 +41,10 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Esqueleto as DB
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocDBFlow)
+import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Common as BC
@@ -122,6 +125,7 @@ auth ::
     HasCacheConfig r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
+    EsqLocDBFlow m r,
     Redis.HedisFlow m r,
     EncFlow m r,
     CoreMetrics m
@@ -175,6 +179,7 @@ auth req mbBundleVersion mbClientVersion = do
 createDriverDetails :: (EncFlow m r, EsqDBFlow m r) => Id SP.Person -> Id DO.Merchant -> m ()
 createDriverDetails personId merchantId = do
   now <- getCurrentTime
+  let driverId = cast personId
   let driverInfo =
         DriverInfo.DriverInformation
           { driverId = personId,
@@ -200,11 +205,7 @@ createDriverDetails personId merchantId = do
           }
   QDriverStats.createInitialDriverStats driverId
   QD.create driverInfo
-  QDriverLocation.create personId initLatLong now merchantId
   pure ()
-  where
-    initLatLong = LatLong 0 0
-    driverId = cast personId
 
 makePerson :: EncFlow m r => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> m SP.Person
 makePerson req mbBundleVersion mbClientVersion merchantId = do
@@ -281,13 +282,15 @@ makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp = do
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
-createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> m SP.Person
+createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, EsqLocDBFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> m SP.Person
 createDriverWithDetails req mbBundleVersion mbClientVersion merchantId = do
   person <- makePerson req mbBundleVersion mbClientVersion merchantId
+  now <- getCurrentTime
   -- DB.runTransaction $ do
-  _ <- either (throwError . InvalidRequest . show) pure =<< QP.create person
+  _ <- QP.create person
   _ <- QDFS.create $ makeIdleDriverFlowStatus person
   createDriverDetails (person.id) merchantId
+  runInLocationDB $ QDriverLocation.create person.id initLatLong now merchantId
   pure person
   where
     makeIdleDriverFlowStatus person =
@@ -296,6 +299,7 @@ createDriverWithDetails req mbBundleVersion mbClientVersion merchantId = do
           flowStatus = DDFS.IDLE,
           updatedAt = person.updatedAt
         }
+    initLatLong = LatLong 0 0
 
 verify ::
   ( HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],

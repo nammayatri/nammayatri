@@ -25,7 +25,8 @@ where
 
 import AWS.S3 as S3
 import Control.Applicative ((<|>))
-import Data.Text as T hiding (length, null)
+import Data.List (find)
+import Data.Text as T hiding (find, length, null)
 import qualified Data.Time as DT
 import qualified Data.Time.Calendar.OrdinalDate as TO
 import qualified Domain.Types.DriverOnboarding.DriverRCAssociation as Domain
@@ -34,12 +35,14 @@ import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.DriverOnboarding.VehicleRegistrationCertificate as Domain
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.OnboardingDocumentConfig as ODC
+import qualified Domain.Types.Merchant.OnboardingDocumentConfig as ODC
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Vehicle as Vehicle
 import Environment
 import Kernel.External.Encryption
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto hiding (isNothing)
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -49,8 +52,8 @@ import Kernel.Utils.Predicates
 import Kernel.Utils.Validation
 import SharedLogic.DriverOnboarding
 import qualified Storage.CachedQueries.DriverInformation as DriverInfo
+import qualified Storage.CachedQueries.Merchant.OnboardingDocumentConfig as SCO
 import Storage.CachedQueries.Merchant.TransporterConfig as QTC
-import qualified Storage.CachedQueries.OnboardingDocumentConfig as SCO
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
 import qualified Storage.Queries.DriverOnboarding.Image as ImageQuery
@@ -70,12 +73,12 @@ data DriverRCReq = DriverRCReq
 
 type DriverRCRes = APISuccess
 
-validateDriverRCReq :: Validate DriverRCReq
-validateDriverRCReq DriverRCReq {..} =
+validateDriverRCReq :: Text -> Validate DriverRCReq
+validateDriverRCReq rcNumberPrefix DriverRCReq {..} =
   sequenceA_
     [validateField "vehicleRegistrationCertNumber" vehicleRegistrationCertNumber certNum]
   where
-    certNum = LengthInRange 5 12 `And` ("KA" <> star (latinUC \/ digit \/ ","))
+    certNum = LengthInRange 5 12 `And` (string (T.unpack rcNumberPrefix) <> star (latinUC \/ digit \/ ","))
 
 verifyRC ::
   Bool ->
@@ -84,8 +87,9 @@ verifyRC ::
   DriverRCReq ->
   Flow DriverRCRes
 verifyRC isDashboard mbMerchant (personId, _) req@DriverRCReq {..} = do
-  runRequestValidation validateDriverRCReq req
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  onboardingDocumentConfig <- SCO.findByMerchantIdAndDocumentType person.merchantId ODC.RC >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantId.getId (show ODC.RC))
+  runRequestValidation (validateDriverRCReq onboardingDocumentConfig.rcNumberPrefix) req
   driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   when driverInfo.blocked $ throwError DriverAccountBlocked
   whenJust mbMerchant $ \merchant -> do
@@ -97,7 +101,6 @@ verifyRC isDashboard mbMerchant (personId, _) req@DriverRCReq {..} = do
   when (null operatingCity') $
     throwError $ InvalidOperatingCity req.operatingCity
   transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
-  onboardingDocumentConfig <- SCO.findByMerchantIdAndDocumentType person.merchantId ODC.RC >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantId.getId (show ODC.RC))
   when
     ( isNothing dateOfRegistration && onboardingDocumentConfig.checkExtraction
         && (not isDashboard || transporterConfig.checkImageExtractionForDashboard)
@@ -242,8 +245,8 @@ createRC ::
 createRC rcconfigs rcInsurenceConfigs output id imageId now edl expiry = do
   let insuranceValidity = convertTextToUTC output.insurance_validity
   let vehicleClass = output.vehicle_class
-  let vehicleCapacity = maybe (Just 3) (readMaybe . T.unpack) output.seating_capacity
-  let verificationStatus = validateRCStatus rcconfigs rcInsurenceConfigs expiry insuranceValidity vehicleClass now vehicleCapacity
+  let vehicleCapacity = (readMaybe . T.unpack) =<< output.seating_capacity
+  let (verificationStatus, variant) = validateRCStatus rcconfigs rcInsurenceConfigs expiry insuranceValidity vehicleClass now vehicleCapacity
   Domain.VehicleRegistrationCertificate
     { id,
       documentImageId = imageId,
@@ -252,6 +255,7 @@ createRC rcconfigs rcInsurenceConfigs output id imageId now edl expiry = do
       permitExpiry = convertTextToUTC output.permit_validity_upto,
       pucExpiry = convertTextToUTC output.puc_validity_upto,
       vehicleClass,
+      vehicleVariant = variant,
       vehicleManufacturer = output.manufacturer <|> output.manufacturer_model,
       vehicleCapacity,
       vehicleModel = output.m_y_manufacturing <|> output.manufacturer_model,
@@ -264,28 +268,40 @@ createRC rcconfigs rcInsurenceConfigs output id imageId now edl expiry = do
       updatedAt = now
     }
 
-validateRCStatus :: ODC.OnboardingDocumentConfig -> ODC.OnboardingDocumentConfig -> UTCTime -> Maybe UTCTime -> Maybe Text -> UTCTime -> Maybe Int -> Domain.VerificationStatus
+validateRCStatus :: ODC.OnboardingDocumentConfig -> ODC.OnboardingDocumentConfig -> UTCTime -> Maybe UTCTime -> Maybe Text -> UTCTime -> Maybe Int -> (Domain.VerificationStatus, Maybe Vehicle.Variant)
 validateRCStatus rcconfigs rcInsurenceConfigs expiry insuranceValidity cov now capacity = do
-  let validCOVs = rcconfigs.validVehicleClasses
-  let validCOVsCheck = rcconfigs.vehicleClassCheckType
-  let isCOVValid = (length rcconfigs.validVehicleClasses == 0) || maybe False (isValidCOVRC capacity validCOVs validCOVsCheck) cov
-  let validInsurance = (not rcInsurenceConfigs.checkExpiry) || maybe False (now <) insuranceValidity
-  if ((not rcconfigs.checkExpiry) || now < expiry) && isCOVValid && validInsurance then Domain.VALID else Domain.INVALID
+  case rcconfigs.supportedVehicleClasses of
+    ODC.RCValidClasses [] -> (Domain.INVALID, Nothing)
+    ODC.RCValidClasses vehicleClassVariantMap -> do
+      let validCOVsCheck = rcconfigs.vehicleClassCheckType
+      let (isCOVValid, variant) = maybe (False, Nothing) (isValidCOVRC capacity vehicleClassVariantMap validCOVsCheck) cov
+      let validInsurance = (not rcInsurenceConfigs.checkExpiry) || maybe False (now <) insuranceValidity
+      if ((not rcconfigs.checkExpiry) || now < expiry) && isCOVValid && validInsurance then (Domain.VALID, variant) else (Domain.INVALID, variant)
+    _ -> (Domain.INVALID, Nothing)
 
 convertTextToUTC :: Maybe Text -> Maybe UTCTime
 convertTextToUTC a = do
   a_ <- a
   DT.parseTimeM True DT.defaultTimeLocale "%Y-%-m-%-d" $ T.unpack a_
 
-isValidCOVRC :: Maybe Int -> [Text] -> ODC.VehicleClassCheckType -> Text -> Bool
-isValidCOVRC capacity validCOVs validCOVsCheck cov =
-  checkForClass && classSpecificChecks cov capacity
+isValidCOVRC :: Maybe Int -> [ODC.VehicleClassVariantMap] -> ODC.VehicleClassCheckType -> Text -> (Bool, Maybe Vehicle.Variant)
+isValidCOVRC capacity vehicleClassVariantMap validCOVsCheck cov = do
+  let vehicleClassVariant = find checkIfMatch vehicleClassVariantMap
+  case vehicleClassVariant of
+    Just obj -> (True, Just obj.vehicleVariant)
+    Nothing -> (False, Nothing)
   where
-    checkForClass = foldr' (\x acc -> classCheckFunction validCOVsCheck (T.toUpper x) (T.toUpper cov) || acc) False validCOVs
+    checkIfMatch obj = do
+      let classMatched = classCheckFunction validCOVsCheck (T.toUpper obj.vehicleClass) (T.toUpper cov)
+      let capacityMatched = capacityCheckFunction obj.vehicleCapacity capacity
+      classMatched && capacityMatched
 
-classSpecificChecks :: Text -> Maybe Int -> Bool
-classSpecificChecks "Passenger" capacity = capacity == Just 4
-classSpecificChecks _ _ = True
+-- capacityCheckFunction validCapacity rcCapacity
+capacityCheckFunction :: Maybe Int -> Maybe Int -> Bool
+capacityCheckFunction (Just a) (Just b) = a == b
+capacityCheckFunction Nothing (Just _) = True
+capacityCheckFunction Nothing Nothing = True
+capacityCheckFunction _ _ = False
 
 classCheckFunction :: ODC.VehicleClassCheckType -> Text -> Text -> Bool
 classCheckFunction validCOVsCheck =

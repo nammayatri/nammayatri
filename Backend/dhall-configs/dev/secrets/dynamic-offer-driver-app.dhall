@@ -7,4 +7,5 @@
 , dashboardToken = "some-secret-dashboard-token-for-driver-offer-bpp"
 , clickHouseUsername = "xxxx"
 , clickHousePassword = "xxxx"
+, locDBUserId = "atlas_person_location_user"
 }

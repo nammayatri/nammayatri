@@ -34,7 +34,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import EulerHS.Prelude hiding (id)
 import Kernel.Randomizer (randomizeList)
-import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocDBFlow, EsqLocRepDBFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -68,6 +68,8 @@ prepareDriverPoolBatch ::
   ( EncFlow m r,
     HasCacheConfig r,
     EsqDBReplicaFlow m r,
+    EsqLocDBFlow m r,
+    EsqLocRepDBFlow m r,
     CoreMetrics m,
     EsqDBFlow m r,
     Redis.HedisFlow m r
@@ -392,6 +394,8 @@ getNextDriverPoolBatch ::
   ( EncFlow m r,
     HasCacheConfig r,
     EsqDBReplicaFlow m r,
+    EsqLocDBFlow m r,
+    EsqLocRepDBFlow m r,
     CoreMetrics m,
     EsqDBFlow m r,
     Redis.HedisFlow m r

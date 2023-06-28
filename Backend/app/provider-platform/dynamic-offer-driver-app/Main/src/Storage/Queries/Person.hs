@@ -60,6 +60,7 @@ import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config (EsqLocRepDBFlow)
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
@@ -260,7 +261,7 @@ getDriversWithOutdatedLocationsToMakeInactive before = do
   getDriversList driverInfos
 
 findAllDriversByIdsFirstNameAsc ::
-  (Transactionable m, Functor m) =>
+  (Transactionable m, Functor m, EsqLocRepDBFlow m r, EsqDBReplicaFlow m r) =>
   Id Merchant ->
   [Id Person] ->
   m [FullDriver]
@@ -307,17 +308,18 @@ buildFullDriver personHashMap vehicleHashMap driverInfoHashMap location = do
   Just $ mkFullDriver (person, location, info, vehicle)
 
 getDriverLocs ::
-  Transactionable m =>
+  (Transactionable m, EsqLocRepDBFlow m r, MonadFlow m) =>
   [Id Person] ->
   Id Merchant ->
   m [DriverLocation]
 getDriverLocs driverIds merchantId = do
-  Esq.findAll $ do
-    driverLocs <- from $ table @DriverLocationT
-    where_ $
-      driverLocs ^. DriverLocationDriverId `in_` valList personsKeys
-        &&. driverLocs ^. DriverLocationMerchantId ==. (val . toKey $ merchantId)
-    return driverLocs
+  runInLocReplica $
+    Esq.findAll $ do
+      driverLocs <- from $ table @DriverLocationT
+      where_ $
+        driverLocs ^. DriverLocationDriverId `in_` valList personsKeys
+          &&. driverLocs ^. DriverLocationMerchantId ==. (val . toKey $ merchantId)
+      return driverLocs
   where
     personsKeys = toKey . cast <$> driverIds
 
@@ -349,15 +351,16 @@ getDriverLocs' driverIds (Id merchantId) = do
     personKeys = getId <$> driverIds
 
 getDriverInfos ::
-  Transactionable m =>
+  (Transactionable m, EsqDBReplicaFlow m r) =>
   [DriverLocation] ->
   m [DriverInformation]
 getDriverInfos driverLocs = do
-  Esq.findAll $ do
-    driverInfos <- from $ table @DriverInformationT
-    where_ $
-      driverInfos ^. DriverInformationDriverId `in_` valList personsKeys
-    return driverInfos
+  runInReplica $
+    Esq.findAll $ do
+      driverInfos <- from $ table @DriverInformationT
+      where_ $
+        driverInfos ^. DriverInformationDriverId `in_` valList personsKeys
+      return driverInfos
   where
     personsKeys = toKey . cast <$> fetchDriverIDsFromLocations driverLocs
 
@@ -394,15 +397,16 @@ getOnRideStuckDriverIds = do
       pure (r ^. RideDriverId)
 
 getVehicles ::
-  Transactionable m =>
+  (Transactionable m, EsqDBReplicaFlow m r) =>
   [DriverInformation] ->
   m [Vehicle]
 getVehicles driverInfo = do
-  Esq.findAll $ do
-    vehicles <- from $ table @VehicleT
-    where_ $
-      vehicles ^. VehicleDriverId `in_` valList personsKeys
-    return vehicles
+  runInReplica $
+    Esq.findAll $ do
+      vehicles <- from $ table @VehicleT
+      where_ $
+        vehicles ^. VehicleDriverId `in_` valList personsKeys
+      return vehicles
   where
     personsKeys = toKey . cast <$> fetchDriverIDsFromInfo driverInfo
 
@@ -425,16 +429,17 @@ getVehicles' driverInfo = do
     personKeys = getId <$> fetchDriverIDsFromInfo driverInfo
 
 getDrivers ::
-  Transactionable m =>
+  (Transactionable m, EsqDBReplicaFlow m r) =>
   [Vehicle] ->
   m [Person]
 getDrivers vehicles = do
-  Esq.findAll $ do
-    persons <- from $ table @PersonT
-    where_ $
-      persons ^. PersonTId `in_` valList personsKeys
-        &&. persons ^. PersonRole ==. val Person.DRIVER
-    return persons
+  runInReplica $
+    Esq.findAll $ do
+      persons <- from $ table @PersonT
+      where_ $
+        persons ^. PersonTId `in_` valList personsKeys
+          &&. persons ^. PersonRole ==. val Person.DRIVER
+      return persons
   where
     personsKeys = toKey . cast <$> fetchDriverIDsFromVehicle vehicles
 
@@ -471,15 +476,30 @@ getDrivers' vehicles = do
 
 getDriversWithMerchID ::
   Transactionable m =>
-  Id Merchant ->
+  [Id Person] ->
   m [Person]
-getDriversWithMerchID merchantId = do
+
+getDriversByIdIn driverIds = do
   Esq.findAll $ do
     persons <- from $ table @PersonT
     where_ $
-      persons ^. PersonMerchantId ==. val (toKey merchantId)
-        &&. persons ^. PersonRole ==. val Person.DRIVER
+      persons ^. PersonTId `in_` valList personIds
     return persons
+  where
+    personIds = toKey . cast <$> driverIds
+
+getDriversWithMerchID ::
+  (Transactionable m, EsqDBReplicaFlow m r) =>
+  Id Merchant ->
+  m [Person]
+getDriversWithMerchID merchantId = do
+  runInReplica $
+    Esq.findAll $ do
+      persons <- from $ table @PersonT
+      where_ $
+        persons ^. PersonMerchantId ==. val (toKey merchantId)
+          &&. persons ^. PersonRole ==. val Person.DRIVER
+      return persons
 
 getDriversWithMerchID' ::
   (L.MonadFlow m, Log m) =>
@@ -592,15 +612,16 @@ getBookingInfo' driverQuote = do
     personsKeys = fetchDriverIDsTextFromQuote driverQuote
 
 getBookingLocs ::
-  Transactionable m =>
+  (Transactionable m, EsqDBReplicaFlow m r) =>
   [Booking.Booking] ->
   m [BookingLocation]
 getBookingLocs bookings = do
-  Esq.findAll $ do
-    bookingLoc <- from $ table @BookingLocationT
-    where_ $
-      bookingLoc ^. BookingLocationTId `in_` valList toLocKeys
-    return bookingLoc
+  runInReplica $
+    Esq.findAll $ do
+      bookingLoc <- from $ table @BookingLocationT
+      where_ $
+        bookingLoc ^. BookingLocationTId `in_` valList toLocKeys
+      return bookingLoc
   where
     toLocKeys = toKey . cast <$> fetchToLocationIDFromBooking bookings
 
@@ -627,7 +648,7 @@ getBookingLocs' bookings = do
     bookingKeys = getId <$> fetchToLocationIDFromBooking bookings
 
 getDriverLocsFromMerchId ::
-  (Transactionable m, MonadTime m) =>
+  (Transactionable m, MonadTime m, EsqLocRepDBFlow m r) =>
   Maybe Seconds ->
   LatLong ->
   Int ->
@@ -635,16 +656,17 @@ getDriverLocsFromMerchId ::
   m [DriverLocation]
 getDriverLocsFromMerchId mbDriverPositionInfoExpiry LatLong {..} radiusMeters merchantId = do
   now <- getCurrentTime
-  Esq.findAll $ do
-    driverLoc <- from $ table @DriverLocationT
-    where_ $
-      driverLoc ^. DriverLocationMerchantId ==. (val . toKey $ merchantId)
-        &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
-                ||. (driverLoc ^. DriverLocationCoordinatesCalculatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
-            )
-        &&. buildRadiusWithin (driverLoc ^. DriverLocationPoint) (lat, lon) (val radiusMeters)
-    orderBy [asc (driverLoc ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon))]
-    return driverLoc
+  runInLocReplica $
+    Esq.findAll $ do
+      driverLoc <- from $ table @DriverLocationT
+      where_ $
+        driverLoc ^. DriverLocationMerchantId ==. (val . toKey $ merchantId)
+          &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
+                  ||. (driverLoc ^. DriverLocationCoordinatesCalculatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
+              )
+          &&. buildRadiusWithin (driverLoc ^. DriverLocationPoint) (lat, lon) (val radiusMeters)
+      orderBy [asc (driverLoc ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon))]
+      return driverLoc
 
 fetchDriverIDsFromDriverQuotes :: [DriverQuote] -> [Id Person]
 fetchDriverIDsFromDriverQuotes = map DriverQuote.driverId
@@ -1474,7 +1496,7 @@ data NearestDriversResult = NearestDriversResult
   deriving (Generic, Show, PrettyShow, HasCoordinates)
 
 getNearestDrivers ::
-  (Transactionable m, MonadTime m) =>
+  (Transactionable m, MonadTime m, EsqDBReplicaFlow m r, EsqLocRepDBFlow m r) =>
   Maybe Variant ->
   LatLong ->
   Int ->
@@ -1532,7 +1554,7 @@ buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap LatLong {..} 
     else Nothing
 
 getDriverLocsWithCond ::
-  (Transactionable m, MonadTime m) =>
+  (Transactionable m, MonadTime m, EsqLocRepDBFlow m r) =>
   Id Merchant ->
   Maybe Seconds ->
   LatLong ->
@@ -1540,33 +1562,35 @@ getDriverLocsWithCond ::
   m [DriverLocation]
 getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry LatLong {..} radiusMeters = do
   now <- getCurrentTime
-  Esq.findAll $ do
-    driverLocs <- from $ table @DriverLocationT
-    where_ $
-      driverLocs ^. DriverLocationMerchantId ==. (val . toKey $ merchantId)
-        &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
-                ||. (driverLocs ^. DriverLocationCoordinatesCalculatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
-            )
-        &&. buildRadiusWithin (driverLocs ^. DriverLocationPoint) (lat, lon) (val radiusMeters)
-    orderBy [asc (driverLocs ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon))]
-    return driverLocs
+  runInLocReplica $
+    Esq.findAll $ do
+      driverLocs <- from $ table @DriverLocationT
+      where_ $
+        driverLocs ^. DriverLocationMerchantId ==. (val . toKey $ merchantId)
+          &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
+                  ||. (driverLocs ^. DriverLocationCoordinatesCalculatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
+              )
+          &&. buildRadiusWithin (driverLocs ^. DriverLocationPoint) (lat, lon) (val radiusMeters)
+      orderBy [asc (driverLocs ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon))]
+      return driverLocs
 
 getDriverInfosWithCond ::
-  Transactionable m =>
+  (Transactionable m, EsqDBReplicaFlow m r) =>
   [DriverLocation] ->
   Bool ->
   Bool ->
   m [DriverInformation]
 getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide = do
-  Esq.findAll $ do
-    driverInfos <- from $ table @DriverInformationT
-    where_ $
-      driverInfos ^. DriverInformationDriverId `in_` valList personsKeys
-        &&. ((Esq.isNothing (driverInfos ^. DriverInformationMode) &&. driverInfos ^. DriverInformationActive) ||. (not_ (Esq.isNothing (driverInfos ^. DriverInformationMode)) &&. (driverInfos ^. DriverInformationMode ==. val (Just DriverInfo.SILENT) ||. driverInfos ^. DriverInformationMode ==. val (Just DriverInfo.ONLINE))))
-        &&. (if onlyNotOnRide then not_ (driverInfos ^. DriverInformationOnRide) else if onlyOnRide then driverInfos ^. DriverInformationOnRide else val True)
-        &&. not_ (driverInfos ^. DriverInformationBlocked)
-        &&. (driverInfos ^. DriverInformationSubscribed)
-    return driverInfos
+  runInReplica $
+    Esq.findAll $ do
+      driverInfos <- from $ table @DriverInformationT
+      where_ $
+        driverInfos ^. DriverInformationDriverId `in_` valList personsKeys
+          &&. ((Esq.isNothing (driverInfos ^. DriverInformationMode) &&. driverInfos ^. DriverInformationActive) ||. (not_ (Esq.isNothing (driverInfos ^. DriverInformationMode)) &&. (driverInfos ^. DriverInformationMode ==. val (Just DriverInfo.SILENT) ||. driverInfos ^. DriverInformationMode ==. val (Just DriverInfo.ONLINE))))
+          &&. (if onlyNotOnRide then not_ (driverInfos ^. DriverInformationOnRide) else if onlyOnRide then driverInfos ^. DriverInformationOnRide else val True)
+          &&. not_ (driverInfos ^. DriverInformationBlocked)
+          &&. (driverInfos ^. DriverInformationSubscribed)
+      return driverInfos
   where
     personsKeys = toKey . cast <$> fetchDriverIDsFromLocations driverLocs
 
@@ -1606,15 +1630,16 @@ getDriverInfosWithCond' driverLocs onlyNotOnRide onlyOnRide = do
     personsKeys = getId . cast <$> fetchDriverIDsFromLocations driverLocs
 
 getVehiclesWithCond ::
-  Transactionable m =>
+  (Transactionable m, EsqDBReplicaFlow m r) =>
   [DriverInformation] ->
   m [Vehicle]
 getVehiclesWithCond driverInfo = do
-  Esq.findAll $ do
-    vehicles <- from $ table @VehicleT
-    where_ $
-      vehicles ^. VehicleDriverId `in_` valList personsKeys
-    return vehicles
+  runInReplica $
+    Esq.findAll $ do
+      vehicles <- from $ table @VehicleT
+      where_ $
+        vehicles ^. VehicleDriverId `in_` valList personsKeys
+      return vehicles
   where
     personsKeys = toKey . cast <$> fetchDriverIDsFromInfo driverInfo
 
@@ -1653,7 +1678,7 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
   deriving (Generic, Show, PrettyShow, HasCoordinates)
 
 getNearestDriversCurrentlyOnRide ::
-  (Transactionable m, MonadTime m) =>
+  (Transactionable m, MonadTime m, EsqDBReplicaFlow m r, EsqLocRepDBFlow m r) =>
   Maybe Variant ->
   LatLong ->
   Int ->

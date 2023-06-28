@@ -24,7 +24,8 @@ import GHC.Records.Extra
 import qualified Kernel.External.Maps.HasCoordinates as GoogleMaps
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocDBFlow, EsqLocRepDBFlow)
+import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
@@ -44,7 +45,7 @@ data GetLocationRes = GetLocationRes
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
-getLocation :: (EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r) => Id SRide.Ride -> m GetLocationRes
+getLocation :: (EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r, EsqLocDBFlow m r, EsqLocRepDBFlow m r) => Id SRide.Ride -> m GetLocationRes
 getLocation rideId = do
   ride <-
     -- runInReplica $

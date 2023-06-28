@@ -24,6 +24,7 @@ import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocRepDBFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -88,6 +89,11 @@ updateSubscription isSubscribed driverId = do
   -- Esq.runTransaction $ Queries.updateSubscription isSubscribed driverId
   void $ Queries.updateSubscription isSubscribed driverId
 
+updateSubscription :: (CacheFlow m r, Esq.EsqDBFlow m r) => Bool -> Id Person.Driver -> m ()
+updateSubscription isSubscribed driverId = do
+  clearDriverInfoCache driverId
+  Esq.runTransaction $ Queries.updateSubscription isSubscribed driverId
+
 -- this function created because all queries wishfully should be in one transaction
 updateNotOnRideMultiple :: (L.MonadFlow m, MonadTime m) => [Id Person.Driver] -> m (MeshResult ())
 updateNotOnRideMultiple = Queries.updateNotOnRideMultiple
@@ -98,7 +104,7 @@ deleteById driverId = do
   Queries.deleteById driverId
 
 findAllWithLimitOffsetByMerchantId ::
-  Esq.Transactionable m =>
+  (Esq.Transactionable m, EsqDBReplicaFlow m r) =>
   Maybe Text ->
   Maybe DbHash ->
   Maybe Integer ->

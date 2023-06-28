@@ -20,8 +20,8 @@ import qualified Data.HashMap as HM
 import Data.Time hiding (getCurrentTime)
 import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
-import qualified Domain.Types.LeaderBoardConfig as LConfig
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.LeaderBoardConfig as LConfig
 import Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -31,7 +31,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Error
 import Storage.CachedQueries.CacheConfig (CacheFlow)
-import Storage.CachedQueries.LeaderBoardConfig as QLeaderConfig
+import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.Queries.Person as QPerson
 
 data DriversInfo = DriversInfo

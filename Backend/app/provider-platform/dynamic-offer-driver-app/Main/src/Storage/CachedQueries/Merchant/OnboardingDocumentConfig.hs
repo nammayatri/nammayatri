@@ -14,7 +14,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
-module Storage.CachedQueries.OnboardingDocumentConfig
+module Storage.CachedQueries.Merchant.OnboardingDocumentConfig
   ( findAllByMerchantId,
     findByMerchantIdAndDocumentType,
     clearCache,
@@ -24,17 +24,16 @@ module Storage.CachedQueries.OnboardingDocumentConfig
 where
 
 import Domain.Types.Merchant (Merchant)
-import Domain.Types.OnboardingDocumentConfig as DTO
-import EulerHS.KVConnector.Types
-import qualified EulerHS.Language as L
+import Domain.Types.Merchant.OnboardingDocumentConfig as DTO
 import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.Queries.OnboardingDocumentConfig as Queries
+import qualified Storage.Queries.Merchant.OnboardingDocumentConfig as Queries
 
-create :: L.MonadFlow m => OnboardingDocumentConfig -> m (MeshResult ())
+create :: OnboardingDocumentConfig -> Esq.SqlDB ()
 create = Queries.create
 
 findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [DTO.OnboardingDocumentConfig]
@@ -59,5 +58,5 @@ makeMerchantIdKey merchantId = "driver-offer:CachedQueries:OnboardingDocumentCon
 clearCache :: Hedis.HedisFlow m r => Id Merchant -> m ()
 clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantIdKey
 
-update :: (L.MonadFlow m, MonadTime m) => OnboardingDocumentConfig -> m (MeshResult ())
+update :: OnboardingDocumentConfig -> Esq.SqlDB ()
 update = Queries.update

@@ -49,6 +49,7 @@ import Kernel.Utils.Common hiding (id)
 import Kernel.Utils.GenericPretty (PrettyShow)
 import Kernel.Utils.SlidingWindowLimiter (slidingWindowLimiter)
 import qualified Lib.LocationUpdates as LocUpd
+import SharedLogic.DriverFee (mergeDriverFee)
 import qualified SharedLogic.DriverLocation as DrLoc
 import SharedLogic.DriverPool (updateDriverSpeedInRedis)
 import qualified SharedLogic.Ride as SRide
@@ -159,13 +160,17 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
     thresholdConfig <- QTConf.findByMerchantId driver.merchantId >>= fromMaybeM (TransporterConfigNotFound driver.merchantId.getId)
     when (thresholdConfig.subscription) $ do
       lastPaymentOverdue <- runInReplica $ findOldestFeeByStatus (cast driver.id) PAYMENT_OVERDUE
-      case lastPaymentOverdue of
-        Nothing -> pure ()
-        Just lpo -> do
+      lastPaymentPending <- runInReplica $ findOldestFeeByStatus (cast driver.id) PAYMENT_PENDING
+      case (lastPaymentOverdue, lastPaymentPending) of
+        (Just lpo, Just lpp) -> do
+          now <- getLocalCurrentTime thresholdConfig.timeDiffFromUtc
+          mergeDriverFee lpo lpp now
+        (Just _, Nothing) -> do
           updateSubscription False (cast driver.id)
-          -- Esq.runNoTransaction $ do QDFS.updateStatus (cast driver.id) $ DDFS.PAYMENT_OVERDUE lpo.id lpo.govtCharges $ PlatformFee lpo.platformFee.fee lpo.platformFee.cgst lpo.platformFee.sgst
-          QDFS.updateStatus (cast driver.id) $ DDFS.PAYMENT_OVERDUE lpo.id lpo.govtCharges $ PlatformFee lpo.platformFee.fee lpo.platformFee.cgst lpo.platformFee.sgst
+          -- Esq.runNoTransaction $ QDFS.updateStatus (cast driver.id) DDFS.PAYMENT_OVERDUE
+          QDFS.updateStatus (cast driver.id) DDFS.PAYMENT_OVERDUE
           throwError DriverUnsubscribed
+        _ -> pure ()
     driverInfo <- DInfo.findById (cast driver.id) >>= fromMaybeM (PersonNotFound driver.id.getId)
     logInfo $ "got location updates: " <> getId driver.id <> " " <> encodeToText waypoints
     checkLocationUpdatesRateLimit driver.id

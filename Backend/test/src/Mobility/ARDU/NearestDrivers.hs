@@ -23,7 +23,6 @@ import Kernel.Types.Flow (FlowR)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified "dynamic-offer-driver-app" Storage.Queries.DriverInformation as Q
-import qualified "dynamic-offer-driver-app" Storage.Queries.DriverLocation as QL
 import qualified "dynamic-offer-driver-app" Storage.Queries.Person as Q
 import Test.Hspec
 import Utils
@@ -34,7 +33,6 @@ spec = do
     . beforeAll_
       ( runARDUFlow "Turn on drivers" $ do
           setDriversActive True (Just DI.ONLINE)
-          setDriverWithOldLocation
       )
     . afterAll_ (runARDUFlow "Turn off drivers." $ setDriversActive False (Just DI.OFFLINE))
     $ do
@@ -103,10 +101,3 @@ setDriversActive isActive mode = do
   -- Esq.runTransaction $ do
   let drivers = [furthestDriver, closestDriver, suvDriver, sedanDriver, hatchbackDriver, driverWithOldLocation]
   forM_ drivers (\driver -> Q.updateActivity (Id driver) isActive mode)
-
--- we can remove this when we flatten migrations
-setDriverWithOldLocation :: FlowR ARDUEnv.AppEnv ()
-setDriverWithOldLocation = do
-  now <- getCurrentTime
-  -- Esq.runTransaction $
-  void $ QL.upsertGpsCoord (Id driverWithOldLocation) (LatLong 13.005432 77.59336) ((-86400) `addUTCTime` now) (Id "MERCHANT_ID") -- one day ago

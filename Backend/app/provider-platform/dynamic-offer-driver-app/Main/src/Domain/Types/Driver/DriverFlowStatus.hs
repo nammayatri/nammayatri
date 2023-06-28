@@ -54,10 +54,6 @@ data FlowStatus
       { rideId :: Id DRide.Ride
       }
   | PAYMENT_OVERDUE
-      { driverFeeId :: Id DriverFee,
-        govtCharges :: Money,
-        platformFee :: PlatformFee
-      }
   deriving (Show, Eq, Generic)
 
 flowStatusCustomJSONOptions :: Options

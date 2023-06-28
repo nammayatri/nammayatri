@@ -41,6 +41,10 @@ data IssueCategory
 
 data FarePolicy
 
+data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 -- | Hide secrets before storing request (or response) to DB.
 --
 -- By default considered that request type has no secrets.

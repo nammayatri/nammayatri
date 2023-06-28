@@ -45,8 +45,9 @@ import qualified Domain.Types.Merchant.DriverIntelligentPoolConfig as DDIPC
 import qualified Domain.Types.Merchant.DriverPoolConfig as DDPC
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as DMSUC
+import qualified Domain.Types.Merchant.OnboardingDocumentConfig as DODC
 import qualified Domain.Types.Merchant.TransporterConfig as DTC
-import qualified Domain.Types.OnboardingDocumentConfig as DODC
+import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.SMS as SMS
@@ -65,8 +66,8 @@ import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as C
 import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CQDPC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
+import qualified Storage.CachedQueries.Merchant.OnboardingDocumentConfig as CQODC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
-import qualified Storage.CachedQueries.OnboardingDocumentConfig as CQODC
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPEFB
 -- import qualified Storage.Tabular.FarePolicy.DriverExtraFeeBounds as DFP
 import Tools.Error
@@ -172,7 +173,12 @@ merchantCommonConfigUpdate merchantShortId req = do
                onboardingTryLimit = maybe config.onboardingTryLimit (.value) req.onboardingTryLimit,
                onboardingRetryTimeInHours = maybe config.onboardingRetryTimeInHours (.value) req.onboardingRetryTimeInHours,
                checkImageExtractionForDashboard = maybe config.checkImageExtractionForDashboard (.value) req.checkImageExtractionForDashboard,
-               searchRepeatLimit = maybe config.searchRepeatLimit (.value) req.searchRepeatLimit
+               searchRepeatLimit = maybe config.searchRepeatLimit (.value) req.searchRepeatLimit,
+               driverPaymentCycleBuffer = maybe config.driverPaymentCycleBuffer (.value) req.driverPaymentCycleBuffer,
+               driverPaymentCycleDuration = maybe config.driverPaymentCycleDuration (.value) req.driverPaymentCycleDuration,
+               driverPaymentCycleStartTime = maybe config.driverPaymentCycleStartTime (.value) req.driverPaymentCycleStartTime,
+               driverPaymentReminderInterval = maybe config.driverPaymentReminderInterval (.value) req.driverPaymentReminderInterval,
+               timeDiffFromUtc = maybe config.timeDiffFromUtc (.value) req.timeDiffFromUtc
               }
   -- Esq.runTransaction $ do
   _ <- CQTC.update updConfig
@@ -333,8 +339,30 @@ mkOnboardingDocumentConfigRes DODC.OnboardingDocumentConfig {..} =
   Common.OnboardingDocumentConfigItem
     { documentType = castDDocumentType documentType,
       vehicleClassCheckType = castDVehicleClassCheckType vehicleClassCheckType,
+      supportedVehicleClasses = castDSupportedVehicleClasses supportedVehicleClasses,
       ..
     }
+
+castDSupportedVehicleClasses :: DODC.SupportedVehicleClasses -> Common.SupportedVehicleClasses
+castDSupportedVehicleClasses = \case
+  DODC.DLValidClasses cfg -> Common.DLValidClasses cfg
+  DODC.RCValidClasses cfg -> Common.RCValidClasses (castDClassVariantMap <$> cfg)
+
+castDClassVariantMap :: DODC.VehicleClassVariantMap -> Common.VehicleClassVariantMap
+castDClassVariantMap DODC.VehicleClassVariantMap {..} =
+  Common.VehicleClassVariantMap
+    { vehicleVariant = castDVehicleVariant vehicleVariant,
+      ..
+    }
+
+castDVehicleVariant :: DVeh.Variant -> Common.Variant
+castDVehicleVariant = \case
+  DVeh.SUV -> Common.SUV
+  DVeh.HATCHBACK -> Common.HATCHBACK
+  DVeh.SEDAN -> Common.SEDAN
+  DVeh.AUTO_RICKSHAW -> Common.AUTO_RICKSHAW
+  DVeh.TAXI -> Common.TAXI
+  DVeh.TAXI_PLUS -> Common.TAXI_PLUS
 
 castDVehicleClassCheckType :: DODC.VehicleClassCheckType -> Common.VehicleClassCheckType
 castDVehicleClassCheckType = \case
@@ -355,20 +383,42 @@ onboardingDocumentConfigUpdate ::
   Common.OnboardingDocumentConfigUpdateReq ->
   Flow APISuccess
 onboardingDocumentConfigUpdate merchantShortId reqDocumentType req = do
-  runRequestValidation Common.validateOnboardingDocumentConfigUpdateReq req
+  -- runRequestValidation Common.validateOnboardingDocumentConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   let documentType = castDocumentType reqDocumentType
   config <- CQODC.findByMerchantIdAndDocumentType merchant.id documentType >>= fromMaybeM (OnboardingDocumentConfigDoesNotExist merchant.id.getId $ show documentType)
   let updConfig =
         config{checkExtraction = maybe config.checkExtraction (.value) req.checkExtraction,
                checkExpiry = maybe config.checkExpiry (.value) req.checkExpiry,
-               validVehicleClasses = fromMaybe config.validVehicleClasses req.validVehicleClasses,
-               vehicleClassCheckType = maybe config.vehicleClassCheckType (castVehicleClassCheckType . (.value)) req.vehicleClassCheckType
+               supportedVehicleClasses = maybe config.supportedVehicleClasses castSupportedVehicleClasses req.supportedVehicleClasses,
+               vehicleClassCheckType = maybe config.vehicleClassCheckType (castVehicleClassCheckType . (.value)) req.vehicleClassCheckType,
+               rcNumberPrefix = maybe config.rcNumberPrefix (.value) req.rcNumberPrefix
               }
   _ <- CQODC.update updConfig
   CQODC.clearCache merchant.id
   logTagInfo "dashboard -> onboardingDocumentConfigUpdate : " $ show merchant.id <> "documentType : " <> show documentType
   pure Success
+
+castSupportedVehicleClasses :: Common.SupportedVehicleClasses -> DODC.SupportedVehicleClasses
+castSupportedVehicleClasses = \case
+  Common.DLValidClasses cfg -> DODC.DLValidClasses cfg
+  Common.RCValidClasses cfg -> DODC.RCValidClasses (castClassVariantMap <$> cfg)
+
+castClassVariantMap :: Common.VehicleClassVariantMap -> DODC.VehicleClassVariantMap
+castClassVariantMap Common.VehicleClassVariantMap {..} =
+  DODC.VehicleClassVariantMap
+    { vehicleVariant = castVehicleVariant vehicleVariant,
+      ..
+    }
+
+castVehicleVariant :: Common.Variant -> DVeh.Variant
+castVehicleVariant = \case
+  Common.SUV -> DVeh.SUV
+  Common.HATCHBACK -> DVeh.HATCHBACK
+  Common.SEDAN -> DVeh.SEDAN
+  Common.AUTO_RICKSHAW -> DVeh.AUTO_RICKSHAW
+  Common.TAXI -> DVeh.TAXI
+  Common.TAXI_PLUS -> DVeh.TAXI_PLUS
 
 castVehicleClassCheckType :: Common.VehicleClassCheckType -> DODC.VehicleClassCheckType
 castVehicleClassCheckType = \case
@@ -389,7 +439,7 @@ onboardingDocumentConfigCreate ::
   Common.OnboardingDocumentConfigCreateReq ->
   Flow APISuccess
 onboardingDocumentConfigCreate merchantShortId reqDocumentType req = do
-  runRequestValidation Common.validateOnboardingDocumentConfigCreateReq req
+  -- runRequestValidation Common.validateOnboardingDocumentConfigCreateReq req
   merchant <- findMerchantByShortId merchantShortId
   let documentType = castDocumentType reqDocumentType
   mbConfig <- CQODC.findByMerchantIdAndDocumentType merchant.id documentType
@@ -413,6 +463,7 @@ buildOnboardingDocumentConfig merchantId documentType Common.OnboardingDocumentC
     DODC.OnboardingDocumentConfig
       { merchantId,
         vehicleClassCheckType = castVehicleClassCheckType vehicleClassCheckType,
+        supportedVehicleClasses = castSupportedVehicleClasses supportedVehicleClasses,
         updatedAt = now,
         createdAt = now,
         ..

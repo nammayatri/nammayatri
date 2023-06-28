@@ -93,7 +93,8 @@ import qualified Kernel.External.SMS.MyValueFirst.Types as SMS
 import Kernel.Prelude (NominalDiffTime)
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocDBFlow)
+import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB, runInReplica)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -342,6 +343,8 @@ newtype DriverAlternateNumberRes = DriverAlternateNumberRes
 
 data DriverPaymentHistoryResp = DriverPaymentHistoryResp
   { date :: Day, -- window start day
+    driverFeeId :: Id DDF.DriverFee,
+    status :: DDF.DriverFeeStatus,
     totalRides :: Int,
     totalEarnings :: Money,
     charges :: Money,
@@ -366,6 +369,7 @@ createDriver ::
   ( HasCacheConfig r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
+    EsqLocDBFlow m r,
     EncFlow m r,
     Redis.HedisFlow m r,
     CoreMetrics m
@@ -389,8 +393,10 @@ createDriver admin req = do
   -- Esq.runTransaction $ do
   _ <- QPerson.create person
   _ <- QDFS.create $ makeIdleDriverFlowStatus person
-  createDriverDetails person.id admin.id admin.merchantId
+  createDriverDetails person.id admin.id merchantId
   _ <- QVehicle.create vehicle
+  now <- getCurrentTime
+  runInLocationDB $ QDriverLocation.create person.id initLatLong now admin.merchantId
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> createDriver : ") (show person.id)
   org <-
     CQM.findById merchantId
@@ -410,7 +416,7 @@ createDriver admin req = do
   return $ OnboardDriverRes personAPIEntity
   where
     duplicateCheck cond err = whenM (isJust <$> cond) $ throwError $ InvalidRequest err
-
+    initLatLong = LatLong 0 0
     makeIdleDriverFlowStatus person =
       DDFS.DriverFlowStatus
         { personId = person.id,
@@ -457,10 +463,8 @@ createDriverDetails personId adminId merchantId = do
           }
   _ <- QDriverStats.createInitialDriverStats driverId
   QDriverInformation.create driverInfo
-  QDriverLocation.create personId initLatLong now merchantId
   pure ()
   where
-    initLatLong = LatLong 0 0
     driverId = cast personId
 
 getInformation ::
@@ -505,10 +509,10 @@ setActivity (personId, _) isActive mode = do
       DMode.getDriverStatus mode isActive
   pure APISuccess.Success
 
-listDriver :: (EsqDBReplicaFlow m r, EncFlow m r) => SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> m ListDriverRes
+listDriver :: (EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r) => SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> m ListDriverRes
 listDriver admin mbSearchString mbLimit mbOffset = do
   mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
-  personList <- Esq.runInReplica $ QDriverInformation.findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOffset admin.merchantId
+  personList <- QDriverInformation.findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOffset admin.merchantId
   respPersonList <- traverse buildDriverEntityRes personList
   return $ ListDriverRes respPersonList
 
@@ -572,7 +576,7 @@ changeDriverEnableState admin personId isEnabled = do
     notificationTitle = "Account is disabled."
     notificationMessage = "Your account has been disabled. Contact support for more info."
 
-deleteDriver :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r) => SP.Person -> Id SP.Person -> m APISuccess
+deleteDriver :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, EsqLocDBFlow m r) => SP.Person -> Id SP.Person -> m APISuccess
 deleteDriver admin driverId = do
   driver <-
     QPerson.findById driverId
@@ -585,10 +589,9 @@ deleteDriver admin driverId = do
   QDriverStats.deleteById (cast driverId)
   QR.deleteByPersonId driverId
   QVehicle.deleteById driverId
-  QDriverLocation.deleteById driverId
   QDFS.deleteById driverId
   QPerson.deleteById driverId
-
+  runInLocationDB $ QDriverLocation.deleteById driverId
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> deleteDriver : ") (show driverId)
   return Success
 
@@ -1181,20 +1184,19 @@ remove (personId, _) = do
   _ <- QPerson.updateAlternateMobileNumberAndCode driver
   return Success
 
-getDriverPayments :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Maybe Day -> Maybe Day -> Maybe Int -> Maybe Int -> m [DriverPaymentHistoryResp]
-getDriverPayments (_, merchantId_) mbFrom mbTo mbLimit mbOffset = do
+getDriverPayments :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Maybe Day -> Maybe Day -> Maybe DDF.DriverFeeStatus -> Maybe Int -> Maybe Int -> m [DriverPaymentHistoryResp]
+getDriverPayments (personId, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset = do
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit -- TODO move to common code
       offset = fromMaybe 0 mbOffset
       defaultFrom = fromMaybe (fromGregorian 2020 1 1) mbFrom
-  nowUtc <- getCurrentTime
   transporterConfig <- CQTC.findByMerchantId merchantId_ >>= fromMaybeM (TransporterConfigNotFound merchantId_.getId)
-  let now = utctDay $ getLocalTime nowUtc transporterConfig.timeDiffFromUtc
+  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  let today = utctDay now
       from = fromMaybe defaultFrom mbFrom
-      to = fromMaybe now mbTo
+      to = fromMaybe today mbTo
   let windowStartTime = UTCTime from 0
       windowEndTime = addUTCTime (86399 + transporterConfig.driverPaymentCycleDuration) (UTCTime to 0)
-  -- driverFees <- runInReplica $ QDF.findWindowsWithStatus windowStartTime windowEndTime DDF.CLEARED limit offset
-  driverFees <- QDF.findWindowsWithStatus windowStartTime windowEndTime DDF.CLEARED limit offset
+  driverFees <- runInReplica $ QDF.findWindowsWithStatus personId windowStartTime windowEndTime mbStatus limit offset
   mapM buildPaymentResp driverFees
   where
     maxLimit = 20
@@ -1202,6 +1204,7 @@ getDriverPayments (_, merchantId_) mbFrom mbTo mbLimit mbOffset = do
 
     buildPaymentResp DDF.DriverFee {..} = do
       let date = utctDay startTime
+          driverFeeId = id
           totalRides = numRides
           charges = round $ fromIntegral govtCharges + fromIntegral platformFee.fee + platformFee.cgst + platformFee.sgst
           chargesBreakup = mkChargesBreakup govtCharges platformFee.fee platformFee.cgst platformFee.sgst
@@ -1229,6 +1232,3 @@ getDriverPayments (_, merchantId_) mbFrom mbTo mbLimit mbOffset = do
             amount = sgst
           }
       ]
-
-    getLocalTime :: UTCTime -> Seconds -> UTCTime
-    getLocalTime utcTime seconds = addUTCTime (secondsToNominalDiffTime seconds) utcTime

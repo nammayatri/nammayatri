@@ -75,6 +75,7 @@ upsert a@VehicleRegistrationCertificate {..} = do
                 Se.Set BeamVRC.pucExpiry pucExpiry,
                 Se.Set BeamVRC.insuranceValidity insuranceValidity,
                 Se.Set BeamVRC.vehicleClass vehicleClass,
+                Se.Set BeamVRC.vehicleVariant vehicleVariant,
                 Se.Set BeamVRC.vehicleManufacturer vehicleManufacturer,
                 Se.Set BeamVRC.vehicleCapacity vehicleCapacity,
                 Se.Set BeamVRC.vehicleModel vehicleModel,

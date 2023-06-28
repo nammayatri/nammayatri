@@ -32,6 +32,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (findById)
+import Kernel.Storage.Esqueleto.Config (EsqLocRepDBFlow)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Logging
@@ -284,7 +285,7 @@ deleteById (Id driverId) = do
     Nothing -> pure ()
 
 findAllWithLimitOffsetByMerchantId ::
-  Transactionable m =>
+  (Transactionable m, EsqDBReplicaFlow m r) =>
   Maybe Text ->
   Maybe DbHash ->
   Maybe Integer ->
@@ -292,22 +293,23 @@ findAllWithLimitOffsetByMerchantId ::
   Id Merchant ->
   m [(Person, DriverInformation)]
 findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOffset merchantId = do
-  findAll $ do
-    (person :& driverInformation) <-
-      from $
-        table @PersonT
-          `innerJoin` table @DriverInformationT
-            `Esq.on` ( \(person :& driverInformation) ->
-                         driverInformation ^. DriverInformationDriverId ==. person ^. PersonTId
-                     )
-    where_ $
-      person ^. PersonRole ==. val Person.DRIVER
-        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
-        &&. Esq.whenJust_ (liftA2 (,) mbSearchString mbSearchStrDBHash) (filterBySearchString person)
-    orderBy [desc $ driverInformation ^. DriverInformationCreatedAt]
-    limit limitVal
-    offset offsetVal
-    return (person, driverInformation)
+  runInReplica $
+    findAll $ do
+      (person :& driverInformation) <-
+        from $
+          table @PersonT
+            `innerJoin` table @DriverInformationT
+              `Esq.on` ( \(person :& driverInformation) ->
+                           driverInformation ^. DriverInformationDriverId ==. person ^. PersonTId
+                       )
+      where_ $
+        person ^. PersonRole ==. val Person.DRIVER
+          &&. person ^. PersonMerchantId ==. val (toKey merchantId)
+          &&. Esq.whenJust_ (liftA2 (,) mbSearchString mbSearchStrDBHash) (filterBySearchString person)
+      orderBy [desc $ driverInformation ^. DriverInformationCreatedAt]
+      limit limitVal
+      offset offsetVal
+      return (person, driverInformation)
   where
     limitVal = maybe 100 fromIntegral mbLimit
     offsetVal = maybe 0 fromIntegral mbOffset
@@ -320,7 +322,7 @@ findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOf
         ||. person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)
     unMaybe = maybe_ (val "") identity
 
-getDriversWithOutdatedLocationsToMakeInactive :: Transactionable m => UTCTime -> m [Person]
+getDriversWithOutdatedLocationsToMakeInactive :: (Transactionable m, EsqLocRepDBFlow m r) => UTCTime -> m [Person]
 getDriversWithOutdatedLocationsToMakeInactive before = do
   driverLocations <- getDriverLocs before
   driverInfos <- getDriverInfos driverLocations
@@ -356,15 +358,16 @@ getDriverInfos driverLocations = do
     personsKeys = toKey . cast <$> fetchDriverIDsFromLocations driverLocations
 
 getDriverLocs ::
-  Transactionable m =>
+  (Transactionable m, EsqLocRepDBFlow m r) =>
   UTCTime ->
   m [DriverLocation]
 getDriverLocs before = do
-  Esq.findAll $ do
-    driverLocs <- from $ table @DriverLocationT
-    where_ $
-      driverLocs ^. DriverLocationUpdatedAt <. val before
-    return driverLocs
+  runInLocReplica $
+    Esq.findAll $ do
+      driverLocs <- from $ table @DriverLocationT
+      where_ $
+        driverLocs ^. DriverLocationUpdatedAt <. val before
+      return driverLocs
 
 fetchDriverIDsFromLocations :: [DriverLocation] -> [Id Person]
 fetchDriverIDsFromLocations = map DriverLocation.driverId
@@ -567,3 +570,39 @@ transformDomainDriverInformationToBeam DriverInformation {..} =
       BeamDI.createdAt = createdAt,
       BeamDI.updatedAt = updatedAt
     }
+
+updateSubscription :: Bool -> Id Person.Driver -> SqlDB ()
+updateSubscription isSubscribed driverId = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverInformationSubscribed =. val isSubscribed,
+        DriverInformationUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
+
+updateAadhaarVerifiedState :: Id Person.Driver -> Bool -> SqlDB ()
+updateAadhaarVerifiedState personId isVerified = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverInformationAadhaarVerified =. val isVerified,
+        DriverInformationUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast personId)
+
+updatePendingPayment ::
+  Bool ->
+  Id Person.Driver ->
+  SqlDB ()
+updatePendingPayment isPending driverId = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverInformationPaymentPending =. val isPending,
+        DriverInformationUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)

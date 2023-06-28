@@ -24,6 +24,7 @@ import Dashboard.Common.Merchant as Reexport
 import Data.Aeson
 import qualified Data.Bifunctor as BF
 import Data.ByteString.Lazy as BSL
+import Data.OpenApi hiding (description, name, password, url)
 import Data.Text as T
 import Data.Text.Encoding as DT
 import Kernel.Prelude
@@ -158,7 +159,12 @@ data MerchantCommonConfigUpdateReq = MerchantCommonConfigUpdateReq
     onboardingTryLimit :: Maybe (MandatoryValue Int),
     onboardingRetryTimeInHours :: Maybe (MandatoryValue Int),
     checkImageExtractionForDashboard :: Maybe (MandatoryValue Bool),
-    searchRepeatLimit :: Maybe (MandatoryValue Int)
+    searchRepeatLimit :: Maybe (MandatoryValue Int),
+    driverPaymentCycleBuffer :: Maybe (MandatoryValue NominalDiffTime), -- TODO : Add in validation if reqd
+    driverPaymentCycleDuration :: Maybe (MandatoryValue NominalDiffTime),
+    driverPaymentCycleStartTime :: Maybe (MandatoryValue NominalDiffTime),
+    driverPaymentReminderInterval :: Maybe (MandatoryValue NominalDiffTime),
+    timeDiffFromUtc :: Maybe (MandatoryValue Seconds)
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -437,12 +443,60 @@ data OnboardingDocumentConfigItem = OnboardingDocumentConfigItem
   { documentType :: DocumentType,
     checkExtraction :: Bool,
     checkExpiry :: Bool,
-    validVehicleClasses :: [Text],
+    supportedVehicleClasses :: SupportedVehicleClasses,
     vehicleClassCheckType :: VehicleClassCheckType,
+    rcNumberPrefix :: Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
   deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SupportedVehicleClasses = DLValidClasses [Text] | RCValidClasses [VehicleClassVariantMap]
+  deriving stock (Generic, Show)
+
+instance ToJSON SupportedVehicleClasses where
+  toJSON = genericToJSON supportedVCOptions
+
+instance FromJSON SupportedVehicleClasses where
+  parseJSON = genericParseJSON supportedVCOptions
+
+instance ToSchema SupportedVehicleClasses where
+  declareNamedSchema = genericDeclareNamedSchema supportedVCSchemaOptions
+
+supportedVCOptions :: Options
+supportedVCOptions =
+  defaultOptions
+    { sumEncoding = taggedObject,
+      constructorTagModifier = modifier
+    }
+
+supportedVCSchemaOptions :: SchemaOptions
+supportedVCSchemaOptions =
+  defaultSchemaOptions
+    { sumEncoding = taggedObject,
+      constructorTagModifier = modifier
+    }
+
+taggedObject :: SumEncoding
+taggedObject =
+  TaggedObject
+    { tagFieldName = "documentType",
+      contentsFieldName = "vehicleClasses"
+    }
+
+modifier :: String -> String
+modifier = \case
+  "DL" -> "DLValidClasses"
+  "RC" -> "RCValidClasses"
+  x -> x
+
+data VehicleClassVariantMap = VehicleClassVariantMap
+  { vehicleClass :: Text,
+    vehicleCapacity :: Maybe Int,
+    vehicleVariant :: Variant
+  }
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data VehicleClassCheckType = Infix | Prefix | Suffix
@@ -477,7 +531,8 @@ type OnboardingDocumentConfigUpdateAPI =
 data OnboardingDocumentConfigUpdateReq = OnboardingDocumentConfigUpdateReq
   { checkExtraction :: Maybe (MandatoryValue Bool),
     checkExpiry :: Maybe (MandatoryValue Bool),
-    validVehicleClasses :: Maybe [Text], -- value wrapper make no sense for lists and objects
+    supportedVehicleClasses :: Maybe SupportedVehicleClasses, -- value wrapper make no sense for lists and objects
+    rcNumberPrefix :: Maybe (MandatoryValue Text),
     vehicleClassCheckType :: Maybe (MandatoryValue VehicleClassCheckType)
   }
   deriving stock (Show, Generic)
@@ -485,10 +540,6 @@ data OnboardingDocumentConfigUpdateReq = OnboardingDocumentConfigUpdateReq
 
 instance HideSecrets OnboardingDocumentConfigUpdateReq where
   hideSecrets = identity
-
-validateOnboardingDocumentConfigUpdateReq :: Validate OnboardingDocumentConfigUpdateReq
-validateOnboardingDocumentConfigUpdateReq OnboardingDocumentConfigUpdateReq {..} =
-  validateField "validVehicleClasses" validVehicleClasses $ InMaybe $ InList $ MinLength 1
 
 ---------------------------------------------------------
 -- merchant onboarding document config create -----------
@@ -504,7 +555,8 @@ type OnboardingDocumentConfigCreateAPI =
 data OnboardingDocumentConfigCreateReq = OnboardingDocumentConfigCreateReq
   { checkExtraction :: Bool,
     checkExpiry :: Bool,
-    validVehicleClasses :: [Text],
+    supportedVehicleClasses :: SupportedVehicleClasses,
+    rcNumberPrefix :: Text,
     vehicleClassCheckType :: VehicleClassCheckType
   }
   deriving stock (Show, Generic)
@@ -512,10 +564,6 @@ data OnboardingDocumentConfigCreateReq = OnboardingDocumentConfigCreateReq
 
 instance HideSecrets OnboardingDocumentConfigCreateReq where
   hideSecrets = identity
-
-validateOnboardingDocumentConfigCreateReq :: Validate OnboardingDocumentConfigCreateReq
-validateOnboardingDocumentConfigCreateReq OnboardingDocumentConfigCreateReq {..} =
-  validateField "validVehicleClasses" validVehicleClasses $ InList $ MinLength 1
 
 ---------------------------------------------------------
 -- Create Fare Policy -----------------------------------

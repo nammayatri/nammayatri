@@ -72,6 +72,7 @@ getPersonFlowStatus personId mIsPolling = do
     DPFS.WAITING_FOR_DRIVER_ASSIGNMENT _ _ -> expirePersonStatusIfNeeded personStatus
     DPFS.RIDE_PICKUP {} -> handleRideTracking personId mIsPolling personStatus
     DPFS.RIDE_STARTED {} -> handleRideTracking personId mIsPolling personStatus
+    DPFS.DRIVER_ARRIVED {} -> handleRideTracking personId mIsPolling personStatus
     a -> return $ GetPersonFlowStatusRes Nothing a
   where
     expirePersonStatusIfNeeded personStatus = do
@@ -154,6 +155,13 @@ handleRideTracking personId (Just isPolling) DPFS.RIDE_PICKUP {..} = do
         distanceUpdates = "Ride:GetDriverLoc:DriverDistance " <> rideId.getId
         driverOnTheWay = "Ride:GetDriverLoc:DriverIsOnTheWay " <> rideId.getId
         driverHasReached = "Ride:GetDriverLoc:DriverHasReached " <> rideId.getId
+handleRideTracking _ Nothing DPFS.DRIVER_ARRIVED {..} = return $ GetPersonFlowStatusRes Nothing (DPFS.RIDE_ASSIGNED rideId) -- handle backward compatibility, if isPolling is Nothing means old version of API Call
+handleRideTracking personId (Just isPolling) DPFS.DRIVER_ARRIVED {..} = do
+  trackUrl <- getTrackUrl rideId trackingUrl
+  newDriverLocation <- if isPolling then Just . (.currPoint) <$> CallBPP.callGetDriverLocation trackUrl else return Nothing
+  let updatedStatus = DPFS.DRIVER_ARRIVED {trackingUrl = trackUrl, driverLocation = newDriverLocation, ..}
+  updateStatus personId updatedStatus
+  return $ GetPersonFlowStatusRes Nothing updatedStatus
 handleRideTracking _ _ status = return $ GetPersonFlowStatusRes Nothing status
 
 updateStatus :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id DP.Person -> DPFS.FlowStatus -> m ()

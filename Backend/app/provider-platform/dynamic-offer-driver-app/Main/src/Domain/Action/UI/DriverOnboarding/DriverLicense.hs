@@ -34,8 +34,8 @@ import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.Merchant as DM
-import Domain.Types.OnboardingDocumentConfig (OnboardingDocumentConfig)
-import qualified Domain.Types.OnboardingDocumentConfig as DTO
+import Domain.Types.Merchant.OnboardingDocumentConfig (OnboardingDocumentConfig)
+import qualified Domain.Types.Merchant.OnboardingDocumentConfig as DTO
 import qualified Domain.Types.Person as Person
 import Environment
 import EulerHS.KVConnector.Types
@@ -54,8 +54,8 @@ import Kernel.Utils.Predicates
 import Kernel.Utils.Validation
 import SharedLogic.DriverOnboarding
 import qualified Storage.CachedQueries.DriverInformation as DriverInfo
+import qualified Storage.CachedQueries.Merchant.OnboardingDocumentConfig as QODC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
-import qualified Storage.CachedQueries.OnboardingDocumentConfig as QODC
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as Query
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
 import qualified Storage.Queries.DriverOnboarding.Image as ImageQuery
@@ -260,10 +260,13 @@ createDL configs driverId output id imageId1 imageId2 now edl expiry = do
 
 validateDLStatus :: DTO.OnboardingDocumentConfig -> UTCTime -> [Text] -> UTCTime -> Domain.VerificationStatus
 validateDLStatus configs expiry cov now = do
-  let validCOVs = configs.validVehicleClasses
-  let validCOVsCheck = configs.vehicleClassCheckType
-  let isCOVValid = (length configs.validVehicleClasses == 0) || foldr' (\x acc -> isValidCOVDL validCOVs validCOVsCheck x || acc) False cov
-  if ((not configs.checkExpiry) || now < expiry) && isCOVValid then Domain.VALID else Domain.INVALID
+  case configs.supportedVehicleClasses of
+    DTO.DLValidClasses [] -> Domain.INVALID
+    DTO.DLValidClasses validCOVs -> do
+      let validCOVsCheck = configs.vehicleClassCheckType
+      let isCOVValid = foldr' (\x acc -> isValidCOVDL validCOVs validCOVsCheck x || acc) False cov
+      if ((not configs.checkExpiry) || now < expiry) && isCOVValid then Domain.VALID else Domain.INVALID
+    _ -> Domain.INVALID
 
 convertTextToUTC :: Maybe Text -> Maybe UTCTime
 convertTextToUTC a = do
