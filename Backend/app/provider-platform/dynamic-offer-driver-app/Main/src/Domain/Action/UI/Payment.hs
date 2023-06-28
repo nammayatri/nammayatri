@@ -22,12 +22,12 @@ where
 
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverFee as DF
-import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.External.Encryption
+import Kernel.External.Payment.Interface (TransactionStatus)
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
 import Kernel.Prelude
@@ -46,7 +46,6 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverFee as QDF
-import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import Tools.Metrics
@@ -102,23 +101,10 @@ getStatus (personId, merchantId) orderId = do
   let commonPersonId = cast @DP.Person @DPayment.Person personId
       orderStatusCall = Payment.orderStatus merchantId -- api call
   paymentStatus <- DPayment.orderStatusService commonPersonId orderId orderStatusCall
-  driverInfo <- QDI.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
-  transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
-  case paymentStatus.status of
-    Juspay.CHARGED -> do
-      CDI.updatePendingPayment False (cast personId)
-      CDI.updateSubscription True (cast personId)
-      Esq.runTransaction $ processPaymentTransactions (cast personId) (cast orderId) driverInfo transporterConfig.timeDiffFromUtc
-    _ -> pure ()
+  processPayment merchantId paymentStatus.status (cast orderId)
   pure paymentStatus
 
 -- webhook ----------------------------------------------------------
-
-processPaymentTransactions :: Id DP.Driver -> Id DriverFee -> DriverInformation -> Seconds -> SqlDB ()
-processPaymentTransactions driverId driverFeeId driverInfo timeDiff = do
-  now <- getLocalCurrentTime timeDiff
-  QDF.updateStatus DF.CLEARED driverFeeId now
-  QDFS.clearPaymentStatus (cast driverId) driverInfo.active
 
 juspayWebhookHandler ::
   ShortId DM.Merchant ->
@@ -137,13 +123,19 @@ juspayWebhookHandler merchantShortId authData value = do
       case orderStatusContent of
         Nothing -> throwError $ InternalError "Order Contents not found."
         Just osc -> do
-          let driverFeeId = Id osc.order.order_id
-          driverFee <- QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound driverFeeId.getId)
-          driverInfo <- QDI.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound driverFee.driverId.getId)
-          transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
-          unless (osc.order.status /= Juspay.CHARGED) $ do
-            CDI.updatePendingPayment False driverFee.driverId
-            CDI.updateSubscription True driverFee.driverId
-            Esq.runTransaction $ processPaymentTransactions driverFee.driverId driverFee.id driverInfo transporterConfig.timeDiffFromUtc
+          processPayment merchantId osc.order.status (Id osc.order.order_id)
           pure Ack
     _ -> throwError $ InternalError "Unknown Service Config"
+
+processPayment :: (EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> TransactionStatus -> Id DriverFee -> m ()
+processPayment merchantId orderStatus driverFeeId = do
+  driverFee <- QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound driverFeeId.getId)
+  driverInfo <- CDI.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound driverFee.driverId.getId)
+  transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  unless (orderStatus /= Juspay.CHARGED) $ do
+    CDI.updatePendingPayment False driverFee.driverId
+    CDI.updateSubscription True driverFee.driverId
+    Esq.runTransaction $ do
+      QDF.updateStatus DF.CLEARED driverFeeId now
+      QDFS.clearPaymentStatus (cast driverFee.driverId) driverInfo.active
