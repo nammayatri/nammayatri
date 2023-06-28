@@ -38,11 +38,12 @@ newtype BookingListRes = BookingListRes
 
 bookingStatus :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SRB.Booking -> Id Person.Person -> m SRB.BookingAPIEntity
 bookingStatus bookingId personId = do
-  booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  bookingTable <- runInReplica (QRB.getBookingTableByBookingId bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  booking <- QRB.bookingTableToBookingConverter bookingTable >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   unless (booking.riderId == personId) $ throwError AccessDenied
   SRB.buildBookingAPIEntity booking
 
 bookingList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> m BookingListRes
 bookingList personId mbLimit mbOffset mbOnlyActive mbBookingStatus = do
-  rbList <- runInReplica $ QRB.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus
+  rbList <- QRB.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus
   BookingListRes <$> traverse SRB.buildBookingAPIEntity rbList

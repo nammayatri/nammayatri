@@ -20,10 +20,10 @@ where
 import qualified Data.Map as M
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.Location as DLoc
 import Domain.Types.Merchant.DriverPoolConfig
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest as DSearchReq
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.SearchRequestForDriver
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -136,17 +136,30 @@ sendSearchRequestToDrivers searchReq baseFare driverExtraFeeBounds driverPoolCon
               }
       pure searchRequestForDriver
 
-buildTranslatedSearchReqLocation :: (TranslateFlow m r, EsqDBFlow m r, CacheFlow m r) => DLoc.SearchReqLocation -> Maybe Maps.Language -> m DLoc.SearchReqLocation
-buildTranslatedSearchReqLocation DLoc.SearchReqLocation {..} mbLanguage = do
+buildTranslatedSearchReqLocation :: (TranslateFlow m r, EsqDBFlow m r, CacheFlow m r) => DLoc.Location -> Maybe Maps.Language -> m DLoc.Location
+buildTranslatedSearchReqLocation DLoc.Location {..} mbLanguage = do
   areaRegional <- case mbLanguage of
-    Nothing -> return area
+    Nothing -> return address.area
     Just lang -> do
-      mAreaObj <- translate ENGLISH lang `mapM` area
+      mAreaObj <- translate ENGLISH lang `mapM` address.area
       let translation = (\areaObj -> listToMaybe areaObj._data.translations) =<< mAreaObj
       return $ (.translatedText) <$> translation
+  let add =
+        DLoc.LocationAddress
+          { area = areaRegional,
+            street = address.street,
+            door = address.door,
+            city = address.door,
+            state = address.state,
+            country = address.country,
+            building = address.building,
+            areaCode = address.areaCode,
+            full_address = address.full_address,
+            ..
+          }
   pure
-    DLoc.SearchReqLocation
-      { area = areaRegional,
+    DLoc.Location
+      { address = add,
         ..
       }
 
@@ -160,11 +173,11 @@ translateSearchReq ::
   m DSearchReq.SearchRequest
 translateSearchReq DSearchReq.SearchRequest {..} language = do
   from <- buildTranslatedSearchReqLocation fromLocation (Just language)
-  to <- buildTranslatedSearchReqLocation toLocation (Just language)
+  to <- buildTranslatedSearchReqLocation (last toLocation) (Just language)
   pure
     DSearchReq.SearchRequest
       { fromLocation = from,
-        toLocation = to,
+        toLocation = [to],
         ..
       }
 

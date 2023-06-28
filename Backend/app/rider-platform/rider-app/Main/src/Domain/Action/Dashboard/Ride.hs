@@ -21,8 +21,8 @@ where
 import qualified "dashboard-helper-api" Dashboard.Common as Common
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import Data.Coerce (coerce)
-import Domain.Types.Booking.BookingLocation (BookingLocation (..))
 import qualified Domain.Types.Booking.Type as DB
+import Domain.Types.Location
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as Domain
@@ -48,10 +48,10 @@ mkCommonRideStatus rs = case rs of
   Domain.COMPLETED -> Common.COMPLETED
   Domain.CANCELLED -> Common.CANCELLED
 
-mkCommonBookingLocation :: BookingLocation -> Common.BookingLocation
-mkCommonBookingLocation BookingLocation {..} =
-  Common.BookingLocation
-    { id = cast @BookingLocation @Common.BookingLocation id,
+mkCommonBookingLocation :: Location -> Common.Location
+mkCommonBookingLocation Location {..} =
+  Common.Location
+    { id = cast @Location @Common.Location id,
       address = mkAddressRes address,
       ..
     }
@@ -65,7 +65,8 @@ shareRideInfo ::
   Flow Common.ShareRideInfoRes
 shareRideInfo merchantId rideId = do
   ride <- runInReplica $ QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  bookingT <- runInReplica $ QRB.getBookingTableByBookingId ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  booking <- QRB.bookingTableToBookingConverter bookingT >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   merchant <- findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
   unless (merchant.id == booking.merchantId) $ throwError (RideDoesNotExist rideId.getId)
   case ride.status of
@@ -73,10 +74,10 @@ shareRideInfo merchantId rideId = do
     Domain.CANCELLED -> throwError $ RideInvalidStatus "This ride is cancelled"
     _ -> pure ()
   person <- runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
-  let mbtoLocation = case booking.bookingDetails of
-        DB.OneWayDetails locationDetail -> Just $ mkCommonBookingLocation locationDetail.toLocation
-        DB.DriverOfferDetails driverOfferDetail -> Just $ mkCommonBookingLocation driverOfferDetail.toLocation
-        _ -> Nothing
+  let toLocation = case booking.bookingDetails of
+        DB.OneWayDetails locationDetail -> map mkCommonBookingLocation locationDetail.toLocation
+        DB.DriverOfferDetails driverOfferDetail -> map mkCommonBookingLocation driverOfferDetail.toLocation
+        _ -> []
   let mbDistance = case booking.bookingDetails of
         DB.OneWayDetails locationDetail -> Just $ locationDetail.distance
         DB.DriverOfferDetails driverOfferDetail -> Just $ driverOfferDetail.distance
@@ -99,7 +100,7 @@ shareRideInfo merchantId rideId = do
         userFirstName = person.firstName,
         userLastName = person.lastName,
         fromLocation = mkCommonBookingLocation booking.fromLocation,
-        toLocation = mbtoLocation
+        toLocation = toLocation
       }
 
 ---------------------------------------------------------------------

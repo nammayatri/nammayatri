@@ -26,9 +26,9 @@ import Data.Coerce (coerce)
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import qualified Domain.Types.Booking as DBooking
-import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.CancellationReason as DCReason
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
@@ -125,7 +125,8 @@ rideRoute merchantShortId reqRideId = do
   merchant <- findMerchantByShortId merchantShortId
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  bookingTable <- runInReplica $ QBooking.getBookingTableByBookingId ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  booking <- QBooking.bookingTableToBookingConverter bookingTable
   unless (merchant.id == booking.providerId) $ throwError (RideDoesNotExist rideId.getId)
   let rideQId = T.unpack rideId.getId
       driverQId = T.unpack ride.driverId.getId
@@ -153,7 +154,8 @@ rideInfo merchantShortId reqRideId = do
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   rideDetails <- runInReplica $ QRideDetails.findById rideId >>= fromMaybeM (RideNotFound rideId.getId) -- FIXME RideDetailsNotFound
-  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound rideId.getId)
+  bookingTable <- runInReplica $ QBooking.getBookingTableByBookingId ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  booking <- QBooking.bookingTableToBookingConverter bookingTable
   mQuote <- runInReplica $ DQ.findById (Id booking.quoteId)
   let driverId = ride.driverId
 
@@ -185,7 +187,7 @@ rideInfo merchantShortId reqRideId = do
         customerPhoneNo,
         rideOtp = ride.otp,
         customerPickupLocation = mkLocationAPIEntity booking.fromLocation,
-        customerDropLocation = Just $ mkLocationAPIEntity booking.toLocation,
+        customerDropLocation = Just $ mkLocationAPIEntity $ last booking.toLocation,
         actualDropLocation = ride.tripEndPos,
         driverId = cast @DP.Person @Common.Driver driverId,
         driverName = rideDetails.driverName,
@@ -218,9 +220,9 @@ rideInfo merchantShortId reqRideId = do
         distanceCalculationFailed = ride.distanceCalculationFailed
       }
 
-mkLocationAPIEntity :: DBLoc.BookingLocation -> Common.LocationAPIEntity
-mkLocationAPIEntity DBLoc.BookingLocation {..} = do
-  let DBLoc.LocationAddress {..} = address
+mkLocationAPIEntity :: DLoc.Location -> Common.LocationAPIEntity
+mkLocationAPIEntity DLoc.Location {..} = do
+  let DLoc.LocationAddress {..} = address
   Common.LocationAPIEntity {..}
 
 castCancellationSource :: DBCReason.CancellationSource -> Common.CancellationSource
@@ -254,7 +256,8 @@ rideSync merchantShortId reqRideId = do
   merchant <- findMerchantByShortId merchantShortId
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound rideId.getId)
+  bookingTable <- runInReplica $ QBooking.getBookingTableByBookingId ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  booking <- QBooking.bookingTableToBookingConverter bookingTable
 
   -- merchant access checking
   unless (merchant.id == booking.providerId) $ throwError (RideDoesNotExist rideId.getId)
@@ -300,8 +303,8 @@ syncCompletedRide ride booking = do
     logWarning "No fare params linked to ride. Using fare params linked to booking, they may be not actual"
   let fareParametersId = fromMaybe booking.fareParams.id ride.fareParametersId
   fareParameters <- runInReplica $ QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
-  handle (errHandler ride.status booking.status "ride completed") $
-    CallBAP.sendRideCompletedUpdateToBAP booking ride fareParameters
+  handle (errHandler ride.status booking.status "ride completed") $ do
+    CallBAP.sendRideCompletedUpdateToBAP booking ride fareParameters (fromJust Nothing ride.fromLocation) (Just $ last ride.toLocation)
   pure $ Common.RideSyncRes Common.RIDE_COMPLETED "Success. Sent ride completed update to bap"
 
 errHandler :: DRide.RideStatus -> DBooking.BookingStatus -> Text -> SomeException -> Flow ()

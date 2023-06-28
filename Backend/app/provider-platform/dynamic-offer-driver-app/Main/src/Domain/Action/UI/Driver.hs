@@ -681,7 +681,8 @@ getNearbySearchRequests driverId = do
   return $ GetNearbySearchRequestsRes searchRequestForDriverAPIEntity
   where
     buildSearchRequestForDriverAPIEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig nearbyReq = do
-      searchRequest <- runInReplica $ QSReq.findById nearbyReq.searchRequestId >>= fromMaybeM (SearchRequestNotFound nearbyReq.searchRequestId.getId)
+      searchRequestTable <- runInReplica $ QSReq.getSearchRequestTableById nearbyReq.searchRequestId >>= fromMaybeM (SearchRequestNotFound nearbyReq.searchRequestId.getId)
+      searchRequest <- QSReq.searchTableToSearchReqConverter searchRequestTable >>= fromMaybeM (SearchRequestNotFound nearbyReq.searchRequestId.getId)
       popupDelaySeconds <- DP.getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
       return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest popupDelaySeconds
 

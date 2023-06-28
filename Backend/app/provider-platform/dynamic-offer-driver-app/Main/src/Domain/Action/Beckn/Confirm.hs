@@ -17,10 +17,10 @@ module Domain.Action.Beckn.Confirm where
 import Data.String.Conversions
 import qualified Data.Text as T
 import Domain.Types.Booking as DRB
-import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverQuote as DDQ
+import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.QuoteSpecialZone as DQSZ
@@ -48,12 +48,13 @@ import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
 import Storage.CachedQueries.Merchant as QM
 import Storage.Queries.Booking as QRB
-import qualified Storage.Queries.Booking.BookingLocation as QBL
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
+import qualified Storage.Queries.Location as QL
+import qualified Storage.Queries.LocationMapping as QLocationMapping
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.QuoteSpecialZone as QQSpecialZone
 import qualified Storage.Queries.Ride as QRide
@@ -67,16 +68,16 @@ data DConfirmReq = DConfirmReq
   { bookingId :: Id DRB.Booking,
     customerMobileCountryCode :: Text,
     customerPhoneNumber :: Text,
-    fromAddress :: DBL.LocationAddress,
-    toAddress :: DBL.LocationAddress,
+    fromAddress :: DL.LocationAddress,
+    toAddress :: DL.LocationAddress,
     mbRiderName :: Maybe Text
   }
 
 data DConfirmRes = DConfirmRes
   { booking :: DRB.Booking,
     ride :: Maybe DRide.Ride,
-    fromLocation :: DBL.BookingLocation,
-    toLocation :: DBL.BookingLocation,
+    fromLocation :: DL.Location,
+    toLocation :: DL.Location,
     riderDetails :: DRD.RiderDetails,
     transporter :: DM.Merchant
   }
@@ -110,14 +111,19 @@ handler transporter req quote = do
           ride <- buildRide driver.id booking
           rideDetails <- buildRideDetails ride driver
           driverSearchReqs <- QSRD.findAllActiveBySRId driverQuote.searchRequestId
+          let destination = last booking.toLocation
           Esq.runTransaction $ do
             when isNewRider $ QRD.create riderDetails
             QRB.updateRiderId booking.id riderDetails.id
             QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
-            QBL.updateAddress booking.fromLocation.id req.fromAddress
-            QBL.updateAddress booking.toLocation.id req.toAddress
+            QL.updateAddress booking.fromLocation.id req.fromAddress
+            QL.updateAddress destination.id req.toAddress
             whenJust req.mbRiderName $ QRB.updateRiderName booking.id
             QRide.create ride
+          mappings <- DRide.locationMappingMakerForRide ride
+          for_ mappings $ \locMap -> do
+            Esq.runTransaction $ QLocationMapping.createOnlyMapping locMap
+          Esq.runTransaction $ do
             QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
             QRideD.create rideDetails
             QBE.logRideConfirmedEvent booking.id
@@ -146,7 +152,7 @@ handler transporter req quote = do
                 riderDetails,
                 transporter,
                 fromLocation = uBooking.fromLocation,
-                toLocation = uBooking.toLocation
+                toLocation = last uBooking.toLocation
               }
         Right _ -> throwError AccessDenied
     DRB.SpecialZoneBooking -> do
@@ -154,12 +160,13 @@ handler transporter req quote = do
         Left _ -> throwError AccessDenied
         Right _ -> do
           otpCode <- generateOTPCode
+          let destination = last booking.toLocation
           Esq.runTransaction $ do
             when isNewRider $ QRD.create riderDetails
             QRB.updateRiderId booking.id riderDetails.id
             QRB.updateSpecialZoneOtpCode booking.id otpCode
-            QBL.updateAddress booking.fromLocation.id req.fromAddress
-            QBL.updateAddress booking.toLocation.id req.toAddress
+            QL.updateAddress booking.fromLocation.id req.fromAddress
+            QL.updateAddress destination.id req.toAddress
             whenJust req.mbRiderName $ QRB.updateRiderName booking.id
             QBE.logRideConfirmedEvent booking.id
           uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
@@ -171,7 +178,7 @@ handler transporter req quote = do
                 riderDetails,
                 transporter,
                 fromLocation = uBooking.fromLocation,
-                toLocation = uBooking.toLocation
+                toLocation = last uBooking.toLocation
               }
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
@@ -208,6 +215,8 @@ handler transporter req quote = do
             tripStartPos = Nothing,
             tripEndPos = Nothing,
             fareParametersId = Nothing,
+            fromLocation = Just $ booking.fromLocation,
+            toLocation = booking.toLocation,
             distanceCalculationFailed = Nothing,
             createdAt = now,
             updatedAt = now

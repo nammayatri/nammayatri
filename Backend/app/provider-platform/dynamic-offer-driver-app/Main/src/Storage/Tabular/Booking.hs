@@ -26,7 +26,6 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
-import Storage.Tabular.Booking.BookingLocation hiding (createdAt, id, updatedAt)
 import qualified Storage.Tabular.FareParameters as Fare
 import qualified Storage.Tabular.FareParameters.Instances as Fare
 import Storage.Tabular.Merchant (MerchantTId)
@@ -52,8 +51,6 @@ mkPersist
       bapUri Text
       startTime UTCTime
       riderId RiderDetailsTId Maybe
-      fromLocationId BookingLocationTId
-      toLocationId BookingLocationTId
       vehicleVariant Veh.Variant
       estimatedDistance Meters
       maxEstimatedDistance Centesimal Maybe
@@ -63,7 +60,6 @@ mkPersist
       riderName Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
-
       Primary id
       deriving Generic
     |]
@@ -73,40 +69,30 @@ instance TEntityKey BookingT where
   fromKey (BookingTKey _id) = Id _id
   toKey (Id id) = BookingTKey id
 
-type FullBookingT = (BookingT, BookingLocationT, BookingLocationT, Fare.FullFareParametersT)
+type FullBookingT = (BookingT, Fare.FullFareParametersT)
 
-instance FromTType FullBookingT Domain.Booking where
-  fromTType (BookingT {..}, fromLoc, toLoc, fareParametersT) = do
+instance FromTType BookingT Domain.BookingTable where
+  fromTType BookingT {..} = do
     pUrl <- parseBaseUrl bapUri
-    let fromLoc_ = mkDomainBookingLocation fromLoc
-        toLoc_ = mkDomainBookingLocation toLoc
-    fareParams <- fromTType fareParametersT
     return $
-      Domain.Booking
+      Domain.BookingTable
         { id = Id id,
           providerId = fromKey providerId,
-          fromLocation = fromLoc_,
-          toLocation = toLoc_,
           bapUri = pUrl,
           maxEstimatedDistance = HighPrecMeters <$> maxEstimatedDistance,
           riderId = fromKey <$> riderId,
+          fareParametersId = fromKey fareParametersId,
           ..
         }
 
-instance ToTType FullBookingT Domain.Booking where
-  toTType Domain.Booking {..} =
-    ( BookingT
-        { id = getId id,
-          providerId = toKey providerId,
-          fromLocationId = toKey fromLocation.id,
-          toLocationId = toKey toLocation.id,
-          bapUri = showBaseUrl bapUri,
-          riderId = toKey <$> riderId,
-          maxEstimatedDistance = getHighPrecMeters <$> maxEstimatedDistance,
-          fareParametersId = toKey fareParams.id,
-          ..
-        },
-      mkTabularBookingLocation fromLocation,
-      mkTabularBookingLocation toLocation,
-      toTType fareParams
-    )
+instance ToTType BookingT Domain.BookingTable where
+  toTType Domain.BookingTable {..} =
+    BookingT
+      { id = getId id,
+        providerId = toKey providerId,
+        bapUri = showBaseUrl bapUri,
+        riderId = toKey <$> riderId,
+        maxEstimatedDistance = getHighPrecMeters <$> maxEstimatedDistance,
+        fareParametersId = toKey fareParametersId,
+        ..
+      }

@@ -18,13 +18,19 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import qualified Domain.Types.Booking.BookingLocation as DLoc
+import qualified Data.Time.Clock.POSIX as Time
+import qualified Domain.Types.FarePolicy.FareProductType as DQuote
+import qualified Domain.Types.Location as DLoc
+import qualified Domain.Types.Location as DLocation
+import qualified Domain.Types.LocationMapping as DLocationMapping
+import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
+import qualified Domain.Types.VehicleVariant as VehVar (VehicleVariant)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -68,7 +74,7 @@ data Booking = Booking
     primaryExophone :: Text,
     startTime :: UTCTime,
     riderId :: Id DPerson.Person,
-    fromLocation :: DLoc.BookingLocation,
+    fromLocation :: DLoc.Location,
     estimatedFare :: Money,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
@@ -89,14 +95,74 @@ data BookingDetails
   deriving (Show)
 
 data OneWayBookingDetails = OneWayBookingDetails
-  { toLocation :: DLoc.BookingLocation,
+  { toLocation :: [DLoc.Location],
     distance :: HighPrecMeters
   }
   deriving (Show)
 
 data OneWaySpecialZoneBookingDetails = OneWaySpecialZoneBookingDetails
-  { toLocation :: DLoc.BookingLocation,
+  { toLocation :: [DLoc.Location],
     distance :: HighPrecMeters,
     otpCode :: Maybe Text
   }
   deriving (Show)
+
+data BookingTable = BookingTable
+  { id :: Text,
+    transactionId :: Text,
+    fareProductType :: DQuote.FareProductType,
+    bppBookingId :: Maybe Text,
+    status :: BookingStatus,
+    providerId :: Text,
+    quoteId :: Maybe (Id DQuote.Quote),
+    providerUrl :: BaseUrl,
+    providerName :: Text,
+    providerMobileNumber :: Text,
+    primaryExophone :: Text,
+    startTime :: UTCTime,
+    riderId :: Id DPerson.Person,
+    estimatedFare :: Money,
+    discount :: Maybe Money,
+    estimatedTotalFare :: Money,
+    distance :: Maybe HighPrecMeters,
+    otpCode :: Maybe Text,
+    vehicleVariant :: VehVar.VehicleVariant,
+    tripTermsId :: Maybe (Id DTripTerms.TripTerms),
+    rentalSlabId :: Maybe (Id DRentalSlab.RentalSlab),
+    merchantId :: Id Merchant,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving (Generic, Show)
+
+locationMappingMakerForBooking :: (MonadFlow m) => Booking -> m [DLocationMapping.LocationMapping]
+locationMappingMakerForBooking booking = do
+  ifBookingWithIndexes <- case booking.bookingDetails of
+    OneWayDetails details -> return $ Just $ zip ([1 ..] :: [Int]) details.toLocation
+    DriverOfferDetails driverDetails -> return $ Just $ zip ([1 ..] :: [Int]) driverDetails.toLocation
+    OneWaySpecialZoneDetails oneWaySpDetails -> return $ Just $ zip ([1 ..] :: [Int]) oneWaySpDetails.toLocation
+    RentalDetails _ -> return Nothing
+  case ifBookingWithIndexes of
+    Just bookingWithIndexes -> do
+      toLocationMappers <- mapM (locationMappingMakerForBookingInstanceMaker booking) bookingWithIndexes
+      fromLocationMapping <- locationMappingMakerForBookingInstanceMaker booking (0, booking.fromLocation)
+      return $ fromLocationMapping : toLocationMappers
+    Nothing -> return []
+
+locationMappingMakerForBookingInstanceMaker :: (MonadFlow m) => Booking -> (Int, DLocation.Location) -> m DLocationMapping.LocationMapping
+locationMappingMakerForBookingInstanceMaker Booking {..} location = do
+  locationMappingId <- generateGUID
+  let getIntEpochTime = round `fmap` Time.getPOSIXTime
+  epochVersion <- liftIO getIntEpochTime
+  let epochVersionLast5Digits = epochVersion `mod` 100000 :: Integer
+  let locationMapping =
+        DLocationMapping.LocationMapping
+          { id = Id locationMappingId,
+            tag = DLocationMapping.Booking,
+            order = fst location,
+            version = show epochVersionLast5Digits,
+            tagId = getId id,
+            location = snd location,
+            ..
+          }
+  return locationMapping

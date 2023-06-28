@@ -15,44 +15,66 @@
 
 module Storage.Queries.SearchRequestSpecialZone where
 
+import Domain.Types.Location as DLocation
+import Domain.Types.LocationMapping as DLocationMapping
 import Domain.Types.Merchant
 import Domain.Types.SearchRequestSpecialZone as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Error
 import Kernel.Types.Id
-import Storage.Tabular.SearchRequest.SearchReqLocation
+import Kernel.Utils.Common
+import Storage.Queries.LocationMapping as QLocationMapping
 import Storage.Tabular.SearchRequestSpecialZone
 
 create :: SearchRequestSpecialZone -> SqlDB ()
-create dsReq = Esq.runTransaction $
-  withFullEntity dsReq $ \(sReq, fromLoc, toLoc) -> do
-    Esq.create' fromLoc
-    Esq.create' toLoc
-    Esq.create' sReq
+create searchRequest = do
+  let tablex = searchReqSPToSearchTableConverter searchRequest
+  createSearchReqTable tablex
 
-findById :: Transactionable m => Id SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
-findById searchRequestSpecialZoneId = buildDType $
-  fmap (fmap $ extractSolidType @Domain.SearchRequestSpecialZone) $
-    Esq.findOne' $ do
-      (sReq :& sFromLoc :& sToLoc) <-
-        from
-          ( table @SearchRequestSpecialZoneT
-              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& loc1) -> s ^. SearchRequestSpecialZoneFromLocationId ==. loc1 ^. SearchReqLocationTId)
-              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& _ :& loc2) -> s ^. SearchRequestSpecialZoneToLocationId ==. loc2 ^. SearchReqLocationTId)
-          )
-      where_ $ sReq ^. SearchRequestSpecialZoneTId ==. val (toKey searchRequestSpecialZoneId)
-      pure (sReq, sFromLoc, sToLoc)
+searchReqSPToSearchTableConverter :: SearchRequestSpecialZone -> SearchRequestSpecialZoneTable
+searchReqSPToSearchTableConverter SearchRequestSpecialZone {..} = SearchRequestSpecialZoneTable {..}
 
-fullSearchRequestTable ::
-  From
-    ( Table SearchRequestSpecialZoneT
-        :& Table SearchReqLocationT
-        :& Table SearchReqLocationT
-    )
-fullSearchRequestTable =
-  table @SearchRequestSpecialZoneT
-    `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& loc1) -> s ^. SearchRequestSpecialZoneFromLocationId ==. loc1 ^. SearchReqLocationTId)
-    `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& _ :& loc2) -> s ^. SearchRequestSpecialZoneToLocationId ==. loc2 ^. SearchReqLocationTId)
+createSearchReqTable :: SearchRequestSpecialZoneTable -> SqlDB ()
+createSearchReqTable = Esq.create
+
+findById :: (Transactionable m, MonadFlow m) => Id SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
+findById searchRequestId = do
+  mbSearchReqTable <- getSearchRequestSpecialZoneTableById searchRequestId
+  case mbSearchReqTable of
+    Just searchRequestTable -> searchTableToSearchReqSpecialZoneConverter searchRequestTable
+    Nothing -> return Nothing
+
+searchTableToSearchReqSpecialZoneConverter :: (Transactionable m, MonadFlow m) => SearchRequestSpecialZoneTable -> m (Maybe SearchRequestSpecialZone)
+searchTableToSearchReqSpecialZoneConverter SearchRequestSpecialZoneTable {..} = do
+  locationMappings <- QLocationMapping.findByTagId id.getId
+  let toLocation = map (.location) (filter (\locationMapping -> locationMapping.order /= 0) locationMappings)
+  fromLocation <- sourceLocationFinder locationMappings & fromMaybeM (InternalError "from location is missing")
+  return $
+    Just
+      SearchRequestSpecialZone
+        { ..
+        }
+
+getSearchRequestSpecialZoneTableById ::
+  (Transactionable m) =>
+  Id SearchRequestSpecialZone ->
+  m (Maybe SearchRequestSpecialZoneTable)
+getSearchRequestSpecialZoneTableById searchRequestId = do
+  findOne $ do
+    searchRequestT <- from $ table @SearchRequestSpecialZoneT
+    where_ $
+      searchRequestT ^. SearchRequestSpecialZoneId ==. val (getId searchRequestId)
+    return searchRequestT
+
+sourceLocationFinder :: [DLocationMapping.LocationMapping] -> Maybe Location
+sourceLocationFinder locationMappings = do
+  let orderZeroMappings = filter (\locationMapping -> locationMapping.order == 0) locationMappings
+  if null orderZeroMappings
+    then Nothing
+    else do
+      let source = head orderZeroMappings
+      Just $ source.location
 
 getRequestIdfromTransactionId ::
   (Transactionable m) =>
@@ -65,16 +87,22 @@ getRequestIdfromTransactionId tId = do
       searchT ^. SearchRequestSpecialZoneTransactionId ==. val (getId tId)
     return $ searchT ^. SearchRequestSpecialZoneTId
 
-findByMsgIdAndBapIdAndBppId :: Transactionable m => Text -> Text -> Id Merchant -> m (Maybe SearchRequestSpecialZone)
-findByMsgIdAndBapIdAndBppId txnId bapId merchantId = Esq.buildDType $ do
-  mbFullSearchReqT <- Esq.findOne' $ do
-    (sReq :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
+findTByMsgIdAndBapIdAndBppId :: Transactionable m => Text -> Text -> Id Merchant -> m (Maybe SearchRequestSpecialZoneTable)
+findTByMsgIdAndBapIdAndBppId txnId bapId merchantId = do
+  findOne $ do
+    searchT <- from $ table @SearchRequestSpecialZoneT
     where_ $
-      sReq ^. SearchRequestSpecialZoneMessageId ==. val txnId
-        &&. sReq ^. SearchRequestSpecialZoneProviderId ==. val (toKey merchantId)
-        &&. sReq ^. SearchRequestSpecialZoneBapId ==. val bapId
-    pure (sReq, sFromLoc, mbSToLoc)
-  pure $ extractSolidType @SearchRequestSpecialZone <$> mbFullSearchReqT
+      searchT ^. SearchRequestSpecialZoneMessageId ==. val txnId
+        &&. searchT ^. SearchRequestSpecialZoneProviderId ==. val (toKey merchantId)
+        &&. searchT ^. SearchRequestSpecialZoneBapId ==. val bapId
+    return searchT
+
+findByMsgIdAndBapIdAndBppId :: (Transactionable m, MonadFlow m) => Text -> Text -> Id Merchant -> m (Maybe SearchRequestSpecialZone)
+findByMsgIdAndBapIdAndBppId txnId bapId merchantId = do
+  mbSearchReqTable <- findTByMsgIdAndBapIdAndBppId txnId bapId merchantId
+  case mbSearchReqTable of
+    Just searchRequestTable -> searchTableToSearchReqSpecialZoneConverter searchRequestTable
+    Nothing -> return Nothing
 
 getValidTill ::
   (Transactionable m) =>

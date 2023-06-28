@@ -18,6 +18,8 @@ module Storage.Queries.Ride where
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
 import Data.Time hiding (getCurrentTime)
 import Domain.Types.Booking as Booking
+import Domain.Types.Location
+import qualified Domain.Types.LocationMapping as DLocationMapping
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
@@ -26,42 +28,77 @@ import Domain.Types.RiderDetails as RiderDetails
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto as Esq hiding (findById, isNothing)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Queries.FullEntityBuilders (buildFullBooking)
+import Storage.Queries.Booking (bookingTableToBookingConverter)
+import Storage.Queries.FullEntityBuilders
+import qualified Storage.Queries.LocationMapping as QLocationMapping
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.DriverInformation as DriverInfo
 import Storage.Tabular.Ride as Ride
 import Storage.Tabular.RideDetails as RideDetails
 import Storage.Tabular.RiderDetails as RiderDetails
 
-create :: Ride -> SqlDB ()
-create = Esq.create
+rideToRideTableConverter :: Ride -> RideTable
+rideToRideTableConverter Ride {..} = RideTable {..}
 
-findById :: Transactionable m => Id Ride -> m (Maybe Ride)
-findById rideId = Esq.findOne $ do
+rideTableToRideConverter :: Transactionable m => RideTable -> m Ride
+rideTableToRideConverter RideTable {..} = do
+  locationMappings <- QLocationMapping.findByTagId (id.getId)
+  let toLocation = map (.location) (filter (\locationMapping -> locationMapping.order /= 0) locationMappings)
+  let fromLocation = sourceLocationFinder locationMappings
+  return Ride {..}
+
+createTable :: RideTable -> SqlDB ()
+createTable = Esq.create
+
+create :: Ride -> SqlDB ()
+create ride = do
+  let rideTable = rideToRideTableConverter ride
+  createTable rideTable
+
+findTableById :: Transactionable m => Id Ride -> m (Maybe RideTable)
+findTableById rideId = Esq.findOne $ do
   ride <- from $ table @RideT
   where_ $ ride ^. RideTId ==. val (toKey rideId)
   pure ride
 
+findById :: Transactionable m => Id Ride -> m (Maybe Ride)
+findById rideId = do
+  ridetable <- findTableById rideId
+  case ridetable of
+    Just rideTable -> do
+      ride <- rideTableToRideConverter rideTable
+      return $ Just ride
+    Nothing -> return Nothing
+
 findActiveByRBId :: Transactionable m => Id Booking -> m (Maybe Ride)
-findActiveByRBId rbId = Esq.findOne $ do
+findActiveByRBId rbId = do
+  ridetable <- findActiveByRBIdTable rbId
+  case ridetable of
+    Just rideTable -> do
+      ride <- rideTableToRideConverter rideTable
+      return $ Just ride
+    Nothing -> return Nothing
+
+findActiveByRBIdTable :: Transactionable m => Id Booking -> m (Maybe RideTable)
+findActiveByRBIdTable rbId = Esq.findOne $ do
   ride <- from $ table @RideT
   where_ $
     ride ^. Ride.RideBookingId ==. val (toKey rbId)
       &&. ride ^. RideStatus !=. val Ride.CANCELLED
   pure ride
 
-findAllByDriverId ::
+findAllByDriverIdTable' ::
   Transactionable m =>
   Id Person ->
   Maybe Integer ->
   Maybe Integer ->
   Maybe Bool ->
   Maybe Ride.RideStatus ->
-  m [(Ride, Booking)]
-findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus = Esq.buildDType $ do
+  m [(RideTable, BookingTable)]
+findAllByDriverIdTable' driverId mbLimit mbOffset mbOnlyActive mbRideStatus = Esq.buildDType $ do
   let limitVal = fromIntegral $ fromMaybe 10 mbLimit
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
       isOnlyActive = Just True == mbOnlyActive
@@ -87,24 +124,79 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus = Esq.buil
       res
       ( \(bookingT, rideT) -> runMaybeT do
           booking <- MaybeT $ buildFullBooking bookingT
-          return (extractSolidType @Ride rideT, booking)
+          return (extractSolidType @RideTable rideT, booking)
       )
 
-findOneByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
-findOneByDriverId driverId = Esq.findOne $ do
+findAllByDriverId' ::
+  Transactionable m =>
+  Id Person ->
+  Maybe Integer ->
+  Maybe Integer ->
+  Maybe Bool ->
+  Maybe Ride.RideStatus ->
+  m [(Ride, BookingTable)]
+findAllByDriverId' driverId mbLimit mbOffset mbOnlyActive mbRideStatus = do
+  rideTablePair <- findAllByDriverIdTable' driverId mbLimit mbOffset mbOnlyActive mbRideStatus
+  mapM
+    ( \pair -> do
+        ride <- rideTableToRideConverter (fst pair)
+        return (ride, snd pair)
+    )
+    rideTablePair
+
+findAllByDriverId ::
+  (Transactionable m) =>
+  Id Person ->
+  Maybe Integer ->
+  Maybe Integer ->
+  Maybe Bool ->
+  Maybe Ride.RideStatus ->
+  m [(Ride, Booking)]
+findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus = do
+  result <- findAllByDriverId' driverId mbLimit mbOffset mbOnlyActive mbRideStatus
+  convertPairs result
+
+convertPairs :: (Transactionable m) => [(Ride, BookingTable)] -> m [(Ride, Booking)]
+convertPairs = traverse convertPair
+  where
+    convertPair :: (Transactionable m) => (Ride, BookingTable) -> m (Ride, Booking)
+    convertPair (ride, bookingTable) = do
+      booking <- bookingTableToBookingConverter bookingTable
+      return (ride, booking)
+
+findOneByDriverIdTable :: Transactionable m => Id Person -> m (Maybe RideTable)
+findOneByDriverIdTable driverId = Esq.findOne $ do
   ride <- from $ table @RideT
   where_ $
     ride ^. RideDriverId ==. val (toKey driverId)
   limit 1
   pure ride
 
-getInProgressByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
-getInProgressByDriverId driverId = Esq.findOne $ do
+findOneByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
+findOneByDriverId driverId = do
+  ridetable <- findOneByDriverIdTable driverId
+  case ridetable of
+    Just rideTable -> do
+      ride <- rideTableToRideConverter rideTable
+      return $ Just ride
+    Nothing -> return Nothing
+
+getInProgressByDriverIdTable :: Transactionable m => Id Person -> m (Maybe RideTable)
+getInProgressByDriverIdTable driverId = Esq.findOne $ do
   ride <- from $ table @RideT
   where_ $
     ride ^. RideDriverId ==. val (toKey driverId)
       &&. ride ^. RideStatus ==. val Ride.INPROGRESS
   pure ride
+
+getInProgressByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
+getInProgressByDriverId driverId = do
+  ridetable <- getInProgressByDriverIdTable driverId
+  case ridetable of
+    Just rideTable -> do
+      ride <- rideTableToRideConverter rideTable
+      return $ Just ride
+    Nothing -> return Nothing
 
 getInProgressOrNewRideIdAndStatusByDriverId :: Transactionable m => Id Person -> m (Maybe (Id Ride, RideStatus))
 getInProgressOrNewRideIdAndStatusByDriverId driverId = do
@@ -116,8 +208,8 @@ getInProgressOrNewRideIdAndStatusByDriverId driverId = do
     pure (ride ^. RideId, ride ^. RideStatus)
   pure $ first Id <$> mbTuple
 
-getActiveByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
-getActiveByDriverId driverId = Esq.findOne $ do
+getActiveByDriverIdTable :: Transactionable m => Id Person -> m (Maybe RideTable)
+getActiveByDriverIdTable driverId = Esq.findOne $ do
   ride <- from $ table @RideT
   where_ $
     ride ^. RideDriverId ==. val (toKey driverId)
@@ -125,6 +217,15 @@ getActiveByDriverId driverId = Esq.findOne $ do
               ||. ride ^. RideStatus ==. val Ride.NEW
           )
   pure ride
+
+getActiveByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
+getActiveByDriverId driverId = do
+  ridetable <- getActiveByDriverIdTable driverId
+  case ridetable of
+    Just rideTable -> do
+      ride <- rideTableToRideConverter rideTable
+      return $ Just ride
+    Nothing -> return Nothing
 
 updateStatus ::
   Id Ride ->
@@ -238,8 +339,8 @@ getCountByStatus merchantId = do
 --     mkCount [counter] = counter
 --     mkCount _ = 0
 
-getRidesForDate :: Transactionable m => Id Person -> Day -> m [Ride]
-getRidesForDate driverId date = Esq.findAll $ do
+getRidesForDateTable :: Transactionable m => Id Person -> Day -> m [RideTable]
+getRidesForDateTable driverId date = Esq.findAll $ do
   ride <- from $ table @RideT
   where_ $
     ride ^. RideDriverId ==. val (toKey driverId)
@@ -250,6 +351,11 @@ getRidesForDate driverId date = Esq.findAll $ do
   where
     minDayTime = UTCTime (addDays (-1) date) 66600
     maxDayTime = UTCTime date 66600
+
+getRidesForDate :: Transactionable m => Id Person -> Day -> m [Ride]
+getRidesForDate driverId date = do
+  tables <- getRidesForDateTable driverId date
+  mapM rideTableToRideConverter tables
 
 updateArrival :: Id Ride -> SqlDB ()
 updateArrival rideId = do
@@ -374,3 +480,12 @@ findStuckRideItems merchantId bookingIds now = do
   pure $ mkStuckRideItem <$> res
   where
     mkStuckRideItem (rideId, bookingId, driverId, driverActive) = StuckRideItem {..}
+
+sourceLocationFinder :: [DLocationMapping.LocationMapping] -> Maybe Location
+sourceLocationFinder locationMappings = do
+  let orderZeroMappings = filter (\locationMapping -> locationMapping.order == 0) locationMappings
+  if null orderZeroMappings
+    then Nothing
+    else do
+      let source = head orderZeroMappings
+      Just $ source.location

@@ -15,7 +15,6 @@
 
 module Storage.Queries.FullEntityBuilders where
 
-import Domain.Types.Booking as Booking
 import Domain.Types.Estimate
 import Domain.Types.FarePolicy.FareProductType
 import Domain.Types.Quote as Quote
@@ -23,11 +22,10 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Queries.EstimateBreakup as QEB
-import Storage.Tabular.Booking as Booking
-import Storage.Tabular.Booking.BookingLocation
 import Storage.Tabular.DriverOffer
 import Storage.Tabular.Estimate
 import Storage.Tabular.Estimate.Instances
+import Storage.Tabular.LocationMapping
 import Storage.Tabular.Quote as Quote
 import Storage.Tabular.Quote.Instances as Quote
 import Storage.Tabular.RentalSlab
@@ -46,17 +44,8 @@ buildFullQuote (quoteT@QuoteT {..}, mbTripTermsT, mbRentalSlab, mbDriverOffer, m
     ONE_WAY_SPECIAL_ZONE -> MaybeT $ pure (Quote.OneWaySpecialZoneDetailsT <$> mbspecialZoneQuote)
   return $ extractSolidType @Quote (quoteT, mbTripTermsT, quoteDetailsT)
 
-buildFullBooking ::
-  Transactionable m =>
-  (BookingT, BookingLocationT, Maybe BookingLocationT, Maybe TripTermsT, Maybe RentalSlabT) ->
-  DTypeBuilder m (Maybe (SolidType FullBookingT))
-buildFullBooking (bookingT@BookingT {..}, fromLocT, mbToLocT, mbTripTermsT, mbRentalSlab) = runMaybeT $ do
-  bookingDetails <- case fareProductType of
-    ONE_WAY -> MaybeT $ pure (Booking.OneWayDetailsT <$> mbToLocT)
-    RENTAL -> MaybeT $ pure (Booking.RentalDetailsT <$> mbRentalSlab)
-    DRIVER_OFFER -> MaybeT $ pure (Booking.DriverOfferDetailsT <$> mbToLocT)
-    ONE_WAY_SPECIAL_ZONE -> MaybeT $ pure (Booking.OneWaySpecialZoneDetailsT <$> mbToLocT)
-  return $ extractSolidType @Booking (bookingT, fromLocT, mbTripTermsT, bookingDetails)
+getLocationMappingOrder :: LocationMappingT -> Int
+getLocationMappingOrder LocationMappingT {..} = order
 
 buildFullEstimate ::
   Transactionable m =>

@@ -1,17 +1,17 @@
 module SharedLogic.Confirm where
 
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Exophone as DExophone
+import qualified Domain.Types.Location as DL
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RentalSlab
 import qualified Domain.Types.SearchRequest as DSReq
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DSRLoc
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
@@ -26,6 +26,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.LocationMapping as QLocationMapping
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSReq
 import Tools.Error
@@ -34,7 +35,7 @@ data DConfirmRes = DConfirmRes
   { providerId :: Text,
     providerUrl :: BaseUrl,
     fromLoc :: LatLong,
-    toLoc :: Maybe LatLong,
+    toLoc :: [LatLong],
     vehicleVariant :: VehicleVariant,
     quoteDetails :: ConfirmQuoteDetails,
     startTime :: UTCTime,
@@ -79,8 +80,11 @@ confirm personId quoteId = do
   booking <- buildBooking searchRequest quote bFromLocation mbBToLocation exophone now Nothing
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   let details = mkConfirmQuoteDetails quote.quoteDetails
+  DB.runTransaction $ QRideB.create booking
+  mappings <- DRB.locationMappingMakerForBooking booking
+  for_ mappings $ \locMap -> do
+    DB.runTransaction $ QLocationMapping.create locMap
   DB.runTransaction $ do
-    QRideB.create booking
     QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill}
     QEstimate.updateStatusbyRequestId quote.requestId DEstimate.COMPLETED
   QPFS.clearCache searchRequest.riderId
@@ -110,8 +114,8 @@ buildBooking ::
   MonadFlow m =>
   DSReq.SearchRequest ->
   DQuote.Quote ->
-  DBL.BookingLocation ->
-  Maybe DBL.BookingLocation ->
+  DL.Location ->
+  [DL.Location] ->
   DExophone.Exophone ->
   UTCTime ->
   Maybe Text ->
@@ -152,14 +156,17 @@ buildBooking searchRequest quote fromLoc mbToLoc exophone now otpCode = do
       DQuote.OneWaySpecialZoneDetails _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails
     buildOneWayDetails = do
       -- we need to throw errors here because of some redundancy of our domain model
-      toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")
       distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
+      let toLocation = mbToLoc
       pure DRB.OneWayBookingDetails {..}
     buildOneWaySpecialZoneDetails = do
       -- we need to throw errors here because of some redundancy of our domain model
-      toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")
+      let toLocation = mbToLoc
       distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
-      pure DRB.OneWaySpecialZoneBookingDetails {..}
+      pure
+        DRB.OneWaySpecialZoneBookingDetails
+          { ..
+          }
 
 findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m DExophone.Exophone
 findRandomExophone merchantId = do
@@ -169,11 +176,11 @@ findRandomExophone merchantId = do
     e : es -> pure $ e :| es
   getRandomElement nonEmptyExophones
 
-buildBookingLocation :: MonadGuid m => UTCTime -> DSRLoc.SearchReqLocation -> m DBL.BookingLocation
-buildBookingLocation now DSRLoc.SearchReqLocation {..} = do
+buildBookingLocation :: MonadGuid m => UTCTime -> DLoc.Location -> m DLoc.Location
+buildBookingLocation now DLoc.Location {..} = do
   locId <- generateGUID
   return
-    DBL.BookingLocation
+    DLoc.Location
       { id = locId,
         lat,
         lon,

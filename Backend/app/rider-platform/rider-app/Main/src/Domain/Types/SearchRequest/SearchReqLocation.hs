@@ -14,6 +14,7 @@
 
 module Domain.Types.SearchRequest.SearchReqLocation where
 
+import Domain.Types.Location
 import Domain.Types.LocationAddress
 import Kernel.External.Maps.HasCoordinates
 import Kernel.Prelude
@@ -37,6 +38,12 @@ data SearchReqLocationAPIEntity = SearchReqLocationAPIEntity
 
 makeSearchReqLocationAPIEntity :: SearchReqLocation -> SearchReqLocationAPIEntity
 makeSearchReqLocationAPIEntity SearchReqLocation {..} =
+  SearchReqLocationAPIEntity
+    { ..
+    }
+
+makeLocationAPIEntity :: Location -> SearchReqLocationAPIEntity
+makeLocationAPIEntity Location {..} =
   SearchReqLocationAPIEntity
     { ..
     }

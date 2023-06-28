@@ -36,13 +36,14 @@ import Kernel.Types.Version
 import Kernel.Utils.Common hiding (Value)
 import Kernel.Utils.GenericPretty
 import Storage.Tabular.Booking
-import Storage.Tabular.Booking.BookingLocation
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
 import Storage.Tabular.DriverOnboarding.DriverLicense
 import Storage.Tabular.DriverOnboarding.DriverRCAssociation
 import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
 import Storage.Tabular.DriverQuote
+import Storage.Tabular.Location
+import Storage.Tabular.LocationMapping
 import Storage.Tabular.Person as TPerson
 import Storage.Tabular.Ride
 import Storage.Tabular.Vehicle as Vehicle
@@ -591,7 +592,8 @@ baseFullPersonQueryWithRideInfo ::
         :& Table VehicleT
         :& Table DriverQuoteT
         :& Table BookingT
-        :& Table BookingLocationT
+        :& Table LocationMappingT
+        :& Table LocationT
     )
 baseFullPersonQueryWithRideInfo =
   table @PersonT
@@ -616,9 +618,13 @@ baseFullPersonQueryWithRideInfo =
                  driverQuoteInfo ^. DriverQuoteId ==. bookingInfo ^. BookingQuoteId
                    &&. bookingInfo ^. BookingStatus ==. val Booking.TRIP_ASSIGNED
              )
-    `innerJoin` table @BookingLocationT
-    `Esq.on` ( \(_ :& _ :& _ :& _ :& _ :& bookingInfo :& bookingLocationInfo) ->
-                 bookingInfo ^. BookingToLocationId ==. bookingLocationInfo ^. BookingLocationTId
+    `innerJoin` table @LocationMappingT
+    `Esq.on` ( \(_ :& _ :& _ :& _ :& _ :& bookingInfo :& locationMapping) ->
+                 bookingInfo ^. BookingId ==. locationMapping ^. LocationMappingTagId
+             )
+    `innerJoin` table @LocationT
+    `Esq.on` ( \(_ :& _ :& _ :& _ :& _ :& _ :& locationMapping :& location) ->
+                 locationMapping ^. LocationMappingLocationId ==. location ^. LocationTId
              )
 
 getNearestDriversCurrentlyOnRide ::
@@ -633,9 +639,9 @@ getNearestDriversCurrentlyOnRide ::
 getNearestDriversCurrentlyOnRide mbVariant LatLong {..} radiusMeters merchantId mbDriverPositionInfoExpiry reduceRadiusValue = do
   now <- getCurrentTime
   res <- Esq.findAll $ do
-    (personInfo :& locationInfo :& driverInfo :& vehicleInfo :& _ :& _ :& bookingLocationInfo) <-
+    (personInfo :& locationInfo :& driverInfo :& vehicleInfo :& _ :& _ :& _ :& locationTInfo') <-
       from baseFullPersonQueryWithRideInfo
-    let destinationPoint = Esq.getPoint (bookingLocationInfo ^. BookingLocationLat, bookingLocationInfo ^. BookingLocationLon)
+    let destinationPoint = Esq.getPoint (locationTInfo' ^. LocationLat, locationTInfo' ^. LocationLon)
         distanceFromDriverToDestination = locationInfo ^. DriverLocationPoint <->. destinationPoint
         onRideRadius = val (fromIntegral (radiusMeters - reduceRadiusValue) :: Double)
         distanceFromDestinationToPickup = Esq.getPoint (val lat, val lon) <->. destinationPoint
@@ -675,8 +681,8 @@ getNearestDriversCurrentlyOnRide mbVariant LatLong {..} radiusMeters merchantId 
         locationInfo ^. DriverLocationLat,
         locationInfo ^. DriverLocationLon,
         vehicleInfo ^. VehicleVariant,
-        bookingLocationInfo ^. BookingLocationLat,
-        bookingLocationInfo ^. BookingLocationLon,
+        locationTInfo' ^. LocationLat,
+        locationTInfo' ^. LocationLon,
         distanceFromDriverToDestination +. distanceFromDestinationToPickup,
         distanceFromDriverToDestination,
         driverInfo ^. DriverInformationMode

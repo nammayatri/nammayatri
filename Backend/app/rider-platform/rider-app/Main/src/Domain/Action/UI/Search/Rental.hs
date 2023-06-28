@@ -35,6 +35,7 @@ import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import Storage.Queries.Geometry
+import qualified Storage.Queries.LocationMapping as QLocationMapping
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
@@ -80,12 +81,14 @@ rentalSearch personId bundleVersion clientVersion device req = do
   validateServiceability merchant.geofencingConfig
   fromLocation <- DSearch.buildSearchReqLoc req.origin
   now <- getCurrentTime
-  searchRequest <- DSearch.buildSearchRequest person fromLocation Nothing Nothing Nothing now bundleVersion clientVersion device Nothing
+  searchRequest <- DSearch.buildSearchRequest person fromLocation [] Nothing Nothing now bundleVersion clientVersion device Nothing
   Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId
-  DB.runTransaction $ do
-    QSearchRequest.create searchRequest
+  DB.runTransaction $ QSearchRequest.create searchRequest
+  mappings <- DSearchReq.locationMappingMakerForSearch searchRequest
+  for_ mappings $ \locMap -> do
+    DB.runTransaction $ QLocationMapping.create locMap
   let dSearchRes =
         RentalSearchRes
           { origin = req.origin,

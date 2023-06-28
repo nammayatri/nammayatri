@@ -23,3 +23,6 @@ import Storage.Tabular.RentalSlab
 
 findById' :: (MonadThrow m, Log m, Transactionable m) => Id RentalSlab -> DTypeBuilder m (Maybe RentalSlabT)
 findById' = Esq.findById'
+
+findById :: Transactionable m => Id RentalSlab -> m (Maybe RentalSlab)
+findById = Esq.findById

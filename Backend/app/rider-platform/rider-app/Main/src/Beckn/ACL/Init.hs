@@ -54,12 +54,13 @@ buildInitMessage res = do
             distance = mbDistance,
             duration = mbDuration
           }
+  let destination = if null res.toLoc then Just $ last res.toLoc else Nothing
   pure
     Init.InitMessage
       { order =
           Init.Order
             { items = [mkOrderItem mbBppItemId itemCode],
-              fulfillment = mkFulfillmentInfo res.fromLoc res.toLoc res.startTime res.maxEstimatedDistance,
+              fulfillment = mkFulfillmentInfo res.fromLoc destination res.startTime res.maxEstimatedDistance,
               payment = mkPayment
             }
       }

@@ -147,14 +147,15 @@ listOrder personId mRequestId mMobile mlimit moffset = do
         runInReplica $
           Person.findByRoleAndMobileNumberAndMerchantIdWithoutCC SP.USER mobileNumberHash merchantId
             >>= fromMaybeM (PersonDoesNotExist number)
-      bookings <-
-        runInReplica $ QRB.findAllByPersonIdLimitOffset (person.id) (Just limit_) moffset
+      bookingsTable <- runInReplica $ QRB.findAllBookingTableByByPersonIdLimitOffset (person.id) (Just limit_) moffset
+      bookings <- catMaybes <$> mapM QRB.bookingTableToBookingConverter bookingsTable
       return $ OrderInfo person bookings
     getByRequestId bookingId merchantId = do
-      (booking :: DRB.Booking) <-
+      (bookingT :: DRB.BookingTable) <-
         runInReplica $
-          QRB.findByIdAndMerchantId (Id bookingId) merchantId
+          QRB.findBookingTableByIdAndMerchantId (Id bookingId) merchantId
             >>= fromMaybeM (BookingDoesNotExist bookingId)
+      booking <- QRB.bookingTableToBookingConverter bookingT >>= fromMaybeM (BookingDoesNotExist bookingId)
       let requestorId = booking.riderId
       person <-
         runInReplica $
@@ -164,13 +165,14 @@ listOrder personId mRequestId mMobile mlimit moffset = do
 
 buildBookingToOrder :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => SP.Person -> DRB.Booking -> m OrderResp
 buildBookingToOrder SP.Person {firstName, lastName, mobileNumber} booking = do
-  let mbToLocation = case booking.bookingDetails of
-        DRB.RentalDetails _ -> Nothing
-        DRB.OneWayDetails details -> Just details.toLocation
-        DRB.DriverOfferDetails details -> Just details.toLocation
-        DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
+  let toLocationList = case booking.bookingDetails of
+        DRB.RentalDetails _ -> []
+        DRB.OneWayDetails details -> details.toLocation
+        DRB.DriverOfferDetails details -> details.toLocation
+        DRB.OneWaySpecialZoneDetails details -> details.toLocation
   rbStatus <- DRB.buildBookingAPIEntity booking
   decMobNum <- mapM decrypt mobileNumber
+  let mbToLocation = if not (null toLocationList) then Just (head toLocationList) else Nothing
   let details =
         OrderDetails
           { id = getId booking.id,

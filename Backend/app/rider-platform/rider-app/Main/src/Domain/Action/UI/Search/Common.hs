@@ -19,11 +19,11 @@ module Domain.Action.UI.Search.Common
   )
 where
 
+import qualified Domain.Types.Location as Location
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest as SearchRequest
-import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.Version
@@ -36,8 +36,8 @@ buildSearchRequest ::
     CoreMetrics m
   ) =>
   DPerson.Person ->
-  Location.SearchReqLocation ->
-  Maybe Location.SearchReqLocation ->
+  Location.Location ->
+  [Location.Location] ->
   Maybe HighPrecMeters ->
   Maybe HighPrecMeters ->
   UTCTime ->
@@ -83,12 +83,12 @@ data SearchReqLocation = SearchReqLocation
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-buildSearchReqLoc :: MonadFlow m => SearchReqLocation -> m Location.SearchReqLocation
+buildSearchReqLoc :: MonadFlow m => SearchReqLocation -> m Location.Location
 buildSearchReqLoc SearchReqLocation {..} = do
   now <- getCurrentTime
   locId <- generateGUID
   return
-    Location.SearchReqLocation
+    Location.Location
       { id = locId,
         lat = gps.lat,
         lon = gps.lon,

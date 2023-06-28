@@ -145,7 +145,8 @@ data RentalQuoteDetails = RentalQuoteDetails
 
 validateRequest :: DOnSearchReq -> Flow ValidatedOnSearchReq
 validateRequest DOnSearchReq {..} = do
-  _searchRequest <- runInReplica $ QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
+  _searchRequestTable <- runInReplica $ QSearchReq.getSearchRequestTableById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
+  _searchRequest <- QSearchReq.searchTableToSearchReqConverter _searchRequestTable >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
   merchant <- QMerch.findById _searchRequest.merchantId >>= fromMaybeM (MerchantNotFound _searchRequest.merchantId.getId)
   return $ ValidatedOnSearchReq {..}
 

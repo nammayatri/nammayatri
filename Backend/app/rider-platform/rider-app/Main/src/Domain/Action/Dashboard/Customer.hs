@@ -53,7 +53,7 @@ deleteCustomer merchantShortId customerId = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
   unless (merchant.id == person.merchantId) $ throwError (PersonDoesNotExist $ getId personId)
-  bookings <- runInReplica $ QRB.findByRiderIdAndStatus personId [DRB.NEW, DRB.TRIP_ASSIGNED, DRB.AWAITING_REASSIGNMENT, DRB.CONFIRMED, DRB.COMPLETED]
+  bookings <- runInReplica $ QRB.findBookingTableByRiderIdAndStatus personId [DRB.NEW, DRB.TRIP_ASSIGNED, DRB.AWAITING_REASSIGNMENT, DRB.CONFIRMED, DRB.COMPLETED]
   unless (null bookings) $ throwError (InvalidRequest "Can't delete customer, has a valid booking in past.")
   runTransaction $ do
     QPFS.deleteByPersonId personId

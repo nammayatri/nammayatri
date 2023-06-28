@@ -29,6 +29,7 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Exophone as DExophone
+import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
@@ -62,6 +63,7 @@ import Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
+import qualified Storage.Queries.LocationMapping as QLocationMapping
 import qualified Storage.Queries.Rating as QR
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
@@ -74,7 +76,7 @@ data DriverRideRes = DriverRideRes
   { id :: Id DRide.Ride,
     shortRideId :: ShortId DRide.Ride,
     status :: DRide.RideStatus,
-    fromLocation :: DBLoc.BookingLocationAPIEntity,
+    fromLocation :: Maybe DBLoc.BookingLocationAPIEntity,
     toLocation :: DBLoc.BookingLocationAPIEntity,
     driverName :: Text,
     driverNumber :: Maybe Text,
@@ -119,13 +121,13 @@ listDriverRides ::
   Maybe DRide.RideStatus ->
   m DriverRideListRes
 listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus = do
-  rides <- runInReplica $ QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus
+  rides <- QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus
   driverRideLis <- forM rides $ \(ride, booking) -> do
     rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
     rideRating <- runInReplica $ QR.findRatingForRide ride.id
     driverNumber <- RD.getDriverNumber rideDetail
     mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
-    pure $ mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking)
+    pure $ mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) ride.fromLocation ride.toLocation
   pure . DriverRideListRes $ driverRideLis
 
 mkDriverRideRes ::
@@ -134,16 +136,25 @@ mkDriverRideRes ::
   Maybe DRating.Rating ->
   Maybe DExophone.Exophone ->
   (DRide.Ride, DRB.Booking) ->
+  Maybe DL.Location ->
+  [DL.Location] ->
   DriverRideRes
-mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) = do
+mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) fromLocation toLocation = do
   let fareParams = booking.fareParams
+      estimatedBaseFare =
+        fareSum $
+          fareParams{driverSelectedFare = Nothing -- it should not be part of estimatedBaseFare
+                    }
   let initial = "" :: Text
+
   DriverRideRes
     { id = ride.id,
       shortRideId = ride.shortId,
       status = ride.status,
-      fromLocation = DBLoc.makeBookingLocationAPIEntity booking.fromLocation,
-      toLocation = DBLoc.makeBookingLocationAPIEntity booking.toLocation,
+      fromLocation = case fromLocation of
+        Just location -> Just $ DBLoc.makeBookingLocationAPIEntity location
+        Nothing -> Nothing,
+      toLocation = DBLoc.makeBookingLocationAPIEntity $ last toLocation,
       driverName = rideDetails.driverName,
       driverNumber,
       vehicleNumber = rideDetails.vehicleNumber,
@@ -151,7 +162,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) =
       vehicleVariant = fromMaybe DVeh.SEDAN rideDetails.vehicleVariant,
       vehicleModel = fromMaybe initial rideDetails.vehicleModel,
       computedFare = ride.fare,
-      estimatedBaseFare = fareSum fareParams,
+      estimatedBaseFare = estimatedBaseFare,
       estimatedDistance = booking.estimatedDistance,
       driverSelectedFare = fromMaybe 0 fareParams.driverSelectedFare,
       actualRideDistance = ride.traveledDistance,
@@ -170,7 +181,8 @@ arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow 
 arrivedAtPickup rideId req = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "The ride has already started."
-  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  bookingTable <- QBooking.getBookingTableByBookingId ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  booking <- QBooking.bookingTableToBookingConverter bookingTable
   let pickupLoc = getCoordinates booking.fromLocation
   let distance = distanceBetweenInMeters req pickupLoc
   driverReachedDistance <- asks (.driverReachedDistance)
@@ -213,17 +225,22 @@ otpRideCreate driver otpCode booking = do
   Esq.runTransaction $ do
     QBooking.updateStatus booking.id DRB.TRIP_ASSIGNED
     QRide.create ride
+  mappings <- DRide.locationMappingMakerForRide ride
+  for_ mappings $ \locMap -> do
+    Esq.runTransaction $ QLocationMapping.create locMap
+  Esq.runTransaction $ do
     QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
     QRideD.create rideDetails
     QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
   DLoc.updateOnRide (cast driver.id) True
-  uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
+  uBookingTable <- runInReplica $ QBooking.getBookingTableByBookingId booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
+  uBooking <- QBooking.bookingTableToBookingConverter uBookingTable
   Notify.notifyDriver transporter.id notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
   void $ BP.sendRideAssignedUpdateToBAP uBooking ride
   DS.driverScoreEventHandler DST.OnNewRideAssigned {merchantId = transporter.id, driverId = driver.id}
   driverNumber <- RD.getDriverNumber rideDetails
   mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
-  pure $ mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking)
+  pure $ mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) ride.fromLocation ride.toLocation
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
@@ -259,6 +276,8 @@ otpRideCreate driver otpCode booking = do
             tripEndPos = Nothing,
             fareParametersId = Nothing,
             distanceCalculationFailed = Nothing,
+            fromLocation = Just booking.fromLocation,
+            toLocation = booking.toLocation,
             createdAt = now,
             updatedAt = now
           }

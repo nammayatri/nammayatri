@@ -141,7 +141,8 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus = do
         return (person, Just dtmfNumber)
       Just entity -> return (entity, Nothing)
   activeRide <- runInReplica $ QRide.getActiveByDriverId driver.id >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
-  activeBooking <- runInReplica $ QRB.findById activeRide.bookingId >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)
+  activeBookingTable <- runInReplica $ QRB.getBookingTableByBookingId activeRide.bookingId >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)
+  activeBooking <- QRB.bookingTableToBookingConverter activeBookingTable
   riderId <-
     activeBooking.riderId
       & fromMaybeM (BookingFieldNotPresent "riderId")

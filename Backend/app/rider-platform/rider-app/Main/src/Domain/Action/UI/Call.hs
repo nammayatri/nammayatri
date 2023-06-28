@@ -141,9 +141,11 @@ getDriverMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus = do
     runInReplica (Person.findByRoleAndMobileNumberAndMerchantId USER "+91" mobileNumberHash exophone.merchantId) >>= \case
       Nothing -> getDtmfFlow dtmfNumber_ exophone.merchantId
       Just person -> do
-        runInReplica (QRB.findAssignedByRiderId person.id) >>= \case
+        runInReplica (QRB.findBAssignedByRiderId person.id) >>= \case
           Nothing -> getDtmfFlow dtmfNumber_ exophone.merchantId
-          Just activeBooking -> return (Nothing, activeBooking)
+          Just activeBookingTable -> do
+            activeBooking <- QRB.bookingTableToBookingConverter activeBookingTable >>= fromMaybeM (InternalError "booking not found")
+            return (Nothing, activeBooking)
   ride <- runInReplica $ QRide.findActiveByRBId booking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId booking.id)
   callId <- generateGUID
   callStatusObj <- buildCallStatus ride.id callId callSid (exotelStatusToInterfaceStatus callStatus) dtmfNumberUsed
@@ -171,7 +173,8 @@ getDtmfFlow dtmfNumber_ merchantId = do
   let dtmfNumber = dropFirstZero $ removeQuotes number
   dtmfMobileHash <- getDbHash dtmfNumber
   person <- runInReplica $ Person.findByRoleAndMobileNumberAndMerchantId USER "+91" dtmfMobileHash merchantId >>= fromMaybeM (PersonWithPhoneNotFound dtmfNumber)
-  booking <- runInReplica $ QRB.findAssignedByRiderId person.id >>= fromMaybeM (BookingForRiderNotFound $ getId person.id)
+  bookingTable <- runInReplica $ QRB.findBAssignedByRiderId person.id >>= fromMaybeM (BookingForRiderNotFound $ getId person.id)
+  booking <- QRB.bookingTableToBookingConverter bookingTable >>= fromMaybeM (BookingForRiderNotFound $ getId person.id)
   return (Just dtmfNumber, booking)
   where
     dropFirstZero = T.dropWhile (== '0')

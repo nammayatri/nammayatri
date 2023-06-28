@@ -28,7 +28,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
 import Storage.Tabular.Estimate (EstimateTId)
 import Storage.Tabular.Merchant (MerchantTId)
-import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId, mkDomainSearchReqLocation, mkTabularSearchReqLocation)
 import Storage.Tabular.Vehicle ()
 
 derivePersistField "Domain.SearchRequestStatus"
@@ -44,8 +43,6 @@ mkPersist
       startTime UTCTime
       validTill UTCTime
       providerId MerchantTId
-      fromLocationId SearchReqLocationTId
-      toLocationId SearchReqLocationTId
       bapId Text
       bapUri Text
       estimatedDistance Meters
@@ -67,36 +64,25 @@ instance TEntityKey SearchRequestT where
   fromKey (SearchRequestTKey _id) = Id _id
   toKey (Id id) = SearchRequestTKey id
 
-type FullSearchRequestT = (SearchRequestT, SearchReqLocationT, SearchReqLocationT)
-
-instance FromTType FullSearchRequestT Domain.SearchRequest where
-  fromTType (SearchRequestT {..}, fromLoc, toLoc) = do
+instance FromTType SearchRequestT Domain.SearchRequestTable where
+  fromTType SearchRequestT {..} = do
     pUrl <- parseBaseUrl bapUri
-    let fromLoc_ = mkDomainSearchReqLocation fromLoc
-        toLoc_ = mkDomainSearchReqLocation toLoc
 
     return $
-      Domain.SearchRequest
+      Domain.SearchRequestTable
         { id = Id id,
           estimateId = fromKey estimateId,
           providerId = fromKey providerId,
-          fromLocation = fromLoc_,
-          toLocation = toLoc_,
           bapUri = pUrl,
           ..
         }
 
-instance ToTType FullSearchRequestT Domain.SearchRequest where
-  toTType Domain.SearchRequest {..} =
-    ( SearchRequestT
-        { id = getId id,
-          estimateId = toKey estimateId,
-          providerId = toKey providerId,
-          fromLocationId = toKey fromLocation.id,
-          toLocationId = toKey toLocation.id,
-          bapUri = showBaseUrl bapUri,
-          ..
-        },
-      mkTabularSearchReqLocation fromLocation,
-      mkTabularSearchReqLocation toLocation
-    )
+instance ToTType SearchRequestT Domain.SearchRequestTable where
+  toTType Domain.SearchRequestTable {..} =
+    SearchRequestT
+      { id = getId id,
+        estimateId = toKey estimateId,
+        providerId = toKey providerId,
+        bapUri = showBaseUrl bapUri,
+        ..
+      }

@@ -18,12 +18,12 @@ module Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl) where
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DMerc
 import Domain.Types.Merchant.DriverPoolConfig (DriverPoolConfig)
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest as DSearchReq
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
@@ -52,6 +52,7 @@ import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.LocationMapping as QLocationMapping
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
@@ -167,8 +168,10 @@ repeatSearch merchant farePolicy searchReq booking ride cancellationSource now d
         }
 
   let baseFare = fareSum fareParams
-  Esq.runTransaction $ do
-    QSR.create newSearchReq
+  Esq.runTransaction $ QSR.create newSearchReq
+  mappings <- DSearchReq.locationMappingMakerForSearch newSearchReq
+  for_ mappings $ \locMap -> do
+    Esq.runTransaction $ QLocationMapping.create locMap
 
   let driverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
   res <-
@@ -200,14 +203,14 @@ repeatSearch merchant farePolicy searchReq booking ride cancellationSource now d
       id_ <- Id <$> generateGUID
       let validTill_ = 120 `addUTCTime` validTill
       from <- buildSearchReqLocation fromLocation
-      to <- buildSearchReqLocation toLocation
+      to <- buildSearchReqLocation $ last toLocation
       pure
         DSearchReq.SearchRequest
           { id = id_,
             startTime = now,
             validTill = validTill_,
             fromLocation = from,
-            toLocation = to,
+            toLocation = [to],
             status = DSearchReq.ACTIVE,
             searchRepeatCounter = searchRepeatCounter + 1,
             updatedAt = now,
@@ -219,12 +222,12 @@ repeatSearch merchant farePolicy searchReq booking ride cancellationSource now d
       ( MonadTime m,
         MonadGuid m
       ) =>
-      DLoc.SearchReqLocation ->
-      m DLoc.SearchReqLocation
-    buildSearchReqLocation DLoc.SearchReqLocation {..} = do
+      DLoc.Location ->
+      m DLoc.Location
+    buildSearchReqLocation DLoc.Location {..} = do
       newId <- Id <$> generateGUID
       pure
-        DLoc.SearchReqLocation
+        DLoc.Location
           { id = newId,
             createdAt = now,
             updatedAt = now,

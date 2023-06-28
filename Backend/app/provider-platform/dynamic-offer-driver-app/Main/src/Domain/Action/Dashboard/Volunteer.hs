@@ -18,13 +18,13 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Volunteer as 
 import qualified Domain.Action.UI.Ride as DRide
 import qualified Domain.Action.UI.Ride.StartRide as RideStart
 import qualified Domain.Types.Booking as Domain
-import qualified Domain.Types.Booking.BookingLocation as Domain
+import qualified Domain.Types.Location as Domain
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.APISuccess (APISuccess (Success))
-import Kernel.Types.Common (MonadTime (getCurrentTime))
+import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM)
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -36,20 +36,21 @@ bookingInfo :: ShortId DM.Merchant -> Text -> Flow Common.BookingInfoResponse
 bookingInfo merchantShortId otpCode = do
   merchant <- findMerchantByShortId merchantShortId
   now <- getCurrentTime
-  booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP merchant.id otpCode now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp otpCode)
+  bookingTable <- runInReplica $ QBooking.findBookingTableBySpecialZoneOTP merchant.id otpCode now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp otpCode)
+  booking <- QBooking.bookingTableToBookingConverter bookingTable
   return $ buildMessageInfoResponse booking
   where
     buildMessageInfoResponse Domain.Booking {..} =
       Common.BookingInfoResponse
         { bookingId = cast id,
           fromLocation = buildBookingLocation fromLocation,
-          toLocation = buildBookingLocation toLocation,
+          toLocation = buildBookingLocation $ last toLocation,
           estimatedDistance,
           estimatedFare,
           estimatedDuration,
           riderName
         }
-    buildBookingLocation Domain.BookingLocation {..} =
+    buildBookingLocation Domain.Location {..} =
       Common.BookingLocation
         { address = buildLocationAddress address,
           id = cast id,
@@ -64,7 +65,8 @@ bookingInfo merchantShortId otpCode = do
 assignCreateAndStartOtpRide :: ShortId DM.Merchant -> Common.AssignCreateAndStartOtpRideAPIReq -> Flow APISuccess
 assignCreateAndStartOtpRide _ Common.AssignCreateAndStartOtpRideAPIReq {..} = do
   requestor <- findPerson (cast driverId)
-  booking <- runInReplica $ QBooking.findById (cast bookingId) >>= fromMaybeM (BookingNotFound bookingId.getId)
+  bookingTable <- runInReplica $ QBooking.getBookingTableByBookingId (cast bookingId) >>= fromMaybeM (BookingNotFound bookingId.getId)
+  booking <- QBooking.bookingTableToBookingConverter bookingTable
   rideOtp <- booking.specialZoneOtpCode & fromMaybeM (InternalError "otpCode not found for special zone booking")
 
   ride <- DRide.otpRideCreate requestor rideOtp booking

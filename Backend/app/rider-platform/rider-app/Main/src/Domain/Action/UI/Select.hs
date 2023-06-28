@@ -149,14 +149,14 @@ selectList estimateId = do
   selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId estimateId
   pure $ SelectListRes $ map DQuote.makeQuoteAPIEntity selectedQuotes
 
-selectResult :: (EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m QuotesResultResponse
+selectResult :: (EsqDBReplicaFlow m r, EsqDBFlow m r) => Id DEstimate.Estimate -> m QuotesResultResponse
 selectResult estimateId = do
   res <- runMaybeT $ do
     estimate <- MaybeT . runInReplica $ QEstimate.findById estimateId
     quoteId <- MaybeT $ pure estimate.autoAssignQuoteId
     when (DEstimate.isCancelled estimate.status) $ MaybeT $ throwError $ EstimateCancelled estimate.id.getId
-    booking <- MaybeT . runInReplica $ QBooking.findAssignedByQuoteId (Id quoteId)
-    return $ QuotesResultResponse {bookingId = Just booking.id, selectedQuotes = Nothing}
+    booking <- MaybeT . runInReplica $ QBooking.findBookingTableAssignedByQuoteId (Id quoteId)
+    return $ QuotesResultResponse {bookingId = Just $ Id booking.id, selectedQuotes = Nothing}
   case res of
     Just r -> pure r
     Nothing -> do

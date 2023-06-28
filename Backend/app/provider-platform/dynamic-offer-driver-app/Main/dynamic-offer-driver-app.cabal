@@ -169,6 +169,8 @@ library
       Domain.Types.Issue.IssueOption
       Domain.Types.Issue.IssueReport
       Domain.Types.Issue.IssueTranslation
+      Domain.Types.Location
+      Domain.Types.LocationMapping
       Domain.Types.MediaFile
       Domain.Types.Merchant
       Domain.Types.Merchant.DriverIntelligentPoolConfig
@@ -271,6 +273,8 @@ library
       Storage.Queries.Issue.IssueCategory
       Storage.Queries.Issue.IssueOption
       Storage.Queries.Issue.IssueReport
+      Storage.Queries.Location
+      Storage.Queries.LocationMapping
       Storage.Queries.MediaFile
       Storage.Queries.Merchant
       Storage.Queries.Merchant.DriverIntelligentPoolConfig
@@ -331,6 +335,8 @@ library
       Storage.Tabular.Issue.IssueOption
       Storage.Tabular.Issue.IssueReport
       Storage.Tabular.Issue.IssueTranslation
+      Storage.Tabular.Location
+      Storage.Tabular.LocationMapping
       Storage.Tabular.MediaFile
       Storage.Tabular.Merchant
       Storage.Tabular.Merchant.DriverIntelligentPoolConfig

@@ -15,14 +15,16 @@
 
 module Domain.Types.SearchRequest where
 
+import qualified Data.Time.Clock.POSIX as Time
+import qualified Domain.Types.Location as DLoc
+import qualified Domain.Types.LocationMapping as DLocationMapping
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
-import Kernel.Types.Common (HighPrecMeters, Money, Seconds)
 import Kernel.Types.Id
 import Kernel.Types.Version
+import Kernel.Utils.Common
 
 data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
@@ -32,8 +34,8 @@ data SearchRequest = SearchRequest
     startTime :: UTCTime,
     validTill :: UTCTime,
     riderId :: Id DP.Person,
-    fromLocation :: DLoc.SearchReqLocation,
-    toLocation :: Maybe DLoc.SearchReqLocation,
+    fromLocation :: DLoc.Location,
+    toLocation :: [DLoc.Location],
     distance :: Maybe HighPrecMeters,
     maxDistance :: Maybe HighPrecMeters,
     estimatedRideDuration :: Maybe Seconds,
@@ -46,3 +48,47 @@ data SearchRequest = SearchRequest
     customerExtraFee :: Maybe Money
   }
   deriving (Generic, Show)
+
+data SearchRequestTable = SearchRequestTable
+  { id :: Id SearchRequest,
+    startTime :: UTCTime,
+    validTill :: UTCTime,
+    riderId :: Id DP.Person,
+    distance :: Maybe HighPrecMeters,
+    maxDistance :: Maybe HighPrecMeters,
+    estimatedRideDuration :: Maybe Seconds,
+    device :: Maybe Text,
+    merchantId :: Id DMerchant.Merchant, -- remove when searchRequest will not be used in CustomerSupport
+    createdAt :: UTCTime,
+    bundleVersion :: Maybe Version,
+    clientVersion :: Maybe Version,
+    language :: Maybe Maps.Language,
+    customerExtraFee :: Maybe Money
+  }
+  deriving (Generic, Show)
+
+locationMappingMakerForSearch :: (MonadFlow m) => SearchRequest -> m [DLocationMapping.LocationMapping]
+locationMappingMakerForSearch search = do
+  let searchWithIndexes = zip ([1 ..] :: [Int]) search.toLocation
+  toLocationMappers <- mapM (locationMappingMakerForSearchInstanceMaker search) searchWithIndexes
+  fromLocationMapping <- locationMappingMakerForSearchInstanceMaker search (0, search.fromLocation)
+  let d = fromLocationMapping : toLocationMappers
+  return d
+
+locationMappingMakerForSearchInstanceMaker :: (MonadFlow m) => SearchRequest -> (Int, DLoc.Location) -> m DLocationMapping.LocationMapping
+locationMappingMakerForSearchInstanceMaker SearchRequest {..} location = do
+  locationMappingId <- generateGUID
+  let getIntEpochTime = round `fmap` Time.getPOSIXTime
+  epochVersion <- liftIO getIntEpochTime
+  let epochVersionLast5Digits = epochVersion `mod` 100000 :: Integer
+  let locationMapping =
+        DLocationMapping.LocationMapping
+          { id = Id locationMappingId,
+            tag = DLocationMapping.SearchRequest,
+            order = fst location,
+            version = show epochVersionLast5Digits,
+            tagId = getId id,
+            location = snd location,
+            ..
+          }
+  return locationMapping

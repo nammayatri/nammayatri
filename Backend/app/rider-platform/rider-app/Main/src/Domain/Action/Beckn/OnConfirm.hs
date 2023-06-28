@@ -51,5 +51,6 @@ onConfirm ValidatedOnConfirmReq {..} = do
 
 validateRequest :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => OnConfirmReq -> m ValidatedOnConfirmReq
 validateRequest OnConfirmReq {..} = do
-  booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId" <> bppBookingId.getId)
+  bookingTable <- runInReplica $ QRB.findBookingTableByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId" <> bppBookingId.getId)
+  booking <- QRB.bookingTableToBookingConverter bookingTable >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId" <> bppBookingId.getId)
   return $ ValidatedOnConfirmReq {..}

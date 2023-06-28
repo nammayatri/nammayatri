@@ -33,10 +33,10 @@ import Tools.Error
 
 type AckResp = AckResponse
 
-callBasedEndRide :: (MonadThrow m, Log m, MonadTime m, EsqDBReplicaFlow m r) => EndRide.ServiceHandle m -> Id Merchant -> DbHash -> Text -> m AckResp
+callBasedEndRide :: (MonadThrow m, Log m, MonadTime m, EsqDBReplicaFlow m r, EsqDBFlow m r) => EndRide.ServiceHandle m -> Id Merchant -> DbHash -> Text -> m AckResp
 callBasedEndRide shandle merchantId mobileNumberHash callFrom = do
   driver <- runInReplica $ QPerson.findByMobileNumberAndMerchant "+91" mobileNumberHash merchantId >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
   activeRide <- runInReplica $ QRide.getActiveByDriverId driver.id >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
-  _ <- runInReplica $ QRB.findById activeRide.bookingId >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)
+  _ <- runInReplica $ QRB.getBookingTableByBookingId activeRide.bookingId >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)
   _ <- EndRide.callBasedEndRide shandle activeRide.id (EndRide.CallBasedEndRideReq driver)
   return Ack

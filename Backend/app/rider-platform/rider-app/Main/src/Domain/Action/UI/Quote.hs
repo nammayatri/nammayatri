@@ -50,7 +50,7 @@ import Tools.Error
 
 data GetQuotesRes = GetQuotesRes
   { fromLocation :: SearchReqLocationAPIEntity,
-    toLocation :: Maybe SearchReqLocationAPIEntity,
+    toLocation :: SearchReqLocationAPIEntity,
     quotes :: [OfferRes],
     estimates :: [EstimateAPIEntity]
   }
@@ -71,9 +71,10 @@ instance FromJSON OfferRes where
 instance ToSchema OfferRes where
   declareNamedSchema = genericDeclareNamedSchema $ S.objectWithSingleFieldParsing \(f : rest) -> toLower f : rest
 
-getQuotes :: (HedisFlow m r, EsqDBReplicaFlow m r) => Id SSR.SearchRequest -> m GetQuotesRes
+getQuotes :: (HedisFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) => Id SSR.SearchRequest -> m GetQuotesRes
 getQuotes searchRequestId = do
-  searchRequest <- runInReplica $ QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
+  searchRequestTable <- runInReplica $ QSR.getSearchRequestTableById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
+  searchRequest <- QSR.searchTableToSearchReqConverter searchRequestTable >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
   activeBooking <- runInReplica $ QBooking.findLatestByRiderIdAndStatus searchRequest.riderId DRB.activeBookingStatus
   whenJust activeBooking $ \_ -> throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT")
   logDebug $ "search Request is : " <> show searchRequest
@@ -81,8 +82,8 @@ getQuotes searchRequestId = do
   estimates <- getEstimates searchRequestId
   return $
     GetQuotesRes
-      { fromLocation = Location.makeSearchReqLocationAPIEntity searchRequest.fromLocation,
-        toLocation = Location.makeSearchReqLocationAPIEntity <$> searchRequest.toLocation,
+      { fromLocation = Location.makeLocationAPIEntity searchRequest.fromLocation,
+        toLocation = Location.makeLocationAPIEntity $ last searchRequest.toLocation,
         quotes = offers,
         estimates
       }
@@ -90,15 +91,15 @@ getQuotes searchRequestId = do
 getOffers :: (HedisFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m [OfferRes]
 getOffers searchRequest = do
   logDebug $ "search Request is : " <> show searchRequest
-  case searchRequest.toLocation of
-    Just _ -> do
+  if null searchRequest.toLocation
+    then do
       quoteList <- runInReplica $ QQuote.findAllByRequestId searchRequest.id
       logDebug $ "quotes are : " <> show quoteList
       let quotes = OnDemandCab . SQuote.makeQuoteAPIEntity <$> sortByNearestDriverDistance quoteList
       metroOffers <- map Metro <$> Metro.getMetroOffers searchRequest.id
       publicTransportOffers <- map PublicTransport <$> PublicTransport.getPublicTransportOffers searchRequest.id
       return . sortBy (compare `on` creationTime) $ quotes <> metroOffers <> publicTransportOffers
-    Nothing -> do
+    else do
       quoteList <- runInReplica $ QRentalQuote.findAllByRequestId searchRequest.id
       let quotes = OnDemandCab . SQuote.makeQuoteAPIEntity <$> sortByEstimatedFare quoteList
       return . sortBy (compare `on` creationTime) $ quotes

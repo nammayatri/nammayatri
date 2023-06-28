@@ -22,9 +22,9 @@ import qualified Data.Text as T
 import Data.Time.Clock (addUTCTime)
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FarePolicy as DFarePolicy
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSearchReq
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -45,6 +45,7 @@ import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.Estimate as QEst
+import qualified Storage.Queries.LocationMapping as QLocationMapping
 import qualified Storage.Queries.SearchRequest as QSReq
 import Tools.Error
 import Tools.Maps as Maps
@@ -109,8 +110,10 @@ handler merchant sReq estimate = do
       <> show estimateFare
   driverPoolConfig <- getDriverPoolConfig merchantId distance
   let inTime = fromIntegral driverPoolConfig.singleBatchProcessTime
-  Esq.runTransaction $ do
-    QSReq.create searchReq
+  Esq.runTransaction $ QSReq.create searchReq
+  mappings <- DSearchReq.locationMappingMakerForSearch searchReq
+  for_ mappings $ \locMap -> do
+    Esq.runTransaction $ QLocationMapping.create locMap
 
   let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance distance <$> farePolicy.driverExtraFeeBounds
   res <- sendSearchRequestToDrivers' driverPoolConfig searchReq merchant estimateFare driverExtraFeeBounds
@@ -134,8 +137,8 @@ buildSearchRequest ::
     MonadReader r m,
     HasField "searchRequestExpirationSeconds" r NominalDiffTime
   ) =>
-  DLoc.SearchReqLocation ->
-  DLoc.SearchReqLocation ->
+  DLoc.Location ->
+  DLoc.Location ->
   Id DM.Merchant ->
   DEst.Estimate ->
   DSelectReq ->
@@ -159,7 +162,7 @@ buildSearchRequest from to merchantId estimate sReq distance duration customerEx
         validTill = validTill_,
         providerId = merchantId,
         fromLocation = from,
-        toLocation = to,
+        toLocation = [to],
         bapId = sReq.bapId,
         bapUri = sReq.bapUri,
         estimatedDistance = distance,
@@ -174,7 +177,7 @@ buildSearchRequest from to merchantId estimate sReq distance duration customerEx
         updatedAt = now
       }
 
-buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.SearchReqLocation
+buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.Location
 buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@Maps.LatLong {..} = do
   Address {..} <- case address of
     Just loc
@@ -196,7 +199,8 @@ buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@
   now <- getCurrentTime
   let createdAt = now
       updatedAt = now
-  pure DLoc.SearchReqLocation {..}
+  let addres = DLoc.LocationAddress {..}
+  pure DLoc.Location {address = addres, ..}
 
 getAddressByGetPlaceName :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> LatLong -> m Address
 getAddressByGetPlaceName merchantId sessionToken latLong = do

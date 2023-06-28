@@ -97,8 +97,8 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest delayDuration =
       durationToPickup = nearbyReq.durationToPickup,
       baseFare = nearbyReq.baseFare,
       customerExtraFee = searchRequest.customerExtraFee,
-      fromLocation = searchRequest.fromLocation,
-      toLocation = searchRequest.toLocation,
+      fromLocation = DLoc.convertLocationToSearchRequestLocation searchRequest.fromLocation,
+      toLocation = DLoc.convertLocationToSearchRequestLocation $ last searchRequest.toLocation,
       distance = searchRequest.estimatedDistance,
       driverLatLong =
         LatLong

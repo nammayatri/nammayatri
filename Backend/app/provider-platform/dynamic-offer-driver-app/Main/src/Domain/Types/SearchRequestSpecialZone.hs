@@ -15,8 +15,8 @@
 
 module Domain.Types.SearchRequestSpecialZone where
 
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -29,8 +29,24 @@ data SearchRequestSpecialZone = SearchRequestSpecialZone
     startTime :: UTCTime,
     validTill :: UTCTime,
     providerId :: Id DM.Merchant,
-    fromLocation :: DLoc.SearchReqLocation,
-    toLocation :: DLoc.SearchReqLocation,
+    fromLocation :: DLoc.Location,
+    toLocation :: [DLoc.Location],
+    bapId :: Text,
+    bapUri :: BaseUrl,
+    estimatedDistance :: Meters,
+    estimatedDuration :: Seconds,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving (Generic, PrettyShow, Show)
+
+data SearchRequestSpecialZoneTable = SearchRequestSpecialZoneTable
+  { id :: Id SearchRequestSpecialZone,
+    transactionId :: Text,
+    messageId :: Text,
+    startTime :: UTCTime,
+    validTill :: UTCTime,
+    providerId :: Id DM.Merchant,
     bapId :: Text,
     bapUri :: BaseUrl,
     estimatedDistance :: Meters,

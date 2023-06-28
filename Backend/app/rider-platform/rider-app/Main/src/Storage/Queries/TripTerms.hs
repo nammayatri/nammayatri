@@ -23,3 +23,6 @@ import Storage.Tabular.TripTerms
 
 findById' :: (MonadThrow m, Log m, Transactionable m) => Id TripTerms -> DTypeBuilder m (Maybe TripTermsT)
 findById' = Esq.findById'
+
+findById :: Transactionable m => Id TripTerms -> m (Maybe TripTerms)
+findById = Esq.findById

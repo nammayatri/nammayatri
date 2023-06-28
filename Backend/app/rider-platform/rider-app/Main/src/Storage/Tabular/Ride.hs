@@ -68,11 +68,11 @@ instance TEntityKey RideT where
   fromKey (RideTKey _id) = Id _id
   toKey (Id id) = RideTKey id
 
-instance FromTType RideT Domain.Ride where
+instance FromTType RideT Domain.RideTable where
   fromTType RideT {..} = do
     tUrl <- parseBaseUrl `mapM` trackingUrl
     return $
-      Domain.Ride
+      Domain.RideTable
         { id = Id id,
           bppRideId = Id bppRideId,
           bookingId = fromKey bookingId,
@@ -83,8 +83,8 @@ instance FromTType RideT Domain.Ride where
           ..
         }
 
-instance ToTType RideT Domain.Ride where
-  toTType Domain.Ride {..} =
+instance ToTType RideT Domain.RideTable where
+  toTType Domain.RideTable {..} =
     RideT
       { id = getId id,
         bppRideId = getId bppRideId,

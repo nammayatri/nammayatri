@@ -22,17 +22,20 @@ where
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.FareParameters as DFare
+import qualified Domain.Types.Location as DLocation
 import Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RiderDetails as RD
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.DriverLocation as DLoc
+import qualified SharedLogic.GoogleMaps as GoogleMaps
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as CDI
@@ -41,7 +44,10 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverStats as DriverStats
 import qualified Storage.Queries.FareParameters as QFare
+import qualified Storage.Queries.Location as QLocation
+import qualified Storage.Queries.LocationMapping as QLocationMapping
 import Storage.Queries.Person as SQP
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import Tools.Error
@@ -50,14 +56,60 @@ import qualified Tools.Metrics as Metrics
 import Tools.Notifications (sendNotificationToDriver)
 
 endRideTransaction ::
-  (Metrics.CoreMetrics m, CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)) =>
+  (Metrics.CoreMetrics m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, Esq.EsqDBReplicaFlow m r, HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)) =>
   Id DP.Driver ->
   Id SRB.Booking ->
   Ride.Ride ->
   Maybe DFare.FareParameters ->
   Maybe (Id RD.RiderDetails) ->
-  m ()
-endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId = do
+  Bool ->
+  LatLong ->
+  m (Maybe DLocation.Location, Maybe DLocation.Location)
+endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId pickupDropOutsideOfThreshold tripEndPoint = do
+  (startLocationCustomer, endLocationCustomer) <-
+    if pickupDropOutsideOfThreshold
+      then do
+        person <- Esq.runInReplica $ QPerson.findById (cast driverId) >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+        let merchantId = person.merchantId
+        tripStartLatLong <- ride.tripStartPos & fromMaybeM LocationNotFound
+        fromLocationResponse <- Maps.getTripPlaceName merchantId GetPlaceNameReq {getBy = ByLatLong LatLong {lat = tripStartLatLong.lat, lon = tripStartLatLong.lon}, sessionToken = Nothing, language = Nothing}
+        actualFromLocationId <- generateGUID
+        fromAddress <- GoogleMaps.mkLocation fromLocationResponse
+        actualFromLocation <- buildLocation actualFromLocationId tripStartLatLong fromAddress
+        toLocationResponse <- Maps.getTripPlaceName merchantId GetPlaceNameReq {getBy = ByLatLong LatLong {lat = tripEndPoint.lat, lon = tripEndPoint.lon}, sessionToken = Nothing, language = Nothing}
+        actualToLocationId <- generateGUID
+        toAddress <- GoogleMaps.mkLocation toLocationResponse
+        actualToLocation <- buildLocation actualToLocationId tripEndPoint toAddress
+        logDebug $ "trip start point is " <> show actualFromLocation
+        case ride.fromLocation of
+          Just _ -> do
+            fromLocationMapping <- QLocationMapping.findByTagIdAndOrder ride.id.getId 0 >>= fromMaybeM (InternalError "location not found")
+            Esq.runTransaction $ do
+              QLocation.create actualFromLocation
+              QLocationMapping.updateLocationInMapping fromLocationMapping actualFromLocation
+          Nothing -> do
+            mapping <- Ride.locationMappingMakerForRideInstanceMaker ride (0, actualFromLocation)
+            Esq.runTransaction $ do
+              QLocationMapping.create mapping
+        if null ride.toLocation
+          then do
+            logDebug "ride to location is null "
+            let rideWithIndexes = zip ([1 ..] :: [Int]) [actualToLocation]
+            toLocationMappers <- mapM (Ride.locationMappingMakerForRideInstanceMaker ride) rideWithIndexes
+            for_ toLocationMappers $ \locMap -> do
+              Esq.runTransaction $ QLocationMapping.create locMap
+            return (Just actualFromLocation, Just actualToLocation)
+          else do
+            logDebug "ride to location is not null "
+            mappers <- QLocationMapping.findByTagId $ ride.id.getId
+            let toLocationMappers = filter (\mapper -> mapper.order /= 0) mappers
+            logDebug $ "updating location mappings " <> show toLocationMappers
+            logDebug $ "trip end point is " <> show actualToLocation
+            Esq.runTransaction $ QLocation.create actualToLocation
+            for_ toLocationMappers $ \locMap -> do
+              Esq.runTransaction $ QLocationMapping.updateLocationInMapping locMap actualToLocation
+            return (Just actualFromLocation, Just actualToLocation)
+      else return (Nothing, Nothing)
   driverInfo <- CDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
@@ -89,6 +141,7 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId = do
       else QDFS.updateStatus ride.driverId DDFS.IDLE
   DLoc.updateOnRide driverId False
   SRide.clearCache $ cast driverId
+  return (startLocationCustomer, endLocationCustomer)
 
 putDiffMetric :: (Metrics.HasBPPMetrics m r, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Money -> Meters -> m ()
 putDiffMetric merchantId money mtrs = do
@@ -116,3 +169,26 @@ getDistanceBetweenPoints merchantId a b = do
           travelMode = Just Maps.CAR
         }
   return $ distRes.distance
+
+buildLocation :: (MonadFlow m) => Id DLocation.Location -> LatLong -> GoogleMaps.Address -> m DLocation.Location
+buildLocation locationId LatLong {..} address = do
+  currTime <- getCurrentTime
+  return $
+    DLocation.Location
+      { id = locationId,
+        address =
+          DLocation.LocationAddress
+            { street = address.street,
+              city = address.city,
+              state = address.state,
+              country = address.country,
+              building = address.building,
+              areaCode = address.areaCode,
+              area = address.area,
+              door = address.door,
+              full_address = address.full_address
+            },
+        createdAt = currTime,
+        updatedAt = currTime,
+        ..
+      }

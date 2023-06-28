@@ -33,10 +33,11 @@ import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Types.Version (Version)
-import Kernel.Utils.Common
+import Kernel.Utils.Common (throwError, type (:::))
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import Storage.Queries.Geometry
+import qualified Storage.Queries.LocationMapping as QLocationMapping
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 import Tools.Metrics
@@ -84,12 +85,15 @@ oneWaySearch person merchant req bundleVersion clientVersion longestRouteDistanc
   fromLocation <- DSearch.buildSearchReqLoc req.origin
   toLocation <- DSearch.buildSearchReqLoc req.destination
   now <- getCurrentTime
-  searchRequest <- DSearch.buildSearchRequest person fromLocation (Just toLocation) (metersToHighPrecMeters <$> longestRouteDistance) (metersToHighPrecMeters <$> distance) now bundleVersion clientVersion device duration
+  searchRequest <- DSearch.buildSearchRequest person fromLocation [toLocation] (metersToHighPrecMeters <$> longestRouteDistance) (metersToHighPrecMeters <$> distance) now bundleVersion clientVersion device duration
   Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId
+  DB.runTransaction $ QSearchRequest.create searchRequest
+  mappings <- DSearchReq.locationMappingMakerForSearch searchRequest
+  for_ mappings $ \locMap -> do
+    DB.runTransaction $ QLocationMapping.create locMap
   DB.runTransaction $ do
-    QSearchRequest.create searchRequest
     QPFS.updateStatus person.id DPFS.SEARCHING {requestId = searchRequest.id, validTill = searchRequest.validTill}
   QPFS.clearCache person.id
   let dSearchRes =

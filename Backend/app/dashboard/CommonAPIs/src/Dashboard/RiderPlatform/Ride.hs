@@ -57,8 +57,8 @@ data ShareRideInfoRes = ShareRideInfoRes
     rideEndTime :: Maybe UTCTime,
     userFirstName :: Maybe Text,
     userLastName :: Maybe Text,
-    fromLocation :: BookingLocation,
-    toLocation :: Maybe BookingLocation
+    fromLocation :: Location,
+    toLocation :: [Location]
   }
   deriving (Generic, Show, ToSchema, FromJSON, ToJSON)
 
@@ -68,6 +68,16 @@ data RideStatus
   | COMPLETED
   | CANCELLED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data Location = Location
+  { id :: Id Location,
+    lat :: Double,
+    lon :: Double,
+    address :: LocationAddress,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show, Eq, HasCoordinates)
 
 data BookingLocation = BookingLocation
   { id :: Id BookingLocation,

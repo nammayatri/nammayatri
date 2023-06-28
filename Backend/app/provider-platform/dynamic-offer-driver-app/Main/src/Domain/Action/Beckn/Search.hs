@@ -27,10 +27,11 @@ import qualified Data.Map as M
 import qualified Domain.Types.Estimate as DEst
 import Domain.Types.FareParameters
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.DriverPoolConfig (DriverPoolConfig)
 import qualified Domain.Types.QuoteSpecialZone as DQuoteSpecialZone
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
+import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequestSpecialZone as DSRSZ
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
@@ -53,6 +54,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.TransporterConfig as CTC
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.Geometry as QGeometry
+import qualified Storage.Queries.LocationMapping as QLocationMapping
 import qualified Storage.Queries.QuoteSpecialZone as QQuoteSpecialZone
 import qualified Storage.Queries.SearchRequestSpecialZone as QSearchRequestSpecialZone
 import Tools.Error
@@ -134,9 +136,11 @@ handler org sReq = do
           (\_ -> throwError $ InvalidRequest "Duplicate Search request")
         fromLocation <- buildSearchReqLocation fromLocationLatLong
         toLocation <- buildSearchReqLocation toLocationLatLong
-        searchRequestSpecialZone <- buildSearchRequestSpecialZone sReq merchantId fromLocation toLocation result.distance result.duration
-        Esq.runTransaction $ do
-          QSearchRequestSpecialZone.create searchRequestSpecialZone
+        searchRequestSpecialZone <- buildSearchRequestSpecialZone sReq merchantId fromLocation [toLocation] result.distance result.duration
+        Esq.runTransaction $ QSearchRequestSpecialZone.create searchRequestSpecialZone
+        mappings <- DSR.locationMappingMakerForSearchSP searchRequestSpecialZone
+        for_ mappings $ \locMap -> do
+          Esq.runTransaction $ QLocationMapping.create locMap
         now <- getCurrentTime
         listOfSpecialZoneQuotes <- do
           allFarePolicies <- FarePolicyS.findAllByMerchantId org.id
@@ -191,24 +195,28 @@ handler org sReq = do
         Nothing -> mempty
         Just dp -> return (estimate, dp)
 
-    buildSearchReqLocation :: (MonadGuid m, MonadTime m) => LatLong -> m DLoc.SearchReqLocation
+    buildSearchReqLocation :: (MonadGuid m, MonadTime m) => LatLong -> m DLoc.Location
     buildSearchReqLocation LatLong {..} = do
       id <- Id <$> generateGUID
       now <- getCurrentTime
       let createdAt = now
           updatedAt = now
+      let address =
+            DLoc.LocationAddress
+              { street = Nothing,
+                door = Nothing,
+                city = Nothing,
+                state = Nothing,
+                country = Nothing,
+                building = Nothing,
+                areaCode = Nothing,
+                area = Nothing,
+                full_address = Nothing,
+                ..
+              }
       pure
-        DLoc.SearchReqLocation
-          { street = Nothing,
-            door = Nothing,
-            city = Nothing,
-            state = Nothing,
-            country = Nothing,
-            building = Nothing,
-            areaCode = Nothing,
-            area = Nothing,
-            full_address = Nothing,
-            ..
+        DLoc.Location
+          { ..
           }
 
     buildEstimatesInfos ::
@@ -285,8 +293,8 @@ buildSearchRequestSpecialZone ::
   ) =>
   DSearchReq ->
   Id DM.Merchant ->
-  DLoc.SearchReqLocation ->
-  DLoc.SearchReqLocation ->
+  DLoc.Location ->
+  [DLoc.Location] ->
   Meters ->
   Seconds ->
   m DSRSZ.SearchRequestSpecialZone
@@ -337,7 +345,7 @@ buildSpecialZoneQuote productSearchRequest fareParams transporterId distance veh
         ..
       }
 
-mkQuoteInfo :: DLoc.SearchReqLocation -> DLoc.SearchReqLocation -> UTCTime -> DQuoteSpecialZone.QuoteSpecialZone -> SpecialZoneQuoteInfo
+mkQuoteInfo :: DLoc.Location -> DLoc.Location -> UTCTime -> DQuoteSpecialZone.QuoteSpecialZone -> SpecialZoneQuoteInfo
 mkQuoteInfo fromLoc toLoc startTime DQuoteSpecialZone.QuoteSpecialZone {..} = do
   let fromLocation = Maps.getCoordinates fromLoc
       toLocation = Maps.getCoordinates toLoc

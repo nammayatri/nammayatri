@@ -14,33 +14,42 @@
 
 module Storage.Queries.SearchRequest where
 
+import Domain.Types.Location
+import qualified Domain.Types.LocationMapping as DLocationMapping
 import Domain.Types.SearchRequest as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.Queries.LocationMapping as QLocationMapping
 import Storage.Tabular.SearchRequest
-import Storage.Tabular.SearchRequest.SearchReqLocation
 
 create :: SearchRequest -> SqlDB ()
-create dsReq = Esq.runTransaction $
-  withFullEntity dsReq $ \(sReq, fromLoc, toLoc) -> do
-    Esq.create' fromLoc
-    Esq.create' toLoc
-    Esq.create' sReq
+create searchRequest = do
+  let tablex = searchReqToSearchTableConverter searchRequest
+  createSearchReqTable tablex
 
-findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
-findById searchRequestId = buildDType $
-  fmap (fmap $ extractSolidType @Domain.SearchRequest) $
-    Esq.findOne' $ do
-      (sReq :& sFromLoc :& sToLoc) <-
-        from
-          ( table @SearchRequestT
-              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& loc1) -> s ^. SearchRequestFromLocationId ==. loc1 ^. SearchReqLocationTId)
-              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& _ :& loc2) -> s ^. SearchRequestToLocationId ==. loc2 ^. SearchReqLocationTId)
-          )
-      where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
-      pure (sReq, sFromLoc, sToLoc)
+createSearchReqTable :: SearchRequestTable -> SqlDB ()
+createSearchReqTable = Esq.create
+
+findById :: (Transactionable m, MonadFlow m) => Id SearchRequest -> m (Maybe SearchRequest)
+findById searchRequestId = do
+  mbSearchReqTable <- getSearchRequestTableById searchRequestId
+  case mbSearchReqTable of
+    Just searchRequestTable -> searchTableToSearchReqConverter searchRequestTable
+    Nothing -> return Nothing
+
+getSearchRequestTableById ::
+  (Transactionable m) =>
+  Id SearchRequest ->
+  m (Maybe SearchRequestTable)
+getSearchRequestTableById searchRequestId = do
+  findOne $ do
+    searchRequestT <- from $ table @SearchRequestT
+    where_ $
+      searchRequestT ^. SearchRequestId ==. val (getId searchRequestId)
+    return searchRequestT
 
 updateStatus ::
   Id SearchRequest ->
@@ -89,3 +98,26 @@ findActiveByTransactionId transactionId = do
       searchT ^. SearchRequestTransactionId ==. val transactionId
         &&. searchT ^. SearchRequestStatus ==. val Domain.ACTIVE
     return $ searchT ^. SearchRequestTId
+
+searchReqToSearchTableConverter :: SearchRequest -> SearchRequestTable
+searchReqToSearchTableConverter SearchRequest {..} = SearchRequestTable {..}
+
+sourceLocationFinder :: [DLocationMapping.LocationMapping] -> Maybe Location
+sourceLocationFinder locationMappings = do
+  let orderZeroMappings = filter (\locationMapping -> locationMapping.order == 0) locationMappings
+  if null orderZeroMappings
+    then Nothing
+    else do
+      let source = head orderZeroMappings
+      Just $ source.location
+
+searchTableToSearchReqConverter :: (Transactionable m, MonadFlow m) => SearchRequestTable -> m (Maybe SearchRequest)
+searchTableToSearchReqConverter SearchRequestTable {..} = do
+  locationMappings <- QLocationMapping.findByTagId id.getId
+  let toLocation = map (.location) (filter (\locationMapping -> locationMapping.order /= 0) locationMappings)
+  fromLocation <- sourceLocationFinder locationMappings & fromMaybeM (InternalError "from location is missing")
+  return $
+    Just
+      SearchRequest
+        { ..
+        }

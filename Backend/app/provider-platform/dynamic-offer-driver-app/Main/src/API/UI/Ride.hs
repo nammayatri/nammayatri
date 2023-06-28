@@ -124,7 +124,8 @@ otpRideCreateAndStart requestorId req@DRide.OTPRideReq {..} = withFlowHandlerAPI
   requestor <- findPerson requestorId
   now <- getCurrentTime
   let rideOtp = req.specialZoneOtpCode
-  booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP requestor.merchantId rideOtp now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
+  bookingTable <- runInReplica $ QBooking.findBookingTableBySpecialZoneOTP requestor.merchantId rideOtp now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
+  booking <- QBooking.bookingTableToBookingConverter bookingTable
   ride <- DRide.otpRideCreate requestor rideOtp booking
   let driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor}
   shandle <- RideStart.buildStartRideHandle requestor.merchantId

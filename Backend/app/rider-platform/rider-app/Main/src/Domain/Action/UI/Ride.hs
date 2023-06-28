@@ -48,7 +48,7 @@ type GetDriverLocResp = MapSearch.LatLong
 
 data GetRideStatusResp = GetRideStatusResp
   { fromLocation :: BookingLocationAPIEntity,
-    toLocation :: Maybe BookingLocationAPIEntity,
+    toLocation :: [BookingLocationAPIEntity],
     ride :: RideAPIEntity,
     customer :: SPerson.PersonAPIEntity,
     driverPosition :: Maybe MapSearch.LatLong
@@ -73,7 +73,8 @@ getDriverLoc rideId personId = do
     (ride.status == COMPLETED || ride.status == CANCELLED)
     $ throwError $ RideInvalidStatus "Cannot track this ride"
   res <- CallBPP.callGetDriverLocation ride.trackingUrl
-  booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  bookingTable <- runInReplica (QRB.getBookingTableByBookingId ride.bookingId) >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  booking <- QRB.bookingTableToBookingConverter bookingTable >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let fromLocation = Maps.getCoordinates booking.fromLocation
   driverReachedDistance <- asks (.rideCfg.driverReachedDistance)
   driverOnTheWayNotifyExpiry <- getSeconds <$> asks (.rideCfg.driverOnTheWayNotifyExpiry)
@@ -101,6 +102,7 @@ getRideStatus ::
   ( HasCacheConfig r,
     EncFlow m r,
     EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
     Redis.HedisFlow m r,
     CoreMetrics m,
     HasField "rideCfg" r RideConfig
@@ -114,17 +116,18 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
     if ride.status == COMPLETED || ride.status == CANCELLED
       then return Nothing
       else Just <$> CallBPP.callGetDriverLocation ride.trackingUrl
-  booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  bookingTable <- runInReplica (QRB.getBookingTableByBookingId ride.bookingId) >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  booking <- QRB.bookingTableToBookingConverter bookingTable >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   rider <- runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   decRider <- decrypt rider
   return $
     GetRideStatusResp
       { fromLocation = makeBookingLocationAPIEntity booking.fromLocation,
         toLocation = case booking.bookingDetails of
-          DB.OneWayDetails details -> Just $ makeBookingLocationAPIEntity details.toLocation
-          DB.RentalDetails _ -> Nothing
-          DB.OneWaySpecialZoneDetails details -> Just $ makeBookingLocationAPIEntity details.toLocation
-          DB.DriverOfferDetails details -> Just $ makeBookingLocationAPIEntity details.toLocation,
+          DB.OneWayDetails details -> map makeBookingLocationAPIEntity details.toLocation
+          DB.RentalDetails _ -> []
+          DB.OneWaySpecialZoneDetails details -> map makeBookingLocationAPIEntity details.toLocation
+          DB.DriverOfferDetails details -> map makeBookingLocationAPIEntity details.toLocation,
         ride = makeRideAPIEntity ride,
         customer = SPerson.makePersonAPIEntity decRider,
         driverPosition = mbPos <&> (.currPoint)

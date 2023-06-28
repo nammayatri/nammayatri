@@ -40,7 +40,8 @@ buildSelectReq dSelectRes = do
 mkOrder :: DSelect.DSelectRes -> Select.Order
 mkOrder dSelectRes = do
   let from = dSelectRes.searchRequest.fromLocation
-      mbTo = dSelectRes.searchRequest.toLocation
+      tolocationList = dSelectRes.searchRequest.toLocation
+      mbTo = if not $ null tolocationList then Just $ last tolocationList else Nothing
       autoAssignEnabled = dSelectRes.autoAssignEnabled
       items =
         (: []) $

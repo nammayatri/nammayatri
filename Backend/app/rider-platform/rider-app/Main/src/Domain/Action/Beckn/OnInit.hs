@@ -16,6 +16,7 @@ module Domain.Action.Beckn.OnInit where
 
 import Domain.Types.Booking (BPPBooking, Booking)
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationAddress as DBL
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
@@ -68,10 +69,11 @@ onInit req = do
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
   let fromLocation = booking.fromLocation
   let mbToLocation = case booking.bookingDetails of
-        DRB.RentalDetails _ -> Nothing
-        DRB.OneWayDetails details -> Just details.toLocation
-        DRB.DriverOfferDetails details -> Just details.toLocation
-        DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
+        DRB.RentalDetails _ -> []
+        DRB.OneWayDetails details -> details.toLocation
+        DRB.DriverOfferDetails details -> details.toLocation
+        DRB.OneWaySpecialZoneDetails details -> details.toLocation
+
   return $
     OnInitRes
       { bookingId = booking.id,
@@ -79,7 +81,7 @@ onInit req = do
         bppUrl = booking.providerUrl,
         estimatedTotalFare = booking.estimatedTotalFare,
         fromLocationAddress = fromLocation.address,
-        mbToLocationAddress = mbToLocation <&> (.address),
+        mbToLocationAddress = if not (null mbToLocation) then Just $ DL.address (head mbToLocation) else Nothing,
         mbRiderName = decRider.firstName,
         transactionId = booking.transactionId,
         city = merchant.city,

@@ -34,7 +34,6 @@ import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as FarePolicyDr
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QFarePolicyProgressiveDetailsPerExtraKmRateSection
 import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as FarePolicySlabsDetailsSlab
 import Storage.Tabular.Booking
-import Storage.Tabular.Booking.BookingLocation
 import qualified Storage.Tabular.DriverQuote as DriverQuote
 import qualified Storage.Tabular.FareParameters as FareParams
 import qualified Storage.Tabular.FareParameters.FareParametersProgressiveDetails as FareParametersProgressiveDetails
@@ -47,13 +46,9 @@ import qualified Storage.Tabular.QuoteSpecialZone as QuoteSpecialZone
 buildFullBooking ::
   Transactionable m =>
   BookingT ->
-  DTypeBuilder m (Maybe (SolidType FullBookingT))
-buildFullBooking bookingT@BookingT {..} = runMaybeT $ do
-  fromLocationT <- MaybeT $ Esq.findById' @BookingLocationT (fromKey fromLocationId)
-  toLocationT <- MaybeT $ Esq.findById' @BookingLocationT (fromKey toLocationId)
-  fareParamsT <- MaybeT $ Esq.findById' @FareParams.FareParametersT (fromKey fareParametersId)
-  fullFareParamsData <- MaybeT $ getFullFareParamsData fareParamsT
-  return $ extractSolidType @Booking (bookingT, fromLocationT, toLocationT, fullFareParamsData)
+  DTypeBuilder m (Maybe (SolidType BookingT))
+buildFullBooking bookingT = runMaybeT $ do
+  return $ extractSolidType @BookingTable bookingT
 
 getFullFareParamsData ::
   Transactionable m =>

@@ -45,7 +45,8 @@ sendMessageFCM :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m
 sendMessageFCM _personId FCMReq {..} = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "The ride has already started."
-  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  bookingTable <- runInReplica $ QBooking.getBookingTableByBookingId ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  booking <- QBooking.bookingTableToBookingConverter bookingTable
   BP.sendNewMessageToBAP booking ride message
   pure APISuccess.Success
   where

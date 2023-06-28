@@ -17,37 +17,93 @@ module Storage.Queries.Booking where
 
 import Domain.Types.Booking
 import Domain.Types.DriverQuote (DriverQuote)
+import Domain.Types.Location
+import qualified Domain.Types.LocationMapping as DLocationMapping
 import Domain.Types.Merchant
 import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (findById, isNothing)
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Time
+import Kernel.Utils.Common
 import qualified Storage.Queries.DriverQuote as QDQuote
+import qualified Storage.Queries.FareParameters as QFareParameters
 import Storage.Queries.FullEntityBuilders
+import qualified Storage.Queries.LocationMapping as QLocationMapping
 import Storage.Tabular.Booking
 import Storage.Tabular.DriverQuote as DriverQuote
 
--- fareParams already created with driverQuote
+bookingTableToBookingConverter :: (Transactionable m) => BookingTable -> m Booking
+bookingTableToBookingConverter BookingTable {..} = do
+  locationMappings <- QLocationMapping.findByTagId id.getId
+  let toLocation = map (.location) (filter (\locationMapping -> locationMapping.order /= 0) locationMappings)
+  fromLocation <- sourceLocationFinder locationMappings & fromMaybeM (InternalError "from location is missing")
+  fareParams' <- QFareParameters.findById fareParametersId
+  fareParams <- fareParams' & fromMaybeM (InternalError "fare params is missing")
+  return
+    Booking
+      { id = Id id.getId,
+        ..
+      }
+
+sourceLocationFinder :: [DLocationMapping.LocationMapping] -> Maybe Location
+sourceLocationFinder locationMappings = do
+  let orderZeroMappings = filter (\locationMapping -> locationMapping.order == 0) locationMappings
+  if null orderZeroMappings
+    then Nothing
+    else do
+      let source = head orderZeroMappings
+      Just $ source.location
+
+bookingToBookingTableConverter :: Booking -> BookingTable
+bookingToBookingTableConverter Booking {..} =
+  BookingTable
+    { id = Id id.getId,
+      fareParametersId = fareParams.id,
+      ..
+    }
+
 create :: Booking -> SqlDB ()
-create dBooking =
-  withFullEntity dBooking $ \(booking, fromLoc, toLoc, _fareParams) -> do
-    Esq.create' fromLoc
-    Esq.create' toLoc
-    Esq.create' booking
+create booking = do
+  let tablex = bookingToBookingTableConverter booking
+  createBTable tablex
 
-findById :: Transactionable m => Id Booking -> m (Maybe Booking)
-findById bookingId = buildDType $ do
-  res <-
-    Esq.findOne' $ do
-      rb <- from $ table @BookingT
-      where_ $ rb ^. BookingTId ==. val (toKey bookingId)
-      pure rb
-  join <$> mapM buildFullBooking res
+createBTable :: BookingTable -> SqlDB ()
+createBTable = Esq.create
 
-findBySearchReq :: (Transactionable m) => Id DSR.SearchRequest -> m (Maybe Booking)
-findBySearchReq searchReqId = buildDType $ do
+findById :: (Transactionable m, MonadFlow m) => Id Booking -> m (Maybe Booking)
+findById bookingId = do
+  mbBookingTable <- getBookingTableByBookingId bookingId
+  case mbBookingTable of
+    Just bookingTable -> do
+      booking <- bookingTableToBookingConverter bookingTable
+      return $ Just booking
+    Nothing -> return Nothing
+
+getBookingTableByBookingId ::
+  (Transactionable m) =>
+  Id Booking ->
+  m (Maybe BookingTable)
+getBookingTableByBookingId bookingId = do
+  findOne $ do
+    bookingT <- from $ table @BookingT
+    where_ $
+      bookingT ^. BookingId ==. val (getId bookingId)
+    return bookingT
+
+findBySearchReq :: (Transactionable m, MonadFlow m) => Id DSR.SearchRequest -> m (Maybe Booking)
+findBySearchReq req = do
+  mbBookingTable <- findBookingTableBySearchReq req
+  case mbBookingTable of
+    Just bookingTable -> do
+      booking <- bookingTableToBookingConverter bookingTable
+      return $ Just booking
+    Nothing -> return Nothing
+
+findBookingTableBySearchReq :: (Transactionable m) => Id DSR.SearchRequest -> m (Maybe BookingTable)
+findBookingTableBySearchReq searchReqId = buildDType $ do
   mbDriverQuoteT <- QDQuote.findDriverQuoteBySearchId searchReqId
   let mbDriverQuoteId = Id . DriverQuote.id <$> mbDriverQuoteT
   mbBookingT <- (join <$>) $ mapM findBookingByDriverQuoteId' mbDriverQuoteId
@@ -116,12 +172,20 @@ findStuckBookings merchantId bookingIds now = do
         &&. (booking ^. BookingStatus ==. val NEW &&. upcoming6HrsCond)
     pure $ booking ^. BookingTId
 
-findBookingBySpecialZoneOTP :: Transactionable m => Id Merchant -> Text -> UTCTime -> m (Maybe Booking)
+findBookingBySpecialZoneOTP :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> Text -> UTCTime -> m (Maybe Booking)
 findBookingBySpecialZoneOTP merchantId otpCode now = do
   bookingId <- findBookingIdBySpecialZoneOTP merchantId otpCode now
   maybe
     (return Nothing)
     findById
+    bookingId
+
+findBookingTableBySpecialZoneOTP :: Transactionable m => Id Merchant -> Text -> UTCTime -> m (Maybe BookingTable)
+findBookingTableBySpecialZoneOTP merchantId otpCode now = do
+  bookingId <- findBookingIdBySpecialZoneOTP merchantId otpCode now
+  maybe
+    (return Nothing)
+    getBookingTableByBookingId
     bookingId
 
 findBookingIdBySpecialZoneOTP :: Transactionable m => Id Merchant -> Text -> UTCTime -> m (Maybe (Id Booking))

@@ -128,12 +128,12 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone = do
       where
         mkOneWayAPIDetails OneWayBookingDetails {..} =
           OneWayBookingAPIDetails
-            { toLocation = SLoc.makeBookingLocationAPIEntity toLocation,
+            { toLocation = SLoc.makeBookingLocationAPIEntity (last toLocation),
               estimatedDistance = distance
             }
         mkOneWaySpecialZoneAPIDetails OneWaySpecialZoneBookingDetails {..} =
           OneWaySpecialZoneBookingAPIDetails
-            { toLocation = SLoc.makeBookingLocationAPIEntity toLocation,
+            { toLocation = SLoc.makeBookingLocationAPIEntity (last toLocation),
               estimatedDistance = distance,
               ..
             }

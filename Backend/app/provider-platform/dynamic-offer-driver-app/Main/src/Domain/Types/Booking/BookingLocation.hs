@@ -17,6 +17,7 @@ module Domain.Types.Booking.BookingLocation where
 import Data.Aeson
 import Data.OpenApi (ToSchema)
 import Data.Time
+import qualified Domain.Types.Location as DLoc
 import EulerHS.Prelude hiding (id, state)
 import Kernel.External.Maps.HasCoordinates (HasCoordinates)
 import Kernel.Types.Id
@@ -56,9 +57,9 @@ data BookingLocationAPIEntity = BookingLocationAPIEntity
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-makeBookingLocationAPIEntity :: BookingLocation -> BookingLocationAPIEntity
-makeBookingLocationAPIEntity BookingLocation {..} = do
-  let LocationAddress {..} = address
+makeBookingLocationAPIEntity :: DLoc.Location -> BookingLocationAPIEntity
+makeBookingLocationAPIEntity DLoc.Location {..} = do
+  let DLoc.LocationAddress {..} = address
   BookingLocationAPIEntity
     { ..
     }
