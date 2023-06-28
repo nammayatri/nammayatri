@@ -474,7 +474,7 @@ const englishStrings = {
   "DRIVER_WAS_TAKING_TOO_LONG_TO_REACH_THE_PICKUP_LOCATION" : "Driver was taking too long to reach the pickup location",
   "THE_PICKUP_LOCATION_ENTERED_WAS_WRONG" : "The pickup location entered was wrong",
   "YOUR_DRIVER_IS_JUST" : "Your Driver is just ",
-  "M_AWAY" : "m away.",
+  "M_AWAY" : " m away.",
   "DRIVER_HAS_ALREADY_TRAVELLED" : "Driver has already travelled ",
   "PLEASE_CONTACT_THE_DRIVER_BEFORE_CANCELLING" : "\nPlease contact the driver before cancelling",
   "CHANGE_OF_PLANS" : "Change of plans",
@@ -498,5 +498,7 @@ const englishStrings = {
   "IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL" : "It seems to be taking longer than usual.",
   "CONTINUE_SEARCH_WITH" : "Continue Search with",
   "CONTINUING_SEARCH_WITH" : "Continuing search with",
-  "SEARCHING_WITH" : "Searching with"
+  "SEARCHING_WITH" : "Searching with",
+  "THE_DRIVER_PREFERRED_YOUR_SPECIAL_LOCATION_AND_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "The driver preferred your special location and is already on the way to your location.",
+  "DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "Driver is already on the way to your location."
 }
