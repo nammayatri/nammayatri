@@ -122,6 +122,16 @@ mkFulfillment dReq quote = do
       vehicle =
         OS.FulfillmentVehicle
           { category = castVariant quote.vehicleVariant
+          },
+      agent =
+        OS.Agent
+          { name = Just quote.driverName,
+            rateable = Just True,
+            tags =
+              Just $
+                OS.AgentTags
+                  { agent_info_rating = maybe Nothing (\rating -> Just $ show $ rating.getCenti) quote.driverRating
+                  }
           }
     }
   where
@@ -153,8 +163,8 @@ mkItem categoryId fulfillmentId q =
             { distance_to_nearest_driver = OS.DecimalValue $ toRational q.distanceToPickup.getMeters,
               special_location_tag = q.specialLocationTag
             },
-      base_distance = Nothing,
-      base_duration = Nothing,
+      -- base_distance = Nothing,
+      -- base_duration = Nothing,
       driver_name = Just q.driverName,
       duration_to_pickup = Just q.durationToPickup.getSeconds,
       valid_till = Just q.validTill,

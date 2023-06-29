@@ -19,6 +19,7 @@ module Beckn.Types.Core.Taxi.OnSelect
 where
 
 import Beckn.Types.Core.Taxi.OnSelect.Addon as Reexport
+import Beckn.Types.Core.Taxi.OnSelect.Agent as Reexport
 import Beckn.Types.Core.Taxi.OnSelect.Category as Reexport
 import Beckn.Types.Core.Taxi.OnSelect.Descriptor as Reexport
 import Beckn.Types.Core.Taxi.OnSelect.Fulfillment as Reexport

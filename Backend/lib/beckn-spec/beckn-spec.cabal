@@ -132,6 +132,7 @@ library
       Beckn.Types.Core.Taxi.OnSearch.StopInfo
       Beckn.Types.Core.Taxi.OnSelect
       Beckn.Types.Core.Taxi.OnSelect.Addon
+      Beckn.Types.Core.Taxi.OnSelect.Agent
       Beckn.Types.Core.Taxi.OnSelect.Category
       Beckn.Types.Core.Taxi.OnSelect.Descriptor
       Beckn.Types.Core.Taxi.OnSelect.Fulfillment

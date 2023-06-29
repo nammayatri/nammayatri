@@ -78,9 +78,9 @@ buildSearchReq origin mbDestination searchId startTime city device distance dura
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) bapIDs.cabs bapURIs.cabs Nothing Nothing city
-  let intent = mkIntent origin mbDestination startTime customerLanguage
-  let mbRouteInfo = Search.RouteInfo {distance, duration}
-  let searchMessage = Search.SearchMessage intent (Just mbRouteInfo) device
+  let intent = mkIntent origin mbDestination startTime customerLanguage distance duration
+  -- let mbRouteInfo = Search.RouteInfo {distance, duration}
+  let searchMessage = Search.SearchMessage intent device
 
   pure $ BecknReq context searchMessage
 
@@ -89,8 +89,10 @@ mkIntent ::
   Maybe DSearchCommon.SearchReqLocation ->
   UTCTime ->
   Maybe Maps.Language ->
+  Maybe Meters ->
+  Maybe Seconds ->
   Search.Intent
-mkIntent origin mbDestination startTime customerLanguage = do
+mkIntent origin mbDestination startTime customerLanguage distance duration = do
   let startLocation =
         Search.StartInfo
           { location = mkLocation origin,
@@ -107,9 +109,43 @@ mkIntent origin mbDestination startTime customerLanguage = do
           { start = startLocation,
             end = mbEndLocation,
             tags =
-              Search.Tags
-                { customer_language = customerLanguage
-                }
+              if (isJust distance || isJust duration)
+                then
+                  Just $
+                    Search.Tags
+                      { --customer_language = customerLanguage
+                        code = "route_info",
+                        name = "Route Information",
+                        list_1_code = maybe Nothing (\_ -> Just "distance_info_in_m") distance,
+                        list_1_name = maybe Nothing (\_ -> Just "Distance Information In Meters") distance, --"Distance Information In Meters",
+                        list_1_value = maybe Nothing (\distanceInM -> Just $ show distanceInM.getMeters) distance,
+                        list_2_code = maybe Nothing (\_ -> Just "duration_info_in_s") duration, --"duration_info_in_s",
+                        list_2_name = maybe Nothing (\_ -> Just "Duration Information In Seconds") duration, --"Duration Information In Seconds",
+                        list_2_value = maybe Nothing (\durationInS -> Just $ show durationInS.getSeconds) duration
+                      }
+                else Nothing,
+            customer =
+              if isJust customerLanguage
+                then
+                  Just $
+                    Search.Customer
+                      { person =
+                          Search.Person
+                            { tags =
+                                Search.Tags
+                                  { --customer_language = customerLanguage
+                                    code = "customer_info",
+                                    name = "Customer Information",
+                                    list_1_code = maybe Nothing (\_ -> Just "customer_language") customerLanguage,
+                                    list_1_name = maybe Nothing (\_ -> Just "Customer Language") customerLanguage, --"Distance Information In Meters",
+                                    list_1_value = maybe Nothing (\language -> Just $ show language) customerLanguage,
+                                    list_2_code = Nothing,
+                                    list_2_name = Nothing,
+                                    list_2_value = Nothing
+                                  }
+                            }
+                      }
+                else Nothing
           }
   Search.Intent
     { ..

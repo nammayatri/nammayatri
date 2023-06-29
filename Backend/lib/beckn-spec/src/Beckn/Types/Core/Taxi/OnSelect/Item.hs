@@ -26,6 +26,22 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
+-- id*	[...]
+-- parent_item_id	Item/properties/id[...]
+-- descriptor	Descriptor{...}
+-- price	Price{...}
+-- category_id	Category/properties/id[...]
+-- fulfillment_id	Fulfillment/properties/id[...]
+-- rating	Rating/properties/value[...]
+-- location_id	Location/properties/id[...]
+-- time	Time{...}
+-- rateable	Rateable[...]
+-- matched	[...]
+-- related	[...]
+-- recommended	[...]
+-- tags	Tags{...}
+-- quantity
+
 data Item = Item
   { id :: Text,
     category_id :: FareProductType,
@@ -37,8 +53,8 @@ data Item = Item
     -- Only when FareProductType.ONE_WAY_TRIP
     tags :: Maybe ItemTags,
     -- Only when FareProductType.RENTAL_TRIP
-    base_distance :: Maybe Kilometers,
-    base_duration :: Maybe Hours,
+    -- base_distance :: Maybe Kilometers,
+    -- base_duration :: Maybe Hours,
     -- Only when FareProductType.DRIVER_OFFER
     driver_name :: Maybe Text,
     duration_to_pickup :: Maybe Int, -- Seconds?
@@ -61,8 +77,6 @@ itemJSONOptions :: Options
 itemJSONOptions =
   defaultOptions
     { fieldLabelModifier = \case
-        "base_distance" -> "./komn/rental/base_distance_km"
-        "base_duration" -> "./komn/rental/base_duration_hr"
         "quote_terms" -> "./komn/quote_terms"
         a -> a
     }

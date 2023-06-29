@@ -61,6 +61,7 @@ buildContextMetro action message_id bapId bapUri = do
         bpp_id = Nothing,
         bpp_uri = Nothing,
         transaction_id = Nothing,
+        max_callbacks = Nothing,
         ..
       }
 
