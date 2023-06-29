@@ -266,7 +266,12 @@ Please refer to the [Project Structure Section](#project-structure)
 
 ### In Visual Studio Code Terminal, I get the error ```Assertion `path != ""' failed```.
 
-This appears to be [a bug in the VSCode direnv extension](https://github.com/NixOS/nix/issues/6409#issuecomment-1407799718). Run `unset NIX_STORE && direnv reload` in the VSCode terminal to fix it.
+Try the following steps:
+1. `sudo -i nix upgrade-nix` (This will upgrade nix on your machine)
+2. Ensure that you have VS Code installed from this link (choose the installer correctly): (https://code.visualstudio.com/insiders/)
+3. Open the project in the newly installed VS Code Insiders.
+
+If the above steps don't solve the issue, this could be due to [a bug in the VSCode direnv extension](https://github.com/NixOS/nix/issues/6409#issuecomment-1407799718). Run `unset NIX_STORE && direnv reload` in the VSCode terminal to fix it.
 
 ### How to find out where a library dependency is specified in Nix?
 
