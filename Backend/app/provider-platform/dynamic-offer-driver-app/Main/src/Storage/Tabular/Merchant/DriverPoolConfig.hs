@@ -42,6 +42,8 @@ mkPersist
       minRadiusOfSearch Meters
       maxRadiusOfSearch Meters
       radiusStepSize Meters
+      goHomeFromLocationRadius Meters
+      goHomeToLocationRadius Meters
       driverPositionInfoExpiry Seconds Maybe
       actualDistanceThreshold Meters Maybe
       maxDriverQuotesRequired Int
@@ -53,7 +55,7 @@ mkPersist
       poolSortingType PoolSortingType
       singleBatchProcessTime Seconds
       tripDistance Meters
-      radiusShrinkValueForDriversOnRide Int
+      radiusShrinkValueForDriversOnRide Meters
       driverToDestinationDistanceThreshold Meters
       driverToDestinationDuration Seconds
       createdAt UTCTime

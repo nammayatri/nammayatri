@@ -536,3 +536,59 @@ instance IsHTTPError MerchantPaymentMethodError where
     MerchantPaymentMethodDoesNotExist _ -> E400
 
 instance IsAPIError MerchantPaymentMethodError
+
+data DriverHomeLocationError
+  = DriverHomeLocationNotFound Text
+  | DriverHomeLocationDoesNotExist Text
+  | DriverHomeLocationLimitReached
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''DriverHomeLocationError
+
+instance IsBaseError DriverHomeLocationError where
+  toMessage = \case
+    DriverHomeLocationNotFound driverHomeLocationId -> Just $ "Driver home location with id \"" <> show driverHomeLocationId <> "\" not found."
+    DriverHomeLocationDoesNotExist driverHomeLocationId -> Just $ "No driver home location matches passed data \"<>" <> show driverHomeLocationId <> "\"."
+    DriverHomeLocationLimitReached -> Just "Driver home location limit already reached."
+
+instance IsHTTPError DriverHomeLocationError where
+  toErrorCode = \case
+    DriverHomeLocationNotFound _ -> "DRIVER_HOME_LOCATION_NOT_FOUND"
+    DriverHomeLocationDoesNotExist _ -> "DRIVER_HOME_LOCATION_DOES_NOT_EXIST"
+    DriverHomeLocationLimitReached -> "DRIVER_HOME_LOCATION_LIMIT_REACHED"
+  toHttpCode = \case
+    DriverHomeLocationNotFound _ -> E500
+    DriverHomeLocationDoesNotExist _ -> E400
+    DriverHomeLocationLimitReached -> E400
+
+instance IsAPIError DriverHomeLocationError
+
+data DriverGoHomeRequestError
+  = DriverGoHomeRequestErrorNotFound Text
+  | DriverGoHomeRequestErrorDoesNotExist Text
+  | DriverGoHomeRequestDailyUsageLimitReached
+  | DriverGoHomeRequestAlreadyActive
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''DriverGoHomeRequestError
+
+instance IsBaseError DriverGoHomeRequestError where
+  toMessage = \case
+    DriverGoHomeRequestErrorNotFound goHomeReqId -> Just $ "Driver GoHome request with id \"" <> show goHomeReqId <> "\" not found."
+    DriverGoHomeRequestErrorDoesNotExist goHomeReqId -> Just $ "No driver GoHome request matches passed data \"<>" <> show goHomeReqId <> "\"."
+    DriverGoHomeRequestDailyUsageLimitReached -> Just "GoHome feature daily usage limit reached."
+    DriverGoHomeRequestAlreadyActive -> Just "GoHome feature is already active."
+
+instance IsHTTPError DriverGoHomeRequestError where
+  toErrorCode = \case
+    DriverGoHomeRequestErrorNotFound _ -> "DRIVER_GO_HOME_REQUEST_NOT_FOUND"
+    DriverGoHomeRequestErrorDoesNotExist _ -> "DRIVER_GO_HOME_REQUEST_DOES_NOT_EXIST"
+    DriverGoHomeRequestDailyUsageLimitReached -> "DRIVER_GO_HOME_REQUEST_DAILY_USAGE_LIMIT_REACHED"
+    DriverGoHomeRequestAlreadyActive -> "DRIVER_GO_HOME_REQUEST_ALREADY_ACTIVE"
+  toHttpCode = \case
+    DriverGoHomeRequestErrorNotFound _ -> E500
+    DriverGoHomeRequestErrorDoesNotExist _ -> E400
+    DriverGoHomeRequestDailyUsageLimitReached -> E400
+    DriverGoHomeRequestAlreadyActive -> E400
+
+instance IsAPIError DriverGoHomeRequestError

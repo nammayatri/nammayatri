@@ -29,6 +29,7 @@ import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Storage.Tabular.Booking.BookingLocation hiding (createdAt, id, updatedAt)
+import Storage.Tabular.Driver.GoHomeFeature.DriverGoHomeRequest (DriverGoHomeRequestTId)
 import qualified Storage.Tabular.FareParameters as Fare
 import qualified Storage.Tabular.FareParameters.Instances as Fare
 import Storage.Tabular.Merchant (MerchantTId)
@@ -70,6 +71,7 @@ mkPersist
       fareParametersId Fare.FareParametersTId
       riderName Text Maybe
       paymentMethodId SMPM.MerchantPaymentMethodTId Maybe
+      goHomeRequestId DriverGoHomeRequestTId Maybe
       createdAt UTCTime
       updatedAt UTCTime
 
@@ -100,6 +102,7 @@ instance FromTType FullBookingT Domain.Booking where
           maxEstimatedDistance = HighPrecMeters <$> maxEstimatedDistance,
           riderId = fromKey <$> riderId,
           paymentMethodId = fromKey <$> paymentMethodId,
+          goHomeRequestId = fromKey <$> goHomeRequestId,
           ..
         }
 
@@ -115,6 +118,7 @@ instance ToTType FullBookingT Domain.Booking where
           maxEstimatedDistance = getHighPrecMeters <$> maxEstimatedDistance,
           fareParametersId = toKey fareParams.id,
           paymentMethodId = toKey <$> paymentMethodId,
+          goHomeRequestId = toKey <$> goHomeRequestId,
           ..
         },
       mkTabularBookingLocation fromLocation,

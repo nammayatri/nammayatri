@@ -27,6 +27,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Common (Centesimal, Meters (..))
 import qualified Kernel.Types.Common as Common
 import Kernel.Types.Id
+import Storage.Tabular.Driver.GoHomeFeature.DriverGoHomeRequest (DriverGoHomeRequestTId)
 import qualified Storage.Tabular.FareParameters as Fare
 import qualified Storage.Tabular.FareParameters.Instances as Fare
 import Storage.Tabular.Merchant (MerchantTId)
@@ -59,6 +60,7 @@ mkPersist
       fareParametersId Fare.FareParametersTId
       providerId MerchantTId
       specialLocationTag Text Maybe
+      goHomeRequestId DriverGoHomeRequestTId Maybe
       createdAt UTCTime
       updatedAt UTCTime
 
@@ -85,6 +87,7 @@ instance FromTType FullDriverQuoteT Domain.DriverQuote where
           driverId = fromKey driverId,
           durationToPickup = roundToIntegral durationToPickup,
           providerId = fromKey providerId,
+          goHomeRequestId = fromKey <$> goHomeRequestId,
           ..
         }
 
@@ -99,6 +102,7 @@ instance ToTType FullDriverQuoteT Domain.DriverQuote where
           durationToPickup = realToFrac durationToPickup,
           fareParametersId = toKey fareParams.id,
           providerId = toKey providerId,
+          goHomeRequestId = toKey <$> goHomeRequestId,
           ..
         },
       toTType fareParams

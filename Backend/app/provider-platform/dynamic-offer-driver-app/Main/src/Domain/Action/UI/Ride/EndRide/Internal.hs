@@ -63,6 +63,7 @@ import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverFee as QDF
+import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as DriverStats
 import qualified Storage.Queries.FareParameters as QFare
@@ -124,6 +125,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
     whenJust mbRiderDetails $ \riderDetails ->
       when shouldUpdateRideComplete (QRD.updateHasTakenValidRide riderDetails.id)
     whenJust mbFareParams QFare.create
+    whenJust booking.goHomeRequestId $ QDGR.finishSuccessfully
     QRide.updateAll ride.id ride
     QRide.updateStatus ride.id Ride.COMPLETED
     QRB.updateStatus booking.id SRB.COMPLETED

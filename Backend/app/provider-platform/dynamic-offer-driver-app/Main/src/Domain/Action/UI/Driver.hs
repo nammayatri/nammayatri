@@ -15,6 +15,8 @@
 
 module Domain.Action.UI.Driver
   ( DriverInformationRes (..),
+    GetHomeLocationsRes (..),
+    AddHomeLocationReq (..),
     ListDriverRes (..),
     DriverEntityRes (..),
     OnboardDriverReq (..),
@@ -33,6 +35,11 @@ module Domain.Action.UI.Driver
     ResendAuth (..),
     DriverPaymentHistoryResp,
     getInformation,
+    activateGoHomeFeature,
+    deactivateGoHomeFeature,
+    addHomeLocation,
+    getHomeLocations,
+    deleteHomeLocation,
     setActivity,
     listDriver,
     changeDriverEnableState,
@@ -57,6 +64,8 @@ import Data.OpenApi (ToSchema)
 import Data.Time (Day, UTCTime (UTCTime, utctDay), fromGregorian)
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverFee as DDF
+import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
+import qualified Domain.Types.Driver.GoHomeFeature.DriverHomeLocation as DDHL
 import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverQuote as DDrQuote
@@ -126,6 +135,8 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverFee as QDF
+import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
+import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
 import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverReferral as QDR
@@ -366,6 +377,16 @@ data DriverTxnInfo = DriverTxnInfo
     status :: TransactionStatus
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+  
+newtype AddHomeLocationReq = AddHomeLocationReq
+  { position :: LatLong
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+newtype GetHomeLocationsRes = GetHomeLocationsRes
+  { locations :: [DDHL.DriverHomeLocationAPIEntity]
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 createDriver ::
   ( HasCacheConfig r,
@@ -491,9 +512,87 @@ setActivity (personId, _) isActive mode = do
   QDriverInformation.updateActivity driverId isActive mode
   driverStatus <- QDFS.getStatus personId >>= fromMaybeM (PersonNotFound personId.getId)
   logInfo $ "driverStatus " <> show driverStatus
-  unless (driverStatus `notElem` [DDFS.IDLE, DDFS.ACTIVE, DDFS.SILENT]) $ do
-    Esq.runNoTransaction $ QDFS.updateStatus personId (DMode.getDriverStatus mode isActive)
+  Esq.runTransaction $ do
+    QDGR.finishActiveFailed personId
+    unless (driverStatus `notElem` [DDFS.IDLE, DDFS.ACTIVE, DDFS.SILENT]) $
+      QDFS.updateStatus personId $
+        DMode.getDriverStatus mode isActive
   pure APISuccess.Success
+
+activateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> Id DDHL.DriverHomeLocation -> m APISuccess.APISuccess
+activateGoHomeFeature (driverId, _) driverHomeLocationId = do
+  _ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+  unless driverInfo.enabled $ throwError DriverAccountDisabled
+  unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
+  whenM (isJust <$> QDGR.findActive driverId) $ throwError DriverGoHomeRequestAlreadyActive
+  unlessM ((< 2) <$> QDGR.todaySuccessCount driverId) $ throwError DriverGoHomeRequestDailyUsageLimitReached
+  driverHomeLocation <- QDHL.findById driverHomeLocationId >>= fromMaybeM (DriverHomeLocationDoesNotExist driverHomeLocationId.getId)
+  Esq.runTransaction . QDGR.create =<< buildDriverGoHomeRequest driverHomeLocation
+  pure APISuccess.Success
+  where
+    buildDriverGoHomeRequest driverHomeLocation = do
+      id <- generateGUID
+      now <- getCurrentTime
+      return $
+        DDGR.DriverGoHomeRequest
+          { lat = driverHomeLocation.lat,
+            lon = driverHomeLocation.lon,
+            status = DDGR.ACTIVE,
+            createdAt = now,
+            updatedAt = now,
+            ..
+          }
+
+deactivateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> m APISuccess.APISuccess
+deactivateGoHomeFeature (personId, _) = do
+  _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let driverId = cast personId
+  driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+  unless driverInfo.enabled $ throwError DriverAccountDisabled
+  unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
+  Esq.runTransaction $ QDGR.finishActiveFailed driverId
+  pure APISuccess.Success
+
+addHomeLocation :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> AddHomeLocationReq -> m APISuccess.APISuccess
+addHomeLocation (driverId, _) req = do
+  _ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+  unless driverInfo.enabled $ throwError DriverAccountDisabled
+  unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
+  oldHomeLocations <- QDHL.findAllByDriverId driverId
+  unless (length oldHomeLocations < 5) $ throwError DriverHomeLocationLimitReached
+  Esq.runTransaction . QDHL.create =<< buildDriverHomeLocation
+  pure APISuccess.Success
+  where
+    buildDriverHomeLocation = do
+      id <- generateGUID
+      now <- getCurrentTime
+      return $
+        DDHL.DriverHomeLocation
+          { lat = req.position.lat,
+            lon = req.position.lon,
+            createdAt = now,
+            ..
+          }
+
+getHomeLocations :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> m GetHomeLocationsRes
+getHomeLocations (driverId, _) = do
+  _ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+  unless driverInfo.enabled $ throwError DriverAccountDisabled
+  unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
+  driverHomeLocations <- QDHL.findAllByDriverId driverId
+  return . GetHomeLocationsRes $ DDHL.makeDriverHomeLocationAPIEntity <$> driverHomeLocations
+
+deleteHomeLocation :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> Id DDHL.DriverHomeLocation -> m APISuccess.APISuccess
+deleteHomeLocation (driverId, _) driverHomeLocationId = do
+  _ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+  unless driverInfo.enabled $ throwError DriverAccountDisabled
+  unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
+  Esq.runTransaction $ QDHL.deleteById driverHomeLocationId
+  return APISuccess.Success
 
 listDriver :: (EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r) => SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> m ListDriverRes
 listDriver admin mbSearchString mbLimit mbOffset = do
@@ -575,6 +674,8 @@ deleteDriver admin driverId = do
     QDriverStats.deleteById (cast driverId)
     QR.deleteByPersonId driverId
     QVehicle.deleteById driverId
+    QDHL.deleteByDriverId driverId
+    QDriverLocation.deleteById driverId
     QDFS.deleteById driverId
     QPerson.deleteById driverId
   runInLocationDB $ QDriverLocation.deleteById driverId
@@ -916,7 +1017,8 @@ respondQuote (driverId, _) req = do
             providerId = searchReq.providerId,
             estimatedFare,
             fareParams,
-            specialLocationTag = searchReq.specialLocationTag
+            specialLocationTag = searchReq.specialLocationTag,
+            goHomeRequestId = sd.goHomeRequestId
           }
     thereAreActiveQuotes = do
       driverUnlockDelay <- asks (.driverUnlockDelay)

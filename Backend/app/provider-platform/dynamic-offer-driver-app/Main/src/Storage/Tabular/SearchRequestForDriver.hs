@@ -29,6 +29,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Common (Meters, Money)
 import Kernel.Types.Id
 import Kernel.Types.Time
+import Storage.Tabular.Driver.GoHomeFeature.DriverGoHomeRequest (DriverGoHomeRequestTId)
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Person (PersonTId)
 import Storage.Tabular.SearchRequest (SearchRequestTId)
@@ -69,6 +70,7 @@ mkPersist
       driverSpeed Double Maybe
       keepHiddenForSeconds Seconds
       mode D.DriverMode Maybe
+      goHomeRequestId DriverGoHomeRequestTId Maybe
       createdAt UTCTime
       Primary id
       deriving Generic
@@ -88,6 +90,7 @@ instance FromTType SearchRequestForDriverT Domain.SearchRequestForDriver where
           requestId = fromKey requestId,
           searchTryId = fromKey searchTryId,
           merchantId = fromKey <$> merchantId,
+          goHomeRequestId = fromKey <$> goHomeRequestId,
           ..
         }
 
@@ -100,5 +103,6 @@ instance ToTType SearchRequestForDriverT Domain.SearchRequestForDriver where
         requestId = toKey requestId,
         searchTryId = toKey searchTryId,
         merchantId = toKey <$> merchantId,
+        goHomeRequestId = toKey <$> goHomeRequestId,
         ..
       }

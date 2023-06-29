@@ -91,6 +91,7 @@ ui = do
         :<|> _
       )
       :<|> ( setDriverOnline
+               :<|> _
                :<|> getNearbySearchRequests
                :<|> offerQuote
                :<|> respondQuote

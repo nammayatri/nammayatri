@@ -228,7 +228,7 @@ data DriverPoolConfigItem = DriverPoolConfigItem
     poolSortingType :: PoolSortingType,
     singleBatchProcessTime :: Seconds,
     tripDistance :: Meters,
-    radiusShrinkValueForDriversOnRide :: Int,
+    radiusShrinkValueForDriversOnRide :: Meters,
     driverToDestinationDistanceThreshold :: Meters,
     driverToDestinationDuration :: Seconds,
     createdAt :: UTCTime,
@@ -313,6 +313,8 @@ data DriverPoolConfigCreateReq = DriverPoolConfigCreateReq
   { minRadiusOfSearch :: Meters,
     maxRadiusOfSearch :: Meters,
     radiusStepSize :: Meters,
+    goHomeFromLocationRadius :: Meters,
+    goHomeToLocationRadius :: Meters,
     driverPositionInfoExpiry :: Maybe Seconds,
     actualDistanceThreshold :: Maybe Meters,
     maxDriverQuotesRequired :: Int,
@@ -324,7 +326,7 @@ data DriverPoolConfigCreateReq = DriverPoolConfigCreateReq
     poolSortingType :: PoolSortingType,
     distanceBasedBatchSplit :: [BatchSplitByPickupDistance],
     singleBatchProcessTime :: Seconds,
-    radiusShrinkValueForDriversOnRide :: Int,
+    radiusShrinkValueForDriversOnRide :: Meters,
     driverToDestinationDistanceThreshold :: Meters,
     driverToDestinationDuration :: Seconds
   }
@@ -340,6 +342,8 @@ validateDriverPoolConfigCreateReq DriverPoolConfigCreateReq {..} =
     [ validateField "minRadiusOfSearch" minRadiusOfSearch $ Min @Meters 1,
       validateField "maxRadiusOfSearch" maxRadiusOfSearch $ Min @Meters minRadiusOfSearch,
       validateField "radiusStepSize" radiusStepSize $ Min @Meters 1,
+      validateField "goHomeFromLocationRadius" goHomeFromLocationRadius $ Min @Meters 1,
+      validateField "goHomeToLocationRadius" goHomeToLocationRadius $ Min @Meters 1,
       validateField "driverPositionInfoExpiry" driverPositionInfoExpiry $ InMaybe $ Min @Seconds 1,
       validateField "actualDistanceThreshold" actualDistanceThreshold $ InMaybe $ Min @Meters 0,
       validateField "maxDriverQuotesRequired" maxDriverQuotesRequired $ Min @Int 1,
@@ -349,7 +353,7 @@ validateDriverPoolConfigCreateReq DriverPoolConfigCreateReq {..} =
       validateField "maxNumberOfBatches" maxNumberOfBatches $ Min @Int 1,
       validateField "maxParallelSearchRequests" maxParallelSearchRequests $ Min @Int 1,
       validateField "singleBatchProcessTime" singleBatchProcessTime $ Min @Seconds 1,
-      validateField "radiusShrinkValueForDriversOnRide" radiusShrinkValueForDriversOnRide $ Min @Int 1,
+      validateField "radiusShrinkValueForDriversOnRide" radiusShrinkValueForDriversOnRide $ Min @Meters 1,
       validateField "driverToDestinationDistanceThreshold" driverToDestinationDistanceThreshold $ Min @Meters 1,
       validateField "driverToDestinationDuration" driverToDestinationDuration $ Min @Seconds 1
     ]

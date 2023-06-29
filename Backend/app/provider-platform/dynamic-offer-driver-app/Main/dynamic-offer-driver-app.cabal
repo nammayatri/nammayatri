@@ -152,6 +152,8 @@ library
       Domain.Types.Common
       Domain.Types.Driver.DriverFlowStatus
       Domain.Types.DriverFee
+      Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest
+      Domain.Types.Driver.GoHomeFeature.DriverHomeLocation
       Domain.Types.DriverInformation
       Domain.Types.DriverLocation
       Domain.Types.DriverOnboarding.AadhaarOtp
@@ -268,14 +270,21 @@ library
       Storage.Queries.BapMetadata
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation
+      Storage.Queries.Booking.BookingLocation.Internal
+      Storage.Queries.Booking.Internal
       Storage.Queries.BookingCancellationReason
       Storage.Queries.BusinessEvent
       Storage.Queries.CallStatus
       Storage.Queries.CancellationReason
       Storage.Queries.Driver.DriverFlowStatus
       Storage.Queries.DriverFee
+      Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest
+      Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal
+      Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation
       Storage.Queries.DriverInformation
+      Storage.Queries.DriverInformation.Internal
       Storage.Queries.DriverLocation
+      Storage.Queries.DriverLocation.Internal
       Storage.Queries.DriverOnboarding.AadhaarOtp
       Storage.Queries.DriverOnboarding.AadhaarVerification
       Storage.Queries.DriverOnboarding.DriverLicense
@@ -286,6 +295,7 @@ library
       Storage.Queries.DriverOnboarding.Status
       Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate
       Storage.Queries.DriverQuote
+      Storage.Queries.DriverQuote.Internal
       Storage.Queries.DriverReferral
       Storage.Queries.DriverStats
       Storage.Queries.Estimate
@@ -318,6 +328,10 @@ library
       Storage.Queries.Message.MessageReport
       Storage.Queries.Message.MessageTranslation
       Storage.Queries.Person
+      Storage.Queries.Person.GetNearestDrivers
+      Storage.Queries.Person.GetNearestDriversCurrentlyOnRide
+      Storage.Queries.Person.GetNearestGoHomeDrivers
+      Storage.Queries.Person.Internal
       Storage.Queries.QuoteSpecialZone
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken
@@ -330,6 +344,7 @@ library
       Storage.Queries.SearchTry
       Storage.Queries.Vehicle
       Storage.Tabular.BapMetadata
+      Storage.Queries.Vehicle.Internal
       Storage.Tabular.Booking
       Storage.Tabular.Booking.BookingLocation
       Storage.Tabular.BookingCancellationReason
@@ -338,6 +353,8 @@ library
       Storage.Tabular.CancellationReason
       Storage.Tabular.Driver.DriverFlowStatus
       Storage.Tabular.DriverFee
+      Storage.Tabular.Driver.GoHomeFeature.DriverGoHomeRequest
+      Storage.Tabular.Driver.GoHomeFeature.DriverHomeLocation
       Storage.Tabular.DriverInformation
       Storage.Tabular.DriverLocation
       Storage.Tabular.DriverOnboarding.AadhaarOtpReq

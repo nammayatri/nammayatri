@@ -17,6 +17,7 @@ module Domain.Action.Beckn.Init where
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FareParameters as DFP
@@ -147,7 +148,7 @@ handler merchantId req eitherReq = do
     InitNormalReq -> do
       case eitherReq of
         Left (driverQuote, searchRequest, searchTry) -> do
-          booking <- buildBooking searchRequest driverQuote searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id))
+          booking <- buildBooking searchRequest driverQuote searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id)) driverQuote.goHomeRequestId
           triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
           Esq.runTransaction $ do
             QST.updateStatus searchTry.id DST.COMPLETED
@@ -157,7 +158,7 @@ handler merchantId req eitherReq = do
     InitSpecialZoneReq -> do
       case eitherReq of
         Right (specialZoneQuote, searchRequest) -> do
-          booking <- buildBooking searchRequest specialZoneQuote searchRequest.startTime DRB.SpecialZoneBooking now (mbPaymentMethod <&> (.id))
+          booking <- buildBooking searchRequest specialZoneQuote searchRequest.startTime DRB.SpecialZoneBooking now (mbPaymentMethod <&> (.id)) Nothing
           Esq.runTransaction $
             QRB.create booking
           return booking
@@ -187,8 +188,9 @@ handler merchantId req eitherReq = do
       DRB.BookingType ->
       UTCTime ->
       Maybe (Id DMPM.MerchantPaymentMethod) ->
+      Maybe (Id DDGR.DriverGoHomeRequest) ->
       m DRB.Booking
-    buildBooking searchRequest driverQuote startTime bookingType now mbPaymentMethodId = do
+    buildBooking searchRequest driverQuote startTime bookingType now mbPaymentMethodId mbGoHomeRequestId = do
       id <- Id <$> generateGUID
       fromLocation <- buildBookingLocation searchRequest.fromLocation
       toLocation <- buildBookingLocation searchRequest.toLocation
@@ -220,6 +222,7 @@ handler merchantId req eitherReq = do
             specialZoneOtpCode = Nothing,
             area = searchRequest.area,
             paymentMethodId = mbPaymentMethodId,
+            goHomeRequestId = mbGoHomeRequestId,
             ..
           }
 

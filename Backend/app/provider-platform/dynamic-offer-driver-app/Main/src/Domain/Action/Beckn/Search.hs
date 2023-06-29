@@ -41,7 +41,6 @@ import qualified Domain.Types.SearchRequestSpecialZone as DSRSZ
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import EulerHS.Prelude (Alternative (empty), whenJustM)
-import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.Prelude
 import Kernel.Serviceability
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -49,7 +48,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import SharedLogic.DriverPool hiding (lat, lon)
+import SharedLogic.DriverPool
 import qualified SharedLogic.Estimate as SHEst
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
@@ -65,6 +64,7 @@ import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestSpecialZone as QSearchRequestSpecialZone
 import Tools.Error
 import Tools.Event
+import Tools.Maps (LatLong (LatLong))
 import qualified Tools.Maps as Maps
 import Tools.Metrics
 import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
@@ -229,13 +229,14 @@ handler merchant sReq = do
           driverPoolCurrentlyOnRide <-
             if null driverPoolNotOnRide
               then do
-                let reducedRadiusValue = driverPoolCfg.radiusShrinkValueForDriversOnRide
                 transporter <- CTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigDoesNotExist merchantId.getId)
                 if transporter.includeDriverCurrentlyOnRide
-                  then calculateDriverPoolCurrentlyOnRide Estimate driverPoolCfg Nothing fromLocation merchantId Nothing reducedRadiusValue
+                  then calculateDriverPoolCurrentlyOnRide Estimate driverPoolCfg Nothing fromLocation merchantId Nothing
                   else pure []
               else pure []
-          let driverPool = driverPoolNotOnRide ++ map changeIntoDriverPoolResult driverPoolCurrentlyOnRide
+          let driverPool =
+                driverPoolNotOnRide
+                  <> map (\DriverPoolResultCurrentlyOnRide {..} -> DriverPoolResult {..}) driverPoolCurrentlyOnRide
           logDebug $ "Search handler: driver pool " <> show driverPool
 
           let onlyFPWithDrivers = filter (\fp -> isJust (find (\dp -> dp.variant == fp.vehicleVariant) driverPool)) farePolicies
