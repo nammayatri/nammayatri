@@ -31,14 +31,8 @@ import Kernel.Utils.Common
 import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.DriverRCAssociation as BeamDRCA
--- import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as BeamVRCT
--- import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as QVRC
-
 import Storage.Tabular.DriverOnboarding.DriverRCAssociation
 import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
-
--- create :: DriverRCAssociation -> SqlDB ()
--- create = Esq.create
 
 create :: L.MonadFlow m => DriverRCAssociation -> m ()
 create driverRCAssociation = do
@@ -67,41 +61,6 @@ getActiveAssociationByDriver (Id personId) = do
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamDriverRCAssociationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamDRCA.driverId $ Se.Eq personId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now]]
     Nothing -> pure Nothing
-
--- findAllByDriverId ::
---   Transactionable m =>
---   Id Person ->
---   m [(DriverRCAssociation, VehicleRegistrationCertificate)]
--- findAllByDriverId driverId = do
---   findAll $ do
---     rcAssoc :& regCert <-
---       from $
---         table @DriverRCAssociationT
---           `Esq.innerJoin` table @VehicleRegistrationCertificateT
---             `Esq.on` ( \(rcAssoc :& regCert) ->
---                          rcAssoc ^. DriverRCAssociationRcId ==. regCert ^. VehicleRegistrationCertificateTId
---                      )
---     where_ $
---       rcAssoc ^. DriverRCAssociationDriverId ==. val (toKey driverId)
---     orderBy [desc $ rcAssoc ^. DriverRCAssociationAssociatedOn]
---     return (rcAssoc, regCert)
-
--- findAllByDriverId :: L.MonadFlow m => Id Person -> m [(DriverRCAssociation, VehicleRegistrationCertificate)]
--- findAllByDriverId (Id driverId) = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
---   let modelName = Se.modelTableName @BeamDRCA.DriverRCAssociationT
---   let updatedMeshConfig = setMeshConfig modelName
---   case dbConf of
---     Just dbCOnf' -> do
---       driverRCA <- either (pure []) (transformBeamDriverRCAssociationToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDRCA.driverId $ Se.Eq driverId] (Se.Desc BeamDRCA.associatedOn) Nothing Nothing
---       vehicleRC <- either (pure []) (QVRC.transformBeamVehicleRegistrationCertificateToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamVRCT.id $ Se.In $ getId . DRCA.rcId <$> driverRCA]
---       let rcAWithrc = foldl' (getRCAWithRC vehicleRC) [] driverRCA
---       pure rcAWithrc
---     Nothing -> pure []
---   where
---     getRCAWithRC vrc acc driverRCA' =
---       let vrc' = filter (\v -> v.id == driverRCA'.rcId) vrc
---        in acc <> ((\v -> (driverRCA', v)) <$> vrc')
 
 findAllByDriverId ::
   Transactionable m =>

@@ -26,14 +26,11 @@ module Domain.Action.UI.Registration
 where
 
 import Data.OpenApi hiding (info, url)
-import qualified Debug.Trace as T
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Merchant as DO
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
--- import qualified Storage.Tabular.BookingNew as BN (findById)
-
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption
@@ -60,13 +57,11 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QD
 import Storage.CachedQueries.Merchant as QMerchant
-import Storage.Queries.Booking (findAllBookings)
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
-import qualified Storage.Tabular.VechileNew as BN (findById)
 import Tools.Auth (authTokenCacheKey)
 import Tools.Error
 import Tools.Metrics
@@ -135,11 +130,8 @@ auth ::
   Maybe Version ->
   m AuthRes
 auth req mbBundleVersion mbClientVersion = do
-  -- res' <- runInReplica $ do
-  res' <- findAllBookings
-  res <- BN.findById "ND-driver-with-old-location-00000000"
   runRequestValidation validateInitiateLoginReq req
-  smsCfg <- T.trace (show res') $ T.trace (show res) $ asks (.smsCfg)
+  smsCfg <- asks (.smsCfg)
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
   mobileNumberHash <- getDbHash mobileNumber

@@ -155,4 +155,4 @@ instance Serialize DriverLicense where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''DriverLicenseT ['id] [])
+$(enableKVPG ''DriverLicenseT ['id] [['driverId], ['licenseNumberHash]])

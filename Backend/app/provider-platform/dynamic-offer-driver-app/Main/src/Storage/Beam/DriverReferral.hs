@@ -102,4 +102,4 @@ instance Serialize DriverReferral where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''DriverReferralT ['referralCode] [])
+$(enableKVPG ''DriverReferralT ['referralCode] [['driverId]])

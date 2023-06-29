@@ -79,7 +79,7 @@ update farePolicy = do
               ]
               [Se.Is BeamFPPD.farePolicyId (Se.Eq $ getId farePolicy.id)]
         SlabsDetails (FPSlabsDetails slabs) -> do
-          _ <- QueriesFPSDS.deleteAll'' farePolicy.id
+          _ <- QueriesFPSDS.deleteAll' farePolicy.id
           mapM_ (create'' farePolicy.id) slabs
     Nothing -> pure ()
   where
@@ -116,7 +116,7 @@ transformBeamFarePolicyToDomain BeamFP.FarePolicyT {..} = do
   fullFPPD <- QueriesFPPD.findById' (Id id)
   if isJust fullFPPD
     then do
-      fullslabs <- QueriesFPSDS.findAll'' (Id id)
+      fullslabs <- QueriesFPSDS.findAll' (Id id)
       let fPPD = snd $ fromJust fullFPPD
       let slabs = snd <$> fullslabs
       pure $

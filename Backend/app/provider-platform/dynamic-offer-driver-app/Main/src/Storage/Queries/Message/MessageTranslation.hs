@@ -14,6 +14,7 @@
 
 module Storage.Queries.Message.MessageTranslation where
 
+import qualified Data.Time as T
 import qualified Domain.Types.Message.Message as Msg
 import Domain.Types.Message.MessageTranslation
 import qualified EulerHS.KVConnector.Flow as KV
@@ -67,7 +68,7 @@ transformBeamMessageTranslationToDomain BeamMT.MessageTranslationT {..} = do
       label = label,
       description = description,
       shortDescription = shortDescription,
-      createdAt = createdAt
+      createdAt = T.localTimeToUTC T.utc createdAt
     }
 
 transformDomainMessageTranslationToBeam :: MessageTranslation -> BeamMT.MessageTranslation
@@ -79,5 +80,5 @@ transformDomainMessageTranslationToBeam MessageTranslation {..} =
       BeamMT.label = label,
       BeamMT.description = description,
       BeamMT.shortDescription = shortDescription,
-      BeamMT.createdAt = createdAt
+      BeamMT.createdAt = T.utcToLocalTime T.utc createdAt
     }

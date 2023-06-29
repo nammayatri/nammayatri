@@ -108,4 +108,4 @@ commentToPSModifiers :: M.Map Text (A.Value -> A.Value)
 commentToPSModifiers =
   M.empty
 
-$(enableKVPG ''CommentT ['id] [])
+$(enableKVPG ''CommentT ['id] [['issueReportId]])

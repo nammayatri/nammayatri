@@ -352,14 +352,14 @@ containsPoint'' (lon, lat) = B.sqlBool_ (BQ.QExpr (\_ -> PgExpressionSyntax (emi
 containsPoint' :: (Double, Double) -> BQ.QGenExpr context Postgres s BQ.SqlBool
 containsPoint' (lon, lat) = B.sqlBool_ (BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "st_contains (geom, ST_GeomFromText('POINT (" <> show lon <> " " <> show lat <> ")'))")))
 
-buildRadiusWithin' :: Point -> (Double, Double) -> Int -> BQ.QGenExpr context Postgres s BQ.SqlBool
-buildRadiusWithin' pnt (lat, lon) rad =
-  BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "ST_DWithin(" <> show pnt <> " , " <> getPoint' <> " , " <> show rad <> ")"))
+buildRadiusWithin' :: (Double, Double) -> Int -> BQ.QGenExpr context Postgres s BQ.SqlBool
+buildRadiusWithin' (lat, lon) rad =
+  BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "ST_DWithin(point" <> " , " <> getPoint' <> " , " <> show rad <> ")"))
   where
-    getPoint' = "(SRID=4326;POINT(" <> show lon <> " " <> show lat <> "))"
+    getPoint' = "(ST_SetSRID (ST_Point (" <> show lon <> " , " <> show lat <> "),4326))"
 
-(<->.) :: Point -> Point -> BQ.QGenExpr context Postgres s Double
-(<->.) p1 p2 = BQ.QExpr (\_ -> PgExpressionSyntax (emit $ show p1 <> " <-> " <> show p2))
+(<->.) :: (Double, Double) -> BQ.QGenExpr context Postgres s Double
+(<->.) (lat, lon) = BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "point <-> " <> "ST_SetSRID (ST_Point (" <> show lon <> " , " <> show lat <> "),4326)"))
 
 setFlagsInMeshConfig :: (L.MonadFlow m) => MeshConfig -> Text -> m MeshConfig
 setFlagsInMeshConfig meshCfg modelName = do
@@ -371,10 +371,10 @@ setFlagsInMeshConfig meshCfg modelName = do
     isHardKillEnabled _ = True
 
 kvTables :: [Text]
-kvTables = []
+kvTables = [] -- ["registration_token", "search_request", "search_request_for_driver", "search_try", "driver_information", "driver_flow_status", "business_event", "booking", "ride", "estimate", "fare_parameters", "fare_parameters_progressive_details", "booking_location", "ride_details", "rider_details", "driver_stats", "driver_quote", "search_request_location"]
 
 kvHardKilledTables :: [Text]
-kvHardKilledTables = []
+kvHardKilledTables = [] --["registration_token", "search_request", "search_request_for_driver", "search_try", "driver_information", "driver_flow_status", "business_event", "booking", "ride", "estimate", "fare_parameters", "fare_parameters_progressive_details", "booking_location", "ride_details", "rider_details", "driver_stats", "driver_quote", "search_request_location"]
 
 setMeshConfig :: Text -> MeshConfig
 setMeshConfig modelTableName = meshConfig {meshEnabled = modelTableName `elem` kvTables, kvHardKilled = modelTableName `notElem` kvHardKilledTables}

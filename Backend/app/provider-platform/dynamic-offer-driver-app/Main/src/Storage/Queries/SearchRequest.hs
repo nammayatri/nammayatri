@@ -20,13 +20,13 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+-- import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest as BeamSR
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
-import Storage.Tabular.SearchRequest
+-- import Storage.Tabular.SearchRequest
 import Storage.Tabular.SearchRequest.SearchReqLocation ()
 
 createDSReq :: L.MonadFlow m => SearchRequest -> m (MeshResult ())
@@ -89,6 +89,25 @@ findByTransactionId transactionId = do
         _ -> pure Nothing
     Nothing -> pure Nothing
 
+updateAutoAssign ::
+  L.MonadFlow m =>
+  Id SearchRequest ->
+  Bool ->
+  m ()
+updateAutoAssign searchRequestId autoAssignedEnabled = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamSR.SearchRequestT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' ->
+      void $
+        KV.updateWoReturningWithKVConnector
+          dbConf'
+          updatedMeshConfig
+          [Se.Set BeamSR.autoAssignEnabled $ Just $ autoAssignedEnabled]
+          [Se.Is BeamSR.id (Se.Eq $ getId searchRequestId)]
+    Nothing -> pure ()
+
 transformBeamSearchRequestToDomain :: L.MonadFlow m => BeamSR.SearchRequest -> m (Maybe SearchRequest)
 transformBeamSearchRequestToDomain BeamSR.SearchRequestT {..} = do
   fl <- QSRL.findById (Id fromLocationId)
@@ -137,14 +156,14 @@ transformDomainSearchRequestToBeam SearchRequest {..} =
       BeamSR.specialLocationTag = specialLocationTag
     }
 
-updateAutoAssign ::
-  Id SearchRequest ->
-  Bool ->
-  SqlDB ()
-updateAutoAssign searchRequestId autoAssignedEnabled = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ SearchRequestAutoAssignEnabled =. val (Just autoAssignedEnabled)
-      ]
-    where_ $ tbl ^. SearchRequestTId ==. val (toKey searchRequestId)
+-- updateAutoAssign ::
+--   Id SearchRequest ->
+--   Bool ->
+--   SqlDB ()
+-- updateAutoAssign searchRequestId autoAssignedEnabled = do
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ SearchRequestAutoAssignEnabled =. val (Just autoAssignedEnabled)
+--       ]
+--     where_ $ tbl ^. SearchRequestTId ==. val (toKey searchRequestId)

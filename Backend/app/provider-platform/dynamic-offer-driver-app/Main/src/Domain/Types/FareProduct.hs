@@ -29,7 +29,7 @@ import qualified Text.Show
 data FlowType
   = RIDE_OTP
   | NORMAL
-  deriving (Show, Read, Generic, Eq, ToSchema, FromJSON, ToJSON)
+  deriving (Show, Read, Generic, Eq, ToSchema, FromJSON, ToJSON, Ord)
 
 data Area
   = Pickup (Id SpecialLocation)

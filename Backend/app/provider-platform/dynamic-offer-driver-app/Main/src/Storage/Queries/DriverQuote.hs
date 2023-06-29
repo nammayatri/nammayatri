@@ -104,7 +104,7 @@ findActiveQuotesByDriverId (Id driverId) driverUnlockDelay = do
   let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
-      dQuote <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamDQ.status $ Se.Eq Domain.Active, Se.Is BeamDQ.id $ Se.Eq driverId, Se.Is BeamDQ.validTill $ Se.GreaterThan (T.utcToLocalTime (T.TimeZone (5 * 60 + 30) False "IST") $ addUTCTime delayToAvoidRaces now)]]
+      dQuote <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamDQ.status $ Se.Eq Domain.Active, Se.Is BeamDQ.id $ Se.Eq driverId, Se.Is BeamDQ.validTill $ Se.GreaterThan (T.utcToLocalTime T.utc $ addUTCTime delayToAvoidRaces now)]]
       case dQuote of
         Right dQuote' -> catMaybes <$> traverse transformBeamDriverQuoteToDomain dQuote'
         _ -> pure []
@@ -214,9 +214,9 @@ transformDomainDriverQuoteToBeam Domain.DriverQuote {..} =
       BeamDQ.distance = distance,
       BeamDQ.distanceToPickup = distanceToPickup,
       BeamDQ.durationToPickup = durationToPickup,
-      BeamDQ.createdAt = T.utcToLocalTime (T.TimeZone (5 * 60 + 30) False "IST") createdAt,
-      BeamDQ.updatedAt = T.utcToLocalTime (T.TimeZone (5 * 60 + 30) False "IST") updatedAt,
-      BeamDQ.validTill = T.utcToLocalTime (T.TimeZone (5 * 60 + 30) False "IST") validTill,
+      BeamDQ.createdAt = T.utcToLocalTime T.utc createdAt,
+      BeamDQ.updatedAt = T.utcToLocalTime T.utc updatedAt,
+      BeamDQ.validTill = T.utcToLocalTime T.utc validTill,
       BeamDQ.estimatedFare = estimatedFare,
       BeamDQ.fareParametersId = getId fareParams.id,
       BeamDQ.providerId = getId providerId,

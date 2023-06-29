@@ -15,6 +15,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use newtype instead of data" #-}
 
 module Storage.Beam.DriverLocation where
 
@@ -31,6 +34,7 @@ import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres (Postgres)
+import qualified Database.Beam.Schema.Tables as B
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
@@ -77,6 +81,12 @@ data DriverLocationT f = DriverLocationT
     merchantId :: B.C f Text
   }
   deriving (Generic, B.Beamable)
+
+dLocationTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity DriverLocationT)
+dLocationTable =
+  B.setEntitySchema (Just "atlas_driver_offer_bpp")
+    <> B.setEntityName "driver_location"
+    <> B.modifyTableFields driverLocationTMod
 
 instance B.Table DriverLocationT where
   data PrimaryKey DriverLocationT f

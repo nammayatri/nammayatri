@@ -169,4 +169,4 @@ instance Serialize IdfyVerification where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''IdfyVerificationT ['id] [])
+$(enableKVPG ''IdfyVerificationT ['id] [['driverId], ['requestId]])

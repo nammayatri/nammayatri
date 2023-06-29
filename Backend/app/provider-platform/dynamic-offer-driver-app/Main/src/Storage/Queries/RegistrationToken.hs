@@ -27,9 +27,6 @@ import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.RegistrationToken as BeamRT
 
--- create :: RegistrationToken -> SqlDB ()
--- create = Esq.create
-
 create :: L.MonadFlow m => DRT.RegistrationToken -> m (MeshResult ())
 create registrationToken = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -39,9 +36,6 @@ create registrationToken = do
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRegistrationTokenToBeam registrationToken)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
--- findById :: Transactionable m => Id RegistrationToken -> m (Maybe RegistrationToken)
--- findById = Esq.findById
-
 findById :: L.MonadFlow m => Id RegistrationToken -> m (Maybe RegistrationToken)
 findById (Id registrationTokenId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -50,17 +44,6 @@ findById (Id registrationTokenId) = do
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamRT.id $ Se.Eq registrationTokenId]
     Nothing -> pure Nothing
-
--- setVerified :: Id RegistrationToken -> SqlDB ()
--- setVerified rtId = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ RegistrationTokenVerified =. val True,
---         RegistrationTokenUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. RegistrationTokenTId ==. val (toKey rtId)
 
 setVerified :: (L.MonadFlow m, MonadTime m) => Id RegistrationToken -> m (MeshResult ())
 setVerified (Id rtId) = do
@@ -79,13 +62,6 @@ setVerified (Id rtId) = do
         [Se.Is BeamRT.id (Se.Eq rtId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
--- findByToken :: Transactionable m => RegToken -> m (Maybe RegistrationToken)
--- findByToken token =
---   findOne $ do
---     regToken <- from $ table @RegistrationTokenT
---     where_ $ regToken ^. RegistrationTokenToken ==. val token
---     return regToken
-
 findByToken :: L.MonadFlow m => RegToken -> m (Maybe RegistrationToken)
 findByToken token = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -94,17 +70,6 @@ findByToken token = do
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamRT.token $ Se.Eq token]
     Nothing -> pure Nothing
-
--- updateAttempts :: Int -> Id RegistrationToken -> SqlDB ()
--- updateAttempts attemps rtId = do
---   now <- getCurrentTime
---   Esq.update $ \tbl -> do
---     set
---       tbl
---       [ RegistrationTokenAttempts =. val attemps,
---         RegistrationTokenUpdatedAt =. val now
---       ]
---     where_ $ tbl ^. RegistrationTokenTId ==. val (toKey rtId)
 
 updateAttempts :: (L.MonadFlow m, MonadTime m) => Int -> Id RegistrationToken -> m (MeshResult ())
 updateAttempts attempts (Id rtId) = do
@@ -123,12 +88,6 @@ updateAttempts attempts (Id rtId) = do
         [Se.Is BeamRT.id (Se.Eq rtId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
--- deleteByPersonId :: Id Person -> SqlDB ()
--- deleteByPersonId personId =
---   Esq.delete $ do
---     regToken <- from $ table @RegistrationTokenT
---     where_ $ regToken ^. RegistrationTokenEntityId ==. val (getId personId)
-
 deleteByPersonId :: L.MonadFlow m => Id Person -> m ()
 deleteByPersonId (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -142,14 +101,6 @@ deleteByPersonId (Id personId) = do
           updatedMeshConfig
           [Se.Is BeamRT.entityId (Se.Eq personId)]
     Nothing -> pure ()
-
--- deleteByPersonIdExceptNew :: Id Person -> Id RegistrationToken -> SqlDB ()
--- deleteByPersonIdExceptNew personId newRT =
---   Esq.delete $ do
---     regToken <- from $ table @RegistrationTokenT
---     where_ $
---       regToken ^. RegistrationTokenEntityId ==. val (getId personId)
---         &&. not_ (regToken ^. RegistrationTokenTId ==. val (toKey newRT))
 
 deleteByPersonIdExceptNew :: L.MonadFlow m => Id Person -> Id RegistrationToken -> m ()
 deleteByPersonIdExceptNew (Id personId) (Id newRT) = do
@@ -165,13 +116,6 @@ deleteByPersonIdExceptNew (Id personId) (Id newRT) = do
           [Se.And [Se.Is BeamRT.entityId (Se.Eq personId), Se.Is BeamRT.id (Se.Not $ Se.Eq newRT)]]
     Nothing -> pure ()
 
--- findAllByPersonId :: Transactionable m => Id Person -> m [RegistrationToken]
--- findAllByPersonId personId =
---   findAll $ do
---     regToken <- from $ table @RegistrationTokenT
---     where_ $ regToken ^. RegistrationTokenEntityId ==. val (getId personId)
---     return regToken
-
 findAllByPersonId :: L.MonadFlow m => Id Person -> m [RegistrationToken]
 findAllByPersonId personId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -180,14 +124,6 @@ findAllByPersonId personId = do
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamRT.entityId $ Se.Eq $ getId personId]
     Nothing -> pure []
-
--- getAlternateNumberAttempts :: Transactionable m => Id Person -> m Int
--- getAlternateNumberAttempts personId =
---   fromMaybe 5 . listToMaybe
---     <$> Esq.findAll do
---       attempts <- from $ table @RegistrationTokenT
---       where_ $ attempts ^. RegistrationTokenEntityId ==. val (getId personId)
---       return $ attempts ^. RegistrationTokenAlternateNumberAttempts
 
 getAlternateNumberAttempts :: L.MonadFlow m => Id Person -> m Int
 getAlternateNumberAttempts (Id personId) = do
@@ -198,12 +134,11 @@ getAlternateNumberAttempts (Id personId) = do
     Just dbConf' -> do
       rt <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamRT.entityId $ Se.Eq personId]
       case rt of
-        Left _ -> pure 0
-        Right Nothing -> pure 0
         Right (Just x) -> do
           let rt' = transformBeamRegistrationTokenToDomain x
           let attempts = DRT.attempts rt'
           pure attempts
+        _ -> pure 0
     Nothing -> pure 0
 
 transformBeamRegistrationTokenToDomain :: BeamRT.RegistrationToken -> RegistrationToken

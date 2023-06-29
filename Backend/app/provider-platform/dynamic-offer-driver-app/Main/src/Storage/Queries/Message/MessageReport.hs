@@ -13,6 +13,9 @@
 -}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-identities #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use tuple-section" #-}
 
 module Storage.Queries.Message.MessageReport where
 
@@ -57,65 +60,122 @@ create messageReport = do
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainMessageReportToBeam messageReport)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-findByDriverIdAndLanguage :: (L.MonadFlow m) => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
-findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
+-- fullMessage ::
+--   Language ->
+--   From
+--     ( Table MessageReportT
+--         :& Table M.MessageT
+--         :& MbTable MT.MessageTranslationT
+--     )
+-- fullMessage lang =
+--   table
+--     @MessageReportT
+--     `innerJoin` table @M.MessageT
+--       `Esq.on` ( \(messageReport :& message) ->
+--                    messageReport ^. MessageReportMessageId ==. message ^. M.MessageTId
+--                )
+--     `leftJoin` table @MT.MessageTranslationT
+--       `Esq.on` ( \(_ :& message :& messageTranslation) ->
+--                    just (message ^. M.MessageTId) ==. messageTranslation ?. MT.MessageTranslationMessageId
+--                      &&. messageTranslation ?. MT.MessageTranslationLanguage ==. val (Just lang)
+--                )
+
+-- findByDriverIdAndLanguage :: Transactionable m => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
+-- findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
+--   let limitVal = min (fromMaybe 10 mbLimit) 10
+--       offsetVal = fromMaybe 0 mbOffset
+--   Esq.findAll $ do
+--     (messageReport :& message :& mbMessageTranslation) <- from (fullMessage language)
+--     where_ $
+--       messageReport ^. MessageReportDriverId ==. val (toKey $ cast driverId)
+--     orderBy [desc $ messageReport ^. MessageReportCreatedAt]
+--     limit $ fromIntegral limitVal
+--     offset $ fromIntegral offsetVal
+--     return (messageReport, message, mbMessageTranslation)
+
+findAllMessageWithSeConditionCreatedAtdesc :: (L.MonadFlow m) => [Se.Clause Postgres BeamM.MessageT] -> m [Message]
+findAllMessageWithSeConditionCreatedAtdesc conditions = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamM.MessageT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      message' <-
+        KV.findAllWithOptionsKVConnector
+          dbConf'
+          updatedMeshConfig
+          conditions
+          (Se.Desc BeamM.createdAt)
+          Nothing
+          Nothing
+      case message' of
+        Left _ -> pure []
+        Right result -> traverse QMM.transformBeamMessageToDomain result
+    Nothing -> pure []
+
+findAllMessageTranslationWithSeConditionCreatedAtdesc :: (L.MonadFlow m) => [Se.Clause Postgres BeamMT.MessageTranslationT] -> m [MTD.MessageTranslation]
+findAllMessageTranslationWithSeConditionCreatedAtdesc conditions = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMT.MessageTranslationT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      messageTranslation' <-
+        KV.findAllWithOptionsKVConnector
+          dbConf'
+          updatedMeshConfig
+          conditions
+          (Se.Desc BeamMT.createdAt)
+          Nothing
+          Nothing
+      case messageTranslation' of
+        Left _ -> pure []
+        Right result -> pure $ QMMT.transformBeamMessageTranslationToDomain <$> result
+    Nothing -> pure []
+
+findAllMessageReportWithSeCondition :: (L.MonadFlow m) => [Se.Clause Postgres BeamMR.MessageReportT] -> m [MessageReport]
+findAllMessageReportWithSeCondition conditions = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamMR.MessageReportT
   let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
-      let limitVal = min (fromMaybe 10 mbLimit) 10
-          offsetVal = fromMaybe 0 mbOffset
-      messageReport <- do
-        messageReport' <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]
-        case messageReport' of
-          Left _ -> pure []
-          Right result -> pure $ transformBeamMessageReportToDomain <$> result
-      message <- do
-        message' <-
-          KV.findAllWithOptionsKVConnector
-            dbConf'
-            updatedMeshConfig
-            [Se.Is BeamM.id $ Se.In $ getId . DTMR.messageId <$> messageReport]
-            (Se.Desc BeamM.createdAt)
-            Nothing
-            Nothing
-        case message' of
-          Left _ -> pure []
-          Right result -> traverse QMM.transformBeamMessageToDomain result
-      let rawMessageFromMessage Message {..} =
-            RawMessage
-              { id = id,
-                _type = _type,
-                title = title,
-                description = description,
-                shortDescription = shortDescription,
-                label = label,
-                likeCount = likeCount,
-                viewCount = viewCount,
-                mediaFiles = mediaFiles,
-                merchantId = merchantId,
-                createdAt = createdAt
-              }
-      messageTranslation <- do
-        messageTranslation' <-
-          KV.findAllWithOptionsKVConnector
-            dbConf'
-            updatedMeshConfig
-            [ Se.And
-                [Se.Is BeamMT.messageId $ Se.In $ getId . Msg.id <$> message, Se.Is BeamMT.language $ Se.Eq language]
-            ]
-            (Se.Desc BeamMT.createdAt)
-            Nothing
-            Nothing
-        case messageTranslation' of
-          Left _ -> pure []
-          Right result -> pure $ QMMT.transformBeamMessageTranslationToDomain <$> result
-      let messageReportAndMessage = foldl' (getMessageReportAndMessage messageReport) [] message
-      let finalResult' = foldl' (getMessageTranslationAndMessage messageTranslation rawMessageFromMessage) [] messageReportAndMessage
-      let finalResult = map (\(mr, rm, mt) -> (mr, rm, Just mt)) finalResult'
-      pure $ take limitVal (drop offsetVal finalResult)
+      messageReport' <- KV.findAllWithKVConnector dbConf' updatedMeshConfig conditions
+      case messageReport' of
+        Left _ -> pure []
+        Right result -> pure $ transformBeamMessageReportToDomain <$> result
     Nothing -> pure []
+
+findByDriverIdAndLanguage :: (L.MonadFlow m) => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
+findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
+  let limitVal = min (fromMaybe 10 mbLimit) 10
+      offsetVal = fromMaybe 0 mbOffset
+  messageReport <- findAllMessageReportWithSeCondition [Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]
+  message <- findAllMessageWithSeConditionCreatedAtdesc [Se.Is BeamM.id $ Se.In $ getId . DTMR.messageId <$> messageReport]
+  let rawMessageFromMessage Message {..} =
+        RawMessage
+          { id = id,
+            _type = _type,
+            title = title,
+            description = description,
+            shortDescription = shortDescription,
+            label = label,
+            likeCount = likeCount,
+            viewCount = viewCount,
+            mediaFiles = mediaFiles,
+            merchantId = merchantId,
+            createdAt = createdAt
+          }
+  let mtSeCondition =
+        [ Se.And
+            [Se.Is BeamMT.messageId $ Se.In $ getId . Msg.id <$> message, Se.Is BeamMT.language $ Se.Eq language]
+        ]
+  messageTranslation <- findAllMessageTranslationWithSeConditionCreatedAtdesc mtSeCondition
+
+  let messageReportAndMessage = foldl' (getMessageReportAndMessage messageReport) [] message
+  let finalResult' = foldl' (getMessageTranslationAndMessage messageTranslation rawMessageFromMessage) [] messageReportAndMessage
+  let finalResult = map (\(mr, rm, mt) -> (mr, rm, Just mt)) finalResult'
+  pure $ take limitVal (drop offsetVal finalResult)
   where
     getMessageReportAndMessage messageReports acc message' =
       let messageeReports' = filter (\messageReport -> messageReport.messageId == message'.id) messageReports

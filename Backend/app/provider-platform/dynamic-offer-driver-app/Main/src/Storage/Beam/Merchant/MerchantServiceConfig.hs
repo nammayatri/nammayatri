@@ -127,4 +127,4 @@ merchantServiceConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
 merchantServiceConfigToPSModifiers =
   M.empty
 
-$(enableKVPG ''MerchantServiceConfigT ['serviceName] [])
+$(enableKVPG ''MerchantServiceConfigT ['serviceName, 'merchantId] [])

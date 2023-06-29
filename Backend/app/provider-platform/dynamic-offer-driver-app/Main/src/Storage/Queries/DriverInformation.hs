@@ -35,13 +35,15 @@ import Kernel.Storage.Esqueleto as Esq hiding (findById)
 import Kernel.Storage.Esqueleto.Config (EsqLocRepDBFlow)
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Logging
+-- import Kernel.Utils.Logging
 import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverInformation as BeamDI
+import qualified Storage.Beam.DriverLocation as BeamDL
 import qualified Storage.Beam.Person as BeamP
+import qualified Storage.Queries.DriverLocation as QDL
 import Storage.Tabular.DriverInformation
-import Storage.Tabular.DriverLocation
+-- import Storage.Tabular.DriverLocation
 import Storage.Tabular.Person
 import qualified Prelude
 
@@ -326,9 +328,9 @@ getDriversWithOutdatedLocationsToMakeInactive :: (Transactionable m, EsqLocRepDB
 getDriversWithOutdatedLocationsToMakeInactive before = do
   driverLocations <- getDriverLocs before
   driverInfos <- getDriverInfos driverLocations
-  drivers <- getDrivers driverInfos
-  logDebug $ "GetDriversWithOutdatedLocationsToMakeInactive - DLoc:- " <> show (length driverLocations) <> " DInfo:- " <> show (length driverInfos) <> " Drivers:- " <> show (length drivers)
-  return drivers
+  getDrivers driverInfos
+
+-- logDebug $ "GetDriversWithOutdatedLocationsToMakeInactive - DLoc:- " <> show (length driverLocations) <> " DInfo:- " <> show (length driverInfos) <> " Drivers:- " <> show (length drivers)
 
 getDrivers ::
   Transactionable m =>
@@ -357,17 +359,29 @@ getDriverInfos driverLocations = do
   where
     personsKeys = toKey . cast <$> fetchDriverIDsFromLocations driverLocations
 
+-- getDriverLocs ::
+--   (Transactionable m, EsqLocRepDBFlow m r) =>
+--   UTCTime ->
+--   m [DriverLocation]
+-- getDriverLocs before = do
+--   runInLocReplica $
+--     Esq.findAll $ do
+--       driverLocs <- from $ table @DriverLocationT
+--       where_ $
+--         driverLocs ^. DriverLocationUpdatedAt <. val before
+--       return driverLocs
+
 getDriverLocs ::
-  (Transactionable m, EsqLocRepDBFlow m r) =>
+  L.MonadFlow m =>
   UTCTime ->
   m [DriverLocation]
 getDriverLocs before = do
-  runInLocReplica $
-    Esq.findAll $ do
-      driverLocs <- from $ table @DriverLocationT
-      where_ $
-        driverLocs ^. DriverLocationUpdatedAt <. val before
-      return driverLocs
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDL.DriverLocationT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbCOnf' -> either (pure []) (QDL.transformBeamDriverLocationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDL.updatedAt $ Se.LessThan before]
+    Nothing -> pure []
 
 fetchDriverIDsFromLocations :: [DriverLocation] -> [Id Person]
 fetchDriverIDsFromLocations = map DriverLocation.driverId

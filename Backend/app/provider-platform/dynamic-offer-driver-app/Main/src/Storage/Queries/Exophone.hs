@@ -19,7 +19,8 @@ module Storage.Queries.Exophone
     #-}
 where
 
-import Domain.Types.Exophone as DE
+import qualified Database.Beam as B
+import Domain.Types.Exophone as DE (Exophone (..))
 import qualified Domain.Types.Merchant as DM
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
@@ -31,6 +32,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
+import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Exophone as BeamE
 import Storage.Tabular.Exophone
 
@@ -124,6 +126,70 @@ updateAffectedPhones primaryPhones = do
         ExophoneUpdatedAt =. val now
       ]
     where_ $ isPrimaryDown !=. tbl ^. ExophoneIsPrimaryDown
+
+updateAffectedPhonesHelper :: (L.MonadFlow m, MonadTime m) => [Text] -> m Bool
+updateAffectedPhonesHelper primaryNumbers = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let indianMobileCode = "+91"
+  conn <- L.getOrInitSqlConn (fromJust dbConf)
+  case conn of
+    Right c -> do
+      geoms <-
+        L.runDB c $
+          L.findRow $
+            B.select $
+              B.limit_ 1 $
+                B.filter_'
+                  ( \BeamE.ExophoneT {..} ->
+                      B.sqlBool_ (primaryPhone `B.in_` (B.val_ <$> primaryNumbers))
+                        B.||?. B.sqlBool_ (B.concat_ [indianMobileCode, primaryPhone] `B.in_` (B.val_ <$> primaryNumbers))
+                  )
+                  $
+                  -- B.all_ (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT))
+                  B.all_ (BeamCommon.exophone BeamCommon.atlasDB)
+      case geoms of
+        Right (Just _) -> do
+          pure True
+        _ -> pure False
+    Left _ -> pure (error "DB Config not found")
+
+updateAffectedPhones' :: (L.MonadFlow m, MonadTime m) => [Text] -> m ()
+updateAffectedPhones' primaryPhones = do
+  now <- getCurrentTime
+  isPrimary <- updateAffectedPhonesHelper primaryPhones
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  case dbConf of
+    Just dbConf' -> do
+      conn <- L.getOrInitSqlConn dbConf'
+      case conn of
+        Right c -> do
+          _ <-
+            L.runDB c $
+              L.updateRows $
+                B.update
+                  (BeamCommon.exophone BeamCommon.atlasDB)
+                  ( \BeamE.ExophoneT {..} ->
+                      (isPrimaryDown B.<-. B.val_ isPrimary)
+                        <> (updatedAt B.<-. B.val_ now)
+                  )
+                  (\BeamE.ExophoneT {..} -> isPrimaryDown B.==. B.val_ isPrimary)
+          void $ pure Nothing
+        Left _ -> pure (error "DB Config not found")
+    Nothing -> pure (error "DB Config not found")
+
+-- updateAffectedPhones' :: (L.MonadFlow m, MonadTime m) => [Text] -> m (MeshResult ())
+-- updateAffectedPhones' primaryPhones = do
+--   let indianMobileCode = "+91"
+--   now <- getCurrentTime
+--   let primaryPhonesList = valList primaryPhones
+--   dbConf <- L.getOption KBT.PsqlDbCfg
+--   case dbConf of
+--     Just dbConf' -> do
+--       conn <- L.getOrInitSqlConn dbConf'
+--       case conn of
+--         Right c -> do
+
+--     Nothing -> pure (error "DB Config not found")
 
 -- updateAffectedPhones' :: (L.MonadFlow m, MonadTime m) => [Text] -> m (MeshResult ())
 -- updateAffectedPhones' primaryPhones = do

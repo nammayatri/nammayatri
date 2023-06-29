@@ -191,4 +191,4 @@ instance Serialize RegistrationToken where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''RegistrationTokenT ['id] [])
+$(enableKVPG ''RegistrationTokenT ['id] [['token], ['entityId]])

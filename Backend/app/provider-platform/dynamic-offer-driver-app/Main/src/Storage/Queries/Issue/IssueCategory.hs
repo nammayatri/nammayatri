@@ -1,5 +1,6 @@
 module Storage.Queries.Issue.IssueCategory where
 
+import Database.Beam.Postgres (Postgres)
 import Domain.Types.Issue.IssueCategory
 import qualified Domain.Types.Issue.IssueCategory as DomainIC
 import Domain.Types.Issue.IssueTranslation as DomainIT
@@ -34,18 +35,31 @@ import qualified Storage.Queries.Issue.IssueTranslation as QueriesIT
 --   (issueCategory :& mbIssueTranslation) <- from $ fullCategoryTable language
 --   return (issueCategory, mbIssueTranslation)
 
-findAllByLanguage :: L.MonadFlow m => Language -> m [(IssueCategory, Maybe IssueTranslation)]
-findAllByLanguage language = do
+findAllIssueTranslationWithSeCondition :: L.MonadFlow m => [Se.Clause Postgres BeamIT.IssueTranslationT] -> m [IssueTranslation]
+findAllIssueTranslationWithSeCondition seCondition = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamIT.IssueTranslationT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig seCondition
+    Nothing -> pure []
+
+findAllIssueCategoryWithSeCondition :: L.MonadFlow m => [Se.Clause Postgres BeamIC.IssueCategoryT] -> m [IssueCategory]
+findAllIssueCategoryWithSeCondition seCondition = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamIC.IssueCategoryT
   let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> do
-      iTranslations <- either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamIT.language $ Se.Eq language]
-      iCategorys <- either (pure []) (transformBeamIssueCategoryToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamIC.category $ Se.In (DomainIT.sentence <$> iTranslations)]
-      let dCategoriesWithTranslations = foldl' (getIssueCategoryWithTranslations iTranslations) [] iCategorys
-      pure dCategoriesWithTranslations
+    Just dbConf' -> either (pure []) (transformBeamIssueCategoryToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig seCondition
     Nothing -> pure []
+
+findAllByLanguage :: L.MonadFlow m => Language -> m [(IssueCategory, Maybe IssueTranslation)]
+findAllByLanguage language = do
+  iTranslations <- findAllIssueTranslationWithSeCondition [Se.Is BeamIT.language $ Se.Eq language]
+  let iCategorySeCondition = [Se.Is BeamIC.category $ Se.In (DomainIT.sentence <$> iTranslations)]
+  iCategorys <- findAllIssueCategoryWithSeCondition iCategorySeCondition
+  let dCategoriesWithTranslations = foldl' (getIssueCategoryWithTranslations iTranslations) [] iCategorys
+  pure dCategoriesWithTranslations
   where
     getIssueCategoryWithTranslations iTranslations dInfosWithTranslations iCategory =
       let iTranslations' = filter (\iTranslation -> iTranslation.sentence == iCategory.category) iTranslations
@@ -74,17 +88,11 @@ findById (Id issueCategoryId) = do
 
 findByIdAndLanguage :: L.MonadFlow m => Id IssueCategory -> Language -> m (Maybe (IssueCategory, Maybe IssueTranslation))
 findByIdAndLanguage (Id issueCategoryId) language = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamIC.IssueCategoryT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> do
-      iCategory <- either (pure []) (transformBeamIssueCategoryToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamIC.id $ Se.Eq issueCategoryId]
-      iTranslations <- either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamIT.language $ Se.Eq language, Se.Is BeamIT.sentence $ Se.In (DomainIC.category <$> iCategory)]]
-      let dInfosWithTranslations' = foldl' (getIssueOptionsWithTranslations iTranslations) [] iCategory
-          dInfosWithTranslations = headMaybe dInfosWithTranslations'
-      pure dInfosWithTranslations
-    Nothing -> pure Nothing
+  iCategory <- findAllIssueCategoryWithSeCondition [Se.Is BeamIC.id $ Se.Eq issueCategoryId]
+  iTranslations <- findAllIssueTranslationWithSeCondition [Se.And [Se.Is BeamIT.language $ Se.Eq language, Se.Is BeamIT.sentence $ Se.In (DomainIC.category <$> iCategory)]]
+  let dInfosWithTranslations' = foldl' (getIssueOptionsWithTranslations iTranslations) [] iCategory
+      dInfosWithTranslations = headMaybe dInfosWithTranslations'
+  pure dInfosWithTranslations
   where
     getIssueOptionsWithTranslations iTranslations dInfosWithTranslations iCategory =
       let iTranslations' = filter (\iTranslation -> iTranslation.sentence == iCategory.category) iTranslations

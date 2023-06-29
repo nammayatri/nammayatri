@@ -25,6 +25,7 @@ import Data.Time hiding (getCurrentTime)
 import qualified Database.Beam as B
 import Database.Beam.Postgres
 import Domain.Types.Booking as Booking
+import Domain.Types.DriverInformation
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Ride as DR
@@ -112,40 +113,90 @@ findActiveByRBId (Id rbId) = do
         Left _ -> pure Nothing
     Nothing -> pure Nothing
 
-findAllRidesBookingsByRideId :: L.MonadFlow m => Id Merchant -> [Id Ride] -> m [(Ride, Booking)]
-findAllRidesBookingsByRideId (Id merchantId) rideIds = do
+findAllRidesWithSeConditionsCreatedAtDesc :: L.MonadFlow m => [Se.Clause Postgres BeamR.RideT] -> m [Ride]
+findAllRidesWithSeConditionsCreatedAtDesc conditions = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
   let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
-      rides <- do
-        res <-
-          KV.findAllWithKVConnector
-            dbConf'
-            updatedMeshConfig
-            [Se.Is BeamR.id $ Se.In $ getId <$> rideIds]
-        case res of
-          Left _ -> pure []
-          Right x -> traverse transformBeamRideToDomain x
-
-      bookings <- do
-        res <-
-          KV.findAllWithKVConnector
-            dbConf'
-            updatedMeshConfig
-            [ Se.And
-                [ Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <$> rides,
-                  Se.Is BeamB.providerId $ Se.Eq merchantId
-                ]
-            ]
-        case res of
-          Right x -> catMaybes <$> traverse QB.transformBeamBookingToDomain x
-          _ -> pure []
-
-      let rideBooking = foldl' (getRideWithBooking bookings) [] rides
-      pure rideBooking
+      res <-
+        KV.findAllWithOptionsKVConnector
+          dbConf'
+          updatedMeshConfig
+          conditions
+          (Se.Desc BeamR.createdAt)
+          Nothing
+          Nothing
+      case res of
+        Right x -> traverse transformBeamRideToDomain x
+        Left _ -> pure []
     Nothing -> pure []
+
+findAllDriverInfromationFromRides :: L.MonadFlow m => [Ride] -> m [DriverInformation]
+findAllDriverInfromationFromRides rides = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDI.DriverInformationT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> either (pure []) (QDI.transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamDI.driverId $ Se.In $ getId . DR.driverId <$> rides]]
+    Nothing -> pure []
+
+findAllBookingsWithSeConditions :: L.MonadFlow m => [Se.Clause Postgres BeamB.BookingT] -> m [Booking]
+findAllBookingsWithSeConditions conditions = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamB.BookingT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      res <- KV.findAllWithKVConnector dbConf' updatedMeshConfig conditions
+      case res of
+        Right x -> catMaybes <$> traverse QB.transformBeamBookingToDomain x
+        _ -> pure []
+    Nothing -> pure []
+
+findAllBookingsWithSeConditionsCreatedAtDesc :: L.MonadFlow m => [Se.Clause Postgres BeamB.BookingT] -> m [Booking]
+findAllBookingsWithSeConditionsCreatedAtDesc conditions = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamB.BookingT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      res <- KV.findAllWithOptionsKVConnector dbConf' updatedMeshConfig conditions (Se.Desc BeamB.createdAt) Nothing Nothing
+      case res of
+        Right x -> catMaybes <$> traverse QB.transformBeamBookingToDomain x
+        _ -> pure []
+    Nothing -> pure []
+
+findAllRidesWithSeConditions :: L.MonadFlow m => [Se.Clause Postgres BeamR.RideT] -> m [Ride]
+findAllRidesWithSeConditions conditions = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamR.RideT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      res <-
+        KV.findAllWithKVConnector
+          dbConf'
+          updatedMeshConfig
+          conditions
+      case res of
+        Right x -> traverse transformBeamRideToDomain x
+        Left _ -> pure []
+    Nothing -> pure []
+
+findAllRidesBookingsByRideId :: L.MonadFlow m => Id Merchant -> [Id Ride] -> m [(Ride, Booking)]
+findAllRidesBookingsByRideId (Id merchantId) rideIds = do
+  rides <- findAllRidesWithSeConditions [Se.Is BeamR.id $ Se.In $ getId <$> rideIds]
+  let bookingSeCondition =
+        [ Se.And
+            [ Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <$> rides,
+              Se.Is BeamB.providerId $ Se.Eq merchantId
+            ]
+        ]
+  bookings <- findAllBookingsWithSeConditions bookingSeCondition
+  let rideBooking = foldl' (getRideWithBooking bookings) [] rides
+  pure rideBooking
   where
     getRideWithBooking bookings acc ride' =
       let bookings' = filter (\x -> x.id == ride'.bookingId) bookings
@@ -610,23 +661,15 @@ findStuckRideItems (Id merchantId) bookingIds now = do
         case res of
           Left _ -> pure []
           Right x -> traverse transformBeamRideToDomain x
-      bookings <- do
-        let modelNameB = Se.modelTableName @BeamB.BookingT
-        let updatedMeshConfigB = setMeshConfig modelNameB
-        res <-
-          KV.findAllWithKVConnector
-            dbCOnf'
-            updatedMeshConfigB
+      let bookingSeCondition =
             [ Se.And
                 [ Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <$> rides,
                   Se.Is BeamB.providerId $ Se.Eq merchantId,
                   Se.Is BeamB.id $ Se.In $ getId <$> bookingIds
                 ]
             ]
-        case res of
-          Left _ -> pure []
-          Right x -> catMaybes <$> traverse QB.transformBeamBookingToDomain x
-      driverInfos <- either (pure []) (QDI.transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamDI.driverId $ Se.In $ getId . DR.driverId <$> rides]]
+      bookings <- findAllBookingsWithSeConditions bookingSeCondition
+      driverInfos <- findAllDriverInfromationFromRides rides
       let rideBooking = foldl' (getRideWithBooking bookings) [] rides
       let rideBookingDriverInfo = foldl' (getRideWithBookingDriverInfo driverInfos) [] rideBooking
 

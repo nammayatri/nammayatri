@@ -432,6 +432,7 @@ calculateDriverPool ::
     Esq.EsqDBReplicaFlow m r,
     EsqLocRepDBFlow m r,
     CoreMetrics m,
+    L.MonadFlow m,
     HasCoordinates a
   ) =>
   PoolCalculationStage ->
@@ -515,6 +516,7 @@ calculateDriverPoolCurrentlyOnRide ::
     EsqLocRepDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     CoreMetrics m,
+    L.MonadFlow m,
     HasCoordinates a
   ) =>
   PoolCalculationStage ->
@@ -531,6 +533,7 @@ calculateDriverPoolCurrentlyOnRide poolStage driverPoolCfg mbVariant pickup merc
   now <- getCurrentTime
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPoolCurrentlyOnRide" $
+      -- Esq.runInReplica $
       QP.getNearestDriversCurrentlyOnRide
         mbVariant
         coord

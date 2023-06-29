@@ -14,6 +14,9 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use newtype instead of data" #-}
 
 module Storage.Beam.Exophone where
 
@@ -24,6 +27,7 @@ import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
+import qualified Database.Beam.Schema.Tables as B
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
@@ -53,6 +57,12 @@ data ExophoneT f = ExophoneT
     updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
+
+dExophone :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity ExophoneT)
+dExophone =
+  B.setEntitySchema (Just "atlas_driver_offer_bpp")
+    <> B.setEntityName "exophone"
+    <> B.modifyTableFields exophoneTMod
 
 instance B.Table ExophoneT where
   data PrimaryKey ExophoneT f
@@ -114,4 +124,4 @@ instance Serialize Exophone where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''ExophoneT ['id] [])
+$(enableKVPG ''ExophoneT ['id] [['merchantId], ['primaryPhone]])

@@ -12,6 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -36,6 +37,7 @@ import Sequelize
 import Storage.Tabular.Vehicle ()
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be BaseUrl where
+  sqlValueSyntax :: HasSqlValueSyntax be String => BaseUrl -> be
   sqlValueSyntax = autoSqlValueSyntax
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be BaseUrl
@@ -143,4 +145,4 @@ instance Serialize SearchRequestSpecialZone where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''SearchRequestSpecialZoneT ['id] [])
+$(enableKVPG ''SearchRequestSpecialZoneT ['id] [['transactionId], ['messageId]])

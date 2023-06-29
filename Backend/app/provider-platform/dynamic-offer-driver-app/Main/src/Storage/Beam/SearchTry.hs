@@ -147,4 +147,4 @@ instance Serialize SearchTry where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''SearchTryT ['id] [])
+$(enableKVPG ''SearchTryT ['id] [['requestId]])

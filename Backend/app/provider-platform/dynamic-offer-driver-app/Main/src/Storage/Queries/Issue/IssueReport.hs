@@ -1,5 +1,6 @@
 module Storage.Queries.Issue.IssueReport where
 
+import qualified Data.Time as T
 import Domain.Types.Issue.IssueCategory
 import Domain.Types.Issue.IssueOption
 import Domain.Types.Issue.IssueReport as IssueReport
@@ -108,7 +109,7 @@ safeToDelete (Id issueReportId) (Id driverId) = do
   let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamIR.id $ Se.Eq issueReportId, Se.Is BeamIR.driverId $ Se.Eq driverId]]
+      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamIR.id $ Se.Eq issueReportId, Se.Is BeamIR.driverId $ Se.Eq driverId, Se.Is BeamIR.deleted $ Se.Eq False]]
       case result of
         Right issueReport -> pure $ transformBeamIssueReportToDomain <$> issueReport
         Left _ -> pure Nothing
@@ -169,7 +170,7 @@ updateAsDeleted issueReportId = do
           dbConf'
           updatedMeshConfig
           [ Se.Set BeamIR.deleted True,
-            Se.Set BeamIR.updatedAt now
+            Se.Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now
           ]
           [Se.Is BeamIR.id (Se.Eq $ getId issueReportId)]
     Nothing -> pure ()
@@ -200,7 +201,7 @@ updateStatusAssignee issueReportId status assignee = do
         KV.updateWoReturningWithKVConnector
           dbConf'
           updatedMeshConfig
-          ([Se.Set BeamIR.updatedAt now] <> if isJust status then [Se.Set BeamIR.status (fromJust status)] else [] <> ([Se.Set BeamIR.assignee assignee | isJust assignee]))
+          ([Se.Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now] <> if isJust status then [Se.Set BeamIR.status (fromJust status)] else [] <> ([Se.Set BeamIR.assignee assignee | isJust assignee]))
           [Se.Is BeamIR.id (Se.Eq $ getId issueReportId)]
     Nothing -> pure ()
 
@@ -229,7 +230,7 @@ updateOption issueReportId (Id optionId) = do
         KV.updateWoReturningWithKVConnector
           dbConf'
           updatedMeshConfig
-          [Se.Set BeamIR.optionId (Just optionId), Se.Set BeamIR.updatedAt now]
+          [Se.Set BeamIR.optionId (Just optionId), Se.Set BeamIR.updatedAt $ T.utcToLocalTime T.utc now]
           [Se.Is BeamIR.id (Se.Eq $ getId issueReportId)]
     Nothing -> pure ()
 
@@ -246,8 +247,8 @@ transformBeamIssueReportToDomain BeamIR.IssueReportT {..} = do
       optionId = Id <$> optionId,
       deleted = deleted,
       mediaFiles = Id <$> mediaFiles,
-      createdAt = createdAt,
-      updatedAt = updatedAt
+      createdAt = T.localTimeToUTC T.utc createdAt,
+      updatedAt = T.localTimeToUTC T.utc updatedAt
     }
 
 transformDomainIssueReportToBeam :: IssueReport -> BeamIR.IssueReport
@@ -263,6 +264,6 @@ transformDomainIssueReportToBeam IssueReport {..} =
       BeamIR.optionId = getId <$> optionId,
       BeamIR.deleted = deleted,
       BeamIR.mediaFiles = getId <$> mediaFiles,
-      BeamIR.createdAt = createdAt,
-      BeamIR.updatedAt = updatedAt
+      BeamIR.createdAt = T.utcToLocalTime T.utc createdAt,
+      BeamIR.updatedAt = T.utcToLocalTime T.utc updatedAt
     }

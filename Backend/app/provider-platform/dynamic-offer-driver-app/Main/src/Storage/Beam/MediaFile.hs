@@ -53,7 +53,7 @@ data MediaFileT f = MediaFileT
   { id :: B.C f Text,
     fileType :: B.C f Domain.MediaType,
     url :: B.C f Text,
-    createdAt :: B.C f Time.UTCTime
+    createdAt :: B.C f Time.LocalTime
   }
   deriving (Generic, B.Beamable)
 
@@ -96,7 +96,7 @@ mediaFileTMod :: MediaFileT (B.FieldModification (B.TableField MediaFileT))
 mediaFileTMod =
   B.tableModification
     { id = B.fieldNamed "id",
-      fileType = B.fieldNamed "file_type",
+      fileType = B.fieldNamed "type",
       url = B.fieldNamed "url",
       createdAt = B.fieldNamed "created_at"
     }
@@ -114,15 +114,6 @@ mediaFileToPSModifiers =
 
 instance IsString Domain.MediaType where
   fromString = show
-
-defaultMediaFile :: MediaFile
-defaultMediaFile =
-  MediaFileT
-    { id = "",
-      fileType = "",
-      url = "",
-      createdAt = defaultUTCDate
-    }
 
 instance Serialize MediaFile where
   put = error "undefined"

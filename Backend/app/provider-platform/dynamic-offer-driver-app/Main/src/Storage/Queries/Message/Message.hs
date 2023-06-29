@@ -14,9 +14,8 @@
 
 module Storage.Queries.Message.Message where
 
+import qualified Data.Time as T
 import Domain.Types.Merchant (Merchant)
--- import Kernel.Storage.Esqueleto as Esq
-
 import Domain.Types.Message.Message
 import Domain.Types.Message.MessageTranslation as DomainMT
 import qualified EulerHS.KVConnector.Flow as KV
@@ -188,7 +187,7 @@ transformBeamMessageToDomain BeamM.MessageT {..} = do
         mediaFiles = Id <$> mediaFiles,
         messageTranslations = mT,
         merchantId = Id merchantId,
-        createdAt = createdAt
+        createdAt = T.localTimeToUTC T.utc createdAt
       }
 
 transformDomainMessageToBeam :: Message -> BeamM.Message
@@ -204,5 +203,5 @@ transformDomainMessageToBeam Message {..} =
       BeamM.viewCount = viewCount,
       BeamM.mediaFiles = getId <$> mediaFiles,
       BeamM.merchantId = getId merchantId,
-      BeamM.createdAt = createdAt
+      BeamM.createdAt = T.utcToLocalTime T.utc createdAt
     }

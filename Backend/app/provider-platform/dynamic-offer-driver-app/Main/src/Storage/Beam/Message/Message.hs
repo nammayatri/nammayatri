@@ -60,7 +60,7 @@ data MessageT f = MessageT
     viewCount :: B.C f Int,
     mediaFiles :: B.C f [Text],
     merchantId :: B.C f Text,
-    createdAt :: B.C f Time.UTCTime
+    createdAt :: B.C f Time.LocalTime
   }
   deriving (Generic, B.Beamable)
 
@@ -106,7 +106,7 @@ messageTMod :: MessageT (B.FieldModification (B.TableField MessageT))
 messageTMod =
   B.tableModification
     { id = B.fieldNamed "id",
-      messageType = B.fieldNamed "message_type",
+      messageType = B.fieldNamed "type",
       title = B.fieldNamed "title",
       description = B.fieldNamed "description",
       shortDescription = B.fieldNamed "short_description",
@@ -133,4 +133,4 @@ instance Serialize Message where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''MessageT ['id] [])
+$(enableKVPG ''MessageT ['id] [['merchantId]])

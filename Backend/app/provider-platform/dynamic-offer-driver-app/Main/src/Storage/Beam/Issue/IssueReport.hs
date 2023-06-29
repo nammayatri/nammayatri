@@ -73,8 +73,8 @@ data IssueReportT f = IssueReportT
     optionId :: B.C f (Maybe Text),
     deleted :: B.C f Bool,
     mediaFiles :: B.C f [Text],
-    createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    createdAt :: B.C f Time.LocalTime,
+    updatedAt :: B.C f Time.LocalTime
   }
   deriving (Generic, B.Beamable)
 
@@ -116,23 +116,6 @@ issueReportTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-defaultIssueReport :: IssueReport
-defaultIssueReport =
-  IssueReportT
-    { id = "",
-      driverId = "",
-      rideId = Nothing,
-      description = "",
-      assignee = Nothing,
-      status = "",
-      categoryId = "",
-      optionId = Nothing,
-      deleted = False,
-      mediaFiles = [],
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
-
 instance Serialize IssueReport where
   put = error "undefined"
   get = error "undefined"
@@ -148,4 +131,4 @@ issueReportToPSModifiers :: M.Map Text (A.Value -> A.Value)
 issueReportToPSModifiers =
   M.empty
 
-$(enableKVPG ''IssueReportT ['id] [])
+$(enableKVPG ''IssueReportT ['id] [['driverId], ['categoryId]])

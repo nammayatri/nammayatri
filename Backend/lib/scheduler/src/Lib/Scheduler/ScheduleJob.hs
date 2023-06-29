@@ -16,11 +16,13 @@ module Lib.Scheduler.ScheduleJob
   ( createJob,
     createJobByTime,
     createJobIn,
+    createJobIn',
   )
 where
 
 import Data.Singletons
 import qualified Data.UUID as UU
+import EulerHS.Language as L
 import Kernel.Prelude hiding (mask, throwIO)
 import Kernel.Types.Common
 import Kernel.Types.Error (GenericError (InternalError))
@@ -53,6 +55,20 @@ createJobIn createJobFunc diff maxShards jobEntry = do
   let scheduledAt = addUTCTime diff now
   createJobImpl createJobFunc scheduledAt maxShards jobEntry
 
+createJobIn' ::
+  forall t (e :: t) m.
+  (MonadTime m, L.MonadFlow m, MonadGuid m, MonadThrow m, Log m, SingI e, JobProcessor t, JobInfoProcessor (e :: t)) =>
+  (AnyJob t -> m ()) ->
+  NominalDiffTime ->
+  Int ->
+  JobEntry e ->
+  m (Id AnyJob)
+createJobIn' createJobFunc diff maxShards jobEntry = do
+  now <- getCurrentTime
+  when (diff < 0) $ throwError $ InternalError "job can only be scheduled for now or for future"
+  let scheduledAt = addUTCTime diff now
+  createJobImpl' createJobFunc scheduledAt maxShards jobEntry
+
 createJobByTime ::
   forall t (e :: t) m.
   (MonadTime m, MonadGuid m, MonadThrow m, Log m, SingI e, JobProcessor t, JobInfoProcessor (e :: t)) =>
@@ -80,6 +96,38 @@ createJobImpl ::
   JobEntry e ->
   m (Id AnyJob)
 createJobImpl createJobFunc scheduledAt maxShards JobEntry {..} = do
+  when (maxErrors <= 0) $ throwError $ InternalError "maximum errors should be positive"
+  now <- getCurrentTime
+  uuid <- generateGUIDText
+  let id = Id uuid
+  let shardId :: Int = idToShardNumber . fromJust $ UU.fromText uuid -- using fromJust because its never going to fail
+  let job = makeJob shardId id now
+  createJobFunc $ AnyJob job
+  pure id
+  where
+    idToShardNumber uuid = fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords uuid)) `mod` maxShards
+    makeJob shardId id currentTime =
+      Job
+        { id = id,
+          jobInfo = JobInfo (sing :: Sing e) jobData,
+          shardId = shardId,
+          scheduledAt = scheduledAt,
+          maxErrors = maxErrors,
+          createdAt = currentTime,
+          updatedAt = currentTime,
+          currErrors = 0,
+          status = Pending
+        }
+
+createJobImpl' ::
+  forall t (e :: t) m.
+  (MonadTime m, L.MonadFlow m, MonadGuid m, MonadThrow m, Log m, SingI e, JobProcessor t, JobInfoProcessor (e :: t)) =>
+  (AnyJob t -> m ()) ->
+  UTCTime ->
+  Int ->
+  JobEntry e ->
+  m (Id AnyJob)
+createJobImpl' createJobFunc scheduledAt maxShards JobEntry {..} = do
   when (maxErrors <= 0) $ throwError $ InternalError "maximum errors should be positive"
   now <- getCurrentTime
   uuid <- generateGUIDText

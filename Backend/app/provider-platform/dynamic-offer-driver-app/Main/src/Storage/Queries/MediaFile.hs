@@ -14,6 +14,7 @@
 
 module Storage.Queries.MediaFile where
 
+import qualified Data.Time as T
 import Domain.Types.MediaFile as DMF
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
@@ -25,9 +26,6 @@ import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.MediaFile as BeamMF
 
--- create :: MediaFile -> SqlDB ()
--- create = Esq.create
-
 create :: L.MonadFlow m => DMF.MediaFile -> m (MeshResult ())
 create mediaFile = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -37,9 +35,6 @@ create mediaFile = do
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainMediaFileToBeam mediaFile)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
--- findById :: Transactionable m => Id MediaFile -> m (Maybe MediaFile)
--- findById = Esq.findById
-
 findById :: L.MonadFlow m => Id MediaFile -> m (Maybe MediaFile)
 findById (Id mediaFileId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -48,13 +43,6 @@ findById (Id mediaFileId) = do
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamMediaFileToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamMF.id $ Se.Eq mediaFileId]
     Nothing -> pure Nothing
-
--- findAllIn :: Transactionable m => [Id MediaFile] -> m [MediaFile]
--- findAllIn mfList =
---   Esq.findAll $ do
---     mediaFile <- from $ table @MediaFileT
---     where_ $ mediaFile ^. MediaFileId `in_` valList (map getId mfList)
---     return mediaFile
 
 findAllIn :: L.MonadFlow m => [Id MediaFile] -> m [MediaFile]
 findAllIn mfList = do
@@ -71,7 +59,7 @@ transformBeamMediaFileToDomain BeamMF.MediaFileT {..} = do
     { id = Id id,
       _type = fileType,
       url = url,
-      createdAt = createdAt
+      createdAt = T.localTimeToUTC T.utc createdAt
     }
 
 transformDomainMediaFileToBeam :: MediaFile -> BeamMF.MediaFile
@@ -80,5 +68,5 @@ transformDomainMediaFileToBeam MediaFile {..} =
     { BeamMF.id = getId id,
       BeamMF.fileType = _type,
       BeamMF.url = url,
-      BeamMF.createdAt = createdAt
+      BeamMF.createdAt = T.utcToLocalTime T.utc createdAt
     }

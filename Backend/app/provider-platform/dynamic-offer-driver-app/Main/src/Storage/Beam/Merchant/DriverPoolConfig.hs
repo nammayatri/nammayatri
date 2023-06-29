@@ -39,8 +39,6 @@ import Lib.UtilsTH
 import Sequelize
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config (BatchSplitByPickupDistance (..), PoolSortingType (..))
 
--- import qualified Data.Vector as V
-
 instance FromField PoolSortingType where
   fromField = fromFieldEnum
 
@@ -59,14 +57,6 @@ instance FromField [BatchSplitByPickupDistance] where
 
 instance (HasSqlValueSyntax be Value) => HasSqlValueSyntax be [BatchSplitByPickupDistance] where
   sqlValueSyntax = sqlValueSyntax . A.toJSON
-
--- instance ToField [BatchSplitByPickupDistance] where
---   toField = error ""
-
--- instance ToField Text => ToField BatchSplitByPickupDistance where
---   toField x = toField (show x)
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be [BatchSplitByPickupDistance] where
---   sqlValueSyntax = autoSqlValueSyntax
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [BatchSplitByPickupDistance]
 

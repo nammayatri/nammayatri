@@ -132,4 +132,4 @@ instance Serialize QuoteSpecialZone where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''QuoteSpecialZoneT ['id] [])
+$(enableKVPG ''QuoteSpecialZoneT ['id] [['searchRequestId]])

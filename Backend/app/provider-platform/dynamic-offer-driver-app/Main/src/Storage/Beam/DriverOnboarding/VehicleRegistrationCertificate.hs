@@ -186,4 +186,4 @@ vehicleRegistrationCertificateToPSModifiers :: M.Map Text (A.Value -> A.Value)
 vehicleRegistrationCertificateToPSModifiers =
   M.empty
 
-$(enableKVPG ''VehicleRegistrationCertificateT ['id] [])
+$(enableKVPG ''VehicleRegistrationCertificateT ['id] [['certificateNumberHash]])

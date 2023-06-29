@@ -202,4 +202,4 @@ instance Serialize SearchRequestForDriver where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''SearchRequestForDriverT ['id] [])
+$(enableKVPG ''SearchRequestForDriverT ['id] [['driverId], ['searchTryId], ['requestId]])

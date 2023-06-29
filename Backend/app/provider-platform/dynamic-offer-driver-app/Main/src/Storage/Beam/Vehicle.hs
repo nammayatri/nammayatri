@@ -164,4 +164,4 @@ instance Serialize Vehicle where
   put = error "undefined"
   get = error "undefined"
 
-$(enableKVPG ''VehicleT ['driverId] [])
+$(enableKVPG ''VehicleT ['driverId] [['registrationNo]])
