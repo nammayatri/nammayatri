@@ -167,7 +167,7 @@ getDistanceString currDistance initDistance zoneType
                               getString YOUR_DRIVER_IS_JUST
                             ) <> show currDistance <> getString M_AWAY
   | otherwise = if zoneType == METRO then
-                  getString THE_DRIVER_PREFERRED_YOUR_SPECIAL_LOCATION_AND_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION
+                  getString THE_DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION
                 else
                   getString DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION
 
