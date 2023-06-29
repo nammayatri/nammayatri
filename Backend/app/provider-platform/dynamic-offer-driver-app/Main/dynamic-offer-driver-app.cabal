@@ -63,6 +63,7 @@ library
       API.UI.Registration
       API.UI.Ride
       API.UI.Route
+      API.UI.SearchRequestRoute
       API.UI.Transporter
       API.UI.Vehicle
       API.UI.Whatsapp
@@ -135,6 +136,7 @@ library
       Domain.Action.UI.Ride.StartRide
       Domain.Action.UI.Ride.StartRide.Internal
       Domain.Action.UI.Route
+      Domain.Action.UI.SearchRequestRoute
       Domain.Action.UI.Transporter
       Domain.Action.UI.Vehicle
       Domain.Action.UI.Whatsapp

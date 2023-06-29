@@ -49,6 +49,13 @@ search ::
 search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ gateway) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "Search API Flow" "Reached"
+
+    logTagInfo "Search API Flow axyz" $ "Request: " <> show req
+    logTagInfo "Search API Flow axyz" $ "messageId: " <> show req.context.message_id
+    logTagInfo "Search API Flow axyz" $ "routeInfor: " <> show req.message.routeInfo
+    logTagInfo "Search API Flow axyz" $ "transporterId: " <> show transporterId.getId
+    Redis.hSetExp (searchRequestKey transporterId.getId) req.context.message_id req.message.routeInfo 84000
+
     dSearchReq <- ACL.buildSearchReq subscriber req
     Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $ do
       merchant <- DSearch.validateRequest transporterId dSearchReq
@@ -67,3 +74,6 @@ searchLockKey id mId = "Driver:Search:MessageId-" <> id <> ":" <> mId
 
 searchProcessingLockKey :: Text -> Text -> Text
 searchProcessingLockKey id mId = "Driver:Search:Processing:MessageId-" <> id <> ":" <> mId
+
+searchRequestKey :: Text -> Text
+searchRequestKey mId = "Driver:Search:Request:" <> mId
