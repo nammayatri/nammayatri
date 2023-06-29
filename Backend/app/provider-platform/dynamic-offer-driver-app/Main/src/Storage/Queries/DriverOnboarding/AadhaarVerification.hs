@@ -19,6 +19,7 @@ import Domain.Types.Person (Person)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Storage.Beam.DriverOnboarding.AadhaarVerification as BeamAV
 import Storage.Tabular.DriverOnboarding.AadhaarVerification
 
 create :: AadhaarVerification -> Esq.SqlDB ()
@@ -39,3 +40,27 @@ findByDriverId driverId = do
     aadhaar <- from $ table @AadhaarVerificationT
     where_ $ aadhaar ^. AadhaarVerificationDriverId ==. val (toKey driverId)
     return aadhaar
+
+transformBeamAadhaarVerificationToDomain :: BeamAV.AadhaarVerification -> AadhaarVerification
+transformBeamAadhaarVerificationToDomain BeamAV.AadhaarVerificationT {..} = do
+  AadhaarVerification
+    { id = Id id,
+      driverId = Id driverId,
+      driverName = driverName,
+      driverGender = driverGender,
+      driverDob = driverDob,
+      driverImage = driverImage,
+      createdAt = createdAt
+    }
+
+transformDomainAadhaarVerificationToBeam :: AadhaarVerification -> BeamAV.AadhaarVerification
+transformDomainAadhaarVerificationToBeam AadhaarVerification {..} =
+  BeamAV.defaultAadhaarVerification
+    { BeamAV.id = getId id,
+      BeamAV.driverId = getId driverId,
+      BeamAV.driverName = driverName,
+      BeamAV.driverGender = driverGender,
+      BeamAV.driverDob = driverDob,
+      BeamAV.driverImage = driverImage,
+      BeamAV.createdAt = createdAt
+    }
