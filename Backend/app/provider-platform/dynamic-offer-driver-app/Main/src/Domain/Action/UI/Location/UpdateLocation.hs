@@ -36,7 +36,7 @@ import GHC.Records.Extra
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+-- import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
@@ -148,7 +148,8 @@ handleDriverPayments driverId diffUtc = do
   case (ongoingAfterEndTime, overdueFee) of
     (Nothing, _) -> pure ()
     (Just df, Nothing) -> do
-      Esq.runNoTransaction $ updateStatus PAYMENT_PENDING df.id now
+      -- Esq.runNoTransaction $ updateStatus PAYMENT_PENDING df.id now
+      _ <- updateStatus PAYMENT_PENDING df.id now
       updatePendingPayment True (cast driverId)
     (Just dGFee, Just oDFee) -> mergeDriverFee dGFee oDFee now
 
@@ -157,7 +158,7 @@ handleDriverPayments driverId diffUtc = do
     Nothing -> pure ()
     Just df -> do
       -- Esq.runTransaction $ do
-      updateStatus PAYMENT_OVERDUE df.id now
+      _ <- updateStatus PAYMENT_OVERDUE df.id now
       QDFS.updateStatus (cast driverId) DDFS.PAYMENT_OVERDUE
       updateSubscription False (cast driverId)
 

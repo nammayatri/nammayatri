@@ -46,6 +46,15 @@ create driverFee = do
 findById :: Transactionable m => Id DriverFee -> m (Maybe DriverFee)
 findById = Esq.findById
 
+findByIdBeam :: L.MonadFlow m => Id DriverFee -> m (Maybe DriverFee)
+findByIdBeam (Id driverFeeId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDF.DriverFeeT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> either (pure Nothing) (transformBeamDriverFeeToDomain <$>) <$> KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamDF.id $ Se.Eq driverFeeId]
+    Nothing -> pure Nothing
+
 findByShortId :: Transactionable m => ShortId DriverFee -> m (Maybe DriverFee)
 findByShortId shortId = do
   findOne $ do
@@ -128,22 +137,55 @@ findUnpaidAfterPayBy driverId now = do
         &&. driverFee ^. DriverFeePayBy <=. val now
     return driverFee
 
-updateFee :: Id DriverFee -> Maybe Money -> Money -> Money -> HighPrecMoney -> HighPrecMoney -> UTCTime -> SqlDB ()
+-- updateFee :: Id DriverFee -> Maybe Money -> Money -> Money -> HighPrecMoney -> HighPrecMoney -> UTCTime -> SqlDB ()
+-- updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now = do
+--   let fare = fromMaybe 0 mbFare
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ DriverFeeGovtCharges +=. val govtCharges,
+--         DriverFeePlatformFee +=. val platformFee,
+--         DriverFeeCgst +=. val cgst,
+--         DriverFeeSgst +=. val sgst,
+--         DriverFeeStatus =. val ONGOING,
+--         DriverFeeTotalEarnings +=. val fare,
+--         DriverFeeNumRides +=. val 1, -- in the api, num_rides needed without cost contribution?
+--         DriverFeeUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. DriverFeeId ==. val (getId driverFeeId)
+
+updateFee :: L.MonadFlow m => Id DriverFee -> Maybe Money -> Money -> Money -> HighPrecMoney -> HighPrecMoney -> UTCTime -> m (MeshResult ())
 updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now = do
-  let fare = fromMaybe 0 mbFare
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ DriverFeeGovtCharges +=. val govtCharges,
-        DriverFeePlatformFee +=. val platformFee,
-        DriverFeeCgst +=. val cgst,
-        DriverFeeSgst +=. val sgst,
-        DriverFeeStatus =. val ONGOING,
-        DriverFeeTotalEarnings +=. val fare,
-        DriverFeeNumRides +=. val 1, -- in the api, num_rides needed without cost contribution?
-        DriverFeeUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. DriverFeeId ==. val (getId driverFeeId)
+  driverFeeObject <- findByIdBeam driverFeeId
+  case driverFeeObject of
+    Just df -> do
+      let govtCharges' = df.govtCharges
+      let platformFee' = df.platformFee.fee
+      let cgst' = df.platformFee.cgst
+      let sgst' = df.platformFee.sgst
+      let totalEarnings = df.totalEarnings
+      let numRides = df.numRides
+      let fare = fromMaybe 0 mbFare
+      dbConf <- L.getOption KBT.PsqlDbCfg
+      let modelName = Se.modelTableName @BeamDF.DriverFeeT
+      let updatedMeshConfig = setMeshConfig modelName
+      case dbConf of
+        Just dbConf' ->
+          KV.updateWoReturningWithKVConnector
+            dbConf'
+            updatedMeshConfig
+            [ Se.Set BeamDF.govtCharges $ govtCharges' + govtCharges,
+              Se.Set BeamDF.platformFee $ platformFee' + platformFee,
+              Se.Set BeamDF.cgst $ cgst' + cgst,
+              Se.Set BeamDF.sgst $ sgst' + sgst,
+              Se.Set BeamDF.status ONGOING,
+              Se.Set BeamDF.totalEarnings $ totalEarnings + fare,
+              Se.Set BeamDF.numRides $ numRides + 1, -- in the api, num_rides needed without cost contribution?
+              Se.Set BeamDF.updatedAt now
+            ]
+            [Se.Is BeamDF.id (Se.Eq (getId driverFeeId))]
+        Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+    Nothing -> pure (Left (MKeyNotFound "Could not retrieve driver fee object"))
 
 -- updateStatus :: DriverFeeStatus -> Id DriverFee -> UTCTime -> SqlDB ()
 -- updateStatus status driverFeeId now = do

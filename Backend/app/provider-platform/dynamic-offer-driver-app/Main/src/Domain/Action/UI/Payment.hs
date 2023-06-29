@@ -27,7 +27,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import Environment
-import qualified EulerHS.Language as L
+-- import qualified EulerHS.Language as L
 import Kernel.External.Encryption
 import Kernel.External.Payment.Interface (TransactionStatus)
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
@@ -160,6 +160,6 @@ processPayment merchantId orderStatus driverFeeId = do
   unless (orderStatus /= Juspay.CHARGED) $ do
     CDI.updatePendingPayment False driverFee.driverId
     CDI.updateSubscription True driverFee.driverId
-    Esq.runTransaction $ do
-      QDF.updateStatus DF.CLEARED driverFeeId now
-      QDFS.clearPaymentStatus (cast driverFee.driverId) driverInfo.active
+    -- Esq.runTransaction $ do
+    _ <- QDF.updateStatus DF.CLEARED driverFeeId now
+    QDFS.clearPaymentStatus (cast driverFee.driverId) driverInfo.active

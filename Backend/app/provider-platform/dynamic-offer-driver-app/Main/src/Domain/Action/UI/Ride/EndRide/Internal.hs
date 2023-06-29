@@ -277,14 +277,15 @@ createDriverFee merchantId driverId rideFare newFareParams maxShards = do
   lastDriverFee <- QDF.findLatestFeeByDriverId driverId
   driverFee <- mkDriverFee now driverId rideFare govtCharges platformFee cgst sgst transporterConfig
   unless (totalDriverFee <= 0) $ do
-    case lastDriverFee of
+    _ <- case lastDriverFee of
       Just ldFee ->
         if now >= ldFee.startTime && now < ldFee.endTime
-          then Esq.runNoTransaction $ QDF.updateFee ldFee.id rideFare ldFee.govtCharges ldFee.platformFee.fee ldFee.platformFee.cgst ldFee.platformFee.sgst now
+          then -- then Esq.runNoTransaction $ QDF.updateFee ldFee.id rideFare ldFee.govtCharges ldFee.platformFee.fee ldFee.platformFee.cgst ldFee.platformFee.sgst now
+            QDF.updateFee ldFee.id rideFare ldFee.govtCharges ldFee.platformFee.fee ldFee.platformFee.cgst ldFee.platformFee.sgst now
           else -- else Esq.runNoTransaction $ QDF.create driverFee
-            void $ QDF.create driverFee
+            QDF.create driverFee
       -- Nothing -> Esq.runNoTransaction $ QDF.create driverFee
-      Nothing -> void $ QDF.create driverFee
+      Nothing -> QDF.create driverFee
 
     isPendingPaymentJobScheduled <- getPendingPaymentCache driverFee.endTime
     let pendingPaymentJobTs = diffUTCTime driverFee.endTime now

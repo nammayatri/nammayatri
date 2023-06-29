@@ -119,25 +119,6 @@ updateReferralLinkPassword (Id merchantId) newPassword = do
 --   Esq.update $ \tbl -> do
 --     set
 --       tbl
---       [ TransporterConfigPickupLocThreshold =. val config.pickupLocThreshold,
---         TransporterConfigDropLocThreshold =. val config.dropLocThreshold,
---         TransporterConfigRideTimeEstimatedThreshold =. val config.rideTimeEstimatedThreshold,
---         TransporterConfigDefaultPopupDelay =. val config.defaultPopupDelay,
---         TransporterConfigPopupDelayToAddAsPenalty =. val config.popupDelayToAddAsPenalty,
---         TransporterConfigThresholdCancellationScore =. val config.thresholdCancellationScore,
---         TransporterConfigMinRidesForCancellationScore =. val config.minRidesForCancellationScore,
---         TransporterConfigMediaFileUrlPattern =. val config.mediaFileUrlPattern,
---         TransporterConfigMediaFileSizeUpperLimit =. val config.mediaFileSizeUpperLimit,
---         TransporterConfigOnboardingTryLimit =. val config.onboardingTryLimit,
---         TransporterConfigOnboardingRetryTimeInHours =. val config.onboardingRetryTimeInHours,
---         TransporterConfigCheckImageExtractionForDashboard =. val config.checkImageExtractionForDashboard,
---         TransporterConfigSearchRepeatLimit =. val config.searchRepeatLimit,
---         TransporterConfigDriverPaymentCycleStartTime =. val (nominalDiffTimeToSeconds config.driverPaymentCycleStartTime),
---         TransporterConfigTimeDiffFromUtc =. val config.timeDiffFromUtc,
---         TransporterConfigDriverPaymentCycleBuffer =. val (nominalDiffTimeToSeconds config.driverPaymentCycleBuffer),
---         TransporterConfigDriverPaymentReminderInterval =. val (nominalDiffTimeToSeconds config.driverPaymentReminderInterval),
---         TransporterConfigDriverPaymentCycleDuration =. val (nominalDiffTimeToSeconds config.driverPaymentCycleDuration),
---         TransporterConfigUpdatedAt =. val now
 --       ]
 --     where_ $ tbl ^. TransporterConfigMerchantId ==. val (toKey config.merchantId)
 
@@ -159,14 +140,17 @@ update config = do
           Se.Set BeamTC.popupDelayToAddAsPenalty config.popupDelayToAddAsPenalty,
           Se.Set BeamTC.thresholdCancellationScore config.thresholdCancellationScore,
           Se.Set BeamTC.minRidesForCancellationScore config.minRidesForCancellationScore,
-          Se.Set BeamTC.thresholdCancellationPercentageToUnlist config.thresholdCancellationPercentageToUnlist,
-          Se.Set BeamTC.minRidesToUnlist config.minRidesToUnlist,
           Se.Set BeamTC.mediaFileUrlPattern config.mediaFileUrlPattern,
           Se.Set BeamTC.mediaFileSizeUpperLimit config.mediaFileSizeUpperLimit,
           Se.Set BeamTC.onboardingTryLimit config.onboardingTryLimit,
           Se.Set BeamTC.onboardingRetryTimeInHours config.onboardingRetryTimeInHours,
           Se.Set BeamTC.checkImageExtractionForDashboard config.checkImageExtractionForDashboard,
           Se.Set BeamTC.searchRepeatLimit config.searchRepeatLimit,
+          Se.Set BeamTC.driverPaymentCycleStartTime (nominalDiffTimeToSeconds config.driverPaymentCycleStartTime),
+          Se.Set BeamTC.timeDiffFromUtc config.timeDiffFromUtc,
+          Se.Set BeamTC.driverPaymentCycleBuffer (nominalDiffTimeToSeconds config.driverPaymentCycleBuffer),
+          Se.Set BeamTC.driverPaymentReminderInterval (nominalDiffTimeToSeconds config.driverPaymentReminderInterval),
+          Se.Set BeamTC.driverPaymentCycleDuration (nominalDiffTimeToSeconds config.driverPaymentCycleDuration),
           Se.Set BeamTC.updatedAt now
         ]
         [Se.Is BeamTC.merchantId (Se.Eq $ getId config.merchantId)]
