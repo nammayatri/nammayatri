@@ -27,6 +27,7 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
         //  { logToFile = True, logRawSql = True, prettyPrinting = True }
     , LogLevel = globalCommon.LogLevel
     , s3Config = sec.s3Config
+    , s3PublicConfig = sec.s3PublicConfig
     , slackToken = sec.slackToken
     , signatureExpiry = globalCommon.signatureExpiry
     , httpClientOptions = globalCommon.httpClientOptions

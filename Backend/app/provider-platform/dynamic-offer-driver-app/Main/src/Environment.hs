@@ -65,6 +65,7 @@ data AppCfg = AppCfg
     signingKey :: PrivateKey,
     signatureExpiry :: Seconds,
     s3Config :: S3Config,
+    s3PublicConfig :: S3Config,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
     coreVersion :: Text,
@@ -114,6 +115,7 @@ data AppEnv = AppEnv
     coreVersion :: Text,
     loggerConfig :: LoggerConfig,
     s3Config :: S3Config,
+    s3PublicConfig :: S3Config,
     graceTerminationPeriod :: Seconds,
     registryUrl :: BaseUrl,
     disableSignatureAuth :: Bool,
@@ -151,6 +153,7 @@ data AppEnv = AppEnv
     dashboardToken :: Text,
     cacheConfig :: CacheConfig,
     s3Env :: S3Env Flow,
+    s3EnvPublic :: S3Env Flow,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
     driverReachedDistance :: HighPrecMeters,
     cacheTranslationConfig :: CacheTranslationConfig,
@@ -202,6 +205,7 @@ buildAppEnv cfg@AppCfg {..} = do
   let searchRequestExpirationSeconds = fromIntegral cfg.searchRequestExpirationSeconds
       driverQuoteExpirationSeconds = fromIntegral cfg.driverQuoteExpirationSeconds
       s3Env = buildS3Env cfg.s3Config
+      s3EnvPublic = buildS3Env cfg.s3PublicConfig
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

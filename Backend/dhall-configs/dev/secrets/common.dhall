@@ -15,6 +15,7 @@ let InfoBIPConfig = { username = "xxxxx", password = "xxxxx", token = "xxxxx" }
 in  { smsUserName = "xxxxxxx"
     , smsPassword = "yyyyyyy"
     , s3Config = mockS3Config
+    , s3PublicConfig = mockS3Config
     , googleKey = topSecret.googleKey
     , googleTranslateKey = topSecret.googleTranslateKey
     , slackToken = "xxxxxxx"
