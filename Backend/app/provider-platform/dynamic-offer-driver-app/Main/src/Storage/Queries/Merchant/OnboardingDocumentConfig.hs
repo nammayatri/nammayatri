@@ -22,10 +22,11 @@ where
 
 import Domain.Types.Merchant
 import Domain.Types.Merchant.OnboardingDocumentConfig
+import EulerHS.KVConnector.Types (MeshResult)
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Kernel.Utils.Common
 import Storage.Tabular.Merchant.OnboardingDocumentConfig
 
 -- import qualified Lib.Mesh as Mesh
@@ -54,8 +55,11 @@ import Storage.Tabular.Merchant.OnboardingDocumentConfig
 --         [Se.Is BeamP.id (Se.Eq personId)]
 --     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-create :: OnboardingDocumentConfig -> SqlDB ()
-create = Esq.create
+-- create :: OnboardingDocumentConfig -> SqlDB ()
+-- create = Esq.create
+
+create :: L.MonadFlow m => OnboardingDocumentConfig -> m (MeshResult ())
+create = error "Not implemented"
 
 findAllByMerchantId :: Transactionable m => Id Merchant -> m [OnboardingDocumentConfig]
 findAllByMerchantId merchantId =
@@ -65,21 +69,25 @@ findAllByMerchantId merchantId =
       config ^. OnboardingDocumentConfigMerchantId ==. val (toKey merchantId)
     return config
 
-update :: OnboardingDocumentConfig -> SqlDB ()
-update config = do
-  now <- getCurrentTime
-  let supportedClassJson = getConfigJSON config.supportedVehicleClasses
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ OnboardingDocumentConfigCheckExtraction =. val config.checkExtraction,
-        OnboardingDocumentConfigCheckExpiry =. val config.checkExpiry,
-        OnboardingDocumentConfigSupportedVehicleClassesJSON =. val supportedClassJson,
-        OnboardingDocumentConfigVehicleClassCheckType =. val config.vehicleClassCheckType,
-        OnboardingDocumentConfigRcNumberPrefix =. val config.rcNumberPrefix,
-        OnboardingDocumentConfigUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. OnboardingDocumentConfigTId ==. val (toKey (config.merchantId, config.documentType))
+-- update :: OnboardingDocumentConfig -> SqlDB ()
+-- update config = do
+--   now <- getCurrentTime
+--   let supportedClassJson = getConfigJSON config.supportedVehicleClasses
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ OnboardingDocumentConfigCheckExtraction =. val config.checkExtraction,
+--         OnboardingDocumentConfigCheckExpiry =. val config.checkExpiry,
+--         OnboardingDocumentConfigSupportedVehicleClassesJSON =. val supportedClassJson,
+--         OnboardingDocumentConfigVehicleClassCheckType =. val config.vehicleClassCheckType,
+--         OnboardingDocumentConfigRcNumberPrefix =. val config.rcNumberPrefix,
+--         OnboardingDocumentConfigUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. OnboardingDocumentConfigTId ==. val (toKey (config.merchantId, config.documentType))
+
+--complete this function after tranformations is done
+update :: L.MonadFlow m => OnboardingDocumentConfig -> m (MeshResult ())
+update = error "Not implemented"
 
 -- transformBeamOnboardingDocumentConfigToDomain :: BeamODC.OnboardingDocumentConfig -> m OnboardingDocumentConfig
 -- transformBeamOnboardingDocumentConfigToDomain BeamODC.OnboardingDocumentConfigT {..} = do

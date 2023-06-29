@@ -120,7 +120,7 @@ getStatus (personId, merchantId) orderId = do
 processPaymentTransactions :: (L.MonadFlow m, MonadTime m) => Id DP.Driver -> Id DriverFee -> DriverInformation -> Seconds -> m ()
 processPaymentTransactions driverId driverFeeId driverInfo timeDiff = do
   now <- getLocalCurrentTime timeDiff
-  QDF.updateStatus DF.CLEARED driverFeeId now
+  _ <- QDF.updateStatus DF.CLEARED driverFeeId now
   QDFS.clearPaymentStatus (cast driverId) driverInfo.active
 
 juspayWebhookHandler ::

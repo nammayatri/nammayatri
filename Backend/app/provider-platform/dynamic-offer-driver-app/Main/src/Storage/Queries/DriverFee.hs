@@ -17,15 +17,31 @@ module Storage.Queries.DriverFee where
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverFee as Domain
 import Domain.Types.Person
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types (MeshError (MKeyNotFound), MeshResult)
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common (HighPrecMoney, Money)
 import Kernel.Types.Id
+import Lib.Utils
+import qualified Sequelize as Se
 import qualified Storage.Beam.DriverFee as BeamDF
 import Storage.Tabular.DriverFee
 
-create :: DriverFee -> SqlDB ()
-create = Esq.create
+-- create :: DriverFee -> SqlDB ()
+-- create = Esq.create
+
+create :: L.MonadFlow m => DriverFee -> m (MeshResult ())
+create driverFee = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDF.DriverFeeT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainDriverFeeToBeam driverFee)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findById :: Transactionable m => Id DriverFee -> m (Maybe DriverFee)
 findById = Esq.findById
@@ -107,15 +123,48 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now = do
       ]
     where_ $ tbl ^. DriverFeeId ==. val (getId driverFeeId)
 
-updateStatus :: DriverFeeStatus -> Id DriverFee -> UTCTime -> SqlDB ()
-updateStatus status driverFeeId now = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ DriverFeeStatus =. val status,
-        DriverFeeUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. DriverFeeId ==. val (getId driverFeeId)
+-- updateStatus :: DriverFeeStatus -> Id DriverFee -> UTCTime -> SqlDB ()
+-- updateStatus status driverFeeId now = do
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ DriverFeeStatus =. val status,
+--         DriverFeeUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. DriverFeeId ==. val (getId driverFeeId)
+-- updateActivity :: (L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> Maybe DriverMode -> m (MeshResult ())
+-- updateActivity (Id driverId) isActive mode = do
+--   dbConf <- L.getOption KBT.PsqlDbCfg
+--   let modelName = Se.modelTableName @BeamDI.DriverInformationT
+--   let updatedMeshConfig = setMeshConfig modelName
+--   now <- getCurrentTime
+--   case dbConf of
+--     Just dbConf' ->
+--       KV.updateWoReturningWithKVConnector
+--         dbConf'
+--         updatedMeshConfig
+--         [ Se.Set BeamDI.active isActive,
+--           Se.Set BeamDI.mode mode,
+--           Se.Set BeamDI.updatedAt now
+--         ]
+--         [Se.Is BeamDI.driverId (Se.Eq driverId)]
+--     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
+updateStatus :: L.MonadFlow m => DriverFeeStatus -> Id DriverFee -> UTCTime -> m (MeshResult ())
+updateStatus status (Id driverFeeId) now = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDF.DriverFeeT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        updatedMeshConfig
+        [ Se.Set BeamDF.status status,
+          Se.Set BeamDF.updatedAt now
+        ]
+        [Se.Is BeamDF.id (Se.Eq driverFeeId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 transformBeamDriverFeeToDomain :: BeamDF.DriverFee -> DriverFee
 transformBeamDriverFeeToDomain BeamDF.DriverFeeT {..} = do

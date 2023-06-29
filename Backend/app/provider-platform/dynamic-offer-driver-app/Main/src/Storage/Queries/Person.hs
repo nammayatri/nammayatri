@@ -165,6 +165,19 @@ getDriversList driverInfos = do
   where
     personsKeys = getId <$> fetchDriverIDsFromInfo driverInfos
 
+getDriversByIdIn :: (L.MonadFlow m, Log m) => [Id Person] -> m [Person]
+getDriversByIdIn personIds = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamP.PersonT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      result <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamP.id $ Se.In $ getId <$> personIds]
+      case result of
+        Right result' -> catMaybes <$> mapM transformBeamPersonToDomain result'
+        _ -> pure []
+    Nothing -> pure []
+
 getDriverInformations ::
   L.MonadFlow m =>
   [DriverLocation] ->
