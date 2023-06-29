@@ -65,6 +65,7 @@ public class ChatService extends Service {
     private static String baseUrl;
     static Random random = new Random();
     String merchantType = BuildConfig.MERCHANT_TYPE;
+    final MessageOverlay messageOverlay = new MessageOverlay();
     @Override
     public void onCreate() {
         super.onCreate();
@@ -270,10 +271,10 @@ public class ChatService extends Service {
             }
             if(!(merchant.equals(sentBy)) && isChatServiceRunning && shouldNotify){
                 if(appState.equals("onDestroy") || appState.equals("onPause")){
-                    if(merchantType.equals("DRIVER")) startWidgetService(_message, _sentBy);
-                } else if (appState.equals("onResume") && merchantType.equals("DRIVER") && !(stage.equals("ChatWithCustomer"))) {
+                    if(merchantType.equals("DRIVER")) startOverlayService(_message, _dateFormatted);
+                }else if (appState.equals("onResume") && merchantType.equals("DRIVER") && !(stage.equals("ChatWithCustomer"))) {
                     String notificationId = String.valueOf(random.nextInt(1000000));
-                    MainActivity.showInAppNotification(_sentBy, _message, CommonJsInterface.storeCallBackOpenChatScreen,"", "", "", "", notificationId, 5000, context);
+                    MainActivity.showInAppNotification(_sentBy, getMessageFromKey(_message), CommonJsInterface.storeCallBackOpenChatScreen,"", "", "", "", notificationId, 5000, context);
                 }
             }
         } catch (Exception e) {
@@ -281,13 +282,10 @@ public class ChatService extends Service {
         }
     }
 
-    private void startWidgetService(String widgetMessage, String sentBy){
-        Intent widgetService = new Intent(getApplicationContext(), WidgetService.class);
+    private void startOverlayService(String message, String timestamp){
         if ((merchantType.equals("DRIVER")) && Settings.canDrawOverlays(getApplicationContext())  && !sharedPrefs.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPrefs.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPrefs.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
-            widgetService.putExtra(getResources().getString(R.string.WIDGET_MESSAGE),widgetMessage);
-            widgetService.putExtra("sentBy",(sentBy + " :-"));
             try{
-                startService(widgetService);
+                messageOverlay.showMessageOverlay(getMessageFromKey(message),timestamp,context);
                 startMediaPlayer(context, R.raw.new_message, false);
             }catch (Exception e) {
                 e.printStackTrace();
@@ -399,7 +397,25 @@ public class ChatService extends Service {
             Log.e(LOG_TAG,"Error in sending FCM" + e);
         }
     }
-    
+
+    public static String getMessageFromKey(String key) {
+        try {
+            String suggestionsStr = sharedPrefs.getString("SUGGESTIONS_DEFINITIONS", "null");
+            JSONObject suggestions = new JSONObject(suggestionsStr);
+            String language = sharedPrefs.getString("LANGUAGE_KEY", "null");
+            if(suggestions.has(key)) {
+                JSONObject message = suggestions.getJSONObject(key).getJSONObject("value");
+                if(message.has(language.toLowerCase())) return message.getString(language.toLowerCase());
+                else return message.getString("en_us");
+            } else {
+                return key;
+            }
+        } catch (Exception e) {
+            Log.e(LOG_TAG,"Error in getMessageFromKey : " + e);
+            return key;
+        }
+    }
+
     @Override
     public void onDestroy() {
         isChatServiceRunning = false;

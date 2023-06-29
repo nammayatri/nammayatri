@@ -19,6 +19,7 @@ import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
 import Screens.Types(Stage, ZoneType(..))
 import Data.Maybe(Maybe)
+import Components.ChatView as ChatView
 
 data Action = NoAction
             | Support
@@ -31,6 +32,7 @@ data Action = NoAction
             | ShareRide
             | ZoneOTPExpiryAction String String Int
             | OnNavigate
+            | RemoveNotification
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps
@@ -42,6 +44,7 @@ type DriverInfoCardProps =
     currentStage :: Stage,
     trackingEnabled :: Boolean,
     unReadMessages :: Boolean,
+    showChatNotification :: Boolean,
     showCallPopUp :: Boolean,
     isSpecialZone :: Boolean,
     estimatedTime :: String,
@@ -79,4 +82,5 @@ type DriverInfoCardData =
   , isSpecialZone :: Boolean
   , isLocationTracking :: Boolean
   , bookingCreatedAt :: String
+  , lastMessage :: ChatView.ChatComponent
   }

@@ -251,30 +251,20 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                                         rideRequestUtils.callAPIViaFCM(endPoint, reqBody, method, this);
                                     }
 
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                }
-                            case NotificationTypes.CHAT_MESSAGE:
-                                try {
-                                    String appState = null;
-                                    String stage = null;
-                                    if (sharedPref != null)
-                                        appState = sharedPref.getString("ACTIVITY_STATUS", "null");
-                                    if (sharedPref != null)
-                                        stage = sharedPref.getString("LOCAL_STAGE", "null");
-                                    final boolean condition = appState.equals("onResume") && !(stage.equals("ChatWithDriver")) && !BuildConfig.MERCHANT_TYPE.equals("DRIVER");
-                                    if (condition) {
-                                        getApplicationContext().getMainLooper();
-                                        String notificationId = String.valueOf(rand.nextInt(1000000));
-                                        MainActivity.showInAppNotification(title, body, CommonJsInterface.storeCallBackOpenChatScreen, "", "", "", "", notificationId, 5000, getApplicationContext());
-                                    }
-                                    if (appState.equals("onDestroy") || appState.equals("onPause")) {
-                                        NotificationUtils.createChatNotification(title, body, getApplicationContext());
-                                    }
-                                } catch (Exception e) {
-                                    Log.e("MyFirebaseMessagingService", "Error in CHAT_MESSAGE " + e);
-                                }
-                                break;
+                        }catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    case NotificationTypes.CHAT_MESSAGE :
+                        try{
+                            String appState = "";
+                            if(sharedPref != null) appState = sharedPref.getString("ACTIVITY_STATUS", "null");
+                            if((appState.equals("onDestroy") || appState.equals("onPause"))) {
+                                NotificationUtils.createChatNotification(title,body,getApplicationContext());
+                            }
+                        } catch (Exception e) {
+                            Log.e("MyFirebaseMessagingService", "Error in CHAT_MESSAGE " + e);
+                        }
+                        break;
 
                             case NotificationTypes.REALLOCATE_PRODUCT:
                                 try {

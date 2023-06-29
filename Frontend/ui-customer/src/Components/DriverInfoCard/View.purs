@@ -24,6 +24,7 @@ import Components.SourceToDestination as SourceToDestination
 import Data.Array as Array
 import Data.Maybe (fromMaybe)
 import Data.String (Pattern(..), split, length, take, drop)
+import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
@@ -31,20 +32,19 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (secondsToHms, zoneOtpExpiryTimer, Merchant(..), getMerchant)
+import Helpers.Utils (secondsToHms, zoneOtpExpiryTimer, Merchant(..), getMerchant, makeNumber)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, (&&), (||), (/=))
+import Merchant.Utils (getValueFromConfig)
+import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, (&&), (||), (/=), not)
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, alignParentLeft, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (Stage(..), ZoneType(..))
-import Styles.Colors as Color
-import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Storage (isLocalStageOn)
-import Merchant.Utils (getValueFromConfig)
+import Styles.Colors as Color
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -54,6 +54,7 @@ view push state =
   , background Color.transparent
   , orientation VERTICAL
   ][  mapOptionsView push state
+    , messageNotificationView push state
     , if state.data.isSpecialZone then driverInfoViewSpecialZone push state else driverInfoView push state
     ]
 
@@ -265,6 +266,7 @@ supportButton push state =
   , height WRAP_CONTENT
   , orientation VERTICAL
   , gravity CENTER
+  , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ])  && (not state.props.showChatNotification) then VISIBLE else GONE
   , background Color.white900
   , stroke $ "1,"<> Color.grey900
   , margin $ MarginTop 10
@@ -303,7 +305,7 @@ locationTrackButton push state =
   , gravity CENTER
   , background Color.white900
   , stroke $ "1,"<> Color.grey900
-  , visibility if state.props.currentStage == RideAccepted then GONE else VISIBLE
+  , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]) && (not state.props.showChatNotification) then VISIBLE else GONE
   , cornerRadius 20.0
   , onClick push (const $ LocationTracking)
   , margin $ MarginTop 8
@@ -320,7 +322,7 @@ sosView push state =
   linearLayout
     [ height MATCH_PARENT
     , width WRAP_CONTENT
-    , visibility if (state.props.currentStage == RideAccepted) || (state.props.currentStage == RideStarted) then VISIBLE else GONE
+    , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]) && (not state.props.showChatNotification) then VISIBLE else GONE
     , orientation VERTICAL
     , gravity if os == "IOS" then CENTER_VERTICAL else BOTTOM
     , onClick push $ const OpenEmergencyHelp
@@ -330,6 +332,106 @@ sosView push state =
         , width $ V 50
         ]
     ]
+
+messageNotificationView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
+messageNotificationView push state = 
+  PrestoAnim.animationSet [ fadeIn state.props.showChatNotification ] $
+  linearLayout
+  [ height $ V 84
+  , width MATCH_PARENT
+  , margin $ Margin 16 10 16 0
+  , orientation VERTICAL
+  , visibility if state.props.showChatNotification then VISIBLE else GONE
+  ][ linearLayout
+      [ height $ V 22
+      , width MATCH_PARENT
+      , gravity RIGHT
+      ][ imageView
+          [ height $ V 22
+          , width $ V 22
+          , clickable true
+          , onClick push $ const $ RemoveNotification
+          , imageWithFallback "ny_ic_cross_round,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_cross_round.png"
+          ]
+        ]
+    , linearLayout
+      [ height $ V 56
+      , width MATCH_PARENT
+      , margin $ MarginTop 6
+      , background Color.black900
+      , cornerRadius 8.0
+      , padding $ PaddingHorizontal 12 16
+      , orientation HORIZONTAL
+      , clickable true
+      , onClick push $ const $ MessageDriver
+      , gravity CENTER_VERTICAL
+      ][ linearLayout
+         [ height MATCH_PARENT
+         , width WRAP_CONTENT
+         , gravity CENTER_VERTICAL
+         ][imageView
+           [height $ V 24
+           , width $ V 24
+           , imageWithFallback "ny_ic_chat_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_chat_white.png"
+           , margin $ MarginRight 12
+          ]
+         ]
+       , linearLayout
+         [ height WRAP_CONTENT
+         , width WRAP_CONTENT
+         , orientation VERTICAL
+         , gravity LEFT
+         ][ textView
+            [ width (V ((screenWidth unit)-178))
+            , height WRAP_CONTENT
+            , text $ getString MESSAGE_FROM_DRIVER
+            , color Color.grey900
+            , textSize FontSize.a_10
+            , lineHeight "13"
+            , maxLines 1
+            , ellipsize true
+            , margin $ if os == "IOS" then MarginBottom 2 else MarginBottom 0
+            , fontStyle $ FontStyle.regular LanguageStyle
+            ]
+          , textView
+            [ width (V ((screenWidth unit)-178))
+            , height WRAP_CONTENT
+            , text $ state.data.lastMessage.message
+            , color Color.grey900
+            , gravity CENTER_VERTICAL
+            , maxLines 1
+            , ellipsize true
+            , textSize FontSize.a_14
+            , lineHeight "18"
+            , fontStyle $ FontStyle.bold LanguageStyle
+            ]
+          ]
+        , linearLayout
+          [ height MATCH_PARENT
+          , width MATCH_PARENT
+          , gravity RIGHT
+          , padding $ PaddingVertical 12 12
+          ][linearLayout
+            [ height $ V 32
+            , width $ V 58
+            , cornerRadius if os == "IOS" then 16.0 else 24.0
+            , gravity CENTER
+            , background Color.blue600
+            ][textView
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , text $ getString REPLY
+              , color Color.black900
+              , ellipsize true
+              , padding $ if os == "IOS" then PaddingBottom 1 else PaddingBottom 0
+              , textSize FontSize.a_12
+              , lineHeight "15"
+              , fontStyle $ FontStyle.bold LanguageStyle
+              ]
+             ]
+           ]
+       ]
+   ]
 
 navigateView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 navigateView push state =
@@ -366,7 +468,7 @@ otpAndWaitView push state =
   , width MATCH_PARENT
   , gravity CENTER_HORIZONTAL
   , margin $ Margin 16 0 16 16
-  , visibility if state.props.currentStage == RideAccepted then VISIBLE else GONE
+  , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver ]) then VISIBLE else GONE
   ][ linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -499,7 +601,7 @@ driverInfoView push state =
               ][]
               , if state.props.isSpecialZone  then headerTextView push state else contactView push state
               , otpAndWaitView push state
-              , separator (MarginHorizontal 16 16) (V 1) Color.grey900 (state.props.currentStage == RideAccepted)
+              , separator (MarginHorizontal 16 16) (V 1) Color.grey900 (Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver ])
               , driverDetailsView push state
               , separator (MarginHorizontal 16 16) (V 1) Color.grey900 true
               , paymentMethodView push state (getString RIDE_FARE) true
@@ -509,7 +611,7 @@ driverInfoView push state =
                 , height if os == "IOS" then (V 210) else WRAP_CONTENT
                 , orientation VERTICAL
                 ][ if state.props.isSpecialZone then destinationView push state else  sourceDistanceView push state
-                  , separator (Margin 0 0 0 0) (V 1) Color.grey900 (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted)
+                  , separator (Margin 0 0 0 0) (V 1) Color.grey900 (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ])
                   , cancelRideLayout push state
                 ]
               ]
@@ -525,7 +627,7 @@ cancelRideLayout push state =
  , gravity CENTER
  , margin $ MarginVertical 16 0
  , padding $ PaddingBottom if os == "IOS" then (if safeMarginBottom == 0 then 24 else safeMarginBottom) else 0
- , visibility if state.props.currentStage == RideAccepted then VISIBLE else GONE
+ , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver ]) then VISIBLE else GONE
  ][ linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
@@ -552,7 +654,7 @@ contactView push state =
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
   , padding $ Padding 16 20 16 16
-  , visibility if state.props.currentStage == RideAccepted then VISIBLE else GONE
+  , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver ]) then VISIBLE else GONE
   ][  linearLayout
       [ width (V (((screenWidth unit)/3 * 2)-27))
       , height WRAP_CONTENT
@@ -722,12 +824,6 @@ driverDetailsView push state =
     ]
 
 ---------------------------------- ratingView ---------------------------------------
-
-makeNumber :: String -> String
-makeNumber number = (take 2 number) <> " " <> (drop 2 (take 4 number)) <> " " <>  reverse (drop 4 (reverse (drop 4 number))) <> " " <>  reverse (take 4 (reverse number))
-
-reverse :: String -> String
-reverse = fromCharArray <<< Array.reverse <<< toCharArray
 
 ratingView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 ratingView push state =

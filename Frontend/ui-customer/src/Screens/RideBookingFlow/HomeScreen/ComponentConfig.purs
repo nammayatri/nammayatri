@@ -661,6 +661,7 @@ driverInfoCardViewState state = { props:
                                   { currentStage: state.props.currentStage
                                   , trackingEnabled: state.props.isInApp
                                   , unReadMessages : state.props.unReadMessages
+                                  , showChatNotification : state.props.showChatNotification && state.data.lastMessage.sentBy /= ""
                                   , showCallPopUp: state.props.showCallPopUp
                                   , isSpecialZone: state.props.isSpecialZone
                                   , estimatedTime : state.data.rideDuration
@@ -681,8 +682,8 @@ chatViewConfig state = let
       , messages = state.data.messages
       , messagesSize = state.data.messagesSize
       , sendMessageActive = state.props.sendMessageActive
-      , distance = metersToKm state.data.driverInfoCardState.distance state
-      , suggestionsList = if (metersToKm state.data.driverInfoCardState.distance state) == (getString AT_PICKUP) then pickupSuggestions ""  else initialSuggestions ""
+      , vehicleNo = HU.makeNumber $ state.data.driverInfoCardState.registrationNumber
+      , suggestionsList = getCustomerSuggestions state
       , hint = (getString MESSAGE)
       , suggestionHeader = (getString START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS)
       , emptyChatHeader = (getString START_YOUR_CHAT_WITH_THE_DRIVER)
@@ -702,22 +703,18 @@ chatViewConfig state = let
   }
   in chatViewConfig'
 
-initialSuggestions :: String -> Array String
-initialSuggestions _ =
-  [
-    (getString ARE_YOU_STARING),
-    (getString PLEASE_COME_SOON),
-    (getString OK_I_WILL_WAIT)
-  ]
+getCustomerSuggestions :: ST.HomeScreenState -> Array String
+getCustomerSuggestions state = case (DA.length state.data.suggestionsList == 0), (DA.length state.data.messages == 0 ) of
+                                  true, true -> (if (metersToKm state.data.driverInfoCardState.distance state) == (getString AT_PICKUP) then JB.getSuggestionsfromKey "customerInitialAP" else JB.getSuggestionsfromKey "customerInitialBP")
+                                  true, false -> if (showSuggestions state) then (if (metersToKm state.data.driverInfoCardState.distance state) == (getString AT_PICKUP) then JB.getSuggestionsfromKey "customerDefaultAP" else JB.getSuggestionsfromKey "customerDefaultBP") else []
+                                  false, false -> state.data.suggestionsList
+                                  false, true -> JB.getSuggestionsfromKey "customerDefaultAP"
 
-pickupSuggestions :: String -> Array String
-pickupSuggestions _ =
-  [
-    (getString PLEASE_WAIT_I_WILL_BE_THERE),
-    (getString LOOKING_FOR_YOU_AT_PICKUP),
-    (getString UNREACHABLE_PLEASE_CALL_BACK)
-  ]
-
+showSuggestions :: ST.HomeScreenState -> Boolean
+showSuggestions state = do
+  case (DA.last state.data.messages) of 
+    Just value -> if value.sentBy == "Customer" then false else true
+    Nothing -> true
 
 metersToKm :: Int -> ST.HomeScreenState -> String
 metersToKm distance state =
@@ -760,6 +757,7 @@ driverInfoTransformer state =
     , bppRideId : ""
     , driverNumber : cardState.driverNumber
     , merchantExoPhone : cardState.merchantExoPhone
+    , lastMessage : state.data.lastMessage
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState

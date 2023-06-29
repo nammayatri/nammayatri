@@ -65,6 +65,8 @@ data KeyStore = USER_NAME
                 | SESSION_ID
                 | PROFILE_DEMO
                 | SET_ALTERNATE_TIME
+                | SUGGESTIONS
+                | SUGGESTIONS_DEFINITIONS
                 | TRIGGER_MAPS
                 | DEVICE_DETAILS
                 | HAS_TAKEN_FIRST_RIDE

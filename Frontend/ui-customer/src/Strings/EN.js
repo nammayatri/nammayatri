@@ -501,5 +501,7 @@ const englishStrings = {
   "SEARCHING_WITH" : "Searching with",
   "THE_DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "The driver preferred your special request and is already on the way to your location.",
   "DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "Driver is already on the way to your location.",
-  "ALLOW_LOCATION_ACCESS": "Allow Location Access"
+  "ALLOW_LOCATION_ACCESS": "Allow Location Access",
+  "MESSAGE_FROM_DRIVER": "Message from Driver",
+  "REPLY": "Reply"
 }

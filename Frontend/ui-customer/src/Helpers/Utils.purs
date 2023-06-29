@@ -22,7 +22,7 @@ module Helpers.Utils
 import Common.Types.App (LazyCheck(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Control.Monad.Except (runExcept)
-import Data.Array (length, filter, cons, deleteAt, sortWith, drop, head, tail, (!!), null)
+import Data.Array (length, filter, cons, deleteAt, sortWith, drop, head, tail, (!!), null, reverse)
 import Data.Array.NonEmpty (fromArray)
 import Data.Date (Date)
 import Data.Either (Either(..), hush)
@@ -59,6 +59,8 @@ import Data.Ord (comparing)
 import Data.Lens ((^.))
 import Accessor (_distance_meters)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
+import Data.String.CodeUnits (fromCharArray, toCharArray)
+
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
 -- shuffle' array = do
@@ -378,3 +380,10 @@ decodeMerchantId :: Foreign -> Maybe Merchant
 decodeMerchantId = hush <<< runExcept <<< decode
 
 foreign import addCarousel :: Array CarouselModel -> String -> Effect Unit
+
+
+makeNumber :: String -> String
+makeNumber number = (DS.take 2 number) <> " " <> (DS.drop 2 (DS.take 4 number)) <> " " <>  reverse' (DS.drop 4 (reverse' (DS.drop 4 number))) <> " " <>  reverse' (DS.take 4 (reverse' number))
+
+reverse' :: String -> String
+reverse' = fromCharArray <<< reverse <<< toCharArray
