@@ -8,11 +8,22 @@
 		},
 		{
 			"path": "ui-common"
+		},
+		{
+			"path": "."
 		}
 	],
 	"settings": {
 		"purescript.addSpagoSources": false,
 		"purescript.buildCommand": "purifix --json-errors \"./src/**/*.purs\" \"../ui-common/**/*.purs\"",
 		"purescript.formatter": "none"
-	}
+	},
+	"extensions": {
+        "recommendations": [
+            "nwolverson.ide-purescript",
+			"bbenoist.nix",
+			"mkhl.direnv"
+		],
+
+    }
 }
