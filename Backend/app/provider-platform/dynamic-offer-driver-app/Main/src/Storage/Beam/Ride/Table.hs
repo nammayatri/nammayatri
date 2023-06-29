@@ -54,9 +54,6 @@ instance FromBackendRow Postgres Domain.RideStatus
 instance IsString Domain.RideStatus where
   fromString = show
 
-instance IsString HighPrecMeters where
-  fromString = show
-
 data RideT f = RideT
   { id :: B.C f Text,
     bookingId :: B.C f Text,

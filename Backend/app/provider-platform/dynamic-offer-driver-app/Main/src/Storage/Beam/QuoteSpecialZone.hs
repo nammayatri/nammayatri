@@ -57,9 +57,6 @@ instance IsString Variant.Variant where
 instance IsString Common.Money where
   fromString = show
 
-instance IsString Meters where
-  fromString = show
-
 instance B.Table QuoteSpecialZoneT where
   data PrimaryKey QuoteSpecialZoneT f
     = Id (B.C f Text)

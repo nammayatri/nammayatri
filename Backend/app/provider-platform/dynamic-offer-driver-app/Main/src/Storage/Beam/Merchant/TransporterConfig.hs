@@ -32,15 +32,6 @@ import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
-instance IsString HighPrecMeters where
-  fromString = show
-
-instance IsString Seconds where
-  fromString = show
-
-instance IsString Meters where
-  fromString = show
-
 data TransporterConfigT f = TransporterConfigT
   { merchantId :: B.C f Text,
     pickupLocThreshold :: B.C f Meters,

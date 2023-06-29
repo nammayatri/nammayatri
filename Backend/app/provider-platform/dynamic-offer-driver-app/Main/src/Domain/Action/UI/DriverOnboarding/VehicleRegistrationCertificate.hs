@@ -25,7 +25,6 @@ where
 
 import AWS.S3 as S3
 import Control.Applicative ((<|>))
-import Data.List (find)
 import Data.Text as T hiding (find, length, null)
 import qualified Data.Time as DT
 import qualified Data.Time.Calendar.OrdinalDate as TO
@@ -42,7 +41,6 @@ import Environment
 import Kernel.External.Encryption
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto hiding (isNothing)
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id

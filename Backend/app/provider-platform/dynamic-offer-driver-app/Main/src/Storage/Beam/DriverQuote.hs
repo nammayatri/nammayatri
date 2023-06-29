@@ -81,9 +81,6 @@ instance IsString Variant.Variant where
 instance IsString Common.Money where
   fromString = show
 
-instance IsString Meters where
-  fromString = show
-
 instance B.Table DriverQuoteT where
   data PrimaryKey DriverQuoteT f
     = Id (B.C f Text)

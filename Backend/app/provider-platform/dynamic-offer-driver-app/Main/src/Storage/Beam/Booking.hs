@@ -101,12 +101,6 @@ instance IsString Veh.Variant where
 instance IsString Money where
   fromString = show
 
-instance IsString Meters where
-  fromString = show
-
-instance IsString Seconds where
-  fromString = show
-
 instance B.Table BookingT where
   data PrimaryKey BookingT f
     = Id (B.C f Text)

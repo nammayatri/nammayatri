@@ -62,12 +62,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be [BatchSplitByPickupDistan
 
 instance FromBackendRow Postgres [BatchSplitByPickupDistance]
 
-instance IsString Seconds where
-  fromString = show
-
-instance IsString Meters where
-  fromString = show
-
 instance IsString PoolSortingType where
   fromString = show
 

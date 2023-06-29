@@ -22,7 +22,7 @@ import Kernel.Types.Id
 data LeaderBoardType
   = WEEKLY
   | DAILY
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Read, Show)
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Read, Show, Ord, Eq)
 
 data LeaderBoardConfigs = LeaderBoardConfigs
   { id :: Id LeaderBoardConfigs,

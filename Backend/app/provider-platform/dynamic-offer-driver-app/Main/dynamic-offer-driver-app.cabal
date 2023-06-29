@@ -251,8 +251,11 @@ library
       Storage.Beam.CancellationReason
       Storage.Beam.Common
       Storage.Beam.Driver.DriverFlowStatus
+      Storage.Beam.DriverFee
       Storage.Beam.DriverInformation
       Storage.Beam.DriverLocation
+      Storage.Beam.DriverOnboarding.AadhaarOtpReq
+      Storage.Beam.DriverOnboarding.AadhaarOtpVerify
       Storage.Beam.DriverOnboarding.DriverLicense
       Storage.Beam.DriverOnboarding.DriverRCAssociation
       Storage.Beam.DriverOnboarding.IdfyVerification
@@ -285,9 +288,12 @@ library
       Storage.Beam.Merchant
       Storage.Beam.Merchant.DriverIntelligentPoolConfig
       Storage.Beam.Merchant.DriverPoolConfig
+      Storage.Beam.Merchant.LeaderBoardConfig
       Storage.Beam.Merchant.MerchantMessage
+      Storage.Beam.Merchant.MerchantPaymentMethod
       Storage.Beam.Merchant.MerchantServiceConfig
       Storage.Beam.Merchant.MerchantServiceUsageConfig
+      Storage.Beam.Merchant.OnboardingDocumentConfig
       Storage.Beam.Merchant.TransporterConfig
       Storage.Beam.Message.Message
       Storage.Beam.Message.MessageReport

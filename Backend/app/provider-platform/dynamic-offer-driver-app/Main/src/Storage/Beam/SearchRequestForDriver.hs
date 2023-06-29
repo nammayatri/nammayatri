@@ -115,12 +115,6 @@ instance IsString Domain.SearchRequestForDriverResponse where
 instance IsString Variant.Variant where
   fromString = show
 
-instance IsString Seconds where
-  fromString = show
-
-instance IsString Meters where
-  fromString = show
-
 instance B.Table SearchRequestForDriverT where
   data PrimaryKey SearchRequestForDriverT f
     = Id (B.C f Text)

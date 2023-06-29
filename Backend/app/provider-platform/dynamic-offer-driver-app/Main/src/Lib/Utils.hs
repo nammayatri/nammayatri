@@ -233,6 +233,9 @@ instance FromBackendRow Postgres HighPrecMoney
 instance FromField Seconds where
   fromField = fromFieldSeconds
 
+instance IsString Seconds where
+  fromString = show
+
 instance FromField DbHash where
   fromField = fromFieldEnumDbHash
 
@@ -285,6 +288,12 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be AadhaarVerification
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be AadhaarVerificationService
 
 instance FromBackendRow Postgres AadhaarVerificationService
+
+instance IsString HighPrecMeters where
+  fromString = show
+
+instance IsString Meters where
+  fromString = show
 
 fromFieldJSON ::
   (Typeable a, Read a, FromJSON a) =>

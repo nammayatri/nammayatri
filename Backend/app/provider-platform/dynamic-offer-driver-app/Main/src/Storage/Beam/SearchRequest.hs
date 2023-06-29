@@ -64,12 +64,6 @@ data SearchRequestT f = SearchRequestT
 instance IsString Variant.Variant where
   fromString = show
 
-instance IsString Meters where
-  fromString = show
-
-instance IsString Seconds where
-  fromString = show
-
 instance B.Table SearchRequestT where
   data PrimaryKey SearchRequestT f
     = Id (B.C f Text)

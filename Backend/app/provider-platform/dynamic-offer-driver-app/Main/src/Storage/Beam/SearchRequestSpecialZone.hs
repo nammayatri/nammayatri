@@ -63,12 +63,6 @@ data SearchRequestSpecialZoneT f = SearchRequestSpecialZoneT
   }
   deriving (Generic, B.Beamable)
 
-instance IsString Seconds where
-  fromString = show
-
-instance IsString Meters where
-  fromString = show
-
 instance B.Table SearchRequestSpecialZoneT where
   data PrimaryKey SearchRequestSpecialZoneT f
     = Id (B.C f Text)

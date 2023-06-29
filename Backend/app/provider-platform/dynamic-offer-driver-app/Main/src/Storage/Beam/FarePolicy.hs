@@ -65,13 +65,7 @@ data FarePolicyT f = FarePolicyT
   }
   deriving (Generic, B.Beamable)
 
-instance IsString Meters where
-  fromString = show
-
 instance IsString Variant.Variant where
-  fromString = show
-
-instance IsString Money where
   fromString = show
 
 instance IsString Domain.FarePolicyType where

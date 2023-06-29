@@ -28,6 +28,23 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Tabular.Merchant.OnboardingDocumentConfig
 
+-- updateDeviceToken :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe FCMRecipientToken -> m (MeshResult ())
+-- updateDeviceToken (Id personId) mbDeviceToken = do
+--   dbConf <- L.getOption KBT.PsqlDbCfg
+--   let modelName = Se.modelTableName @BeamP.PersonT
+--   let updatedMeshConfig = setMeshConfig modelName
+--   now <- getCurrentTime
+--   case dbConf of
+--     Just dbConf' ->
+--       KV.updateWoReturningWithKVConnector
+--         dbConf'
+--         updatedMeshConfig
+--         [ Se.Set BeamP.deviceToken mbDeviceToken,
+--           Se.Set BeamP.updatedAt now
+--         ]
+--         [Se.Is BeamP.id (Se.Eq personId)]
+--     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 create :: OnboardingDocumentConfig -> SqlDB ()
 create = Esq.create
 

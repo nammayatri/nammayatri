@@ -68,9 +68,6 @@ instance IsString Vehicle.Variant where
 
 -- instance FromBackendRow Postgres Meters
 
-instance IsString Meters where
-  fromString = show
-
 -- instance FromField Money where
 --   fromField = fromFieldEnum
 

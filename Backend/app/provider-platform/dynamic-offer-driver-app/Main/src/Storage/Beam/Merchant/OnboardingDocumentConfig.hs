@@ -12,17 +12,17 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Beam.OnboardingDocumentConfig where
+module Storage.Beam.Merchant.OnboardingDocumentConfig where
 
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
--- import qualified Data.Vector as V
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
@@ -38,6 +38,19 @@ import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
+instance FromField Domain.DocumentType where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.DocumentType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.DocumentType
+
+instance FromBackendRow Postgres Domain.DocumentType
+
+instance IsString Domain.DocumentType where
+  fromString = show
+
 instance FromField Domain.VehicleClassCheckType where
   fromField = fromFieldEnum
 
@@ -48,32 +61,16 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.VehicleClassCheckT
 
 instance FromBackendRow Postgres Domain.VehicleClassCheckType
 
--- instance FromField [Text] where
---   fromField f mbValue = V.toList <$> (fromField f mbValue)
-
--- instance FromBackendRow Postgres [Text]
-
-instance FromField Domain.DocumentType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.DocumentType where
-  sqlValueSyntax = autoSqlValueSyntax
-
--- instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [Text] where
---   sqlValueSyntax x = sqlValueSyntax (V.fromList x)
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.DocumentType
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Text]
-
-instance FromBackendRow Postgres Domain.DocumentType
+instance IsString Domain.VehicleClassCheckType where
+  fromString = show
 
 data OnboardingDocumentConfigT f = OnboardingDocumentConfigT
   { merchantId :: B.C f Text,
     documentType :: B.C f Domain.DocumentType,
     checkExtraction :: B.C f Bool,
     checkExpiry :: B.C f Bool,
-    validVehicleClasses :: B.C f [Text],
+    supportedVehicleClassesJSON :: B.C f Text,
+    rcNumberPrefix :: B.C f Text,
     vehicleClassCheckType :: B.C f Domain.VehicleClassCheckType,
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
@@ -89,7 +86,7 @@ instance B.Table OnboardingDocumentConfigT where
 instance ModelMeta OnboardingDocumentConfigT where
   modelFieldModification = onboardingDocumentConfigTMod
   modelTableName = "onboarding_document_configs"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
+  modelSchemaName = Just "atlas_app"
 
 type OnboardingDocumentConfig = OnboardingDocumentConfigT Identity
 
@@ -108,11 +105,30 @@ onboardingDocumentConfigTMod =
       documentType = B.fieldNamed "document_type",
       checkExtraction = B.fieldNamed "check_extraction",
       checkExpiry = B.fieldNamed "check_expiry",
-      validVehicleClasses = B.fieldNamed "valid_vehicle_classes",
+      supportedVehicleClassesJSON = B.fieldNamed "supported_vehicle_classes_j_s_o_n",
+      rcNumberPrefix = B.fieldNamed "rc_number_prefix",
       vehicleClassCheckType = B.fieldNamed "vehicle_class_check_type",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }
+
+defaultOnboardingDocumentConfig :: OnboardingDocumentConfig
+defaultOnboardingDocumentConfig =
+  OnboardingDocumentConfigT
+    { merchantId = "",
+      documentType = "",
+      checkExtraction = False,
+      checkExpiry = False,
+      supportedVehicleClassesJSON = "",
+      rcNumberPrefix = "",
+      vehicleClassCheckType = "",
+      createdAt = defaultUTCDate,
+      updatedAt = defaultUTCDate
+    }
+
+instance Serialize OnboardingDocumentConfig where
+  put = error "undefined"
+  get = error "undefined"
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty
@@ -125,27 +141,4 @@ onboardingDocumentConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
 onboardingDocumentConfigToPSModifiers =
   M.empty
 
-instance IsString Domain.DocumentType where
-  fromString = show
-
-instance IsString Domain.VehicleClassCheckType where
-  fromString = show
-
-defaultOnboardingDocumentConfig :: OnboardingDocumentConfig
-defaultOnboardingDocumentConfig =
-  OnboardingDocumentConfigT
-    { merchantId = "",
-      documentType = "",
-      checkExtraction = False,
-      checkExpiry = False,
-      validVehicleClasses = [""],
-      vehicleClassCheckType = "",
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
-
-instance Serialize OnboardingDocumentConfig where
-  put = error "undefined"
-  get = error "undefined"
-
-$(enableKVPG ''OnboardingDocumentConfigT ['documentType, 'merchantId] [])
+$(enableKVPG ''OnboardingDocumentConfigT ['documentType] [])

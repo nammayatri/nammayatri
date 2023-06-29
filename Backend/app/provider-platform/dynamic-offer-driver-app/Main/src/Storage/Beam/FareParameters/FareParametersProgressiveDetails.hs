@@ -37,12 +37,6 @@ import Storage.Tabular.Vehicle ()
 instance IsString Vehicle.Variant where
   fromString = show
 
-instance IsString Meters where
-  fromString = show
-
-instance IsString Money where
-  fromString = show
-
 data FareParametersProgressiveDetailsT f = FareParametersProgressiveDetailsT
   { fareParametersId :: B.C f Text,
     deadKmFare :: B.C f Money,
