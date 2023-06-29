@@ -48,7 +48,7 @@ rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
 rideActionModalConfig state = let
   config = RideActionModal.config
   rideActionModalConfig' = config {
-    startRideActive = if state.props.currentStage == ST.RideAccepted then true else false,
+    startRideActive = (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer),
     totalDistance = if state.data.activeRide.distance <= 0.0 then "0.0" else if(state.data.activeRide.distance < 1000.0) then HU.parseFloat (state.data.activeRide.distance) 2 <> " m" else HU.parseFloat((state.data.activeRide.distance / 1000.0)) 2 <> " km",
     customerName = if DS.length (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)) < 4
                       then (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)) <> " " <> (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 1))
@@ -206,8 +206,8 @@ chatViewConfig state = let
     , messages = state.data.messages
     , messagesSize = state.data.messagesSize
     , sendMessageActive = state.props.sendMessageActive
-    , distance = ""
-    , suggestionsList = (if (state.data.activeRide.isDriverArrived || state.data.activeRide.notifiedCustomer) then pickupSuggestions "" else initialSuggestions "")
+    , vehicleNo = ""
+    , suggestionsList = getDriverSuggestions state
     , hint = (getString MESSAGE)
     , suggestionHeader = (getString START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS)
     , emptyChatHeader = (getString START_YOUR_CHAT_WITH_THE_DRIVER)
@@ -227,21 +227,13 @@ chatViewConfig state = let
   }
   in chatViewConfig'
 
-initialSuggestions :: String -> Array String
-initialSuggestions _ =
-  [
-    (getString I_AM_ON_MY_WAY),
-    (getString GETTING_DELAYED_PLEASE_WAIT),
-    (getString UNREACHABLE_PLEASE_CALL_BACK)
-  ]
+getDriverSuggestions :: ST.HomeScreenState -> Array String
+getDriverSuggestions state = case (DA.length state.data.suggestionsList == 0), (DA.length state.data.messages == 0 ) of
+                                  true, true -> if (state.data.activeRide.isDriverArrived || state.data.activeRide.notifiedCustomer) then JB.getSuggestionsfromKey "driverInitialAP" else JB.getSuggestionsfromKey "driverInitialBP"
+                                  true, false -> if (state.data.activeRide.isDriverArrived || state.data.activeRide.notifiedCustomer) then JB.getSuggestionsfromKey "driverDefaultAP" else JB.getSuggestionsfromKey "driverDefaultBP"
+                                  false, false -> state.data.suggestionsList
+                                  false, true -> JB.getSuggestionsfromKey "driverDefaultAP" 
 
-pickupSuggestions :: String -> Array String
-pickupSuggestions _ =
-  [
-    (getString I_HAVE_ARRIVED),
-    (getString PLEASE_COME_FAST_I_AM_WAITING),
-    (getString UNREACHABLE_PLEASE_CALL_BACK)
-  ]
 silentModeConfig :: ST.HomeScreenState -> PopUpModal.Config
 silentModeConfig state = let
   config' = PopUpModal.config

@@ -958,7 +958,7 @@ rideActionModelView push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , alignParentBottom "true,-1"
-  , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted,RideStarted]) then VISIBLE else GONE
+  , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted,RideStarted,ChatWithCustomer]) then VISIBLE else GONE
   ][  coordinatorLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -977,6 +977,7 @@ rideActionModelView push state =
 
 chatView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 chatView push state =
+  PrestoAnim.animationSet [ Anim.translateYAnimFromTop $ AnimConfig.translateFullYAnimWithDurationConfig 300 ] $
   relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT

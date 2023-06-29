@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/message_sheet"
+    android:visibility="gone">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="320dp"
+        android:elevation="32dp"
+        android:background="@drawable/message_sheet_bg"
+        android:layout_alignParentBottom="true">
+        
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="320dp"
+            android:paddingHorizontal="16dp"
+            android:clipToPadding="false"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:id="@+id/message_sheet_header"
+                android:layout_width="match_parent"
+                android:layout_height="80dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1.0">
+                    <ImageView
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_marginRight="12dp"
+                        android:src="@drawable/ny_logo_dark">
+                    </ImageView>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="16dp"
+                        android:layout_gravity="center_vertical"
+                        android:textColor="@color/Black800"
+                        android:fontFamily="@font/plus_jakartasans_semibold"
+                        android:lineHeight="16dp"
+                        android:includeFontPadding="false"
+                        android:text="Message from Customer"
+                        android:textFontWeight="600">
+                    </TextView>
+
+                </LinearLayout>
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginHorizontal="12dp"
+                    android:src="@drawable/ny_ic_chevron_right">
+                </ImageView>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginRight="-16dp"
+                android:layout_marginLeft="-16dp"
+                android:background="@color/grey900">
+            </LinearLayout>
+
+                <TextView
+                    android:id="@+id/messageView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:paddingVertical="8dp"
+                    android:paddingHorizontal="12dp"
+                    android:ellipsize="end"
+                    android:textColor="@color/Black800"
+                    android:fontFamily="@font/plus_jakartasans_semibold"
+                    android:maxLines="2"
+                    android:lineHeight="22dp"
+                    android:includeFontPadding="false"
+                    android:text="I'll be there in 2 minutes"
+                    android:textFontWeight="600"
+                    android:textSize="18dp"
+                    android:background="@drawable/message_bg">
+                </TextView>
+
+                <TextView
+                    android:id="@+id/messageTimeView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:textSize="12dp"
+                    android:textColor="@color/Black700"
+                    android:fontFamily="@font/plus_jakartasans_regular"
+                    android:lineHeight="16dp"
+                    android:includeFontPadding="false"
+                    android:text="8:45 PM"
+                    android:textFontWeight="400">
+                </TextView>
+
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="32dp"
+                android:layout_weight="1.0"
+                android:layout_marginBottom="32dp">
+
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scrollbars="none"
+                    android:overScrollMode="never">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/suggestion1"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/plus_jakartasans_semibold"
+                            android:letterSpacing="0"
+                            android:text="Ok"
+                            android:visibility="gone"
+                            android:backgroundTint="@color/zxing_transparent"
+                            android:textAllCaps="false"
+                            android:includeFontPadding="false"
+                            android:textColor="#2194FF"
+                            android:layout_marginRight="16dp"
+                            android:paddingVertical="16dp"
+                            android:paddingHorizontal="20dp"
+                            android:textFontWeight="600"
+                            android:textSize="18dp"
+                            android:lineHeight="22dp"
+                            android:theme="@style/Theme.MaterialComponents.Light"
+                            app:cornerRadius="32dp"
+                            app:strokeColor="@color/grey900" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/suggestion2"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:backgroundTint="@color/zxing_transparent"
+                            android:fontFamily="@font/plus_jakartasans_semibold"
+                            android:letterSpacing="0"
+                            android:text="Yes"
+                            android:visibility="gone"
+                            android:textAllCaps="false"
+                            android:includeFontPadding="false"
+                            android:textColor="#2194FF"
+                            android:layout_marginRight="16dp"
+                            android:paddingVertical="16dp"
+                            android:paddingHorizontal="20dp"
+                            android:textFontWeight="600"
+                            android:textSize="18dp"
+                            android:lineHeight="22dp"
+                            android:theme="@style/Theme.MaterialComponents.Light"
+                            app:cornerRadius="32dp"
+                            app:strokeColor="@color/grey900" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/suggestion3"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:backgroundTint="@color/zxing_transparent"
+                            android:fontFamily="@font/plus_jakartasans_semibold"
+                            android:letterSpacing="0"
+                            android:text="On my way"
+                            android:visibility="gone"
+                            android:textAllCaps="false"
+                            android:includeFontPadding="false"
+                            android:textColor="#2194FF"
+                            android:layout_marginRight="16dp"
+                            android:paddingVertical="16dp"
+                            android:paddingHorizontal="20dp"
+                            android:textFontWeight="600"
+                            android:textSize="18dp"
+                            android:lineHeight="22dp"
+                            android:theme="@style/Theme.MaterialComponents.Light"
+                            app:cornerRadius="32dp"
+                            app:strokeColor="@color/grey900" />
+
+                    </LinearLayout>
+
+                </HorizontalScrollView>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </RelativeLayout>
+
+</RelativeLayout>

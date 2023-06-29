@@ -288,8 +288,8 @@ view push state =
                 []
             , rideRequestFlowView push state
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
-            , if state.props.currentStage == ChatWithDriver then (chatView push state) else emptyTextView state
             , rideTrackingView push state
+            , if state.props.currentStage == ChatWithDriver then (chatView push state) else emptyTextView state
             , if ((not state.props.ratingModal) && (state.props.showlocUnserviceablePopUp || (state.props.isMockLocation && (getMerchant FunctionCall == NAMMAYATRI))) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else emptyTextView state
             , if state.data.settingSideBar.opened /= SettingSideBar.CLOSED then settingSideBarView push state else emptyTextView state
             , if (state.props.currentStage == SearchLocationModel || state.props.currentStage == FavouriteLocationModel) then searchLocationView push state else emptyTextView state
@@ -331,12 +331,10 @@ cancelSearchPopUp push state =
 
 chatView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 chatView push state =
+  PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 300 ] $ 
   relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  , alignParentBottom "true,-1"
-  , adjustViewWithKeyboard "true"
-  , background Color.transparent
   ][ ChatView.view (push <<< ChatViewActionController) (chatViewConfig state) ]
 
 showLiveStatsDashboard :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -1613,7 +1611,7 @@ rideTrackingView push state =
     , background Color.transparent
     , alignParentBottom "true,-1" -- Check it in Android.
     , onBackPressed push (const $ BackPressed)
-    , visibility if (any (_ == state.props.currentStage) [RideAccepted, RideStarted]) then VISIBLE else GONE
+    , visibility if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then VISIBLE else GONE
     ]
     [ -- TODO Add Animations
       -- PrestoAnim.animationSet
@@ -1648,7 +1646,7 @@ rideTrackingView push state =
                     [ height WRAP_CONTENT
                     , width MATCH_PARENT
                     ]
-                    [ if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then
+                    [ if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then
                         DriverInfoCard.view (push <<< DriverInfoCardActionController) $ driverInfoCardViewState state
 
                       else
@@ -1663,7 +1661,9 @@ rideTrackingView push state =
 getPeakHeight :: Stage -> Int
 getPeakHeight stage = case getValueFromConfig "enableShareRide" , stage of
                       "true" , RideAccepted -> getHeightFromPercent 65
+                      "true" , ChatWithDriver -> getHeightFromPercent 65
                       "false" , RideAccepted -> getHeightFromPercent 60
+                      "false" , ChatWithDriver -> getHeightFromPercent 60
                       "true" , _ ->  getHeightFromPercent 52
                       "false" , _ ->  getHeightFromPercent 47
                       _ , _ -> getHeightFromPercent 47

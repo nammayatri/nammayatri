@@ -67,7 +67,7 @@ chatConfig' = ChatView.config {
                        }
                      , messages = []
                      , sendMessageActive = false
-                     , distance = ""
+                     , vehicleNo = ""
                      , suggestionsList = []
                      , hint = "Message"
                      , suggestionHeader = "Start Chat"

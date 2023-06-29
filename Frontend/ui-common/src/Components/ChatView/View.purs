@@ -13,11 +13,11 @@
 -}
 module Components.ChatView.View where
 import Effect (Effect)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), scrollBarY, alignParentBottom, background, color, cornerRadius, fontStyle, gravity, height, id, imageView, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width, editText, onChange, hint, scrollView, onAnimationEnd, pattern, ellipsize, clickable, singleLine, maxLines, hintColor, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), scrollBarY, alignParentBottom, background, color, cornerRadius, fontStyle, gravity, height, id, imageView, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width, editText, onChange, hint, scrollView, onAnimationEnd, pattern, ellipsize, clickable, singleLine, maxLines, hintColor, imageWithFallback, adjustViewWithKeyboard)
 import Engineering.Helpers.Commons (getNewIDWithTag, screenWidth, os)
 import Animation (fadeInWithDelay, translateInXBackwardAnim, translateInXBackwardFadeAnimWithDelay, translateInXForwardAnim, translateInXForwardFadeAnimWithDelay)
 import PrestoDOM.Animation as PrestoAnim
-import Prelude (Unit, bind, const, pure, unit, show, ($), (&&), (-), (/), (<>), (==), (>), (*), (/=), (||), not, ($), negate)
+import Prelude (Unit, bind, const, pure, unit, show, ($), (&&), (-), (/), (<>), (==), (>), (*), (/=), (||), not, ($), negate, (+))
 import PrestoDOM.Properties (alpha, cornerRadii, lineHeight, minWidth)
 import Font.Size as FontSize
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -25,24 +25,21 @@ import Font.Style as FontStyle
 import Data.Array (mapWithIndex , (!!), length, null)
 import Data.String (split, Pattern(..), length) as STR
 import Data.Maybe (fromMaybe, Maybe(..))
-import JBridge (renderBase64Image, scrollToBottom, addMediaFile)
+import JBridge (renderBase64Image, scrollToBottom, addMediaFile, getSuggestionfromKey)
 import Components.ChatView.Controller (Action(..), Config(..), ChatComponent)
 import Common.Types.App
 import Common.Styles.Colors (white900) as Color
 import PrestoDOM.Elements.Elements (progressBar)
 import PrestoDOM.Events (afterRender)
+import Engineering.Helpers.Commons (screenHeight, safeMarginTop)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
   linearLayout
-  [ height if config.spanParent then MATCH_PARENT else (V 410)
+  [ height MATCH_PARENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  , alignParentBottom "true,-1"
   , clickable true
-  , cornerRadii $ Corners 24.0 true true false false
-  , gravity BOTTOM
-  , stroke if config.showStroke then ("1," <> config.grey800) else ""
   , background config.white900
   ]
   [ chatHeaderView config push
@@ -54,7 +51,7 @@ chatHeaderView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effe
 chatHeaderView config push =
   linearLayout
   [ orientation VERTICAL
-  , height WRAP_CONTENT
+  , height $ V 80
   , width MATCH_PARENT
   , visibility if config.showHeader then VISIBLE else GONE
   ][ linearLayout
@@ -100,11 +97,12 @@ headerNameView config push =
     , singleLine true
     ]
    ,textView
-    [ text config.distance
-    , textSize FontSize.a_12
+    [ text config.vehicleNo
+    , textSize FontSize.a_14
+    , lineHeight "18"
     , visibility (getConfig config.userConfig.appType).customerVisibility
     , color config.black700
-    , fontStyle $ FontStyle.regular LanguageStyle
+    , fontStyle $ FontStyle.medium LanguageStyle
     , ellipsize true
     , singleLine true
     ]
@@ -182,13 +180,15 @@ chatBodyView config push =
 chatView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 chatView config push =
   linearLayout
-  [ height if config.spanParent then MATCH_PARENT else (V 240)
+  [ height if config.spanParent then MATCH_PARENT else WRAP_CONTENT
   , width MATCH_PARENT
+  , weight 1.0
   , orientation VERTICAL
   ] ([ scrollView
-      [ height if config.spanParent then MATCH_PARENT else (V 240)
+      [ height if config.spanParent then MATCH_PARENT else if os == "IOS" then (V (((screenHeight unit)-188)-(safeMarginTop + 16) - length config.suggestionsList * 52)) else WRAP_CONTENT
       , width MATCH_PARENT
       , id (getNewIDWithTag "ChatScrollView")
+      , adjustViewWithKeyboard "true"
       , scrollBarY false
       ]
       [ linearLayout
@@ -201,7 +201,7 @@ chatView config push =
          , orientation VERTICAL
          , padding (PaddingHorizontal 16 16)
          ](mapWithIndex (\index item -> chatComponent config push item (if (config.messagesSize /= "-1") then (show index == config.messagesSize ) else (index == (length config.messages - 1))) (config.userConfig.appType)) (config.messages))
-         , if (length config.suggestionsList) > 0 then suggestionsView config push else dummyTextView
+         , if (length config.suggestionsList) > 0 && config.spanParent then suggestionsView config push else dummyTextView
         ]
       ]
     ] )
@@ -212,10 +212,10 @@ chatFooterView config push =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  , alignParentBottom "true,-1"
   , background config.white900
   , visibility if config.showTextEdit then VISIBLE else GONE
-  ][ linearLayout
+  ][ suggestionsView config push
+   , linearLayout
      [ width (V (screenWidth unit))
      , height $ V 1
      , background config.grey900
@@ -262,7 +262,8 @@ chatFooterView config push =
 emptyChatView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 emptyChatView config push =
   linearLayout
-  [ height if config.spanParent then MATCH_PARENT else (V 240)
+  [ height MATCH_PARENT
+  , weight 1.0
   , width MATCH_PARENT
   ]
   [ linearLayout
@@ -281,7 +282,7 @@ emptyChatView config push =
        , gravity CENTER
        , fontStyle $ FontStyle.medium LanguageStyle
        ]
-     ] <> if (length config.suggestionsList) > 0 then [suggestionsView config push] else [])
+     ] <> if (length config.suggestionsList) > 0 && config.spanParent then [suggestionsView config push] else [])
   ]
 
 suggestionsView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -291,7 +292,7 @@ suggestionsView config push =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , gravity RIGHT
-    , margin if config.spanParent then (Margin 0 0 16 20) else (Margin 0 4 16 0)
+    , margin if config.spanParent then (Margin 0 0 16 20) else MarginRight $ 16
     , onAnimationEnd push (const EnableSuggestions)
     , alpha if config.spanParent then 0.0 else 1.0
     , visibility if (length config.suggestionsList == 0 ) then GONE else VISIBLE
@@ -321,7 +322,7 @@ quickMessageView config message isLastItem push =
   , orientation VERTICAL
   , onClick push (if config.enableSuggestionClick then const (SendSuggestion message) else (const NoAction))
   ][ textView
-     [ text (message)
+     [ text $ getSuggestionfromKey message config.languageKey
      , color config.blue800
      , padding (Padding 12 16 12 16)
      , textSize FontSize.a_14
@@ -339,14 +340,20 @@ chatComponent :: forall w. Config -> (Action -> Effect Unit) -> ChatComponent ->
 chatComponent state push config isLastItem userType = 
   PrestoAnim.animationSet 
     [ if state.userConfig.appType == config.sentBy then 
-        translateInXForwardFadeAnimWithDelay config.delay if state.spanParent || isLastItem then true else false
+        if (state.spanParent) then 
+          translateInXForwardFadeAnimWithDelay config.delay true  
+        else 
+          (translateInXForwardAnim $ if isLastItem then true else false)
       else
-        translateInXBackwardFadeAnimWithDelay config.delay if state.spanParent || isLastItem then true else false
+        if (state.spanParent) then 
+          translateInXBackwardFadeAnimWithDelay config.delay true
+        else
+          (translateInXBackwardAnim $ if isLastItem then true else false)
     ]
   $ linearLayout
   [height WRAP_CONTENT
   , width MATCH_PARENT
-  , alpha if state.spanParent || isLastItem then 0.0 else 1.0
+  , alpha if state.spanParent then 0.0 else 1.0
   , margin (getChatConfig state config.sentBy isLastItem (STR.length config.timeStamp > 0)).margin
   , gravity (getChatConfig state config.sentBy isLastItem (STR.length config.timeStamp > 0)).gravity
   , orientation VERTICAL
@@ -451,14 +458,14 @@ getChatConfig :: Config -> String -> Boolean -> Boolean -> {margin :: Margin, gr
 getChatConfig state sentBy isLastItem hasTimeStamp = 
   if state.userConfig.appType == sentBy then 
     { 
-      margin : (Margin ((screenWidth unit)/4) 24 0 (if state.spanParent then 24 else if hasTimeStamp && isLastItem then 12 else 0)),
+      margin : (Margin ((screenWidth unit)/4) 24 0 if state.spanParent then 24 else if(os == "IOS" && isLastItem && hasTimeStamp) then 12 else 0),
       gravity : RIGHT,
       background : state.blue800,
       cornerRadii : (Corners 16.0 true true false true),
       textColor :  state.white900
     }
   else 
-    { margin : (Margin 0 24 ((screenWidth unit)/4) (if state.spanParent then 24 else if hasTimeStamp && isLastItem then 12 else 0)),
+    { margin : (Margin 0 24 ((screenWidth unit)/4) if state.spanParent then 24 else if(os == "IOS" && isLastItem && hasTimeStamp) then 12 else 0),
       gravity :  LEFT,
       background : state.grey900,
       cornerRadii : (Corners 16.0 true true true false ),
