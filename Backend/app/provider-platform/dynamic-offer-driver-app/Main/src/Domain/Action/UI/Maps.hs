@@ -47,13 +47,13 @@ getPlaceName merchantId req = do
           placeNameCache <- CM.findPlaceByGeoHash (pack geoHash)
           if null placeNameCache
             then callMapsApi merchantId req merchant.geoHashPrecisionValue
-            else mapM convertToGetPlaceNameResp placeNameCache
+            else pure $ map convertToGetPlaceNameResp placeNameCache
         Nothing -> callMapsApi merchantId req merchant.geoHashPrecisionValue
     MIT.ByPlaceId placeId -> do
       placeNameCache <- CM.findPlaceByPlaceId placeId
       if null placeNameCache
         then callMapsApi merchantId req merchant.geoHashPrecisionValue
-        else mapM convertToGetPlaceNameResp placeNameCache
+        else pure $ map convertToGetPlaceNameResp placeNameCache
 
 callMapsApi :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DMerchant.Merchant -> Maps.GetPlaceNameReq -> Int -> m Maps.GetPlaceNameResp
 callMapsApi merchantId req geoHashPrecisionValue = do
@@ -78,16 +78,15 @@ callMapsApi merchantId req geoHashPrecisionValue = do
     Nothing -> pure ()
   return res
 
-convertToGetPlaceNameResp :: Monad m => PlaceNameCache -> m Maps.PlaceName
-convertToGetPlaceNameResp placeNameCache = do
-  pure
-    MIT.PlaceName
-      { formattedAddress = placeNameCache.formattedAddress,
-        addressComponents = map (\DTM.AddressResp {..} -> MIT.AddressResp {..}) placeNameCache.addressComponents,
-        plusCode = placeNameCache.plusCode,
-        location = LatLong {lat = placeNameCache.lat, lon = placeNameCache.lon},
-        placeId = placeNameCache.placeId
-      }
+convertToGetPlaceNameResp :: PlaceNameCache -> Maps.PlaceName
+convertToGetPlaceNameResp placeNameCache =
+  MIT.PlaceName
+    { formattedAddress = placeNameCache.formattedAddress,
+      addressComponents = map (\DTM.AddressResp {..} -> MIT.AddressResp {..}) placeNameCache.addressComponents,
+      plusCode = placeNameCache.plusCode,
+      location = LatLong {lat = placeNameCache.lat, lon = placeNameCache.lon},
+      placeId = placeNameCache.placeId
+    }
 
 convertResultsRespToPlaceNameCache :: MonadFlow m => MIT.PlaceName -> Double -> Double -> Int -> m DTM.PlaceNameCache
 convertResultsRespToPlaceNameCache resultsResp latitude longitude geoHashPrecisionValue = do

@@ -26,7 +26,6 @@ import qualified Storage.Tabular.FarePolicy.DriverExtraFeeBounds as DFP
 
 findAll' ::
   ( Transactionable m,
-    Monad m,
     MonadThrow m,
     Log m
   ) =>

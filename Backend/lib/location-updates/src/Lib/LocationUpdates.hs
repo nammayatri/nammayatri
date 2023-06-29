@@ -45,7 +45,7 @@ initializeDistanceCalculation ih rideId driverId pt = withRideIdLogTag rideId $ 
   ih.expireInterpolatedPoints driverId
   ih.addPoints driverId $ pt :| []
 
-finalDistanceCalculation :: (Monad m, Log m, MonadThrow m) => I.RideInterpolationHandler person m -> Id ride -> Id person -> LatLong -> m ()
+finalDistanceCalculation :: (Log m, MonadThrow m) => I.RideInterpolationHandler person m -> Id ride -> Id person -> LatLong -> m ()
 finalDistanceCalculation ih rideId driverId pt = withRideIdLogTag rideId $ I.processWaypoints ih driverId True $ pt :| []
 
 getInterpolatedPoints :: I.RideInterpolationHandler person m -> Id person -> m [LatLong]

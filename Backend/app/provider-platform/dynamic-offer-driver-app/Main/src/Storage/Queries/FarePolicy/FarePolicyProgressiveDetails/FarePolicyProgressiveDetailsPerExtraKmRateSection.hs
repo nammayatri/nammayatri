@@ -23,7 +23,6 @@ import Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgres
 
 findAll' ::
   ( Transactionable m,
-    Monad m,
     MonadThrow m,
     Log m
   ) =>

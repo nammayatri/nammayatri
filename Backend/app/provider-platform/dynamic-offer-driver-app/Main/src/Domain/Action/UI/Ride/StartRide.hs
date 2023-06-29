@@ -87,7 +87,7 @@ buildStartRideHandle merchantId = do
       }
 
 driverStartRide ::
-  (MonadThrow m, Log m, EsqLocDBFlow m r, MonadTime m, CoreMetrics m, Monad m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
+  (MonadThrow m, Log m, EsqLocDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverStartRideReq ->
@@ -98,7 +98,7 @@ driverStartRide handle rideId req =
     $ DriverReq req
 
 dashboardStartRide ::
-  (MonadThrow m, Log m, EsqLocDBFlow m r, MonadTime m, CoreMetrics m, Monad m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
+  (MonadThrow m, Log m, EsqLocDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardStartRideReq ->
@@ -109,7 +109,7 @@ dashboardStartRide handle rideId req =
     $ DashboardReq req
 
 startRide ::
-  (MonadThrow m, Log m, EsqLocDBFlow m r, MonadTime m, CoreMetrics m, Monad m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
+  (MonadThrow m, Log m, EsqLocDBFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   StartRideReq ->
