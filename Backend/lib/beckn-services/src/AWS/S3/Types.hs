@@ -88,3 +88,13 @@ put :: (MonadReader r m, HasField "s3Env" r (S3Env m)) => String -> Text -> m ()
 put path file_ = do
   s3env <- asks (.s3Env)
   putH s3env path file_
+
+getPublic :: (MonadReader r m, HasField "s3EnvPublic" r (S3Env m)) => String -> m Text
+getPublic path = do
+  s3EnvPublic <- asks (.s3EnvPublic)
+  getH s3EnvPublic path
+
+putPublic :: (MonadReader r m, HasField "s3EnvPublic" r (S3Env m)) => String -> Text -> m ()
+putPublic path file_ = do
+  s3EnvPublic <- asks (.s3EnvPublic)
+  putH s3EnvPublic path file_
