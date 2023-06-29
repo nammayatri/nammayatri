@@ -15,11 +15,13 @@
 module Storage.Queries.DriverFee where
 
 import Domain.Types.DriverFee
+import qualified Domain.Types.DriverFee as Domain
 import Domain.Types.Person
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common (HighPrecMoney, Money)
 import Kernel.Types.Id
+import qualified Storage.Beam.DriverFee as BeamDF
 import Storage.Tabular.DriverFee
 
 create :: DriverFee -> SqlDB ()
@@ -114,3 +116,41 @@ updateStatus status driverFeeId now = do
         DriverFeeUpdatedAt =. val now
       ]
     where_ $ tbl ^. DriverFeeId ==. val (getId driverFeeId)
+
+transformBeamDriverFeeToDomain :: BeamDF.DriverFee -> DriverFee
+transformBeamDriverFeeToDomain BeamDF.DriverFeeT {..} = do
+  DriverFee
+    { id = Id id,
+      shortId = ShortId shortId,
+      driverId = Id driverId,
+      govtCharges = govtCharges,
+      platformFee = Domain.PlatformFee platformFee cgst sgst,
+      numRides = numRides,
+      payBy = payBy,
+      totalEarnings = totalEarnings,
+      startTime = startTime,
+      endTime = endTime,
+      status = status,
+      createdAt = createdAt,
+      updatedAt = updatedAt
+    }
+
+transformDomainDriverFeeToBeam :: DriverFee -> BeamDF.DriverFee
+transformDomainDriverFeeToBeam DriverFee {..} =
+  BeamDF.DriverFeeT
+    { BeamDF.id = getId id,
+      BeamDF.shortId = getShortId shortId,
+      BeamDF.driverId = getId driverId,
+      BeamDF.govtCharges = govtCharges,
+      BeamDF.platformFee = platformFee.fee,
+      BeamDF.cgst = platformFee.cgst,
+      BeamDF.sgst = platformFee.sgst,
+      BeamDF.numRides = numRides,
+      BeamDF.payBy = payBy,
+      BeamDF.totalEarnings = totalEarnings,
+      BeamDF.startTime = startTime,
+      BeamDF.endTime = endTime,
+      BeamDF.status = status,
+      BeamDF.createdAt = createdAt,
+      BeamDF.updatedAt = updatedAt
+    }
