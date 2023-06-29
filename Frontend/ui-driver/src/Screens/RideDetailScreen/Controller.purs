@@ -15,7 +15,7 @@
 
 module Screens.RideDetailScreen.Controller where
 
-import Prelude(Unit, class Show, pure, unit, ($), (&&), bind, discard)
+import Prelude(Unit, class Show, pure, unit, ($), (&&), bind, discard,(==))
 import PrestoDOM (Eval, continue, continueWithCmd, exit)
 import Screens.Types (RideDetailScreenState, Location)
 import PrestoDOM.Types.Core (class Loggable)
@@ -32,6 +32,8 @@ import Components.PopUpModal.Controller as PopUpModal
 import JBridge (firebaseLogEvent)
 import Services.Config (getSupportNumber)
 import Debug (spy)
+import Storage(isLocalStageOn,getValueToLocalNativeStore,KeyStore(..))
+import Screens.Types (HomeScreenStage(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -103,7 +105,7 @@ eval (RateCardAction (RatingCard.Rating index)) state = continue state { props {
 eval (RateCardAction (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = exit $ SubmitRating state
 
 eval (RateCardAction (RatingCard.FeedbackChanged value)) state = continue state { props { feedback = value } } 
-eval GoToRateCardView state = continue state {props{rateCardView = true}}
+eval GoToRateCardView state = if ((getValueToLocalNativeStore IS_RIDE_ACTIVE) == "true") then exit $ GoToHomeScreen else continue state {props{rateCardView = true}}
 eval OnCallSupport state = continue state {props{supportPopUpView = true}}
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state{props{supportPopUpView=false}}
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do

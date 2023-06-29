@@ -73,7 +73,7 @@ view push state =
             , gravity CENTER
             , padding (Padding 14 14 14 14)
             , margin (MarginBottom 16)
-            , visibility if state.props.zoneType then VISIBLE else GONE
+            , visibility if state.props.isItZone then VISIBLE else GONE
             ][ imageView
                 [ width (V 20)
                 , height (V 20)

@@ -42,7 +42,7 @@ type RatingCardProps =
   , estimatedDistance :: Maybe Int
   , enableFeedback :: Boolean
   , showFareBreakUp :: Boolean
-  , zoneType :: Boolean
+  , isItZone :: Boolean
   , isDriver :: Boolean
   }
 
@@ -76,7 +76,7 @@ config = {
   , showFareBreakUp: false
   , enableFeedback: false
   , isDriver: false
-  , zoneType : false
+  , isItZone : false
 },
   ratingCardData :{
       rideId : ""

@@ -814,10 +814,11 @@ previousRideRatingViewState state = let
   ratingCardConfig' = config {
     props 
     {
-        currentStage = if state.props.currentStage /= ST.HomeScreen then true else false
+        currentStage =  (state.props.currentStage /= ST.HomeScreen)
       , estimatedDistance = state.props.estimatedDistance
       , showFareBreakUp = false
       , enableFeedback = true
+      , isItZone =  (state.props.zoneType.priorityTag == METRO)
     }
     , ratingCardData = state.data.previousRideRatingState
   }
