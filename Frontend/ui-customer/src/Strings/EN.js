@@ -499,7 +499,7 @@ const englishStrings = {
   "CONTINUE_SEARCH_WITH" : "Continue Search with",
   "CONTINUING_SEARCH_WITH" : "Continuing search with",
   "SEARCHING_WITH" : "Searching with",
-  "THE_DRIVER_PREFERRED_YOUR_SPECIAL_LOCATION_AND_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "The driver preferred your special location and is already on the way to your location.",
+  "THE_DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "The driver preferred your special request and is already on the way to your location.",
   "DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "Driver is already on the way to your location.",
   "ALLOW_LOCATION_ACCESS": "Allow Location Access"
 }

@@ -24,7 +24,7 @@ const kannadaStrings = {
   "THANK_YOU_FOR_WRITING": "ನಮಗೆ ಬರೆದಿದ್ದಕ್ಕಾಗಿ ಧನ್ಯವಾದಗಳು!",
   "WE_HAVE_RECEIVED_YOUR_ISSUE": "ನಿಮ್ಮ ಸಮಸ್ಯೆಯನ್ನು ನಾವು ಸ್ವೀಕರಿಸಿದ್ದೇವೆ. ನಾವು ಸ್ವಲ್ಪ ಸಮಯದಲ್ಲಿ ನಿಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸುತ್ತೇವೆ.",
   "GO_HOME_": "ಮನೆಗೆ ಹೋಗಿ",
-  "ABOUT_APP_DESCRIPTION": "ನಮ್ಮಾ ಯಾತ್ರಿ ಸವಾರರನ್ನು ಚಾಲಕರೊಂದಿಗೆ ಸಂಪರ್ಕಿಸಲು ಮುಕ್ತ ವೇದಿಕೆಯಾಗಿದೆ. ಮೀಟರ್ ದರದೊಂದಿಗೆ ಸವಾರಿಯನ್ನು ಕಾಯ್ದಿರಿಸಲು ಸವಾರರಿಗೆ ಅಪ್ಲಿಕೇಶನ್ ಅನುಕೂಲಕರವಾಗಿದೆ ಆದ್ದರಿಂದ ಕನಿಷ್ಠ ಶುಲ್ಕ",
+  "ABOUT_APP_DESCRIPTION": "ನಮ್ಮ ಯಾತ್ರಿ ಸವಾರರನ್ನು ಚಾಲಕರೊಂದಿಗೆ ಸಂಪರ್ಕಿಸಲು ಮುಕ್ತ ವೇದಿಕೆಯಾಗಿದೆ. ಮೀಟರ್ ದರದೊಂದಿಗೆ ಸವಾರಿಯನ್ನು ಕಾಯ್ದಿರಿಸಲು ಸವಾರರಿಗೆ ಅಪ್ಲಿಕೇಶನ್ ಅನುಕೂಲಕರವಾಗಿದೆ ಆದ್ದರಿಂದ ಕನಿಷ್ಠ ಶುಲ್ಕ",
   "ABOUT": "ಬಗ್ಗೆ",
   "PRIVACY_POLICY": "ಗೌಪ್ಯತಾ ನೀತಿ",
   "SET_UP_YOUR_ACCOUNT": "ನಿಮ್ಮ ಖಾತೆಯನ್ನು ಹೊಂದಿಸಿ",
@@ -494,7 +494,7 @@ const kannadaStrings = {
   "CONTINUE_SEARCH_WITH" : "ಇದರೊಂದಿಗೆ ಹುಡುಕಾಟವನ್ನು ಮುಂದುವರಿಸಿ",
   "CONTINUING_SEARCH_WITH" : "ಇದರೊಂದಿಗೆ ಹುಡುಕಾಟವನ್ನು ಮುಂದುವರಿಸಲಾಗುತ್ತಿದೆ",
   "SEARCHING_WITH" : "ಇದರೊಂದಿಗೆ ಹುಡುಕಲಾಗುತ್ತಿದೆ",
-  "THE_DRIVER_PREFERRED_YOUR_SPECIAL_LOCATION_AND_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ಚಾಲಕರು ನಿಮ್ಮ ನಿರ್ದಿಷ್ಟ ಸ್ಥಳಕ್ಕೆ ಆದ್ಯತೆ ನೀಡಿದ್ದಾರೆ ಮತ್ತು ನಿಮ್ಮ ಸ್ಥಳಕ್ಕೆ ಹೋಗುತ್ತಿದ್ದಾರೆ.",
-  "DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ಚಾಲಕ ನಿಮ್ಮ ಸ್ಥಳಕ್ಕೆ ಹೋಗುತ್ತಿದ್ದಾರೆ.",
+  "THE_DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ಚಾಲಕರು ನಿಮ್ಮ ವಿಶೇಷ ವಿನಂತಿಗೆ ಆದ್ಯತೆ ನೀಡಿದ್ದಾರೆ ಮತ್ತು ನಿಮ್ಮ ಸ್ಥಳಕ್ಕೆ ಬರುತ್ತಿದ್ದಾರೆ",
+  "DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ಚಾಲಕ ನಿಮ್ಮ ಸ್ಥಳಕ್ಕೆ ಬರುತ್ತಿದ್ದಾರೆ.",
   "ALLOW_LOCATION_ACCESS": "ಸ್ಥಳ ಪ್ರವೇಶವನ್ನು ಅನುಮತಿಸಿ"
 }
