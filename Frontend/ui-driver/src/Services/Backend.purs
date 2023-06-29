@@ -49,18 +49,18 @@ import Debug (spy)
 getHeaders :: String -> Flow GlobalState Headers
 getHeaders dummy = do
     _ <- pure $ printLog "dummy" dummy
-    if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed") 
-        then pure $ (Headers [  Header "Content-Type" "application/json", 
-                                Header "x-client-version" (getValueToLocalStore VERSION_NAME), 
-                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION), 
+    if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed")
+        then pure $ (Headers [  Header "Content-Type" "application/json",
+                                Header "x-client-version" (getValueToLocalStore VERSION_NAME),
+                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                                 Header "session_id" (getValueToLocalStore SESSION_ID),
                                 Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
                                 ]
                     )
-        else pure $ (Headers [  Header "Content-Type" "application/json", 
-                                Header "token" (getValueToLocalStore REGISTERATION_TOKEN), 
-                                Header "x-client-version" (getValueToLocalStore VERSION_NAME), 
-                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION), 
+        else pure $ (Headers [  Header "Content-Type" "application/json",
+                                Header "token" (getValueToLocalStore REGISTERATION_TOKEN),
+                                Header "x-client-version" (getValueToLocalStore VERSION_NAME),
+                                Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                                 Header "session_id" (getValueToLocalStore SESSION_ID),
                                 Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
                                 ]
@@ -71,18 +71,18 @@ getHeaders dummy = do
 getHeaders' :: String -> FlowBT String Headers
 getHeaders' dummy = do
         _ <- pure $ printLog "dummy" dummy
-        if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed") 
-        then lift $ lift $ pure $ (Headers [Header "Content-Type" "application/json", 
-                                            Header "x-client-version" (getValueToLocalStore VERSION_NAME), 
-                                            Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION), 
+        if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed")
+        then lift $ lift $ pure $ (Headers [Header "Content-Type" "application/json",
+                                            Header "x-client-version" (getValueToLocalStore VERSION_NAME),
+                                            Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                                             Header "session_id" (getValueToLocalStore SESSION_ID),
                                             Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
                                             ]
-                                    ) 
+                                    )
         else lift $ lift $ pure $ (Headers [Header "Content-Type" "application/json",
-                                            Header "token" (getValueToLocalStore REGISTERATION_TOKEN), 
-                                            Header "x-client-version" (getValueToLocalStore VERSION_NAME), 
-                                            Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION), 
+                                            Header "token" (getValueToLocalStore REGISTERATION_TOKEN),
+                                            Header "x-client-version" (getValueToLocalStore VERSION_NAME),
+                                            Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                                             Header "session_id" (getValueToLocalStore SESSION_ID),
                                             Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
                                             ]
@@ -789,7 +789,7 @@ callCustomerBT rideId = do
     where
       errorHandler errorPayload = do
             BackT $ pure GoBack
-      
+
 ----------------------------------- fetchIssueList ----------------------------------------
 
 fetchIssueListBT :: FetchIssueListReq -> FlowBT String FetchIssueListResp
@@ -840,3 +840,25 @@ makeOnCallReq rideID = OnCallReq {
     "rideId" : rideID
 }
 
+--------------------------------- leaderBoard  --------------------------------------------------------------------------------------------------------
+leaderBoardBT :: LeaderBoardReq -> FlowBT String LeaderBoardRes
+leaderBoardBT request = do
+    headers <- getHeaders' ""
+    case request of
+        (DailyRequest date) ->
+            withAPIResultBT (EP.leaderBoardDaily date) (\x → x) errorHandler (lift $ lift $ callAPI headers request)
+        (WeeklyRequest fromDate toDate) ->
+            withAPIResultBT (EP.leaderBoardWeekly fromDate toDate) (\x → x) errorHandler (lift $ lift $ callAPI headers request)
+    where
+    errorHandler (ErrorPayload errorPayload) =  do
+        BackT $ pure GoBack
+
+leaderBoard request = do
+    headers <- getHeaders ""
+    case request of
+        (DailyRequest date) ->
+            withAPIResult (EP.leaderBoardDaily date) unwrapResponse (callAPI headers request)
+        (WeeklyRequest fromDate toDate) ->
+            withAPIResult (EP.leaderBoardWeekly fromDate toDate) unwrapResponse (callAPI headers request)
+    where
+        unwrapResponse (x) = x

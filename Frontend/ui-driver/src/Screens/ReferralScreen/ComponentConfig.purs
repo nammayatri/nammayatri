@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -56,11 +56,11 @@ passwordPopUpConfig state = let
   in popUpConfig'
 
 contactSupportConfig :: ST.ReferralScreenState->  PopUpModal.Config
-contactSupportConfig state  = 
-  let 
-  config' =  PopUpModal.config 
+contactSupportConfig state  =
+  let
+  config' =  PopUpModal.config
   popUpConfig' = config' {
-    primaryText { 
+    primaryText {
       text = (getString CONTACT_SUPPORT)<>"?"
     , margin = (Margin 40 23 40 12)
     , fontStyle = FontStyle.semiBold LanguageStyle }
@@ -82,24 +82,25 @@ contactSupportConfig state  =
   }
   in popUpConfig'
 
-  
+
 --------------------------------------------------- genericHeaderConfig -----------------------------------------------------
 genericHeaderConfig :: ST.ReferralScreenState -> GenericHeader.Config
-genericHeaderConfig state = let 
+genericHeaderConfig state = let
   config = GenericHeader.config
-  genericHeaderConfig' = config 
+  genericHeaderConfig' = config
     {
       height = WRAP_CONTENT
+    , width = WRAP_CONTENT
     , prefixImageConfig {
         height = V 25
       , width = V 25
       , imageUrl = "ny_ic_chevron_left"
       , margin = (Margin 12 12 12 12)
-      , visibility = if state.props.stage == ST.ReferralFlow then VISIBLE else GONE 
+      , visibility = if state.props.stage == ST.ReferralFlow then VISIBLE else GONE
       }
     , padding = if state.props.stage == ST.ReferralFlow then (Padding 0 5 0 5) else (Padding 16 16 0 16)
     , textConfig {
-        text = if state.props.stage == ST.ReferralFlow then (getString REFERRAL_ENROLMENT) else (getString REFERRALS)
+        text = if state.props.stage == ST.LeaderBoard then (getString RANKINGS) else if state.props.stage == ST.ReferralFlow then (getString REFERRAL_ENROLMENT) else (getString REFERRALS)
       , textSize = FontSize.a_18
       , color = Color.darkDescriptionText
       , fontStyle = FontStyle.semiBold LanguageStyle
@@ -116,7 +117,7 @@ genericHeaderConfig state = let
 primaryButtonViewConfig :: ST.ReferralScreenState -> PrimaryButton.Config
 primaryButtonViewConfig state = let
     config = PrimaryButton.config
-    primaryButtonConfig' = config 
+    primaryButtonConfig' = config
       { textConfig{ text = (getString LINK_REFERRAL_CODE) }
       , id = "PrimaryButtonReferralScreen"
       , isClickable = state.props.primarybtnActive

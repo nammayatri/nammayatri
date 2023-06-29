@@ -19,7 +19,7 @@ module Helpers.Utils
     ) where
 
 -- import Prelude (Unit, bind, discard, identity, pure, show, unit, void, ($), (<#>), (<$>), (<*>), (<<<), (<>), (>>=))
-import Screens.Types (AllocationData, YoutubeData)
+import Screens.Types (AllocationData, YoutubeData, LeaderBoardDay, LeaderBoardWeek)
 import Language.Strings (getString)
 import Language.Types(STR(..))
 import Data.Array ((!!)) as DA
@@ -118,6 +118,8 @@ foreign import parseNumber :: Int -> String
 
 -- -- ####### MAP FFI ######## -----
 foreign import currentPosition  :: String -> Effect Unit
+foreign import getPastDays :: Int -> Array LeaderBoardDay
+foreign import getPastWeeks :: Int -> Array LeaderBoardWeek
 
 otpRule :: Reader.OtpRule
 otpRule = Reader.OtpRule {
@@ -230,14 +232,14 @@ getSpecialZoneConfig prop tag = do
 
 getRequiredTag :: String -> Maybe String -> Maybe String
 getRequiredTag prop tag = do
-  case tag of 
+  case tag of
     Nothing -> Nothing
     Just tag' -> do
         let arr = split (Pattern "_") tag'
         let pickup = fromMaybe "" (arr DA.!! 0)
         let drop = fromMaybe "" (arr DA.!! 1)
         let priority = fromMaybe "" (arr DA.!! 2)
-        case priority of 
+        case priority of
           "PriorityPickup" -> case (runFn4 getZoneTagConfig Just Nothing prop (pickup <> "_Pickup")) of
                                 Nothing -> Nothing
                                 Just val -> Just val

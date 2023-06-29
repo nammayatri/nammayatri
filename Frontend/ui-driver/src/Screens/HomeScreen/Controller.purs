@@ -37,7 +37,7 @@ import Effect (Effect)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (clearTimer, getCurrentUTC, getNewIDWithTag, convertUTCtoISC)
 import Helpers.Utils (currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat,setText',getTime, differenceBetweenTwoUTC)
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, scrollToBottom, stopChatListenerService, getSuggestionfromKey, getSuggestionsfromKey)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, getSuggestionsfromKey)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -187,7 +187,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | UpdateStage ST.HomeScreenStage ST.HomeScreenState
                     | GoToNotifications ST.HomeScreenState
                     | AddAlternateNumber ST.HomeScreenState
-                    | StartZoneRide ST.HomeScreenState 
+                    | StartZoneRide ST.HomeScreenState
                     | CallCustomer ST.HomeScreenState
                     | GotoEditGenderScreen
 
@@ -298,7 +298,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
       exit $ GoToNotifications state
-    "Contest" -> do
+    "Rankings" -> do
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
       exit $ GoToReferralScreen
     _ -> continue state
@@ -325,9 +325,9 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.BackPressed)) state = do
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone text)) state = do
     let exitState = if state.props.zoneRideBooking then StartZoneRide state else StartRide state
     exit exitState
-eval (RideActionModalAction (RideActionModal.StartRide)) state = do 
+eval (RideActionModalAction (RideActionModal.StartRide)) state = do
   continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false } }
-eval (RideActionModalAction (RideActionModal.EndRide)) state = do 
+eval (RideActionModalAction (RideActionModal.EndRide)) state = do
   continue $ (state {props {endRidePopUp = true}, data {route = []}})
 eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
   _ <- pure $ setValueToLocalStore TRIGGER_MAPS "false"
@@ -542,8 +542,8 @@ eval ClickAddAlternateButton state = do
     continue state
   else do
     exit $ AddAlternateNumber state
-   
-  
+
+
 eval ZoneOtpAction state = do
   continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false } }
 
@@ -552,12 +552,12 @@ eval HelpAndSupportScreen state = exit $ GoToHelpAndSupportScreen
 eval (GenderBannerModal (Banner.OnClick)) state = do
   _ <- pure $ firebaseLogEvent "ny_driver_gender_banner_click"
   exit $ GotoEditGenderScreen
-  
+
 eval (StatsModelAction StatsModelController.OnIconClick) state = continue state { props { showBonusInfo = not state.props.showBonusInfo } }
 
-eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { props { showBonusInfo = false } } 
+eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { props { showBonusInfo = false } }
 
-eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { props { showBonusInfo = false } } 
+eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { props { showBonusInfo = false } }
 
 eval (RequestInfoCardAction RequestInfoCard.NoAction) state = continue state
 
@@ -567,7 +567,7 @@ eval RemoveGenderBanner state = do
   _ <- pure $ setValueToLocalStore IS_BANNER_ACTIVE "False"
   continue state { props = state.props{showGenderBanner = false}}
 
-eval _ state = continue state 
+eval _ state = continue state
 
 checkPermissionAndUpdateDriverMarker :: ST.HomeScreenState -> Effect Unit
 checkPermissionAndUpdateDriverMarker state = do

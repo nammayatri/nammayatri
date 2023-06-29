@@ -485,5 +485,14 @@ const mlStrings = {
   CONFIRM : "സ്ഥിരീകരിക്കുക",
   GENDER_UPDATED : "ലിംഗഭേദം അപ്ഡേറ്റ് ചെയ്തു",
   ZONE_CANCEL_TEXT_DROP : "നിങ്ങളുടെ ഉപഭോക്താവ് കൃത്യസമയത്ത് മെട്രോ സ്റ്റേഷനിൽ എത്താനുള്ള തിരക്കിലായിരിക്കാം! \n റദ്ദാക്കരുതെന്ന് ഞങ്ങൾ നിങ്ങളോട് അഭ്യർത്ഥിക്കുന്നു.",
-	ZONE_CANCEL_TEXT_PICKUP : "നിങ്ങളുടെ ഉപഭോക്താവ് അവരുടെ ലക്ഷ്യസ്ഥാനത്ത് എത്താനുള്ള തിരക്കിലായിരിക്കാം. \n റദ്ദാക്കരുതെന്ന് ഞങ്ങൾ നിങ്ങളോട് അഭ്യർത്ഥിക്കുന്നു."
+	ZONE_CANCEL_TEXT_PICKUP : "നിങ്ങളുടെ ഉപഭോക്താവ് അവരുടെ ലക്ഷ്യസ്ഥാനത്ത് എത്താനുള്ള തിരക്കിലായിരിക്കാം. \n റദ്ദാക്കരുതെന്ന് ഞങ്ങൾ നിങ്ങളോട് അഭ്യർത്ഥിക്കുന്നു.",
+  REGISTERED_ADDRESS_DESCRIPTION : "Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala, Bengaluru, Karnataka- 560095, India",
+  RANKINGS : "റാങ്കിങ്",
+  GETTING_THE_LEADERBOARD_READY : "ലീഡർബോർഡ് സൃഷ്ടിക്കുന്നു!",
+  PLEASE_WAIT_WHILE_WE_UPDATE_THE_DETAILS : "ഞങ്ങൾ വിശദാംശങ്ങൾ അപ്ഡേറ്റ് ചെയ്യുമ്പോൾ ദയവായി കാത്തിരിക്കുക",
+  LAST_UPDATED : "അവസാന പരിഷ്കാരം: ",
+  CONGRATULATIONS_YOU_ARE_RANK : "അഭിനന്ദനങ്ങൾ! നിങ്ങൾ റാങ്ക് ",
+  YOU : " (നിങ്ങൾ)",
+  DAILY : "ദിവസേന",
+  WEEKLY : "പ്രതിവാരം"
 }
