@@ -23,7 +23,6 @@ import Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsS
 
 findAll' ::
   ( Transactionable m,
-    Monad m,
     MonadThrow m,
     Log m
   ) =>

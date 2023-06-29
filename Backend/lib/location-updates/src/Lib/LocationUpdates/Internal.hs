@@ -79,7 +79,7 @@ resetFailedDistanceCalculationFlag :: (HedisFlow m r) => Id person -> m ()
 resetFailedDistanceCalculationFlag driverId = Hedis.del $ getFailedDistanceCalculationKey driverId
 
 processWaypoints ::
-  (Monad m, Log m, MonadThrow m) =>
+  (Log m, MonadThrow m) =>
   RideInterpolationHandler person m ->
   Id person ->
   Bool ->

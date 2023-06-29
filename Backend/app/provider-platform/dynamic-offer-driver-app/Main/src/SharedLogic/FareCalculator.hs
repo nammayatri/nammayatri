@@ -144,7 +144,7 @@ data CalculateFareParametersParams = CalculateFareParametersParams
   }
 
 calculateFareParameters ::
-  (Monad m, Log m, MonadGuid m, MonadThrow m) =>
+  (Log m, MonadGuid m, MonadThrow m) =>
   CalculateFareParametersParams ->
   m FareParameters
 calculateFareParameters params = do

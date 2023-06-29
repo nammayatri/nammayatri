@@ -25,7 +25,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler.Types (ExecutionResult (..))
 import SharedLogic.DriverPool
 
-type HandleMonad m = (Monad m, MonadClock m, Log m)
+type HandleMonad m = (MonadClock m, Log m)
 
 data MetricsHandle m = MetricsHandle
   { incrementTaskCounter :: m (),
