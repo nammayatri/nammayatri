@@ -84,6 +84,7 @@ import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.widget.DatePicker;
 import android.widget.EditText;
+import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.NumberPicker;
@@ -1569,7 +1570,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         } catch (Exception e) {
             Log.e(LOG_TAG, "Error sending user data: " + e);
         }
-        
+
         if (clevertapDefaultInstance!=null) {
             clevertapDefaultInstance.onUserLogin(profileUpdate);
             sharedPrefs = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
@@ -3915,15 +3916,22 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void scrollToBottom(final String id) {
-        try {
-            ScrollView scrollView = activity.findViewById(Integer.parseInt(id));
-            if (scrollView != null) {
-                scrollView.fullScroll(View.FOCUS_DOWN);
-            }
-        } catch (Exception e) {
-            Log.e(LOG_TAG, "Error in scroll to Bottom : " + e);
-        }
+    public void scrollToEnd(final String id, final boolean isBottom){
+       try {
+           if (isBottom) {
+               ScrollView scrollView = activity.findViewById(Integer.parseInt(id));
+               if (scrollView != null) {
+                   scrollView.fullScroll(View.FOCUS_DOWN);
+               }
+           }else {
+               HorizontalScrollView horizontalScrollView = activity.findViewById(Integer.parseInt(id));
+               if (horizontalScrollView != null) {
+                   horizontalScrollView.fullScroll(View.FOCUS_RIGHT);
+               }
+           }
+       } catch(Exception e) {
+           Log.e(LOG_TAG,"Error in scroll to Bottom : " + e);
+       }
     }
 
     @JavascriptInterface

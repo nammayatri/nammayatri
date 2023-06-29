@@ -238,7 +238,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state =
     "Profile" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       exit GoToProfileScreen
-    "Contest" -> do
+    "Rankings" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       exit $ GoToReferralScreen
     _ -> continue state

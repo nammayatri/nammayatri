@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -22,7 +22,7 @@ import Data.Array (deleteAt, length, snoc)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Helpers.Utils (clearFocus, clearTimer, convertUTCtoISC, getCurrentUTC, removeMediaPlayer, renderBase64ImageFile, saveAudioFile, startAudioRecording, startTimer, stopAudioRecording, uploadMultiPartData)
-import JBridge (addMediaFile, hideKeyboardOnNavigation, scrollToBottom, startLottieProcess, toast, uploadFile)
+import JBridge (addMediaFile, hideKeyboardOnNavigation, scrollToEnd, startLottieProcess, toast, uploadFile)
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender)
 import PrestoDOM.Types.Core (class Loggable, Eval)
 import PrestoDOM.Utils (continue, continueWithCmd, exit)
@@ -161,7 +161,7 @@ eval AddImage state =
   if length state.data.addedImages > 0
   then
     continueWithCmd state { props { showImageModel = true, isPopupModelOpen = true }
-                   , data  { addImagesState { images = state.data.addedImages, stateChanged = false } } } [do 
+                   , data  { addImagesState { images = state.data.addedImages, stateChanged = false } } } [do
                      _ <- pure $ clearFocus (getNewIDWithTag "submit_chat_edit_text")
                      pure NoAction
                    ]
@@ -202,7 +202,7 @@ eval (AddAudioModelAction AudioModel.AddAudio) state =
   ]
 
 eval (AddAudioModelAction AudioModel.BackPressed) state = do
-  continueWithCmd state [do 
+  continueWithCmd state [do
     if state.props.isPopupModelOpen
     then pure $ (AddAudioModelAction (AudioModel.OnClickCancel PrimaryButton.OnClick))
     else pure $ BackPressed
@@ -275,18 +275,18 @@ eval (RecordAudioModelAction (RecordAudioModel.TimerCallback timer)) state = do
 
 ---------------------------------------------------- Add Image Callback ----------------------------------------------------
 eval (ImageUploadCallback image imageName imagePath) state = do
-  let images' = if length state.data.addImagesState.imageMediaIds == 3 
-                then do 
+  let images' = if length state.data.addImagesState.imageMediaIds == 3
+                then do
                   pure $ toast (getString MAX_IMAGES)
                   state.data.addImagesState.images
                 else
                   snoc state.data.addImagesState.images { image, imageName }
   continueWithCmd state { data { addImagesState { isLoading = true } } } [do
     res <- uploadMultiPartData imagePath (EndPoint.uploadFile "") "Image"
-    let uploadedImagesIds' = if length state.data.addImagesState.imageMediaIds == 3 
-                             then do 
-                               state.data.addImagesState.imageMediaIds 
-                             else 
+    let uploadedImagesIds' = if length state.data.addImagesState.imageMediaIds == 3
+                             then do
+                               state.data.addImagesState.imageMediaIds
+                             else
                                snoc state.data.addImagesState.imageMediaIds res
     pure $ UpdateState state { data { addImagesState { images = images', isLoading = false, stateChanged = true, imageMediaIds = uploadedImagesIds' } } }
   ]
@@ -297,9 +297,9 @@ eval (ViewImageModelAction (ViewImageModel.BackPressed)) state = do
   then
     continue state { data  { viewImageState { image = "", imageName = Nothing } }
                    , props { showViewImageModel = false } }
-  else 
+  else
     continueWithCmd state [do
-      if state.props.showImageModel 
+      if state.props.showImageModel
       then pure $ (AddImagesModelAction AddImagesModel.BackPressed)
       else pure $ BackPressed
     ]
@@ -308,13 +308,13 @@ eval (ViewImageModelAction (ViewImageModel.BackPressed)) state = do
 eval (RecordAudioModelAction (RecordAudioModel.OnClickRecord push)) state = do
   continueWithCmd state { data { recordAudioState { timer = "00:00" } } }  [do
     cond <- startAudioRecording ""
-    if cond 
+    if cond
     then do
       _ <- pure $ clearTimer ""
       _ <- removeMediaPlayer ""
       _ <- startTimer 0 false push RecordAudioModel.TimerCallback
       pure $ UpdateState state { data { recordAudioState { isRecording = true, timer = "00:00" } } }
-    else 
+    else
       pure $ NoAction
   ]
 
@@ -405,7 +405,7 @@ eval (ChatViewActionController (ChatView.BackPressed)) state = do
   continueWithCmd state [do
     pure $ BackPressed
   ]
-  
+
 eval (ChatViewActionController (ChatView.OnImageClick url)) state = do
   continue state { data  { viewImageState { image = url, imageName = Nothing } }
                  , props { showViewImageModel = true } }
@@ -418,7 +418,7 @@ eval (SendMessage message toggleSubmitComp) state = do
   let showSubmitComp' = if toggleSubmitComp then not state.props.showSubmitComp else state.props.showSubmitComp
   continueWithCmd state { data  { chatConfig { messages = messages' } }
                         , props { showSubmitComp = showSubmitComp' } } [do
-    _ <- scrollToBottom (getNewIDWithTag "ChatScrollView")
+    _ <- scrollToEnd (getNewIDWithTag "ChatScrollView") true
     pure NoAction
   ]
 
@@ -427,8 +427,8 @@ eval (UpdateState updatedState) state = do
 
 eval (PrimaryEditTextActionController (PrimaryEditText.TextChanged id text)) state =
   continue state { data { messageToBeSent = text } }
-  
-eval (ConfirmCall (PrimaryButton.OnClick)) state = 
+
+eval (ConfirmCall (PrimaryButton.OnClick)) state =
   case find (\x -> x.label == "CALL_THE_CUSTOMER") state.data.options of
     Just selectedOption -> do
       let messages' = snoc state.data.chatConfig.messages (makeChatComponent selectedOption.option "Driver" (convertUTCtoISC (getCurrentUTC "") "hh:mm A"))
@@ -437,7 +437,7 @@ eval (ConfirmCall (PrimaryButton.OnClick)) state =
       _ <- pure $ toast "Can't find option"
       continue state
 
-eval (CancelCall (PrimaryButton.OnClick)) state = 
+eval (CancelCall (PrimaryButton.OnClick)) state =
   continue state { props { isPopupModelOpen = false, showCallCustomerModel = false } }
 
 eval _ state =

@@ -19,7 +19,7 @@ import Log
 
 import Control.Monad.Except.Trans (lift)
 import Common.Types.App (Version(..),LazyCheck(..))
-import Data.Array (concat, filter, cons, elemIndex, head, length, mapWithIndex, null, snoc, sortBy, (!!), any)
+import Data.Array (concat, filter, cons, elemIndex, head, length, mapWithIndex, null, snoc, sortBy, (!!), any, last)
 import Data.Either (Either(..))
 import Data.Int (round, toNumber, ceil,fromString)
 import Data.Lens ((^.))
@@ -33,7 +33,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime,stringToVersion)
 import Foreign.Class (class Encode, encode, decode)
-import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions)
+import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks)
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
 import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, loaderText, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, toggleLoader, generateSessionId, stopChatListenerService, hideKeyboardOnNavigation, metaLogEvent, saveSuggestions)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
@@ -687,13 +687,13 @@ driverDetailsFlow = do
         let genderSelected = state.data.driverGender
         let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq ""
             requiredData = initialData{gender = genderSelected}
-        (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)       
+        (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)
         pure $ toast (getString GENDER_UPDATED)
         modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> state { data {driverGender = genderSelected}})
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props = homeScreen.props {  showGenderBanner = false}})
         setValueToLocalStore IS_BANNER_ACTIVE "False"
         driverDetailsFlow
-        
+
   pure unit
 
 vehicleDetailsFlow :: FlowBT String Unit
@@ -955,8 +955,19 @@ issueReportChatScreenFlow = do
 
 referralScreenFlow :: FlowBT String Unit
 referralScreenFlow = do
-  (GlobalState state) <- getState
-  if isJust state.referralScreen.data.driverInfo.referralCode then do
+  (GlobalState allState) <- getState
+  let state = allState.referralScreen
+  when (any (_ == "") [state.props.selectedDay.utcDate, state.props.selectedWeek.utcStartDate, state.props.selectedWeek.utcEndDate]) do
+    let pastDates = getPastDays 7
+        pastWeeks = getPastWeeks 4
+        selectedDay = case last pastDates of
+                        Just date -> date
+                        Nothing -> state.props.selectedDay
+        selectedWeek = case last pastWeeks of
+                        Just week -> week
+                        Nothing -> state.props.selectedWeek
+    modifyScreenState $ ReferralScreenStateType (\ referralScreen -> referralScreen {props{ days = pastDates, weeks = pastWeeks, selectedDay = selectedDay, selectedWeek = selectedWeek }} )
+  if isJust state.data.driverInfo.referralCode then do
     (GetPerformanceRes getPerformanceres) <- Remote.getPerformanceBT (GetPerformanceReq {} )
     modifyScreenState $ ReferralScreenStateType (\ referralScreen -> referralScreen { data { driverPerformance { referrals = getPerformanceres.referrals}}} )
     else pure unit
@@ -976,6 +987,7 @@ referralScreenFlow = do
           _ <- pure $ toast (decodeErrorMessage error.response.errorMessage)
           referralScreenFlow
       referralScreenFlow
+    REFRESH_LEADERBOARD -> referralScreenFlow
     _ -> homeScreenFlow
 
 tripDetailsScreenFlow :: FlowBT String Unit
@@ -1483,4 +1495,4 @@ setDriverStatusInLocal status mode = do
                                     setValueToLocalNativeStore DRIVER_STATUS status
                                     setValueToLocalStore DRIVER_STATUS_N mode
                                     setValueToLocalNativeStore DRIVER_STATUS_N mode
-                              
+

@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 module Screens.DriverProfileScreen.Controller where
@@ -38,7 +38,7 @@ import Screens.DriverProfileScreen.ScreenData (MenuOptions(LIVE_STATS_DASHBOARD)
 instance showAction :: Show Action where
   show _ = ""
 instance loggableAction :: Loggable Action where
-  performLog action appId = case action of 
+  performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen DRIVER_PROFILE_SCREEN)
     BackPressed flag -> do
       trackAppBackPress appId (getScreen DRIVER_PROFILE_SCREEN)
@@ -80,9 +80,9 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | GoBack
 
 data Action = BackPressed Boolean
-            | NoAction 
-            | OptionClick Data.MenuOptions 
-            | BottomNavBarAction BottomNavBar.Action 
+            | NoAction
+            | OptionClick Data.MenuOptions
+            | BottomNavBarAction BottomNavBar.Action
             | GetDriverInfoResponse GetDriverInfoResp
             | PopUpModalAction PopUpModal.Action
             | AfterRender
@@ -100,7 +100,7 @@ eval (BackPressed flag) state = if state.props.logoutModalView then continue $ s
                                 ]
                                 else exit GoBack
 
-eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do 
+eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
   case screen of
     "Home" -> exit $ GoToHomeScreen
     "Rides" -> exit $ GoToDriverHistoryScreen
@@ -108,7 +108,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
       exit $ GoToNotifications
-    "Contest" -> do
+    "Rankings" -> do
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
       exit $ GoToReferralScreen
     _ -> continue state
@@ -123,7 +123,7 @@ eval (OptionClick optionIndex) state = do
     Data.HELP_AND_FAQS -> exit $ GoToHelpAndSupportScreen
     Data.ABOUT_APP -> exit $ GoToAboutUsScreen
     Data.DRIVER_LOGOUT -> continue $ (state {props = state.props {logoutModalView = true}})
-    Data.REFER -> exit $ OnBoardingFlow 
+    Data.REFER -> exit $ OnBoardingFlow
     Data.APP_INFO_SETTINGS -> do
       _ <- pure $ launchAppSettings unit
       continue state
@@ -131,7 +131,7 @@ eval (OptionClick optionIndex) state = do
 
 eval (HideLiveDashboard val) state = continue state {props {showLiveDashboard = false}}
 
-eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {logoutModalView = false}}) 
+eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {logoutModalView = false}})
 
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ GoToLogout
 
@@ -151,7 +151,7 @@ eval (GetDriverInfoResponse (GetDriverInfoResp driverProfileResp)) state = do
 eval _ state = continue state
 
 getTitle :: Data.MenuOptions -> String
-getTitle menuOption = 
+getTitle menuOption =
   case menuOption of
     Data.DRIVER_PRESONAL_DETAILS -> (getString PERSONAL_DETAILS)
     Data.DRIVER_VEHICLE_DETAILS -> (getString VEHICLE_DETAILS)
