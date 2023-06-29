@@ -156,7 +156,7 @@ const malayalamStrings = {
   "PLEASE_WAIT_WHILE_IN_PROGRESS": "പുരോഗമിക്കുമ്പോൾ ദയവായി കാത്തിരിക്കുക",
   "SET_LOCATION_ON_MAP": "മാപ്പിൽ ലൊക്കേഷൻ ഉറപ്പിക്കുക",
   "CURRENT_LOCATION": "ഇപ്പോഴുള്ള സ്ഥലം",
-  "I_AM_NOT_RECEIVING_ANY_RIDES": "എനിക്ക് റൈഡുകൾ ഒന്നും കിട്ടുന്നില്ല",
+  "ACTUAL_FARE_WAS_HIGHER_THAN_WHAT_WAS_SHOWN": "യഥാർത്ഥ നിരക്ക് കാണിച്ചതിനേക്കാൾ കൂടുതലായിരുന്നു.",
   "DELETE": "ഡിലീറ്റ്",
   "ARE_YOU_SURE_YOU_WANT_TO_LOGOUT": "നിങ്ങൾ ലോഗൗട്ട് ചെയ്യണമെന്ന് ഉറപ്പാണോ?",
   "ARE_YOU_SURE_YOU_WANT_TO_CANCEL": "റദ്ദാക്കണമെന്ന് നിങ്ങൾക്ക് ഉറപ്പാണോ?",
@@ -466,7 +466,8 @@ const malayalamStrings = {
   "METRO_RIDE" : "മെട്രോ റൈഡ്",
   "GO_BACK_TEXT": "മടങ്ങിപ്പോവുക",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST": "ഡ്രൈവർ നിങ്ങളുടെ പ്രത്യേക അഭ്യർത്ഥന തിരഞ്ഞെടുത്തു, അത് ",
-  "WE_URGE_YOU_NOT_TO_CANCEL": " മീറ്റർ അകലെയാണ്. യാത്ര റദ്ദാക്കരുതെന്ന് ഞങ്ങൾ നിങ്ങളോട് അഭ്യർത്ഥിക്കുന്നു",
+  "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST": "ড্ഡ്രൈവർ നിങ്ങളുടെ പ്രത്യേക അഭ്യർത്ഥനയ്ക്ക് മുൻഗണന നൽകി, ഇതിനകം ",
+  "AND_HAS_TRAVELLED": " യാത്ര ചെയ്തിട്ടുണ്ട്.",
   "PLEASE_FIND_REVISED_FARE_ESTIMATE": "പുതുക്കിയ കണക്കാക്കിയ നിരക്ക് ദയവായി കണ്ടെത്തുക. രാത്രി നിരക്കുകൾ പകലിന്റെ 1.5 ഇരട്ടിയാണ്.",
   "NAVIGATE_TO_PICKUP" : "പിക്കപ്പിലേക്ക് നാവിഗേറ്റ് ചെയ്യുക" ,
   "FARE_ESTIMATE" : "നിരക്ക് എസ്റ്റിമേറ്റ്" ,
@@ -475,5 +476,7 @@ const malayalamStrings = {
   "IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL" : "ഇതിന് പതിവിലും കൂടുതൽ സമയമെടുക്കുന്നതായി തോന്നുന്നു.",
   "CONTINUE_SEARCH_WITH" : "ഉപയോഗിച്ച് തിരയൽ തുടരുക",
   "CONTINUING_SEARCH_WITH" : "ഉപയോഗിച്ച് തിരയൽ തുടരുന്നു",
-  "SEARCHING_WITH" : "ഉപയോഗിച്ച് തിരയുന്നു"
+  "SEARCHING_WITH" : "ഉപയോഗിച്ച് തിരയുന്നു",
+  "THE_DRIVER_PREFERRED_YOUR_SPECIAL_LOCATION_AND_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ഡ്രൈവർ നിങ്ങളുടെ പ്രത്യേക ലൊക്കേഷൻ തിരഞ്ഞെടുത്തു, നിങ്ങളുടെ ലൊക്കേഷനിലേക്കുള്ള വഴിയിലാണ്.",
+  "ALLOW_LOCATION_ACCESS": "ലൊക്കേഷൻ ആക്സസ് അനുവദിക്കുക"
 }

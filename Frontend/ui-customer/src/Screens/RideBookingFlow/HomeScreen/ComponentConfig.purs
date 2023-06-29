@@ -40,7 +40,6 @@ import Components.ChatView as ChatView
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Data.String as DS
 import Animation.Config as AnimConfig
-import Components.SearchLocationModel as SearchLocationModel
 import Components.SourceToDestination as SourceToDestination
 import Data.Array as DA
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -119,9 +118,7 @@ cancelAppConfig state = let
       optionButtonOrientation = "VERTICAL",
       buttonLayoutMargin = Margin 16 0 16 20,
       primaryText {
-        text = case distanceString of
-                  Just distanceString  -> distanceString <> getString PLEASE_CONTACT_THE_DRIVER_BEFORE_CANCELLING
-                  Nothing -> getString DRIVER_IS_NOT_MOVING_Q <> getString WOULD_YOU_LIKE_TO_CHECK_WITH_THE_DRIVER_BEFORE_CANCELLING
+        text = distanceString <> getString PLEASE_CONTACT_THE_DRIVER_BEFORE_CANCELLING
       , margin = Margin 16 20 16 20
       , fontSize = FontSize.a_18},
       secondaryText { visibility = GONE },
@@ -159,20 +156,18 @@ cancelAppConfig state = let
       where distanceString = getDistanceString state.data.driverInfoCardState.distance (fromMaybe 0 state.data.driverInfoCardState.initDistance) state.props.zoneType.priorityTag
 
 
-getDistanceString :: Int -> Int -> ZoneType -> Maybe String
+getDistanceString :: Int -> Int -> ZoneType -> String
 getDistanceString currDistance initDistance zoneType
-  | currDistance <= 15 = Just $ getString DRIVER_IS_NEAR_YOUR_LOCATION
-  | currDistance <= 500 = Just $ (if zoneType == METRO then
-                                    getString DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST
-                                  else
-                                    getString YOUR_DRIVER_IS_JUST
-                                 ) <> show currDistance <> getString M_AWAY
-  | currDistance > initDistance = Just $ getString DRIVER_MIGHT_BE_TAKING_ALTERNATE_ROUTE
-  | currDistance < initDistance = Just $ if zoneType == METRO then
-                                          getString DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST <> getKmMeter (initDistance - currDistance) <> getString AND_HAS_TRAVELLED
-                                         else
-                                          getString DRIVER_HAS_ALREADY_TRAVELLED <> getKmMeter (initDistance - currDistance) <> if (getValueToLocalStore LANGUAGE_KEY) == "EN_US" then "." else getString HAS_TRAVELLED
-  | otherwise =  Nothing
+  | currDistance <= 15 =  getString DRIVER_IS_NEAR_YOUR_LOCATION
+  | currDistance <= 500 = (if zoneType == METRO then
+                              getString DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST
+                            else
+                              getString YOUR_DRIVER_IS_JUST
+                            ) <> show currDistance <> getString M_AWAY
+  | otherwise = if zoneType == METRO then
+                  getString THE_DRIVER_PREFERRED_YOUR_SPECIAL_LOCATION_AND_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION
+                else
+                  getString DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION
 
 skipButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 skipButtonConfig state =
@@ -385,6 +380,7 @@ cancelRidePopUpConfig state =
     cancelRideconfig' =
       cancelRideconfig
         { selectionOptions = state.props.cancellationReasons
+        , showAllOptionsText = (getString SHOW_ALL_OPTIONS)
         , primaryButtonTextConfig
           { firstText = getString WAIT_FOR_DRIVER
           , secondText = getString CANCEL_RIDE

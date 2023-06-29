@@ -28,7 +28,7 @@ import Data.Function (flip)
 import Data.Maybe (Maybe(..))
 import Debug (spy)
 import Effect (Effect)
-import Engineering.Helpers.Commons (getNewIDWithTag, os, safeMarginBottom, safeMarginTop, screenHeight, screenWidth, isPreviousVersion)
+import Engineering.Helpers.Commons (getNewIDWithTag, os, safeMarginBottom, safeMarginTop, screenHeight, screenWidth, isPreviousVersion, setText')
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getLocationName, debounceFunction, getPreviousVersion)
@@ -275,7 +275,11 @@ sourceDestinationEditTextView state push =
             , width WRAP_CONTENT
             , gravity CENTER
             , padding (Padding 0 10 0 5)
-            , onClick push (const $ SourceClear)
+            , onClick (\action -> do
+                        _ <- if state.isSource == Just true then setText' (getNewIDWithTag "SourceEditText") "" else pure unit
+                        _ <- push action
+                        pure unit
+                      )(const $ SourceClear)
             , visibility if state.source /= "" then VISIBLE else GONE
             ]
             [ imageView

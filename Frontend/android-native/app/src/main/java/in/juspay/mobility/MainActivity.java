@@ -351,8 +351,9 @@ public class MainActivity extends AppCompatActivity {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
+        String clientId = getApplicationContext().getResources().getString(R.string.client_id);
         CleverTapAPI cleverTap = CleverTapAPI.getDefaultInstance(getApplicationContext());
-        CleverTapAPI.createNotificationChannel(getApplicationContext(),"NammaYatri","NammaYatri","notification",NotificationManager.IMPORTANCE_MAX,true);
+        CleverTapAPI.createNotificationChannel(getApplicationContext(),clientId,clientId,"notification",NotificationManager.IMPORTANCE_MAX,true);
         CleverTapAPI.setDebugLevel(CleverTapAPI.LogLevel.VERBOSE);
         cleverTap.enableDeviceNetworkInfoReporting(true);
 

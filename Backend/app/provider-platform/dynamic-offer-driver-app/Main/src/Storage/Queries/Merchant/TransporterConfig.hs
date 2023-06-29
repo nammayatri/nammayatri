@@ -128,11 +128,15 @@ updateReferralLinkPassword (Id merchantId) newPassword = do
 --         TransporterConfigMinRidesForCancellationScore =. val config.minRidesForCancellationScore,
 --         TransporterConfigMediaFileUrlPattern =. val config.mediaFileUrlPattern,
 --         TransporterConfigMediaFileSizeUpperLimit =. val config.mediaFileSizeUpperLimit,
---         TransporterConfigWaitingTimeEstimatedThreshold =. val config.waitingTimeEstimatedThreshold,
 --         TransporterConfigOnboardingTryLimit =. val config.onboardingTryLimit,
 --         TransporterConfigOnboardingRetryTimeInHours =. val config.onboardingRetryTimeInHours,
 --         TransporterConfigCheckImageExtractionForDashboard =. val config.checkImageExtractionForDashboard,
 --         TransporterConfigSearchRepeatLimit =. val config.searchRepeatLimit,
+--         TransporterConfigDriverPaymentCycleStartTime =. val (nominalDiffTimeToSeconds config.driverPaymentCycleStartTime),
+--         TransporterConfigTimeDiffFromUtc =. val config.timeDiffFromUtc,
+--         TransporterConfigDriverPaymentCycleBuffer =. val (nominalDiffTimeToSeconds config.driverPaymentCycleBuffer),
+--         TransporterConfigDriverPaymentReminderInterval =. val (nominalDiffTimeToSeconds config.driverPaymentReminderInterval),
+--         TransporterConfigDriverPaymentCycleDuration =. val (nominalDiffTimeToSeconds config.driverPaymentCycleDuration),
 --         TransporterConfigUpdatedAt =. val now
 --       ]
 --     where_ $ tbl ^. TransporterConfigMerchantId ==. val (toKey config.merchantId)

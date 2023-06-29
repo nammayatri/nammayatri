@@ -22,6 +22,7 @@ where
 
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
+import qualified Kernel.External.Payment.Juspay.Types as Juspay
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (Value)
 import Kernel.Types.Common hiding (id)
@@ -53,13 +54,58 @@ createOrderService ::
   (Payment.CreateOrderReq -> m Payment.CreateOrderResp) ->
   m Payment.CreateOrderResp
 createOrderService merchantId personId orderId createOrderReq createOrderCall = do
-  existingOrder <- runInReplica $ QOrder.findById orderId
-  whenJust existingOrder $ \_ -> throwError (InvalidRequest "Payment order already exists")
-  createOrderResp <- createOrderCall createOrderReq -- api call
-  paymentOrder <- buildPaymentOrder merchantId personId orderId createOrderReq createOrderResp
-  Esq.runTransaction $
-    QOrder.create paymentOrder
-  pure createOrderResp
+  mbExistingOrder <- runInReplica $ QOrder.findById orderId
+  case mbExistingOrder of
+    Nothing -> do
+      createOrderResp <- createOrderCall createOrderReq -- api call
+      paymentOrder <- buildPaymentOrder merchantId personId orderId createOrderReq createOrderResp
+      Esq.runTransaction $
+        QOrder.create paymentOrder
+      pure createOrderResp
+    Just existingOrder -> do
+      sdk_payload <- buildSDKPayload createOrderReq existingOrder
+      pure
+        Payment.CreateOrderResp
+          { status = existingOrder.status,
+            id = existingOrder.paymentServiceOrderId,
+            order_id = existingOrder.shortId.getShortId,
+            payment_links = Just existingOrder.paymentLinks,
+            sdk_payload
+          }
+
+buildSDKPayload :: EncFlow m r => Payment.CreateOrderReq -> DOrder.PaymentOrder -> m Juspay.SDKPayload
+buildSDKPayload req order = do
+  payload <- buildSDKPayloadDetails req order
+  pure
+    Juspay.SDKPayload
+      { requestId = order.requestId,
+        service = order.service,
+        payload
+      }
+
+buildSDKPayloadDetails :: EncFlow m r => Payment.CreateOrderReq -> DOrder.PaymentOrder -> m Juspay.SDKPayloadDetails
+buildSDKPayloadDetails req order = do
+  clientAuthToken <- decrypt order.clientAuthToken
+  pure
+    Juspay.SDKPayloadDetails
+      { clientId = order.clientId,
+        amount = show order.amount,
+        merchantId = Just order.merchantId.getId,
+        clientAuthToken,
+        clientAuthTokenExpiry = order.clientAuthTokenExpiry,
+        environment = order.environment,
+        options_getUpiDeepLinks = order.getUpiDeepLinksOption,
+        lastName = req.customerLastName,
+        action = order.action,
+        customerId = Just order.personId.getId,
+        returnUrl = order.returnUrl,
+        currency = order.currency,
+        firstName = req.customerFirstName,
+        customerPhone = Just req.customerPhone,
+        customerEmail = Just req.customerEmail,
+        orderId = Just order.shortId.getShortId,
+        description = order.description
+      }
 
 buildPaymentOrder ::
   ( EncFlow m r,
@@ -79,6 +125,13 @@ buildPaymentOrder merchantId personId orderId req resp = do
     DOrder.PaymentOrder
       { id = orderId,
         shortId = ShortId req.orderShortId,
+        paymentServiceOrderId = resp.id,
+        requestId = resp.sdk_payload.requestId,
+        service = resp.sdk_payload.service,
+        clientId = resp.sdk_payload.payload.clientId,
+        description = resp.sdk_payload.payload.description,
+        returnUrl = resp.sdk_payload.payload.returnUrl,
+        action = resp.sdk_payload.payload.action,
         personId,
         merchantId,
         amount = req.amount, -- FIXME resp.sdk_payload.payload.amount

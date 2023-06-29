@@ -174,6 +174,7 @@ initData = {
       }
     , timerId : ""
     , findingRidesAgain : false
+    , routeEndPoints : Nothing
     }
 }
 

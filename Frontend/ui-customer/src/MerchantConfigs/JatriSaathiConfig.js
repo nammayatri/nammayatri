@@ -82,7 +82,7 @@ const bengaliStrings = {
   "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER": "\n আপনি আপনার যাত্রী সাথী ড্রাইভারকে জিজ্ঞাসা করে একটি রেফারেল কোড পেতে পারেন।",
   "YOUR_LOCATION_HELPS_OUR_SYSTEM" : "আপনার অবস্থান আমাদের সিস্টেমকে ট্যাক্সি দ্বারা আশেপাশের সমস্ত স্থান ম্যাপ করতে এবং আপনাকে দ্রুততম রাইড করতে সাহায্য করে৷",
   "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT" : "আপনি জাত্রি সাথি সমর্থন দলকে কল করতে চলেছেন। আপনি কি এগিয়ে যেতে চান?",
-  "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "Jatri Saathi-এ স্বাগতম \nরাইড বুকিং শুরু করতে, আমাদের আপনার ডিভাইসের লোকেশন প্রয়োজন।"
+  "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "Jatri Saathi-এ স্বাগতম \nরাইড বুকিং শুরু করতে, অনুগ্রহ করে আমাদের আপনাকে খুঁজে পেতে অনুমতি দিন!"
 }
 
 const hindiStrings = {
@@ -97,7 +97,7 @@ const hindiStrings = {
   "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER": "\n आप अपने जात्री साथी ड्राइवर से पूछकर रेफ़रल कोड प्राप्त कर सकते हैं।",
   "YOUR_LOCATION_HELPS_OUR_SYSTEM" : "आपका स्थान हमारे सिस्टम को आस पास के सभी टैक्सियों को मैप करने में सहायता कर्ता है और आपको सबसे तेज सवारी प्रदान करता है",
   "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT" : "आप जात्री साथी सपोर्ट टीम को कॉल करने वाले हैं। क्या आपकी आगे बढ़ने की इच्छा है?",
-  "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "जात्री साथी में आपका स्वागत है! \nराइड बुक करना शुरू करने के लिए, हमें आपके डिवाइस की लोकेशन की आवश्यकता होती है।"
+  "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "जात्री साथी में आपका स्वागत है! \nसवारी की बुकिंग शुरू करने के लिए, कृपया हमें आपको ढूंढने की अनुमति दें!"
 }
 
 const englishStrings = {
@@ -112,5 +112,5 @@ const englishStrings = {
   "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER": "\nYou can get a referral code by asking your Jatri Sathi Driver.",
   "YOUR_LOCATION_HELPS_OUR_SYSTEM" : "Your location helps our system to map down all the near by taxis and get you the quickest ride possible.",
   "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT" : "You are about to place a call to the Jatri Sathi Support Team. Do you want to proceed?",
-  "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "Welcome to Jatri Sathi! \nTo start booking rides, we require your device location."
+  "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "Welcome to Jatri Sathi! \nTo start booking rides, please allow us to find you!"
 }

@@ -24,7 +24,7 @@ import Components.SettingSideBar.Controller as SettingSideBarController
 import Screens.RideBookingFlow.HomeScreen.Config (getTipViewData , setTipViewData)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
-import Data.Array (catMaybes, filter, length, null, snoc, (!!), any, sortBy, head, uncons)
+import Data.Array (catMaybes, filter, length, null, snoc, (!!), any, sortBy, head, uncons, last)
 import Data.Array as Arr
 import Data.Either (Either(..))
 import Data.Int as INT
@@ -63,7 +63,7 @@ import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.Types (CardType(..), AddNewAddressScreenState(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), EmailErrorType(..), ZoneType(..), TipViewData(..))
-import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), SelectEstimateRes(..),UpdateProfileReq(..), OnCallRes(..))
+import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), SelectEstimateRes(..),UpdateProfileReq(..), OnCallRes(..), Snapped(..))
 import Services.Backend as Remote
 import Screens.Types (Gender(..)) as Gender
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
@@ -94,9 +94,9 @@ baseAppFlow gPayload refreshFlow = do
   _ <- pure $ setValueToLocalStore TRACKING_DRIVER "False"
   _ <- pure $ setValueToLocalStore TRACKING_ENABLED "True"
   _ <- pure $ setValueToLocalStore RELOAD_SAVED_LOCATION "true"
-  _ <- pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT "15"
+  _ <- pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT "17"
   _ <- pure $ setValueToLocalStore TEST_POLLING_INTERVAL "1500.0"
-  _ <- pure $ setValueToLocalStore TEST_POLLING_COUNT "113"
+  _ <- pure $ setValueToLocalStore TEST_POLLING_COUNT "117"
   _ <- pure $ setValueToLocalStore RATING_SKIPPED "false"
   _ <- pure $ setValueToLocalStore POINTS_FACTOR "3"
   _ <- pure $ setValueToLocalStore ACCURACY_THRESHOLD "23.0"
@@ -314,17 +314,27 @@ currentFlowStatus = do
       else do
         resp <- lift $ lift $ Remote.updateProfile (Remote.mkUpdateProfileRequest)
         pure unit
-      void $ pure $ setCleverTapUserData "Name" ((fromMaybe "" response.firstName) <> " " <> (fromMaybe "" response.middleName) <> " " <> (fromMaybe "" response.lastName))
 
-      if (fromMaybe "UNKNOWN" (response.gender) /= "UNKNOWN") then do
-        void $ pure $ setCleverTapUserData "gender" (fromMaybe "" response.gender)
-        pure unit
-        else pure unit
-      if (isJust response.language) then do
-        _ <- pure $ spy "testing" (fromMaybe "" response.language)
-        void $ pure $ setCleverTapUserProp "Preferred Language" (fromMaybe "" response.language)
-        pure unit
-        else pure unit
+      let middleName = case response.middleName of 
+                    Just ""  -> ""
+                    Just name -> (" " <> name)
+                    Nothing -> ""
+          lastName   = case response.lastName of 
+                    Just "" -> ""
+                    Just name -> (" " <> name)
+                    Nothing -> ""
+          name = (fromMaybe "" response.firstName) <> middleName <> lastName
+      void $ pure $ setCleverTapUserData "Name" name
+
+      when (fromMaybe "UNKNOWN" (response.gender) /= "UNKNOWN") $ do
+          case response.gender of
+              Just value -> void $ pure $ setCleverTapUserData "gender" (spy "hello" value)
+              Nothing -> pure unit
+
+      case response.language of
+          Just value -> void $ pure $ setCleverTapUserData "Preferred Language" value
+          Nothing -> pure unit
+
       void $ pure $ setCleverTapUserData "Identity" (getValueToLocalStore CUSTOMER_ID)
       void $ pure $ setCleverTapUserData "Phone" ("+91" <> (getValueToLocalStore MOBILE_NUMBER))
 
@@ -343,7 +353,9 @@ currentFlowStatus = do
         else pure unit
       if isJust response.email then do
         setValueToLocalStore USER_EMAIL $ fromMaybe "" response.email
-        void $ pure $ setCleverTapUserData "Email" (fromMaybe "" response.email)
+        case response.email of
+            Just value -> void $ pure $ setCleverTapUserData "Email" value
+            Nothing -> pure unit
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{settingSideBar{email = Just (fromMaybe "" response.email)}}})
         else pure unit
 
@@ -495,10 +507,13 @@ accountSetUpScreenFlow = do
   case flow of
     GO_HOME state -> do
       void $ lift $ lift $ toggleLoader false
-      let gender = state.data.gender
+      let gender = getGenderValue state.data.gender
       let (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest
           requiredData = initialData{firstName = (Just state.data.name),gender = gender}
-      void $ pure $ setCleverTapUserData "gender" (fromMaybe "" gender)
+      case gender of
+          Just value -> void $ pure $ setCleverTapUserData "gender" value
+          Nothing -> pure unit
+      
       resp <- lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
       case resp of
         Right response -> do
@@ -563,17 +578,17 @@ homeScreenFlow = do
         homeScreenFlow
         else pure unit
       (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong (encodeAddress address.formattedAddress [] state.props.sourcePlaceId) state.data.destinationAddress)
-      if (os == "IOS") then do
-        routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong (Remote.normalRoute "") "NORMAL" address.formattedAddress state.data.destination rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "")
-        pure unit
-      else do
-        routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong (Remote.normalRoute "") "NORMAL" "" "" rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "")
-        pure unit
+      routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong (Remote.normalRoute "") "NORMAL" address.formattedAddress state.data.destination rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "")
       case rideSearchRes.routeInfo of
         Just (Route response) -> do
           let distance = if response.distance < 1000 then toString(response.distance)  <> " m" else parseFloat(INT.toNumber(response.distance) / 1000.0) 2 <> " km"
               duration = (show (response.duration / 60)) <> " min"
               tipEnabled = isTipEnabled response.distance
+              Snapped points = response.points
+          case head points, last points of
+            Just (LatLong source), Just (LatLong dest) -> do
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ routeEndPoints = Just ({ source : { lat : source.lat, lng : source.lon, place : address.formattedAddress }, destination : { lat : dest.lat, lng : dest.lon, place : state.data.destination } }) } })
+            _ , _ -> pure unit
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration, source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] state.props.sourcePlaceId}, props{customerTip{enableTips = tipEnabled}}})
           _ <- setValueToLocalStore ENABLE_TIPS $ show tipEnabled
           if ((getMerchant FunctionCall) /= YATRI && response.distance >= 50000) then do
@@ -734,7 +749,9 @@ homeScreenFlow = do
             destSpecialTagIcon = specialLocationIcons state.props.zoneType.destinationTag
             srcMarker = (Remote.normalRoute "").srcMarker
             destMarker = (Remote.normalRoute "").destMarker
-        lift $ lift $ liftFlow $ updateRouteMarker $ updateRouteMarkerConfig (Remote.walkCoordinate state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong) state.data.source state.data.destination srcMarker destMarker (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon)
+        case state.props.routeEndPoints of
+          Just points -> lift $ lift $ liftFlow $ updateRouteMarker $ updateRouteMarkerConfig (Remote.walkCoordinate points.source.lat points.source.lng points.destination.lat points.destination.lng) points.source.place points.destination.place srcMarker destMarker (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon)
+          Nothing -> pure unit
         homeScreenFlow
     GET_SELECT_LIST state -> do
       when (isLocalStageOn QuoteList) $ do
@@ -1355,6 +1372,14 @@ selectLanguageScreenFlow = do
     UPDATE_LANGUAGE state -> do
                                 setValueToLocalStore LANGUAGE_KEY (state.props.selectedLanguage)
                                 _ <- lift $ lift $ liftFlow $(firebaseLogEventWithParams "ny_user_lang_selec" "language" (state.props.selectedLanguage))
+                                let langVal =  case (state.props.selectedLanguage) of
+                                                                                     "HI_IN" -> "HINDI"
+                                                                                     "EN_US" -> "ENGLISH"
+                                                                                     "KN_IN" -> "KANNADA"
+                                                                                     "BN_IN" -> "BENGALI"
+                                                                                     "ML_IN" -> "MALAYALAM"
+                                                                                     _ -> state.props.selectedLanguage
+                                void $ pure $ setCleverTapUserProp "Preferred Language" langVal
                                 resp <- lift $ lift $ Remote.updateProfile (Remote.mkUpdateProfileRequest)
                                 modifyScreenState $ SelectLanguageScreenStateType (\selectLanguageScreen -> SelectLanguageScreenData.initData)
                                 homeScreenFlow

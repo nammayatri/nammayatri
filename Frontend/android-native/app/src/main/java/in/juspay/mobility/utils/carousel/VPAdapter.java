@@ -1,5 +1,6 @@
 package in.juspay.mobility.utils.carousel;
 
+import android.content.res.Resources;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,6 +28,7 @@ public class VPAdapter extends RecyclerView.Adapter<VPAdapter.ViewHolder> {
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         ViewPagerItem viewPagerItem = viewPagerItemArrayList.get(position);
         holder.imageView.setImageResource(viewPagerItem.imageID);
+        holder.imageView.getLayoutParams().height = (Resources.getSystem().getDisplayMetrics().heightPixels)/3;
         holder.tvHeading.setText(viewPagerItem.heading);
         holder.tvDesc.setText(viewPagerItem.description);
     }

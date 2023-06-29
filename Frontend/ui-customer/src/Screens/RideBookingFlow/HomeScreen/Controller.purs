@@ -750,6 +750,8 @@ eval BackPressed state = do
     _               -> do
                         if state.props.isLocationTracking then continue state{props{isLocationTracking = false}}
                           else if state.props.cancelSearchCallDriver then continue state{props{cancelSearchCallDriver = false}}
+                          else if state.props.showCallPopUp then continue state{props{showCallPopUp = false}}
+                          else if state.props.isCancelRide then continue state{props{isCancelRide = false}}
                           else if state.props.isSaveFavourite then continueWithCmd state [pure $ SaveFavouriteCardAction SaveFavouriteCardController.OnClose]
                           else if state.props.showShareAppPopUp then continue state{props{showShareAppPopUp=false}}
                           else if state.props.showMultipleRideInfo then continue state{props{showMultipleRideInfo=false}}
@@ -1210,7 +1212,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.EditTex
   else
     continueWithCmd state { props { isSource = Just true} }
       [ do
-          if state.props.isSearchLocation /= LocateOnMap then do
+          if state.props.isSearchLocation /= LocateOnMap && state.props.isSource == Just true then do
             _ <- (setText' (getNewIDWithTag "SourceEditText") state.data.source)
             pure $ NoAction
           else
@@ -1226,7 +1228,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SourceC
     pure unit
   else
     pure unit
-  continue state { data { source = "" }, props { isSource = Just true, isSrcServiceable = true, isRideServiceable = true } }
+  continue state { props { isSource = Just true, isSrcServiceable = true, isRideServiceable = true } }
 
 eval (SearchLocationModelActionController (SearchLocationModelController.DestinationClear)) state = do
   _ <- pure $ performHapticFeedback unit

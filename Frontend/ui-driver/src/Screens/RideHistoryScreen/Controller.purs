@@ -15,7 +15,7 @@
 
 module Screens.RideHistoryScreen.Controller where
 
-import Prelude (class Show, pure, unit, ($), map, (==), not,bind, (&&),(<>) ,(+), (*), (/=), discard, (/))
+import Prelude (class Show, pure, unit, ($), map, (==), not,bind, (&&),(<>) ,(+), (*), (/=), discard, (/), (||))
 import Screens.Types (RideHistoryScreenState, AnimationState(..), ItemState(..), IndividualRideCardState(..))
 import PrestoDOM.Types.Core (class Loggable)
 import PrestoDOM (Eval, continue, exit, ScrollState(..), updateAndExit)
@@ -30,7 +30,7 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Int(fromString, toNumber)
 import Data.Number(fromString) as NUM
 import Data.String (Pattern(..), split)
-import Helpers.Utils (setRefreshing, setEnabled, parseFloat, getSpecialZoneConfig, convertUTCtoISC)
+import Helpers.Utils (setRefreshing, setEnabled, parseFloat, getSpecialZoneConfig, convertUTCtoISC, getRequiredTag)
 import Engineering.Helpers.Commons (getNewIDWithTag, strToBool)
 import Data.Int (ceil)
 import Styles.Colors as Color
@@ -183,7 +183,7 @@ rideHistoryListTransformer list = (map (\(RidesInfo ride) -> {
                   "CANCELLED" -> Color.red
                   _ -> Color.black800),
     riderName : toPropValue $ fromMaybe "" ride.riderName,
-    metroTagVisibility : toPropValue if ride.specialLocationTag == Nothing then "gone" else "visible",
+    metroTagVisibility : toPropValue if (ride.specialLocationTag /= Nothing || (getRequiredTag "text" ride.specialLocationTag) /= Nothing) then "visible" else "gone",
     specialZoneText : toPropValue $ getSpecialZoneConfig "text" ride.specialLocationTag,
     specialZoneImage : toPropValue $ getSpecialZoneConfig "imageUrl" ride.specialLocationTag,
     specialZoneLayoutBackground : toPropValue $ getSpecialZoneConfig "backgroundColor" ride.specialLocationTag

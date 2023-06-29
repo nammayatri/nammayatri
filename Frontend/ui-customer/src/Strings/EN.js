@@ -162,7 +162,7 @@ const englishStrings = {
   "PLEASE_WAIT_WHILE_IN_PROGRESS": "Please wait while in progress",
   "SET_LOCATION_ON_MAP": "Set location on map",
   "CURRENT_LOCATION": "Current Location",
-  "I_AM_NOT_RECEIVING_ANY_RIDES": "I am not receiving any rides",
+  "ACTUAL_FARE_WAS_HIGHER_THAN_WHAT_WAS_SHOWN": "Actual fare was higher than what was shown",
   "DELETE": "Delete",
   "ARE_YOU_SURE_YOU_WANT_TO_LOGOUT": "Are you sure you want to logout?",
   "ARE_YOU_SURE_YOU_WANT_TO_CANCEL": "Are you sure you want to Cancel?",
@@ -474,7 +474,7 @@ const englishStrings = {
   "DRIVER_WAS_TAKING_TOO_LONG_TO_REACH_THE_PICKUP_LOCATION" : "Driver was taking too long to reach the pickup location",
   "THE_PICKUP_LOCATION_ENTERED_WAS_WRONG" : "The pickup location entered was wrong",
   "YOUR_DRIVER_IS_JUST" : "Your Driver is just ",
-  "M_AWAY" : "m away.",
+  "M_AWAY" : " m away.",
   "DRIVER_HAS_ALREADY_TRAVELLED" : "Driver has already travelled ",
   "PLEASE_CONTACT_THE_DRIVER_BEFORE_CANCELLING" : "\nPlease contact the driver before cancelling",
   "CHANGE_OF_PLANS" : "Change of plans",
@@ -490,7 +490,7 @@ const englishStrings = {
   "GO_BACK_TEXT" : "Go Back",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST": "The driver preferred your special request and is just ",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST": "The driver preferred your special request and has travelled ",
-  "AND_HAS_TRAVELLED": " km.",
+  "AND_HAS_TRAVELLED": ".",
   "PLEASE_FIND_REVISED_FARE_ESTIMATE": "Please find the Revised Estimated Fare. Night charges are 1.5 times the day charges.",
   "FARE_ESTIMATE" : "Fare Estimate",
   "TIP_SELECTED" : "Tip Selected",
@@ -498,5 +498,8 @@ const englishStrings = {
   "IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL" : "It seems to be taking longer than usual.",
   "CONTINUE_SEARCH_WITH" : "Continue Search with",
   "CONTINUING_SEARCH_WITH" : "Continuing search with",
-  "SEARCHING_WITH" : "Searching with"
+  "SEARCHING_WITH" : "Searching with",
+  "THE_DRIVER_PREFERRED_YOUR_SPECIAL_LOCATION_AND_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "The driver preferred your special location and is already on the way to your location.",
+  "DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "Driver is already on the way to your location.",
+  "ALLOW_LOCATION_ACCESS": "Allow Location Access"
 }

@@ -88,16 +88,38 @@ findWindowsWithStatus driverId startTime endTime mbStatus limitVal offsetVal = d
     offset $ fromIntegral offsetVal
     return driverFee
 
+findOngoingAfterEndTime :: Transactionable m => Id Person -> UTCTime -> m (Maybe DriverFee)
+findOngoingAfterEndTime driverId now = do
+  findOne $ do
+    -- assuming one such entry only
+    driverFee <- from $ table @DriverFeeT
+    where_ $
+      driverFee ^. DriverFeeDriverId ==. val (toKey driverId)
+        &&. driverFee ^. DriverFeeStatus ==. val ONGOING
+        &&. driverFee ^. DriverFeeEndTime <=. val now
+    return driverFee
+
+findUnpaidAfterPayBy :: Transactionable m => Id Person -> UTCTime -> m (Maybe DriverFee)
+findUnpaidAfterPayBy driverId now = do
+  findOne $ do
+    -- assuming only one such entry only
+    driverFee <- from $ table @DriverFeeT
+    where_ $
+      driverFee ^. DriverFeeDriverId ==. val (toKey driverId)
+        &&. driverFee ^. DriverFeeStatus `in_` valList [PAYMENT_PENDING, PAYMENT_OVERDUE]
+        &&. driverFee ^. DriverFeePayBy <=. val now
+    return driverFee
+
 updateFee :: Id DriverFee -> Maybe Money -> Money -> Money -> HighPrecMoney -> HighPrecMoney -> UTCTime -> SqlDB ()
 updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now = do
   let fare = fromMaybe 0 mbFare
   Esq.update $ \tbl -> do
     set
       tbl
-      [ DriverFeeGovtCharges =. val govtCharges,
-        DriverFeePlatformFee =. val platformFee,
-        DriverFeeCgst =. val cgst,
-        DriverFeeSgst =. val sgst,
+      [ DriverFeeGovtCharges +=. val govtCharges,
+        DriverFeePlatformFee +=. val platformFee,
+        DriverFeeCgst +=. val cgst,
+        DriverFeeSgst +=. val sgst,
         DriverFeeStatus =. val ONGOING,
         DriverFeeTotalEarnings +=. val fare,
         DriverFeeNumRides +=. val 1, -- in the api, num_rides needed without cost contribution?

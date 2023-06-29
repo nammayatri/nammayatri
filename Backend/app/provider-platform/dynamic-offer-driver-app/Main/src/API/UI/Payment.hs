@@ -40,9 +40,13 @@ handler :: FlowServer API
 handler authInfo =
   createOrder authInfo
     :<|> getStatus authInfo
+    :<|> getOrder authInfo
 
 createOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DriverFee -> FlowHandler Payment.CreateOrderResp
 createOrder tokenDetails driverFeeId = withFlowHandlerAPI $ DPayment.createOrder tokenDetails driverFeeId
 
 getStatus :: (Id DP.Person, Id Merchant.Merchant) -> Id DOrder.PaymentOrder -> FlowHandler DPayment.PaymentStatusResp
 getStatus tokenDetails orderId = withFlowHandlerAPI $ DPayment.getStatus tokenDetails orderId
+
+getOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DOrder.PaymentOrder -> FlowHandler DOrder.PaymentOrderAPIEntity
+getOrder tokenDetails orderId = withFlowHandlerAPI $ DPayment.getOrder tokenDetails orderId

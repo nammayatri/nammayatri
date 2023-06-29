@@ -161,7 +161,7 @@ const hindiStrings = {
   "PLEASE_WAIT_WHILE_IN_PROGRESS": "कृपया प्रगति के दौरान प्रतीक्षा करें",
   "SET_LOCATION_ON_MAP": "मानचित्र पर स्थान निर्धारित करें",
   "CURRENT_LOCATION": "वर्तमान स्थान",
-  "I_AM_NOT_RECEIVING_ANY_RIDES": "मुझे कोई सवारी नहीं मिल रही है",
+  "ACTUAL_FARE_WAS_HIGHER_THAN_WHAT_WAS_SHOWN": "वास्तविक किराया जो दिखाया गया था उससे अधिक था।",
   "DELETE": "मिटायें",
   "ARE_YOU_SURE_YOU_WANT_TO_LOGOUT": "क्या आप लॉग आउट करना चाहते हैं ?",
   "ARE_YOU_SURE_YOU_WANT_TO_CANCEL": "क्या आप रद्द करना चाहते हैं ?",
@@ -473,7 +473,7 @@ const hindiStrings = {
   "DRIVER_WAS_TAKING_TOO_LONG_TO_REACH_THE_PICKUP_LOCATION" : "ड्राइवर को पिकअप लोकेशन तक पहुंचने में काफी समय लग रहा था।",
   "THE_PICKUP_LOCATION_ENTERED_WAS_WRONG" : "दर्ज किया गया पिकअप स्थान गलत था।",
   "YOUR_DRIVER_IS_JUST" : "आपका ड्राइवर बस",
-  "M_AWAY" : "m दूर है।",
+  "M_AWAY" : " m दूर है।",
   "DRIVER_HAS_ALREADY_TRAVELLED" : "ड्राइवर ",
   "PLEASE_CONTACT_THE_DRIVER_BEFORE_CANCELLING" : "\nकृपया कैंसिल करने से पहले ड्राइवर से संपर्क करें।",
   "CHANGE_OF_PLANS" : "प्लान में परिवर्तन",
@@ -490,7 +490,7 @@ const hindiStrings = {
   "GO_BACK_TEXT": "पीछे जाएं",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST": "ड्राइवर ने आपके विशेष अनुरोध को प्राथमिकता दी और वह केवल ",
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST": "ड्राइवर ने आपके विशेष अनुरोध को प्राथमिकता दी और पहले ही ",
-  "AND_HAS_TRAVELLED": " किमी की यात्रा कर चुका है।",
+  "AND_HAS_TRAVELLED": " की यात्रा कर चुका है।",
   "PLEASE_FIND_REVISED_FARE_ESTIMATE": "कृपया संशोधित अनुमानित किराया ज्ञात करें। रात का शुल्क दिन के शुल्क का 1.5 गुना है।",
   "REGISTERED_ADDRESS_DESCRIPTION" : "Juspay Technologies Private Limited <br> Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala Bengaluru, Karnataka- 560095, India.",
   "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "Website: <u>https://nammayatri.in/</u>",
@@ -501,5 +501,8 @@ const hindiStrings = {
   "IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL" : "ऐसा लगता है कि इसमें सामान्य से ज़्यादा समय लग रहा है।",
   "CONTINUE_SEARCH_WITH" : "के साथ खोज जारी रखें",
   "CONTINUING_SEARCH_WITH" : "से तलाश जारी है",
-  "SEARCHING_WITH" : "से खोज रहे हैं"
+  "SEARCHING_WITH" : "से खोज रहे हैं",
+  "THE_DRIVER_PREFERRED_YOUR_SPECIAL_LOCATION_AND_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ड्राइवर ने आपके विशेष स्थान को प्राथमिकता दी और वह आपके स्थान के रास्ते पर है।",
+  "DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ड्राइवर आपके स्थान के रास्ते पर है।",
+  "ALLOW_LOCATION_ACCESS": "स्थान पहुंच की अनुमति दें"
 }

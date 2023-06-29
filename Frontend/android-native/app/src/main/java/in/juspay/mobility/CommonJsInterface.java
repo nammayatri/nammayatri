@@ -454,9 +454,16 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         if (activity == null) return;
         activity.runOnUiThread(() -> {
             ViewPager2 viewPager2 = new ViewPager2(context);
-            LinearLayout layout = activity.findViewById(Integer.parseInt(id));
-            LinearLayout sliderDotsPanel;
+            LinearLayout parentLayout = activity.findViewById(Integer.parseInt(id));
+            LinearLayout sliderDotsPanel= new LinearLayout(context);
             LinearLayout.LayoutParams sliderDotsPanelParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            ViewGroup.LayoutParams scrollViewParams = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+            LinearLayout.LayoutParams linearLayoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT);
+            LinearLayout linearLayout = new LinearLayout(context);
+            linearLayout.setOrientation(LinearLayout.VERTICAL);
+            linearLayout.setLayoutParams(linearLayoutParams);
+            ScrollView scrollView = new ScrollView(context);
+            scrollView.setLayoutParams(scrollViewParams);
 
             //adding data in array list
             ArrayList<ViewPagerItem> viewPagerItemArrayList = new ArrayList<>();
@@ -478,13 +485,12 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             // setting the dots layout
             int dotsCount;
             ImageView[] dots;
-            sliderDotsPanel = new LinearLayout(context);
             dotsCount = vpAdapter.getItemCount();
             dots = new ImageView[dotsCount];
             for(int i = 0; i < dotsCount; i++){
                 dots[i] = new ImageView(context);
                 dots[i].setImageDrawable(ContextCompat.getDrawable(context, R.drawable.carousel_dot_inactive));
-                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(30, 30);
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(28, 28);
                 params.setMargins(14, 0, 14, 0);
                 sliderDotsPanel.addView(dots[i], params);
                 dots[0].setImageDrawable(ContextCompat.getDrawable(context, R.drawable.carousel_dot_active));
@@ -496,7 +502,6 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     }
                 });
             }
-            sliderDotsPanel.setGravity(Gravity.CENTER);
             sliderDotsPanel.setLayoutParams(sliderDotsPanelParams);
 
             viewPager2.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
@@ -518,8 +523,15 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     super.onPageScrollStateChanged(state);
                 }
             });
-            layout.addView(viewPager2);
-            layout.addView(sliderDotsPanel);
+            linearLayout.addView(viewPager2);
+            linearLayout.setGravity(Gravity.BOTTOM);
+            linearLayout.addView(sliderDotsPanel);
+            linearLayout.setWeightSum(2);
+            scrollView.addView(linearLayout);
+            scrollView.setFillViewport(true);
+            sliderDotsPanelParams.weight = 1;
+            sliderDotsPanel.setGravity(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+            parentLayout.addView(scrollView);
         });
     }
 

@@ -49,6 +49,7 @@ import Prelude (class Eq, class Show, (<<<))
 import Prelude (map, (*), (-), (/))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import Data.String (Pattern(..), split)
+import Data.Function.Uncurried (Fn4(..), runFn4)
 
 -- import Control.Monad.Except (runExcept)
 -- import Data.Array.NonEmpty (fromArray)
@@ -219,18 +220,28 @@ getVehicleType vehicleType =
     "TAXI_PLUS" -> "AC Taxi"
     _ -> ""
 
-foreign import getZoneTagConfig :: String -> String -> String
+foreign import getZoneTagConfig :: forall f a. Fn4 (f -> Maybe f) (Maybe f) String String (Maybe String)
 
 getSpecialZoneConfig :: String -> Maybe String -> String
 getSpecialZoneConfig prop tag = do
-  case tag of
+  case getRequiredTag prop tag of
     Nothing -> ""
+    Just tag' -> tag'
+
+getRequiredTag :: String -> Maybe String -> Maybe String
+getRequiredTag prop tag = do
+  case tag of 
+    Nothing -> Nothing
     Just tag' -> do
-      let arr = split (Pattern "_") tag'
-      let pickup = fromMaybe "" (arr DA.!! 0)
-      let drop = fromMaybe "" (arr DA.!! 1)
-      let priority = fromMaybe "" (arr DA.!! 2)
-      case priority of 
-        "PriorityPickup" -> getZoneTagConfig prop (pickup <> "_Pickup")
-        "PriorityDrop" -> getZoneTagConfig prop (drop <> "_Drop")
-        _ -> ""
+        let arr = split (Pattern "_") tag'
+        let pickup = fromMaybe "" (arr DA.!! 0)
+        let drop = fromMaybe "" (arr DA.!! 1)
+        let priority = fromMaybe "" (arr DA.!! 2)
+        case priority of 
+          "PriorityPickup" -> case (runFn4 getZoneTagConfig Just Nothing prop (pickup <> "_Pickup")) of
+                                Nothing -> Nothing
+                                Just val -> Just val
+          "PriorityDrop" -> case (runFn4 getZoneTagConfig Just Nothing prop (drop <> "_Drop")) of
+                                Nothing -> Nothing
+                                Just val -> Just val
+          _ -> Nothing

@@ -54,13 +54,12 @@ import qualified SharedLogic.DriverLocation as DrLoc
 import SharedLogic.DriverPool (updateDriverSpeedInRedis)
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig (CacheFlow)
-import Storage.CachedQueries.DriverInformation (updateSubscription)
+import Storage.CachedQueries.DriverInformation (updatePendingPayment, updateSubscription)
 import qualified Storage.CachedQueries.DriverInformation as DInfo
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
-import Storage.Queries.DriverFee (findOldestFeeByStatus)
+import Storage.Queries.DriverFee (findOldestFeeByStatus, findOngoingAfterEndTime, findUnpaidAfterPayBy, updateStatus)
 import qualified Storage.Queries.Person as QP
-import Tools.Error (DriverError (DriverUnsubscribed))
 import Tools.Metrics (CoreMetrics)
 
 type UpdateLocationReq = NonEmpty Waypoint
@@ -140,6 +139,28 @@ streamLocationUpdates mbRideId merchantId driverId point timestamp accuracy stat
     (topicName, Just (encodeUtf8 $ getId driverId))
     (DriverLocationUpdateStreamData (getId <$> mbRideId) (getId merchantId) timestamp now point accuracy status isDriverActive mbDriverMode)
 
+handleDriverPayments :: (Esq.EsqDBReplicaFlow m r, Esq.EsqDBFlow m r, CacheFlow m r) => Id Person.Person -> Seconds -> m ()
+handleDriverPayments driverId diffUtc = do
+  now <- getLocalCurrentTime diffUtc
+  ongoingAfterEndTime <- Esq.runInReplica $ findOngoingAfterEndTime driverId now
+  overdueFee <- Esq.runInReplica $ findOldestFeeByStatus (cast driverId) PAYMENT_OVERDUE
+
+  case (ongoingAfterEndTime, overdueFee) of
+    (Nothing, _) -> pure ()
+    (Just df, Nothing) -> do
+      Esq.runNoTransaction $ updateStatus PAYMENT_PENDING df.id now
+      updatePendingPayment True (cast driverId)
+    (Just dGFee, Just oDFee) -> mergeDriverFee dGFee oDFee now
+
+  unpaidAfterdeadline <- findUnpaidAfterPayBy driverId now
+  case unpaidAfterdeadline of
+    Nothing -> pure ()
+    Just df -> do
+      -- Esq.runTransaction $ do
+      updateStatus PAYMENT_OVERDUE df.id now
+      QDFS.updateStatus (cast driverId) DDFS.PAYMENT_OVERDUE
+      updateSubscription False (cast driverId)
+
 updateLocationHandler ::
   ( Redis.HedisFlow m r,
     CoreMetrics m,
@@ -159,18 +180,9 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
   withLogTag ("driverId-" <> driver.id.getId) $ do
     thresholdConfig <- QTConf.findByMerchantId driver.merchantId >>= fromMaybeM (TransporterConfigNotFound driver.merchantId.getId)
     when (thresholdConfig.subscription) $ do
-      lastPaymentOverdue <- runInReplica $ findOldestFeeByStatus (cast driver.id) PAYMENT_OVERDUE
-      lastPaymentPending <- runInReplica $ findOldestFeeByStatus (cast driver.id) PAYMENT_PENDING
-      case (lastPaymentOverdue, lastPaymentPending) of
-        (Just lpo, Just lpp) -> do
-          now <- getLocalCurrentTime thresholdConfig.timeDiffFromUtc
-          mergeDriverFee lpo lpp now
-        (Just _, Nothing) -> do
-          updateSubscription False (cast driver.id)
-          -- Esq.runNoTransaction $ QDFS.updateStatus (cast driver.id) DDFS.PAYMENT_OVERDUE
-          QDFS.updateStatus (cast driver.id) DDFS.PAYMENT_OVERDUE
-          throwError DriverUnsubscribed
-        _ -> pure ()
+      -- window end time over - still ongoing - sendPaymentReminder
+      -- payBy is also over - still ongoing/pending - unsubscribe
+      handleDriverPayments driver.id thresholdConfig.timeDiffFromUtc
     driverInfo <- DInfo.findById (cast driver.id) >>= fromMaybeM (PersonNotFound driver.id.getId)
     logInfo $ "got location updates: " <> getId driver.id <> " " <> encodeToText waypoints
     checkLocationUpdatesRateLimit driver.id
