@@ -150,3 +150,5 @@ onCall _ = (getBaseUrl "") <> "/onCall"
 
 likeMessage :: String -> String
 likeMessage messageId = (getBaseUrl "") <> "/message/" <> messageId <> "/like"
+customerFeedback :: String -> String
+customerFeedback dummy = (getBaseUrl "") <> "/rating"

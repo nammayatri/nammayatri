@@ -92,6 +92,9 @@ a_40 = fromMaybe 40 $ fromNumber $ 40.0 * multiplier
 a_44 :: FontSize
 a_44 = fromMaybe 44 $ fromNumber $ 44.0 * multiplier
 
+a_72 :: FontSize
+a_72 = fromMaybe 72 $ fromNumber $ 72.0 * multiplier
+
 primaryButtonSize :: FontSize
 primaryButtonSize = fromMaybe 20 $ fromNumber $ 20.0 * multiplier
 

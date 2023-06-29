@@ -770,15 +770,19 @@ emergencyHelpModelViewState state = { showContactSupportPopUp: state.props.emerg
                                 }
 
 ratingCardViewState :: ST.HomeScreenState -> RatingCard.RatingCardState
-ratingCardViewState state = { props:
-                            { currentStage: state.props.currentStage
-                            , estimatedDistance: state.props.estimatedDistance
-                            , showFareBreakUp: false
-                            , enableFeedback: true
-                            , zoneType: state.props.zoneType.priorityTag
-                            }
-                        , data: state.data.previousRideRatingState
-                        }
+ratingCardViewState state = let
+  config = RatingCard.config
+  ratingCardConfig' = config {
+    props 
+    {
+        currentStage = if state.props.currentStage /= ST.HomeScreen then true else false
+      , estimatedDistance = state.props.estimatedDistance
+      , showFareBreakUp = false
+      , enableFeedback = true
+    }
+    , ratingCardData = state.data.previousRideRatingState
+  }
+  in ratingCardConfig'
 
 searchLocationModelViewState :: ST.HomeScreenState -> SearchLocationModel.SearchLocationModelState
 searchLocationModelViewState state = { isSearchLocation: state.props.isSearchLocation
@@ -805,15 +809,19 @@ quoteListModelViewState state = { source: state.data.source
                             }
 
 previousRideRatingViewState :: ST.HomeScreenState -> RatingCard.RatingCardState
-previousRideRatingViewState state = { props:
-                                        { currentStage: state.props.currentStage
-                                        , estimatedDistance: state.props.estimatedDistance
-                                        , enableFeedback: false
-                                        , showFareBreakUp: true
-                                        , zoneType: state.props.zoneType.priorityTag
-                                        }
-                                    , data: state.data.previousRideRatingState
-                                    }
+previousRideRatingViewState state = let
+  config = RatingCard.config
+  ratingCardConfig' = config {
+    props 
+    {
+        currentStage = if state.props.currentStage /= ST.HomeScreen then true else false
+      , estimatedDistance = state.props.estimatedDistance
+      , showFareBreakUp = false
+      , enableFeedback = true
+    }
+    , ratingCardData = state.data.previousRideRatingState
+  }
+  in ratingCardConfig'
 
 rideRequestAnimConfig :: AnimConfig.AnimConfig
 rideRequestAnimConfig =

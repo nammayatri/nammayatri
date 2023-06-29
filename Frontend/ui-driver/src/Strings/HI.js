@@ -479,6 +479,16 @@ const hindiStrings = {
   REGISTERED_ADDRESS_DESCRIPTION : "जस्पे टेक्नोलॉजीज प्राइवेट लिमिटेड <br> स्टैलियन बिजनेस सेंटर, नंबर 444, तीसरी और चौथी मंजिल, 18वीं मेन, 6वां ब्लॉक, कोरमंगला बेंगलुरु, कर्नाटक- 560095, भारत।",
   REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL : "वेबसाइट : <u>https://nammayatri.in/</u>",
   ZONE_CANCEL_TEXT_DROP : "आपका ग्राहक शायद समय पर मेट्रो स्टेशन पहुंचने की हड़बड़ी में है! \n हम आपसे अनुरोध करते हैं कि रद्द न करें।",
-  ZONE_CANCEL_TEXT_PICKUP : "आपका ग्राहक शायद अपने गंतव्य तक पहुंचने की हड़बड़ी में है। \n हम आपसे अनुरोध करते हैं कि रद्द न करें।"
+  ZONE_CANCEL_TEXT_PICKUP : "आपका ग्राहक शायद अपने गंतव्य तक पहुंचने की हड़बड़ी में है। \n हम आपसे अनुरोध करते हैं कि रद्द न करें।",
+  SAVED_DUE_TO_NO_COMMISSION : "जीरो कमीशन के कारण बचत",
+  RIDE_DETAILS : "सवारी विवरण",
+  RIDE_COMPLETED :"सवारी पूरी हुई",
+  FARE_COLLECTED : "एकत्र किया गया किराया",
+  HELP_US_WITH_YOUR_FEEDBACK : "अपने फीडबैक से हमारी सहायता करें",
+  RATE_YOUR_RIDE_WITH :" के साथ अपनी राइड को रेट करें",
+  HOPE_YOUR_RIDE_WAS_HASSLE_FREE : "आशा है कि आपकी सवारी परेशानी मुक्त थी",
+  SUBMIT_FEEDBACK : "प्रतिपुष्टि दें",
+  TOTAL_AMOUNT : "कुल राशि",
+  METRO_RIDE : "मेट्रो की सवारी"
 
 }

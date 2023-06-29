@@ -899,11 +899,17 @@ type RideDetailScreenData =  {
   rideEndTime :: String,
   bookingDateAndTime :: String,
   totalAmount :: Int,
-  customerName :: String
+  customerName :: String,
+  extraFare :: Maybe Int,
+  rideId :: String
  }
 
 type RideDetailScreenProps =  {
-  cashCollectedButton :: Boolean
+  cashCollectedButton :: Boolean,
+  rateCardView :: Boolean,
+  rating :: Int,
+  feedback :: String,
+  supportPopUpView :: Boolean
  }
 
 --------------------------------------------- EditBankDetailsScreen ---------------------------

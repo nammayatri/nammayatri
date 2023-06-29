@@ -477,5 +477,14 @@ const englishStrings = {
   REGISTERED_ADDRESS_DESCRIPTION : "Juspay Technologies Private Limited <br> Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala Bengaluru, Karnataka- 560095, India.",
   REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL : "Website: <u>https://nammayatri.in/</u>",
   ZONE_CANCEL_TEXT_DROP : "Your customer is probably in a rush to reach the metro station on time! \n We urge you not to cancel.",
-  ZONE_CANCEL_TEXT_PICKUP : "Your customer is probably in a rush to reach their destination. \n We urge you not to cancel."
+  ZONE_CANCEL_TEXT_PICKUP : "Your customer is probably in a rush to reach their destination. \n We urge you not to cancel.",
+  SAVED_DUE_TO_NO_COMMISSION : "Saved due to \n Zero Commission",
+  RIDE_DETAILS : "Ride Details",
+  RIDE_COMPLETED : "Ride Completed",
+  FARE_COLLECTED : "Fare Collected",
+  HELP_US_WITH_YOUR_FEEDBACK : "Help us with your feedback",
+  RATE_YOUR_RIDE_WITH : "Rate your ride with ",
+  TOTAL_AMOUNT : "Total Amount",
+  HOPE_YOUR_RIDE_WAS_HASSLE_FREE : "We hope your ride was hassle free",
+  SUBMIT_FEEDBACK : "Submit Feedback"
 }

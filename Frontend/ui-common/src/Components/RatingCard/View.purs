@@ -16,7 +16,6 @@
 module Components.RatingCard.View where
 
 import Animation (fadeIn)
-import Components.FareBreakUp as FareBreakUp
 import Components.PrimaryButton as PrimaryButton
 import Components.RatingCard.Controller (Action(..), RatingCardState)
 import Components.SourceToDestination as SourceToDestination
@@ -28,7 +27,7 @@ import Engineering.Helpers.Commons (screenWidth, os)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge (getBtnLoader, getKeyInSharedPrefKeys)
-import Language.Strings (getString, getKey, LANGUAGE_KEY(..))
+import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, unit, ($), (-), (<<<), (<=), (<>), (==), (<), (/), (/=), not, (&&))
 import PrestoDOM (Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, visibility, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, imageUrl, imageView, inputType, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, singleLine, stroke, text, textSize, textView, weight, width, multiLineEditText, pattern, maxLines, editText, imageWithFallback, scrollBarY, scrollView)
@@ -37,9 +36,7 @@ import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
-import Screens.Types(Stage(..), ZoneType(..))
 import Common.Types.App
-
 
 view :: forall w. (Action -> Effect Unit) -> RatingCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -49,6 +46,7 @@ view push state =
     , height MATCH_PARENT
     , orientation VERTICAL
     , clickable true
+    , background Color.black9000
   ][  linearLayout
       [ orientation VERTICAL
       , height MATCH_PARENT
@@ -75,7 +73,7 @@ view push state =
             , gravity CENTER
             , padding (Padding 14 14 14 14)
             , margin (MarginBottom 16)
-            , visibility if state.props.zoneType == METRO then VISIBLE else GONE
+            , visibility if state.props.zoneType then VISIBLE else GONE
             ][ imageView
                 [ width (V 20)
                 , height (V 20)
@@ -100,6 +98,7 @@ view push state =
                 , height WRAP_CONTENT
                 , gravity CENTER
                 , orientation HORIZONTAL
+                , visibility GONE
                 ][  textView
                     [ height WRAP_CONTENT
                     , width WRAP_CONTENT
@@ -121,9 +120,9 @@ view push state =
                   , gravity CENTER
                   , lineHeight "18"
                   , margin (MarginVertical 2 24)
+                  , visibility GONE
                   ]
-                ] <> (if (state.props.showFareBreakUp) then [tripDetailsView state push]  else [])
-                  <> (if (not state.props.showFareBreakUp) then [horizontalLine state] else [])
+                ] <> (if (not state.props.showFareBreakUp && state.props.isDriver == false) then [horizontalLine state] else [])
                   <> ([starRatingView state push])
                   <> (if state.props.enableFeedback then [editTextView state push] else [])
                   <> ([buttonView push state])
@@ -138,8 +137,8 @@ buttonView push state =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , alignParentBottom "true,-1"
-  ][ if state.props.currentStage /= HomeScreen then PrimaryButton.view (push <<< SkipButtonAC ) (skipButtonConfig state) else emptyLayout state
-    , PrimaryButton.view (push <<< PrimaryButtonAC ) (rideRatingButtonConfig state)]
+  ][ --if state.props.currentStage /= HomeScreen then PrimaryButton.view (push <<< SkipButtonAC ) (skipButtonConfig state) else emptyLayout state
+     PrimaryButton.view (push <<< PrimaryButtonAC ) (rideRatingButtonConfig state)]
 
 --------------------------------------------------- horizontalLine ---------------------------------------------------
 
@@ -150,6 +149,7 @@ horizontalLine state =
   , width MATCH_PARENT
   , background Color.grey900
   , margin $ MarginBottom 24
+  , visibility GONE
   ][]
 
 --------------------------------------------------- emptyLayout ---------------------------------------------------
@@ -190,26 +190,27 @@ editTextView state push =
       , hint (getString HELP_US_WITH_YOUR_FEEDBACK)
       , weight 1.0
       , pattern "[^\n]*,255"
-      , singleLine false
-      , onChange push FeedbackChanged
+      , singleLine false 
+      , onChange push FeedbackChanged  
       ]
 
   ]
 
 --------------------------------------------------- tripDetailsView ---------------------------------------------------
 
-tripDetailsView :: forall w . RatingCardState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-tripDetailsView state push =
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  , stroke ("1,"<>Color.grey900)
-  , clickable true
-  , cornerRadius 8.0
-  , padding (Padding 16 24 16 24)
-  , margin (MarginBottom 16)
-  ][( FareBreakUp.view (push <<< FareBreakUpAC ) (fareBreakUpConfig state))]
+-- tripDetailsView :: forall w . RatingCardState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+-- tripDetailsView state push =
+--   linearLayout
+--   [ height WRAP_CONTENT
+--   , width MATCH_PARENT
+--   , orientation VERTICAL
+--   , stroke ("1,"<>Color.grey900)
+--   , clickable true
+--   , cornerRadius 8.0
+--   , padding (Padding 16 24 16 24)
+--   , margin (MarginBottom 16)
+--   , visibility GONE
+--   ][( FareBreakUp.view (push <<< FareBreakUpAC ) (fareBreakUpConfig state))]
 
 --------------------------------------------------- rideRatingButtonConfig ---------------------------------------------------
 
@@ -223,8 +224,8 @@ rideRatingButtonConfig state = let
         , textSize = FontSize.a_16
         , width = MATCH_PARENT
         }
-      , isClickable = if state.data.rating < 1 then false else true
-      , alpha = if state.data.rating < 1 then 0.4 else 1.0
+      , isClickable = if state.ratingCardData.rating < 1 then false else true 
+      , alpha = if state.ratingCardData.rating < 1 then 0.4 else 1.0
       , margin = (Margin 0 0 0 0)
       , height = (V 48)
       , gravity = CENTER_VERTICAL
@@ -237,25 +238,25 @@ rideRatingButtonConfig state = let
 
 --------------------------------------------------- skipRatingButtonConfig ---------------------------------------------------
 
-skipButtonConfig :: RatingCardState -> PrimaryButton.Config
-skipButtonConfig state = let
-  config = PrimaryButton.config
-  skipButtonConfig' = config
-    { textConfig
-      { text = (getString SKIP)
-      , color = Color.black700
-      , fontStyle = FontStyle.bold LanguageStyle
-      , textSize = FontSize.a_16
-      }
-    , width = V ( screenWidth unit / 4)
-    , background = Color.white900
-    , stroke = ("1," <> Color.black500)
-    , margin = (MarginRight 12)
-    , id = "SkipCurrentRatingButton"
-    , enableLoader = (getBtnLoader "SkipCurrentRatingButton")
-    }
-  in skipButtonConfig'
-
+-- skipButtonConfig :: RatingCardState -> PrimaryButton.Config 
+-- skipButtonConfig state = let 
+--   config = PrimaryButton.config 
+--   skipButtonConfig' = config 
+--     { textConfig 
+--       { text = (getString SKIP)
+--       , color = Color.black700 
+--       , fontStyle = FontStyle.bold LanguageStyle
+--       , textSize = FontSize.a_16 
+--       }
+--     , width = V ( screenWidth unit / 4)
+--     , background = Color.white900 
+--     , stroke = ("1," <> Color.black500)
+--     , margin = (MarginRight 12)
+--     , id = "SkipCurrentRatingButton"
+--     , enableLoader = (getBtnLoader "SkipCurrentRatingButton")
+--     }
+--   in skipButtonConfig'
+  
 ------------------------starRatingView--------------------------
 
 starRatingView :: forall w . RatingCardState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -269,18 +270,34 @@ starRatingView state push =
     , padding (PaddingVertical 16 16)
     , cornerRadius 8.0
     , stroke if state.props.showFareBreakUp then ("1,"<>Color.grey900) else ("0,"<>Color.grey900)
-    ][textView
+    ][
+      linearLayout
         [ height WRAP_CONTENT
-        , width $ V (screenWidth unit - 64)
-        , textSize FontSize.a_16
-        , text (getText state)
-        , color Color.black800
-        , maxLines 2
-        , fontStyle $ FontStyle.semiBold LanguageStyle
+        , width MATCH_PARENT
         , gravity CENTER
-        , lineHeight "20"
+        , orientation HORIZONTAL
         , margin (MarginBottom 16)
-        ]
+        ][
+          textView
+            [ height WRAP_CONTENT
+            , width $ V (screenWidth unit - 64)
+            , textSize FontSize.a_16
+            , text (getText state)
+            , color Color.black800
+            , maxLines 2
+            , fontStyle $ FontStyle.semiBold LanguageStyle
+            , gravity CENTER_HORIZONTAL
+            , lineHeight "20"
+            
+            ]
+          
+          , imageView
+              [ height $ V 16
+              , width $ V 16
+              , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
+              , onClick push  (const OnClose)
+              ]
+           ]
     , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -289,51 +306,51 @@ starRatingView state push =
                           linearLayout
                           [ height WRAP_CONTENT
                           , width WRAP_CONTENT
-                          , margin (MarginHorizontal 5 5)
+                          , margin (MarginHorizontal 6 6)
                           , onClick push $ const (Rating item)
                           ][imageView
-                              [ height $ V 30
-                              , width $ V 30
-                              , imageWithFallback if item <= state.data.rating then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png" else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
+                              [ height $ V 40
+                              , width $ V 40
+                              , imageWithFallback if item <= state.ratingCardData.rating then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png" else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
                               ]
                           ]) [1,2,3,4,5])
     ]
 
 --------------------------------------------------- fareBreakUpConfig ---------------------------------------------------
 
-fareBreakUpConfig :: RatingCardState -> FareBreakUp.Config
-fareBreakUpConfig state = let
-    config = FareBreakUp.config
-    fareBreakUpConfig' = config
-      {
-          fareDetails = [] -- ToDo :: send the fareDetails from the View file which is using this component.
-        , headingText = (getString VIEW_BREAKDOWN)
-        , totalAmount = {
-            text : (getString TOTAL_AMOUNT)
-            , textSize : FontSize.a_16
-            , fontStyle : FontStyle.semiBold LanguageStyle
-            , color : Color.black800
-            , margin : (Margin 0 0 0 12)
-            , visibility : VISIBLE
-            , priceDetails : {
-                text : state.data.finalAmount
-              , textSize : FontSize.a_16
-              , fontStyle : FontStyle.semiBold LanguageStyle
-              , offeredFare : state.data.offeredFare
-              , distanceDifference : state.data.distanceDifference
-              }
-            }
-        , rideDetails = {
-              destination : state.data.destination
-            , destinationTitle :(fromMaybe "" ((split (Pattern ",") (state.data.destination)) !! 0))
-            , source :state.data.source
-            , sourceTitle : (fromMaybe "" ((split (Pattern ",") (state.data.source)) !! 0))
-            , rideStartTime : state.data.rideStartTime
-            , rideStartDate : state.data.rideStartDate
-            , estimatedDistance : state.props.estimatedDistance
-        }
-      }
-  in fareBreakUpConfig'
+-- fareBreakUpConfig :: RatingCardState -> FareBreakUp.Config
+-- fareBreakUpConfig state = let
+--     config = FareBreakUp.config
+--     fareBreakUpConfig' = config
+--       {
+--           fareDetails = [] -- ToDo :: send the fareDetails from the View file which is using this component.
+--         , headingText = (getString VIEW_BREAKDOWN)
+--         , totalAmount = {
+--             text : (getString TOTAL_AMOUNT)
+--             , textSize : FontSize.a_16
+--             , fontStyle : FontStyle.semiBold LanguageStyle
+--             , color : Color.black800
+--             , margin : (Margin 0 0 0 12)
+--             , visibility : VISIBLE
+--             , priceDetails : {
+--                 text : state.ratingCardData.finalAmount
+--               , textSize : FontSize.a_16
+--               , fontStyle : FontStyle.semiBold LanguageStyle
+--               , offeredFare : state.ratingCardData.offeredFare
+--               , distanceDifference : state.ratingCardData.distanceDifference
+--               }
+--             }
+--         , rideDetails = {
+--               destination : state.ratingCardData.destination
+--             , destinationTitle :(fromMaybe "" ((split (Pattern ",") (state.ratingCardData.destination)) !! 0)) 
+--             , source :state.ratingCardData.source   
+--             , sourceTitle : (fromMaybe "" ((split (Pattern ",") (state.ratingCardData.source)) !! 0))
+--             , rideStartTime : state.ratingCardData.rideStartTime
+--             , rideStartDate : state.ratingCardData.rideStartDate
+--             , estimatedDistance : state.props.estimatedDistance
+--         }
+--       }
+--   in fareBreakUpConfig'
 
 --------------------------------------------------- sourceToDestinationConfig ---------------------------------------------------
 
@@ -352,14 +369,14 @@ sourceToDestinationConfig state = let
       , margin = (Margin 4 0 0 0)
       }
     , rideStartedAtConfig {
-        text = state.data.rideStartTime
+        text = state.ratingCardData.rideStartTime
       , textSize = FontSize.a_12
       , visibility = VISIBLE
       , padding = (Padding 1 1 1 1)
       , margin = (Margin 5 2 0 0)
       }
     , sourceTextConfig {
-        text = state.data.source
+        text = state.ratingCardData.source
       , textSize = FontSize.a_14
       , padding = (Padding 2 0 2 2)
       , margin = (Margin 5 0 15 0)
@@ -374,7 +391,7 @@ sourceToDestinationConfig state = let
       , margin = (Margin 13 2 0 0)
       }
     , destinationTextConfig {
-        text = state.data.destination
+        text = state.ratingCardData.destination
       , textSize = FontSize.a_14
       , padding = (Padding 2 0 2 2)
       , margin = (Margin 14 0 15 0)
@@ -383,7 +400,7 @@ sourceToDestinationConfig state = let
       , ellipsize = true
       }
     , rideEndedAtConfig {
-        text  = state.data.rideEndTime
+        text  = state.ratingCardData.rideEndTime
       , textSize = FontSize.a_12
       , visibility = VISIBLE
       , padding = (Padding 1 1 1 1)
@@ -393,7 +410,7 @@ sourceToDestinationConfig state = let
   in sourceToDestinationConfig'
 
 getText ::  RatingCardState -> String
-getText state = let language = getKey $ getKeyInSharedPrefKeys "LANGUAGE_KEY"
+getText state = let language = (getValueToLocalStore LANGUAGE_KEY)
               in case language of
-                          EN_US -> ((getString RATE_YOUR_RIDE_WITH) <> state.data.driverName )
-                          _     ->( state.data.driverName <> (getString RATE_YOUR_RIDE_WITH) )
+                          "EN_US" -> ((getString RATE_YOUR_RIDE_WITH) <> state.ratingCardData.driverName )
+                          _     ->( state.ratingCardData.driverName <> (getString RATE_YOUR_RIDE_WITH) )
