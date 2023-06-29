@@ -16,7 +16,7 @@ module SharedLogic.DriverFee where
 
 import Domain.Types.DriverFee
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto (EsqDBFlow, runTransaction)
+import Kernel.Storage.Esqueleto (EsqDBFlow)
 import Kernel.Types.Common (MonadFlow, generateGUID)
 import Kernel.Utils.Common (generateShortId)
 import Storage.Queries.DriverFee (create, updateStatus)
@@ -37,7 +37,7 @@ mergeDriverFee oldFee newFee now = do
       createdAt = now
       updatedAt = now
   let newDriverFee = DriverFee {..}
-  runTransaction $ do
-    updateStatus INACTIVE oldFee.id now
-    updateStatus INACTIVE newFee.id now
-    create newDriverFee
+  -- runTransaction $ do
+  _ <- updateStatus INACTIVE oldFee.id now
+  _ <- updateStatus INACTIVE newFee.id now
+  void $ create newDriverFee

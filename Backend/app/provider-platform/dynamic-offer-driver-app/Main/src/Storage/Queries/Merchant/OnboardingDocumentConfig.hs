@@ -22,13 +22,23 @@ where
 
 import Domain.Types.Merchant
 import Domain.Types.Merchant.OnboardingDocumentConfig
+import EulerHS.KVConnector.Types (MeshResult)
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Kernel.Utils.Common
 import Storage.Tabular.Merchant.OnboardingDocumentConfig
 
--- updateDeviceToken :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe FCMRecipientToken -> m (MeshResult ())
+-- import qualified Lib.Mesh as Mesh
+-- import qualified Sequelize as Se
+-- import qualified Storage.Beam.OnboardingDocumentConfig as BeamODC
+-- import qualified EulerHS.KVConnector.Flow as KV
+-- import EulerHS.KVConnector.Types
+-- import qualified EulerHS.Language as L
+-- import qualified EulerHS.Extra.EulerDB as Extra
+-- import qualified Domain.Types.Merchant.OnboardingDocumentConfig as Domain
+
+-- -- updateDeviceToken :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe FCMRecipientToken -> m (MeshResult ())
 -- updateDeviceToken (Id personId) mbDeviceToken = do
 --   dbConf <- L.getOption KBT.PsqlDbCfg
 --   let modelName = Se.modelTableName @BeamP.PersonT
@@ -45,8 +55,11 @@ import Storage.Tabular.Merchant.OnboardingDocumentConfig
 --         [Se.Is BeamP.id (Se.Eq personId)]
 --     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-create :: OnboardingDocumentConfig -> SqlDB ()
-create = Esq.create
+-- create :: OnboardingDocumentConfig -> SqlDB ()
+-- create = Esq.create
+
+create :: L.MonadFlow m => OnboardingDocumentConfig -> m (MeshResult ())
+create = error "Not implemented"
 
 findAllByMerchantId :: Transactionable m => Id Merchant -> m [OnboardingDocumentConfig]
 findAllByMerchantId merchantId =
@@ -56,18 +69,63 @@ findAllByMerchantId merchantId =
       config ^. OnboardingDocumentConfigMerchantId ==. val (toKey merchantId)
     return config
 
-update :: OnboardingDocumentConfig -> SqlDB ()
-update config = do
-  now <- getCurrentTime
-  let supportedClassJson = getConfigJSON config.supportedVehicleClasses
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ OnboardingDocumentConfigCheckExtraction =. val config.checkExtraction,
-        OnboardingDocumentConfigCheckExpiry =. val config.checkExpiry,
-        OnboardingDocumentConfigSupportedVehicleClassesJSON =. val supportedClassJson,
-        OnboardingDocumentConfigVehicleClassCheckType =. val config.vehicleClassCheckType,
-        OnboardingDocumentConfigRcNumberPrefix =. val config.rcNumberPrefix,
-        OnboardingDocumentConfigUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. OnboardingDocumentConfigTId ==. val (toKey (config.merchantId, config.documentType))
+-- update :: OnboardingDocumentConfig -> SqlDB ()
+-- update config = do
+--   now <- getCurrentTime
+--   let supportedClassJson = getConfigJSON config.supportedVehicleClasses
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ OnboardingDocumentConfigCheckExtraction =. val config.checkExtraction,
+--         OnboardingDocumentConfigCheckExpiry =. val config.checkExpiry,
+--         OnboardingDocumentConfigSupportedVehicleClassesJSON =. val supportedClassJson,
+--         OnboardingDocumentConfigVehicleClassCheckType =. val config.vehicleClassCheckType,
+--         OnboardingDocumentConfigRcNumberPrefix =. val config.rcNumberPrefix,
+--         OnboardingDocumentConfigUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. OnboardingDocumentConfigTId ==. val (toKey (config.merchantId, config.documentType))
+
+--complete this function after tranformations is done
+update :: L.MonadFlow m => OnboardingDocumentConfig -> m (MeshResult ())
+update = error "Not implemented"
+
+-- transformBeamOnboardingDocumentConfigToDomain :: BeamODC.OnboardingDocumentConfig -> m OnboardingDocumentConfig
+-- transformBeamOnboardingDocumentConfigToDomain BeamODC.OnboardingDocumentConfigT {..} = do
+--   supportedVehicleClasses <- maybe (throwError $ InternalError "Unable to decode OnboardingDocumentConfigT.supportedVehicleClasses") return $ case documentType of
+--       Domain.DL -> Domain.DLValidClasses <$> decodeFromText supportedVehicleClassesJSON
+--       Domain.RC -> Domain.RCValidClasses . sortOnCapcity <$> decodeFromText supportedVehicleClassesJSON
+--       _ -> Just $ Domain.RCValidClasses []
+--    pure $ OnboardingDocumentConfig
+--     {
+--       merchantId = Id merchantId,
+--       documentType = documentType,
+--       checkExtraction = checkExtraction,
+--       checkExpiry = checkExpiry,
+--       supportedVehicleClasses = supportedVehicleClasses,
+--       vehicleClassCheckType = vehicleClassCheckType,
+--       rcNumberPrefix = Domain.rcNumberPrefix,
+--       createdAt = createdAt,
+--       updatedAt = updatedAt
+--     }
+-- where
+--     sortOnCapcity = sortBy (\a b -> compare b.vehicleCapacity a.vehicleCapacity)
+
+-- transformDomainOnboardingDocumentConfigToBeam :: OnboardingDocumentConfig -> BeamODC.OnboardingDocumentConfig
+-- transformDomainOnboardingDocumentConfigToBeam OnboardingDocumentConfig {..} =
+--   BeamODC.defaultOnboardingDocumentConfig
+--     {
+--       BeamODC.merchantId = getId merchantId,
+--       BeamODC.documentType = documentType,
+--       BeamODC.checkExtraction = checkExtraction,
+--       BeamODC.checkExpiry = checkExpiry,
+--       BeamODC.supportedVehicleClassesJSON = getConfigJSON supportedVehicleClasses,
+--       BeamODC.vehicleClassCheckType = vehicleClassCheckType,
+--       BeamODC.rcNumberPrefix = rcNumberPrefix,
+--       BeamODC.createdAt = createdAt,
+--       BeamODC.updatedAt = updatedAt
+--     }
+--   where
+--     getConfigJSON :: Domain.SupportedVehicleClasses -> Text
+--     getConfigJSON = \case
+--       Domain.DLValidClasses cfg -> encodeToText cfg
+--       Domain.RCValidClasses cfg -> encodeToText cfg

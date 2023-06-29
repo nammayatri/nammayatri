@@ -256,6 +256,7 @@ library
       Storage.Beam.DriverLocation
       Storage.Beam.DriverOnboarding.AadhaarOtpReq
       Storage.Beam.DriverOnboarding.AadhaarOtpVerify
+      Storage.Beam.DriverOnboarding.AadhaarVerification
       Storage.Beam.DriverOnboarding.DriverLicense
       Storage.Beam.DriverOnboarding.DriverRCAssociation
       Storage.Beam.DriverOnboarding.IdfyVerification

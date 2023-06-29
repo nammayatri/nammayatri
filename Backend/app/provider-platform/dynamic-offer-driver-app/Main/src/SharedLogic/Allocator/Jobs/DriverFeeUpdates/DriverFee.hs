@@ -74,7 +74,8 @@ sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
       overdueFee <- Esq.runInReplica $ findOldestFeeByStatus (cast person.id) PAYMENT_OVERDUE
       case overdueFee of
         Nothing -> do
-          Esq.runNoTransaction $ updateStatus PAYMENT_PENDING driverFee.id now
+          -- Esq.runTransaction $ updateStatus PAYMENT_PENDING driverFee.id now
+          _ <- updateStatus PAYMENT_PENDING driverFee.id now
           updatePendingPayment True (cast person.id)
         Just oDFee -> do
           mergeDriverFee driverFee oDFee now
@@ -114,7 +115,7 @@ unsubscribeDriverForPaymentOverdue Job {id, jobInfo} = withLogTag ("JobId-" <> i
         (Notify.sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.PAYMENT_OVERDUE paymentTitle paymentMessage driver.id driver.deviceToken) `C.catchAll` \e -> C.mask_ $ logError $ "FCM for removing subsciption of driver id " <> driver.id.getId <> " failed. Error: " <> show e
   forM_ feeZipDriver $ \(driverFee, mbPerson) -> do
     -- Esq.runTransaction $ do
-    updateStatus PAYMENT_OVERDUE driverFee.id now
+    _ <- updateStatus PAYMENT_OVERDUE driverFee.id now
     whenJust mbPerson $ \person -> do
       QDFS.updateStatus (cast person.id) DDFS.PAYMENT_OVERDUE
     whenJust mbPerson $ \person -> updateSubscription False (cast person.id) -- fix later: take tabular updates inside transaction
