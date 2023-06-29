@@ -78,8 +78,8 @@ buildSDKPayload req order = do
   payload <- buildSDKPayloadDetails req order
   pure
     Juspay.SDKPayload
-      { requestId = Nothing,
-        service = Nothing,
+      { requestId = order.requestId,
+        service = order.service,
         payload
       }
 
@@ -88,23 +88,23 @@ buildSDKPayloadDetails req order = do
   clientAuthToken <- decrypt order.clientAuthToken
   pure
     Juspay.SDKPayloadDetails
-      { clientId = Nothing,
+      { clientId = order.clientId,
         amount = show order.amount,
-        merchantId = Nothing,
+        merchantId = Just order.merchantId.getId,
         clientAuthToken,
         clientAuthTokenExpiry = order.clientAuthTokenExpiry,
         environment = order.environment,
         options_getUpiDeepLinks = order.getUpiDeepLinksOption,
         lastName = req.customerLastName,
-        action = Nothing,
+        action = order.action,
         customerId = Just order.personId.getId,
-        returnUrl = Nothing,
+        returnUrl = order.returnUrl,
         currency = order.currency,
         firstName = req.customerFirstName,
         customerPhone = Just req.customerPhone,
         customerEmail = Just req.customerEmail,
         orderId = Just order.shortId.getShortId,
-        description = Nothing
+        description = order.description
       }
 
 buildPaymentOrder ::
@@ -126,6 +126,12 @@ buildPaymentOrder merchantId personId orderId req resp = do
       { id = orderId,
         shortId = ShortId req.orderShortId,
         paymentServiceOrderId = resp.id,
+        requestId = resp.sdk_payload.requestId,
+        service = resp.sdk_payload.service,
+        clientId = resp.sdk_payload.payload.clientId,
+        description = resp.sdk_payload.payload.description,
+        returnUrl = resp.sdk_payload.payload.returnUrl,
+        action = resp.sdk_payload.payload.action,
         personId,
         merchantId,
         amount = req.amount, -- FIXME resp.sdk_payload.payload.amount

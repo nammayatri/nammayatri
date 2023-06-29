@@ -37,6 +37,12 @@ mkPersist
       paymentServiceOrderId Text
       personId Text -- PersonTId
       merchantId Text -- MerchantTId
+      requestId Text Maybe
+      service Text Maybe
+      clientId Text Maybe
+      description Text Maybe
+      returnUrl Text Maybe
+      action Text Maybe
       amount Money
       currency Payment.Currency
       status Payment.TransactionStatus
