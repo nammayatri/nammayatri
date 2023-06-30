@@ -7,6 +7,11 @@ export function getStringValue(key) {
 }
 
 const englishStrings = {
+  "CHOOSE_MODE_OF_PAYMENT": "Choose mode of Payment",
+  "PAY_ONLINE_ONCE_RIDE_HAS_ENDED": "Pay online once the ride has ended",
+  "PAY_THE_DRIVER_DIRECTLY_USING_CASH": "Pay the driver directly using Cash",
+  "CHOOSE_PAYMENT_METHOD": "Choose Payment Method",
+  "CONFIRM": "Confirm",
   "DOWNLOAD_INVOICE": "Download Invoice",
   "REPORT_AN_ISSUE": "Report an Issue",
   "SUBMIT": "Submit",

@@ -537,6 +537,8 @@ type HomeScreenStateData =
   , selectedEstimatesObject :: ChooseVehicle.Config
   , lastMessage :: ChatComponent
   , cancelRideConfirmationData :: CancelRideConfirmationData
+  , modeOfPayment :: Maybe String
+  , choosePaymentMode :: Boolean
   }
 
 type HomeScreenStateProps =

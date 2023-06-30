@@ -7,6 +7,11 @@ export function getStringValue(key) {
 }
 
 const bengaliStrings = {
+  "CHOOSE_MODE_OF_PAYMENT": "পেমেন্ট মোড নির্বাচন করুন",
+  "PAY_ONLINE_ONCE_RIDE_HAS_ENDED": "রাইড শেষ হয়ে গেলে অনলাইনে পেমেন্ট করুন",
+  "PAY_THE_DRIVER_DIRECTLY_USING_CASH": "নগদ ব্যবহার করে ড্রাইভারকে সরাসরি অর্থ প্রদান করুন",
+  "CHOOSE_PAYMENT_METHOD": "পরিশোধের পদ্ধতি নির্বাচন করুন",
+  "CONFIRM": "নিশ্চিত করুন",
   "DOWNLOAD_INVOICE": "চালান ডাউনলোড করুন",
   "REPORT_AN_ISSUE": "সমস্যা বিবৃতি করুন",
   "SUBMIT": "অনুমোদন",

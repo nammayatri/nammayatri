@@ -6,6 +6,11 @@ export function getStringValue(key) {
 }
 
 const malayalamStrings = {
+  "CHOOSE_MODE_OF_PAYMENT": "പേയ്‌മെന്റ് മോഡ് തിരഞ്ഞെടുക്കുക",
+  "PAY_ONLINE_ONCE_RIDE_HAS_ENDED": "റൈഡ് അവസാനിച്ചുകഴിഞ്ഞാൽ ഓൺലൈനായി പണമടയ്ക്കുക",
+  "PAY_THE_DRIVER_DIRECTLY_USING_CASH": "പണം ഉപയോഗിച്ച് ഡ്രൈവർക്ക് നേരിട്ട് പണം നൽകുക",
+  "CHOOSE_PAYMENT_METHOD": "Cപണം അടക്കുന്ന രീതി തിരഞ്ഞെടുക്കുക",
+  "CONFIRM": "സ്ഥിരീകരിക്കുക",
   "DOWNLOAD_INVOICE": "ഇൻവോയ്സ് ഡൗൺലോഡ് ചെയ്യുക",
   "REPORT_AN_ISSUE": "ഒരു പ്രശ്നം റിപ്പോർട്ടുചെയ്യുക",
   "SUBMIT": "സമർപ്പിക്കുക",

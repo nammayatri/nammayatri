@@ -31,8 +31,6 @@ import Components.GenericHeader.Controller as GenericHeaderController
 import Components.LocationListItem.Controller as LocationListItemController
 import Components.LocationTagBar as LocationTagBarController
 import Components.MenuButton as MenuButton
-import Components.MenuButton as MenuButton
-import Components.MenuButton.Controller (Action(..)) as MenuButtonController
 import Components.PopUpModal.Controller as PopUpModal
 import Components.PricingTutorialModel.Controller as PricingTutorialModelController
 import Components.ChatView as ChatView
@@ -585,7 +583,7 @@ data Action = NoAction
             | CheckFlowStatusAction
             | GoToEditProfile
             | IsMockLocation String
-            | MenuButtonActionController MenuButtonController.Action
+            | MenuButtonActionController MenuButton.Action
             | ChooseYourRideAction ChooseYourRideController.Action
             | SearchForSelectedLocation
             | GenderBannerModal Banner.Action
@@ -708,11 +706,11 @@ eval BackPressed state = do
                                 exit $ GoToHome
     SettingPrice    -> do
                       _ <- pure $ performHapticFeedback unit
-                      if state.props.showRateCard then continue state{props{showRateCard = false}}
-                      else if state.props.showMultipleRideInfo then continue state{props{showMultipleRideInfo=false}}
+                      if state.props.showRateCard then continue state{props{showRateCard = false}, data{modeOfPayment = Nothing}}
+                      else if state.props.showMultipleRideInfo then continue state{props{showMultipleRideInfo=false}, data{modeOfPayment = Nothing}}
                         else do
                         _ <- pure $ updateLocalStage SearchLocationModel
-                        continue state{props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation}}
+                        continue state{props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation}, data{modeOfPayment = Nothing}}
     ConfirmingLocation -> do
                       _ <- pure $ performHapticFeedback unit
                       _ <- pure $ exitLocateOnMap ""
@@ -1648,7 +1646,7 @@ eval (UpdateLocAndLatLong lat lng) state = do
 
 eval GoToEditProfile state = do
   exit $ GoToMyProfile state true
-eval (MenuButtonActionController (MenuButtonController.OnClick config)) state = do
+eval (MenuButtonActionController (MenuButton.OnClick config)) state = do
   continueWithCmd state{props{defaultPickUpPoint = config.id}} [do
       _ <- animateCamera config.lat config.lng 25
       pure NoAction
@@ -1663,7 +1661,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
 eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state =
   if state.props.isSpecialZone then do
     _ <- pure $ updateLocalStage ConfirmingRide
-    exit $ ConfirmRide state{props{currentStage = ConfirmingRide}}
+    exit $ ConfirmRide state{props{currentStage = ConfirmingRide}, data{modeOfPayment = if state.data.modeOfPayment == Nothing then Just "Cash" else state.data.modeOfPayment}}
     else do
       _ <- pure $ updateLocalStage FindingQuotes
       let updatedState = state{props{currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck")}}
@@ -1682,6 +1680,17 @@ eval MapReadyAction state = continueWithCmd state [ do
 eval (TriggerPermissionFlow flowType) state = exit $ ExitToPermissionFlow flowType
 
 
+eval (ChooseYourRideAction (ChooseYourRideController.MenuButtonActionController (MenuButton.OnClick config))) state = do 
+  continue state{data{modeOfPayment = Just config.id}}
+
+eval (ChooseYourRideAction ChooseYourRideController.ShowPaymentMode) state = do 
+  continue state{data{choosePaymentMode = true, modeOfPayment = if state.data.modeOfPayment == Nothing then Just "Cash" else state.data.modeOfPayment}}
+
+eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonConfirmActionController (PrimaryButtonController.OnClick))) state = do 
+  continue state{data{choosePaymentMode = false}}
+
+eval (ChooseYourRideAction ChooseYourRideController.DisapperPaymentPage) state = do 
+  continue state{data{choosePaymentMode = false, modeOfPayment = Nothing}, props{currentStage=SearchLocationModel}}
 
 eval _ state = continue state
 

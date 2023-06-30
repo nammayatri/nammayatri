@@ -7,6 +7,11 @@ export function getStringValue(key) {
 }
 
 const kannadaStrings = {
+  "CHOOSE_MODE_OF_PAYMENT": "ಪಾವತಿ ವಿಧಾನವನ್ನು ಆರಿಸಿ",
+  "PAY_ONLINE_ONCE_RIDE_HAS_ENDED": "ಸವಾರಿ ಮುಗಿದ ನಂತರ ಆನ್‌ಲೈನ್‌ನಲ್ಲಿ ಪಾವತಿಸಿ",
+  "PAY_THE_DRIVER_DIRECTLY_USING_CASH": "ನಗದನ್ನು ಬಳಸಿಕೊಂಡು ಚಾಲಕನಿಗೆ ನೇರವಾಗಿ ಪಾವತಿಸಿ",
+  "CHOOSE_PAYMENT_METHOD": "ಪಾವತಿ ವಿಧಾನವನ್ನು ಆಯ್ಕೆಮಾಡಿ",
+  "CONFIRM": "ದೃಢೀಕರಿಸಿ",
   "DOWNLOAD_INVOICE": "ಸರಕುಪಟ್ಟಿ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ",
   "REPORT_AN_ISSUE": "ಸಮಸ್ಯೆಯನ್ನು ವರದಿ ಮಾಡಿ",
   "SUBMIT": "ಸಲ್ಲಿಸಿ",

@@ -73,7 +73,9 @@ initData = {
     , polygonCoordinates : ""
     , specialZoneQuoteList : []
     , specialZoneSelectedQuote : Nothing
-    , selectedEstimatesObject : {
+    , modeOfPayment : Nothing
+    , choosePaymentMode : false
+    , selectedEstimatesObject : { 
       vehicleImage: ""
       , isSelected: false
       , vehicleVariant: ""

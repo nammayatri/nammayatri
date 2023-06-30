@@ -7,6 +7,11 @@ export function getStringValue(key) {
 }
 
 const hindiStrings = {
+  "CHOOSE_MODE_OF_PAYMENT": "भुगतान करने का तरीका चुनें",
+  "PAY_ONLINE_ONCE_RIDE_HAS_ENDED": "यात्रा समाप्त होने पर ऑनलाइन भुगतान करें",
+  "PAY_THE_DRIVER_DIRECTLY_USING_CASH": "ड्राइवर को सीधे नकद भुगतान करें",
+  "CHOOSE_PAYMENT_METHOD": "भुगतान का तरीका चुनें",
+  "CONFIRM": "पुष्टि करना",
   "DOWNLOAD_INVOICE": "इनवाइस को डाउनलोड करें",
   "REPORT_AN_ISSUE": "मामले की रिपोर्ट दर्ज करें",
   "SUBMIT": "जमा करें",
