@@ -31,7 +31,6 @@ import Kernel.Types.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
-import Storage.Beam.Instances ()
 
 -- fromFieldEnum ::
 --   (Typeable a, Read a) =>
