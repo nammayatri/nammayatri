@@ -386,9 +386,5 @@ hideLoader :: Unit ->  Effect Unit
 hideLoader _ = do
   pure $ runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload {
     event : "hide_loader"
-  , payload : Just {
-    action : "terminate"
-  , trip_amount : Nothing
-  , trip_id : Nothing
-  }
+  , payload : Nothing
 }

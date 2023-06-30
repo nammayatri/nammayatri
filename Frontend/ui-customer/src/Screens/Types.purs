@@ -131,6 +131,7 @@ type StepsHeaderModelState = {
   activeIndex :: Int,
   textArray :: Array String,
   backArrowVisibility :: Boolean
+, config :: AppConfig
 }
 
 -- ############################################################# ChooseLanguageScreen ################################################################################

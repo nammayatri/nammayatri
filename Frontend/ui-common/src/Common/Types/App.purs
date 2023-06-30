@@ -167,6 +167,8 @@ type InnerPayload = {
     action :: String
   , trip_amount :: Maybe Int
   , trip_id :: Maybe String
+  , screen :: Maybe String
+  , exit_app :: Boolean
 }
 
 derive instance genericEventPayload :: Generic EventPayload _

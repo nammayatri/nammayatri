@@ -95,7 +95,7 @@ view push state = let
     , onBackPressed push (const BackPressed state.props.enterOTP)
     ][  PrestoAnim.animationSet
           [ Anim.fadeIn true
-          ] $ StepsHeaderModel.view (push <<< StepsHeaderModelAC) (StepsHeaderModel.stepsHeaderData if state.props.enterOTP then 1 else 0)
+          ] $ StepsHeaderModel.view (push <<< StepsHeaderModelAC) $ (StepsHeaderModel.stepsHeaderData if state.props.enterOTP then 1 else 0){config = state.data.config}
       , frameLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT

@@ -24,7 +24,6 @@ import Common.Types.App (LazyCheck(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Components.SavedLocationCard.Controller (getCardType)
 import Components.SettingSideBar.Controller as SettingSideBarController
-import Screens.RideBookingFlow.HomeScreen.Config (getTipViewData , setTipViewData)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except (runExcept)
@@ -54,7 +53,8 @@ import Engineering.Helpers.Utils (loaderText, toggleLoader)
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode)
 import Foreign.Class (encode)
-import Helpers.Utils (getDistanceBwCordinates, adjustViewWithKeyboard, decodeErrorCode, getObjFromLocal, differenceOfLocationLists, filterRecentSearches, setText', seperateByWhiteSpaces, getNewTrackingId, checkPrediction, getRecentSearches, addToRecentSearches, saveRecents, clearWaitingTimer, toString, parseFloat, getCurrentLocationsObjFromLocal, addToPrevCurrLoc, saveCurrentLocations, getCurrentDate, getPrediction, getCurrentLocationMarker, parseNewContacts, drawPolygon,requestKeyboardShow, removeLabelFromMarker, sortPredctionByDistance, withinTimeRange, getGlobalPayload, getAssetStoreLink, getMobileNumber, showCarouselScreen)
+import Foreign.Generic (decodeJSON, encodeJSON)
+import Helpers.Utils (addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, clearWaitingTimer, decodeErrorCode, differenceOfLocationLists, drawPolygon, filterRecentSearches, getAssetStoreLink, getCurrentDate, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, saveRecents, seperateByWhiteSpaces, setText', showCarouselScreen, sortPredctionByDistance, toString, withinTimeRange)
 import JBridge (metaLogEvent, currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker, generateSessionId, stopChatListenerService, updateRouteMarker, setCleverTapUserProp, setCleverTapUserData, cleverTapSetLocation, hideLoader, emitJOSEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -82,6 +82,7 @@ import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutpu
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Screens.ReferralScreen.ScreenData as ReferralScreen
+import Screens.RideBookingFlow.HomeScreen.Config (getTipViewData, setTipViewData)
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationIcons, specialLocationConfig, updateRouteMarkerConfig)
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
@@ -92,7 +93,6 @@ import Services.API (AuthType(..), AddressGeometry(..), BookingLocationAPIEntity
 import Services.Backend as Remote
 import Services.Backend as Remote
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
-import Foreign.Generic (decodeJSON, encodeJSON)
 import Types.App (ABOUT_US_SCREEN_OUTPUT(..), ACCOUNT_SET_UP_SCREEN_OUTPUT(..), ADD_NEW_ADDRESS_SCREEN_OUTPUT(..), GlobalState(..), CONTACT_US_SCREEN_OUTPUT(..), FlowBT, HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREEN_OUTPUT(..), MY_PROFILE_SCREEN_OUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), PERMISSION_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUPUT(..), SAVED_LOCATION_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), EMERGECY_CONTACTS_SCREEN_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..))
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
@@ -918,6 +918,8 @@ homeScreenFlow = do
                                           action : "trip_completed"
                                         , trip_amount : Just finalAmount
                                         , trip_id : Just state.props.bookingId
+                                        , screen : Just $ getScreenFromStage state.props.currentStage
+                                        , exit_app : false
                                         }
                                         }
                                         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{startedAt = convertUTCtoISC (fromMaybe "" resp.rideStartTime ) "h:mm A", startedAtUTC = fromMaybe "" resp.rideStartTime ,endedAt = convertUTCtoISC (fromMaybe "" resp.rideEndTime ) "h:mm A", finalAmount = finalAmount, previousRideRatingState {distanceDifference = differenceOfDistance}, driverInfoCardState {initDistance = Nothing}},props {currentStage = RideCompleted, estimatedDistance = contents.estimatedDistance}})
@@ -961,6 +963,8 @@ homeScreenFlow = do
                                           action : "feedback_submitted"
                                         , trip_amount : Nothing
                                         , trip_id : Nothing
+                                        , screen : Just $ getScreenFromStage state.props.currentStage
+                                        , exit_app : false
                                         }
                                         }
       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}}})

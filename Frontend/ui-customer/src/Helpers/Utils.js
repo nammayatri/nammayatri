@@ -469,34 +469,6 @@ export const performHapticFeedback = function () {
   }
 }
 
-export const initialWebViewSetUp = function (cb) {
-  return function (id) {
-      return function (action) {
-        return function () {
-          try {
-            var callback = callbackMapper.map(function (val) {
-              cb(action(val))();
-            });
-
-            return window.JBridge.initialWebViewSetUp(callback,id);
-          } catch (err) {
-            console.log("initialWebViewSetUp error " + err);
-          }
-        };
-      };
-  };
-};
-
-export const goBackPrevWebPage = function (id) {
-  try {
-    if (window.JBridge.goBackPrevWebPage){
-      return window.JBridge.goBackPrevWebPage(id);
-    }
-  } catch (err) {
-    console.log("goBackPrevWebPage error " + err);
-  }
-}
-
 export const storeOnResumeCallback = function (cb) {
   return function (action) {
     return function () {

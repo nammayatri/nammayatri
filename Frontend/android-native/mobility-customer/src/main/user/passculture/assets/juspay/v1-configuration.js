@@ -6,7 +6,8 @@ window.getMerchantConfig = function () {
                          "PAYMENT_METHOD_STRING",
                          "PAY_DRIVER_USING_CASH_OR_UPI",
                          "PAY_DRIVER_USING_WALLET",
-                         "PAY_DRIVER_USING_CASH_OR_UPI_"],
+                         "PAY_DRIVER_USING_CASH_OR_UPI_",
+                         "LOCATION_PERMISSION_SUBTITLE_NEW_USER"],
     "isReferralEnabled": "false",
     "showBookingPreference": "true",
     "showRateCard": "true",
@@ -70,7 +71,7 @@ window.getMerchantConfig = function () {
     "quoteListModel": {
       "backgroundColor": "#EB0055",
       "textColor": "#FFFFFF",
-      "loaderColor": "#80B2FF", 
+      "loaderColor": "#80B2FF",
       "otpTextBackground"  : "#FFFFFF",
       "otpBackground" : "#FFF0F6",
       "otpTextColor" : "#3C2062",
@@ -122,7 +123,8 @@ window.getMerchantConfig = function () {
       "PAYMENT_METHOD_STRING": "Cash",
       "PAY_DRIVER_USING_CASH_OR_UPI": "Pay driver by Cash",
       "PAY_DRIVER_USING_WALLET": "Pay driver using Pass Culture Wallet",
-      "PAY_DRIVER_USING_CASH_OR_UPI_": "Already paid using Pass Culture Wallet"
+      "PAY_DRIVER_USING_CASH_OR_UPI_": "Already paid using Pass Culture Wallet",
+      "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "Welcome to Pass Culture \n To start booking ride, please allow us to \n find you!"
     },
     "frenchStrings": {
       "REQUEST_AUTO_RIDE": "Demande de trajet",
@@ -132,6 +134,7 @@ window.getMerchantConfig = function () {
       "PAY_DRIVER_USING_CASH_OR_UPI": "Payer le chauffeur en espèces",
       "PAY_DRIVER_USING_WALLET" : "Payer le chauffeur avec Pass Culture Wallet",
       "PAY_DRIVER_USING_CASH_OR_UPI_" : "Déjà payé avec Pass Culture Wallet",
+      "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "Bienvenue au Pass Culture \n Pour commencer à réserver un trajet, veuillez nous permettre \n de vous trouver !"
     } ,
     "languageList": [{
       "name": "English",
@@ -148,12 +151,12 @@ window.getMerchantConfig = function () {
     , "titleColor" : "#21C179"
     , "actionText" : "Update now"
     , "actionTextColor" : "#27AE5F"
-    , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
+    , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png"
     },
     "terminateBtnConfig" : {
-      "visibility" : true, 
-      "title" : "Pass Culture",
-      "imageUrl" : "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
+      "visibility" : true,
+      "title" : "",
+      "imageUrl" : "ny_ic_go_home,https://assets.juspay.in/beckn/passculture/passculturecommon/ny_ic_go_home.png"
   }
   , "showDeleteAccount" : false
     , "fontName" : "Montserrat"

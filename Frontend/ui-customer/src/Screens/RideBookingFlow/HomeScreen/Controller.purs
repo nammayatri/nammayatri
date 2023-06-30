@@ -70,7 +70,7 @@ import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os, getExpiryTime, convertUTCtoISC, getCurrentUTC)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Foreign.Class (encode)
-import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getSearchType, getLocationName, parseNewContacts, performHapticFeedback, saveRecents, setText', terminateApp, updateInputString, withinTimeRange)
+import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, saveRecents, setText', terminateApp, updateInputString, withinTimeRange)
 import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
@@ -87,15 +87,15 @@ import Screens.AddNewAddressScreen.Controller (validTag, getSavedTagsFromHome)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity, dummyZoneType)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList)
+import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData)
 import Screens.SuccessScreen.Handler as UI
 import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RateCardType(..), RatingCard, SearchLocationModelType(..), SpecialTags, Stage(..), ZoneType(..), TipViewStage(..))
+import Screens.Types (TipViewData(..), TipViewProps(..))
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
 import Types.App (defaultGlobalState)
-import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData)
-import Screens.Types (TipViewData(..) , TipViewProps(..))
 
 
 instance showAction :: Show Action where
@@ -611,7 +611,7 @@ eval SearchForSelectedLocation state = do
 eval CheckFlowStatusAction state = exit $ CheckFlowStatus state
 
 eval TerminateApp state = do 
-  pure $ terminateApp unit
+  pure $ terminateApp state.props.currentStage true
   continue state
 
 eval (IsMockLocation isMock) state = do
@@ -725,7 +725,7 @@ eval BackPressed state = do
                                     continue state{props{isSearchLocation = SearchLocation}}
                                   else do
                                     if (getSearchType unit) == "direct_search" then 
-                                      pure $ terminateApp unit
+                                      pure $ terminateApp state.props.currentStage false
                                       else pure unit
                                     exit $ GoToHome
     SettingPrice    -> do
@@ -786,7 +786,7 @@ eval BackPressed state = do
                           else if state.props.emergencyHelpModal then continue state {props {emergencyHelpModal = false}}
                           else if state.props.callSupportPopUp then continue state {props {callSupportPopUp = false}}
                           else do 
-                              pure $ terminateApp unit
+                              pure $ terminateApp state.props.currentStage false
                               continue state
 
 eval GoBackToSearchLocationModal state = do
@@ -900,7 +900,7 @@ eval (SettingSideBarActionController (SettingSideBarController.OnClose)) state =
       else case state.data.settingSideBar.opened of
                 SettingSideBarController.CLOSED -> do
                                                     if state.props.currentStage == HomeScreen then do
-                                                      pure $ terminateApp unit
+                                                      pure $ terminateApp state.props.currentStage false
                                                       continue state
                                                       else continueWithCmd state [pure $ BackPressed]
                 _                               -> continue state {data{settingSideBar{opened = SettingSideBarController.CLOSING}}}
@@ -972,6 +972,8 @@ eval (SkipButtonActionController (PrimaryButtonController.OnClick)) state = do
                                           action : "feedback_skipped"
                                         , trip_amount : Nothing
                                         , trip_id : Nothing
+                                        , screen : Just $ getScreenFromStage state.props.currentStage
+                                        , exit_app : false
                                         }
                                         }
   updateAndExit state GoToHome

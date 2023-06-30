@@ -404,15 +404,41 @@ getAssetsBaseUrl lazy = case (getMerchant lazy) of
 showCarouselScreen :: LazyCheck -> Boolean
 showCarouselScreen a = os == "ANDROID" && (getMerchant FunctionCall) == NAMMAYATRI
 
-terminateApp :: Unit -> Unit
-terminateApp _ = runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload {
+terminateApp :: Stage -> Boolean -> Unit
+terminateApp stage exitApp = runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload {
     event : "process_result"
   , payload : Just {
     action : "terminate"
   , trip_amount : Nothing
   , trip_id : Nothing
+  , screen : Just (getScreenFromStage stage)
+  , exit_app : exitApp
   }
-}  
+}
+
+getScreenFromStage :: Stage -> String
+getScreenFromStage stage = case stage of
+  HomeScreen -> "home_screen"
+  SettingPrice -> "estimate_screen"
+  FindingEstimate -> "finding_driver_loader"
+  ConfirmingRide -> "confirm_ride_loader"
+  RideAccepted -> "trip_accepted_screen"
+  RideStarted -> "trip_started_screen"
+  RideCompleted -> "trip_completed_screen"
+  PricingTutorial -> "estimate_screen"
+  SearchLocationModel -> "search_location_screen"
+  FindingQuotes -> "finding_rides_screen"
+  QuoteList -> "no_rides_screen"
+  PreviousRating -> "previous_ride_rating_screen"
+  ConfirmingLocation -> "confirm_location_screen"
+  RideRating -> "ride_rating_screen"
+  FavouriteLocationModel -> "search_location_screen"
+  ChatWithDriver -> "trip_accepted_screen"
+  FindEstimateAndSearch -> "finding_rides_screen"
+  RetryFindingQuote -> "finding_rides_screen"
+  DistanceOutsideLimits -> "finding_driver_loader"
+  ShortDistance -> "finding_driver_loader"
+  TryAgain -> "finding_rides_screen"
 
 getGlobalPayload :: Unit -> Effect (Maybe GlobalPayload)
 getGlobalPayload _ = do

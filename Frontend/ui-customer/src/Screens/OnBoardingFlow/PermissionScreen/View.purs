@@ -15,6 +15,7 @@
 
 module Screens.PermissionScreen.View where
 
+import Common.Types.App (LazyCheck(..))
 import Components.ErrorModal as ErrorModal
 import Components.PrimaryButton as PrimaryButton
 import Effect (Effect)
@@ -27,12 +28,11 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, (<<<), ($), (==), (<>), (/=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alignParentBottom, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, orientation, padding, text, textSize, textView, width)
+import Screens.OnBoardingFlow.PermissionScreen.ComponentConfig (errorModalConfig, primaryButtonConfig)
 import Screens.PermissionScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
-import Styles.Colors as Color
-import Common.Types.App (LazyCheck(..))
-import Screens.OnBoardingFlow.PermissionScreen.ComponentConfig (errorModalConfig, primaryButtonConfig)
 import Storage (getValueToLocalStore, KeyStore(..))
+import Styles.Colors as Color
 
 screen :: ST.PermissionScreenState -> String -> Screen Action ST.PermissionScreenState ScreenOutput
 screen initialState triggertype = 
@@ -80,7 +80,7 @@ locationAccessPermissionView push state =
       , cornerRadius 8.0
       , background Color.white900
       ][  imageView
-          [ imageWithFallback "ic_location_permission_logo,https://assets.juspay.in/nammayatri/images/user/ic_location_permission_logo.png"
+          [ imageWithFallback $ "ic_location_permission_logo," <> (getAssetStoreLink FunctionCall) <> "ic_location_permission_logo.png"
           , height $ V 213
           , width $ V 240
           , gravity CENTER
