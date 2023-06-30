@@ -25,6 +25,7 @@ import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Common (HighPrecMoney, MandatoryQueryParam, Money)
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import qualified Kernel.Utils.Predicates as P
@@ -44,6 +45,7 @@ data DriverEndpoint
   | UpdatePhoneNumberEndpoint
   | AddVehicleEndpoint
   | UpdateDriverNameEndpoint
+  | CollectCashEndpoint
   deriving (Show, Read)
 
 derivePersistField "DriverEndpoint"
@@ -183,6 +185,47 @@ data DriverAadhaarInfoRes = DriverAadhaarInfoRes
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+---------------------------------------------------------
+-- driver outstanding balance api ----------------------------------------
+
+data DriverOutstandingBalanceResp = DriverOutstandingBalanceResp
+  { driverFeeId :: Id DriverOutstandingBalanceResp,
+    driverId :: Id Driver,
+    govtCharges :: Money,
+    platformFee :: PlatformFee,
+    numRides :: Int,
+    payBy :: UTCTime,
+    totalFee :: Money,
+    totalEarnings :: Money,
+    startTime :: UTCTime,
+    endTime :: UTCTime,
+    status :: DriverFeeStatus
+  }
+  deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
+
+data PlatformFee = PlatformFee
+  { fee :: Money,
+    cgst :: HighPrecMoney,
+    sgst :: HighPrecMoney
+  }
+  deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
+
+data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED | COLLECTED_CASH | INACTIVE deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
+
+type DriverOutstandingBalanceAPI =
+  "paymentDue"
+    :> QueryParam "countryCode" Text
+    :> MandatoryQueryParam "phone" Text
+    :> Get '[JSON] [DriverOutstandingBalanceResp]
+
+---------------------------------------------------------
+-- driver cash collection api ----------------------------------------
+
+type DriverCashCollectionAPI =
+  Capture "driverId" (Id Driver)
+    :> "collectCash"
+    :> Post '[JSON] APISuccess
 
 -------------------------------------
 

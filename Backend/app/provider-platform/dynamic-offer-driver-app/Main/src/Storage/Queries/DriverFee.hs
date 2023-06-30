@@ -44,6 +44,15 @@ findPendingFeesByDriverFeeId driverFeeId = do
         &&. driverFee ^. DriverFeeStatus `in_` valList [PAYMENT_PENDING, PAYMENT_OVERDUE]
     return driverFee
 
+findPendingFeesByDriverId :: Transactionable m => Id Driver -> m (Maybe DriverFee)
+findPendingFeesByDriverId driverId = do
+  findOne $ do
+    driverFee <- from $ table @DriverFeeT
+    where_ $
+      driverFee ^. DriverFeeDriverId ==. val (toKey (cast driverId))
+        &&. driverFee ^. DriverFeeStatus `in_` valList [PAYMENT_PENDING, PAYMENT_OVERDUE]
+    return driverFee
+
 findLatestFeeByDriverId :: Transactionable m => Id Driver -> m (Maybe DriverFee)
 findLatestFeeByDriverId driverId = do
   findOne $ do
