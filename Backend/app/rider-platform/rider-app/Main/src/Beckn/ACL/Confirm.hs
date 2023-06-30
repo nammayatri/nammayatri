@@ -11,13 +11,14 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE OverloadedLabels #-}
 
 module Beckn.ACL.Confirm (buildConfirmReq) where
 
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
+import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Types.LocationAddress as DBL
-import Environment
 import EulerHS.Prelude hiding (id, state)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
@@ -26,14 +27,13 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 
 buildConfirmReq ::
-  (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DOnInit.OnInitRes ->
   m (BecknReq Confirm.ConfirmMessage)
 buildConfirmReq res = do
-  bapURIs <- asks (.bapSelfURIs)
-  bapIDs <- asks (.bapSelfIds)
   messageId <- generateGUID
-  context <- buildTaxiContext Context.CONFIRM messageId (Just res.transactionId) bapIDs.cabs bapURIs.cabs (Just res.bppId) (Just res.bppUrl) res.city
+  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/cab/v1/" <> T.unpack res.merchant.id.getId)
+  context <- buildTaxiContext Context.CONFIRM messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchant.city
   pure $ BecknReq context $ mkConfirmMessage res
 
 mkConfirmMessage :: DOnInit.OnInitRes -> Confirm.ConfirmMessage

@@ -30,6 +30,7 @@ import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
 import Domain.Types.Booking.Type
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
@@ -77,7 +78,7 @@ data DSelectRes = DSelectRes
     providerUrl :: BaseUrl,
     variant :: VehicleVariant,
     customerExtraFee :: Maybe Money,
-    city :: Text,
+    merchant :: DM.Merchant,
     autoAssignEnabled :: Bool
   }
 
@@ -135,7 +136,6 @@ select personId estimateId req@DSelectReq {..} = do
       { providerId = estimate.providerId,
         providerUrl = estimate.providerUrl,
         variant = estimate.vehicleVariant,
-        city = merchant.city,
         ..
       }
 

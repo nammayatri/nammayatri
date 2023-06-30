@@ -17,13 +17,13 @@ module Domain.Action.Beckn.OnInit where
 import Domain.Types.Booking (BPPBooking, Booking)
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.LocationAddress as DBL
+import qualified Domain.Types.Merchant as DM
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.GenericPretty (PrettyShow)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRideB
@@ -52,9 +52,9 @@ data OnInitRes = OnInitRes
     riderPhoneNumber :: Text,
     mbRiderName :: Maybe Text,
     transactionId :: Text,
-    city :: Text
+    merchant :: DM.Merchant
   }
-  deriving (Generic, Show, PrettyShow)
+  deriving (Generic, Show)
 
 onInit :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HedisFlow m r) => OnInitReq -> m OnInitRes
 onInit req = do
@@ -83,6 +83,6 @@ onInit req = do
         mbToLocationAddress = mbToLocation <&> (.address),
         mbRiderName = decRider.firstName,
         transactionId = booking.transactionId,
-        city = merchant.city,
+        merchant = merchant,
         ..
       }

@@ -37,6 +37,8 @@ mkPersist
       subscriberId Text
       name Text
       city Text
+      bapId Text
+      bapUniqueKeyId Text
       originRestriction GeoRestriction
       destinationRestriction GeoRestriction
       gatewayUrl Text

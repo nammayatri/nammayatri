@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE OverloadedLabels #-}
 
 module Beckn.ACL.Track
   ( TrackBuildReq (..),
@@ -19,8 +20,10 @@ module Beckn.ACL.Track
 where
 
 import qualified Beckn.Types.Core.Taxi.Track as Track
+import Control.Lens ((%~))
+import qualified Data.Text as T
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
-import Environment
 import Kernel.Prelude
 import Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
@@ -33,22 +36,21 @@ data TrackBuildReq = TrackBuildReq
     bppId :: Text,
     bppUrl :: BaseUrl,
     transactionId :: Text,
-    city :: Text
+    merchant :: DM.Merchant
   }
 
 buildTrackReq ::
   ( MonadFlow m,
-    HasBapInfo r m,
-    HedisFlow m r
+    HedisFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   TrackBuildReq ->
   m (BecknReq Track.TrackMessage)
 buildTrackReq res = do
-  bapURIs <- asks (.bapSelfURIs)
-  bapIDs <- asks (.bapSelfIds)
   messageId <- generateGUID
   Redis.setExp (key messageId) res.bppRideId 1800 --30 mins
-  context <- buildTaxiContext Context.TRACK messageId (Just res.transactionId) bapIDs.cabs bapURIs.cabs (Just res.bppId) (Just res.bppUrl) res.city
+  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/cab/v1/" <> T.unpack res.merchant.id.getId)
+  context <- buildTaxiContext Context.TRACK messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchant.city
   pure $ BecknReq context $ mkTrackMessage res
   where
     key messageId = "Track:bppRideId:" <> messageId

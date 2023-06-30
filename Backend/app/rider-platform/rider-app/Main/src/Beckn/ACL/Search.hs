@@ -11,15 +11,17 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE OverloadedLabels #-}
 
 module Beckn.ACL.Search (buildRentalSearchReq, buildOneWaySearchReq) where
 
 import qualified Beckn.Types.Core.Taxi.Search as Search
+import qualified Data.Text as T
 import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
 import qualified Domain.Action.UI.Search.Rental as DRentalSearch
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSearchReq
-import Environment
 import EulerHS.Prelude hiding (state)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
@@ -29,7 +31,7 @@ import Kernel.Utils.Common
 import qualified Tools.Maps as Maps
 
 buildOneWaySearchReq ::
-  (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DOneWaySearch.OneWaySearchRes ->
   m (BecknReq Search.SearchMessage)
 buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
@@ -38,14 +40,14 @@ buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
     (Just destination)
     searchId
     now
-    city
     device
     (shortestRouteInfo >>= (.distance))
     (shortestRouteInfo >>= (.duration))
     customerLanguage
+    merchant
 
 buildRentalSearchReq ::
-  (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DRentalSearch.RentalSearchRes ->
   m (BecknReq Search.SearchMessage)
 buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
@@ -54,30 +56,29 @@ buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
     Nothing
     searchId
     startTime
-    city
     Nothing
     Nothing
     Nothing
     Nothing
+    merchant
 
 buildSearchReq ::
-  (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DSearchCommon.SearchReqLocation ->
   Maybe DSearchCommon.SearchReqLocation ->
   Id DSearchReq.SearchRequest ->
   UTCTime ->
-  Text ->
   Maybe Text ->
   Maybe Meters ->
   Maybe Seconds ->
   Maybe Maps.Language ->
+  DM.Merchant ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin mbDestination searchId startTime city device distance duration customerLanguage = do
+buildSearchReq origin mbDestination searchId startTime device distance duration customerLanguage merchant = do
   let transactionId = getId searchId
       messageId = transactionId
-  bapURIs <- asks (.bapSelfURIs)
-  bapIDs <- asks (.bapSelfIds)
-  context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) bapIDs.cabs bapURIs.cabs Nothing Nothing city
+  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/cab/v1/" <> T.unpack merchant.id.getId)
+  context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.city
   let intent = mkIntent origin mbDestination startTime customerLanguage
   let mbRouteInfo = Search.RouteInfo {distance, duration}
   let searchMessage = Search.SearchMessage intent (Just mbRouteInfo) device

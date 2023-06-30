@@ -142,6 +142,7 @@ library
       Domain.Action.UI.Transporter
       Domain.Action.UI.Vehicle
       Domain.Action.UI.Whatsapp
+      Domain.Types.BapMetadata
       Domain.Types.Booking
       Domain.Types.Booking.BookingLocation
       Domain.Types.BookingCancellationReason
@@ -243,6 +244,7 @@ library
       SharedLogic.Person
       SharedLogic.Ride
       SharedLogic.SearchTryLocker
+      Storage.CachedQueries.BapMetadata
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.DriverInformation
       Storage.CachedQueries.Exophone
@@ -263,6 +265,7 @@ library
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
       Storage.CachedQueries.Merchant.OnboardingDocumentConfig
       Storage.CachedQueries.Merchant.TransporterConfig
+      Storage.Queries.BapMetadata
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation
       Storage.Queries.BookingCancellationReason
@@ -326,6 +329,7 @@ library
       Storage.Queries.SearchRequestSpecialZone
       Storage.Queries.SearchTry
       Storage.Queries.Vehicle
+      Storage.Tabular.BapMetadata
       Storage.Tabular.Booking
       Storage.Tabular.Booking.BookingLocation
       Storage.Tabular.BookingCancellationReason

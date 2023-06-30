@@ -30,6 +30,8 @@ data MerchantD (s :: UsageSafety) = Merchant
     geofencingConfig :: GeofencingConfig,
     gatewayUrl :: BaseUrl,
     registryUrl :: BaseUrl,
+    bapId :: Text,
+    bapUniqueKeyId :: Text,
     driverOfferBaseUrl :: BaseUrl,
     driverOfferApiKey :: Text,
     driverOfferMerchantId :: Text,

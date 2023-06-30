@@ -20,6 +20,7 @@ module Domain.Action.UI.Feedback
 where
 
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Environment as App
@@ -47,7 +48,7 @@ data FeedbackRes = FeedbackRes
     providerId :: Text,
     providerUrl :: BaseUrl,
     transactionId :: Text,
-    city :: Text
+    merchant :: DM.Merchant
   }
 
 feedback :: FeedbackReq -> App.Flow FeedbackRes
@@ -70,6 +71,5 @@ feedback request = do
       { providerId = booking.providerId,
         providerUrl = booking.providerUrl,
         transactionId = booking.transactionId,
-        city = merchant.city,
         ..
       }
