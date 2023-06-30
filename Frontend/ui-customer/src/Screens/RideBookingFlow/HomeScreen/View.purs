@@ -331,7 +331,7 @@ cancelSearchPopUp push state =
 
 chatView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 chatView push state =
-  PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 300 ] $ 
+  PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 300 ] $
   relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -958,7 +958,7 @@ rideCompletedCardView state push =
             ][ imageView
                 [ width (V 20)
                 , height (V 20)
-                , imageWithFallback "ny_ic_metro_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_metro_blue.png"
+                , imageWithFallback "ny_ic_metro_blue,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_metro_blue.png"
                 , margin (MarginRight 5)
                 ]
               , textView
@@ -1124,7 +1124,7 @@ suggestedPriceView push state =
           [ width (V 15)
           , height (V 15)
           , margin (MarginRight 6)
-          , imageWithFallback "ny_ic_metro_white,https://assets.juspay.in/nammayatri/images/common/ny_ic_metro_white.png"
+          , imageWithFallback "ny_ic_metro_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_metro_white.png"
           ]
         , textView
           [ width WRAP_CONTENT
