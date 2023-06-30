@@ -156,7 +156,7 @@ window.getMerchantConfig = function () {
     "terminateBtnConfig" : {
       "visibility" : true,
       "title" : "",
-      "imageUrl" : "ny_ic_go_home,https://assets.juspay.in/beckn/passculture/passculturecommon/ny_ic_go_home.png"
+      "imageUrl" : "ny_ic_go_home,https://assets.juspay.in/beckn/passculture/user/images/ny_ic_go_home.png"
   }
   , "showDeleteAccount" : false
     , "fontName" : "Montserrat"
