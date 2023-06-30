@@ -457,6 +457,7 @@ data Stage = HomeScreen
            | FindingEstimate
            | ConfirmingRide
            | RideAccepted
+           | ReAllocated
            | RideStarted
            | RideCompleted
            | PricingTutorial

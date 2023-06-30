@@ -355,6 +355,7 @@ public class NotificationUtils extends AppCompatActivity {
     @RequiresApi(api = Build.VERSION_CODES.M)
     public static void showNotification(Context context, String title, String msg, JSONObject data, String imageUrl ) throws JSONException{
             Log.e(TAG, "SHOWNOTIFICATION MESSAGE");
+            System.out.println("debug reallocation inside showNotification");
             Bitmap bigIcon = BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher);
             Bitmap bitmap = null;
             if (imageUrl != null)

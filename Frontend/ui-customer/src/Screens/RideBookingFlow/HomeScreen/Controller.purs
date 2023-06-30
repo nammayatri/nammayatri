@@ -592,6 +592,7 @@ data Action = NoAction
             | CancelSearchAction PopUpModal.Action
             | TriggerPermissionFlow String
             | PopUpModalCancelConfirmationAction PopUpModal.Action
+            | Refresh
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -599,6 +600,15 @@ eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval SearchForSelectedLocation state = do
   let currentStage = if state.props.searchAfterEstimate then TryAgain else FindingEstimate
   updateAndExit state{props{isPopUp = NoPopUp}} $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = currentStage, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
+
+eval Refresh state =
+  if (getValueToLocalNativeStore LOCAL_STAGE) == "ReAllocated" then do
+    _ <- pure $ setValueToLocalStore LOCAL_STAGE "FindingQuotes"
+    exit $ Retry state{ props{ currentStage = FindingQuotes } }
+  else continue state
+
+eval SearchForSelectedLocation state =
+  updateAndExit state{props{isPopUp = NoPopUp}} $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = TryAgain, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
 
 eval CheckFlowStatusAction state = exit $ CheckFlowStatus state
 
@@ -609,7 +619,9 @@ eval (IsMockLocation isMock) state = do
 
 eval (UpdateCurrentStage stage) state = do
   _ <- pure $ spy "updateCurrentStage" stage
-  if (stage == "INPROGRESS") && (not $ isLocalStageOn RideStarted) then
+  if stage == "REALLOCATED" then
+    exit $ NotificationHandler "REALLOCATE_PRODUCT" state
+  else if (stage == "INPROGRESS") && (not $ isLocalStageOn RideStarted) then
     exit $ NotificationHandler "TRIP_STARTED" state
   else if (stage == "COMPLETED") && (not $ isLocalStageOn HomeScreen) then
     exit $ NotificationHandler "TRIP_FINISHED" state
@@ -632,7 +644,7 @@ eval (UpdateMessages message sender timeStamp size) state = do
                     then updateMessagesWithCmd state {data {messages = messages, messagesSize = size, suggestionsList = []}}
                   else do
                     let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
-                    let unReadMessages = (if readMessages == 0 then true else (if (readMessages < (length messages) && state.props.currentStage /= ChatWithDriver) then true else false)) 
+                    let unReadMessages = (if readMessages == 0 then true else (if (readMessages < (length messages) && state.props.currentStage /= ChatWithDriver) then true else false))
                     let suggestions = getSuggestionsfromKey message
                     updateMessagesWithCmd state {data {messages = messages, suggestionsList = suggestions, lastMessage = value , messagesSize = size}, props {unReadMessages = unReadMessages, showChatNotification = unReadMessages}}
     Nothing -> continue state
@@ -974,6 +986,9 @@ eval CancelSearch state = case state.props.currentStage of
   ConfirmingRide -> do
     _ <- pure $ performHapticFeedback unit
     continue state { props { currentStage = SettingPrice, isSearchLocation = NoView } }
+  ReAllocated -> do
+    _ <- pure $ spy "debug reallocated cancel" state
+    exit $ CheckCurrentStatus
   _ -> continue state
 
 eval SidebarCloseAnimationCompleted state = continue state --{props{sideBarStatus = SettingSideBarController.CLOSED}}

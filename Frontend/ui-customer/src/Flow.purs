@@ -80,6 +80,8 @@ import Screens.RideBookingFlow.HomeScreen.Config (specialLocationIcons, specialL
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload refreshFlow = do
+  _ <- pure $ spy "debug reallocation FINDING_QUOTES_START_TIME" (getValueToLocalNativeStore FINDING_QUOTES_START_TIME)
+  _ <- pure $ spy "debug reallocation current time" (getCurrentUTC "LazyCheck")
   _ <- pure $ printLog "Global Payload" gPayload
   (GlobalState state) <- getState
   let bundle = bundleVersion unit
@@ -199,7 +201,7 @@ currentRideFlow rideAssigned = do
           void $ pure $ firebaseLogEvent "ny_active_ride_with_idle_state"
         let (RideBookingRes resp) = (fromMaybe dummyRideBooking (listResp.list !! 0))
             status = (fromMaybe dummyRideAPIEntity ((resp.rideList) !! 0))^._status
-            rideStatus = if status == "NEW" then RideAccepted else RideStarted
+            rideStatus = if status == "NEW" then RideAccepted else if status == "INPROGRESS" then RideStarted else HomeScreen
             newState = state{data{driverInfoCardState = getDriverInfo (RideBookingRes resp) state.props.isSpecialZone
                 , finalAmount = fromMaybe 0 ((fromMaybe dummyRideAPIEntity (resp.rideList !!0) )^. _computedPrice)},
                   props{currentStage = rideStatus
@@ -209,27 +211,31 @@ currentRideFlow rideAssigned = do
                   , isPopUp = NoPopUp
                   , zoneType = getSpecialTag resp.specialLocationTag
                   }}
-        when (not rideAssigned) $ do
-          void $ pure $ firebaseLogEventWithTwoParams "ny_active_ride_with_idle_state" "status" status "bookingId" resp.id
-        _ <- pure $ spy "Active api" listResp
-        modifyScreenState $ HomeScreenStateType (\homeScreen → newState)
-        updateLocalStage rideStatus
-        let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
-        let (RideBookingDetails contents) = bookingDetails.contents
-        let otpCode = contents.otpCode
-        let rideList =  (resp.rideList !!0)
-        case rideList of
-          Nothing -> do
-            case otpCode of
-              Just otp' -> do
+        if rideStatus == HomeScreen then do
+          _ <- pure $ spy "status is : " status
+          updateLocalStage HomeScreen
+        else do
+          when (not rideAssigned) $ do
+            void $ pure $ firebaseLogEventWithTwoParams "ny_active_ride_with_idle_state" "status" status "bookingId" resp.id
+          _ <- pure $ spy "Active api" listResp
+          modifyScreenState $ HomeScreenStateType (\homeScreen → newState)
+          updateLocalStage rideStatus
+          let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
+          let (RideBookingDetails contents) = bookingDetails.contents
+          let otpCode = contents.otpCode
+          let rideList =  (resp.rideList !!0)
+          case rideList of
+            Nothing -> do
+              case otpCode of
+                Just otp' -> do
+                  _ <- pure $ setValueToLocalStore TRACKING_ENABLED "True"
+                  modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{isSpecialZone = true, isInApp = true}, data{driverInfoCardState{otp = otp'}}})
+                Nothing -> pure unit
+            Just (RideAPIEntity _) ->
+              if otpCode /= Nothing then do
                 _ <- pure $ setValueToLocalStore TRACKING_ENABLED "True"
-                modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{isSpecialZone = true, isInApp = true}, data{driverInfoCardState{otp = otp'}}})
-              Nothing -> pure unit
-          Just (RideAPIEntity _) ->
-            if otpCode /= Nothing then do
-              _ <- pure $ setValueToLocalStore TRACKING_ENABLED "True"
-              modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{isSpecialZone = true,isInApp = true }}) else
-              pure unit
+                modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{isSpecialZone = true,isInApp = true }}) else
+                pure unit
       else if ((getValueToLocalStore RATING_SKIPPED) == "false") then do
         updateLocalStage HomeScreen
         rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "false"
@@ -318,11 +324,11 @@ currentFlowStatus = do
         resp <- lift $ lift $ Remote.updateProfile (Remote.mkUpdateProfileRequest)
         pure unit
 
-      let middleName = case response.middleName of 
+      let middleName = case response.middleName of
                     Just ""  -> ""
                     Just name -> (" " <> name)
                     Nothing -> ""
-          lastName   = case response.lastName of 
+          lastName   = case response.lastName of
                     Just "" -> ""
                     Just name -> (" " <> name)
                     Nothing -> ""
@@ -364,18 +370,24 @@ currentFlowStatus = do
 
     goToFindingQuotesStage :: String -> Boolean -> FlowBT String Unit
     goToFindingQuotesStage estimateId driverOfferedQuote = do
-      if any (_ == (getValueToLocalStore FINDING_QUOTES_START_TIME)) ["__failed", ""] then do
+      removeChatService ""
+      _ <- pure $ spy "debug reallocation local stage" (getValueToLocalNativeStore LOCAL_STAGE)
+      if any (_ == (getValueToLocalNativeStore FINDING_QUOTES_START_TIME)) ["__failed", ""] then do
         updateFlowStatus SEARCH_CANCELLED
       else do
-        let secondsPassed = spy "secondsPassed" (getExpiryTime (getValueToLocalStore FINDING_QUOTES_START_TIME) true)
+        let secondsPassed = spy "secondsPassed" (getExpiryTime (getValueToLocalNativeStore FINDING_QUOTES_START_TIME) true)
         let searchExpiryTime = getSearchExpiryTime "LazyCheck"
         let secondsLeft = case driverOfferedQuote of
                             true  -> if (searchExpiryTime - secondsPassed) < 30 then (searchExpiryTime - secondsPassed) else 30
                             false -> (searchExpiryTime - secondsPassed)
         if secondsLeft > 0 then do
           _ <- pure $ setValueToLocalStore RATING_SKIPPED "true"
-          updateLocalStage FindingQuotes
-          setValueToLocalStore AUTO_SELECTING ""
+          if (getValueToLocalNativeStore LOCAL_STAGE) == "ReAllocated" then do
+            _ <- pure $ spy "debug reallocation local stage if" "."
+            pure unit
+          else do
+            _ <- pure $ spy "debug reallocation local stage else" "."
+            updateLocalStage FindingQuotes
           setValueToLocalStore FINDING_QUOTES_POLLING "false"
           _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
           (GlobalState currentState) <- getState
@@ -391,7 +403,7 @@ currentFlowStatus = do
                      , sourceLong = flowStatusData.source.lng
                      , destinationLat = flowStatusData.destination.lat
                      , destinationLong = flowStatusData.destination.lng
-                     , currentStage = FindingQuotes
+                     , currentStage = if (getValueToLocalNativeStore LOCAL_STAGE) == "ReAllocated" then ReAllocated else FindingQuotes
                      , searchExpire = secondsLeft
                      , estimateId = estimateId
                      , rideRequestFlow = true
@@ -516,7 +528,7 @@ accountSetUpScreenFlow = do
       case gender of
           Just value -> void $ pure $ setCleverTapUserData "gender" value
           Nothing -> pure unit
-      
+
       resp <- lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
       case resp of
         Right response -> do
@@ -542,6 +554,7 @@ accountSetUpScreenFlow = do
 homeScreenFlow :: FlowBT String Unit
 homeScreenFlow = do
   (GlobalState currentState) <- getState
+  _ <- pure $ spy "debug reallocation inside homeScreenFlow" currentState.homeScreen
   _ <- checkAndUpdateSavedLocations currentState.homeScreen
   _ <- pure $ cleverTapSetLocation unit
   -- TODO: REQUIRED ONCE WE NEED TO STORE RECENT CURRENTLOCATIONS
@@ -743,7 +756,7 @@ homeScreenFlow = do
             pure unit
           else do
             pure unit
-          void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
+          void $ pure $ setValueToLocalNativeStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
           _ <- Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing)) (state.props.estimateId)
           homeScreenFlow
     SELECT_ESTIMATE state -> do
@@ -880,6 +893,14 @@ homeScreenFlow = do
                                         currentRideFlow true
                                         homeScreenFlow
                                      else homeScreenFlow
+            "REALLOCATE_PRODUCT"  -> do
+                                      _ <- pure $ removeAllPolylines ""
+                                      removeChatService ""
+                                      setValueToLocalStore PICKUP_DISTANCE "0"
+                                      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}, driverInfoCardState{initDistance = Nothing}},props { isBanner = state.props.isBanner}})
+                                      _ <- pure $ clearWaitingTimer <$> state.props.waitingTimeTimerIds
+                                      -- setValueToLocalNativeStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
+                                      currentFlowStatus
             _                     -> homeScreenFlow
 
     LOGOUT -> do
@@ -955,7 +976,7 @@ homeScreenFlow = do
         homeScreenFlow
     CHECK_CURRENT_STATUS -> do
       (GlobalState state) <- getState
-      when (isLocalStageOn FindingQuotes) $ do
+      when (isLocalStageOn FindingQuotes || (getValueToLocalNativeStore LOCAL_STAGE == "ReAllocated")) $ do
         cancelEstimate state.homeScreen.props.estimateId
       _ <- pure $ removeAllPolylines ""
       _ <- lift $ lift $ liftFlow $ addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) 9.9 9.9 160 0.5 0.9

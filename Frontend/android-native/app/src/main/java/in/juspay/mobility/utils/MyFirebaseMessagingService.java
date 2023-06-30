@@ -268,8 +268,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                             case NotificationTypes.REALLOCATE_PRODUCT:
                                 try {
-                                    if (sharedPref.getString("REALLOCATE_PRODUCT_ENABLED", "false").equals("false"))
-                                        break;
+                                    // if (sharedPref.getString("REALLOCATE_PRODUCT_ENABLED", "false").equals("false"))
+                                    //     break;
                                     SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
                                     dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
                                     String getCurrTime = dateFormat.format(new Date());
