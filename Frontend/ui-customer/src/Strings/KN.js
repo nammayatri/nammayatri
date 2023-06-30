@@ -102,10 +102,10 @@ const kannadaStrings = {
   "LOAD_MORE": "ಇನ್ನಷ್ಟು ಲೋಡ್ ಮಾಡಿ",
   "WE_NEED_ACCESS_TO_YOUR_LOCATION": "ನಿಮ್ಮ ಸ್ಥಳಕ್ಕೆ ನಮಗೆ ಪ್ರವೇಶ ಬೇಕು!",
   "LOCATION_PERMISSION_SUBTITLE" : "ನಿಮ್ಮ ಸವಾರಿಗಳನ್ನು ಪಡೆಯಲು, ನಮಗೆ ನಿಮ್ಮ ಸಾಧನದ ಸ್ಥಳದ ಅಗತ್ಯವಿದೆ.",
-  "CALL": "ಕರೆಯಿಸು",
+  "CALL": "ಕರೆ",
   "EMPTY_RIDES": "ಖಾಲಿ ಸವಾರಿಗಳು",
   "YOU_HAVENT_TAKEN_A_TRIP_YET": "ನೀವು ಇನ್ನೂ ಪ್ರವಾಸ ಕೈಗೊಂಡಿಲ್ಲ",
-  "BOOK_NOW": "ಈಗ ಪುಸ್ತಕ",
+  "BOOK_NOW": "ಕರೆ ಮಾಡು",
   "DENY_ACCESS": "ಪ್ರವೇಶವನ್ನು ನಿರಾಕರಿಸು",
   "T_AND_C_A": "ಎ) ನೀವು ಬೀಟಾ ಪರೀಕ್ಷೆಯಲ್ಲಿ ಇಚ್ willing ೆಯ ಭಾಗವಹಿಸುವವರು ಮತ್ತು ಜಸ್ಪೇ ಯಾವುದೇ ವಿಷಯದಲ್ಲಿ ನಿಮ್ಮ ವಿರುದ್ಧ ಯಾವುದೇ ಹೊಣೆಗಾರಿಕೆಯನ್ನು ಹೊಂದಿರುವುದಿಲ್ಲ ಎಂದು ನೀವು ಒಪ್ಪುತ್ತೀರಿ",
   "TERMS_AND_CONDITIONS": " ಟಿ&ಸಿ ",
@@ -498,5 +498,8 @@ const kannadaStrings = {
   "DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ಚಾಲಕ ನಿಮ್ಮ ಸ್ಥಳಕ್ಕೆ ಬರುತ್ತಿದ್ದಾರೆ.",
   "ALLOW_LOCATION_ACCESS": "ಸ್ಥಳ ಪ್ರವೇಶವನ್ನು ಅನುಮತಿಸಿ",
   "MESSAGE_FROM_DRIVER": "ಚಾಲಕನಿಂದ ಸಂದೇಶ" ,
-  "REPLY": "ಉತ್ತರಿಸು"
+  "REPLY": "ಉತ್ತರಿಸು",
+  "NAME_SHOULD_BE_MORE_THAN_2_CHARACTERS" : "ಹೆಸರು 2 ಅಕ್ಷರಗಳಿಗಿಂತ ಹೆಚ್ಚು ಇರಬೇಕು",
+  "THIS_FIELD_IS_REQUIRED" : "ಈ ಜಾಗ ಬೇಕಾಗಿದೆ", 
+  "EMAIL_EXISTS_ALREADY" : "ಇಮೇಲ್ ಈಗಾಗಲೇ ಅಸ್ತಿತ್ವದಲ್ಲಿದೆ"
 }

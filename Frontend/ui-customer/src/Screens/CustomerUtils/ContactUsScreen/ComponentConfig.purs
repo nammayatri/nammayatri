@@ -106,7 +106,8 @@ primaryEditTextConfigEmail state = let
           text = case state.data.errorMessage of
             Just ST.EMAIL_EXISTS -> "Email already exists"
             Just ST.INVALID_EMAIL -> "Please enter a valid email"
-            Nothing -> ""
+            Just ST.EMAIL_CANNOT_BE_BLANK -> "This field is required"
+            _ -> ""
         , fontStyle = FontStyle.regular LanguageStyle
         , color = Color.textDanger
         }
