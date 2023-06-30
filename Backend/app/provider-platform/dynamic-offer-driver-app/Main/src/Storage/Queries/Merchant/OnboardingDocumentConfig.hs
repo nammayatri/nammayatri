@@ -22,11 +22,18 @@ where
 
 import Domain.Types.Merchant
 import Domain.Types.Merchant.OnboardingDocumentConfig
-import EulerHS.KVConnector.Types (MeshResult)
+import qualified Domain.Types.Merchant.OnboardingDocumentConfig as Domain
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types (MeshError (MKeyNotFound), MeshResult)
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Kernel.Utils.Common
+import Lib.Utils
+import qualified Sequelize as Se
+import qualified Storage.Beam.Merchant.OnboardingDocumentConfig as BeamODC
 import Storage.Tabular.Merchant.OnboardingDocumentConfig
 
 -- import qualified Lib.Mesh as Mesh
@@ -59,7 +66,13 @@ import Storage.Tabular.Merchant.OnboardingDocumentConfig
 -- create = Esq.create
 
 create :: L.MonadFlow m => OnboardingDocumentConfig -> m (MeshResult ())
-create = error "Not implemented"
+create config = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamODC.OnboardingDocumentConfigT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainOnboardingDocumentConfigToBeam config)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findAllByMerchantId :: Transactionable m => Id Merchant -> m [OnboardingDocumentConfig]
 findAllByMerchantId merchantId =
@@ -91,41 +104,40 @@ update = error "Not implemented"
 
 -- transformBeamOnboardingDocumentConfigToDomain :: BeamODC.OnboardingDocumentConfig -> m OnboardingDocumentConfig
 -- transformBeamOnboardingDocumentConfigToDomain BeamODC.OnboardingDocumentConfigT {..} = do
---   supportedVehicleClasses <- maybe (throwError $ InternalError "Unable to decode OnboardingDocumentConfigT.supportedVehicleClasses") return $ case documentType of
+--   supportedVehicleClasses' <- maybe (throwError $ InternalError "Unable to decode OnboardingDocumentConfigT.supportedVehicleClasses") return $ case documentType of
 --       Domain.DL -> Domain.DLValidClasses <$> decodeFromText supportedVehicleClassesJSON
 --       Domain.RC -> Domain.RCValidClasses . sortOnCapcity <$> decodeFromText supportedVehicleClassesJSON
 --       _ -> Just $ Domain.RCValidClasses []
---    pure $ OnboardingDocumentConfig
+--   pure $ OnboardingDocumentConfig
 --     {
 --       merchantId = Id merchantId,
 --       documentType = documentType,
 --       checkExtraction = checkExtraction,
 --       checkExpiry = checkExpiry,
---       supportedVehicleClasses = supportedVehicleClasses,
+--       supportedVehicleClasses = supportedVehicleClasses',
 --       vehicleClassCheckType = vehicleClassCheckType,
 --       rcNumberPrefix = Domain.rcNumberPrefix,
 --       createdAt = createdAt,
 --       updatedAt = updatedAt
 --     }
--- where
+--   where
 --     sortOnCapcity = sortBy (\a b -> compare b.vehicleCapacity a.vehicleCapacity)
 
--- transformDomainOnboardingDocumentConfigToBeam :: OnboardingDocumentConfig -> BeamODC.OnboardingDocumentConfig
--- transformDomainOnboardingDocumentConfigToBeam OnboardingDocumentConfig {..} =
---   BeamODC.defaultOnboardingDocumentConfig
---     {
---       BeamODC.merchantId = getId merchantId,
---       BeamODC.documentType = documentType,
---       BeamODC.checkExtraction = checkExtraction,
---       BeamODC.checkExpiry = checkExpiry,
---       BeamODC.supportedVehicleClassesJSON = getConfigJSON supportedVehicleClasses,
---       BeamODC.vehicleClassCheckType = vehicleClassCheckType,
---       BeamODC.rcNumberPrefix = rcNumberPrefix,
---       BeamODC.createdAt = createdAt,
---       BeamODC.updatedAt = updatedAt
---     }
---   where
---     getConfigJSON :: Domain.SupportedVehicleClasses -> Text
---     getConfigJSON = \case
---       Domain.DLValidClasses cfg -> encodeToText cfg
---       Domain.RCValidClasses cfg -> encodeToText cfg
+transformDomainOnboardingDocumentConfigToBeam :: OnboardingDocumentConfig -> BeamODC.OnboardingDocumentConfig
+transformDomainOnboardingDocumentConfigToBeam OnboardingDocumentConfig {..} =
+  BeamODC.defaultOnboardingDocumentConfig
+    { BeamODC.merchantId = getId merchantId,
+      BeamODC.documentType = documentType,
+      BeamODC.checkExtraction = checkExtraction,
+      BeamODC.checkExpiry = checkExpiry,
+      BeamODC.supportedVehicleClassesJSON = getConfigJSON' supportedVehicleClasses,
+      BeamODC.vehicleClassCheckType = vehicleClassCheckType,
+      BeamODC.rcNumberPrefix = rcNumberPrefix,
+      BeamODC.createdAt = createdAt,
+      BeamODC.updatedAt = updatedAt
+    }
+  where
+    getConfigJSON' :: Domain.SupportedVehicleClasses -> [Text]
+    getConfigJSON' = \case
+      Domain.DLValidClasses cfg -> encodeToText <$> cfg
+      Domain.RCValidClasses cfg -> encodeToText <$> cfg
