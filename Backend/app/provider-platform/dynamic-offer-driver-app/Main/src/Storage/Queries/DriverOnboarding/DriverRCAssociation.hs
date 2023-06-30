@@ -59,13 +59,13 @@ findAllByDriverId driverId = do
 
 linkDriversRC :: [DriverRCAssociation] -> [VehicleRegistrationCertificate] -> [(DriverRCAssociation, VehicleRegistrationCertificate)]
 linkDriversRC rcAssocs regCerts = do
-  let certHM = buildCertHM regCerts
-   in mapMaybe (mapRCWithDriver certHM) rcAssocs
+  let rcHM = buildRcHM rcAssocs
+   in mapMaybe (mapRCWithDriver rcHM) regCerts
 
-mapRCWithDriver :: HashMap.HashMap Text VehicleRegistrationCertificate -> DriverRCAssociation -> Maybe (DriverRCAssociation, VehicleRegistrationCertificate)
-mapRCWithDriver certHM rcAssoc = do
-  let rcId = rcAssoc.rcId.getId
-  cert <- HashMap.lookup rcId certHM
+mapRCWithDriver :: HashMap.HashMap Text DriverRCAssociation -> VehicleRegistrationCertificate -> Maybe (DriverRCAssociation, VehicleRegistrationCertificate)
+mapRCWithDriver rcHM cert = do
+  let rcId = cert.id.getId
+  rcAssoc <- HashMap.lookup rcId rcHM
   Just (rcAssoc, cert)
 
 buildRcHM :: [DriverRCAssociation] -> HashMap.HashMap Text DriverRCAssociation

@@ -74,7 +74,7 @@ mkFullDriver :: (Person, DriverLocation, DriverInformation, Vehicle) -> FullDriv
 mkFullDriver (p, l, i, v) = FullDriver p l i v
 
 findAllDriversWithInfoAndVehicle ::
-  Transactionable m =>
+  (Transactionable m, EsqDBReplicaFlow m r) =>
   Id Merchant ->
   Int ->
   Int ->
@@ -86,30 +86,53 @@ findAllDriversWithInfoAndVehicle ::
   Maybe Text ->
   m [(Person, DriverInformation, Maybe Vehicle)]
 findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnabled mbBlocked mbSubscribed mbSearchPhoneDBHash mbVehicleNumberSearchString = do
+  drivers <- getDriversByAttributes merchantId mbSearchPhoneDBHash
+  driversInfo <- getDriversInfoByAttributes mbVerified mbEnabled mbBlocked mbSubscribed drivers
+  vehicles <- getVehiclesByNumber mbVehicleNumberSearchString driversInfo
+  let linkedDrivers = linkDriverWithVehicle drivers driversInfo vehicles
+  let result = case mbVehicleNumberSearchString of
+        Nothing -> linkedDrivers
+        Just _ -> filter (isJust . getVehicle) linkedDrivers
+  return $ Esq.limitOffset limitVal offsetVal result
+  where
+    getVehicle (_, _, vehicle) = vehicle
+
+linkDriverWithVehicle :: [Person] -> [DriverInformation] -> [Vehicle] -> [(Person, DriverInformation, Maybe Vehicle)]
+linkDriverWithVehicle drivers driversInfo vehicles = do
+  let personHM = buildPersonHashMap drivers
+      vehicleHM = buildVehicleHashMap vehicles
+   in mapMaybe (mapDriverWithVehicle personHM vehicleHM) driversInfo
+
+mapDriverWithVehicle :: HashMap.HashMap Text Person -> HashMap.HashMap Text Vehicle -> DriverInformation -> Maybe (Person, DriverInformation, Maybe Vehicle)
+mapDriverWithVehicle driverHM vehicleHM info = do
+  let driverId = info.driverId.getId
+  person <- HashMap.lookup driverId driverHM
+  let vehicle = HashMap.lookup driverId vehicleHM
+  Just (person, info, vehicle)
+
+getDriversByAttributes :: Transactionable m => Id Merchant -> Maybe DbHash -> m [Person]
+getDriversByAttributes merchantId mbSearchPhoneDBHash = do
   Esq.findAll $ do
-    person :& info :& mbVeh <-
-      from $
-        table @PersonT
-          `innerJoin` table @DriverInformationT
-            `Esq.on` ( \(person :& driverInfo) ->
-                         person ^. PersonTId ==. driverInfo ^. DriverInformationDriverId
-                     )
-          `leftJoin` table @VehicleT
-            `Esq.on` ( \(person :& _ :& mbVehicle) ->
-                         just (person ^. PersonTId) ==. mbVehicle ?. VehicleDriverId
-                     )
+    person <- from $ table @PersonT
     where_ $
       person ^. PersonMerchantId ==. (val . toKey $ merchantId)
         &&. person ^. PersonRole ==. val Person.DRIVER
-        &&. maybe (val True) (\vehicleNumber -> mbVeh ?. VehicleRegistrationNo `Esq.like` just (val vehicleNumber)) mbVehicleNumberSearchString
+        &&. maybe (val True) (\searchStrDBHash -> person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)) mbSearchPhoneDBHash
+    return person
+
+getDriversInfoByAttributes :: Transactionable m => Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> [Person] -> m [DriverInformation]
+getDriversInfoByAttributes mbVerified mbEnabled mbBlocked mbSubscribed drivers = do
+  Esq.findAll $ do
+    info <- from $ table @DriverInformationT
+    where_ $
+      info ^. DriverInformationDriverId `in_` valList driverKeys
         &&. maybe (val True) (\verified -> info ^. DriverInformationVerified ==. val verified) mbVerified
         &&. maybe (val True) (\enabled -> info ^. DriverInformationEnabled ==. val enabled) mbEnabled
         &&. maybe (val True) (\blocked -> info ^. DriverInformationBlocked ==. val blocked) mbBlocked
         &&. maybe (val True) (\subscribed -> info ^. DriverInformationSubscribed ==. val subscribed) mbSubscribed
-        &&. maybe (val True) (\searchStrDBHash -> person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)) mbSearchPhoneDBHash
-    limit $ fromIntegral limitVal
-    offset $ fromIntegral offsetVal
-    pure (person, info, mbVeh)
+    return info
+  where
+    driverKeys = toKey . cast <$> fetchDriverIDsFromPersons drivers
 
 -- countDrivers :: Transactionable m => Id Merchant -> m Int
 -- countDrivers merchantId =
@@ -225,6 +248,22 @@ getVehicles driverInfo = do
       vehicles <- from $ table @VehicleT
       where_ $
         vehicles ^. VehicleDriverId `in_` valList personsKeys
+      return vehicles
+  where
+    personsKeys = toKey . cast <$> fetchDriverIDsFromInfo driverInfo
+
+getVehiclesByNumber ::
+  (Transactionable m, EsqDBReplicaFlow m r) =>
+  Maybe Text ->
+  [DriverInformation] ->
+  m [Vehicle]
+getVehiclesByNumber mbVehicleNumberSearchString driverInfo = do
+  runInReplica $
+    Esq.findAll $ do
+      vehicles <- from $ table @VehicleT
+      where_ $
+        vehicles ^. VehicleDriverId `in_` valList personsKeys
+          &&. maybe (val True) (\vehicleNumber -> vehicles ^. VehicleRegistrationNo `Esq.like` val vehicleNumber) mbVehicleNumberSearchString
       return vehicles
   where
     personsKeys = toKey . cast <$> fetchDriverIDsFromInfo driverInfo
