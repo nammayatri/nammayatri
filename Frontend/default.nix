@@ -18,24 +18,6 @@
         src = ./.;
       };
 
-      # Wrapper for typescript language server to make it work with neovim(and other editors) by default
-      # Ensure that typescript is installed and the language server knows where tsserver lives
-      # The --tsserver-path argument being hardcoded instead of sent in the initialization
-      # both simplifies the process and ensures that everyone is using the same tsserver when
-      # the editor is running in the development shell
-      typescript-language-server = pkgs.symlinkJoin {
-        name = "typescript-language-server";
-        nativeBuildInputs = [ pkgs.makeWrapper ];
-        paths = [
-          pkgs.nodePackages.typescript
-          pkgs.nodePackages.typescript-language-server
-        ];
-        postBuild = ''
-          wrapProgram $out/bin/typescript-language-server \
-            --add-flags "--tsserver-path $out/bin/tsserver"
-        '';
-      };
-
     in
     {
       treefmt.config = {
@@ -71,7 +53,6 @@
         ];
         packages = [
           pkgs.dhall
-          typescript-language-server
         ];
       };
 
