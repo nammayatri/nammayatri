@@ -84,7 +84,7 @@ findActiveQuotesByDriverId driverId driverUnlockDelay = do
       pure (dQuote, farePars)
     catMaybes <$> mapM buildFullDriverQuote res
 
-findAllBySTId :: Transactionable m => Id DST.SearchTry -> m [Domain.DriverQuote]
+findAllBySTId :: (Transactionable m) => Id DST.SearchTry -> m [Domain.DriverQuote]
 findAllBySTId searchTryId = do
   buildDType $ do
     res <- Esq.findAll' $ do
@@ -96,7 +96,7 @@ findAllBySTId searchTryId = do
       pure (dQuote, farePars)
     catMaybes <$> mapM buildFullDriverQuote res
 
-countAllBySTId :: Transactionable m => Id DST.SearchTry -> m Int32
+countAllBySTId :: (Transactionable m) => Id DST.SearchTry -> m Int32
 countAllBySTId searchTryId = do
   fmap (fromMaybe 0) $
     Esq.findOne $ do
@@ -112,7 +112,7 @@ deleteByDriverId personId =
     driverQuotes <- from $ table @DriverQuoteT
     where_ $ driverQuotes ^. DriverQuoteDriverId ==. val (toKey personId)
 
-findDriverQuoteBySTId :: Transactionable m => Id DST.SearchTry -> DTypeBuilder m (Maybe DriverQuoteT)
+findDriverQuoteBySTId :: (Transactionable m) => Id DST.SearchTry -> DTypeBuilder m (Maybe DriverQuoteT)
 findDriverQuoteBySTId searchTryId = Esq.findOne' $ do
   driverQuote <- from $ table @DriverQuoteT
   where_ $ driverQuote ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)

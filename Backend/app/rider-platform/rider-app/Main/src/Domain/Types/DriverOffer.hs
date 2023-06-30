@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingVia #-}
 
 module Domain.Types.DriverOffer where
 
@@ -19,9 +20,13 @@ import qualified Domain.Types.Merchant as DMerchant
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.GenericPretty
+import Kernel.Utils.GenericPretty (PrettyShow, Showable (..))
 
 data BPPQuote
+
+data DriverOfferStatus = ACTIVE | INACTIVE
+  deriving (Generic, Show, Read)
+  deriving (PrettyShow) via Showable DriverOfferStatus
 
 data DriverOffer = DriverOffer
   { id :: Id DriverOffer,
@@ -32,7 +37,9 @@ data DriverOffer = DriverOffer
     distanceToPickup :: HighPrecMeters,
     validTill :: UTCTime,
     bppQuoteId :: Id BPPQuote,
-    rating :: Maybe Centesimal
+    rating :: Maybe Centesimal,
+    status :: DriverOfferStatus,
+    updatedAt :: UTCTime
   }
   deriving (Generic, Show, PrettyShow)
 

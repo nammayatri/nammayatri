@@ -400,7 +400,7 @@ notifyOnBookingReallocated booking = do
           dynamicParams = EmptyDynamicParam,
           auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
         }
-    title = T.pack "Ride cancelled!"
+    title = T.pack "Ride cancelled! We are allocating another driver"
     body =
       unwords
         [ "The driver had to cancel the ride for",

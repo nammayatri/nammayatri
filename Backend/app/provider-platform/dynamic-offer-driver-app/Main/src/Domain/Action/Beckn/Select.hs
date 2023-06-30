@@ -42,6 +42,7 @@ import SharedLogic.DriverPool (getDriverPoolConfig)
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchTry as QST
@@ -112,7 +113,9 @@ handler merchant sReq estimate = do
             throwError SearchTryEstimatedFareChanged
           searchTry <- buildSearchTry merchant.id searchReq.id estimate sReq estimatedFare searchReq.estimatedDistance searchReq.estimatedDuration (oldSearchTry.searchRepeatCounter + 1) searchRepeatType
           Esq.runTransaction $ do
-            when (oldSearchTry.status == DST.ACTIVE) $ QST.updateStatus oldSearchTry.id DST.CANCELLED
+            when (oldSearchTry.status == DST.ACTIVE) $ do
+              QST.updateStatus oldSearchTry.id DST.CANCELLED
+              QDQ.setInactiveBySTId oldSearchTry.id
             QST.create searchTry
           return searchTry
 
