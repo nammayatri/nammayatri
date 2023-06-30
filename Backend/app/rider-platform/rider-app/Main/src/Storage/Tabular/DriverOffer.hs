@@ -28,6 +28,8 @@ import Kernel.Types.Id
 import qualified Storage.Tabular.Estimate as TEstimate
 import Storage.Tabular.Merchant (MerchantTId)
 
+derivePersistField "Domain.DriverOfferStatus"
+
 mkPersist
   defaultSqlSettings
   [defaultQQ|
@@ -41,6 +43,8 @@ mkPersist
       validTill UTCTime
       bppQuoteId Text
       rating Centesimal Maybe
+      status Domain.DriverOfferStatus
+      updatedAt UTCTime
       Primary id
       deriving Generic
     |]

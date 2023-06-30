@@ -113,9 +113,9 @@ findAllBySRId searchRequestId = Esq.buildDType $ do
     pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote)
   catMaybes <$> mapM buildFullQuote fullQuoteTs
 
-findAllByEstimateId :: Transactionable m => Id Estimate -> m [Quote]
-findAllByEstimateId estimateId = buildDType $ do
-  driverOfferTs <- findDOfferByEstimateId' estimateId
+findAllByEstimateId :: Transactionable m => Id Estimate -> DriverOfferStatus -> m [Quote]
+findAllByEstimateId estimateId status = buildDType $ do
+  driverOfferTs <- findDOfferByEstimateId' estimateId status
   (catMaybes <$>) $ mapM buildFullQuote' driverOfferTs
   where
     buildFullQuote' :: Transactionable m => DriverOfferT -> DTypeBuilder m (Maybe (SolidType FullQuoteT))
@@ -137,11 +137,13 @@ findAllByEstimateId estimateId = buildDType $ do
         MaybeT $ Esq.findById' @TripTermsT tripTermsId
       return $ extractSolidType @Quote (quoteT, mbTripTermsT, quoteDetailsT)
 
-findDOfferByEstimateId' :: Transactionable m => Id Estimate -> DTypeBuilder m [DriverOfferT]
-findDOfferByEstimateId' estimateId =
+findDOfferByEstimateId' :: Transactionable m => Id Estimate -> DriverOfferStatus -> DTypeBuilder m [DriverOfferT]
+findDOfferByEstimateId' estimateId status =
   Esq.findAll' $ do
     driverOffer <- from $ table @DriverOfferT
-    where_ $ driverOffer ^. DriverOfferEstimateId ==. val (toKey estimateId)
+    where_ $
+      driverOffer ^. DriverOfferEstimateId ==. val (toKey estimateId)
+        &&. driverOffer ^. DriverOfferStatus ==. val status
     return driverOffer
 
 findQuotesByDriverOfferId' :: Transactionable m => Id DriverOffer -> DTypeBuilder m (Maybe QuoteT)

@@ -233,7 +233,7 @@ validateRequest merchantId req = do
   case req.initTypeReq of
     InitNormalReq -> do
       driverQuote <- QDQuote.findById (Id req.driverQuoteId) >>= fromMaybeM (QuoteNotFound req.driverQuoteId)
-      when (driverQuote.validTill < now) $
+      when (driverQuote.validTill < now || driverQuote.status == DDQ.Inactive) $
         throwError $ QuoteExpired driverQuote.id.getId
       searchRequest <- QSR.findById driverQuote.requestId >>= fromMaybeM (SearchRequestNotFound driverQuote.requestId.getId)
       searchTry <- QST.findById driverQuote.searchTryId >>= fromMaybeM (SearchTryNotFound driverQuote.searchTryId.getId)

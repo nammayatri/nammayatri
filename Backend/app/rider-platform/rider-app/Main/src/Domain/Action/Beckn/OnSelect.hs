@@ -178,11 +178,14 @@ buildDriverOffer ::
   m DDriverOffer.DriverOffer
 buildDriverOffer estimateId DriverOfferQuoteDetails {..} merchantId = do
   uid <- generateGUID
+  now <- getCurrentTime
   pure
     DDriverOffer.DriverOffer
       { id = uid,
         merchantId = Just merchantId,
         bppQuoteId = bppDriverQuoteId,
+        status = DDriverOffer.ACTIVE,
+        updatedAt = now,
         ..
       }
 
