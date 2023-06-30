@@ -15,6 +15,7 @@
 
 module Domain.Types.SearchRequestForDriver where
 
+import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person
@@ -74,6 +75,8 @@ data SearchRequestForDriver = SearchRequestForDriver
 data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
   { searchRequestId :: Id DST.SearchTry, -- TODO: Deprecated, to be removed
     searchTryId :: Id DST.SearchTry,
+    bapName :: Maybe Text,
+    bapLogo :: Maybe BaseUrl,
     startTime :: UTCTime,
     searchRequestValidTill :: UTCTime,
     distanceToPickup :: Meters,
@@ -92,11 +95,13 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
 
-makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Seconds -> Seconds -> SearchRequestForDriverAPIEntity
-makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry delayDuration keepHiddenForSeconds =
+makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Seconds -> SearchRequestForDriverAPIEntity
+makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration keepHiddenForSeconds =
   SearchRequestForDriverAPIEntity
     { searchRequestId = nearbyReq.searchTryId,
       searchTryId = nearbyReq.searchTryId,
+      bapName = bapMetadata <&> (.name),
+      bapLogo = bapMetadata <&> (.logoUrl),
       startTime = nearbyReq.startTime,
       searchRequestValidTill = nearbyReq.searchRequestValidTill,
       distanceToPickup = nearbyReq.actualDistanceToPickup,

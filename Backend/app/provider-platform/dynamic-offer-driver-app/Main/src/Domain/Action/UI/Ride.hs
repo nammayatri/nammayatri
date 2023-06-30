@@ -26,6 +26,7 @@ where
 import Data.String.Conversions
 import qualified Data.Text as T
 import Data.Time (Day)
+import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
@@ -56,6 +57,7 @@ import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
 import SharedLogic.FareCalculator (fareSum)
+import qualified Storage.CachedQueries.BapMetadata as CQSM
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
 import qualified Storage.CachedQueries.Exophone as CQExophone
@@ -97,6 +99,8 @@ data DriverRideRes = DriverRideRes
     specialLocationTag :: Maybe Text,
     chargeableDistance :: Maybe Meters,
     exoPhone :: Text,
+    bapName :: Maybe Text,
+    bapLogo :: Maybe BaseUrl,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     customerExtraFee :: Maybe Money
@@ -130,7 +134,8 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = do
     rideRating <- runInReplica $ QR.findRatingForRide ride.id
     driverNumber <- RD.getDriverNumber rideDetail
     mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
-    pure $ mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking)
+    bapMetadata <- CQSM.findById (Id booking.bapId)
+    pure $ mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata
   pure . DriverRideListRes $ driverRideLis
 
 mkDriverRideRes ::
@@ -139,8 +144,9 @@ mkDriverRideRes ::
   Maybe DRating.Rating ->
   Maybe DExophone.Exophone ->
   (DRide.Ride, DRB.Booking) ->
+  Maybe DSM.BapMetadata ->
   DriverRideRes
-mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) = do
+mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata = do
   let fareParams = booking.fareParams
       estimatedBaseFare =
         fareSum $
@@ -174,7 +180,9 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) =
       rideRating = rideRating <&> (.ratingValue),
       chargeableDistance = ride.chargeableDistance,
       exoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone,
-      customerExtraFee = fareParams.customerExtraFee
+      customerExtraFee = fareParams.customerExtraFee,
+      bapName = bapMetadata <&> (.name),
+      bapLogo = bapMetadata <&> (.logoUrl)
     }
 
 arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess
@@ -238,7 +246,8 @@ otpRideCreate driver otpCode booking = do
   DS.driverScoreEventHandler DST.OnNewRideAssigned {merchantId = transporter.id, driverId = driver.id}
   driverNumber <- RD.getDriverNumber rideDetails
   mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
-  pure $ mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking)
+  bapMetadata <- CQSM.findById (Id booking.bapId)
+  pure $ mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"

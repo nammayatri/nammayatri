@@ -36,6 +36,7 @@ import qualified Lib.DriverScore.Types as DST
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
 import SharedLogic.DriverPool
 import SharedLogic.GoogleTranslate
+import qualified Storage.CachedQueries.BapMetadata as CQSM
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
@@ -61,6 +62,7 @@ sendSearchRequestToDrivers ::
   m ()
 sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolConfig driverPool = do
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
+  bapMetadata <- CQSM.findById (Id searchReq.bapId)
   validTill <- getSearchRequestValidTill
   batchNumber <- getPoolBatchNum searchTry.id
   languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool
@@ -84,7 +86,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
     let translatedSearchReq = fromMaybe searchReq $ M.lookup language languageDictionary
-    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.keepHiddenForSeconds
+    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.keepHiddenForSeconds
 
     Notify.notifyOnNewSearchRequestAvailable searchReq.providerId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
   where

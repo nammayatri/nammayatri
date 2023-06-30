@@ -22,6 +22,7 @@ module Domain.Action.UI.Search.OneWay
 where
 
 import qualified Domain.Action.UI.Search.Common as DSearch
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.SearchRequest as DSearchReq
@@ -62,7 +63,7 @@ data OneWaySearchRes = OneWaySearchRes
     now :: UTCTime,
     gatewayUrl :: BaseUrl,
     searchRequestExpiry :: UTCTime,
-    city :: Text,
+    merchant :: DM.Merchant,
     customerLanguage :: Maybe Maps.Language,
     device :: Maybe Text,
     shortestRouteInfo :: Maybe Maps.RouteInfo
@@ -137,10 +138,10 @@ oneWaySearch personId req bundleVersion clientVersion device = do
             now = now,
             gatewayUrl = merchant.gatewayUrl,
             searchRequestExpiry = searchRequest.validTill,
-            city = merchant.city,
             customerLanguage = searchRequest.language,
             device,
-            shortestRouteInfo
+            shortestRouteInfo,
+            ..
           }
   fork "updating search counters" $ do
     merchantConfigs <- QMC.findAllByMerchantId person.merchantId

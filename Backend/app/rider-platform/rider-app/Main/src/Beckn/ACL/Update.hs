@@ -24,7 +24,6 @@ import qualified Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent 
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Ride as DRide
-import Environment
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
@@ -39,18 +38,18 @@ data UpdateBuildReq = PaymentCompletedBuildReq
     bppId :: Text,
     bppUrl :: BaseUrl,
     transactionId :: Text,
-    city :: Text
+    city :: Text,
+    bapId :: Text,
+    bapUrl :: BaseUrl
   }
 
 buildUpdateReq ::
-  (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
+  (MonadFlow m) =>
   UpdateBuildReq ->
   m (BecknReq Update.UpdateMessage)
 buildUpdateReq res = do
-  bapURIs <- asks (.bapSelfURIs)
-  bapIDs <- asks (.bapSelfIds)
   messageId <- generateGUID
-  context <- buildTaxiContext Context.UPDATE messageId (Just res.transactionId) bapIDs.cabs bapURIs.cabs (Just res.bppId) (Just res.bppUrl) res.city
+  context <- buildTaxiContext Context.UPDATE messageId (Just res.transactionId) res.bapId res.bapUrl (Just res.bppId) (Just res.bppUrl) res.city
   pure $ BecknReq context $ mkUpdateMessage res
 
 mkUpdateMessage ::
