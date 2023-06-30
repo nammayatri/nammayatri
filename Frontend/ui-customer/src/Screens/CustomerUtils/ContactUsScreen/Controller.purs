@@ -27,7 +27,7 @@ import Prelude (pure, unit, class Show, bind, (>), (&&), ($), discard, (==))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
-import Screens.Types (ContactUsScreenState, EmailErrorType(..))
+import Screens.Types (ContactUsScreenState, ErrorType(..))
 import Storage (KeyStore(..), setValueToLocalStore)
 import Data.Maybe(Maybe(..))
 

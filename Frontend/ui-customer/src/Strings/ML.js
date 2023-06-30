@@ -480,5 +480,8 @@ const malayalamStrings = {
   "THE_DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "താങ്കളുടെ പ്രത്യേക റിക്വസ്റ്റ് സ്വീകരിച്ചു, ഡ്രൈവർ നിങ്ങളുടെ ലൊക്കേഷനിലേക്ക് വരികയാണ്.",
   "ALLOW_LOCATION_ACCESS": "ലൊക്കേഷൻ ആക്സസ് അനുവദിക്കുക",
   "MESSAGE_FROM_DRIVER": "ഡ്രൈവറിൽ നിന്നുള്ള സന്ദേശം",
-  "REPLY": "മറുപടി"
+  "REPLY": "മറുപടി",
+  "NAME_SHOULD_BE_MORE_THAN_2_CHARACTERS" : "പേര് 2 പ്രതീകങ്ങളിൽ കൂടുതലായിരിക്കണം",
+  "THIS_FIELD_IS_REQUIRED" : "ഈ ഫീൽഡ് പൂരിപ്പിക്കേണ്ടതുണ്ട്", 
+  "EMAIL_EXISTS_ALREADY" : "ഇമെയില് നേരത്തെ ഉള്ളതാണ്"
 }

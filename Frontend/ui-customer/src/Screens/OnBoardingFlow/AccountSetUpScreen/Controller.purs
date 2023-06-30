@@ -23,11 +23,11 @@ import Components.PrimaryEditText as PrimaryEditTextController
 import Data.String (length, trim)
 import JBridge (hideKeyboardOnNavigation)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, bind, discard, pure, unit, not, ($), (/=), (&&), (>=))
+import Prelude (class Show, bind, discard, pure, unit, not, ($), (/=), (&&), (>=), (==),(<))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
-import Screens.Types (AccountSetUpScreenState, Gender(..), ActiveFieldAccountSetup(..))
+import Screens.Types (AccountSetUpScreenState, Gender(..), ActiveFieldAccountSetup(..), ErrorType(..))
 import Engineering.Helpers.Commons(getNewIDWithTag)
 import Data.Maybe(Maybe(..))
 import Components.StepsHeaderModel.Controller as StepsHeaderModelController
@@ -113,11 +113,11 @@ eval (GenderSelected value) state = continue state{data{gender = Just value}, pr
 eval (TextChanged value) state = do
   let
     newState = state { data { name = trim value } }
-  continue newState { props { expandEnabled = false, genderOptionExpanded = false, btnActive = (newState.data.name /= "") && (length newState.data.name >= 3) && (newState.data.gender /= Nothing)} }
+  continue newState { data{nameErrorMessage = if (length newState.data.name >= 3) then Nothing else if (newState.data.gender /= Nothing && length newState.data.name < 3) then Just INVALID_NAME else newState.data.nameErrorMessage}, props { expandEnabled = false, genderOptionExpanded = false, isNameValid = (length newState.data.name >= 3), btnActive = (newState.data.name /= "") && (length newState.data.name >= 3) && (newState.data.gender /= Nothing)} }
 
 eval (ShowOptions) state = do
   _ <- pure $ hideKeyboardOnNavigation true
-  continue state{props{genderOptionExpanded = not state.props.genderOptionExpanded, expandEnabled = true, activeField = Just DropDown}}
+  continue state{data {nameErrorMessage = if(length state.data.name >= 3) then Nothing else Just INVALID_NAME}, props{genderOptionExpanded = not state.props.genderOptionExpanded, expandEnabled = true, activeField = Just DropDown}}
 
 eval NameSectionClick state = continue state {props{genderOptionExpanded = false, activeField = Just NameSection}}
 

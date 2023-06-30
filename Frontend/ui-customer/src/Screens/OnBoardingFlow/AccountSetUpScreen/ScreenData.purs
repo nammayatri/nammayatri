@@ -24,6 +24,7 @@ initData =
       { name: ""
       , email: ""
       , gender: Nothing
+      , nameErrorMessage: Nothing
       }
   , props:
       { btnActive: false
@@ -33,5 +34,6 @@ initData =
       , expandEnabled : false
       , showOptions : false
       , activeField : Nothing
+      , isNameValid : false
       }
   }

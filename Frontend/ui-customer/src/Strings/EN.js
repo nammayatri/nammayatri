@@ -503,5 +503,8 @@ const englishStrings = {
   "DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "Driver is already on the way to your location.",
   "ALLOW_LOCATION_ACCESS": "Allow Location Access",
   "MESSAGE_FROM_DRIVER": "Message from Driver",
-  "REPLY": "Reply"
+  "REPLY": "Reply",
+  "NAME_SHOULD_BE_MORE_THAN_2_CHARACTERS" : "Name should be more than 2 characters",
+  "THIS_FIELD_IS_REQUIRED" : "This field is required",
+  "EMAIL_EXISTS_ALREADY" : "Email already exists",
 }
