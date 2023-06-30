@@ -24,7 +24,8 @@ import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButtonController
 import Components.RideActionModal as RideActionModal
 import Components.ChatView as ChatView
-import Components.StatsModel.Controller (Action) as StatsModelController
+import Components.StatsModel.Controller as StatsModelController
+import Components.RequestInfoCard as RequestInfoCard
 import Control.Monad.State (state)
 import Data.Array as Array
 import Data.Int (round, toNumber, fromString)
@@ -36,7 +37,7 @@ import Effect (Effect)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (clearTimer, getCurrentUTC, getNewIDWithTag, convertUTCtoISC)
 import Helpers.Utils (currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat,setText',getTime, differenceBetweenTwoUTC)
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, scrollToBottom, stopChatListenerService)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, scrollToBottom, stopChatListenerService, getSuggestionfromKey, getSuggestionsfromKey)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -166,7 +167,7 @@ instance loggableAction :: Loggable Action where
     ZoneOtpAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "zone_otp"
     TriggerMaps -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "trigger_maps"
     RemoveGenderBanner -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "gender_banner"
-
+    RequestInfoCardAction act -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "request_info_card"
 
 
 
@@ -231,6 +232,7 @@ data Action = NoAction
             | TriggerMaps
             | GenderBannerModal Banner.Action
             | RemoveGenderBanner
+            | RequestInfoCardAction RequestInfoCard.Action
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -247,9 +249,11 @@ eval BackPressed state = do
           else if state.props.cancelConfirmationPopup then do
             _ <- pure $ clearTimer state.data.cancelRideConfirmationPopUp.timerID
             continue state {props{cancelConfirmationPopup = false}, data{cancelRideConfirmationPopUp{timerID = "" , continueEnabled=false, enableTimer=false}}}
-              else do
-                _ <- pure $ minimizeApp ""
-                continue state
+              else if state.props.showBonusInfo then do
+                continue state { props { showBonusInfo = false } }
+                  else do
+                    _ <- pure $ minimizeApp ""
+                    continue state
 
 eval TriggerMaps state = continueWithCmd state[ do
   _ <- pure $ openNavigation 0.0 0.0 state.data.activeRide.dest_lat state.data.activeRide.dest_lon
@@ -271,7 +275,7 @@ eval TriggerMaps state = continueWithCmd state[ do
 
 eval (Notification notificationType) state = do
   _ <- pure $ printLog "notificationType" notificationType
-  if (checkNotificationType notificationType ST.DRIVER_REACHED && state.props.currentStage == ST.RideAccepted && (not state.data.activeRide.notifiedCustomer)) then
+  if (checkNotificationType notificationType ST.DRIVER_REACHED && (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) && (not state.data.activeRide.notifiedCustomer)) then
     continue state{data{activeRide{isDriverArrived = true}}}
     else if (Array.any ( _ == notificationType) [show ST.CANCELLED_PRODUCT, show ST.DRIVER_ASSIGNMENT, show ST.RIDE_REQUESTED, show ST.DRIVER_REACHED]) then do
       exit $ FcmNotification notificationType state
@@ -426,7 +430,7 @@ eval RetryTimeUpdate state = do
 
 eval (TimeUpdate time lat lng) state = do
   let isDriverNearBy = ((getDistanceBwCordinates (getLastKnownLocValue ST.LATITUDE lat) (getLastKnownLocValue ST.LONGITUDE lng)  state.data.activeRide.src_lat state.data.activeRide.src_lon) < 0.05)
-      newState = state { data = state.data { activeRide{isDriverArrived = if (state.props.currentStage == ST.RideAccepted && not state.data.activeRide.notifiedCustomer) then isDriverNearBy else state.data.activeRide.isDriverArrived},currentDriverLat= getLastKnownLocValue ST.LATITUDE lat,  currentDriverLon = getLastKnownLocValue ST.LONGITUDE lng, locationLastUpdatedTime = (convertUTCtoISC time "hh:mm a") }}
+      newState = state { data = state.data { activeRide{isDriverArrived = if ((state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) && not state.data.activeRide.notifiedCustomer) then isDriverNearBy else state.data.activeRide.isDriverArrived},currentDriverLat= getLastKnownLocValue ST.LATITUDE lat,  currentDriverLon = getLastKnownLocValue ST.LONGITUDE lng, locationLastUpdatedTime = (convertUTCtoISC time "hh:mm a") }}
   _ <- pure $ setValueToLocalStore LOCATION_UPDATE_TIME (convertUTCtoISC time "hh:mm a")
   continueWithCmd newState [ do
     _ <- if (getValueToLocalNativeStore IS_RIDE_ACTIVE == "false") then checkPermissionAndUpdateDriverMarker newState else pure unit
@@ -445,16 +449,16 @@ eval RemoveChat state = do
   ]
 
 eval (UpdateMessages message sender timeStamp size) state = do
-  let newMessage = [(ChatView.makeChatComponent message sender timeStamp)]
-  let messages = state.data.messages <> [((ChatView.makeChatComponent (getMessage message) sender timeStamp))]
-  case (Array.last newMessage) of
+  let messages = state.data.messages <> [((ChatView.makeChatComponent (getSuggestionfromKey message (getValueToLocalStore LANGUAGE_KEY) ) sender timeStamp))]
+  case (Array.last messages) of
     Just value -> do
                   if (value.sentBy == "Driver") then
-                    updateMessagesWithCmd state { data { messages = messages, messagesSize = size}}
+                    updateMessagesWithCmd state { data { messages = messages, messagesSize = size, suggestionsList = []}}
                   else do
                     let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
                     let unReadMessages = (if (readMessages == 0 && state.props.currentStage /= ST.ChatWithCustomer) then true else (if (readMessages < (Array.length messages) && state.props.currentStage /= ST.ChatWithCustomer) then true else false))
-                    updateMessagesWithCmd state { data {messages = messages, messagesSize = size}, props {unReadMessages = unReadMessages}}
+                    let suggestionsList = getSuggestionsfromKey message
+                    updateMessagesWithCmd state { data {messages = messages,suggestionsList = suggestionsList, messagesSize = size}, props {unReadMessages = unReadMessages}}
     Nothing -> continue state
 
 eval (ChatViewActionController (ChatView.TextChanged value)) state = do
@@ -482,11 +486,9 @@ eval (ChatViewActionController (ChatView.SendMessage)) state = do
     continue state
 
 eval (ChatViewActionController (ChatView.SendSuggestion chatSuggestion)) state = do
-  let suggestions = Array.filter (\item -> (getString item) == chatSuggestion) (chatSuggestionsList "")
-  let messageArr = map (\item -> (getEN item)) suggestions
-  let message = fromMaybe "" (messageArr Array.!! 0)
+  let message = getSuggestionfromKey chatSuggestion "EN_US"
   _ <- pure $ sendMessage message
-  _ <- pure $ firebaseLogEvent $ toLower $ (replaceAll (Pattern "'") (Replacement "") (replaceAll (Pattern ",") (Replacement "") (replaceAll (Pattern " ") (Replacement "_") message)))
+  _ <- pure $ firebaseLogEvent $ toLower $ (replaceAll (Pattern "'") (Replacement "") (replaceAll (Pattern ",") (Replacement "") (replaceAll (Pattern " ") (Replacement "_") chatSuggestion)))
   continue state
 
 eval (ChatViewActionController (ChatView.BackPressed)) state = do
@@ -550,6 +552,16 @@ eval HelpAndSupportScreen state = exit $ GoToHelpAndSupportScreen
 eval (GenderBannerModal (Banner.OnClick)) state = do
   _ <- pure $ firebaseLogEvent "ny_driver_gender_banner_click"
   exit $ GotoEditGenderScreen
+  
+eval (StatsModelAction StatsModelController.OnIconClick) state = continue state { props { showBonusInfo = not state.props.showBonusInfo } }
+
+eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { props { showBonusInfo = false } } 
+
+eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { props { showBonusInfo = false } } 
+
+eval (RequestInfoCardAction RequestInfoCard.NoAction) state = continue state
+
+eval (GenderBannerModal (Banner.OnClick)) state = exit $ GotoEditGenderScreen
 
 eval RemoveGenderBanner state = do
   _ <- pure $ setValueToLocalStore IS_BANNER_ACTIVE "False"
@@ -688,54 +700,9 @@ updateMessagesWithCmd :: ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeS
 updateMessagesWithCmd state =
   continueWithCmd state [ do
     if(state.props.currentStage == ST.ChatWithCustomer) then do
-      _ <- pure $ scrollToBottom (getNewIDWithTag "ChatScrollView")
+      _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (Array.length state.data.messages))
       pure unit
     else
       pure unit
     pure NoAction
     ]
-
-getMessage :: String -> String
-getMessage message = case message of
-                        "I'm on my way" -> (getString I_AM_ON_MY_WAY)
-                        "Getting delayed, Please wait" -> (getString GETTING_DELAYED_PLEASE_WAIT)
-                        "Unreachable, Please call back" -> (getString UNREACHABLE_PLEASE_CALL_BACK)
-                        "Are you starting?" -> (getString ARE_YOU_STARING)
-                        "Please come soon" -> (getString PLEASE_COME_SOON)
-                        "Ok, I'll wait" -> (getString OK_I_WILL_WAIT)
-                        "I've arrived" -> (getString I_HAVE_ARRIVED)
-                        "Please come fast, I'm waiting" -> (getString PLEASE_COME_FAST_I_AM_WAITING)
-                        "Please wait, I'll be there" -> (getString PLEASE_WAIT_I_WILL_BE_THERE)
-                        "Looking for you at pick-up" -> (getString LOOKING_FOR_YOU_AT_PICKUP)
-                        _ -> message
-
-initialSuggestions :: String -> Array String
-initialSuggestions _ =
-  [
-    (getString I_AM_ON_MY_WAY),
-    (getString GETTING_DELAYED_PLEASE_WAIT),
-    (getString UNREACHABLE_PLEASE_CALL_BACK)
-  ]
-
-pickupSuggestions :: String -> Array String
-pickupSuggestions _ =
-  [
-    (getString I_HAVE_ARRIVED),
-    (getString PLEASE_COME_FAST_I_AM_WAITING),
-    (getString UNREACHABLE_PLEASE_CALL_BACK)
-  ]
-
-chatSuggestionsList :: String -> Array STR
-chatSuggestionsList _ =
-  [
-    I_AM_ON_MY_WAY,
-    GETTING_DELAYED_PLEASE_WAIT ,
-    UNREACHABLE_PLEASE_CALL_BACK ,
-    ARE_YOU_STARING ,
-    PLEASE_COME_SOON ,
-    OK_I_WILL_WAIT ,
-    I_HAVE_ARRIVED,
-    PLEASE_COME_FAST_I_AM_WAITING,
-    PLEASE_WAIT_I_WILL_BE_THERE ,
-    LOOKING_FOR_YOU_AT_PICKUP
-  ]

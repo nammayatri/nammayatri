@@ -535,6 +535,7 @@ type HomeScreenStateData =
   , specialZoneQuoteList :: Array ChooseVehicle.Config
   , specialZoneSelectedQuote :: Maybe String
   , selectedEstimatesObject :: ChooseVehicle.Config
+  , lastMessage :: ChatComponent
   , cancelRideConfirmationData :: CancelRideConfirmationData
   }
 
@@ -602,6 +603,7 @@ type HomeScreenStateProps =
   , callSupportPopUp :: Boolean
   , defaultPickUpPoint :: String
   , isSpecialZone :: Boolean
+  , showChatNotification :: Boolean
   , cancelSearchCallDriver :: Boolean
   , zoneType :: SpecialTags
   , cancelRideConfirmationPopup :: Boolean

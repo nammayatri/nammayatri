@@ -477,6 +477,8 @@ const malayalamStrings = {
   "CONTINUE_SEARCH_WITH" : "ഉപയോഗിച്ച് തിരയൽ തുടരുക",
   "CONTINUING_SEARCH_WITH" : "ഉപയോഗിച്ച് തിരയൽ തുടരുന്നു",
   "SEARCHING_WITH" : "ഉപയോഗിച്ച് തിരയുന്നു",
-  "THE_DRIVER_PREFERRED_YOUR_SPECIAL_LOCATION_AND_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ഡ്രൈവർ നിങ്ങളുടെ പ്രത്യേക ലൊക്കേഷൻ തിരഞ്ഞെടുത്തു, നിങ്ങളുടെ ലൊക്കേഷനിലേക്കുള്ള വഴിയിലാണ്.",
-  "ALLOW_LOCATION_ACCESS": "ലൊക്കേഷൻ ആക്സസ് അനുവദിക്കുക"
+  "THE_DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "താങ്കളുടെ പ്രത്യേക റിക്വസ്റ്റ് സ്വീകരിച്ചു, ഡ്രൈവർ നിങ്ങളുടെ ലൊക്കേഷനിലേക്ക് വരികയാണ്.",
+  "ALLOW_LOCATION_ACCESS": "ലൊക്കേഷൻ ആക്സസ് അനുവദിക്കുക",
+  "MESSAGE_FROM_DRIVER": "ഡ്രൈവറിൽ നിന്നുള്ള സന്ദേശം",
+  "REPLY": "മറുപടി"
 }

@@ -27,6 +27,7 @@ library
       API.Beckn.OnInit
       API.Beckn.OnSearch
       API.Beckn.OnSelect
+      API.Beckn.OnStatus
       API.Beckn.OnTrack
       API.Beckn.OnUpdate
       API.Dashboard
@@ -88,11 +89,13 @@ library
       Beckn.ACL.OnInit
       Beckn.ACL.OnSearch
       Beckn.ACL.OnSelect
+      Beckn.ACL.OnStatus
       Beckn.ACL.OnTrack
       Beckn.ACL.OnUpdate
       Beckn.ACL.Rating
       Beckn.ACL.Search
       Beckn.ACL.Select
+      Beckn.ACL.Status
       Beckn.ACL.Track
       Beckn.ACL.Update
       Beckn.Core
@@ -100,6 +103,7 @@ library
       Domain.Action.Beckn.OnInit
       Domain.Action.Beckn.OnSearch
       Domain.Action.Beckn.OnSelect
+      Domain.Action.Beckn.OnStatus
       Domain.Action.Beckn.OnTrack
       Domain.Action.Beckn.OnUpdate
       Domain.Action.Dashboard.Booking

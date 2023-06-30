@@ -300,16 +300,24 @@ syncCancelledRide :: DRide.Ride -> DBooking.Booking -> DM.Merchant -> Flow Commo
 syncCancelledRide ride booking merchant = do
   -- mbBookingCReason <- runInReplica $ QBCReason.findByRideId ride.id
   mbBookingCReason <- QBCReason.findByRideId ride.id
-  -- rides cancelled by bap no need to sync, and have mbBookingCReason = Nothing
-  case mbBookingCReason of
-    Nothing -> pure $ Common.RideSyncRes Common.RIDE_CANCELLED "No cancellation reason found for ride. Nothing to sync, ignoring"
-    Just bookingCReason -> do
-      case bookingCReason.source of
-        DBCReason.ByUser -> pure $ Common.RideSyncRes Common.RIDE_CANCELLED "Ride canceled by customer. Nothing to sync, ignoring"
-        source -> do
-          handle (errHandler ride.status booking.status "booking cancellation") $
-            CallBAP.sendBookingCancelledUpdateToBAP booking merchant source
-          pure $ Common.RideSyncRes Common.RIDE_CANCELLED "Success. Sent booking cancellation update to bap"
+  source <- case mbBookingCReason of
+    Just bookingCReason -> pure bookingCReason.source
+    Nothing -> do
+      -- mbBookingCReason' <- runInReplica $ QBCReason.findByBookingId booking.id
+      mbBookingCReason' <- QBCReason.findByBookingId booking.id
+      case mbBookingCReason' of
+        Just bookingCReason' -> pure bookingCReason'.source
+        Nothing -> do
+          logWarning $
+            "No cancellation reason found for ride "
+              <> show ride.id
+              <> " and booking "
+              <> show booking.id
+              <> "; Using ByMerchant as cancellation source"
+          pure DBCReason.ByMerchant
+  handle (errHandler ride.status booking.status "booking cancellation") $
+    CallBAP.sendBookingCancelledUpdateToBAP booking merchant source
+  pure $ Common.RideSyncRes Common.RIDE_CANCELLED "Success. Sent booking cancellation update to bap"
 
 syncCompletedRide :: DRide.Ride -> DBooking.Booking -> Flow Common.RideSyncRes
 syncCompletedRide ride booking = do

@@ -157,7 +157,8 @@ data ValidatedOnUpdateReq
   | ValidatedBookingCancelledReq
       { bppBookingId :: Id SRB.BPPBooking,
         cancellationSource :: SBCR.CancellationSource,
-        booking :: SRB.Booking
+        booking :: SRB.Booking,
+        mbRide :: Maybe SRide.Ride
       }
   | ValidatedBookingReallocationReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -302,6 +303,7 @@ onUpdate ValidatedRideCompletedReq {..} = do
   SMC.updateTotalRidesCounters booking.riderId
   merchantConfigs <- CMC.findAllByMerchantId person.merchantId
   SMC.updateTotalRidesInWindowCounters booking.riderId merchantConfigs
+
   rideEndTime <- getCurrentTime
   let updRide =
         ride{status = SRide.COMPLETED,
@@ -318,7 +320,7 @@ onUpdate ValidatedRideCompletedReq {..} = do
           Nothing -> True
   -- DB.runTransaction $ do
   when shouldUpdateRideComplete $ void $ QP.updateHasTakenValidRide booking.riderId
-  _ <- QRB.updateStatus booking.id SRB.COMPLETED
+  unless (booking.status == SRB.COMPLETED) $ void $ QRB.updateStatus booking.id SRB.COMPLETED
   whenJust paymentUrl $ QRB.updatePaymentUrl booking.id
   _ <- QRide.updateMultiple updRide.id updRide
   _ <- QFareBreakup.createMany breakups
@@ -353,7 +355,6 @@ onUpdate ValidatedRideCompletedReq {..} = do
             ..
           }
 onUpdate ValidatedBookingCancelledReq {..} = do
-  mbRide <- QRide.findActiveByRBId booking.id
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show cancellationSource)
   bookingCancellationReason <- buildBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource booking.merchantId
   merchantConfigs <- CMC.findAllByMerchantId booking.merchantId
@@ -365,8 +366,9 @@ onUpdate ValidatedBookingCancelledReq {..} = do
     mFraudDetected <- SMC.anyFraudDetected booking.riderId booking.merchantId merchantConfigs
     whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id)
   -- DB.runTransaction $ do
-  _ <- QRB.updateStatus booking.id SRB.CANCELLED
-  whenJust mbRide $ \ride -> void $ QRide.updateStatus ride.id SRide.CANCELLED
+  unless (booking.status == SRB.CANCELLED) $ void $ QRB.updateStatus booking.id SRB.CANCELLED
+  whenJust mbRide $ \ride -> void $ do
+    unless (ride.status == SRide.CANCELLED) $ void $ QRide.updateStatus ride.id SRide.CANCELLED
   unless (cancellationSource == SBCR.ByUser) $
     QBCR.upsert bookingCancellationReason
   _ <- QPFS.updateStatus booking.riderId DPFS.IDLE
@@ -436,13 +438,22 @@ validateRequest RideStartedReq {..} = do
 validateRequest RideCompletedReq {..} = do
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
-  unless (booking.status == SRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
-  unless (ride.status == SRide.INPROGRESS) $ throwError (RideInvalidStatus $ show ride.status)
+  let bookingCanBeCompleted = booking.status == SRB.TRIP_ASSIGNED
+      rideCanBeCompleted = ride.status == SRide.INPROGRESS
+      bookingAlreadyCompleted = booking.status == SRB.COMPLETED
+      rideAlreadyCompleted = ride.status == SRide.COMPLETED
+  unless (bookingCanBeCompleted || (bookingAlreadyCompleted && rideCanBeCompleted)) $
+    throwError (BookingInvalidStatus $ show booking.status)
+  unless (rideCanBeCompleted || (rideAlreadyCompleted && bookingCanBeCompleted)) $
+    throwError (RideInvalidStatus $ show ride.status)
   person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   return $ ValidatedRideCompletedReq {..}
 validateRequest BookingCancelledReq {..} = do
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
-  unless (isBookingCancellable booking) $
+  mbRide <- QRide.findActiveByRBId booking.id
+  let isRideCancellable = maybe False (\ride -> ride.status `notElem` [SRide.INPROGRESS, SRide.CANCELLED]) mbRide
+      bookingAlreadyCancelled = booking.status == SRB.CANCELLED
+  unless (isBookingCancellable booking || (isRideCancellable && bookingAlreadyCancelled)) $
     throwError (BookingInvalidStatus (show booking.status))
   return $ ValidatedBookingCancelledReq {..}
   where

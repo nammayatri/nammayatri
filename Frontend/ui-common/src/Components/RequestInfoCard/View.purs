@@ -15,20 +15,19 @@
 
 module Components.RequestInfoCard.View where
 
-import Components.RequestInfoCard.Controller (Action(..))
+import Components.RequestInfoCard.Controller (Action(..) , Config, TextConfig)
 import Prelude ((*), Unit, ($), const, (/), unit, (-))
 import Effect (Effect)
-import PrestoDOM (PrestoDOM, Orientation(..), Gravity(..), Padding(..), Margin(..), Length(..), margin, padding, orientation, height, width, linearLayout, imageView, imageUrl, text, textView, textSize, fontStyle, gravity, onClick, color, background, lineHeight, cornerRadius, weight, onBackPressed, imageWithFallback)
+import PrestoDOM (PrestoDOM, Orientation(..), Gravity(..), Padding(..), Margin(..), Length(..), margin, padding, orientation, height, width, linearLayout, imageView, imageUrl, text, textView, textSize, fontStyle, gravity, onClick, color, background, cornerRadius, weight, imageWithFallback , visibility)
 import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Common.Types.App
 import Engineering.Helpers.Commons (screenWidth)
 
-view :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-view push = 
+view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
+view push state= 
   linearLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
@@ -54,45 +53,49 @@ view push =
             , height WRAP_CONTENT
             , orientation VERTICAL
             ][
-                textView
-                [ width WRAP_CONTENT
-                , height WRAP_CONTENT
-                , padding (Padding 16 24 0 0)
-                , text  (getString CHOOSE_BETWEEN_MULTIPLE_RIDES)
-                , textSize FontSize.a_16
-                , color Color.black800
-                , fontStyle $ FontStyle.semiBold LanguageStyle
-                ]
-                , textView
-                [ width WRAP_CONTENT
-                , height WRAP_CONTENT
-                , padding (Padding 16 16 0 0)
-                , text (getString ENABLE_THIS_FEATURE_TO_CHOOSE_YOUR_RIDE)
-                , fontStyle $ FontStyle.regular LanguageStyle
-                , textSize FontSize.a_14
-                , color Color.black700
-                ]
+              genericTextView push state.title
+            , genericTextView push state.primaryText
             ]
             , linearLayout
               [ height WRAP_CONTENT
-              ,   weight 1.0
+              , weight 1.0
               ][]
             , imageView
-              [ width $ V 116
-              , height $ V 122
-              , imageWithFallback "ny_ic_select_offer,https://assets.juspay.in/nammayatri/images/user/ny_ic_select_offer.png"
+              [ width state.imageConfig.width
+              , height state.imageConfig.height
+              , imageWithFallback state.imageConfig.imageUrl
+              , visibility state.imageConfig.visibility
+              , margin state.imageConfig.margin
+              , padding state.imageConfig.padding
               ]
-        ], textView
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , color Color.blue800
-            , gravity CENTER
-            , fontStyle $ FontStyle.semiBold LanguageStyle
-            , text (getString GOT_IT)
-            , textSize FontSize.a_16
-            , padding (Padding 0 28 0 20)
-            , onClick push $ const Close
-            ]
+        ]
+        , genericTextView push state.secondaryText
+        , textView
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , color state.buttonConfig.color
+          , gravity state.buttonConfig.gravity
+          , fontStyle state.buttonConfig.fontStyle
+          , text state.buttonConfig.text
+          , textSize state.buttonConfig.fontSize
+          , padding state.buttonConfig.padding
+          , margin state.buttonConfig.margin
+          , onClick push $ const Close
+          ]
      ]
 
+  ]
+
+genericTextView :: forall w. (Action -> Effect Unit) -> TextConfig -> PrestoDOM (Effect Unit) w
+genericTextView push config = 
+  textView
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , padding config.padding
+  , margin config.margin
+  , text config.text
+  , fontStyle config.fontStyle
+  , textSize config.fontSize
+  , color config.color
+  , visibility config.visibility
   ]

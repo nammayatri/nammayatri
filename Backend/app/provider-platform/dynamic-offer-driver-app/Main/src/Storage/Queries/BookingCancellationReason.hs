@@ -31,6 +31,8 @@ import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.BookingCancellationReason as BeamBCR
 
+-- import Domain.Types.BookingCancellationReason (BookingCancellationReason(bookingId))
+
 -- import Storage.Tabular.BookingCancellationReason
 
 create :: L.MonadFlow m => DBCR.BookingCancellationReason -> m (MeshResult ())
@@ -76,13 +78,13 @@ findAllCancelledByDriverId driverId = do
       pure $ either (const 0) length res
     Nothing -> pure 0
 
-findByRideBookingId :: L.MonadFlow m => Id Booking -> m (Maybe BookingCancellationReason)
-findByRideBookingId (Id rideBookingId) = do
+findByBookingId :: L.MonadFlow m => Id Booking -> m (Maybe BookingCancellationReason)
+findByBookingId (Id bookingId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamBCR.BookingCancellationReasonT
   let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamBookingCancellationReasonToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamBCR.bookingId $ Se.Eq rideBookingId]
+    Just dbCOnf' -> either (pure Nothing) (transformBeamBookingCancellationReasonToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamBCR.bookingId $ Se.Eq bookingId]
     Nothing -> pure Nothing
 
 findByRideId :: L.MonadFlow m => Id Ride -> m (Maybe BookingCancellationReason)

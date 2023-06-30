@@ -31,6 +31,7 @@ data RideEndpoint
   | RideCancelEndpoint
   | MultipleRideCancelEndpoint
   | RideSyncEndpoint
+  | RideForceSyncEndpoint
   | MultipleRideSyncEndpoint
   deriving (Show, Read)
 

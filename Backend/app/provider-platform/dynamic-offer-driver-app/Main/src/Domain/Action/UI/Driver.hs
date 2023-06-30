@@ -112,13 +112,13 @@ import qualified Lib.DriverScore.Types as DST
 import Lib.Payment.Domain.Types.PaymentTransaction
 import Lib.Payment.Storage.Queries.PaymentTransaction
 import SharedLogic.CallBAP (sendDriverOffer)
-import qualified SharedLogic.CancelSearch as CS
 import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
 import SharedLogic.DriverMode as DMode
 import SharedLogic.DriverPool as DP
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified SharedLogic.SearchTryLocker as CS
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -852,7 +852,10 @@ respondQuote (driverId, _) req = do
       case req.response of
         Pulled -> throwError UnexpectedResponseValue
         Accept -> do
-          when (searchReq.autoAssignEnabled == Just True) $ CS.incrementSearchRequestLockCounter searchTryId
+          when (searchReq.autoAssignEnabled == Just True) $ do
+            whenM (CS.isSearchTryCancelled searchTryId) $
+              throwError (InternalError "SEARCH_TRY_CANCELLED")
+            CS.markSearchTryAsAssigned searchTryId
           logDebug $ "offered fare: " <> show req.offeredFare
           whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
           when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)

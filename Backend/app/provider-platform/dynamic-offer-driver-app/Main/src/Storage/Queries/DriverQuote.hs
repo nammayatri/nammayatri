@@ -17,6 +17,7 @@ module Storage.Queries.DriverQuote where
 import qualified Data.Time as T
 import qualified Domain.Types.DriverQuote as Domain
 import Domain.Types.Person
+import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
@@ -93,6 +94,25 @@ setInactiveBySTId (Id searchTryId) = do
         updatedMeshConfig
         [Se.Set BeamDQ.status Domain.Inactive]
         [Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
+-- setInactiveBySRId :: Id DSR.SearchRequest -> SqlDB ()
+-- setInactiveBySRId searchReqId = Esq.update $ \p -> do
+--   set p [DriverQuoteStatus =. val Domain.Inactive]
+--   where_ $ p ^. DriverQuoteRequestId ==. val (toKey searchReqId)
+
+setInactiveBySRId :: L.MonadFlow m => Id DSR.SearchRequest -> m (MeshResult ())
+setInactiveBySRId (Id searchReqId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDQ.DriverQuoteT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbCOnf' ->
+      KV.updateWoReturningWithKVConnector
+        dbCOnf'
+        updatedMeshConfig
+        [Se.Set BeamDQ.status Domain.Inactive]
+        [Se.Is BeamDQ.requestId $ Se.Eq searchReqId]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 findActiveQuotesByDriverId :: (L.MonadFlow m, MonadTime m) => Id Person -> Seconds -> m [Domain.DriverQuote]

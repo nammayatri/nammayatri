@@ -30,7 +30,7 @@ type Config =
   , messages :: Array ChatComponent
   , messagesSize :: String
   , sendMessageActive :: Boolean
-  , distance :: String
+  , vehicleNo :: String
   , suggestionsList :: Array String
   , suggestionDelay :: Int
   , spanParent :: Boolean
@@ -80,7 +80,7 @@ config =
     , messages : []
     , messagesSize : ""
     , sendMessageActive : false
-    , distance : ""
+    , vehicleNo : ""
     , suggestionsList : []
     , hint : ""
     , suggestionHeader : ""

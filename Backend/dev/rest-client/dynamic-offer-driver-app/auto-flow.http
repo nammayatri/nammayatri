@@ -144,13 +144,14 @@ token: {{token1}}
 ###
 
 # @name offerQuote
-POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/offer
+POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/respond
 token: {{token1}}
 content-type: application/json
 
 {
     "offeredFare": 10,
-    "searchRequestId": "{{nearbySearchRequest.response.body.searchRequestsForDriver[0].searchTryId}}"
+    "searchTryId": "{{nearbySearchRequest.response.body.searchRequestsForDriver[0].searchTryId}}",
+    "response" : "Accept"
 }
 
 ###

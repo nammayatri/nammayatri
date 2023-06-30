@@ -86,6 +86,7 @@ initData = {
       , index: 0
       , id: ""
       }
+    , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
     },
     props: {
@@ -156,6 +157,7 @@ initData = {
     , isMockLocation: false
     , isSpecialZone : false
     , defaultPickUpPoint : ""
+    , showChatNotification : false
     , cancelSearchCallDriver : false
     , zoneType : dummyZoneType
     , cancelRideConfirmationPopup : false

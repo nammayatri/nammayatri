@@ -15,9 +15,9 @@
 
 module Components.StatsModel.View where
 
-import Prelude (Unit, const, map, ($),(-),unit, (*),(/), (+), (<>), show)
+import Prelude (Unit, const, map, ($),(-),unit, (*),(/), (+), (<>), (==), show)
 import Effect (Effect)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width, visibility, stroke)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width, visibility, stroke, imageWithFallback)
 import PrestoDOM.Animation as PrestoAnim
 import Animation (translateYAnim)
 import Animation.Config (translateYAnimConfig)
@@ -32,6 +32,7 @@ import Language.Strings (getString)
 import Language.Types(STR(..))
 import Engineering.Helpers.Commons (screenWidth)
 import Common.Types.App
+import Merchant.Utils (getValueFromConfig)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -52,55 +53,87 @@ earningsView config push =
   , orientation HORIZONTAL
   , background Color.white900
   , gravity CENTER
-  , padding (Padding 0 5 0 5)
+  , padding $ PaddingVertical 5 5
   , cornerRadius 9.0
-  ][ linearLayout
-        [ width $ V ((screenWidth unit) /2 - 16)
-        , height WRAP_CONTENT
-        , orientation HORIZONTAL
-        , gravity CENTER
-        ][ textView $ 
-            [ height config.countTextConfig.height
-            , text config.countTextConfig.text
-            , margin $ MarginRight 10
-            , gravity config.countTextConfig.gravity
-            , color config.countTextConfig.color
-            -- , weight config.countTextConfig.weight
-            ] <> FontStyle.tags TypoGraphy
-         , textView $
-            [ height config.textConfig.height
-            , text $ show $ config.totalRidesOfDay
-            , gravity config.textConfig.gravity
-            , width WRAP_CONTENT
-            , color config.textConfig.color
-            -- , weight config.textConfig.weight
-            ] <> FontStyle.h2 TypoGraphy
+  ][  linearLayout
+      [ height WRAP_CONTENT
+      , orientation VERTICAL
+      , gravity CENTER
+      , weight 1.0
+      ][ textView $ 
+         [ height config.countTextConfig.height
+         , text config.countTextConfig.text
+         , gravity config.countTextConfig.gravity
+         , color config.countTextConfig.color
+         ] <> FontStyle.tags TypoGraphy
+      , textView $
+         [ height config.textConfig.height
+         , text $ show $ config.totalRidesOfDay
+         , gravity config.textConfig.gravity
+         , width WRAP_CONTENT
+         , color config.textConfig.color
+         ] <> FontStyle.h2 TypoGraphy
+      ]
+    , linearLayout
+      [ width (V 1)
+      , height (V 42)
+      , background Color.grey900
+      ][]
+    , linearLayout
+      [ height WRAP_CONTENT
+      , orientation VERTICAL
+      , gravity CENTER
+      , weight 1.0
+      ][ textView $ 
+         [ height config.earningsTextConfig.height
+         , text config.earningsTextConfig.text
+         , gravity config.earningsTextConfig.gravity
+         , color config.earningsTextConfig.color
+         , textSize FontSize.a_12
+         ]<> FontStyle.tags TypoGraphy
+      , textView $ 
+         [ height config.textConfig.height
+         , text $ "₹" <> (show $ config.totalEarningsOfDay)
+         , gravity config.textConfig.gravity
+         , color config.textConfig.color
+         ]<> FontStyle.h2 TypoGraphy
+      ]
+    , linearLayout
+      [ width (V 1)
+      , height (V 42)
+      , background Color.grey900
+      , visibility if getValueFromConfig "BONUS_EARNED" == "true" then VISIBLE else GONE
+      ][]
+    , linearLayout
+      [ height WRAP_CONTENT
+      , orientation VERTICAL
+      , gravity CENTER
+      , weight 1.0
+      , visibility if getValueFromConfig "BONUS_EARNED" == "true" then VISIBLE else GONE
+      ][ textView $ 
+         [ height config.bonusTextConfig.height
+         , text config.bonusTextConfig.text
+         , gravity config.bonusTextConfig.gravity
+         , color config.earningsTextConfig.color
+         , textSize FontSize.a_12
+         ]<> FontStyle.tags TypoGraphy
+      ,  linearLayout
+         [ width WRAP_CONTENT
+         , height WRAP_CONTENT
+         , gravity CENTER
          ]
-    , linearLayout
-        [ width (V 1)
-        , height (V 42)
-        , background Color.grey900
-        ][]
-    , linearLayout
-        [ width $ V ((screenWidth unit) /2 - 16)
-        , height WRAP_CONTENT
-        , orientation HORIZONTAL
-        , gravity CENTER
-        ][ textView $ 
-            [ height config.earningsTextConfig.height
-            , text config.earningsTextConfig.text
-            , margin $ MarginRight 10
-            , gravity config.earningsTextConfig.gravity
-            , color config.earningsTextConfig.color
-            -- , weight config.earningsTextConfig.weight
-            , textSize FontSize.a_12
-            ]<> FontStyle.tags TypoGraphy
-         , textView $ 
+         [ textView $ 
             [ height config.textConfig.height
-            , text  $ "₹" <> (show  $ config.totalEarningsOfDay)
-            , gravity config.textConfig.gravity
-            , color config.textConfig.color
-            -- , weight config.textConfig.weight
+            , text $ "₹" <> (show $ config.bonusEarned)
+            , color config.bonusTextConfig.color
             ]<> FontStyle.h2 TypoGraphy
+         , imageView
+            [imageWithFallback "ic_info,https://assets.juspay.in/nammayatri/images/user/ic_info.png"
+            , width $ V 14
+            , height $ V 23
+            , margin $ Margin 5 2 0 0
+            , onClick push $ const OnIconClick
+            ]
          ]
+      ]
    ]

@@ -650,6 +650,62 @@ export const scrollToBottom = function(id) {
   }
 }
 
+export const getSuggestionsfromKey = function(key) {
+    try {
+      if(!window.suggestions) {
+        window.suggestions = new Map(Object.entries(JSON.parse(JBridge.getKeyInNativeSharedPrefKeys("SUGGESTIONS"))));
+      }
+      let suggestions = window.suggestions;
+      let keys = suggestions.get(key);
+      let arr = [];
+      if(keys) {
+        for (let key of keys) {
+            arr.push(key);
+        }
+      };
+      return arr;
+    } catch (error) {
+      console.error(error);
+      return [];
+    }
+  }
+
+export const getSuggestionfromKey = function (key) {
+  return function (language) {
+    try {
+      if(!window.suggestionsDefs) {
+        window.suggestionsDefs = new Map(Object.entries(JSON.parse(JBridge.getKeyInNativeSharedPrefKeys("SUGGESTIONS_DEFINITIONS"))));
+      }
+      let suggestionsDefs = window.suggestionsDefs;
+      let val = suggestionsDefs.get(key);
+      if(val) {
+      const operations = {
+        "EN_US": (val) => val.value.en_us,
+        "HI_IN": (val) => val.value.hi_in,
+        "KN_IN": (val) => val.value.kn_in,
+        "BN_IN": (val) => val.value.bn_in,
+        "ML_IN": (val) => val.value.ml_in,
+        "TA_IN": (val) => val.value.ta_in,
+        _ : (val) => val.value.en_us
+        };
+        const action = (key, val) => operations[key](val);
+        return action(language, val);
+        } else return key;
+      } catch (error) {
+        console.error(error);
+        return key;
+      }
+   }
+}
+
+export const saveToLocalStoreImpl = function(key) {
+  return function (state) {
+      window.JBridge.setKeysInSharedPrefs(key, state);
+      return function () {
+      };
+    };
+}
+
 export const addMediaFile = function (viewID) {
   return function (source) {
       return function (actionButtonID) {

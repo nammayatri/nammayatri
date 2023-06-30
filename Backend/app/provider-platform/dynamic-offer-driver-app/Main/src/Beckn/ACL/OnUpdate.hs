@@ -110,6 +110,7 @@ buildOnUpdateMessage RideAssignedBuildReq {..} = do
                         token = ride.otp
                       }
                 },
+            agent,
             vehicle = veh,
             ..
           }

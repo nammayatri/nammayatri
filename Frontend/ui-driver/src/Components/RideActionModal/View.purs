@@ -64,7 +64,7 @@ messageButton push config =
   , height WRAP_CONTENT
   , orientation HORIZONTAL
   , gravity CENTER
-  , visibility if config.currentStage == RideAccepted && checkVersionForChat (getCurrentAndroidVersion (getMerchant unit)) then VISIBLE else GONE
+  , visibility if (config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer) && checkVersionForChat (getCurrentAndroidVersion (getMerchant unit)) then VISIBLE else GONE
   , padding $ Padding 20 16 20 16
   , margin $ MarginLeft 16
   , background Color.white900
@@ -102,7 +102,7 @@ callButton push config =
   , background Color.white900
   , stroke $ "1,"<> Color.black500
   , cornerRadius 30.0
-  , visibility if (config.currentStage == RideAccepted) then VISIBLE else GONE
+  , visibility if (config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer) then VISIBLE else GONE
   , onClick push (const $ CallCustomer)
   ][  imageView
       [ imageWithFallback "ic_phone,https://assets.juspay.in/nammayatri/images/common/ic_phone.png"
@@ -549,7 +549,7 @@ destAddressTextView config push=
         , color Color.black650
         , ellipsize true
         , textSize FontSize.a_14
-        , maxLines if config.currentStage == RideAccepted then 1 else 2
+        , maxLines if config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer then 1 else 2
         ]<> FontStyle.body1 TypoGraphy
       ]
 

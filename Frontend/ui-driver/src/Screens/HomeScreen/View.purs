@@ -26,6 +26,7 @@ import Components.PopUpModal as PopUpModal
 import Components.RideActionModal as RideActionModal
 import Components.StatsModel as StatsModel
 import Components.ChatView as ChatView
+import Components.RequestInfoCard as RequestInfoCard
 import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Int (ceil, toNumber)
@@ -189,6 +190,7 @@ view push state =
       , if state.props.cancelConfirmationPopup then cancelConfirmation push state else dummyTextView
       , if state.props.cancelRideModalShow then cancelRidePopUpView push state else dummyTextView
       , if state.props.currentStage == ChatWithCustomer then chatView push state else dummyTextView
+      , if state.props.showBonusInfo then requestInfoCardView push state else dummyTextView
       , if state.props.silentPopUpView then popupModelSilentAsk push state else dummyTextView
   ]
 
@@ -928,7 +930,7 @@ rideActionModelView push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , alignParentBottom "true,-1"
-  , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted,RideStarted]) then VISIBLE else GONE
+  , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted,RideStarted,ChatWithCustomer]) then VISIBLE else GONE
   ][  coordinatorLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -947,6 +949,7 @@ rideActionModelView push state =
 
 chatView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 chatView push state =
+  PrestoAnim.animationSet [ Anim.translateYAnimFromTop $ AnimConfig.translateFullYAnimWithDurationConfig 300 ] $
   relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -976,6 +979,15 @@ dummyTextView =
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   ]
+
+requestInfoCardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+requestInfoCardView push state =
+  PrestoAnim.animationSet [ Anim.fadeIn true ]
+    $ linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        ]
+        [ RequestInfoCard.view (push <<< RequestInfoCardAction) (requestInfoCardConfig FunctionCall) ]
 
 enableCurrentLocation :: HomeScreenState -> Boolean
 enableCurrentLocation state = if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted]) then false else true

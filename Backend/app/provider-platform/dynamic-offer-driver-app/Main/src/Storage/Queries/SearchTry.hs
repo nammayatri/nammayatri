@@ -28,6 +28,8 @@ import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchTry as BeamST
 
+-- import qualified Storage.Beam.SearchTry as BeamST
+
 create :: L.MonadFlow m => SearchTry -> m (MeshResult ())
 create searchTry = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -69,17 +71,22 @@ findLastByRequestId (Id searchRequest) = do
     headMaybe [] = Nothing
     headMaybe (a : _) = Just a
 
-findActiveTriesByRequestId ::
+findActiveTryByRequestId ::
   L.MonadFlow m =>
   Id SearchRequest ->
-  m [SearchTry]
-findActiveTriesByRequestId (Id searchRequest) = do
+  m (Maybe SearchTry)
+findActiveTryByRequestId (Id searchRequest) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamST.SearchTryT
   let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> either (pure []) (transformBeamSearchTryToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamST.id $ Se.Eq searchRequest, Se.Is BeamST.status $ Se.Eq ACTIVE]]
-    Nothing -> pure []
+    Just dbConf' -> do
+      result <- KV.findAllWithOptionsKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamST.id $ Se.Eq searchRequest, Se.Is BeamST.status $ Se.Eq ACTIVE]] (Se.Desc BeamST.searchRepeatCounter) (Just 1) Nothing
+      case result of
+        Right (searchTry : _) ->
+          pure $ Just $ transformBeamSearchTryToDomain searchTry
+        _ -> pure Nothing
+    Nothing -> pure Nothing
 
 cancelActiveTriesByRequestId ::
   (L.MonadFlow m, MonadTime m) =>

@@ -29,6 +29,7 @@ library
       API.Beckn.Rating
       API.Beckn.Search
       API.Beckn.Select
+      API.Beckn.Status
       API.Beckn.Track
       API.Beckn.Update
       API.Dashboard
@@ -76,11 +77,13 @@ library
       Beckn.ACL.OnInit
       Beckn.ACL.OnSearch
       Beckn.ACL.OnSelect
+      Beckn.ACL.OnStatus
       Beckn.ACL.OnTrack
       Beckn.ACL.OnUpdate
       Beckn.ACL.Rating
       Beckn.ACL.Search
       Beckn.ACL.Select
+      Beckn.ACL.Status
       Beckn.ACL.Track
       Beckn.ACL.Update
       Beckn.Core
@@ -90,6 +93,7 @@ library
       Domain.Action.Beckn.Rating
       Domain.Action.Beckn.Search
       Domain.Action.Beckn.Select
+      Domain.Action.Beckn.Status
       Domain.Action.Beckn.Track
       Domain.Action.Beckn.Update
       Domain.Action.Dashboard.Booking
@@ -224,7 +228,6 @@ library
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers
       SharedLogic.CallBAP
-      SharedLogic.CancelSearch
       SharedLogic.DeleteDriver
       SharedLogic.DriverFee
       SharedLogic.DriverLocation
@@ -243,6 +246,7 @@ library
       SharedLogic.MessageBuilder
       SharedLogic.Person
       SharedLogic.Ride
+      SharedLogic.SearchTryLocker
       Storage.Beam.Booking
       Storage.Beam.Booking.BookingLocation
       Storage.Beam.BookingCancellationReason

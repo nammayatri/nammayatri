@@ -620,6 +620,7 @@ public class NotificationUtils extends AppCompatActivity {
         } catch (JSONException e) {
             Log.e(LOG_TAG,"Error in adding data to jsonObject");
         }
+        String body = ChatService.getMessageFromKey(message);
         notificationIntent.putExtra("NOTIFICATION_DATA", payload.toString());
         notificationIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, chatNotificationId, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
@@ -627,7 +628,7 @@ public class NotificationUtils extends AppCompatActivity {
                 new NotificationCompat.Builder(context, "MessageUpdates")
                         .setContentTitle(sentBy)
                         .setAutoCancel(true)
-                        .setContentText(message)
+                        .setContentText(body)
                         .setSmallIcon(R.drawable.ny_ic_launcher)
                         .setDefaults(Notification.DEFAULT_ALL)
                         .setPriority(NotificationCompat.PRIORITY_HIGH)

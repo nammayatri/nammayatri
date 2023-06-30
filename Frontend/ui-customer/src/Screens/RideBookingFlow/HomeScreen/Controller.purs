@@ -63,7 +63,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os, getExpiryTime, convertUTCtoISC, getCurrentUTC)
 import Helpers.Utils (Merchant(..), addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, getMerchant, performHapticFeedback)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, startLottieProcess)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, startLottieProcess, getSuggestionsfromKey, getSuggestionfromKey)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
@@ -626,15 +626,15 @@ eval OnResumeCallback state =
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
 
 eval (UpdateMessages message sender timeStamp size) state = do
-  let newMessage = [(ChatView.makeChatComponent message sender timeStamp)]
-  let messages = state.data.messages <> [((ChatView.makeChatComponent (getMessage message) sender timeStamp))]
-  case (last newMessage) of
+  let messages = state.data.messages <> [((ChatView.makeChatComponent (getSuggestionfromKey message (getValueToLocalStore LANGUAGE_KEY) ) sender timeStamp))]
+  case (last messages) of
     Just value -> if value.sentBy == "Customer"
-                    then updateMessagesWithCmd state {data {messages = messages, messagesSize = size}}
+                    then updateMessagesWithCmd state {data {messages = messages, messagesSize = size, suggestionsList = []}}
                   else do
                     let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
-                    let unReadMessages = (if readMessages == 0 then true else (if (readMessages < (length messages) && state.props.currentStage /= ChatWithDriver) then true else false))
-                    updateMessagesWithCmd state {data {messages = messages, messagesSize = size}, props {unReadMessages = unReadMessages}}
+                    let unReadMessages = (if readMessages == 0 then true else (if (readMessages < (length messages) && state.props.currentStage /= ChatWithDriver) then true else false)) 
+                    let suggestions = getSuggestionsfromKey message
+                    updateMessagesWithCmd state {data {messages = messages, suggestionsList = suggestions, lastMessage = value , messagesSize = size}, props {unReadMessages = unReadMessages, showChatNotification = unReadMessages}}
     Nothing -> continue state
 
 eval (OpenChatScreen) state = do
@@ -665,11 +665,9 @@ eval (ChatViewActionController (ChatView.SendMessage)) state = do
     continue state
 
 eval (ChatViewActionController (ChatView.SendSuggestion chatSuggestion)) state = do
-  let suggestions = filter (\item -> (getString item) == chatSuggestion) (chatSuggestionsList "")
-  let messageArr = map (\item -> (getEN item)) suggestions
-  let message = fromMaybe "" (messageArr !! 0)
+  let message = getSuggestionfromKey chatSuggestion "EN_US"
   _ <- pure $ sendMessage message
-  _ <- pure $ firebaseLogEvent $ "ny_" <> STR.toLower (STR.replaceAll (STR.Pattern "'") (STR.Replacement "") (STR.replaceAll (STR.Pattern ",") (STR.Replacement "") (STR.replaceAll (STR.Pattern " ") (STR.Replacement "_") message)))
+  _ <- pure $ firebaseLogEvent $ "ny_" <> STR.toLower (STR.replaceAll (STR.Pattern "'") (STR.Replacement "") (STR.replaceAll (STR.Pattern ",") (STR.Replacement "") (STR.replaceAll (STR.Pattern " ") (STR.Replacement "_") chatSuggestion)))
   continue state
 
 eval (ChatViewActionController (ChatView.BackPressed)) state = do
@@ -694,7 +692,10 @@ eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) s
   _ <- pure $ performHapticFeedback unit
   _ <- pure $ updateLocalStage ChatWithDriver
   _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
-  continue state {props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false }}
+  continue state {props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false }}
+
+eval (DriverInfoCardActionController (DriverInfoCardController.RemoveNotification)) state = do
+  continue state {props { showChatNotification = false}}
 
 eval BackPressed state = do
   _ <- pure $ toggleBtnLoader "" false
@@ -1932,35 +1933,6 @@ updateMessagesWithCmd state =
       pure unit
     pure NoAction
     ]
-
-getMessage :: String -> String
-getMessage message = case message of
-                        "I'm on my way" -> (getString I_AM_ON_MY_WAY)
-                        "Getting delayed, Please wait" -> (getString GETTING_DELAYED_PLEASE_WAIT)
-                        "Unreachable, Please call back" -> (getString UNREACHABLE_PLEASE_CALL_BACK)
-                        "Are you starting?" -> (getString ARE_YOU_STARING)
-                        "Please come soon" -> (getString PLEASE_COME_SOON)
-                        "Ok, I'll wait" -> (getString OK_I_WILL_WAIT)
-                        "I've arrived" -> (getString I_HAVE_ARRIVED)
-                        "Please come fast, I'm waiting" -> (getString PLEASE_COME_FAST_I_AM_WAITING)
-                        "Please wait, I'll be there" -> (getString PLEASE_WAIT_I_WILL_BE_THERE)
-                        "Looking for you at pick-up" -> (getString LOOKING_FOR_YOU_AT_PICKUP)
-                        _ -> message
-
-chatSuggestionsList :: String -> Array STR
-chatSuggestionsList _ =
-  [
-    I_AM_ON_MY_WAY,
-    GETTING_DELAYED_PLEASE_WAIT ,
-    UNREACHABLE_PLEASE_CALL_BACK ,
-    ARE_YOU_STARING ,
-    PLEASE_COME_SOON ,
-    OK_I_WILL_WAIT ,
-    I_HAVE_ARRIVED,
-    PLEASE_COME_FAST_I_AM_WAITING,
-    PLEASE_WAIT_I_WILL_BE_THERE ,
-    LOOKING_FOR_YOU_AT_PICKUP
-  ]
 
 dummySelectedQuotes :: SelectedQuotes
 dummySelectedQuotes = SelectedQuotes {

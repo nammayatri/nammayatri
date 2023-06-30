@@ -596,6 +596,7 @@ type HomeScreenData =  {
   locationLastUpdatedTime :: String,
   totalRidesOfDay :: Int,
   totalEarningsOfDay :: Int,
+  bonusEarned :: Int ,
   route :: Array Route,
   cancelRideConfirmationPopUp :: CancelRidePopUpData,
   messages :: Array ChatView.ChatComponent,
@@ -692,7 +693,8 @@ type HomeScreenProps =  {
   silentPopUpView :: Boolean,
   zoneRideBooking :: Boolean,
   showGenderBanner :: Boolean,
-  notRemoveBanner :: Boolean
+  notRemoveBanner :: Boolean,
+  showBonusInfo :: Boolean
  }
 
 data DriverStatus = Online | Offline | Silent
