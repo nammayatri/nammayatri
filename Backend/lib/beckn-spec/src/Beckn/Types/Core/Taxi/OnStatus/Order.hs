@@ -12,11 +12,11 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnStatus.Order where
+module Beckn.Types.Core.Taxi.OnStatus.Order (Order (..), BookingStatus (..)) where
 
 import Beckn.Types.Core.Taxi.OnStatus.Fulfillment (FulfillmentInfo)
-import Data.Aeson (Value (String))
-import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
+import Data.Aeson
+import Data.OpenApi
 import EulerHS.Prelude hiding (id)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
@@ -35,10 +35,33 @@ data BookingStatus
   | TRIP_ASSIGNED
   | BOOKING_COMPLETED
   | BOOKING_CANCELLED
-  deriving (Generic, FromJSON, Show, ToSchema)
+  deriving (Generic, Show)
 
 instance ToJSON BookingStatus where
-  toJSON NEW_BOOKING = String "NEW"
-  toJSON TRIP_ASSIGNED = String "TRIP_ASSIGNED"
-  toJSON BOOKING_COMPLETED = String "COMPLETED"
-  toJSON BOOKING_CANCELLED = String "CANCELLED"
+  toJSON = genericToJSON bookingStatusOptions
+
+instance FromJSON BookingStatus where
+  parseJSON = genericParseJSON bookingStatusOptions
+
+instance ToSchema BookingStatus where
+  declareNamedSchema = genericDeclareNamedSchema bookingStatusSchemaOptions
+
+bookingStatusOptions :: Options
+bookingStatusOptions =
+  defaultOptions
+    { constructorTagModifier = modifier
+    }
+
+bookingStatusSchemaOptions :: SchemaOptions
+bookingStatusSchemaOptions =
+  defaultSchemaOptions
+    { constructorTagModifier = modifier
+    }
+
+modifier :: String -> String
+modifier = \case
+  "NEW_BOOKING" -> "NEW"
+  "TRIP_ASSIGNED" -> "TRIP_ASSIGNED"
+  "BOOKING_COMPLETED" -> "COMPLETED"
+  "BOOKING_CANCELLED" -> "CANCELLED"
+  x -> x
