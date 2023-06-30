@@ -38,14 +38,15 @@
 
     in
     {
-      packages =
-        builtins.listToAttrs (map
-          (args:
-            let bundle = make-bundle args;
-            in {
-              inherit (bundle) name;
-              value = bundle;
-            })
-          bundle-options);
+      packages = {
+        ui-customer-android-bundle-js = make-bundle {
+          target = "ui-customer";
+          platform = "android";
+        };
+        ui-driver-android-bundle-js = make-bundle {
+          target = "ui-driver";
+          platform = "android";
+        };
+      };
     };
 }

@@ -79,37 +79,33 @@
           };
         };
 
-      process-options =
-        lib.attrsets.cartesianProductOfSets {
-          env = [ "master" "sandbox" "prod" ];
-          target = [ "ui-customer" "ui-driver" ];
-          platform = [ "android" ]; # TODO: support iOS
-        };
-
-      process-name = { target, platform, env }: "${target}-start-${platform}-${env}";
-
-      process-configs =
+      build-configs =
+        let
+          options = lib.attrsets.cartesianProductOfSets {
+            env = [ "master" "sandbox" "prod" ];
+            target = [ "ui-customer" "ui-driver" ];
+            platform = [ "android" ]; # TODO: support iOS
+          };
+        in
         builtins.listToAttrs (map
           (args: {
-            name = process-name args;
-            value = make-watch-processes args;
+            name = "${args.target}-start-${args.platform}-${args.env}";
+            value = args;
           })
-          process-options);
+          options);
 
-      mission-control-scripts =
-        builtins.listToAttrs (map
-          (args: rec {
-            name = process-name args;
-            value = {
-              category = "Frontend Watch";
-              description = "Start the dev server for ${args.target} on ${args.platform} with env set to ${args.env}";
-              exec = "${lib.getExe self'.packages.${name}}";
-            };
-          })
-          process-options);
     in
     {
-      process-compose = process-configs;
-      mission-control.scripts = mission-control-scripts;
+      process-compose = builtins.mapAttrs (_: make-watch-processes) build-configs;
+
+      mission-control.scripts = builtins.mapAttrs
+        (name: args:
+          {
+            category = "Frontend Watch";
+            description = "Start the dev server for ${args.target} on ${args.platform} with env set to ${args.env}";
+            exec = "${lib.getExe config.process-compose.${name}.outputs.package}";
+          }
+        )
+        build-configs;
     };
 }
