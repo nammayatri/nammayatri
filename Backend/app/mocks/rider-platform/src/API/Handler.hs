@@ -16,8 +16,8 @@ module API.Handler where
 
 import qualified API.Types as API
 import qualified Data.ByteString as BS
+import qualified Data.Text as T
 import Environment
-import EulerHS.Types as ET
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.App
@@ -48,7 +48,7 @@ callBAP ::
 callBAP uri body = do
   selfId <- asks (.selfId)
   let authKey = getHttpManagerKey selfId
-  Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing "Some action" fakeAPI uri body
+  Beckn.callBecknAPI (Just $ T.unpack authKey) Nothing "Some action" fakeAPI uri body
   where
     fakeAPI :: Proxy (ReqBody '[JSONBS] BS.ByteString :> Post '[JSON] AckResponse)
     fakeAPI = Proxy
