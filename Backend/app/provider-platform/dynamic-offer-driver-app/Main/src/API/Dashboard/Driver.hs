@@ -30,10 +30,12 @@ type API =
     :> ( Common.DriverDocumentsInfoAPI
            :<|> Common.DriverAadhaarInfoAPI
            :<|> Common.DriverListAPI
+           :<|> Common.DriverOutstandingBalanceAPI
            :<|> Common.DriverActivityAPI
            :<|> Common.EnableDriverAPI
            :<|> Common.DisableDriverAPI
            :<|> Common.BlockDriverAPI
+           :<|> Common.DriverCashCollectionAPI
            :<|> Common.UnblockDriverAPI
            :<|> Common.DriverLocationAPI
            :<|> Common.DriverInfoAPI
@@ -53,10 +55,12 @@ handler merchantId =
   driverDocumentsInfo merchantId
     :<|> driverAadhaarInfo merchantId
     :<|> listDrivers merchantId
+    :<|> getDriverDue merchantId
     :<|> driverActivity merchantId
     :<|> enableDriver merchantId
     :<|> disableDriver merchantId
     :<|> blockDriver merchantId
+    :<|> collectCash merchantId
     :<|> unblockDriver merchantId
     :<|> driverLocation merchantId
     :<|> driverInfo merchantId
@@ -80,6 +84,10 @@ listDrivers :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Ma
 listDrivers merchantShortId mbLimit mbOffset verified enabled blocked mbSubscribed vechicleNumberSearchString =
   withFlowHandlerAPI . DDriver.listDrivers merchantShortId mbLimit mbOffset verified enabled blocked mbSubscribed vechicleNumberSearchString
 
+getDriverDue :: ShortId DM.Merchant -> Maybe Text -> Text -> FlowHandler [Common.DriverOutstandingBalanceResp]
+getDriverDue merchantShortId mobileCountryCode phone =
+  withFlowHandlerAPI $ DDriver.getDriverDue merchantShortId mobileCountryCode phone
+
 driverActivity :: ShortId DM.Merchant -> FlowHandler Common.DriverActivityRes
 driverActivity = withFlowHandlerAPI . DDriver.driverActivity
 
@@ -91,6 +99,9 @@ disableDriver merchantShortId = withFlowHandlerAPI . DDriver.disableDriver merch
 
 blockDriver :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
 blockDriver merchantShortId = withFlowHandlerAPI . DDriver.blockDriver merchantShortId
+
+collectCash :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
+collectCash merchantShortId = withFlowHandlerAPI . DDriver.collectCash merchantShortId
 
 unblockDriver :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
 unblockDriver merchantShortId = withFlowHandlerAPI . DDriver.unblockDriver merchantShortId

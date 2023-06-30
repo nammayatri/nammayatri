@@ -60,10 +60,12 @@ data DriversAPIs = DriversAPIs
   { driverDocumentsInfo :: Euler.EulerClient Driver.DriverDocumentsInfoRes,
     driverAadhaarInfo :: Id Driver.Driver -> Euler.EulerClient Driver.DriverAadhaarInfoRes,
     listDrivers :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Euler.EulerClient Driver.DriverListRes,
+    getDriverDue :: Maybe Text -> Text -> Euler.EulerClient [Driver.DriverOutstandingBalanceResp],
     driverActivity :: Euler.EulerClient Driver.DriverActivityRes,
     enableDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     disableDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     blockDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
+    collectCash :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     unblockDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     driverLocation :: Maybe Int -> Maybe Int -> Driver.DriverIds -> Euler.EulerClient Driver.DriverLocationRes,
     driverInfo :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Euler.EulerClient Driver.DriverInfoRes,
@@ -177,10 +179,12 @@ mkDriverOfferAPIs merchantId token = do
     driverDocumentsInfo
       :<|> driverAadhaarInfo
       :<|> listDrivers
+      :<|> getDriverDue
       :<|> driverActivity
       :<|> enableDriver
       :<|> disableDriver
       :<|> blockDriver
+      :<|> collectCash
       :<|> unblockDriver
       :<|> driverLocation
       :<|> driverInfo

@@ -61,7 +61,7 @@ createOrder ::
   Flow Payment.CreateOrderResp
 createOrder (driverId, merchantId) driverFeeId = do
   driverFee <- runInReplica $ QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound $ getId driverFeeId)
-  when (driverFee.status `elem` [CLEARED, EXEMPTED]) $ throwError (DriverFeeAlreadySettled $ getId driverFeeId)
+  when (driverFee.status `elem` [CLEARED, EXEMPTED, COLLECTED_CASH]) $ throwError (DriverFeeAlreadySettled $ getId driverFeeId)
   when (driverFee.status `elem` [INACTIVE, ONGOING]) $ throwError (DriverFeeNotInUse $ getId driverFeeId)
   driver <- runInReplica $ QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound $ getId driverFee.driverId)
   unless (driver.id == driverId) $ throwError NotAnExecutor
