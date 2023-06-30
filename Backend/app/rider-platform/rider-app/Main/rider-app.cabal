@@ -195,6 +195,7 @@ library
       SharedLogic.MessageBuilder
       SharedLogic.MetroOffer
       SharedLogic.PublicTransport
+      Storage.Beam.AppInstalls
       Storage.Beam.BlackListOrg
       Storage.Beam.Booking
       Storage.Beam.Booking.BookingLocation

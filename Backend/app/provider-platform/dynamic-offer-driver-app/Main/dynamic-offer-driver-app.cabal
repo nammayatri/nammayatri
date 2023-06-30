@@ -283,12 +283,13 @@ library
       Storage.Beam.FarePolicy.RestrictedExtraFare
       Storage.Beam.FareProduct
       Storage.Beam.Geometry
-      Storage.Beam.Instances
       Storage.Beam.Issue.Comment
       Storage.Beam.Issue.IssueCategory
       Storage.Beam.Issue.IssueOption
       Storage.Beam.Issue.IssueReport
       Storage.Beam.Issue.IssueTranslation
+      Storage.Beam.LeaderBoardConfig
+      Storage.Beam.Maps.PlaceNameCache
       Storage.Beam.MediaFile
       Storage.Beam.Merchant
       Storage.Beam.Merchant.DriverIntelligentPoolConfig
