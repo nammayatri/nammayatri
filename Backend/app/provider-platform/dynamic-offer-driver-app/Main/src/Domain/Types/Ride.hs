@@ -61,6 +61,7 @@ data Ride = Ride
     traveledDistance :: HighPrecMeters,
     chargeableDistance :: Maybe Meters,
     driverArrivalTime :: Maybe UTCTime,
+    pickupTraveledDistance :: HighPrecMeters,
     tripStartTime :: Maybe UTCTime,
     tripEndTime :: Maybe UTCTime,
     tripStartPos :: Maybe LatLong,

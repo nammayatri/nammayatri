@@ -68,12 +68,19 @@ data ServiceHandle m = ServiceHandle
     notifyBAPRideStarted :: SRB.Booking -> DRide.Ride -> m (),
     rateLimitStartRide :: Id DP.Person -> Id DRide.Ride -> m (),
     initializeDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> LatLong -> m (),
-    whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m ()
+    whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m (),
+    isPickupDistanceCalculationFailed :: Id DP.Person -> m Bool,
+    finalPickupDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> LatLong -> m (),
+    clearPickupInterpolatedPoints :: Id DP.Person -> m (),
+    getPickupInterpolatedPoints :: Id DP.Person -> m [LatLong],
+    getFirstNPickupwaypoints :: Id DP.Person -> Integer -> m [LatLong],
+    updatePickupDistance :: Id DP.Person -> HighPrecMeters -> m ()
   }
 
 buildStartRideHandle :: Id DM.Merchant -> Flow (ServiceHandle Flow)
 buildStartRideHandle merchantId = do
   defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId False
+  pickupRideInterpolationHandler <- LocUpd.buildPickupRideInterpolationHandler merchantId True
   pure
     ServiceHandle
       { findRideById = QRide.findById,
@@ -83,7 +90,13 @@ buildStartRideHandle merchantId = do
         notifyBAPRideStarted = sendRideStartedUpdateToBAP,
         rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId'),
         initializeDistanceCalculation = LocUpd.initializeDistanceCalculation defaultRideInterpolationHandler,
-        whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock
+        whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock,
+        isPickupDistanceCalculationFailed = LocUpd.isPickupDistanceCalculationFailed pickupRideInterpolationHandler,
+        finalPickupDistanceCalculation = LocUpd.finalPickupDistanceCalculation pickupRideInterpolationHandler,
+        clearPickupInterpolatedPoints = LocUpd.clearPickupInterpolatedPoints pickupRideInterpolationHandler,
+        getPickupInterpolatedPoints = LocUpd.getPickupInterpolatedPoints pickupRideInterpolationHandler,
+        getFirstNPickupwaypoints = LocUpd.getFirstNPickupwaypoints pickupRideInterpolationHandler,
+        updatePickupDistance = LocUpd.updatePickupDistance pickupRideInterpolationHandler
       }
 
 driverStartRide ::
@@ -145,9 +158,29 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
           pure $ getCoordinates driverLocation
 
   whenWithLocationUpdatesLock driverId $ do
+    withTimeAPI "endPickup" "finalPickupDistanceCalculation" $ finalPickupDistanceCalculation ride.id driverId point
+    pickupDistanceCalculationFailed <- withTimeAPI "endPickup" "isPickupDistanceCalculationFailed" $ isPickupDistanceCalculationFailed driverId
+    when pickupDistanceCalculationFailed $ do
+      logWarning $ "Failed to calculate actual traveled pickup distance for this ride: " <> ride.id.getId
+      updatePickupDistance driverId (-1)
     withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId ride booking.id point booking.providerId
     withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation ride.id driverId point
     withTimeAPI "startRide" "notifyBAPRideStarted" $ notifyBAPRideStarted booking ride
+    withTimeAPI "endPickup" "clearPickupInterpolatedPoints" $ clearPickupInterpolatedPoints driverId
   pure APISuccess.Success
   where
     isValidRideStatus status = status == DRide.NEW
+
+-- failedPickupDistanceCalculation :: (MonadReader r m, MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m ->  LatLong -> Id DP.Person -> m ()
+-- failedPickupDistanceCalculation ServiceHandle{..} endPoint driverId = do
+--   interpolatedPoints <- getPickupInterpolatedPoints driverId
+--   logInfo $ "hello interpolated" <> show interpolatedPoints <> show endPoint
+--   if null interpolatedPoints then do
+--     pickupPoints <- getFirstNPickupwaypoints driverId 99
+--     logInfo $ "hello pikcup" <> show pickupPoints
+--     let dist = getRouteLinearLength (pickupPoints ++ [endPoint])
+--     updatePickupDistance driverId dist
+--   else do
+--     let dist = getRouteLinearLength (reverse interpolatedPoints ++ [endPoint])
+--     updatePickupDistance driverId dist
+--   pure ()

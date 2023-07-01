@@ -84,7 +84,8 @@ data UpdateLocationHandle m = UpdateLocationHandle
     findDriverLocation :: m (Maybe DriverLocation),
     upsertDriverLocation :: LatLong -> UTCTime -> Id DM.Merchant -> m (),
     getAssignedRide :: m (Maybe (Id DRide.Ride, DRide.RideStatus)),
-    addIntermediateRoutePoints :: Id DRide.Ride -> NonEmpty LatLong -> m ()
+    addIntermediateRoutePoints :: Id DRide.Ride -> NonEmpty LatLong -> m (),
+    addIntermediatePickupRoutePoints :: Id DRide.Ride -> NonEmpty LatLong -> m ()
   }
 
 data DriverLocationUpdateStreamData = DriverLocationUpdateStreamData
@@ -109,6 +110,7 @@ buildUpdateLocationHandle driverId = do
       QP.findById driverId
         >>= fromMaybeM (PersonNotFound driverId.getId)
   defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler driver.merchantId False
+  pickupRideInterpolationHandler <- LocUpd.buildPickupRideInterpolationHandler driver.merchantId False
   pure $
     UpdateLocationHandle
       { driver,
@@ -116,7 +118,9 @@ buildUpdateLocationHandle driverId = do
         upsertDriverLocation = DrLoc.upsertGpsCoord driverId,
         getAssignedRide = SRide.getInProgressOrNewRideIdAndStatusByDriverId driverId,
         addIntermediateRoutePoints = \rideId ->
-          LocUpd.addIntermediateRoutePoints defaultRideInterpolationHandler rideId driverId
+          LocUpd.addIntermediateRoutePoints defaultRideInterpolationHandler rideId driverId,
+        addIntermediatePickupRoutePoints = \rideId ->
+          LocUpd.addIntermediatePickupRoutePoints pickupRideInterpolationHandler rideId driverId
       }
 
 streamLocationUpdates ::
@@ -220,7 +224,11 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
               updateDriverSpeedInRedis driver.merchantId driver.id point.pt point.ts
           maybe
             (logInfo "No ride is assigned to driver, ignoring")
-            (\(rideId, rideStatus) -> when (rideStatus == DRide.INPROGRESS) $ addIntermediateRoutePoints rideId $ NE.map (.pt) newWaypoints)
+            ( \(rideId, rideStatus) ->
+                if rideStatus == DRide.INPROGRESS
+                  then addIntermediateRoutePoints rideId $ NE.map (.pt) newWaypoints
+                  else when (rideStatus == DRide.NEW) $ addIntermediatePickupRoutePoints rideId $ NE.map (.pt) newWaypoints
+            )
             mbRideIdAndStatus
 
     pure Success

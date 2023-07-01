@@ -18,54 +18,46 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.Ride.Table where
+module Storage.Tabular.Feedback.FeedbackBadge where
 
-import qualified Domain.Types.Ride as Domain
+import qualified Domain.Types.Feedback.Feedback as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
-import Kernel.Types.Common (HighPrecMeters, Meters, Money)
 import Kernel.Types.Id
-import Storage.Tabular.Booking (BookingTId)
-import qualified Storage.Tabular.FareParameters as Fare
-import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Person (PersonTId)
-
-derivePersistField "Domain.RideStatus"
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    RideT sql=ride
+    FeedbackBadgeT sql=feedback_badge
       id Text
-      bookingId BookingTId
-      shortId Text
-      merchantId MerchantTId Maybe
-      status Domain.RideStatus
       driverId PersonTId
-      otp Text
-      trackingUrl Text
-      fare Money Maybe
-      traveledDistance HighPrecMeters
-      chargeableDistance Meters Maybe
-      pickupTraveledDistance HighPrecMeters
-      driverArrivalTime UTCTime Maybe
-      tripStartTime UTCTime Maybe
-      tripEndTime UTCTime Maybe
-      tripStartLat Double Maybe
-      tripStartLon Double Maybe
-      tripEndLat Double Maybe
-      tripEndLon Double Maybe
-      pickupDropOutsideOfThreshold Bool Maybe
-      fareParametersId Fare.FareParametersTId Maybe
-      distanceCalculationFailed Bool Maybe
+      badge Text
+      badgeCount Int
       createdAt UTCTime
       updatedAt UTCTime
-      numberOfDeviation Bool Maybe
       Primary id
       deriving Generic
     |]
 
-instance TEntityKey RideT where
-  type DomainKey RideT = Id Domain.Ride
-  fromKey (RideTKey _id) = Id _id
-  toKey (Id id) = RideTKey id
+instance TEntityKey FeedbackBadgeT where
+  type DomainKey FeedbackBadgeT = Id Domain.FeedbackBadge
+  fromKey (FeedbackBadgeTKey _id) = Id _id
+  toKey (Id id) = FeedbackBadgeTKey id
+
+instance FromTType FeedbackBadgeT Domain.FeedbackBadge where
+  fromTType FeedbackBadgeT {..} = do
+    return $
+      Domain.FeedbackBadge
+        { id = Id id,
+          driverId = fromKey driverId,
+          ..
+        }
+
+instance ToTType FeedbackBadgeT Domain.FeedbackBadge where
+  toTType Domain.FeedbackBadge {..} =
+    FeedbackBadgeT
+      { id = getId id,
+        driverId = toKey driverId,
+        ..
+      }

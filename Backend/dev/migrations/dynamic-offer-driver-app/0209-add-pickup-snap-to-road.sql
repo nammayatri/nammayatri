@@ -1,0 +1,3 @@
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN pickup_snap_to_road text;
+UPDATE atlas_driver_offer_bpp.merchant_service_usage_config SET pickup_snap_to_road ='OSRM';
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ALTER COLUMN pickup_snap_to_road SET NOT NULL;
