@@ -1,5 +1,6 @@
 module SharedLogic.CallBPPInternal where
 
+import Domain.Types.FeedbackForm
 import EulerHS.Types (EulerClient, client)
 import Kernel.External.Slack.Types
 import Kernel.Prelude
@@ -43,3 +44,28 @@ linkReferee ::
   m APISuccess
 linkReferee apiKey internalUrl merchantId referralCode phoneNumber countryCode = do
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") internalUrl (linkRefereeClient merchantId (Just apiKey) (RefereeLinkInfoReq referralCode phoneNumber countryCode)) "LinkReferee" likeRefereeApi
+
+type FeedbackFormAPI =
+  "internal"
+    :> "beckn"
+    :> "booking"
+    :> ( "feedback"
+           :> ReqBody '[JSON] FeedbackFormReq
+           :> Post '[JSON] APISuccess
+       )
+
+feedbackFormClient :: FeedbackFormReq -> EulerClient APISuccess
+feedbackFormClient = client (Proxy @FeedbackFormAPI)
+
+feedbackFormApi :: Proxy FeedbackFormAPI
+feedbackFormApi = Proxy
+
+feedbackForm ::
+  ( MonadFlow m,
+    CoreMetrics m
+  ) =>
+  BaseUrl ->
+  FeedbackFormReq ->
+  m APISuccess
+feedbackForm internalUrl request = do
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") internalUrl (feedbackFormClient request) "FeedbackForm" feedbackFormApi
