@@ -59,6 +59,7 @@ library
       API.UI.Confirm
       API.UI.CustomerSupport
       API.UI.Feedback
+      API.UI.FeedbackForm
       API.UI.Frontend
       API.UI.GoogleTranslate
       API.UI.Maps
@@ -121,6 +122,7 @@ library
       Domain.Action.UI.Confirm
       Domain.Action.UI.CustomerSupport
       Domain.Action.UI.Feedback
+      Domain.Action.UI.FeedbackForm
       Domain.Action.UI.Frontend
       Domain.Action.UI.Maps
       Domain.Action.UI.Payment
@@ -156,6 +158,7 @@ library
       Domain.Types.Exophone
       Domain.Types.FarePolicy.FareBreakup
       Domain.Types.FarePolicy.FareProductType
+      Domain.Types.FeedbackForm
       Domain.Types.Geometry
       Domain.Types.Issue
       Domain.Types.LocationAddress
@@ -197,6 +200,7 @@ library
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.Exophone
+      Storage.CachedQueries.FeedbackForm
       Storage.CachedQueries.Maps.DirectionsCache
       Storage.CachedQueries.Maps.PlaceNameCache
       Storage.CachedQueries.Merchant
@@ -218,6 +222,7 @@ library
       Storage.Queries.EstimateBreakup
       Storage.Queries.Exophone
       Storage.Queries.FareBreakup
+      Storage.Queries.FeedbackForm
       Storage.Queries.FullEntityBuilders
       Storage.Queries.Geometry
       Storage.Queries.Issues
@@ -254,6 +259,7 @@ library
       Storage.Tabular.EstimateBreakup
       Storage.Tabular.Exophone
       Storage.Tabular.FarePolicy.FareBreakup
+      Storage.Tabular.FeedbackForm
       Storage.Tabular.Geometry
       Storage.Tabular.Issue
       Storage.Tabular.Maps.DirectionsCache
