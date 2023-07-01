@@ -27,6 +27,7 @@ module Environment
 where
 
 import qualified Data.Map as M
+import Domain.Types.FeedbackForm
 import EulerHS.Prelude (newEmptyTMVarIO)
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Infobip.Types (InfoBIPConfig, WebengageConfig)
@@ -101,6 +102,7 @@ data AppCfg = AppCfg
     dashboardToken :: Text,
     cacheConfig :: CacheConfig,
     cacheTranslationConfig :: CacheTranslationConfig,
+    cacheFeedbackFormConfig :: CacheFeedbackFormConfig,
     maxEmergencyNumberCount :: Int,
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
     registryMap :: M.Map Text BaseUrl,
@@ -155,6 +157,7 @@ data AppEnv = AppEnv
     dashboardToken :: Text,
     cacheConfig :: CacheConfig,
     cacheTranslationConfig :: CacheTranslationConfig,
+    cacheFeedbackFormConfig :: CacheFeedbackFormConfig,
     maxEmergencyNumberCount :: Int,
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
     registryMap :: M.Map Text BaseUrl,

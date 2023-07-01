@@ -45,6 +45,7 @@ library
       API.Dashboard.Volunteer
       API.Internal
       API.Internal.DriverReferee
+      API.Internal.FeedbackForm
       API.UI
       API.UI.Call
       API.UI.CancellationReason
@@ -108,6 +109,7 @@ library
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.Volunteer
       Domain.Action.Internal.DriverReferee
+      Domain.Action.Internal.FeedbackForm
       Domain.Action.UI.Call
       Domain.Action.UI.CancellationReason
       Domain.Action.UI.Driver
@@ -180,6 +182,8 @@ library
       Domain.Types.FarePolicy.FarePolicySlabsDetails
       Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Domain.Types.FareProduct
+      Domain.Types.Feedback.Feedback
+      Domain.Types.Feedback.FeedbackForm
       Domain.Types.Geometry
       Domain.Types.Issue.Comment
       Domain.Types.Issue.IssueCategory
@@ -303,6 +307,9 @@ library
       Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Storage.Queries.FareProduct
+      Storage.Queries.Feedback.Feedback
+      Storage.Queries.Feedback.FeedbackBadge
+      Storage.Queries.Feedback.FeedbackForm
       Storage.Queries.FullEntityBuilders
       Storage.Queries.Geometry
       Storage.Queries.Issue.Comment
@@ -376,6 +383,9 @@ library
       Storage.Tabular.FarePolicy.Instances
       Storage.Tabular.FarePolicy.Table
       Storage.Tabular.FareProduct
+      Storage.Tabular.Feedback.Feedback
+      Storage.Tabular.Feedback.FeedbackBadge
+      Storage.Tabular.Feedback.FeedbackForm
       Storage.Tabular.Geometry
       Storage.Tabular.Issue.Comment
       Storage.Tabular.Issue.IssueCategory
