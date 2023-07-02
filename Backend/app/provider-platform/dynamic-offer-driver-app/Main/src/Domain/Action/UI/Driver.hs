@@ -994,7 +994,7 @@ invalidateAlternateNoCache personId = do
 validationCheck :: Validate DriverAlternateNumberReq
 validationCheck DriverAlternateNumberReq {..} = do
   sequenceA_
-    [ validateField "mobileCountryCode" mobileCountryCode P.mobileIndianCode,
+    [ validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode,
       validateField "alternateNumber" alternateNumber P.mobileNumber
     ]
 

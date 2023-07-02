@@ -97,7 +97,7 @@ validatePersonDefaultEmergencyNumber :: Validate PersonDefaultEmergencyNumber
 validatePersonDefaultEmergencyNumber PersonDefaultEmergencyNumber {..} =
   sequenceA_
     [ validateField "mobileNumber" mobileNumber P.mobileNumber,
-      validateField "mobileCountryCode" mobileCountryCode P.mobileIndianCode
+      validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
     ]
 
 type UpdateProfileDefaultEmergencyNumbersResp = APISuccess.APISuccess
