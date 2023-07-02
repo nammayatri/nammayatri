@@ -217,7 +217,7 @@ findingRidesView state push =
       lottieAnimationView
       [ id (getNewIDWithTag "lottieLoaderAnim")
       , afterRender (\action-> do
-                    _ <- pure $ startLottieProcess ((getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_with_text.json") (getNewIDWithTag "1234567893") true 0.6 "Default"
+                    _ <- pure $ startLottieProcess ((getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_with_text.json") (getNewIDWithTag "lottieLoaderAnim") true 0.6 "Default"
                     pure unit)(const NoAction)
       , height $ V state.appConfig.quoteListModel.lottieHeight
       , width $ V state.appConfig.quoteListModel.lottieWidth
@@ -463,7 +463,7 @@ noQuotesErrorModel state =
       ][imageView
         [ height $ V 115
         , width $ V 161
-        , imageWithFallback "ic_no_quotes_color,https://assets.juspay.in/nammayatri/images/user/ic_no_quotes_color.png"
+        , imageWithFallback $ "ny_ic_no_quotes," <> getAssetStoreLink FunctionCall  <> "ny_ic_no_quotes.png"
         ]
       , textView $
         [ height WRAP_CONTENT

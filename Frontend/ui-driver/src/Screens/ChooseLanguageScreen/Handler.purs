@@ -27,13 +27,14 @@ import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.ChooseLanguageScreen.View as ChooseLanguageScreen
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
+import MerchantConfig.Utils (getValueFromConfig)
 
 
 chooseLanguage :: FlowBT String ScreenOutput
 chooseLanguage = do
   (GlobalState state) <- getState
   config <- getAppConfig
-  action <- lift $ lift $ runScreen $ ChooseLanguageScreen.screen state.chooseLanguageScreen{data{config = config}}
+  action <- lift $ lift $ runScreen $ ChooseLanguageScreen.screen state.chooseLanguageScreen{data{config = config},props{selectedLanguage = getValueFromConfig "defaultLanguage"}}
   case action of
     GoToEnterMobileScreen updateState -> do
       modifyScreenState $ ChooseLanguageScreenStateType (\chooseLanguageScreenScreen -> updateState)

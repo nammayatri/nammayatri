@@ -63,7 +63,7 @@ import Engineering.Helpers.LogEvent (logEvent)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (adjustViewWithKeyboard) as HU
-import Helpers.Utils (decodeErrorMessage, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPaymentMethod, getPreviousVersion, getSearchType, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, waitingCountdownTimer)
+import Helpers.Utils (decodeErrorMessage, fetchAndUpdateCurrentLocation, getAssetStoreLink, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPaymentMethod, getPreviousVersion, getSearchType, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, waitingCountdownTimer)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getAssetsBaseUrl)
 import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getCurrentPosition, getExtendedPath, getHeightFromPercent, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, toast, updateRoute)
 import Language.Strings (getString)
@@ -194,7 +194,7 @@ screen initialState =
                     pure (pure unit)
                   else do
                     let src = initialState.data.source
-                    if src == "" || src == "Current Location" then do
+                    if src == "" || src == (getString CURRENT_LOCATION) then do
                         if (checkCurrentLocation initialState.props.sourceLat initialState.props.sourceLong initialState.data.previousCurrentLocations.pastCurrentLocations  && initialState.props.storeCurrentLocs )|| checkSavedLocations initialState.props.sourceLat initialState.props.sourceLong initialState.data.savedLocations
                           then push $ UpdateSourceFromPastLocations
                           else
@@ -240,11 +240,13 @@ view push state =
         , orientation VERTICAL
         , clickable true
         , afterRender
-            (  \action -> do
+            ( \action -> do
                 _ <- push action
                 _ <- showMap (getNewIDWithTag "CustomerHomeScreenMap") isCurrentLocationEnabled "satellite" (17.0) push MAPREADY
                 if(state.props.openChatScreen == true && state.props.currentStage == RideAccepted) then push OpenChatScreen else pure unit
-                if (getSearchType unit) == "direct_search" then push DirectSearch else pure unit
+                case state.props.currentStage of 
+                  HomeScreen -> if ((getSearchType unit) == "direct_search") && not state.props.ratingModal then push DirectSearch else pure unit
+                  _ -> pure unit
             )
             (const MapReadyAction)
         ]
@@ -717,6 +719,7 @@ genderBannerView state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin (Margin 10 10 10 10)
+    , visibility if state.data.config.showGenderBanner then VISIBLE else GONE
     , gravity BOTTOM
     ][
         genderBanner push state
@@ -1288,7 +1291,7 @@ suggestedPriceView push state =
                           , height WRAP_CONTENT
                           , orientation VERTICAL
                           , visibility if state.data.showPreferences then VISIBLE else GONE
-                          ][ showMenuButtonView push (getString AUTO_ASSIGN_DRIVER) "ny_ic_faster,https://assets.juspay.in/nammayatri/images/user/ny_ic_faster.png" true state,
+                          ][ showMenuButtonView push (getString AUTO_ASSIGN_DRIVER) ("ny_ic_faster_lightning," <> (getAssetStoreLink FunctionCall) <> "ny_ic_faster_lightning.png") true state,
                             showMenuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png" false state]
                       ]
 
@@ -1331,13 +1334,36 @@ showMenuButtonView push menuText menuImage autoAssign state =
       , margin (MarginHorizontal 10 10)
       , onClick push (const $ CheckBoxClick autoAssign)
       ] <> FontStyle.paragraphText LanguageStyle
-    , imageView
-      [ height $ if autoAssign then V 30 else V 25
-      , width $ if autoAssign then V 75 else V 25
-      , imageWithFallback menuImage
-      , margin $ (MarginHorizontal 5 5)
-      , onClick push (const $ OnIconClick autoAssign)
-      ]
+    , if autoAssign then
+        linearLayout
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , background state.data.config.autoSelectBackground
+        , cornerRadius 14.0
+        , gravity CENTER
+        , padding $ Padding 10 6 10 6
+        ][  imageView
+            [ height $ V 12
+            , width $ V 8
+            , margin $ MarginRight 4
+            , imageWithFallback menuImage
+            ]
+          , textView $ 
+            [ text $ getString FASTER
+            , width WRAP_CONTENT
+            , gravity CENTER
+            , color Color.white900
+            , height WRAP_CONTENT
+            ] <> FontStyle.body15 LanguageStyle
+          ]
+        else 
+          imageView
+          [ height $ V 25
+          , width $ V 25
+          , imageWithFallback menuImage
+          , margin $ (MarginHorizontal 5 5)
+          , onClick push (const $ OnIconClick autoAssign)
+          ]
   ]
 
 estimatedTimeAndDistanceView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w

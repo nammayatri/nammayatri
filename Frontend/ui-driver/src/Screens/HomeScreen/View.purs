@@ -277,6 +277,7 @@ genderBannerView state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin (Margin 10 10 10 10)
+    , visibility if (getValueFromConfig "showGenderBanner") then VISIBLE else GONE
     , gravity BOTTOM
     ][     
     linearLayout

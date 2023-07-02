@@ -34,7 +34,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getPaymentMethod)
+import Helpers.Utils (getAssetStoreLink, getAssetsBaseUrl, getCommonAssetStoreLink, getPaymentMethod)
 import Helpers.Utils (secondsToHms, zoneOtpExpiryTimer)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -300,7 +300,7 @@ locationTrackButton push state =
   , onClick push (const $ LocationTracking)
   , margin $ MarginTop 8
   ][  imageView
-      [ imageWithFallback $ "ny_ic_location_track," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_location_track.png"
+      [ imageWithFallback $ "ny_ic_location_track," <> (getAssetStoreLink FunctionCall) <> "ny_ic_location_track.png"
       , height $ V 18
       , width $ V 18
       , margin $ Margin 10 10 10 10
@@ -660,7 +660,7 @@ driverDetailsView push state =
               ][  linearLayout
                   [ height $ V 38
                   , width MATCH_PARENT
-                  , background Color.golden
+                  , background state.data.config.driverInfoConfig.numberPlateBackground
                   , cornerRadius 4.0
                   , orientation HORIZONTAL
                   , gravity BOTTOM
@@ -676,24 +676,29 @@ driverDetailsView push state =
                     ][  imageView
                         [ imageWithFallback $ "ny_ic_number_plate," <> (getAssetStoreLink FunctionCall) <> "ny_ic_number_plate.png"
                         , gravity LEFT
-                        , visibility if state.data.config.driverInfoConfig.showIndNumberPlate then VISIBLE else GONE
+                        , visibility if state.data.config.driverInfoConfig.showNumberPlatePrefix then VISIBLE else GONE
                         , background "#1C4188"
                         , height MATCH_PARENT
                         , width $ V 22
                         ]
                         , textView $
                         [ margin $ Margin 2 2 2 2
-                        , width MATCH_PARENT
+                        , weight 1.0
                         , height MATCH_PARENT
                         , text $ (makeNumber state.data.registrationNumber)
                         , color Color.black
                         , gravity CENTER
-                        , cornerRadius 4.0
                         ] <> FontStyle.body7 TypoGraphy
+                        , imageView
+                        [ imageWithFallback $ "ny_ic_number_plate_suffix," <> (getAssetStoreLink FunctionCall) <> "ny_ic_number_plate_suffix.png"
+                        , gravity RIGHT
+                        , visibility if state.data.config.driverInfoConfig.showNumberPlateSuffix then VISIBLE else GONE
+                        , height MATCH_PARENT
+                        , width $ V 13
+                        ]
                       ]
                     ]
                 ]
-
             ]
         ]
     ]
@@ -723,7 +728,7 @@ ratingView push state =
       , width $ V 13
       ]
     , textView (
-      [ text $ if state.data.rating == 0.0 then "New" else show state.data.rating
+      [ text $ if state.data.rating == 0.0 then (getString NEW_) else show state.data.rating
       , color state.data.config.driverInfoConfig.ratingTextColor
       , gravity CENTER
       , margin (Margin 8 0 2 0)

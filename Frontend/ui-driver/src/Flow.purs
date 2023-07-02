@@ -85,7 +85,7 @@ import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OU
 import Screens.HomeScreen.ComponentConfig (specialLocationConfig)
 import Types.ModifyScreenState (modifyScreenState, updateStage)
 import Screens.DriverProfileScreen.Controller (getDowngradeOptionsSelected)
-import MerchantConfig.Utils(getMerchant, Merchant(..), getValueFromConfig)
+import MerchantConfig.Utils(getMerchant, Merchant(..), getValueFromConfig, getAppConfig)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import Control.Monad.Trans.Class (lift)
 import Engineering.Helpers.LogEvent (logEvent)
@@ -153,7 +153,7 @@ loginFlow = do
   _ <- pure $ spy "before hideSplash" ""
   runInternetCondition
   _ <- pure $ spy "after hideSplash" ""
-  setValueToLocalStore LANGUAGE_KEY "EN_US"
+  setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
   languageType <- UI.chooseLanguage
   _ <- pure $ spy "after chooseLanguage" ""
   mobileNo <- UI.enterMobileNumber

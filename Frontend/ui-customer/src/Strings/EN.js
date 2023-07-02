@@ -503,5 +503,7 @@ const englishStrings = {
   "SEARCHING_WITH" : "Searching with",
   "PLATFORM_FEE" : "Platform Fee",
   "FINDING_QUOTES_TEXT": "Searching for cabs around",
-  "PLEASE_WAIT": "Please wait!"
+  "PLEASE_WAIT": "Please wait!",
+  "FASTER" : "Faster",
+  "NEW_" : "New"
 }

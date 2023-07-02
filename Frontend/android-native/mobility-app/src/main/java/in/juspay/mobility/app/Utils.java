@@ -155,4 +155,21 @@ public class Utils {
         startMain.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         context.startActivity(startMain);
     }
+
+    public static Intent getNavigationIntent(Context context, double lat , double lon) {
+        int navAppId = context.getResources().getIdentifier("navigationApp","string",context.getPackageName());
+        int navUriId = context.getResources().getIdentifier("navigationURI","string",context.getPackageName());
+        int navPackage = context.getResources().getIdentifier("navigationAppPackage","string",context.getPackageName());
+        String query;
+        if (context.getString(navAppId).equals("waze")) {
+            query = context.getString(navUriId) + lat + "," + lon + "&navigate=yes";
+        } else {
+            query = context.getString(navUriId) + lat + "," + lon;
+        }
+        Uri mapsURI = Uri.parse(query);
+        Intent mapIntent = new Intent(Intent.ACTION_VIEW, mapsURI);
+        mapIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        mapIntent.setPackage(context.getString(navPackage));
+        return mapIntent;
+    }
 }

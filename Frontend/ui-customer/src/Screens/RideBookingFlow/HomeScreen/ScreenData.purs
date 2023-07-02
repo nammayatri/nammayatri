@@ -17,13 +17,13 @@ module Screens.HomeScreen.ScreenData where
 
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
-import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location,RateCardType(..), ZoneType(..), SpecialTags, TipViewStage(..))
-import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..))
-import Prelude (($) ,negate)
 import Data.Array (head)
-import MerchantConfig.DefaultConfig as DC
+import Data.Maybe (Maybe(..))
 import Foreign.Object (empty)
+import MerchantConfig.DefaultConfig as DC
+import Prelude (($), negate)
+import Screens.Types (Address, Contact, DriverInfoCard, EmergencyHelpModelState, HomeScreenState, Location, LocationListItemState, PopupType(..), RateCardType(..), RatingCard(..), SearchLocationModelType(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..))
+import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..))
 
 initData :: HomeScreenState
 initData = {
@@ -92,7 +92,7 @@ initData = {
     },
     props: {
       rideRequestFlow : false
-    , isSearchLocation : NoView
+    , isSearchLocation : SearchLocation
     , currentStage : HomeScreen
     , showCallPopUp : false
     , sourceLat : 0.0

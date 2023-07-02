@@ -17,34 +17,34 @@ window.getMerchantConfig = function () {
     "primaryBackground": "#2C2F3A",
     "showCorporateAddress" : false,
     "languageList": [{
-        "name": "English",
+      "name": "Français",
+      "value": "FR_FR",
+      "subtitle": "French"
+      },
+      { "name": "English",
         "value": "EN_US",
         "subtitle": ""
-      },
-      {
-        "name": "Français",
-        "value": "FR_FR",
-        "subtitle": "French"
-      }
-    ],
+      }],
     "englishStrings": {
-      "WELCOME_TEXT": "Welcome to the Pass Culture Partner",
-      "ABOUT_TEXT": "Yatri partner is an open platform to connect drivers with riders. The app makes it convenient for drivers to find riders with proposed desired rates. No ride based commission, just pay small amount in the form of monthly subscription",
+      "WELCOME_TEXT": "Welcome to the Ma le Taxi",
+      "ABOUT_TEXT": "Ma le Taxi is an open platform to connect drivers with riders. The app makes it convenient for drivers to find riders with proposed desired rates. No ride based commission, just pay small amount in the form of monthly subscription",
       "NEED_IT_TO_ENABLE_LOCATION": "Pass Culture Partner collect location data to enable share your location to monitor driver current location, even when the app is closed or not in use.",
-      "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER": "Currently,We allow only Kerala registered number",
+      "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER": "Currently,We allow only Paris registered number",
       "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "You are about to place a call to the Yatri Support Team. Do you want to proceed?",
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "Your location helps our system to map down all the near by taxis and get you the quickest ride possible."
     },
-    "frenchString": {
-      "WELCOME_TEXT": "Bienvenue chez le partenaire Pass Culture",
-      "ABOUT_TEXT": "Le partenaire Yatri est une plate-forme ouverte pour connecter les conducteurs aux passagers. L'application permet aux conducteurs de trouver facilement des passagers avec les tarifs souhaités proposés. Pas de commission basée sur le trajet, payez simplement un petit montant sous forme d'abonnement mensuel",
+    "frenchStrings": {
+      "WELCOME_TEXT": "Bienvenue chez le partenaire Ma le Taxi",
+      "ABOUT_TEXT": "Ma le Taxi est une plateforme ouverte pour mettre en relation chauffeurs et passagers. L'application permet aux conducteurs de trouver facilement des passagers avec les tarifs souhaités proposés. Pas de commission basée sur le trajet, payez simplement un petit montant sous forme d'abonnement mensuel",
       "NEED_IT_TO_ENABLE_LOCATION": "Pass Culture Partner collecte des données de localisation pour permettre de partager votre position afin de surveiller la position actuelle du conducteur, même lorsque l'application est fermée ou non utilisée.",
-      "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER": "Actuellement, nous n'autorisons que le numéro enregistré au Bengaluru",
+      "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER": "Actuellement, nous n'autorisons que le numéro enregistré au Paris",
       "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "Vous êtes sur le point d'appeler l'équipe d'assistance Yatri. Voulez-vous poursuivre?",
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "Votre emplacement aide notre système à cartographier tous les taxis à proximité et à vous offrir le trajet le plus rapide possible."
     },
     "logs": ["JUSPAY","FIREBASE"]
     , "fontName" : "Montserrat"
     , "fontKannada" : "Montserrat"
+    , "showGenderBanner" : false
+    , "defaultLanguage" : "FR_FR"
   })
 }

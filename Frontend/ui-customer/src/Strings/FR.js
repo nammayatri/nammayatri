@@ -463,5 +463,7 @@ export function getStringValue(key) {
     "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "Site Web: <u> https://nammayatri.in/ </u>",
     "FINDING_QUOTES_TEXT": "chercher des taxis dans les environs",
     "PLEASE_WAIT": "S'il vous plaît, attendez!",
-    "RECOMMENDED": "Recommandé"
+    "RECOMMENDED": "Recommandé",
+    "FASTER" : "Plus rapide",
+    "NEW_" : "Nouvelle"
   }

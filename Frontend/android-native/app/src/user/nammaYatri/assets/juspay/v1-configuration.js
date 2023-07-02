@@ -88,7 +88,7 @@ window.getMerchantConfig = function () {
       "callButtonStroke": "0,#EB0055",
       "cardStroke": "1,#E5E7EB",
       "otpStroke": "0,#717171",
-      "showIndNumberPlate": true,
+      "showNumberPlatePrefix": true,
       "callHeight": 24,
       "callWidth": 24
     },
@@ -153,6 +153,8 @@ window.getMerchantConfig = function () {
   , "showDeleteAccount" : true
   , "fontName" : "PlusJakartaSans"
   , "fontKannada" : "NotoSansKannada"
+  , "showGenderBanner" : true
+  , "autoSelectBackground" : "#53BB6F"
   })
 }
 

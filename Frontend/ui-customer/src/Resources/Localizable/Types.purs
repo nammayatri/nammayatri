@@ -515,6 +515,8 @@ data STR
  | FINDING_QUOTES_TEXT
  | PLEASE_WAIT
  | PAY_DRIVER_USING_WALLET
+ | FASTER
+ | NEW_
 
 getKeyString :: STR -> String
 getKeyString key = case key of
@@ -1018,3 +1020,5 @@ getKeyString key = case key of
   FINDING_QUOTES_TEXT -> "FINDING_QUOTES_TEXT"
   PLEASE_WAIT -> "PLEASE_WAIT"
   PAY_DRIVER_USING_WALLET -> "PAY_DRIVER_USING_WALLET"
+  FASTER -> "FASTER"
+  NEW_ -> "NEW_"

@@ -38,7 +38,7 @@ dependencies {
 
     implementation 'androidx.appcompat:appcompat:1.6.1'
     compileOnly 'com.google.android.material:material:1.6.0'
-
+    compileOnly project(':mobility-app')
     implementation 'in.juspay:hyper:2.1.13-nammayatri.24'
     implementation 'com.facebook.shimmer:shimmer:0.5.0'
     testImplementation 'junit:junit:4.13.2'

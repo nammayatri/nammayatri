@@ -59,7 +59,7 @@ public class RideRequestUtils {
     private final static int rideReqNotificationReqCode = 6032023;
     private static final String LOG_TAG = "RideRequestUtils";
 
-    public static Boolean driverRespondApi(String searchRequestId, int offeredPrice, boolean isAccept, Context context, int slotNumber) {
+    public static Boolean driverRespondApi(String searchRequestId, double offeredPrice, boolean isAccept, Context context, int slotNumber) {
         Handler mainLooper = new Handler(Looper.getMainLooper());
         StringBuilder result = new StringBuilder();
         SharedPreferences sharedPref = context.getApplicationContext().getSharedPreferences(context.getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);

@@ -457,7 +457,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     int calculatedTime = RideRequestUtils.calculateExpireTimer(searchRequestValidTill,getCurrTime);
                     if (sharedPref == null)
                         sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                    int negotiationUnit = Integer.parseInt(sharedPref.getString("NEGOTIATION_UNIT", "10"));
+//                    int negotiationUnit = Integer.parseInt(sharedPref.getString("NEGOTIATION_UNIT", "10"));
+                    double negotiationUnit = driverMaxExtraFee / 2.0;
                     int rideRequestedBuffer = Integer.parseInt(sharedPref.getString("RIDE_REQUEST_BUFFER", "2"));
                     int customerExtraFee = rideRequestBundle.getInt("customerExtraFee");
                     if (calculatedTime > rideRequestedBuffer) {
@@ -538,6 +539,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             merchantLogo.setText("Jatri Sathi");
         } else if (key != null && key.equals("yatripartner")) {
             merchantLogo.setText("Yatri Partner");
+        } else if (key != null && key.equals("passcultureprovider")) {
+            merchantLogo.setText("Ma le Taxi");
         }
         progressDialog = inflater.inflate(R.layout.loading_screen_overlay, null);
         apiLoader = inflater.inflate(R.layout.api_loader, null);
@@ -587,7 +590,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         mFirebaseAnalytics.logEvent(event, params);
     }
 
-    private Boolean driverRespondApi(String searchRequestId, int offeredPrice, boolean isAccept, int slotNumber) {
+    private Boolean driverRespondApi(String searchRequestId, double offeredPrice, boolean isAccept, int slotNumber) {
         StringBuilder result = new StringBuilder();
         Handler handler = new Handler(Looper.getMainLooper());
         sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);

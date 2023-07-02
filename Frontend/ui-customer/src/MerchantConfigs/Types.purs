@@ -45,6 +45,8 @@ type AppConfig =
     cancelReasonConfig :: CancelReasonConfig,
     terminateBtnConfig :: TerminateBtnConfig,
     showDeleteAccount :: Boolean
+  , autoSelectBackground :: String
+  , showGenderBanner :: Boolean
   } 
 
 type QuoteListItemConfig = {
@@ -76,9 +78,11 @@ type DriverInfoConfig = {
   callButtonStroke :: String,
   cardStroke :: String,
   otpStroke :: String,
-  showIndNumberPlate :: Boolean,
+  showNumberPlatePrefix :: Boolean,
+  showNumberPlateSuffix :: Boolean,
   callHeight :: Int,
   callWidth :: Int
+, numberPlateBackground :: String
 }
 
 type SearchLocationConfig = {

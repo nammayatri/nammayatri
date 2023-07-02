@@ -129,6 +129,7 @@ import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JsCallback;
 import in.juspay.hyper.core.JuspayLogger;
+import in.juspay.mobility.app.Utils;
 
 public class MobilityCommonBridge extends HyperBridge {
 
@@ -529,14 +530,12 @@ public class MobilityCommonBridge extends HyperBridge {
         try {
             if (bridgeComponents.getActivity() != null) {
                 setKeysInSharedPrefs("MAPS_OPENED", "true");
-                Uri googleMapsURI = Uri.parse("google.navigation:q=" + dlat + "," + dlong);
-                Intent mapIntent = new Intent(Intent.ACTION_VIEW, googleMapsURI);
-                mapIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                mapIntent.setPackage("com.google.android.apps.maps");
-                bridgeComponents.getActivity().startActivity(mapIntent);
+                bridgeComponents.getContext().startActivity(Utils.getNavigationIntent(bridgeComponents.getContext(),dlat,dlong));
             }
         } catch (Exception e) {
             setKeysInSharedPrefs("MAPS_OPENED", "null");
+            int resID = bridgeComponents.getContext().getResources().getIdentifier("error_app_not_found","string",bridgeComponents.getContext().getPackageName());
+            Toast.makeText(bridgeComponents.getContext(), resID,Toast.LENGTH_SHORT).show();
             Log.e(MAPS, "Can't open google maps", e);
         }
     }
@@ -1001,6 +1000,9 @@ public class MobilityCommonBridge extends HyperBridge {
     public void setKeysInSharedPrefs(String key, String value) {
         SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getSdkName(), Context.MODE_PRIVATE);
         sharedPref.edit().putString(key, value).apply();
+        if (key.equals(bridgeComponents.getContext().getString(R.string.LANGUAGE_KEY))) {
+            Utils.updateLocaleResource(value,bridgeComponents.getContext());
+        }
     }
 
     @JavascriptInterface

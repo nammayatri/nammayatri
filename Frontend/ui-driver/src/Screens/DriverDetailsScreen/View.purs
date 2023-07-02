@@ -40,6 +40,7 @@ import Components.PopUpModal.View as PopUpModal
 import Components.PopUpModal.Controller as PopUpModalConfig
 import Screens.DriverDetailsScreen.ComponentConfig
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import MerchantConfig.Utils (getValueFromConfig)
 
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
@@ -81,7 +82,7 @@ view push state =
       profilePictureLayout state push
      , driverDetailsView push state
     ]
-  , if state.props.genderSelectionModalShow then selectYourGender push state else textView[]
+  , if state.props.genderSelectionModalShow && (getValueFromConfig "showGenderBanner") then selectYourGender push state else textView[]
   , if state.props.keyboardModalType == ST.MOBILE__NUMBER then enterMobileNumberModal push state else textView[height $ V 0,
   width $ V 0]
  , if state.props.keyboardModalType == ST.OTP then enterOtpModal push state else textView[height $ V 0,

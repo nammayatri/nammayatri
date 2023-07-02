@@ -14,4 +14,5 @@ config =
       , { name: "தமிழ்", value: "TA_IN", subtitle: "Tamil" }
       ]
   , popupBackground : "#FFFFFF"
+  , defaultLanguage : "EN_US"
   }

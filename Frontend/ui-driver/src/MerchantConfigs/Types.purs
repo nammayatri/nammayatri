@@ -7,6 +7,7 @@ type AppConfig =
     fontType :: String,
     languageList :: Array Language,
     popupBackground :: String
+  , defaultLanguage :: String
   } 
 
 type Language =  {

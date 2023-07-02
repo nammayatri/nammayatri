@@ -252,7 +252,7 @@ ratingView state=
     , textView $
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    , text $ if (fromMaybe 0 state.data.driverRating ) == 0 then "New" else show (fromMaybe 0 state.data.driverRating )
+    , text $ if (fromMaybe 0 state.data.driverRating ) == 0 then (getString NEW_) else show (fromMaybe 0 state.data.driverRating )
     , margin (MarginLeft 7)
     , color Color.white900
     ] <> FontStyle.paragraphText TypoGraphy

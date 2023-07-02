@@ -167,7 +167,7 @@ applicationInformationLayout state push =
         ( [ width $ V 150
           , height $ V 100
           , layoutGravity "center_horizontal"
-          , imageWithFallback $ "ny_ic_banner," <> (getAssetStoreLink FunctionCall) <> "ny_ic_banner.png"
+          , imageWithFallback $ "ic_launcher," <> (getAssetStoreLink FunctionCall) <> "ic_launcher.png"
           ]
             <> if getValueToLocalStore DRIVER_STATUS == "true" then [ onClick push (const ShowDemoPopUp) ] else []
         )

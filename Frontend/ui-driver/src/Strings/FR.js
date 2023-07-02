@@ -465,4 +465,7 @@ const frenchStrings = {
     REGISTERED_ADDRESS : "Adresse enregistrée",
     REGISTERED_ADDRESS_DESCRIPTION : "Juspay Technologies Private Limited <br>Stallion Business Centre, numero 444, 3e et 4e étage, 18e Main, 6e bloc, Koramangala Bengaluru, Karnataka- 560095, Inde",
     REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL : "Site Web: <u> https://nammayatriin/ </u>",
+    NEW_ : "Nouvelle",
+    WITH : "avec",
+    CHOOSE_LANGUAGE :"Choisissez la langue"
 }

@@ -80,7 +80,7 @@ window.getMerchantConfig = function () {
       "lineImage": "ic_line_white",
       "lottieHeight": 40,
       "lottieWidth": 40,
-      "topMargin": 250,
+      "topMargin": 0,
       "noQuotesImageHeight": 225,
       "noQuotesImageWidth": 340
     },
@@ -95,7 +95,10 @@ window.getMerchantConfig = function () {
       "otpStroke": "1,#717171",
       "showIndNumberPlate": false,
       "callHeight": 16,
-      "callWidth": 16
+      "callWidth": 16,
+      "showNumberPlatePrefix": true,
+      "showNumberPlateSuffix" : true,
+      "numberPlateBackground" : "#FFFFFF"
     },
     "profileBackground": "#EB0055",
     "profileName": "#FFFFFF",
@@ -137,13 +140,13 @@ window.getMerchantConfig = function () {
       "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "Bienvenue au Pass Culture \n Pour commencer à réserver un trajet, veuillez nous permettre \n de vous trouver !"
     } ,
     "languageList": [{
-      "name": "English",
-      "value": "EN_US",
-      "subTitle": ""
-    }, {
       "name": "Français",
       "value": "FR_FR",
       "subTitle": "French"
+    }, {
+      "name": "English",
+      "value": "EN_US",
+      "subTitle": ""
     }],
     "bannerConfig" : {
       "backgroundColor" : "#F0FAF0"
@@ -159,7 +162,10 @@ window.getMerchantConfig = function () {
       "imageUrl" : "ny_ic_go_home,https://assets.juspay.in/beckn/passculture/user/images/ny_ic_go_home.png"
   }
   , "showDeleteAccount" : false
-    , "fontName" : "Montserrat"
-    , "fontKannada" : "Montserrat"
+  , "fontName" : "Montserrat"
+  , "fontKannada" : "Montserrat"
+  , "defaultLanguage" : "FR_FR"
+  , "showGenderBanner" : false
+  , "autoSelectBackground" : "#320096"
   })
 }

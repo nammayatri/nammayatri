@@ -61,9 +61,11 @@ config =
     , callButtonStroke: "0,#EB0055" 
     , cardStroke: "1,#E5E7EB"
     , otpStroke: "0,#717171"
-    , showIndNumberPlate: true
+    , showNumberPlatePrefix : true
+    , showNumberPlateSuffix : false
     , callHeight: 24
     , callWidth: 24
+    , numberPlateBackground : "#E9BE4D"
     }
   , ratingConfig : 
     { secondaryButtonTextColor : "#2C2F3A"
@@ -107,4 +109,6 @@ config =
           imageUrl : "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
       }
   , showDeleteAccount : false
+  , autoSelectBackground : "#53BB6F"
+  , showGenderBanner : true
   }

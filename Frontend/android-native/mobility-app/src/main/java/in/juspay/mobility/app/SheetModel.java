@@ -11,8 +11,16 @@ package in.juspay.mobility.app;
 public class SheetModel {
     private final String pickUpDistance, distanceToBeCovered, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag;
     private String requestId;
-    private int startTime, updatedAmount, offeredPrice, customerExtraFee;
-    private final int baseFare, reqExpiryTime, driverMinExtraFee, driverMaxExtraFee, rideRequestPopupDelayDuration, negotiationUnit;
+    private int startTime;
+    private double updatedAmount;
+    private double offeredPrice;
+    private int customerExtraFee;
+    private final int baseFare;
+    private final int reqExpiryTime;
+    private final int driverMinExtraFee;
+    private final int driverMaxExtraFee;
+    private final int rideRequestPopupDelayDuration;
+    private final double negotiationUnit;
     private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha;
     private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable;
 
@@ -30,7 +38,7 @@ public class SheetModel {
                       int driverMinExtraFee,
                       int driverMaxExtraFee,
                       int rideRequestPopupDelayDuration,
-                      int negotiationUnit,
+                      double negotiationUnit,
                       int customerExtraFee,
                       String specialLocationTag){
         this.pickUpDistance = pickUpDistance;
@@ -58,7 +66,7 @@ public class SheetModel {
         this.customerExtraFee = customerExtraFee;
     }
 
-    public int getOfferedPrice() {
+    public double getOfferedPrice() {
         return offeredPrice;
     }
 
@@ -66,7 +74,7 @@ public class SheetModel {
         return customerExtraFee;
     }
 
-    public void setOfferedPrice(int offeredPrice) {
+    public void setOfferedPrice(double offeredPrice) {
         this.offeredPrice = offeredPrice;
     }
 
@@ -126,11 +134,11 @@ public class SheetModel {
         this.startTime = startTime;
     }
 
-    public int getUpdatedAmount() {
+    public double getUpdatedAmount() {
         return updatedAmount;
     }
 
-    public void setUpdatedAmount(int updatedAmount) {
+    public void setUpdatedAmount(double updatedAmount) {
         this.updatedAmount = updatedAmount;
     }
 
@@ -142,7 +150,7 @@ public class SheetModel {
         return rideRequestPopupDelayDuration;
     }
 
-    public int getNegotiationUnit() {
+    public double getNegotiationUnit() {
         return negotiationUnit;
     }
 

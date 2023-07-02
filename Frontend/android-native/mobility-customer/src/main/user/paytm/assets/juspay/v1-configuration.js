@@ -73,7 +73,7 @@ window.getMerchantConfig = function () {
       "callButtonStroke": "0,#EB0055",
       "cardStroke": "1,#E5E7EB",
       "otpStroke": "1,#10101021",
-      "showIndNumberPlate": true,
+      "showNumberPlatePrefix": true,
       "callHeight": 24,
       "callWidth": 24
     },
@@ -154,5 +154,7 @@ window.getMerchantConfig = function () {
       "imageUrl" : "ny_ic_chevron_left_double,https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/ny_ic_chevron_left_double.png"
   }
   , "showDeleteAccount" : false
+  , "showGenderBanner" : true
+  , "autoSelectBackground" : "#53BB6F"
   })
 }

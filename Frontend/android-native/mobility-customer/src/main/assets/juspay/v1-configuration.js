@@ -73,7 +73,7 @@ window.getMerchantConfig = function () {
       "callButtonStroke": "0,#EB0055",
       "cardStroke": "1,#E5E7EB",
       "otpStroke": "1,#10101021",
-      "showIndNumberPlate": true,
+      "showNumberPlatePrefix": true,
       "callHeight": 24,
       "callWidth": 24
     },

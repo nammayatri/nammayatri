@@ -48,6 +48,7 @@ import Resources.Constants (getDelayForAutoComplete)
 import Screens.Types (SearchLocationModelType(..), LocationListItemState)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
+import Data.String as DS
 
 view :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -231,14 +232,10 @@ sourceDestinationEditTextView state push =
     , margin if os == "IOS" then (Margin 0 18 15 0) else (Margin 0 15 15 0)
     , height $ V 136
     , afterRender (\action -> do
-      _ <- push action
       _ <- requestKeyboardShow case state.isSource of
                                 Just true  -> (getNewIDWithTag "SourceEditText")
                                 Just false -> (getNewIDWithTag "DestinationEditText")
                                 Nothing    -> ""
-      if (getSearchType unit) == "direct_search" then 
-        setText' (getNewIDWithTag "DestinationEditText") (state.destination)
-        else pure unit
       pure unit
       ) (const NoAction)
     ][linearLayout

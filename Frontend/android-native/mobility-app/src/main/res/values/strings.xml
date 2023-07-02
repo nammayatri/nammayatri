@@ -44,4 +44,7 @@
     <string name="and">and</string>
     <string name="service" translatable="false">for_compilation</string>
     <string name="tip_included">" tip included!"</string>
+    <string name="navigationApp" translatable="false">googlemaps</string>
+    <string name="navigationURI" translatable="false">google.navigation:q=</string>
+    <string name="navigationAppPackage" translatable="false">com.google.android.apps.maps</string>
 </resources>

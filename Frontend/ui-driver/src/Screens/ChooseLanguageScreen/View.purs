@@ -121,7 +121,7 @@ scrollableView state push =
           ] $ textView (
               [ height WRAP_CONTENT
               , width WRAP_CONTENT
-              , text "Choose Language"
+              , text $ getString CHOOSE_LANGUAGE
               , color Color.inactive
               , margin $ Margin 20 50 0 0
               ] <> FontStyle.body1 TypoGraphy
