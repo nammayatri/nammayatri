@@ -34,7 +34,7 @@ data AadhaarOtpReq = AadhaarOtpReq
     driverId :: Id Person,
     requestId :: Text,
     statusCode :: Text,
-    transactionId :: Text,
+    transactionId :: Maybe Text,
     requestMessage :: Text,
     createdAt :: UTCTime
   }

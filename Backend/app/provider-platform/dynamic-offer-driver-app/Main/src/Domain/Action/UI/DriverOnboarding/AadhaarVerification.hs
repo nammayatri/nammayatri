@@ -69,7 +69,8 @@ generateAadhaarOtp isDashboard mbMerchant personId req = do
   cacheAadhaarVerifyTries personId tried res.transactionId isDashboard
   pure res
 
-cacheAadhaarVerifyTries :: Id Person.Person -> Int -> Text -> Bool -> Flow ()
+cacheAadhaarVerifyTries :: Id Person.Person -> Int -> Maybe Text -> Bool -> Flow ()
+cacheAadhaarVerifyTries _ _ Nothing _ = return ()
 cacheAadhaarVerifyTries personId tried transactionId isDashboard = do
   let key = makeTransactionNumberKey personId
   let tryKey = makeGenerateOtpTryKey personId
