@@ -480,7 +480,7 @@ validateUpdatePhoneNumberReq :: Validate UpdatePhoneNumberReq
 validateUpdatePhoneNumberReq UpdatePhoneNumberReq {..} =
   sequenceA_
     [ validateField "newPhoneNumber" newPhoneNumber P.mobileNumber,
-      validateField "newCountryCode" newCountryCode P.mobileIndianCode
+      validateField "newCountryCode" newCountryCode P.mobileCountryCode
     ]
 
 instance HideSecrets UpdatePhoneNumberReq where

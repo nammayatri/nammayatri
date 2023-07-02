@@ -79,7 +79,7 @@ validateCreatePerson CreatePersonReq {..} =
     [ validateField "firstName" firstName $ MinLength 3 `And` P.name,
       validateField "lastName" lastName $ NotEmpty `And` P.name,
       validateField "mobileNumber" mobileNumber P.mobileNumber,
-      validateField "mobileCountryCode" mobileCountryCode P.mobileIndianCode
+      validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
     ]
 
 newtype CreatePersonRes = CreatePersonRes

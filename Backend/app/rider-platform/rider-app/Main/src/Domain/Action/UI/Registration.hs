@@ -116,13 +116,13 @@ validateAuthReq :: Validate AuthReq
 validateAuthReq AuthReq {..} =
   sequenceA_
     [ validateField "mobileNumber" mobileNumber P.mobileNumber,
-      validateField "mobileCountryCode" mobileCountryCode P.mobileIndianCode
+      validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
     ]
 
 validateSignatureAuthReq :: Validate AuthReq
 validateSignatureAuthReq AuthReq {..} =
   sequenceA_
-    [ validateField "mobileCountryCode" mobileCountryCode P.mobileIndianCode
+    [ validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
     ]
 
 data AuthRes = AuthRes

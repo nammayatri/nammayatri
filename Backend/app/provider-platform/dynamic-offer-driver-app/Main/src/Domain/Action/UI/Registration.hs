@@ -78,7 +78,7 @@ validateInitiateLoginReq :: Validate AuthReq
 validateInitiateLoginReq AuthReq {..} =
   sequenceA_
     [ validateField "mobileNumber" mobileNumber P.mobileNumber,
-      validateField "mobileCountryCode" mobileCountryCode P.mobileIndianCode
+      validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
     ]
 
 data AuthRes = AuthRes

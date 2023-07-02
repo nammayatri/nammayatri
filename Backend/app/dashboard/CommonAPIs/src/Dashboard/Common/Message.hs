@@ -308,5 +308,5 @@ instance ToHttpApiData MessageDeliveryStatus where
 -- validateUpdatePhoneNumberReq UpdatePhoneNumberReq {..} =
 --   sequenceA_
 --     [ validateField "newPhoneNumber" newPhoneNumber P.mobileNumber,
---       validateField "newCountryCode" newCountryCode P.mobileIndianCode
+--       validateField "newCountryCode" newCountryCode P.mobileCountryCode
 --     ]
