@@ -24,7 +24,7 @@ import qualified Domain.Types.FareProduct as FareProductD
 import Domain.Types.Vehicle.Variant (Variant (..))
 import EulerHS.KVConnector.Types (MeshConfig (..))
 import qualified EulerHS.Language as L
-import Kernel.External.AadhaarVerification.Types
+-- import Kernel.External.AadhaarVerification.Types
 import Kernel.External.Encryption
 import Kernel.External.Types
 import Kernel.Prelude
@@ -279,16 +279,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainFP.WaitingChargeInf
 
 instance FromBackendRow Postgres DomainFP.WaitingChargeInfo
 
-instance FromField AadhaarVerificationService where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be AadhaarVerificationService where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be AadhaarVerificationService
-
-instance FromBackendRow Postgres AadhaarVerificationService
-
 instance IsString HighPrecMeters where
   fromString = show
 
@@ -342,7 +332,7 @@ fromFieldEnum f mbValue = case mbValue of
   Just value' ->
     case readMaybe (unpackChars value') of
       Just val -> pure val
-      _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
+      _ -> DPSF.returnError ConversionFailed f ("Could not 'read' for: " <> unpackChars value')
 
 fromFieldEnumDbHash ::
   DPSF.Field ->

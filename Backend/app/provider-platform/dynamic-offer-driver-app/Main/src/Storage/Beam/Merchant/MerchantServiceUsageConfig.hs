@@ -70,6 +70,19 @@ instance FromBackendRow Postgres VerificationService
 instance FromField MapsService where
   fromField = fromFieldEnum
 
+instance FromField AadhaarVerificationService where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be AadhaarVerificationService where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be AadhaarVerificationService
+
+instance FromBackendRow Postgres AadhaarVerificationService
+
+instance IsString AadhaarVerificationService where
+  fromString = show
+
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be MapsService where
   sqlValueSyntax = autoSqlValueSyntax
 
@@ -203,6 +216,7 @@ merchantServiceUsageConfigTMod =
       smsProvidersPriorityList = B.fieldNamed "sms_providers_priority_list",
       whatsappProvidersPriorityList = B.fieldNamed "whatsapp_providers_priority_list",
       verificationService = B.fieldNamed "verification_service",
+      aadhaarVerificationService = B.fieldNamed "aadhaar_verification_service",
       updatedAt = B.fieldNamed "updated_at",
       createdAt = B.fieldNamed "created_at"
     }
