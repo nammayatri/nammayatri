@@ -122,7 +122,7 @@ buildEndRideHandle merchantId = do
       }
 
 driverEndRide ::
-  (MonadThrow m, Log m, MonadTime m, MonadGuid m, CoreMetrics m, Monad m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
+  (MonadThrow m, Log m, MonadTime m, MonadGuid m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverEndRideReq ->
@@ -133,7 +133,7 @@ driverEndRide handle rideId req =
     $ DriverReq req
 
 callBasedEndRide ::
-  (MonadThrow m, Log m, MonadTime m, MonadGuid m, CoreMetrics m, Monad m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
+  (MonadThrow m, Log m, MonadTime m, MonadGuid m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   CallBasedEndRideReq ->
@@ -141,7 +141,7 @@ callBasedEndRide ::
 callBasedEndRide handle rideId = endRide handle rideId . CallBasedReq
 
 dashboardEndRide ::
-  (MonadThrow m, Log m, MonadTime m, MonadGuid m, CoreMetrics m, Monad m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
+  (MonadThrow m, Log m, MonadTime m, MonadGuid m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardEndRideReq ->
@@ -152,7 +152,7 @@ dashboardEndRide handle rideId req =
     $ DashboardReq req
 
 endRide ::
-  (MonadThrow m, Log m, MonadTime m, MonadGuid m, CoreMetrics m, Monad m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
+  (MonadThrow m, Log m, MonadTime m, MonadGuid m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   EndRideReq ->

@@ -91,13 +91,13 @@ update (Id farePolicyId) startDistance minFee maxFee = do
           [Se.And [Se.Is BeamDEFB.farePolicyId $ Se.Eq farePolicyId, Se.Is BeamDEFB.startDistance $ Se.Eq startDistance]]
     Nothing -> pure ()
 
-findAll ::
-  ( L.MonadFlow m
-  -- , Log m
+findAll' ::
+  ( L.MonadFlow m,
+    MonadThrow m
   ) =>
   Id DFP.FarePolicy ->
   m [Domain.FullDriverExtraFeeBounds]
-findAll farePolicyId = do
+findAll' farePolicyId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamDEFB.DriverExtraFeeBoundsT
   let updatedMeshConfig = setMeshConfig modelName

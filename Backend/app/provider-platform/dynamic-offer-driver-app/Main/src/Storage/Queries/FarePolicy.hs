@@ -111,7 +111,7 @@ transformDomainFarePolicyToBeam FarePolicy {..} =
 
 transformBeamFarePolicyToDomain :: L.MonadFlow m => BeamFP.FarePolicy -> m (Maybe Domain.FarePolicy)
 transformBeamFarePolicyToDomain BeamFP.FarePolicyT {..} = do
-  fullDEFB <- QueriesDEFB.findAll (KTI.Id id)
+  fullDEFB <- QueriesDEFB.findAll' (KTI.Id id)
   let fDEFB = snd <$> fullDEFB
   fullFPPD <- QueriesFPPD.findById' (Id id)
   if isJust fullFPPD
