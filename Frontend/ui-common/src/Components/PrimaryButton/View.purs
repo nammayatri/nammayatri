@@ -33,7 +33,7 @@ view push config =
   , background config.background
   , disableClickFeedback false
   , rippleColor Color.greyShade
-  , enableRoundedRipple 300.0
+  , enableRoundedRipple true
   , clickable if config.enableLoader then false else config.isClickable
   , gravity config.gravity
   , margin config.margin

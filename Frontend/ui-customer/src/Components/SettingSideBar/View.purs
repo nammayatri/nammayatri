@@ -244,7 +244,7 @@ settingsMenuView item push  =
   , disableClickFeedback false
   , rippleColor Color.filterDisableButtonColor
   , translationZ 800.0
-  , enableRoundedRipple 80.0--true
+  , enableRoundedRipple true
   , onClick push $ ( const case item.tag of
                               SETTINGS_RIDES          -> PastRides
                               SETTINGS_FAVOURITES     -> GoToFavourites
