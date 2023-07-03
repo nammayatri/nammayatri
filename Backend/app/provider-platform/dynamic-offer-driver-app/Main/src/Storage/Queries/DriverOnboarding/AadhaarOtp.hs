@@ -15,18 +15,38 @@
 module Storage.Queries.DriverOnboarding.AadhaarOtp where
 
 import Domain.Types.DriverOnboarding.AadhaarOtp
-import Kernel.Storage.Esqueleto as Esq
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
+import Kernel.Prelude
 import Kernel.Types.Id
+import Lib.Utils
+import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.AadhaarOtpReq as BeamAOR
 import qualified Storage.Beam.DriverOnboarding.AadhaarOtpVerify as BeamAOV
 import Storage.Tabular.DriverOnboarding.AadhaarOtpReq ()
 import Storage.Tabular.DriverOnboarding.AadhaarOtpVerify ()
 
-createForGenerate :: AadhaarOtpReq -> Esq.SqlDB ()
-createForGenerate = Esq.create
+createForGenerate :: L.MonadFlow m => AadhaarOtpReq -> m (MeshResult ())
+createForGenerate aadhaarOtpReq = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamAOR.AadhaarOtpReqT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainAadhaarOtpReqToBeam aadhaarOtpReq)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-createForVerify :: AadhaarOtpVerify -> Esq.SqlDB ()
-createForVerify = Esq.create
+createForVerify :: L.MonadFlow m => AadhaarOtpVerify -> m (MeshResult ())
+createForVerify aadhaarOtpVerify = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamAOV.AadhaarOtpVerifyT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainAadhaarOtpVerifyToBeam aadhaarOtpVerify)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 transformBeamAadhaarOtpReqToDomain :: BeamAOR.AadhaarOtpReq -> AadhaarOtpReq
 transformBeamAadhaarOtpReqToDomain BeamAOR.AadhaarOtpReqT {..} = do

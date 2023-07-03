@@ -16,30 +16,62 @@ module Storage.Queries.DriverOnboarding.AadhaarVerification where
 
 import Domain.Types.DriverOnboarding.AadhaarVerification
 import Domain.Types.Person (Person)
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Lib.Utils
+import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.AadhaarVerification as BeamAV
-import Storage.Tabular.DriverOnboarding.AadhaarVerification
 
-create :: AadhaarVerification -> Esq.SqlDB ()
-create = Esq.create
+-- create :: AadhaarVerification -> Esq.SqlDB ()
+-- create = Esq.create
 
-findById ::
-  Transactionable m =>
-  Id AadhaarVerification ->
-  m (Maybe AadhaarVerification)
-findById = Esq.findById
+create :: L.MonadFlow m => AadhaarVerification -> m (MeshResult ())
+create aadhaarVerification = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamAV.AadhaarVerificationT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainAadhaarVerificationToBeam aadhaarVerification)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-findByDriverId ::
-  Transactionable m =>
-  Id Person ->
-  m (Maybe AadhaarVerification)
-findByDriverId driverId = do
-  findOne $ do
-    aadhaar <- from $ table @AadhaarVerificationT
-    where_ $ aadhaar ^. AadhaarVerificationDriverId ==. val (toKey driverId)
-    return aadhaar
+-- findById ::
+--   Transactionable m =>
+--   Id AadhaarVerification ->
+--   m (Maybe AadhaarVerification)
+-- findById = Esq.findById
+
+findById :: L.MonadFlow m => Id AadhaarVerification -> m (Maybe AadhaarVerification)
+findById (Id aadhaarVerification) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamAV.AadhaarVerificationT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> either (pure Nothing) (transformBeamAadhaarVerificationToDomain <$>) <$> KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamAV.id $ Se.Eq aadhaarVerification]
+    Nothing -> pure Nothing
+
+-- findByDriverId ::
+--   Transactionable m =>
+--   Id Person ->
+--   m (Maybe AadhaarVerification)
+-- findByDriverId driverId = do
+--   findOne $ do
+--     aadhaar <- from $ table @AadhaarVerificationT
+--     where_ $ aadhaar ^. AadhaarVerificationDriverId ==. val (toKey driverId)
+--     return aadhaar
+
+findByDriverId :: L.MonadFlow m => Id Person -> m (Maybe AadhaarVerification)
+findByDriverId (Id driverId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamAV.AadhaarVerificationT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> either (pure Nothing) (transformBeamAadhaarVerificationToDomain <$>) <$> KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamAV.driverId $ Se.Eq driverId]
+    Nothing -> pure Nothing
 
 transformBeamAadhaarVerificationToDomain :: BeamAV.AadhaarVerification -> AadhaarVerification
 transformBeamAadhaarVerificationToDomain BeamAV.AadhaarVerificationT {..} = do
