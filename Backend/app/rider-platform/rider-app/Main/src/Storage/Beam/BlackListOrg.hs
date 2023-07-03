@@ -85,7 +85,7 @@ blackListOrgTMod =
   B.tableModification
     { id = B.fieldNamed "id",
       subscriberId = B.fieldNamed "subscriber_id",
-      orgType = B.fieldNamed "org_type"
+      orgType = B.fieldNamed "type"
     }
 
 defaultBlackListOrg :: BlackListOrg

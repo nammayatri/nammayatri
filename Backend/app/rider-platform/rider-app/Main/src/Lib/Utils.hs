@@ -215,8 +215,8 @@ instance FromField HighPrecMoney where
 instance HasSqlValueSyntax be Rational => HasSqlValueSyntax be HighPrecMoney where
   sqlValueSyntax = sqlValueSyntax . getHighPrecMoney
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Rational where
-  sqlValueSyntax = autoSqlValueSyntax
+instance HasSqlValueSyntax be Double => HasSqlValueSyntax be Rational where
+  sqlValueSyntax = sqlValueSyntax
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be HighPrecMoney
 

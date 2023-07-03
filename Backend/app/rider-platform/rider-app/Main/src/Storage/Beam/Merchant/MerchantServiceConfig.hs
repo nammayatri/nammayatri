@@ -86,7 +86,7 @@ merchantServiceConfigTMod =
   B.tableModification
     { merchantId = B.fieldNamed "merchant_id",
       serviceName = B.fieldNamed "service_name",
-      configJSON = B.fieldNamed "config_j_s_o_n",
+      configJSON = B.fieldNamed "config_json",
       updatedAt = B.fieldNamed "updated_at",
       createdAt = B.fieldNamed "created_at"
     }
