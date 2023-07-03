@@ -21,6 +21,7 @@ module Domain.Action.UI.DriverOnboarding.Status
   )
 where
 
+import Domain.Types.DriverOnboarding.AadhaarVerification as AV
 import qualified Domain.Types.DriverOnboarding.DriverLicense as DL
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
 import qualified Domain.Types.DriverOnboarding.Image as Image
@@ -39,6 +40,7 @@ import Kernel.Types.Id (Id)
 import Kernel.Utils.Error
 import qualified Storage.CachedQueries.DriverInformation as DIQuery
 import Storage.CachedQueries.Merchant.TransporterConfig
+import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as SAV
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as DLQuery
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DRAQuery
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
@@ -56,7 +58,8 @@ data ResponseStatus = NO_DOC_AVAILABLE | PENDING | VALID | FAILED | INVALID | LI
 
 data StatusRes = StatusRes
   { dlVerificationStatus :: ResponseStatus,
-    rcVerificationStatus :: ResponseStatus
+    rcVerificationStatus :: ResponseStatus,
+    aadhaarVerificationStatus :: ResponseStatus
   }
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -65,10 +68,18 @@ statusHandler (personId, merchantId) = do
   transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   (dlStatus, mDL) <- getDLAndStatus personId transporterConfig.onboardingTryLimit
   (rcStatus, mRC) <- getRCAndStatus personId transporterConfig.onboardingTryLimit
-
-  when (dlStatus == VALID && rcStatus == VALID) $
+  (aadhaarStatus, _) <- getAadhaarStatus personId transporterConfig.aadhaarVerificationRequired
+  when (dlStatus == VALID && rcStatus == VALID && aadhaarStatus == VALID) $ do
     enableDriver personId merchantId mRC mDL
-  return $ StatusRes {dlVerificationStatus = dlStatus, rcVerificationStatus = rcStatus}
+  return $ StatusRes {dlVerificationStatus = dlStatus, rcVerificationStatus = rcStatus, aadhaarVerificationStatus = aadhaarStatus}
+
+getAadhaarStatus :: Id SP.Person -> Bool -> Flow (ResponseStatus, Maybe AV.AadhaarVerification)
+getAadhaarStatus _ False = return (VALID, Nothing)
+getAadhaarStatus personId True = do
+  mAadhaarCard <- SAV.findByDriverId personId
+  case mAadhaarCard of
+    Just aadhaarCard -> return (VALID, Just aadhaarCard)
+    Nothing -> return (INVALID, Nothing)
 
 getDLAndStatus :: Id SP.Person -> Int -> Flow (ResponseStatus, Maybe DL.DriverLicense)
 getDLAndStatus driverId onboardingTryLimit = do
