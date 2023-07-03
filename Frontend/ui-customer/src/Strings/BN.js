@@ -358,7 +358,7 @@ const bengaliStrings = {
   "ADD_EMERGENCY_CONTACTS": "জরুরী পরিচিতি যোগ করুন",
   "ADD_ANOTHER_CONTACT": "আরেকটি পরিচিতি যোগ করুন",
   "NO_EMERGENCY_CONTACTS_SET": "কোনো জরুরী পরিচিতি সেট নেই",
-  "EMERGENCY_CONTACTS_SCREEN_DESCRIPTION": "আপনি একটি জরুরী পরিস্থিতিতে আপনার রাইড স্ট্যাটাস 3 জন \n পর্যন্ত জরুরি পরিচিতির সাথে শেয়ার করতে পারেন।",
+  "EMERGENCY_CONTACTS_SCREEN_DESCRIPTION": "আপনি একটি জরুরী পরিস্থিতিতে আপনার রাইড স্ট্যাটাস 3 জন পর্যন্ত জরুরি পরিচিতির সাথে শেয়ার করতে পারেন।",
   "CONTACTS_SELECTED": "পরিচিতি নির্বাচিত",
   "SELECT_CONTACTS": "পরিচিতি নির্বাচন করুন",
   "CONFIRM_EMERGENCY_CONTACTS": "জরুরী যোগাযোগ নিশ্চিত করুন",
