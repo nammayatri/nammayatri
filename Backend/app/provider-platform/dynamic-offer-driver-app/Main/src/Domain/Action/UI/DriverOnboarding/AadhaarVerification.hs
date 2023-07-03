@@ -24,7 +24,6 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import Environment
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -65,7 +64,8 @@ generateAadhaarOtp isDashboard mbMerchant personId req = do
   unless (isDashboard || tried < transporterConfig.onboardingTryLimit) $ throwError (GenerateAadhaarOtpExceedLimit personId.getId)
   res <- AadhaarVerification.generateAadhaarOtp person.merchantId $ req
   aadhaarOtpEntity <- mkAadhaarOtp personId res
-  Esq.runNoTransaction $ Query.createForGenerate aadhaarOtpEntity
+  -- Esq.runNoTransaction $ Query.createForGenerate aadhaarOtpEntity
+  Query.createForGenerate aadhaarOtpEntity
   cacheAadhaarVerifyTries personId tried res.transactionId isDashboard
   pure res
 
@@ -103,12 +103,14 @@ verifyAadhaarOtp mbMerchant personId req = do
               }
       res <- AadhaarVerification.verifyAadhaarOtp person.merchantId aadhaarVerifyReq
       aadhaarVerifyEntity <- mkAadhaarVerify personId tId res
-      Esq.runTransaction $ Query.createForVerify aadhaarVerifyEntity
+      -- Esq.runTransaction $ Query.createForVerify aadhaarVerifyEntity
+      Query.createForVerify aadhaarVerifyEntity
       if res.code == pack "1002"
         then do
           Redis.del key
           aadhaarEntity <- mkAadhaar personId res
-          Esq.runNoTransaction $ Q.create aadhaarEntity
+          --Esq.runNoTransaction $ Q.create aadhaarEntity
+          Q.create aadhaarEntity
           void $ CQDriverInfo.updateAadhaarVerifiedState (cast personId) True
         else throwError $ InternalError "Aadhaar Verification failed, Please try again"
       pure res
