@@ -40,10 +40,12 @@ type API =
     :> ( DriverDocumentsInfoAPI
            :<|> DriverAadhaarInfoAPI
            :<|> DriverListAPI
+           :<|> DriverOutstandingBalanceAPI
            :<|> DriverActivityAPI
            :<|> EnableDriverAPI
            :<|> DisableDriverAPI
            :<|> BlockDriverAPI
+           :<|> DriverCashCollectionAPI
            :<|> UnblockDriverAPI
            :<|> DriverLocationAPI
            :<|> DriverInfoAPI
@@ -69,6 +71,14 @@ type DriverAadhaarInfoAPI =
 type DriverListAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'LIST
     :> Common.DriverListAPI
+
+type DriverOutstandingBalanceAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'BALANCE_DUE
+    :> Common.DriverOutstandingBalanceAPI
+
+type DriverCashCollectionAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'COLLECT_CASH
+    :> Common.DriverCashCollectionAPI
 
 type DriverActivityAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'ACTIVITY
@@ -135,10 +145,12 @@ handler merchantId =
   driverDocuments merchantId
     :<|> driverAadhaarInfo merchantId
     :<|> listDriver merchantId
+    :<|> getDriverDue merchantId
     :<|> driverActivity merchantId
     :<|> enableDriver merchantId
     :<|> disableDriver merchantId
     :<|> blockDriver merchantId
+    :<|> collectCash merchantId
     :<|> unblockDriver merchantId
     :<|> driverLocation merchantId
     :<|> driverInfo merchantId
@@ -179,10 +191,22 @@ listDriver merchantShortId apiTokenInfo mbLimit mbOffset verified enabled blocke
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.drivers.listDrivers) mbLimit mbOffset verified enabled blocked mbSubscribed phone mbVehicleNumberSearchString
 
+getDriverDue :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Text -> Text -> FlowHandler [Common.DriverOutstandingBalanceResp]
+getDriverDue merchantShortId apiTokenInfo mbMobileCountryCode phone = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.getDriverDue) mbMobileCountryCode phone
+
 driverActivity :: ShortId DM.Merchant -> ApiTokenInfo -> FlowHandler Common.DriverActivityRes
 driverActivity merchantShortId apiTokenInfo = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.drivers.driverActivity)
+
+collectCash :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
+collectCash merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.CollectCashEndpoint apiTokenInfo driverId T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.drivers.collectCash) driverId
 
 enableDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 enableDriver merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do

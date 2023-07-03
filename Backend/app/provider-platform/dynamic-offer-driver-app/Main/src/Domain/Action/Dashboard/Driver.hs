@@ -32,6 +32,8 @@ module Domain.Action.Dashboard.Driver
     addVehicle,
     updateDriverName,
     clearOnRideStuckDrivers,
+    getDriverDue,
+    collectCash,
   )
 where
 
@@ -41,6 +43,7 @@ import Data.Coerce
 import Data.List.NonEmpty (nonEmpty)
 import Domain.Action.UI.DriverOnboarding.Status (ResponseStatus (..))
 import qualified Domain.Action.UI.DriverOnboarding.Status as St
+import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DrInfo
 import Domain.Types.DriverOnboarding.DriverLicense
 import Domain.Types.DriverOnboarding.DriverRCAssociation (DriverRCAssociation (..))
@@ -62,8 +65,12 @@ import Kernel.Utils.Validation (runRequestValidation)
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import qualified SharedLogic.DriverLocation as DLoc
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.DriverInformation as CQDriverInfo
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
+import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
+import Storage.Queries.DriverFee (findPendingFeesByDriverId)
+import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as AV
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as QRCAssociation
@@ -186,6 +193,37 @@ buildDriverListItem (person, driverInformation, mbVehicle) = do
       }
 
 ---------------------------------------------------------------------
+
+getDriverDue :: ShortId DM.Merchant -> Maybe Text -> Text -> Flow [Common.DriverOutstandingBalanceResp] -- add mig and totalFee
+getDriverDue merchantShortId mbMobileCountryCode phone = do
+  let mobileCountryCode = fromMaybe "+91" mbMobileCountryCode
+  merchant <- findMerchantByShortId merchantShortId
+  mobileNumber <- getDbHash phone
+  -- driver <- Esq.runInReplica $ QPerson.findByMobileNumberAndMerchant mobileCountryCode mobileNumber merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
+  driver <- QPerson.findByMobileNumberAndMerchant mobileCountryCode mobileNumber merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
+  driverFee <- findPendingFeesByDriverId (cast driver.id)
+  return $ map mkPaymentDueResp (catMaybes [driverFee])
+  where
+    mkPaymentDueResp a@DriverFee {..} = do
+      let platformFee_ = mkPlatformFee a.platformFee
+          status_ = castStatus a.status
+          totalFee = round $ fromIntegral a.govtCharges + fromIntegral platformFee_.fee + platformFee_.cgst + platformFee_.sgst
+          driverFeeId = cast id
+          driverId_ = cast driverId
+      Common.DriverOutstandingBalanceResp {platformFee = platformFee_, status = status_, driverId = driverId_, ..}
+
+    mkPlatformFee PlatformFee {..} = Common.PlatformFee {..}
+
+    castStatus status = case status of -- only PENDING and OVERDUE possible
+      ONGOING -> Common.ONGOING
+      PAYMENT_PENDING -> Common.PAYMENT_PENDING
+      PAYMENT_OVERDUE -> Common.PAYMENT_OVERDUE
+      CLEARED -> Common.CLEARED
+      EXEMPTED -> Common.EXEMPTED
+      COLLECTED_CASH -> Common.COLLECTED_CASH
+      INACTIVE -> Common.INACTIVE
+
+---------------------------------------------------------------------
 driverAadhaarInfo :: ShortId DM.Merchant -> Id Common.Driver -> Flow Common.DriverAadhaarInfoRes
 driverAadhaarInfo merchantShortId driverId = do
   merchant <- findMerchantByShortId merchantShortId
@@ -267,6 +305,30 @@ blockDriver merchantShortId reqDriverId = do
   driverInf <- CQDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   when (not driverInf.blocked) (void $ CQDriverInfo.updateBlockedState driverId True)
   logTagInfo "dashboard -> blockDriver : " (show personId)
+  pure Success
+
+---------------------------------------------------------------------
+collectCash :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
+collectCash merchantShortId reqDriverId = do
+  merchant <- findMerchantByShortId merchantShortId
+
+  let driverId = cast @Common.Driver @DP.Driver reqDriverId
+  let personId = cast @Common.Driver @DP.Person reqDriverId
+  -- driver <- Esq.runInReplica (QPerson.findById personId) >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+
+  -- merchant access checking
+  let merchantId = driver.merchantId
+  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  driverFee <- findPendingFeesByDriverId driverId >>= fromMaybeM (InvalidRequest "No pending payment found")
+  driverInfo_ <- CDI.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound driverFee.driverId.getId)
+  transporterConfig <- SCT.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
+  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  CDI.updatePendingPayment False driverFee.driverId
+  CDI.updateSubscription True driverId
+  -- Esq.runTransaction $ do
+  _ <- QDF.updateStatus COLLECTED_CASH driverFee.id now
+  _ <- QDFS.clearPaymentStatus (cast driverFee.driverId) driverInfo_.active
   pure Success
 
 ---------------------------------------------------------------------

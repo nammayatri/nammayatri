@@ -34,7 +34,7 @@ mkPersist
       driverId PersonTId
       requestId Text
       statusCode Text
-      transactionId Text
+      transactionId Text Maybe
       requestMessage Text
       createdAt  UTCTime
       Primary id

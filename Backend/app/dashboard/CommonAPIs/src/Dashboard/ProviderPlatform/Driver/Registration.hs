@@ -168,7 +168,7 @@ instance HideSecrets GenerateAadhaarOtpReq where
 
 data GenerateAadhaarOtpRes = GenerateAadhaarOtpRes
   { message :: Text,
-    transactionId :: Text
+    transactionId :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 

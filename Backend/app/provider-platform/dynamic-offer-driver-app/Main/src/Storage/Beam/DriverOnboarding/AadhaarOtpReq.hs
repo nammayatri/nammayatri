@@ -37,7 +37,7 @@ data AadhaarOtpReqT f = AadhaarOtpReqT
     driverId :: B.C f Text,
     requestId :: B.C f Text,
     statusCode :: B.C f Text,
-    transactionId :: B.C f Text,
+    transactionId :: B.C f (Maybe Text),
     requestMessage :: B.C f Text,
     createdAt :: B.C f Time.UTCTime
   }
@@ -83,7 +83,7 @@ defaultAadhaarOtpReq =
       driverId = "",
       requestId = "",
       statusCode = "",
-      transactionId = "",
+      transactionId = Nothing,
       requestMessage = "",
       createdAt = defaultUTCDate
     }
