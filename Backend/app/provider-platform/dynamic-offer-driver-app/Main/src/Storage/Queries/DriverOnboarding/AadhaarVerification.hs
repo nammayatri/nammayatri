@@ -39,3 +39,9 @@ findByDriverId driverId = do
     aadhaar <- from $ table @AadhaarVerificationT
     where_ $ aadhaar ^. AadhaarVerificationDriverId ==. val (toKey driverId)
     return aadhaar
+
+deleteByDriverId :: Id Person -> SqlDB ()
+deleteByDriverId driverId =
+  Esq.delete $ do
+    aadhaar <- from $ table @AadhaarVerificationT
+    where_ $ aadhaar ^. AadhaarVerificationDriverId ==. val (toKey driverId)
