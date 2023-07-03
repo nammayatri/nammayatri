@@ -89,6 +89,7 @@ buildOnUpdateMessage RideAssignedBuildReq {..} = do
         RideAssignedOU.Agent
           { name = name,
             phone = mobileNumber,
+            phoneCountryCode = driver.mobileCountryCode,
             rating = realToFrac <$> driver.rating,
             tags = RideAssignedOU.AgentTags {registered_at = driver.createdAt}
           }

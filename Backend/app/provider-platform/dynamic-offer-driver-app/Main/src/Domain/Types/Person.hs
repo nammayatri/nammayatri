@@ -147,8 +147,7 @@ makePersonAPIEntity Person {..} =
 
 getPersonNumber :: (EncFlow m r) => Person -> m (Maybe Text)
 getPersonNumber person = do
-  decMobileNumber <- mapM decrypt person.mobileNumber
-  return $ person.mobileCountryCode <> decMobileNumber
+  mapM decrypt person.mobileNumber
 
 getPersonFullName :: Person -> Maybe Text
 getPersonFullName person = (\fN -> fN <> maybe "" (" " <>) person.lastName) <$> Just person.firstName
