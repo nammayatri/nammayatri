@@ -22,7 +22,7 @@ import Components.BottomNavBar.Controller (navData)
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryEditText.Views as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
-import Data.Array (mapWithIndex, (!!), length, index, drop, (..))
+import Data.Array (mapWithIndex, (!!), length, index, drop, (..), last, any)
 import Data.Int (toNumber, ceil)
 import Data.String (take, length) as DS
 import Effect (Effect)
@@ -54,7 +54,7 @@ import Effect.Class (liftEffect)
 import Control.Monad.Except.Trans (runExceptT , lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Presto.Core.Types.Language.Flow (doAff)
-import Helpers.Utils (countDown, getPastWeeks, convertUTCtoISC)
+import Helpers.Utils (countDown, getPastWeeks, convertUTCtoISC, getPastDays, getPastWeeks)
 import Screens.ReferralScreen.ComponentConfig
 import Screens as ScreenNames
 import Data.Either (Either(..))
@@ -69,13 +69,23 @@ screen initialState =
                 void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
                   case initialState.props.leaderBoardType of
                     ST.Daily  -> do
-                      leaderBoardRes <- lift $ lift $ Remote.leaderBoard $ DailyRequest (convertUTCtoISC initialState.props.selectedDay.utcDate "YYYY-MM-DD")
+                      let selectedDay =  if initialState.props.selectedDay.utcDate == "" then
+                                            case last (getPastDays 1) of
+                                              Just day -> day
+                                              Nothing -> initialState.props.selectedDay
+                                          else initialState.props.selectedDay
+                      leaderBoardRes <- lift $ lift $ Remote.leaderBoard $ DailyRequest (convertUTCtoISC selectedDay.utcDate "YYYY-MM-DD")
                       case leaderBoardRes of
                         Right res -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoard res
                         Left err  -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoardFailed
                       pure unit
                     ST.Weekly -> do
-                      leaderBoardRes <- lift $ lift $ Remote.leaderBoard $ WeeklyRequest (convertUTCtoISC initialState.props.selectedWeek.utcStartDate "YYYY-MM-DD") (convertUTCtoISC initialState.props.selectedWeek.utcEndDate "YYYY-MM-DD")
+                      let selectedWeek =  if any (_ == "") [initialState.props.selectedWeek.utcStartDate, initialState.props.selectedWeek.utcEndDate] then
+                                            case last (getPastWeeks 1) of
+                                              Just week -> week
+                                              Nothing -> initialState.props.selectedWeek
+                                          else initialState.props.selectedWeek
+                      leaderBoardRes <- lift $ lift $ Remote.leaderBoard $ WeeklyRequest (convertUTCtoISC selectedWeek.utcStartDate "YYYY-MM-DD") (convertUTCtoISC selectedWeek.utcEndDate "YYYY-MM-DD")
                       case leaderBoardRes of
                         Right res -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoard res
                         Left err  -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoardFailed
@@ -476,10 +486,7 @@ rankCard item aboveThreshold state =
         , textView
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text $ if aboveThreshold || (item == currentDriverData && currentDriverData.rank > 0) then
-                    (DS.take 12 item.goodName) <> (if DS.length item.goodName > 12 then "..." else "") <> (getString YOU)
-                   else
-                    (DS.take 16 item.goodName) <> if DS.length item.goodName > 16 then "..." else ""
+          , text $ (DS.take 12 item.goodName) <> (if DS.length item.goodName > 12 then "..." else "")
           , textSize FontSize.a_14
           , color if aboveThreshold || (item == currentDriverData && currentDriverData.rank > 0) then Color.white900 else Color.black800
           ]
