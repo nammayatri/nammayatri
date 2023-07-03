@@ -91,7 +91,8 @@ data DriverListItem = DriverListItem
     subscribed :: Bool,
     verified :: Bool,
     onRide :: Bool,
-    active :: Bool
+    active :: Bool,
+    onboardingDate :: Maybe UTCTime
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -138,7 +139,8 @@ data DriverDocumentsInfoRes = DriverDocumentsInfoRes
     verificationPending :: !DocumentsByStateInfo,
     verificationFailed :: !DocumentsByStateInfo,
     verificationLimitExceeded :: !DocumentsByStateInfo,
-    docsExpiringInMonth :: !DocumentsByStateInfo
+    docsExpiringInMonth :: !DocumentsByStateInfo,
+    onboardingDate :: !(Maybe UTCTime)
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -166,7 +168,8 @@ emptyInfo =
       verificationPending = emptyDocumentsByStateInfo,
       verificationFailed = emptyDocumentsByStateInfo,
       verificationLimitExceeded = emptyDocumentsByStateInfo,
-      docsExpiringInMonth = emptyDocumentsByStateInfo
+      docsExpiringInMonth = emptyDocumentsByStateInfo,
+      onboardingDate = Nothing
     }
 
 ---------------------------------------------------------
@@ -364,7 +367,8 @@ data DriverInfoRes = DriverInfoRes
     canDowngradeToTaxi :: Bool,
     vehicleNumber :: Maybe Text,
     driverLicenseDetails :: Maybe DriverLicenseAPIEntity,
-    vehicleRegistrationDetails :: [DriverRCAssociationAPIEntity]
+    vehicleRegistrationDetails :: [DriverRCAssociationAPIEntity],
+    onboardingDate :: Maybe UTCTime
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
