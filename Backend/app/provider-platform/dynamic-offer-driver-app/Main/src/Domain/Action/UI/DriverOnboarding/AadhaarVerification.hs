@@ -65,7 +65,7 @@ generateAadhaarOtp isDashboard mbMerchant personId req = do
   res <- AadhaarVerification.generateAadhaarOtp person.merchantId $ req
   aadhaarOtpEntity <- mkAadhaarOtp personId res
   -- Esq.runNoTransaction $ Query.createForGenerate aadhaarOtpEntity
-  Query.createForGenerate aadhaarOtpEntity
+  _ <- Query.createForGenerate aadhaarOtpEntity
   cacheAadhaarVerifyTries personId tried res.transactionId isDashboard
   pure res
 

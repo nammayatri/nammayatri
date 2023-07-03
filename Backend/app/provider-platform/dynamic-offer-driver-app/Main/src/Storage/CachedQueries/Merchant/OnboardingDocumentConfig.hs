@@ -59,5 +59,5 @@ makeMerchantIdKey merchantId = "driver-offer:CachedQueries:OnboardingDocumentCon
 clearCache :: Hedis.HedisFlow m r => Id Merchant -> m ()
 clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantIdKey
 
-update :: L.MonadFlow m => OnboardingDocumentConfig -> m (MeshResult ())
+update :: (L.MonadFlow m, MonadTime m) => OnboardingDocumentConfig -> m (MeshResult ())
 update = Queries.update
