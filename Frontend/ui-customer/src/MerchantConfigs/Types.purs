@@ -83,6 +83,7 @@ type DriverInfoConfig = {
   callHeight :: Int,
   callWidth :: Int
 , numberPlateBackground :: String
+, showCancelPrevention :: Boolean
 }
 
 type SearchLocationConfig = {

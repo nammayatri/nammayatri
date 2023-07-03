@@ -89,7 +89,7 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList)
 import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData)
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RateCardType(..), RatingCard, SearchLocationModelType(..), SpecialTags, Stage(..), ZoneType(..), TipViewStage(..))
+import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RateCardType(..), RatingCard, SearchLocationModelType(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..))
 import Screens.Types (TipViewData(..), TipViewProps(..))
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..))
 import Services.Backend as Remote
@@ -972,6 +972,7 @@ eval (SkipButtonActionController (PrimaryButtonController.OnClick)) state = do
                                           action : "feedback_skipped"
                                         , trip_amount : Nothing
                                         , trip_id : Nothing
+                                        , ride_status : Nothing
                                         , screen : Just $ getScreenFromStage state.props.currentStage
                                         , exit_app : false
                                         }
@@ -1053,7 +1054,9 @@ eval (CancelSearchAction PopUpModal.OnButton2Click) state = do
   continue state { props { isCancelRide = true, cancellationReasons = cancelReasons "", cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "", cancelSearchCallDriver = false } }
 
 eval (DriverInfoCardActionController (DriverInfoCardController.CancelRide infoCard)) state =
-  continue state { props { cancelSearchCallDriver = true } }
+  if state.data.config.driverInfoConfig.showCancelPrevention then
+    continue state { props { cancelSearchCallDriver = true } }
+      else continueWithCmd state [ pure $ CancelSearchAction PopUpModal.OnButton2Click]
 
 eval (DriverInfoCardActionController (DriverInfoCardController.LocationTracking)) state = do
   _ <- pure $ performHapticFeedback unit
@@ -1721,7 +1724,7 @@ eval _ state = continue state
 
 validateSearchInput :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
 validateSearchInput state searchString =
-  if STR.length (STR.trim searchString) > 2 && searchString /= state.data.source && (searchString /= state.data.destination || ((getSearchType unit) == "direct_search")) then
+  if STR.length (STR.trim searchString) > 2 && searchString /= state.data.source && (searchString /= state.data.destination || ((getSearchType unit) == "direct_search") && (state.props.isSearchLocation == SearchLocation)) then
     callSearchLocationAPI
   else
     continue state

@@ -23,7 +23,7 @@ window.getMerchantConfig = function () {
     "addFavouriteScreenBackArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png",
     "showPickUpandDrop": false,
     "apiLoaderLottie": "",
-    "isEmergencyContacts": "true",
+    "isEmergencyContacts": "false",
     "showCorporateAddress" : false,
     "isChatEnabled": "false",
     "loaderColor": "#EB0055",
@@ -98,7 +98,8 @@ window.getMerchantConfig = function () {
       "callWidth": 16,
       "showNumberPlatePrefix": true,
       "showNumberPlateSuffix" : true,
-      "numberPlateBackground" : "#FFFFFF"
+      "numberPlateBackground" : "#FFFFFF",
+      "showCancelPrevention" : false
     },
     "profileBackground": "#EB0055",
     "profileName": "#FFFFFF",
@@ -143,10 +144,6 @@ window.getMerchantConfig = function () {
       "name": "Français",
       "value": "FR_FR",
       "subTitle": "French"
-    }, {
-      "name": "English",
-      "value": "EN_US",
-      "subTitle": ""
     }],
     "bannerConfig" : {
       "backgroundColor" : "#F0FAF0"

@@ -66,6 +66,7 @@ config =
     , callHeight: 24
     , callWidth: 24
     , numberPlateBackground : "#E9BE4D"
+    , showCancelPrevention : false
     }
   , ratingConfig : 
     { secondaryButtonTextColor : "#2C2F3A"

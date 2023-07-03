@@ -21,7 +21,7 @@ module Helpers.Utils
 
 import Accessor (_distance_meters)
 import Accessor (_distance_meters)
-import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Payload(..))
+import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Payload(..), InnerPayload)
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Free (resume)
@@ -410,6 +410,7 @@ terminateApp stage exitApp = runFn3 emitJOSEvent "java" "onEvent" $ encode $  Ev
   , payload : Just {
     action : "terminate"
   , trip_amount : Nothing
+  , ride_status : Nothing
   , trip_id : Nothing
   , screen : Just (getScreenFromStage stage)
   , exit_app : exitApp
@@ -466,3 +467,19 @@ getPaymentMethod _ = do
         Just a -> a 
         Nothing -> "cash"
     Nothing -> "cash"
+
+
+triggerRideStatusEvent :: String -> Maybe Int -> Maybe String -> String -> Flow GlobalState Unit 
+triggerRideStatusEvent status amount bookingId screen = do
+  let (payload :: InnerPayload) = { action : "trip_status"
+    , ride_status : Just status
+    , trip_amount : amount
+    , trip_id : bookingId
+    , screen : Just screen
+    , exit_app : false
+    }
+  pure $ runFn3 emitJOSEvent "java" "onEvent" $ encode $ EventPayload {
+    event : "process_result"
+  , payload : Just payload
+  }
+      
