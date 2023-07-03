@@ -1569,7 +1569,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         } catch (Exception e) {
             Log.e(LOG_TAG, "Error sending user data: " + e);
         }
-        
+
         if (clevertapDefaultInstance!=null) {
             clevertapDefaultInstance.onUserLogin(profileUpdate);
             sharedPrefs = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
@@ -1612,19 +1612,21 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void showDialer(String phoneNum) {
+    public void showDialer(String phoneNum, boolean call) {
         Intent intent = new Intent();
-        intent.setAction(Intent.ACTION_CALL);
-        phoneNumber = phoneNum;
-        if (ContextCompat.checkSelfPermission(activity, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.CALL_PHONE}, REQUEST_CALL);
-        } else {
-            if (intent != null) {
-                phoneNumber = "tel:" + phoneNum;
+        phoneNumber = "tel:" + phoneNum;
+        if (call) {
+            intent.setAction(Intent.ACTION_CALL);
+            if (ContextCompat.checkSelfPermission(activity, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.CALL_PHONE}, REQUEST_CALL);
+            } else {
                 intent.setData(Uri.parse(phoneNumber));
                 activity.startActivity(intent);
             }
-
+        } else {
+            intent.setAction(Intent.ACTION_DIAL);
+            intent.setData(Uri.parse(phoneNumber));
+            activity.startActivity(intent);
         }
     }
 
@@ -3319,10 +3321,9 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     Bitmap thumbnailBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_launcher);
                     sendIntent.setType("text/plain");
                    if (thumbnailBitmap != null &&  Build.VERSION.SDK_INT > 28) {
-                       Uri thumbnailUri = getImageUri(context, thumbnailBitmap);
-                       ClipData clipData = ClipData.newUri(context.getContentResolver(), "ThumbnailImage", thumbnailUri);
-                       sendIntent.setClipData(clipData);
-                       sendIntent.setType("image/*");
+                        Uri thumbnailUri = getImageUri(context, thumbnailBitmap);
+                        sendIntent.putExtra(Intent.EXTRA_STREAM, thumbnailUri);
+                        sendIntent.setType("image/*");
                    }
                     sendIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     Intent shareIntent = Intent.createChooser(sendIntent, null);
