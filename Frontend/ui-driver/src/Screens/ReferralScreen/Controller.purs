@@ -34,7 +34,7 @@ import Debug (spy)
 import Helpers.Utils (clearTimer, getPastDays, getPastWeeks, convertUTCtoISC)
 import Storage (setValueToLocalNativeStore, KeyStore(..))
 import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC)
-import Data.Array (last, (!!), init, replicate, filter, sortWith)
+import Data.Array (last, (!!), init, replicate, filter, sortWith, any)
 import Data.Array (length) as DA
 import Data.Maybe (Maybe(..))
 import Services.APITypes (LeaderBoardRes(..), DriversInfo(..))
@@ -149,7 +149,18 @@ eval (UpdateLeaderBoard (LeaderBoardRes leaderBoardRes)) state = do
                             Just driverData -> transformLeaderBoard driverData
                             Nothing         -> RSD.dummyRankData
       lastUpdatedAt = convertUTCtoISC (fromMaybe (getCurrentUTC "") leaderBoardRes.lastUpdatedAt) "h:mm A"
-  continue state{ props { rankersData = rankersData, currentDriverData = currentDriverData, showShimmer = false, noData = not (dataLength > 0), lastUpdatedAt = lastUpdatedAt } }
+  let newState = state{ props { rankersData = rankersData, currentDriverData = currentDriverData, showShimmer = false, noData = not (dataLength > 0), lastUpdatedAt = lastUpdatedAt } }
+  if (any (_ == "") [state.props.selectedDay.utcDate, state.props.selectedWeek.utcStartDate, state.props.selectedWeek.utcEndDate]) then do
+    let pastDates = getPastDays 7
+        pastWeeks = getPastWeeks 4
+        selectedDay = case last pastDates of
+                        Just date -> date
+                        Nothing -> state.props.selectedDay
+        selectedWeek = case last pastWeeks of
+                        Just week -> week
+                        Nothing -> state.props.selectedWeek
+    continue newState{ props{ days = pastDates, weeks = pastWeeks, selectedDay = selectedDay, selectedWeek = selectedWeek } }
+  else continue newState
 
 eval UpdateLeaderBoardFailed state = continue state{ props{ showShimmer = false, noData = true } }
 
