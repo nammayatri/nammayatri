@@ -465,5 +465,18 @@ export function getStringValue(key) {
     "PLEASE_WAIT": "S'il vous plaît, attendez!",
     "RECOMMENDED": "Recommandé",
     "FASTER" : "Plus rapide",
-    "NEW_" : "Nouvelle"
+    "NEW_" : "Nouvelle",
+    "METRO_RIDE": "Balade en métro",
+    "DRIVER_IS_NEAR_YOUR_LOCATION" : "Le chauffeur est près de chez vous.",
+    "PLEASE_CONTACT_THE_DRIVER_BEFORE_CANCELLING" : "\nVeuillez contacter le chauffeur avant d'annuler",
+    "CHANGE_OF_PLANS" : "Changement de plan",
+    "NO_LONGER_REQUIRE_A_RIDE_DUE_TO_CHANGE_IN_PLANS" : "Ne nécessite plus de trajet en raison d'un changement de plans",
+    "CANCELLING_AS_I_GOT_A_RIDE_ON_ANOTHER_APP" : "Annulation car j'ai fait un tour sur une autre application",
+    "DRIVER_IS_NOT_MOVING" : "Le conducteur ne bouge pas",
+    "DRIVER_LOCATION_WASNT_CHANGING_ON_THE_MAP" : "L'emplacement du conducteur ne changeait pas sur la carte",
+    "WRONG_PICKUP_LOCATION" : "Mauvais lieu de prise en charge",
+    "THE_PICKUP_LOCATION_ENTERED_WAS_WRONG" : "Le lieu de prise en charge saisi était erroné",
+    "SOME_OTHER_REASON" : "Une autre raison.",
+    "WAIT_FOR_DRIVER" : "Attendre le chauffeur",
+    "DRIVER_WAS_TAKING_TOO_LONG_TO_REACH_THE_PICKUP_LOCATION" : "Le chauffeur mettait trop de temps à atteindre le lieu de prise en charge"
   }
