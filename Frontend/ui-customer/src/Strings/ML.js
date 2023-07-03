@@ -350,7 +350,7 @@ const malayalamStrings = {
   "LET_TRY_THAT_AGAIN": "നമുക്ക് വീണ്ടും ശ്രമിക്കാം ...",
   "EMERGENCY_CONTACTS": "അടിയന്തര കോൺടാക്റ്റുകൾ",
   "NO_EMERGENCY_CONTACTS_SET": "അടിയന്തര കോൺടാക്‌റ്റുകളൊന്നും സജ്ജീകരിച്ചിട്ടില്ല",
-  "EMERGENCY_CONTACTS_SCREEN_DESCRIPTION": "അടിയന്തര സാഹചര്യത്തിൽ 3 എമർജൻസി കോൺടാക്റ്റുകളുമായി \n നിങ്ങളുടെ റൈഡ് സ്റ്റാറ്റസ് പങ്കിടാം.",
+  "EMERGENCY_CONTACTS_SCREEN_DESCRIPTION": "അടിയന്തര സാഹചര്യത്തിൽ 3 എമർജൻസി കോൺടാക്റ്റുകളുമായി നിങ്ങളുടെ റൈഡ് സ്റ്റാറ്റസ് പങ്കിടാം.",
   "ADD_EMERGENCY_CONTACTS": "അടിയന്തര കോൺടാക്റ്റുകൾ ചേർക്കുക",
   "DAY_TIMES_OF": "",
   "NIGHT_TIMES_OF": "",

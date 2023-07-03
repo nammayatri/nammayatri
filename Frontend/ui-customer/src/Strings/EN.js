@@ -136,7 +136,7 @@ const englishStrings = {
   "ADD_EMERGENCY_CONTACTS": "Add Emergency Contacts",
   "ADD_ANOTHER_CONTACT": "Add Another Contact",
   "NO_EMERGENCY_CONTACTS_SET": "No Emergency Contacts Set",
-  "EMERGENCY_CONTACTS_SCREEN_DESCRIPTION": "You can share your ride status in case of an emergency \n with upto 3 emergency contacts.",
+  "EMERGENCY_CONTACTS_SCREEN_DESCRIPTION": "You can share your ride status in case of an emergency with upto 3 emergency contacts.",
   "COPIED": "Copied",
   "TRIP_ID": "Trip Id",
   "SAVE_PLACE": "Save Place",

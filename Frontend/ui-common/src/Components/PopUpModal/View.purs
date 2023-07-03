@@ -206,7 +206,7 @@ view push state =
                     ]
                 , linearLayout
                     [ if state.option1.visibility then width state.option2.width else weight 1.0
-                    , height $ V 48
+                    , height state.option2.height
                     , background state.option2.background
                     , cornerRadius 8.0
                     , visibility if state.option2.visibility then VISIBLE else GONE

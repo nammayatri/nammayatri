@@ -460,10 +460,10 @@ logOutPopUpModelConfig state =
             , fontSize = FontSize.a_22
             },
           secondaryText {
-            text = (getString BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS)
+            text = (getString BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS) 
           , fontSize = FontSize.a_14
           , color = Color.black650}
-          , tipLayoutMargin = (Margin 22 0 22 22)
+          , tipLayoutMargin = (Margin 22 2 22 22)
           , buttonLayoutMargin = (MarginHorizontal 16 16)
           , activeIndex = state.props.customerTip.tipActiveIndex
           , tipButton {
@@ -492,6 +492,7 @@ logOutPopUpModelConfig state =
           , padding = PaddingBottom $ getBottomMargin
           , color = Color.black650
           , fontStyle = FontStyle.semiBold LanguageStyle
+          , height = WRAP_CONTENT
           },
           cornerRadius = (Corners 15.0 true true false false)
 
