@@ -25,6 +25,7 @@ import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Vehicle.Variant as Veh
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Storage.Tabular.Booking.BookingLocation hiding (createdAt, id, updatedAt)
@@ -55,6 +56,8 @@ mkPersist
       primaryExophone Text
       bapId Text
       bapUri Text
+      bapCity Context.City Maybe
+      bapCountry Context.Country Maybe
       startTime UTCTime
       riderId RiderDetailsTId Maybe
       fromLocationId BookingLocationTId

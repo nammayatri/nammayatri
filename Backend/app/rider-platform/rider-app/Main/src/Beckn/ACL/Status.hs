@@ -47,4 +47,5 @@ buildStatusReq bppRideId booking merchant = do
       (Just merchant.id.getId)
       (Just booking.providerUrl)
       merchant.city
+      merchant.country
   pure $ BecknReq context $ Status.StatusMessage bppRideId.getId

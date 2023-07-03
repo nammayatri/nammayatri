@@ -19,7 +19,7 @@ import qualified Beckn.Types.Core.Metro.Search as Search
 import Control.Lens ((?~))
 import qualified Domain.Action.UI.Search.OneWay as DSearch
 import EulerHS.Prelude hiding (state)
-import Kernel.Types.Beckn.Context
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.TimeRFC339
 
@@ -35,8 +35,8 @@ buildContextMetro action message_id bapId bapUri = do
   return
     Context
       { domain = METRO,
-        country = "IND",
-        city = "Kochi",
+        country = Context.India,
+        city = Context.Kochi,
         core_version = "0.9.3",
         bap_id = bapId,
         bap_uri = bapUri,

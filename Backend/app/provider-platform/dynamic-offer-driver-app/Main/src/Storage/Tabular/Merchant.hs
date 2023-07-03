@@ -23,6 +23,7 @@ module Storage.Tabular.Merchant where
 import qualified Domain.Types.Merchant as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 
@@ -46,7 +47,7 @@ mkPersist
       geoHashPrecisionValue Int
       headCount Int Maybe
       status Domain.Status
-      city Text
+      city Context.City
       verified Bool
       enabled Bool
       internalApiKey Text

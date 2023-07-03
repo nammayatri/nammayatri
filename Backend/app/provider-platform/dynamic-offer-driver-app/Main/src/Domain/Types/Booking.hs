@@ -28,6 +28,7 @@ import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.Vehicle.Variant as DVeh
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Servant.API
@@ -62,6 +63,8 @@ data Booking = Booking
     primaryExophone :: Text,
     bapId :: Text,
     bapUri :: BaseUrl,
+    bapCity :: Maybe Context.City,
+    bapCountry :: Maybe Context.Country,
     startTime :: UTCTime,
     riderId :: Maybe (Id DRD.RiderDetails),
     fromLocation :: DLoc.BookingLocation,

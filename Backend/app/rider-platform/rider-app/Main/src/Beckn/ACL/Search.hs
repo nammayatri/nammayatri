@@ -78,7 +78,7 @@ buildSearchReq origin mbDestination searchId startTime device distance duration 
   let transactionId = getId searchId
       messageId = transactionId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/cab/v1/" <> T.unpack merchant.id.getId)
-  context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.city
+  context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.city merchant.country
   let intent = mkIntent origin mbDestination startTime customerLanguage
   let mbRouteInfo = Search.RouteInfo {distance, duration}
   let searchMessage = Search.SearchMessage intent (Just mbRouteInfo) device

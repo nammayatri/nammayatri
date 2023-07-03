@@ -24,6 +24,7 @@ import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.SearchRequest as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
 import Storage.Tabular.Merchant (MerchantTId)
@@ -45,6 +46,8 @@ mkPersist
       area FareProductD.Area Maybe
       bapId Text
       bapUri Text
+      bapCity Context.City Maybe
+      bapCountry Context.Country Maybe
       estimatedDistance Meters
       estimatedDuration Seconds
       device Text Maybe
