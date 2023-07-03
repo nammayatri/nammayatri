@@ -21,13 +21,10 @@ import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq hiding (create)
-import Kernel.Types.Common
 import Kernel.Types.Id
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FareBreakup as BeamFB
-import Storage.Tabular.FarePolicy.FareBreakup
 
 -- createMany :: [FareBreakup] -> SqlDB ()
 -- createMany = Esq.createMany
@@ -44,15 +41,15 @@ create fareBreakup = do
 createMany :: L.MonadFlow m => [FareBreakup] -> m ()
 createMany = traverse_ create
 
-findAllByBookingId :: (MonadThrow m, Log m, Transactionable m) => Id Booking -> m [FareBreakup]
-findAllByBookingId bookingId =
-  findAll $ do
-    fareBreakup <- from $ table @FareBreakupT
-    where_ $ fareBreakup ^. FareBreakupBookingId ==. val (toKey bookingId)
-    return fareBreakup
+-- findAllByBookingId :: (MonadThrow m, Log m, Transactionable m) => Id Booking -> m [FareBreakup]
+-- findAllByBookingId bookingId =
+--   findAll $ do
+--     fareBreakup <- from $ table @FareBreakupT
+--     where_ $ fareBreakup ^. FareBreakupBookingId ==. val (toKey bookingId)
+--     return fareBreakup
 
-findAllByBookingId' :: L.MonadFlow m => Id Booking -> m [FareBreakup]
-findAllByBookingId' bookingId = do
+findAllByBookingId :: L.MonadFlow m => Id Booking -> m [FareBreakup]
+findAllByBookingId bookingId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamFB.FareBreakupT
   let updatedMeshConfig = setMeshConfig modelName

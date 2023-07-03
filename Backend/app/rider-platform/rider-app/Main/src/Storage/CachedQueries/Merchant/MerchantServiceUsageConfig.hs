@@ -36,7 +36,7 @@ import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant.MerchantServiceUsageConfig as Queries
 
-findByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
+findByMerchantId :: (CacheFlow m r, EsqDBFlow m r, L.MonadFlow m) => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
 findByMerchantId id =
   Hedis.safeGet (makeMerchantIdKey id) >>= \case
     Just a -> return . Just $ coerce @(MerchantServiceUsageConfigD 'Unsafe) @MerchantServiceUsageConfig a

@@ -22,7 +22,6 @@ import qualified Domain.Types.AppInstalls as DAppInstalls
 import qualified Domain.Types.Merchant as DMerchant
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto (runTransaction)
 -- import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Error
@@ -73,5 +72,6 @@ createAppInstallsDetails req = do
             bundleVersion = req.bundleVersion,
             platform = req.platform
           }
-  runTransaction $ QAppInstalls.upsert appInstallsDetails
+  -- runTransaction $ QAppInstalls.upsert appInstallsDetails
+  QAppInstalls.upsert appInstallsDetails
   return APISuccess.Success

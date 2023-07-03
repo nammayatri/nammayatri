@@ -35,7 +35,6 @@ import Environment
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto (runInReplica, runTransaction)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
@@ -109,7 +108,8 @@ newtype GetProfileDefaultEmergencyNumbersResp = GetProfileDefaultEmergencyNumber
 
 getPersonDetails :: (EsqDBReplicaFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> m ProfileRes
 getPersonDetails (personId, _) = do
-  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  -- person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   decPerson <- decrypt person
   return $ Person.makePersonAPIEntity decPerson
 
@@ -120,7 +120,8 @@ updatePerson personId req = do
   mbEncEmail <- encrypt `mapM` req.email
 
   refCode <- join <$> validateRefferalCode personId `mapM` req.referralCode
-  runTransaction $
+  -- runTransaction $
+  void $
     QPerson.updatePersonalInfo
       personId
       req.firstName

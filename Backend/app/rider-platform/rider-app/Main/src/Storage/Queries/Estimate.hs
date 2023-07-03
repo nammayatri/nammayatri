@@ -183,19 +183,19 @@ updateStatus (Id estimateId) status_ = do
         [Se.Is BeamE.id (Se.Eq estimateId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-getStatus ::
-  (Transactionable m) =>
-  Id Estimate ->
-  m (Maybe EstimateStatus)
-getStatus estimateId = do
-  findOne $ do
-    estimateT <- from $ table @EstimateT
-    where_ $
-      estimateT ^. EstimateId ==. val (getId estimateId)
-    return $ estimateT ^. EstimateStatus
+-- getStatus ::
+--   (Transactionable m) =>
+--   Id Estimate ->
+--   m (Maybe EstimateStatus)
+-- getStatus estimateId = do
+--   findOne $ do
+--     estimateT <- from $ table @EstimateT
+--     where_ $
+--       estimateT ^. EstimateId ==. val (getId estimateId)
+--     return $ estimateT ^. EstimateStatus
 
-getStatus' :: L.MonadFlow m => Id Estimate -> m (Maybe EstimateStatus)
-getStatus' (Id estimateId) = do
+getStatus :: L.MonadFlow m => Id Estimate -> m (Maybe EstimateStatus)
+getStatus (Id estimateId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamE.EstimateT
   let updatedMeshConfig = setMeshConfig modelName

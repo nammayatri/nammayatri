@@ -26,7 +26,7 @@ import Kernel.Types.Id
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.CallStatus as BeamCS
-import Storage.Tabular.CallStatus
+import Storage.Tabular.CallStatus ()
 import qualified Tools.Call as Call
 
 -- import qualified EulerHS.KVConnector.Flow as KV
@@ -45,14 +45,15 @@ import qualified Tools.Call as Call
 --   case dbConf of
 --     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRideToBeam CallStatus)
 --     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
 create :: CallStatus -> SqlDB ()
 create callStatus = void $ Esq.createUnique callStatus
 
-findById :: Transactionable m => Id CallStatus -> m (Maybe CallStatus)
-findById = Esq.findById
+-- findById :: Transactionable m => Id CallStatus -> m (Maybe CallStatus)
+-- findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id CallStatus -> m (Maybe CallStatus)
-findById' (Id callStatusId) = do
+findById :: L.MonadFlow m => Id CallStatus -> m (Maybe CallStatus)
+findById (Id callStatusId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamCS.CallStatusT
   let updatedMeshConfig = setMeshConfig modelName
@@ -60,15 +61,15 @@ findById' (Id callStatusId) = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamCS.id $ Se.Eq callStatusId]
     Nothing -> pure Nothing
 
-findByCallSid :: Transactionable m => Text -> m (Maybe CallStatus)
-findByCallSid callSid =
-  Esq.findOne $ do
-    callStatus <- from $ table @CallStatusT
-    where_ $ callStatus ^. CallStatusCallId ==. val callSid
-    return callStatus
+-- findByCallSid :: Transactionable m => Text -> m (Maybe CallStatus)
+-- findByCallSid callSid =
+--   Esq.findOne $ do
+--     callStatus <- from $ table @CallStatusT
+--     where_ $ callStatus ^. CallStatusCallId ==. val callSid
+--     return callStatus
 
-findByCallSid' :: L.MonadFlow m => Text -> m (Maybe CallStatus)
-findByCallSid' callSid = do
+findByCallSid :: L.MonadFlow m => Text -> m (Maybe CallStatus)
+findByCallSid callSid = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamCS.CallStatusT
   let updatedMeshConfig = setMeshConfig modelName
@@ -76,19 +77,19 @@ findByCallSid' callSid = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamCS.callId $ Se.Eq callSid]
     Nothing -> pure Nothing
 
-updateCallStatus :: Id CallStatus -> Call.CallStatus -> Int -> Maybe BaseUrl -> SqlDB ()
-updateCallStatus callId status conversationDuration mbrecordingUrl = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ CallStatusStatus =. val status,
-        CallStatusConversationDuration =. val conversationDuration,
-        CallStatusRecordingUrl =. val (showBaseUrl <$> mbrecordingUrl)
-      ]
-    where_ $ tbl ^. CallStatusId ==. val (getId callId)
+-- updateCallStatus :: Id CallStatus -> Call.CallStatus -> Int -> Maybe BaseUrl -> SqlDB ()
+-- updateCallStatus callId status conversationDuration mbrecordingUrl = do
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ CallStatusStatus =. val status,
+--         CallStatusConversationDuration =. val conversationDuration,
+--         CallStatusRecordingUrl =. val (showBaseUrl <$> mbrecordingUrl)
+--       ]
+--     where_ $ tbl ^. CallStatusId ==. val (getId callId)
 
-updateCallStatus' :: L.MonadFlow m => Id CallStatus -> Call.CallStatus -> Int -> Maybe BaseUrl -> m (MeshResult ())
-updateCallStatus' (Id callId) status conversationDuration recordingUrl = do
+updateCallStatus :: L.MonadFlow m => Id CallStatus -> Call.CallStatus -> Int -> Maybe BaseUrl -> m (MeshResult ())
+updateCallStatus (Id callId) status conversationDuration recordingUrl = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamCS.CallStatusT
   let updatedMeshConfig = setMeshConfig modelName

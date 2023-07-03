@@ -21,12 +21,10 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.Webengage as BeamW
-import Storage.Tabular.Webengage
 
 create :: L.MonadFlow m => Webengage -> m (MeshResult ())
 create webengage = do
@@ -37,11 +35,11 @@ create webengage = do
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainWebengageToBeam webengage)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-findById :: Transactionable m => Id Webengage -> m (Maybe Webengage)
-findById = Esq.findById
+-- findById :: Transactionable m => Id Webengage -> m (Maybe Webengage)
+-- findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id Webengage -> m (Maybe Webengage)
-findById' webengageId = do
+findById :: L.MonadFlow m => Id Webengage -> m (Maybe Webengage)
+findById webengageId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamW.WebengageT
   let updatedMeshConfig = setMeshConfig modelName
@@ -49,15 +47,15 @@ findById' webengageId = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamWebengageToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamW.id $ Se.Eq (getId webengageId)]
     Nothing -> pure Nothing
 
-findByInfoMsgId :: Transactionable m => Text -> m (Maybe Webengage)
-findByInfoMsgId infoMessageId =
-  Esq.findOne $ do
-    webengage <- from $ table @WebengageT
-    where_ $ webengage ^. WebengageInfoMessageId ==. val infoMessageId
-    return webengage
+-- findByInfoMsgId :: Transactionable m => Text -> m (Maybe Webengage)
+-- findByInfoMsgId infoMessageId =
+--   Esq.findOne $ do
+--     webengage <- from $ table @WebengageT
+--     where_ $ webengage ^. WebengageInfoMessageId ==. val infoMessageId
+--     return webengage
 
-findByInfoMsgId' :: L.MonadFlow m => Text -> m (Maybe Webengage)
-findByInfoMsgId' infoMessageId = do
+findByInfoMsgId :: L.MonadFlow m => Text -> m (Maybe Webengage)
+findByInfoMsgId infoMessageId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamW.WebengageT
   let updatedMeshConfig = setMeshConfig modelName

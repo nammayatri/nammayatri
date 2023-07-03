@@ -39,7 +39,8 @@ newtype BookingListRes = BookingListRes
 
 bookingStatus :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> m SRB.BookingAPIEntity
 bookingStatus bookingId (personId, _) = do
-  booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  -- booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   unless (booking.riderId == personId) $ throwError AccessDenied
   SRB.buildBookingAPIEntity booking
 

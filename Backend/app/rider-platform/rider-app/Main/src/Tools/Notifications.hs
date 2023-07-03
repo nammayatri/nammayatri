@@ -556,7 +556,8 @@ notifyOnNewMessage ::
   T.Text ->
   m ()
 notifyOnNewMessage booking message = do
-  person <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  -- person <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   let notificationData =
         Notification.NotificationReq
           { category = Notification.CHAT_MESSAGE,

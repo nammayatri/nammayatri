@@ -40,7 +40,6 @@ import Environment
 import qualified Kernel.External.Slack.Flow as SF
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis (HedisFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -211,4 +210,5 @@ searchHitsCountKey personId = "BAP:Ride:search:" <> getId personId <> ":hitsCoun
 updateVersions :: EsqDBFlow m r => Id Person.Person -> Maybe Version -> Maybe Version -> m ()
 updateVersions personId mbBundleVersion mbClientVersion = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
-  DB.runTransaction $ Person.updatePersonVersions person mbBundleVersion mbClientVersion
+  -- DB.runTransaction $ Person.updatePersonVersions person mbBundleVersion mbClientVersion
+  void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion

@@ -21,13 +21,11 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.RegistrationToken as BeamRT
-import Storage.Tabular.RegistrationToken
 
 create :: L.MonadFlow m => RegistrationToken -> m (MeshResult ())
 create registrationToken = do
@@ -38,11 +36,11 @@ create registrationToken = do
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRegistrationTokenToBeam registrationToken)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-findById :: Transactionable m => Id RegistrationToken -> m (Maybe RegistrationToken)
-findById = Esq.findById
+-- findById :: Transactionable m => Id RegistrationToken -> m (Maybe RegistrationToken)
+-- findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id RegistrationToken -> m (Maybe RegistrationToken)
-findById' (Id registrationTokenId) = do
+findById :: L.MonadFlow m => Id RegistrationToken -> m (Maybe RegistrationToken)
+findById (Id registrationTokenId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
   let updatedMeshConfig = setMeshConfig modelName
@@ -50,15 +48,15 @@ findById' (Id registrationTokenId) = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamRT.id $ Se.Eq registrationTokenId]
     Nothing -> pure Nothing
 
-findByToken :: Transactionable m => Text -> m (Maybe RegistrationToken)
-findByToken token_ =
-  findOne $ do
-    registrationToken <- from $ table @RegistrationTokenT
-    where_ $ registrationToken ^. RegistrationTokenToken ==. val token_
-    return registrationToken
+-- findByToken :: Transactionable m => Text -> m (Maybe RegistrationToken)
+-- findByToken token_ =
+--   findOne $ do
+--     registrationToken <- from $ table @RegistrationTokenT
+--     where_ $ registrationToken ^. RegistrationTokenToken ==. val token_
+--     return registrationToken
 
-findByToken' :: L.MonadFlow m => RegToken -> m (Maybe RegistrationToken)
-findByToken' token = do
+findByToken :: L.MonadFlow m => RegToken -> m (Maybe RegistrationToken)
+findByToken token = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
   let updatedMeshConfig = setMeshConfig modelName
@@ -66,19 +64,19 @@ findByToken' token = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamRT.token $ Se.Eq token]
     Nothing -> pure Nothing
 
-setVerified :: Id RegistrationToken -> SqlDB ()
-setVerified rtId = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ RegistrationTokenUpdatedAt =. val now,
-        RegistrationTokenVerified =. val True
-      ]
-    where_ $ tbl ^. RegistrationTokenId ==. val (getId rtId)
+-- setVerified :: Id RegistrationToken -> SqlDB ()
+-- setVerified rtId = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ RegistrationTokenUpdatedAt =. val now,
+--         RegistrationTokenVerified =. val True
+--       ]
+--     where_ $ tbl ^. RegistrationTokenId ==. val (getId rtId)
 
-setVerified' :: (L.MonadFlow m, MonadTime m) => Id RegistrationToken -> m (MeshResult ())
-setVerified' (Id rtId) = do
+setVerified :: (L.MonadFlow m, MonadTime m) => Id RegistrationToken -> m (MeshResult ())
+setVerified (Id rtId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
   let updatedMeshConfig = setMeshConfig modelName
@@ -94,21 +92,21 @@ setVerified' (Id rtId) = do
         [Se.Is BeamRT.id (Se.Eq rtId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-setDirectAuth :: Id RegistrationToken -> SqlDB ()
-setDirectAuth rtId = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ RegistrationTokenUpdatedAt =. val now,
-        RegistrationTokenVerified =. val True,
-        RegistrationTokenAuthMedium =. val SIGNATURE,
-        RegistrationTokenAuthType =. val DIRECT
-      ]
-    where_ $ tbl ^. RegistrationTokenId ==. val (getId rtId)
+-- setDirectAuth :: Id RegistrationToken -> SqlDB ()
+-- setDirectAuth rtId = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ RegistrationTokenUpdatedAt =. val now,
+--         RegistrationTokenVerified =. val True,
+--         RegistrationTokenAuthMedium =. val SIGNATURE,
+--         RegistrationTokenAuthType =. val DIRECT
+--       ]
+--     where_ $ tbl ^. RegistrationTokenId ==. val (getId rtId)
 
-setDirectAuth' :: (L.MonadFlow m, MonadTime m) => Id RegistrationToken -> m (MeshResult ())
-setDirectAuth' (Id rtId) = do
+setDirectAuth :: (L.MonadFlow m, MonadTime m) => Id RegistrationToken -> m (MeshResult ())
+setDirectAuth (Id rtId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
   let updatedMeshConfig = setMeshConfig modelName
@@ -126,19 +124,19 @@ setDirectAuth' (Id rtId) = do
         [Se.Is BeamRT.id (Se.Eq rtId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-updateAttempts :: Int -> Id RegistrationToken -> SqlDB ()
-updateAttempts attemps rtId = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ RegistrationTokenUpdatedAt =. val now,
-        RegistrationTokenAttempts =. val attemps
-      ]
-    where_ $ tbl ^. RegistrationTokenId ==. val (getId rtId)
+-- updateAttempts :: Int -> Id RegistrationToken -> SqlDB ()
+-- updateAttempts attemps rtId = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ RegistrationTokenUpdatedAt =. val now,
+--         RegistrationTokenAttempts =. val attemps
+--       ]
+--     where_ $ tbl ^. RegistrationTokenId ==. val (getId rtId)
 
-updateAttempts' :: (L.MonadFlow m, MonadTime m) => Int -> Id RegistrationToken -> m (MeshResult ())
-updateAttempts' attempts (Id rtId) = do
+updateAttempts :: (L.MonadFlow m, MonadTime m) => Int -> Id RegistrationToken -> m (MeshResult ())
+updateAttempts attempts (Id rtId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
   let updatedMeshConfig = setMeshConfig modelName
@@ -154,14 +152,14 @@ updateAttempts' attempts (Id rtId) = do
         [Se.Is BeamRT.id (Se.Eq rtId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-deleteByPersonId :: Id Person -> SqlDB ()
-deleteByPersonId (Id personId) = do
-  delete $ do
-    registrationToken <- from $ table @RegistrationTokenT
-    where_ (registrationToken ^. RegistrationTokenEntityId ==. val personId)
+-- deleteByPersonId :: Id Person -> SqlDB ()
+-- deleteByPersonId (Id personId) = do
+--   delete $ do
+--     registrationToken <- from $ table @RegistrationTokenT
+--     where_ (registrationToken ^. RegistrationTokenEntityId ==. val personId)
 
-deleteByPersonId' :: L.MonadFlow m => Id Person -> m ()
-deleteByPersonId' (Id personId) = do
+deleteByPersonId :: L.MonadFlow m => Id Person -> m ()
+deleteByPersonId (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
   let updatedMeshConfig = setMeshConfig modelName
@@ -174,16 +172,16 @@ deleteByPersonId' (Id personId) = do
           [Se.And [Se.Is BeamRT.entityId (Se.Eq personId)]]
     Nothing -> pure ()
 
-deleteByPersonIdExceptNew :: Id Person -> Id RegistrationToken -> SqlDB ()
-deleteByPersonIdExceptNew (Id personId) newRT = do
-  delete $ do
-    registrationToken <- from $ table @RegistrationTokenT
-    where_ $
-      (registrationToken ^. RegistrationTokenEntityId ==. val personId)
-        &&. not_ (registrationToken ^. RegistrationTokenId ==. val (getId newRT))
+-- deleteByPersonIdExceptNew :: Id Person -> Id RegistrationToken -> SqlDB ()
+-- deleteByPersonIdExceptNew (Id personId) newRT = do
+--   delete $ do
+--     registrationToken <- from $ table @RegistrationTokenT
+--     where_ $
+--       (registrationToken ^. RegistrationTokenEntityId ==. val personId)
+--         &&. not_ (registrationToken ^. RegistrationTokenId ==. val (getId newRT))
 
-deleteByPersonIdExceptNew' :: L.MonadFlow m => Id Person -> Id RegistrationToken -> m ()
-deleteByPersonIdExceptNew' (Id personId) (Id newRT) = do
+deleteByPersonIdExceptNew :: L.MonadFlow m => Id Person -> Id RegistrationToken -> m ()
+deleteByPersonIdExceptNew (Id personId) (Id newRT) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
   let updatedMeshConfig = setMeshConfig modelName
@@ -196,15 +194,15 @@ deleteByPersonIdExceptNew' (Id personId) (Id newRT) = do
           [Se.And [Se.Is BeamRT.entityId (Se.Eq personId), Se.Is BeamRT.id (Se.Not $ Se.Eq newRT)]]
     Nothing -> pure ()
 
-findAllByPersonId :: Transactionable m => Id Person -> m [RegistrationToken]
-findAllByPersonId (Id personId) =
-  findAll $ do
-    registrationToken <- from $ table @RegistrationTokenT
-    where_ $ registrationToken ^. RegistrationTokenEntityId ==. val personId
-    return registrationToken
+-- findAllByPersonId :: Transactionable m => Id Person -> m [RegistrationToken]
+-- findAllByPersonId (Id personId) =
+--   findAll $ do
+--     registrationToken <- from $ table @RegistrationTokenT
+--     where_ $ registrationToken ^. RegistrationTokenEntityId ==. val personId
+--     return registrationToken
 
-findAllByPersonId' :: L.MonadFlow m => Id Person -> m [RegistrationToken]
-findAllByPersonId' personId = do
+findAllByPersonId :: L.MonadFlow m => Id Person -> m [RegistrationToken]
+findAllByPersonId personId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
   let updatedMeshConfig = setMeshConfig modelName

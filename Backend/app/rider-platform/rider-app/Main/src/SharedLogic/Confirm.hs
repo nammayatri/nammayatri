@@ -98,7 +98,7 @@ confirm DConfirmReq {..} = do
     pure paymentMethod
 
   -- DB.runTransaction $ do
-  _ <- QRideB.create' booking
+  _ <- QRideB.create booking
   _ <- QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill}
   _ <- QEstimate.updateStatusByRequestId quote.requestId DEstimate.COMPLETED
   QPFS.clearCache searchRequest.riderId

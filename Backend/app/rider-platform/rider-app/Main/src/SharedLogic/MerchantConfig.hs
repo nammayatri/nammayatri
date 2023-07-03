@@ -30,6 +30,7 @@ import qualified Domain.Types.Booking.Type as BT
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantConfig as DMC
 import qualified Domain.Types.Person as Person
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Storage.Hedis as Redis
@@ -97,7 +98,8 @@ getTotalRidesCount riderId = Redis.withNonCriticalCrossAppRedis $ do
   case mbTotalCount of
     Just totalCount -> pure totalCount
     Nothing -> do
-      totalCount <- runInReplica $ QB.findCountByRideIdAndStatus riderId BT.COMPLETED
+      -- totalCount <- runInReplica $ QB.findCountByRideIdAndStatus riderId BT.COMPLETED
+      totalCount <- QB.findCountByRideIdAndStatus riderId BT.COMPLETED
       Redis.setExp key totalCount 14400
       pure totalCount
 
@@ -112,9 +114,10 @@ getRidesCountInWindow riderId start window currTime =
   Redis.withNonCriticalCrossAppRedis $ do
     let startTime = addUTCTime (fromIntegral (- start)) currTime
         endTime = addUTCTime (fromIntegral window) startTime
-    runInReplica $ QB.findCountByRideIdStatusAndTime riderId BT.COMPLETED startTime endTime
+    -- runInReplica $ QB.findCountByRideIdStatusAndTime riderId BT.COMPLETED startTime endTime
+    QB.findCountByRideIdStatusAndTime riderId BT.COMPLETED startTime endTime
 
-anyFraudDetected :: (HedisFlow m r, HasCacheConfig r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> Id DM.Merchant -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
+anyFraudDetected :: (HedisFlow m r, HasCacheConfig r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r, L.MonadFlow m) => Id Person.Person -> Id DM.Merchant -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
 anyFraudDetected riderId merchantId = checkFraudDetected riderId merchantId [MoreCancelling, MoreCancelledByDriver, MoreSearching, TotalRides, TotalRidesInWindow]
 
 checkFraudDetected :: (HedisFlow m r, HasCacheConfig r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> Id DM.Merchant -> [Factors] -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
@@ -162,12 +165,12 @@ checkFraudDetected riderId merchantId factors merchantConfigs = Redis.withNonCri
           let totalRideCount = sum rideCount
           return $ totalRideCount <= mc.fraudRideCountThreshold
 
-blockCustomer :: (HedisFlow m r, HasCacheConfig r, MonadFlow m, EsqDBFlow m r) => Id Person.Person -> Maybe (Id DMC.MerchantConfig) -> m ()
+blockCustomer :: (HedisFlow m r, HasCacheConfig r, MonadFlow m, EsqDBFlow m r, L.MonadFlow m) => Id Person.Person -> Maybe (Id DMC.MerchantConfig) -> m ()
 blockCustomer riderId mcId = do
   regTokens <- RT.findAllByPersonId riderId
   for_ regTokens $ \regToken -> do
     let key = authTokenCacheKey regToken.token
     void $ Redis.del key
-  runNoTransaction $ do
-    RT.deleteByPersonId riderId
-    QP.updatingEnabledAndBlockedState riderId mcId True
+  -- runNoTransaction $ do
+  _ <- RT.deleteByPersonId riderId
+  void $ QP.updatingEnabledAndBlockedState riderId mcId True

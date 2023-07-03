@@ -52,20 +52,35 @@ import qualified Storage.Tabular.TripTerms as TripTerms
 
 -- we already created TripTerms and RentalSlab when created Quote
 -- create :: L.MonadFlow m => Booking -> m (MeshResult ())
-create :: Booking -> SqlDB ()
-create booking =
-  Esq.withFullEntity booking $ \(bookingT, fromLocT, _mbTripTermsT, bookingDetailsT) -> do
-    Esq.create' fromLocT
-    case bookingDetailsT of
-      OneWayDetailsT toLocT -> Esq.create' toLocT
-      RentalDetailsT _rentalSlabT -> pure ()
-      DriverOfferDetailsT toLocT -> Esq.create' toLocT
-      OneWaySpecialZoneDetailsT toLocT -> Esq.create' toLocT
-    Esq.create' bookingT
+-- create :: Booking -> SqlDB ()
+-- create booking =
+--   Esq.withFullEntity booking $ \(bookingT, fromLocT, _mbTripTermsT, bookingDetailsT) -> do
+--     Esq.create' fromLocT
+--     case bookingDetailsT of
+--       OneWayDetailsT toLocT -> Esq.create' toLocT
+--       RentalDetailsT _rentalSlabT -> pure ()
+--       DriverOfferDetailsT toLocT -> Esq.create' toLocT
+--       OneWaySpecialZoneDetailsT toLocT -> Esq.create' toLocT
+--     Esq.create' bookingT
 
--- create this and update the reference
-create' :: (L.MonadFlow m, MonadTime m) => Booking -> m (MeshResult ())
-create' = error "create' not implemented"
+createBooking :: L.MonadFlow m => Booking -> m (MeshResult ())
+createBooking booking = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamB.BookingT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainBookingToBeam booking)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+
+create :: L.MonadFlow m => Booking -> m ()
+create dBooking = do
+  _ <- QBBL.create (dBooking.fromLocation)
+  _ <- case dBooking.bookingDetails of
+    OneWayDetails toLoc -> void $ QBBL.create toLoc.toLocation
+    RentalDetails _ -> pure ()
+    DriverOfferDetails toLoc -> void $ QBBL.create toLoc.toLocation
+    OneWaySpecialZoneDetails toLoc -> void $ QBBL.create toLoc.toLocation
+  void $ createBooking dBooking
 
 -- updateStatus :: Id Booking -> BookingStatus -> SqlDB ()
 -- updateStatus rbId rbStatus = do
@@ -95,19 +110,19 @@ updateStatus rbId rbStatus = do
         [Se.Is BeamB.id (Se.Eq $ getId rbId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-updateBPPBookingId :: Id Booking -> Id BPPBooking -> SqlDB ()
-updateBPPBookingId rbId bppRbId = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ RB.BookingUpdatedAt =. val now,
-        RB.BookingBppBookingId =. val (Just $ getId bppRbId)
-      ]
-    where_ $ tbl ^. RB.BookingId ==. val (getId rbId)
+-- updateBPPBookingId :: Id Booking -> Id BPPBooking -> SqlDB ()
+-- updateBPPBookingId rbId bppRbId = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ RB.BookingUpdatedAt =. val now,
+--         RB.BookingBppBookingId =. val (Just $ getId bppRbId)
+--       ]
+--     where_ $ tbl ^. RB.BookingId ==. val (getId rbId)
 
-updateBPPBookingId' :: (L.MonadFlow m, MonadTime m) => Id Booking -> Id BPPBooking -> m (MeshResult ())
-updateBPPBookingId' rbId bppRbId = do
+updateBPPBookingId :: (L.MonadFlow m, MonadTime m) => Id Booking -> Id BPPBooking -> m (MeshResult ())
+updateBPPBookingId rbId bppRbId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamB.BookingT
   let updatedMeshConfig = setMeshConfig modelName
@@ -123,19 +138,19 @@ updateBPPBookingId' rbId bppRbId = do
         [Se.Is BeamB.id (Se.Eq $ getId rbId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-updateOtpCodeBookingId :: Id Booking -> Text -> SqlDB ()
-updateOtpCodeBookingId rbId otp = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ RB.BookingUpdatedAt =. val now,
-        RB.BookingOtpCode =. val (Just otp)
-      ]
-    where_ $ tbl ^. RB.BookingId ==. val (getId rbId)
+-- updateOtpCodeBookingId :: Id Booking -> Text -> SqlDB ()
+-- updateOtpCodeBookingId rbId otp = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ RB.BookingUpdatedAt =. val now,
+--         RB.BookingOtpCode =. val (Just otp)
+--       ]
+--     where_ $ tbl ^. RB.BookingId ==. val (getId rbId)
 
-updateOtpCodeBookingId' :: (L.MonadFlow m, MonadTime m) => Id Booking -> Text -> m (MeshResult ())
-updateOtpCodeBookingId' rbId otp = do
+updateOtpCodeBookingId :: (L.MonadFlow m, MonadTime m) => Id Booking -> Text -> m (MeshResult ())
+updateOtpCodeBookingId rbId otp = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamB.BookingT
   let updatedMeshConfig = setMeshConfig modelName
@@ -208,16 +223,16 @@ findLatestByRiderIdAndStatus (Id bookingId) bookingStatus = do
         _ -> pure Nothing
     _ -> pure Nothing
 
-findById :: Transactionable m => Id Booking -> m (Maybe Booking)
-findById bookingId = Esq.buildDType $ do
-  mbFullBookingT <- Esq.findOne' $ do
-    (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
-    where_ $ booking ^. RB.BookingTId ==. val (toKey bookingId)
-    pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
-  join <$> mapM buildFullBooking mbFullBookingT
+-- findById :: Transactionable m => Id Booking -> m (Maybe Booking)
+-- findById bookingId = Esq.buildDType $ do
+--   mbFullBookingT <- Esq.findOne' $ do
+--     (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
+--     where_ $ booking ^. RB.BookingTId ==. val (toKey bookingId)
+--     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
+--   join <$> mapM buildFullBooking mbFullBookingT
 
-findById' :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Booking)
-findById' (Id bookingId) = do
+findById :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Booking)
+findById (Id bookingId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamB.BookingT
   let updatedMeshConfig = setMeshConfig modelName
@@ -229,16 +244,16 @@ findById' (Id bookingId) = do
         _ -> pure Nothing
     Nothing -> pure Nothing
 
-findByBPPBookingId :: Transactionable m => Id BPPBooking -> m (Maybe Booking)
-findByBPPBookingId bppRbId = Esq.buildDType $ do
-  mbFullBookingT <- Esq.findOne' $ do
-    (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
-    where_ $ booking ^. RB.BookingBppBookingId ==. val (Just $ getId bppRbId)
-    pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
-  join <$> mapM buildFullBooking mbFullBookingT
+-- findByBPPBookingId :: Transactionable m => Id BPPBooking -> m (Maybe Booking)
+-- findByBPPBookingId bppRbId = Esq.buildDType $ do
+--   mbFullBookingT <- Esq.findOne' $ do
+--     (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
+--     where_ $ booking ^. RB.BookingBppBookingId ==. val (Just $ getId bppRbId)
+--     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
+--   join <$> mapM buildFullBooking mbFullBookingT
 
-findByBPPBookingId' :: (L.MonadFlow m, Log m) => Id BPPBooking -> m (Maybe Booking)
-findByBPPBookingId' (Id bppRbId) = do
+findByBPPBookingId :: (L.MonadFlow m, Log m) => Id BPPBooking -> m (Maybe Booking)
+findByBPPBookingId (Id bppRbId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamB.BookingT
   let updatedMeshConfig = setMeshConfig modelName
@@ -250,18 +265,18 @@ findByBPPBookingId' (Id bppRbId) = do
         _ -> pure Nothing
     Nothing -> pure Nothing
 
-findByIdAndMerchantId :: Transactionable m => Id Booking -> Id Merchant -> m (Maybe Booking)
-findByIdAndMerchantId bookingId merchantId = Esq.buildDType $ do
-  mbFullBookingT <- Esq.findOne' $ do
-    (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
-    where_ $
-      booking ^. RB.BookingId ==. val bookingId.getId
-        &&. booking ^. RB.BookingMerchantId ==. val (toKey merchantId)
-    pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
-  join <$> mapM buildFullBooking mbFullBookingT
+-- findByIdAndMerchantId :: Transactionable m => Id Booking -> Id Merchant -> m (Maybe Booking)
+-- findByIdAndMerchantId bookingId merchantId = Esq.buildDType $ do
+--   mbFullBookingT <- Esq.findOne' $ do
+--     (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
+--     where_ $
+--       booking ^. RB.BookingId ==. val bookingId.getId
+--         &&. booking ^. RB.BookingMerchantId ==. val (toKey merchantId)
+--     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
+--   join <$> mapM buildFullBooking mbFullBookingT
 
-findByIdAndMerchantId' :: (L.MonadFlow m, Log m) => Id Booking -> Id Merchant -> m (Maybe Booking)
-findByIdAndMerchantId' (Id bookingId) (Id merchantId) = do
+findByIdAndMerchantId :: (L.MonadFlow m, Log m) => Id Booking -> Id Merchant -> m (Maybe Booking)
+findByIdAndMerchantId (Id bookingId) (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamB.BookingT
   let updatedMeshConfig = setMeshConfig modelName
@@ -273,22 +288,22 @@ findByIdAndMerchantId' (Id bookingId) (Id merchantId) = do
         _ -> pure Nothing
     Nothing -> pure Nothing
 
-findAllByRiderId :: Transactionable m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Booking]
-findAllByRiderId personId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
-  let isOnlyActive = Just True == mbOnlyActive
-  fullBookingsT <- Esq.findAll' $ do
-    (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
-    where_ $
-      booking ^. RB.BookingRiderId ==. val (toKey personId)
-        &&. whenTrue_ isOnlyActive (not_ (booking ^. RB.BookingStatus `in_` valList [DRB.COMPLETED, DRB.CANCELLED]))
-    limit $ fromIntegral $ fromMaybe 10 mbLimit
-    offset $ fromIntegral $ fromMaybe 0 mbOffset
-    orderBy [desc $ booking ^. RB.BookingCreatedAt]
-    pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
-  catMaybes <$> mapM buildFullBooking fullBookingsT
+-- findAllByRiderId :: Transactionable m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Booking]
+-- findAllByRiderId personId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
+--   let isOnlyActive = Just True == mbOnlyActive
+--   fullBookingsT <- Esq.findAll' $ do
+--     (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
+--     where_ $
+--       booking ^. RB.BookingRiderId ==. val (toKey personId)
+--         &&. whenTrue_ isOnlyActive (not_ (booking ^. RB.BookingStatus `in_` valList [DRB.COMPLETED, DRB.CANCELLED]))
+--     limit $ fromIntegral $ fromMaybe 10 mbLimit
+--     offset $ fromIntegral $ fromMaybe 0 mbOffset
+--     orderBy [desc $ booking ^. RB.BookingCreatedAt]
+--     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
+--   catMaybes <$> mapM buildFullBooking fullBookingsT
 
-findAllByRiderId' :: (L.MonadFlow m, Log m) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Booking]
-findAllByRiderId' (Id personId) mbLimit mbOffset mbOnlyActive = do
+findAllByRiderId :: (L.MonadFlow m, Log m) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Booking]
+findAllByRiderId (Id personId) mbLimit mbOffset mbOnlyActive = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamB.BookingT
   let updatedMeshConfig = setMeshConfig modelName
@@ -302,21 +317,21 @@ findAllByRiderId' (Id personId) mbLimit mbOffset mbOnlyActive = do
         _ -> pure []
     Nothing -> pure []
 
-findCountByRideIdAndStatus :: Transactionable m => Id Person -> BookingStatus -> m Int
-findCountByRideIdAndStatus personId status = do
-  mkCount <$> do
-    Esq.findAll $ do
-      messageReport <- from $ table @BookingT
-      where_ $
-        messageReport ^. BookingRiderId ==. val (toKey personId)
-          &&. messageReport ^. BookingStatus ==. val status
-      return (countRows :: SqlExpr (Esq.Value Int))
-  where
-    mkCount [counter] = counter
-    mkCount _ = 0
+-- findCountByRideIdAndStatus :: Transactionable m => Id Person -> BookingStatus -> m Int
+-- findCountByRideIdAndStatus personId status = do
+--   mkCount <$> do
+--     Esq.findAll $ do
+--       messageReport <- from $ table @BookingT
+--       where_ $
+--         messageReport ^. BookingRiderId ==. val (toKey personId)
+--           &&. messageReport ^. BookingStatus ==. val status
+--       return (countRows :: SqlExpr (Esq.Value Int))
+--   where
+--     mkCount [counter] = counter
+--     mkCount _ = 0
 
-findCountByRideIdAndStatus' :: (L.MonadFlow m, Log m) => Id Person -> BookingStatus -> m Int
-findCountByRideIdAndStatus' (Id personId) status = do
+findCountByRideIdAndStatus :: (L.MonadFlow m, Log m) => Id Person -> BookingStatus -> m Int
+findCountByRideIdAndStatus (Id personId) status = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamB.BookingT
   let updatedMeshConfig = setMeshConfig modelName
@@ -328,22 +343,22 @@ findCountByRideIdAndStatus' (Id personId) status = do
         _ -> pure 0
     Nothing -> pure 0
 
-findCountByRideIdStatusAndTime :: Transactionable m => Id Person -> BookingStatus -> UTCTime -> UTCTime -> m Int
-findCountByRideIdStatusAndTime personId status startTime endTime = do
-  mkCount <$> do
-    Esq.findAll $ do
-      booking <- from $ table @BookingT
-      where_ $
-        booking ^. BookingRiderId ==. val (toKey personId)
-          &&. booking ^. BookingStatus ==. val status
-          &&. (booking ^. BookingCreatedAt >=. val startTime &&. booking ^. BookingCreatedAt <. val endTime)
-      return (countRows :: SqlExpr (Esq.Value Int))
-  where
-    mkCount [counter] = counter
-    mkCount _ = 0
+-- findCountByRideIdStatusAndTime :: Transactionable m => Id Person -> BookingStatus -> UTCTime -> UTCTime -> m Int
+-- findCountByRideIdStatusAndTime personId status startTime endTime = do
+--   mkCount <$> do
+--     Esq.findAll $ do
+--       booking <- from $ table @BookingT
+--       where_ $
+--         booking ^. BookingRiderId ==. val (toKey personId)
+--           &&. booking ^. BookingStatus ==. val status
+--           &&. (booking ^. BookingCreatedAt >=. val startTime &&. booking ^. BookingCreatedAt <. val endTime)
+--       return (countRows :: SqlExpr (Esq.Value Int))
+--   where
+--     mkCount [counter] = counter
+--     mkCount _ = 0
 
-findCountByRideIdStatusAndTime' :: (L.MonadFlow m, Log m) => Id Person -> BookingStatus -> UTCTime -> UTCTime -> m Int
-findCountByRideIdStatusAndTime' (Id personId) status startTime endTime = do
+findCountByRideIdStatusAndTime :: (L.MonadFlow m, Log m) => Id Person -> BookingStatus -> UTCTime -> UTCTime -> m Int
+findCountByRideIdStatusAndTime (Id personId) status startTime endTime = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamB.BookingT
   let updatedMeshConfig = setMeshConfig modelName
@@ -355,18 +370,18 @@ findCountByRideIdStatusAndTime' (Id personId) status startTime endTime = do
         _ -> pure 0
     Nothing -> pure 0
 
-findByRiderIdAndStatus :: Transactionable m => Id Person -> [BookingStatus] -> m [Booking]
-findByRiderIdAndStatus personId statusList = Esq.buildDType $ do
-  fullBookingsT <- Esq.findAll' $ do
-    (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
-    where_ $
-      booking ^. RB.BookingRiderId ==. val (toKey personId)
-        &&. booking ^. RB.BookingStatus `in_` valList statusList
-    pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
-  catMaybes <$> mapM buildFullBooking fullBookingsT
+-- findByRiderIdAndStatus :: Transactionable m => Id Person -> [BookingStatus] -> m [Booking]
+-- findByRiderIdAndStatus personId statusList = Esq.buildDType $ do
+--   fullBookingsT <- Esq.findAll' $ do
+--     (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
+--     where_ $
+--       booking ^. RB.BookingRiderId ==. val (toKey personId)
+--         &&. booking ^. RB.BookingStatus `in_` valList statusList
+--     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
+--   catMaybes <$> mapM buildFullBooking fullBookingsT
 
-findByRiderIdAndStatus' :: (L.MonadFlow m, Log m) => Id Person -> [BookingStatus] -> m [Booking]
-findByRiderIdAndStatus' (Id personId) statusList = do
+findByRiderIdAndStatus :: (L.MonadFlow m, Log m) => Id Person -> [BookingStatus] -> m [Booking]
+findByRiderIdAndStatus (Id personId) statusList = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamB.BookingT
   let updatedMeshConfig = setMeshConfig modelName
@@ -378,18 +393,18 @@ findByRiderIdAndStatus' (Id personId) statusList = do
         _ -> pure []
     Nothing -> pure []
 
-findAssignedByRiderId :: Transactionable m => Id Person -> m (Maybe Booking)
-findAssignedByRiderId personId = Esq.buildDType $ do
-  fullBookingsT <- Esq.findOne' $ do
-    (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
-    where_ $
-      booking ^. RB.BookingRiderId ==. val (toKey personId)
-        &&. booking ^. RB.BookingStatus ==. val TRIP_ASSIGNED
-    pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
-  join <$> mapM buildFullBooking fullBookingsT
+-- findAssignedByRiderId :: Transactionable m => Id Person -> m (Maybe Booking)
+-- findAssignedByRiderId personId = Esq.buildDType $ do
+--   fullBookingsT <- Esq.findOne' $ do
+--     (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
+--     where_ $
+--       booking ^. RB.BookingRiderId ==. val (toKey personId)
+--         &&. booking ^. RB.BookingStatus ==. val TRIP_ASSIGNED
+--     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
+--   join <$> mapM buildFullBooking fullBookingsT
 
-findAssignedByRiderId' :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Booking)
-findAssignedByRiderId' (Id personId) = do
+findAssignedByRiderId :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Booking)
+findAssignedByRiderId (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamB.BookingT
   let updatedMeshConfig = setMeshConfig modelName
@@ -444,22 +459,22 @@ findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus =
     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
   catMaybes <$> mapM buildFullBooking fullBookingsT
 
-updatePaymentInfo :: Id Booking -> Money -> Maybe Money -> Money -> Maybe Text -> SqlDB ()
-updatePaymentInfo rbId estimatedFare discount estimatedTotalFare mbPaymentUrl = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ RB.BookingUpdatedAt =. val now,
-        RB.BookingEstimatedFare =. val (realToFrac estimatedFare),
-        RB.BookingDiscount =. val (realToFrac <$> discount),
-        RB.BookingEstimatedTotalFare =. val (realToFrac estimatedTotalFare),
-        RB.BookingPaymentUrl =. val mbPaymentUrl
-      ]
-    where_ $ tbl ^. RB.BookingId ==. val (getId rbId)
+-- updatePaymentInfo :: Id Booking -> Money -> Maybe Money -> Money -> Maybe Text -> SqlDB ()
+-- updatePaymentInfo rbId estimatedFare discount estimatedTotalFare mbPaymentUrl = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ RB.BookingUpdatedAt =. val now,
+--         RB.BookingEstimatedFare =. val (realToFrac estimatedFare),
+--         RB.BookingDiscount =. val (realToFrac <$> discount),
+--         RB.BookingEstimatedTotalFare =. val (realToFrac estimatedTotalFare),
+--         RB.BookingPaymentUrl =. val mbPaymentUrl
+--       ]
+--     where_ $ tbl ^. RB.BookingId ==. val (getId rbId)
 
-updatePaymentInfo' :: (L.MonadFlow m, MonadTime m) => Id Booking -> Money -> Maybe Money -> Money -> Maybe Text -> m (MeshResult ())
-updatePaymentInfo' rbId estimatedFare discount estimatedTotalFare mbPaymentUrl = do
+updatePaymentInfo :: (L.MonadFlow m, MonadTime m) => Id Booking -> Money -> Maybe Money -> Money -> Maybe Text -> m (MeshResult ())
+updatePaymentInfo rbId estimatedFare discount estimatedTotalFare mbPaymentUrl = do
   now <- getCurrentTime
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamB.BookingT
@@ -507,25 +522,25 @@ updatePaymentUrl bookingId paymentUrl = do
           [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
     Nothing -> pure ()
 
-findAllByPersonIdLimitOffset ::
-  Transactionable m =>
-  Id Person ->
-  Maybe Integer ->
-  Maybe Integer ->
-  m [Booking]
-findAllByPersonIdLimitOffset personId mlimit moffset = Esq.buildDType $ do
-  fullBookingsT <- Esq.findAll' $ do
-    (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
-    where_ $
-      booking ^. RB.BookingRiderId ==. val (toKey personId)
-    limit $ fromIntegral $ fromMaybe 100 mlimit
-    offset $ fromIntegral $ fromMaybe 0 moffset
-    orderBy [desc $ booking ^. RB.BookingCreatedAt]
-    pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
-  catMaybes <$> mapM buildFullBooking fullBookingsT
+-- findAllByPersonIdLimitOffset ::
+--   Transactionable m =>
+--   Id Person ->
+--   Maybe Integer ->
+--   Maybe Integer ->
+--   m [Booking]
+-- findAllByPersonIdLimitOffset personId mlimit moffset = Esq.buildDType $ do
+--   fullBookingsT <- Esq.findAll' $ do
+--     (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
+--     where_ $
+--       booking ^. RB.BookingRiderId ==. val (toKey personId)
+--     limit $ fromIntegral $ fromMaybe 100 mlimit
+--     offset $ fromIntegral $ fromMaybe 0 moffset
+--     orderBy [desc $ booking ^. RB.BookingCreatedAt]
+--     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
+--   catMaybes <$> mapM buildFullBooking fullBookingsT
 
-findAllByPersonIdLimitOffset' :: (L.MonadFlow m, Log m) => Id Person -> Maybe Integer -> Maybe Integer -> m [Booking]
-findAllByPersonIdLimitOffset' (Id personId) mlimit moffset = do
+findAllByPersonIdLimitOffset :: (L.MonadFlow m, Log m) => Id Person -> Maybe Integer -> Maybe Integer -> m [Booking]
+findAllByPersonIdLimitOffset (Id personId) mlimit moffset = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamB.BookingT
   let updatedMeshConfig = setMeshConfig modelName
@@ -539,20 +554,20 @@ findAllByPersonIdLimitOffset' (Id personId) mlimit moffset = do
         _ -> pure []
     Nothing -> pure []
 
-findStuckBookings :: Transactionable m => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
-findStuckBookings merchantId bookingIds now = do
-  Esq.findAll $ do
-    booking <- from $ table @BookingT
-    let upcoming6HrsCond =
-          booking ^. BookingCreatedAt +. Esq.interval [Esq.HOUR 6] <=. val now
-    where_ $
-      booking ^. BookingMerchantId ==. val (toKey merchantId)
-        &&. booking ^. BookingTId `in_` valList (toKey <$> bookingIds)
-        &&. (booking ^. BookingStatus `in_` valList [NEW, CONFIRMED, TRIP_ASSIGNED] &&. upcoming6HrsCond)
-    pure $ booking ^. BookingTId
+-- findStuckBookings :: Transactionable m => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
+-- findStuckBookings merchantId bookingIds now = do
+--   Esq.findAll $ do
+--     booking <- from $ table @BookingT
+--     let upcoming6HrsCond =
+--           booking ^. BookingCreatedAt +. Esq.interval [Esq.HOUR 6] <=. val now
+--     where_ $
+--       booking ^. BookingMerchantId ==. val (toKey merchantId)
+--         &&. booking ^. BookingTId `in_` valList (toKey <$> bookingIds)
+--         &&. (booking ^. BookingStatus `in_` valList [NEW, CONFIRMED, TRIP_ASSIGNED] &&. upcoming6HrsCond)
+--     pure $ booking ^. BookingTId
 
-findStuckBookings' :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
-findStuckBookings' (Id merchantId) bookingIds now = do
+findStuckBookings :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
+findStuckBookings (Id merchantId) bookingIds now = do
   let updatedTimestamp = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamB.BookingT

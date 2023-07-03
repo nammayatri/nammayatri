@@ -28,7 +28,7 @@ import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto.Transactionable (Transactionable' (runTransaction), runInReplica)
+import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Storage.Hedis (withCrossAppRedis)
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
@@ -51,9 +51,11 @@ deleteCustomer ::
 deleteCustomer merchantShortId customerId = do
   let personId = cast @Common.Customer @DP.Person customerId
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
+  -- person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
   unless (merchant.id == person.merchantId) $ throwError (PersonDoesNotExist $ getId personId)
-  bookings <- runInReplica $ QRB.findByRiderIdAndStatus personId [DRB.NEW, DRB.TRIP_ASSIGNED, DRB.AWAITING_REASSIGNMENT, DRB.CONFIRMED, DRB.COMPLETED]
+  -- bookings <- runInReplica $ QRB.findByRiderIdAndStatus personId [DRB.NEW, DRB.TRIP_ASSIGNED, DRB.AWAITING_REASSIGNMENT, DRB.CONFIRMED, DRB.COMPLETED]
+  bookings <- QRB.findByRiderIdAndStatus personId [DRB.NEW, DRB.TRIP_ASSIGNED, DRB.AWAITING_REASSIGNMENT, DRB.CONFIRMED, DRB.COMPLETED]
   unless (null bookings) $ throwError (InvalidRequest "Can't delete customer, has a valid booking in past.")
   -- runTransaction $ do
   _ <- QPFS.deleteByPersonId personId
@@ -69,9 +71,9 @@ blockCustomer merchantShortId customerId = do
 
   let personId = cast @Common.Customer @DP.Person customerId
   customer <-
-    runInReplica $
-      QP.findById personId
-        >>= fromMaybeM (PersonDoesNotExist personId.getId)
+    -- runInReplica $
+    QP.findById personId
+      >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
   let merchantId = customer.merchantId
@@ -88,9 +90,9 @@ unblockCustomer merchantShortId customerId = do
 
   let personId = cast @Common.Customer @DP.Person customerId
   customer <-
-    runInReplica $
-      QP.findById personId
-        >>= fromMaybeM (PersonDoesNotExist personId.getId)
+    -- runInReplica $
+    QP.findById personId
+      >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
   let merchantId = customer.merchantId
@@ -102,8 +104,8 @@ unblockCustomer merchantShortId customerId = do
         SWC.deleteCurrentWindowValues (SMC.mkCancellationByDriverKey mc.id.getId personId.getId) mc.fraudBookingCancelledByDriverCountWindow
     )
     merchantConfigs
-  runTransaction $ do
-    QP.updatingEnabledAndBlockedState personId Nothing False
+  -- runTransaction $ do
+  void $ QP.updatingEnabledAndBlockedState personId Nothing False
   logTagInfo "dashboard -> unblockCustomer : " (show personId)
   pure Success
 
@@ -114,9 +116,9 @@ customerInfo merchantShortId customerId = do
 
   let personId = cast @Common.Customer @DP.Person customerId
   customer <-
-    runInReplica $
-      QP.findById personId
-        >>= fromMaybeM (PersonDoesNotExist personId.getId)
+    -- runInReplica $
+    QP.findById personId
+      >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
   let merchantId = customer.merchantId
@@ -132,10 +134,12 @@ listCustomers merchantShortId mbLimit mbOffset mbEnabled mbBlocked mbSearchPhone
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
   mbSearchPhoneDBHash <- getDbHash `traverse` mbSearchPhone
-  customers <- runInReplica $ QP.findAllCustomers merchant.id limit offset mbEnabled mbBlocked mbSearchPhoneDBHash
+  -- customers <- runInReplica $ QP.findAllCustomers merchant.id limit offset mbEnabled mbBlocked mbSearchPhoneDBHash
+  customers <- QP.findAllCustomers merchant.id limit offset mbEnabled mbBlocked mbSearchPhoneDBHash
   items <- mapM buildCustomerListItem customers
   let count = length items
-  totalCount <- runInReplica $ QP.countCustomers merchant.id
+  -- totalCount <- runInReplica $ QP.countCustomers merchant.id
+  totalCount <- QP.countCustomers merchant.id
   let summary = Common.Summary {totalCount, count}
   pure Common.CustomerListRes {totalItems = count, summary, customers = items}
   where

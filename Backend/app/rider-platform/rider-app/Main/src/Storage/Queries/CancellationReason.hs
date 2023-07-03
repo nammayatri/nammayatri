@@ -20,27 +20,25 @@ import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.CancellationReason as BeamCR
-import Storage.Tabular.CancellationReason
 
-findAll :: Transactionable m => CancellationStage -> m [CancellationReason]
-findAll cancStage =
-  Esq.findAll $ do
-    cancellationReason <- from $ table @CancellationReasonT
-    where_ $
-      cancellationReason ^. CancellationReasonEnabled
-        &&. case cancStage of
-          OnSearch -> cancellationReason ^. CancellationReasonOnSearch
-          OnConfirm -> cancellationReason ^. CancellationReasonOnConfirm
-          OnAssign -> cancellationReason ^. CancellationReasonOnAssign
-    orderBy [desc $ cancellationReason ^. CancellationReasonPriority]
-    return cancellationReason
+-- findAll :: Transactionable m => CancellationStage -> m [CancellationReason]
+-- findAll cancStage =
+--   Esq.findAll $ do
+--     cancellationReason <- from $ table @CancellationReasonT
+--     where_ $
+--       cancellationReason ^. CancellationReasonEnabled
+--         &&. case cancStage of
+--           OnSearch -> cancellationReason ^. CancellationReasonOnSearch
+--           OnConfirm -> cancellationReason ^. CancellationReasonOnConfirm
+--           OnAssign -> cancellationReason ^. CancellationReasonOnAssign
+--     orderBy [desc $ cancellationReason ^. CancellationReasonPriority]
+--     return cancellationReason
 
-findAll' :: L.MonadFlow m => CancellationStage -> m [CancellationReason]
-findAll' cancStage = do
+findAll :: L.MonadFlow m => CancellationStage -> m [CancellationReason]
+findAll cancStage = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   seCaseCondition <- case cancStage of
     OnSearch -> pure $ Se.Is BeamCR.onSearch $ Se.Eq True

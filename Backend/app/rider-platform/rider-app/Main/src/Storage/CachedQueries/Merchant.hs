@@ -36,7 +36,7 @@ import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant as Queries
 
-findById :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe Merchant)
+findById :: (CacheFlow m r, EsqDBFlow m r, L.MonadFlow m) => Id Merchant -> m (Maybe Merchant)
 findById id =
   Hedis.safeGet (makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a

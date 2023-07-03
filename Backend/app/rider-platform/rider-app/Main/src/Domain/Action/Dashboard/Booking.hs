@@ -26,7 +26,6 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
 import Environment
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -49,7 +48,8 @@ stuckBookingsCancel merchantShortId req = do
   merchant <- findMerchantByShortId merchantShortId
   let reqBookingIds = cast @Common.Booking @DBooking.Booking <$> req.bookingIds
   now <- getCurrentTime
-  stuckBookingIds <- Esq.runInReplica $ QBooking.findStuckBookings merchant.id reqBookingIds now
+  -- stuckBookingIds <- Esq.runInReplica $ QBooking.findStuckBookings merchant.id reqBookingIds now
+  stuckBookingIds <- QBooking.findStuckBookings merchant.id reqBookingIds now
   -- stuckRideItems <- Esq.runInReplica $ QRide.findStuckRideItems merchant.id reqBookingIds now
   stuckRideItems <- QRide.findStuckRideItems merchant.id reqBookingIds now
   let bcReasons = mkBookingCancellationReason merchant.id Common.bookingStuckCode Nothing <$> stuckBookingIds

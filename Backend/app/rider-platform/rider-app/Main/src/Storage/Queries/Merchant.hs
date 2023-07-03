@@ -26,8 +26,6 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto hiding (findById)
-import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Types.Geofencing as Geo
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
@@ -35,13 +33,12 @@ import Kernel.Utils.Common
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant as BeamM
-import Storage.Tabular.Merchant
 
-findById :: Transactionable m => Id Merchant -> m (Maybe Merchant)
-findById = Esq.findById
+-- findById :: Transactionable m => Id Merchant -> m (Maybe Merchant)
+-- findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id Merchant -> m (Maybe Merchant)
-findById' (Id merchantId) = do
+findById :: L.MonadFlow m => Id Merchant -> m (Maybe Merchant)
+findById (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamM.MerchantT
   let updatedMeshConfig = setMeshConfig modelName
@@ -73,15 +70,15 @@ findByShortId shortId_ = do
         _ -> pure Nothing
     Nothing -> pure Nothing
 
-findBySubscriberId :: Transactionable m => ShortId Subscriber -> m (Maybe Merchant)
-findBySubscriberId subscriberId = do
-  findOne $ do
-    merchant <- from $ table @MerchantT
-    where_ $ merchant ^. MerchantSubscriberId ==. val (getShortId subscriberId)
-    return merchant
+-- findBySubscriberId :: Transactionable m => ShortId Subscriber -> m (Maybe Merchant)
+-- findBySubscriberId subscriberId = do
+--   findOne $ do
+--     merchant <- from $ table @MerchantT
+--     where_ $ merchant ^. MerchantSubscriberId ==. val (getShortId subscriberId)
+--     return merchant
 
-findBySubscriberId' :: L.MonadFlow m => ShortId Subscriber -> m (Maybe Merchant)
-findBySubscriberId' subscriberId = do
+findBySubscriberId :: L.MonadFlow m => ShortId Subscriber -> m (Maybe Merchant)
+findBySubscriberId subscriberId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamM.MerchantT
   let updatedMeshConfig = setMeshConfig modelName
@@ -93,12 +90,12 @@ findBySubscriberId' subscriberId = do
         _ -> pure Nothing
     Nothing -> pure Nothing
 
-findAll :: Transactionable m => m [Merchant]
-findAll =
-  Esq.findAll $ do from $ table @MerchantT
+-- findAll :: Transactionable m => m [Merchant]
+-- findAll =
+--   Esq.findAll $ do from $ table @MerchantT
 
-findAll' :: L.MonadFlow m => m [Merchant]
-findAll' = do
+findAll :: L.MonadFlow m => m [Merchant]
+findAll = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamM.MerchantT
   let updatedMeshConfig = setMeshConfig modelName

@@ -28,14 +28,12 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Utils
 import qualified Sequelize as Se
 import Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Exophone as BeamE
-import Storage.Tabular.Exophone
 
 create :: L.MonadFlow m => Exophone -> m (MeshResult ())
 create exophone = do
@@ -57,22 +55,22 @@ findAllMerchantIdsByPhone phone = do
       pure $ DE.merchantId <$> res
     Nothing -> pure []
 
-findAllByPhone :: Transactionable m => Text -> m [Exophone]
-findAllByPhone phone = do
-  findAll $ do
-    exophone <- from $ table @ExophoneT
-    where_ $ just (exophone ^. ExophoneMerchantId) ==. subSelect subQuery
-    return exophone
-  where
-    subQuery = do
-      exophone1 <- from $ table @ExophoneT
-      where_ $
-        exophone1 ^. ExophonePrimaryPhone ==. val phone
-          ||. exophone1 ^. ExophoneBackupPhone ==. val phone
-      return (exophone1 ^. ExophoneMerchantId)
+-- findAllByPhone :: Transactionable m => Text -> m [Exophone]
+-- findAllByPhone phone = do
+--   findAll $ do
+--     exophone <- from $ table @ExophoneT
+--     where_ $ just (exophone ^. ExophoneMerchantId) ==. subSelect subQuery
+--     return exophone
+--   where
+--     subQuery = do
+--       exophone1 <- from $ table @ExophoneT
+--       where_ $
+--         exophone1 ^. ExophonePrimaryPhone ==. val phone
+--           ||. exophone1 ^. ExophoneBackupPhone ==. val phone
+--       return (exophone1 ^. ExophoneMerchantId)
 
-findAllByPhone' :: L.MonadFlow m => Text -> m [Exophone]
-findAllByPhone' phone = do
+findAllByPhone :: L.MonadFlow m => Text -> m [Exophone]
+findAllByPhone phone = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamE.ExophoneT
   let updatedMeshConfig = setMeshConfig modelName
@@ -81,15 +79,15 @@ findAllByPhone' phone = do
     Just dbConf' -> either (pure []) (transformBeamExophoneToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamE.merchantId $ Se.In $ getId <$> merchIds]
     Nothing -> pure []
 
-findAllByMerchantId :: Transactionable m => Id DM.Merchant -> m [Exophone]
-findAllByMerchantId merchantId = do
-  findAll $ do
-    exophone <- from $ table @ExophoneT
-    where_ $ exophone ^. ExophoneMerchantId ==. val (toKey merchantId)
-    return exophone
+-- findAllByMerchantId :: Transactionable m => Id DM.Merchant -> m [Exophone]
+-- findAllByMerchantId merchantId = do
+--   findAll $ do
+--     exophone <- from $ table @ExophoneT
+--     where_ $ exophone ^. ExophoneMerchantId ==. val (toKey merchantId)
+--     return exophone
 
-findAllByMerchantId' :: L.MonadFlow m => Id DM.Merchant -> m [Exophone]
-findAllByMerchantId' merchantId = do
+findAllByMerchantId :: L.MonadFlow m => Id DM.Merchant -> m [Exophone]
+findAllByMerchantId merchantId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamE.ExophoneT
   let updatedMeshConfig = setMeshConfig modelName
@@ -97,11 +95,11 @@ findAllByMerchantId' merchantId = do
     Just dbConf' -> either (pure []) (transformBeamExophoneToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamE.merchantId $ Se.Eq $ getId merchantId]
     Nothing -> pure []
 
-findAllExophones :: Transactionable m => m [Exophone]
-findAllExophones = findAll $ from $ table @ExophoneT
+-- findAllExophones :: Transactionable m => m [Exophone]
+-- findAllExophones = findAll $ from $ table @ExophoneT
 
-findAllExophones' :: L.MonadFlow m => m [Exophone]
-findAllExophones' = do
+findAllExophones :: L.MonadFlow m => m [Exophone]
+findAllExophones = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamE.ExophoneT
   let updatedMeshConfig = setMeshConfig modelName
@@ -109,21 +107,21 @@ findAllExophones' = do
     Just dbConf' -> either (pure []) (transformBeamExophoneToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig []
     Nothing -> pure []
 
-updateAffectedPhones :: [Text] -> SqlDB ()
-updateAffectedPhones primaryPhones = do
-  let indianMobileCode = val "+91"
-  now <- getCurrentTime
-  let primaryPhonesList = valList primaryPhones
-  Esq.update $ \tbl -> do
-    let isPrimaryDown =
-          tbl ^. ExophonePrimaryPhone `in_` primaryPhonesList
-            ||. (indianMobileCode ++. tbl ^. ExophonePrimaryPhone) `in_` primaryPhonesList
-    set
-      tbl
-      [ ExophoneIsPrimaryDown =. isPrimaryDown,
-        ExophoneUpdatedAt =. val now
-      ]
-    where_ $ isPrimaryDown !=. tbl ^. ExophoneIsPrimaryDown
+-- updateAffectedPhones :: [Text] -> SqlDB ()
+-- updateAffectedPhones primaryPhones = do
+--   let indianMobileCode = val "+91"
+--   now <- getCurrentTime
+--   let primaryPhonesList = valList primaryPhones
+--   Esq.update $ \tbl -> do
+--     let isPrimaryDown =
+--           tbl ^. ExophonePrimaryPhone `in_` primaryPhonesList
+--             ||. (indianMobileCode ++. tbl ^. ExophonePrimaryPhone) `in_` primaryPhonesList
+--     set
+--       tbl
+--       [ ExophoneIsPrimaryDown =. isPrimaryDown,
+--         ExophoneUpdatedAt =. val now
+--       ]
+--     where_ $ isPrimaryDown !=. tbl ^. ExophoneIsPrimaryDown
 
 updateAffectedPhonesHelper :: (L.MonadFlow m, MonadTime m) => [Text] -> m Bool
 updateAffectedPhonesHelper primaryNumbers = do
@@ -149,8 +147,8 @@ updateAffectedPhonesHelper primaryNumbers = do
         _ -> pure False
     Left _ -> pure (error "DB Config not found")
 
-updateAffectedPhones' :: (L.MonadFlow m, MonadTime m) => [Text] -> m ()
-updateAffectedPhones' primaryPhones = do
+updateAffectedPhones :: (L.MonadFlow m, MonadTime m) => [Text] -> m ()
+updateAffectedPhones primaryPhones = do
   now <- getCurrentTime
   isPrimary <- updateAffectedPhonesHelper primaryPhones
   dbConf <- L.getOption KBT.PsqlDbCfg

@@ -7,13 +7,11 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.Sos as BeamS
-import Storage.Tabular.Sos
 
 create :: L.MonadFlow m => Sos.Sos -> m (MeshResult ())
 create sos = do
@@ -24,19 +22,19 @@ create sos = do
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainSosToBeam sos)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-updateStatus :: Id Sos.Sos -> Sos.SosStatus -> SqlDB ()
-updateStatus sosId status = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ SosUpdatedAt =. val now,
-        SosStatus =. val status
-      ]
-    where_ $ tbl ^. SosId ==. val (getId sosId)
+-- updateStatus :: Id Sos.Sos -> Sos.SosStatus -> SqlDB ()
+-- updateStatus sosId status = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ SosUpdatedAt =. val now,
+--         SosStatus =. val status
+--       ]
+--     where_ $ tbl ^. SosId ==. val (getId sosId)
 
-updateStatus' :: (L.MonadFlow m, MonadTime m) => Id Sos.Sos -> Sos.SosStatus -> m (MeshResult ())
-updateStatus' sosId status = do
+updateStatus :: (L.MonadFlow m, MonadTime m) => Id Sos.Sos -> Sos.SosStatus -> m (MeshResult ())
+updateStatus sosId status = do
   now <- getCurrentTime
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamS.SosT
@@ -52,11 +50,11 @@ updateStatus' sosId status = do
         [Se.Is BeamS.id $ Se.Eq (getId sosId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-findById :: Transactionable m => Id Sos.Sos -> m (Maybe Sos)
-findById = Esq.findById
+-- findById :: Transactionable m => Id Sos.Sos -> m (Maybe Sos)
+-- findById = Esq.findById
 
-findById' :: L.MonadFlow m => Id Sos.Sos -> m (Maybe Sos)
-findById' sosId = do
+findById :: L.MonadFlow m => Id Sos.Sos -> m (Maybe Sos)
+findById sosId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamS.SosT
   let updatedMeshConfig = setMeshConfig modelName

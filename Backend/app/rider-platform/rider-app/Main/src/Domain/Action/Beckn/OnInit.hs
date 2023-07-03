@@ -19,7 +19,6 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.LocationAddress as DBL
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -58,9 +57,9 @@ data OnInitRes = OnInitRes
 
 onInit :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HedisFlow m r) => OnInitReq -> m OnInitRes
 onInit req = do
-  DB.runTransaction $ do
-    QRideB.updateBPPBookingId req.bookingId req.bppBookingId
-    QRideB.updatePaymentInfo req.bookingId req.estimatedFare req.discount req.estimatedTotalFare req.paymentUrl
+  -- DB.runTransaction $ do
+  void $ QRideB.updateBPPBookingId req.bookingId req.bppBookingId
+  void $ QRideB.updatePaymentInfo req.bookingId req.estimatedFare req.discount req.estimatedTotalFare req.paymentUrl
   booking <- QRideB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   decRider <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId) >>= decrypt

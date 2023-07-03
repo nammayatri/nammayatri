@@ -59,7 +59,8 @@ createOrder (personId, merchantId) rideId = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (ride.status == DRide.COMPLETED) $ throwError (RideInvalidStatus $ show ride.status)
   totalFare <- ride.totalFare & fromMaybeM (RideFieldNotPresent "totalFare")
-  person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
+  -- person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
   riderId <- runInReplica $ QRide.findRiderIdByRideId ride.id >>= fromMaybeM (InternalError "riderId not found")
   unless (person.id == riderId) $ throwError NotAnExecutor
   customerEmail <- person.email & fromMaybeM (PersonFieldNotPresent "email") >>= decrypt

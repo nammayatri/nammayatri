@@ -148,7 +148,8 @@ mkDomainCancelSearch personId estimateId = do
   where
     buildCancelReq estId sendToBpp estStatus = do
       estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
-      person <- Esq.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      -- person <- Esq.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       merchant <- CQM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
       let searchRequestId = estimate.requestId
       pure

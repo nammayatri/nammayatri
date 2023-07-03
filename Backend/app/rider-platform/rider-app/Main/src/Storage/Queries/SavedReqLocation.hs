@@ -21,12 +21,10 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.SavedReqLocation as BeamSRL
-import Storage.Tabular.SavedReqLocation
 
 create :: L.MonadFlow m => SavedReqLocation -> m (MeshResult ())
 create savedReqLocation = do
@@ -37,17 +35,17 @@ create savedReqLocation = do
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainSavedReqLocationToBeam savedReqLocation)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-findAllByRiderId :: Transactionable m => Id Person -> m [SavedReqLocation]
-findAllByRiderId perId =
-  Esq.findAll $ do
-    saveReqLocation <- from $ table @SavedReqLocationT
-    where_ $
-      saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey perId)
-    orderBy [desc $ saveReqLocation ^. SavedReqLocationUpdatedAt]
-    return saveReqLocation
+-- findAllByRiderId :: Transactionable m => Id Person -> m [SavedReqLocation]
+-- findAllByRiderId perId =
+--   Esq.findAll $ do
+--     saveReqLocation <- from $ table @SavedReqLocationT
+--     where_ $
+--       saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey perId)
+--     orderBy [desc $ saveReqLocation ^. SavedReqLocationUpdatedAt]
+--     return saveReqLocation
 
-findAllByRiderId' :: L.MonadFlow m => Id Person -> m [SavedReqLocation]
-findAllByRiderId' perId = do
+findAllByRiderId :: L.MonadFlow m => Id Person -> m [SavedReqLocation]
+findAllByRiderId perId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSRL.SavedReqLocationT
   let updatedMeshConfig = setMeshConfig modelName
@@ -55,16 +53,16 @@ findAllByRiderId' perId = do
     Just dbCOnf' -> either (pure []) (transformBeamSavedReqLocationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSRL.riderId $ Se.Eq (getId perId)]
     Nothing -> pure []
 
-deleteByRiderIdAndTag :: Id Person -> Text -> SqlDB ()
-deleteByRiderIdAndTag perId addressTag = do
-  Esq.delete $ do
-    saveReqLocation <- from $ table @SavedReqLocationT
-    where_ $
-      (saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey perId))
-        &&. (saveReqLocation ^. SavedReqLocationTag ==. val addressTag)
+-- deleteByRiderIdAndTag :: Id Person -> Text -> SqlDB ()
+-- deleteByRiderIdAndTag perId addressTag = do
+--   Esq.delete $ do
+--     saveReqLocation <- from $ table @SavedReqLocationT
+--     where_ $
+--       (saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey perId))
+--         &&. (saveReqLocation ^. SavedReqLocationTag ==. val addressTag)
 
-deleteByRiderIdAndTag' :: L.MonadFlow m => Id Person -> Text -> m ()
-deleteByRiderIdAndTag' perId addressTag = do
+deleteByRiderIdAndTag :: L.MonadFlow m => Id Person -> Text -> m ()
+deleteByRiderIdAndTag perId addressTag = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSRL.SavedReqLocationT
   let updatedMeshConfig = setMeshConfig modelName
@@ -77,17 +75,17 @@ deleteByRiderIdAndTag' perId addressTag = do
           [Se.And [Se.Is BeamSRL.riderId (Se.Eq (getId perId)), Se.Is BeamSRL.tag (Se.Eq addressTag)]]
     Nothing -> pure ()
 
-findAllByRiderIdAndTag :: Transactionable m => Id Person -> Text -> m [SavedReqLocation]
-findAllByRiderIdAndTag perId addressTag =
-  Esq.findAll $ do
-    saveReqLocation <- from $ table @SavedReqLocationT
-    where_ $
-      (saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey perId))
-        &&. (saveReqLocation ^. SavedReqLocationTag ==. val addressTag)
-    return saveReqLocation
+-- findAllByRiderIdAndTag :: Transactionable m => Id Person -> Text -> m [SavedReqLocation]
+-- findAllByRiderIdAndTag perId addressTag =
+--   Esq.findAll $ do
+--     saveReqLocation <- from $ table @SavedReqLocationT
+--     where_ $
+--       (saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey perId))
+--         &&. (saveReqLocation ^. SavedReqLocationTag ==. val addressTag)
+--     return saveReqLocation
 
-findAllByRiderIdAndTag' :: L.MonadFlow m => Id Person -> Text -> m [SavedReqLocation]
-findAllByRiderIdAndTag' perId addressTag = do
+findAllByRiderIdAndTag :: L.MonadFlow m => Id Person -> Text -> m [SavedReqLocation]
+findAllByRiderIdAndTag perId addressTag = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSRL.SavedReqLocationT
   let updatedMeshConfig = setMeshConfig modelName

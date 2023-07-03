@@ -26,25 +26,22 @@ import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto hiding (findById)
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.MerchantConfig as BeamMC
-import Storage.Tabular.MerchantConfig
 
-findAllByMerchantId :: Transactionable m => Id Merchant -> m [DMC.MerchantConfig]
-findAllByMerchantId merchantId =
-  Esq.findAll $ do
-    config <- from $ table @MerchantConfigT
-    where_ $
-      config ^. MerchantConfigMerchantId ==. val (toKey merchantId)
-        &&. config ^. MerchantConfigEnabled ==. val True
-    return config
+-- findAllByMerchantId :: Transactionable m => Id Merchant -> m [DMC.MerchantConfig]
+-- findAllByMerchantId merchantId =
+--   Esq.findAll $ do
+--     config <- from $ table @MerchantConfigT
+--     where_ $
+--       config ^. MerchantConfigMerchantId ==. val (toKey merchantId)
+--         &&. config ^. MerchantConfigEnabled ==. val True
+--     return config
 
-findAllByMerchantId' :: L.MonadFlow m => Id Merchant -> m [DMC.MerchantConfig]
-findAllByMerchantId' (Id merchantId) = do
+findAllByMerchantId :: L.MonadFlow m => Id Merchant -> m [DMC.MerchantConfig]
+findAllByMerchantId (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamMC.MerchantConfigT
   let updatedMeshConfig = setMeshConfig modelName

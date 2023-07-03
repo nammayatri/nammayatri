@@ -22,12 +22,10 @@ import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Maps
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.BookingCancellationReason as BeamBCR
-import Storage.Tabular.BookingCancellationReason
 
 create :: L.MonadFlow m => BookingCancellationReason -> m (MeshResult ())
 create bookingCancellationReason = do
@@ -38,15 +36,24 @@ create bookingCancellationReason = do
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainBookingCancellationReasonToBeam bookingCancellationReason)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-findByRideBookingId ::
-  Transactionable m =>
-  Id Booking ->
-  m (Maybe BookingCancellationReason)
-findByRideBookingId rideBookingId =
-  Esq.findOne $ do
-    rideBookingCancellationReason <- from $ table @BookingCancellationReasonT
-    where_ $ rideBookingCancellationReason ^. BookingCancellationReasonBookingId ==. val (toKey rideBookingId)
-    return rideBookingCancellationReason
+-- findByRideBookingId ::
+--   Transactionable m =>
+--   Id Booking ->
+--   m (Maybe BookingCancellationReason)
+-- findByRideBookingId rideBookingId =
+--   Esq.findOne $ do
+--     rideBookingCancellationReason <- from $ table @BookingCancellationReasonT
+--     where_ $ rideBookingCancellationReason ^. BookingCancellationReasonBookingId ==. val (toKey rideBookingId)
+--     return rideBookingCancellationReason
+
+findByRideBookingId :: L.MonadFlow m => Id Booking -> m (Maybe BookingCancellationReason)
+findByRideBookingId (Id bookingId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamBCR.BookingCancellationReasonT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbCOnf' -> either (pure Nothing) (transformBeamBookingCancellationReasonToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamBCR.bookingId $ Se.Eq bookingId]
+    Nothing -> pure Nothing
 
 -- upsert :: BookingCancellationReason -> SqlDB ()
 -- upsert cancellationReason =

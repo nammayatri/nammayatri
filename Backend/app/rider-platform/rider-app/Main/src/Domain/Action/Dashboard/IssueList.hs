@@ -72,7 +72,8 @@ getIssueList merchantShortId mbLimit mbOffset mbmobileCountryCode mbMobileNumber
     Just mobileNumber -> do
       mobileNumberDbHash <- getDbHash mobileNumber
       let mobileCountryCode = fromMaybe mobileIndianCode mbmobileCountryCode
-      customer <- runInReplica $ QPerson.findByMobileNumberAndMerchantId mobileCountryCode mobileNumberDbHash merchant.id >>= fromMaybeM (PersonNotFound mobileNumber)
+      -- customer <- runInReplica $ QPerson.findByMobileNumberAndMerchantId mobileCountryCode mobileNumberDbHash merchant.id >>= fromMaybeM (PersonNotFound mobileNumber)
+      customer <- QPerson.findByMobileNumberAndMerchantId mobileCountryCode mobileNumberDbHash merchant.id >>= fromMaybeM (PersonNotFound mobileNumber)
       issues <- runInReplica $ QIssue.findByCustomerId customer.id mbLimit mbOffset fromDate toDate
       issueList <- mapM buildIssueList issues
       let count = length issueList

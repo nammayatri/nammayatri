@@ -48,14 +48,14 @@ create person = do
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainPersonToBeam person)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-findById ::
-  Transactionable m =>
-  Id Person ->
-  m (Maybe Person)
-findById = Esq.findById
+-- findById ::
+--   Transactionable m =>
+--   Id Person ->
+--   m (Maybe Person)
+-- findById = Esq.findById
 
-findById' :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Person)
-findById' (Id personId) = do
+findById :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Person)
+findById (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
   let updatedMeshConfig = setMeshConfig modelName
@@ -67,23 +67,23 @@ findById' (Id personId) = do
         _ -> pure Nothing
     Nothing -> pure Nothing
 
-findByMobileNumberAndMerchantId ::
-  Transactionable m =>
-  Text ->
-  DbHash ->
-  Id Merchant ->
-  m (Maybe Person)
-findByMobileNumberAndMerchantId countryCode mobileNumberHash merchantId = do
-  Esq.findOne $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonMobileCountryCode ==. val (Just countryCode)
-        &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberHash)
-        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
-    return person
+-- findByMobileNumberAndMerchantId ::
+--   Transactionable m =>
+--   Text ->
+--   DbHash ->
+--   Id Merchant ->
+--   m (Maybe Person)
+-- findByMobileNumberAndMerchantId countryCode mobileNumberHash merchantId = do
+--   Esq.findOne $ do
+--     person <- from $ table @PersonT
+--     where_ $
+--       person ^. PersonMobileCountryCode ==. val (Just countryCode)
+--         &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberHash)
+--         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
+--     return person
 
-findByMobileNumberAndMerchantId' :: (L.MonadFlow m, Log m) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
-findByMobileNumberAndMerchantId' countryCode mobileNumberHash (Id merchantId) = do
+findByMobileNumberAndMerchantId :: (L.MonadFlow m, Log m) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
+findByMobileNumberAndMerchantId countryCode mobileNumberHash (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
   let updatedMeshConfig = setMeshConfig modelName
@@ -95,23 +95,23 @@ findByMobileNumberAndMerchantId' countryCode mobileNumberHash (Id merchantId) = 
         _ -> pure Nothing
     Nothing -> pure Nothing
 
-findByEmailAndPassword ::
-  (Transactionable m, EncFlow m r) =>
-  Text ->
-  Text ->
-  m (Maybe Person)
-findByEmailAndPassword email_ password = do
-  emailDbHash <- getDbHash email_
-  passwordDbHash <- getDbHash password
-  findOne $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonEmailHash ==. val (Just emailDbHash)
-        &&. person ^. PersonPasswordHash ==. val (Just passwordDbHash)
-    return person
+-- findByEmailAndPassword ::
+--   (Transactionable m, EncFlow m r) =>
+--   Text ->
+--   Text ->
+--   m (Maybe Person)
+-- findByEmailAndPassword email_ password = do
+--   emailDbHash <- getDbHash email_
+--   passwordDbHash <- getDbHash password
+--   findOne $ do
+--     person <- from $ table @PersonT
+--     where_ $
+--       person ^. PersonEmailHash ==. val (Just emailDbHash)
+--         &&. person ^. PersonPasswordHash ==. val (Just passwordDbHash)
+--     return person
 
-findByEmailAndPassword' :: (L.MonadFlow m, Log m, EncFlow m r) => Text -> Text -> m (Maybe Person)
-findByEmailAndPassword' email_ password = do
+findByEmailAndPassword :: (L.MonadFlow m, Log m, EncFlow m r) => Text -> Text -> m (Maybe Person)
+findByEmailAndPassword email_ password = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
   let updatedMeshConfig = setMeshConfig modelName
@@ -125,20 +125,20 @@ findByEmailAndPassword' email_ password = do
         _ -> pure Nothing
     Nothing -> pure Nothing
 
-findByEmail ::
-  (Transactionable m, EncFlow m r) =>
-  Text ->
-  m (Maybe Person)
-findByEmail email_ = do
-  emailDbHash <- getDbHash email_
-  findOne $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonEmailHash ==. val (Just emailDbHash)
-    return person
+-- findByEmail ::
+--   (Transactionable m, EncFlow m r) =>
+--   Text ->
+--   m (Maybe Person)
+-- findByEmail email_ = do
+--   emailDbHash <- getDbHash email_
+--   findOne $ do
+--     person <- from $ table @PersonT
+--     where_ $
+--       person ^. PersonEmailHash ==. val (Just emailDbHash)
+--     return person
 
-findByEmail' :: (L.MonadFlow m, Log m, EncFlow m r) => Text -> m (Maybe Person)
-findByEmail' email_ = do
+findByEmail :: (L.MonadFlow m, Log m, EncFlow m r) => Text -> m (Maybe Person)
+findByEmail email_ = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
   let updatedMeshConfig = setMeshConfig modelName
@@ -151,25 +151,25 @@ findByEmail' email_ = do
         _ -> pure Nothing
     Nothing -> pure Nothing
 
-findByRoleAndMobileNumberAndMerchantId ::
-  Transactionable m =>
-  Role ->
-  Text ->
-  DbHash ->
-  Id Merchant ->
-  m (Maybe Person)
-findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumberHash merchantId = do
-  findOne $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonRole ==. val role_
-        &&. person ^. PersonMobileCountryCode ==. val (Just countryCode)
-        &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberHash)
-        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
-    return person
+-- findByRoleAndMobileNumberAndMerchantId ::
+--   Transactionable m =>
+--   Role ->
+--   Text ->
+--   DbHash ->
+--   Id Merchant ->
+--   m (Maybe Person)
+-- findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumberHash merchantId = do
+--   findOne $ do
+--     person <- from $ table @PersonT
+--     where_ $
+--       person ^. PersonRole ==. val role_
+--         &&. person ^. PersonMobileCountryCode ==. val (Just countryCode)
+--         &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberHash)
+--         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
+--     return person
 
-findByRoleAndMobileNumberAndMerchantId' :: (L.MonadFlow m, Log m) => Role -> Text -> DbHash -> Id Merchant -> m (Maybe Person)
-findByRoleAndMobileNumberAndMerchantId' role_ countryCode mobileNumberHash (Id merchantId) = do
+findByRoleAndMobileNumberAndMerchantId :: (L.MonadFlow m, Log m) => Role -> Text -> DbHash -> Id Merchant -> m (Maybe Person)
+findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumberHash (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
   let updatedMeshConfig = setMeshConfig modelName
@@ -181,18 +181,18 @@ findByRoleAndMobileNumberAndMerchantId' role_ countryCode mobileNumberHash (Id m
         _ -> pure Nothing
     Nothing -> pure Nothing
 
-findByRoleAndMobileNumberAndMerchantIdWithoutCC :: Transactionable m => Role -> DbHash -> Id Merchant -> m (Maybe Person)
-findByRoleAndMobileNumberAndMerchantIdWithoutCC role_ mobileNumberHash merchantId = do
-  findOne $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonRole ==. val role_
-        &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberHash)
-        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
-    return person
+-- findByRoleAndMobileNumberAndMerchantIdWithoutCC :: Transactionable m => Role -> DbHash -> Id Merchant -> m (Maybe Person)
+-- findByRoleAndMobileNumberAndMerchantIdWithoutCC role_ mobileNumberHash merchantId = do
+--   findOne $ do
+--     person <- from $ table @PersonT
+--     where_ $
+--       person ^. PersonRole ==. val role_
+--         &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberHash)
+--         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
+--     return person
 
-findByRoleAndMobileNumberAndMerchantIdWithoutCC' :: (L.MonadFlow m, Log m) => Role -> DbHash -> Id Merchant -> m (Maybe Person)
-findByRoleAndMobileNumberAndMerchantIdWithoutCC' role_ mobileNumberHash (Id merchantId) = do
+findByRoleAndMobileNumberAndMerchantIdWithoutCC :: (L.MonadFlow m, Log m) => Role -> DbHash -> Id Merchant -> m (Maybe Person)
+findByRoleAndMobileNumberAndMerchantIdWithoutCC role_ mobileNumberHash (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
   let updatedMeshConfig = setMeshConfig modelName
@@ -204,29 +204,29 @@ findByRoleAndMobileNumberAndMerchantIdWithoutCC' role_ mobileNumberHash (Id merc
         _ -> pure Nothing
     Nothing -> pure Nothing
 
-updateMultiple :: Id Person -> Person -> SqlDB ()
-updateMultiple personId person = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonUpdatedAt =. val now,
-        PersonFirstName =. val (person.firstName),
-        PersonMiddleName =. val (person.middleName),
-        PersonLastName =. val (person.lastName),
-        PersonGender =. val (person.gender),
-        PersonDescription =. val (person.description),
-        PersonRole =. val (person.role),
-        PersonIdentifier =. val (person.identifier),
-        PersonRating =. val (person.rating),
-        PersonDeviceToken =. val (person.deviceToken),
-        PersonClientVersion =. val (versionToText <$> person.clientVersion),
-        PersonBundleVersion =. val (versionToText <$> person.bundleVersion)
-      ]
-    where_ $ tbl ^. PersonId ==. val (getId personId)
+-- updateMultiple :: Id Person -> Person -> SqlDB ()
+-- updateMultiple personId person = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ PersonUpdatedAt =. val now,
+--         PersonFirstName =. val (person.firstName),
+--         PersonMiddleName =. val (person.middleName),
+--         PersonLastName =. val (person.lastName),
+--         PersonGender =. val (person.gender),
+--         PersonDescription =. val (person.description),
+--         PersonRole =. val (person.role),
+--         PersonIdentifier =. val (person.identifier),
+--         PersonRating =. val (person.rating),
+--         PersonDeviceToken =. val (person.deviceToken),
+--         PersonClientVersion =. val (versionToText <$> person.clientVersion),
+--         PersonBundleVersion =. val (versionToText <$> person.bundleVersion)
+--       ]
+--     where_ $ tbl ^. PersonId ==. val (getId personId)
 
-updateMultiple' :: (L.MonadFlow m, MonadTime m) => Id Person -> Person -> m (MeshResult ())
-updateMultiple' (Id personId) person = do
+updateMultiple :: (L.MonadFlow m, MonadTime m) => Id Person -> Person -> m (MeshResult ())
+updateMultiple (Id personId) person = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
   let updatedMeshConfig = setMeshConfig modelName
@@ -252,26 +252,26 @@ updateMultiple' (Id personId) person = do
         [Se.Is BeamP.id (Se.Eq personId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-updatePersonVersions :: Person -> Maybe Version -> Maybe Version -> SqlDB ()
-updatePersonVersions person mbBundleVersion mbClientVersion =
-  when
-    ((isJust mbBundleVersion || isJust mbClientVersion) && (person.bundleVersion /= mbBundleVersion || person.clientVersion /= mbClientVersion))
-    do
-      now <- getCurrentTime
-      let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.bundleVersion)
-          mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientVersion)
-      Esq.update $ \tbl -> do
-        set
-          tbl
-          [ PersonUpdatedAt =. val now,
-            PersonClientVersion =. val mbClientVersionText,
-            PersonBundleVersion =. val mbBundleVersionText
-          ]
-        where_ $
-          tbl ^. PersonTId ==. val (toKey person.id)
+-- updatePersonVersions :: Person -> Maybe Version -> Maybe Version -> SqlDB ()
+-- updatePersonVersions person mbBundleVersion mbClientVersion =
+--   when
+--     ((isJust mbBundleVersion || isJust mbClientVersion) && (person.bundleVersion /= mbBundleVersion || person.clientVersion /= mbClientVersion))
+--     do
+--       now <- getCurrentTime
+--       let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.bundleVersion)
+--           mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientVersion)
+--       Esq.update $ \tbl -> do
+--         set
+--           tbl
+--           [ PersonUpdatedAt =. val now,
+--             PersonClientVersion =. val mbClientVersionText,
+--             PersonBundleVersion =. val mbBundleVersionText
+--           ]
+--         where_ $
+--           tbl ^. PersonTId ==. val (toKey person.id)
 
-updatePersonVersions' :: (L.MonadFlow m, MonadTime m) => Person -> Maybe Version -> Maybe Version -> m ()
-updatePersonVersions' person mbBundleVersion mbClientVersion =
+updatePersonVersions :: (L.MonadFlow m, MonadTime m) => Person -> Maybe Version -> Maybe Version -> m ()
+updatePersonVersions person mbBundleVersion mbClientVersion =
   when
     ((isJust mbBundleVersion || isJust mbClientVersion) && (person.bundleVersion /= mbBundleVersion || person.clientVersion /= mbClientVersion))
     do
@@ -294,19 +294,19 @@ updatePersonVersions' person mbBundleVersion mbClientVersion =
               [Se.Is BeamP.id (Se.Eq (getId (person.id)))]
         Nothing -> pure ()
 
-updateDeviceToken :: Id Person -> Maybe Text -> SqlDB ()
-updateDeviceToken personId mbDeviceToken = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonUpdatedAt =. val now,
-        PersonDeviceToken =. val mbDeviceToken
-      ]
-    where_ $ tbl ^. PersonId ==. val (getId personId)
+-- updateDeviceToken :: Id Person -> Maybe Text -> SqlDB ()
+-- updateDeviceToken personId mbDeviceToken = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ PersonUpdatedAt =. val now,
+--         PersonDeviceToken =. val mbDeviceToken
+--       ]
+--     where_ $ tbl ^. PersonId ==. val (getId personId)
 
-updateDeviceToken' :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe Text -> m (MeshResult ())
-updateDeviceToken' (Id personId) mbDeviceToken = do
+updateDeviceToken :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe Text -> m (MeshResult ())
+updateDeviceToken (Id personId) mbDeviceToken = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
   let updatedMeshConfig = setMeshConfig modelName
@@ -322,19 +322,19 @@ updateDeviceToken' (Id personId) mbDeviceToken = do
         [Se.Is BeamP.id (Se.Eq personId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-updateWhatsappNotificationEnrollStatus :: Id Person -> Maybe Whatsapp.OptApiMethods -> SqlDB ()
-updateWhatsappNotificationEnrollStatus personId enrollStatus = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonWhatsappNotificationEnrollStatus =. val enrollStatus,
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+-- updateWhatsappNotificationEnrollStatus :: Id Person -> Maybe Whatsapp.OptApiMethods -> SqlDB ()
+-- updateWhatsappNotificationEnrollStatus personId enrollStatus = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ PersonWhatsappNotificationEnrollStatus =. val enrollStatus,
+--         PersonUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
-updateWhatsappNotificationEnrollStatus' :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe Whatsapp.OptApiMethods -> m (MeshResult ())
-updateWhatsappNotificationEnrollStatus' (Id personId) enrollStatus = do
+updateWhatsappNotificationEnrollStatus :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe Whatsapp.OptApiMethods -> m (MeshResult ())
+updateWhatsappNotificationEnrollStatus (Id personId) enrollStatus = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
   let updatedMeshConfig = setMeshConfig modelName
@@ -350,19 +350,19 @@ updateWhatsappNotificationEnrollStatus' (Id personId) enrollStatus = do
         [Se.Is BeamP.id (Se.Eq personId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-setIsNewFalse :: Id Person -> SqlDB ()
-setIsNewFalse personId = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonUpdatedAt =. val now,
-        PersonIsNew =. val False
-      ]
-    where_ $ tbl ^. PersonId ==. val (getId personId)
+-- setIsNewFalse :: Id Person -> SqlDB ()
+-- setIsNewFalse personId = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ PersonUpdatedAt =. val now,
+--         PersonIsNew =. val False
+--       ]
+--     where_ $ tbl ^. PersonId ==. val (getId personId)
 
-setIsNewFalse' :: (L.MonadFlow m, MonadTime m) => Id Person -> m (MeshResult ())
-setIsNewFalse' (Id personId) = do
+setIsNewFalse :: (L.MonadFlow m, MonadTime m) => Id Person -> m (MeshResult ())
+setIsNewFalse (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
   let updatedMeshConfig = setMeshConfig modelName
@@ -378,45 +378,45 @@ setIsNewFalse' (Id personId) = do
         [Se.Is BeamP.id (Se.Eq personId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-updatePersonalInfo ::
-  Id Person ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe (EncryptedHashed Text) ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Language ->
-  Maybe Gender ->
-  Maybe Version ->
-  Maybe Version ->
-  SqlDB ()
-updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbCVersion mbBVersion = do
-  now <- getCurrentTime
-  let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
-  let mbEmailHash = mbEncEmail <&> (.hash)
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      ( [PersonUpdatedAt =. val now]
-          <> updateWhenJust_ (\x -> PersonFirstName =. val (Just x)) mbFirstName
-          <> updateWhenJust_ (\x -> PersonMiddleName =. val (Just x)) mbMiddleName
-          <> updateWhenJust_ (\x -> PersonLastName =. val (Just x)) mbLastName
-          <> updateWhenJust_ (\x -> PersonEmailEncrypted =. val (Just x)) mbEmailEncrypted
-          <> updateWhenJust_ (\x -> PersonEmailHash =. val (Just x)) mbEmailHash
-          <> updateWhenJust_ (\x -> PersonDeviceToken =. val (Just x)) mbDeviceToken
-          <> updateWhenJust_ (\x -> PersonNotificationToken =. val (Just x)) mbNotificationToken
-          <> updateWhenJust_ (\x -> PersonReferralCode =. val (Just x)) mbReferralCode
-          <> updateWhenJust_ (\_ -> PersonReferredAt =. val (Just now)) mbReferralCode
-          <> updateWhenJust_ (\x -> PersonLanguage =. val (Just x)) mbLanguage
-          <> updateWhenJust_ (\x -> PersonGender =. val x) mbGender
-          <> updateWhenJust_ (\x -> PersonClientVersion =. val (versionToText <$> Just x)) mbCVersion
-          <> updateWhenJust_ (\x -> PersonBundleVersion =. val (versionToText <$> Just x)) mbBVersion
-      )
-    where_ $ tbl ^. PersonId ==. val (getId personId)
+-- updatePersonalInfo ::
+--   Id Person ->
+--   Maybe Text ->
+--   Maybe Text ->
+--   Maybe Text ->
+--   Maybe Text ->
+--   Maybe (EncryptedHashed Text) ->
+--   Maybe Text ->
+--   Maybe Text ->
+--   Maybe Language ->
+--   Maybe Gender ->
+--   Maybe Version ->
+--   Maybe Version ->
+--   SqlDB ()
+-- updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbCVersion mbBVersion = do
+--   now <- getCurrentTime
+--   let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
+--   let mbEmailHash = mbEncEmail <&> (.hash)
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       ( [PersonUpdatedAt =. val now]
+--           <> updateWhenJust_ (\x -> PersonFirstName =. val (Just x)) mbFirstName
+--           <> updateWhenJust_ (\x -> PersonMiddleName =. val (Just x)) mbMiddleName
+--           <> updateWhenJust_ (\x -> PersonLastName =. val (Just x)) mbLastName
+--           <> updateWhenJust_ (\x -> PersonEmailEncrypted =. val (Just x)) mbEmailEncrypted
+--           <> updateWhenJust_ (\x -> PersonEmailHash =. val (Just x)) mbEmailHash
+--           <> updateWhenJust_ (\x -> PersonDeviceToken =. val (Just x)) mbDeviceToken
+--           <> updateWhenJust_ (\x -> PersonNotificationToken =. val (Just x)) mbNotificationToken
+--           <> updateWhenJust_ (\x -> PersonReferralCode =. val (Just x)) mbReferralCode
+--           <> updateWhenJust_ (\_ -> PersonReferredAt =. val (Just now)) mbReferralCode
+--           <> updateWhenJust_ (\x -> PersonLanguage =. val (Just x)) mbLanguage
+--           <> updateWhenJust_ (\x -> PersonGender =. val x) mbGender
+--           <> updateWhenJust_ (\x -> PersonClientVersion =. val (versionToText <$> Just x)) mbCVersion
+--           <> updateWhenJust_ (\x -> PersonBundleVersion =. val (versionToText <$> Just x)) mbBVersion
+--       )
+--     where_ $ tbl ^. PersonId ==. val (getId personId)
 
-updatePersonalInfo' ::
+updatePersonalInfo ::
   (L.MonadFlow m, MonadTime m) =>
   Id Person ->
   Maybe Text ->
@@ -431,7 +431,7 @@ updatePersonalInfo' ::
   Maybe Version ->
   Maybe Version ->
   m (MeshResult ())
-updatePersonalInfo' (Id personId) mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbCVersion mbBVersion = do
+updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbCVersion mbBVersion = do
   let modelName = Se.modelTableName @BeamP.PersonT
   let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
@@ -543,20 +543,20 @@ updateHasTakenValidRide (Id personId) = do
         [Se.Is BeamP.id (Se.Eq personId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-updateReferralCodeAndReferredAt :: Id Person -> Maybe Text -> SqlDB ()
-updateReferralCodeAndReferredAt personId referralCode = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonReferredAt =. val (Just now),
-        PersonReferralCode =. val referralCode,
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonId ==. val (getId personId)
+-- updateReferralCodeAndReferredAt :: Id Person -> Maybe Text -> SqlDB ()
+-- updateReferralCodeAndReferredAt personId referralCode = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ PersonReferredAt =. val (Just now),
+--         PersonReferralCode =. val referralCode,
+--         PersonUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. PersonId ==. val (getId personId)
 
-updateReferralCodeAndReferredAt' :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe Text -> m (MeshResult ())
-updateReferralCodeAndReferredAt' (Id personId) referralCode = do
+updateReferralCodeAndReferredAt :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe Text -> m (MeshResult ())
+updateReferralCodeAndReferredAt (Id personId) referralCode = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
   let updatedMeshConfig = setMeshConfig modelName
@@ -573,22 +573,22 @@ updateReferralCodeAndReferredAt' (Id personId) referralCode = do
         [Se.Is BeamP.id (Se.Eq personId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-findByReferralCode ::
-  (Transactionable m, EncFlow m r) =>
-  Text ->
-  m (Maybe Person)
-findByReferralCode referralCode = do
-  findOne $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonReferralCode ==. val (Just referralCode)
-    return person
+-- findByReferralCode ::
+--   (Transactionable m, EncFlow m r) =>
+--   Text ->
+--   m (Maybe Person)
+-- findByReferralCode referralCode = do
+--   findOne $ do
+--     person <- from $ table @PersonT
+--     where_ $
+--       person ^. PersonReferralCode ==. val (Just referralCode)
+--     return person
 
-findByReferralCode' ::
+findByReferralCode ::
   (L.MonadFlow m, EncFlow m r) =>
   Text ->
   m (Maybe Person)
-findByReferralCode' referralCode = do
+findByReferralCode referralCode = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
   let updatedMeshConfig = setMeshConfig modelName
@@ -604,17 +604,17 @@ findByReferralCode' referralCode = do
         _ -> pure Nothing
     Nothing -> pure Nothing
 
-findBlockedByDeviceToken :: Transactionable m => Maybe Text -> m [Person]
-findBlockedByDeviceToken deviceToken = do
-  findAll $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonDeviceToken ==. val deviceToken
-        &&. person ^. PersonBlocked ==. val True
-    return person
+-- findBlockedByDeviceToken :: Transactionable m => Maybe Text -> m [Person]
+-- findBlockedByDeviceToken deviceToken = do
+--   findAll $ do
+--     person <- from $ table @PersonT
+--     where_ $
+--       person ^. PersonDeviceToken ==. val deviceToken
+--         &&. person ^. PersonBlocked ==. val True
+--     return person
 
-findBlockedByDeviceToken' :: (L.MonadFlow m, EncFlow m r) => Maybe Text -> m [Person]
-findBlockedByDeviceToken' deviceToken = do
+findBlockedByDeviceToken :: (L.MonadFlow m, EncFlow m r) => Maybe Text -> m [Person]
+findBlockedByDeviceToken deviceToken = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
   let updatedMeshConfig = setMeshConfig modelName
@@ -630,19 +630,19 @@ findBlockedByDeviceToken' deviceToken = do
         _ -> pure []
     Nothing -> pure []
 
-updateBlockedState :: Id Person -> Bool -> SqlDB ()
-updateBlockedState personId isBlocked = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonBlocked =. val isBlocked,
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonId ==. val (getId personId)
+-- updateBlockedState :: Id Person -> Bool -> SqlDB ()
+-- updateBlockedState personId isBlocked = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ PersonBlocked =. val isBlocked,
+--         PersonUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. PersonId ==. val (getId personId)
 
-updateBlockedState' :: (L.MonadFlow m, MonadTime m) => Id Person -> Bool -> m (MeshResult ())
-updateBlockedState' (Id personId) isBlocked = do
+updateBlockedState :: (L.MonadFlow m, MonadTime m) => Id Person -> Bool -> m (MeshResult ())
+updateBlockedState (Id personId) isBlocked = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
   let updatedMeshConfig = setMeshConfig modelName
@@ -658,22 +658,22 @@ updateBlockedState' (Id personId) isBlocked = do
         [Se.Is BeamP.id (Se.Eq personId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-updatingEnabledAndBlockedState :: Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> SqlDB ()
-updatingEnabledAndBlockedState personId blockedByRule isBlocked = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      $ [ PersonEnabled =. val (not isBlocked),
-          PersonBlocked =. val isBlocked,
-          PersonBlockedByRuleId =. val (toKey <$> blockedByRule),
-          PersonUpdatedAt =. val now
-        ]
-        <> [PersonBlockedAt =. val (Just now) | isBlocked]
-    where_ $ tbl ^. PersonId ==. val (getId personId)
+-- updatingEnabledAndBlockedState :: Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> SqlDB ()
+-- updatingEnabledAndBlockedState personId blockedByRule isBlocked = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       $ [ PersonEnabled =. val (not isBlocked),
+--           PersonBlocked =. val isBlocked,
+--           PersonBlockedByRuleId =. val (toKey <$> blockedByRule),
+--           PersonUpdatedAt =. val now
+--         ]
+--         <> [PersonBlockedAt =. val (Just now) | isBlocked]
+--     where_ $ tbl ^. PersonId ==. val (getId personId)
 
-updateEnabledAndBlockedState' :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> m (MeshResult ())
-updateEnabledAndBlockedState' (Id personId) blockedByRule isBlocked = do
+updatingEnabledAndBlockedState :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> m (MeshResult ())
+updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
   let updatedMeshConfig = setMeshConfig modelName
@@ -693,31 +693,31 @@ updateEnabledAndBlockedState' (Id personId) blockedByRule isBlocked = do
         [Se.Is BeamP.id (Se.Eq personId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-findAllCustomers ::
-  Transactionable m =>
-  Id Merchant ->
-  Int ->
-  Int ->
-  Maybe Bool ->
-  Maybe Bool ->
-  Maybe DbHash ->
-  m [Person]
-findAllCustomers merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash = do
-  Esq.findAll $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonMerchantId ==. (val . toKey $ merchantId)
-        &&. person ^. PersonRole ==. val USER
-        &&. maybe (val True) (\enabled -> person ^. PersonEnabled ==. val enabled) mbEnabled
-        &&. maybe (val True) (\blocked -> person ^. PersonBlocked ==. val blocked) mbBlocked
-        &&. maybe (val True) (\searchStrDBHash -> person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)) mbSearchPhoneDBHash
-    orderBy [asc (person ^. PersonFirstName)]
-    limit $ fromIntegral limitVal
-    offset $ fromIntegral offsetVal
-    pure person
+-- findAllCustomers ::
+--   Transactionable m =>
+--   Id Merchant ->
+--   Int ->
+--   Int ->
+--   Maybe Bool ->
+--   Maybe Bool ->
+--   Maybe DbHash ->
+--   m [Person]
+-- findAllCustomers merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash = do
+--   Esq.findAll $ do
+--     person <- from $ table @PersonT
+--     where_ $
+--       person ^. PersonMerchantId ==. (val . toKey $ merchantId)
+--         &&. person ^. PersonRole ==. val USER
+--         &&. maybe (val True) (\enabled -> person ^. PersonEnabled ==. val enabled) mbEnabled
+--         &&. maybe (val True) (\blocked -> person ^. PersonBlocked ==. val blocked) mbBlocked
+--         &&. maybe (val True) (\searchStrDBHash -> person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)) mbSearchPhoneDBHash
+--     orderBy [asc (person ^. PersonFirstName)]
+--     limit $ fromIntegral limitVal
+--     offset $ fromIntegral offsetVal
+--     pure person
 
-findAllCustomers' :: (L.MonadFlow m, Log m) => Id Merchant -> Int -> Int -> Maybe Bool -> Maybe Bool -> Maybe DbHash -> m [Person]
-findAllCustomers' merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash = do
+findAllCustomers :: (L.MonadFlow m, Log m) => Id Merchant -> Int -> Int -> Maybe Bool -> Maybe Bool -> Maybe DbHash -> m [Person]
+findAllCustomers merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
   let updatedMeshConfig = setMeshConfig modelName
@@ -744,21 +744,21 @@ findAllCustomers' merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhon
         _ -> pure []
     Nothing -> pure []
 
-countCustomers :: Transactionable m => Id Merchant -> m Int
-countCustomers merchantId =
-  mkCount <$> do
-    Esq.findAll $ do
-      person <- from $ table @PersonT
-      where_ $
-        person ^. PersonMerchantId ==. val (toKey merchantId)
-          &&. person ^. PersonRole ==. val USER
-      return (countRows :: SqlExpr (Esq.Value Int))
-  where
-    mkCount [counter] = counter
-    mkCount _ = 0
+-- countCustomers :: Transactionable m => Id Merchant -> m Int
+-- countCustomers merchantId =
+--   mkCount <$> do
+--     Esq.findAll $ do
+--       person <- from $ table @PersonT
+--       where_ $
+--         person ^. PersonMerchantId ==. val (toKey merchantId)
+--           &&. person ^. PersonRole ==. val USER
+--       return (countRows :: SqlExpr (Esq.Value Int))
+--   where
+--     mkCount [counter] = counter
+--     mkCount _ = 0
 
-countCustomers' :: (L.MonadFlow m, Log m) => Id Merchant -> m Int
-countCustomers' merchantId = do
+countCustomers :: (L.MonadFlow m, Log m) => Id Merchant -> m Int
+countCustomers merchantId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
   let updatedMeshConfig = setMeshConfig modelName

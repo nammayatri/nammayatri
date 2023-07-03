@@ -27,7 +27,6 @@ import Domain.Types.Person as Person
 import Domain.Types.Quote (Quote)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import Kernel.Storage.Esqueleto (runTransaction)
 import Kernel.Types.APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -72,8 +71,8 @@ sendIssue :: EsqDBFlow m r => Id Person.Person -> SendIssueReq -> m SendIssueRes
 sendIssue personId request = do
   runRequestValidation validateSendIssueReq request
   newIssue <- buildDBIssue personId request
-  runTransaction $
-    Queries.insertIssue newIssue
+  -- runTransaction $
+  void $ Queries.insertIssue newIssue
   return Success
 
 buildDBIssue :: MonadFlow m => Id Person.Person -> SendIssueReq -> m DIssue.Issue

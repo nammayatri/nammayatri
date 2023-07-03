@@ -41,7 +41,7 @@ import qualified Kernel.External.Call.Interface.Types as Call
 import qualified Kernel.External.Call.Interface.Types as CallTypes
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto (runInReplica, runTransaction)
+import Kernel.Storage.Esqueleto (runTransaction)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Common
@@ -122,18 +122,19 @@ callStatusCallback :: EsqDBFlow m r => CallCallbackReq -> m CallCallbackRes
 callStatusCallback req = do
   let callStatusId = req.customField.callStatusId
   _ <- QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist
-  runTransaction $ QCallStatus.updateCallStatus callStatusId (exotelStatusToInterfaceStatus req.status) req.conversationDuration (Just req.recordingUrl)
+  -- runTransaction $ QCallStatus.updateCallStatus callStatusId (exotelStatusToInterfaceStatus req.status) req.conversationDuration (Just req.recordingUrl)
+  void $ QCallStatus.updateCallStatus callStatusId (exotelStatusToInterfaceStatus req.status) req.conversationDuration (Just req.recordingUrl)
   return Ack
 
 directCallStatusCallback :: EsqDBFlow m r => Text -> Call.ExotelCallStatus -> Maybe Text -> Maybe Int -> m CallCallbackRes
 directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuration = do
   callStatus <- QCallStatus.findByCallSid callSid >>= fromMaybeM CallStatusDoesNotExist
   let newCallStatus = exotelStatusToInterfaceStatus dialCallStatus
-  case recordingUrl_ of
+  _ <- case recordingUrl_ of
     Just recordUrl -> do
       if recordUrl == ""
         then do
-          updateCallStatus callStatus.id newCallStatus Nothing
+          void $ updateCallStatus callStatus.id newCallStatus Nothing
           throwError CallStatusDoesNotExist
         else do
           baseUrl <- parseBaseUrl recordUrl
@@ -141,12 +142,13 @@ directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuration = do
     Nothing -> do
       if newCallStatus == CallTypes.COMPLETED
         then do
-          updateCallStatus callStatus.id newCallStatus Nothing
+          void $ updateCallStatus callStatus.id newCallStatus Nothing
           throwError CallStatusDoesNotExist
         else updateCallStatus callStatus.id newCallStatus Nothing
   return Ack
   where
-    updateCallStatus id callStatus url = runTransaction $ QCallStatus.updateCallStatus id callStatus (fromMaybe 0 callDuration) url
+    -- updateCallStatus id callStatus url = runTransaction $ QCallStatus.updateCallStatus id callStatus (fromMaybe 0 callDuration) url
+    updateCallStatus id callStatus = QCallStatus.updateCallStatus id callStatus (fromMaybe 0 callDuration)
 
 getDriverMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> Maybe Text -> Call.ExotelCallStatus -> m GetDriverMobileNumberResp
 getDriverMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus = do
@@ -155,10 +157,11 @@ getDriverMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus = do
   exophone <- CQExophone.findByPhone callTo >>= fromMaybeM (ExophoneDoesNotExist callTo)
   mobileNumberHash <- getDbHash callFrom
   (dtmfNumberUsed, booking) <-
-    runInReplica (Person.findByRoleAndMobileNumberAndMerchantId USER "+91" mobileNumberHash exophone.merchantId) >>= \case
+    -- runInReplica (Person.findByRoleAndMobileNumberAndMerchantId USER "+91" mobileNumberHash exophone.merchantId) >>= \case
+    (Person.findByRoleAndMobileNumberAndMerchantId USER "+91" mobileNumberHash exophone.merchantId) >>= \case
       Nothing -> getDtmfFlow dtmfNumber_ exophone.merchantId
-      Just person -> do
-        runInReplica (QRB.findAssignedByRiderId person.id) >>= \case
+      Just person ->
+        (QRB.findAssignedByRiderId person.id) >>= \case
           Nothing -> getDtmfFlow dtmfNumber_ exophone.merchantId
           Just activeBooking -> return (Nothing, activeBooking)
   -- ride <- runInReplica $ QRide.findActiveByRBId booking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId booking.id)
@@ -188,8 +191,10 @@ getDtmfFlow dtmfNumber_ merchantId = do
   number <- fromMaybeM (InvalidRequest "DTMF Number Not Found") dtmfNumber_
   let dtmfNumber = dropFirstZero $ removeQuotes number
   dtmfMobileHash <- getDbHash dtmfNumber
-  person <- runInReplica $ Person.findByRoleAndMobileNumberAndMerchantId USER "+91" dtmfMobileHash merchantId >>= fromMaybeM (PersonWithPhoneNotFound dtmfNumber)
-  booking <- runInReplica $ QRB.findAssignedByRiderId person.id >>= fromMaybeM (BookingForRiderNotFound $ getId person.id)
+  -- person <- runInReplica $ Person.findByRoleAndMobileNumberAndMerchantId USER "+91" dtmfMobileHash merchantId >>= fromMaybeM (PersonWithPhoneNotFound dtmfNumber)
+  person <- Person.findByRoleAndMobileNumberAndMerchantId USER "+91" dtmfMobileHash merchantId >>= fromMaybeM (PersonWithPhoneNotFound dtmfNumber)
+  -- booking <- runInReplica $ QRB.findAssignedByRiderId person.id >>= fromMaybeM (BookingForRiderNotFound $ getId person.id)
+  booking <- QRB.findAssignedByRiderId person.id >>= fromMaybeM (BookingForRiderNotFound $ getId person.id)
   return (Just dtmfNumber, booking)
   where
     dropFirstZero = T.dropWhile (== '0')
@@ -197,7 +202,8 @@ getDtmfFlow dtmfNumber_ merchantId = do
 
 getCallStatus :: EsqDBReplicaFlow m r => Id CallStatus -> m GetCallStatusRes
 getCallStatus callStatusId = do
-  runInReplica $ QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> makeCallStatusAPIEntity
+  -- runInReplica $ QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> makeCallStatusAPIEntity
+  QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> makeCallStatusAPIEntity
 
 getPerson :: (EsqDBFlow m r, EncFlow m r) => SRide.Ride -> m Person
 getPerson ride = do

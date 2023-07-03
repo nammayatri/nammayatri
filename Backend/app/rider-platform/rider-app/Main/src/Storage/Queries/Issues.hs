@@ -17,16 +17,31 @@ module Storage.Queries.Issues where
 import Domain.Types.Issue
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types (MeshError (MKeyNotFound), MeshResult)
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Lib.Utils
+import qualified Sequelize as Se
 import qualified Storage.Beam.Issue as BeamI
 import Storage.Tabular.Issue
 import Storage.Tabular.Person
 
-insertIssue :: Issue -> SqlDB ()
-insertIssue = do
-  Esq.create
+-- insertIssue :: Issue -> SqlDB ()
+-- insertIssue = do
+--   Esq.create
+
+insertIssue :: L.MonadFlow m => Issue -> m (MeshResult ())
+insertIssue issue = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamI.IssueT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainIssueToBeam issue)
+    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 findByCustomerId :: Transactionable m => Id Person -> Maybe Int -> Maybe Int -> UTCTime -> UTCTime -> m [(Issue, Person)]
 findByCustomerId customerId mbLimit mbOffset fromDate toDate = Esq.findAll $ do

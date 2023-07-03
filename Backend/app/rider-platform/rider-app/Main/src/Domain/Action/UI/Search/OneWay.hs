@@ -25,10 +25,15 @@ import qualified Domain.Action.UI.Search.Common as DSearch
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.SearchRequest as DSearchReq
+-- import Kernel.Serviceability
+-- import qualified Kernel.Storage.Esqueleto as DB
+-- import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+
+import qualified EulerHS.Language as L
+import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Serviceability
--- import qualified Kernel.Storage.Esqueleto as DB
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -75,7 +80,8 @@ oneWaySearch ::
     EsqDBFlow m r,
     HedisFlow m r,
     CoreMetrics m,
-    HasBAPMetrics m r
+    HasBAPMetrics m r,
+    L.MonadFlow m
   ) =>
   Id Person.Person ->
   OneWaySearchReq ->
@@ -148,6 +154,25 @@ oneWaySearch personId req bundleVersion clientVersion device = do
     validateServiceability geoConfig =
       unlessM (rideServiceable geoConfig someGeometriesContain req.origin.gps (Just req.destination.gps)) $
         throwError RideNotServiceable
+
+-- rideServiceable' ::
+--     L.MonadFlow m =>
+--   GeofencingConfig ->
+--   (LatLong -> [Text] -> m Bool) ->
+--   LatLong ->
+--   Maybe LatLong ->
+--   m Bool
+-- rideServiceable' geofencingConfig someGeometriesContain' origin mbDestination = do
+--   originServiceable <-
+--     case geofencingConfig.origin of
+--       Unrestricted -> pure True
+--       Regions regions -> someGeometriesContain' origin regions
+--   destinationServiceable <-
+--     case geofencingConfig.destination of
+--       Unrestricted -> pure True
+--       Regions regions -> do
+--         maybe (pure True) (`someGeometriesContain` regions) mbDestination
+--   pure $ originServiceable && destinationServiceable
 
 getLongestRouteDistance :: [Maps.RouteInfo] -> Maybe Maps.RouteInfo
 getLongestRouteDistance [] = Nothing
