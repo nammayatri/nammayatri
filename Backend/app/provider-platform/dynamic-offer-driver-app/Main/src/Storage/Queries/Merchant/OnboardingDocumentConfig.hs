@@ -47,23 +47,6 @@ import Storage.Tabular.Merchant.OnboardingDocumentConfig
 -- import qualified EulerHS.Extra.EulerDB as Extra
 -- import qualified Domain.Types.Merchant.OnboardingDocumentConfig as Domain
 
--- -- updateDeviceToken :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe FCMRecipientToken -> m (MeshResult ())
--- updateDeviceToken (Id personId) mbDeviceToken = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
---   let modelName = Se.modelTableName @BeamP.PersonT
---   let updatedMeshConfig = setMeshConfig modelName
---   now <- getCurrentTime
---   case dbConf of
---     Just dbConf' ->
---       KV.updateWoReturningWithKVConnector
---         dbConf'
---         updatedMeshConfig
---         [ Se.Set BeamP.deviceToken mbDeviceToken,
---           Se.Set BeamP.updatedAt now
---         ]
---         [Se.Is BeamP.id (Se.Eq personId)]
---     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
-
 -- create :: OnboardingDocumentConfig -> SqlDB ()
 -- create = Esq.create
 
@@ -100,9 +83,45 @@ findAllByMerchantId merchantId =
 --       ]
 --     where_ $ tbl ^. OnboardingDocumentConfigTId ==. val (toKey (config.merchantId, config.documentType))
 
+-- -- updateDeviceToken :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe FCMRecipientToken -> m (MeshResult ())
+-- updateDeviceToken (Id personId) mbDeviceToken = do
+--   dbConf <- L.getOption KBT.PsqlDbCfg
+--   let modelName = Se.modelTableName @BeamP.PersonT
+--   let updatedMeshConfig = setMeshConfig modelName
+--   now <- getCurrentTime
+--   case dbConf of
+--     Just dbConf' ->
+--       KV.updateWoReturningWithKVConnector
+--         dbConf'
+--         updatedMeshConfig
+--         [ Se.Set BeamP.deviceToken mbDeviceToken,
+--           Se.Set BeamP.updatedAt now
+--         ]
+--         [Se.Is BeamP.id (Se.Eq personId)]
+--     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 --complete this function after tranformations is done
-update :: L.MonadFlow m => OnboardingDocumentConfig -> m (MeshResult ())
-update = error "Not implemented"
+update :: (L.MonadFlow m, MonadTime m) => OnboardingDocumentConfig -> m (MeshResult ())
+update config = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamODC.OnboardingDocumentConfigT
+  let updatedMeshConfig = setMeshConfig modelName
+  let supportedClassJson = getConfigJSON config.supportedVehicleClasses
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        updatedMeshConfig
+        [ Se.Set BeamODC.checkExtraction (config.checkExtraction),
+          Se.Set BeamODC.checkExpiry (config.checkExpiry),
+          Se.Set BeamODC.supportedVehicleClassesJSON supportedClassJson,
+          Se.Set BeamODC.vehicleClassCheckType (config.vehicleClassCheckType),
+          Se.Set BeamODC.rcNumberPrefix (config.rcNumberPrefix),
+          Se.Set BeamODC.updatedAt now
+        ]
+        [Se.Is BeamODC.merchantId $ Se.Eq $ getId config.merchantId]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
 transformBeamOnboardingDocumentConfigToDomain :: (L.MonadFlow m, Log m) => BeamODC.OnboardingDocumentConfig -> m OnboardingDocumentConfig
 transformBeamOnboardingDocumentConfigToDomain BeamODC.OnboardingDocumentConfigT {..} = do

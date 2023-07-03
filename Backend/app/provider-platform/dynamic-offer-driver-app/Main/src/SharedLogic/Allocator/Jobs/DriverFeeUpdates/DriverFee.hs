@@ -71,7 +71,8 @@ sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
         (Notify.sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.PAYMENT_PENDING paymentTitle paymentMessage driver.id driver.deviceToken) `C.catchAll` \e -> C.mask_ $ logError $ "FCM for payment reminder to driver id " <> driver.id.getId <> " failed. Error: " <> show e
   forM_ feeZipDriver $ \(driverFee, mbPerson) -> do
     whenJust mbPerson $ \person -> do
-      overdueFee <- Esq.runInReplica $ findOldestFeeByStatus (cast person.id) PAYMENT_OVERDUE
+      -- overdueFee <- Esq.runInReplica $ findOldestFeeByStatus (cast person.id) PAYMENT_OVERDUE
+      overdueFee <- findOldestFeeByStatus (cast person.id) PAYMENT_OVERDUE
       case overdueFee of
         Nothing -> do
           -- Esq.runTransaction $ updateStatus PAYMENT_PENDING driverFee.id now

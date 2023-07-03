@@ -142,8 +142,10 @@ streamLocationUpdates mbRideId merchantId driverId point timestamp accuracy stat
 handleDriverPayments :: (Esq.EsqDBReplicaFlow m r, Esq.EsqDBFlow m r, CacheFlow m r) => Id Person.Person -> Seconds -> m ()
 handleDriverPayments driverId diffUtc = do
   now <- getLocalCurrentTime diffUtc
-  ongoingAfterEndTime <- Esq.runInReplica $ findOngoingAfterEndTime driverId now
-  overdueFee <- Esq.runInReplica $ findOldestFeeByStatus (cast driverId) PAYMENT_OVERDUE
+  -- ongoingAfterEndTime <- Esq.runInReplica $ findOngoingAfterEndTime driverId now
+  ongoingAfterEndTime <- findOngoingAfterEndTime driverId now
+  -- overdueFee <- Esq.runInReplica $ findOldestFeeByStatus (cast driverId) PAYMENT_OVERDUE
+  overdueFee <- findOldestFeeByStatus (cast driverId) PAYMENT_OVERDUE
 
   case (ongoingAfterEndTime, overdueFee) of
     (Nothing, _) -> pure ()

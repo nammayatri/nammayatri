@@ -22,20 +22,32 @@ where
 
 import Domain.Types.Merchant
 import Domain.Types.Merchant.MerchantPaymentMethod
+import qualified EulerHS.KVConnector.Flow as KV
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Lib.Utils
+import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantPaymentMethod as BeamMPM
-import Storage.Tabular.Merchant.MerchantPaymentMethod
 
-findAllByMerchantId :: Transactionable m => Id Merchant -> m [MerchantPaymentMethod]
-findAllByMerchantId merchantId =
-  Esq.findAll $ do
-    merchantPaymentMethod <- from $ table @MerchantPaymentMethodT
-    where_ $
-      merchantPaymentMethod ^. MerchantPaymentMethodMerchantId ==. val (toKey merchantId)
-    orderBy [desc $ merchantPaymentMethod ^. MerchantPaymentMethodPriority]
-    return merchantPaymentMethod
+-- findAllByMerchantId :: Transactionable m => Id Merchant -> m [MerchantPaymentMethod]
+-- findAllByMerchantId merchantId =
+--   Esq.findAll $ do
+--     merchantPaymentMethod <- from $ table @MerchantPaymentMethodT
+--     where_ $
+--       merchantPaymentMethod ^. MerchantPaymentMethodMerchantId ==. val (toKey merchantId)
+--     orderBy [desc $ merchantPaymentMethod ^. MerchantPaymentMethodPriority]
+--     return merchantPaymentMethod
+
+findAllByMerchantId :: L.MonadFlow m => Id Merchant -> m [MerchantPaymentMethod]
+findAllByMerchantId (Id merchantId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamMPM.MerchantPaymentMethodT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbCOnf' -> either (pure []) (transformBeamMerchantPaymentMethodToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamMPM.merchantId $ Se.Eq merchantId] (Se.Desc BeamMPM.priority) Nothing Nothing
+    Nothing -> pure []
 
 transformBeamMerchantPaymentMethodToDomain :: BeamMPM.MerchantPaymentMethod -> MerchantPaymentMethod
 transformBeamMerchantPaymentMethodToDomain BeamMPM.MerchantPaymentMethodT {..} = do
