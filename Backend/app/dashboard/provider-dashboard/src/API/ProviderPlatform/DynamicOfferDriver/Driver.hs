@@ -52,6 +52,7 @@ type API =
            :<|> DeleteDriverAPI
            :<|> UnlinkVehicleAPI
            :<|> UnlinkDLAPI
+           :<|> UnlinkAadhaarAPI
            :<|> EndRCAssociationAPI
            :<|> UpdatePhoneNumberAPI
            :<|> AddVehicleAPI
@@ -124,6 +125,10 @@ type UnlinkDLAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UNLINK_DL
     :> Common.UnlinkDLAPI
 
+type UnlinkAadhaarAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UNLINK_AADHAAR
+    :> Common.UnlinkAadhaarAPI
+
 type UpdatePhoneNumberAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UPDATE_PHONE_NUMBER
     :> Common.UpdatePhoneNumberAPI
@@ -157,6 +162,7 @@ handler merchantId =
     :<|> deleteDriver merchantId
     :<|> unlinkVehicle merchantId
     :<|> unlinkDL merchantId
+    :<|> unlinkAadhaar merchantId
     :<|> endRCAssociation merchantId
     :<|> updatePhoneNumber merchantId
     :<|> addVehicle merchantId
@@ -302,6 +308,13 @@ unlinkDL merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
   transaction <- buildTransaction Common.UnlinkDLEndpoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.drivers.unlinkDL) driverId
+
+unlinkAadhaar :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
+unlinkAadhaar merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.UnlinkAadhaarEndpoint apiTokenInfo driverId T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.drivers.unlinkAadhaar) driverId
 
 endRCAssociation :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 endRCAssociation merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
