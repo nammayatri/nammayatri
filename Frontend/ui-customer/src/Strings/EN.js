@@ -535,5 +535,6 @@ const englishStrings = {
   "ASKING_FOR_MORE_MONEY" : "Driver was asking for more money",
   "AUTO_BROKEN" : "Auto broke down",
   "WE_WILL_GIVE_YOU_CALLBACK" : "We will give you a callback within 24 hrs",
-  "YOUR_ISSUE_HAS_BEEN_REPORTED" : "Your issue has been reported successfully"
+  "YOUR_ISSUE_HAS_BEEN_REPORTED" : "Your issue has been reported successfully",
+  "OTP_RESENT_SUCCESSFULLY" : "OTP resent successfully"
 }

@@ -2,9 +2,10 @@ module Merchant.Utils where
 
 import Common.Types.App (LazyCheck(..))
 import Helpers.Utils (Merchant(..), getMerchant)
-import Prelude ((<>), (==), (&&))
+import Prelude ((<>), (==), (&&), not)
 import Screens.Types ( Language)
-import Engineering.Helpers.Commons (os)
+import Engineering.Helpers.Commons (os, isPreviousVersion)
+import Storage (KeyStore(..), getValueToLocalStore)
 
 foreign import getStringFromConfig :: String -> String
 
@@ -58,4 +59,4 @@ getLanguagesList lazy = case (getMerchant FunctionCall) of
     ]
 
 showCarouselScreen :: LazyCheck -> Boolean
-showCarouselScreen a = (getMerchant FunctionCall) == NAMMAYATRI
+showCarouselScreen a = if os == "IOS" then not ( isPreviousVersion (getValueToLocalStore VERSION_NAME) "1.3.1" ) && getMerchant FunctionCall == NAMMAYATRI else getMerchant FunctionCall == NAMMAYATRI
