@@ -65,6 +65,7 @@ import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.MediaStore;
 import android.provider.Settings;
+import android.speech.tts.TextToSpeech;
 import android.util.Base64;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -252,7 +253,6 @@ import java.net.URISyntaxException;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.content.pm.ResolveInfo;
-
 import com.facebook.appevents.AppEventsLogger;
 
 public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.core.JSI {
@@ -315,7 +315,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     private String zoneName = "";
     private float zoom = 17.0f;
     public static String detectPhoneNumbersCallBack = null;
-
+    public static TextToSpeech ttsEngine;
+    public static Boolean isTTSInitialized = false;
 
     public CommonJsInterface() {
         super();
@@ -364,6 +365,58 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
         sharedPref =  context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         fetchLatLonAndUpdate();
+    }
+
+    @JavascriptInterface
+    public void startTTSEngine(){
+        if (isTTSInitialized == true)
+            return;
+        try {
+            ttsEngine = new TextToSpeech(context, new TextToSpeech.OnInitListener() {
+                @Override
+                public void onInit(int status) {
+
+                    if (status == TextToSpeech.SUCCESS) {
+                        int res = ttsEngine.setLanguage(Locale.ENGLISH);
+                        if (res == TextToSpeech.LANG_MISSING_DATA || res == TextToSpeech.LANG_NOT_SUPPORTED) {
+                            Log.e("TTS", "Language Not Supported");
+                        } else {
+                            isTTSInitialized = true;
+                            Log.e("TTS", "TTS Engine initialization completed successfully");
+                        }
+                    } else
+                        Log.e("TTS ", "TTS Engine Initialization failed");
+                }
+            });
+        } catch (Exception e) {
+            Log.e("TTS", "Exception" + e);
+        }
+    }
+
+    @JavascriptInterface
+    public static void stopTTSEngine(){
+        try {
+            if (isTTSInitialized) {
+                ttsEngine.stop();
+                ttsEngine.shutdown();
+                isTTSInitialized = false;
+            }
+        } catch (Exception e) {
+            Log.e("TTS", "Exception " + e);
+        }
+    }
+
+    public static void convertTTS(String payload){
+        try {
+            if (isTTSInitialized) {
+                float speechRate = 0.7F;
+                ttsEngine.setSpeechRate(speechRate);
+                ttsEngine.speak(payload, TextToSpeech.QUEUE_FLUSH, null, "TTS");
+            }
+        }
+        catch (Exception e){
+            Log.e("TTS", "Exception "+ e);
+        }
     }
 
     @JavascriptInterface
@@ -4004,6 +4057,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             Intent overlayService = new Intent(activity, MessageOverlayService.class);
             activity.stopService(chatListenerService);
             activity.stopService(overlayService);
+            stopTTSEngine();
         } catch (Exception e) {
             Log.e(LOG_TAG, "Error in stopChatListenerService : " + e);
         }

@@ -220,6 +220,16 @@ var mainFiber = null;
 //   }
 // }
 
+export const startTTSEngine = function(){
+  if(window.JBridge.startTTSEngine)
+    window.JBridge.startTTSEngine();
+}
+
+export const stopTTSEngine = function(){
+  if(window.JBridge.stopTTSEngine)
+    window.JBridge.stopTTSEngine();
+}
+
 export const requestLocationPermissionDriver = function (cb){
   return function (action) {
     return function () {

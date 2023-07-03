@@ -13,6 +13,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.provider.Settings;
+import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
@@ -277,8 +278,9 @@ public class ChatService extends Service {
                     else startOverlayService(message, _dateFormatted);
                 }else if (appState.equals("onResume") && !(stage.equals("ChatWithCustomer"))) {
                     String notificationId = String.valueOf(random.nextInt(1000000));
-                    MainActivity.showInAppNotification(_sentBy, message, CommonJsInterface.storeCallBackOpenChatScreen,"", "", "", "", notificationId, 5000, context);
+                    MainActivity.showInAppNotification(_sentBy, getMessageFromKey(_message), CommonJsInterface.storeCallBackOpenChatScreen,"", "", "", "", notificationId, 5000, context);//, "false", "false"); To uncomment before merging
                 }
+                CommonJsInterface.convertTTS(message);
             }
         } catch (Exception e) {
             Log.e(LOG_TAG,"Error in handleMessage : " + e);
@@ -292,7 +294,6 @@ public class ChatService extends Service {
                 intent.putExtra("message", message);
                 intent.putExtra("timestamp",timestamp);
                 context.startService(intent);
-                startMediaPlayer(context, R.raw.new_message, false);
             }catch (Exception e) {
                 Log.e(LOG_TAG,"Error in startOverlayService : " + e);
             }

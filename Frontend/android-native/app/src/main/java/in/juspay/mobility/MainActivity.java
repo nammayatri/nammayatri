@@ -49,6 +49,7 @@ import android.provider.ContactsContract;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
 import android.provider.Settings;
+import android.speech.tts.TextToSpeech;
 import android.system.Os;
 import android.util.Base64;
 import android.util.DisplayMetrics;
@@ -65,6 +66,11 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.media.MediaPlayer;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContract;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -338,6 +344,33 @@ public class MainActivity extends AppCompatActivity {
         return deviceDetails;
     }
 
+    ActivityResultLauncher<Intent> checkTTSData = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            new ActivityResultCallback<ActivityResult>() {
+                @Override
+                public void onActivityResult(ActivityResult result) {
+                    if (result.getResultCode() == TextToSpeech.Engine.CHECK_VOICE_DATA_PASS)
+                        Log.e("TTS", "TTS Engine already present");
+                    else {
+                        try {
+                            Intent installIntent = new Intent();
+                            installIntent.setAction(
+                                    TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA);
+                            startActivity(installIntent);
+                        }
+                        catch (Exception e){
+                            Log.e("TTS","exception " + e);
+                        }
+                    }
+                }
+            }
+    );
+
+    public void checkTTSEngine() {
+        Intent checkIntent = new Intent();
+        checkIntent.setAction(TextToSpeech.Engine.ACTION_CHECK_TTS_DATA);
+        checkTTSData.launch(checkIntent);
+    }
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -359,6 +392,7 @@ public class MainActivity extends AppCompatActivity {
 
         sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         sharedPref.edit().putString("DEVICE_DETAILS", getDeviceDetails()).apply();
+        checkTTSEngine();
 
         // TODO :- Discuss on the approach for handling realtime database
 //        FirebaseDatabase database = FirebaseDatabase.getInstance();
@@ -1069,7 +1103,7 @@ public class MainActivity extends AppCompatActivity {
                             CommonJsInterface.detectPhoneNumbersCallBack, selectedNumber); //mobile_number
                     juspayServicesGlobal.getDuiCallback().addJsToWebView(javascript);
                 }
-
+                break;
             default:return;
         }
     }

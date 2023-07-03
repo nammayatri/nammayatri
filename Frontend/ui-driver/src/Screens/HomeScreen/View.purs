@@ -117,6 +117,7 @@ screen initialState =
                                   push InitializeChat
                                   pure unit
                                 else pure unit
+                                _ <- JB.startTTSEngine
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do
                                   _ <- JB.getCurrentPosition push $ ModifyRoute
                                   _ <- JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
@@ -138,6 +139,7 @@ screen initialState =
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "50000"
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
                                 _ <- push RemoveChat
+                                _ <- JB.stopTTSEngine
                                 _ <- launchAff $ flowRunner defaultGlobalState $ launchMaps push TriggerMaps
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do
                                   _ <- JB.getCurrentPosition push $ ModifyRoute
@@ -153,6 +155,7 @@ screen initialState =
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "50000"
                                 _ <- pure $ JB.removeAllPolylines ""
                                 _ <- JB.reallocateMapFragment (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap")
+                                _ <- JB.stopTTSEngine
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
                                 _ <- pure $ setValueToLocalStore SESSION_ID (JB.generateSessionId unit)
                                 _ <- checkPermissionAndUpdateDriverMarker initialState

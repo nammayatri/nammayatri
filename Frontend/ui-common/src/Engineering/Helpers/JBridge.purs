@@ -204,6 +204,9 @@ foreign import cleverTapSetLocation :: Unit -> Effect Unit
 foreign import saveSuggestions :: String -> Suggestions -> Unit
 foreign import saveSuggestionDefs :: String -> SuggestionDefinitions -> Unit
 foreign import launchDateSettings :: String -> Unit
+foreign import startTTSEngine :: Effect Unit
+foreign import stopTTSEngine :: Effect Unit
+
 -- -- keyStoreEntryPresent :: String -> Flow Boolean
 -- -- keyStoreEntryPresent = liftFlow <<< _keyStoreEntryPresent
 

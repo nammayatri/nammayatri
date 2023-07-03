@@ -419,6 +419,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 editor.apply();
                 Intent overlayService = new Intent(getApplicationContext(), MessageOverlayService.class);
                 getApplicationContext().stopService(overlayService);
+                CommonJsInterface.stopTTSEngine();
             } catch (Exception e){
                 Log.e("MyFirebaseMessagingService", "Error in stopChatService : " + e);
             }
