@@ -17,6 +17,7 @@
 module Domain.Action.UI.DriverOnboarding.AadhaarVerification where
 
 import Data.Text (pack)
+import qualified Domain.Action.UI.DriverOnboarding.Status as Status
 import qualified Domain.Types.DriverOnboarding.AadhaarOtp as Domain
 import qualified Domain.Types.DriverOnboarding.AadhaarVerification as VDomain
 import Domain.Types.DriverOnboarding.Error
@@ -109,6 +110,7 @@ verifyAadhaarOtp mbMerchant personId req = do
           Redis.del key
           aadhaarEntity <- mkAadhaar personId res
           Esq.runNoTransaction $ Q.create aadhaarEntity
+          _ <- Status.statusHandler (person.id, person.merchantId)
           void $ CQDriverInfo.updateAadhaarVerifiedState (cast personId) True
         else throwError $ InternalError "Aadhaar Verification failed, Please try again"
       pure res

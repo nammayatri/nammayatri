@@ -53,6 +53,7 @@ data TransporterConfigD u = TransporterConfig
     driverPaymentReminderInterval :: NominalDiffTime,
     timeDiffFromUtc :: Seconds,
     subscription :: Bool,
+    aadhaarVerificationRequired :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
