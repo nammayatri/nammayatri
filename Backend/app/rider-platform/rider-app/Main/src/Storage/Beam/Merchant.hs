@@ -12,6 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -19,10 +20,12 @@
 module Storage.Beam.Merchant where
 
 import qualified Data.Aeson as A
+import Data.ByteString.Internal (ByteString)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
+import qualified Data.Vector as V
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
@@ -30,6 +33,7 @@ import Database.Beam.Postgres
   ( Postgres,
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
@@ -40,8 +44,19 @@ import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
-instance FromField Base64 where
-  fromField = fromFieldEnum
+fromFieldEnum' ::
+  -- (Typeable a, Read a) =>
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion GeoRestriction
+fromFieldEnum' f mbValue = case mbValue of
+  Nothing -> pure Geo.Unrestricted
+  Just _ -> Geo.Regions . V.toList <$> fromField f mbValue
+
+-- instance FromField Base64 where
+--   fromField = fromFieldEnum
+
+deriving newtype instance FromField Base64
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Base64 where
   sqlValueSyntax = autoSqlValueSyntax
@@ -51,7 +66,7 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Base64
 instance FromBackendRow Postgres Base64
 
 instance FromField GeoRestriction where
-  fromField = fromFieldEnum
+  fromField = fromFieldEnum'
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be GeoRestriction where
   sqlValueSyntax = autoSqlValueSyntax

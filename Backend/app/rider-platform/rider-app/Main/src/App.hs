@@ -17,8 +17,11 @@ module App where
 import qualified App.Server as App
 import qualified Data.Text as T
 import Environment
+import EulerHS.Interpreters (runFlow)
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
+import Kernel.Beam.Connection.Flow (prepareConnection)
+import Kernel.Beam.Connection.Types (ConnectionConfig (..))
 import Kernel.Exit
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
 import qualified Kernel.Tools.Metrics.Init as Metrics
@@ -57,6 +60,15 @@ runRiderApp' appCfg = do
           & setInstallShutdownHandler (handleShutdown appEnv.isShuttingDown (releaseAppEnv appEnv))
           & setPort (appCfg.port)
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
+    runFlow
+      flowRt
+      ( prepareConnection $
+          ConnectionConfig
+            { esqDBCfg = appCfg.esqDBCfg,
+              esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
+              hedisClusterCfg = appCfg.hedisClusterCfg
+            }
+      )
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do
         migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg

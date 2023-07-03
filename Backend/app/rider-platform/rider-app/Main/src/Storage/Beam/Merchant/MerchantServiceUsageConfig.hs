@@ -19,10 +19,12 @@
 module Storage.Beam.Merchant.MerchantServiceUsageConfig where
 
 import qualified Data.Aeson as A
+import Data.ByteString.Internal (ByteString)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
+import qualified Data.Vector as V
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
@@ -30,6 +32,7 @@ import Database.Beam.Postgres
   ( Postgres,
   )
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.External.Call.Types (CallService)
@@ -41,6 +44,22 @@ import Kernel.Prelude hiding (Generic)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
+
+fromFieldSmsService ::
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion [SmsService]
+fromFieldSmsService f mbValue = case mbValue of
+  Nothing -> DPSF.returnError DPSF.UnexpectedNull f mempty
+  Just _ -> V.toList <$> fromField f mbValue
+
+fromFieldWhatsappService ::
+  DPSF.Field ->
+  Maybe ByteString ->
+  DPSF.Conversion [WhatsappService]
+fromFieldWhatsappService f mbValue = case mbValue of
+  Nothing -> DPSF.returnError DPSF.UnexpectedNull f mempty
+  Just _ -> V.toList <$> fromField f mbValue
 
 instance FromField NotificationService where
   fromField = fromFieldEnum
@@ -82,6 +101,9 @@ instance IsString MapsService where
   fromString = show
 
 instance FromField [WhatsappService] where
+  fromField = fromFieldWhatsappService
+
+instance FromField WhatsappService where
   fromField = fromFieldEnum
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be [WhatsappService] where
@@ -92,6 +114,9 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be [WhatsappService]
 instance FromBackendRow Postgres [WhatsappService]
 
 instance FromField [SmsService] where
+  fromField = fromFieldSmsService
+
+instance FromField SmsService where
   fromField = fromFieldEnum
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be [SmsService] where

@@ -90,7 +90,7 @@ fromFieldCenti f mbValue = case mbValue of
   Just value' ->
     case readMaybe (unpackChars value') of
       Just val -> pure val
-      _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
+      _ -> DPSF.returnError ConversionFailed f ("Could not 'read'" <> show value')
 
 fromFieldCentesimal ::
   DPSF.Field ->
@@ -250,7 +250,7 @@ fromFieldJSON f mbValue = case mbValue of
   Nothing -> DPSF.returnError UnexpectedNull f mempty
   Just value' -> case A.decode $ fromStrict value' of
     Just res -> pure res
-    Nothing -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
+    Nothing -> DPSF.returnError ConversionFailed f ("Could not 'read'" <> show value')
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Language where
   sqlValueSyntax = autoSqlValueSyntax
@@ -315,7 +315,7 @@ fromFieldEnum f mbValue = case mbValue of
   Just value' ->
     case readMaybe (unpackChars value') of
       Just val -> pure val
-      _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
+      _ -> DPSF.returnError ConversionFailed f ("Could not 'read'" <> show value')
 
 fromFieldEnumDbHash ::
   DPSF.Field ->
