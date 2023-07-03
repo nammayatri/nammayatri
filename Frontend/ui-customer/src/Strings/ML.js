@@ -531,5 +531,6 @@ const malayalamStrings = {
   "ASKING_FOR_MORE_MONEY" : "ഡ്രൈവർ കൂടുതൽ പണം ആവശ്യപ്പെടുകയായിരുന്നു",
   "AUTO_BROKEN" : "ഓട്ടോ തകർന്നു",
   "WE_WILL_GIVE_YOU_CALLBACK" : "24 മണിക്കൂറിനുള്ളിൽ ഞങ്ങൾ നിങ്ങൾക്ക് ഒരു കോൾബാക്ക് നൽകും",
-  "YOUR_ISSUE_HAS_BEEN_REPORTED" : "നിങ്ങളുടെ പ്രശ്നം വിജയകരമായി റിപ്പോർട്ട് ചെയ്തു"
+  "YOUR_ISSUE_HAS_BEEN_REPORTED" : "നിങ്ങളുടെ പ്രശ്നം വിജയകരമായി റിപ്പോർട്ട് ചെയ്തു",
+  "OTP_RESENT_SUCCESSFULLY" : "OTP വീണ്ടും അയച്ചു"
 }

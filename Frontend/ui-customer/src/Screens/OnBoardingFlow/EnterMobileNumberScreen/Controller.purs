@@ -165,14 +165,15 @@ eval Resend state = do
         _ <- pure $ toast (getString OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER)
         _ <- pure $ toggleBtnLoader "" false
         continue newState{props{enterOTP = false}}
-      else exit $ ResendOTP newState
+      else do 
+        _ <- pure $ toast (getString OTP_RESENT_SUCCESSFULLY)
+        exit $ ResendOTP newState
 
-eval (AutoFill otp) state = updateAndExit
-    (state {props = state.props {
-    isReadingOTP = if length otp == 4 then false else true ,
-    capturedOtp = otp}, data = state.data { otp = if (length otp <= 4) then otp else state.data.otp}})
-   (GoToAccountSetUp (state {props = state.props {isReadingOTP = if length otp == 4 then false else true ,capturedOtp = otp}, data = state.data { otp = if (length otp <= 4) then otp else state.data.otp}}))
-
+eval (AutoFill otp) state = do
+    _ <- pure $ firebaseLogEvent "ny_user_otp_autoread"
+    let newState = state {props = state.props {isReadingOTP = if length otp == 4 then false else true ,capturedOtp = otp}, data = state.data { otp = if (length otp <= 4) then otp else state.data.otp}}
+    updateAndExit newState $ GoToAccountSetUp (newState)
+   
 eval (BackPressed flag) state = do
       _ <- pure $ printLog "state" state
       _ <- pure $ toggleBtnLoader "" false

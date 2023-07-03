@@ -535,5 +535,6 @@ const hindiStrings = {
   "ASKING_FOR_MORE_MONEY" : "ड्राइवर और पैसे मांग रहा था",
   "AUTO_BROKEN" : "ऑटो टूट गया",
   "WE_WILL_GIVE_YOU_CALLBACK" : "हम आपको 24 घंटे के भीतर कॉलबैक देंगे",
-  "YOUR_ISSUE_HAS_BEEN_REPORTED" : "आपकी समस्या की सफलतापूर्वक रिपोर्ट कर दी गई है"
+  "YOUR_ISSUE_HAS_BEEN_REPORTED" : "आपकी समस्या की सफलतापूर्वक रिपोर्ट कर दी गई है",
+  "OTP_RESENT_SUCCESSFULLY" : "OTP सफलतापूर्वक पुनः भेजा गया"
 }

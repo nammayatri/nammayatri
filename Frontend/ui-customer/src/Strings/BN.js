@@ -531,5 +531,6 @@ const bengaliStrings = {
   "ASKING_FOR_MORE_MONEY" : "চালক আরও টাকা চাইছিলেন",
   "AUTO_BROKEN" : "অটো ভেঙে পড়ে",
   "WE_WILL_GIVE_YOU_CALLBACK" : "আমরা আপনাকে 24 ঘন্টার মধ্যে একটি কলব্যাক দেব",
-  "YOUR_ISSUE_HAS_BEEN_REPORTED" : "আপনার সমস্যা সফলভাবে রিপোর্ট করা হয়েছে"
+  "YOUR_ISSUE_HAS_BEEN_REPORTED" : "আপনার সমস্যা সফলভাবে রিপোর্ট করা হয়েছে",
+  "OTP_RESENT_SUCCESSFULLY" : "OTP সফলভাবে পুনরায় পাঠানো হয়েছে"
 }

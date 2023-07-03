@@ -529,5 +529,6 @@ const kannadaStrings = {
   "ASKING_FOR_MORE_MONEY" : "ಚಾಲಕ ಹೆಚ್ಚಿನ ಹಣ ಕೇಳುತ್ತಿದ್ದ",
   "AUTO_BROKEN" : "ಆಟೋ ಕೆಟ್ಟು ನಿಂತಿತು",
   "WE_WILL_GIVE_YOU_CALLBACK" : "ನಾವು ನಿಮಗೆ 24 ಗಂಟೆಗಳ ಒಳಗೆ ಕಾಲ್‌ಬ್ಯಾಕ್ ನೀಡುತ್ತೇವೆ",
-  "YOUR_ISSUE_HAS_BEEN_REPORTED" : "ನಿಮ್ಮ ಸಮಸ್ಯೆಯನ್ನು ಯಶಸ್ವಿಯಾಗಿ ವರದಿ ಮಾಡಲಾಗಿದೆ"
+  "YOUR_ISSUE_HAS_BEEN_REPORTED" : "ನಿಮ್ಮ ಸಮಸ್ಯೆಯನ್ನು ಯಶಸ್ವಿಯಾಗಿ ವರದಿ ಮಾಡಲಾಗಿದೆ",
+  "OTP_RESENT_SUCCESSFULLY" : "OTP ಯಶಸ್ವಿಯಾಗಿ ಮರುಕಳುಹಿಸಲಾಗಿದೆ"
 }

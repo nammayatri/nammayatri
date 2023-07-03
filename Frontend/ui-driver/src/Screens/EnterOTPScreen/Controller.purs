@@ -21,7 +21,7 @@ import Components.PrimaryEditText.Controllers as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
 import PrestoDOM.Types.Core (class Loggable)
 import Data.String (length)
-import JBridge (hideKeyboardOnNavigation)
+import JBridge (hideKeyboardOnNavigation, firebaseLogEvent)
 import Storage (setValueToLocalNativeStore, setValueToLocalStore, KeyStore(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Storage (setValueToLocalNativeStore, KeyStore(..))
@@ -87,6 +87,7 @@ eval (PrimaryEditTextAction (PrimaryEditText.TextChanged valId newVal)) state = 
   
 
 eval (AutoFill otpReceived) state = do 
+  _ <- pure $ firebaseLogEvent "ny_driver_otp_autoread"
   updateAndExit (state { data {capturedOtp = otpReceived, otp = if (length otpReceived) == 4 then otpReceived else state.data.otp } }) $ GoToHome (state { data {capturedOtp = otpReceived, otp = if (length otpReceived) == 4 then otpReceived else state.data.otp } })
 eval (SetToken id )state = do 
   _ <-  pure $ setValueToLocalNativeStore FCM_TOKEN  id
