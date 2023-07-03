@@ -1,5 +1,5 @@
 -- for testing purposes
-INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type)
+INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type)
     (
     SELECT
         atlas_bap_dashboard.uuid_generate_v4(),

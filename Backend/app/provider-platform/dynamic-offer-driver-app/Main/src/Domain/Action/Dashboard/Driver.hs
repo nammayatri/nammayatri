@@ -189,7 +189,8 @@ buildDriverListItem (person, driverInformation, mbVehicle) = do
         verified = driverInformation.verified,
         subscribed = driverInformation.subscribed,
         onRide = driverInformation.onRide,
-        active = driverInformation.active
+        active = driverInformation.active,
+        onboardingDate = driverInformation.lastEnabledOn
       }
 
 ---------------------------------------------------------------------
@@ -441,6 +442,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         verified = info.verified,
         subscribed = info.subscribed,
         aadhaarVerified = info.aadhaarVerified,
+        onboardingDate = info.lastEnabledOn,
         canDowngradeToSedan = info.canDowngradeToSedan,
         canDowngradeToHatchback = info.canDowngradeToHatchback,
         canDowngradeToTaxi = info.canDowngradeToTaxi,
