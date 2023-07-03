@@ -14,9 +14,8 @@
 
 module Beckn.Context where
 
-import qualified Beckn.Spec.Common.Context as Context
-import qualified Beckn.Spec.Common.Domain as Domain
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Predicate
 import Kernel.Types.TimeRFC339
@@ -26,9 +25,9 @@ coreConfig :: CoreConfig
 coreConfig =
   CoreConfig
     { version = "0.9.3",
-      domain = Domain.PUBLIC_TRANSPORT,
-      country = "IND",
-      city = "Kochi"
+      domain = Context.PUBLIC_TRANSPORT,
+      country = Context.India,
+      city = Context.Kochi
     }
 
 buildContext ::
@@ -49,9 +48,9 @@ validateContext = validateContext' coreConfig
 
 data CoreConfig = CoreConfig
   { version :: Text,
-    domain :: Domain.Domain,
-    country :: Text,
-    city :: Text
+    domain :: Context.Domain,
+    country :: Context.Country,
+    city :: Context.City
   }
 
 buildContext' ::

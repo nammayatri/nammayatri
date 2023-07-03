@@ -17,6 +17,7 @@ module Domain.Types.Merchant where
 import Domain.Types.Common
 import Kernel.Prelude
 import Kernel.Types.Base64 (Base64)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
@@ -26,7 +27,8 @@ data MerchantD (s :: UsageSafety) = Merchant
     subscriberId :: ShortId Subscriber,
     shortId :: ShortId Merchant,
     name :: Text,
-    city :: Text,
+    city :: Context.City,
+    country :: Context.Country,
     geofencingConfig :: GeofencingConfig,
     gatewayUrl :: BaseUrl,
     registryUrl :: BaseUrl,

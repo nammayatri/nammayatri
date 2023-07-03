@@ -23,6 +23,7 @@ import qualified Data.Text.Encoding as DT
 import Data.Time
 import Domain.Types.Common
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Servant.API
@@ -46,7 +47,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     subscriberId :: ShortId Subscriber,
     uniqueKeyId :: Text,
     shortId :: ShortId Merchant,
-    city :: Text,
+    city :: Context.City,
     mobileNumber :: Maybe Text,
     mobileCountryCode :: Maybe Text,
     gstin :: Maybe Text,

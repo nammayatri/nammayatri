@@ -47,6 +47,8 @@ buildSearchReq subscriber req = do
         transactionId = transactionId,
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
+        bapCity = context.city,
+        bapCountry = context.country,
         pickupLocation = LatLong {lat = pickup.location.gps.lat, lon = pickup.location.gps.lon},
         pickupTime = pickup.time.timestamp,
         dropLocation = LatLong {lat = dropOff.location.gps.lat, lon = dropOff.location.gps.lon},
