@@ -126,6 +126,7 @@ instance ToJSON Authorization where
 data Agent = Agent
   { name :: Text,
     phone :: Text,
+    phoneCountryCode :: Maybe Text,
     rating :: Maybe DecimalValue,
     tags :: AgentTags
   }

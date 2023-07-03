@@ -56,6 +56,7 @@ data Ride = Ride
     driverName :: Text,
     driverRating :: Maybe Centesimal,
     driverMobileNumber :: Text,
+    driverMobileCountryCode :: Maybe Text,
     driverRegisteredAt :: UTCTime,
     vehicleNumber :: Text,
     vehicleModel :: Text,
