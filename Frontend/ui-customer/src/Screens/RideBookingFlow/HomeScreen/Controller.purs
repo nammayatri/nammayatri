@@ -1230,7 +1230,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SourceC
     pure unit
   else
     pure unit
-  continue state { props { isSource = Just true, isSrcServiceable = true, isRideServiceable = true } }
+  continue state { data { source = ""}, props { isSource = Just true, isSrcServiceable = true, isRideServiceable = true } }
 
 eval (SearchLocationModelActionController (SearchLocationModelController.DestinationClear)) state = do
   _ <- pure $ performHapticFeedback unit
@@ -1582,6 +1582,8 @@ eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { prop
 eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { props { showMultipleRideInfo = false } }
 
 eval (RequestInfoCardAction RequestInfoCard.NoAction) state = continue state
+
+eval (GenderBannerModal Banner.OnClick) state = exit $ GoToMyProfile state true
 
 eval ShowRateCard state = do
   continue state { props { showRateCard = true } }

@@ -197,7 +197,7 @@ otpView push state =
             , text item
             , textSize FontSize.a_18
             , color Color.white900
-            , fontStyle $ FontStyle.bold LanguageStyle
+            , fontStyle $ FontStyle.fontByOS "PlusJakartaSans-Bold" "PlusJakartaSans-Bold" "Arial"
             ]
         ]) $ split (Pattern "")  state.data.otp)
 

@@ -73,7 +73,7 @@ nameEditTextConfig state = let
                 text = state.data.name,
                 textSize = FontSize.a_16,
                 fontStyle = FontStyle.semiBold LanguageStyle,
-                pattern = Just "[a-zA-Z ]*,30"
+                pattern = Just "[a-zA-Z. ]*,30"
             },
             errorLabel{
               text = case state.data.nameErrorMessage of 

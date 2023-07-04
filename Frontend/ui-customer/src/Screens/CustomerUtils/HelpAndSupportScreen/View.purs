@@ -121,7 +121,7 @@ view push state =
        , height MATCH_PARENT
        , visibility if state.props.isCallConfirmation then VISIBLE else GONE
        ][PopUpModal.view (push <<< PopupModelActionController) (callConfirmationPopup state)]
-     , deleteAccountView state push
+     , if state.props.showDeleteAccountView then deleteAccountView state push else textView[]
    ] <> if state.data.accountStatus == ST.CONFIRM_REQ || state.data.accountStatus == ST.DEL_REQUESTED then 
      [ linearLayout
        [ width MATCH_PARENT
