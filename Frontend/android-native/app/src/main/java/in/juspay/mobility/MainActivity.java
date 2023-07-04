@@ -428,7 +428,7 @@ public class MainActivity extends AppCompatActivity {
                 });
 
 
-        WebView.setWebContentsDebuggingEnabled(true);
+        WebView.setWebContentsDebuggingEnabled(false);
         setContentView(R.layout.activity_main);
         Intent intent = getIntent();
         String action = intent.getAction();

@@ -4550,8 +4550,10 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         Vibrator vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
 
         if (vibrator != null && vibrator.hasVibrator()) {
-            VibrationEffect effect = VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE);
-            vibrator.vibrate(effect);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                VibrationEffect effect = VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE);
+                vibrator.vibrate(effect);
+            }
         }
     }
 
