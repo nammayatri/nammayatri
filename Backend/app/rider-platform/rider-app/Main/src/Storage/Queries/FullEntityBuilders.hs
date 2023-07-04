@@ -17,30 +17,25 @@ module Storage.Queries.FullEntityBuilders where
 
 import Domain.Types.Booking.Type as Booking
 import Domain.Types.FarePolicy.FareProductType
-import Domain.Types.Quote as Quote
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 -- import Storage.Queries.EstimateBreakup as QEB
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.Booking.BookingLocation
-import Storage.Tabular.DriverOffer
-import Storage.Tabular.Quote as Quote
-import Storage.Tabular.Quote.Instances as Quote
 import Storage.Tabular.RentalSlab
-import Storage.Tabular.SpecialZoneQuote
 import Storage.Tabular.TripTerms
 
-buildFullQuote ::
-  Transactionable m =>
-  (QuoteT, Maybe TripTermsT, Maybe RentalSlabT, Maybe DriverOfferT, Maybe SpecialZoneQuoteT) ->
-  DTypeBuilder m (Maybe (SolidType FullQuoteT))
-buildFullQuote (quoteT@QuoteT {..}, mbTripTermsT, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote) = runMaybeT $ do
-  quoteDetailsT <- case fareProductType of
-    ONE_WAY -> pure Quote.OneWayDetailsT
-    RENTAL -> hoistMaybe (Quote.RentalDetailsT <$> mbRentalSlab)
-    DRIVER_OFFER -> hoistMaybe (Quote.DriverOfferDetailsT <$> mbDriverOffer)
-    ONE_WAY_SPECIAL_ZONE -> hoistMaybe (Quote.OneWaySpecialZoneDetailsT <$> mbspecialZoneQuote)
-  return $ extractSolidType @Quote (quoteT, mbTripTermsT, quoteDetailsT)
+-- buildFullQuote ::
+--   Transactionable m =>
+--   (QuoteT, Maybe TripTermsT, Maybe RentalSlabT, Maybe DriverOfferT, Maybe SpecialZoneQuoteT) ->
+--   DTypeBuilder m (Maybe (SolidType FullQuoteT))
+-- buildFullQuote (quoteT@QuoteT {..}, mbTripTermsT, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote) = runMaybeT $ do
+--   quoteDetailsT <- case fareProductType of
+--     ONE_WAY -> pure Quote.OneWayDetailsT
+--     RENTAL -> hoistMaybe (Quote.RentalDetailsT <$> mbRentalSlab)
+--     DRIVER_OFFER -> hoistMaybe (Quote.DriverOfferDetailsT <$> mbDriverOffer)
+--     ONE_WAY_SPECIAL_ZONE -> hoistMaybe (Quote.OneWaySpecialZoneDetailsT <$> mbspecialZoneQuote)
+--   return $ extractSolidType @Quote (quoteT, mbTripTermsT, quoteDetailsT)
 
 buildFullBooking ::
   Transactionable m =>

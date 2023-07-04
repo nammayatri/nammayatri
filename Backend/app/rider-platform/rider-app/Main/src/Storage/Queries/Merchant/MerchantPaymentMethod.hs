@@ -22,10 +22,6 @@ where
 
 import Domain.Types.Merchant
 import Domain.Types.Merchant.MerchantPaymentMethod
--- import Kernel.Storage.Esqueleto as Esq
-
--- import Storage.Tabular.Merchant.MerchantPaymentMethod
-
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT

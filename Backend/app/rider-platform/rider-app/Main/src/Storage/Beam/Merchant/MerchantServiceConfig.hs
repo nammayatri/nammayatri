@@ -33,6 +33,14 @@ import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
+import qualified Kernel.External.Call as Call
+import qualified Kernel.External.Maps.Interface.Types as Maps
+import qualified Kernel.External.Maps.Types as Maps
+import qualified Kernel.External.Notification as Notification
+import Kernel.External.Notification.Interface.Types as Notification
+import qualified Kernel.External.Payment.Interface as Payment
+import qualified Kernel.External.SMS.Interface as Sms
+import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude hiding (Generic)
 import Lib.Utils
 import Lib.UtilsTH
@@ -100,6 +108,25 @@ defaultMerchantServiceConfig =
       updatedAt = defaultUTCDate,
       createdAt = defaultUTCDate
     }
+
+getServiceNameConfigJSON :: Domain.ServiceConfig -> (Domain.ServiceName, A.Value)
+getServiceNameConfigJSON = \case
+  Domain.MapsServiceConfig mapsCfg -> case mapsCfg of
+    Maps.GoogleConfig cfg -> (Domain.MapsService Maps.Google, toJSON cfg)
+    Maps.OSRMConfig cfg -> (Domain.MapsService Maps.OSRM, toJSON cfg)
+    Maps.MMIConfig cfg -> (Domain.MapsService Maps.MMI, toJSON cfg)
+  Domain.SmsServiceConfig smsCfg -> case smsCfg of
+    Sms.ExotelSmsConfig cfg -> (Domain.SmsService Sms.ExotelSms, toJSON cfg)
+    Sms.MyValueFirstConfig cfg -> (Domain.SmsService Sms.MyValueFirst, toJSON cfg)
+  Domain.WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
+    Whatsapp.GupShupConfig cfg -> (Domain.WhatsappService Whatsapp.GupShup, toJSON cfg)
+  Domain.CallServiceConfig callCfg -> case callCfg of
+    Call.ExotelConfig cfg -> (Domain.CallService Call.Exotel, toJSON cfg)
+  Domain.NotificationServiceConfig notificationCfg -> case notificationCfg of
+    Notification.FCMConfig cfg -> (Domain.NotificationService Notification.FCM, toJSON cfg)
+    Notification.PayTMConfig cfg -> (Domain.NotificationService Notification.PayTM, toJSON cfg)
+  Domain.PaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig cfg -> (Domain.PaymentService Payment.Juspay, toJSON cfg)
 
 instance Serialize MerchantServiceConfig where
   put = error "undefined"

@@ -284,45 +284,23 @@ library
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.TripTerms
       Storage.Queries.Webengage
-      Storage.Tabular.AppInstalls
-      Storage.Tabular.BlackListOrg
       Storage.Tabular.Booking
       Storage.Tabular.Booking.BookingLocation
-      Storage.Tabular.BookingCancellationReason
-      Storage.Tabular.CallbackRequest
       Storage.Tabular.CallStatus
-      Storage.Tabular.CancellationReason
       Storage.Tabular.DriverOffer
       Storage.Tabular.Estimate
-      Storage.Tabular.Estimate.Instances
-      Storage.Tabular.EstimateBreakup
-      Storage.Tabular.Exophone
-      Storage.Tabular.FarePolicy.FareBreakup
-      Storage.Tabular.Geometry
       Storage.Tabular.Issue
-      Storage.Tabular.Maps.PlaceNameCache
       Storage.Tabular.Merchant
-      Storage.Tabular.Merchant.MerchantMessage
       Storage.Tabular.Merchant.MerchantPaymentMethod
-      Storage.Tabular.Merchant.MerchantServiceConfig
-      Storage.Tabular.Merchant.MerchantServiceUsageConfig
       Storage.Tabular.MerchantConfig
-      Storage.Tabular.OnSearchEvent
       Storage.Tabular.Person
-      Storage.Tabular.Person.PersonDefaultEmergencyNumber
-      Storage.Tabular.Person.PersonFlowStatus
       Storage.Tabular.Quote
-      Storage.Tabular.Quote.Instances
-      Storage.Tabular.RegistrationToken
       Storage.Tabular.RentalSlab
       Storage.Tabular.Ride
-      Storage.Tabular.SavedReqLocation
       Storage.Tabular.SearchRequest
       Storage.Tabular.SearchRequest.SearchReqLocation
-      Storage.Tabular.Sos
       Storage.Tabular.SpecialZoneQuote
       Storage.Tabular.TripTerms
-      Storage.Tabular.Webengage
       Tools.Auth
       Tools.Call
       Tools.Error

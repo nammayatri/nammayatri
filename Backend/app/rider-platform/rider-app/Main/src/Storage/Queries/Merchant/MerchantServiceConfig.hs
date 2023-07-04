@@ -46,7 +46,6 @@ import Kernel.Utils.Error
 import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantServiceConfig as BeamMSC
-import Storage.Tabular.Merchant.MerchantServiceConfig
 import Tools.Error
 
 -- findByMerchantIdAndService :: Transactionable m => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)
@@ -86,7 +85,7 @@ upsertMerchantServiceConfig merchantServiceConfig = do
   let modelName = Se.modelTableName @BeamMSC.MerchantServiceConfigT
   let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
-  let (_serviceName, configJSON) = getServiceNameConfigJSON' merchantServiceConfig.serviceConfig
+  let (_serviceName, configJSON) = BeamMSC.getServiceNameConfigJSON merchantServiceConfig.serviceConfig
   case dbConf of
     Just dbCOnf' -> do
       res <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamMSC.merchantId $ Se.Eq (getId merchantServiceConfig.merchantId)]

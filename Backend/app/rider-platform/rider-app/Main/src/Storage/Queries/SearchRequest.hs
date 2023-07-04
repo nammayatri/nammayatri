@@ -24,7 +24,6 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
--- import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Version
@@ -32,9 +31,6 @@ import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest as BeamSR
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
-
--- import Storage.Tabular.SearchRequest
--- import Storage.Tabular.SearchRequest.SearchReqLocation
 
 -- create :: L.MonadFlow m => SearchRequest -> m (MeshResult ())
 -- create SearchRequest = do

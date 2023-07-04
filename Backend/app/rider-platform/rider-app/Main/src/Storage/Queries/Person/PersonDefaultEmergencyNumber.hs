@@ -16,11 +16,6 @@ module Storage.Queries.Person.PersonDefaultEmergencyNumber where
 
 import Domain.Types.Person
 import Domain.Types.Person.PersonDefaultEmergencyNumber
--- import Kernel.Storage.Esqueleto as Esq
-
--- import Storage.Tabular.Person.PersonDefaultEmergencyNumber
--- import EulerHS.KVConnector.Types
-
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT

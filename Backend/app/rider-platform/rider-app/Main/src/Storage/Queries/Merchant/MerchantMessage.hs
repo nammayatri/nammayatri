@@ -21,9 +21,6 @@ where
 
 import Domain.Types.Merchant as DOrg
 import Domain.Types.Merchant.MerchantMessage
--- import Kernel.Storage.Esqueleto hiding (findById)
--- import qualified Kernel.Storage.Esqueleto as Esq
-
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
@@ -32,7 +29,6 @@ import Kernel.Types.Id
 import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantMessage as BeamMM
-import Storage.Tabular.Merchant.MerchantMessage ()
 
 -- findByMerchantIdAndMessageKey :: Transactionable m => Id Merchant -> MessageKey -> m (Maybe MerchantMessage)
 -- findByMerchantIdAndMessageKey merchantId messageKey =
