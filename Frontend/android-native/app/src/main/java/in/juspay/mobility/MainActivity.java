@@ -717,11 +717,11 @@ public class MainActivity extends AppCompatActivity {
         try {
 
             json.put("requestId", "123");
-            json.put("service", getService());
+            json.put("service", "in.yatri.consumer");
             json.put("betaAssets", false);
-            payload.put("clientId",getResources().getString(R.string.client_id));
+            payload.put("clientId","jatrisaathiconsumer"); 
             payload.put("action", "initiate");
-            payload.put("service", getService());
+            payload.put("service","in.yatri.consumer");
             payload.put(PaymentConstants.ENV, "prod");
 
             json.put(PaymentConstants.PAYLOAD, payload);
@@ -1365,13 +1365,6 @@ public class MainActivity extends AppCompatActivity {
         StringBuilder key = new StringBuilder();
         if (in.juspay.mobility.BuildConfig.MERCHANT.equals("KL")) {
             key.append("net.openkochi.");
-        }   else if (in.juspay.mobility.BuildConfig.MERCHANT.equals("WB")){
-            if (in.juspay.mobility.BuildConfig.MERCHANT_TYPE.equals("USER")){
-                key.append("in.yatri.consumer");
-            } else{
-                key.append("in.yatri.provider");
-            }
-            return key.toString();
         }
         else {
             key.append("in.juspay.");
