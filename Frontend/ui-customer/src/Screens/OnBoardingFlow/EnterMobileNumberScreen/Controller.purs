@@ -23,8 +23,8 @@ import Data.Maybe (Maybe(..))
 import Data.String (length)
 import Data.String.CodeUnits (charAt)
 import Debug (spy)
-import Engineering.Helpers.Commons (getNewIDWithTag, os, clearTimer)
-import Helpers.Utils (setText')
+import Engineering.Helpers.Commons (getNewIDWithTag, os)
+import Helpers.Utils (setText', clearCountDownTimer)
 import JBridge (hideKeyboardOnNavigation, toast, toggleBtnLoader, minimizeApp, firebaseLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -176,6 +176,7 @@ eval (AutoFill otp) state = updateAndExit
 eval (BackPressed flag) state = do
       _ <- pure $ printLog "state" state
       _ <- pure $ toggleBtnLoader "" false
+      _ <- pure $ clearCountDownTimer state.data.timerID
       let newState = state {props{enterOTP =  false,letterSpacing = PX 1.0},data{otp = ""}}
       _ <- pure $ hideKeyboardOnNavigation true
       if state.props.enterOTP then exit $ GoBack newState
@@ -187,8 +188,8 @@ eval (BackPressed flag) state = do
 eval (CountDown seconds id status timerID) state = do
         _ <- pure $ printLog "timer" $ show seconds
         if status == "EXPIRED" then do
-            _ <- pure $ clearTimer timerID
-            let newState = state{data{timer = 15, timerID = ""},props = state.props{resendEnable = true}}
+            _ <- pure $ clearCountDownTimer state.data.timerID
+            let newState = state{data{timer = 30, timerID = ""},props = state.props{resendEnable = true}}
             continue newState
         else
             continue $ state{data{timer = seconds, timerID=timerID},props = state.props{resendEnable = false}}
