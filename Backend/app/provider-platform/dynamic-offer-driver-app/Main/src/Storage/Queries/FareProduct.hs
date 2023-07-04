@@ -19,6 +19,7 @@ module Storage.Queries.FareProduct
     #-}
 where
 
+import qualified Domain.Types.FarePolicy as FarePolicy
 import Domain.Types.FareProduct
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Vehicle.Variant (Variant (..))
@@ -54,3 +55,16 @@ findByMerchantVariantArea merchantId vehicleVariant area =
         &&. fareProduct ^. FareProductArea ==. val area
         &&. fareProduct ^. FareProductVehicleVariant ==. val vehicleVariant
     return fareProduct
+
+updateFareProduct :: Id Merchant -> Variant -> Area -> FlowType -> Id FarePolicy.FarePolicy -> SqlDB ()
+updateFareProduct merchantId vehicleVariant area flow farePolicyId =
+  Esq.update $ \fareProduct -> do
+    set
+      fareProduct
+      [ FareProductFarePolicyId =. val (toKey farePolicyId)
+      ]
+    where_ $
+      fareProduct ^. FareProductMerchantId ==. val (toKey merchantId)
+        &&. fareProduct ^. FareProductArea ==. val area
+        &&. fareProduct ^. FareProductVehicleVariant ==. val vehicleVariant
+        &&. fareProduct ^. FareProductFlow ==. val flow

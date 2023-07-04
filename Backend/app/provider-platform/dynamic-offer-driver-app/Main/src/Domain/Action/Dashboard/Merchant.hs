@@ -32,14 +32,20 @@ module Domain.Action.Dashboard.Merchant
     verificationServiceConfigUpdate,
     createFPDriverExtraFee,
     updateFPDriverExtraFee,
+    updateFarePolicy,
+    updateFareProduct,
   )
 where
 
 import Control.Applicative
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as Common
+import Domain.Types.Common
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FarePolicy as FarePolicy
 import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as DFPEFB
+-- import qualified Storage.Tabular.FarePolicy.DriverExtraFeeBounds as DFP
+
+import qualified Domain.Types.FareProduct as FareProduct
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.DriverIntelligentPoolConfig as DDIPC
 import qualified Domain.Types.Merchant.DriverPoolConfig as DDPC
@@ -48,6 +54,7 @@ import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as DODC
 import qualified Domain.Types.Merchant.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as DVeh
+import qualified Domain.Types.Vehicle.Variant as Variant
 import Environment
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.SMS as SMS
@@ -61,6 +68,7 @@ import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.In
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.FarePolicy as CQFP
+import qualified Storage.CachedQueries.FareProduct as SCQF
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as CQDIPC
 import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CQDPC
@@ -69,7 +77,6 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQ
 import qualified Storage.CachedQueries.Merchant.OnboardingDocumentConfig as CQODC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPEFB
--- import qualified Storage.Tabular.FarePolicy.DriverExtraFeeBounds as DFP
 import Tools.Error
 
 ---------------------------------------------------------------------
@@ -623,3 +630,125 @@ updateFPDriverExtraFee _ farePolicyId startDistance req = do
   Esq.runTransaction $ QFPEFB.update farePolicyId startDistance req.minFee req.maxFee
   CQFP.clearCacheById farePolicyId
   pure Success
+
+---------------------------------------------------------------------
+updateFarePolicy :: ShortId DM.Merchant -> Common.FullFarePolicyUpdateReq -> Flow APISuccess
+updateFarePolicy _ req = do
+  _ <- CQFP.findById (cast req.id) >>= fromMaybeM NoFarePolicy
+  let farePolicyReq = convertToSafeFarePolicy req
+  Esq.runTransaction $ CQFP.update farePolicyReq
+  CQFP.clearCacheById (cast req.id)
+  pure Success
+
+convertToSafeFarePolicy :: Common.FullFarePolicyUpdateReq -> FarePolicy.FarePolicy
+convertToSafeFarePolicy Common.FullFarePolicy {..} =
+  FarePolicy.FarePolicy
+    { id = cast id,
+      driverExtraFeeBounds = convertDriverExtraFeeBounds driverExtraFeeBounds,
+      serviceCharge = serviceCharge,
+      nightShiftBounds = mapNightShiftBounds nightShiftBounds,
+      allowedTripDistanceBounds = mapAllowedTripDistanceBounds allowedTripDistanceBounds,
+      govtCharges = govtCharges,
+      farePolicyDetails = mapFarePolicyDetails farePolicyDetails,
+      description = description,
+      createdAt = createdAt,
+      updatedAt = updatedAt
+    }
+  where
+    convertDriverExtraFeeBounds :: Maybe (NonEmpty Common.DriverExtraFeeBounds) -> Maybe (NonEmpty DFPEFB.DriverExtraFeeBounds)
+    convertDriverExtraFeeBounds = fmap (fmap convertSingleDriverExtraFeeBounds)
+
+    convertSingleDriverExtraFeeBounds :: Common.DriverExtraFeeBounds -> DFPEFB.DriverExtraFeeBounds
+    convertSingleDriverExtraFeeBounds (Common.DriverExtraFeeBounds startDistance minFee maxFee) =
+      DFPEFB.DriverExtraFeeBounds startDistance minFee maxFee
+
+    mapNightShiftBounds :: Maybe Common.NightShiftBounds -> Maybe FarePolicy.NightShiftBounds
+    mapNightShiftBounds = fmap (\(Common.NightShiftBounds start end) -> FarePolicy.NightShiftBounds start end)
+
+    mapAllowedTripDistanceBounds :: Maybe Common.AllowedTripDistanceBounds -> Maybe FarePolicy.AllowedTripDistanceBounds
+    mapAllowedTripDistanceBounds = fmap (\(Common.AllowedTripDistanceBounds max_ min_) -> FarePolicy.AllowedTripDistanceBounds max_ min_)
+
+    mapFarePolicyDetails :: Common.FarePolicyDetailsD 'Common.Safe -> FarePolicy.FarePolicyDetailsD 'Domain.Types.Common.Safe
+    mapFarePolicyDetails (Common.ProgressiveDetails progressiveDetails) = FarePolicy.ProgressiveDetails (mapProgressiveDetails progressiveDetails)
+    mapFarePolicyDetails (Common.SlabsDetails slabsDetails) = FarePolicy.SlabsDetails (mapSlabsDetails slabsDetails)
+
+    mapProgressiveDetails :: Common.FPProgressiveDetailsD 'Common.Safe -> FarePolicy.FPProgressiveDetailsD 'Domain.Types.Common.Safe
+    mapProgressiveDetails (Common.FPProgressiveDetails baseFare baseDistance perExtraKmRateSections deadKmFare waitingChargeInfo nightShiftCharge) =
+      FarePolicy.FPProgressiveDetails baseFare baseDistance (mapPerExtraKmRateSection perExtraKmRateSections) deadKmFare (toWaitingChargeInfo waitingChargeInfo) (toFarePolicyNightShiftCharge nightShiftCharge)
+
+    mapPerExtraKmRateSection :: NonEmpty (Common.FPProgressiveDetailsPerExtraKmRateSectionD 'Common.Safe) -> NonEmpty (FarePolicy.FPProgressiveDetailsPerExtraKmRateSectionD 'Domain.Types.Common.Safe)
+    mapPerExtraKmRateSection = fmap (\(Common.FPProgressiveDetailsPerExtraKmRateSection startDistance perExtraKmRate) -> FarePolicy.FPProgressiveDetailsPerExtraKmRateSection startDistance perExtraKmRate)
+
+    mapSlabsDetails :: Common.FPSlabsDetailsD 'Common.Safe -> FarePolicy.FPSlabsDetailsD 'Domain.Types.Common.Safe
+    mapSlabsDetails (Common.FPSlabsDetails slabs) = FarePolicy.FPSlabsDetails (mapSlabs slabs)
+
+    mapSlabs :: NonEmpty (Common.FPSlabsDetailsSlabD 'Common.Safe) -> NonEmpty (FarePolicy.FPSlabsDetailsSlabD 'Domain.Types.Common.Safe)
+    mapSlabs =
+      fmap
+        ( \(Common.FPSlabsDetailsSlab startDistance baseFare waitingChargeInfo platformFeeInfo nightShiftCharge) ->
+            FarePolicy.FPSlabsDetailsSlab startDistance baseFare (toWaitingChargeInfo waitingChargeInfo) (toFarePolicyPlatformFeeInfo platformFeeInfo) (toFarePolicyNightShiftCharge nightShiftCharge)
+        )
+
+    toWaitingChargeInfo :: Maybe Common.WaitingChargeInfo -> Maybe FarePolicy.WaitingChargeInfo
+    toWaitingChargeInfo waitingChargeInfo =
+      case waitingChargeInfo of
+        Just waitingChargeInf -> Just $ FarePolicy.WaitingChargeInfo waitingChargeInf.freeWaitingTime (mapWaitingCharge waitingChargeInf.waitingCharge)
+        Nothing -> Nothing
+
+    mapWaitingCharge :: Common.WaitingCharge -> FarePolicy.WaitingCharge
+    mapWaitingCharge (Common.PerMinuteWaitingCharge amount) =
+      FarePolicy.PerMinuteWaitingCharge amount
+    mapWaitingCharge (Common.ConstantWaitingCharge amount) =
+      FarePolicy.ConstantWaitingCharge amount
+
+    toFarePolicyPlatformFeeInfo :: Maybe Common.PlatformFeeInfo -> Maybe FarePolicy.PlatformFeeInfo
+    toFarePolicyPlatformFeeInfo platformFeeInfo =
+      case platformFeeInfo of
+        Just platformFeeInf -> Just $ FarePolicy.PlatformFeeInfo (toFarePolicyPlatformFeeCharge platformFeeInf.platformFeeCharge) platformFeeInf.cgst platformFeeInf.sgst
+        Nothing -> Nothing
+
+    toFarePolicyPlatformFeeCharge :: Common.PlatformFeeCharge -> FarePolicy.PlatformFeeCharge
+    toFarePolicyPlatformFeeCharge (Common.ProgressivePlatformFee amount) =
+      FarePolicy.ProgressivePlatformFee amount
+    toFarePolicyPlatformFeeCharge (Common.ConstantPlatformFee amount) =
+      FarePolicy.ConstantPlatformFee amount
+
+    toFarePolicyNightShiftCharge :: Maybe Common.NightShiftCharge -> Maybe FarePolicy.NightShiftCharge
+    toFarePolicyNightShiftCharge nightShiftCharge =
+      case nightShiftCharge of
+        Just nightShiftChargeInf -> Just do
+          case nightShiftChargeInf of
+            Common.ProgressiveNightShiftCharge rate -> FarePolicy.ProgressiveNightShiftCharge rate
+            Common.ConstantNightShiftCharge amount -> FarePolicy.ConstantNightShiftCharge amount
+        Nothing -> Nothing
+
+---------------------------------------------------------------------
+updateFareProduct :: ShortId DM.Merchant -> Common.UpdateFareProductReq -> Flow APISuccess
+updateFareProduct merchantShortId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  SCQF.updateFareProduct merchant.id vehicleVariant area flow (cast req.farePolicyId)
+  pure Success
+  where
+    vehicleVariant = castVehicleVar req.vehicleVariant
+    area = castArea req.area
+    flow = castFlow req.flow
+
+    castVehicleVar :: Common.Variant -> Variant.Variant
+    castVehicleVar = \case
+      Common.SUV -> Variant.SUV
+      Common.HATCHBACK -> Variant.HATCHBACK
+      Common.SEDAN -> Variant.SEDAN
+      Common.AUTO_RICKSHAW -> Variant.AUTO_RICKSHAW
+      Common.TAXI -> Variant.TAXI
+      Common.TAXI_PLUS -> Variant.TAXI_PLUS
+
+    castArea :: Common.Area -> FareProduct.Area
+    castArea = \case
+      Common.Pickup (Id pickupId) -> FareProduct.Pickup (Id pickupId)
+      Common.Drop (Id dropId) -> FareProduct.Drop (Id dropId)
+      Common.Default -> FareProduct.Default
+
+    castFlow :: Common.FlowType -> FareProduct.FlowType
+    castFlow = \case
+      Common.RIDE_OTP -> FareProduct.RIDE_OTP
+      Common.NORMAL -> FareProduct.NORMAL

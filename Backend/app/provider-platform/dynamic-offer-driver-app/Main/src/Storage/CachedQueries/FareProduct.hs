@@ -16,6 +16,7 @@
 
 module Storage.CachedQueries.FareProduct where
 
+import qualified Domain.Types.FarePolicy as FarePolicy
 import Domain.Types.FareProduct
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Vehicle.Variant (Variant (..))
@@ -53,3 +54,13 @@ cacheFareProductByMerchantVariantArea merchantId vehicleVariant area fareProduct
 
 makeFareProductByMerchantVariantAreaKey :: Id Merchant -> Variant -> Area -> Text
 makeFareProductByMerchantVariantAreaKey merchantId vehicleVariant area = "driver-offer:CachedQueries:FareProduct:MerchantId-" <> getId merchantId <> ":Variant-" <> show vehicleVariant <> ":Area-" <> show area
+
+updateFareProduct :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Merchant -> Variant -> Area -> FlowType -> Id FarePolicy.FarePolicy -> m ()
+updateFareProduct merchantId vehicleVariant area flow farePolicyId = do
+  Esq.runTransaction $ Queries.updateFareProduct merchantId vehicleVariant area flow farePolicyId
+  clearCacheByMerchantVariantArea merchantId vehicleVariant area farePolicyId
+
+clearCacheByMerchantVariantArea :: (CacheFlow m r) => Id Merchant -> Variant -> Area -> Id FarePolicy.FarePolicy -> m ()
+clearCacheByMerchantVariantArea merchantId vehicleVariant area farePolicyId = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeFareProductByMerchantVariantAreaKey merchantId vehicleVariant area) farePolicyId expTime

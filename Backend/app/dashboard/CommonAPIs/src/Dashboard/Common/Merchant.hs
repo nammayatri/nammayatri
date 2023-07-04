@@ -58,6 +58,8 @@ data MerchantEndpoint
   | VerificationServiceConfigUpdateEndpoint
   | CreateFPDriverExtraFeeEndpoint
   | UpdateFPDriverExtraFeeEndpoint
+  | UpdateFarePolicyEndpoint
+  | UpdateFareProductEndpoint
   deriving (Show, Read)
 
 derivePersistField "MerchantEndpoint"

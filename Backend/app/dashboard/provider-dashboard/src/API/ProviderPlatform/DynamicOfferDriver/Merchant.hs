@@ -54,6 +54,8 @@ type API =
            :<|> VerificationServiceConfigUpdateAPI
            :<|> CreateFPDriverExtraFee
            :<|> UpdateFPDriverExtraFee
+           :<|> UpdateFarePolicy
+           :<|> UpdateFareProduct
        )
 
 type MerchantUpdateAPI =
@@ -132,6 +134,14 @@ type UpdateFPDriverExtraFee =
   ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'UPDATE_FP_DRIVER_EXTRA_FEE
     :> Common.UpdateFPDriverExtraFee
 
+type UpdateFarePolicy =
+  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'UPDATE_FARE_POLICY
+    :> Common.UpdateFarePolicy
+
+type UpdateFareProduct =
+  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'UPDATE_FARE_PRODUCT
+    :> Common.UpdateFareProduct
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   merchantUpdate merchantId
@@ -153,6 +163,8 @@ handler merchantId =
     :<|> verificationServiceConfigUpdate merchantId
     :<|> createFPDriverExtraFee merchantId
     :<|> updateFPDriverExtraFee merchantId
+    :<|> updateFarePolicy merchantId
+    :<|> updateFareProduct merchantId
 
 buildTransaction ::
   ( MonadFlow m,
@@ -363,3 +375,15 @@ updateFPDriverExtraFee merchantShortId apiTokenInfo farePolicyId startDistance r
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   transaction <- buildTransaction Common.UpdateFPDriverExtraFeeEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callDriverOfferBPP checkedMerchantId (.merchant.updateFPDriverExtraFee) farePolicyId startDistance req
+
+updateFarePolicy :: ShortId DM.Merchant -> ApiTokenInfo -> Common.FullFarePolicyUpdateReq -> FlowHandler APISuccess
+updateFarePolicy merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.UpdateFarePolicyEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callDriverOfferBPP checkedMerchantId (.merchant.updateFarePolicy) req
+
+updateFareProduct :: ShortId DM.Merchant -> ApiTokenInfo -> Common.UpdateFareProductReq -> FlowHandler APISuccess
+updateFareProduct merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.UpdateFareProductEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callDriverOfferBPP checkedMerchantId (.merchant.updateFareProduct) req

@@ -45,6 +45,8 @@ type API =
            :<|> Common.VerificationServiceConfigUpdateAPI
            :<|> Common.CreateFPDriverExtraFee
            :<|> Common.UpdateFPDriverExtraFee
+           :<|> Common.UpdateFarePolicy
+           :<|> Common.UpdateFareProduct
        )
 
 handler :: ShortId DM.Merchant -> FlowServer API
@@ -68,6 +70,8 @@ handler merchantId =
     :<|> verificationServiceConfigUpdate merchantId
     :<|> createFPDriverExtraFee merchantId
     :<|> updateFPDriverExtraFee merchantId
+    :<|> updateFarePolicy merchantId
+    :<|> updateFareProduct merchantId
 
 merchantUpdate ::
   ShortId DM.Merchant ->
@@ -177,3 +181,9 @@ createFPDriverExtraFee merchantShortId farePolicyId startDistance req = withFlow
 
 updateFPDriverExtraFee :: ShortId DM.Merchant -> Id Common.FarePolicy -> Meters -> Common.CreateFPDriverExtraFeeReq -> FlowHandler APISuccess
 updateFPDriverExtraFee merchantShortId farePolicyId startDistance req = withFlowHandlerAPI $ DMerchant.updateFPDriverExtraFee merchantShortId (cast farePolicyId) startDistance req
+
+updateFarePolicy :: ShortId DM.Merchant -> Common.FullFarePolicyUpdateReq -> FlowHandler APISuccess
+updateFarePolicy merchantShortId req = withFlowHandlerAPI $ DMerchant.updateFarePolicy merchantShortId req
+
+updateFareProduct :: ShortId DM.Merchant -> Common.UpdateFareProductReq -> FlowHandler APISuccess
+updateFareProduct merchantShortId req = withFlowHandlerAPI $ DMerchant.updateFareProduct merchantShortId req

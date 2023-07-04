@@ -581,7 +581,7 @@ instance HideSecrets OnboardingDocumentConfigCreateReq where
   hideSecrets = identity
 
 ---------------------------------------------------------
--- Create Fare Policy -----------------------------------
+-- Create Fare Policy Extra Fee Bounds ------------------
 
 type CreateFPDriverExtraFee =
   "config"
@@ -604,7 +604,7 @@ instance HideSecrets CreateFPDriverExtraFeeReq where
   hideSecrets = identity
 
 ---------------------------------------------------------
--- Update Fare Policy -----------------------------------
+-- Update Fare Policy Extra Fee Bounds ------------------
 
 type UpdateFPDriverExtraFee =
   "config"
@@ -615,3 +615,31 @@ type UpdateFPDriverExtraFee =
     :> MandatoryQueryParam "startDistance" Meters
     :> ReqBody '[JSON] CreateFPDriverExtraFeeReq
     :> Post '[JSON] APISuccess
+
+---------------------------------------------------------
+-- Update Fare Policy -----------------------------------
+
+type UpdateFarePolicy =
+  "updateFarePolicy"
+    :> ReqBody '[JSON] Common.FullFarePolicyUpdateReq
+    :> Post '[JSON] APISuccess
+
+---------------------------------------------------------
+-- Update Fare Product -----------------------------------
+
+type UpdateFareProduct =
+  "updateFareProduct"
+    :> ReqBody '[JSON] UpdateFareProductReq
+    :> Post '[JSON] APISuccess
+
+data UpdateFareProductReq = UpdateFareProductReq
+  { vehicleVariant :: Common.Variant,
+    farePolicyId :: Id Common.FarePolicy,
+    area :: Common.Area,
+    flow :: Common.FlowType
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpdateFareProductReq where
+  hideSecrets = identity

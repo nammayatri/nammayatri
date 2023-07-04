@@ -126,7 +126,9 @@ data MerchantAPIs = MerchantAPIs
     smsServiceUsageConfigUpdate :: Merchant.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
     verificationServiceConfigUpdate :: Merchant.VerificationServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
     createFPDriverExtraFee :: Id Common.FarePolicy -> Meters -> Merchant.CreateFPDriverExtraFeeReq -> Euler.EulerClient APISuccess,
-    updateFPDriverExtraFee :: Id Common.FarePolicy -> Meters -> Merchant.CreateFPDriverExtraFeeReq -> Euler.EulerClient APISuccess
+    updateFPDriverExtraFee :: Id Common.FarePolicy -> Meters -> Merchant.CreateFPDriverExtraFeeReq -> Euler.EulerClient APISuccess,
+    updateFarePolicy :: Common.FullFarePolicyUpdateReq -> Euler.EulerClient APISuccess,
+    updateFareProduct :: Common.UpdateFareProductReq -> Euler.EulerClient APISuccess
   }
 
 data DriverReferralAPIs = DriverReferralAPIs
@@ -244,7 +246,9 @@ mkDriverOfferAPIs merchantId token = do
       :<|> smsServiceUsageConfigUpdate
       :<|> verificationServiceConfigUpdate
       :<|> createFPDriverExtraFee
-      :<|> updateFPDriverExtraFee = merchantClient
+      :<|> updateFPDriverExtraFee
+      :<|> updateFarePolicy
+      :<|> updateFareProduct = merchantClient
 
     updateReferralLinkPassword
       :<|> linkDriverReferralCode = driverReferralClient

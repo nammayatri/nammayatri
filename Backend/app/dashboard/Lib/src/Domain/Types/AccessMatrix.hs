@@ -141,6 +141,8 @@ data UserActionType
   | UPDATE_FP_DRIVER_EXTRA_FEE
   | BALANCE_DUE
   | COLLECT_CASH
+  | UPDATE_FARE_POLICY
+  | UPDATE_FARE_PRODUCT
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''UserActionType]
