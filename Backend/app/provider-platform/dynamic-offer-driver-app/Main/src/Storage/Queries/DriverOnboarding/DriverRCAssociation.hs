@@ -25,14 +25,13 @@ import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude hiding (on)
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.DriverRCAssociation as BeamDRCA
-import Storage.Tabular.DriverOnboarding.DriverRCAssociation
-import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
+import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as BeamVRC
+import Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as QVRC
 
 create :: L.MonadFlow m => DriverRCAssociation -> m ()
 create driverRCAssociation = do
@@ -62,8 +61,17 @@ getActiveAssociationByDriver (Id personId) = do
     Just dbCOnf' -> either (pure Nothing) (transformBeamDriverRCAssociationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamDRCA.driverId $ Se.Eq personId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now]]
     Nothing -> pure Nothing
 
+-- findAllByDriverId ::
+--   Transactionable m =>
+--   Id Person ->
+--   m [(DriverRCAssociation, VehicleRegistrationCertificate)]
+-- findAllByDriverId driverId = do
+--   rcAssocs <- getRcAssocs driverId
+--   regCerts <- getRegCerts rcAssocs
+--   return $ linkDriversRC rcAssocs regCerts
+
 findAllByDriverId ::
-  Transactionable m =>
+  L.MonadFlow m =>
   Id Person ->
   m [(DriverRCAssociation, VehicleRegistrationCertificate)]
 findAllByDriverId driverId = do
@@ -90,33 +98,72 @@ buildCertHM :: [VehicleRegistrationCertificate] -> HashMap.HashMap Text VehicleR
 buildCertHM regCerts =
   HashMap.fromList $ map (\r -> (r.id.getId, r)) regCerts
 
-getRegCerts ::
-  Transactionable m =>
-  [DriverRCAssociation] ->
-  m [VehicleRegistrationCertificate]
+-- getRegCerts ::
+--   Transactionable m =>
+--   [DriverRCAssociation] ->
+--   m [VehicleRegistrationCertificate]
+-- getRegCerts rcAssocs = do
+--   Esq.findAll $ do
+--     regCerts <- from $ table @VehicleRegistrationCertificateT
+--     where_ $
+--       regCerts ^. VehicleRegistrationCertificateTId `in_` valList rcAssocsKeys
+--     return regCerts
+--   where
+--     rcAssocsKeys = toKey . cast <$> fetchRcIdFromAssocs rcAssocs
+
+getRegCerts :: L.MonadFlow m => [DriverRCAssociation] -> m [VehicleRegistrationCertificate]
 getRegCerts rcAssocs = do
-  Esq.findAll $ do
-    regCerts <- from $ table @VehicleRegistrationCertificateT
-    where_ $
-      regCerts ^. VehicleRegistrationCertificateTId `in_` valList rcAssocsKeys
-    return regCerts
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamVRC.VehicleRegistrationCertificateT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      result <-
+        KV.findAllWithKVConnector
+          dbConf'
+          updatedMeshConfig
+          [Se.Is BeamVRC.id $ Se.In $ getId <$> rcAssocsKeys]
+      case result of
+        Left _ -> pure []
+        Right result' -> pure $ QVRC.transformBeamVehicleRegistrationCertificateToDomain <$> result'
+    Nothing -> pure []
   where
-    rcAssocsKeys = toKey . cast <$> fetchRcIdFromAssocs rcAssocs
+    rcAssocsKeys = fetchRcIdFromAssocs rcAssocs
 
 fetchRcIdFromAssocs :: [DriverRCAssociation] -> [Id VehicleRegistrationCertificate]
 fetchRcIdFromAssocs = map (.rcId)
 
-getRcAssocs ::
-  Transactionable m =>
-  Id Person ->
-  m [DriverRCAssociation]
-getRcAssocs driverId = do
-  Esq.findAll $ do
-    rcAssoc <- from $ table @DriverRCAssociationT
-    where_ $
-      rcAssoc ^. DriverRCAssociationDriverId ==. val (toKey driverId)
-    orderBy [desc $ rcAssoc ^. DriverRCAssociationAssociatedOn]
-    return rcAssoc
+-- getRcAssocs ::
+--   Transactionable m =>
+--   Id Person ->
+--   m [DriverRCAssociation]
+-- getRcAssocs driverId = do
+--   Esq.findAll $ do
+--     rcAssoc <- from $ table @DriverRCAssociationT
+--     where_ $
+--       rcAssoc ^. DriverRCAssociationDriverId ==. val (toKey driverId)
+--     orderBy [desc $ rcAssoc ^. DriverRCAssociationAssociatedOn]
+--     return rcAssoc
+
+getRcAssocs :: L.MonadFlow m => Id Person -> m [DriverRCAssociation]
+getRcAssocs (Id driverId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDRCA.DriverRCAssociationT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' -> do
+      result <-
+        KV.findAllWithOptionsKVConnector
+          dbConf'
+          updatedMeshConfig
+          [Se.Is BeamDRCA.driverId $ Se.Eq driverId]
+          (Se.Desc BeamDRCA.associatedOn)
+          Nothing
+          Nothing
+      case result of
+        Left _ -> pure []
+        Right result' -> pure $ transformBeamDriverRCAssociationToDomain <$> result'
+    Nothing -> pure []
 
 getActiveAssociationByRC :: (L.MonadFlow m, MonadTime m) => Id VehicleRegistrationCertificate -> m (Maybe DriverRCAssociation)
 getActiveAssociationByRC (Id rcId) = do

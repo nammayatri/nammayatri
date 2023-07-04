@@ -29,7 +29,6 @@ import EulerHS.KVConnector.Types (MeshError (MKeyNotFound), MeshResult)
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -59,13 +58,30 @@ create config = do
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainOnboardingDocumentConfigToBeam config)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-findAllByMerchantId :: Transactionable m => Id Merchant -> m [OnboardingDocumentConfig]
-findAllByMerchantId merchantId =
-  Esq.findAll $ do
-    config <- from $ table @OnboardingDocumentConfigT
-    where_ $
-      config ^. OnboardingDocumentConfigMerchantId ==. val (toKey merchantId)
-    return config
+-- findAllByMerchantId :: Transactionable m => Id Merchant -> m [OnboardingDocumentConfig]
+-- findAllByMerchantId merchantId =
+--   Esq.findAll $ do
+--     config <- from $ table @OnboardingDocumentConfigT
+--     where_ $
+--       config ^. OnboardingDocumentConfigMerchantId ==. val (toKey merchantId)
+--     return config
+
+findAllByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [OnboardingDocumentConfig]
+findAllByMerchantId (Id merchantId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamODC.OnboardingDocumentConfigT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbCOnf' -> do
+      result <-
+        KV.findAllWithKVConnector
+          dbCOnf'
+          updatedMeshConfig
+          [Se.Is BeamODC.merchantId $ Se.Eq merchantId]
+      case result of
+        Left _ -> pure []
+        Right result' -> mapM transformBeamOnboardingDocumentConfigToDomain result'
+    Nothing -> pure []
 
 -- update :: OnboardingDocumentConfig -> SqlDB ()
 -- update config = do
