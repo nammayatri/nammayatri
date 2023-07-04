@@ -64,6 +64,7 @@ data TransporterConfigT f = TransporterConfigT
     timeDiffFromUtc :: B.C f Seconds,
     subscription :: B.C f Bool,
     minLocationAccuracy :: B.C f Double,
+    aadhaarVerificationRequired :: B.C f Bool,
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }
@@ -124,6 +125,7 @@ transporterConfigTMod =
       timeDiffFromUtc = B.fieldNamed "time_diff_from_utc",
       subscription = B.fieldNamed "subscription",
       minLocationAccuracy = B.fieldNamed "min_location_accuracy",
+      aadhaarVerificationRequired = B.fieldNamed "aadhaar_verification_required",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }

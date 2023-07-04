@@ -41,7 +41,7 @@ import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
-import Servant.Client (BaseUrl (..))
+-- import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
 import qualified SharedLogic.DriverMode as DMode

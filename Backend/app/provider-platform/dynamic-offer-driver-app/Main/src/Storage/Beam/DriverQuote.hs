@@ -100,12 +100,6 @@ instance FromJSON DriverQuote where
 instance ToJSON DriverQuote where
   toJSON = A.genericToJSON A.defaultOptions
 
-instance FromJSON Domain.DriverQuoteStatus where
-  parseJSON = A.genericParseJSON A.defaultOptions
-
-instance ToJSON Domain.DriverQuoteStatus where
-  toJSON = A.genericToJSON A.defaultOptions
-
 deriving stock instance Show DriverQuote
 
 driverQuoteTMod :: DriverQuoteT (B.FieldModification (B.TableField DriverQuoteT))

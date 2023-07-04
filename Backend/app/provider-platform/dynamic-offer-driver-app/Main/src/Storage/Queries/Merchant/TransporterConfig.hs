@@ -195,6 +195,7 @@ transformBeamTransporterConfigToDomain BeamTC.TransporterConfigT {..} = do
         timeDiffFromUtc = timeDiffFromUtc,
         subscription = subscription,
         minLocationAccuracy = minLocationAccuracy,
+        aadhaarVerificationRequired = aadhaarVerificationRequired,
         createdAt = createdAt,
         updatedAt = updatedAt
       }
@@ -233,6 +234,7 @@ transformDomainTransporterConfigToBeam TransporterConfig {..} =
       BeamTC.timeDiffFromUtc = timeDiffFromUtc,
       BeamTC.subscription = subscription,
       BeamTC.minLocationAccuracy = minLocationAccuracy,
+      BeamTC.aadhaarVerificationRequired = aadhaarVerificationRequired,
       BeamTC.createdAt = createdAt,
       BeamTC.updatedAt = updatedAt
     }

@@ -31,7 +31,7 @@ import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Scheduler
-import Lib.Scheduler.JobStorageType.DB.Queries (createJobIn)
+import Lib.Scheduler.JobStorageType.DB.Queries (createJobIn')
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers
