@@ -14,6 +14,7 @@
 
 module Domain.Action.Dashboard.Person where
 
+import Dashboard.Common
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantAccess as DAccess
@@ -46,8 +47,10 @@ import qualified Tools.Auth.Common as Auth
 import qualified Tools.Client as Client
 import Tools.Error
 
-newtype ListPersonRes = ListPersonRes
-  {list :: [DP.PersonAPIEntity]}
+data ListPersonRes = ListPersonRes
+  { list :: [DP.PersonAPIEntity],
+    summary :: Summary
+  }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 newtype MerchantAccessReq = MerchantAccessReq
@@ -117,7 +120,9 @@ listPerson _ mbSearchString mbLimit mbOffset mbPersonId = do
   res <- forM personAndRoleList $ \(encPerson, role, merchantAccessList) -> do
     decPerson <- decrypt encPerson
     pure $ DP.makePersonAPIEntity decPerson role merchantAccessList
-  pure $ ListPersonRes res
+  let count = length res
+  let summary = Summary {totalCount = count, count}
+  pure $ ListPersonRes {list = res, summary = summary}
 
 assignRole ::
   EsqDBFlow m r =>
