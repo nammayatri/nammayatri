@@ -105,7 +105,7 @@ zoneView state =
      [ width (V 15)
      , height (V 15)
      , margin (MarginRight 6)
-     , imageWithFallback "ny_ic_metro_white,https://assets.juspay.in/nammayatri/images/common/ny_ic_metro_white.png"
+     , imageWithFallback "ny_ic_metro_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_metro_white.png"
      ]
    , textView
      [ width WRAP_CONTENT

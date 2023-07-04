@@ -79,7 +79,7 @@ view push state =
             ][ imageView
                 [ width (V 20)
                 , height (V 20)
-                , imageWithFallback "ny_ic_metro_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_metro_blue.png"
+                , imageWithFallback "ny_ic_metro_blue,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_metro_blue.png"
                 , margin (MarginRight 5)
                 ]
               , textView
