@@ -14,6 +14,7 @@
 
 module Domain.Action.Dashboard.Roles where
 
+import Dashboard.Common
 import qualified Domain.Types.AccessMatrix as DMatrix
 import Domain.Types.Role
 import qualified Domain.Types.Role as DRole
@@ -42,8 +43,9 @@ data AssignAccessLevelReq = AssignAccessLevelReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-newtype ListRoleRes = ListRoleRes
-  { list :: [RoleAPIEntity]
+data ListRoleRes = ListRoleRes
+  { list :: [RoleAPIEntity],
+    summary :: Summary
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -128,4 +130,6 @@ listRoles _ mbSearchString mbLimit mbOffset = do
   personAndRoleList <- Esq.runInReplica $ QRole.findAllWithLimitOffset mbLimit mbOffset mbSearchString
   res <- forM personAndRoleList $ \role -> do
     pure $ mkRoleAPIEntity role
-  pure $ ListRoleRes res
+  let count = length res
+  let summary = Summary {totalCount = count, count}
+  pure $ ListRoleRes {list = res, summary = summary}
