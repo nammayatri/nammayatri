@@ -102,6 +102,7 @@ primaryEditTextConfig state = let
         , margin = (MarginTop 1)
         }
       , showErrorLabel = state.props.placeNameExists
+      , width = MATCH_PARENT
       }
     in primaryEditTextConfig'
 

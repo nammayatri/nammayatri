@@ -526,7 +526,7 @@ savePlaceView state push =
           , margin (MarginTop 24)
           , padding (PaddingBottom 2)
           , visibility if state.data.activeIndex == Just 2 then VISIBLE else GONE
-          ][ PrimaryEditText.view (push <<< PrimaryEditTextAC ) (primaryEditTextConfig state) ]
+          ](if state.data.activeIndex == Just 2 then [PrimaryEditText.view (push <<< PrimaryEditTextAC ) (primaryEditTextConfig state)] else [] )
         ]]
     , linearLayout
       [ alignParentBottom "true,-1"

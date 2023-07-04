@@ -112,7 +112,7 @@ view push state = let
           --   [ Anim.fadeIn state.props.enterOTP
           --   , Anim.fadeOut  (not state.props.enterOTP)
           --   ]  $
-          , enterOTPView state lang push
+          , if state.props.enterOTP then (enterOTPView state lang push) else textView[]
           ]
       ]
     ]
@@ -174,7 +174,6 @@ enterOTPView state lang push =
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , visibility  if state.props.enterOTP then VISIBLE else GONE
     , alpha if state.props.enterOTP then 1.0 else 0.0
     , orientation VERTICAL
     ][PrestoAnim.animationSet

@@ -26,7 +26,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (not, (<>))
-import PrestoDOM (Length(..), Margin(..), Visibility(..), Padding(..))
+import PrestoDOM (Length(..), Margin(..), Visibility(..), Padding(..), Gravity(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
@@ -106,11 +106,13 @@ otpEditTextConfig state = let
         , placeholder = (getString ENTER_4_DIGIT_OTP)
         , singleLine = true
         , pattern = Just "[0-9]*,4"
+        , margin = MarginHorizontal 10 10
         , fontStyle = FontStyle.bold LanguageStyle
         , textSize = FontSize.a_16
         , letterSpacing = state.props.letterSpacing
         , text = ""
         , focused = state.props.otpEdtFocused
+        , gravity = LEFT
         }
       , background = Color.white900
       , margin = (Margin 0 30 0 20)
@@ -131,6 +133,7 @@ otpEditTextConfig state = let
             fontStyle = FontStyle.bold LanguageStyle,
             alpha = 0.8
       },
+      width = MATCH_PARENT,
       showErrorLabel = state.props.wrongOTP, 
       stroke = if state.props.wrongOTP then ("1," <> Color.warningRed) else ("1," <> Color.borderColorLight)
       }

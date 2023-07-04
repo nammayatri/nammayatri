@@ -408,6 +408,7 @@ primaryButtonConfig state =
         { text = if state.isSearchLocation == LocateOnMap then if state.isSource == Just true then (getString CONFIRM_PICKUP_LOCATION) else (getString CONFIRM_DROP_LOCATION) else ""
         , color = Color.yellow900
         , textSize = FontSize.a_16
+        , height = V 40
         }
       , height = V 60
       , gravity = CENTER

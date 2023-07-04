@@ -151,5 +151,6 @@ primaryEditTextConfig state =
         , margin = (MarginVertical 4 4)
         }
       , showErrorLabel = state.tagExists
+      , width = MATCH_PARENT
       }
     in config'
