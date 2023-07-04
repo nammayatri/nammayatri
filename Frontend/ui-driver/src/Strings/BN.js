@@ -488,7 +488,7 @@ const bengaliStrings = {
 	GETTING_THE_LEADERBOARD_READY : "লিডারবোর্ড তৈরি করা হচ্ছে!",
 	PLEASE_WAIT_WHILE_WE_UPDATE_THE_DETAILS : "আমরা বিস্তারিত আপডেট করা পর্যন্ত অপেক্ষা করুন",
 	LAST_UPDATED : "সর্বশেষ আপডেট: ",
-	CONGRATULATIONS_YOU_ARE_RANK : "অভিনন্দন! আপনি র্যাঙ্ক ",
+	CONGRATULATIONS_YOU_ARE_RANK : "অভিনন্দন! আপনার র্যাঙ্ক হল ",
 	YOU : " (আপনি)",
 	DAILY : "দৈনিক",
 	WEEKLY : "সাপ্তাহিক"
