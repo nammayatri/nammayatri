@@ -485,7 +485,7 @@ const kannadaStrings = {
   GETTING_THE_LEADERBOARD_READY : "ಲೀಡರ್‌ಬೋರ್ಡ್ ರಚಿಸಲಾಗುತ್ತಿದೆ!",
   PLEASE_WAIT_WHILE_WE_UPDATE_THE_DETAILS : "ನಾವು ವಿವರಗಳನ್ನು ನವೀಕರಿಸುವವರೆಗೆ ದಯವಿಟ್ಟು ನಿರೀಕ್ಷಿಸಿ",
   LAST_UPDATED : "ಕೊನೆಯ ನವೀಕರಣ: ",
-  CONGRATULATIONS_YOU_ARE_RANK : "ಅಭಿನಂದನೆಗಳು! ನಿಮ್ಮ ಶ್ರೇಣಿ ",
+  CONGRATULATIONS_YOU_ARE_RANK : "ಅಭಿನಂದನೆಗಳು ! ನಿಮ್ಮ ಶ್ರೇಣಿ ",
   YOU : " (ನೀವು)",
   DAILY : "ಪ್ರತಿದಿನ",
   WEEKLY : "ಸಾಪ್ತಾಹಿಕ"
