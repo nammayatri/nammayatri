@@ -60,7 +60,7 @@ import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, lift
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (Merchant(..), decodeErrorMessage, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getMerchant, getNewTrackingId, getPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, waitingCountdownTimer)
-import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen)
+import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, startTimerWithTime, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -125,7 +125,7 @@ screen initialState =
               FindingQuotes -> do
                 when ((getValueToLocalStore FINDING_QUOTES_POLLING) == "false") $ do
                   _ <- pure $ setValueToLocalStore FINDING_QUOTES_POLLING "true"
-                  _ <- countDown initialState.props.searchExpire "" push SearchExpireCountDown
+                  _ <- if os == "IOS" then startTimerWithTime (show initialState.props.searchExpire) "" "1" push SearchExpireCountDown else countDown initialState.props.searchExpire "" push SearchExpireCountDown
                   _ <- pure $ setValueToLocalStore GOT_ONE_QUOTE "FALSE"
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   let pollingCount = ceil ((toNumber initialState.props.searchExpire)/((fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) / 1000.0))

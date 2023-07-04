@@ -1441,11 +1441,13 @@ export const startTimerWithTime = function (time) {
     return function (interval) {
       return function (cb) {
         return function (action) {
-          var callback = callbackMapper.map(function (seconds,quoteID,status,timerID) {
-            cb(action(seconds)(quoteID)(status)(timerID))();
-          });
-          if (JBridge.startCountDownTimerWithTime)  {
-            return JBridge.startCountDownTimerWithTime(time, interval, qouteId, callback);}
+          return function () {
+            var callback = callbackMapper.map(function (seconds,quoteID,status,timerID) {
+              cb(action(seconds)(quoteID)(status)(timerID))();
+            });
+            if (JBridge.startCountDownTimerWithTime)  {
+              return JBridge.startCountDownTimerWithTime(time, interval, qouteId, callback);}
+          }
         }
       }
     }
