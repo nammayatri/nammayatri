@@ -276,13 +276,13 @@ supportButton push state =
       , height $ V 18
       , width $ V 18
       , margin $ Margin 10 10 10 4
-      , visibility (if (getValueFromConfig "enableShareRide") == "true" then VISIBLE else GONE)
+      , visibility GONE -- (if (getValueFromConfig "enableShareRide") == "true" then VISIBLE else GONE) -- TODO:: temp. disable share ride since share ride is not working
       , onClick push $ const ShareRide
       ]
     , linearLayout
       [ height (V 1)
       , width (V 19)
-      , visibility (if (getValueFromConfig "enableShareRide") == "true" then VISIBLE else GONE)
+      , visibility GONE -- (if (getValueFromConfig "enableShareRide") == "true" then VISIBLE else GONE) -- TODO:: temp. disable share ride since share ride is not working
       , margin (MarginTop 8 )
       , background Color.lightGreyShade
       ][]
@@ -334,7 +334,7 @@ sosView push state =
     ]
 
 messageNotificationView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
-messageNotificationView push state = 
+messageNotificationView push state =
   PrestoAnim.animationSet [ fadeIn state.props.showChatNotification ] $
   linearLayout
   [ height $ V 84
