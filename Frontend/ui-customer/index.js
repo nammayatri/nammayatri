@@ -243,8 +243,12 @@ window["onEvent'"] = function (event, args) {
 function refreshFlow(){
   let currentDate = new Date();
   let diff = Math.abs(previousDateObject - currentDate) / 1000;
-  let token = ((window.JBridge.getKeysInSharedPrefs("REGISTERATION_TOKEN")));
-  if ((diff > refreshThreshold) && (token != "__failed") && (token != "(null)")){
+  let token = (window.JBridge.getKeysInSharedPrefs("REGISTERATION_TOKEN"));
+  let currentState = (window.JBridge.getKeysInSharedPrefs("LOCAL_STAGE"));
+  if ((diff > refreshThreshold) && 
+      (token != "__failed") && 
+      (token != "(null)") &&
+      ((currentState == "RideStarted") || currentState == "RideAccepted")){
     purescript.onConnectivityEvent("REFRESH")();
   }
 }
