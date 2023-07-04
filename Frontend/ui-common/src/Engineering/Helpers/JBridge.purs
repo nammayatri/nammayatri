@@ -161,7 +161,7 @@ foreign import storeCallBackOpenChatScreen :: forall action. (action -> Effect U
 foreign import sendMessage :: String -> Unit
 foreign import getSuggestionsfromKey :: String -> Array String
 foreign import getSuggestionfromKey :: String -> String -> String
-foreign import scrollToBottom :: String -> Effect Unit
+foreign import scrollToEnd :: String -> Boolean -> Effect Unit
 foreign import metaLogEvent :: String -> Unit
 foreign import firebaseLogEvent :: String -> Unit
 foreign import firebaseLogEventWithParams :: String -> String -> String -> Effect Unit
@@ -197,7 +197,7 @@ foreign import getMainFiber :: forall f a. Fn2 (f -> Maybe f) (Maybe f) (Maybe (
 foreign import detectPhoneNumbers :: forall action. (action -> Effect Unit) -> (String  -> action) -> Effect Unit
 foreign import setCleverTapUserData :: String -> String -> Unit
 foreign import setCleverTapUserProp :: String -> String -> Unit
-foreign import cleverTapCustomEvent :: String -> Unit 
+foreign import cleverTapCustomEvent :: String -> Unit
 foreign import cleverTapCustomEventWithParams :: String -> String -> String -> Effect Unit
 foreign import cleverTapSetLocation :: Unit -> Effect Unit
 foreign import saveToLocalStoreImpl :: String -> String -> EffectFnAff Unit
@@ -396,7 +396,7 @@ instance genericSerializable :: (Encode a, Decode a) => Serializable a where
   deserialize = decodeJSON >>> runExcept >>> hush
 
 saveSuggestions :: forall s. Serializable s => String -> s -> Flow GlobalState Unit
-saveSuggestions objName obj = 
+saveSuggestions objName obj =
   doAff do
     (fromEffectFnAff <<< saveToLocalStore' objName $ (serialize obj))
 

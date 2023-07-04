@@ -15,8 +15,8 @@
 
 module Screens.ReferralScreen.Controller where
 
-import Prelude (bind , class Show, pure, unit, ($), discard , (>=) , (<=) ,(==),(&&) , not ,(+) , show , void)
-import Screens.Types (ReferralScreenState, ReferralType(..))
+import Prelude (bind , class Show, pure, unit, ($), discard , (>=) , (<=) ,(==),(&&) , not ,(+) , show , void, (<>), when, map, (-), (>))
+import Screens.Types (ReferralScreenState, ReferralType(..), LeaderBoardType(..), DateSelector(..), RankCardData)
 import Components.BottomNavBar as BottomNavBar
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryEditText.Controllers as PrimaryEditText
@@ -28,11 +28,18 @@ import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress , trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
 import Data.String (length)
-import JBridge (hideKeyboardOnNavigation, toast, showDialer, firebaseLogEvent)
+import JBridge (hideKeyboardOnNavigation, toast, showDialer, firebaseLogEvent, scrollToEnd)
 import Services.Config (getSupportNumber)
 import Debug (spy)
-import Helpers.Utils (clearTimer)
+import Helpers.Utils (clearTimer, getPastDays, getPastWeeks, convertUTCtoISC)
 import Storage (setValueToLocalNativeStore, KeyStore(..))
+import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC)
+import Data.Array (last, (!!), init, replicate, filter, sortWith, any)
+import Data.Array (length) as DA
+import Data.Maybe (Maybe(..))
+import Services.APITypes (LeaderBoardRes(..), DriversInfo(..))
+import Data.Maybe (fromMaybe)
+import Screens.ReferralScreen.ScreenData as RSD
 
 
 instance showAction :: Show Action where
@@ -96,6 +103,14 @@ instance loggableAction :: Loggable Action where
     EnableReferralFlow -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "in_screen" "enable_referral_flow"
     EnableReferralFlowNoAction -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "in_screen" "enable_referral_flow_no_action"
     SuccessScreenRenderAction -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "your_referral_code_is_linked"
+    ChangeLeaderBoardtab _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "change_leader_board_tab"
+    DateSelectorAction -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "date_selector_clicked"
+    ChangeDate date ->
+      case date of
+        DaySelector _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "day_changed"
+        WeekSelector _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "week_changed"
+    UpdateLeaderBoard _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "update_leaderBoard"
+    UpdateLeaderBoardFailed -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "in_screen" "update_leaderBoard_failed"
 
 data Action = BottomNavBarAction BottomNavBar.Action
             | GenericHeaderActionController GenericHeader.Action
@@ -109,8 +124,13 @@ data Action = BottomNavBarAction BottomNavBar.Action
             | EnableReferralFlow
             | BackPressed
             | EnableReferralFlowNoAction
-            | AfterRender
             | SuccessScreenRenderAction
+            | ChangeLeaderBoardtab LeaderBoardType
+            | DateSelectorAction
+            | ChangeDate DateSelector
+            | UpdateLeaderBoard LeaderBoardRes
+            | AfterRender
+            | UpdateLeaderBoardFailed
 
 data ScreenOutput = GoToHomeScreen
                   | GoBack
@@ -118,7 +138,54 @@ data ScreenOutput = GoToHomeScreen
                   | GoToProfileScreen
                   | GoToNotifications
                   | LinkReferralApi ReferralScreenState
+                  | Refresh ReferralScreenState
+
 eval :: Action -> ReferralScreenState -> Eval Action ScreenOutput ReferralScreenState
+
+eval (UpdateLeaderBoard (LeaderBoardRes leaderBoardRes)) state = do
+  let dataLength = DA.length leaderBoardRes.driverList
+      rankersData = sortWith (_.rank) (transformLeaderBoardList (filter (\(DriversInfo info) -> info.rank <= 10 && info.totalRides > 0 && info.rank > 0) leaderBoardRes.driverList)) <> (replicate (10 - dataLength) RSD.dummyRankData)
+      currentDriverData = case (filter (\(DriversInfo info) -> info.isCurrentDriver && info.rank > 0 && info.totalRides > 0) leaderBoardRes.driverList) !! 0 of
+                            Just driverData -> transformLeaderBoard driverData
+                            Nothing         -> RSD.dummyRankData
+      lastUpdatedAt = convertUTCtoISC (fromMaybe (getCurrentUTC "") leaderBoardRes.lastUpdatedAt) "h:mm A"
+  let newState = state{ props { rankersData = rankersData, currentDriverData = currentDriverData, showShimmer = false, noData = not (dataLength > 0), lastUpdatedAt = lastUpdatedAt } }
+  if (any (_ == "") [state.props.selectedDay.utcDate, state.props.selectedWeek.utcStartDate, state.props.selectedWeek.utcEndDate]) then do
+    let pastDates = getPastDays 7
+        pastWeeks = getPastWeeks 4
+        selectedDay = case last pastDates of
+                        Just date -> date
+                        Nothing -> state.props.selectedDay
+        selectedWeek = case last pastWeeks of
+                        Just week -> week
+                        Nothing -> state.props.selectedWeek
+    continue newState{ props{ days = pastDates, weeks = pastWeeks, selectedDay = selectedDay, selectedWeek = selectedWeek } }
+  else continue newState
+
+eval UpdateLeaderBoardFailed state = continue state{ props{ showShimmer = false, noData = true } }
+
+eval (ChangeDate (DaySelector item)) state = do
+  if state.props.selectedDay == item then
+    continue state
+  else do
+    let newState = state { props { selectedDay = item, showShimmer = true } }
+    updateAndExit newState $ Refresh newState
+
+eval (ChangeDate (WeekSelector item)) state =
+  if state.props.selectedWeek == item then
+    continue state
+  else do
+    let newState = state { props { selectedWeek = item, showShimmer = true } }
+    updateAndExit newState $ Refresh newState
+
+eval DateSelectorAction state = do
+  _ <- pure $ scrollToEnd (getNewIDWithTag "DateSelector") false
+  continue state { props { showDateSelector = not state.props.showDateSelector } }
+
+eval (ChangeLeaderBoardtab tab) state = do
+  _ <- pure $ scrollToEnd (getNewIDWithTag "DateSelector") false
+  let newState = state { props { leaderBoardType = tab, showShimmer = true } }
+  updateAndExit newState $ Refresh newState
 
 eval BackPressed state = exit $ GoBack
 
@@ -189,3 +256,15 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
     _ -> continue state
 
 eval _ state = continue state
+
+
+transformLeaderBoardList :: (Array DriversInfo) -> Array RankCardData
+transformLeaderBoardList driversList = map (\x -> transformLeaderBoard x) driversList
+
+transformLeaderBoard :: DriversInfo -> RankCardData
+transformLeaderBoard (DriversInfo driversInfo) = {
+    goodName : driversInfo.name
+  , profileUrl : Nothing
+  , rank : driversInfo.rank
+  , rides : driversInfo.totalRides
+}

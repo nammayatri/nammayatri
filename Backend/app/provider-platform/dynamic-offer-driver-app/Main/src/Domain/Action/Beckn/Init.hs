@@ -37,6 +37,7 @@ import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBAP as BP
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Exophone as CQExophone
@@ -50,6 +51,7 @@ import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestSpecialZone as QSRSpecialZone
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
+import Tools.Event
 
 data InitReq = InitReq
   { driverQuoteId :: Text,
@@ -118,7 +120,15 @@ cancelBooking booking transporterId = do
             driverDistToPickup = Nothing
           }
 
-handler :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> Either (DDQ.DriverQuote, DSR.SearchRequest, DST.SearchTry) (DQSZ.QuoteSpecialZone, DSRSZ.SearchRequestSpecialZone) -> m InitRes
+handler ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EventStreamFlow m r
+  ) =>
+  Id DM.Merchant ->
+  InitReq ->
+  Either (DDQ.DriverQuote, DSR.SearchRequest, DST.SearchTry) (DQSZ.QuoteSpecialZone, DSRSZ.SearchRequestSpecialZone) ->
+  m InitRes
 handler merchantId req eitherReq = do
   transporter <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   now <- getCurrentTime
@@ -134,6 +144,7 @@ handler merchantId req eitherReq = do
       case eitherReq of
         Left (driverQuote, searchRequest, searchTry) -> do
           booking <- buildBooking searchRequest driverQuote searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id))
+          triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
           -- Esq.runTransaction $ do
           QST.updateStatus searchTry.id DST.COMPLETED
           _ <- QRB.create booking

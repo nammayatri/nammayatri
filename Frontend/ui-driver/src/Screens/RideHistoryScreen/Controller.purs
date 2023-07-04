@@ -126,7 +126,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
       exit $ GoToNotification
-    "Contest" -> do
+    "Rankings" -> do
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
       exit $ GoToReferralScreen
     _ -> continue state

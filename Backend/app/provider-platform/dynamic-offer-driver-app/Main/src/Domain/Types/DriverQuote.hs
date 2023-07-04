@@ -28,7 +28,7 @@ import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 
 data DriverQuoteStatus = Active | Inactive
-  deriving (Show, Read, Eq, Generic, Ord)
+  deriving (Show, Read, Eq, Generic, Ord, ToJSON, FromJSON)
   deriving (PrettyShow) via Showable DriverQuoteStatus
 
 data DriverQuote = DriverQuote

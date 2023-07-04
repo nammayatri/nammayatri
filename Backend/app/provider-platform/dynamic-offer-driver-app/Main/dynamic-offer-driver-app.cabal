@@ -490,6 +490,7 @@ library
       Tools.Auth
       Tools.Call
       Tools.Error
+      Tools.Event
       Tools.Maps
       Tools.Metrics
       Tools.Metrics.ARDUBPPMetrics
@@ -586,6 +587,7 @@ library
     , servant-multipart
     , servant-openapi3
     , servant-server
+    , sessionizer-metrics
     , shared-services
     , singletons
     , special-zone-a

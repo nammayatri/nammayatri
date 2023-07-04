@@ -1379,11 +1379,11 @@ instance encodeRemoveAlternateNumberRequest :: Encode RemoveAlternateNumberReque
 data GetCategoriesReq = GetCategoriesReq String
 
 newtype GetCategoriesRes = GetCategoriesRes { categories :: Array Category }
-  
+
 newtype Category = Category
-  { label    :: String 
-  , logoUrl  :: String 
-  , category :: String 
+  { label    :: String
+  , logoUrl  :: String
+  , category :: String
   , issueCategoryId :: String
   }
 
@@ -1414,8 +1414,8 @@ instance encodeGetCategoriesRes         :: Encode GetCategoriesRes where encode 
 data GetOptionsReq = GetOptionsReq String String
 
 newtype GetOptionsRes = GetOptionsRes { options :: Array Option }
-  
-newtype Option = Option 
+
+newtype Option = Option
   { label  :: String
   , option :: String
   , issueOptionId :: String
@@ -1527,14 +1527,14 @@ instance encodeCallCustomerRes  :: Encode CallCustomerRes where encode = default
 -------------------------------------------- FetchIssueList -------------------------------------------
 
 
-data FetchIssueListReq = FetchIssueListReq 
+data FetchIssueListReq = FetchIssueListReq
 
-newtype FetchIssueListResp = FetchIssueListResp 
+newtype FetchIssueListResp = FetchIssueListResp
  {
    issues :: Array IssueReportDriverListItem
  }
 
-newtype IssueReportDriverListItem = IssueReportDriverListItem 
+newtype IssueReportDriverListItem = IssueReportDriverListItem
   {
     issueReportId :: String,
     status :: String,
@@ -1573,8 +1573,8 @@ instance encodeFetchIssueListReq :: Encode FetchIssueListReq where encode = defa
 
 ------------------------------------------ deleteIssue --------------------------------------
 
-newtype DeleteIssueReq = DeleteIssueReq String 
- 
+newtype DeleteIssueReq = DeleteIssueReq String
+
 
 newtype DeleteIssueResp =  DeleteIssueResp  ApiSuccessResult
 
@@ -1601,7 +1601,7 @@ instance encodeDeleteIssueResp :: Encode DeleteIssueResp where encode = defaultE
 
 
 
---------------------------------------------------- rideOtp ---------------------------------------------------- 
+--------------------------------------------------- rideOtp ----------------------------------------------------
 
 newtype OTPRideReq = OTPRideReq
     {
@@ -1659,3 +1659,49 @@ instance standardEncodeOnCallRes :: StandardEncode OnCallRes where standardEncod
 instance showOnCallRes :: Show OnCallRes where show = genericShow
 instance decodeOnCallRes :: Decode OnCallRes where decode = defaultDecode
 instance encodeOnCallRes :: Encode OnCallRes where encode = defaultEncode
+------------------------------------------------------ leaderBoard -----------------------------------------------
+
+data LeaderBoardReq = DailyRequest String
+                    | WeeklyRequest String String
+
+newtype LeaderBoardRes = LeaderBoardRes {
+    lastUpdatedAt :: Maybe String
+  , driverList :: Array DriversInfo
+}
+
+newtype DriversInfo = DriversInfo
+  { name :: String
+  , totalRides :: Int
+  , rank :: Int
+  , isCurrentDriver :: Boolean
+  , totalDistance :: Int
+  }
+
+instance makeLeaderBoardReq :: RestEndpoint LeaderBoardReq LeaderBoardRes where
+    makeRequest reqBody@(DailyRequest date) headers = defaultMakeRequest GET (EP.leaderBoardDaily date) headers reqBody
+    makeRequest reqBody@(WeeklyRequest fromDate toDate) headers = defaultMakeRequest GET (EP.leaderBoardWeekly fromDate toDate) headers reqBody
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericLeaderBoardReq :: Generic LeaderBoardReq _
+instance showLeaderBoardReq :: Show LeaderBoardReq where show = genericShow
+instance standardEncodeLeaderBoardReq :: StandardEncode LeaderBoardReq
+  where
+    standardEncode (DailyRequest _) = standardEncode {}
+    standardEncode (WeeklyRequest _ _) = standardEncode {}
+instance decodeLeaderBoardReq :: Decode LeaderBoardReq where decode = defaultDecode
+instance encodeLeaderBoardReq :: Encode LeaderBoardReq where encode = defaultEncode
+
+derive instance genericLeaderBoardRes :: Generic LeaderBoardRes _
+derive instance newtypeLeaderBoardRes :: Newtype LeaderBoardRes _
+instance showLeaderBoardRes :: Show LeaderBoardRes where show = genericShow
+instance standardEncodeLeaderBoardRes :: StandardEncode LeaderBoardRes where standardEncode (LeaderBoardRes res) = standardEncode res
+instance decodeLeaderBoardRes :: Decode LeaderBoardRes where decode = defaultDecode
+instance encodeLeaderBoardRes :: Encode LeaderBoardRes where encode = defaultEncode
+
+derive instance genericDriversInfo :: Generic DriversInfo _
+derive instance newtypeDriversInfo :: Newtype DriversInfo _
+instance showDriversInfo :: Show DriversInfo where show = genericShow
+instance standardEncodeDriversInfo :: StandardEncode DriversInfo where standardEncode (DriversInfo res) = standardEncode res
+instance decodeDriversInfo :: Decode DriversInfo where decode = defaultDecode
+instance encodeDriversInfo :: Encode DriversInfo where encode = defaultEncode

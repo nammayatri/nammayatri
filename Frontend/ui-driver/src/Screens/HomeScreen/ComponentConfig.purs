@@ -230,9 +230,15 @@ chatViewConfig state = let
 getDriverSuggestions :: ST.HomeScreenState -> Array String
 getDriverSuggestions state = case (DA.length state.data.suggestionsList == 0), (DA.length state.data.messages == 0 ) of
                                   true, true -> if (state.data.activeRide.isDriverArrived || state.data.activeRide.notifiedCustomer) then JB.getSuggestionsfromKey "driverInitialAP" else JB.getSuggestionsfromKey "driverInitialBP"
-                                  true, false -> if (state.data.activeRide.isDriverArrived || state.data.activeRide.notifiedCustomer) then JB.getSuggestionsfromKey "driverDefaultAP" else JB.getSuggestionsfromKey "driverDefaultBP"
+                                  true, false -> if (showSuggestions state) then (if (state.data.activeRide.isDriverArrived || state.data.activeRide.notifiedCustomer) then JB.getSuggestionsfromKey "driverDefaultAP" else JB.getSuggestionsfromKey "driverDefaultBP") else []
                                   false, false -> state.data.suggestionsList
                                   false, true -> JB.getSuggestionsfromKey "driverDefaultAP" 
+
+showSuggestions :: ST.HomeScreenState -> Boolean
+showSuggestions state = do
+  case (DA.last state.data.messages) of 
+    Just value -> if value.sentBy == "Driver" then false else true
+    Nothing -> true
 
 silentModeConfig :: ST.HomeScreenState -> PopUpModal.Config
 silentModeConfig state = let

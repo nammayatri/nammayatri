@@ -30,4 +30,5 @@ packages:
   lib/location-updates
   lib/special-zone
   lib/scheduler
+  lib/sessionizer-metrics
   test

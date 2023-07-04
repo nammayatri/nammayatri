@@ -31,7 +31,8 @@ import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Scheduler
-import Lib.Scheduler.JobStorageType.DB.Queries (createJobIn')
+import Lib.Scheduler.JobStorageType.DB.Queries (createJobIn)
+import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers
 import qualified SharedLogic.CallBAP as BP
@@ -58,6 +59,7 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
+import Tools.Event
 import Tools.Metrics
 import qualified Tools.Notifications as Notify
 
@@ -73,7 +75,8 @@ cancelRideImpl ::
     HasShortDurationRetryCfg r c,
     HasField "maxShards" r Int,
     HasCacheConfig r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    EventStreamFlow m r
   ) =>
   Id DRide.Ride ->
   SBCR.BookingCancellationReason ->
@@ -90,6 +93,9 @@ cancelRideImpl rideId bookingCReason = do
 
   fork "cancelRide - Notify driver" $ do
     driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+    triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = driver.id, merchantId = merchantId}
+    triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
+
     when (bookingCReason.source == SBCR.ByDriver) $
       DS.driverScoreEventHandler DST.OnDriverCancellation {merchantId = merchantId, driverId = driver.id}
     Notify.notifyOnCancel merchantId booking driver.id driver.deviceToken bookingCReason.source

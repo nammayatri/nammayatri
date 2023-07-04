@@ -32,6 +32,25 @@ let loggerConfig =
 
 let ConsumerType = < AVAILABILITY_TIME | BROADCAST_MESSAGE >
 
+let kafkaConfig = { topicName : Text, kafkaKey : Text }
+
+let eventStreamNameType = < KAFKA_STREAM | LOG_STREAM | REDIS_STREAM >
+
+let streamConfig = < KafkaStream : kafkaConfig | LogStream : Text >
+
+let eventType =
+      < RideCreated
+      | RideStarted
+      | RideEnded
+      | RideCancelled
+      | BookingCreated
+      | BookingCancelled
+      | BookingCompleted
+      | SearchRequest
+      | Quotes
+      | Estimate
+      >
+
 let httpClientOptions = { timeoutMs = +2000 }
 
 let shortDurationRetryCfg = { maxRetries = +3, baseCoefficient = +2 }
@@ -54,4 +73,8 @@ in  { smsSessionConfig
     , S3Config
     , periodType = PeriodType
     , consumerType = ConsumerType
+    , kafkaConfig
+    , streamConfig
+    , eventStreamNameType
+    , eventType
     }

@@ -52,6 +52,7 @@ import Kernel.Types.SlidingWindowLimiter
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
+import Lib.SessionizerMetrics.Types.Event
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 -- import qualified SharedLogic.MerchantConfig as SMC
@@ -139,7 +140,8 @@ oneWaySearch ::
     CoreMetrics m,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
     HasBAPMetrics m r,
-    MonadProducer PublicTransportSearch m
+    MonadProducer PublicTransportSearch m,
+    EventStreamFlow m r
   ) =>
   Id Person.Person ->
   Maybe Version ->

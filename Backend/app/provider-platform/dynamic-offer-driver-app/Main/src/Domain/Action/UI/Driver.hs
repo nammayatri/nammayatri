@@ -111,6 +111,7 @@ import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Payment.Domain.Types.PaymentTransaction
 import Lib.Payment.Storage.Queries.PaymentTransaction
+import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.CallBAP (sendDriverOffer)
 import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
 import SharedLogic.DriverMode as DMode
@@ -140,6 +141,7 @@ import qualified Storage.Queries.SearchTry as QST
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Tools.Auth as Auth
 import Tools.Error
+import Tools.Event
 import Tools.Metrics
 import qualified Tools.Notifications as Notify
 import Tools.SMS as Sms hiding (Success)
@@ -803,7 +805,8 @@ offerQuote ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     CoreMetrics m,
-    HasPrettyLogger m r
+    HasPrettyLogger m r,
+    EventStreamFlow m r
   ) =>
   (Id SP.Person, Id DM.Merchant) ->
   DriverOfferReq ->
@@ -828,7 +831,8 @@ respondQuote ::
     HasShortDurationRetryCfg r c,
     CoreMetrics m,
     HasPrettyLogger m r,
-    L.MonadFlow m
+    L.MonadFlow m,
+    EventStreamFlow m r
   ) =>
   (Id SP.Person, Id DM.Merchant) ->
   DriverRespondReq ->
@@ -880,6 +884,7 @@ respondQuote (driverId, _) req = do
                   customerExtraFee = searchTry.customerExtraFee
                 }
           driverQuote <- buildDriverQuote driver searchReq sReqFD fareParams
+          triggerQuoteEvent QuoteEventData {quote = driverQuote}
           -- Esq.runTransaction $ do
           _ <- QDrQt.create driverQuote
           _ <- QSRD.updateDriverResponse sReqFD.id req.response
@@ -1023,7 +1028,7 @@ invalidateAlternateNoCache personId = do
 validationCheck :: Validate DriverAlternateNumberReq
 validationCheck DriverAlternateNumberReq {..} = do
   sequenceA_
-    [ validateField "mobileCountryCode" mobileCountryCode P.mobileIndianCode,
+    [ validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode,
       validateField "alternateNumber" alternateNumber P.mobileNumber
     ]
 

@@ -119,6 +119,7 @@ library:
     - special-zone-a
     - special-zone
     - payment
+    - sessionizer-metrics
 executables:
   rider-app-exe:
     main: Main.hs

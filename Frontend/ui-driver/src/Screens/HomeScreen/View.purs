@@ -195,7 +195,7 @@ view push state =
   ]
 
 driverMapsHeaderView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-driverMapsHeaderView push state = 
+driverMapsHeaderView push state =
   linearLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
@@ -222,17 +222,17 @@ driverMapsHeaderView push state =
             , linearLayout
               [ width MATCH_PARENT
               , height WRAP_CONTENT
-              , orientation VERTICAL 
+              , orientation VERTICAL
               ][ linearLayout
                   [ width MATCH_PARENT
-                  , height WRAP_CONTENT  
+                  , height WRAP_CONTENT
                   , orientation VERTICAL
                   , PP.cornerRadii $ PTD.Corners 24.0  false false true true
                   , background $ Color.white900
                   , stroke $ (if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then "0," else "1,") <> "#E5E7EB"
                   ][  driverDetail push state
                     , driverActivityStatus state
-                    , statsModel push state      
+                    , statsModel push state
                   ]
               , linearLayout
                 [ width MATCH_PARENT
@@ -248,7 +248,7 @@ driverMapsHeaderView push state =
             , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True") then genderBannerView state push else linearLayout[][]
             ]
         ]
-        , bottomNavBar push state 
+        , bottomNavBar push state
   ]
 
 alternateNumberOrOTPView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -269,6 +269,34 @@ alternateNumberOrOTPView state push =
         , if (getValueFromConfig "SPECIAL_ZONE_OTP_VIEW") == "true"  then otpButtonView state push else dummyTextView
         ]
       ]
+
+genderBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+genderBannerView state push =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin (Margin 10 10 10 10)
+    , gravity BOTTOM
+    ][
+    linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , gravity RIGHT
+      ][
+        imageView
+        [
+          height $ V 24
+        , width $ V 24
+        , gravity RIGHT
+        , margin (MarginRight 4)
+        , onClick push (const RemoveGenderBanner)
+        , imageWithFallback "ny_ic_grey_cross,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_grey_cross_icon.png"
+        ]
+        , genderBanner push state
+      ]
+    ]
 
 otpButtonView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
 otpButtonView state push =
@@ -362,7 +390,7 @@ recenterBtnView state push =
   ]
 
 offlineView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-offlineView push state = 
+offlineView push state =
   linearLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
@@ -375,7 +403,7 @@ offlineView push state =
           [ height $ V 280
           , width MATCH_PARENT
           , gravity CENTER_HORIZONTAL
-          ][ lottieAnimationView 
+          ][ lottieAnimationView
               [ id (EHC.getNewIDWithTag "RippleGoOnlineLottie")
               , afterRender (\action-> do
                               _ <- pure $ JB.startLottieProcess "rippling_online_effect" (EHC.getNewIDWithTag "RippleGoOnlineLottie") true 1.0 "DEFAULT"
@@ -388,7 +416,7 @@ offlineView push state =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , gravity BOTTOM
-        ][ linearLayout 
+        ][ linearLayout
             [ height $ V 140
             , width MATCH_PARENT
             , gravity BOTTOM
@@ -410,7 +438,7 @@ offlineView push state =
         , width MATCH_PARENT
         , gravity CENTER_HORIZONTAL
         ][ linearLayout
-            [ height WRAP_CONTENT 
+            [ height WRAP_CONTENT
             , width WRAP_CONTENT
             ][ frameLayout
                 [ height MATCH_PARENT
@@ -420,7 +448,7 @@ offlineView push state =
                     [ height $ V 132
                     , width $ V 132
                     , cornerRadius 75.0
-                    , background "#53BB6F"
+                    , background Color.darkMint
                     , onClick  push  (const $ SwitchDriverStatus Online)
                     ][]
                   , textView
@@ -538,8 +566,8 @@ driverStatusPill pillConfig push state index =
   ]
 
 updateLocationAndLastUpdatedView :: forall w . HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-updateLocationAndLastUpdatedView state push = 
-  PrestoAnim.animationSet 
+updateLocationAndLastUpdatedView state push =
+  PrestoAnim.animationSet
   [ Anim.translateYAnimFromTop $ AnimConfig.translateYAnimHomeConfig AnimConfig.TOP_BOTTOM ] $
   linearLayout
   [ width MATCH_PARENT
@@ -553,7 +581,7 @@ updateLocationAndLastUpdatedView state push =
   ]
 
 statsModel :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-statsModel push state = 
+statsModel push state =
     linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -940,7 +968,7 @@ rideActionModelView push state =
           , PP.sheetState COLLAPSED
           , peakHeight if state.data.activeRide.isDriverArrived then 518 else 470
           , halfExpandedRatio 0.9
-          ][ if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then 
+          ][ if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then
                 RideActionModal.view (push <<< RideActionModalAction) (rideActionModalConfig state)
                 else linearLayout[][]
         ]

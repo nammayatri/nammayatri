@@ -51,6 +51,7 @@ import Kernel.Types.Common hiding (getCurrentTime)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler.JobStorageType.DB.Queries (createJobIn)
+import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import SharedLogic.DriverLocation as DLoc
 import SharedLogic.FareCalculator
@@ -71,6 +72,7 @@ import Storage.Queries.Person as SQP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import Tools.Error
+import Tools.Event
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 import Tools.Notifications (sendNotificationToDriver)
@@ -84,10 +86,11 @@ endRideTransaction ::
     Esq.EsqDBReplicaFlow m r,
     EsqLocRepDBFlow m r,
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
-    HasField "maxShards" r Int
+    HasField "maxShards" r Int,
+    EventStreamFlow m r
   ) =>
   Id DP.Driver ->
-  Id SRB.Booking ->
+  SRB.Booking ->
   Ride.Ride ->
   Maybe DFare.FareParameters ->
   Maybe (Id RD.RiderDetails) ->
@@ -95,7 +98,9 @@ endRideTransaction ::
   TransporterConfig ->
   Id Merchant ->
   m ()
-endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig merchantId = do
+endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig merchantId = do
+  triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = merchantId}
+  triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = merchantId}
   driverInfo <- CDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
@@ -123,7 +128,7 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId newFare
   whenJust mbFareParams QFare.create
   _ <- QRide.updateAll ride.id ride
   _ <- QRide.updateStatus ride.id Ride.COMPLETED
-  _ <- QRB.updateStatus bookingId SRB.COMPLETED
+  _ <- QRB.updateStatus booking.id SRB.COMPLETED
   DriverStats.updateIdleTime driverId
   _ <- DriverStats.incrementTotalRidesAndTotalDist (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
   _ <- QDI.updateOnRide driverId False

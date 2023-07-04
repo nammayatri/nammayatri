@@ -22,40 +22,77 @@ import Components.BottomNavBar.Controller (navData)
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryEditText.Views as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
+import Data.Array (mapWithIndex, (!!), length, index, drop, (..), last, any)
+import Data.Int (toNumber, ceil)
+import Data.String (take, length) as DS
 import Effect (Effect)
-import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os ,getNewIDWithTag , flowRunner)
+import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, getNewIDWithTag, flowRunner, screenWidth, getCurrentUTC)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import JBridge (openUrlInApp , startTimerWithTime , toast)
+import JBridge (openUrlInApp, startTimerWithTime, toast)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>) , map , discard , show ,(>), void)
-import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility,stroke , alpha, relativeLayout , scrollView , alignParentRight, alignParentBottom)
+import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, discard, show, (>), void, (/=), (/), (*), (+), not, (||), negate, (<=), (&&), (-))
+import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Gradient(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, alpha, relativeLayout, scrollView, alignParentRight, alignParentBottom, imageWithFallback, frameLayout, horizontalScrollView, scrollBarX, scrollBarY, id, gradient, rotation, rotationY, shimmerFrameLayout)
+import PrestoDOM.Animation as PrestoAnim
+import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.ReferralScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.ReferralScreen.ScreenData as ReferralScreenData
 import Screens.Types as ST
+import Services.APITypes (LeaderBoardReq(..))
+import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Common.Types.App
+import Styles.Types as Font
 import Types.App (defaultGlobalState)
 import Components.PopUpModal as PopUpModal
-import Data.Maybe (Maybe(..) ,fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, fromJust, isJust)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Control.Monad.Except.Trans (runExceptT , lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Presto.Core.Types.Language.Flow (doAff)
-import Helpers.Utils (countDown)
+import Helpers.Utils (countDown, getPastWeeks, convertUTCtoISC, getPastDays, getPastWeeks)
 import Screens.ReferralScreen.ComponentConfig
 import Screens as ScreenNames
+import Data.Either (Either(..))
 
 screen :: ST.ReferralScreenState -> Screen Action ST.ReferralScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "ReferralScreen"
-  , globalEvents : []
+  , globalEvents : [
+              (\push -> do
+                void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
+                  case initialState.props.leaderBoardType of
+                    ST.Daily  -> do
+                      let selectedDay =  if initialState.props.selectedDay.utcDate == "" then
+                                            case last (getPastDays 1) of
+                                              Just day -> day
+                                              Nothing -> initialState.props.selectedDay
+                                          else initialState.props.selectedDay
+                      leaderBoardRes <- lift $ lift $ Remote.leaderBoard $ DailyRequest (convertUTCtoISC selectedDay.utcDate "YYYY-MM-DD")
+                      case leaderBoardRes of
+                        Right res -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoard res
+                        Left err  -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoardFailed
+                      pure unit
+                    ST.Weekly -> do
+                      let selectedWeek =  if any (_ == "") [initialState.props.selectedWeek.utcStartDate, initialState.props.selectedWeek.utcEndDate] then
+                                            case last (getPastWeeks 1) of
+                                              Just week -> week
+                                              Nothing -> initialState.props.selectedWeek
+                                          else initialState.props.selectedWeek
+                      leaderBoardRes <- lift $ lift $ Remote.leaderBoard $ WeeklyRequest (convertUTCtoISC selectedWeek.utcStartDate "YYYY-MM-DD") (convertUTCtoISC selectedWeek.utcEndDate "YYYY-MM-DD")
+                      case leaderBoardRes of
+                        Right res -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoard res
+                        Left err  -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoardFailed
+                      pure unit
+                pure (pure unit)
+              )
+  ]
   , eval
   }
 
@@ -81,9 +118,47 @@ view push state =
         , weight 1.0
         , height WRAP_CONTENT
         ](
-        [
-          GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state),
-          linearLayout
+        [ linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , orientation HORIZONTAL
+          ][ GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
+           , linearLayout
+             [ width MATCH_PARENT
+             , height MATCH_PARENT
+             , margin (MarginRight 16)
+             , gravity RIGHT
+             ][ linearLayout
+                [ width WRAP_CONTENT
+                , height MATCH_PARENT
+                , gravity CENTER
+                ][ linearLayout
+                   [ width WRAP_CONTENT
+                   , height WRAP_CONTENT
+                   , gravity CENTER
+                   , background Color.grey700
+                   , padding (Padding 11 6 11 6)
+                   , orientation HORIZONTAL
+                   , cornerRadius 8.0
+                   ][ imageView
+                      [ width (V 16)
+                      , height (V 16)
+                      , imageWithFallback "ny_ic_reward,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_reward.png"
+                      , margin (MarginRight 5)
+                      ]
+                    , textView
+                      [ width WRAP_CONTENT
+                      , height WRAP_CONTENT
+                      , text $ "(" <> (getString COMING_SOON) <> ")"
+                      , gravity CENTER
+                      , textSize FontSize.a_14
+                      , color Color.black600
+                      ]
+                   ]
+                ]
+             ]
+          ]
+        , linearLayout
             [ height $ V 1
             , width MATCH_PARENT
             , background Color.greySmoke
@@ -91,12 +166,545 @@ view push state =
         ] <> if state.props.stage == ST.SuccessScreen then [commonView push "ny_ic_green_tick" (getString  YOUR_REFERRAL_CODE_IS_LINKED) (getString YOU_CAN_NOW_EARN_REWARDS) state] else []
           <> if state.props.stage == ST.ComingSoonScreen then [commonView push "ny_ic_comming_soon_poster" (getString COMING_SOON) (getString COMING_SOON_DESCRIPTION) state] else []
           <> if state.props.stage == ST.ReferralFlow then  [referralEnrolmentFlow push state, continueButtonView push state] else []
-          <> if state.props.stage == ST.QRScreen then [qrScreen push state] else [])
+          <> if state.props.stage == ST.QRScreen then [qrScreen push state] else []
+          <> if state.props.stage == ST.LeaderBoard then [leaderBoard push state] else [])
         , bottomNavBarView push state
         ]
         , passwordPopUpView push state
         , customerSupportPopUpView state push
     ] <> if state.props.passwordPopUpVisible then [passwordPopUpView push state] else [])
+
+shimmerView :: forall w . ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
+shimmerView state =
+  shimmerFrameLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , orientation VERTICAL
+  , background Color.white900
+  , visibility if state.props.showShimmer then VISIBLE else GONE
+  ][  linearLayout
+      [ width MATCH_PARENT
+      , height (V 235)
+      , margin (Margin 16 15 16 0)
+      , background Color.greyDark
+      , cornerRadius 16.0
+      ][]
+    , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , margin (MarginTop 258)
+      ](mapWithIndex (\index item ->
+                      linearLayout
+                      [ width MATCH_PARENT
+                      , height (V 60)
+                      , margin (Margin 16 16 16 0)
+                      , cornerRadius 12.0
+                      , background Color.greyDark
+                      ][]
+                  ) (1 .. 7)
+       )
+  ]
+
+leaderBoard :: forall w . (Action -> Effect Unit) -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
+leaderBoard push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  ][  linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation HORIZONTAL
+      , margin (Margin 16 12 16 0)
+      , padding (Padding 2 2 2 2)
+      , background Color.grey800
+      , cornerRadius 30.0
+      , gravity CENTER
+      ][ leaderBoardTab (getString DAILY) ST.Daily push state
+       , leaderBoardTab (getString WEEKLY) ST.Weekly push state
+       ]
+    , dateAndTime push state
+    , relativeLayout
+      [ width MATCH_PARENT
+      , height MATCH_PARENT
+      , weight 1.0
+      ]([ if state.props.noData then
+            noDataView state
+          else
+            leaderBoardRanks state
+        , dateSelector push state
+          ]<> if state.props.currentDriverData.rank > 10 then [currentDriverRank state] else []
+      )
+   ]
+
+noDataView :: forall w . ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
+noDataView state =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  ][ scrollView
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    ][  linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      ][linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , margin (Margin 16 15 16 15)
+        , gradient (Linear 0.0 [Color.lightGradientBlue, Color.darkGradientBlue])
+        , gravity CENTER
+        , padding (Padding 24 30 24 8)
+        , cornerRadius 16.0
+        , orientation VERTICAL
+        ][  imageView
+            [ width $ V $ (screenWidth unit) - 48
+            , height $ V $ ceil ((toNumber ((screenWidth unit) - 48)) * 1.25)
+            , imageWithFallback "ny_ic_leaderboard_no_data,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_leaderboard_no_data.png"
+            ]
+          , textView
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , margin (Margin 24 0 24 4)
+            , text (getString GETTING_THE_LEADERBOARD_READY)
+            , color Color.black800
+            , fontStyle $ FontStyle.bold LanguageStyle
+            , textSize FontSize.a_18
+            , gravity CENTER_HORIZONTAL
+            ]
+          , textView
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , margin (Margin 24 0 24 30)
+            , text (getString PLEASE_WAIT_WHILE_WE_UPDATE_THE_DETAILS)
+            , color Color.black700
+            , textSize FontSize.a_14
+            , gravity CENTER_HORIZONTAL
+            ]
+         ]
+      ]
+     ]
+  ]
+
+currentDriverRank :: forall w . ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
+currentDriverRank state =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , gravity BOTTOM
+  , alignParentBottom "true,-1"
+  , cornerRadii $ Corners 18.0 true true false false
+  ][ rankCard state.props.currentDriverData true state
+   ]
+
+dateAndTime :: forall w . (Action -> Effect Unit) -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
+dateAndTime push state =
+  let date = state.props.selectedDay
+      week = state.props.selectedWeek
+  in
+    linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation HORIZONTAL
+    , margin (MarginHorizontal 16 16)
+    , padding (Padding 8 15 8 15)
+    , gravity CENTER_VERTICAL
+    ][  linearLayout
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , gravity CENTER_VERTICAL
+        , weight 1.0
+        , onClick push (const $ DateSelectorAction)
+        ][  textView
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , text $  if state.props.leaderBoardType == ST.Daily then
+                        (show date.date) <> " " <> date.month <> ", " <> (show date.year)
+                      else
+                        (show week.startDate) <> " " <> week.startMonth <> " - " <> (show week.endDate) <> " " <> week.endMonth
+            , textSize FontSize.a_16
+            , color Color.black800
+            ]
+          , imageView
+            [ width (V 24)
+            , height (V 24)
+            , margin (MarginLeft 12)
+            , imageWithFallback if state.props.showDateSelector then
+                                  "ny_ic_chevron_up_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_chevron_up_blue.png"
+                                else
+                                  "ny_ic_calendar_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_calendar_blue.png"
+            ]
+        ]
+      , textView
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , text $ (getString LAST_UPDATED) <> state.props.lastUpdatedAt
+        , textSize FontSize.a_12
+        , color Color.black700
+        , gravity RIGHT
+        , weight 1.0
+        ]
+    ]
+
+leaderBoardRanks :: forall w . ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
+leaderBoardRanks state =
+  scrollView
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , orientation VERTICAL
+  ][  linearLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , orientation VERTICAL
+    , padding (PaddingBottom if state.props.currentDriverData.rank > 10 then 68 else 8)
+    ][ shimmerView state
+     , congratsBar state
+     , topRankers state
+     , otherRankers state
+     ]
+  ]
+
+congratsBar :: forall w . ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
+congratsBar state =
+  let rank = state.props.currentDriverData.rank
+  in
+  linearLayout
+  ([ width MATCH_PARENT
+   , height (V 44)
+   , margin (Margin 16 15 16 0)
+   , cornerRadius 8.0
+   , visibility if rank <= 10 && rank > 0 && not state.props.showShimmer then VISIBLE else GONE
+   ] <> if rank == 1 then [gradient (Linear 270.0 ["#FEE8B8","#D3A119","#C59311", "#E1BC5B"])] else [background Color.blue800]
+  )[  frameLayout
+      [ width MATCH_PARENT
+      , height MATCH_PARENT
+      ]([  linearLayout
+          [ width MATCH_PARENT
+          , height MATCH_PARENT
+          , gravity CENTER
+          ][  textView
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , text  if rank == 1 then
+                        (getString CONGRATULATIONS_YOU_ARE_RANK) <> (show rank) <> " 🏆"
+                      else
+                        (getString CONGRATULATIONS_YOU_ARE_RANK) <> (show rank) <> " 🎉"
+              , color Color.white900
+              , textSize FontSize.a_18
+              ]
+           ]
+       ] <> if rank > 0 && rank <= 3 then [shineAnimation rank] else [])
+   ]
+
+shineAnimation :: forall w . Int -> PrestoDOM (Effect Unit) w
+shineAnimation rank =
+  PrestoAnim.animationSet
+  [ PrestoAnim.Animation
+    [ PrestoAnim.duration 2500
+    , PrestoAnim.fromX $ (- 200)
+    , PrestoAnim.toX $ (screenWidth unit) + 200
+    , PrestoAnim.repeatCount PrestoAnim.Infinite
+    ] true
+  ] $ linearLayout
+      [ width MATCH_PARENT
+      , height MATCH_PARENT
+      , gravity CENTER_VERTICAL
+      ][ linearLayout
+        [ width (V 10)
+        , height (V 200)
+        , margin (MarginRight 20)
+        ][]
+      , linearLayout
+        [ width (V 10)
+        , height (V 100)
+        , background Color.transparentWhite
+        , rotation 20.0
+        , margin (MarginRight 10)
+        ][]
+      , linearLayout
+        [ width (V 25)
+        , height (V 100)
+        , background Color.transparentWhite
+        , rotation 20.0
+        ][]
+      ]
+
+otherRankers :: forall w . ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
+otherRankers state =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , visibility if not state.props.showShimmer then VISIBLE else GONE
+  ] (mapWithIndex (\index item ->
+                      rankCard item false state
+                  ) (drop 3 state.props.rankersData)
+    )
+
+rankCard :: forall w . ST.RankCardData -> Boolean -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
+rankCard item aboveThreshold state =
+  let currentDriverData = state.props.currentDriverData
+  in
+    linearLayout
+    ([ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , stroke $ (if aboveThreshold then "0," else "1,") <> Color.grey900
+    , orientation HORIZONTAL
+    , gravity CENTER_VERTICAL
+    , padding if aboveThreshold then (Padding 24 10 32 10) else (Padding 8 10 16 10)
+    , background if aboveThreshold || (item == currentDriverData && currentDriverData.rank > 0) then Color.blue800 else Color.white900
+    ] <> (if not aboveThreshold then [margin (Margin 16 8 16 8)] else [])
+      <> (if aboveThreshold then [cornerRadii (Corners 12.0 true true false false)] else [cornerRadius 12.0])
+    )[ linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , gravity CENTER_VERTICAL
+      ][ linearLayout
+          [ width (V 55)
+          , height WRAP_CONTENT
+          , gravity CENTER_HORIZONTAL
+          , margin (MarginHorizontal 8 6)
+          ][ textView
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , text $ if item.rank > 0 then show item.rank else "-"
+            , textSize FontSize.a_14
+            , color if aboveThreshold || (item == currentDriverData && currentDriverData.rank > 0) then Color.white900 else Color.black800
+            , fontStyle  $ FontStyle.semiBold LanguageStyle
+            ]
+          ]
+        , imageView
+          [ width (V 40)
+          , height (V 40)
+          , cornerRadius 30.0
+          , margin (MarginHorizontal 8 10)
+          , imageWithFallback "ny_ic_general_profile,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_general_profile.png"
+          ]
+        , textView
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text $ (DS.take 12 item.goodName) <> (if DS.length item.goodName > 12 then "..." else "")
+          , textSize FontSize.a_14
+          , color if aboveThreshold || (item == currentDriverData && currentDriverData.rank > 0) then Color.white900 else Color.black800
+          ]
+        ]
+      , linearLayout
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , gravity RIGHT
+        , weight 1.0
+        ][ textView
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , gravity CENTER_VERTICAL
+          , text $ (show item.rides) <> " " <> (getString RIDES)
+          , textSize FontSize.a_16
+          , fontStyle  $ FontStyle.semiBold LanguageStyle
+          , color if aboveThreshold || (item == currentDriverData && currentDriverData.rank > 0) then Color.white900 else Color.black800
+          ]
+        ]
+    ]
+
+topRankers :: forall w . ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
+topRankers state =
+  let rankersList = state.props.rankersData
+      rank1 = fromMaybe ReferralScreenData.dummyRankData (index rankersList 0)
+      rank2 = fromMaybe ReferralScreenData.dummyRankData (index rankersList 1)
+      rank3 = fromMaybe ReferralScreenData.dummyRankData (index rankersList 2)
+  in
+    linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , margin (Margin 16 15 16 15)
+    , gradient (Linear 0.0 [Color.lightGradientBlue, Color.darkGradientBlue])
+    , orientation HORIZONTAL
+    , gravity CENTER
+    , padding (PaddingVertical 20 24)
+    , cornerRadius 16.0
+    , visibility if not state.props.showShimmer then VISIBLE else GONE
+    ][ rankers 72 2 Color.darkMint false FontSize.a_16 rank2 "ny_ic_rank2,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_rank2.png"
+    , rankers 102 1 Color.yellow900 true FontSize.a_22 rank1 "ny_ic_rank1,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_rank1.png"
+    , rankers 72 3 Color.orange900 false FontSize.a_16 rank3 "ny_ic_rank3,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_rank3.png"
+    ]
+
+rankers :: forall w . Int -> Int -> String -> Boolean -> Font.FontSize -> ST.RankCardData -> String -> PrestoDOM (Effect Unit) w
+rankers size rank themeColor showCrown fontSize detail imageUrl =
+  let bottomMargin = ceil ( (toNumber size) / 7.0 )
+      rankWidth = bottomMargin * 2 + 5
+  in
+    linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , weight 1.0
+    , gravity CENTER
+    , orientation VERTICAL
+    , margin (MarginHorizontal 10 10)
+    ][ frameLayout
+       [ width (V $ size)
+       , height (V $ size + bottomMargin + 30)
+       ][ linearLayout
+          [ width MATCH_PARENT
+          , height (V 22)
+          , gravity CENTER_HORIZONTAL
+          ][ imageView
+             [ imageWithFallback "ny_ic_crown,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_crown.png"
+             , visibility if rank == 1 then VISIBLE else GONE
+             ]
+           ]
+        , linearLayout
+          [ width (V $ size)
+          , height (V $ size)
+          , background Color.white900
+          , cornerRadius (toNumber size)
+          , stroke ("2," <> themeColor)
+          , margin (MarginTop 28)
+          ][ imageView
+             [ width MATCH_PARENT
+             , height MATCH_PARENT
+             , imageWithFallback imageUrl
+             ]
+           ]
+        , linearLayout
+          [ width MATCH_PARENT
+          , height MATCH_PARENT
+          , gravity BOTTOM
+          ][ linearLayout
+             [ width MATCH_PARENT
+             , height (V $ bottomMargin * 2 + 3)
+             , gravity CENTER
+             ][ textView
+                [ width (V $ rankWidth)
+                , height MATCH_PARENT
+                , text $ if detail.rank > 0 then show rank else "-"
+                , textSize fontSize
+                , fontStyle  $ FontStyle.bold LanguageStyle
+                , color if rank ==  1 then Color.black900 else Color.white900
+                , background themeColor
+                , gravity CENTER
+                , cornerRadius 14.0
+                ]
+              ]
+           ]
+        ]
+      , linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , gravity CENTER
+        , orientation VERTICAL
+        ][ textView
+           [ width MATCH_PARENT
+           , height MATCH_PARENT
+           , text $ (show detail.rides) <> " " <> (getString RIDES)
+           , gravity CENTER
+           , textSize FontSize.a_18
+           , fontStyle  $ FontStyle.bold LanguageStyle
+           , color Color.black800
+           ]
+         , textView
+           [ width MATCH_PARENT
+           , height MATCH_PARENT
+           , text $ if DS.length detail.goodName > 20 then (DS.take 20 detail.goodName) <> "..." else detail.goodName
+           , gravity CENTER
+           , textSize FontSize.a_14
+           , color Color.black700
+           ]
+         ]
+     ]
+
+dateSelector :: forall w . (Action -> Effect Unit) -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
+dateSelector push state =
+  let leaderBoardType = state.props.leaderBoardType
+  in
+    linearLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , background Color.blackLessTrans
+    , visibility if state.props.showDateSelector then VISIBLE else GONE
+    , onClick push (const $ DateSelectorAction)
+    ][horizontalScrollView
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , background Color.white900
+      , cornerRadii $ Corners 18.0 false false true true
+      , stroke $ "1," <> Color.grey900
+      , scrollBarX false
+      , id (getNewIDWithTag "DateSelector")
+      ][  linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , orientation HORIZONTAL
+          , padding (Padding 12 18 12 20)
+          ] if leaderBoardType == ST.Daily then
+              (mapWithIndex (\index item ->
+                    linearLayout
+                    [ width (V 50)
+                    , height (V 50)
+                    , cornerRadius 50.0
+                    , background if item == state.props.selectedDay then Color.blue600 else Color.grey700
+                    , margin (MarginHorizontal 4 4)
+                    , gravity CENTER
+                    , orientation VERTICAL
+                    , stroke $ "1," <> if item == state.props.selectedDay then Color.blue800 else Color.grey700
+                    , onClick push (const $ ChangeDate (ST.DaySelector item))
+                    ][  textView
+                        [ text $ show item.date
+                        , textSize FontSize.a_16
+                        , color if item == state.props.selectedDay then Color.blue800 else Color.black700
+                        ]
+                      , textView
+                        [ text item.month
+                        , textSize FontSize.a_10
+                        , color if item == state.props.selectedDay then Color.blue800 else Color.black700
+                        ]
+                    ]
+                ) state.props.days
+              )
+            else
+              (mapWithIndex (\index item ->
+                    linearLayout
+                    [ width (V 140)
+                    , height (V 50)
+                    , cornerRadius 50.0
+                    , background if item == state.props.selectedWeek then Color.blue600 else Color.grey700
+                    , margin (MarginHorizontal 4 4)
+                    , gravity CENTER
+                    , orientation HORIZONTAL
+                    , stroke $ "1," <> if item == state.props.selectedWeek then Color.blue800 else Color.grey700
+                    , onClick push (const $ ChangeDate (ST.WeekSelector item))
+                    ][  textView
+                        [ text $ (show item.startDate) <> " " <> item.startMonth <> " - " <> (show item.endDate) <> " " <> item.endMonth
+                        , textSize FontSize.a_16
+                        , color if item == state.props.selectedWeek then Color.blue800 else Color.black700
+                        ]
+                    ]
+                ) state.props.weeks
+              )
+      ]
+    ]
+
+leaderBoardTab :: forall w . String -> ST.LeaderBoardType -> (Action -> Effect Unit) -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
+leaderBoardTab _text leaderBoardType push state =
+  textView
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , text _text
+  , background if leaderBoardType == state.props.leaderBoardType then Color.black900 else Color.grey800
+  , padding (Padding 8 8 8 8)
+  , weight 1.0
+  , gravity CENTER
+  , color if leaderBoardType == state.props.leaderBoardType then Color.white900 else Color.black700
+  , cornerRadius 20.0
+  , textSize FontSize.a_14
+  , onClick (\action ->
+              if state.props.leaderBoardType /= leaderBoardType then do
+                _ <- push action
+                pure unit
+              else pure unit
+            ) (const $ ChangeLeaderBoardtab leaderBoardType)
+  ]
 
 bottomNavBarView :: forall w . (Action -> Effect Unit) -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
 bottomNavBarView push state =

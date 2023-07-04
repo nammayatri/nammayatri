@@ -2,6 +2,8 @@ let common = ./common.dhall
 
 let sec = ./secrets/rider-app.dhall
 
+let globalCommon = ../generic/common.dhall
+
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = 5434
@@ -62,6 +64,39 @@ let InfoBIPConfig =
       }
 
 let WebengageConfig = { url = "https://st.in.webengage.com" }
+
+let sampleKafkaConfig
+    : globalCommon.kafkaConfig
+    = { topicName = "rider-app-events-updates", kafkaKey = "rider-app" }
+
+let sampleLogConfig
+    : Text
+    = "log-stream"
+
+let eventStreamMappings =
+      [ { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
+        , streamConfig = globalCommon.streamConfig.KafkaStream sampleKafkaConfig
+        , eventTypes =
+          [ globalCommon.eventType.RideCreated
+          , globalCommon.eventType.RideStarted
+          , globalCommon.eventType.RideEnded
+          , globalCommon.eventType.RideCancelled
+          , globalCommon.eventType.BookingCreated
+          , globalCommon.eventType.BookingCancelled
+          , globalCommon.eventType.BookingCompleted
+          , globalCommon.eventType.SearchRequest
+          , globalCommon.eventType.Quotes
+          , globalCommon.eventType.Estimate
+          ]
+        }
+      , { streamName = globalCommon.eventStreamNameType.LOG_STREAM
+        , streamConfig = globalCommon.streamConfig.LogStream sampleLogConfig
+        , eventTypes =
+          [ globalCommon.eventType.RideEnded
+          , globalCommon.eventType.RideCancelled
+          ]
+        }
+      ]
 
 let apiRateLimitOptions = { limit = +8000, limitResetTimeInSec = +1 }
 
@@ -160,4 +195,5 @@ in  { esqDBCfg
     , registryMap
     , enableRedisLatencyLogging = False
     , enablePrometheusMetricLogging = True
+    , eventStreamMap = eventStreamMappings
     }

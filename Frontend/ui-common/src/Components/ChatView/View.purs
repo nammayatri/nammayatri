@@ -25,7 +25,7 @@ import Font.Style as FontStyle
 import Data.Array (mapWithIndex , (!!), length, null)
 import Data.String (split, Pattern(..), length) as STR
 import Data.Maybe (fromMaybe, Maybe(..))
-import JBridge (renderBase64Image, scrollToBottom, addMediaFile, getSuggestionfromKey)
+import JBridge (renderBase64Image, scrollToEnd, addMediaFile, getSuggestionfromKey)
 import Components.ChatView.Controller (Action(..), Config(..), ChatComponent)
 import Common.Types.App
 import Common.Styles.Colors (white900) as Color
@@ -337,15 +337,15 @@ quickMessageView config message isLastItem push =
      ][]
   ]
 chatComponent :: forall w. Config -> (Action -> Effect Unit) -> ChatComponent -> Boolean -> String -> PrestoDOM (Effect Unit) w
-chatComponent state push config isLastItem userType = 
-  PrestoAnim.animationSet 
-    [ if state.userConfig.appType == config.sentBy then 
-        if (state.spanParent) then 
-          translateInXForwardFadeAnimWithDelay config.delay true  
-        else 
+chatComponent state push config isLastItem userType =
+  PrestoAnim.animationSet
+    [ if state.userConfig.appType == config.sentBy then
+        if (state.spanParent) then
+          translateInXForwardFadeAnimWithDelay config.delay true
+        else
           (translateInXForwardAnim $ if isLastItem then true else false)
       else
-        if (state.spanParent) then 
+        if (state.spanParent) then
           translateInXBackwardFadeAnimWithDelay config.delay true
         else
           (translateInXBackwardAnim $ if isLastItem then true else false)
@@ -359,7 +359,7 @@ chatComponent state push config isLastItem userType =
   , orientation VERTICAL
   , onAnimationEnd (\action ->
       if isLastItem || state.spanParent then do
-        _ <- scrollToBottom (getNewIDWithTag "ChatScrollView")
+        _ <- scrollToEnd (getNewIDWithTag "ChatScrollView") true
         pure unit
       else
         pure unit) (const NoAction)
@@ -455,16 +455,16 @@ getConfig appType =
     }
 
 getChatConfig :: Config -> String -> Boolean -> Boolean -> {margin :: Margin, gravity :: Gravity, background :: String, cornerRadii :: Corners, textColor :: String}
-getChatConfig state sentBy isLastItem hasTimeStamp = 
-  if state.userConfig.appType == sentBy then 
-    { 
+getChatConfig state sentBy isLastItem hasTimeStamp =
+  if state.userConfig.appType == sentBy then
+    {
       margin : (Margin ((screenWidth unit)/4) 24 0 if state.spanParent then 24 else if(os == "IOS" && isLastItem && hasTimeStamp) then 12 else 0),
       gravity : RIGHT,
       background : state.blue800,
       cornerRadii : (Corners 16.0 true true false true),
       textColor :  state.white900
     }
-  else 
+  else
     { margin : (Margin 0 24 ((screenWidth unit)/4) if state.spanParent then 24 else if(os == "IOS" && isLastItem && hasTimeStamp) then 12 else 0),
       gravity :  LEFT,
       background : state.grey900,

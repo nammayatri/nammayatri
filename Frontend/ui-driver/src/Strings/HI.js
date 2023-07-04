@@ -484,6 +484,13 @@ const hindiStrings = {
   REGISTERED_ADDRESS_DESCRIPTION : "जस्पे टेक्नोलॉजीज प्राइवेट लिमिटेड <br> स्टैलियन बिजनेस सेंटर, नंबर 444, तीसरी और चौथी मंजिल, 18वीं मेन, 6वां ब्लॉक, कोरमंगला बेंगलुरु, कर्नाटक- 560095, भारत।",
   REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL : "वेबसाइट : <u>https://nammayatri.in/</u>",
   ZONE_CANCEL_TEXT_DROP : "आपका ग्राहक शायद समय पर मेट्रो स्टेशन पहुंचने की हड़बड़ी में है! \n हम आपसे अनुरोध करते हैं कि रद्द न करें।",
-  ZONE_CANCEL_TEXT_PICKUP : "आपका ग्राहक शायद अपने गंतव्य तक पहुंचने की हड़बड़ी में है। \n हम आपसे अनुरोध करते हैं कि रद्द न करें।"
-
+  ZONE_CANCEL_TEXT_PICKUP : "आपका ग्राहक शायद अपने गंतव्य तक पहुंचने की हड़बड़ी में है। \n हम आपसे अनुरोध करते हैं कि रद्द न करें।",
+  RANKINGS : "रैंकिंग",
+  GETTING_THE_LEADERBOARD_READY : "लीडरबोर्ड तैयार किया जा रहा है!",
+  PLEASE_WAIT_WHILE_WE_UPDATE_THE_DETAILS : "जब तक हम विवरण अपडेट करते हैं कृपया प्रतीक्षा करें",
+  LAST_UPDATED : "आखरी अपडेट: ",
+  CONGRATULATIONS_YOU_ARE_RANK : "बधाई हो! आप रैंक है ",
+  YOU : " (आप)",
+  DAILY : "दैनिक",
+  WEEKLY : "साप्ताहिक"
 }

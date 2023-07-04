@@ -21,6 +21,7 @@ import Kernel.Randomizer (getRandomElement)
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.SessionizerMetrics.Types.Event
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -31,6 +32,7 @@ import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSReq
 import Tools.Error
+import Tools.Event
 
 data DConfirmReq = DConfirmReq
   { personId :: Id DP.Person,
@@ -61,7 +63,13 @@ data ConfirmQuoteDetails
   | ConfirmOneWaySpecialZoneDetails Text
   deriving (Show, Generic)
 
-confirm :: (EsqDBFlow m r, CacheFlow m r) => DConfirmReq -> m DConfirmRes
+confirm ::
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    EventStreamFlow m r
+  ) =>
+  DConfirmReq ->
+  m DConfirmRes
 confirm DConfirmReq {..} = do
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
   now <- getCurrentTime
@@ -86,6 +94,7 @@ confirm DConfirmReq {..} = do
   mbBToLocation <- traverse (buildBookingLocation now) mbToLocation
   exophone <- findRandomExophone searchRequest.merchantId
   booking <- buildBooking searchRequest quote bFromLocation mbBToLocation exophone now Nothing paymentMethodId
+  triggerBookingCreatedEvent BookingEventData {booking = booking}
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   let details = mkConfirmQuoteDetails quote.quoteDetails
 
