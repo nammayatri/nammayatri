@@ -269,6 +269,17 @@ export const clearWaitingTimer = function (id){
   }
 }
 
+export const clearCountDownTimer = function (id){
+  if(__OS == "IOS"){
+    if (window.JBridge.clearCountDownTimer) {
+      window.JBridge.clearCountDownTimer();
+    }
+  }
+  else {
+    clearInterval(parseInt(id));
+  }
+}
+
 function getTwoDigitsNumber(number) {
   return number >= 10 ? number : "0"+number.toString();
 }

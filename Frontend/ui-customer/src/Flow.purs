@@ -494,7 +494,9 @@ enterMobileNumberScreenFlow = do
             (ResendOTPResp resendResp) <- Remote.resendOTPBT state.data.tokenId
             modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen { data { tokenId = resendResp.authId, attempts = resendResp.attempts}})
             enterMobileNumberScreenFlow
-    GoBack state  ->  enterMobileNumberScreenFlow
+    GoBack state  ->  do
+            modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen { data {timer = 30 }, props {enterOTP = false,resendEnable = false}})
+            enterMobileNumberScreenFlow
     GoToWelcomeScreen state -> welcomeScreenFlow
 
 welcomeScreenFlow :: FlowBT String Unit
