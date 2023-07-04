@@ -22,10 +22,6 @@ where
 import qualified Domain.Types.FareProduct as Domain
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Vehicle.Variant (Variant (..))
--- import Kernel.Storage.Esqueleto as Esq
-
--- import Storage.Tabular.FareProduct
-
 import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT

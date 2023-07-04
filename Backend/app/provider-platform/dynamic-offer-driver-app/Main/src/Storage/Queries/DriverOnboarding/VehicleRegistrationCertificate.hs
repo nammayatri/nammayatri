@@ -25,7 +25,6 @@ import Kernel.Types.Id
 import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as BeamVRC
-import Storage.Tabular.Person ()
 
 -- create :: VehicleRegistrationCertificate -> SqlDB ()
 -- create = Esq.create

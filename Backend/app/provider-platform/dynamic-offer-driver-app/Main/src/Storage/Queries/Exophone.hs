@@ -27,14 +27,12 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Exophone as BeamE
-import Storage.Tabular.Exophone
 
 -- create :: Exophone -> SqlDB ()
 -- create = Esq.create
@@ -111,21 +109,21 @@ findAllExophones = do
     Just dbCOnf' -> either (pure []) (transformBeamExophoneToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig []
     Nothing -> pure []
 
-updateAffectedPhones :: [Text] -> SqlDB ()
-updateAffectedPhones primaryPhones = do
-  let indianMobileCode = val "+91"
-  now <- getCurrentTime
-  let primaryPhonesList = valList primaryPhones
-  Esq.update $ \tbl -> do
-    let isPrimaryDown =
-          tbl ^. ExophonePrimaryPhone `in_` primaryPhonesList
-            ||. (indianMobileCode ++. tbl ^. ExophonePrimaryPhone) `in_` primaryPhonesList
-    set
-      tbl
-      [ ExophoneIsPrimaryDown =. isPrimaryDown,
-        ExophoneUpdatedAt =. val now
-      ]
-    where_ $ isPrimaryDown !=. tbl ^. ExophoneIsPrimaryDown
+-- updateAffectedPhones :: [Text] -> SqlDB ()
+-- updateAffectedPhones primaryPhones = do
+--   let indianMobileCode = val "+91"
+--   now <- getCurrentTime
+--   let primaryPhonesList = valList primaryPhones
+--   Esq.update $ \tbl -> do
+--     let isPrimaryDown =
+--           tbl ^. ExophonePrimaryPhone `in_` primaryPhonesList
+--             ||. (indianMobileCode ++. tbl ^. ExophonePrimaryPhone) `in_` primaryPhonesList
+--     set
+--       tbl
+--       [ ExophoneIsPrimaryDown =. isPrimaryDown,
+--         ExophoneUpdatedAt =. val now
+--       ]
+--     where_ $ isPrimaryDown !=. tbl ^. ExophoneIsPrimaryDown
 
 updateAffectedPhonesHelper :: (L.MonadFlow m, MonadTime m) => [Text] -> m Bool
 updateAffectedPhonesHelper primaryNumbers = do
@@ -153,8 +151,8 @@ updateAffectedPhonesHelper primaryNumbers = do
         _ -> pure False
     Left _ -> pure (error "DB Config not found")
 
-updateAffectedPhones' :: (L.MonadFlow m, MonadTime m) => [Text] -> m ()
-updateAffectedPhones' primaryPhones = do
+updateAffectedPhones :: (L.MonadFlow m, MonadTime m) => [Text] -> m ()
+updateAffectedPhones primaryPhones = do
   now <- getCurrentTime
   isPrimary <- updateAffectedPhonesHelper primaryPhones
   dbConf <- L.getOption KBT.PsqlDbCfg

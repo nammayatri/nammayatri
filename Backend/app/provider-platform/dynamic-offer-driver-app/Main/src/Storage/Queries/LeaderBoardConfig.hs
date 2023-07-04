@@ -16,20 +16,41 @@ module Storage.Queries.LeaderBoardConfig where
 
 import Domain.Types.LeaderBoardConfig
 import Domain.Types.Merchant
+import qualified EulerHS.KVConnector.Flow as KV
+import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Lib.Utils (setMeshConfig)
+import qualified Sequelize as Se
 import qualified Storage.Beam.LeaderBoardConfig as BeamLBC
-import Storage.Tabular.LeaderBoardConfig
 
-findLeaderBoardConfigbyType :: (Transactionable m) => LeaderBoardType -> Id Merchant -> m (Maybe LeaderBoardConfigs)
-findLeaderBoardConfigbyType leaderBType merchantId = Esq.findOne $ do
-  leaderBoardConfig <- from $ table @LeaderBoardConfigsT
-  where_ $
-    leaderBoardConfig ^. LeaderBoardConfigsLeaderBoardType ==. val leaderBType
-      &&. leaderBoardConfig ^. LeaderBoardConfigsMerchantId ==. val (toKey merchantId)
+-- findLeaderBoardConfigbyType :: (Transactionable m) => LeaderBoardType -> Id Merchant -> m (Maybe LeaderBoardConfigs)
+-- findLeaderBoardConfigbyType leaderBType merchantId = Esq.findOne $ do
+--   leaderBoardConfig <- from $ table @LeaderBoardConfigsT
+--   where_ $
+--     leaderBoardConfig ^. LeaderBoardConfigsLeaderBoardType ==. val leaderBType
+--       &&. leaderBoardConfig ^. LeaderBoardConfigsMerchantId ==. val (toKey merchantId)
 
-  pure leaderBoardConfig
+--   pure leaderBoardConfig
+
+findLeaderBoardConfigbyType :: (L.MonadFlow m) => LeaderBoardType -> Id Merchant -> m (Maybe LeaderBoardConfigs)
+findLeaderBoardConfigbyType leaderBType (Id merchantId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamLBC.LeaderBoardConfigsT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' ->
+      either (pure Nothing) (transformBeamLeaderBoardConfigToDomain <$>)
+        <$> KV.findWithKVConnector
+          dbConf'
+          updatedMeshConfig
+          [ Se.And
+              [ Se.Is BeamLBC.leaderBoardType $ Se.Eq leaderBType,
+                Se.Is BeamLBC.merchantId $ Se.Eq merchantId
+              ]
+          ]
+    Nothing -> pure Nothing
 
 transformBeamLeaderBoardConfigToDomain :: BeamLBC.LeaderBoardConfigs -> LeaderBoardConfigs
 transformBeamLeaderBoardConfigToDomain BeamLBC.LeaderBoardConfigsT {..} = do

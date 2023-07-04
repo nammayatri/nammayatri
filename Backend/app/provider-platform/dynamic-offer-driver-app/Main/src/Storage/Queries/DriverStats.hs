@@ -21,14 +21,11 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
--- import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverStats as BeamDS
-
--- import Storage.Tabular.DriverStats
 
 -- createInitialDriverStats :: Id Driver -> SqlDB ()
 -- createInitialDriverStats driverId = do

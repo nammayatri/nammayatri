@@ -28,7 +28,6 @@ import Kernel.Types.Id
 import Lib.Utils
 import Sequelize as Se
 import qualified Storage.Beam.BusinessEvent as BeamBE
-import Storage.Tabular.BusinessEvent ()
 
 logBusinessEvent ::
   (L.MonadFlow m, MonadGuid m, MonadTime m) =>

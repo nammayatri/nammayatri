@@ -372,7 +372,6 @@ library
       Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Storage.Queries.FareProduct
-      Storage.Queries.FullEntityBuilders
       Storage.Queries.Geometry
       Storage.Queries.Issue.Comment
       Storage.Queries.Issue.IssueCategory
@@ -410,81 +409,31 @@ library
       Storage.Queries.Vehicle
       Storage.Tabular.Booking
       Storage.Tabular.Booking.BookingLocation
-      Storage.Tabular.BookingCancellationReason
-      Storage.Tabular.BookingNew
-      Storage.Tabular.BusinessEvent
-      Storage.Tabular.CallStatus
-      Storage.Tabular.CancellationReason
-      Storage.Tabular.Driver.DriverFlowStatus
-      Storage.Tabular.DriverFee
       Storage.Tabular.DriverInformation
-      Storage.Tabular.DriverLocation
-      Storage.Tabular.DriverOnboarding.AadhaarOtpReq
-      Storage.Tabular.DriverOnboarding.AadhaarOtpVerify
-      Storage.Tabular.DriverOnboarding.AadhaarVerification
       Storage.Tabular.DriverOnboarding.DriverLicense
       Storage.Tabular.DriverOnboarding.DriverRCAssociation
       Storage.Tabular.DriverOnboarding.IdfyVerification
       Storage.Tabular.DriverOnboarding.Image
-      Storage.Tabular.DriverOnboarding.OperatingCity
       Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
-      Storage.Tabular.DriverQuote
       Storage.Tabular.DriverReferral
-      Storage.Tabular.DriverStats
-      Storage.Tabular.Estimate
-      Storage.Tabular.Exophone
       Storage.Tabular.FareParameters
       Storage.Tabular.FareParameters.FareParametersProgressiveDetails
       Storage.Tabular.FareParameters.FareParametersSlabDetails
       Storage.Tabular.FareParameters.Instances
       Storage.Tabular.FareParameters.Table
-      Storage.Tabular.FarePolicy
       Storage.Tabular.FarePolicy.DriverExtraFeeBounds
       Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails
       Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
-      Storage.Tabular.FarePolicy.Instances
       Storage.Tabular.FarePolicy.Table
-      Storage.Tabular.FareProduct
-      Storage.Tabular.Geometry
-      Storage.Tabular.GeometryNew
-      Storage.Tabular.Issue.Comment
-      Storage.Tabular.Issue.IssueCategory
-      Storage.Tabular.Issue.IssueOption
-      Storage.Tabular.Issue.IssueReport
-      Storage.Tabular.Issue.IssueTranslation
-      Storage.Tabular.LeaderBoardConfig
-      Storage.Tabular.Maps.PlaceNameCache
-      Storage.Tabular.MediaFile
       Storage.Tabular.Merchant
-      Storage.Tabular.Merchant.DriverIntelligentPoolConfig
-      Storage.Tabular.Merchant.DriverPoolConfig
-      Storage.Tabular.Merchant.LeaderBoardConfig
-      Storage.Tabular.Merchant.MerchantMessage
       Storage.Tabular.Merchant.MerchantPaymentMethod
-      Storage.Tabular.Merchant.MerchantServiceConfig
-      Storage.Tabular.Merchant.MerchantServiceUsageConfig
-      Storage.Tabular.Merchant.OnboardingDocumentConfig
-      Storage.Tabular.Merchant.TransporterConfig
-      Storage.Tabular.Message.Instances
-      Storage.Tabular.Message.Message
-      Storage.Tabular.Message.MessageReport
-      Storage.Tabular.Message.MessageTranslation
       Storage.Tabular.Person
-      Storage.Tabular.QuoteSpecialZone
-      Storage.Tabular.Rating
-      Storage.Tabular.RegistrationToken
       Storage.Tabular.Ride
       Storage.Tabular.Ride.Instances
       Storage.Tabular.Ride.Table
       Storage.Tabular.RideDetails
       Storage.Tabular.RiderDetails
-      Storage.Tabular.SearchRequest
-      Storage.Tabular.SearchRequest.SearchReqLocation
-      Storage.Tabular.SearchRequestForDriver
-      Storage.Tabular.SearchRequestSpecialZone
-      Storage.Tabular.SearchTry
-      Storage.Tabular.VechileNew
       Storage.Tabular.Vehicle
       Tools.AadhaarVerification
       Tools.Auth

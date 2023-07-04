@@ -35,7 +35,6 @@ import Kernel.Storage.Esqueleto as Esq hiding (findById)
 import Kernel.Storage.Esqueleto.Config (EsqLocRepDBFlow)
 import Kernel.Types.Common
 import Kernel.Types.Id
--- import Kernel.Utils.Logging
 import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverInformation as BeamDI
@@ -43,7 +42,6 @@ import qualified Storage.Beam.DriverLocation as BeamDL
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Queries.DriverLocation as QDL
 import Storage.Tabular.DriverInformation
--- import Storage.Tabular.DriverLocation
 import Storage.Tabular.Person
 import qualified Prelude
 

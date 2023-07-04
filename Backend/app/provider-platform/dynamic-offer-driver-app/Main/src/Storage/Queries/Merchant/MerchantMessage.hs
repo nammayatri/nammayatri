@@ -30,7 +30,6 @@ import Kernel.Types.Id
 import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantMessage as BeamMM
-import Storage.Tabular.Merchant.MerchantMessage ()
 
 -- findByMerchantIdAndMessageKey :: Transactionable m => Id Merchant -> MessageKey -> m (Maybe MerchantMessage)
 -- findByMerchantIdAndMessageKey merchantId messageKey =

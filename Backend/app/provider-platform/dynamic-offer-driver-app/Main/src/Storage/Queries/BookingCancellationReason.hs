@@ -25,15 +25,10 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude as P hiding ((^.))
 import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Maps.Types (LatLong (..), lat, lon)
--- import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.BookingCancellationReason as BeamBCR
-
--- import Domain.Types.BookingCancellationReason (BookingCancellationReason(bookingId))
-
--- import Storage.Tabular.BookingCancellationReason
 
 create :: L.MonadFlow m => DBCR.BookingCancellationReason -> m (MeshResult ())
 create bookingCancellationReason = do

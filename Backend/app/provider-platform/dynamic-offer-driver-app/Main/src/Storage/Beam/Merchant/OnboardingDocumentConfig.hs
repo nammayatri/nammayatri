@@ -34,6 +34,7 @@ import qualified Domain.Types.Merchant.OnboardingDocumentConfig as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
+import Kernel.Utils.Common (encodeToText)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
@@ -97,6 +98,11 @@ instance ToJSON OnboardingDocumentConfig where
   toJSON = A.genericToJSON A.defaultOptions
 
 deriving stock instance Show OnboardingDocumentConfig
+
+getConfigJSON :: Domain.SupportedVehicleClasses -> Text
+getConfigJSON = \case
+  Domain.DLValidClasses cfg -> encodeToText cfg
+  Domain.RCValidClasses cfg -> encodeToText cfg
 
 onboardingDocumentConfigTMod :: OnboardingDocumentConfigT (B.FieldModification (B.TableField OnboardingDocumentConfigT))
 onboardingDocumentConfigTMod =

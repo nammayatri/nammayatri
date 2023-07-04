@@ -20,8 +20,6 @@ import Domain.Types.SearchRequestSpecialZone as Domain
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
--- import Kernel.Storage.Esqueleto as Esq
-
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -29,11 +27,6 @@ import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequestSpecialZone as BeamSRSZ
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
-
--- import Storage.Tabular.SearchRequestSpecialZone
-
--- import Storage.Tabular.SearchRequest.SearchReqLocation
--- import Storage.Tabular.SearchRequestSpecialZone
 
 -- create :: SearchRequestSpecialZone -> SqlDB ()
 -- create dsReq = Esq.runTransaction $

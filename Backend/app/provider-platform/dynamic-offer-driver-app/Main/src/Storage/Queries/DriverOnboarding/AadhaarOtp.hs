@@ -25,8 +25,6 @@ import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.AadhaarOtpReq as BeamAOR
 import qualified Storage.Beam.DriverOnboarding.AadhaarOtpVerify as BeamAOV
-import Storage.Tabular.DriverOnboarding.AadhaarOtpReq ()
-import Storage.Tabular.DriverOnboarding.AadhaarOtpVerify ()
 
 createForGenerate :: L.MonadFlow m => AadhaarOtpReq -> m (MeshResult ())
 createForGenerate aadhaarOtpReq = do

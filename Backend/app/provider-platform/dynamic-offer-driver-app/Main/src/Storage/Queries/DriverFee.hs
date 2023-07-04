@@ -22,13 +22,12 @@ import EulerHS.KVConnector.Types (MeshError (MKeyNotFound), MeshResult)
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+-- import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common (HighPrecMoney, Money)
 import Kernel.Types.Id
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverFee as BeamDF
-import Storage.Tabular.DriverFee
 
 -- create :: DriverFee -> SqlDB ()
 -- create = Esq.create
@@ -236,16 +235,35 @@ findOngoingAfterEndTime (Id driverId) now = do
         _ -> pure Nothing
     Nothing -> pure Nothing
 
-findUnpaidAfterPayBy :: Transactionable m => Id Person -> UTCTime -> m (Maybe DriverFee)
-findUnpaidAfterPayBy driverId now = do
-  findOne $ do
-    -- assuming only one such entry only
-    driverFee <- from $ table @DriverFeeT
-    where_ $
-      driverFee ^. DriverFeeDriverId ==. val (toKey driverId)
-        &&. driverFee ^. DriverFeeStatus `in_` valList [PAYMENT_PENDING, PAYMENT_OVERDUE]
-        &&. driverFee ^. DriverFeePayBy <=. val now
-    return driverFee
+-- findUnpaidAfterPayBy :: Transactionable m => Id Person -> UTCTime -> m (Maybe DriverFee)
+-- findUnpaidAfterPayBy driverId now = do
+--   findOne $ do
+--     -- assuming only one such entry only
+--     driverFee <- from $ table @DriverFeeT
+--     where_ $
+--       driverFee ^. DriverFeeDriverId ==. val (toKey driverId)
+--         &&. driverFee ^. DriverFeeStatus `in_` valList [PAYMENT_PENDING, PAYMENT_OVERDUE]
+--         &&. driverFee ^. DriverFeePayBy <=. val now
+--     return driverFee
+
+findUnpaidAfterPayBy :: L.MonadFlow m => Id Person -> UTCTime -> m (Maybe DriverFee)
+findUnpaidAfterPayBy (Id driverId) now = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDF.DriverFeeT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' ->
+      either (pure Nothing) (transformBeamDriverFeeToDomain <$>)
+        <$> KV.findWithKVConnector
+          dbConf'
+          updatedMeshConfig
+          [ Se.And
+              [ Se.Is BeamDF.driverId $ Se.Eq driverId,
+                Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE],
+                Se.Is BeamDF.payBy $ Se.LessThanOrEq now
+              ]
+          ]
+    Nothing -> pure Nothing
 
 -- updateFee :: Id DriverFee -> Maybe Money -> Money -> Money -> HighPrecMoney -> HighPrecMoney -> UTCTime -> SqlDB ()
 -- updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now = do

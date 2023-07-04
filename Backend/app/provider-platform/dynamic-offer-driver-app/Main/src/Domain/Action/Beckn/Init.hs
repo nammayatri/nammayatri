@@ -154,7 +154,6 @@ handler merchantId req eitherReq = do
       case eitherReq of
         Right (specialZoneQuote, searchRequest) -> do
           booking <- buildBooking searchRequest specialZoneQuote searchRequest.startTime DRB.SpecialZoneBooking now (mbPaymentMethod <&> (.id))
-          -- Esq.runTransaction $
           _ <- QRB.create booking
           return booking
         Left _ -> throwError $ InvalidRequest "Can't have driverQuote in specialZone booking"

@@ -625,7 +625,6 @@ updateDriverName merchantShortId reqDriverId req = do
                lastName = if req.lastName == Just "" then Nothing else req.lastName <|> driver.lastName
               }
 
-  -- Esq.runTransaction $ do
   _ <- QPerson.updatePersonRec personId updDriver
 
   logTagInfo "dashboard -> updateDriverName : " (show personId)
