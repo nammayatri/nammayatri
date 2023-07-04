@@ -53,7 +53,7 @@ instance B.Table ExophoneT where
 instance ModelMeta ExophoneT where
   modelFieldModification = exophoneTMod
   modelTableName = "exophone"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
+  modelSchemaName = Just "atlas_app"
 
 type Exophone = ExophoneT Identity
 

@@ -7,7 +7,7 @@ module Lib.Utils where
 import qualified Data.Aeson as A
 import Data.ByteString.Internal (ByteString, unpackChars)
 import Data.ByteString.Lazy (fromStrict)
-import Data.Fixed (Centi)
+import Data.Fixed (Centi, Fixed (..))
 import Data.Time
 import qualified Data.Vector as V
 import Database.Beam
@@ -143,8 +143,8 @@ fromFieldSeconds f mbValue = case mbValue of
 instance FromField Minutes where
   fromField = fromFieldMinutes
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Centi where
-  sqlValueSyntax = autoSqlValueSyntax
+instance HasSqlValueSyntax be Integer => HasSqlValueSyntax be Centi where
+  sqlValueSyntax (MkFixed i) = sqlValueSyntax i
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centesimal
 
@@ -216,7 +216,7 @@ instance HasSqlValueSyntax be Rational => HasSqlValueSyntax be HighPrecMoney whe
   sqlValueSyntax = sqlValueSyntax . getHighPrecMoney
 
 instance HasSqlValueSyntax be Double => HasSqlValueSyntax be Rational where
-  sqlValueSyntax = sqlValueSyntax
+  sqlValueSyntax = sqlValueSyntax . (fromRational :: Rational -> Double)
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be HighPrecMoney
 

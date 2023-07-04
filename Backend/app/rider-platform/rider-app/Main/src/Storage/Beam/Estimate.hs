@@ -23,6 +23,7 @@ import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
+import qualified Data.Vector as V
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
@@ -58,10 +59,15 @@ instance IsString TimeOfDay where
   fromString = show
 
 instance FromField [LatLong] where
+  fromField f mbValue = V.toList <$> fromField f mbValue
+
+instance FromField LatLong where
   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be [LatLong] where
-  sqlValueSyntax = autoSqlValueSyntax
+instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [LatLong] where
+  sqlValueSyntax latlonglist =
+    let x = (show <$> latlonglist :: [Text])
+     in sqlValueSyntax (V.fromList x)
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [LatLong]
 

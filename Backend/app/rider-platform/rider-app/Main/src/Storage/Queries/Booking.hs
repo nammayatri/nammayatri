@@ -624,17 +624,16 @@ transformBeamBookingToDomain BeamB.BookingT {..} = do
   fl <- QBBL.findById (Id fromLocationId)
   tt <- if isJust tripTermsId then QTT.findById'' (Id (fromJust tripTermsId)) else pure Nothing
   pUrl <- parseBaseUrl providerUrl
-  rentalDetails <- do
-    res <- QueryRS.findById (Id (fromJust rentalSlabId))
-    case res of
-      Just rentalSlab -> pure $ Just $ DRB.RentalDetails rentalSlab
-      Nothing -> pure Nothing
   bookingDetails <- case fareProductType of
     DFF.ONE_WAY -> DRB.OneWayDetails <$> buildOneWayDetails toLocationId
-    DFF.RENTAL -> pure (fromJust rentalDetails)
+    DFF.RENTAL -> do
+      qd <- getRentalDetails rentalSlabId
+      case qd of
+        Nothing -> throwError (InternalError "No Rental Details present")
+        Just a -> pure a
     DFF.DRIVER_OFFER -> DRB.OneWayDetails <$> buildOneWayDetails toLocationId
     DFF.ONE_WAY_SPECIAL_ZONE -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId
-  if isJust fl && isJust tt
+  if isJust fl
     then
       pure $
         Just
@@ -668,7 +667,7 @@ transformBeamBookingToDomain BeamB.BookingT {..} = do
     else pure Nothing
   where
     buildOneWayDetails _ = do
-      toLocation <- QBBL.findById (Id (fromJust toLocationId))
+      toLocation <- maybe (pure Nothing) (QBBL.findById . Id) toLocationId
       distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
       pure
         DRB.OneWayBookingDetails
@@ -683,6 +682,11 @@ transformBeamBookingToDomain BeamB.BookingT {..} = do
           { distance = distance',
             ..
           }
+    getRentalDetails rentalSlabId' = do
+      res <- maybe (pure Nothing) (QueryRS.findById . Id) rentalSlabId'
+      case res of
+        Just rentalSlab -> pure $ Just $ DRB.RentalDetails rentalSlab
+        Nothing -> pure Nothing
 
 transformDomainBookingToBeam :: Booking -> BeamB.Booking
 transformDomainBookingToBeam DRB.Booking {..} =

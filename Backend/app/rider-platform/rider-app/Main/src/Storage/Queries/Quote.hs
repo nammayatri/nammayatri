@@ -289,24 +289,6 @@ transformBeamQuoteToDomain BeamQ.QuoteT {..} = do
   trip <- if isJust tripTermsId then QTT.findById'' (Id (fromJust tripTermsId)) else pure Nothing
   pUrl <- parseBaseUrl providerUrl
 
-  rentalDetails <- do
-    res <- QueryRS.findById (Id (fromJust rentalSlabId))
-    case res of
-      Just rentalSlab -> pure $ Just $ DQ.RentalDetails rentalSlab
-      Nothing -> pure Nothing
-
-  specialZoneQuote <- do
-    res <- QuerySZQ.findById (Id (fromJust specialZoneQuoteId))
-    case res of
-      Just specialZoneQuote -> pure $ Just $ DQ.OneWaySpecialZoneDetails specialZoneQuote
-      Nothing -> pure Nothing
-
-  driverOfferDetails <- do
-    res <- QueryDO.findById (Id (fromJust driverOfferId))
-    case res of
-      Just driverOffer -> pure $ Just $ DQ.DriverOfferDetails driverOffer
-      Nothing -> pure Nothing
-
   quoteDetails <- case fareProductType of
     DFFP.ONE_WAY -> do
       distanceToNearestDriver' <- distanceToNearestDriver & fromMaybeM (QuoteFieldNotPresent "distanceToNearestDriver")
@@ -314,32 +296,47 @@ transformBeamQuoteToDomain BeamQ.QuoteT {..} = do
         DQ.OneWayQuoteDetails
           { distanceToNearestDriver = distanceToNearestDriver'
           }
-    DFFP.RENTAL -> pure (fromJust rentalDetails)
-    DFFP.DRIVER_OFFER -> pure (fromJust driverOfferDetails)
-    DFFP.ONE_WAY_SPECIAL_ZONE -> pure (fromJust specialZoneQuote)
-  if isJust trip
-    then
-      pure $
-        Just
-          Quote
-            { id = Id id,
-              requestId = Id requestId,
-              estimatedFare = roundToIntegral estimatedFare,
-              discount = roundToIntegral <$> discount,
-              estimatedTotalFare = roundToIntegral estimatedTotalFare,
-              providerId = providerId,
-              providerUrl = pUrl,
-              providerName = providerName,
-              providerMobileNumber = providerMobileNumber,
-              providerCompletedRidesCount = providerCompletedRidesCount,
-              vehicleVariant = vehicleVariant,
-              tripTerms = trip,
-              quoteDetails = quoteDetails,
-              merchantId = Id merchantId,
-              specialLocationTag = specialLocationTag,
-              createdAt = createdAt
-            }
-    else pure Nothing
+    DFFP.RENTAL -> do
+      qd <- getRentalDetails rentalSlabId
+      maybe (throwError (InternalError "No rental details")) return qd
+    DFFP.DRIVER_OFFER -> do
+      qd <- getDriverOfferDetails driverOfferId
+      maybe (throwError (InternalError "No driver offer details")) return qd
+    DFFP.ONE_WAY_SPECIAL_ZONE -> do
+      qd <- getSpecialZoneQuote specialZoneQuoteId
+      maybe (throwError (InternalError "No special zone details")) return qd
+  pure $
+    Just
+      Quote
+        { id = Id id,
+          requestId = Id requestId,
+          estimatedFare = roundToIntegral estimatedFare,
+          discount = roundToIntegral <$> discount,
+          estimatedTotalFare = roundToIntegral estimatedTotalFare,
+          merchantId = Id merchantId,
+          quoteDetails = quoteDetails,
+          providerId = providerId,
+          providerUrl = pUrl,
+          providerName = providerName,
+          providerMobileNumber = providerMobileNumber,
+          providerCompletedRidesCount = providerCompletedRidesCount,
+          vehicleVariant = vehicleVariant,
+          tripTerms = trip,
+          specialLocationTag = specialLocationTag,
+          createdAt = createdAt
+        }
+  where
+    getRentalDetails rentalSlabId' = do
+      res <- maybe (pure Nothing) (QueryRS.findById . Id) rentalSlabId'
+      maybe (pure Nothing) (pure . Just . DQ.RentalDetails) res
+
+    getDriverOfferDetails driverOfferId' = do
+      res <- maybe (pure Nothing) (QueryDO.findById . Id) driverOfferId'
+      maybe (pure Nothing) (pure . Just . DQ.DriverOfferDetails) res
+
+    getSpecialZoneQuote specialZoneQuoteId' = do
+      res <- maybe (pure Nothing) (QuerySZQ.findById . Id) specialZoneQuoteId'
+      maybe (pure Nothing) (pure . Just . DQ.OneWaySpecialZoneDetails) res
 
 transformDomainQuoteToBeam :: Quote -> BeamQ.Quote
 transformDomainQuoteToBeam Quote {..} =
