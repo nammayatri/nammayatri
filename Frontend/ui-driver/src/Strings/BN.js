@@ -501,5 +501,16 @@ const bengaliStrings = {
 	TC_TAIL : "",
 	OTP_SENT_TO_AADHAAR_NUMBER: "আপনার আধারের সাথে লিঙ্ক করা মোবাইল নম্বরে OTP পাঠানো হয়েছে",
 	ENTER_SIX_DIGIT_OTP : "ছয় সংখ্যার ওটিপি লিখুন",
-	LINK_AADHAAR_ID : "আধার আইডি লিঙ্ক করুন"
+	LINK_AADHAAR_ID : "আধার আইডি লিঙ্ক করুন",
+	NO_MOBILE_NUMBER_REGISTERED : "আধার নম্বরের সাথে নিবন্ধিত একটি মোবাইল নম্বর নেই।",
+  EXCEED_OTP_GENERATION_LIMIT : "ওটিপি তৈরির সর্বোচ্চ সীমা ছাড়িয়ে গেছে। কিছু সময়ের মধ্যে আবার চেষ্টা করুন.",
+  AADHAAR_NUMBER_NOT_EXIST : "আধার নম্বর নেই।",
+  INVALID_OTP : "অবৈধ OTP",
+  NO_SHARE_CODE : "কোন শেয়ার কোড প্রদান করা হয় না",
+  WRONG_SHARE_CODE : "ভুল শেয়ার কোড",
+  INVALID_SHARE_CODE : "অবৈধ শেয়ার কোড। দৈর্ঘ্য 4 হওয়া উচিত এবং শুধুমাত্র সংখ্যা থাকা উচিত।",
+  SESSION_EXPIRED : "সময় মেয়াদ শেষ. আবার প্রক্রিয়া শুরু করুন.",
+  OTP_ATTEMPT_EXCEEDED : "OTP প্রয়াস অতিক্রম করেছে৷ আবার প্রক্রিয়া শুরু করুন",
+  UPSTREAM_INTERNAL_SERVER_ERROR : "আপস্ট্রিম উৎস/সরকারি উৎস অভ্যন্তরীণ সার্ভার ত্রুটি। আবার প্রক্রিয়া শুরু করুন.",
+  TRANSACTION_ALREADY_COMPLETED : "লেনদেন ইতিমধ্যে সম্পন্ন হয়েছে. এই লেনদেনে আর কাজ করা যাবে না."
 	}

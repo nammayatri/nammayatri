@@ -556,7 +556,7 @@ driverInfoView push state =
          , height WRAP_CONTENT
          , width MATCH_PARENT
          , margin $ MarginTop 14
-         , background Color.blue800
+         , background if state.props.zoneType == METRO then Color.blue800 else Color.white900
          , gravity CENTER
          , cornerRadii $ Corners 24.0 true true false false
          , stroke $ "1," <> Color.grey900

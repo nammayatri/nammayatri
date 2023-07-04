@@ -1672,7 +1672,7 @@ eval MapReadyAction state = continueWithCmd state [ do
 
 eval (TriggerPermissionFlow flowType) state = exit $ ExitToPermissionFlow flowType
 
-
+eval (GenderBannerModal (Banner.OnClick)) state = exit $ GoToMyProfile state true
 
 eval _ state = continue state
 

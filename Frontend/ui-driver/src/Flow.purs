@@ -1516,6 +1516,17 @@ aadhaarVerificationFlow = do
             "GENERATE_AADHAAR_OTP_EXCEED_LIMIT" -> do
               _ <- pure $ toast $ getString OTP_LIMIT_EXCEEDED
               modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{btnActive = false}})
+            "NO_MOBILE_NUMBER_REGISTERED" -> pure $ toast $ getString NO_MOBILE_NUMBER_REGISTERED
+            "EXCEED_OTP_GENERATION_LIMIT" -> pure $ toast $ getString EXCEED_OTP_GENERATION_LIMIT
+            "AADHAAR_NUMBER_NOT_EXIST" -> pure $ toast $ getString AADHAAR_NUMBER_NOT_EXIST
+            "INVALID_OTP" -> pure $ toast $ getString INVALID_OTP
+            "NO_SHARE_CODE" -> pure $ toast $ getString NO_SHARE_CODE
+            "WRONG_SHARE_CODE" -> pure $ toast $ getString WRONG_SHARE_CODE
+            "INVALID_SHARE_CODE" -> pure $ toast $ getString INVALID_SHARE_CODE
+            "SESSION_EXPIRED" -> pure $ toast $ getString SESSION_EXPIRED
+            "OTP_ATTEMPT_EXCEEDED" -> pure $ toast $ getString OTP_ATTEMPT_EXCEEDED
+            "UPSTREAM_INTERNAL_SERVER_ERROR" -> pure $ toast $ getString UPSTREAM_INTERNAL_SERVER_ERROR
+            "TRANSACTION_ALREADY_COMPLETED" -> pure $ toast $ getString TRANSACTION_ALREADY_COMPLETED
             _ -> pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
           aadhaarVerificationFlow
     VERIFY_AADHAAR_OTP state -> do

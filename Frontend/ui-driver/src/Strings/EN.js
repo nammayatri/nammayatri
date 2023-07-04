@@ -500,5 +500,16 @@ const englishStrings = {
   TC_TAIL : "",
   OTP_SENT_TO_AADHAAR_NUMBER: "OTP sent to mobile number linked with your aadhar",
   ENTER_SIX_DIGIT_OTP : "Enter six digit OTP",
-  LINK_AADHAAR_ID : "Link Aadhaar ID"
+  LINK_AADHAAR_ID : "Link Aadhaar ID",
+  NO_MOBILE_NUMBER_REGISTERED : "Aadhaar number does not have a mobile number registered with it.",
+  EXCEED_OTP_GENERATION_LIMIT : "Exceeded Maximum OTP generation Limit. Please try again in some time.",
+  AADHAAR_NUMBER_NOT_EXIST : "Aadhaar number does not exist.",
+  INVALID_OTP : "Invalid OTP",
+  NO_SHARE_CODE : "No share code provided",
+  WRONG_SHARE_CODE : "Wrong share code",
+  INVALID_SHARE_CODE : "Invalid share code. Length should be 4 and should only contain numbers.",
+  SESSION_EXPIRED : "Session Expired. Please start the process again.",
+  OTP_ATTEMPT_EXCEEDED : "OTP attempts exceeded. Please start the process again",
+  UPSTREAM_INTERNAL_SERVER_ERROR : "Upstream source/Government source internal server error. Please start the process again.",
+  TRANSACTION_ALREADY_COMPLETED : "Transaction already completed. Cannot do further operation on this transaction."
 }
