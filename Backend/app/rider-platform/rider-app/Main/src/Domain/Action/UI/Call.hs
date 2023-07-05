@@ -35,6 +35,7 @@ import qualified Domain.Types.CallStatus as DCS
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
+import EulerHS.Prelude (Alternative ((<|>)))
 import qualified Kernel.External.Call.Exotel.Types as Call
 import Kernel.External.Call.Interface.Exotel (exotelStatusToInterfaceStatus)
 import qualified Kernel.External.Call.Interface.Types as Call
@@ -125,28 +126,29 @@ callStatusCallback req = do
   runTransaction $ QCallStatus.updateCallStatus callStatusId (exotelStatusToInterfaceStatus req.status) req.conversationDuration (Just req.recordingUrl)
   return Ack
 
-directCallStatusCallback :: EsqDBFlow m r => Text -> Call.ExotelCallStatus -> Maybe Text -> Maybe Int -> m CallCallbackRes
-directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuration = do
+directCallStatusCallback :: EsqDBFlow m r => Text -> Call.ExotelCallStatus -> Maybe Text -> Maybe Int -> Maybe Int -> m CallCallbackRes
+directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuratioExotel callDurationFallback = do
+  let callDuration = callDuratioExotel <|> callDurationFallback
   callStatus <- QCallStatus.findByCallSid callSid >>= fromMaybeM CallStatusDoesNotExist
   let newCallStatus = exotelStatusToInterfaceStatus dialCallStatus
   case recordingUrl_ of
     Just recordUrl -> do
       if recordUrl == ""
         then do
-          updateCallStatus callStatus.id newCallStatus Nothing
+          updateCallStatus callStatus.id newCallStatus Nothing callDuration
           throwError CallStatusDoesNotExist
         else do
           baseUrl <- parseBaseUrl recordUrl
-          updateCallStatus callStatus.id newCallStatus (Just baseUrl)
+          updateCallStatus callStatus.id newCallStatus (Just baseUrl) callDuration
     Nothing -> do
       if newCallStatus == CallTypes.COMPLETED
         then do
-          updateCallStatus callStatus.id newCallStatus Nothing
+          updateCallStatus callStatus.id newCallStatus Nothing callDuration
           throwError CallStatusDoesNotExist
-        else updateCallStatus callStatus.id newCallStatus Nothing
+        else updateCallStatus callStatus.id newCallStatus Nothing callDuration
   return Ack
   where
-    updateCallStatus id callStatus url = runTransaction $ QCallStatus.updateCallStatus id callStatus (fromMaybe 0 callDuration) url
+    updateCallStatus id callStatus url callDuration = runTransaction $ QCallStatus.updateCallStatus id callStatus (fromMaybe 0 callDuration) url
 
 getDriverMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> Maybe Text -> Call.ExotelCallStatus -> m GetDriverMobileNumberResp
 getDriverMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus = do
