@@ -31,4 +31,4 @@ INSERT INTO atlas_driver_offer_bpp.merchant_message (merchant_id, message_key, m
 
 INSERT INTO atlas_driver_offer_bpp.onboarding_document_configs VALUES ('favorit0-0000-0000-0000-00000favorit', 'DL', false , true,ARRAY[ 'AUTORICKSHAW', 'LMV', '3W-NT', '3WT', '3W-T', 'LIGHT MOTOR VEHICLE', '3W-CAB' ], 'Infix' ) ;
 INSERT INTO atlas_driver_offer_bpp.onboarding_document_configs VALUES ('favorit0-0000-0000-0000-00000favorit', 'RC', false , false,ARRAY['3WT','Passenger','3WN'], 'Infix' ) ;
-INSERT INTO atlas_driver_offer_bpp.onboarding_document_configs VALUES ('favorit0-0000-0000-0000-00000favorit', 'RCInsurance', false , false,ARRAY[]::TEXT[] , 'None' ) ;
+INSERT INTO atlas_driver_offer_bpp.onboarding_document_configs VALUES ('favorit0-0000-0000-0000-00000favorit', 'RCInsurance', false , false,ARRAY[]::TEXT[] , 'Infix' ) ;

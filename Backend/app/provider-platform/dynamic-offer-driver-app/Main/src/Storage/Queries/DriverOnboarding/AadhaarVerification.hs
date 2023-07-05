@@ -16,6 +16,7 @@ module Storage.Queries.DriverOnboarding.AadhaarVerification where
 
 import Domain.Types.DriverOnboarding.AadhaarVerification
 import Domain.Types.Person (Person)
+import Kernel.External.Encryption (DbHash)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
@@ -38,6 +39,16 @@ findByDriverId driverId = do
   findOne $ do
     aadhaar <- from $ table @AadhaarVerificationT
     where_ $ aadhaar ^. AadhaarVerificationDriverId ==. val (toKey driverId)
+    return aadhaar
+
+findByAadhaarNumberHash ::
+  Transactionable m =>
+  DbHash ->
+  m (Maybe AadhaarVerification)
+findByAadhaarNumberHash aadhaarHash = do
+  findOne $ do
+    aadhaar <- from $ table @AadhaarVerificationT
+    where_ $ aadhaar ^. AadhaarVerificationAadhaarNumberHash ==. val (Just aadhaarHash)
     return aadhaar
 
 deleteByDriverId :: Id Person -> SqlDB ()

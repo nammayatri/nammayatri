@@ -15,6 +15,7 @@
 module Domain.Types.DriverOnboarding.AadhaarVerification where
 
 import Domain.Types.Person
+import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
 
@@ -24,7 +25,9 @@ data AadhaarVerification = AadhaarVerification
     driverName :: Text,
     driverGender :: Text,
     driverDob :: Text,
-    driverImage :: Text,
+    driverImage :: Maybe Text,
+    aadhaarNumberHash :: Maybe DbHash,
+    isVerified :: Bool,
     createdAt :: UTCTime
   }
-  deriving (Generic, ToSchema, ToJSON, FromJSON, Show)
+  deriving (Generic, ToJSON, FromJSON, Show)

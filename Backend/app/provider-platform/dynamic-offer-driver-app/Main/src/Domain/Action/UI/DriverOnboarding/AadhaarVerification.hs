@@ -24,6 +24,7 @@ import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import Environment
+import Kernel.External.Encryption (DbHash, getDbHash)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
@@ -38,11 +39,20 @@ import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as Q
 import qualified Storage.Queries.Person as Person
 import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Error
+import Kernel.Types.APISuccess (APISuccess(..))
 
 data VerifyAadhaarOtpReq = VerifyAadhaarOtpReq
   { otp :: Int,
     shareCode :: Text
   }
+  deriving (Show, Generic, ToSchema, ToJSON, FromJSON)
+
+data UnVerifiedDataReq = UnVerifiedDataReq 
+  {
+    driverName :: Text,
+    driverGender :: Text,
+    driverDob :: Text
+  } 
   deriving (Show, Generic, ToSchema, ToJSON, FromJSON)
 
 generateAadhaarOtp ::
@@ -56,6 +66,9 @@ generateAadhaarOtp isDashboard mbMerchant personId req = do
   driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   when driverInfo.blocked $ throwError DriverAccountBlocked
   when (driverInfo.aadhaarVerified) $ throwError AadhaarAlreadyVerified
+  aadhaarHash <- getDbHash req.aadhaarNumber
+  aadhaarInfo <- Q.findByAadhaarNumberHash aadhaarHash
+  when (isJust aadhaarInfo) $ throwError AadhaarAlreadyLinked
   whenJust mbMerchant $ \merchant -> do
     -- merchant access checking
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
@@ -67,16 +80,16 @@ generateAadhaarOtp isDashboard mbMerchant personId req = do
   res <- AadhaarVerification.generateAadhaarOtp person.merchantId $ req
   aadhaarOtpEntity <- mkAadhaarOtp personId res
   Esq.runNoTransaction $ Query.createForGenerate aadhaarOtpEntity
-  cacheAadhaarVerifyTries personId tried res.transactionId isDashboard
+  cacheAadhaarVerifyTries personId tried res.transactionId aadhaarHash isDashboard
   pure res
 
-cacheAadhaarVerifyTries :: Id Person.Person -> Int -> Maybe Text -> Bool -> Flow ()
-cacheAadhaarVerifyTries _ _ Nothing _ = return ()
-cacheAadhaarVerifyTries personId tried transactionId isDashboard = do
-  let key = makeTransactionNumberKey personId
+cacheAadhaarVerifyTries :: Id Person.Person -> Int -> Maybe Text -> DbHash -> Bool -> Flow ()
+cacheAadhaarVerifyTries _ _ Nothing _ _ = return ()
+cacheAadhaarVerifyTries personId tried transactionId aadhaarNumberHash isDashboard = do
+  let key = makeTransactionIdAndAadhaarHashKey personId
   let tryKey = makeGenerateOtpTryKey personId
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Redis.setExp key transactionId expTime
+  Redis.setExp key (transactionId, aadhaarNumberHash) expTime
   unless isDashboard $ Redis.setExp tryKey (tried + 1) expTime
 
 verifyAadhaarOtp ::
@@ -92,10 +105,10 @@ verifyAadhaarOtp mbMerchant personId req = do
   whenJust mbMerchant $ \merchant -> do
     -- merchant access checking
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound (getId personId))
-  let key = makeTransactionNumberKey personId
-  transactionId <- Redis.safeGet key
-  case transactionId of
-    Just tId -> do
+  let key = makeTransactionIdAndAadhaarHashKey personId
+  mtIdAndAadhaarHash <- Redis.safeGet key
+  case mtIdAndAadhaarHash of
+    Just (tId, aadhaarNumberHash) -> do
       let aadhaarVerifyReq =
             AadhaarVerification.AadhaarOtpVerifyReq
               { otp = req.otp,
@@ -108,16 +121,25 @@ verifyAadhaarOtp mbMerchant personId req = do
       if res.code == pack "1002"
         then do
           Redis.del key
-          aadhaarEntity <- mkAadhaar personId res
+          aadhaarEntity <- mkAadhaar personId res.name res.gender res.date_of_birth (Just aadhaarNumberHash) (Just res.image) True
           Esq.runNoTransaction $ Q.create aadhaarEntity
-          _ <- Status.statusHandler (person.id, person.merchantId)
           void $ CQDriverInfo.updateAadhaarVerifiedState (cast personId) True
+          Status.statusHandler (person.id, person.merchantId)
         else throwError $ InternalError "Aadhaar Verification failed, Please try again"
       pure res
     Nothing -> throwError TransactionIdNotFound
 
-makeTransactionNumberKey :: Id Person.Person -> Text
-makeTransactionNumberKey id = "AadhaarVerificationTransactionId:PersonId-" <> id.getId
+unVerifiedAadhaarData ::
+  Id Person.Person ->
+  UnVerifiedDataReq  ->
+  Flow APISuccess
+unVerifiedAadhaarData personId req = do  
+  aadhaarEntity <- mkAadhaar personId req.driverName req.driverGender req.driverDob Nothing Nothing False
+  Esq.runNoTransaction $ Q.create aadhaarEntity
+  return Success
+
+makeTransactionIdAndAadhaarHashKey :: Id Person.Person -> Text
+makeTransactionIdAndAadhaarHashKey id = "AadhaarVerificationTransactionIdAndAadhaarHash:PersonId-" <> id.getId
 
 makeGenerateOtpTryKey :: Id Person.Person -> Text
 makeGenerateOtpTryKey id = "GenerateOtpTryKeyId:PersonId-" <> id.getId
@@ -164,18 +186,25 @@ mkAadhaarVerify personId tId res = do
 mkAadhaar ::
   (MonadGuid m, MonadTime m) =>
   Id Person.Person ->
-  AadhaarVerification.AadhaarOtpVerifyRes ->
+  Text ->
+  Text ->
+  Text ->    
+  Maybe DbHash ->
+  Maybe Text ->   
+  Bool ->
   m VDomain.AadhaarVerification
-mkAadhaar personId res = do
+mkAadhaar personId name gender dob aadhaarHash img aadhaarVerified = do
   id <- generateGUID
   now <- getCurrentTime
   return $
     VDomain.AadhaarVerification
       { id,
         driverId = personId,
-        driverName = res.name,
-        driverGender = res.gender,
-        driverDob = res.date_of_birth,
-        driverImage = res.image,
+        driverName = name,
+        driverGender = gender,
+        driverDob = dob,
+        driverImage = img,
+        aadhaarNumberHash = aadhaarHash,
+        isVerified = aadhaarVerified,
         createdAt = now
       }
