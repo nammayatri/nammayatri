@@ -65,6 +65,7 @@ import Foreign.Class (class Encode)
 import Data.Array ((!!))
 import Resources.Constants (getKmMeter)
 import Common.Types.App (LazyCheck(..))
+import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -705,10 +706,10 @@ chatViewConfig state = let
 
 getCustomerSuggestions :: ST.HomeScreenState -> Array String
 getCustomerSuggestions state = case (DA.length state.data.suggestionsList == 0), (DA.length state.data.messages == 0 ) of
-                                  true, true -> (if (metersToKm state.data.driverInfoCardState.distance state) == (getString AT_PICKUP) then JB.getSuggestionsfromKey "customerInitialAP" else JB.getSuggestionsfromKey "customerInitialBP")
-                                  true, false -> if (showSuggestions state) then (if (metersToKm state.data.driverInfoCardState.distance state) == (getString AT_PICKUP) then JB.getSuggestionsfromKey "customerDefaultAP" else JB.getSuggestionsfromKey "customerDefaultBP") else []
+                                  true, true -> (if (metersToKm state.data.driverInfoCardState.distance state) == (getString AT_PICKUP) then getSuggestionsfromKey "customerInitialAP" else getSuggestionsfromKey "customerInitialBP")
+                                  true, false -> if (showSuggestions state) then (if (metersToKm state.data.driverInfoCardState.distance state) == (getString AT_PICKUP) then getSuggestionsfromKey "customerDefaultAP" else getSuggestionsfromKey "customerDefaultBP") else []
                                   false, false -> state.data.suggestionsList
-                                  false, true -> JB.getSuggestionsfromKey "customerDefaultAP"
+                                  false, true -> getSuggestionsfromKey "customerDefaultAP"
 
 showSuggestions :: ST.HomeScreenState -> Boolean
 showSuggestions state = do

@@ -77,19 +77,34 @@ public class MessageOverlay implements View.OnClickListener {
 
             suggestions = getDefaultSuggestions(context);
 
+            SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            String language = sharedPref.getString("LANGUAGE_KEY", "null");
+
             if(suggestions != null) {
-                if (suggestion1View != null) {
-                    suggestion1View.setText(ChatService.getMessageFromKey(suggestions.s1));
+                String suggestion1 = getSuggestionFromKey(context, suggestions.s1, language);
+                String suggestion2 = getSuggestionFromKey(context, suggestions.s2, language);
+                String suggestion3 = getSuggestionFromKey(context, suggestions.s3, language);
+                if(suggestion1.equals("")) {
+                    suggestion1 = getFallBackSuggestion(suggestions.s1, language);
+                }
+                if(suggestion2.equals("")) {
+                    suggestion2 = getFallBackSuggestion(suggestions.s2, language);
+                }
+                if(suggestion3.equals("")) {
+                    suggestion3 = getFallBackSuggestion(suggestions.s3, language);
+                }
+                if (suggestion1View != null && suggestion1 != "") {
+                    suggestion1View.setText(suggestion1);
                     suggestion1View.setVisibility(View.VISIBLE);
                     suggestion1View.setOnClickListener(this);
                 }
-                if (suggestion2View != null) {
-                    suggestion2View.setText(ChatService.getMessageFromKey(suggestions.s2));
+                if (suggestion2View != null && suggestion2 != "") {
+                    suggestion2View.setText(suggestion2);
                     suggestion2View.setVisibility(View.VISIBLE);
                     suggestion2View.setOnClickListener(this);
                 }
-                if (suggestion3View != null) {
-                    suggestion3View.setText(ChatService.getMessageFromKey(suggestions.s3));
+                if (suggestion3View != null && suggestion3 != "") {
+                    suggestion3View.setText(suggestion3);
                     suggestion3View.setVisibility(View.VISIBLE);
                     suggestion3View.setOnClickListener(this);
                 }
@@ -119,13 +134,13 @@ public class MessageOverlay implements View.OnClickListener {
                 startMainActivity();
                 break;
             case R.id.suggestion1:
-                if(suggestions != null) ChatService.sendMessage(suggestions.s1);
+                if(suggestions != null) ChatService.sendMessage(getSuggestionFromKey(context, suggestions.s1, "EN_US"));
                 break;
             case R.id.suggestion2:
-                if(suggestions != null) ChatService.sendMessage(suggestions.s2);
+                if(suggestions != null) ChatService.sendMessage(getSuggestionFromKey(context, suggestions.s2, "EN_US"));
                 break;
             case R.id.suggestion3:
-                if(suggestions != null) ChatService.sendMessage(suggestions.s3);
+                if(suggestions != null) ChatService.sendMessage(getSuggestionFromKey(context, suggestions.s3, "EN_US"));
                 break;
         }
         overlayView.setVisibility(View.GONE);
@@ -135,10 +150,84 @@ public class MessageOverlay implements View.OnClickListener {
         try {
             SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             String suggestionsStr = sharedPref.getString("SUGGESTIONS", "null");
-            JSONArray suggestionsArr = new JSONObject(suggestionsStr).getJSONArray("driverOverlayDefault");
-            return new Suggestions(suggestionsArr.getString(0), suggestionsArr.getString(1), suggestionsArr.getString(2));
+            String isDriverAtPickup = sharedPref.getString("IS_DRIVER_AT_PICKUP", "null");
+            JSONArray suggestionsArr = new JSONArray();
+            if(isDriverAtPickup.equals("true")) {
+                suggestionsArr = new JSONObject(suggestionsStr).getJSONArray("driverOverlayDefaultAP");
+            } else {
+                suggestionsArr = new JSONObject(suggestionsStr).getJSONArray("driverOverlayDefaultBP");
+            }
+            return new Suggestions(suggestionsArr.getString(0) , suggestionsArr.getString(1), suggestionsArr.getString(2));
         }catch (Exception e) {
             Log.e("MessageOverlay", "Error in getDefaultSuggestions " + e);
+            return getFallBackSuggestions(context);
+        }
+    }
+
+    private static String getSuggestionFromKey (Context context, String key, String language) {
+        try {
+            SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            String suggestionsStr = sharedPref.getString("SUGGESTIONS_DEFINITIONS", "null");
+            JSONObject suggestions = new JSONObject(suggestionsStr);
+            if(suggestions.has(key)) {
+                JSONObject message = suggestions.getJSONObject(key);
+                if(message.has(language.toLowerCase())) return message.getString(language.toLowerCase());
+                else return message.getString("en_us");
+            } else {
+                return key;
+            }
+        } catch (Exception e) {
+            Log.e("MessageOverlay","Error in getMessageFromKey : " + e);
+            return "";
+        }
+    }
+
+    private static Suggestions getFallBackSuggestions (Context context) {
+        try {
+            SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            String isDriverAtPickup = sharedPref.getString("IS_DRIVER_AT_PICKUP", "null");
+            String language = sharedPref.getString("LANGUAGE_KEY", "null");
+            if(isDriverAtPickup.equals("true")) {
+                return new Suggestions(getFallBackSuggestion("dols1AP", language), getFallBackSuggestion("dols2AP", language), getFallBackSuggestion("dols3AP", language));
+            } else {
+                return new Suggestions(getFallBackSuggestion("dols1BP", language), getFallBackSuggestion("dols2BP", language), getFallBackSuggestion("dols3BP", language));
+            }
+        } catch (Exception e) {
+            Log.e("MessageOverlay", "Error in getFallBackSuggestions " + e);
+            return null;
+        }
+    }
+
+    private static String getFallBackSuggestion (String key, String language) {
+        try {
+            JSONObject suggestions = defaultSuggestions();
+            JSONObject suggestion = suggestions.getJSONObject(key);
+            if(suggestion.has(language.toLowerCase())) return suggestion.getString(language.toLowerCase());
+            else return suggestion.getString("en_us");
+        } catch (Exception e) {
+            Log.e("MessageOverlay", "Error in getFallBackSuggestions " + e);
+            return "";
+        }
+    }
+
+    private static JSONObject defaultSuggestions () {
+        try {
+            JSONObject dols1BP = new JSONObject("{\"ta_in\":\"சரி\",\"ml_in\":\"ഓക്കേ\",\"kn_in\":\"ಸರಿ\",\"hi_in\":\"ठीक है\",\"en_us\":\"Ok\",\"bn_in\":\"ঠিক আছে\"}");
+            JSONObject dols2BP = new JSONObject("{\"en_us\":\"Yes\",\"ta_in\":\"ஆம்\",\"kn_in\":\"ಹೌದು\",\"hi_in\":\"हाँ\",\"ml_in\":\"അതെ\",\"bn_in\":\"হ্যাঁ\"}");
+            JSONObject dols3BP = new JSONObject("{\"en_us\":\"On my way\",\"ta_in\":\"வந்துகொண்டிருக்கிறேன்\",\"kn_in\":\"ಬರುತ್ತಿದ್ದೇನೆ\",\"hi_in\":\"मैं आ रहा हूँ\",\"ml_in\":\"ഞാൻ വന്നുകൊണ്ടിരിക്കുകയാണ്\",\"bn_in\":\"আমি আসছি\"}");
+            JSONObject dols1AP = new JSONObject("{\"en_us\":\"Yes\",\"ta_in\":\"ஆம்\",\"kn_in\":\"ಹೌದು\",\"hi_in\":\"हाँ\",\"ml_in\":\"അതെ\",\"bn_in\":\"হ্যাঁ\"}");
+            JSONObject dols2AP = new JSONObject("{\"ta_in\":\"சரி\",\"ml_in\":\"ഓക്കേ\",\"kn_in\":\"ಸರಿ\",\"hi_in\":\"ठीक है\",\"en_us\":\"Ok\",\"bn_in\":\"ঠিক আছে\"}");
+            JSONObject dols3AP = new JSONObject("{\"en_us\" : \"At pick-up\", \"ta_in\" : \"பிக்-அப்பில் உள்ளேன்\", \"kn_in\" : \"ಪಿಕ್ ಅಪ್ ನಲ್ಲಿ\", \"hi_in\" : \"मैं लोकेशन पे हूँ\", \"ml_in\" : \"ഞാൻ പിക്ക്-അപ്പിൽ ആണ്\", \"bn_in\" : \"আমি পিক-আপ স্থানে আছি\" }");
+            JSONObject suggestions = new JSONObject();
+            suggestions.put("dols1BP", dols1BP);
+            suggestions.put("dols2BP", dols2BP);
+            suggestions.put("dols3BP", dols3BP);
+            suggestions.put("dols1AP", dols1AP);
+            suggestions.put("dols2AP", dols2AP);
+            suggestions.put("dols3AP", dols3AP);
+            return suggestions;
+        } catch (Exception e){
+            Log.e("MessageOverlay", "Error in defaultSuggestions " + e);
             return null;
         }
     }

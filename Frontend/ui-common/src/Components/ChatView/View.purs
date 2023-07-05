@@ -32,6 +32,7 @@ import Common.Styles.Colors (white900) as Color
 import PrestoDOM.Elements.Elements (progressBar)
 import PrestoDOM.Events (afterRender)
 import Engineering.Helpers.Commons (screenHeight, safeMarginTop)
+import Engineering.Helpers.Suggestions(getMessageFromKey)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -322,7 +323,7 @@ quickMessageView config message isLastItem push =
   , orientation VERTICAL
   , onClick push (if config.enableSuggestionClick then const (SendSuggestion message) else (const NoAction))
   ][ textView
-     [ text $ getSuggestionfromKey message config.languageKey
+     [ text $ getMessageFromKey message config.languageKey
      , color config.blue800
      , padding (Padding 12 16 12 16)
      , textSize FontSize.a_14
