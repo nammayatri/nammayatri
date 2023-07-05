@@ -5,6 +5,7 @@ packages:
   app/provider-platform/dynamic-offer-driver-app/Allocator
   app/rider-platform/rider-app/Main
   app/rider-platform/rider-app/search-result-aggregator
+  app/rider-platform/rider-app/person-stats-filler
   app/mocks/sms
   app/mocks/fcm
   app/dashboard/rider-dashboard

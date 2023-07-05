@@ -25,6 +25,7 @@ import qualified "mock-google" App as MockGoogle
 import qualified "mock-public-transport-provider-platform" App as MockPublicTransportBpp
 import qualified "mock-registry" App as MockRegistry
 import qualified "mock-sms" App as MockSms
+import qualified "person-stats-filler" App as PersonStatsFiller
 import qualified "public-transport-rider-platform" App as PublicTransport
 import qualified "public-transport-search-consumer" App as PublicTransportSearchConsumer
 import qualified "rider-app" App as AppBackend
@@ -65,6 +66,7 @@ main = do
       "mock-public-transport-provider-platform",
       "public-transport-search-consumer",
       "search-result-aggregator",
+      "person-stats-filler",
       "dynamic-offer-driver-app",
       "driver-offer-allocator",
       "mock-google"
@@ -158,6 +160,9 @@ specs' googleCfg trees = do
           cfg & hideLogging
             & #kafkaConsumerCfgs . #publicTransportSearch . #timeoutMilliseconds .~ kafkaConsumerTimeoutMilliseconds,
         SearchResultAggregator.runSearchResultAggregator $ \cfg ->
+          cfg & hideLogging
+            & #kafkaConsumerCfgs . #publicTransportQuotes . #timeoutMilliseconds .~ kafkaConsumerTimeoutMilliseconds,
+        PersonStatsFiller.runPersonStatsFiller $ \cfg ->
           cfg & hideLogging
             & #kafkaConsumerCfgs . #publicTransportQuotes . #timeoutMilliseconds .~ kafkaConsumerTimeoutMilliseconds,
         ARDUAllocator.runDriverOfferAllocator $ \cfg ->

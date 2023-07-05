@@ -70,6 +70,7 @@ _:
         scheduler-example-app-exe = { };
         scheduler-example-scheduler-exe = { };
         search-result-aggregator-exe = { };
+        person-stats-filler-exe = { };
         special-zone-exe = { };
       };
 

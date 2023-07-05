@@ -117,6 +117,7 @@ library
     , mock-public-transport-provider-platform
     , mock-registry
     , mock-sms
+    , person-stats-filler
     , public-transport-rider-platform
     , public-transport-search-consumer
     , record-dot-preprocessor
@@ -208,6 +209,7 @@ test-suite beckn-integ-test
     , mock-public-transport-provider-platform
     , mock-registry
     , mock-sms
+    , person-stats-filler
     , public-transport-rider-platform
     , public-transport-search-consumer
     , record-dot-preprocessor
