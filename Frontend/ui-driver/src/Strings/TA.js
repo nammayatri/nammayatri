@@ -484,7 +484,7 @@ const tamilStrings = {
   GETTING_THE_LEADERBOARD_READY : "லீடர்போர்டை உருவாக்குகிறது!",
   PLEASE_WAIT_WHILE_WE_UPDATE_THE_DETAILS : "நாங்கள் விவரங்களைப் புதுப்பிக்கும் வரை காத்திருக்கவும்",
   LAST_UPDATED : "கடைசியாக புதுப்பிக்கப்பட்டது: ",
-  CONGRATULATIONS_YOU_ARE_RANK : "வாழ்த்துகள்! நீங்கள் தரவரிசை ",
+  CONGRATULATIONS_YOU_ARE_RANK : "வாழ்த்துகள் ! உங்கள் ரேங்க் ",
   YOU : " (நீங்கள்)",
   DAILY : "தினசரி",
   WEEKLY : "வாரந்தோறும்"

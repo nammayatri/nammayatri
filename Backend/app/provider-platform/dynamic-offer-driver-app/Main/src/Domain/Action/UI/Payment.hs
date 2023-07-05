@@ -79,7 +79,7 @@ createOrder (driverId, merchantId) driverFeeId = do
             customerId = driver.id.getId,
             customerEmail = driverEmail,
             customerPhone = driverPhone,
-            paymentPageClientId = driver.id.getId,
+            paymentPageClientId = "yatrisathi",
             customerFirstName = Just driver.firstName,
             customerLastName = driver.lastName
           }
