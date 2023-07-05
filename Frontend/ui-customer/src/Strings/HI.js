@@ -259,7 +259,8 @@ const hindiStrings = {
   "ESTIMATES_REVISED_TO": "संशोधित अनुमानित कीमत है",
   "RATE_CARD": "रेट कार्ड",
   "NIGHT_TIME_CHARGES": "रात के समय का शुल्क",
-  "MIN_FARE_UPTO": "न्यूनतम किराया 2 किमी तक",
+  "MIN_FARE_UPTO": "तक का न्यूनतम किराया",
+  "MORE_THAN" : "किलोमीटर से अधिक",
   "RATE_ABOVE_MIN_FARE": "न्यूनतम किराए से ऊपर की दर",
   "DRIVER_PICKUP_CHARGES": "ड्राइवर के आने का शुल्क",
   "DAY_TIMES_OF": "रात में लागू दिन के समय के शुल्क का ",
@@ -512,5 +513,10 @@ const hindiStrings = {
   "CALL_NAMMA_YATRI_SUPPORT" : "नम्मा यात्री सहायता को कॉल करें",
   "CALL_112": "112 पर कॉल करें",
   "CALL_EMERGENCY_CENTRE": "आपातकालीन केंद्र को कॉल करें",
-  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS" :"विवरण 10 अक्षरों से अधिक होना चाहिए"
+  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS" :"विवरण 10 अक्षरों से अधिक होना चाहिए",
+  "SEATS" : "सीटें",
+  "DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS" :"ड्राइवर जोड़ने की सीमा ₹10 की वृद्धि में है",
+  "HATCHBACK" : "हैचबैक", 
+  "SUV" : "एसयूवी",
+  "SEDAN" : "सेडान" 
 }

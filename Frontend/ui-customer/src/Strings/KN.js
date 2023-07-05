@@ -259,7 +259,8 @@ const kannadaStrings = {
   "ESTIMATES_REVISED_TO": "ಪರಿಷ್ಕೃತ ಅಂದಾಜು",
   "RATE_CARD": "ದರದ ಚೀಟಿ",
   "NIGHT_TIME_CHARGES": "ರಾತ್ರಿ ಸಮಯದ ಶುಲ್ಕಗಳು",
-  "MIN_FARE_UPTO": "2 ಕಿಮೀ ವರೆಗೆ ಕನಿಷ್ಠ ದರ",
+  "MIN_FARE_UPTO": "ವರೆಗೆ ಕನಿಷ್ಠ ದರ",
+  "MORE_THAN" : "ಕಿಲೋಮೀಟರ್‌ಗಿಂತ ಹೆಚ್ಚು",
   "RATE_ABOVE_MIN_FARE": "ಕನಿಷ್ಠ ದರಕ್ಕಿಂತ ಹೆಚ್ಚಿನ ದರ",
   "DRIVER_PICKUP_CHARGES": "ಚಾಲಕ ಪಿಕಪ್ ಶುಲ್ಕಗಳು",
   "DAY_TIMES_OF": "",
@@ -506,5 +507,11 @@ const kannadaStrings = {
   "CALL_NAMMA_YATRI_SUPPORT" : "ನಮ್ಮ ಯಾತ್ರಿ ಬೆಂಬಲಕ್ಕೆ ಕರೆ ಮಾಡಿ",
   "CALL_112": "112 ಗೆ ಕರೆ ಮಾಡಿ",
   "CALL_EMERGENCY_CENTRE": "ತುರ್ತು ಕೇಂದ್ರಕ್ಕೆ ಕರೆ ಮಾಡಿ",
-  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS" : "ವಿವರಣೆಯು 10 ಅಕ್ಷರಗಳಿಗಿಂತ ಹೆಚ್ಚು ಇರಬೇಕು"
+  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS" : "ವಿವರಣೆಯು 10 ಅಕ್ಷರಗಳಿಗಿಂತ ಹೆಚ್ಚು ಇರಬೇಕು",
+  "DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS" :"ಚಾಲಕ ಸೇರ್ಪಡೆ ಮಿತಿಗಳು ₹10 ಹೆಚ್ಚಳದಲ್ಲಿವೆ",
+  "SEATS" : "ಆಸನಗಳು",
+  "HATCHBACK" : "ಹ್ಯಾಚ್ಬ್ಯಾಕ್", 
+  "SUV" : "ಎಸ್ ಯು ವಿ",
+  "SEDAN" : "ಸೆಡಾನ್" 
+
 }

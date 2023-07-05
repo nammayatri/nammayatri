@@ -80,6 +80,7 @@ baseAppFlow baseFlow = do
     checkVersion versionCode
     cacheAppParameters versionCode
     when baseFlow $ void $ UI.splashScreen state.splashScreen
+    setValueToLocalNativeStore NEGOTIATION_UNIT if (getMerchant unit == YATRIPARTNER) then "20" else "10"
     let regToken = getValueToLocalStore REGISTERATION_TOKEN
     _ <- pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")

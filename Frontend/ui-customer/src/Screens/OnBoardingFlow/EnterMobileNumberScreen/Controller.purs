@@ -200,7 +200,7 @@ eval (SetToken id )state = do
 
 eval (SetPhoneNumber number )state = continue state {props { editTextVal = number, mNumberEdtFocused = true}}
 
-eval ContinueCommand state = exit $ GoToOTP state{data{timer = 30, timerID = ""},props = state.props{resendEnable = false}}
+eval ContinueCommand state = exit $ GoToOTP state{data{timer = 30, timerID = ""},props = state.props{btnActiveOTP = false, resendEnable = false}}
 eval AfterRender state = continue state
 
 eval _ state = continue state

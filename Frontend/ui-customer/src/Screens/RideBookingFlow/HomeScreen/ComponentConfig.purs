@@ -632,14 +632,15 @@ rateCardConfig state =
     config' = RateCard.config
     rateCardConfig' =
       config'
-        { baseFare = "₹" <> HU.toString (state.data.rateCard.baseFare)
-        , extraFare = "₹" <> HU.toString (state.data.rateCard.extraFare)
-        , nightCharges = state.data.rateCard.nightCharges
-        , pickUpCharges = "₹" <> HU.toString (state.data.rateCard.pickUpCharges)
-        , additionalFare = "₹" <> HU.toString (state.data.rateCard.additionalFare)
+        { nightCharges = state.data.rateCard.nightCharges
         , nightShiftMultiplier = HU.toString (state.data.rateCard.nightShiftMultiplier)
         , currentRateCardType = state.data.rateCard.currentRateCardType
         , onFirstPage = state.data.rateCard.onFirstPage
+        , nightChargesApplicable = not ((HU.getMerchant FunctionCall) == HU.YATRI)
+        , rateCardArray = state.data.rateCard.rateCardArray
+        , title = state.data.rateCard.title
+        , driverAdditionsImage = state.data.rateCard.driverAdditionsImage
+        , driverAdditionsLogic = state.data.rateCard.driverAdditionsLogic
         }
   in
     rateCardConfig'

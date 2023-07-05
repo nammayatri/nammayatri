@@ -547,6 +547,7 @@ type HomeScreenStateData =
   , selectedEstimatesObject :: ChooseVehicle.Config
   , lastMessage :: ChatComponent
   , cancelRideConfirmationData :: CancelRideConfirmationData
+  , pickUpCharges :: Int
   }
 
 type HomeScreenStateProps =
@@ -689,15 +690,21 @@ instance eqRateCardType :: Eq RateCardType where eq = genericEq
 
 type RateCard =
   {
-    baseFare :: Int,
-    extraFare :: Int,
-    pickUpCharges :: Int,
     additionalFare :: Int,
     nightShiftMultiplier :: Number,
     nightCharges :: Boolean,
     currentRateCardType :: RateCardType,
-    onFirstPage :: Boolean
+    onFirstPage :: Boolean,
+    rateCardArray :: Array RateCardDetails,
+    driverAdditionsImage :: String,
+    driverAdditionsLogic :: String,
+    title :: String
   }
+
+type RateCardDetails = {
+  title :: String ,
+  description :: String
+}
 
 type EmergencyHelpModelState = {
    currentlySelectedContact :: Contact,

@@ -17,7 +17,7 @@ module Screens.HomeScreen.Transformer where
 
 import Prelude
 
-import Accessor (_contents, _description, _estimatedDistance, _lat, _lon, _place_id, _distance, _toLocation, _otpCode)
+import Accessor (_contents, _description, _estimatedDistance, _lat, _lon, _place_id, _distance, _toLocation, _otpCode, _maxFare)
 import Components.ChooseVehicle (Config, config) as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
@@ -38,7 +38,7 @@ import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar)
 import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact)
-import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..))
+import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..))
 import Services.Backend as Remote
 import Types.App(FlowBT)
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
@@ -345,10 +345,13 @@ getEstimates (EstimateAPIEntity estimate) index = ChooseVehicle.config {
       , index = index
       , id = trim estimate.id
       , capacity = case estimate.vehicleVariant of
-          "TAXI" -> (getString ECONOMICAL) <> ", 4 " <> (getString PEOPLE)
-          "TAXI_PLUS" -> (getString COMFY) <> ", 4 " <> (getString PEOPLE)
-          "SEDAN" -> (getString COMFY) <> ", " <>(getString UPTO) <>" 4 " <> (getString PEOPLE)
-          "SUV" -> (getString SPACIOUS) <> ", " <> (getString UPTO)<>" 6 " <> (getString PEOPLE)
-          "HATCHBACK" -> (getString EASY_ON_WALLET) <> ", "<> (getString UPTO) <> " 4 " <> (getString PEOPLE)
-          _ -> (getString ECONOMICAL) <> ", 4 " <> (getString PEOPLE)
+          "SUV" -> "6 " <> (getString SEATS)
+          _ -> "4 " <> (getString SEATS)
+      , maxPrice = show $ (fromMaybe dummyFareRange estimate.totalFareRange)^. _maxFare
       }
+
+dummyFareRange :: FareRange
+dummyFareRange = FareRange{
+   maxFare : 0,
+   minFare : 0
+  }

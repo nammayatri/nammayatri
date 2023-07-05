@@ -900,7 +900,7 @@ rideRequestFlowView push state =
         ]
         [ PrestoAnim.animationSet [ fadeIn true ]
             $ if (state.props.currentStage == SettingPrice) then
-                if (state.props.isSpecialZone && (getValueFromConfig "specialLocationView") == "true") then
+                if ((state.props.isSpecialZone && (getValueFromConfig "specialLocationView") == "true") || ((getMerchant FunctionCall) /= NAMMAYATRI)) then
                   ChooseYourRide.view (push <<< ChooseYourRideAction) (chooseYourRideConfig state)
                 else
                 suggestedPriceView push state
