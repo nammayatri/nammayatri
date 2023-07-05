@@ -69,7 +69,7 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
       nightShiftCaption = "NIGHT_SHIFT_CHARGE"
       mbNightShiftChargeItem = fmap (mkBreakupItem nightShiftCaption) (mkPrice <$> fareParams.nightShiftCharge)
 
-      waitingChargesCaption = "WAITING_CHARGE"
+      waitingChargesCaption = "WAITING_OR_PICKUP_CHARGES"
       mbWaitingChargesItem = mkBreakupItem waitingChargesCaption . mkPrice <$> fareParams.waitingCharge
 
       mbFixedGovtRateCaption = "FIXED_GOVERNMENT_RATE"
