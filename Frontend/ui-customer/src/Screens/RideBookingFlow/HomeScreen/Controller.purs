@@ -633,7 +633,7 @@ eval (UpdateMessages message sender timeStamp size) state = do
                     if value.sentBy == "Customer" then updateMessagesWithCmd state {data {messages = messages, messagesSize = size, suggestionsList = []}}
                     else do
                       let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
-                      let unReadMessages = (if readMessages == 0 then true else (if (readMessages < (length messages) && state.props.currentStage /= ChatWithDriver) then true else false))
+                      let unReadMessages = (if readMessages == 0 && state.props.currentStage /= ChatWithDriver then true else (if (readMessages < (length messages) && state.props.currentStage /= ChatWithDriver) then true else false))
                       let suggestions = getSuggestionsfromKey message
                       updateMessagesWithCmd state {data {messages = messages, suggestionsList = suggestions, lastMessage = value , messagesSize = size}, props {unReadMessages = unReadMessages, showChatNotification = unReadMessages}}
     Nothing -> continue state
