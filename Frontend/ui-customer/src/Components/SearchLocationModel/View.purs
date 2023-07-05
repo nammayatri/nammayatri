@@ -301,6 +301,7 @@ sourceDestinationEditTextView state push =
         [ height $ V 1
         , width MATCH_PARENT
         , background Color.grey900
+        , visibility if state.isSource == Just false then VISIBLE else GONE
         ]
         []
     , linearLayout

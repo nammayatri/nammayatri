@@ -3320,10 +3320,9 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     Bitmap thumbnailBitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_launcher);
                     sendIntent.setType("text/plain");
                    if (thumbnailBitmap != null &&  Build.VERSION.SDK_INT > 28) {
-                       Uri thumbnailUri = getImageUri(context, thumbnailBitmap);
-                       ClipData clipData = ClipData.newUri(context.getContentResolver(), "ThumbnailImage", thumbnailUri);
-                       sendIntent.setClipData(clipData);
-                       sendIntent.setType("image/*");
+                        Uri thumbnailUri = getImageUri(context, thumbnailBitmap);
+                        ClipData clipData = ClipData.newUri(context.getContentResolver(), "ThumbnailImage", thumbnailUri);
+                        sendIntent.setClipData(clipData);
                    }
                     sendIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     Intent shareIntent = Intent.createChooser(sendIntent, null);
@@ -4557,7 +4556,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public void performHapticFeedback() {
         Vibrator vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
 
-        if (vibrator != null && vibrator.hasVibrator()) {
+        if (vibrator != null && vibrator.hasVibrator() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             VibrationEffect effect = VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE);
             vibrator.vibrate(effect);
         }
