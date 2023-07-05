@@ -220,7 +220,8 @@ handler transporter req quote = do
             fareParametersId = Nothing,
             distanceCalculationFailed = Nothing,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            numberOfDeviation = Nothing
           }
 
     buildTrackingUrl rideId = do
