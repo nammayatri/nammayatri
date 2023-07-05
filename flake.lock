@@ -44,11 +44,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1687932510,
-        "narHash": "sha256-TcFQofoRojjwSOH2935CFtVvw7bJydoK6hJm7r9fLc0=",
+        "lastModified": 1688554292,
+        "narHash": "sha256-LO70fwU210xEDKP0fe78lPzsBh+tSi39Xi2U1l7yvts=",
         "owner": "nammayatri",
         "repo": "beckn-gateway",
-        "rev": "887a54ba0a9cf8aa9ca14179bbdf21ba92273774",
+        "rev": "1f85ad6c10fe07d8c2c015fde721064c55176042",
         "type": "github"
       },
       "original": {
@@ -542,11 +542,11 @@
         "sequelize": "sequelize"
       },
       "locked": {
-        "lastModified": 1687788036,
-        "narHash": "sha256-G1klby6mwVsLKMMhnlELS3sfaLYccnV7DItV/+rb8k0=",
+        "lastModified": 1688551247,
+        "narHash": "sha256-Y6p6hHQkKvSNpeYTzuqMdzwCbbACz7+jysbF/vCiq5U=",
         "ref": "ny-compatible",
-        "rev": "ad46399802023b1bc7cdcf5b0240033e767c26e6",
-        "revCount": 2118,
+        "rev": "93e95e2658f26c50d99dc0d5251fd563c1a07f36",
+        "revCount": 2119,
         "type": "git",
         "url": "ssh://git@ssh.bitbucket.juspay.net/iris/euler-hs"
       },
@@ -2294,11 +2294,11 @@
         "prometheus-haskell": "prometheus-haskell"
       },
       "locked": {
-        "lastModified": 1688373391,
-        "narHash": "sha256-zk1e55IpR5YnzIWYKr5YtQ+wXnyWgMq6EwZLk+LQxtY=",
+        "lastModified": 1688552352,
+        "narHash": "sha256-QuAq/RE/GQL9hEjwEhOScCNjYI51FPE51RwER+Fv554=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "d47335826a0f49fb3ef517ee8b59b0eeecc359ac",
+        "rev": "619450da8fb4b66e4f18cba9057b52c37afd4839",
         "type": "github"
       },
       "original": {

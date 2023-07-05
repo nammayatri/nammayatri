@@ -18,7 +18,7 @@ import Beckn.Spec.API.Search as Search
 import qualified Beckn.Spec.Search as Search
 -- import qualified EulerHS.Types as ET
 
-import Data.Text (unpack)
+import qualified EulerHS.Types as ET
 import GHC.Records.Extra
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics
@@ -57,4 +57,4 @@ callBecknAPIWithSignature ::
   m ()
 callBecknAPIWithSignature a b c d = do
   bapId <- asks (.bapId)
-  void $ callBecknAPI (Just $ unpack $ getHttpManagerKey bapId) Nothing a b c d
+  void $ callBecknAPI (Just $ ET.ManagerSelector $ getHttpManagerKey bapId) Nothing a b c d
