@@ -1165,7 +1165,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Debounc
   if (STR.length searchString > 2) then
     validateSearchInput state searchString
   else
-    continue state
+    continue state{data{ locationList = state.data.recentSearchs.predictionArray }}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SourceChanged input)) state = do
   _ <- pure $ (setText' (getNewIDWithTag "SourceEditText") input)
@@ -1202,7 +1202,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Destina
 eval (SearchLocationModelActionController (SearchLocationModelController.EditTextFocusChanged textType)) state = do
   _ <- pure $ spy "searchLocationModal" textType
   if textType == "D" then
-    continueWithCmd state { props { isSource = Just false } }
+    continueWithCmd state { props { isSource = Just false }, data { locationList = state.data.recentSearchs.predictionArray } }
       [ do
           if state.props.isSearchLocation /= LocateOnMap then do
             _ <- (setText' (getNewIDWithTag "DestinationEditText") state.data.destination)
@@ -1211,7 +1211,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.EditTex
             pure $ NoAction
       ]
   else
-    continueWithCmd state { props { isSource = Just true} }
+    continueWithCmd state { props { isSource = Just true}, data { locationList = state.data.recentSearchs.predictionArray } }
       [ do
           if state.props.isSearchLocation /= LocateOnMap && state.props.isSource == Just true then do
             _ <- (setText' (getNewIDWithTag "SourceEditText") state.data.source)
@@ -1435,14 +1435,14 @@ eval CloseShowCallDialer state = continue state { props { showCallPopUp = false 
 eval (ShowCallDialer item) state = do
   case item of
     ANONYMOUS_CALLER -> do
-      continueWithCmd state
+      continueWithCmd state{props{ showCallPopUp = false }}
         [ do
             _ <- pure $ showDialer (if (STR.take 1 state.data.driverInfoCardState.merchantExoPhone) == "0" then state.data.driverInfoCardState.merchantExoPhone else "0" <> state.data.driverInfoCardState.merchantExoPhone)
             _ <- (firebaseLogEventWithTwoParams "ny_user_anonymous_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
             pure NoAction
         ]
     DIRECT_CALLER -> do
-      continueWithCmd state
+      continueWithCmd state{props{ showCallPopUp = false }}
         [ do
             _ <- pure $ showDialer $ fromMaybe state.data.driverInfoCardState.merchantExoPhone state.data.driverInfoCardState.driverNumber
             _ <- (firebaseLogEventWithTwoParams "ny_user_direct_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
