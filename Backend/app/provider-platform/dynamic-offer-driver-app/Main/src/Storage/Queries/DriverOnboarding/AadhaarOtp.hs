@@ -60,7 +60,7 @@ transformBeamAadhaarOtpReqToDomain BeamAOR.AadhaarOtpReqT {..} = do
 
 transformDomainAadhaarOtpReqToBeam :: AadhaarOtpReq -> BeamAOR.AadhaarOtpReq
 transformDomainAadhaarOtpReqToBeam AadhaarOtpReq {..} =
-  BeamAOR.defaultAadhaarOtpReq
+  BeamAOR.AadhaarOtpReqT
     { BeamAOR.id = getId id,
       BeamAOR.driverId = getId driverId,
       BeamAOR.requestId = requestId,
@@ -84,7 +84,7 @@ transformBeamAadhaarOtpVerifyToDomain BeamAOV.AadhaarOtpVerifyT {..} = do
 
 transformDomainAadhaarOtpVerifyToBeam :: AadhaarOtpVerify -> BeamAOV.AadhaarOtpVerify
 transformDomainAadhaarOtpVerifyToBeam AadhaarOtpVerify {..} =
-  BeamAOV.defaultAadhaarOtpVerify
+  BeamAOV.AadhaarOtpVerifyT
     { BeamAOV.id = getId id,
       BeamAOV.driverId = getId driverId,
       BeamAOV.requestId = requestId,

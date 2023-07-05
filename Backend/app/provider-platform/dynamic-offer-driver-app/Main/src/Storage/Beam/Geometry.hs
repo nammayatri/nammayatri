@@ -23,6 +23,7 @@ import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
+import qualified Database.Beam.Schema.Tables as BST
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
@@ -34,6 +35,12 @@ data GeometryT f = GeometryT
     region :: B.C f Text
   }
   deriving (Generic, B.Beamable)
+
+geometryTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity GeometryT)
+geometryTable =
+  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
+    <> B.setEntityName "geometry"
+    <> B.modifyTableFields geometryTMod
 
 instance B.Table GeometryT where
   data PrimaryKey GeometryT f

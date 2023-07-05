@@ -122,30 +122,6 @@ vehicleRegistrationCertificateTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-defaultVehicleRegistrationCertificate :: VehicleRegistrationCertificate
-defaultVehicleRegistrationCertificate =
-  VehicleRegistrationCertificateT
-    { id = "",
-      documentImageId = "",
-      certificateNumberEncrypted = "",
-      certificateNumberHash = "",
-      fitnessExpiry = defaultUTCDate,
-      permitExpiry = Nothing,
-      pucExpiry = Nothing,
-      insuranceValidity = Nothing,
-      vehicleClass = Nothing,
-      vehicleVariant = Nothing,
-      vehicleManufacturer = Nothing,
-      vehicleCapacity = Nothing,
-      vehicleModel = Nothing,
-      vehicleColor = Nothing,
-      vehicleEnergyType = Nothing,
-      verificationStatus = "",
-      failedRules = [],
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
-
 instance Serialize VehicleRegistrationCertificate where
   put = error "undefined"
   get = error "undefined"

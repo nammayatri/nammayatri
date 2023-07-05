@@ -28,7 +28,6 @@ import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
@@ -74,18 +73,6 @@ aadhaarOtpReqTMod =
       transactionId = B.fieldNamed "transaction_id",
       requestMessage = B.fieldNamed "request_message",
       createdAt = B.fieldNamed "created_at"
-    }
-
-defaultAadhaarOtpReq :: AadhaarOtpReq
-defaultAadhaarOtpReq =
-  AadhaarOtpReqT
-    { id = "",
-      driverId = "",
-      requestId = "",
-      statusCode = "",
-      transactionId = Nothing,
-      requestMessage = "",
-      createdAt = defaultUTCDate
     }
 
 instance Serialize AadhaarOtpReq where

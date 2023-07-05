@@ -114,19 +114,6 @@ imageTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-defaultImage :: Image
-defaultImage =
-  ImageT
-    { id = "",
-      personId = "",
-      merchantId = "",
-      s3Path = "",
-      imageType = "",
-      isValid = False,
-      failureReason = Nothing,
-      createdAt = defaultUTCDate
-    }
-
 instance Serialize Image where
   put = error "undefined"
   get = error "undefined"

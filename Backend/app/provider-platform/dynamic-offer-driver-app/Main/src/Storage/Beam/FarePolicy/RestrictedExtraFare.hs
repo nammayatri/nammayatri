@@ -79,16 +79,6 @@ restrictedExtraFareTMod =
       driverMaxExtraFare = B.fieldNamed "driver_max_extra_fare"
     }
 
-defaultRestrictedExtraFare :: RestrictedExtraFare
-defaultRestrictedExtraFare =
-  RestrictedExtraFareT
-    { id = "",
-      merchantId = "",
-      vehicleVariant = "",
-      minTripDistance = "",
-      driverMaxExtraFare = ""
-    }
-
 instance Serialize RestrictedExtraFare where
   put = error "undefined"
   get = error "undefined"

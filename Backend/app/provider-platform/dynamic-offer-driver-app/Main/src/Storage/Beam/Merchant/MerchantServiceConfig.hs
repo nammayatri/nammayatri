@@ -98,16 +98,6 @@ merchantServiceConfigTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-defaultMerchantServiceConfig :: MerchantServiceConfig
-defaultMerchantServiceConfig =
-  MerchantServiceConfigT
-    { merchantId = "",
-      serviceName = "",
-      configJSON = "",
-      updatedAt = defaultUTCDate,
-      createdAt = defaultUTCDate
-    }
-
 getServiceNameConfigJSON :: Domain.ServiceConfig -> (Domain.ServiceName, A.Value)
 getServiceNameConfigJSON = \case
   Domain.MapsServiceConfig mapsCfg -> case mapsCfg of

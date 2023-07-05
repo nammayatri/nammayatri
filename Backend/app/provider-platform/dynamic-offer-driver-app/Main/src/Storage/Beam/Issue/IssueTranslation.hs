@@ -72,15 +72,6 @@ issueTranslationTMod =
       language = B.fieldNamed "language"
     }
 
-defaultIssueTranslation :: IssueTranslation
-defaultIssueTranslation =
-  IssueTranslationT
-    { id = "",
-      sentence = "",
-      translation = "",
-      language = ""
-    }
-
 instance Serialize IssueTranslation where
   put = error "undefined"
   get = error "undefined"

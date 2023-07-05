@@ -123,19 +123,6 @@ merchantPaymentMethodTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-defaultMerchantPaymentMethod :: MerchantPaymentMethod
-defaultMerchantPaymentMethod =
-  MerchantPaymentMethodT
-    { id = "",
-      merchantId = "",
-      paymentType = "",
-      paymentInstrument = "",
-      collectedBy = "",
-      priority = 0,
-      updatedAt = defaultUTCDate,
-      createdAt = defaultUTCDate
-    }
-
 instance Serialize MerchantPaymentMethod where
   put = error "undefined"
   get = error "undefined"

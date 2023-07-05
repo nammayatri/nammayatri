@@ -13,13 +13,11 @@
 -}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
-{-# HLINT ignore "Use newtype instead of data" #-}
-
 module Storage.Queries.Geometry where
 
 import qualified Database.Beam as B
 -- import Database.Beam.Postgres
-import qualified Database.Beam.Schema.Tables as B
+-- import qualified Database.Beam.Schema.Tables as B
 import Domain.Types.Geometry
 -- import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
@@ -28,26 +26,27 @@ import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Lib.Utils
+import qualified Storage.Beam.Common as BeamCommon
 -- import Sequelize
 import qualified Storage.Beam.Geometry as BeamG
 
-data AtlasDB f = AtlasDB
-  { geometry :: f (B.TableEntity BeamG.GeometryT)
-  }
-  deriving (Generic, B.Database be)
+-- data AtlasDB f = AtlasDB
+--   { geometry :: f (B.TableEntity BeamG.GeometryT)
+--   }
+--   deriving (Generic, B.Database be)
 
-atlasDB :: B.DatabaseSettings be AtlasDB
-atlasDB =
-  B.defaultDbSettings
-    `B.withDbModification` B.dbModification
-      { geometry = geometryTable
-      }
+-- atlasDB :: B.DatabaseSettings be AtlasDB
+-- atlasDB =
+--   B.defaultDbSettings
+--     `B.withDbModification` B.dbModification
+--       { geometry = geometryTable
+--       }
 
-geometryTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity BeamG.GeometryT)
-geometryTable =
-  B.setEntitySchema (Just "atlas_driver_offer_bpp")
-    <> B.setEntityName "geometry"
-    <> B.modifyTableFields BeamG.geometryTMod
+-- geometryTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity BeamG.GeometryT)
+-- geometryTable =
+--   B.setEntitySchema (Just "atlas_driver_offer_bpp")
+--     <> B.setEntityName "geometry"
+--     <> B.modifyTableFields BeamG.geometryTMod
 
 -- findGeometriesContaining :: Transactionable m => LatLong -> [Text] -> m [Geometry]
 -- findGeometriesContaining gps regions =
@@ -65,7 +64,7 @@ findGeometriesContaining gps regions = do
   conn <- L.getOrInitSqlConn (fromJust dbConf)
   case conn of
     Right c -> do
-      geoms <- L.runDB c $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lon, gps.lat) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (geometry atlasDB)
+      geoms <- L.runDB c $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lon, gps.lat) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
       -- geoms <- L.runDB c $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (geometry atlasDB)
       pure (either (const []) (transformBeamGeometryToDomain <$>) geoms)
     Left _ -> pure []

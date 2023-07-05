@@ -111,20 +111,6 @@ placeNameCacheTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-defaultPlaceNameCache :: PlaceNameCache
-defaultPlaceNameCache =
-  PlaceNameCacheT
-    { id = "",
-      formattedAddress = Nothing,
-      plusCode = Nothing,
-      lat = 0.0,
-      lon = 0.0,
-      placeId = Nothing,
-      geoHash = Nothing,
-      addressComponents = [],
-      createdAt = defaultUTCDate
-    }
-
 instance Serialize PlaceNameCache where
   put = error "undefined"
   get = error "undefined"

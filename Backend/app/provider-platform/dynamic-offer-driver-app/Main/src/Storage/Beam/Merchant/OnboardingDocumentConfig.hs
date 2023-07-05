@@ -118,20 +118,6 @@ onboardingDocumentConfigTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-defaultOnboardingDocumentConfig :: OnboardingDocumentConfig
-defaultOnboardingDocumentConfig =
-  OnboardingDocumentConfigT
-    { merchantId = "",
-      documentType = "",
-      checkExtraction = False,
-      checkExpiry = False,
-      supportedVehicleClassesJSON = "",
-      rcNumberPrefix = "",
-      vehicleClassCheckType = "",
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
-
 instance Serialize OnboardingDocumentConfig where
   put = error "undefined"
   get = error "undefined"

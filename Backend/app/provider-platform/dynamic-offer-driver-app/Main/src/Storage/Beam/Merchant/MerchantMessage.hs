@@ -90,16 +90,6 @@ merchantMessageTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-defaultMerchantMessage :: MerchantMessage
-defaultMerchantMessage =
-  MerchantMessageT
-    { merchantId = "",
-      messageKey = "",
-      message = "",
-      updatedAt = defaultUTCDate,
-      createdAt = defaultUTCDate
-    }
-
 instance Serialize MerchantMessage where
   put = error "undefined"
   get = error "undefined"

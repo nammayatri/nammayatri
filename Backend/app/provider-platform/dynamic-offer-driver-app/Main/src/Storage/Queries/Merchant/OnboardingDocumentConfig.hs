@@ -149,7 +149,7 @@ transformBeamOnboardingDocumentConfigToDomain BeamODC.OnboardingDocumentConfigT 
 
 transformDomainOnboardingDocumentConfigToBeam :: OnboardingDocumentConfig -> BeamODC.OnboardingDocumentConfig
 transformDomainOnboardingDocumentConfigToBeam OnboardingDocumentConfig {..} =
-  BeamODC.defaultOnboardingDocumentConfig
+  BeamODC.OnboardingDocumentConfigT
     { BeamODC.merchantId = getId merchantId,
       BeamODC.documentType = documentType,
       BeamODC.checkExtraction = checkExtraction,

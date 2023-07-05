@@ -126,20 +126,6 @@ messageReportTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-defaultMessageReport :: MessageReport
-defaultMessageReport =
-  MessageReportT
-    { messageId = "",
-      driverId = "",
-      deliveryStatus = "",
-      readStatus = False,
-      likeStatus = False,
-      reply = Nothing,
-      messageDynamicFields = "",
-      updatedAt = defaultUTCDate,
-      createdAt = defaultUTCDate
-    }
-
 instance Serialize MessageReport where
   put = error "undefined"
   get = error "undefined"

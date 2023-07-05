@@ -87,7 +87,7 @@ transformBeamAadhaarVerificationToDomain BeamAV.AadhaarVerificationT {..} = do
 
 transformDomainAadhaarVerificationToBeam :: AadhaarVerification -> BeamAV.AadhaarVerification
 transformDomainAadhaarVerificationToBeam AadhaarVerification {..} =
-  BeamAV.defaultAadhaarVerification
+  BeamAV.AadhaarVerificationT
     { BeamAV.id = getId id,
       BeamAV.driverId = getId driverId,
       BeamAV.driverName = driverName,

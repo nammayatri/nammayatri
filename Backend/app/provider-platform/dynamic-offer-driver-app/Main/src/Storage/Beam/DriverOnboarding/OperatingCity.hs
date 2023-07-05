@@ -27,7 +27,6 @@ import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
@@ -71,17 +70,6 @@ operatingCityTMod =
       enabled = B.fieldNamed "enabled",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
-    }
-
-defaultOperatingCity :: OperatingCity
-defaultOperatingCity =
-  OperatingCityT
-    { id = "",
-      merchantId = "",
-      cityName = "",
-      enabled = False,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
     }
 
 instance Serialize OperatingCity where

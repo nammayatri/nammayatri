@@ -27,7 +27,6 @@ import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
@@ -69,16 +68,6 @@ commentTMod =
       authorId = B.fieldNamed "author_id",
       comment = B.fieldNamed "comment",
       createdAt = B.fieldNamed "created_at"
-    }
-
-defaultComment :: Comment
-defaultComment =
-  CommentT
-    { id = "",
-      issueReportId = "",
-      authorId = "",
-      comment = "",
-      createdAt = defaultUTCDate
     }
 
 instance Serialize Comment where
