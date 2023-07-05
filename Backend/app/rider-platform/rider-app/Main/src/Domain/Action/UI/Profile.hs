@@ -50,7 +50,6 @@ import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPersonDEN
-import Storage.Tabular.Person ()
 import Tools.Error
 import Tools.Metrics
 

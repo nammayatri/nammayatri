@@ -37,6 +37,7 @@ import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Person (PersonAPIEntity, PersonE (updatedAt))
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import qualified Domain.Types.Person.PersonStats as DPS
 import Domain.Types.RegistrationToken (RegistrationToken)
 import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
@@ -66,6 +67,7 @@ import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QDFS
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.Person.PersonStats as QPS
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Tools.Auth (authTokenCacheKey, decryptAES128)
 import Tools.Error
@@ -435,12 +437,26 @@ createPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion 
   DB.runTransaction $ do
     Person.create person
     QDFS.create $ makeIdlePersonFlowStatus person
+    QPS.create $ makePersonStats person
   pure person
   where
     makeIdlePersonFlowStatus person =
       DPFS.PersonFlowStatus
         { personId = person.id,
           flowStatus = DPFS.IDLE,
+          updatedAt = person.updatedAt
+        }
+    makePersonStats person =
+      DPS.PersonStats
+        { personId = person.id,
+          userCancelledRides = 0,
+          completedRides = 0,
+          driverCancelledRides = 0,
+          weekdayRides = 0,
+          weekendRides = 0,
+          offPeakRides = 0,
+          eveningPeakRides = 0,
+          morningPeakRides = 0,
           updatedAt = person.updatedAt
         }
 

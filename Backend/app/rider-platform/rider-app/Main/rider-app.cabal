@@ -56,6 +56,7 @@ library
       API.UI.Call
       API.UI.Cancel
       API.UI.CancellationReason
+      API.UI.CleverTap
       API.UI.Confirm
       API.UI.CustomerSupport
       API.UI.Feedback
@@ -118,6 +119,7 @@ library
       Domain.Action.UI.Call
       Domain.Action.UI.Cancel
       Domain.Action.UI.CancellationReason
+      Domain.Action.UI.CleverTap
       Domain.Action.UI.Confirm
       Domain.Action.UI.CustomerSupport
       Domain.Action.UI.Feedback
@@ -170,6 +172,7 @@ library
       Domain.Types.Person
       Domain.Types.Person.PersonDefaultEmergencyNumber
       Domain.Types.Person.PersonFlowStatus
+      Domain.Types.Person.PersonStats
       Domain.Types.Quote
       Domain.Types.RegistrationToken
       Domain.Types.RentalSlab
@@ -228,6 +231,7 @@ library
       Storage.Queries.Person
       Storage.Queries.Person.PersonDefaultEmergencyNumber
       Storage.Queries.Person.PersonFlowStatus
+      Storage.Queries.Person.PersonStats
       Storage.Queries.Quote
       Storage.Queries.RegistrationToken
       Storage.Queries.Ride
@@ -262,6 +266,7 @@ library
       Storage.Tabular.Person
       Storage.Tabular.Person.PersonDefaultEmergencyNumber
       Storage.Tabular.Person.PersonFlowStatus
+      Storage.Tabular.Person.PersonStats
       Storage.Tabular.Quote
       Storage.Tabular.Quote.Instances
       Storage.Tabular.RegistrationToken
