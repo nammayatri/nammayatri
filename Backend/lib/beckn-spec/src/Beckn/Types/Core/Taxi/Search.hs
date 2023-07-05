@@ -26,11 +26,13 @@ import Beckn.Types.Core.Taxi.Search.StopInfo as Reexport
 import Data.Aeson
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
+import Kernel.External.Maps (LatLong)
 import Kernel.Types.Common
 
 data RouteInfo = RouteInfo
   { duration :: Maybe Seconds,
-    distance :: Maybe Meters
+    distance :: Maybe Meters,
+    points :: Maybe [LatLong]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

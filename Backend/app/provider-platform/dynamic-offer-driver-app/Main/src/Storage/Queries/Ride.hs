@@ -241,7 +241,8 @@ updateAll rideId ride = do
         RideFareParametersId =. val (toKey <$> ride.fareParametersId),
         RideDistanceCalculationFailed =. val ride.distanceCalculationFailed,
         RidePickupDropOutsideOfThreshold =. val ride.pickupDropOutsideOfThreshold,
-        RideUpdatedAt =. val now
+        RideUpdatedAt =. val now,
+        RideNumberOfDeviation =. val ride.numberOfDeviation
       ]
     where_ $ tbl ^. RideTId ==. val (toKey rideId)
 
