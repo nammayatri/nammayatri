@@ -185,7 +185,7 @@ data DriverAadhaarInfoRes = DriverAadhaarInfoRes
   { driverName :: Text,
     driverGender :: Text,
     driverDob :: Text,
-    driverImage :: Text
+    driverImage :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

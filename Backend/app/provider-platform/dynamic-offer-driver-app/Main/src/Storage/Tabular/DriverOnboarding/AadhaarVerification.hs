@@ -13,6 +13,7 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -21,6 +22,7 @@
 module Storage.Tabular.DriverOnboarding.AadhaarVerification where
 
 import qualified Domain.Types.DriverOnboarding.AadhaarVerification as Domain
+import Kernel.External.Encryption (DbHash)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
@@ -35,7 +37,9 @@ mkPersist
       driverName Text
       driverGender Text
       driverDob Text
-      driverImage Text
+      driverImage Text Maybe
+      aadhaarNumberHash DbHash Maybe
+      isVerified Bool
       createdAt  UTCTime
       Primary id
       deriving Generic
@@ -56,6 +60,7 @@ instance FromTType AadhaarVerificationT Domain.AadhaarVerification where
         }
 
 instance ToTType AadhaarVerificationT Domain.AadhaarVerification where
+  toTType :: Domain.AadhaarVerification -> AadhaarVerificationT
   toTType Domain.AadhaarVerification {..} =
     AadhaarVerificationT
       { id = getId id,

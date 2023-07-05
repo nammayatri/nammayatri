@@ -175,6 +175,7 @@ instance IsAPIError DriverError
 data AadhaarError
   = AadhaarAlreadyVerified
   | TransactionIdNotFound
+  | AadhaarAlreadyLinked
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''AadhaarError
@@ -182,14 +183,17 @@ instanceExceptionWithParent 'HTTPException ''AadhaarError
 instance IsBaseError AadhaarError where
   toMessage AadhaarAlreadyVerified = Just " Driver aadhar is already verified."
   toMessage TransactionIdNotFound = Just " transaction id not found for this verification"
+  toMessage AadhaarAlreadyLinked = Just "aadhaar number is already linked"
 
 instance IsHTTPError AadhaarError where
   toErrorCode = \case
     AadhaarAlreadyVerified -> "AADHAAR_ALREADY_VERIFIED"
     TransactionIdNotFound -> "TRANSACTION_ID_NOT_FOUND"
+    AadhaarAlreadyLinked -> "AADHAAR_ALREADY_LINKED"
   toHttpCode = \case
     AadhaarAlreadyVerified -> E400
     TransactionIdNotFound -> E400
+    AadhaarAlreadyLinked -> E400
 
 instance IsAPIError AadhaarError
 
