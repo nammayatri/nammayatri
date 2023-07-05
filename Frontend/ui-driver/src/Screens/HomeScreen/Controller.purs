@@ -37,7 +37,7 @@ import Effect (Effect)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (clearTimer, getCurrentUTC, getNewIDWithTag, convertUTCtoISC)
 import Helpers.Utils (currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat,setText',getTime, differenceBetweenTwoUTC)
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, getSuggestionsfromKey)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -54,6 +54,7 @@ import Services.Config (getCustomerNumber)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
+import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -275,7 +276,8 @@ eval TriggerMaps state = continueWithCmd state[ do
 
 eval (Notification notificationType) state = do
   _ <- pure $ printLog "notificationType" notificationType
-  if (checkNotificationType notificationType ST.DRIVER_REACHED && (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) && (not state.data.activeRide.notifiedCustomer)) then
+  if (checkNotificationType notificationType ST.DRIVER_REACHED && (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) && (not state.data.activeRide.notifiedCustomer)) then do
+    _ <- pure $ setValueToLocalStore IS_DRIVER_AT_PICKUP "true"
     continue state{data{activeRide{isDriverArrived = true}}}
     else if (Array.any ( _ == notificationType) [show ST.CANCELLED_PRODUCT, show ST.DRIVER_ASSIGNMENT, show ST.RIDE_REQUESTED, show ST.DRIVER_REACHED]) then do
       exit $ FcmNotification notificationType state
@@ -366,6 +368,7 @@ eval (RideActionModalAction (RideActionModal.ButtonTimer seconds id status timer
   if status == "EXPIRED"
     then do
       _ <- pure $ clearTimer timerID
+      _ <- pure $ setValueToLocalStore IS_DRIVER_AT_PICKUP "false"
       continue state{data{activeRide{isDriverArrived = false}}}
     else
       continue state
@@ -431,6 +434,7 @@ eval RetryTimeUpdate state = do
 eval (TimeUpdate time lat lng) state = do
   let isDriverNearBy = ((getDistanceBwCordinates (getLastKnownLocValue ST.LATITUDE lat) (getLastKnownLocValue ST.LONGITUDE lng)  state.data.activeRide.src_lat state.data.activeRide.src_lon) < 0.05)
       newState = state { data = state.data { activeRide{isDriverArrived = if ((state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) && not state.data.activeRide.notifiedCustomer) then isDriverNearBy else state.data.activeRide.isDriverArrived},currentDriverLat= getLastKnownLocValue ST.LATITUDE lat,  currentDriverLon = getLastKnownLocValue ST.LONGITUDE lng, locationLastUpdatedTime = (convertUTCtoISC time "hh:mm a") }}
+  _ <- pure $ setValueToLocalStore IS_DRIVER_AT_PICKUP (show (newState.data.activeRide.isDriverArrived || newState.data.activeRide.notifiedCustomer))
   _ <- pure $ setValueToLocalStore LOCATION_UPDATE_TIME (convertUTCtoISC time "hh:mm a")
   continueWithCmd newState [ do
     _ <- if (getValueToLocalNativeStore IS_RIDE_ACTIVE == "false") then checkPermissionAndUpdateDriverMarker newState else pure unit
@@ -449,16 +453,15 @@ eval RemoveChat state = do
   ]
 
 eval (UpdateMessages message sender timeStamp size) state = do
-  let messages = state.data.messages <> [((ChatView.makeChatComponent (getSuggestionfromKey message (getValueToLocalStore LANGUAGE_KEY) ) sender timeStamp))]
+  let messages = state.data.messages <> [((ChatView.makeChatComponent (getMessageFromKey message (getValueToLocalStore LANGUAGE_KEY)) sender timeStamp))]  
   case (Array.last messages) of
-    Just value -> do
-                  if (value.sentBy == "Driver") then
-                    updateMessagesWithCmd state { data { messages = messages, messagesSize = size, suggestionsList = []}}
-                  else do
-                    let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
-                    let unReadMessages = (if (readMessages == 0 && state.props.currentStage /= ST.ChatWithCustomer) then true else (if (readMessages < (Array.length messages) && state.props.currentStage /= ST.ChatWithCustomer) then true else false))
-                    let suggestionsList = getSuggestionsfromKey message
-                    updateMessagesWithCmd state { data {messages = messages,suggestionsList = suggestionsList, messagesSize = size}, props {unReadMessages = unReadMessages}}
+    Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}} else 
+                    if value.sentBy == "Driver" then updateMessagesWithCmd state { data { messages = messages, messagesSize = size, suggestionsList = []}}
+                    else do
+                      let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
+                      let unReadMessages = (if (readMessages == 0 && state.props.currentStage /= ST.ChatWithCustomer) then true else (if (readMessages < (Array.length messages) && state.props.currentStage /= ST.ChatWithCustomer) then true else false))
+                      let suggestions = getSuggestionsfromKey message
+                      updateMessagesWithCmd state { data {messages = messages,suggestionsList = suggestions, messagesSize = size}, props {unReadMessages = unReadMessages}}
     Nothing -> continue state
 
 eval (ChatViewActionController (ChatView.TextChanged value)) state = do
@@ -486,7 +489,7 @@ eval (ChatViewActionController (ChatView.SendMessage)) state = do
     continue state
 
 eval (ChatViewActionController (ChatView.SendSuggestion chatSuggestion)) state = do
-  let message = getSuggestionfromKey chatSuggestion "EN_US"
+  let message = getMessageFromKey chatSuggestion "EN_US"
   _ <- pure $ sendMessage message
   _ <- pure $ firebaseLogEvent $ toLower $ (replaceAll (Pattern "'") (Replacement "") (replaceAll (Pattern ",") (Replacement "") (replaceAll (Pattern " ") (Replacement "_") chatSuggestion)))
   continue state
