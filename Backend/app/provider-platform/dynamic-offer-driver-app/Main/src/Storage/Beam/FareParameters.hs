@@ -41,12 +41,7 @@ import Storage.Tabular.Vehicle ()
 instance IsString Centesimal where
   fromString = show
 
--- instance FromBackendRow Postgres Centesimal
-
 instance FromBackendRow Postgres Domain.FareParametersType
-
--- instance FromField Money where
---   fromField = fromFieldEnum
 
 instance FromField Domain.FareParametersType where
   fromField = fromFieldEnum
@@ -103,8 +98,6 @@ deriving stock instance Show FareParameters
 deriving stock instance Ord Domain.FareParametersType
 
 deriving stock instance Eq Domain.FareParametersType
-
--- deriving stock instance Read Money
 
 fareParametersTMod :: FareParametersT (B.FieldModification (B.TableField FareParametersT))
 fareParametersTMod =

@@ -31,7 +31,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Vehicle ()
@@ -41,8 +41,6 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be BaseUrl where
   sqlValueSyntax = autoSqlValueSyntax
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be BaseUrl
-
--- instance FromBackendRow Postgres Seconds
 
 data SearchRequestSpecialZoneT f = SearchRequestSpecialZoneT
   { id :: B.C f Text,
@@ -114,26 +112,6 @@ searchRequestSpecialZoneToHSModifiers =
 searchRequestSpecialZoneToPSModifiers :: M.Map Text (A.Value -> A.Value)
 searchRequestSpecialZoneToPSModifiers =
   M.empty
-
-defaultSearchRequestSpecialZone :: SearchRequestSpecialZone
-defaultSearchRequestSpecialZone = do
-  SearchRequestSpecialZoneT
-    { id = "",
-      transactionId = "",
-      messageId = "",
-      startTime = defaultUTCDate,
-      validTill = defaultUTCDate,
-      providerId = "",
-      fromLocationId = "",
-      toLocationId = "",
-      area = Nothing,
-      bapId = "",
-      bapUri = "",
-      estimatedDistance = "",
-      estimatedDuration = "",
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
 
 instance Serialize SearchRequestSpecialZone where
   put = error "undefined"

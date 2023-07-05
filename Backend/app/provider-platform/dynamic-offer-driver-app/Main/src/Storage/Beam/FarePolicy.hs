@@ -102,8 +102,6 @@ deriving stock instance Ord Domain.FarePolicyType
 
 deriving stock instance Eq Domain.FarePolicyType
 
--- deriving stock instance Read Money
-
 farePolicyTMod :: FarePolicyT (B.FieldModification (B.TableField FarePolicyT))
 farePolicyTMod =
   B.tableModification
@@ -130,22 +128,6 @@ farePolicyToHSModifiers =
 farePolicyToPSModifiers :: M.Map Text (A.Value -> A.Value)
 farePolicyToPSModifiers =
   M.empty
-
-defaultFarePolicy :: FarePolicy
-defaultFarePolicy =
-  FarePolicyT
-    { id = "",
-      farePolicyType = "",
-      serviceCharge = Nothing,
-      nightShiftStart = Nothing,
-      nightShiftEnd = Nothing,
-      maxAllowedTripDistance = Nothing,
-      minAllowedTripDistance = Nothing,
-      govtCharges = Nothing,
-      description = Nothing,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
 
 instance Serialize FarePolicy where
   put = error "undefined"

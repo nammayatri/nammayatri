@@ -129,7 +129,7 @@ transformBeamBookingCancellationReasonToDomain BeamBCR.BookingCancellationReason
 
 transformDomainBookingCancellationReasonToBeam :: BookingCancellationReason -> BeamBCR.BookingCancellationReason
 transformDomainBookingCancellationReasonToBeam BookingCancellationReason {..} =
-  BeamBCR.defaultBookingCancellationReason
+  BeamBCR.BookingCancellationReasonT
     { BeamBCR.driverId = getId <$> driverId,
       BeamBCR.bookingId = getId bookingId,
       BeamBCR.rideId = getId <$> rideId,

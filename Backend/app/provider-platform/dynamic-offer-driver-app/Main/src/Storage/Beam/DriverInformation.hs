@@ -37,18 +37,6 @@ import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
--- fromFieldEnum ::
---   (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldEnum f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' ->
---     case (readMaybe (unpackChars value')) of
---       Just val -> pure val
---       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
-
 instance FromField Domain.DriverMode where
   fromField = fromFieldEnum
 
@@ -139,31 +127,6 @@ driverInformationToHSModifiers =
 driverInformationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverInformationToPSModifiers =
   M.empty
-
-defaultDriverInformation :: DriverInformation
-defaultDriverInformation =
-  DriverInformationT
-    { driverId = "",
-      adminId = Nothing,
-      merchantId = Nothing,
-      active = False,
-      onRide = False,
-      enabled = False,
-      blocked = False,
-      verified = False,
-      subscribed = False,
-      paymentPending = False,
-      aadhaarVerified = False,
-      numOfLocks = 0,
-      lastEnabledOn = Nothing,
-      referralCode = Nothing,
-      canDowngradeToSedan = False,
-      canDowngradeToHatchback = False,
-      canDowngradeToTaxi = False,
-      mode = Nothing,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
 
 instance Serialize DriverInformation where
   put = error "undefined"

@@ -27,21 +27,8 @@ import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
-
--- fromFieldEnum ::
---   (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldEnum f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' ->
---     case (readMaybe (unpackChars value')) of
---       Just val -> pure val
---       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
 data RatingT f = RatingT
   { id :: B.C f Text,
@@ -97,18 +84,6 @@ ratingToHSModifiers =
 ratingToPSModifiers :: M.Map Text (A.Value -> A.Value)
 ratingToPSModifiers =
   M.empty
-
-defaultRating :: Rating
-defaultRating =
-  RatingT
-    { id = "",
-      rideId = "",
-      driverId = "",
-      ratingValue = 0,
-      feedbackDetails = Nothing,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
 
 instance Serialize Rating where
   put = error "undefined"

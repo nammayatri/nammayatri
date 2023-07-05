@@ -97,19 +97,6 @@ leaderBoardConfigsTMod =
       merchantId = B.fieldNamed "merchant_id"
     }
 
-defaultLeaderBoardConfig :: LeaderBoardConfigs
-defaultLeaderBoardConfig =
-  LeaderBoardConfigsT
-    { id = "",
-      leaderBoardType = "",
-      numberOfSets = 0,
-      leaderBoardExpiry = "",
-      zScoreBase = 0,
-      leaderBoardLengthLimit = 0,
-      isEnabled = False,
-      merchantId = ""
-    }
-
 instance Serialize LeaderBoardConfigs where
   put = error "undefined"
   get = error "undefined"

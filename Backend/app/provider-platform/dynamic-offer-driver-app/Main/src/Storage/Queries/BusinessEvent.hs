@@ -116,7 +116,7 @@ transformBeamBusinessEventToDomain BeamBE.BusinessEventT {..} = do
 
 transformDomainBusinessEventToBeam :: BusinessEvent -> BeamBE.BusinessEvent
 transformDomainBusinessEventToBeam BusinessEvent {..} =
-  BeamBE.defaultBusinessEvent
+  BeamBE.BusinessEventT
     { BeamBE.id = getId id,
       BeamBE.driverId = getId <$> driverId,
       BeamBE.eventType = eventType,

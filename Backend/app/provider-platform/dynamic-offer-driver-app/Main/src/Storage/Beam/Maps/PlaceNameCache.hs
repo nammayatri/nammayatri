@@ -43,7 +43,6 @@ import Lib.UtilsTH
 import Sequelize
 
 fromFieldAddressResp ::
-  -- (Typeable a, Read a) =>
   DPSF.Field ->
   Maybe ByteString ->
   DPSF.Conversion [Domain.AddressResp]

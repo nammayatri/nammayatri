@@ -45,18 +45,6 @@ import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
--- fromFieldEnum ::
---   (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldEnum f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' ->
---     case (readMaybe (unpackChars value')) of
---       Just val -> pure val
---       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
-
 instance FromField VerificationService where
   fromField = fromFieldEnum
 
@@ -107,7 +95,6 @@ instance FromField SmsService where
   fromField = fromFieldEnum
 
 fromFieldSmsService ::
-  -- (Typeable a, Read a) =>
   DPSF.Field ->
   Maybe ByteString ->
   DPSF.Conversion [SmsService]
@@ -115,11 +102,7 @@ fromFieldSmsService f mbValue = case mbValue of
   Nothing -> DPSF.returnError UnexpectedNull f mempty
   Just _ -> V.toList <$> fromField f mbValue
 
--- Nothing -> pure Unrestricted
--- Just _ -> (Regions . V.toList) <$> (fromField f mbValue)
-
 fromFieldWhatsappService ::
-  -- (Typeable a, Read a) =>
   DPSF.Field ->
   Maybe ByteString ->
   DPSF.Conversion [WhatsappService]
@@ -133,11 +116,6 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be [SmsService] where
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [SmsService]
 
 instance FromBackendRow Postgres [SmsService]
-
--- instance IsString [SmsService] where
---   fromString = show
--- instance IsString [WhatsappService] where
---   fromString = show
 
 instance FromField WhatsappService where
   fromField = fromFieldEnum
@@ -226,27 +204,6 @@ instance IsString MapsService where
 
 instance IsString VerificationService where
   fromString = show
-
--- defaultMerchantServiceUsageConfig :: MerchantServiceUsageConfig
--- defaultMerchantServiceUsageConfig =
---   MerchantServiceUsageConfigT
---     { merchantId = "",
---       initiateCall = "",
---       getDistances = "",
---       getEstimatedPickupDistances = "",
---       getRoutes = "",
---       getPickupRoutes = "",
---       getTripRoutes = "",
---       snapToRoad = "",
---       getPlaceName = "",
---       getPlaceDetails = "",
---       autoComplete = "",
---       smsProvidersPriorityList = "",
---       whatsappProvidersPriorityList = "",
---       verificationService = "",
---       updatedAt = defaultUTCDate,
---       createdAt = defaultUTCDate
---     }
 
 instance Serialize MerchantServiceUsageConfig where
   put = error "undefined"

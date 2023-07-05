@@ -140,26 +140,6 @@ vehicleToPSModifiers :: M.Map Text (A.Value -> A.Value)
 vehicleToPSModifiers =
   M.empty
 
-defaultVehicle :: Vehicle
-defaultVehicle =
-  VehicleT
-    { driverId = "",
-      merchantId = "",
-      variant = "",
-      model = "",
-      color = "",
-      registrationNo = "",
-      capacity = Nothing,
-      category = Nothing,
-      make = Nothing,
-      size = Nothing,
-      energyType = Nothing,
-      registrationCategory = Nothing,
-      vehicleClass = "",
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
-
 instance Serialize Vehicle where
   put = error "undefined"
   get = error "undefined"

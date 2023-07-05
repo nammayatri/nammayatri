@@ -22,22 +22,7 @@ import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
--- import Database.Beam.Backend
-
--- import Database.Beam.Postgres
---   ( Postgres,
---   )
--- import Database.PostgreSQL.Simple.FromField (FromField, fromField)
--- -- import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Domain
-
--- import qualified Domain.Types.FareParameters as Domain
-
--- import Lib.Utils
-
--- import Database.Beam.Backend
 import Database.Beam.MySQL ()
--- import Database.Beam.Postgres
--- import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as Domain
 import qualified Domain.Types.Vehicle.Variant as Vehicle
@@ -89,27 +74,12 @@ deriving stock instance Ord Domain.WaitingCharge
 
 deriving stock instance Ord Domain.NightShiftCharge
 
--- instance FromField Domain.NightShiftCharge where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.NightShiftCharge where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.NightShiftCharge
-
--- instance FromBackendRow Postgres Domain.NightShiftCharge
-
--- deriving stock instance Read Domain.NightShiftCharge
-
--- deriving stock instance Read Domain.WaitingCharge
-
 farePolicyProgressiveDetailsTMod :: FarePolicyProgressiveDetailsT (B.FieldModification (B.TableField FarePolicyProgressiveDetailsT))
 farePolicyProgressiveDetailsTMod =
   B.tableModification
     { farePolicyId = B.fieldNamed "fare_policy_id",
       baseDistance = B.fieldNamed "base_distance",
       baseFare = B.fieldNamed "base_fare",
-      -- perExtraKmFare = B.fieldNamed "per_km_extra_fare",
       deadKmFare = B.fieldNamed "dead_km_fare",
       waitingCharge = B.fieldNamed "waiting_charge",
       freeWatingTime = B.fieldNamed "free_wating_time",

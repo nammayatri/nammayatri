@@ -30,7 +30,7 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Common as Common
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Vehicle ()
@@ -78,8 +78,6 @@ instance ToJSON QuoteSpecialZone where
 
 deriving stock instance Show QuoteSpecialZone
 
--- deriving stock instance Read Money
-
 quoteSpecialZoneTMod :: QuoteSpecialZoneT (B.FieldModification (B.TableField QuoteSpecialZoneT))
 quoteSpecialZoneTMod =
   B.tableModification
@@ -107,23 +105,6 @@ quoteSpecialZoneToHSModifiers =
 quoteSpecialZoneToPSModifiers :: M.Map Text (A.Value -> A.Value)
 quoteSpecialZoneToPSModifiers =
   M.empty
-
-defaultQuoteSpecialZone :: QuoteSpecialZone
-defaultQuoteSpecialZone =
-  QuoteSpecialZoneT
-    { id = "",
-      searchRequestId = "",
-      providerId = "",
-      vehicleVariant = "",
-      distance = "",
-      validTill = defaultUTCDate,
-      estimatedFare = "",
-      fareParametersId = "",
-      estimatedFinishTime = defaultUTCDate,
-      specialLocationTag = Nothing,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
 
 instance Serialize QuoteSpecialZone where
   put = error "undefined"

@@ -243,7 +243,7 @@ transformBeamExophoneToDomain BeamE.ExophoneT {..} = do
 
 transformDomainExophoneToBeam :: Exophone -> BeamE.Exophone
 transformDomainExophoneToBeam Exophone {..} =
-  BeamE.defaultExophone
+  BeamE.ExophoneT
     { BeamE.id = getId id,
       BeamE.merchantId = getId merchantId,
       BeamE.primaryPhone = primaryPhone,

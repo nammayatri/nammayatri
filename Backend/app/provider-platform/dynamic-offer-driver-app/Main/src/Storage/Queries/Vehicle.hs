@@ -211,7 +211,7 @@ transformBeamVehicleToDomain BeamV.VehicleT {..} = do
 
 transformDomainVehicleToBeam :: Vehicle -> BeamV.Vehicle
 transformDomainVehicleToBeam Vehicle {..} =
-  BeamV.defaultVehicle
+  BeamV.VehicleT
     { BeamV.driverId = getId driverId,
       BeamV.merchantId = getId merchantId,
       BeamV.variant = variant,

@@ -33,52 +33,8 @@ import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Vehicle ()
 
--- fromFieldEnum ::
---   (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldEnum f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' ->
---     case (readMaybe (unpackChars value')) of
---       Just val -> pure val
---       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
-
--- instance FromField Vehicle.Variant where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Vehicle.Variant where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Vehicle.Variant
-
--- instance FromBackendRow Postgres Vehicle.Variant
-
 instance IsString Vehicle.Variant where
   fromString = show
-
--- instance FromField Meters where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Meters where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Meters
-
--- instance FromBackendRow Postgres Meters
-
--- instance FromField Money where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Money where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
-
--- instance FromBackendRow Postgres Money
-
--- deriving stock instance Read Money
 
 instance IsString Money where
   fromString = show

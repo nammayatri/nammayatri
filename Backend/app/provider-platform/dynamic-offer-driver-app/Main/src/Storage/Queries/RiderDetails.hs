@@ -130,7 +130,7 @@ transformBeamRiderDetailsToDomain BeamRD.RiderDetailsT {..} = do
 
 transformDomainRiderDetailsToBeam :: RiderDetails -> BeamRD.RiderDetails
 transformDomainRiderDetailsToBeam RiderDetails {..} =
-  BeamRD.defaultRiderDetails
+  BeamRD.RiderDetailsT
     { BeamRD.id = getId id,
       BeamRD.mobileCountryCode = mobileCountryCode,
       BeamRD.mobileNumberEncrypted = unEncrypted mobileNumber.encrypted,

@@ -142,8 +142,6 @@ instance ToJSON Domain.DriverSearchRequestStatus where
 
 deriving stock instance Show SearchRequestForDriver
 
--- deriving stock instance Read Money
-
 deriving stock instance Ord Domain.DriverSearchRequestStatus
 
 deriving stock instance Ord Domain.SearchRequestForDriverResponse

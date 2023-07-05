@@ -67,7 +67,7 @@ transformBeamLeaderBoardConfigToDomain BeamLBC.LeaderBoardConfigsT {..} = do
 
 transformDomainLeaderBoardConfigToBeam :: LeaderBoardConfigs -> BeamLBC.LeaderBoardConfigs
 transformDomainLeaderBoardConfigToBeam LeaderBoardConfigs {..} =
-  BeamLBC.defaultLeaderBoardConfig
+  BeamLBC.LeaderBoardConfigsT
     { BeamLBC.id = getId id,
       BeamLBC.leaderBoardType = leaderBoardType,
       BeamLBC.numberOfSets = numberOfSets,
