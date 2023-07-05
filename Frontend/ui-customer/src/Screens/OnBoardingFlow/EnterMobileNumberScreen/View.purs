@@ -194,6 +194,7 @@ enterOTPView state lang push =
         , height WRAP_CONTENT
         , text (getString RESEND)
         , textSize FontSize.a_12
+        , clickable state.props.resendEnable
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , color Color.blue900
         , onClick push (const Resend)

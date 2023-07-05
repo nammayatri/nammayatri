@@ -26,7 +26,7 @@ import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (strToBool)
-import Helpers.Utils (parseFloat, rotateArray, setEnabled, setRefreshing, toString, isHaveFare, withinTimeRange)
+import Helpers.Utils (parseFloat, rotateArray, setEnabled, setRefreshing, toString, isHaveFare, withinTimeRange, getMerchant, Merchant(..))
 import Engineering.Helpers.Commons (convertUTCtoISC)
 import JBridge (firebaseLogEvent)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
@@ -42,6 +42,7 @@ import Storage (isLocalStageOn)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getFilteredFares, getKmMeter)
+import Common.Types.App (LazyCheck(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -238,7 +239,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
   , waitingCharges : fares.waitingCharges
   , baseDistance : baseDistanceVal
   , extraDistance : getKmMeter $  (\a -> if a < 0 then - a else a) ((fromMaybe 0 (rideDetails.chargeableRideDistance)) - (fromMaybe 0 (((ride.bookingDetails)^._contents)^._estimatedDistance)))
-  , referenceString : (if (nightChargesVal) then "1.5" <> (getEN DAYTIME_CHARGES_APPLICABLE_AT_NIGHT) else "")
+  , referenceString : (if (nightChargesVal && (getMerchant FunctionCall) /= YATRI) then "1.5" <> (getEN DAYTIME_CHARGES_APPLICABLE_AT_NIGHT) else "")
                         <> (if (isHaveFare "DRIVER_SELECTED_FARE" (updatedFareList)) then "\n\n" <> (getEN DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) else "")
                         <> (if (isHaveFare "WAITING_CHARGES" updatedFareList) then "\n\n" <> (getEN WAITING_CHARGE_DESCRIPTION) else "")
                         <> (if (isHaveFare "EARLY_END_RIDE_PENALTY" (updatedFareList)) then "\n\n" <> (getEN EARLY_END_RIDE_CHARGES_DESCRIPTION) else "")

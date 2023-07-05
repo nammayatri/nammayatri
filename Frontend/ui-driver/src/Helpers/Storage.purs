@@ -83,6 +83,7 @@ data KeyStore = USER_NAME
                 | SUGGESTIONS_ENABLED
                 | LAUNCH_DATE_SETTING
                 | MESSAGES_DELAY
+                | NEGOTIATION_UNIT
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

@@ -259,7 +259,9 @@ const englishStrings = {
   "ESTIMATES_REVISED_TO": "The revised estimate is",
   "RATE_CARD": "Rate Card",
   "NIGHT_TIME_CHARGES": "Night-time Charges (10 PM to 5 AM)",
-  "MIN_FARE_UPTO": "Min. Fare upto 2 km",
+  "MIN_FARE_UPTO": "Min. Fare upto",
+  "MIN_FARE_UPTO_4_KM": "Min. Fare upto 4 km",
+  "MORE_THAN" : "More than",
   "RATE_ABOVE_MIN_FARE": "Rate above Min. Fare",
   "DRIVER_PICKUP_CHARGES": "Driver Pickup Charges",
   "DAY_TIMES_OF": "",
@@ -511,5 +513,10 @@ const englishStrings = {
   "CALL_NAMMA_YATRI_SUPPORT" : "Call Namma Yatri Support",
   "CALL_112": "Call 112",
   "CALL_EMERGENCY_CENTRE": "Call Emergency Centre",
-  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS" : "Description should be more than 10 characters"
+  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS" : "Description should be more than 10 characters",
+  "SEATS" : "Seats",
+  "DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS" : "Driver addition limits are in increments of ₹10",
+  "HATCHBACK" : "Hatchback", 
+  "SUV" : "SUV",
+  "SEDAN" : "Sedan" 
 }

@@ -115,7 +115,7 @@ window.onMerchantEvent = function (event, payload) {
     {
       clientId = clientId.replace("_ios","");
     }
-    if (clientId == "open-kochi") {
+    if (clientId == "open-kochi" || clientId == "yatriconsumer") {
       window.merchantID = "YATRI"
     } else if (clientId == "jatrisaathi" || clientId == "jatrisaathiconsumer"){
       window.merchantID = "JATRISAATHI"
