@@ -452,10 +452,10 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     @JavascriptInterface
     public void addCarousel(String stringifyArray,String id){
-        if (activity == null) return;
+        LinearLayout parentLayout = activity.findViewById(Integer.parseInt(id));
+        if (activity == null || parentLayout == null ) return;
         activity.runOnUiThread(() -> {
             ViewPager2 viewPager2 = new ViewPager2(context);
-            LinearLayout parentLayout = activity.findViewById(Integer.parseInt(id));
             LinearLayout sliderDotsPanel= new LinearLayout(context);
             LinearLayout.LayoutParams sliderDotsPanelParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
             ViewGroup.LayoutParams scrollViewParams = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
