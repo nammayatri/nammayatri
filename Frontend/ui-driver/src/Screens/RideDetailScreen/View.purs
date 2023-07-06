@@ -38,6 +38,9 @@ import Services.Backend as Remote
 import Services.Backend (walkCoordinate)
 import Common.Types.App
 import Types.App (defaultGlobalState)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Prelude ((<>))
+import MerchantConfig.Utils(getValueFromConfig)
 
 screen :: ST.RideDetailScreenState -> Screen Action ST.RideDetailScreenState ScreenOutput
 screen initialState =
@@ -143,7 +146,7 @@ totalAmount state =
  ][ textView
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
-  , text "₹"
+  , text (getValueFromConfig "currency")
   , color Color.black
   , margin (MarginRight 2)
   , textSize FontSize.a_44
@@ -171,7 +174,7 @@ address state =
       ][ imageView
          [ width (V 19)
          , height (V 20)
-         , imageWithFallback "ny_ic_source_dot,https://assets.juspay.in/nammayatri/images/common/ny_ic_source_dot.png"
+         , imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_source_dot.png"
          ]
        , textView (
          [ width WRAP_CONTENT
@@ -206,7 +209,7 @@ address state =
       ][ imageView
          [ width (V 15)
          , height (V 15)
-         , imageWithFallback "ny_ic_destination,https://assets.juspay.in/nammayatri/images/common/ny_ic_destination.png"
+         , imageWithFallback $ "ny_ic_destination," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_destination.png"
          ]
        , textView (
          [ width WRAP_CONTENT
@@ -259,7 +262,6 @@ cashCollected state push =
       , text (getString CASH_COLLECTED)
       , fontStyle $ FontStyle.bold LanguageStyle
       , color Color.yellowText
-      , textSize FontSize.a_16
       ] <> FontStyle.subHeading1 TypoGraphy
   )
   ]

@@ -20,7 +20,7 @@ import Effect (Effect)
 import Font.Style as FontStyle
 import Common.Styles.Colors as Color
 import Components.MenuButton.Controller (Action(..), Config)
-import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), clickable, color, cornerRadius, fontStyle, gravity, height, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, singleLine, stroke, text, textSize, textView, visibility, width, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, fontStyle, gravity, height, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, singleLine, stroke, text, textSize, textView, visibility, width, imageWithFallback)
 import Common.Types.App
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -46,35 +46,32 @@ view push config =
               , if not config.leftsidebutton then buttonLayout config else linearLayout[width $ V 0][]
             ]
 titleView :: forall w . Config -> PrestoDOM (Effect Unit) w
-titleView config =
-  textView
+titleView config = 
+  textView $
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , text config.titleConfig.text
     , color if config.isSelected then Color.black900 else config.titleConfig.color
-    , fontStyle if config.isSelected then config.titleConfig.selectedFontStyle else config.titleConfig.unselectedFontStyle
     , gravity LEFT
     , singleLine config.titleConfig.singleLine
     , lineHeight "24"
     , visibility config.titleConfig.visibility
-    ]
-
+    ] <> (FontStyle.getFontStyle (if config.isSelected then config.titleConfig.selectedTextStyle else config.titleConfig.unselectedTextStyle) LanguageStyle)
+    
 
 
 subTitleView :: forall w . Config -> PrestoDOM (Effect Unit) w
 subTitleView config =
-  textView
+  textView $ 
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
-    , textSize config.subTitleConfig.textSize
     , text config.subTitleConfig.text
     , color config.subTitleConfig.color
-    , fontStyle config.subTitleConfig.selectedFontStyle
     , gravity LEFT
     , lineHeight "23"
     , singleLine config.subTitleConfig.singleLine
     , visibility if config.subTitleConfig.text /= "" then VISIBLE else GONE
-    ]
+    ] <> (FontStyle.getFontStyle config.subTitleConfig.selectedTextStyle LanguageStyle)
 
 buttonLayout :: forall w . Config -> PrestoDOM (Effect Unit) w
 buttonLayout config =
@@ -82,21 +79,22 @@ buttonLayout config =
     [ height WRAP_CONTENT
     , width if config.leftsidebutton then WRAP_CONTENT  else MATCH_PARENT
     , gravity if config.leftsidebutton then LEFT else  RIGHT
-    , margin config.radioButtonConfig.buttonMargin
-    , padding config.radioButtonConfig.buttonPadding
+    , margin config.radioButtonConfig.margin 
+    , padding config.radioButtonConfig.padding
     ][  linearLayout
         [ height config.radioButtonConfig.height
         , width config.radioButtonConfig.width
         , stroke if config.isSelected then config.radioButtonConfig.activeStroke else config.radioButtonConfig.inActiveStroke
         , cornerRadius config.radioButtonConfig.cornerRadius
         , gravity CENTER
-        ][  imageView
-            [ width config.radioButtonConfig.imageWidth
-            , height config.radioButtonConfig.imageHeight
-            , margin config.radioButtonConfig.imageMargin
-            , padding config.radioButtonConfig.imagePadding
+        ][  linearLayout
+            [ width config.radioButtonConfig.buttonWidth
+            , height config.radioButtonConfig.buttonHeight
+            , margin config.radioButtonConfig.buttonMargin
+            , padding config.radioButtonConfig.buttonPadding
             , visibility if config.isSelected then VISIBLE else GONE
-            , imageWithFallback config.radioButtonConfig.imageUrl
-            ]
+            , background config.radioButtonConfig.buttonColor
+            , cornerRadius config.radioButtonConfig.buttonCornerRadius
+            ][]
           ]
       ]

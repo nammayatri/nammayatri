@@ -45,6 +45,8 @@ import Data.String (length, trim)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Common.Types.App (LazyCheck(..))
 import Screens.HelpAndSupportScreen.ScreenData (initData)
+import MerchantConfig.DefaultConfig as DC
+import MerchantConfig.Utils (getValueFromConfig)
 
 instance showAction :: Show Action where
     show _ = ""
@@ -243,7 +245,7 @@ myRideListTransform listRes = filter (\item -> (item.data.status == "COMPLETED")
           destination: (decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation))),
           rating: (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _rideRating)),
           driverName :((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _driverName) ,
-          totalAmount : ("₹ " <> show (fromMaybe (0) ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice))),
+          totalAmount : ((getValueFromConfig "currency") <> " " <> show (fromMaybe (0) ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice))),
           status : (ride.status),
           isNull : false,
           rideStartTime : (convertUTCtoISC (fromMaybe "" ride.rideStartTime )"h:mm A"),
@@ -252,7 +254,8 @@ myRideListTransform listRes = filter (\item -> (item.data.status == "COMPLETED")
           rideId : ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._id),
           tripId : ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._shortRideId),
           bookingId : ride.id,
-          faresList :  getFaresList ride.fareBreakup baseDistanceVal,
+          faresList : updatedFareList,
+          config : DC.config,
           email : "",
           description : "",
           accountStatus : ACTIVE

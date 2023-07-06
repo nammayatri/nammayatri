@@ -29,11 +29,11 @@ app/src/release/
 app/src/debug/
 app/userProd/release/
 app/userProd/debug/
-app/ny_Prod/
-app/ny_p_Prod/
-app/js_kl_Prod/
-app/js_d_kl_Prod/
-app/yatriProd/
-app/yp_Prod/
+app/nyUserProd/
+app/nyDriverProd/
+app/jsUserProd/
+app/jsDriverProd/
+app/yatriUserProd/
+app/yatriDriverProd/
 **/build/
 .idea/modules.xml

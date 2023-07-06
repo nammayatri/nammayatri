@@ -29,6 +29,9 @@ import Language.Types (STR(..))
 import Language.Strings (getString)
 import Font.Style as FontStyle
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 view :: forall w. (Action -> Effect Unit) -> State -> PrestoDOM (Effect Unit) w
 view push state =
@@ -58,7 +61,7 @@ view push state =
                 [ height $ V 18
                 , width $ V 18
                 , margin (MarginTop 20)
-                , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
+                , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_close.png"
                 , clickable true
                 , onClick push (const OnCloseClick)
                 ]
@@ -89,7 +92,7 @@ view push state =
                 , orientation HORIZONTAL
                 , onClick push (const CallSupport)
                 ][ imageView
-                [ imageWithFallback "ny_ic_support,https://assets.juspay.in/nammayatri/images/driver/ny_ic_support.png"
+                [ imageWithFallback $   "ny_ic_support," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_support.png"
                 , height $ V 17
                 , width $ V 20
                 , margin $ (Margin 0 0 7 27)
@@ -106,7 +109,7 @@ view push state =
                 , orientation HORIZONTAL
                 , onClick push (const Logout)
                 ][ imageView
-                [ imageWithFallback "ny_ic_logout_grey,https://assets.juspay.in/nammayatri/images/driver/ny_ic_logout_grey.png"
+                [ imageWithFallback $ "ny_ic_logout_grey," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_logout_grey.png"
                 , height $ V 17
                 , width $ V 20
                 , margin $ MarginRight 7

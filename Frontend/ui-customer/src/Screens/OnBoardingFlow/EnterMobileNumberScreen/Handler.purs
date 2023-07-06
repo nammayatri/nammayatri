@@ -18,19 +18,21 @@ module Screens.EnterMobileNumberScreen.Handler where
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
 import Engineering.Helpers.BackTrack (getState)
+import ModifyScreenState (modifyScreenState)
 import Prelude (bind, discard, ($), pure, (<$>))
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.EnterMobileNumberScreen.Controller (ScreenOutput(..))
 import Screens.EnterMobileNumberScreen.View as EnterMobileNumberScreen
-import Types.App (GlobalState(..), FlowBT, ScreenType(..),defaultGlobalState)
-import ModifyScreenState (modifyScreenState)
+import Types.App (GlobalState(..), FlowBT, ScreenType(..), defaultGlobalState)
+import Presto.Core.Types.Language.Flow (getLogFields)
 
 
 enterMobileNumberScreen ::FlowBT String ScreenOutput
 enterMobileNumberScreen = do
   (GlobalState state') <- getState
   let (GlobalState defaultGlobalState') = defaultGlobalState
-  act <- lift $ lift $ runScreen $ EnterMobileNumberScreen.screen state'.enterMobileNumberScreen
+  logField_ <- lift $ lift $ getLogFields
+  act <- lift $ lift $ runScreen $ EnterMobileNumberScreen.screen state'.enterMobileNumberScreen{data{logField = logField_}}
   case act of
     GoToAccountSetUp state -> do 
                     modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber ->  state) 

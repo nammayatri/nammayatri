@@ -32,7 +32,7 @@ import Language.Strings (getString)
 import Language.Types(STR(..))
 import Engineering.Helpers.Commons (screenWidth)
 import Common.Types.App
-import Merchant.Utils (getValueFromConfig)
+import MerchantConfig.Utils(getValueFromConfig)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 

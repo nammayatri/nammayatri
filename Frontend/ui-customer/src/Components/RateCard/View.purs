@@ -24,7 +24,7 @@ import Animation (translateInXForwardAnim, translateInXBackwardAnim)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (Merchant(..), getMerchant)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), const, (<>), (>),(==), (||), (&&))
@@ -35,6 +35,7 @@ import Styles.Colors as Color
 import Screens.Types (RateCardType(..))
 import PrestoDOM.Animation as PrestoAnim
 import Animation.Config as AnimConfig
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -75,7 +76,7 @@ view push config =
               , fontStyle $ FontStyle.bold LanguageStyle
               , margin (MarginVertical 4 4)
               ]
-            , textView
+            , textView $
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , textSize FontSize.a_14
@@ -85,17 +86,17 @@ view push config =
               , color if config.nightCharges then Color.black500 else Color.black700
               , text if config.nightCharges then (getString NIGHT_TIME_CHARGES) else (getString DAY_TIME_CHARGES)
               , margin (MarginBottom 8)
-              ] 
+              ] <> FontStyle.paragraphText TypoGraphy
             ]
          , imageView
            [ width MATCH_PARENT
            , height $ V 90
-           , imageWithFallback if config.nightCharges then "ny_ic_night,https://assets.juspay.in/nammayatri/images/user/ny_ic_night.png" else "ny_ic_day,https://assets.juspay.in/nammayatri/images/user/ny_ic_day.png"
+           , imageWithFallback if config.nightCharges then "ny_ic_night," <> (getAssetStoreLink FunctionCall) <> "ny_ic_night.png" else "ny_ic_day," <> (getAssetStoreLink FunctionCall) <> "ny_ic_day.png"
            ]  
          ]
       ,linearLayout
         [ width MATCH_PARENT
-        , height $ V 350
+        , height $ V if config.showDetails then 350 else 250
         , orientation HORIZONTAL
         ][PrestoAnim.animationSet [ if config.currentRateCardType == DefaultRateCard then (translateInXBackwardAnim config.onFirstPage) else (translateInXForwardAnim true) ] $
           if config.currentRateCardType == DefaultRateCard then defaultRateCardView push config 
@@ -109,7 +110,7 @@ view push config =
       ][ textView
         [ width MATCH_PARENT
         , height WRAP_CONTENT
-        , color Color.blue800
+        , color config.alertDialogPrimaryColor
         , gravity CENTER
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , text if config.currentRateCardType == DefaultRateCard then (getString GOT_IT) else (getString GO_BACK_)
@@ -234,10 +235,10 @@ defaultRateCardView push config =
       , imageView
         [ width MATCH_PARENT
         , height $ V 2 
-        , imageWithFallback "ny_ic_horizontal_dash,https://assets.juspay.in/nammayatri/images/user/ny_ic_horizontal_dash.png"
+        , imageWithFallback $ "ny_ic_horizontal_dash," <> (getAssetStoreLink FunctionCall) <> "ny_ic_horizontal_dash.png"
         , margin (Margin 20 20 20 12)
         ]
-      , textView
+      , textView $
         [ width MATCH_PARENT
         , height WRAP_CONTENT
             , color Color.black700
@@ -253,7 +254,8 @@ defaultRateCardView push config =
         , imageView
         [ width MATCH_PARENT
         , height $ V 2 
-        , imageWithFallback "ny_ic_horizontal_dash,https://assets.juspay.in/nammayatri/images/user/ny_ic_horizontal_dash.png"
+        , visibility if config.showDetails then VISIBLE else GONE
+        , imageWithFallback $ "ny_ic_horizontal_dash," <> (getAssetStoreLink FunctionCall) <> "ny_ic_horizontal_dash.png"
         , margin (Margin 20 12 20 0)
         ]
         ,linearLayout
@@ -262,6 +264,7 @@ defaultRateCardView push config =
           , orientation HORIZONTAL
           , margin (MarginVertical 12 12)
           , padding (Padding 20 0 20 0)
+          , visibility if config.showDetails then VISIBLE else GONE
           , onClick push (const GoToDriverAddition)
         ][
           textView
@@ -285,7 +288,7 @@ defaultRateCardView push config =
             imageView
             [ height $ V 12
             , width $ V 12
-            , imageWithFallback "ny_ic_chevron_right,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_right.png"
+            , imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
             , margin $ MarginTop 4
             , color Color.black900
             , fontStyle $ FontStyle.semiBold LanguageStyle
@@ -295,6 +298,7 @@ defaultRateCardView push config =
         ,linearLayout 
           [ height $ V 1
           , width MATCH_PARENT
+          , visibility if config.showDetails then VISIBLE else GONE
           , background Color.grey800
           , margin (Margin 16 0 16 0)
           ][]
@@ -302,6 +306,7 @@ defaultRateCardView push config =
         [ width MATCH_PARENT
           , height WRAP_CONTENT
           , orientation HORIZONTAL
+          , visibility if config.showDetails then VISIBLE else GONE
           , margin (MarginVertical 12 12)
           , padding (Padding 20 0 20 0)
           , onClick push (const GoToFareUpdate)
@@ -327,7 +332,7 @@ defaultRateCardView push config =
             imageView
             [ height $ V 12
             , width $ V 12
-            , imageWithFallback "ny_ic_chevron_right,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_right.png"
+            , imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
             , margin $ MarginTop 4
             , color Color.black900
             , fontStyle $ FontStyle.semiBold LanguageStyle

@@ -37,6 +37,7 @@ import Components.PrimaryButton as PrimaryButton
 import Storage (getValueToLocalStore, KeyStore(..))
 import Helpers.Utils (validateEmail)
 import Screens.HelpAndSupportScreen.Controller (isEmailPresent)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 
 sourceToDestinationConfig :: ST.HelpAndSupportScreenState -> SourceToDestination.Config
 sourceToDestinationConfig state = let
@@ -48,30 +49,28 @@ sourceToDestinationConfig state = let
     , lineMargin = (Margin 4 6 0 0)
     , sourceMargin = (Margin 0 0 0 14)
     , sourceImageConfig {
-        imageUrl = "ny_ic_green_circle,https://assets.juspay.in/nammayatri/images/common/ny_ic_green_circle.png"
+        imageUrl = "ny_ic_green_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_green_circle.png"
       , margin = (MarginTop 5)
       }
     , sourceTextConfig {
         text = state.data.source
-      , textSize = FontSize.a_13
       , padding = (Padding 0 0 0 0)
       , margin = (Margin 7 0 15 0)
       , color = Color.darkDescriptionText
-      , fontStyle = FontStyle.medium LanguageStyle
+      , textStyle = FontStyle.Body1
       , ellipsize = true
       , maxLines = 1
       }
     , destinationImageConfig {
-        imageUrl = "ny_ic_red_circle,https://assets.juspay.in/nammayatri/images/common/ny_ic_red_circle.png"
+        imageUrl = "ny_ic_red_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_red_circle.png"
       , margin = (MarginTop 4)
       }
     , destinationTextConfig {
         text = state.data.destination
-      , textSize = FontSize.a_13
       , padding = (Padding 0 0 0 0)
       , margin = (Margin 7 0 15 0)
       , color = Color.darkDescriptionText
-      , fontStyle = FontStyle.medium LanguageStyle
+      , textStyle = FontStyle.Body1
       , maxLines = 1
       , ellipsize = true
       }
@@ -83,7 +82,7 @@ apiErrorModalConfig state = let
   config = ErrorModal.config
   errorModalConfig' = config
     { imageConfig {
-        imageUrl = "ny_ic_error_404,https://assets.juspay.in/nammayatri/images/user/ny_ic_error_404.png"
+        imageUrl = "ny_ic_error_404," <> (getAssetStoreLink FunctionCall) <> "ny_ic_error_404.png"
       , height = V 110
       , width = V 124
       , margin = (MarginBottom 32)
@@ -92,23 +91,17 @@ apiErrorModalConfig state = let
         text = (getString ERROR_404)
       , margin = (MarginBottom 7)
       , color = Color.black800
-      , textSize = FontSize.a_18
-      , fontStyle = FontStyle.bold LanguageStyle
       }
     , errorDescriptionConfig {
         text = (getString PROBLEM_AT_OUR_END)
       , color = Color.black700
-      , textSize = FontSize.a_14
       , margin = (Margin 16 0 16 0)
-      , fontStyle =  FontStyle.regular LanguageStyle
       }
     , buttonConfig {
         text = (getString NOTIFY_ME)
       , margin = (Margin 16 0 16 16)
-      , background = Color.black900
-      , color = Color.yellow900
-      , fontStyle = FontStyle.medium LanguageStyle
-      , textSize = FontSize.a_16
+      , background = state.data.config.primaryBackground
+      , color = state.data.config.primaryTextColor
       }
     }
   in errorModalConfig'
@@ -126,33 +119,33 @@ callConfirmationPopup state = let
         },
       option1 {
         text = (getString GO_BACK_)
-      , fontSize = FontSize.a_16
+      , strokeColor = state.data.config.primaryBackground
+      , background = state.data.config.popupBackground
+      , color = state.data.config.primaryBackground
       },
       option2 {
         text = (getString CALL)
-      , fontSize = FontSize.a_16
+      , strokeColor = state.data.config.primaryBackground
+      , background = state.data.config.primaryBackground
+      , color = state.data.config.primaryTextColor
       }
     }
   in popUpConfig'
 
-genericHeaderConfig :: ST.HelpAndSupportScreenState -> GenericHeader.Config
-genericHeaderConfig state = let
-  config = GenericHeader.config
-  genericHeaderConfig' = config
+genericHeaderConfig :: ST.HelpAndSupportScreenState -> GenericHeader.Config 
+genericHeaderConfig state = let 
+  config = if state.data.config.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
+  genericHeaderConfig' = config 
     {
       height = WRAP_CONTENT
     , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
-      , margin = (Margin 12 12 12 12)
-      }
-    , padding = (Padding 0 5 0 5)
+      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+      } 
     , textConfig {
         text = (getString HELP_AND_SUPPORT)
-      , textSize = FontSize.a_18
       , color = Color.darkDescriptionText
-      , fontStyle = FontStyle.bold LanguageStyle
       }
     , suffixImageConfig {
         visibility = GONE
@@ -175,9 +168,7 @@ deleteGenericHeaderConfig state = let
     , padding = PaddingVertical 5 5
     , textConfig {
         text = getString DEL_ACCOUNT
-      , textSize = FontSize.a_18
       , color = Color.black900
-      , fontStyle = FontStyle.bold LanguageStyle
       }
     }
   in genericHeaderConfig'
@@ -189,24 +180,20 @@ primaryEditTextConfigEmail state = let
     primaryEditTextConfig' = config
       { editText
         { color = if isEmailPresent FunctionCall then Color.black600 else Color.black800
-        , textSize = FontSize.a_14
-        , fontStyle = FontStyle.medium LanguageStyle
         , margin = Margin 16 16 16 16
         , placeholder = "example@xyz.com"
         , text = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else ""
         , enabled = not isEmailPresent FunctionCall
+        , textStyle = FontStyle.Body1
         }
       , background = Color.white900
       , topLabel
         { text = getString YOUR_EMAIL_ID <> "*"
-        , textSize = FontSize.a_12
         , color = Color.black900
-        , fontStyle = FontStyle.regular LanguageStyle
         }
       , showErrorLabel = not validateEmail state.data.email && DS.length state.data.email > 0
       , errorLabel
-        { text = getString PLEASE_ENTER_A_VALID_EMAIL
-        , fontStyle = FontStyle.regular LanguageStyle
+        { text = getString PLEASE_ENTER_A_VALID_EMAIL 
         , color = Color.textDanger }
       , margin = Margin 10 32 10 0
       }
@@ -218,27 +205,23 @@ primaryEditTextConfigDescription state = let
     primaryEditTextConfig' = config
       { editText
         { color = Color.black800
-        , textSize = FontSize.a_14
-        , fontStyle = FontStyle.medium LanguageStyle
         , margin = if EHC.os == "IOS" then Margin 10 16 10 10 else Margin 16 16 16 16
         , singleLine = false
         , placeholder = getString YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE
         , pattern = Just "[A-Za-z0-9,. ]*,300"
+        , textStyle = FontStyle.Body1
         }
       , background = Color.white900
       , height = V 120
       , stroke = "1," <> if DS.length state.data.description >= 300 then Color.textDanger else Color.borderColorLight
       , topLabel
         { text = getString REASON_FOR_DELETING_ACCOUNT
-        , textSize = FontSize.a_12
         , color = Color.black900
-        , fontStyle = FontStyle.regular LanguageStyle
-        }
+        }  
       , margin = Margin 10 32 10 100
       , showErrorLabel = DS.length state.data.description >= 300
       , errorLabel
         { text = getString MAX_CHAR_LIMIT_REACHED <> " 300 " <> getString OF <> " 300"
-        , fontStyle = FontStyle.regular LanguageStyle
         , color = Color.textDanger
         }
       }
@@ -254,8 +237,8 @@ primaryButtonConfigSubmitRequest state = let
         }
       , cornerRadius = 8.0
       , background = if state.props.btnActive then Color.black900 else Color.black500
-      , isClickable = state.props.btnActive
-      , margin = Margin 16 0 16 38
+      , isClickable = state.props.btnActive 
+      , margin = Margin 16 0 16 (if EHC.safeMarginBottom == 0 then 24 else (EHC.safeMarginBottom))
       , id = "ButtonDeleteAccount"
       }
   in primaryButtonConfig'
@@ -270,14 +253,12 @@ requestDeletePopUp state = let
       color = Color.black600},
       option1 {
         text = getString CANCEL_STR
-      , fontSize = FontSize.a_16
       },
       option2 {text = getString YES_DELETE_IT
       , background = Color.red
       , color = Color.white900
-      , strokeColor = Color.red
-      , fontSize = FontSize.a_16 }
-
+      , strokeColor = Color.red }
+     
     }
   in popUpConfig'
 

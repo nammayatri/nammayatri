@@ -95,7 +95,7 @@ lottieLoaderView state push activeIndex text =
     , id (getIdForScreenIndex activeIndex)
     , afterRender
         ( \action -> do
-            _ <- pure $ startLottieProcess "notification_bell" (getIdForScreenIndex activeIndex) true 1.0 "default"
+            _ <- pure $ startLottieProcess "notification_bell.json" (getIdForScreenIndex activeIndex) true 1.0 "default"
             pure unit
         )
         (const OnNavigate text)

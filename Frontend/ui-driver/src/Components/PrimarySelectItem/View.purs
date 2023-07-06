@@ -25,6 +25,9 @@ import Font.Style as FontStyle
 import Styles.Colors as Color
 import Font.Size as FontSize
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 view :: forall w .  (Action  -> Effect Unit) -> PrimarySelectItemState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -37,14 +40,13 @@ view push state =
                 _<- push action
                 pure unit 
                 ) (const (OnClick state))
-    ][ textView
+    ][ textView $
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , textSize FontSize.a_14
         , text state.label
         , color Color.greyTextColor
         , margin (MarginBottom 10)
-        ]
+        ] <> FontStyle.paragraphText TypoGraphy
       , linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
@@ -54,20 +56,18 @@ view push state =
         , background Color.white900
         , cornerRadius 4.0  
         , stroke ("1," <> Color.borderColorLight)
-        ][ textView
+        ][ textView $
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , weight 1.0
             , text if state.selectedItem == "" then state.placeholder else state.selectedItem
             , alpha if state.selectedItem /= "" then 1.0 else 0.33
-            , textSize FontSize.a_18
-            , fontStyle $ FontStyle.bold LanguageStyle
             , color Color.greyTextColor
-            ]
+            ] <> FontStyle.h2 TypoGraphy
           , imageView
             [ width ( V 15 )
             , height ( V 15 )
-            , imageWithFallback "ny_ic_drop_down,https://assets.juspay.in/nammayatri/images/driver/ny_ic_drop_down.png"
+            , imageWithFallback $ "ny_ic_drop_down," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_drop_down.png"
             ]
         ]
     ]

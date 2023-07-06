@@ -397,6 +397,7 @@ data STR = LETS_GET_STARTED
         | CONFIRM_AND_CHANGE
         | MAKE_YOURSELF_AVAILABLE_FOR
         | OTP_
+        | CHOOSE_LANGUAGE
         | RIDE_FARE
         | RIDE_DISTANCE
         | MESSAGE
@@ -499,6 +500,9 @@ data STR = LETS_GET_STARTED
         | YOU
         | DAILY
         | WEEKLY
+        | NEW_
+        | WITH
+
 
 getStringFromEnum :: STR -> String
 getStringFromEnum key = case key of
@@ -867,7 +871,7 @@ getStringFromEnum key = case key of
     CONFIRM_AND_CHANGE -> "CONFIRM_AND_CHANGE"
     OTP_ -> "OTP_"
     MAKE_YOURSELF_AVAILABLE_FOR -> "MAKE_YOURSELF_AVAILABLE_FOR"
-
+    CHOOSE_LANGUAGE -> "CHOOSE_LANGUAGE"
     RIDE_FARE -> "RIDE_FARE"
     RIDE_DISTANCE -> "RIDE_DISTANCE"
     MESSAGE -> "MESSAGE"
@@ -987,3 +991,5 @@ getStringFromEnum key = case key of
     YOU -> "YOU"
     DAILY -> "DAILY"
     WEEKLY -> "WEEKLY"
+    NEW_ -> "NEW_"
+    WITH -> "WITH"

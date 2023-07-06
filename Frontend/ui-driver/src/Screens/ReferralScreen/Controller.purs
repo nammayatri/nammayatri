@@ -40,7 +40,8 @@ import Data.Maybe (Maybe(..))
 import Services.APITypes (LeaderBoardRes(..), DriversInfo(..))
 import Data.Maybe (fromMaybe)
 import Screens.ReferralScreen.ScreenData as RSD
-
+import Engineering.Helpers.LogEvent (logEvent)
+import Effect.Unsafe (unsafePerformEffect)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -251,7 +252,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
     "Profile" -> exit $ GoToProfileScreen
     "Alert" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
+      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
       exit $ GoToNotifications
     _ -> continue state
 

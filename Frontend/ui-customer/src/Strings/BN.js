@@ -88,7 +88,8 @@ const bengaliStrings = {
   "LANGUAGE": "ভাষা",
   "OTP": "ওটিপি",
   "PAYMENT_METHOD": "অর্থপ্রদানের পদ্ধতি",
-  "PAYMENT_METHOD_STRING": "নগদ / কোনও ইউপিআই অ্যাপ্লিকেশন অ্যাপ্লিকেশন করুন করুন",
+  "PAYMENT_METHOD_STRING": "নগদ / UPI অ্যাপ ব্যবহার করুন",
+  "PAYMENT_METHOD_STRING_": "নগদ / UPI অ্যাপ ব্যবহার করুন",
   "CANCEL_RIDE": "যাত্রা বাতিল করুন",
   "SUPPORT": "সমর্থন",
   "PICKUP_AND_DROP": "পিকআপ এবং ড্রপ",
@@ -243,6 +244,7 @@ const bengaliStrings = {
   "RATE_YOUR_RIDE_WITH": "এর সাথে আপনার রাইড রেট করুন",
   "VIEW_BREAKDOWN": "ব্রেকডাউন দেখুন",
   "PAY_DRIVER_USING_CASH_OR_UPI": "নগদ/ইউপিআই ব্যবহার করে ড্রাইভারকে অর্থ প্রদান করুন",
+  "PAY_DRIVER_USING_CASH_OR_UPI_": "নগদ/ইউপিআই ব্যবহার করে ড্রাইভারকে অর্থ প্রদান করুন",
   "RATE_YOUR_DRIVER": "আপনার ড্রাইভারকে রেট দিন",
   "MY_RIDES": "আমার রাইডস",
   "RIDE_DETAILS": "রাইডের বিবরণ",
@@ -488,5 +490,7 @@ const bengaliStrings = {
   "CALL_NAMMA_YATRI_SUPPORT" : "নম্মা যাত্রী সমর্থনে কল করুন",
   "EMAIL_EXISTS_ALREADY" : "ই - মেইল   টি আগে থেকেই আছে",
   "CALL_112": "112 কল করুন",
-  "CALL_EMERGENCY_CENTRE": "ইমার্জেন্সি সেন্টারে কল করুন"
+  "CALL_EMERGENCY_CENTRE": "ইমার্জেন্সি সেন্টারে কল করুন",
+  "EMAIL_EXISTS_ALREADY" : "ই - মেইল ​​টি আগে থেকেই আছে",
+  "PLATFORM_FEE" : "প্ল্যাটফর্ম ফি"
 }

@@ -42,6 +42,9 @@ import Data.Maybe
 import Common.Types.App
 import JBridge(requestKeyboardShow, hideKeyboardOnNavigation)
 import Styles.Types (FontStyle)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
+import MerchantConfig.Utils(getValueFromConfig)
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -83,7 +86,7 @@ headingText config push =
   , height WRAP_CONTENT
   , orientation HORIZONTAL
   ][
-    linearLayout
+linearLayout
     [
       height WRAP_CONTENT
     , width WRAP_CONTENT
@@ -102,64 +105,56 @@ headingText config push =
       , color Color.black900
       , fontStyle $ FontStyle.semiBold LanguageStyle
       ] 
-    ]   
+    ]
+, linearLayout
+ [ width MATCH_PARENT
+ , height WRAP_CONTENT
+ , orientation VERTICAL
+ , clickable true
+ , onClick ( \action -> do
+            _ <- pure $ hideKeyboardOnNavigation true
+            pure unit
+          ) (const NoAction)
+ , disableClickFeedback true
+ ][ textView (
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , text config.headingTextConfig.text
+    , color config.headingTextConfig.color
+    , orientation HORIZONTAL
+    , gravity CENTER
+    ] <> FontStyle.h1 TypoGraphy), 
+    textView (
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , text config.subHeadingTextConfig.text
+    , visibility if config.subHeadingTextConfig.visibility then VISIBLE else GONE
+    , orientation HORIZONTAL
+    , padding (PaddingTop 4)
+    , gravity CENTER
+    , color config.subHeadingTextConfig.color
+    ] <> FontStyle.paragraphText TypoGraphy) 
     ,linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , clickable true
-    , onClick ( \action -> do 
-                _ <- pure $ hideKeyboardOnNavigation true
-                pure unit 
-              ) (const NoAction)
-    , disableClickFeedback true
-    ][ textView
-        [ width MATCH_PARENT
+    , onClick ((\action -> do
+        _ <- push action
+        _ <- setText' (getNewIDWithTag "OtherReasonEditText") ""
+        _ <- setText' (getNewIDWithTag "TechGlitchEditText") ""
+        pure unit
+    )) ( const ClearOptions)
+    , visibility case config.activeReasonCode of
+                    Just reasonCode -> if ( reasonCode == "OTHER" || reasonCode == "TECHNICAL_GLITCH") then VISIBLE else GONE
+                    _               -> GONE
+    ][  textView $
+        [ width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text config.headingTextConfig.text
-        , color config.headingTextConfig.color
-        , orientation HORIZONTAL
-        , gravity if config.topLeftIcon then LEFT else CENTER
-        , textSize config.headingTextConfig.size
-        , fontStyle $ FontStyle.bold LanguageStyle
-        ], 
-        textView 
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , visibility if config.subHeadingTextConfig.visibility then VISIBLE else GONE
-        , text config.subHeadingTextConfig.text
-        , orientation HORIZONTAL
-        , padding (PaddingTop 4)
-        , gravity CENTER
-        , textSize config.subHeadingTextConfig.size
-        , color config.subHeadingTextConfig.color
-        , fontStyle $ FontStyle.regular LanguageStyle
-        ],
-        linearLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , padding (Padding 4 12 4 12)
-        , margin (Margin 2 16 0 0)
-        , orientation VERTICAL
-        , onClick ((\action -> do
-            _ <- push action
-            _ <- setText' (getNewIDWithTag "OtherReasonEditText") ""
-            _ <- setText' (getNewIDWithTag "TechGlitchEditText") ""
-            pure unit 
-        )) ( const ClearOptions)
-        , visibility case config.activeReasonCode of 
-                        Just reasonCode -> if ( reasonCode == "OTHER" || reasonCode == "TECHNICAL_GLITCH") then VISIBLE else GONE
-                        _               -> GONE
-        ][  textView
-            [ width WRAP_CONTENT
-            , height WRAP_CONTENT
-            , text config.showAllOptionsText
-            , color Color.blue900
-            , textSize FontSize.a_12
-            , fontStyle $ FontStyle.semiBold LanguageStyle
-            ]
-        ]
+        , text config.showAllOptionsText
+        , color Color.blue900
+        ] <> FontStyle.body9 TypoGraphy
     ]
+  ]
   ]
   
 
@@ -248,10 +243,8 @@ someOtherReason config push index =
               $ [ width MATCH_PARENT
               , height ( V 58)
               , color Color.black800
-              , textSize FontSize.a_14
               , hint config.hint
               , hintColor Color.black650
-              , fontStyle $ FontStyle.medium LanguageStyle
               , cornerRadius 4.0
               , background Color.grey800
               , singleLine false
@@ -259,17 +252,15 @@ someOtherReason config push index =
               , pattern "[A-Za-z0-9 ]*,100"
               ] <> (if os == "ANDROID" then [id (getNewIDWithTag "OtherReasonEditText")] else [] ))
             ]
-          , textView
+          , textView (
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , text if (not config.isMandatoryTextHidden ) then config.strings.mandatory else config.strings.limitReached
             , color Color.warningRed
-            , textSize FontSize.a_12
-            , fontStyle $ FontStyle.regular LanguageStyle
             , visibility if ((not config.isMandatoryTextHidden )|| config.isLimitExceeded) then VISIBLE else GONE
-            ]
-          ]
-      ]
+            ] <> FontStyle.body3 TypoGraphy )                             
+          ]                                            
+      ] 
 
 technicalGlitchDescription :: forall w . Config -> (Action  -> Effect Unit) -> Int -> PrestoDOM (Effect Unit) w
 technicalGlitchDescription config push index =
@@ -298,28 +289,25 @@ technicalGlitchDescription config push index =
               $ [ width MATCH_PARENT
               , height ( V 58)
               , color Color.black800
-              , textSize FontSize.a_14
               , hint config.hint
               , hintColor Color.black650
               , background Color.grey800
-              , fontStyle $ FontStyle.medium LanguageStyle
               , cornerRadius 4.0
               , singleLine false
               , onChange push (TextChanged ( getNewIDWithTag "TechGlitchEditText") )
               , pattern "[A-Za-z0-9 ]*,100"
-              ] <> (if os == "ANDROID" then [id (getNewIDWithTag "TechGlitchEditText")] else []))
+              ] <> (FontStyle.body1 LanguageStyle)
+                <> (if os == "ANDROID" then [id (getNewIDWithTag "TechGlitchEditText")] else []))
             ]
-          , textView
+          , textView (
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , text if (not config.isMandatoryTextHidden ) then config.strings.mandatory else config.strings.limitReached
             , color Color.warningRed
-            , textSize FontSize.a_12
-            , fontStyle $ FontStyle.regular LanguageStyle
             , visibility if ((not config.isMandatoryTextHidden )|| config.isLimitExceeded) then VISIBLE else GONE
-            ]
-          ]
-      ]
+            ] <> FontStyle.body3 TypoGraphy)                             
+          ]                                            
+      ] 
 primaryButtons :: forall w . (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 primaryButtons push config =
  linearLayout
@@ -331,47 +319,58 @@ primaryButtons push config =
     , PrimaryButton.view (push <<< Button2) (secondaryButtonConfig config)]
 
 
-radioButton :: forall w .  Config -> (Action  -> Effect Unit) -> Int -> OptionButtonList -> PrestoDOM (Effect Unit) w
+radioButton :: forall w. Config -> (Action -> Effect Unit) -> Int -> OptionButtonList -> PrestoDOM (Effect Unit) w
 radioButton config push index item =
- linearLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , padding $ PaddingVertical 12 12
-  ][ imageView
-      [ width $ V 24
-      , height $ V 24
-      , imageWithFallback cancelValues.imageString
-      ],
-
-      linearLayout
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , gravity CENTER_VERTICAL
+    , padding $ PaddingVertical 12 12
+    ]
+    [ linearLayout
+        [ width (V 18)
+        , height (V 18)
+        , stroke $ "2,"
+            <> case config.activeIndex of
+                Just activeIndex' -> if (index == activeIndex') then config.config.primaryBackground else Color.black600
+                Nothing -> Color.black600
+        , cornerRadius 9.0
+        , gravity CENTER
+        ]
+        [ linearLayout
+            [ width $ V 10
+            , height $ V 10
+            , cornerRadius 5.0
+            , background config.config.primaryBackground
+            , visibility
+                $ case config.activeIndex of
+                    Just activeIndex' -> if (index == activeIndex') then VISIBLE else GONE
+                    Nothing -> GONE
+            ]
+            []
+        ]
+    , linearLayout
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , orientation VERTICAL
       , margin $ MarginLeft 10
-      ][ textView
+      ][ textView $
           [ text item.description
           , padding $ PaddingBottom 5
-          , fontStyle cancelValues.font
           , color Color.black900
-          ],
-          textView
+          ] <> font config.activeIndex
+        , textView $
           [ text $ fromMaybe "" item.subtext
           , color Color.black650
-          , visibility cancelValues.visibility
-          ]
+          , visibility $ case config.activeIndex of 
+                            Just activeIndex' -> if (activeIndex' == index) then if item.subtext == Nothing then GONE else VISIBLE else GONE
+                            Nothing -> GONE
+          ] <> font config.activeIndex 
       ]
-  ] where cancelValues = getCancelValues config.activeIndex item index
-
-getCancelValues :: Maybe Int -> OptionButtonList -> Int -> {imageString :: String , font :: FontStyle , visibility :: Visibility}
-getCancelValues index item index' = if isJust index && index' == (fromMaybe 0 index) 
-                                        then {  imageString : "ny_ic_radio_selected,https://assets.juspay.in/nammayatri/images/common/ny_ic_radio_selected.png",
-                                                font : FontStyle.bold LanguageStyle,
-                                                visibility : if item.subtext == Nothing then GONE else VISIBLE
-                                          }
-                                        else {  imageString : "ny_ic_radio_unselected,https://assets.juspay.in/nammayatri/images/common/ny_ic_radio_unselected.png",
-                                                font : FontStyle.regular LanguageStyle,
-                                                visibility : GONE
-                                          }
+    ] where 
+        font activeIndex = case activeIndex of
+                        Just activeIndex' -> if index == activeIndex' then FontStyle.body4 LanguageStyle else FontStyle.paragraphText LanguageStyle
+                        Nothing -> FontStyle.paragraphText LanguageStyle
 
 
 primaryButtonConfig :: Config -> PrimaryButtonConfig.Config
@@ -381,9 +380,11 @@ primaryButtonConfig config = let
     config'
       {textConfig
       { text = config.primaryButtonTextConfig.firstText
-      , color = Color.black700}
+      , color = config.config.primaryBackground}
       , background = Color.white900
-      , stroke = "1," <> Color.black500
+      , isGradient = false
+      , cornerRadius = config.cornerRadius
+      , stroke = "1," <> config.config.primaryBackground
       , width = if(config.secondaryButtonVisibility) then (V ((screenWidth unit/2)-30)) else config.primaryButtonTextConfig.width
       , id = "Button1"
       , visibility = if config.primaryButtonVisibility then VISIBLE else GONE
@@ -396,12 +397,16 @@ secondaryButtonConfig config = let
   primaryButtonConfig' =
     config'
        {textConfig
-        { text = config.primaryButtonTextConfig.secondText}
+        { text = config.primaryButtonTextConfig.secondText
+        , color =  if (not config.isSelectButtonActive) && getValueFromConfig "isGradient" == "true" then "#696A6F" else config.config.primaryTextColor}
         , width = if config.primaryButtonVisibility then (V ((screenWidth unit/2)-30)) else config.primaryButtonTextConfig.width
+        , isGradient = if (not config.isSelectButtonActive) then false else if getValueFromConfig "isGradient" == "true" then true else false
+        , cornerRadius = config.cornerRadius
         , id = "Button2"
-        , alpha = if(config.isSelectButtonActive) then 1.0 else 0.5
+        , alpha = if(config.isSelectButtonActive) || (getValueFromConfig "isGradient" == "true") then 1.0  else 0.5
         , isClickable = config.isSelectButtonActive
-        , visibility = if config.secondaryButtonVisibility then VISIBLE else GONE
+        , background = if (not config.isSelectButtonActive) && getValueFromConfig "isGradient" == "true" then "#F1F1F4" else config.config.primaryBackground
+        , stroke = (if getValueFromConfig "isGradient" == "true" then "0," else "1,") <> config.config.primaryBackground
        }
   in primaryButtonConfig'
 

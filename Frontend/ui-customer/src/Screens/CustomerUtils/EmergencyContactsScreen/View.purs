@@ -7,7 +7,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import JBridge (openUrlInApp, loaderText)
+import JBridge (openUrlInApp)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, (/=), discard, (||), (&&),(-))
@@ -26,6 +26,7 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (split, Pattern(..))
 import Components.PopUpModal as PopUpModal
 import Screens.CustomerUtils.EmergencyContactsScreen.ComponentConfig
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 
 screen :: EmergencyContactsScreenState -> Screen Action EmergencyContactsScreenState ScreenOutput
 screen initialState =
@@ -136,27 +137,23 @@ emptyContactsView push state =
     [ imageView
         [ height $ V 150
         , width $ V 150
-        , imageWithFallback "ic_emergency_contact_empty,https://assets.juspay.in/nammayatri/images/user/ny_ic_emergency_contact_empty.png"
+        , imageWithFallback $ "ny_ic_emergency_contact_empty," <> (getAssetStoreLink FunctionCall) <> "ny_ic_emergency_contact_empty.png"
         ]
-    , textView
+    , textView $
         [ height $ WRAP_CONTENT
         , width $ WRAP_CONTENT
         , gravity CENTER
         , text (getString NO_EMERGENCY_CONTACTS_SET)
         , color Color.black900
-        , textSize 18
-        , fontStyle $ FontStyle.bold LanguageStyle
-        ]
-    , textView
+        ] <> FontStyle.h2 LanguageStyle
+    , textView $
         [ height $ WRAP_CONTENT
         , width if os == "IOS" then V (screenWidth unit - 20) else WRAP_CONTENT
         , gravity CENTER
         , text (getString EMERGENCY_CONTACTS_SCREEN_DESCRIPTION)
         , color Color.black700
-        , textSize 14
-        , fontStyle $ FontStyle.regular LanguageStyle
         , padding (Padding 0 10 0 10)
-        ]
+        ] <> FontStyle.paragraphText LanguageStyle
     ]
 
 --------------------------------------------------- emergencyContactsListView -----------------------------------------------------
@@ -170,15 +167,13 @@ emergencyContactsListView push state =
     , visibility if (null state.data.contactsList) then GONE else VISIBLE
     , weight 1.0
     ]
-    [ textView
+    [ textView $ 
         [ height $ WRAP_CONTENT
         , width if os == "IOS" then V (screenWidth unit - 20) else WRAP_CONTENT
         , text (getString EMERGENCY_CONTACTS_SCREEN_DESCRIPTION)
         , color Color.black700
-        , textSize 14
-        , fontStyle $ FontStyle.regular LanguageStyle
         , padding (Padding 0 10 0 10)
-        ]
+        ] <> FontStyle.paragraphText LanguageStyle
     , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -202,25 +197,22 @@ contactCardView push state contact index =
         [ height $ V 24
         , width $ V 24
         , background (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 0))
-        , cornerRadius if os == "IOS" then 12.0 else 20.0
+        , cornerRadius 12.0
         , gravity CENTER
         , margin (MarginRight 10)
         ]
-        [ textView
+        [ textView $
             [ text (DS.toUpper ((<>) (getFirstChar contact.name) (getLastChar contact.name)))
             , color (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 1))
-            , textSize FontSize.a_12
-            ]
+            ] <> FontStyle.body3 TypoGraphy
         ]
-    , textView
+    , textView $
         [ height $ WRAP_CONTENT
         , width $ WRAP_CONTENT
         , weight 1.0
         , text contact.name
         , color Color.black800
-        , textSize 16
-        , fontStyle $ FontStyle.semiBold LanguageStyle
-        ]
+        ] <> FontStyle.subHeading1 LanguageStyle
     , textView
         [ height $ WRAP_CONTENT
         , width $ WRAP_CONTENT

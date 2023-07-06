@@ -20,8 +20,8 @@ import Data.Array (length, union, filter, (!!))
 import Data.Int (fromString, toNumber)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), split)
-import Engineering.Helpers.Commons (strToBool)
-import Helpers.Utils (convertUTCtoISC, parseFloat, setEnabled, setRefreshing)
+import Engineering.Helpers.Commons (strToBool, convertUTCtoISC)
+import Helpers.Utils (parseFloat, setEnabled, setRefreshing)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (class Show, bind, discard, map, not, pure, unit, ($), (&&), (+), (/), (/=), (<>), (==), (||))
@@ -166,8 +166,8 @@ rideHistoryListTransformer list categoryAction =
     , driverName : toPropValue ride.driverName
     , destination  : toPropValue (decodeAddress (ride.toLocation) false)
     , shortRideId  : toPropValue ((getString TRIP_ID )<> ": " <> ride.shortRideId)
-    , rideDistance : toPropValue $ (parseFloat (toNumber (fromMaybe 0 ride.chargeableDistance) / 1000.0) 2) <> " km Ride" <> case ride.riderName of
-                                      Just name -> " with " <> name
+    , rideDistance : toPropValue $ (parseFloat (toNumber (fromMaybe 0 ride.chargeableDistance) / 1000.0) 2) <> " km " <> (getString RIDE) <> case ride.riderName of
+                                      Just name -> " " <> (getString WITH) <> " " <> name
                                       Nothing -> ""
     , vehicleColor : toPropValue ride.vehicleColor
     , vehicleModel : toPropValue ride.vehicleModel

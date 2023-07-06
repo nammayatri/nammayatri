@@ -29,8 +29,7 @@ primaryButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig
       { text = (getString UPDATE)
-      , color = Color.primaryButtonColor
-      , textSize = FontSize.a_18}
+      , color = Color.primaryButtonColor}
       , margin = (Margin 0 0 0 0)
       , cornerRadius = 0.0
       , background = Color.black900

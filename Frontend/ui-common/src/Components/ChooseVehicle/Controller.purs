@@ -21,7 +21,7 @@ type Config
 
 config :: Config
 config =
-  { vehicleImage: "ic_sedan_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_ac.png"
+  { vehicleImage: ""
   , isSelected: false
   , vehicleVariant: "Non AC Taxi"
   , vehicleType: "Economical"

@@ -86,7 +86,7 @@ view push state =
           , padding (PaddingRight 50)
           , id (getNewIDWithTag "recordAnimation")
           , afterRender (\action -> do
-                 _ <- pure $ startLottieProcess "record_audio_animation" (getNewIDWithTag "recordAnimation") true 1.0 "FIT_CENTER"
+                 _ <- pure $ startLottieProcess "record_audio_animation.json" (getNewIDWithTag "recordAnimation") true 1.0 "FIT_CENTER"
                  pure unit
                 ) (const NoAction)
           ]

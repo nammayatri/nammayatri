@@ -490,5 +490,8 @@ const englishStrings = {
   CONGRATULATIONS_YOU_ARE_RANK : "Congratulations! You are RANK ",
   YOU : " (you)",
   DAILY : "Daily",
-  WEEKLY : "Weekly"
+  WEEKLY : "Weekly",
+  NEW_ : "New",
+  WITH : "with",
+  CHOOSE_LANGUAGE : "Choose Language"
 }
