@@ -10,7 +10,12 @@ initData = {
     , contactsCount : 0
     , contactsList : []
     , contactsNewList : []
-    , removedContactDetail : { isSelected : false
+    , contactsUpdatedNewList: []
+    , prestoListArrayItems: []
+    , loadMoreDisabled: true
+    , offsetForEmergencyContacts : 0
+    , limitForEmergencyContacts : 10
+    , removedContactDetail : { isSelected :false
                               , name : ""
                               , number : ""
                               }

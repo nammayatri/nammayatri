@@ -32,6 +32,8 @@ initData = {
     , finalAmount : 0
     , startedAt : ""
     , endedAt : ""
+    , offsetForEmergencyContacts : 0
+    , limitForEmergencyContacts : 10
     , source : ""
     , destination : ""
     , eta : "2 mins"
