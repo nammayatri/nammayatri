@@ -37,6 +37,7 @@ mkPersist
       paymentServiceOrderId Text
       personId Text -- PersonTId
       merchantId Text -- MerchantTId
+      paymentMerchantId Text Maybe
       requestId Text Maybe
       service Text Maybe
       clientId Text Maybe

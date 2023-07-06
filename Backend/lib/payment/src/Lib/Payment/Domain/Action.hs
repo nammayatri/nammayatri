@@ -90,7 +90,7 @@ buildSDKPayloadDetails req order = do
     Juspay.SDKPayloadDetails
       { clientId = order.clientId,
         amount = show order.amount,
-        merchantId = Just order.merchantId.getId,
+        merchantId = order.paymentMerchantId,
         clientAuthToken,
         clientAuthTokenExpiry = order.clientAuthTokenExpiry,
         environment = order.environment,
@@ -134,6 +134,7 @@ buildPaymentOrder merchantId personId orderId req resp = do
         action = resp.sdk_payload.payload.action,
         personId,
         merchantId,
+        paymentMerchantId = resp.sdk_payload.payload.merchantId,
         amount = req.amount, -- FIXME resp.sdk_payload.payload.amount
         currency = resp.sdk_payload.payload.currency,
         status = resp.status,
