@@ -482,6 +482,8 @@ const malayalamStrings = {
   "MESSAGE_FROM_DRIVER": "ഡ്രൈവറിൽ നിന്നുള്ള സന്ദേശം",
   "REPLY": "മറുപടി",
   "NAME_SHOULD_BE_MORE_THAN_2_CHARACTERS" : "പേര് 2 പ്രതീകങ്ങളിൽ കൂടുതലായിരിക്കണം",
-  "THIS_FIELD_IS_REQUIRED" : "ഈ ഫീൽഡ് പൂരിപ്പിക്കേണ്ടതുണ്ട്", 
-  "EMAIL_EXISTS_ALREADY" : "ഇമെയില് നേരത്തെ ഉള്ളതാണ്"
+  "THIS_FIELD_IS_REQUIRED" : "ഈ ഫീൽഡ് പൂരിപ്പിക്കേണ്ടതുണ്ട്",
+  "EMAIL_EXISTS_ALREADY" : "ഇമെയില് നേരത്തെ ഉള്ളതാണ്",
+  "OKAY_GOT_IT" : "ശരി മനസ്സിലായി",
+  "CALL_NAMMA_YATRI_SUPPORT" : "നമ്മ യാത്രി സപ്പോർട്ടിലേക്ക് വിളിക്കുക"
 }

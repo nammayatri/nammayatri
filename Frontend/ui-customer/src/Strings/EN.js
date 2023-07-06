@@ -507,4 +507,6 @@ const englishStrings = {
   "NAME_SHOULD_BE_MORE_THAN_2_CHARACTERS" : "Name should be more than 2 characters",
   "THIS_FIELD_IS_REQUIRED" : "This field is required",
   "EMAIL_EXISTS_ALREADY" : "Email already exists",
+  "OKAY_GOT_IT" : "Ok, Got it",
+  "CALL_NAMMA_YATRI_SUPPORT" : "Call Namma Yatri Support"
 }

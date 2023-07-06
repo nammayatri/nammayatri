@@ -629,11 +629,11 @@ eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = save
 eval (UpdateMessages message sender timeStamp size) state = do
   let messages = state.data.messages <> [((ChatView.makeChatComponent (getMessageFromKey message (getValueToLocalStore LANGUAGE_KEY)) sender timeStamp))]
   case (last messages) of
-    Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}} else 
+    Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}} else
                     if value.sentBy == "Customer" then updateMessagesWithCmd state {data {messages = messages, messagesSize = size, suggestionsList = []}}
                     else do
                       let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
-                      let unReadMessages = (if readMessages == 0 then true else (if (readMessages < (length messages) && state.props.currentStage /= ChatWithDriver) then true else false)) 
+                      let unReadMessages = (if readMessages == 0 then true else (if (readMessages < (length messages) && state.props.currentStage /= ChatWithDriver) then true else false))
                       let suggestions = getSuggestionsfromKey message
                       updateMessagesWithCmd state {data {messages = messages, suggestionsList = suggestions, lastMessage = value , messagesSize = size}, props {unReadMessages = unReadMessages, showChatNotification = unReadMessages}}
     Nothing -> continue state
@@ -1162,8 +1162,8 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Primary
                     Nothing, true, "QuoteList"            -> exit $ GoToHome
                     _,_,_                                 -> continue state
 
-eval (SearchLocationModelActionController (SearchLocationModelController.DebounceCallBack searchString)) state = do
-  if (STR.length searchString > 2) then
+eval (SearchLocationModelActionController (SearchLocationModelController.DebounceCallBack searchString isSource)) state = do
+  if (STR.length searchString > 2) && (isSource == fromMaybe true state.props.isSource) then
     validateSearchInput state searchString
   else
     continue state{data{ locationList = state.data.recentSearchs.predictionArray }}

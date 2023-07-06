@@ -483,5 +483,7 @@ const bengaliStrings = {
   "REPLY": "উত্তর দিন",
   "NAME_SHOULD_BE_MORE_THAN_2_CHARACTERS" : "নাম 2 অক্ষরের বেশি হওয়া উচিত",
   "THIS_FIELD_IS_REQUIRED" : "ঘরটি অবশ্যই পূরণ করতে হবে",
-  "EMAIL_EXISTS_ALREADY" : "ই - মেইল ​​টি আগে থেকেই আছে"
+  "EMAIL_EXISTS_ALREADY" : "ই - মেইল টি আগে থেকেই আছে",
+  "OKAY_GOT_IT" : "আচ্ছা আমি বুঝে গেছি",
+  "CALL_NAMMA_YATRI_SUPPORT" : "নম্মা যাত্রী সমর্থনে কল করুন"
 }

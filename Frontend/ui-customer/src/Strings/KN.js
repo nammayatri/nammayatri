@@ -500,6 +500,8 @@ const kannadaStrings = {
   "MESSAGE_FROM_DRIVER": "ಚಾಲಕನಿಂದ ಸಂದೇಶ" ,
   "REPLY": "ಉತ್ತರಿಸು",
   "NAME_SHOULD_BE_MORE_THAN_2_CHARACTERS" : "ಹೆಸರು 2 ಅಕ್ಷರಗಳಿಗಿಂತ ಹೆಚ್ಚು ಇರಬೇಕು",
-  "THIS_FIELD_IS_REQUIRED" : "ಈ ಜಾಗ ಬೇಕಾಗಿದೆ", 
-  "EMAIL_EXISTS_ALREADY" : "ಇಮೇಲ್ ಈಗಾಗಲೇ ಅಸ್ತಿತ್ವದಲ್ಲಿದೆ"
+  "THIS_FIELD_IS_REQUIRED" : "ಈ ಜಾಗ ಬೇಕಾಗಿದೆ",
+  "EMAIL_EXISTS_ALREADY" : "ಇಮೇಲ್ ಈಗಾಗಲೇ ಅಸ್ತಿತ್ವದಲ್ಲಿದೆ",
+  "OKAY_GOT_IT" : "ಸರಿ ಅರ್ಥವಾಯಿತು",
+  "CALL_NAMMA_YATRI_SUPPORT" : "ನಮ್ಮ ಯಾತ್ರಿ ಬೆಂಬಲಕ್ಕೆ ಕರೆ ಮಾಡಿ"
 }
