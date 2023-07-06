@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -39,7 +39,7 @@ import Helpers.Utils (validateEmail)
 import Screens.HelpAndSupportScreen.Controller (isEmailPresent)
 
 sourceToDestinationConfig :: ST.HelpAndSupportScreenState -> SourceToDestination.Config
-sourceToDestinationConfig state = let 
+sourceToDestinationConfig state = let
   config = SourceToDestination.config
   sourceToDestinationConfig' = config
     {
@@ -78,10 +78,10 @@ sourceToDestinationConfig state = let
     }
   in sourceToDestinationConfig'
 
-apiErrorModalConfig :: ST.HelpAndSupportScreenState -> ErrorModal.Config 
-apiErrorModalConfig state = let 
-  config = ErrorModal.config 
-  errorModalConfig' = config 
+apiErrorModalConfig :: ST.HelpAndSupportScreenState -> ErrorModal.Config
+apiErrorModalConfig state = let
+  config = ErrorModal.config
+  errorModalConfig' = config
     { imageConfig {
         imageUrl = "ny_ic_error_404,https://assets.juspay.in/nammayatri/images/user/ny_ic_error_404.png"
       , height = V 110
@@ -90,7 +90,7 @@ apiErrorModalConfig state = let
       }
     , errorConfig {
         text = (getString ERROR_404)
-      , margin = (MarginBottom 7)  
+      , margin = (MarginBottom 7)
       , color = Color.black800
       , textSize = FontSize.a_18
       , fontStyle = FontStyle.bold LanguageStyle
@@ -111,17 +111,17 @@ apiErrorModalConfig state = let
       , textSize = FontSize.a_16
       }
     }
-  in errorModalConfig' 
+  in errorModalConfig'
 
-callConfirmationPopup :: ST.HelpAndSupportScreenState -> PopUpModal.Config 
-callConfirmationPopup state = let 
+callConfirmationPopup :: ST.HelpAndSupportScreenState -> PopUpModal.Config
+callConfirmationPopup state = let
     config = PopUpModal.config
     popUpConfig' = config {
-      primaryText { 
-          text = (getString CONTACT_SUPPORT) 
+      primaryText {
+          text = (getString CONTACT_SUPPORT)
       , margin = (Margin 0 20 0 20)
         },
-      secondaryText { 
+      secondaryText {
         visibility = GONE
         },
       option1 {
@@ -130,15 +130,15 @@ callConfirmationPopup state = let
       },
       option2 {
         text = (getString CALL)
-      , fontSize = FontSize.a_16 
+      , fontSize = FontSize.a_16
       }
     }
   in popUpConfig'
 
-genericHeaderConfig :: ST.HelpAndSupportScreenState -> GenericHeader.Config 
-genericHeaderConfig state = let 
+genericHeaderConfig :: ST.HelpAndSupportScreenState -> GenericHeader.Config
+genericHeaderConfig state = let
   config = GenericHeader.config
-  genericHeaderConfig' = config 
+  genericHeaderConfig' = config
     {
       height = WRAP_CONTENT
     , prefixImageConfig {
@@ -146,7 +146,7 @@ genericHeaderConfig state = let
       , width = V 25
       , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
       , margin = (Margin 12 12 12 12)
-      } 
+      }
     , padding = (Padding 0 5 0 5)
     , textConfig {
         text = (getString HELP_AND_SUPPORT)
@@ -160,10 +160,10 @@ genericHeaderConfig state = let
     }
   in genericHeaderConfig'
 
-deleteGenericHeaderConfig :: ST.HelpAndSupportScreenState -> GenericHeader.Config 
-deleteGenericHeaderConfig state = let 
+deleteGenericHeaderConfig :: ST.HelpAndSupportScreenState -> GenericHeader.Config
+deleteGenericHeaderConfig state = let
   config = GenericHeader.config
-  genericHeaderConfig' = config 
+  genericHeaderConfig' = config
     {
       height = WRAP_CONTENT
     , prefixImageConfig {
@@ -171,7 +171,7 @@ deleteGenericHeaderConfig state = let
       , width = V 25
       , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
       , margin = Margin 12 12 12 12
-      } 
+      }
     , padding = PaddingVertical 5 5
     , textConfig {
         text = getString DEL_ACCOUNT
@@ -187,13 +187,13 @@ primaryEditTextConfigEmail :: ST.HelpAndSupportScreenState -> PrimaryEditText.Co
 primaryEditTextConfigEmail state = let
     config = PrimaryEditText.config
     primaryEditTextConfig' = config
-      { editText 
+      { editText
         { color = if isEmailPresent FunctionCall then Color.black600 else Color.black800
         , textSize = FontSize.a_14
         , fontStyle = FontStyle.medium LanguageStyle
         , margin = Margin 16 16 16 16
         , placeholder = "example@xyz.com"
-        , text = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else "" 
+        , text = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else ""
         , enabled = not isEmailPresent FunctionCall
         }
       , background = Color.white900
@@ -205,18 +205,18 @@ primaryEditTextConfigEmail state = let
         }
       , showErrorLabel = not validateEmail state.data.email && DS.length state.data.email > 0
       , errorLabel
-        { text = getString PLEASE_ENTER_A_VALID_EMAIL 
-        , fontStyle = FontStyle.regular LanguageStyle 
+        { text = getString PLEASE_ENTER_A_VALID_EMAIL
+        , fontStyle = FontStyle.regular LanguageStyle
         , color = Color.textDanger }
       , margin = Margin 10 32 10 0
-      } 
+      }
     in primaryEditTextConfig'
 
 primaryEditTextConfigDescription :: ST.HelpAndSupportScreenState -> PrimaryEditText.Config
 primaryEditTextConfigDescription state = let
     config = PrimaryEditText.config
     primaryEditTextConfig' = config
-      { editText 
+      { editText
         { color = Color.black800
         , textSize = FontSize.a_14
         , fontStyle = FontStyle.medium LanguageStyle
@@ -233,35 +233,35 @@ primaryEditTextConfigDescription state = let
         , textSize = FontSize.a_12
         , color = Color.black900
         , fontStyle = FontStyle.regular LanguageStyle
-        }  
+        }
       , margin = Margin 10 32 10 100
       , showErrorLabel = DS.length state.data.description >= 300
-      , errorLabel 
+      , errorLabel
         { text = getString MAX_CHAR_LIMIT_REACHED <> " 300 " <> getString OF <> " 300"
-        , fontStyle = FontStyle.regular LanguageStyle 
+        , fontStyle = FontStyle.regular LanguageStyle
         , color = Color.textDanger
         }
-      } 
+      }
     in primaryEditTextConfig'
 
 primaryButtonConfigSubmitRequest :: ST.HelpAndSupportScreenState -> PrimaryButton.Config
-primaryButtonConfigSubmitRequest state = let 
+primaryButtonConfigSubmitRequest state = let
     config = PrimaryButton.config
-    primaryButtonConfig' = config 
+    primaryButtonConfig' = config
       { textConfig
         { text = getString SUBMIT_REQUEST
-        , color = if state.props.btnActive then Color.yellowRadler else Color.yellow800     
+        , color = if state.props.btnActive then Color.yellowRadler else Color.yellow800
         }
       , cornerRadius = 8.0
       , background = if state.props.btnActive then Color.black900 else Color.black500
-      , isClickable = state.props.btnActive 
+      , isClickable = state.props.btnActive
       , margin = Margin 16 0 16 38
       , id = "ButtonDeleteAccount"
       }
   in primaryButtonConfig'
 
-requestDeletePopUp :: ST.HelpAndSupportScreenState -> PopUpModal.Config 
-requestDeletePopUp state = let 
+requestDeletePopUp :: ST.HelpAndSupportScreenState -> PopUpModal.Config
+requestDeletePopUp state = let
     config = PopUpModal.config
     popUpConfig' = config {
       primaryText { text = getString DEL_ACCOUNT },
@@ -277,13 +277,13 @@ requestDeletePopUp state = let
       , color = Color.white900
       , strokeColor = Color.red
       , fontSize = FontSize.a_16 }
-     
+
     }
   in popUpConfig'
 
-accountDeletedPopUp :: ST.HelpAndSupportScreenState -> PopUpModal.Config 
-accountDeletedPopUp state = let 
-    config = PopUpModal.config 
+accountDeletedPopUp :: ST.HelpAndSupportScreenState -> PopUpModal.Config
+accountDeletedPopUp state = let
+    config = PopUpModal.config
     popUpConfig' = config {
       primaryText{ text = getString REQUEST_SUBMITTED},
       secondaryText{text = getString WE_WILL_DELETE_YOUR_ACCOUNT,
@@ -293,9 +293,9 @@ accountDeletedPopUp state = let
         visibility = false
       },
       option2 {
-        text = getString REQUEST_SUBMITTED,
+        text = getString OKAY_GOT_IT,
         margin = MarginHorizontal 16 16
       }
     }
     in popUpConfig'
-  
+

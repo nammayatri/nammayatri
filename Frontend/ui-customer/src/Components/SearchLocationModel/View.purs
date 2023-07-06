@@ -25,7 +25,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.SearchLocationModel.Controller (Action(..), SearchLocationModelState)
 import Data.Array (mapWithIndex, length)
 import Data.Function (flip)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Debug (spy)
 import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag, os, safeMarginBottom, safeMarginTop, screenHeight, screenWidth, isPreviousVersion, setText')
@@ -261,7 +261,7 @@ sourceDestinationEditTextView state push =
             , id $ getNewIDWithTag "SourceEditText"
             , onChange
                 ( \action -> do
-                    _ <- debounceFunction getDelayForAutoComplete push DebounceCallBack
+                    _ <- debounceFunction getDelayForAutoComplete push DebounceCallBack (fromMaybe false state.isSource)
                     _ <- push action
                     pure unit
                 )
@@ -326,7 +326,7 @@ sourceDestinationEditTextView state push =
               , id $ getNewIDWithTag "DestinationEditText"
               , onChange
                   ( \action -> do
-                      _ <- debounceFunction getDelayForAutoComplete push DebounceCallBack
+                      _ <- debounceFunction getDelayForAutoComplete push DebounceCallBack (fromMaybe false state.isSource)
                       _ <- push action
                       pure unit
                   )
