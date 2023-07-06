@@ -85,7 +85,7 @@ instance B.Table PlaceNameCacheT where
 instance ModelMeta PlaceNameCacheT where
   modelFieldModification = placeNameCacheTMod
   modelTableName = "place_name_cache"
-  modelSchemaName = Just "atlas_app"
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type PlaceNameCache = PlaceNameCacheT Identity
 

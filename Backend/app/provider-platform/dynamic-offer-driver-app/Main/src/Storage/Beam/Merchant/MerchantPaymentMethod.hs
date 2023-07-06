@@ -98,7 +98,7 @@ instance B.Table MerchantPaymentMethodT where
 instance ModelMeta MerchantPaymentMethodT where
   modelFieldModification = merchantPaymentMethodTMod
   modelTableName = "merchant_payment_method"
-  modelSchemaName = Just "atlas_app"
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type MerchantPaymentMethod = MerchantPaymentMethodT Identity
 
