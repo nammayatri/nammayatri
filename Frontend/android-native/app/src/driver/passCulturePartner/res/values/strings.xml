@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name" translatable="false">Ma le Taxi</string>
+    <string name="app_name" translatable="false">Alliance Taxis</string>
     <string name="client_id" translatable="false">passcultureprovider</string>
     <string name="service" translatable="false">passcultureprovider</string>
     <string name="navigationApp" translatable="false">waze</string>

@@ -45,6 +45,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.work.WorkManager;
 
 import com.airbnb.lottie.LottieAnimationView;
+import com.clevertap.android.sdk.CleverTapAPI;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.tasks.Task;
 import com.google.android.play.core.appupdate.AppUpdateInfo;
@@ -55,7 +56,7 @@ import com.google.android.play.core.install.model.UpdateAvailability;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.dynamiclinks.FirebaseDynamicLinks;
 import com.google.firebase.messaging.FirebaseMessaging;
-import com.clevertap.android.sdk.CleverTapAPI;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -74,9 +75,9 @@ import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.MyFirebaseMessagingService;
 import in.juspay.mobility.app.NotificationUtils;
 import in.juspay.mobility.app.RideRequestActivity;
-import in.juspay.mobility.app.Utils;
 import in.juspay.mobility.app.WidgetService;
 import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
+import in.juspay.mobility.common.MobilityCommonBridge;
 import in.juspay.services.HyperServices;
 
 
@@ -266,7 +267,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         if (MERCHANT_TYPE.equals("DRIVER")) {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-            Utils.updateLocaleResource(sharedPref.getString(getResources().getString(R.string.LANGUAGE_KEY), "null"),context);
+            MobilityCommonBridge.updateLocaleResource(sharedPref.getString(getResources().getString(R.string.LANGUAGE_KEY), "null"),context);
         } else {
             LottieAnimationView splashLottieView = findViewById(in.juspay.mobility.app.R.id.splash_lottie);
             try {

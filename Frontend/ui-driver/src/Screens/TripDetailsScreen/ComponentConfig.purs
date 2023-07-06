@@ -62,7 +62,7 @@ sourceToDestinationConfig state = let
   sourceToDestinationConfig' = config
     {
       margin = (Margin 0 13 0 0)
-    , sourceMargin = (Margin 0 10 0 25)
+    , sourceMargin = (Margin 0 10 0 0)
     , lineMargin = (Margin 4 12 0 0)
     , sourceImageConfig {
         imageUrl = "ny_ic_green_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_green_circle.png"
