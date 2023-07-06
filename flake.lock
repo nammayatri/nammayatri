@@ -438,16 +438,17 @@
     "easy-purescript-nix": {
       "flake": false,
       "locked": {
-        "lastModified": 1686810822,
-        "narHash": "sha256-rv++OJWEDLFaasLlRx8Ys+PVrvirXK3rTOQtLO7h+OU=",
+        "lastModified": 1685699610,
+        "narHash": "sha256-GQp2Eg4VkPKg9W0Aw2P4s2YAe1r96TiekZvD9hCw5U0=",
         "owner": "justinwoo",
         "repo": "easy-purescript-nix",
-        "rev": "26b3845c5405e490127203e9ade15c87b8373c86",
+        "rev": "a90bd941297497c83205f0a64f30c5188a2a4fda",
         "type": "github"
       },
       "original": {
         "owner": "justinwoo",
         "repo": "easy-purescript-nix",
+        "rev": "a90bd941297497c83205f0a64f30c5188a2a4fda",
         "type": "github"
       }
     },
