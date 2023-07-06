@@ -3321,7 +3321,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     sendIntent.setType("text/plain");
                    if (thumbnailBitmap != null &&  Build.VERSION.SDK_INT > 28) {
                         Uri thumbnailUri = getImageUri(context, thumbnailBitmap);
-                        ClipData clipData = ClipData.newUri(context.getContentResolver(), "ThumbnailImage", thumbnailUri);
+                        ClipData clipData = ClipData.newUri(context.getContentResolver(), "ThumbnailImage" + System.currentTimeMillis(), thumbnailUri);
                         sendIntent.setClipData(clipData);
                    }
                     sendIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
