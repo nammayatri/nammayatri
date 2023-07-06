@@ -28,6 +28,7 @@ import qualified Domain.Types.DriverOffer as DDO
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as Ride
@@ -79,8 +80,8 @@ data CancelSearch = CancelSearch
     merchant :: DM.Merchant
   }
 
-cancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, HasCacheConfig r, HedisFlow m r, Metrics.CoreMetrics m) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> CancelReq -> m CancelRes
-cancel bookingId _ req = do
+cancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, HasCacheConfig r, HedisFlow m r, Metrics.CoreMetrics m) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> CancelReq -> m CancelRes
+cancel bookingId (_, _, merchantOperatingCityId) req = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   when (booking.status == SRB.CANCELLED) $ throwError (BookingInvalidStatus "This booking is already cancelled")
@@ -96,7 +97,7 @@ cancel bookingId _ req = do
         res <- try @_ @SomeException (CallBPP.callGetDriverLocation ride.trackingUrl)
         case res of
           Right res' -> do
-            disToPickup <- driverDistanceToPickup booking.merchantId (getCoordinates res'.currPoint) (getCoordinates booking.fromLocation)
+            disToPickup <- driverDistanceToPickup merchantOperatingCityId (getCoordinates res'.currPoint) (getCoordinates booking.fromLocation)
             buildBookingCancelationReason (Just res'.currPoint) (Just disToPickup) (Just booking.merchantId)
           Left err -> do
             logTagInfo "DriverLocationFetchFailed" $ show err
@@ -190,13 +191,13 @@ driverDistanceToPickup ::
     Maps.HasCoordinates tripStartPos,
     Maps.HasCoordinates tripEndPos
   ) =>
-  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   tripStartPos ->
   tripEndPos ->
   m Meters
-driverDistanceToPickup merchantId tripStartPos tripEndPos = do
+driverDistanceToPickup merchantOperatingCityId tripStartPos tripEndPos = do
   distRes <-
-    Maps.getDistanceForCancelRide merchantId $
+    Maps.getDistanceForCancelRide merchantOperatingCityId $
       Maps.GetDistanceReq
         { origin = tripStartPos,
           destination = tripEndPos,

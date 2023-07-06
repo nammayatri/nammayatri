@@ -19,7 +19,7 @@ module Storage.Queries.Merchant.MerchantServiceConfig
     #-}
 where
 
-import Domain.Types.Merchant as DOrg
+import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Merchant.MerchantServiceConfig (MerchantServiceConfig, ServiceName)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (findById)
@@ -28,12 +28,12 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Storage.Tabular.Merchant.MerchantServiceConfig
 
-findByMerchantIdAndService :: Transactionable m => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)
-findByMerchantIdAndService merchantId serviceName =
+findByMerchantIdAndService :: Transactionable m => Id MerchantOperatingCity -> ServiceName -> m (Maybe MerchantServiceConfig)
+findByMerchantIdAndService merchantOperatingCityId serviceName =
   Esq.findOne $ do
     merchantServiceConfig <- from $ table @MerchantServiceConfigT
     where_ $
-      merchantServiceConfig ^. MerchantServiceConfigTId ==. val (toKey (merchantId, serviceName))
+      merchantServiceConfig ^. MerchantServiceConfigTId ==. val (toKey (merchantOperatingCityId, serviceName))
     return merchantServiceConfig
 
 upsertMerchantServiceConfig :: MerchantServiceConfig -> SqlDB ()

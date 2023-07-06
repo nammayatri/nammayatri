@@ -34,6 +34,7 @@ import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
 import qualified Domain.Action.UI.Search.Rental as DRentalSearch
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Domain.Types.SearchRequest (SearchRequest)
 import Environment
@@ -117,12 +118,12 @@ fareProductConstructorModifier = \case
   "RentalSearch" -> "RENTAL"
   x -> x
 
-search :: (Id Person.Person, Id Merchant.Merchant) -> SearchReq -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler SearchRes
-search (personId, _) req mbBundleVersion mbClientVersion mbDevice = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+search :: (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> SearchReq -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler SearchRes
+search (personId, _, merchantOperatingCityId) req mbBundleVersion mbClientVersion mbDevice = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   checkSearchRateLimit personId
   updateVersions personId mbBundleVersion mbClientVersion
   (searchId, searchExpiry, routeInfo) <- case req of
-    OneWaySearch oneWay -> oneWaySearch personId mbBundleVersion mbClientVersion mbDevice oneWay
+    OneWaySearch oneWay -> oneWaySearch personId merchantOperatingCityId mbBundleVersion mbClientVersion mbDevice oneWay
     RentalSearch rental -> rentalSearch personId mbBundleVersion mbClientVersion mbDevice rental
   return $ SearchRes searchId searchExpiry routeInfo
 
@@ -141,13 +142,14 @@ oneWaySearch ::
     EventStreamFlow m r
   ) =>
   Id Person.Person ->
+  Id DMOC.MerchantOperatingCity ->
   Maybe Version ->
   Maybe Version ->
   Maybe Text ->
   DOneWaySearch.OneWaySearchReq ->
   m (Id SearchRequest, UTCTime, Maybe Maps.RouteInfo)
-oneWaySearch personId bundleVersion clientVersion device req = do
-  dSearchRes <- DOneWaySearch.oneWaySearch personId req bundleVersion clientVersion device
+oneWaySearch personId merchantOperatingCityId bundleVersion clientVersion device req = do
+  dSearchRes <- DOneWaySearch.oneWaySearch personId merchantOperatingCityId req bundleVersion clientVersion device
   fork "search cabs" . withShortRetry $ do
     becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes
     void $ CallBPP.search dSearchRes.gatewayUrl becknTaxiReq

@@ -22,6 +22,7 @@ import qualified Beckn.ACL.Cancel as ACL
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment
 import Kernel.Prelude
@@ -48,11 +49,11 @@ handler =
 
 cancel ::
   Id SRB.Booking ->
-  (Id Person.Person, Id Merchant.Merchant) ->
+  (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) ->
   DCancel.CancelReq ->
   FlowHandler APISuccess
-cancel bookingId (personId, merchantId) req =
+cancel bookingId (personId, merchantId, merchantOperatingCityId) req =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
-    dCancelRes <- DCancel.cancel bookingId (personId, merchantId) req
+    dCancelRes <- DCancel.cancel bookingId (personId, merchantId, merchantOperatingCityId) req
     void $ withShortRetry $ CallBPP.cancel dCancelRes.bppUrl =<< ACL.buildCancelReq dCancelRes
     return Success

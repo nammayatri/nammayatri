@@ -25,6 +25,7 @@ module Domain.Action.UI.Route
 where
 
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
@@ -35,13 +36,13 @@ import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Tools.Maps as Maps
 import Tools.Metrics (CoreMetrics)
 
-getRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m, HasField "esqDBReplicaEnv" r EsqDBEnv) => (Id DP.Person, Id Merchant.Merchant) -> SDC.GetRoutesReq -> m SDC.GetRoutesResp
-getRoutes (_, merchantId) = SDC.getRoutes merchantId
+getRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m, HasField "esqDBReplicaEnv" r EsqDBEnv) => (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> SDC.GetRoutesReq -> m SDC.GetRoutesResp
+getRoutes (_, merchantId, merchantOperatingCityId) = SDC.getRoutes merchantId merchantOperatingCityId
 
-getPickupRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
-getPickupRoutes (_, merchantId) req = do
-  Maps.getPickupRoutes merchantId req
+getPickupRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
+getPickupRoutes (_, _, merchantOperatingCityId) req = do
+  Maps.getPickupRoutes merchantOperatingCityId req
 
-getTripRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
-getTripRoutes (_, merchantId) req = do
-  Maps.getTripRoutes merchantId req
+getTripRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
+getTripRoutes (_, _, merchantOperatingCityId) req = do
+  Maps.getTripRoutes merchantOperatingCityId req

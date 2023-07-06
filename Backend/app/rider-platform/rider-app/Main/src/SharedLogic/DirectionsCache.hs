@@ -19,6 +19,7 @@ import Data.Time as DT
 import Domain.Types.Maps.DirectionsCache as DC
 import Domain.Types.Merchant (Slot)
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -35,8 +36,8 @@ import Tools.Error (GenericError (..))
 import qualified Tools.Maps as Maps
 import Tools.Metrics (CoreMetrics)
 
-getRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m, HasField "esqDBReplicaEnv" r EsqDBEnv) => Id Merchant.Merchant -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
-getRoutes merchantId req = do
+getRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m, HasField "esqDBReplicaEnv" r EsqDBEnv) => Id Merchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
+getRoutes merchantId merchantOperatingCityId req = do
   merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   let origin = NE.head req.waypoints
   let dest = NE.last req.waypoints
@@ -49,13 +50,13 @@ getRoutes merchantId req = do
         cachedResp <- DQ.findRoute originGeoHash destGeoHash tmeSlt
         case cachedResp of
           Just resp -> return [resp.response]
-          Nothing -> callDirectionsApi merchantId req originGeoHash destGeoHash tmeSlt
+          Nothing -> callDirectionsApi merchantOperatingCityId req originGeoHash destGeoHash tmeSlt
     Nothing ->
-      Maps.getRoutes merchantId req
+      Maps.getRoutes merchantOperatingCityId req
 
-callDirectionsApi :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id Merchant.Merchant -> Maps.GetRoutesReq -> Text -> Text -> Int -> m Maps.GetRoutesResp
-callDirectionsApi merchantId req originGeoHash destGeoHash timeSlot = do
-  resp <- Maps.getRoutes merchantId req
+callDirectionsApi :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DMOC.MerchantOperatingCity -> Maps.GetRoutesReq -> Text -> Text -> Int -> m Maps.GetRoutesResp
+callDirectionsApi merchantOperatingCityId req originGeoHash destGeoHash timeSlot = do
+  resp <- Maps.getRoutes merchantOperatingCityId req
   if null resp
     then throwError $ InternalError "Null response from Directions API" -- This case will never occure unless Google's Direction API Fails.
     else do

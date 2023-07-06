@@ -31,12 +31,15 @@ import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Payment.Juspay.Webhook as Juspay
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.BasicAuth ()
 import Kernel.Utils.Servant.HTML
 import Servant hiding (serveDirectoryWebApp, throwError)
 import Servant.OpenApi
+import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 
 type API =
   MainAPI
@@ -96,5 +99,7 @@ juspayWebhookHandler ::
   BasicAuthData ->
   Value ->
   FlowHandler AckResponse
-juspayWebhookHandler merchantShortId secret =
-  withFlowHandlerAPI . Payment.juspayWebhookHandler merchantShortId secret
+juspayWebhookHandler merchantShortId secret val = withFlowHandlerAPI $ do
+  m <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- SMOC.findByMerchantId m.id >>= fromMaybeM (MerchantOperatingCityNotFound m.id.getId)
+  Payment.juspayWebhookHandler merchantOperatingCity.id secret val

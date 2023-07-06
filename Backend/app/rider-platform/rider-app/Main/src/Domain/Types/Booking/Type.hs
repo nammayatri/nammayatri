@@ -20,6 +20,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
@@ -79,6 +80,7 @@ data Booking = Booking
     bookingDetails :: BookingDetails,
     tripTerms :: Maybe DTripTerms.TripTerms,
     merchantId :: Id DMerchant.Merchant,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     specialLocationTag :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

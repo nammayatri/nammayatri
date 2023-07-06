@@ -28,6 +28,7 @@ import qualified Domain.Action.UI.Call as DCall
 import Domain.Types.CallStatus
 import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import Environment
@@ -97,8 +98,8 @@ frontendBasedCallHandler =
     :<|> directCallStatusCallback
 
 -- | Try to initiate a call customer -> driver
-initiateCallToDriver :: Id SRide.Ride -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DCall.CallRes
-initiateCallToDriver rideId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DCall.initiateCallToDriver rideId
+initiateCallToDriver :: Id SRide.Ride -> (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DCall.CallRes
+initiateCallToDriver rideId (personId, _, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DCall.initiateCallToDriver rideId
 
 callStatusCallback :: DCall.CallCallbackReq -> FlowHandler DCall.CallCallbackRes
 callStatusCallback = withFlowHandlerAPI . DCall.callStatusCallback
@@ -109,5 +110,5 @@ directCallStatusCallback callSid dialCallStatus_ recordingUrl_ duration = withFl
 getDriverMobileNumber :: Text -> Text -> Text -> Maybe Text -> ExotelCallStatus -> FlowHandler DCall.GetDriverMobileNumberResp
 getDriverMobileNumber callSid callFrom_ callTo_ dtmfNumber = withFlowHandlerAPI . DCall.getDriverMobileNumber callSid callFrom_ callTo_ dtmfNumber
 
-getCallStatus :: Id CallStatus -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DCall.GetCallStatusRes
+getCallStatus :: Id CallStatus -> (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DCall.GetCallStatusRes
 getCallStatus callStatusId _ = withFlowHandlerAPI $ DCall.getCallStatus callStatusId

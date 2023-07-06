@@ -29,6 +29,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Storage.Tabular.Merchant (MerchantTId)
+import Storage.Tabular.Merchant.MerchantOperatingCity (MerchantOperatingCityTId)
 import qualified Storage.Tabular.SearchRequest as SSearchRequest
 import qualified Storage.Tabular.TripTerms as STripTerms
 
@@ -42,6 +43,7 @@ mkPersist
       id Text
       requestId SSearchRequest.SearchRequestTId
       merchantId MerchantTId Maybe
+      merchantOperatingCityId MerchantOperatingCityTId Maybe
       bppEstimateId Text
       estimatedFare HighPrecMoney
       discount HighPrecMoney Maybe

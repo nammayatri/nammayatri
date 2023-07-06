@@ -24,10 +24,12 @@ import qualified Domain.Types.Quote as Quote
 import Environment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import SharedLogic.Merchant
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 
 data RideConfirmEndPoint = ConfirmEndPoint
   deriving (Show, Read)
@@ -54,4 +56,5 @@ handler =
 callConfirm :: ShortId DM.Merchant -> Id DP.Person -> Id Quote.Quote -> Maybe (Id DMPM.MerchantPaymentMethod) -> FlowHandler UC.ConfirmRes
 callConfirm merchantId personId quote mbPaymentMethodId = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  UC.confirm (personId, m.id) quote mbPaymentMethodId
+  merchantOperatingCity <- withFlowHandlerAPI $ SMOC.findByMerchantId m.id >>= fromMaybeM (MerchantOperatingCityNotFound m.id.getId)
+  UC.confirm (personId, m.id, merchantOperatingCity.id) quote mbPaymentMethodId

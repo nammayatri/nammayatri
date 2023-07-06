@@ -16,6 +16,7 @@
 module Domain.Types.SearchRequest where
 
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
@@ -40,6 +41,7 @@ data SearchRequest = SearchRequest
     estimatedRideDuration :: Maybe Seconds,
     device :: Maybe Text,
     merchantId :: Id DMerchant.Merchant, -- remove when searchRequest will not be used in CustomerSupport
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     bundleVersion :: Maybe Version,
     clientVersion :: Maybe Version,
     language :: Maybe Maps.Language,

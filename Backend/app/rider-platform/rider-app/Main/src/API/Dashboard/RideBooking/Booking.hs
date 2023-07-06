@@ -18,17 +18,19 @@ module API.Dashboard.RideBooking.Booking where
 
 import qualified API.UI.Booking as UB
 import qualified Domain.Action.UI.Booking as DBooking
-import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Booking.API as DB
+import qualified Domain.Types.Booking.Type as SRB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import SharedLogic.Merchant
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 
 data RideBookingEndPoint = RideStatusEndPoint
   deriving (Show, Read)
@@ -64,9 +66,11 @@ handler merchantId =
 callBookingStatus :: ShortId DM.Merchant -> Id SRB.Booking -> Id DP.Person -> FlowHandler DB.BookingAPIEntity
 callBookingStatus merchantId bookingId personId = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  UB.bookingStatus bookingId (personId, m.id)
+  merchantOperatingCity <- withFlowHandlerAPI $ SMOC.findByMerchantId m.id >>= fromMaybeM (MerchantOperatingCityNotFound m.id.getId)
+  UB.bookingStatus bookingId (personId, m.id, merchantOperatingCity.id)
 
 callBookingList :: ShortId DM.Merchant -> Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> FlowHandler DBooking.BookingListRes
 callBookingList merchantId personId mbLimit mbOffset mbOnlyActive bkngStatus = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  UB.bookingList (personId, m.id) mbLimit mbOffset mbOnlyActive bkngStatus
+  merchantOperatingCity <- withFlowHandlerAPI $ SMOC.findByMerchantId m.id >>= fromMaybeM (MerchantOperatingCityNotFound m.id.getId)
+  UB.bookingList (personId, m.id, merchantOperatingCity.id) mbLimit mbOffset mbOnlyActive bkngStatus

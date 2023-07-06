@@ -272,6 +272,7 @@ onUpdate ValidatedRideAssignedReq {..} = do
           { id = guid,
             bookingId = booking.id,
             merchantId = Just booking.merchantId,
+            merchantOperatingCityId = booking.merchantOperatingCityId,
             status = SRide.NEW,
             trackingUrl = Nothing,
             fare = Nothing,
@@ -367,7 +368,8 @@ onUpdate ValidatedBookingCancelledReq {..} = do
     SBCR.ByDriver -> SMC.updateCancelledByDriverFraudCounters booking.riderId merchantConfigs
     _ -> pure ()
   fork "incrementing fraud counters" $ do
-    mFraudDetected <- SMC.anyFraudDetected booking.riderId booking.merchantId merchantConfigs
+    let merchantOperatingCityId = fromMaybe "" booking.merchantOperatingCityId
+    mFraudDetected <- SMC.anyFraudDetected booking.riderId merchantOperatingCityId merchantConfigs
     whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id)
   case mbRide of
     Just ride -> do

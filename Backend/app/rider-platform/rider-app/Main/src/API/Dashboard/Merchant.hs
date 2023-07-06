@@ -20,9 +20,12 @@ import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
+import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (withFlowHandlerAPI)
+import Kernel.Utils.Common (fromMaybeM, withFlowHandlerAPI)
 import Servant hiding (Unauthorized, throwError)
+import SharedLogic.Merchant
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 
 type API =
   "merchant"
@@ -52,28 +55,43 @@ merchantUpdate merchantShortId = withFlowHandlerAPI . DMerchant.merchantUpdate m
 serviceUsageConfig ::
   ShortId DM.Merchant ->
   FlowHandler Common.ServiceUsageConfigRes
-serviceUsageConfig = withFlowHandlerAPI . DMerchant.serviceUsageConfig
+serviceUsageConfig merchantShortId = withFlowHandlerAPI $ do
+  m <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- SMOC.findByMerchantId m.id >>= fromMaybeM (MerchantOperatingCityNotFound m.id.getId)
+  DMerchant.serviceUsageConfig merchantOperatingCity.id
 
 mapsServiceConfigUpdate ::
   ShortId DM.Merchant ->
   Common.MapsServiceConfigUpdateReq ->
   FlowHandler APISuccess
-mapsServiceConfigUpdate merchantShortId = withFlowHandlerAPI . DMerchant.mapsServiceConfigUpdate merchantShortId
+mapsServiceConfigUpdate merchantShortId req = withFlowHandlerAPI $ do
+  m <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- SMOC.findByMerchantId m.id >>= fromMaybeM (MerchantOperatingCityNotFound m.id.getId)
+  DMerchant.mapsServiceConfigUpdate merchantOperatingCity.id req
 
 mapsServiceUsageConfigUpdate ::
   ShortId DM.Merchant ->
   Common.MapsServiceUsageConfigUpdateReq ->
   FlowHandler APISuccess
-mapsServiceUsageConfigUpdate merchantShortId = withFlowHandlerAPI . DMerchant.mapsServiceUsageConfigUpdate merchantShortId
+mapsServiceUsageConfigUpdate merchantShortId req = withFlowHandlerAPI $ do
+  m <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- SMOC.findByMerchantId m.id >>= fromMaybeM (MerchantOperatingCityNotFound m.id.getId)
+  DMerchant.mapsServiceUsageConfigUpdate merchantOperatingCity.id req
 
 smsServiceConfigUpdate ::
   ShortId DM.Merchant ->
   Common.SmsServiceConfigUpdateReq ->
   FlowHandler APISuccess
-smsServiceConfigUpdate merchantShortId = withFlowHandlerAPI . DMerchant.smsServiceConfigUpdate merchantShortId
+smsServiceConfigUpdate merchantShortId req = withFlowHandlerAPI $ do
+  m <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- SMOC.findByMerchantId m.id >>= fromMaybeM (MerchantOperatingCityNotFound m.id.getId)
+  DMerchant.smsServiceConfigUpdate merchantOperatingCity.id req
 
 smsServiceUsageConfigUpdate ::
   ShortId DM.Merchant ->
   Common.SmsServiceUsageConfigUpdateReq ->
   FlowHandler APISuccess
-smsServiceUsageConfigUpdate merchantShortId = withFlowHandlerAPI . DMerchant.smsServiceUsageConfigUpdate merchantShortId
+smsServiceUsageConfigUpdate merchantShortId req = withFlowHandlerAPI $ do
+  m <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- SMOC.findByMerchantId m.id >>= fromMaybeM (MerchantOperatingCityNotFound m.id.getId)
+  DMerchant.smsServiceUsageConfigUpdate merchantOperatingCity.id req

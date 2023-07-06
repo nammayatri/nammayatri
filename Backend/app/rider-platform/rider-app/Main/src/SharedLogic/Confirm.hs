@@ -186,6 +186,7 @@ buildBooking searchRequest quote fromLoc mbToLoc exophone now otpCode paymentMet
         bookingDetails,
         tripTerms = quote.tripTerms,
         merchantId = searchRequest.merchantId,
+        merchantOperatingCityId = searchRequest.merchantOperatingCityId,
         specialLocationTag = quote.specialLocationTag,
         createdAt = now,
         updatedAt = now

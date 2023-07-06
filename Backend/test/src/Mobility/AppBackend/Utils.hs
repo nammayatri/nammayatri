@@ -24,9 +24,9 @@ import Utils (runAppFlow)
 changeCachedMapsConfig :: Maps.MapsServiceConfig -> IO ()
 changeCachedMapsConfig googleCfg = runAppFlow "change cached maps config" do
   let serviceConfig = DMSC.MapsServiceConfig googleCfg
-  yatriServiceConfig <- DMSC.buildMerchantServiceConfig Fixtures.yatriMerchantId serviceConfig
+  yatriServiceConfig <- DMSC.buildMerchantServiceConfig Fixtures.yatriMerchantOperatingCityId serviceConfig
   CQMSC.cacheMerchantServiceConfig yatriServiceConfig
 
 clearCachedMapsConfig :: IO ()
 clearCachedMapsConfig = runAppFlow "clear cached maps config" do
-  CQMSC.clearCache Fixtures.yatriMerchantId (DMSC.MapsService Maps.Google)
+  CQMSC.clearCache Fixtures.yatriMerchantOperatingCityId (DMSC.MapsService Maps.Google)

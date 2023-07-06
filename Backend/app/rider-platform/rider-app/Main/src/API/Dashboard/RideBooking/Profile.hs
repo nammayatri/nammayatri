@@ -24,10 +24,12 @@ import Environment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.APISuccess
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import SharedLogic.Merchant
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 
 data ProfileEndPoint = UpdatePersonEndPoint
   deriving (Show, Read)
@@ -59,9 +61,11 @@ handler merchantId =
 callGetPersonDetails :: ShortId DM.Merchant -> Id DP.Person -> FlowHandler DProfile.ProfileRes
 callGetPersonDetails merchantId personId = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  AP.getPersonDetails (personId, m.id)
+  merchantOperatingCity <- withFlowHandlerAPI $ SMOC.findByMerchantId m.id >>= fromMaybeM (MerchantOperatingCityNotFound m.id.getId)
+  AP.getPersonDetails (personId, m.id, merchantOperatingCity.id)
 
 callUpdatePerson :: ShortId DM.Merchant -> Id DP.Person -> DProfile.UpdateProfileReq -> FlowHandler APISuccess
 callUpdatePerson merchantId personId req = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  AP.updatePerson (personId, m.id) req
+  merchantOperatingCity <- withFlowHandlerAPI $ SMOC.findByMerchantId m.id >>= fromMaybeM (MerchantOperatingCityNotFound m.id.getId)
+  AP.updatePerson (personId, m.id, merchantOperatingCity.id) req

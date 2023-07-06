@@ -27,6 +27,7 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import qualified Storage.Tabular.Estimate as TEstimate
 import Storage.Tabular.Merchant (MerchantTId)
+import Storage.Tabular.Merchant.MerchantOperatingCity (MerchantOperatingCityTId)
 
 derivePersistField "Domain.DriverOfferStatus"
 
@@ -37,6 +38,7 @@ mkPersist
       id Text
       estimateId TEstimate.EstimateTId
       merchantId MerchantTId Maybe
+      merchantOperatingCityId MerchantOperatingCityTId Maybe
       driverName Text
       durationToPickup Int
       distanceToPickup HighPrecMeters
@@ -61,6 +63,7 @@ instance FromTType DriverOfferT Domain.DriverOffer where
         { id = Id id,
           bppQuoteId = Id bppQuoteId,
           merchantId = fromKey <$> merchantId,
+          merchantOperatingCityId = fromKey <$> merchantOperatingCityId,
           estimateId = fromKey estimateId,
           ..
         }
@@ -71,6 +74,7 @@ instance ToTType DriverOfferT Domain.DriverOffer where
       { id = getId id,
         bppQuoteId = bppQuoteId.getId,
         merchantId = toKey <$> merchantId,
+        merchantOperatingCityId = toKey <$> merchantOperatingCityId,
         estimateId = toKey estimateId,
         ..
       }

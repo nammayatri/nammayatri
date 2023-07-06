@@ -20,6 +20,7 @@ where
 
 import qualified Domain.Action.UI.Payment as DPayment
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
@@ -42,11 +43,11 @@ handler authInfo =
     :<|> getStatus authInfo
     :<|> getOrder authInfo
 
-createOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DRide.Ride -> FlowHandler Payment.CreateOrderResp
+createOrder :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id DRide.Ride -> FlowHandler Payment.CreateOrderResp
 createOrder tokenDetails rideId = withFlowHandlerAPI $ DPayment.createOrder tokenDetails rideId
 
-getStatus :: (Id DP.Person, Id Merchant.Merchant) -> Id DOrder.PaymentOrder -> FlowHandler DPayment.PaymentStatusResp
+getStatus :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id DOrder.PaymentOrder -> FlowHandler DPayment.PaymentStatusResp
 getStatus tokenDetails orderId = withFlowHandlerAPI $ DPayment.getStatus tokenDetails orderId
 
-getOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DOrder.PaymentOrder -> FlowHandler DOrder.PaymentOrderAPIEntity
+getOrder :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id DOrder.PaymentOrder -> FlowHandler DOrder.PaymentOrderAPIEntity
 getOrder tokenDetails orderId = withFlowHandlerAPI $ DPayment.getOrder tokenDetails orderId

@@ -22,6 +22,7 @@ where
 import Data.OpenApi (ToSchema (..))
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import EulerHS.Prelude hiding (id)
 import Kernel.Storage.Esqueleto (runInReplica)
@@ -37,13 +38,13 @@ newtype BookingListRes = BookingListRes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-bookingStatus :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> m SRB.BookingAPIEntity
-bookingStatus bookingId (personId, _) = do
+bookingStatus :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> m SRB.BookingAPIEntity
+bookingStatus bookingId (personId, _, _) = do
   booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   unless (booking.riderId == personId) $ throwError AccessDenied
   SRB.buildBookingAPIEntity booking
 
-bookingList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> m BookingListRes
-bookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus = do
+bookingList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> m BookingListRes
+bookingList (personId, _, _) mbLimit mbOffset mbOnlyActive mbBookingStatus = do
   rbList <- runInReplica $ QRB.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus
   BookingListRes <$> traverse SRB.buildBookingAPIEntity rbList

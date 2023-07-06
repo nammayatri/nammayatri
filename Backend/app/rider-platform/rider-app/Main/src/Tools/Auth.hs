@@ -22,6 +22,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base64 as Base64
 import qualified Data.Text.Encoding as TE
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
@@ -50,7 +51,7 @@ instance
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
 
 instance VerificationMethod VerifyToken where
-  type VerificationResult VerifyToken = (Id Person.Person, Id Merchant.Merchant)
+  type VerificationResult VerifyToken = (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity)
   verificationDescription =
     "Checks whether token is registered.\
     \If you don't have a token, use registration endpoints."
@@ -61,20 +62,21 @@ verifyPerson ::
     HasField "authTokenCacheExpiry" r Seconds
   ) =>
   RegToken ->
-  m (Id Person.Person, Id Merchant.Merchant)
+  m (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity)
 verifyPerson token = do
   let key = authTokenCacheKey token
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
   result <- Redis.safeGet key
   case result of
-    Just (personId, merchantId) -> return (personId, merchantId)
+    Just (personId, merchantId, merchantOperatingCityId) -> return (personId, merchantId, merchantOperatingCityId)
     Nothing -> do
       sr <- verifyToken token
       let expiryTime = min sr.tokenExpiry authTokenCacheExpiry
       let personId = Id sr.entityId
       let merchantId = Id sr.merchantId
-      Redis.setExp key (personId, merchantId) expiryTime
-      return (personId, merchantId)
+      let merchantOperatingCityId = Id sr.merchantOperatingCityId
+      Redis.setExp key (personId, merchantId, merchantOperatingCityId) expiryTime
+      return (personId, merchantId, merchantOperatingCityId)
 
 authTokenCacheKey :: RegToken -> Text
 authTokenCacheKey regToken =

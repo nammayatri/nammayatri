@@ -24,6 +24,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig (CacheFlow)
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 import qualified Storage.Queries.Person as QP
 import Tools.Metrics (CoreMetrics)
 import Tools.Whatsapp as Whatsapp
@@ -37,8 +38,9 @@ whatsAppOptAPI :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => 
 whatsAppOptAPI personId OptAPIRequest {..} = do
   DP.Person {..} <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mobileNo <- mapM decrypt mobileNumber >>= fromMaybeM (InvalidRequest "Person is not linked with any mobile number")
+  merchantOperatingCity <- SMOC.findByMerchantId merchantId >>= fromMaybeM (MerchantOperatingCityNotFound merchantId.getId)
   unless (whatsappNotificationEnrollStatus == Just status) $
-    void $ Whatsapp.whatsAppOptAPI merchantId $ OptApiReq {phoneNumber = mobileNo, method = status}
+    void $ Whatsapp.whatsAppOptAPI merchantOperatingCity.id $ OptApiReq {phoneNumber = mobileNo, method = status}
   DB.runTransaction $
     void $ QP.updateWhatsappNotificationEnrollStatus personId $ Just status
   return Success

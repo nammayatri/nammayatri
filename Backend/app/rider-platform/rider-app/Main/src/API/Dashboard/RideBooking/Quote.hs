@@ -22,10 +22,12 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchRequest as SSR
 import Environment
 import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import SharedLogic.Merchant
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 
 type API =
   "quote"
@@ -43,4 +45,5 @@ handler = callGetQuotes
 callGetQuotes :: ShortId DM.Merchant -> Id SSR.SearchRequest -> Id DP.Person -> FlowHandler DQuote.GetQuotesRes
 callGetQuotes merchantId req personId = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  UQ.getQuotes req (personId, m.id)
+  merchantOperatingCity <- withFlowHandlerAPI $ SMOC.findByMerchantId m.id >>= fromMaybeM (MerchantOperatingCityNotFound m.id.getId)
+  UQ.getQuotes req (personId, m.id, merchantOperatingCity.id)

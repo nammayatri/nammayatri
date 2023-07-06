@@ -19,6 +19,7 @@ module API.UI.GoogleTranslate
 where
 
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment (FlowHandler, FlowServer)
 import EulerHS.Prelude
@@ -45,5 +46,5 @@ handler :: FlowServer API
 handler =
   translate
 
-translate :: (Id Person.Person, Id Merchant.Merchant) -> Maps.Language -> Maps.Language -> Text -> FlowHandler GoogleTranslate.TranslateResp
-translate (personId, _) source target = withFlowHandlerAPI . withPersonIdLogTag personId . GoogleTranslate.translate source target
+translate :: (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maps.Language -> Maps.Language -> Text -> FlowHandler GoogleTranslate.TranslateResp
+translate (personId, _, _) source target = withFlowHandlerAPI . withPersonIdLogTag personId . GoogleTranslate.translate source target

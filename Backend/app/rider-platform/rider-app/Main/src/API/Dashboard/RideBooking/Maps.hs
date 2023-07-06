@@ -23,10 +23,12 @@ import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Error.FlowHandling
+import Kernel.Utils.Common
 import Servant
 import SharedLogic.Merchant
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 
 data MapEndPoints
   = AutoCompleteEndPoint
@@ -70,14 +72,17 @@ handler merchantId =
 callAutoComplete :: ShortId DM.Merchant -> Id DP.Person -> DMaps.AutoCompleteReq -> FlowHandler DMaps.AutoCompleteResp
 callAutoComplete merchantId personId req = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  UM.autoComplete (personId, m.id) req
+  merchantOperatingCity <- withFlowHandlerAPI $ SMOC.findByMerchantId m.id >>= fromMaybeM (MerchantOperatingCityNotFound m.id.getId)
+  UM.autoComplete (personId, m.id, merchantOperatingCity.id) req
 
 callGetPlaceDetails :: ShortId DM.Merchant -> Id DP.Person -> DMaps.GetPlaceDetailsReq -> FlowHandler DMaps.GetPlaceDetailsResp
 callGetPlaceDetails merchantId personId req = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  UM.getPlaceDetails (personId, m.id) req
+  merchantOperatingCity <- withFlowHandlerAPI $ SMOC.findByMerchantId m.id >>= fromMaybeM (MerchantOperatingCityNotFound m.id.getId)
+  UM.getPlaceDetails (personId, m.id, merchantOperatingCity.id) req
 
 callGetPlaceName :: ShortId DM.Merchant -> Id DP.Person -> DMaps.GetPlaceNameReq -> FlowHandler DMaps.GetPlaceNameResp
 callGetPlaceName merchantId personId req = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  UM.getPlaceName (personId, m.id) req
+  merchantOperatingCity <- withFlowHandlerAPI $ SMOC.findByMerchantId m.id >>= fromMaybeM (MerchantOperatingCityNotFound m.id.getId)
+  UM.getPlaceName (personId, m.id, merchantOperatingCity.id) req

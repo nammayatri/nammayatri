@@ -22,6 +22,7 @@ where
 
 import qualified Domain.Action.UI.SavedReqLocation as DSavedReqLocation
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment
 import EulerHS.Prelude hiding (state)
@@ -51,11 +52,11 @@ handler =
     :<|> getSavedReqLocations
     :<|> deleteSavedReqLocation
 
-createSavedReqLocation :: (Id Person.Person, Id Merchant.Merchant) -> DSavedReqLocation.CreateSavedReqLocationReq -> FlowHandler APISuccess.APISuccess
-createSavedReqLocation (riderId, _) = withFlowHandlerAPI . withPersonIdLogTag riderId . DSavedReqLocation.createSavedReqLocation riderId
+createSavedReqLocation :: (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DSavedReqLocation.CreateSavedReqLocationReq -> FlowHandler APISuccess.APISuccess
+createSavedReqLocation (riderId, _, _) = withFlowHandlerAPI . withPersonIdLogTag riderId . DSavedReqLocation.createSavedReqLocation riderId
 
-getSavedReqLocations :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DSavedReqLocation.SavedReqLocationsListRes
-getSavedReqLocations (riderId, _) = withFlowHandlerAPI . withPersonIdLogTag riderId $ DSavedReqLocation.getSavedReqLocations riderId
+getSavedReqLocations :: (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DSavedReqLocation.SavedReqLocationsListRes
+getSavedReqLocations (riderId, _, _) = withFlowHandlerAPI . withPersonIdLogTag riderId $ DSavedReqLocation.getSavedReqLocations riderId
 
-deleteSavedReqLocation :: (Id Person.Person, Id Merchant.Merchant) -> Text -> FlowHandler APISuccess.APISuccess
-deleteSavedReqLocation (riderId, _) = withFlowHandlerAPI . withPersonIdLogTag riderId . DSavedReqLocation.deleteSavedReqLocation riderId
+deleteSavedReqLocation :: (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> FlowHandler APISuccess.APISuccess
+deleteSavedReqLocation (riderId, _, _) = withFlowHandlerAPI . withPersonIdLogTag riderId . DSavedReqLocation.deleteSavedReqLocation riderId

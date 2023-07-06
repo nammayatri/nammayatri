@@ -26,6 +26,7 @@ import qualified "rider-app" Domain.Types.Booking as AbeBooking
 import qualified "rider-app" Domain.Types.Booking as BRB
 import qualified "rider-app" Domain.Types.CancellationReason as AbeCRC
 import qualified "rider-app" Domain.Types.Estimate as AbeEstimate
+import qualified "rider-app" Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified "rider-app" Domain.Types.Merchant.MerchantPaymentMethod as AppMPM
 import qualified "rider-app" Domain.Types.Quote as AbeQuote
 import qualified "rider-app" Domain.Types.RegistrationToken as AppSRT
@@ -101,6 +102,7 @@ mkAuthReq =
     { mobileNumber = "9000090000",
       mobileCountryCode = "+91",
       merchantId = "FIXME",
+      city = DMOC.BANGALORE,
       deviceToken = Nothing,
       notificationToken = Nothing,
       whatsappNotificationEnroll = Nothing,

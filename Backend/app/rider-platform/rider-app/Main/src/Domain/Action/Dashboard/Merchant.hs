@@ -25,6 +25,7 @@ where
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Merchant as Common
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as DMSUC
 import Environment
@@ -98,11 +99,10 @@ buildExophone merchantId now req = do
 
 ---------------------------------------------------------------------
 serviceUsageConfig ::
-  ShortId DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Flow Common.ServiceUsageConfigRes
-serviceUsageConfig merchantShortId = do
-  merchant <- findMerchantByShortId merchantShortId
-  config <- CQMSUC.findByMerchantId merchant.id >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchant.id.getId)
+serviceUsageConfig merchantOperatingCityId = do
+  config <- CQMSUC.findByMerchantId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   pure $ mkServiceUsageConfigRes config
 
 mkServiceUsageConfigRes :: DMSUC.MerchantServiceUsageConfig -> Common.ServiceUsageConfigRes
@@ -116,56 +116,53 @@ mkServiceUsageConfigRes DMSUC.MerchantServiceUsageConfig {..} =
 
 ---------------------------------------------------------------------
 mapsServiceConfigUpdate ::
-  ShortId DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Common.MapsServiceConfigUpdateReq ->
   Flow APISuccess
-mapsServiceConfigUpdate merchantShortId req = do
-  merchant <- findMerchantByShortId merchantShortId
+mapsServiceConfigUpdate merchantOperatingCityId req = do
   let serviceName = DMSC.MapsService $ Common.getMapsServiceFromReq req
   serviceConfig <- DMSC.MapsServiceConfig <$> Common.buildMapsServiceConfig req
-  merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
+  merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchantOperatingCityId serviceConfig
   Esq.runTransaction $ do
     CQMSC.upsertMerchantServiceConfig merchantServiceConfig
-  CQMSC.clearCache merchant.id serviceName
-  logTagInfo "dashboard -> mapsServiceConfigUpdate : " (show merchant.id)
+  CQMSC.clearCache merchantOperatingCityId serviceName
+  logTagInfo "dashboard -> mapsServiceConfigUpdate : " (show merchantOperatingCityId)
   pure Success
 
 ---------------------------------------------------------------------
 smsServiceConfigUpdate ::
-  ShortId DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Common.SmsServiceConfigUpdateReq ->
   Flow APISuccess
-smsServiceConfigUpdate merchantShortId req = do
-  merchant <- findMerchantByShortId merchantShortId
+smsServiceConfigUpdate merchantOperatingCityId req = do
   let serviceName = DMSC.SmsService $ Common.getSmsServiceFromReq req
   serviceConfig <- DMSC.SmsServiceConfig <$> Common.buildSmsServiceConfig req
-  merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
+  merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchantOperatingCityId serviceConfig
   Esq.runTransaction $ do
     CQMSC.upsertMerchantServiceConfig merchantServiceConfig
-  CQMSC.clearCache merchant.id serviceName
-  logTagInfo "dashboard -> smsServiceConfigUpdate : " (show merchant.id)
+  CQMSC.clearCache merchantOperatingCityId serviceName
+  logTagInfo "dashboard -> smsServiceConfigUpdate : " (show merchantOperatingCityId)
   pure Success
 
 ---------------------------------------------------------------------
 mapsServiceUsageConfigUpdate ::
-  ShortId DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Common.MapsServiceUsageConfigUpdateReq ->
   Flow APISuccess
-mapsServiceUsageConfigUpdate merchantShortId req = do
+mapsServiceUsageConfigUpdate merchantOperatingCityId req = do
   runRequestValidation Common.validateMapsServiceUsageConfigUpdateReq req
   whenJust req.getEstimatedPickupDistances $ \_ ->
     throwError (InvalidRequest "getEstimatedPickupDistances is not allowed for bap")
-  merchant <- findMerchantByShortId merchantShortId
 
   forM_ Maps.availableMapsServices $ \service -> do
     when (Common.mapsServiceUsedInReq req service) $ do
       void $
-        CQMSC.findByMerchantIdAndService merchant.id (DMSC.MapsService service)
+        CQMSC.findByMerchantIdAndService merchantOperatingCityId (DMSC.MapsService service)
           >>= fromMaybeM (InvalidRequest $ "Merchant config for maps service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantId merchant.id
-      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchant.id.getId)
+    CQMSUC.findByMerchantId merchantOperatingCityId
+      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   let updMerchantServiceUsageConfig =
         merchantServiceUsageConfig{getDistances = fromMaybe merchantServiceUsageConfig.getDistances req.getDistances,
                                    getRoutes = fromMaybe merchantServiceUsageConfig.getRoutes req.getRoutes,
@@ -176,33 +173,32 @@ mapsServiceUsageConfigUpdate merchantShortId req = do
                                   }
   Esq.runTransaction $ do
     CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
-  CQMSUC.clearCache merchant.id
-  logTagInfo "dashboard -> mapsServiceUsageConfigUpdate : " (show merchant.id)
+  CQMSUC.clearCache merchantOperatingCityId
+  logTagInfo "dashboard -> mapsServiceUsageConfigUpdate : " (show merchantOperatingCityId)
   pure Success
 
 ---------------------------------------------------------------------
 smsServiceUsageConfigUpdate ::
-  ShortId DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Common.SmsServiceUsageConfigUpdateReq ->
   Flow APISuccess
-smsServiceUsageConfigUpdate merchantShortId req = do
+smsServiceUsageConfigUpdate merchantOperatingCityId req = do
   runRequestValidation Common.validateSmsServiceUsageConfigUpdateReq req
-  merchant <- findMerchantByShortId merchantShortId
 
   forM_ SMS.availableSmsServices $ \service -> do
     when (Common.smsServiceUsedInReq req service) $ do
       void $
-        CQMSC.findByMerchantIdAndService merchant.id (DMSC.SmsService service)
+        CQMSC.findByMerchantIdAndService merchantOperatingCityId (DMSC.SmsService service)
           >>= fromMaybeM (InvalidRequest $ "Merchant config for sms service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantId merchant.id
-      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchant.id.getId)
+    CQMSUC.findByMerchantId merchantOperatingCityId
+      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   let updMerchantServiceUsageConfig =
         merchantServiceUsageConfig{smsProvidersPriorityList = req.smsProvidersPriorityList
                                   }
   Esq.runTransaction $ do
     CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
-  CQMSUC.clearCache merchant.id
-  logTagInfo "dashboard -> smsServiceUsageConfigUpdate : " (show merchant.id)
+  CQMSUC.clearCache merchantOperatingCityId
+  logTagInfo "dashboard -> smsServiceUsageConfigUpdate : " (show merchantOperatingCityId)
   pure Success

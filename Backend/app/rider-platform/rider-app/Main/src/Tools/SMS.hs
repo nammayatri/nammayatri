@@ -18,7 +18,7 @@ module Tools.SMS
   )
 where
 
-import Domain.Types.Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Kernel.External.SMS as Reexport hiding
   ( sendSMS,
@@ -38,21 +38,21 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QM
 import Tools.Error
 import Tools.Metrics
 
-sendSMS :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> SendSMSReq -> m SendSMSRes
-sendSMS merchantId = Sms.sendSMS handler
+sendSMS :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id DMOC.MerchantOperatingCity -> SendSMSReq -> m SendSMSRes
+sendSMS merchantOperatingCityId = Sms.sendSMS handler
   where
     handler = Sms.SmsHandler {..}
 
     getProvidersPriorityList = do
-      merchantConfig <- QMSUC.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+      merchantConfig <- QMSUC.findByMerchantId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
       let smsServiceProviders = merchantConfig.smsProvidersPriorityList
-      when (null smsServiceProviders) $ throwError $ InternalError ("No sms service provider configured for the merchant, merchantId:" <> merchantId.getId)
+      when (null smsServiceProviders) $ throwError $ InternalError ("No sms service provider configured for the merchant, merchantId:" <> merchantOperatingCityId.getId)
       pure smsServiceProviders
 
     getProviderConfig provider = do
       merchantSmsServiceConfig <-
-        QMSC.findByMerchantIdAndService merchantId (DMSC.SmsService provider)
-          >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+        QMSC.findByMerchantIdAndService merchantOperatingCityId (DMSC.SmsService provider)
+          >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
       case merchantSmsServiceConfig.serviceConfig of
         DMSC.SmsServiceConfig msc -> pure msc
         _ -> throwError $ InternalError "Unknown Service Config"

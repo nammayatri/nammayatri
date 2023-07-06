@@ -30,6 +30,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Error
 import qualified Storage.Tabular.Booking.BookingLocation as SLoc
 import qualified Storage.Tabular.Merchant as SMerchant
+import qualified Storage.Tabular.Merchant.MerchantOperatingCity as SMOC
 import qualified Storage.Tabular.Merchant.MerchantPaymentMethod as SMPM
 import qualified Storage.Tabular.Person as SPerson
 import qualified Storage.Tabular.Quote as SQuote
@@ -69,6 +70,7 @@ mkPersist
       tripTermsId STripTerms.TripTermsTId Maybe
       rentalSlabId SRentalSlab.RentalSlabTId Maybe
       merchantId SMerchant.MerchantTId
+      merchantOperatingCityId SMOC.MerchantOperatingCityTId Maybe
       specialLocationTag Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
@@ -104,6 +106,7 @@ instance FromTType FullBookingT Domain.Booking where
           quoteId = fromKey <$> quoteId,
           providerUrl = pUrl,
           merchantId = fromKey merchantId,
+          merchantOperatingCityId = fromKey <$> merchantOperatingCityId,
           estimatedFare = roundToIntegral estimatedFare,
           discount = roundToIntegral <$> discount,
           estimatedTotalFare = roundToIntegral estimatedTotalFare,
@@ -155,6 +158,7 @@ instance ToTType FullBookingT Domain.Booking where
               tripTermsId = toKey <$> (tripTerms <&> (.id)),
               distance = distance,
               merchantId = toKey merchantId,
+              merchantOperatingCityId = toKey <$> merchantOperatingCityId,
               estimatedFare = realToFrac estimatedFare,
               discount = realToFrac <$> discount,
               estimatedTotalFare = realToFrac estimatedTotalFare,

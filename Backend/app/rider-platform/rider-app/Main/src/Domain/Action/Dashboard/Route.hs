@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
 
 module Domain.Action.Dashboard.Route where
 
@@ -49,10 +50,11 @@ mkGetLocation shortMerchantId rideId pickupLocationLat pickupLocationLon = do
   let toLocation = LatLong bookingLocation.lat bookingLocation.lon
   let listOfLatLong = [fromLocation, toLocation]
   let waypointsList = NE.fromList listOfLatLong
+  let merchantOperatingCityId = fromMaybe "" booking.merchantOperatingCityId
   let mkGetRoutesResp =
         Maps.GetRoutesReq
           { waypoints = waypointsList,
             mode = Just CAR,
             calcPoints = True
           }
-  getTripRoutes merchant.id mkGetRoutesResp
+  getTripRoutes merchantOperatingCityId mkGetRoutesResp

@@ -25,10 +25,12 @@ import Environment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.APISuccess
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import SharedLogic.Merchant
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 
 data RideEstimatesEndPoint
   = EstimatesEndPoint
@@ -76,19 +78,23 @@ handler merchantId = callSelect merchantId :<|> callSelectList merchantId :<|> c
 callSelect :: ShortId DM.Merchant -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
 callSelect merchantId personId estimateId = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  US.select2 (personId, m.id) estimateId $ US.DSelectReq {customerExtraFee = Nothing, autoAssignEnabled = False, autoAssignEnabledV2 = Nothing, paymentMethodId = Nothing}
+  merchantOperatingCity <- withFlowHandlerAPI $ SMOC.findByMerchantId m.id >>= fromMaybeM (MerchantOperatingCityNotFound m.id.getId)
+  US.select2 (personId, m.id, merchantOperatingCity.id) estimateId $ US.DSelectReq {customerExtraFee = Nothing, autoAssignEnabled = False, autoAssignEnabledV2 = Nothing, paymentMethodId = Nothing}
 
 callSelectList :: ShortId DM.Merchant -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
 callSelectList merchantId personId estimate = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  US.selectList (personId, m.id) estimate
+  merchantOperatingCity <- withFlowHandlerAPI $ SMOC.findByMerchantId m.id >>= fromMaybeM (MerchantOperatingCityNotFound m.id.getId)
+  US.selectList (personId, m.id, merchantOperatingCity.id) estimate
 
 callSelectResult :: ShortId DM.Merchant -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.QuotesResultResponse
 callSelectResult merchantId personId estimate = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  US.selectResult (personId, m.id) estimate
+  merchantOperatingCity <- withFlowHandlerAPI $ SMOC.findByMerchantId m.id >>= fromMaybeM (MerchantOperatingCityNotFound m.id.getId)
+  US.selectResult (personId, m.id, merchantOperatingCity.id) estimate
 
 callCancelSearch :: ShortId DM.Merchant -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.CancelAPIResponse
 callCancelSearch merchantId personId estimate = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  US.cancelSearch (personId, m.id) estimate
+  merchantOperatingCity <- withFlowHandlerAPI $ SMOC.findByMerchantId m.id >>= fromMaybeM (MerchantOperatingCityNotFound m.id.getId)
+  US.cancelSearch (personId, m.id, merchantOperatingCity.id) estimate

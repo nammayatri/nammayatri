@@ -22,6 +22,7 @@ where
 
 import qualified Domain.Action.UI.Serviceability as DServiceability
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person as Person
 import Environment
 import Kernel.External.Maps.Types
@@ -56,8 +57,8 @@ handler regToken =
 
 checkServiceability ::
   (GeofencingConfig -> GeoRestriction) ->
-  (Id Person.Person, Id Merchant.Merchant) ->
+  (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) ->
   ServiceabilityReq ->
   FlowHandler DServiceability.ServiceabilityRes
-checkServiceability settingAccessor (personId, merchantId) ServiceabilityReq {..} = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  DServiceability.checkServiceability settingAccessor (personId, merchantId) location
+checkServiceability settingAccessor (personId, merchantId, merchantOperatingCityId) ServiceabilityReq {..} = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  DServiceability.checkServiceability settingAccessor (personId, merchantId, merchantOperatingCityId) location

@@ -33,6 +33,7 @@ where
 
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
@@ -165,7 +166,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   now <- getCurrentTime
 
   estimates <- traverse (buildEstimate providerInfo now _searchRequest) estimatesInfo
-  quotes <- traverse (buildQuote requestId providerInfo now _searchRequest.merchantId) quotesInfo
+  quotes <- traverse (buildQuote requestId providerInfo now _searchRequest.merchantId _searchRequest.merchantOperatingCityId) quotesInfo
   merchantPaymentMethods <- CQMPM.findAllByMerchantId merchant.id
   let paymentMethods = intersectPaymentMethods paymentMethodsInfo merchantPaymentMethods
   forM_ estimates $ \est -> do
@@ -193,6 +194,7 @@ buildEstimate providerInfo now _searchRequest EstimateInfo {..} = do
       { id = uid,
         requestId = _searchRequest.id,
         merchantId = Just _searchRequest.merchantId,
+        merchantOperatingCityId = _searchRequest.merchantOperatingCityId,
         providerMobileNumber = providerInfo.mobileNumber,
         providerName = providerInfo.name,
         providerCompletedRidesCount = providerInfo.ridesCompleted,
@@ -227,9 +229,10 @@ buildQuote ::
   ProviderInfo ->
   UTCTime ->
   Id DMerchant.Merchant ->
+  Maybe (Id DMOC.MerchantOperatingCity) ->
   QuoteInfo ->
   m DQuote.Quote
-buildQuote requestId providerInfo now merchantId QuoteInfo {..} = do
+buildQuote requestId providerInfo now merchantId merchantOperatingCityId QuoteInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
   quoteDetails' <- case quoteDetails of
@@ -250,6 +253,7 @@ buildQuote requestId providerInfo now merchantId QuoteInfo {..} = do
         createdAt = now,
         quoteDetails = quoteDetails',
         merchantId,
+        merchantOperatingCityId,
         ..
       }
 

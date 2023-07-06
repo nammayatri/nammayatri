@@ -21,10 +21,12 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import SharedLogic.Merchant
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 import Prelude
 
 data RideSearchEndPoint = SearchEndPoint
@@ -48,4 +50,5 @@ handler = callSearch
 callSearch :: ShortId DM.Merchant -> Id DP.Person -> SH.SearchReq -> FlowHandler SH.SearchRes
 callSearch merchantId personId req = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  SH.search (personId, m.id) req Nothing Nothing Nothing
+  merchantOperatingCity <- withFlowHandlerAPI $ SMOC.findByMerchantId m.id >>= fromMaybeM (MerchantOperatingCityNotFound m.id.getId)
+  SH.search (personId, m.id, merchantOperatingCity.id) req Nothing Nothing Nothing

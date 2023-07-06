@@ -26,6 +26,7 @@ where
 
 import qualified Domain.Action.UI.CustomerSupport as DCS
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -62,8 +63,8 @@ handler =
 login :: DCS.LoginReq -> FlowHandler DCS.LoginRes
 login = withFlowHandlerAPI . DCS.login
 
-logout :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler DCS.LogoutRes
+logout :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DCS.LogoutRes
 logout = withFlowHandlerAPI . DCS.logout
 
-listOrder :: (Id SP.Person, Id Merchant.Merchant) -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler [DCS.OrderResp]
-listOrder (personId, _) mRequestId mMobile mlimit = withFlowHandlerAPI . DCS.listOrder personId mRequestId mMobile mlimit
+listOrder :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler [DCS.OrderResp]
+listOrder (personId, _, _) mRequestId mMobile mlimit = withFlowHandlerAPI . DCS.listOrder personId mRequestId mMobile mlimit

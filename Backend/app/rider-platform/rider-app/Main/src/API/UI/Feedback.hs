@@ -22,6 +22,7 @@ where
 import qualified Beckn.ACL.Rating as ACL
 import qualified Domain.Action.UI.Feedback as DFeedback
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Environment as App
 import EulerHS.Prelude hiding (product)
@@ -44,8 +45,8 @@ type API =
 handler :: App.FlowServer API
 handler = feedback
 
-feedback :: (Id Person.Person, Id Merchant.Merchant) -> DFeedback.FeedbackReq -> App.FlowHandler APISuccess
-feedback (personId, _) request = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+feedback :: (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DFeedback.FeedbackReq -> App.FlowHandler APISuccess
+feedback (personId, _, _) request = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   dFeedbackRes <- DFeedback.feedback request
   becknReq <- ACL.buildRatingReq dFeedbackRes
   void $ withLongRetry $ CallBPP.feedback dFeedbackRes.providerUrl becknReq

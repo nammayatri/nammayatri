@@ -29,6 +29,7 @@ where
 
 import qualified Domain.Action.UI.Maps as DMaps
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment (FlowHandler, FlowServer)
 import EulerHS.Prelude
@@ -60,11 +61,11 @@ handler =
     :<|> getPlaceDetails
     :<|> getPlaceName
 
-autoComplete :: (Id Person.Person, Id Merchant.Merchant) -> DMaps.AutoCompleteReq -> FlowHandler DMaps.AutoCompleteResp
-autoComplete (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.autoComplete (personId, merchantId)
+autoComplete :: (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DMaps.AutoCompleteReq -> FlowHandler DMaps.AutoCompleteResp
+autoComplete (personId, merchantId, merchantOperatingCityId) = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.autoComplete (personId, merchantId, merchantOperatingCityId)
 
-getPlaceDetails :: (Id Person.Person, Id Merchant.Merchant) -> DMaps.GetPlaceDetailsReq -> FlowHandler DMaps.GetPlaceDetailsResp
-getPlaceDetails (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.getPlaceDetails (personId, merchantId)
+getPlaceDetails :: (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DMaps.GetPlaceDetailsReq -> FlowHandler DMaps.GetPlaceDetailsResp
+getPlaceDetails (personId, merchantId, merchantOperatingCityId) = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.getPlaceDetails (personId, merchantId, merchantOperatingCityId)
 
-getPlaceName :: (Id Person.Person, Id Merchant.Merchant) -> DMaps.GetPlaceNameReq -> FlowHandler DMaps.GetPlaceNameResp
-getPlaceName (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.getPlaceName (personId, merchantId)
+getPlaceName :: (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DMaps.GetPlaceNameReq -> FlowHandler DMaps.GetPlaceNameResp
+getPlaceName (personId, merchantId, merchantOperatingCityId) = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.getPlaceName (personId, merchantId, merchantOperatingCityId)

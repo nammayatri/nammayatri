@@ -20,6 +20,7 @@ where
 
 import qualified Domain.Action.UI.Sos as DSos
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Sos as Sos
 import Environment
@@ -48,8 +49,8 @@ handler =
   createSosDetails
     :<|> updateSosDetails
 
-createSosDetails :: (Id Person.Person, Id Merchant.Merchant) -> DSos.SosReq -> FlowHandler DSos.SosRes
-createSosDetails (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.createSosDetails personId
+createSosDetails :: (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DSos.SosReq -> FlowHandler DSos.SosRes
+createSosDetails (personId, _, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.createSosDetails personId
 
-updateSosDetails :: Id Sos.Sos -> (Id Person.Person, Id Merchant.Merchant) -> DSos.SosFeedbackReq -> FlowHandler APISuccess.APISuccess
-updateSosDetails sosId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.updateSosDetails sosId personId
+updateSosDetails :: Id Sos.Sos -> (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DSos.SosFeedbackReq -> FlowHandler APISuccess.APISuccess
+updateSosDetails sosId (personId, _, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.updateSosDetails sosId personId

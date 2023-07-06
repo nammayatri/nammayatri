@@ -25,11 +25,13 @@ import Environment
 import EulerHS.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.APISuccess
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.Merchant
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 
 data RideCancelEndPoint = RideBookingCancelEndPoint
   deriving (Show, Read)
@@ -53,6 +55,7 @@ handler = callBookingCancel
 callBookingCancel :: ShortId DM.Merchant -> Id SRB.Booking -> Id DP.Person -> DCancel.CancelReq -> FlowHandler APISuccess
 callBookingCancel merchantId bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   m <- findMerchantByShortId merchantId
-  dCancelRes <- DCancel.cancel bookingId (personId, m.id) req
+  merchantOperatingCity <- SMOC.findByMerchantId m.id >>= fromMaybeM (MerchantOperatingCityNotFound m.id.getId)
+  dCancelRes <- DCancel.cancel bookingId (personId, m.id, merchantOperatingCity.id) req
   void $ withShortRetry $ CallBPP.cancel dCancelRes.bppUrl =<< ACL.buildCancelReq dCancelRes
   return Success

@@ -28,6 +28,7 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Version
 import qualified Storage.Tabular.Merchant as SMerchant
+import qualified Storage.Tabular.Merchant.MerchantOperatingCity as SMOC
 import qualified Storage.Tabular.Merchant.MerchantPaymentMethod as SMPM
 import qualified Storage.Tabular.Person as SP
 import qualified Storage.Tabular.SearchRequest.SearchReqLocation as SLoc
@@ -47,6 +48,7 @@ mkPersist
       estimatedRideDuration Seconds Maybe
       device Text Maybe
       merchantId SMerchant.MerchantTId
+      merchantOperatingCityId SMOC.MerchantOperatingCityTId Maybe
       language Language Maybe
       customerExtraFee Money Maybe
       availablePaymentMethods (PostgresList SMPM.MerchantPaymentMethodTId)
@@ -81,6 +83,7 @@ instance FromTType FullSearchRequestT Domain.SearchRequest where
           distance = HighPrecMeters <$> distance,
           maxDistance = HighPrecMeters <$> maxDistance,
           merchantId = fromKey merchantId,
+          merchantOperatingCityId = fromKey <$> merchantOperatingCityId,
           bundleVersion = bundleVersion',
           clientVersion = clientVersion',
           availablePaymentMethods = fromKey <$> unPostgresList availablePaymentMethods,
@@ -101,6 +104,7 @@ instance ToTType FullSearchRequestT Domain.SearchRequest where
               distance = getHighPrecMeters <$> distance,
               maxDistance = getHighPrecMeters <$> maxDistance,
               merchantId = toKey merchantId,
+              merchantOperatingCityId = toKey <$> merchantOperatingCityId,
               bundleVersion = versionToText <$> bundleVersion,
               clientVersion = versionToText <$> clientVersion,
               availablePaymentMethods = PostgresList $ toKey <$> availablePaymentMethods,

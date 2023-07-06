@@ -23,6 +23,7 @@ where
 
 import qualified Domain.Action.UI.Quote as DQuote
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SearchRequest as SSR
 import Environment
@@ -43,5 +44,5 @@ handler :: FlowServer API
 handler =
   getQuotes
 
-getQuotes :: Id SSR.SearchRequest -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DQuote.GetQuotesRes
+getQuotes :: Id SSR.SearchRequest -> (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DQuote.GetQuotesRes
 getQuotes searchRequestId _ = withFlowHandlerAPI $ DQuote.getQuotes searchRequestId

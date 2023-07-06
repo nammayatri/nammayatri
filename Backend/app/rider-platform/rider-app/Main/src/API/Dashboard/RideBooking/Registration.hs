@@ -13,12 +13,14 @@
 -}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-missing-fields #-}
 
 module API.Dashboard.RideBooking.Registration where
 
 import API.UI.Registration hiding (API)
 import qualified Domain.Action.UI.Registration as DRegistration
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import qualified Domain.Types.RegistrationToken as SRT
@@ -96,6 +98,7 @@ buildAuthReq merchantShortId req =
   DRegistration.AuthReq
     { mobileNumber = req.mobileNumber,
       mobileCountryCode = req.mobileCountryCode,
+      city = req.city,
       merchantId = merchantShortId,
       deviceToken = Nothing,
       notificationToken = Nothing,
@@ -110,6 +113,7 @@ buildAuthReq merchantShortId req =
 
 data CustomerAuthReq = CutomerAuthReq
   { mobileNumber :: Text,
-    mobileCountryCode :: Text
+    mobileCountryCode :: Text,
+    city :: DMOC.City
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

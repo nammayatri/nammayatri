@@ -19,7 +19,7 @@ module Tools.Payment
   )
 where
 
-import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Kernel.External.Payment.Interface as Reexport hiding
   ( createOrder,
@@ -34,22 +34,22 @@ import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Tools.Metrics (CoreMetrics)
 
-createOrder :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id DM.Merchant -> Payment.CreateOrderReq -> m Payment.CreateOrderResp
+createOrder :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id DMOC.MerchantOperatingCity -> Payment.CreateOrderReq -> m Payment.CreateOrderResp
 createOrder = runWithServiceConfig Payment.createOrder
 
-orderStatus :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id DM.Merchant -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
+orderStatus :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id DMOC.MerchantOperatingCity -> Payment.OrderStatusReq -> m Payment.OrderStatusResp
 orderStatus = runWithServiceConfig Payment.orderStatus
 
 runWithServiceConfig ::
   (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) =>
   (Payment.PaymentServiceConfig -> req -> m resp) ->
-  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   req ->
   m resp
-runWithServiceConfig func merchantId req = do
+runWithServiceConfig func merchantOperatingCityId req = do
   merchantServiceConfig <-
-    CQMSC.findByMerchantIdAndService merchantId (DMSC.PaymentService Payment.Juspay)
-      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
+    CQMSC.findByMerchantIdAndService merchantOperatingCityId (DMSC.PaymentService Payment.Juspay)
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantOperatingCityId.getId "Payment" (show Payment.Juspay))
   case merchantServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig vsc -> func vsc req
     _ -> throwError $ InternalError "Unknown Service Config"

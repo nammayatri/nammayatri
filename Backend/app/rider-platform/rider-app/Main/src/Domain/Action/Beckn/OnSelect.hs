@@ -23,6 +23,7 @@ import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
@@ -99,7 +100,7 @@ onSelect ::
   Flow ()
 onSelect OnSelectValidatedReq {..} = do
   now <- getCurrentTime
-  quotes <- traverse (buildSelectedQuote estimate providerInfo now searchRequest.merchantId) quotesInfo
+  quotes <- traverse (buildSelectedQuote estimate providerInfo now searchRequest.merchantId searchRequest.merchantOperatingCityId) quotesInfo
   logPretty DEBUG "quotes" quotes
   forM_ quotes $ \quote -> do
     triggerQuoteEvent QuoteEventData {quote = quote, person = person, merchantId = searchRequest.merchantId}
@@ -148,12 +149,13 @@ buildSelectedQuote ::
   ProviderInfo ->
   UTCTime ->
   Id DMerchant.Merchant ->
+  Maybe (Id DMOC.MerchantOperatingCity) ->
   QuoteInfo ->
   m DQuote.Quote
-buildSelectedQuote estimate providerInfo now merchantId QuoteInfo {..} = do
+buildSelectedQuote estimate providerInfo now merchantId merchantOperatingCityId QuoteInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
-  driverOffer <- buildDriverOffer estimate.id quoteDetails merchantId
+  driverOffer <- buildDriverOffer estimate.id quoteDetails merchantId merchantOperatingCityId
   let quote =
         DQuote.Quote
           { id = uid,
@@ -166,6 +168,7 @@ buildSelectedQuote estimate providerInfo now merchantId QuoteInfo {..} = do
             quoteDetails = DQuote.DriverOfferDetails driverOffer,
             requestId = estimate.requestId,
             merchantId,
+            merchantOperatingCityId,
             ..
           }
   pure quote
@@ -175,14 +178,16 @@ buildDriverOffer ::
   Id DEstimate.Estimate ->
   DriverOfferQuoteDetails ->
   Id DMerchant.Merchant ->
+  Maybe (Id DMOC.MerchantOperatingCity) ->
   m DDriverOffer.DriverOffer
-buildDriverOffer estimateId DriverOfferQuoteDetails {..} merchantId = do
+buildDriverOffer estimateId DriverOfferQuoteDetails {..} merchantId merchantOperatingCityId = do
   uid <- generateGUID
   now <- getCurrentTime
   pure
     DDriverOffer.DriverOffer
       { id = uid,
         merchantId = Just merchantId,
+        merchantOperatingCityId = merchantOperatingCityId,
         bppQuoteId = bppDriverQuoteId,
         status = DDriverOffer.ACTIVE,
         updatedAt = now,

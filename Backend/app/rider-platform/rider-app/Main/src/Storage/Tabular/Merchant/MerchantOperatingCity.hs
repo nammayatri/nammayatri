@@ -18,57 +18,45 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.RegistrationToken where
+module Storage.Tabular.Merchant.MerchantOperatingCity where
 
-import qualified Domain.Types.RegistrationToken as Domain
+import qualified Domain.Types.Merchant.MerchantOperatingCity as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import Storage.Tabular.Merchant (MerchantTId)
 
-derivePersistField "Domain.Medium"
-derivePersistField "Domain.LoginType"
-derivePersistField "Domain.RTEntityType"
+derivePersistField "Domain.City"
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    RegistrationTokenT sql=registration_token
+    MerchantOperatingCityT sql =merchant_operating_city
       id Text
-      token Text
-      attempts Int
-      authMedium Domain.Medium
-      authType Domain.LoginType
-      authValueHash Text
-      verified Bool
-      authExpiry Int
-      tokenExpiry Int
-      entityId Text
-      merchantId Text
-      merchantOperatingCityId Text
-      entityType Domain.RTEntityType
-      createdAt UTCTime
-      updatedAt UTCTime
-      info Text Maybe
+      merchantId MerchantTId
+      city Domain.City
       Primary id
       deriving Generic
     |]
 
-instance TEntityKey RegistrationTokenT where
-  type DomainKey RegistrationTokenT = Id Domain.RegistrationToken
-  fromKey (RegistrationTokenTKey _id) = Id _id
-  toKey (Id id) = RegistrationTokenTKey id
+instance TEntityKey MerchantOperatingCityT where
+  type DomainKey MerchantOperatingCityT = Id Domain.MerchantOperatingCity
+  fromKey (MerchantOperatingCityTKey _id) = Id _id
+  toKey (Id id) = MerchantOperatingCityTKey id
 
-instance FromTType RegistrationTokenT Domain.RegistrationToken where
-  fromTType RegistrationTokenT {..} = do
+instance FromTType MerchantOperatingCityT Domain.MerchantOperatingCity where
+  fromTType MerchantOperatingCityT {..} = do
     return $
-      Domain.RegistrationToken
+      Domain.MerchantOperatingCity
         { id = Id id,
+          merchantId = fromKey merchantId,
           ..
         }
 
-instance ToTType RegistrationTokenT Domain.RegistrationToken where
-  toTType Domain.RegistrationToken {..} =
-    RegistrationTokenT
+instance ToTType MerchantOperatingCityT Domain.MerchantOperatingCity where
+  toTType Domain.MerchantOperatingCity {..} = do
+    MerchantOperatingCityT
       { id = getId id,
+        merchantId = toKey merchantId,
         ..
       }

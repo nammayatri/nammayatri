@@ -25,6 +25,7 @@ import qualified Domain.Action.UI.Booking as DBooking
 import Domain.Types.Booking (BookingAPIEntity)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -52,8 +53,8 @@ handler =
   bookingStatus
     :<|> bookingList
 
-bookingStatus :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler BookingAPIEntity
+bookingStatus :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler BookingAPIEntity
 bookingStatus bookingId = withFlowHandlerAPI . DBooking.bookingStatus bookingId
 
-bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> FlowHandler DBooking.BookingListRes
-bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive = withFlowHandlerAPI . DBooking.bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive
+bookingList :: (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> FlowHandler DBooking.BookingListRes
+bookingList (personId, merchantId, merchantOperatingCityId) mbLimit mbOffset mbOnlyActive = withFlowHandlerAPI . DBooking.bookingList (personId, merchantId, merchantOperatingCityId) mbLimit mbOffset mbOnlyActive

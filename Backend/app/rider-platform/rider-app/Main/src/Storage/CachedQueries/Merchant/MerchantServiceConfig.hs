@@ -24,7 +24,7 @@ where
 
 import Data.Coerce (coerce)
 import Domain.Types.Common
-import Domain.Types.Merchant (Merchant)
+import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Merchant.MerchantServiceConfig
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -34,7 +34,7 @@ import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant.MerchantServiceConfig as Queries
 
-findByMerchantIdAndService :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)
+findByMerchantIdAndService :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> ServiceName -> m (Maybe MerchantServiceConfig)
 findByMerchantIdAndService id serviceName =
   Hedis.safeGet (makeMerchantIdAndServiceKey id serviceName) >>= \case
     Just a -> return . Just $ coerce @(MerchantServiceConfigD 'Unsafe) @MerchantServiceConfig a
@@ -43,16 +43,16 @@ findByMerchantIdAndService id serviceName =
 cacheMerchantServiceConfig :: CacheFlow m r => MerchantServiceConfig -> m ()
 cacheMerchantServiceConfig merchantServiceConfig = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let idKey = makeMerchantIdAndServiceKey merchantServiceConfig.merchantId (getServiceName merchantServiceConfig)
+  let idKey = makeMerchantIdAndServiceKey merchantServiceConfig.merchantOperatingCityId (getServiceName merchantServiceConfig)
   Hedis.setExp idKey (coerce @MerchantServiceConfig @(MerchantServiceConfigD 'Unsafe) merchantServiceConfig) expTime
 
-makeMerchantIdAndServiceKey :: Id Merchant -> ServiceName -> Text
+makeMerchantIdAndServiceKey :: Id MerchantOperatingCity -> ServiceName -> Text
 makeMerchantIdAndServiceKey id serviceName = "CachedQueries:MerchantServiceConfig:MerchantId-" <> id.getId <> ":ServiceName-" <> show serviceName
 
 -- Call it after any update
-clearCache :: Hedis.HedisFlow m r => Id Merchant -> ServiceName -> m ()
-clearCache merchantId serviceName = do
-  Hedis.del (makeMerchantIdAndServiceKey merchantId serviceName)
+clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> ServiceName -> m ()
+clearCache merchanOperatingCityId serviceName = do
+  Hedis.del (makeMerchantIdAndServiceKey merchanOperatingCityId serviceName)
 
 upsertMerchantServiceConfig :: MerchantServiceConfig -> Esq.SqlDB ()
 upsertMerchantServiceConfig = Queries.upsertMerchantServiceConfig

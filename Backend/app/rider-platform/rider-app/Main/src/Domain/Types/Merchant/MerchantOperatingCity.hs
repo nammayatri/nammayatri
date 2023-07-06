@@ -12,25 +12,18 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Mobility.AppBackend.Fixtures where
+module Domain.Types.Merchant.MerchantOperatingCity where
 
-import "rider-app" Domain.Types.Merchant as DM
-import "rider-app" Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Merchant as DM
 import Kernel.Prelude
 import Kernel.Types.Id
-import Kernel.Types.Version
 
-appRegistrationToken :: Text
-appRegistrationToken = "ea37f941-427a-4085-a7d0-96240f166672"
+data MerchantOperatingCity = MerchantOperatingCity
+  { id :: Id MerchantOperatingCity,
+    merchantId :: Id DM.Merchant,
+    city :: City
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, Eq, ToSchema)
 
-appRegistrationToken2 :: Text
-appRegistrationToken2 = "003df941-427a-4085-a7d0-96240f166672"
-
-defaultVersion :: Version
-defaultVersion = Version 0 0 0
-
-yatriMerchantId :: Id DM.Merchant
-yatriMerchantId = "da4e23a5-3ce6-4c37-8b9b-41377c3c1a51"
-
-yatriMerchantOperatingCityId :: Id DMOC.MerchantOperatingCity
-yatriMerchantOperatingCityId = "ea4e23a5-3ce6-4c37-8b9b-41377c3c1a52"
+data City = BANGALORE | KOLKATA | KOCHI | CHENNAI | DELHI | MUMBAI | DEFAULT
+  deriving (Generic, FromJSON, ToJSON, Show, Read, Eq, ToSchema)

@@ -29,6 +29,7 @@ where
 
 import qualified Domain.Action.UI.Profile as DProfile
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment
 import EulerHS.Prelude
@@ -61,14 +62,14 @@ handler =
     :<|> updateDefaultEmergencyNumbers
     :<|> getDefaultEmergencyNumbers
 
-getPersonDetails :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DProfile.ProfileRes
+getPersonDetails :: (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DProfile.ProfileRes
 getPersonDetails = withFlowHandlerAPI . DProfile.getPersonDetails
 
-updatePerson :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateProfileReq -> FlowHandler APISuccess.APISuccess
-updatePerson (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DProfile.updatePerson personId
+updatePerson :: (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DProfile.UpdateProfileReq -> FlowHandler APISuccess.APISuccess
+updatePerson (personId, _, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DProfile.updatePerson personId
 
-updateDefaultEmergencyNumbers :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateProfileDefaultEmergencyNumbersReq -> FlowHandler DProfile.UpdateProfileDefaultEmergencyNumbersResp
-updateDefaultEmergencyNumbers (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DProfile.updateDefaultEmergencyNumbers personId
+updateDefaultEmergencyNumbers :: (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DProfile.UpdateProfileDefaultEmergencyNumbersReq -> FlowHandler DProfile.UpdateProfileDefaultEmergencyNumbersResp
+updateDefaultEmergencyNumbers (personId, _, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DProfile.updateDefaultEmergencyNumbers personId
 
-getDefaultEmergencyNumbers :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DProfile.GetProfileDefaultEmergencyNumbersResp
+getDefaultEmergencyNumbers :: (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DProfile.GetProfileDefaultEmergencyNumbersResp
 getDefaultEmergencyNumbers = withFlowHandlerAPI . DProfile.getDefaultEmergencyNumbers

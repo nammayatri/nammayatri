@@ -29,6 +29,7 @@ import Kernel.Types.Common (HighPrecMeters, HighPrecMoney)
 import Kernel.Types.Id
 import qualified Storage.Tabular.DriverOffer as SDriverOffer
 import qualified Storage.Tabular.Merchant as SMerchant
+import Storage.Tabular.Merchant.MerchantOperatingCity (MerchantOperatingCityTId)
 import qualified Storage.Tabular.RentalSlab as SRentalSlab
 import qualified Storage.Tabular.SearchRequest as SSearchRequest
 import qualified Storage.Tabular.SpecialZoneQuote as SSpecialZoneQuote
@@ -55,6 +56,7 @@ mkPersist
       rentalSlabId SRentalSlab.RentalSlabTId Maybe
       driverOfferId SDriverOffer.DriverOfferTId Maybe
       merchantId SMerchant.MerchantTId
+      merchantOperatingCityId MerchantOperatingCityTId Maybe
       specialZoneQuoteId SSpecialZoneQuote.SpecialZoneQuoteTId Maybe
       specialLocationTag Text Maybe
       createdAt UTCTime

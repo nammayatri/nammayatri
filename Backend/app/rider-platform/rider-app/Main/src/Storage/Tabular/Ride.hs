@@ -28,6 +28,7 @@ import Kernel.Types.Common (Centesimal, HighPrecMeters, HighPrecMoney)
 import Kernel.Types.Id
 import qualified Storage.Tabular.Booking as SRB
 import Storage.Tabular.Merchant (MerchantTId)
+import Storage.Tabular.Merchant.MerchantOperatingCity (MerchantOperatingCityTId)
 
 derivePersistField "Domain.RideStatus"
 
@@ -40,6 +41,7 @@ mkPersist
       bookingId SRB.BookingTId
       shortId Text
       merchantId MerchantTId Maybe
+      merchantOperatingCityId MerchantOperatingCityTId Maybe
       status Domain.RideStatus
       driverName Text
       driverRating Centesimal Maybe
@@ -82,6 +84,7 @@ instance FromTType RideT Domain.Ride where
           bookingId = fromKey bookingId,
           shortId = ShortId shortId,
           merchantId = fromKey <$> merchantId,
+          merchantOperatingCityId = fromKey <$> merchantOperatingCityId,
           trackingUrl = tUrl,
           fare = roundToIntegral <$> fare,
           totalFare = roundToIntegral <$> totalFare,
@@ -96,6 +99,7 @@ instance ToTType RideT Domain.Ride where
         bookingId = toKey bookingId,
         shortId = getShortId shortId,
         merchantId = toKey <$> merchantId,
+        merchantOperatingCityId = toKey <$> merchantOperatingCityId,
         trackingUrl = showBaseUrl <$> trackingUrl,
         fare = realToFrac <$> fare,
         totalFare = realToFrac <$> totalFare,
