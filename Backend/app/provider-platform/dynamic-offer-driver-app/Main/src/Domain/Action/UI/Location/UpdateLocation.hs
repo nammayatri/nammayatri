@@ -152,7 +152,7 @@ handleDriverPayments driverId diffUtc = do
     (Just df, Nothing) -> do
       Esq.runNoTransaction $ updateStatus PAYMENT_PENDING df.id now
       updatePendingPayment True (cast driverId)
-    (Just dGFee, Just oDFee) -> mergeDriverFee dGFee oDFee now
+    (Just dGFee, Just oDFee) -> mergeDriverFee oDFee dGFee now
 
   unpaidAfterdeadline <- findUnpaidAfterPayBy driverId now
   case unpaidAfterdeadline of
