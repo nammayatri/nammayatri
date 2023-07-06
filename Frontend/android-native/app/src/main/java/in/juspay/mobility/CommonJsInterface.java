@@ -1599,6 +1599,27 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
+    public void cleverTapEvent(String event, String params){
+
+        if (clevertapDefaultInstance!=null){
+            Map<String, Object> resultMap = new HashMap<>();
+            try {
+                JSONArray jsonArray = new JSONArray(params);
+
+                for (int i = 0; i < jsonArray.length(); i++) {
+                    JSONObject jsonObject = jsonArray.getJSONObject(i);
+                    String key = jsonObject.getString("key");
+                    Object value = jsonObject.get("value");
+                    resultMap.put(key, value);
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+                return;
+            }
+            clevertapDefaultInstance.pushEvent(event,resultMap);}
+    }
+
+    @JavascriptInterface
     public void cleverTapCustomEventWithParams(String event, String paramKey, String paramValue){
         HashMap<String, Object> mapCustomEvent = new HashMap<String, Object>();
         mapCustomEvent.put(paramKey,paramValue);
