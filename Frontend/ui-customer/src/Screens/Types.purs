@@ -183,7 +183,7 @@ type EnterMobileNumberScreenStateData = {
   , tokenId :: String
   , attempts :: Int
   , otp :: String
-  , timer :: String
+  , timer :: Int
   , timerID :: String
 }
 -- ################################################ AccountSetUpScreenState ##################################################
@@ -207,6 +207,7 @@ type AccountSetUpScreenStateProps =
     , expandEnabled :: Boolean
     , showOptions :: Boolean
     , activeField :: Maybe ActiveFieldAccountSetup
+    , isNameValid :: Boolean
   }
 
 data ActiveFieldAccountSetup = DropDown | NameSection
@@ -218,6 +219,7 @@ type AccountSetUpScreenStateData =
   {   name :: String
     , email :: String
     , gender :: Maybe Gender
+    , nameErrorMessage :: Maybe ErrorType
   }
 
  -- ######################################  TripDetailsScreenState   ######################################
@@ -299,7 +301,7 @@ type ContactUsScreenData =
     subject :: String,
     description :: String,
     bookingId :: String,
-    errorMessage :: Maybe EmailErrorType
+    errorMessage :: Maybe ErrorType
   }
 
 type ContactUsScreenProps =
@@ -782,6 +784,7 @@ type MyProfileScreenProps = {
   genderOptionExpanded :: Boolean,
   expandEnabled :: Boolean,
   isEmailValid :: Boolean,
+  isNameValid :: Boolean,
   isBtnEnabled :: Boolean,
   showOptions :: Boolean,
   fromHomeScreen :: Boolean
@@ -800,13 +803,15 @@ type MyProfileScreenData = {
   gender :: Maybe Gender,
   editedEmailId :: Maybe String,
   editedGender :: Maybe Gender,
-  errorMessage :: Maybe EmailErrorType
+  emailErrorMessage :: Maybe ErrorType,
+  nameErrorMessage :: Maybe ErrorType
 }
 
-data EmailErrorType = INVALID_EMAIL | EMAIL_EXISTS
+data ErrorType = INVALID_EMAIL | EMAIL_EXISTS | EMAIL_CANNOT_BE_BLANK | INVALID_NAME | NAME_CANNOT_BE_BLANK
 
-derive instance genericEmailErrorType :: Generic EmailErrorType _
-instance eqEmailErrorType :: Eq EmailErrorType where eq = genericEq
+
+derive instance genericErrorType :: Generic ErrorType _
+instance eqErrorType :: Eq ErrorType where eq = genericEq
 
 type Location = {
   place :: String,

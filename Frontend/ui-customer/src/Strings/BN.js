@@ -480,5 +480,8 @@ const bengaliStrings = {
   "THE_DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ড্রাইভার আপনার বিশেষ অবস্থান পছন্দ করেছে এবং ইতিমধ্যেই আপনার অবস্থানের পথে রয়েছে৷",
   "ALLOW_LOCATION_ACCESS": "অবস্থান অ্যাক্সেসের অনুমতি দিন",
   "MESSAGE_FROM_DRIVER": "ড্রাইভার থেকে বার্তা",
-  "REPLY": "উত্তর দিন"
+  "REPLY": "উত্তর দিন",
+  "NAME_SHOULD_BE_MORE_THAN_2_CHARACTERS" : "নাম 2 অক্ষরের বেশি হওয়া উচিত",
+  "THIS_FIELD_IS_REQUIRED" : "ঘরটি অবশ্যই পূরণ করতে হবে",
+  "EMAIL_EXISTS_ALREADY" : "ই - মেইল ​​টি আগে থেকেই আছে"
 }

@@ -13,7 +13,7 @@
 -}
 
 module Domain.Action.UI.Maps
-  ( Maps.AutoCompleteReq,
+  ( AutoCompleteReq,
     Maps.AutoCompleteResp,
     Maps.GetPlaceDetailsReq,
     Maps.GetPlaceDetailsResp,
@@ -35,6 +35,7 @@ import qualified Kernel.External.Maps.Interface.Types as MIT
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -44,9 +45,30 @@ import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Tools.Maps as Maps
 import Tools.Metrics (CoreMetrics)
 
-autoComplete :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => (Id DP.Person, Id DMerchant.Merchant) -> Maps.AutoCompleteReq -> m Maps.AutoCompleteResp
-autoComplete (_, merchantId) req = do
-  Maps.autoComplete merchantId req
+data AutoCompleteReq = AutoCompleteReq
+  { input :: Text,
+    sessionToken :: Maybe Text,
+    location :: Text,
+    radius :: Integer,
+    language :: Maps.Language,
+    strictbounds :: Maybe Bool,
+    origin :: Maybe Maps.LatLong
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+autoComplete :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => (Id DP.Person, Id DMerchant.Merchant) -> AutoCompleteReq -> m Maps.AutoCompleteResp
+autoComplete (_, merchantId) AutoCompleteReq {..} = do
+  merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  Maps.autoComplete
+    merchantId
+    Maps.AutoCompleteReq
+      { country = toInterfaceCountry merchant.country,
+        ..
+      }
+  where
+    toInterfaceCountry = \case
+      Context.India -> Maps.India
+      Context.France -> Maps.France
 
 getPlaceDetails :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => (Id DP.Person, Id DMerchant.Merchant) -> Maps.GetPlaceDetailsReq -> m Maps.GetPlaceDetailsResp
 getPlaceDetails (_, merchantId) req = do

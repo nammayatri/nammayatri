@@ -11,33 +11,33 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE OverloadedLabels #-}
 
 module Beckn.ACL.Init (buildInitReq) where
 
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.Init as Init
+import Control.Lens ((%~))
+import qualified Data.Text as T
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.VehicleVariant as VehVar
-import Environment
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Logging
-import Kernel.Utils.Common (HighPrecMeters)
-import Kernel.Utils.Context (buildTaxiContext)
+import Kernel.Utils.Common
 import qualified SharedLogic.Confirm as SConfirm
 
 buildInitReq ::
-  (HasBapInfo r m, MonadFlow m) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   SConfirm.DConfirmRes ->
   m (BecknReq Init.InitMessage)
 buildInitReq res = do
   let transactionId = res.searchRequestId.getId
-  bapURIs <- asks (.bapSelfURIs)
-  bapIDs <- asks (.bapSelfIds)
-  context <- buildTaxiContext Context.INIT res.booking.id.getId (Just transactionId) bapIDs.cabs bapURIs.cabs (Just res.providerId) (Just res.providerUrl) res.city
+  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/cab/v1/" <> T.unpack res.merchant.id.getId)
+  context <- buildTaxiContext Context.INIT res.booking.id.getId (Just transactionId) res.merchant.bapId bapUrl (Just res.providerId) (Just res.providerUrl) res.merchant.city res.merchant.country
   initMessage <- buildInitMessage res
   pure $ BecknReq context initMessage
 

@@ -13,33 +13,15 @@
 -}
 {-# LANGUAGE OverloadedLabels #-}
 
-module Beckn.ACL.Metro.Search (buildSearchReq) where
+module Beckn.ACL.Metro.Search where
 
-import qualified Beckn.Types.Core.Metro.API.Search as Search
 import qualified Beckn.Types.Core.Metro.Search as Search
 import Control.Lens ((?~))
 import qualified Domain.Action.UI.Search.OneWay as DSearch
-import Environment
 import EulerHS.Prelude hiding (state)
-import Kernel.Types.Beckn.Context
-import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Beckn.ReqTypes
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
-import Kernel.Types.Id
 import Kernel.Types.TimeRFC339
-import Kernel.Utils.Common
-
-buildSearchReq ::
-  (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
-  DSearch.OneWaySearchRes ->
-  m (BecknReq Search.SearchIntent)
-buildSearchReq req@DSearch.OneWaySearchRes {..} = do
-  bapURIs <- asks (.bapSelfURIs)
-  bapIDs <- asks (.bapSelfIds)
-  let messageId = getId searchId
-  context <- buildContextMetro Context.SEARCH messageId bapIDs.metro bapURIs.metro
-  let intent = mkIntent req
-  pure $ BecknReq context $ Search.SearchIntent intent
 
 buildContextMetro ::
   (MonadTime m, MonadGuid m, MonadThrow m) =>
@@ -53,8 +35,8 @@ buildContextMetro action message_id bapId bapUri = do
   return
     Context
       { domain = METRO,
-        country = "IND",
-        city = "Kochi",
+        country = Context.India,
+        city = Context.Kochi,
         core_version = "0.9.3",
         bap_id = bapId,
         bap_uri = bapUri,

@@ -29,6 +29,7 @@ import Kernel.External.Encryption
 import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Types
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Utils.Common (encodeToText)
 import Lib.Mesh as Mesh
@@ -278,6 +279,26 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be DomainFP.WaitingCha
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainFP.WaitingChargeInfo
 
 instance FromBackendRow Postgres DomainFP.WaitingChargeInfo
+
+instance FromField Context.City where
+  fromField = fromFieldJSON
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Context.City where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Context.City
+
+instance FromBackendRow Postgres Context.City
+
+instance FromField Context.Country where
+  fromField = fromFieldJSON
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Context.Country where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Context.Country
+
+instance FromBackendRow Postgres Context.Country
 
 instance IsString HighPrecMeters where
   fromString = show

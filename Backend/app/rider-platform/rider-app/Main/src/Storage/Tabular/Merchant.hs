@@ -24,6 +24,7 @@ import qualified Domain.Types.Merchant as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Base64
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing (GeoRestriction)
 import qualified Kernel.Types.Geofencing as Geo
 import Kernel.Types.Id
@@ -36,7 +37,10 @@ mkPersist
       shortId Text
       subscriberId Text
       name Text
-      city Text
+      city Context.City
+      country Context.Country
+      bapId Text
+      bapUniqueKeyId Text
       originRestriction GeoRestriction
       destinationRestriction GeoRestriction
       gatewayUrl Text

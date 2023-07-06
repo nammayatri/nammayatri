@@ -60,7 +60,7 @@ import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, lift
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (Merchant(..), decodeErrorMessage, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getMerchant, getNewTrackingId, getPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, waitingCountdownTimer)
-import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen)
+import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, startTimerWithTime, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -125,7 +125,7 @@ screen initialState =
               FindingQuotes -> do
                 when ((getValueToLocalStore FINDING_QUOTES_POLLING) == "false") $ do
                   _ <- pure $ setValueToLocalStore FINDING_QUOTES_POLLING "true"
-                  _ <- countDown initialState.props.searchExpire "" push SearchExpireCountDown
+                  _ <- if os == "IOS" then startTimerWithTime (show initialState.props.searchExpire) "" "1" push SearchExpireCountDown else countDown initialState.props.searchExpire "" push SearchExpireCountDown
                   _ <- pure $ setValueToLocalStore GOT_ONE_QUOTE "FALSE"
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   let pollingCount = ceil ((toNumber initialState.props.searchExpire)/((fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) / 1000.0))
@@ -184,18 +184,19 @@ screen initialState =
                     pure (pure unit)
                   else do
                     getCurrentCustomerLocation push initialState
-                _, _ ->
-                  if (initialState.props.currentStage == HomeScreen) then do
-                    pure (pure unit)
-                  else do
-                    let src = initialState.data.source
-                    if src == "" || src == "Current Location" then do
-                        if (checkCurrentLocation initialState.props.sourceLat initialState.props.sourceLong initialState.data.previousCurrentLocations.pastCurrentLocations  && initialState.props.storeCurrentLocs )|| checkSavedLocations initialState.props.sourceLat initialState.props.sourceLong initialState.data.savedLocations
-                          then push $ UpdateSourceFromPastLocations
-                          else
-                            pure unit
-                        pure (pure unit)
-                    else  pure (pure unit)
+                _, _ -> pure (pure unit)
+                  -- TODO : Handle the case when location in stored in PREVIOUS_CURRENT_LOCATION
+                  -- if (initialState.props.currentStage == HomeScreen) then do
+                  --   pure (pure unit)
+                  -- else do
+                    -- let src = initialState.data.source
+                    -- if src == "" || src == "Current Location" then do
+                    --     if (checkCurrentLocation initialState.props.sourceLat initialState.props.sourceLong initialState.data.previousCurrentLocations.pastCurrentLocations  && initialState.props.storeCurrentLocs )|| checkSavedLocations initialState.props.sourceLat initialState.props.sourceLong initialState.data.savedLocations
+                    --       then push $ UpdateSourceFromPastLocations
+                    --       else
+                    --         pure unit
+                    --     pure (pure unit)
+                    -- else  pure (pure unit)
             else
               pure (pure unit)
         )
@@ -331,7 +332,7 @@ cancelSearchPopUp push state =
 
 chatView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 chatView push state =
-  PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 300 ] $ 
+  PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 300 ] $
   relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -415,12 +416,12 @@ driverCallPopUp push state =
 driverCallPopUpData :: HomeScreenState -> Array { text :: String, imageWithFallback :: String, type :: CallType, data :: String }
 driverCallPopUpData state =
   [ { text: (getString ANONYMOUS_CALL)
-    , imageWithFallback: "ny_ic_anonymous_call,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_anonymous_call.png"
+    , imageWithFallback: "ic_anonymous_call,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_anonymous_call.png"
     , type: ANONYMOUS_CALLER
     , data: (getString YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER_THE_CALL_WILL_BE_RECORDED_FOR_COMPLIANCE)
     }
   , { text: (getString DIRECT_CALL)
-    , imageWithFallback: "ny_ic_direct_call,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_direct_call.png"
+    , imageWithFallback: "ic_direct_call,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_direct_call.png"
     , type: DIRECT_CALLER
     , data: (getString YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER)
     }
@@ -707,8 +708,7 @@ genderBannerView state push =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , margin (Margin 10 10 10 10)
-    , gravity BOTTOM
+    , margin $ MarginVertical 10 10
     ][
         genderBanner push state
     ]
@@ -958,7 +958,7 @@ rideCompletedCardView state push =
             ][ imageView
                 [ width (V 20)
                 , height (V 20)
-                , imageWithFallback "ny_ic_metro_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_metro_blue.png"
+                , imageWithFallback "ny_ic_metro_blue,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_metro_blue.png"
                 , margin (MarginRight 5)
                 ]
               , textView
@@ -1124,7 +1124,7 @@ suggestedPriceView push state =
           [ width (V 15)
           , height (V 15)
           , margin (MarginRight 6)
-          , imageWithFallback "ny_ic_metro_white,https://assets.juspay.in/nammayatri/images/common/ny_ic_metro_white.png"
+          , imageWithFallback "ny_ic_metro_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_metro_white.png"
           ]
         , textView
           [ width WRAP_CONTENT

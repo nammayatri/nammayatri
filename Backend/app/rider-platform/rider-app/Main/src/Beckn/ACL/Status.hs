@@ -11,13 +11,16 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE OverloadedLabels #-}
+
 module Beckn.ACL.Status where
 
 import qualified Beckn.Types.Core.Taxi.Status as Status
+import Control.Lens ((%~))
+import qualified Data.Text as T
 import Domain.Types.Booking.Type (Booking)
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Ride (BPPRide)
-import Environment
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
@@ -26,23 +29,23 @@ import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
 
 buildStatusReq ::
-  (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
+  (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   Id BPPRide ->
   Booking ->
   Merchant ->
   m (BecknReq Status.StatusMessage)
 buildStatusReq bppRideId booking merchant = do
   messageId <- generateGUID
-  bapIDs <- asks (.bapSelfIds)
-  bapURIs <- asks (.bapSelfURIs)
+  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/cab/v1/" <> T.unpack merchant.id.getId)
   context <-
     buildTaxiContext
       Context.STATUS
       messageId
       (Just booking.transactionId)
-      bapIDs.cabs
-      bapURIs.cabs
+      merchant.bapId
+      bapUrl
       (Just merchant.id.getId)
       (Just booking.providerUrl)
       merchant.city
+      merchant.country
   pure $ BecknReq context $ Status.StatusMessage bppRideId.getId

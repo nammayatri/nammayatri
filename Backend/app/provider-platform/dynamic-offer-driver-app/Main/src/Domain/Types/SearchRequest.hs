@@ -19,6 +19,7 @@ import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
@@ -33,6 +34,8 @@ data SearchRequest = SearchRequest
     area :: Maybe FareProductD.Area,
     bapId :: Text,
     bapUri :: BaseUrl,
+    bapCity :: Maybe Context.City,
+    bapCountry :: Maybe Context.Country,
     estimatedDistance :: Meters,
     estimatedDuration :: Seconds,
     specialLocationTag :: Maybe Text,

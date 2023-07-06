@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Domain.Action.UI.Cancel
   ( cancel,
     CancelReq (..),
@@ -26,6 +25,7 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
@@ -63,17 +63,17 @@ data CancelRes = CancelRes
     bppUrl :: BaseUrl,
     cancellationSource :: SBCR.CancellationSource,
     transactionId :: Text,
-    city :: Text
+    merchant :: DM.Merchant
   }
 
 data CancelSearch = CancelSearch
   { estimateId :: Id DEstimate.Estimate,
     providerUrl :: BaseUrl,
     providerId :: Text,
-    city :: Text,
     estimateStatus :: DEstimate.EstimateStatus,
     searchReqId :: Id SearchRequest,
-    sendToBpp :: Bool
+    sendToBpp :: Bool,
+    merchant :: DM.Merchant
   }
 
 cancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, HasCacheConfig r, HedisFlow m r, Metrics.CoreMetrics m) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> CancelReq -> m CancelRes
@@ -109,7 +109,7 @@ cancel bookingId _ req = do
         bppUrl = booking.providerUrl,
         cancellationSource = SBCR.ByUser,
         transactionId = booking.transactionId,
-        city = merchant.city
+        merchant = merchant
       }
   where
     buildBookingCancelationReason currentDriverLocation disToPickup merchantId = do
@@ -137,7 +137,7 @@ isBookingCancellable booking
   | otherwise = pure False
 
 mkDomainCancelSearch ::
-  (EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, HasCacheConfig r, HedisFlow m r) =>
+  (HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, HasCacheConfig r, HedisFlow m r) =>
   Id Person.Person ->
   Id DEstimate.Estimate ->
   m CancelSearch
@@ -158,9 +158,10 @@ mkDomainCancelSearch personId estimateId = do
             providerUrl = estimate.providerUrl,
             providerId = estimate.providerId,
             searchReqId = searchRequestId,
-            city = merchant.city,
             estimateStatus = estStatus,
-            sendToBpp
+            sendToBpp,
+            merchant = merchant,
+            ..
           }
 
 cancelSearch ::

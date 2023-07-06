@@ -120,6 +120,7 @@ import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.SearchTryLocker as CS
+import qualified Storage.CachedQueries.BapMetadata as CQSM
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -779,8 +780,9 @@ getNearbySearchRequests (driverId, merchantId) = do
       searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
       -- searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
       searchRequest <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
+      bapMetadata <- CQSM.findById (Id searchRequest.bapId)
       popupDelaySeconds <- DP.getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
-      return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry popupDelaySeconds (Seconds 0) -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+      return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds (Seconds 0) -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 

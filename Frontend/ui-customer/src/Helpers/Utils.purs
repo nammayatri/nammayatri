@@ -159,6 +159,7 @@ foreign import updateInputString :: String -> Unit
 foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
 
 foreign import clearWaitingTimer :: String -> Unit
+foreign import clearCountDownTimer :: String -> Unit
 foreign import contactPermission :: Unit -> Effect Unit
 foreign import performHapticFeedback :: Unit -> Effect Unit
 foreign import adjustViewWithKeyboard :: String -> Effect Unit

@@ -269,12 +269,14 @@ public class ChatService extends Service {
                     Log.e(LOG_TAG,"Error sending the message to jbridge : " + err);
                 }
             }
-            if(!(merchant.equals(sentBy)) && isChatServiceRunning && shouldNotify){
+            String message =  getMessageFromKey(_message);
+            if(!(merchant.equals(sentBy)) && isChatServiceRunning && shouldNotify && message != "" && merchantType.equals("DRIVER")){
                 if(appState.equals("onDestroy") || appState.equals("onPause")){
-                    if(merchantType.equals("DRIVER")) startOverlayService(_message, _dateFormatted);
-                }else if (appState.equals("onResume") && merchantType.equals("DRIVER") && !(stage.equals("ChatWithCustomer"))) {
+                    if(NotificationUtils.overlayFeatureNotAvailable(context)) NotificationUtils.createChatNotification(_sentBy, message, context);
+                    else startOverlayService(message, _dateFormatted);
+                }else if (appState.equals("onResume") && !(stage.equals("ChatWithCustomer"))) {
                     String notificationId = String.valueOf(random.nextInt(1000000));
-                    MainActivity.showInAppNotification(_sentBy, getMessageFromKey(_message), CommonJsInterface.storeCallBackOpenChatScreen,"", "", "", "", notificationId, 5000, context);
+                    MainActivity.showInAppNotification(_sentBy, message, CommonJsInterface.storeCallBackOpenChatScreen,"", "", "", "", notificationId, 5000, context);
                 }
             }
         } catch (Exception e) {
@@ -285,7 +287,7 @@ public class ChatService extends Service {
     private void startOverlayService(String message, String timestamp){
         if ((merchantType.equals("DRIVER")) && Settings.canDrawOverlays(getApplicationContext())  && !sharedPrefs.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPrefs.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPrefs.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
             try{
-                messageOverlay.showMessageOverlay(getMessageFromKey(message),timestamp,context);
+                messageOverlay.showMessageOverlay(message, timestamp, context);
                 startMediaPlayer(context, R.raw.new_message, false);
             }catch (Exception e) {
                 e.printStackTrace();
@@ -404,7 +406,7 @@ public class ChatService extends Service {
             JSONObject suggestions = new JSONObject(suggestionsStr);
             String language = sharedPrefs.getString("LANGUAGE_KEY", "null");
             if(suggestions.has(key)) {
-                JSONObject message = suggestions.getJSONObject(key).getJSONObject("value");
+                JSONObject message = suggestions.getJSONObject(key);
                 if(message.has(language.toLowerCase())) return message.getString(language.toLowerCase());
                 else return message.getString("en_us");
             } else {
@@ -412,7 +414,7 @@ public class ChatService extends Service {
             }
         } catch (Exception e) {
             Log.e(LOG_TAG,"Error in getMessageFromKey : " + e);
-            return key;
+            return "";
         }
     }
 

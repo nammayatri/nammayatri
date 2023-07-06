@@ -506,5 +506,8 @@ const hindiStrings = {
   "DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ड्राइवर आपके स्थान के रास्ते पर है।",
   "ALLOW_LOCATION_ACCESS": "स्थान पहुंच की अनुमति दें",
   "MESSAGE_FROM_DRIVER": "ड्राइवर का संदेश",
-  "REPLY": "जवाब"
+  "REPLY": "जवाब",
+  "NAME_SHOULD_BE_MORE_THAN_2_CHARACTERS" : "नाम 2 अक्षर से अधिक होना चाहिए",
+  "THIS_FIELD_IS_REQUIRED" : "यह फ़ील्ड आवश्यक है", 
+  "EMAIL_EXISTS_ALREADY" : "ईमेल पहले से ही मौजूद है"
 }

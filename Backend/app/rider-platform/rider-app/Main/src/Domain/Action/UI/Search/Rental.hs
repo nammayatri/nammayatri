@@ -21,6 +21,7 @@ module Domain.Action.UI.Search.Rental
 where
 
 import qualified Domain.Action.UI.Search.Common as DSearch
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SearchRequest as DSearchReq
 import Kernel.Prelude
@@ -54,7 +55,7 @@ data RentalSearchRes = RentalSearchRes
     --TODO: This supposed to be temporary solution. Check if we still need it
     gatewayUrl :: BaseUrl,
     searchRequestExpiry :: UTCTime,
-    city :: Text
+    merchant :: DM.Merchant
   }
 
 rentalSearch ::
@@ -93,7 +94,7 @@ rentalSearch personId bundleVersion clientVersion device req = do
             startTime = req.startTime,
             gatewayUrl = merchant.gatewayUrl,
             searchRequestExpiry = searchRequest.validTill,
-            city = merchant.city
+            ..
           }
   return dSearchRes
   where

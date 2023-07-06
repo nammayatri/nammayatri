@@ -27,6 +27,7 @@ import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Types
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Lib.Mesh as Mesh
 
@@ -240,6 +241,26 @@ instance FromBackendRow Postgres DbHash
 
 instance IsString DbHash where
   fromString = show
+
+instance FromField Context.City where
+  fromField = fromFieldJSON
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Context.City where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Context.City
+
+instance FromBackendRow Postgres Context.City
+
+instance FromField Context.Country where
+  fromField = fromFieldJSON
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Context.Country where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Context.Country
+
+instance FromBackendRow Postgres Context.Country
 
 fromFieldJSON ::
   (Typeable a, FromJSON a) =>

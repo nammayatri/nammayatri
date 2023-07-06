@@ -31,7 +31,6 @@ import Data.List (nubBy)
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as DPDEN
-import Environment
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
@@ -113,7 +112,7 @@ getPersonDetails (personId, _) = do
   decPerson <- decrypt person
   return $ Person.makePersonAPIEntity decPerson
 
-updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasBapInfo r m, CoreMetrics m) => Id Person.Person -> UpdateProfileReq -> m APISuccess.APISuccess
+updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, CoreMetrics m) => Id Person.Person -> UpdateProfileReq -> m APISuccess.APISuccess
 updatePerson personId req = do
   mPerson <- join <$> QPerson.findByEmail `mapM` req.email
   whenJust mPerson (\_ -> throwError PersonEmailExists)
@@ -137,7 +136,7 @@ updatePerson personId req = do
       req.bundleVersion
   pure APISuccess.Success
 
-validateRefferalCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasBapInfo r m, CoreMetrics m) => Id Person.Person -> Text -> m (Maybe Text)
+validateRefferalCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, CoreMetrics m) => Id Person.Person -> Text -> m (Maybe Text)
 validateRefferalCode personId refCode = do
   unless (TU.validateAllDigitWithMinLength 6 refCode) (throwError $ InvalidRequest "Referral Code must have 6 digits")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt

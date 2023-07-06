@@ -34,6 +34,7 @@ import qualified Domain.Types.Merchant as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
 import Lib.Utils
 import Lib.UtilsTH
@@ -89,7 +90,7 @@ data MerchantT f = MerchantT
     aadhaarVerificationRequired :: B.C f Bool,
     headCount :: B.C f (Maybe Int),
     status :: B.C f Domain.Status,
-    city :: B.C f Text,
+    city :: B.C f Context.City,
     verified :: B.C f Bool,
     enabled :: B.C f Bool,
     internalApiKey :: B.C f Text,
@@ -127,6 +128,8 @@ deriving stock instance Ord Domain.Status
 deriving stock instance Ord GeoRestriction
 
 deriving stock instance Eq GeoRestriction
+
+deriving stock instance Ord Context.City
 
 merchantTMod :: MerchantT (B.FieldModification (B.TableField MerchantT))
 merchantTMod =

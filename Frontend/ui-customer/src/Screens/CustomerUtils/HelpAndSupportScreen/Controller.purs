@@ -214,7 +214,7 @@ eval (EmailEditTextAC (PrimaryEditText.TextChanged id a)) state = continue state
 
 eval (DescriptionEditTextAC (PrimaryEditText.TextChanged id a)) state = continue state{data {description = a},props{btnActive = length state.data.email > 0 && length (trim a) > 9 && validateEmail state.data.email}}
 
-eval DeleteAccount state = continue state {props {showDeleteAccountView = true}}
+eval DeleteAccount state = continue state {props {showDeleteAccountView = true}, data{description = "", email = ""}}
 
 eval (DeleteGenericHeaderAC(GenericHeader.PrefixImgOnClick )) state = continue state {props {showDeleteAccountView = false}}
 

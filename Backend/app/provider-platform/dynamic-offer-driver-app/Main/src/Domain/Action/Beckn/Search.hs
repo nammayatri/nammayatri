@@ -51,6 +51,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude (Alternative (empty), whenJustM)
 import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
@@ -80,6 +81,8 @@ data DSearchReq = DSearchReq
     transactionId :: Text,
     bapId :: Text,
     bapUri :: BaseUrl,
+    bapCity :: Context.City,
+    bapCountry :: Context.Country,
     pickupLocation :: LatLong,
     pickupTime :: UTCTime,
     dropLocation :: LatLong,
@@ -310,6 +313,8 @@ buildSearchRequest DSearchReq {..} providerId fromLocation toLocation estimatedD
       { id = Id uuid,
         createdAt = now,
         area = Just area,
+        bapCity = Just bapCity,
+        bapCountry = Just bapCountry,
         autoAssignEnabled = Nothing,
         ..
       }

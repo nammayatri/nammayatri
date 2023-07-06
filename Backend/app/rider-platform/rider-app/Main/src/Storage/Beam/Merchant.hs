@@ -38,6 +38,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Base64
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing (GeoRestriction)
 import qualified Kernel.Types.Geofencing as Geo
 import Lib.Utils
@@ -88,12 +89,25 @@ deriving stock instance Read Base64
 instance IsString GeoRestriction where
   fromString = show
 
+deriving stock instance Ord Context.City
+
+deriving stock instance Ord Context.Country
+
+instance IsString Context.City where
+  fromString = show
+
+instance IsString Context.Country where
+  fromString = show
+
 data MerchantT f = MerchantT
   { id :: B.C f Text,
     shortId :: B.C f Text,
     subscriberId :: B.C f Text,
     name :: B.C f Text,
-    city :: B.C f Text,
+    city :: B.C f Context.City,
+    country :: B.C f Context.Country,
+    bapId :: B.C f Text,
+    bapUniqueKeyId :: B.C f Text,
     originRestriction :: B.C f GeoRestriction,
     destinationRestriction :: B.C f GeoRestriction,
     gatewayUrl :: B.C f Text,
@@ -139,6 +153,9 @@ merchantTMod =
       subscriberId = B.fieldNamed "subscriber_id",
       name = B.fieldNamed "name",
       city = B.fieldNamed "city",
+      country = B.fieldNamed "country",
+      bapId = B.fieldNamed "bap_id",
+      bapUniqueKeyId = B.fieldNamed "bap_unique_key_id",
       originRestriction = B.fieldNamed "origin_restriction",
       destinationRestriction = B.fieldNamed "destination_restriction",
       gatewayUrl = B.fieldNamed "gateway_url",
@@ -162,6 +179,9 @@ defaultMerchant =
       subscriberId = "",
       name = "",
       city = "",
+      country = "",
+      bapId = "",
+      bapUniqueKeyId = "",
       originRestriction = "",
       destinationRestriction = "",
       gatewayUrl = "",

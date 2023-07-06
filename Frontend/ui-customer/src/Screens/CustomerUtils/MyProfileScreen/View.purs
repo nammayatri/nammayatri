@@ -236,10 +236,7 @@ updatePersonalDetails state push =
               , orientation VERTICAL
               , background Color.white900
               ]
-              [ if state.props.updateProfile then userNameEditTextView push state else textView[]
-              , emailIdEditTextView push state
-              , genderCaptureView state push
-              ]
+              ([] <> (if state.props.updateProfile then [userNameEditTextView push state, emailIdEditTextView push state, genderCaptureView state push ] else []))
           ]
       ]
 

@@ -26,8 +26,8 @@ import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, unit, not, ($), (<<<), (<>), (==), (/=), (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, afterRender, alignParentBottom, background, color, gravity, height, linearLayout, margin, onBackPressed, orientation, padding, relativeLayout, scrollView, singleLine, text, textView, weight, width, fontStyle, textSize, stroke, cornerRadius, imageView, imageWithFallback, visibility, onClick, editText, hint, id, pattern, hintColor, onChange, onFocus, onAnimationEnd)
+import Prelude (Unit, const, unit, not, ($), (<<<), (<>), (==), (/=), (||), (&&))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, afterRender, alignParentBottom, background, color, gravity, height, linearLayout, margin, onBackPressed, orientation, padding, relativeLayout, scrollView, singleLine, text, textView, weight, width, fontStyle, textSize, stroke, cornerRadius, imageView, imageWithFallback, visibility, onClick, editText, hint, id, pattern, hintColor, onChange, onFocus, onAnimationEnd, lineHeight, alpha, adjustViewWithKeyboard)
 import Screens.AccountSetUpScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -100,6 +100,7 @@ view push state =
             , alignParentBottom "true,-1"
             , background Color.white900
             , padding (Padding 16 0 16 26)
+            , adjustViewWithKeyboard "true"
             ]
             [ PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state) ]
         , if state.props.backPressed then goBackPopUpView push state else emptyTextView
@@ -172,6 +173,39 @@ nameEditTextView state push =
           , id $ EHC.getNewIDWithTag "NameEditText"
           ] <> if EHC.os == "IOS" then [] else [onClick push $ const NameSectionClick]
         ]
+    , linearLayout 
+        [ height $ V 18
+        , width MATCH_PARENT
+        , orientation HORIZONTAL
+        , gravity CENTER_VERTICAL
+        ][  linearLayout
+              [ height MATCH_PARENT
+              , width MATCH_PARENT
+              , orientation HORIZONTAL
+              , gravity CENTER_VERTICAL
+              , visibility if state.data.nameErrorMessage /= Nothing then VISIBLE else GONE
+              ][  imageView $
+                  [ width $ V 20
+                  , height MATCH_PARENT
+                  , padding $ Padding 0 5 0 3
+                  , imageWithFallback "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png" 
+                  ]
+                , textView $
+                  [ height WRAP_CONTENT
+                  , width WRAP_CONTENT
+                  , text case state.data.nameErrorMessage of 
+                      Just ST.INVALID_NAME -> getString NAME_SHOULD_BE_MORE_THAN_2_CHARACTERS
+                      _ -> ""
+                  , color Color.black600
+                  -- , fontStyle $ FontStyle.bold LanguageStyle
+                  , gravity LEFT
+                  , margin $ Margin 0 0 0 0
+                  , lineHeight "28"
+                  , singleLine true
+                  , alpha 1.0
+                  ]  <> FontStyle.body3 TypoGraphy
+              ]           
+          ]
     ]
 
 
@@ -182,7 +216,7 @@ genderCaptureView state push =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , margin $ MarginTop 32
+    , margin $ MarginTop 14
     , orientation VERTICAL
     ] $
     [ textView

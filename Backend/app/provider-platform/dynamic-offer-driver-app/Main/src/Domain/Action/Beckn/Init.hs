@@ -34,6 +34,7 @@ import Kernel.Randomizer (getRandomElement)
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis
 import Kernel.Tools.Metrics.CoreMetrics
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -57,6 +58,8 @@ data InitReq = InitReq
   { driverQuoteId :: Text,
     bapId :: Text,
     bapUri :: BaseUrl,
+    bapCity :: Context.City,
+    bapCountry :: Context.Country,
     initTypeReq :: InitTypeReq,
     maxEstimatedDistance :: Maybe HighPrecMeters,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
@@ -197,6 +200,8 @@ handler merchantId req eitherReq = do
             primaryExophone = exophone.primaryPhone,
             bapId = req.bapId,
             bapUri = req.bapUri,
+            bapCity = Just req.bapCity,
+            bapCountry = Just req.bapCountry,
             riderId = Nothing,
             vehicleVariant = driverQuote.vehicleVariant,
             estimatedDistance = driverQuote.distance,
