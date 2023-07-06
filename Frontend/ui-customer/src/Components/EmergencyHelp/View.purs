@@ -183,7 +183,7 @@ callPoliceConfig state  =
   config' = PopUpModalConfig.config
   popUpConfig' = config' {
     primaryText {
-      text = getString DAIL_100
+      text = getString DIAL_112
     , margin = (Margin 40 23 40 12)
     , fontStyle = FontStyle.semiBold LanguageStyle
     }
@@ -192,12 +192,12 @@ callPoliceConfig state  =
     , width = (V 140)
     , fontSize = FontSize.a_16 }
     , option2 {
-      text = getString CALL_POLICE
+      text = getString DIAL_112
     , width = (V 140)
     , fontSize = FontSize.a_16 }
     , backgroundClickable = true
     , secondaryText {
-      text = getString YOU_ARE_ABOUT_TO_CALL_POLICE
+      text = getString YOU_ARE_ABOUT_TO_CALL_NEAREST_EMERGENCY_CENTRE
     , margin = (Margin 40 0 40 32) }
     , gravity = CENTER
     , margin = (Margin 16 0 16 0)
@@ -488,6 +488,6 @@ supportList state = [
   , title : getString CALL_NAMMA_YATRI_SUPPORT
   , secondaryTitle : getString ALSO_SHARE_YOUR_RIDE_STATUS_AND_LOCATION },
   { action : CallPolicePopup
-  , title : getString CALL_POLICE
+  , title : getString CALL_EMERGENCY_CENTRE
   , secondaryTitle : getString ALSO_SHARE_YOUR_RIDE_STATUS_AND_LOCATION }
 ]

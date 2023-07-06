@@ -283,8 +283,8 @@ const kannadaStrings = {
   "DO_YOU_NEED_EMERGENCY_HELP": "ನಿಮಗೆ ತುರ್ತು ಸಹಾಯ ಬೇಕೇ ?",
   "CALL_SUPPORT": "ಕರೆ ಬೆಂಬಲ",
   "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "ನೀವು ನಮ್ಮ ಯಾತ್ರಿ ಬೆಂಬಲ ತಂಡಕ್ಕೆ ಕರೆ ಮಾಡಲಿರುವಿರಿ. ನೀವು ಮುಂದುವರೆಯಲು ಬಯಸುವಿರಾ?",
-  "YOU_ARE_ABOUT_TO_CALL_POLICE": "ನೀವು ಪೊಲೀಸರಿಗೆ ಕರೆ ಮಾಡಲಿರುವಿರಿ. ನೀವು ಮುಂದುವರೆಯಲು ಬಯಸುವಿರಾ?",
-  "DAIL_100": "ಡಯಲ್ 100?",
+  "YOU_ARE_ABOUT_TO_CALL_NEAREST_EMERGENCY_CENTRE": "ನೀವು ಹತ್ತಿರದ ತುರ್ತು ಕೇಂದ್ರಕ್ಕೆ ಕರೆ ಮಾಡಲಿರುವಿರಿ. ನೀವು ಮುಂದುವರೆಯಲು ಬಯಸುವಿರಾ?",
+  "DIAL_112": "ಡಯಲ್ 112?",
   "HELP_US_WITH_YOUR_FEEDBACK": "ನಿಮ್ಮ ಪ್ರತಿಕ್ರಿಯೆಯೊಂದಿಗೆ ನಮಗೆ ಸಹಾಯ ಮಾಡಿ",
   "WAIT_TIME": "ಸಮಯ ಕಾಯಿರಿ",
   "FAVOURITES": "ಮೆಚ್ಚಿನವುಗಳು",
@@ -503,5 +503,7 @@ const kannadaStrings = {
   "THIS_FIELD_IS_REQUIRED" : "ಈ ಜಾಗ ಬೇಕಾಗಿದೆ",
   "EMAIL_EXISTS_ALREADY" : "ಇಮೇಲ್ ಈಗಾಗಲೇ ಅಸ್ತಿತ್ವದಲ್ಲಿದೆ",
   "OKAY_GOT_IT" : "ಸರಿ ಅರ್ಥವಾಯಿತು",
-  "CALL_NAMMA_YATRI_SUPPORT" : "ನಮ್ಮ ಯಾತ್ರಿ ಬೆಂಬಲಕ್ಕೆ ಕರೆ ಮಾಡಿ"
+  "CALL_NAMMA_YATRI_SUPPORT" : "ನಮ್ಮ ಯಾತ್ರಿ ಬೆಂಬಲಕ್ಕೆ ಕರೆ ಮಾಡಿ",
+  "CALL_112": "112 ಗೆ ಕರೆ ಮಾಡಿ",
+  "CALL_EMERGENCY_CENTRE": "ತುರ್ತು ಕೇಂದ್ರಕ್ಕೆ ಕರೆ ಮಾಡಿ"
 }

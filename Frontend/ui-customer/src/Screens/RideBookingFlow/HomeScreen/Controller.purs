@@ -759,6 +759,7 @@ eval BackPressed state = do
                           else if state.props.showMultipleRideInfo then continue state{props{showMultipleRideInfo=false}}
                           else if state.props.emergencyHelpModelState.showContactSupportPopUp then continue state {props {emergencyHelpModelState{showContactSupportPopUp = false}}}
                           else if state.props.emergencyHelpModelState.showCallPolicePopUp then continue state {props{emergencyHelpModelState{showCallPolicePopUp = false}}}
+                          else if state.props.emergencyHelpModelState.showCallSuccessfulPopUp then continue state {props{emergencyHelpModelState{showCallSuccessfulPopUp = false}}}
                           else if state.props.showLiveDashboard then do
                             continueWithCmd state [do
                               _ <- pure $ goBackPrevWebPage (getNewIDWithTag "webview")
@@ -987,7 +988,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.PrimaryButtonAC P
   _ <- pure $ performHapticFeedback unit
   continueWithCmd state
     [ do
-        _ <- pure $ showDialer (getDriverNumber "")
+        _ <- pure $ showDialer (getDriverNumber "") true
         _ <- (firebaseLogEventWithTwoParams "ny_user_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
         pure NoAction
     ]
@@ -1063,7 +1064,7 @@ eval (EmergencyHelpModalAC (EmergencyHelpController.StoreContacts)) state  = do
 eval (EmergencyHelpModalAC (EmergencyHelpController.AddedEmergencyContacts)) state  =  updateAndExit state{props{emergencyHelpModelState{isSelectEmergencyContact = true}}} $ GoToEmergencyContacts state {props {emergencyHelpModelState{isSelectEmergencyContact = true}}}
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.CallEmergencyContact PopUpModal.OnButton2Click)) state = do
-    void <- pure $ showDialer state.props.emergencyHelpModelState.currentlySelectedContact.phoneNo
+    void <- pure $ showDialer state.props.emergencyHelpModelState.currentlySelectedContact.phoneNo true
     updateAndExit state{props{emergencyHelpModelState{showCallContactPopUp = false}}} $ CallContact state {props {emergencyHelpModelState{showCallContactPopUp = false}}}
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.CallSuccessful PopUpModal.OnButton1Click)) state = do
@@ -1073,12 +1074,12 @@ eval (EmergencyHelpModalAC (EmergencyHelpController.CallSuccessful PopUpModal.On
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.CallPolice PopUpModal.OnButton1Click)) state = continue state{props{emergencyHelpModelState{showCallPolicePopUp = false}}}
 eval (EmergencyHelpModalAC (EmergencyHelpController.CallPolice PopUpModal.OnButton2Click)) state = do
-    void $ pure $  showDialer "100"
+    void $ pure $  showDialer "112" false
     updateAndExit state{props{emergencyHelpModelState{showCallPolicePopUp = false}}} $ CallPolice state {props {emergencyHelpModelState{showCallPolicePopUp = false}}}
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.ContactSupport PopUpModal.OnButton1Click)) state = continue state{props{emergencyHelpModelState{showContactSupportPopUp = false}}}
 eval (EmergencyHelpModalAC (EmergencyHelpController.ContactSupport PopUpModal.OnButton2Click)) state = do
-    void $ pure $  showDialer $ getSupportNumber ""
+    void $ pure $  showDialer (getSupportNumber "") true
     updateAndExit state{props{emergencyHelpModelState{showContactSupportPopUp = false}}} $ CallSupport state {props {emergencyHelpModelState{showContactSupportPopUp = false}}}
 
 eval (CancelRidePopUpAction (CancelRidePopUp.Button1 PrimaryButtonController.OnClick)) state = do
@@ -1438,14 +1439,14 @@ eval (ShowCallDialer item) state = do
     ANONYMOUS_CALLER -> do
       continueWithCmd state{props{ showCallPopUp = false }}
         [ do
-            _ <- pure $ showDialer (if (STR.take 1 state.data.driverInfoCardState.merchantExoPhone) == "0" then state.data.driverInfoCardState.merchantExoPhone else "0" <> state.data.driverInfoCardState.merchantExoPhone)
+            _ <- pure $ showDialer (if (STR.take 1 state.data.driverInfoCardState.merchantExoPhone) == "0" then state.data.driverInfoCardState.merchantExoPhone else "0" <> state.data.driverInfoCardState.merchantExoPhone) true
             _ <- (firebaseLogEventWithTwoParams "ny_user_anonymous_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
             pure NoAction
         ]
     DIRECT_CALLER -> do
       continueWithCmd state{props{ showCallPopUp = false }}
         [ do
-            _ <- pure $ showDialer $ fromMaybe state.data.driverInfoCardState.merchantExoPhone state.data.driverInfoCardState.driverNumber
+            _ <- pure $ showDialer (fromMaybe state.data.driverInfoCardState.merchantExoPhone state.data.driverInfoCardState.driverNumber) true
             _ <- (firebaseLogEventWithTwoParams "ny_user_direct_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
             pure NoAction
         ]
@@ -1601,7 +1602,7 @@ eval (CallSupportAction PopUpModal.OnButton1Click) state= do
 
 eval (CallSupportAction PopUpModal.OnButton2Click) state= do
   _ <- pure $ performHapticFeedback unit
-  _ <- pure $ showDialer (getSupportNumber "")
+  _ <- pure $ showDialer (getSupportNumber "") true
   _ <- pure $ firebaseLogEvent "ny_user_ride_support_click"
   continue state{props{callSupportPopUp=false}}
 

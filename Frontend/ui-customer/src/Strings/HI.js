@@ -283,8 +283,8 @@ const hindiStrings = {
   "DO_YOU_NEED_EMERGENCY_HELP": "क्या आपको आपातकालीन सहायता की आवश्यकता है ?",
   "CALL_SUPPORT": "कॉल सपोर्ट",
   "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "आप नम्मा यात्री सपोर्ट टीम को कॉल करने वाले हैं। क्या आप आगे बढ़ना चाहते हैं?",
-  "YOU_ARE_ABOUT_TO_CALL_POLICE": "आप पुलिस को कॉल करने वाले हैं। क्या आप आगे बढ़ना चाहते हैं?",
-  "DAIL_100": "डायल 100?",
+  "YOU_ARE_ABOUT_TO_CALL_NEAREST_EMERGENCY_CENTRE": "आप निकटतम आपातकालीन केंद्र पर कॉल करने वाले हैं। क्या आप आगे बढ़ना चाहते हैं?",
+  "DIAL_112": "डायल 112?",
   "HELP_US_WITH_YOUR_FEEDBACK": "अपने फीडबैक से हमारी सहायता करें",
   "WAIT_TIME": "प्रतीक्षा समय",
   "FAVOURITES": "पसंदीदा",
@@ -511,5 +511,7 @@ const hindiStrings = {
   "THIS_FIELD_IS_REQUIRED" : "यह फ़ील्ड आवश्यक है",
   "EMAIL_EXISTS_ALREADY" : "ईमेल पहले से ही मौजूद है",
   "OKAY_GOT_IT" : "ठीक है समझ आ गया",
-  "CALL_NAMMA_YATRI_SUPPORT" : "नम्मा यात्री सहायता को कॉल करें"
+  "CALL_NAMMA_YATRI_SUPPORT" : "नम्मा यात्री सहायता को कॉल करें",
+  "CALL_112": "112 पर कॉल करें",
+  "CALL_EMERGENCY_CENTRE": "आपातकालीन केंद्र को कॉल करें"
 }
