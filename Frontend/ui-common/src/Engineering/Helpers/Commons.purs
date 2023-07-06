@@ -67,9 +67,7 @@ foreign import safeMarginTopImpl :: Unit -> Int
 foreign import safeMarginBottomImpl :: Unit -> Int
 foreign import getNewIDWithTag :: String -> String
 foreign import getOs :: Unit -> String
-foreign import setTextImpl :: String -> String -> Effect Unit
-setText' :: String -> String -> Effect Unit
-setText' = setTextImpl
+foreign import setText :: String -> String -> Unit
 foreign import countDown :: forall action. Int -> String -> (action -> Effect Unit) -> (Int -> String -> String -> String-> action)  -> Effect Unit
 foreign import clearTimer :: String -> Unit
 foreign import getExpiryTime :: String -> Boolean -> Int

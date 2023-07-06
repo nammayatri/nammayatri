@@ -15,7 +15,7 @@ const kannadaStrings = {
   "AMOUNT_PAID": "ಪಾವತಿಸಿದ ಮೊತ್ತ",
   "TRIP_DETAILS_": "ಪ್ರವಾಸದ ವಿವರಗಳು",
   "DOWNLOAD_PDF": "PDF ಅನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ",
-  "GST": "ಜಿಎಸ್ಟಿ",
+  "CGST": "ಸಿಜಿಎಸ್ಟಿಟಿ",
   "INVOICE": "ಸರಕುಪಟ್ಟಿ",
   "TRIP_CHARGES": "ಟ್ರಿಪ್ ಶುಲ್ಕ",
   "PROMOTION": "ಪ್ರಚಾರ",
@@ -506,5 +506,9 @@ const kannadaStrings = {
   "CALL_NAMMA_YATRI_SUPPORT" : "ನಮ್ಮ ಯಾತ್ರಿ ಬೆಂಬಲಕ್ಕೆ ಕರೆ ಮಾಡಿ",
   "CALL_112": "112 ಗೆ ಕರೆ ಮಾಡಿ",
   "CALL_EMERGENCY_CENTRE": "ತುರ್ತು ಕೇಂದ್ರಕ್ಕೆ ಕರೆ ಮಾಡಿ",
-  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS" : "ವಿವರಣೆಯು 10 ಅಕ್ಷರಗಳಿಗಿಂತ ಹೆಚ್ಚು ಇರಬೇಕು"
+  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS" : "ವಿವರಣೆಯು 10 ಅಕ್ಷರಗಳಿಗಿಂತ ಹೆಚ್ಚು ಇರಬೇಕು",
+  "THIS_FIELD_IS_REQUIRED" : "ಈ ಜಾಗ ಬೇಕಾಗಿದೆ", 
+  "EMAIL_EXISTS_ALREADY" : "ಇಮೇಲ್ ಈಗಾಗಲೇ ಅಸ್ತಿತ್ವದಲ್ಲಿದೆ",
+  "PLATFORM_FEE" : "ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಶುಲ್ಕ",
+  "SGST" : "SGST"
 }

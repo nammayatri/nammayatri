@@ -64,7 +64,8 @@ const nammaYatriConfigs = {
     APP_LINK : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner",
     PRIVACY_POLICY_LINK : "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9",
     SPECIAL_ZONE_OTP_VIEW : "false",
-    BONUS_EARNED : "true"
+    BONUS_EARNED : "true",
+    OTP_MESSAGE_REGEX : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
 }
 
 const kannadaStrings = {

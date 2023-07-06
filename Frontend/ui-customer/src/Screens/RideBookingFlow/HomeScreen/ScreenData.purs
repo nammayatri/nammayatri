@@ -104,6 +104,7 @@ initData = {
     , estimateId : ""
     , selectedQuote : Nothing
     , locationRequestCount : 0
+    , zoneTimerExpired : false
     , customerTip : {
         enableTips: false
       , tipForDriver: 10
@@ -300,6 +301,7 @@ dummyDriverInfo =
   , merchantExoPhone : ""
   , createdAt : ""
   , initDistance : Nothing
+  , vehicleVariant : ""
   }
 
 dummySettingBar :: SettingSideBarState

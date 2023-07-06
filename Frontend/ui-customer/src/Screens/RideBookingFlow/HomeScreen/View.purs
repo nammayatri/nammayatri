@@ -15,7 +15,7 @@
 
 module Screens.HomeScreen.View where
 
-import Screens.RideBookingFlow.HomeScreen.Config (autoAnimConfig,chooseYourRideConfig, menuButtonConfig, cancelRidePopUpConfig, distanceOusideLimitsConfig, driverInfoCardViewState, emergencyHelpModelViewState, estimateChangedPopupConfig, fareBreakUpConfig, logOutPopUpModelConfig, previousRideRatingViewState, primaryButtonConfirmPickupConfig, primaryButtonRequestRideConfig, quoteListModelViewState, rateCardConfig, rateRideButtonConfig, ratingCardViewState, searchLocationModelViewState, shareAppConfig, shortDistanceConfig, skipButtonConfig, sourceUnserviceableConfig, whereToButtonConfig, chatViewConfig, metersToKm, callSupportConfig,genderBannerConfig,cancelAppConfig, specialLocationIcons, specialLocationConfig, requestInfoCardConfig)
+import Screens.RideBookingFlow.HomeScreen.Config (autoAnimConfig,chooseYourRideConfig, menuButtonConfig, cancelRidePopUpConfig, distanceOusideLimitsConfig, driverInfoCardViewState, emergencyHelpModelViewState, estimateChangedPopupConfig, fareBreakUpConfig, logOutPopUpModelConfig, previousRideRatingViewState, primaryButtonConfirmPickupConfig, primaryButtonRequestRideConfig, quoteListModelViewState, rateCardConfig, rateRideButtonConfig, ratingCardViewState, searchLocationModelViewState, shareAppConfig, shortDistanceConfig, skipButtonConfig, sourceUnserviceableConfig, whereToButtonConfig, chatViewConfig, metersToKm, callSupportConfig,genderBannerConfig,cancelAppConfig, specialLocationIcons, specialLocationConfig, requestInfoCardConfig, zoneTimerExpiredConfig)
 import Accessor (_lat, _lon, _selectedQuotes, _fareProductType)
 import Animation (fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromTopWithAlpha, fadeIn)
 import Animation.Config (Direction(..), translateFullYAnimWithDurationConfig, translateYAnimHomeConfig)
@@ -59,12 +59,12 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (Merchant(..), decodeErrorMessage, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getMerchant, getNewTrackingId, getPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, waitingCountdownTimer)
+import Helpers.Utils (decodeErrorMessage, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getMerchant, getNewTrackingId, getPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, waitingCountdownTimer)
 import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, startTimerWithTime, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
-import Merchant.Utils (getValueFromConfig)
+import Merchant.Utils (Merchant(..), getValueFromConfig)
 import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<=), (<>), (==), (>), (||))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
@@ -119,7 +119,7 @@ screen initialState =
                     Nothing -> pure unit
                   pure unit
               FindingEstimate -> do
-                _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
+                _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                 _ <- launchAff $ flowRunner defaultGlobalState $ getEstimate GetEstimates CheckFlowStatusAction 10 1000.0 push initialState
                 pure unit
               FindingQuotes -> do
@@ -140,11 +140,11 @@ screen initialState =
                 _ <- pure $ enableMyLocation true
                 if ((getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION") then waitingCountdownTimer initialState.data.driverInfoCardState.driverArrivalTime push WaitingTimeAction else pure unit
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
-                  _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
+                  _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   void $ launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 3000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup"
                 else pure unit
-                if(not initialState.props.chatcallbackInitiated) then do
+                if(not initialState.props.chatcallbackInitiated && not initialState.props.isSpecialZone) then do
                   _ <- storeCallBackMessageUpdated push initialState.data.driverInfoCardState.bppRideId "Customer" UpdateMessages
                   _ <- storeCallBackOpenChatScreen push OpenChatScreen
                   _ <- startChatListenerService
@@ -155,7 +155,7 @@ screen initialState =
               RideStarted -> do
                 _ <- pure $ enableMyLocation false
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
-                  _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
+                  _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   _ <- launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 20000.0 (getValueToLocalStore TRACKING_ID) initialState "trip"
                   pure unit
@@ -166,7 +166,7 @@ screen initialState =
               ChatWithDriver -> if ((getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION") then waitingCountdownTimer initialState.data.driverInfoCardState.driverArrivalTime push WaitingTimeAction else pure unit
               ConfirmingLocation -> do
                 _ <- pure $ enableMyLocation true
-                _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
+                _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                 _ <- storeCallBackLocateOnMap push UpdatePickupLocation
                 pure unit
               TryAgain -> do
@@ -312,6 +312,7 @@ view push state =
             , if state.props.showCallPopUp then (driverCallPopUp push state) else emptyTextView state
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
             , if state.props.cancelSearchCallDriver then cancelSearchPopUp push state else emptyTextView state
+            -- , if state.props.zoneTimerExpired then zoneTimerExpiredView state push else emptyTextView state
             ]
         ]
     ]
@@ -2058,6 +2059,15 @@ notinPickUpZoneView push state =
               ]
           ]
       ]
+
+zoneTimerExpiredView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+zoneTimerExpiredView state push = 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , gravity CENTER 
+  ][ PopUpModal.view (push <<< ZoneTimerExpired) (zoneTimerExpiredConfig state)]
+
 currentLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 currentLocationView push state =
   linearLayout

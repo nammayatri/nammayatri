@@ -15,7 +15,7 @@ const englishStrings = {
   "AMOUNT_PAID": "Amount Paid",
   "TRIP_DETAILS_": "Trip Details",
   "DOWNLOAD_PDF": "Download PDF",
-  "GST": "GST",
+  "CGST": "CGST",
   "INVOICE": "Invoice",
   "TRIP_CHARGES": "Trip Charges",
   "PROMOTION": "Promotion",
@@ -374,10 +374,10 @@ const englishStrings = {
   "PERMISSION_DENIED": "Permission Denied",
   "PERCENTAGE_OF_NOMINAL_FARE": "10% of base fare",
   "PAY_VIA_CASH_OR_UPI": "Pay via Cash / UPI",
-  "BOARD_THE_FIRST_TAXI": "Board the first taxi from Jatri Sathi zone",
+  "BOARD_THE_FIRST_TAXI": "Board the first taxi from Yatri Sathi zone",
   "REQUEST_CALLBACK": "Request Callback",
   "CHOOSE_YOUR_RIDE": "Choose Your Ride",
-  "BOARD_THE_FIRST_TAXI": "Board the first taxi from Jatri Sathi \nzone",
+  "BOARD_THE_FIRST_TAXI": "Board the first taxi from Yatri Sathi \nzone",
   "ECONOMICAL": "Economical",
   "COMFY": "Comfy",
   "NAVIGATE": "Navigate",
@@ -511,5 +511,7 @@ const englishStrings = {
   "CALL_NAMMA_YATRI_SUPPORT" : "Call Namma Yatri Support",
   "CALL_112": "Call 112",
   "CALL_EMERGENCY_CENTRE": "Call Emergency Centre",
-  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS" : "Description should be more than 10 characters"
+  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS" : "Description should be more than 10 characters",
+  "PLATFORM_FEE" : "Platform Fee",
+  "SGST" : "SGST"
 }

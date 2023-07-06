@@ -16,7 +16,7 @@ const hindiStrings = {
   "AMOUNT_PAID": "राशि का भुगतान",
   "TRIP_DETAILS_": "यात्रा विवरण",
   "DOWNLOAD_PDF": "डाउनलोड पीडीऍफ़",
-  "GST": "जीएसटी",
+  "CGST": "सीजीएसटी",
   "INVOICE": "बिल",
   "TRIP_CHARGES": "यात्रा शुल्क",
   "PROMOTION": "पदोन्नति",
@@ -373,9 +373,9 @@ const hindiStrings = {
   "PERMISSION_DENIED": "अनुमति नहीं दी गई",
   "PERCENTAGE_OF_NOMINAL_FARE": "~ बेस फेयर का 10%",
   "PAY_VIA_CASH_OR_UPI": "नकद / यूपीआई के माध्यम से भुगतान करें",
-  "BOARD_THE_FIRST_TAXI": "जात्री साथी अंचल से पहली टैक्सी में सवार हों",
+  "BOARD_THE_FIRST_TAXI": "यात्री साथी अंचल से पहली टैक्सी में सवार हों",
   "REQUEST_CALLBACK": "कॉलबैक का अनुरोध करें",
-  "BOARD_THE_FIRST_TAXI": "जात्री साथी अंचल से पहली टैक्सी में सवार हों",
+  "BOARD_THE_FIRST_TAXI": "यात्री साथी अंचल से पहली टैक्सी में सवार हों",
   "CHOOSE_YOUR_RIDE": "अपनी सवारी चुनें",
   "PAY_VIA_CASH_OR_UPI": "नकद / यूपीआई के माध्यम से भुगतान करें",
   "ECONOMICAL": "किफ़ायती",
@@ -512,5 +512,9 @@ const hindiStrings = {
   "CALL_NAMMA_YATRI_SUPPORT" : "नम्मा यात्री सहायता को कॉल करें",
   "CALL_112": "112 पर कॉल करें",
   "CALL_EMERGENCY_CENTRE": "आपातकालीन केंद्र को कॉल करें",
-  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS" :"विवरण 10 अक्षरों से अधिक होना चाहिए"
+  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS" :"विवरण 10 अक्षरों से अधिक होना चाहिए",
+  "THIS_FIELD_IS_REQUIRED" : "यह फ़ील्ड आवश्यक है", 
+  "EMAIL_EXISTS_ALREADY" : "ईमेल पहले से ही मौजूद है",
+  "PLATFORM_FEE" : "प्लेटफ़ॉर्म शुल्क",
+  "SGST" : "एसजीएसटी"
 }

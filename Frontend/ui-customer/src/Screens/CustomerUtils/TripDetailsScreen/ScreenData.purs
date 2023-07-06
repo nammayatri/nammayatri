@@ -17,7 +17,7 @@ module Screens.TripDetailsScreen.ScreenData where
 
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Screens.Types (TripDetailsScreenState, PaymentMode(..))
-
+import Data.Maybe(Maybe(..))
 
 initData :: TripDetailsScreenState
 initData = {
@@ -32,6 +32,7 @@ initData = {
       paymentMode : CASH,
       rating : 0,
       tripId : "",
+      vehicleVariant : Nothing,
       selectedItem : dummyIndividualCard
   },
   props: {

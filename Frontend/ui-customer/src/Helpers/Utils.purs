@@ -32,7 +32,6 @@ import Data.Show.Generic (genericShow)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Profunctor.Strong (first)
 import Data.String as DS
-import Data.Eq.Generic (genericEq)
 import Data.Traversable (traverse)
 import Debug (spy)
 import Effect (Effect)
@@ -42,7 +41,7 @@ import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Effect.Class (liftEffect)
 import Effect.Console (logShow)
 import Engineering.Helpers.Commons (liftFlow, os, isPreviousVersion)
-import Engineering.Helpers.Commons (parseFloat, setText') as ReExport
+import Engineering.Helpers.Commons (parseFloat, setText) as ReExport
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Generic (Foreign, decodeJSON, encodeJSON, decode)
 import Juspay.OTP.Reader (initiateSMSRetriever)
@@ -58,8 +57,8 @@ import Data.Array (sortBy)
 import Data.Ord (comparing)
 import Data.Lens ((^.))
 import Accessor (_distance_meters)
-import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import Data.String.CodeUnits (fromCharArray, toCharArray)
+import Merchant.Utils (getValueFromConfig, getMerchantId, Merchant(..))
 
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
@@ -175,7 +174,7 @@ otpRule =
   Reader.OtpRule
     { matches:
         { sender: []
-        , message : "is your OTP for login to Namma Yatri App"
+        , message : (getValueFromConfig "OTP_MESSAGE_REGEX")
         }
     , otp: "\\d{4}"
     , group: Nothing
@@ -335,10 +334,10 @@ getPreviousVersion _ =
   if os == "IOS" then
     case getMerchant FunctionCall of
       NAMMAYATRI -> "1.2.5"
-      JATRISAATHI -> "0.0.0"
+      YATRISATHI -> "0.0.0"
       _ -> "1.0.0"
-    else case getMerchant FunctionCall of
-        JATRISAATHI -> "0.0.0"
+    else case getMerchant FunctionCall of 
+        YATRISATHI -> "0.0.0"
         _ -> "1.2.0"
 
 rotateArray :: forall a. Array a -> Int -> Array a
@@ -362,15 +361,6 @@ isHaveFare fare = not null <<< filter (\item -> item.fareType == fare)
 
 sortPredctionByDistance :: Array Prediction -> Array Prediction
 sortPredctionByDistance arr = sortBy (comparing (_^._distance_meters)) arr
-
-foreign import getMerchantId :: String -> Foreign
-
-data Merchant = NAMMAYATRI | JATRISAATHI | YATRI
-
-derive instance genericMerchant :: Generic Merchant _
-instance eqMerchant :: Eq Merchant where eq = genericEq
-instance encodeMerchant :: Encode Merchant where encode = defaultEnumEncode
-instance decodeMerchant:: Decode Merchant where decode = defaultEnumDecode
 
 getMerchant :: LazyCheck -> Merchant
 getMerchant lazy = case (decodeMerchantId (getMerchantId "")) of

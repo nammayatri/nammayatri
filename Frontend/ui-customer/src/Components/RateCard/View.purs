@@ -24,7 +24,7 @@ import Animation (translateInXForwardAnim, translateInXBackwardAnim)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (Merchant(..), getMerchant)
+import Merchant.Utils (Merchant(..), getMerchant)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), const, (<>), (>),(==), (||), (&&))

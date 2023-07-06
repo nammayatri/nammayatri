@@ -36,6 +36,10 @@
     <string name="location_is_turned_off_permission_is_disabled">ലൊക്കേഷൻ ഓഫാക്കി / അനുമതി പ്രവർത്തനരഹിതമാക്കി</string>
     <string name="ride_assigned_to_another_driver">റൈഡ് മറ്റൊരു ഡ്രൈവറെ ഏൽപ്പിച്ചു</string>
     <string name="select_date">തീയതി തിരഞ്ഞെടുക്കുക</string>
+    <string name="chatting_is_enabled">ചാറ്റിംഗ് പ്രവർത്തനക്ഷമമാക്കി</string>
+    <string name="you_can_now_chat_with_driver">നിങ്ങൾക്ക് ഇപ്പോൾ ഡ്രൈവറുമായി ചാറ്റ് ചെയ്യാം</string>
+    <string name="you_can_now_chat_with_customer">നിങ്ങൾക്ക് ഇപ്പോൾ ഉപഭോക്താവുമായി ചാറ്റ് ചെയ്യാം</string>
+    <string name="and">ഒപ്പം</string>
     <string name="new_ride_req">പുതിയ റൈഡ് അഭ്യർത്ഥന</string>
     <string name="new_ride_available_for_offering">ഓഫറിനായി പുതിയ റൈഡ് ലഭ്യമാണ്</string>
     <string name="no_enabled_browser">നിങ്ങളുടെ ഉപകരണത്തിൽ പ്രവർത്തനക്ഷമമാക്കിയ ബ്രൗസറൊന്നും കണ്ടെത്തിയില്ല, ദയവായി ഒരു ബ്രൗസർ പ്രവർത്തനക്ഷമമാക്കുക അല്ലെങ്കിൽ ഇൻസ്റ്റാൾ ചെയ്യുക</string>

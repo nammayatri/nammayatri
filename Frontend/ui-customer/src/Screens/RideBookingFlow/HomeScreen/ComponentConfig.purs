@@ -760,6 +760,7 @@ driverInfoTransformer state =
     , driverNumber : cardState.driverNumber
     , merchantExoPhone : cardState.merchantExoPhone
     , lastMessage : state.data.lastMessage
+    , vehicleVariant : cardState.vehicleVariant
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
@@ -886,6 +887,35 @@ callSupportConfig state = let
     }
   }
   in popUpConfig'
+
+
+zoneTimerExpiredConfig :: ST.HomeScreenState ->  PopUpModal.Config
+zoneTimerExpiredConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    gravity = CENTER
+  , cornerRadius = Corners 16.0 true true true true
+  , margin = Margin 24 32 24 0
+  , primaryText {
+      text = "OTP Expired"
+    , fontStyle = FontStyle.semiBold LanguageStyle
+    }
+  , secondaryText {
+      text = "Your ride OTP expired. Please book again to get a ride"
+    , margin = Margin 16 4 16 24
+    , color = Color.black700
+    }
+  , option1 {
+      visibility = false
+    }
+  , option2 {
+      text =  "Okay"
+    , fontSize = FontSize.a_16
+    , margin = (MarginHorizontal 16 16)
+    }
+  }
+  in popUpConfig'
+  
 menuButtonConfig :: ST.HomeScreenState -> ST.Location -> MenuButton.Config
 menuButtonConfig state item = let
     config = MenuButton.config

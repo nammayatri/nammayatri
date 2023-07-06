@@ -180,6 +180,7 @@ savedLocationsView push state =
 
 getSavedLocationsList :: forall action. (SavedLocationsListRes -> action) -> (action -> Effect Unit) -> ST.SavedLocationScreenState -> Flow GlobalState Unit
 getSavedLocationsList action push state = do
+  void $ JB.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   _ <-  JB.toggleLoader true
   (savedLocationResp ) <- Remote.getSavedLocationList ""
   case savedLocationResp of

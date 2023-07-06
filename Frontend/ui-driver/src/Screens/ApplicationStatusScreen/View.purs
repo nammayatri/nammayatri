@@ -60,7 +60,7 @@ screen initialState screenType =
               lift $ lift $ doAff do liftEffect $ push $ DriverRegistrationStatusAction (DriverRegistrationStatusResp driverRegistrationStatusResp)
           else pure unit
         if initialState.props.isAlternateMobileNumberExists then do
-          EHC.setText' (EHC.getNewIDWithTag "Referalnumber") initialState.data.mobileNumber
+          pure $ EHC.setText (EHC.getNewIDWithTag "Referalnumber") initialState.data.mobileNumber
           else pure unit
         pure $ pure unit
       )

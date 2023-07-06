@@ -257,7 +257,8 @@ type TripDetailsScreenData =
     paymentMode :: PaymentMode,
     rating :: Int,
     selectedItem :: IndividualRideCardState,
-    tripId :: String
+    tripId :: String,
+    vehicleVariant :: Maybe VehicleVariant
     -- bookingId :: String
   }
 
@@ -346,7 +347,8 @@ type HelpAndSupportScreenData =
     bookingId :: String,
     email :: String,
     description :: String,
-    accountStatus :: DeleteStatus
+    accountStatus :: DeleteStatus,
+    vehicleVariant :: Maybe VehicleVariant
   }
 
 type HelpAndSuportScreenProps =
@@ -430,7 +432,15 @@ type IndividualRideCardState =
   , isSpecialZone :: Boolean
   , nightCharges :: Boolean
   , zoneType :: ZoneType
+  , vehicleVariant :: Maybe VehicleVariant
   }
+
+
+data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS 
+
+derive instance genericVehicleVariant :: Generic VehicleVariant _
+instance eqVehicleVariant :: Eq VehicleVariant where eq = genericEq
+instance showVehicleVariant :: Show VehicleVariant where show = genericShow
 
 type ItemState =
   {
@@ -622,6 +632,7 @@ type HomeScreenStateProps =
   , timerId :: String
   , findingRidesAgain :: Boolean
   , routeEndPoints :: Maybe RouteEndPoints
+  , zoneTimerExpired :: Boolean
   }
 
 type RouteEndPoints = {
@@ -861,6 +872,7 @@ type DriverInfoCard =
   , merchantExoPhone :: String
   , createdAt :: String
   , initDistance :: Maybe Int
+  , vehicleVariant :: String
   }
 
 type RatingCard =

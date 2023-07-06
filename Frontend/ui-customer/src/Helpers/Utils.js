@@ -526,10 +526,6 @@ export const storeOnResumeCallback = function (cb) {
   }
 }
 
-export const getMerchantId = function(id) {
-  return window.merchantID;
-}
-
 export const drawPolygon = function(geoJson) {
   return function (locationName) {
     return function() {

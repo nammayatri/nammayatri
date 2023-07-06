@@ -15,36 +15,38 @@
 
 module Services.Backend where
 
-import Services.Config as SC
+import Data.Maybe
+import Services.APITypes
+
+import Common.Types.App (Version(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
-import Common.Types.App (Version(..))
 import Data.Either (Either(..), either)
-import Presto.Core.Types.API (Header(..), Headers(..))
-import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
-import Helpers.Utils (decodeErrorCode, decodeErrorMessage, toString,getTime)
+import Data.Int (fromString)
+import Data.String as DS
+import Debug (spy)
+import Effect.Class (liftEffect)
+import Engineering.Helpers.Commons (liftFlow, bundleVersion)
 import Foreign.Generic (encode)
-import JBridge (setKeyInSharedPrefKeys,toast,factoryResetApp, toggleLoader, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService)
+import Helpers.Utils (decodeErrorCode, decodeErrorMessage, toString, getTime)
+import JBridge (setKeyInSharedPrefKeys, toast, factoryResetApp, toggleLoader, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService)
 import Juspay.OTP.Reader as Readers
-import Types.ModifyScreenState(modifyScreenState)
-import Types.App (GlobalState, FlowBT, ScreenType(..))
-import Services.APITypes
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Log (printLog)
 import Prelude (bind, discard, pure, unit, ($), ($>), (&&), (*>), (<<<), (=<<), (==), void, map, show, class Show)
+import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
+import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
+import Screens.Types (DriverStatus)
+import Services.Config as SC
+import Services.EndPoints as EP
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalStore, getValueToLocalNativeStore)
+import Storage (getValueToLocalStore, KeyStore(..))
 import Tracker (trackApiCallFlow, trackExceptionFlow)
 import Tracker.Labels (Label(..))
 import Tracker.Types as Tracker
-import Services.EndPoints as EP
-import Engineering.Helpers.Commons (liftFlow, bundleVersion)
-import Data.Maybe
-import Data.String as DS
-import Log (printLog)
-import Effect.Class (liftEffect)
-import Storage (getValueToLocalStore, KeyStore(..))
-import Screens.Types (DriverStatus)
-import Debug (spy)
+import Types.App (GlobalState, FlowBT, ScreenType(..))
+import Types.ModifyScreenState (modifyScreenState)
 
 getHeaders :: String -> Flow GlobalState Headers
 getHeaders dummy = do
@@ -863,3 +865,28 @@ leaderBoard request = do
             withAPIResult (EP.leaderBoardWeekly fromDate toDate) unwrapResponse (callAPI headers request)
     where
         unwrapResponse (x) = x
+---------------------------------------- triggerAadhaarOtp ---------------------------------------------
+triggerAadhaarOtp :: String -> Flow GlobalState (Either ErrorResponse GenerateAadhaarOTPResp)
+triggerAadhaarOtp aadhaarNumber = do
+  headers <- getHeaders ""
+  withAPIResult (EP.triggerAadhaarOTP "") unwrapResponse $ callAPI headers $ makeReq aadhaarNumber
+  where
+    makeReq :: String -> GenerateAadhaarOTPReq
+    makeReq number = GenerateAadhaarOTPReq {
+      aadhaarNumber : number,
+      consent : "Y"
+    }
+    unwrapResponse x = x
+
+---------------------------------------- verifyAadhaarOtp ---------------------------------------------
+verifyAadhaarOtp :: String -> Flow GlobalState (Either ErrorResponse VerifyAadhaarOTPResp)
+verifyAadhaarOtp aadhaarNumber = do
+  headers <- getHeaders ""
+  withAPIResult (EP.verifyAadhaarOTP "") unwrapResponse $ callAPI headers $ makeReq aadhaarNumber
+  where
+    makeReq :: String -> VerifyAadhaarOTPReq
+    makeReq otp = VerifyAadhaarOTPReq {
+      otp : fromMaybe 0 $ fromString otp
+    , shareCode : DS.take 4 otp
+    }
+    unwrapResponse x = x

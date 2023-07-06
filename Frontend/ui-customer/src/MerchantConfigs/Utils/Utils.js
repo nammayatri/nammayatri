@@ -10,7 +10,7 @@ const MalayalamStrings = require("./../../src/Strings/ML.js");
 
 export const getStringFromConfig = function (key) {
   switch (window.merchantID) {
-    case "JATRISAATHI":
+    case "YATRISATHI":
       if (JatriConfig.isMerchantString(key)) {
         return JatriConfig.getMerchantString(key);
       }
@@ -34,7 +34,7 @@ export const getStringFromConfig = function (key) {
 export const getValueFromConfig = function (constructorKey){
   let key = constructorKey.trim(); 
   switch(window.merchantID) {
-      case "JATRISAATHI" :
+      case "YATRISATHI" :
           return JatriConfig.getMerchantConfig(key);
       case "NAMMAYATRI" :
           return NammaYatriConfig.getMerchantConfig(key);
@@ -44,6 +44,10 @@ export const getValueFromConfig = function (constructorKey){
           console.error("no value found for key "+ key);
           return "";
     }
+}
+
+export const getMerchantId = function(id) {
+  return window.merchantID;
 }
 
 function getStringFromCommon(key) {

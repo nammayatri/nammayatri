@@ -33,8 +33,7 @@ import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
-import Helpers.Utils(Merchant(..), getMerchant)
-import Merchant.Utils(getValueFromConfig)
+import Merchant.Utils(getValueFromConfig, Merchant(..), getMerchant)
 
 screen :: AppUpdatePopUpState -> ScopedScreen Action AppUpdatePopUpState ScreenOutput
 screen initialState =

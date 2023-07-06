@@ -31,7 +31,7 @@ getLanguage language = do
         {name:"हिंदी",value:"HI_IN", subtitle: "Hindi"},
         {name:"தமிழ்",value:"TA_IN", subtitle: "Tamil"}
         ]
-    JATRISAATHIDRIVER -> 
+    YATRISATHIDRIVER -> 
         [
         {name:"English",value:"EN_US", subtitle: ""}, 
         {name:"বাংলা",value:"BN_IN", subtitle: "Bengali"},
@@ -43,7 +43,7 @@ getLanguage language = do
         {name:"മലയാളം",value:"ML_IN", subtitle: "Malayalam"}
         ]
 
-data Merchant = NAMMAYATRIPARTNER | JATRISAATHIDRIVER | YATRIPARTNER
+data Merchant = NAMMAYATRIPARTNER | YATRISATHIDRIVER | YATRIPARTNER
 
 derive instance genericMerchant :: Generic Merchant _
 instance eqMerchant :: Eq Merchant where eq = genericEq

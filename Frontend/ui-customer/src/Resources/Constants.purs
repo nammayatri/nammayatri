@@ -193,7 +193,7 @@ getFaresList fares baseDistance =
   map
     ( \(FareBreakupAPIEntity item) ->
           { fareType : item.description
-          , price : if item.description == "BASE_FARE" then (item.amount + getFareFromArray fares "EXTRA_DISTANCE_FARE") else item.amount
+          , price : if item.description == "BASE_FARE" then (item.amount + getFareFromArray fares "EXTRA_DISTANCE_FARE" + getFareFromArray fares "WAITING_OR_PICKUP_CHARGES") else item.amount
           , title : case item.description of
                       "BASE_FARE" -> (getEN BASE_FARES) <> " (" <> baseDistance <> ")"
                       "EXTRA_DISTANCE_FARE" -> getEN NOMINAL_FARE
@@ -207,6 +207,9 @@ getFaresList fares baseDistance =
                       "WAITING_OR_PICKUP_CHARGES" -> getEN PICKUP_CHARGE 
                       "SERVICE_CHARGE" -> getEN SERVICE_CHARGES
                       "FIXED_GOVERNMENT_RATE" -> getEN GOVERNMENT_CHAGRES
+                      "PLATFORM_FEE" -> getEN PLATFORM_FEE
+                      "SGST" -> getEN SGST
+                      "CGST" -> getEN CGST
                       _ -> getEN BASE_FARES
           }
     )
@@ -219,7 +222,36 @@ dummyFareBreakUp :: FareBreakupAPIEntity
 dummyFareBreakUp = FareBreakupAPIEntity{amount: 0,description: ""}
 
 getFilteredFares :: Array FareBreakupAPIEntity -> Array FareBreakupAPIEntity
-getFilteredFares = filter (\(FareBreakupAPIEntity item) -> (all (_ /=  item.description) ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE"]) )
+getFilteredFares = filter (\(FareBreakupAPIEntity item) -> (all (_ /=  item.description) ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "WAITING_OR_PICKUP_CHARGES"]) )
 
 getKmMeter :: Int -> String
 getKmMeter distance = if (distance < 1000) then toString distance <> " m" else (parseFloat ((toNumber distance)/ 1000.0)) 2 <> " km"
+
+fetchVehicleVariant :: String -> Maybe ST.VehicleVariant
+fetchVehicleVariant variant = case variant of  
+  "SUV" -> Just ST.SUV
+  "SEDAN" -> Just ST.SEDAN
+  "HATCHBACK" -> Just ST.HATCHBACK
+  "AUTO_RICKSHAW" -> Just ST.AUTO_RICKSHAW
+  "TAXI" -> Just ST.TAXI 
+  "TAXI_PLUS" -> Just ST.TAXI_PLUS
+  _ -> Nothing
+
+getVehicleImage :: String -> String
+getVehicleImage variant = case fetchVehicleVariant variant of 
+          Just ST.TAXI -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
+          Just ST.TAXI_PLUS -> "ic_sedan_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_ac.png"
+          Just ST.SEDAN -> "ic_sedan,https://assets.juspay.in/nammayatri/images/user/ic_sedan.png"
+          Just ST.SUV -> "ic_suv,https://assets.juspay.in/nammayatri/images/user/ic_suv.png"
+          Just ST.HATCHBACK -> "ic_hatchback,https://assets.juspay.in/nammayatri/images/user/ic_hatchback.png"
+          Just ST.AUTO_RICKSHAW -> "ic_vehicle_side,https://assets.juspay.in/beckn/merchantcommon/images/ic_auto_side_view.png"
+          _ -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
+
+getVehicleCapacity :: String -> String 
+getVehicleCapacity variant = case fetchVehicleVariant variant of
+          Just ST.TAXI -> (getString ECONOMICAL) <> ", 4 " <> (getString PEOPLE)
+          Just ST.TAXI_PLUS -> (getString COMFY) <> ", 4 " <> (getString PEOPLE)
+          Just ST.SEDAN -> (getString COMFY) <> ", " <>(getString UPTO) <>" 4 " <> (getString PEOPLE)
+          Just ST.SUV -> (getString SPACIOUS) <> ", " <> (getString UPTO)<>" 6 " <> (getString PEOPLE)
+          Just ST.HATCHBACK -> (getString EASY_ON_WALLET) <> ", "<> (getString UPTO) <> " 4 " <> (getString PEOPLE)
+          _ -> (getString ECONOMICAL) <> ", 4 " <> (getString PEOPLE)

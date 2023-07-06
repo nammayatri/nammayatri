@@ -32,10 +32,10 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (secondsToHms, zoneOtpExpiryTimer, Merchant(..), getMerchant, makeNumber)
+import Helpers.Utils (secondsToHms, zoneOtpExpiryTimer, makeNumber)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Merchant.Utils (getValueFromConfig)
+import Merchant.Utils (getValueFromConfig,  Merchant(..), getMerchant)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, (&&), (||), (/=), not)
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
@@ -254,6 +254,7 @@ mapOptionsView push state =
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , orientation VERTICAL
+      , margin $ MarginVertical 5 5
       ][ supportButton push state
        , locationTrackButton push state
       ]
@@ -306,7 +307,7 @@ locationTrackButton push state =
   , gravity CENTER
   , background Color.white900
   , stroke $ "1,"<> Color.grey900
-  , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]) && (not state.props.showChatNotification) then VISIBLE else GONE
+  , visibility if ((Array.any (_ == state.props.currentStage) [ RideStarted, ChatWithDriver ]) || (state.props.currentStage == RideAccepted && (not state.props.isSpecialZone)))&& (not state.props.showChatNotification ) then VISIBLE else GONE
   , cornerRadius 20.0
   , onClick push (const $ LocationTracking)
   , margin $ MarginTop 8
@@ -482,17 +483,22 @@ otpAndWaitView push state =
           , gravity CENTER
           , padding $ Padding 10 14 10 14
           , weight 1.0
-          ][ textView
-              [ width WRAP_CONTENT
-              , height WRAP_CONTENT
-              , text $ getString OTP <> ":"
-              , color Color.black700
-              , textSize FontSize.a_14
-              , lineHeight "18"
-              , fontStyle $ FontStyle.bold LanguageStyle
+          ][  linearLayout 
+              [ height WRAP_CONTENT
+              , width WRAP_CONTENT
+              , gravity CENTER
+              ][  textView
+                  [ weight 1.0
+                  , height WRAP_CONTENT
+                  , text $ getString OTP <> ":"
+                  , color Color.black700
+                  , textSize FontSize.a_14
+                  , lineHeight "18"
+                  , fontStyle $ FontStyle.bold LanguageStyle
+                  ]
+                , otpView push state
+                ]
               ]
-            , otpView push state
-          ]
         , waitTimeView push state
       ]
   ]
@@ -556,10 +562,9 @@ driverInfoView push state =
          , height WRAP_CONTENT
          , width MATCH_PARENT
          , margin $ MarginTop 14
-         , background Color.blue800
+         , background if state.props.zoneType == METRO then Color.blue800 else Color.white900
          , gravity CENTER
          , cornerRadii $ Corners 24.0 true true false false
-         , stroke $ "1," <> Color.grey900
          ][ linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
@@ -772,7 +777,7 @@ driverDetailsView push state =
           , width $ V 172
           , gravity BOTTOM
           ][  imageView
-              [ imageWithFallback "ic_driver_vehicle,https://assets.juspay.in/nammayatri/images/user/ny_ic_driver_auto.png"
+              [ imageWithFallback (getVehicleImage state.data.vehicleVariant)
               , height $ V 120
               , gravity RIGHT
               , width MATCH_PARENT
@@ -1114,3 +1119,10 @@ configurations =
               , letterSpacing : 3.0
               , paddingOTP : Padding 11 0 11 7
               }
+
+getVehicleImage :: String -> String 
+getVehicleImage variant = case variant of 
+  "TAXI" -> "ic_yellow_ambassador,https://assets.juspay.in/beckn/merchantcommon/images/ic_yellow_ambassador.png"
+  "TAXI_PLUS" -> "ic_yellow_ambassador,https://assets.juspay.in/beckn/merchantcommon/images/ic_yellow_ambassador.png"
+  "AUTO_RICKSHAW" -> "ic_auto_rickshaw,https://assets.juspay.in/beckn/merchantcommon/images/ic_auto_rickshaw.png"
+  _ ->  "ic_white_taxi,https://assets.juspay.in/beckn/merchantcommon/images/ic_white_taxi.png"

@@ -35,6 +35,7 @@ import Styles.Colors as Color
 import Debug (spy)
 import Common.Types.App
 import Screens.CustomerUtils.TripDetailsScreen.ComponentConfig
+import Data.Maybe(fromMaybe, isJust)
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput
 screen initialState =
@@ -218,7 +219,7 @@ tripDetailsView state =
           , width WRAP_CONTENT
           , orientation HORIZONTAL
           ][  imageView
-              [ margin (MarginLeft 28)
+              [ margin if (isJust state.data.vehicleVariant) then (MarginLeft 28) else (MarginLeft 0)
               , cornerRadius 18.0
               -- , background Color.grey800
               , width (V 36)
@@ -226,8 +227,16 @@ tripDetailsView state =
               , imageWithFallback "ny_ic_user,https://assets.juspay.in/nammayatri/images/user/ny_ic_user.png"
               ]
             , imageView
-              [ imageWithFallback "ic_hatchback,https://assets.juspay.in/nammayatri/images/user/ic_hatchback.png"
+              [ imageWithFallback case (fromMaybe ST.AUTO_RICKSHAW state.data.vehicleVariant) of 
+                                      ST.TAXI -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
+                                      ST.TAXI_PLUS -> "ic_sedan_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_ac.png"
+                                      ST.SEDAN -> "ic_sedan,https://assets.juspay.in/nammayatri/images/user/ic_sedan.png"
+                                      ST.SUV -> "ic_suv,https://assets.juspay.in/nammayatri/images/user/ic_suv.png"
+                                      ST.HATCHBACK -> "ic_hatchback,https://assets.juspay.in/nammayatri/images/user/ic_hatchback.png"
+                                      ST.AUTO_RICKSHAW -> "ic_vehicle_side,https://assets.juspay.in/beckn/merchantcommon/images/ic_auto_side_view.png"
+                                      _ -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png" -- "ic_hatchback,https://assets.juspay.in/nammayatri/images/user/ic_hatchback.png" -- state.data.vehicleImage
               , width (V 40)
+              , visibility if (isJust state.data.vehicleVariant) then VISIBLE else GONE
               , height (V 40)
               ]
             ]

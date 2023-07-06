@@ -39,7 +39,7 @@ import Engineering.Helpers.BackTrack (getState)
 import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, bundleVersion, getExpiryTime,stringToVersion, convertUTCtoISC, getCurrentUTC)
 import Foreign.Class (class Encode)
 import Foreign.Class (encode)
-import Helpers.Utils (hideSplash, getDistanceBwCordinates, adjustViewWithKeyboard, decodeErrorCode, getObjFromLocal, differenceOfLocationLists, filterRecentSearches, setText', seperateByWhiteSpaces, getNewTrackingId, checkPrediction, getRecentSearches, addToRecentSearches, saveRecents, clearWaitingTimer, toString, parseFloat, getCurrentLocationsObjFromLocal, addToPrevCurrLoc, saveCurrentLocations, getCurrentDate, getPrediction, getCurrentLocationMarker, parseNewContacts, getMerchant, Merchant(..), drawPolygon,requestKeyboardShow, removeLabelFromMarker, sortPredctionByDistance, withinTimeRange)
+import Helpers.Utils (hideSplash, getDistanceBwCordinates, adjustViewWithKeyboard, decodeErrorCode, getObjFromLocal, differenceOfLocationLists, filterRecentSearches, setText, seperateByWhiteSpaces, getNewTrackingId, checkPrediction, getRecentSearches, addToRecentSearches, saveRecents, clearWaitingTimer, toString, parseFloat, getCurrentLocationsObjFromLocal, addToPrevCurrLoc, saveCurrentLocations, getCurrentDate, getPrediction, getCurrentLocationMarker, parseNewContacts, drawPolygon,requestKeyboardShow, removeLabelFromMarker, sortPredctionByDistance, withinTimeRange)
 import JBridge (metaLogEvent, currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, loaderText, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, toggleLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker, generateSessionId, stopChatListenerService, updateRouteMarker, setCleverTapUserProp, setCleverTapUserData, cleverTapSetLocation, saveSuggestions, saveSuggestionDefs)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Language.Strings (getString)
@@ -128,20 +128,20 @@ type IosVersion = {
   enableForceUpdateIOS :: Boolean
 }
 
-getIosVersion :: Merchant -> IosVersion
+getIosVersion :: MU.Merchant -> IosVersion
 getIosVersion merchant =
   case merchant of
-    NAMMAYATRI -> { majorUpdateIndex : 1,
+    MU.NAMMAYATRI -> { majorUpdateIndex : 1,
                     minorUpdateIndex : 2,
                     patchUpdateIndex : 4,
                     enableForceUpdateIOS : false
                   }
-    YATRI -> { majorUpdateIndex : 1,
+    MU.YATRI -> { majorUpdateIndex : 1,
                minorUpdateIndex : 1,
                patchUpdateIndex : 0,
                enableForceUpdateIOS : true
               }
-    JATRISAATHI -> { majorUpdateIndex : 0,
+    MU.YATRISATHI -> { majorUpdateIndex : 0,
                      minorUpdateIndex : 1,
                      patchUpdateIndex : 0,
                      enableForceUpdateIOS : false
@@ -151,8 +151,8 @@ getIosVersion merchant =
 checkVersion :: Int -> String -> FlowBT String Unit
 checkVersion versioncodeAndroid versionName= do
   void $ pure $ setCleverTapUserProp "Platform" os
-  let updatedIOSversion = getIosVersion (getMerchant FunctionCall)
-  if os /= "IOS" && versioncodeAndroid < (getLatestAndroidVersion (getMerchant FunctionCall)) then do
+  let updatedIOSversion = getIosVersion (MU.getMerchant FunctionCall)
+  if os /= "IOS" && versioncodeAndroid < (getLatestAndroidVersion (MU.getMerchant FunctionCall)) then do
     lift $ lift $ doAff do liftEffect hideSplash
     _ <- UI.handleAppUpdatePopUp
     _ <- pure $ firebaseLogEvent "ny_user_app_update_pop_up_view"
@@ -174,12 +174,12 @@ checkVersion versioncodeAndroid versionName= do
       else pure unit
 
 
-getLatestAndroidVersion :: Merchant -> Int
+getLatestAndroidVersion :: MU.Merchant -> Int
 getLatestAndroidVersion merchant =
   case merchant of
-    NAMMAYATRI -> 31
-    YATRI -> 49
-    JATRISAATHI -> 2
+    MU.NAMMAYATRI -> 31
+    MU.YATRI -> 49
+    MU.YATRISATHI -> 2
 
 forceIOSupdate :: Int -> Int -> Int -> IosVersion -> Boolean
 forceIOSupdate c_maj c_min c_patch updatedIOSversion=
@@ -471,7 +471,7 @@ enterMobileNumberScreenFlow = do
                     setValueToLocalStore REGISTERATION_TOKEN response.token
                     currentFlowStatus
               Left err -> do
-                _ <- lift $ lift $ liftFlow (setText' (getNewIDWithTag "EnterOTPNumberEditText") "" )
+                pure $ setText (getNewIDWithTag "EnterOTPNumberEditText") ""
                 let errResp = err.response
                     codeMessage = decodeErrorCode errResp.errorMessage
                 if ( err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
@@ -600,7 +600,7 @@ homeScreenFlow = do
             _ , _ -> pure unit
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration, source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] state.props.sourcePlaceId}, props{customerTip{enableTips = tipEnabled}}})
           _ <- setValueToLocalStore ENABLE_TIPS $ show tipEnabled
-          if ((getMerchant FunctionCall) /= YATRI && response.distance >= 50000) then do
+          if ((MU.getMerchant FunctionCall) /= MU.YATRI && response.distance >= 50000) then do
             updateLocalStage DistanceOutsideLimits
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = DistanceOutsideLimits ,rideRequestFlow = true, isSearchLocation = SearchLocation}})
             homeScreenFlow
@@ -881,6 +881,9 @@ homeScreenFlow = do
                                       setValueToLocalStore PICKUP_DISTANCE "0"
                                       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}, driverInfoCardState{initDistance = Nothing}},props { isBanner = state.props.isBanner, showChatNotification = false}})
                                       _ <- pure $ clearWaitingTimer <$> state.props.waitingTimeTimerIds
+                                      permissionConditionA <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
+                                      permissionConditionB <- lift $ lift $ liftFlow $ isLocationEnabled unit
+                                      when (not (permissionConditionA && permissionConditionB)) $ permissionScreenFlow "LOCATION_DISABLED"
                                       homeScreenFlow
             "DRIVER_ASSIGNMENT"   -> if (not (isLocalStageOn RideAccepted || isLocalStageOn RideStarted )) then do
                                         _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_DRIVER_ARRIVAL"
@@ -1240,7 +1243,7 @@ rideSearchFlow flowType = do
                     _ , _ -> pure unit
                   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration,source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] finalState.props.sourcePlaceId}, props{customerTip{enableTips = tipEnabled}}})
                   _ <- setValueToLocalStore ENABLE_TIPS $ show tipEnabled
-                  if ((getMerchant FunctionCall) /= YATRI && response.distance >= 50000 )then do
+                  if ((MU.getMerchant FunctionCall) /= MU.YATRI && response.distance >= 50000 )then do
                     _ <- pure $ updateLocalStage DistanceOutsideLimits
                     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = DistanceOutsideLimits ,rideRequestFlow = true, isSearchLocation = SearchLocation}})
                     void $ lift $ lift $ toggleLoader false
@@ -1302,7 +1305,7 @@ tripDetailsScreenFlow fromMyRides = do
       resp <- Remote.callDriverBT updatedState.data.selectedItem.rideId
       void $ lift $ lift $ toggleLoader false
       pure $ toast (getString REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON)
-      _ <- Remote.sendIssueBT (Remote.makeSendIssueReq  (Just "nammayatri.support@juspay.in") (Just updatedState.data.selectedItem.rideId) "LOSTANDFOUND" "LOST AND FOUND" )
+      _ <- Remote.sendIssueBT (Remote.makeSendIssueReq  (Just (MU.getValueFromConfig "SUPPORT_EMAIL")) (Just updatedState.data.selectedItem.rideId) "LOSTANDFOUND" "LOST AND FOUND" )
       tripDetailsScreenFlow updatedState.props.fromMyRides
 
 
@@ -1334,7 +1337,8 @@ helpAndSupportScreenFlow = do
       modifyScreenState $ ContactUsScreenStateType (\contactUsScreen -> contactUsScreen {data{bookingId = bookingId'}})
       contactUsScreenFlow
     GO_TO_TRIP_DETAILS state -> do
-      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data {tripId = state.data.tripId, selectedItem {faresList = state.data.faresList ,date = state.data.date, bookingId = state.data.bookingId,rideStartTime = state.data.rideStartTime, rideEndTime = state.data.rideEndTime, rideId = state.data.rideId, vehicleNumber = state.data.vehicleNumber,time = state.data.time,source = state.data.source,destination = state.data.destination,driverName = state.data.driverName,totalAmount = state.data.totalAmount, rating = state.data.rating},date = state.data.date, time = state.data.time, source = state.data.source, destination = state.data.destination, driverName = state.data.driverName, totalAmount = state.data.totalAmount,rating = state.data.rating}})
+      _ <- pure $ spy "Inside GO_TO_TRIP_DETAILS" state
+      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data {tripId = state.data.tripId, vehicleVariant = state.data.vehicleVariant, selectedItem {faresList = state.data.faresList ,date = state.data.date, bookingId = state.data.bookingId,rideStartTime = state.data.rideStartTime, rideEndTime = state.data.rideEndTime, rideId = state.data.rideId, vehicleNumber = state.data.vehicleNumber,time = state.data.time,source = state.data.source,destination = state.data.destination,driverName = state.data.driverName,totalAmount = state.data.totalAmount, rating = state.data.rating},date = state.data.date, time = state.data.time, source = state.data.source, destination = state.data.destination, driverName = state.data.driverName, totalAmount = state.data.totalAmount,rating = state.data.rating}})
       tripDetailsScreenFlow false
     VIEW_RIDES -> do
       modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen { data{offsetValue = 0}})
@@ -1354,6 +1358,7 @@ myRidesScreenFlow fromNavBar = do
   case flow of
     REFRESH state -> myRidesScreenFlow state.props.fromNavBar
     TRIP_DETAILS state -> do
+      modifyScreenState $ TripDetailsScreenStateType (\tripDetails -> tripDetails{data{vehicleVariant = state.data.selectedItem.vehicleVariant}})
       tripDetailsScreenFlow true
     LOADER_OUTPUT state -> do
       modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> state{data{offsetValue = state.data.offsetValue + 8}})
@@ -1498,7 +1503,7 @@ myProfileScreenFlow = do
           let codeMessage = decodeErrorCode errResponse.errorMessage
           case codeMessage of
             "PERSON_EMAIL_ALREADY_EXISTS" -> do
-              _ <- lift $ lift $ liftFlow (setText' (getNewIDWithTag "EmailEditText") "" )
+              pure $ setText (getNewIDWithTag "EmailEditText") ""
               modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState -> myProfileScreenState{props{isEmailValid = false, updateProfile = true}, data{emailErrorMessage = Just EMAIL_EXISTS, name = state.data.name, editedName = state.data.editedName, emailId = state.data.emailId, gender = state.data.gender, editedGender = state.data.editedGender}})
             _ -> pure $ toast (getString ERROR_OCCURED)
           myProfileScreenFlow
@@ -1728,7 +1733,7 @@ addNewAddressScreenFlow input = do
                   }
                 } )
           _    ,  _     -> do
-            _ <- lift $ lift $ liftFlow (setText' (getNewIDWithTag "SavedLocationEditText") item.description )
+            pure $ setText (getNewIDWithTag "SavedLocationEditText") item.description
             _ <- pure $ hideKeyboardOnNavigation true
             modifyScreenState $ AddNewAddressScreenStateType (\addNewAddressScreen ->
               addNewAddressScreen
