@@ -185,22 +185,23 @@ validateMerchantCommonConfigUpdateReq MerchantCommonConfigUpdateReq {..} =
       validateField "minRidesForCancellationScore" minRidesForCancellationScore $ InMaybe $ InValue $ Min @Int 0,
       validateField "onboardingTryLimit" onboardingTryLimit $ InMaybe $ InValue $ Min @Int 0,
       validateField "onboardingRetryTimeInHours" onboardingRetryTimeInHours $ InMaybe $ InValue $ Min @Int 0,
-      validateField "searchRepeatLimit" searchRepeatLimit $ InMaybe $ InValue $ Min @Int 0,
-      validateField "driverPaymentCycleDuration" driverPaymentCycleDuration $ InMaybe $ InValue $ Min @NominalDiffTime 86400,
-      validateField "driverPaymentCycleStartTime" driverPaymentCycleStartTime $ InMaybe $ InValue $ InRange @NominalDiffTime 0 86399,
-      validateField "timeDiffFromUtc" timeDiffFromUtc $ InMaybe $ InValue $ InRange @Seconds maxWestWardTimeDiff maxEastWardTimeDiff, --Set -12 hrs to 14 hrs as the max time diff from UTC is -12 Hrs to 14 Hrs
-      validateField "driverPaymentCycleBuffer" driverPaymentCycleBuffer $ InMaybe $ InValue $ Max @NominalDiffTime (cycleBufferTimeLimit driverPaymentCycleDuration),
-      validateField "driverPaymentReminderInterval" driverPaymentReminderInterval $ InMaybe $ InValue $ Max @NominalDiffTime (reminderIntervalLimit driverPaymentCycleBuffer)
+      validateField "searchRepeatLimit" searchRepeatLimit $ InMaybe $ InValue $ Min @Int 0
+      -- validateField "driverPaymentCycleDuration" driverPaymentCycleDuration $ InMaybe $ InValue $ Min @NominalDiffTime 86400,
+      -- validateField "driverPaymentCycleStartTime" driverPaymentCycleStartTime $ InMaybe $ InValue $ InRange @NominalDiffTime 0 86399,
+      -- validateField "timeDiffFromUtc" timeDiffFromUtc $ InMaybe $ InValue $ InRange @Seconds maxWestWardTimeDiff maxEastWardTimeDiff, --Set -12 hrs to 14 hrs as the max time diff from UTC is -12 Hrs to 14 Hrs
+      -- validateField "driverPaymentCycleBuffer" driverPaymentCycleBuffer $ InMaybe $ InValue $ Max @NominalDiffTime (cycleBufferTimeLimit driverPaymentCycleDuration),
+      -- validateField "driverPaymentReminderInterval" driverPaymentReminderInterval $ InMaybe $ InValue $ Max @NominalDiffTime (reminderIntervalLimit driverPaymentCycleBuffer)
     ]
-  where
-    maxWestWardTimeDiff = -12 * 3600
-    maxEastWardTimeDiff = 14 * 3600
-    cycleBufferTimeLimit mbMValue =
-      let mValue = fromMaybe (MandatoryValue 86400) mbMValue
-       in (mValue.value - 8 * 3600)
-    reminderIntervalLimit mbMValue =
-      let mValue = fromMaybe (MandatoryValue 14400) mbMValue
-       in (mValue.value * 0.5)
+
+-- where
+--   maxWestWardTimeDiff = -12 * 3600
+--   maxEastWardTimeDiff = 14 * 3600
+--   cycleBufferTimeLimit mbMValue =
+--     let mValue = fromMaybe (MandatoryValue 86400) mbMValue
+--      in (mValue.value - 8 * 3600)
+--   reminderIntervalLimit mbMValue =
+--     let mValue = fromMaybe (MandatoryValue 14400) mbMValue
+--      in (mValue.value * 0.5)
 
 ---------------------------------------------------------
 -- merchant driver pool config  -------------------------
