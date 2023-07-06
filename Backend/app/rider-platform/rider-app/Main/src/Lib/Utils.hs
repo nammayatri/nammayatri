@@ -243,7 +243,7 @@ instance IsString DbHash where
   fromString = show
 
 instance FromField Context.City where
-  fromField = fromFieldJSON
+  fromField = fromFieldEnum
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Context.City where
   sqlValueSyntax = autoSqlValueSyntax
@@ -253,7 +253,7 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Context.City
 instance FromBackendRow Postgres Context.City
 
 instance FromField Context.Country where
-  fromField = fromFieldJSON
+  fromField = fromFieldEnum
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Context.Country where
   sqlValueSyntax = autoSqlValueSyntax
