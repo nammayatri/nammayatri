@@ -212,6 +212,27 @@ public class RideRequestUtils {
         }else{
             context.startService(locationService);
         }
+        Intent restartIntent = new Intent(context, MainActivity.class);
+        restartIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+
+        if(Settings.canDrawOverlays(context)){
+            try{
+                Handler handler = new Handler();
+                handler.postDelayed(() -> {
+                    context.startActivity(restartIntent);
+                    minimizeApp(context);
+                }, 5000);
+            } catch (Exception e) {
+                Log.e("BootUpReceiver", "Unable to Start Widget Service");
+            }
+        }
+    }
+
+    public void minimizeApp(Context context) {
+        Intent startMain = new Intent(Intent.ACTION_MAIN);
+        startMain.addCategory(Intent.CATEGORY_HOME);
+        startMain.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        context.startActivity(startMain);
     }
 
     public void callAPIViaFCM(String orderUrl, JSONObject requestBody, String method, Context context){
