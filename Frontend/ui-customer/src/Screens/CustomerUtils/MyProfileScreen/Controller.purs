@@ -90,14 +90,14 @@ eval ShowOptions state = do
   _ <- pure $ hideKeyboardOnNavigation true
   continue state{props{genderOptionExpanded = not state.props.genderOptionExpanded, showOptions = true, expandEnabled = true}}
 eval ( AnimationEnd _ )state = continue state{props{showOptions = false}}
-eval (GenderSelected value) state = do 
-    continue state{data{editedGender = Just value}, props{genderOptionExpanded = false , isBtnEnabled = true}}
+eval (GenderSelected value) state = do
+    continue state{data{editedGender = Just value}, props{genderOptionExpanded = false , isBtnEnabled = ((length state.data.editedName >=3)  && state.props.isEmailValid)}}
 eval (UserProfile (GetProfileRes profile)) state = do
-  let middleName = case profile.middleName of 
+  let middleName = case profile.middleName of
                     Just ""  -> ""
                     Just name -> (" " <> name)
                     Nothing -> ""
-      lastName   = case profile.lastName of 
+      lastName   = case profile.lastName of
                     Just "" -> ""
                     Just name -> (" " <> name)
                     Nothing -> ""
@@ -128,9 +128,9 @@ eval _ state = continue state
 
 
 checkError :: String -> Maybe String -> String -> Maybe ErrorType
-checkError inputType originalValue value = case inputType of 
-                                      "email" ->  if (length value == 0 && originalValue /= Nothing) then Just EMAIL_CANNOT_BE_BLANK 
-                                                    else if ((length value == 0 && originalValue == Nothing) || (validateEmail value)) then Nothing 
+checkError inputType originalValue value = case inputType of
+                                      "email" ->  if (length value == 0 && originalValue /= Nothing) then Just EMAIL_CANNOT_BE_BLANK
+                                                    else if ((length value == 0 && originalValue == Nothing) || (validateEmail value)) then Nothing
                                                     else Just INVALID_EMAIL
                                       "name"  ->  if (length value == 0) then Just NAME_CANNOT_BE_BLANK
                                                     else if (length value < 3) then Just INVALID_NAME
@@ -139,5 +139,5 @@ checkError inputType originalValue value = case inputType of
 
 checkValid :: Maybe String -> String -> Boolean
 checkValid originalValue value = if (length value == 0 && originalValue == Nothing) then true
-                                    else if (length value == 0) then false 
+                                    else if (length value == 0) then false
                                     else validateEmail value
