@@ -183,7 +183,7 @@ callPoliceConfig state  =
   config' = PopUpModalConfig.config
   popUpConfig' = config' {
     primaryText {
-      text = getString DIAL_112
+      text = getString DIAL_112 <> "?"
     , margin = (Margin 40 23 40 12)
     , fontStyle = FontStyle.semiBold LanguageStyle
     }

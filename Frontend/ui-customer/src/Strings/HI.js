@@ -284,7 +284,7 @@ const hindiStrings = {
   "CALL_SUPPORT": "कॉल सपोर्ट",
   "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "आप नम्मा यात्री सपोर्ट टीम को कॉल करने वाले हैं। क्या आप आगे बढ़ना चाहते हैं?",
   "YOU_ARE_ABOUT_TO_CALL_NEAREST_EMERGENCY_CENTRE": "आप निकटतम आपातकालीन केंद्र पर कॉल करने वाले हैं। क्या आप आगे बढ़ना चाहते हैं?",
-  "DIAL_112": "डायल 112?",
+  "DIAL_112": "डायल 112",
   "HELP_US_WITH_YOUR_FEEDBACK": "अपने फीडबैक से हमारी सहायता करें",
   "WAIT_TIME": "प्रतीक्षा समय",
   "FAVOURITES": "पसंदीदा",
