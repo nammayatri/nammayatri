@@ -19,7 +19,7 @@ import Control.Transformers.Back.Trans (BackT)
 import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
 import Presto.Core.Types.Language.Flow (FlowWrapper)
-import Screens.Types (AboutUsScreenState, ActiveRide,BookingOptionsScreenState, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, HelpAndSupportScreenState, HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WriteToUsScreenState)
+import Screens.Types (AboutUsScreenState, ActiveRide,BookingOptionsScreenState, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, HelpAndSupportScreenState, HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WriteToUsScreenState, AcknowledgementScreenState)
 import Screens.ChooseLanguageScreen.ScreenData as ChooseLanguageScreenData
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.EnterOTPScreen.ScreenData as  EnterOTPScreenData
@@ -51,6 +51,7 @@ import Screens.NotificationsScreen.ScreenData as NotificationsScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreenData
 import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
 import LoaderOverlay.ScreenData as LoaderOverlayScreenData
+import Screens.AcknowledgementScreen.ScreenData as AcknowledgementScreenData
 import Screens.Types (HomeScreenStage(..))
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
@@ -90,6 +91,7 @@ newtype GlobalState = GlobalState {
   , referralScreen :: ReferralScreenState
   , bookingOptionsScreen :: BookingOptionsScreenState
   , loaderOverlay :: LoaderOverlayScreenData.LoaderOverlayState
+  , acknowledgementScreen :: AcknowledgementScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -128,6 +130,7 @@ defaultGlobalState = GlobalState{
 , referralScreen : ReferralScreenData.initData
 , bookingOptionsScreen : BookingOptionsScreenData.initData
 , loaderOverlay : LoaderOverlayScreenData.initData
+, acknowledgementScreen : AcknowledgementScreenData.initData
 }
 
 data ScreenType =
@@ -162,6 +165,7 @@ data ScreenType =
   | NotificationsScreenStateType (NotificationsScreenState -> NotificationsScreenState)
   | ReferralScreenStateType (ReferralScreenState -> ReferralScreenState)
   | BookingOptionsScreenType (BookingOptionsScreenState -> BookingOptionsScreenState)
+  | AcknowledgementScreenType (AcknowledgementScreenState -> AcknowledgementScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -175,6 +179,7 @@ data MY_RIDES_SCREEN_OUTPUT = MY_RIDE RideHistoryScreenState
                             | GO_TO_TRIP_DETAILS IndividualRideCardState
                             | NOTIFICATION_FLOW
                             | SELECTED_TAB RideHistoryScreenState
+                            | OPEN_PAYMENT_HISTORY RideHistoryScreenState
 
 data REFERRAL_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN
                             | GO_TO_RIDES_SCREEN_FROM_REFERRAL_SCREEN
@@ -256,6 +261,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | ADD_ALTERNATE_HOME
                           | GO_TO_START_ZONE_RIDE {otp :: String, lat :: String, lon :: String}
                           | ON_CALL HomeScreenState
+                          | OPEN_PAYMENT_PAGE HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 
@@ -283,3 +289,4 @@ data NOTIFICATIONS_SCREEN_OUTPUT = REFRESH_SCREEN NotificationsScreenState
                                     | CHECK_RIDE_FLOW_STATUS
 
 data BOOKING_OPTIONS_SCREEN_OUTPUT = SELECT_CAB BookingOptionsScreenState | GO_TO_PROFILE
+data ACKNOWLEDGEMENT_SCREEN_OUTPUT = EXIT_TO_HOME_SCREEN | RETRY_PAYMENT

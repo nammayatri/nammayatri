@@ -17,13 +17,14 @@ module Screens.HomeScreen.View where
 
 import Animation as Anim
 import Animation.Config as AnimConfig
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), APIPaymentStatus(..))
 import Types.App (defaultGlobalState)
 import Components.BottomNavBar as BottomNavBar
 import Components.SelectListModal as SelectListModal
 import Components.InAppKeyboardModal as InAppKeyboardModal
 import Components.PopUpModal as PopUpModal
 import Components.RideActionModal as RideActionModal
+import Components.MakePaymentModal as MakePaymentModal
 import Components.StatsModel as StatsModel
 import Components.ChatView as ChatView
 import Components.RequestInfoCard as RequestInfoCard
@@ -57,7 +58,7 @@ import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, Screen
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..),DriverStatus(..), DriverStatusResult(..), PillButtonState(..))
 import Screens.Types as ST
-import Services.APITypes (GetRidesHistoryResp(..))
+import Services.APITypes (GetRidesHistoryResp(..),OrderStatusRes(..))
 import Services.Backend as Remote
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn, setValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -76,6 +77,7 @@ import MerchantConfig.Utils (getValueFromConfig)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Engineering.Helpers.Commons (flowRunner)
+import Components.RateCard as RateCard
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -89,7 +91,7 @@ screen initialState =
           _ <- HU.storeCallBackTime push TimeUpdate
           when (getValueToLocalNativeStore IS_RIDE_ACTIVE == "true" && initialState.data.activeRide.status == NOTHING) do
             void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-              (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true" "null"
+              (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true" "null" "null"
               case (activeRideResponse.list DA.!! 0) of
                 Just ride -> lift $ lift $ doAff do liftEffect $ push $ RideActiveAction ride
                 Nothing -> setValueToLocalStore IS_RIDE_ACTIVE "false"
@@ -158,6 +160,7 @@ screen initialState =
                                 _ <- pure $ setValueToLocalStore SESSION_ID (JB.generateSessionId unit)
                                 _ <- checkPermissionAndUpdateDriverMarker initialState
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ checkCurrentRide push Notification
+                                _ <- launchAff $ EHC.flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.paymentState.driverFeeId 10 5000.0 initialState push PaymentStatusAction
                                 pure unit
           pure $ pure unit
         )
@@ -194,6 +197,7 @@ view push state =
         ]
       , if (getValueToLocalNativeStore PROFILE_DEMO) /= "false" then profileDemoView state push else linearLayout[][]
       , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
+      , if state.data.paymentState.makePaymentModal then makePaymentModal push state else dummyTextView
       , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView
       , if state.props.endRidePopUp then endRidePopView push state else dummyTextView
       , if state.props.cancelConfirmationPopup then cancelConfirmation push state else dummyTextView
@@ -201,6 +205,7 @@ view push state =
       , if state.props.currentStage == ChatWithCustomer then chatView push state else dummyTextView
       , if state.props.showBonusInfo then requestInfoCardView push state else dummyTextView
       , if state.props.silentPopUpView then popupModelSilentAsk push state else dummyTextView
+      , if state.data.paymentState.showRateCard then rateCardView push state else dummyTextView
   ]
 
 driverMapsHeaderView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -227,7 +232,7 @@ driverMapsHeaderView push state =
           [ width MATCH_PARENT
           , height MATCH_PARENT
           ][  googleMap state
-            , if state.props.driverStatusSet == Offline then offlineView push state else dummyTextView
+            , if (state.props.driverStatusSet == Offline && not state.data.paymentState.blockedDueToPayment) then offlineView push state else dummyTextView
             , linearLayout
               [ width MATCH_PARENT
               , height WRAP_CONTENT
@@ -255,10 +260,31 @@ driverMapsHeaderView push state =
               ]
             , alternateNumberOrOTPView state push
             , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True") then genderBannerView state push else linearLayout[][]
+            , if state.data.paymentState.paymentStatusBanner then paymentStatusBanner state push else dummyTextView
             ]
         ]
         , bottomNavBar push state
   ]
+
+rateCardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+rateCardView push state =
+  PrestoAnim.animationSet [ Anim.fadeIn true ] $ 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  ][ RateCard.view (push <<< RateCardAC) (rateCardState state) ]
+
+paymentStatusBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+paymentStatusBanner state push =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation HORIZONTAL
+  , background Color.transparent
+  , padding $ Padding 10 0 10 16
+  , gravity BOTTOM
+  ][ Banner.view (push <<< PaymentBannerAC) (paymentStatusConfig state)]
+
 
 alternateNumberOrOTPView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 alternateNumberOrOTPView state push =
@@ -766,6 +792,10 @@ showOfflineStatus push state =
       ]
   ]
 
+makePaymentModal :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+makePaymentModal push state = MakePaymentModal.view (push <<< MakePaymentModalAC) (makePaymentState state)
+
+
 goOfflineModal :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 goOfflineModal push state =
   linearLayout
@@ -1021,7 +1051,7 @@ enableCurrentLocation state = if (DA.any (_ == state.props.currentStage) [RideAc
 rideStatusPolling :: forall action. String -> Number -> HomeScreenState -> (action -> Effect Unit) -> (String -> action) -> Flow GlobalState Unit
 rideStatusPolling pollingId duration state push action = do
   if (getValueToLocalStore RIDE_STATUS_POLLING) == "True" && (getValueToLocalStore RIDE_STATUS_POLLING_ID) == pollingId && (DA.any (\stage -> isLocalStageOn stage) [ RideAccepted, ChatWithCustomer]) then do
-    activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true" "null"
+    activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true" "null" "null"
     _ <- pure $ spy "polling inside rideStatusPolling function" activeRideResponse
     case activeRideResponse of
       Right (GetRidesHistoryResp rideList) -> do
@@ -1039,7 +1069,7 @@ rideStatusPolling pollingId duration state push action = do
 rideRequestPolling :: forall action. String -> Int -> Number -> HomeScreenState -> (action -> Effect Unit) -> (String -> action) -> Flow GlobalState Unit
 rideRequestPolling pollingId count duration state push action = do
   if (getValueToLocalStore RIDE_STATUS_POLLING) == "True" && (getValueToLocalStore RIDE_STATUS_POLLING_ID) == pollingId && isLocalStageOn RideRequested then do
-    activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true" "null"
+    activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true" "null" "null"
     _ <- pure $ spy "polling inside rideRequestPolling function" activeRideResponse
     case activeRideResponse of
       Right (GetRidesHistoryResp rideList) -> do
@@ -1054,9 +1084,25 @@ rideRequestPolling pollingId count duration state push action = do
       Left err -> pure unit
     else pure unit
 
+paymentStatusPooling :: forall action. String -> Int -> Number -> HomeScreenState -> (action -> Effect Unit) -> (APIPaymentStatus -> action) -> Flow GlobalState Unit
+paymentStatusPooling orderId count delayDuration state push action = do
+  if (getValueToLocalStore PAYMENT_STATUS_POOLING) == "true" && isLocalStageOn HomeScreen && count > 0 then do
+    orderStatus <- Remote.paymentOrderStatus orderId
+    _ <- pure $ spy "polling inside paymentStatusPooling function" orderStatus
+    case orderStatus of
+      Right (OrderStatusRes resp) -> do
+        if (DA.any (_ == resp.status) [CHARGED, AUTHORIZATION_FAILED, AUTHENTICATION_FAILED, JUSPAY_DECLINED]) then do
+            _ <- pure $ setValueToLocalStore PAYMENT_STATUS_POOLING "false"
+            doAff do liftEffect $ push $ action resp.status
+        else do
+            void $ delay $ Milliseconds delayDuration
+            paymentStatusPooling orderId (count - 1) delayDuration state push action
+      Left err -> pure unit
+    else pure unit
+
 checkCurrentRide :: forall action.(action -> Effect Unit) -> (String -> action) -> Flow GlobalState Unit
 checkCurrentRide push action = do
-  activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true" "null"
+  activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true" "null" "null"
   case activeRideResponse of
       Right (GetRidesHistoryResp rideList) -> do
         if (DA.null rideList.list) then

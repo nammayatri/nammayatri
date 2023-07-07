@@ -15,6 +15,7 @@
 
 module Screens.HomeScreen.ScreenData where
 
+import Common.Types.App (RateCardType(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Array (head)
@@ -22,7 +23,7 @@ import Data.Maybe (Maybe(..))
 import Foreign.Object (empty)
 import MerchantConfig.DefaultConfig as DC
 import Prelude (($), negate)
-import Screens.Types (Address, Contact, DriverInfoCard, EmergencyHelpModelState, HomeScreenState, Location, LocationListItemState, PopupType(..), RateCardType(..), RatingCard(..), SearchLocationModelType(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..))
+import Screens.Types (Address, Contact, DriverInfoCard, EmergencyHelpModelState, HomeScreenState, Location, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..))
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..))
 
 initData :: HomeScreenState

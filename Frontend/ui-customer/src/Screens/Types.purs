@@ -15,7 +15,7 @@
 
 module Screens.Types where
 
-import Common.Types.App (OptionButtonList)
+import Common.Types.App (OptionButtonList, RateCardType)
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState)
@@ -683,10 +683,6 @@ type Contact = {
      name :: String,
      phoneNo :: String
 }
-
-data RateCardType = DefaultRateCard | DriverAddition | FareUpdate
-derive instance genericRateCardType :: Generic RateCardType _
-instance eqRateCardType :: Eq RateCardType where eq = genericEq
 
 type RateCard =
   {

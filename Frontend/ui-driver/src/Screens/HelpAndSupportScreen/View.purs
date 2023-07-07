@@ -76,6 +76,7 @@ view push state =
     , orientation VERTICAL
     , onBackPressed push $ const BackPressed
     , afterRender push (const AfterRender)
+    , background Color.white900
     ]([linearLayout
      [height MATCH_PARENT
      , width MATCH_PARENT

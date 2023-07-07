@@ -637,6 +637,30 @@ rateCardConfig state =
         , onFirstPage = state.data.rateCard.onFirstPage
         , showDetails = state.data.config.searchLocationConfig.showRateCardDetails
         , alertDialogPrimaryColor = state.data.config.alertDialogPrimaryColor
+        , title = getString RATE_CARD
+        , description = if state.data.rateCard.nightCharges then (getString NIGHT_TIME_CHARGES) else (getString DAY_TIME_CHARGES)
+        , buttonText = Just if state.data.rateCard.currentRateCardType == DefaultRateCard then (getString GOT_IT) else (getString GO_BACK_)
+        , applicableCharges = if state.data.rateCard.nightCharges then (getString NIGHT_TIMES_OF) <> (HU.toString (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLIED_AT_NIGHT)
+                                 else (getString DAY_TIMES_OF) <> (HU.toString (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
+        , fareList = ([
+          {key : ((getString MIN_FARE_UPTO) <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toString (state.data.rateCard.baseFare))},
+          {key : ((getString RATE_ABOVE_MIN_FARE) <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toString (state.data.rateCard.extraFare) <> "/ km")},
+          {key : (getString DRIVER_PICKUP_CHARGES), val : ("₹" <> HU.toString (state.data.rateCard.pickUpCharges))}
+          ]) <> (if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && (state.data.rateCard.additionalFare > 0) then 
+          [{key : (getString DRIVER_ADDITIONS), val : (getString PERCENTAGE_OF_NOMINAL_FARE)}] else [])
+
+        , otherOptions  = [
+          {key : "DRIVER_ADDITIONS", val : (getString DRIVER_ADDITIONS)},
+          {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)}]
+        
+        , additionalStrings = [
+          {key : "DRIVER_ADDITIONS_OPTIONAL", val : (getString DRIVER_ADDITIONS_OPTIONAL)},
+          {key : "THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC", val : (getString THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC)},
+          {key : "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE", val : (getString DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE)},
+          {key : "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE", val : (getString DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE)},
+          {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
+          {key : "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS", val : (getString YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS)},
+          {key : "REASON_CHANGE_IN_ROUTE", val : ("<span style=\"color:black;\">" <> (getString REASON_CHANGE_IN_ROUTE_A) <> "</span>" <> (getString REASON_CHANGE_IN_ROUTE_B))}]
         }
   in
     rateCardConfig'

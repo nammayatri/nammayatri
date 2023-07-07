@@ -15,7 +15,7 @@
 
 module Screens.HomeScreen.Controller where
 
-import Common.Types.App (OptionButtonList)
+import Common.Types.App (OptionButtonList, APIPaymentStatus(..), PaymentStatus(..)) as Common
 import Components.BottomNavBar as BottomNavBar
 import Components.SelectListModal as SelectListModal
 import Components.Banner as Banner
@@ -23,6 +23,7 @@ import Components.InAppKeyboardModal as InAppKeyboardModal
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButtonController
 import Components.RideActionModal as RideActionModal
+import Components.MakePaymentModal as MakePaymentModal
 import Components.ChatView as ChatView
 import Components.StatsModel.Controller as StatsModelController
 import Components.RequestInfoCard as RequestInfoCard
@@ -57,6 +58,7 @@ import Types.ModifyScreenState (modifyScreenState)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Engineering.Helpers.LogEvent (logEvent,logEventWithTwoParams)
 import Effect.Unsafe (unsafePerformEffect)
+import Components.RateCard as RateCard
 
 instance showAction :: Show Action where
   show _ = ""
@@ -171,7 +173,10 @@ instance loggableAction :: Loggable Action where
     TriggerMaps -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "trigger_maps"
     RemoveGenderBanner -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "gender_banner"
     RequestInfoCardAction act -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "request_info_card"
-
+    MakePaymentModalAC act -> pure unit
+    RateCardAC act -> pure unit
+    PaymentBannerAC act -> pure unit
+    PaymentStatusAction _ -> pure unit
 
 
 data ScreenOutput =   Refresh ST.HomeScreenState
@@ -193,6 +198,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | StartZoneRide ST.HomeScreenState
                     | CallCustomer ST.HomeScreenState
                     | GotoEditGenderScreen
+                    | OpenPaymentPage ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -234,8 +240,13 @@ data Action = NoAction
             | ZoneOtpAction
             | TriggerMaps
             | GenderBannerModal Banner.Action
+            | PaymentBannerAC Banner.Action
             | RemoveGenderBanner
             | RequestInfoCardAction RequestInfoCard.Action
+            | MakePaymentModalAC MakePaymentModal.Action
+            | RateCardAC RateCard.Action
+            | PaymentStatusAction Common.APIPaymentStatus
+  
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -346,6 +357,14 @@ eval (RideActionModalAction (RideActionModal.CallCustomer)) state = continueWith
   _ <- (logEventWithTwoParams state.data.logField "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID))
   pure NoAction
   ]
+
+eval (MakePaymentModalAC (MakePaymentModal.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = exit $ OpenPaymentPage state
+
+eval (MakePaymentModalAC (MakePaymentModal.Cancel)) state = continue state{data { paymentState {makePaymentModal = false}}}
+
+eval (MakePaymentModalAC (MakePaymentModal.Info)) state = continue state{data { paymentState {showRateCard = true}}}
+
+eval (RateCardAC (RateCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = continue state{data { paymentState {showRateCard = false}}}
 
 eval (OpenChatScreen) state = do
   continueWithCmd state{props{openChatScreen = false}} [do
@@ -568,11 +587,25 @@ eval (RequestInfoCardAction RequestInfoCard.NoAction) state = continue state
 
 eval (GenderBannerModal (Banner.OnClick)) state = exit $ GotoEditGenderScreen
 
+eval (PaymentBannerAC (Banner.OnClick)) state = if state.data.paymentState.blockedDueToPayment then 
+                                                  continue state else continue state {data { paymentState {paymentStatusBanner = false}}}
+
 eval RemoveGenderBanner state = do
   _ <- pure $ setValueToLocalStore IS_BANNER_ACTIVE "False"
   continue state { props = state.props{showGenderBanner = false}}
 
-eval _ state = continue state
+eval (PaymentStatusAction status) state =  
+  case status of 
+    Common.CHARGED -> continue state { data { paymentState { paymentStatusBanner = false}}}
+    _ -> continue state { data { paymentState { 
+                  paymentStatus = Common.Failed, 
+                  bannerBG = "#FFECED",
+                  bannerTitle = getString YOUR_PREVIOUS_PAYMENT_IS_PENDING,
+                  bannerTitleColor = "#BF4A4E",
+                  banneActionText = getString CONTACT_SUPPORT,
+                  bannerImage = "ny_ic_payment_falied_banner," }}} -- failed
+
+eval _ state = continue state 
 
 checkPermissionAndUpdateDriverMarker :: ST.HomeScreenState -> Effect Unit
 checkPermissionAndUpdateDriverMarker state = do
@@ -636,7 +669,7 @@ activeRideDetail state (RidesInfo ride) = {
   specialLocationTag : ride.specialLocationTag -- Just "SureMetro - Pickup"
 }
 
-cancellationReasons :: String -> Array OptionButtonList
+cancellationReasons :: String -> Array Common.OptionButtonList
 cancellationReasons dummy = [
         {
           reasonCode: "VEHICLE_ISSUE"
@@ -676,7 +709,7 @@ cancellationReasons dummy = [
         }
 ]
 
-dummyCancelReason :: OptionButtonList
+dummyCancelReason :: Common.OptionButtonList
 dummyCancelReason =  {
         reasonCode : ""
         , description :""

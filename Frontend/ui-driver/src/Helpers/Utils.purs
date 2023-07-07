@@ -23,10 +23,11 @@ module Helpers.Utils
 import MerchantConfig.Utils
 
 import Common.Types.App (LazyCheck(..))
+import Types.App (FlowBT)
 import Control.Monad.Except (runExcept)
 import Data.Array ((!!)) as DA
 import Data.Array.NonEmpty (fromArray)
-import Data.Either (hush)
+import Data.Either (Either(..), hush)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
@@ -38,7 +39,7 @@ import Data.String (Pattern(..), split) as DS
 import Data.String as DS
 import Data.Traversable (traverse)
 import Effect (Effect)
-import Effect.Aff (error, killFiber, launchAff, launchAff_)
+import Effect.Aff (error, killFiber, launchAff, launchAff_, makeAff, nonCanceler)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (parseFloat, setText', getCurrentUTC) as ReExport
 import Foreign (Foreign)
@@ -48,14 +49,19 @@ import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>))
+import Prelude (Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>))
 import Prelude (class Eq, class Show, (<<<))
 import Prelude (map, (*), (-), (/))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
-import Data.String (Pattern(..), split)
 import Data.Function.Uncurried (Fn4(..), runFn4)
 import Screens.Types (AllocationData, LeaderBoardWeek, YoutubeData, LeaderBoardDay)
 import Engineering.Helpers.Commons (parseFloat, setText', convertUTCtoISC, getCurrentUTC) as ReExport
+import Services.APITypes(PaymentPagePayload)
+import Presto.Core.Types.Language.Flow (Flow, doAff)
+import Control.Monad.Except.Trans (lift)
+import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
+import Data.Newtype (class Newtype)
+import Presto.Core.Types.API (class StandardEncode, standardEncode)
 
 foreign import shuffle :: forall a. Array a -> Array a
 foreign import generateUniqueId :: Unit -> String
@@ -79,6 +85,7 @@ foreign import storeCallBackForNotification :: forall action. (action -> Effect 
 foreign import secondsLeft :: String -> Int
 foreign import objectToAllocationType :: String -> AllocationData
 foreign import getcurrentdate :: String -> String
+foreign import getDatebyCount :: Int -> String
 foreign import launchAppSettings :: Unit -> Effect Unit
 foreign import setYoutubePlayer :: YoutubeData -> String -> String -> Unit
 foreign import getTimeStampString :: String -> String
@@ -213,7 +220,7 @@ getRequiredTag prop tag = do
   case tag of
     Nothing -> Nothing
     Just tag' -> do
-        let arr = split (Pattern "_") tag'
+        let arr = DS.split (DS.Pattern "_") tag'
         let pickup = fromMaybe "" (arr DA.!! 0)
         let drop = fromMaybe "" (arr DA.!! 1)
         let priority = fromMaybe "" (arr DA.!! 2)
@@ -252,3 +259,21 @@ getCommonAssetStoreLink lazy = case (getMerchant lazy) of
   MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/"
   PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/passculturecommon/"
   MOBILITY_RS -> "https://assets.juspay.in/beckn/passculture/passculturecommon/"
+
+
+type AffSuccess s = (s -> Effect Unit)
+type MicroAPPInvokeSignature = String -> (AffSuccess String) ->  Effect Unit
+
+
+foreign import startPP1 :: MicroAPPInvokeSignature
+
+foreign import consumeBackPress :: Unit -> Effect Unit
+
+startPP'' :: forall a. PaymentPagePayload -> Flow a String
+startPP'' payload = do
+  response <- doAff $ makeAff (\cb -> (startPP1 (encodeJSON payload) (Right >>> cb) ) *> pure nonCanceler)
+  pure $ response
+
+
+startPP :: PaymentPagePayload -> FlowBT String String
+startPP payload = lift $ lift $ startPP'' payload

@@ -189,3 +189,45 @@ instance encodeEventPayload  :: Encode EventPayload where encode = defaultEncode
 -- derive instance newtypeLocationLatLong :: Newtype LocationLatLong _
 -- instance encodeLocationLatLong :: Encode LocationLatLong where encode = defaultEncode
 -- instance decodeLocationLatLong :: Decode LocationLatLong where decode = defaultDecode
+
+data RateCardType = DefaultRateCard | DriverAddition | FareUpdate | PaymentFareBreakup
+derive instance genericRateCardType :: Generic RateCardType _
+instance eqRateCardType :: Eq RateCardType where eq = genericEq
+
+type FareList = {
+  key :: String,
+  val :: String
+}
+
+data PaymentStatus = Success | Pending | Failed
+
+derive instance genericPaymentStatus :: Generic PaymentStatus _
+instance standardEncodePaymentStatus :: StandardEncode PaymentStatus where standardEncode _ = standardEncode {}
+instance showPaymentStatus :: Show PaymentStatus where show = genericShow
+instance decodePaymentStatus :: Decode PaymentStatus where decode = defaultDecode
+instance encodePaymentStatus  :: Encode PaymentStatus where encode = defaultEncode
+instance eqPaymentStatus :: Eq PaymentStatus where eq = genericEq
+
+data APIPaymentStatus =  NEW
+                      | PENDING_VBV
+                      | CHARGED
+                      | AUTHENTICATION_FAILED 
+                      | AUTHORIZATION_FAILED
+                      | JUSPAY_DECLINED
+                      | AUTHORIZING
+                      | COD_INITIATED
+                      | STARTED
+                      | AUTO_REFUNDED
+
+derive instance genericAPIPaymentStatus :: Generic APIPaymentStatus _
+instance showAPIPaymentStatus :: Show APIPaymentStatus where show = genericShow
+instance decodeAPIPaymentStatus :: Decode APIPaymentStatus where decode = defaultEnumDecode
+instance encodeAPIPaymentStatus  :: Encode APIPaymentStatus where encode = defaultEnumEncode
+instance eqAPIPaymentStatus :: Eq APIPaymentStatus where eq = genericEq
+instance standardEncodeAPIPaymentStatus :: StandardEncode APIPaymentStatus where standardEncode _ = standardEncode {}
+
+type DateObj = {
+  date :: Int
+, month :: String
+, year :: Int
+}

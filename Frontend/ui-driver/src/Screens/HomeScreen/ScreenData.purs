@@ -20,6 +20,7 @@ import Prelude(negate)
 import Services.APITypes(Status(..))
 import Data.Maybe
 import Foreign.Object (empty)
+import Common.Types.App as Common
 
 initData :: HomeScreenState
 initData = {
@@ -72,6 +73,27 @@ initData = {
         suggestionsList : [],
         messageToBeSent : "",
         logField : empty 
+      ,  paymentState : {
+          rideCount : 0,
+          totalMoneyCollected : 0,
+          payableAndGST : 0,
+          platFromFee : 0,
+          date : "",
+          makePaymentModal : false,
+          showRateCard : false,
+          paymentStatusBanner : false,
+          paymentStatus : Common.Success,
+          driverFeeId : "",
+          bannerBG : "",
+          bannerTitle : "",
+          bannerTitleColor : "",
+          banneActionText : "",
+          actionTextColor : "",
+          bannerImage : "",
+          showBannerImage : false,
+          chargesBreakup : [],
+          blockedDueToPayment : false
+        }
     },
     props: {
         statusOnline : true,

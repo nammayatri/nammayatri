@@ -14,9 +14,22 @@
 -}
 
 module Components.RateCard.Controller where
-import Screens.Types(RateCardType(..))
 
-data Action = Close | BackPressed | NoAction | GoToDefaultStart | GoToDriverAddition | GoToFareUpdate
+import Data.Generic.Rep (class Generic)
+import Data.Eq.Generic (genericEq)
+import Data.Show.Generic (genericShow)
+import Prelude (class Eq, class Show)
+import Common.Types.App (RateCardType(..), FareList(..))
+import Components.PrimaryButton as PrimaryButton
+import Data.Maybe(Maybe(..))
+
+data Action = Close 
+              | BackPressed 
+              | NoAction 
+              | GoToDefaultStart 
+              | GoToDriverAddition 
+              | GoToFareUpdate 
+              | PrimaryButtonAC PrimaryButton.Action
 
 
 type Config = {
@@ -29,7 +42,15 @@ type Config = {
     currentRateCardType :: RateCardType,
     onFirstPage :: Boolean,
     showDetails :: Boolean,
-    alertDialogPrimaryColor :: String
+    alertDialogPrimaryColor :: String,
+    title :: String,
+    description :: String,
+    buttonText :: Maybe String,
+    applicableCharges :: String,
+    primaryButtonText :: String,
+    fareList :: Array FareList,
+    otherOptions :: Array FareList,
+    additionalStrings :: Array FareList
 }
 
 config :: Config 
@@ -43,5 +64,13 @@ config = {
     currentRateCardType : DefaultRateCard,
     onFirstPage : false,
     showDetails : true,
-    alertDialogPrimaryColor: "#2194FF"
+    alertDialogPrimaryColor: "#2194FF",
+    title : "",
+    description : "",
+    buttonText : Nothing,
+    primaryButtonText : "",
+    applicableCharges : "",
+    fareList : [],
+    otherOptions : [],
+    additionalStrings : []
 }

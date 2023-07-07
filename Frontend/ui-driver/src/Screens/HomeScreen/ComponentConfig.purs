@@ -16,7 +16,7 @@
 module Screens.HomeScreen.ComponentConfig where
 
 import Language.Strings (getString)
-import Prelude(unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||))
+import Prelude(unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), show, map)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Visibility(..))
 import Components.SelectListModal as SelectListModal
 import Components.Banner as Banner
@@ -44,9 +44,11 @@ import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge as JB
 import Styles.Colors as Color
-import Common.Types.App (LazyCheck(..))
+import Components.MakePaymentModal as MakePaymentModal
+import Components.RateCard as RateCard
+import Common.Types.App as CommonTypes
+import Services.APITypes ( PaymentBreakUp(..))
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
-
 
 
 --------------------------------- rideActionModalConfig -------------------------------------
@@ -361,3 +363,90 @@ requestInfoCardConfig _ = let
     }
   }
   in requestInfoCardConfig'
+
+makePaymentState :: ST.HomeScreenState -> MakePaymentModal.MakePaymentModalState
+makePaymentState state = {
+  title : getString GREAT_JOB,
+  description : ( case getValueToLocalStore LANGUAGE_KEY of
+                        "EN_US" -> "You have completed "<> (show state.data.paymentState.rideCount) <>" Rides yesterday!"
+                        "HI_IN" -> "आपने कल "<> (show state.data.paymentState.rideCount) <> " सवारी पूरी कर लीं!"
+                        "KN_IN" -> "ನೀವು ನಿನ್ನೆ "<> (show state.data.paymentState.rideCount) <>" ರೈಡ್‌ಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದ್ದೀರಿ!"
+                        "TA_IN" -> "நீங்கள் நேற்று "<> (show state.data.paymentState.rideCount) <>" சவாரிகளை முடித்துவிட்டீர்கள்!"
+                        _       -> "You have completed "<> (show state.data.paymentState.rideCount) <>" Rides yesterday!"
+                     ),
+  description2 : ( case getValueToLocalStore LANGUAGE_KEY of
+                        "EN_US" -> "To continue using Yatri Sathi, please complete your payment for " <> state.data.paymentState.date
+                        "HI_IN" -> "यात्री साथी का उपयोग जारी रखने के लिए, कृपया "<> state.data.paymentState.date <>" के लिए अपना भुगतान पूरा करें"
+                        "KN_IN" -> "ಯಾತ್ರಿ ಸತಿ ಬಳಸುವುದನ್ನು ಮುಂದುವರಿಸಲು, ದಯವಿಟ್ಟು "<> state.data.paymentState.date <> " ಕ್ಕೆ ನಿಮ್ಮ ಪಾವತಿಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ"
+                        "TA_IN" -> "யாத்ரி சாத்தியைத் தொடர்ந்து பயன்படுத்த, "<> state.data.paymentState.date <> " க்கு உங்கள் கட்டணத்தைச் செலுத்தவும்"
+                        _       -> "To continue using Yatri Sathi, please complete your payment for " <> state.data.paymentState.date
+                     ),
+  okButtontext : ( case getValueToLocalStore LANGUAGE_KEY of
+                        "EN_US" -> "Pay ₹" <> (show state.data.paymentState.payableAndGST) <> " now"
+                        "HI_IN" -> "अभी ₹" <> (show state.data.paymentState.payableAndGST) <>" का भुगतान करें"
+                        "KN_IN" -> "ಈಗ ₹"<> (show state.data.paymentState.payableAndGST)<>" ಪಾವತಿಸಿ"
+                        "TA_IN" -> "இப்போது ₹" <> (show state.data.paymentState.payableAndGST) <> " செலுத்துங்கள்"
+                        _       -> "Pay ₹" <> (show state.data.paymentState.payableAndGST) <> " now"
+                     ),
+  cancelButtonText : if (JB.withinTimeRange "14:00:00" "10:00:00" (EHC.convertUTCtoISC(EHC.getCurrentUTC "") "HH:mm:ss")) then Nothing else Just $ getString LATER,
+  ridesCount : state.data.paymentState.rideCount,
+  feeItem : [
+    { feeType : MakePaymentModal.TOTAL_COLLECTED,
+      title : getString TOTAL_MONEY_COLLECTED,
+      val : state.data.paymentState.totalMoneyCollected},
+    { feeType : MakePaymentModal.EARNED_OF_THE_DAY,
+      title : getString FARE_EARNED_OF_THE_DAY,
+      val : (state.data.paymentState.totalMoneyCollected - state.data.paymentState.payableAndGST)},
+    { feeType : MakePaymentModal.GST_PAYABLE,
+      title : getString GST_PLUS_PAYABLE,
+      val : state.data.paymentState.payableAndGST}
+  ]
+}
+
+rateCardState :: ST.HomeScreenState -> RateCard.Config
+rateCardState state =
+  let
+    config' = RateCard.config
+    rateCardConfig' =
+      config'
+        { title = getString FEE_BREAKUP
+        , description = getString YATRI_SATHI_FEE_PAYABLE_FOR_DATE
+        , buttonText = Nothing
+        , currentRateCardType = CommonTypes.PaymentFareBreakup
+        , primaryButtonText = getString GOT_IT
+        , additionalStrings = [
+          {key : "FEE_CORRESPONDING_to_DISTANCE", val : getString FEE_CORRESPONDING_TO_THE_DISTANCE},
+          {key : "GOT_IT", val : getString GOT_IT},
+          {key : "TOTAL_PAYABLE", val : getString TOTAL_PAYABLE},
+          {key : "TOTAL_PAYABLE_VAL", val : "₹" <> (show state.data.paymentState.payableAndGST)}]
+          
+        , fareList = getChargesBreakup state.data.paymentState.chargesBreakup
+
+        }
+  in
+    rateCardConfig'
+
+paymentStatusConfig :: ST.HomeScreenState -> Banner.Config
+paymentStatusConfig state = 
+  let 
+    config = Banner.config
+    config' = config
+      { 
+        backgroundColor = state.data.paymentState.bannerBG,
+        title = state.data.paymentState.bannerTitle,
+        titleColor = state.data.paymentState.bannerTitleColor,
+        actionText = state.data.paymentState.banneActionText,
+        actionTextColor = state.data.paymentState.actionTextColor,
+        imageUrl = state.data.paymentState.bannerImage,
+        isBanner = true
+      }
+  in config'
+
+
+getChargesBreakup :: Array PaymentBreakUp -> Array CommonTypes.FareList
+getChargesBreakup paymentBreakUpArr = map (\(PaymentBreakUp item) -> {val : "₹" <>  (show item.amount),
+  key : case item.component of
+        "Government Charges" -> getString GOVERMENT_CHARGES
+        "Platform Fee" -> getString PLATFORM_FEE
+        _ -> item.component
+    } ) paymentBreakUpArr

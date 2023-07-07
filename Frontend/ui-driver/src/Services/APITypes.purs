@@ -15,24 +15,24 @@
 
 module Services.APITypes where
 
+import Common.Types.App (Version(..),APIPaymentStatus(..)) as Common
 import Control.Alt ((<|>))
-import Common.Types.App (Version(..))
-import Data.Generic.Rep (class Generic)
+import Control.Monad.Except (runExcept)
+import Data.Either as Either
 import Data.Eq.Generic (genericEq)
-import Data.Show.Generic (genericShow)
+import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
+import Data.Show.Generic (genericShow)
 import Foreign (ForeignError(..), fail)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON)
+import Foreign.Generic.EnumEncoding (genericDecodeEnum, genericEncodeEnum, defaultGenericEnumOptions)
+import Foreign.Index (readProp)
 import Prelude (class Eq, class Show, bind, show, ($), (<$>), (>>=))
 import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorResponse, Method(..), defaultMakeRequest, standardEncode)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
-import Foreign.Generic.EnumEncoding (genericDecodeEnum, genericEncodeEnum, defaultGenericEnumOptions)
 import Services.EndPoints as EP
-import Foreign.Index (readProp)
-import Control.Monad.Except (runExcept)
-import Data.Either as Either
 
 newtype ErrorPayloadWrapper = ErrorPayload ErrorResponse
 
@@ -389,10 +389,11 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , canDowngradeToHatchback :: Boolean
     , canDowngradeToSedan :: Boolean
     , canDowngradeToTaxi :: Boolean
-    , clientVersion         :: Maybe Version
-    , bundleVersion         :: Maybe Version
+    , clientVersion         :: Maybe Common.Version
+    , bundleVersion         :: Maybe Common.Version
     , gender                :: Maybe String
-    , numberOfRides :: Maybe Int
+    , numberOfRides         :: Maybe Int
+    , paymentPending        :: Boolean
     }
 
 
@@ -450,7 +451,7 @@ instance decodeGetDriverInfoResp :: Decode GetDriverInfoResp where decode = defa
 instance encodeGetDriverInfoResp :: Encode GetDriverInfoResp where encode = defaultEncode
 -----------------------------------------------GET RIDES HISTORY---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-data GetRidesHistoryReq = GetRidesHistoryReq String String String String
+data GetRidesHistoryReq = GetRidesHistoryReq String String String String String
 
 newtype GetRidesHistoryResp = GetRidesHistoryResp
     {
@@ -500,13 +501,13 @@ newtype LocationInfo = LocationInfo
 
 
 instance makeGetRidesHistoryReq :: RestEndpoint GetRidesHistoryReq GetRidesHistoryResp where
-    makeRequest reqBody@(GetRidesHistoryReq limit offset isActive status) headers = defaultMakeRequest GET (EP.getRideHistory limit offset isActive status) headers reqBody
+    makeRequest reqBody@(GetRidesHistoryReq limit offset isActive status day) headers = defaultMakeRequest GET (EP.getRideHistory limit offset isActive status day) headers reqBody
     decodeResponse = decodeJSON
     encodeRequest req = defaultEncode req
 
 derive instance genericGetRidesHistoryReq :: Generic GetRidesHistoryReq _
 instance showGetRidesHistoryReq :: Show GetRidesHistoryReq where show = genericShow
-instance standardEncodeGetRidesHistoryReq :: StandardEncode GetRidesHistoryReq where standardEncode (GetRidesHistoryReq req rq limit status) = standardEncode req
+instance standardEncodeGetRidesHistoryReq :: StandardEncode GetRidesHistoryReq where standardEncode _ = standardEncode {}
 instance decodeGetRidesHistoryReq :: Decode GetRidesHistoryReq where decode = defaultDecode
 instance encodeGetRidesHistoryReq :: Encode GetRidesHistoryReq where encode = defaultEncode
 
@@ -604,8 +605,8 @@ newtype UpdateDriverInfoReq = UpdateDriverInfoReq
     ,   canDowngradeToHatchback :: Maybe Boolean
     ,   canDowngradeToTaxi      :: Maybe Boolean
     ,   language                :: Maybe String
-    ,   clientVersion           :: Maybe Version
-    ,   bundleVersion           :: Maybe Version
+    ,   clientVersion           :: Maybe Common.Version
+    ,   bundleVersion           :: Maybe Common.Version
     ,   gender                  :: Maybe String
     }
 
@@ -1706,3 +1707,215 @@ instance showDriversInfo :: Show DriversInfo where show = genericShow
 instance standardEncodeDriversInfo :: StandardEncode DriversInfo where standardEncode (DriversInfo res) = standardEncode res
 instance decodeDriversInfo :: Decode DriversInfo where decode = defaultDecode
 instance encodeDriversInfo :: Encode DriversInfo where encode = defaultEncode
+
+-- getOrder status API
+
+data GetOrderReq = GetOrderReq String
+
+newtype GetOrderRes = GetOrderRes {
+  sdk_payload :: PaymentPagePayload,
+  status :: String ,
+  id :: String,
+  order_id :: String,
+  payment_links :: PaymentLinks
+  }
+
+instance makeGetOrderReq :: RestEndpoint GetOrderReq GetOrderRes where
+ makeRequest reqBody@(GetOrderReq orderId) headers = defaultMakeRequest GET (EP.getOrder orderId) headers reqBody
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericGetOrderReq :: Generic GetOrderReq _
+instance standardEncodeGetOrderReq :: StandardEncode GetOrderReq where standardEncode (GetOrderReq id) = standardEncode id
+instance showGetOrderReq :: Show GetOrderReq where show = genericShow
+instance decodeGetOrderReq :: Decode GetOrderReq where decode = defaultDecode
+instance encodeGetOrderReq :: Encode GetOrderReq where encode = defaultEncode
+
+derive instance genericGetOrderRes :: Generic GetOrderRes _
+derive instance newtypeGetOrderRes :: Newtype GetOrderRes _
+instance standardEncodeGetOrderRes :: StandardEncode GetOrderRes where standardEncode (GetOrderRes res) = standardEncode res
+instance showGetOrderRes :: Show GetOrderRes where show = genericShow
+instance decodeGetOrderRes :: Decode GetOrderRes where decode = defaultDecode
+instance encodeGetOrderRes :: Encode GetOrderRes where encode = defaultEncode
+
+-- order status api
+
+data CreateOrderReq = CreateOrderReq String
+
+newtype CreateOrderRes = CreateOrderRes
+  {
+    sdk_payload :: PaymentPagePayload,
+    status :: String ,
+    id :: String,
+    order_id :: String,
+    payment_links :: PaymentLinks
+  }
+
+newtype PaymentPagePayload = PaymentPagePayload
+  {
+    requestId :: Maybe String,
+    service :: Maybe String,
+    payload :: PayPayload
+  }
+
+newtype PayPayload = PayPayload
+  {
+    action :: Maybe String,
+    amount :: String,
+    clientAuthToken :: String,
+    clientAuthTokenExpiry :: String,
+    clientId :: Maybe String,
+    currency :: String,
+    customerEmail :: Maybe String,
+    customerId :: Maybe String,
+    customerPhone :: Maybe String,
+    description :: Maybe String,
+    environment :: Maybe String,
+    firstName :: Maybe String,
+    lastName :: Maybe String,
+    merchantId :: Maybe String,
+    options_getUpiDeepLinks :: Maybe Boolean,
+    orderId :: Maybe String,
+    returnUrl :: Maybe String
+  }
+
+newtype PaymentLinks = PaymentLinks
+  {
+    web :: Maybe String,
+    iframe :: Maybe String,
+    mobile :: Maybe String
+  }
+
+instance makeCreateOrderReq :: RestEndpoint CreateOrderReq CreateOrderRes where
+ makeRequest reqBody@(CreateOrderReq estimateId) headers = defaultMakeRequest POST (EP.createOrder estimateId) headers reqBody
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericCreateOrderReq :: Generic CreateOrderReq _
+instance standardEncodeCreateOrderReq :: StandardEncode CreateOrderReq where standardEncode (CreateOrderReq dummy) = standardEncode dummy
+instance showCreateOrderReq :: Show CreateOrderReq where show = genericShow
+instance decodeCreateOrderReq :: Decode CreateOrderReq where decode = defaultDecode
+instance encodeCreateOrderReq :: Encode CreateOrderReq where encode = defaultEncode
+
+derive instance genericPaymentLinks :: Generic PaymentLinks _
+derive instance newtypePaymentLinks :: Newtype PaymentLinks _
+instance standardEncodePaymentLinks :: StandardEncode PaymentLinks where standardEncode (PaymentLinks id) = standardEncode id
+instance showPaymentLinks :: Show PaymentLinks where show = genericShow
+instance decodePaymentLinks :: Decode PaymentLinks where decode = defaultDecode
+instance encodePaymentLinks :: Encode PaymentLinks where encode = defaultEncode
+
+derive instance genericCreateOrderRes :: Generic CreateOrderRes _
+derive instance newtypeCreateOrderRes :: Newtype CreateOrderRes _
+instance standardEncodeCreateOrderRes :: StandardEncode CreateOrderRes where standardEncode (CreateOrderRes res) = standardEncode res
+instance showCreateOrderRes :: Show CreateOrderRes where show = genericShow
+instance decodeCreateOrderRes :: Decode CreateOrderRes where decode = defaultDecode
+instance encodeCreateOrderRes :: Encode CreateOrderRes where encode = defaultEncode
+
+derive instance genericPayPayload :: Generic PayPayload _
+derive instance newtypePayPayload :: Newtype PayPayload _
+instance standardEncodePayPayload :: StandardEncode PayPayload where standardEncode (PayPayload id) = standardEncode id
+instance showPayPayload :: Show PayPayload where show = genericShow
+instance decodePayPayload :: Decode PayPayload where decode = defaultDecode
+instance encodePayPayload :: Encode PayPayload where encode = defaultEncode
+
+derive instance genericPaymentPagePayload :: Generic PaymentPagePayload _
+derive instance newtypePaymentPagePayload :: Newtype PaymentPagePayload _
+instance standardEncodePaymentPagePayload :: StandardEncode PaymentPagePayload where standardEncode (PaymentPagePayload id) = standardEncode id
+instance showPaymentPagePayload :: Show PaymentPagePayload where show = genericShow
+instance decodePaymentPagePayload :: Decode PaymentPagePayload where decode = defaultDecode
+instance encodePaymentPagePayload :: Encode PaymentPagePayload where encode = defaultEncode
+
+
+
+-- order status
+
+data OrderStatusReq = OrderStatusReq String
+
+newtype OrderStatusRes = OrderStatusRes
+  {
+    status :: Common.APIPaymentStatus
+  }
+
+instance makeOrderStatusReq :: RestEndpoint OrderStatusReq OrderStatusRes where
+ makeRequest reqBody@(OrderStatusReq orderId) headers = defaultMakeRequest GET (EP.orderStatus orderId) headers reqBody
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericOrderStatusReq :: Generic OrderStatusReq _
+instance standardEncodeOrderStatusReq :: StandardEncode OrderStatusReq where standardEncode (OrderStatusReq dummy) = standardEncode dummy
+instance showOrderStatusReq :: Show OrderStatusReq where show = genericShow
+instance decodeOrderStatusReq :: Decode OrderStatusReq where decode = defaultDecode
+instance encodeOrderStatusReq :: Encode OrderStatusReq where encode = defaultEncode
+
+derive instance genericOrderStatusRes :: Generic OrderStatusRes _
+derive instance newtypeOrderStatusRes :: Newtype OrderStatusRes _
+instance standardEncodeOrderStatusRes :: StandardEncode OrderStatusRes where standardEncode (OrderStatusRes res) = standardEncode res
+instance showOrderStatusRes :: Show OrderStatusRes where show = genericShow
+instance decodeOrderStatusRes :: Decode OrderStatusRes where decode = defaultDecode
+instance encodeOrderStatusRes :: Encode OrderStatusRes where encode = defaultEncode 
+
+-- payment history
+
+data GetPaymentHistoryReq = GetPaymentHistoryReq String String (Maybe String)
+
+newtype GetPaymentHistoryResp = GetPaymentHistoryResp (Array PaymentDetailsEntity)
+
+newtype PaymentDetailsEntity = PaymentDetailsEntity {
+    date :: String
+  , totalRides :: Int
+  , totalEarnings :: Int
+  , charges :: Int
+  , chargesBreakup :: Array PaymentBreakUp
+  , txnInfo :: Array TxnInfo
+  , driverFeeId :: String
+}
+
+newtype PaymentBreakUp = PaymentBreakUp {
+    component :: String
+  , amount :: Number
+}
+
+newtype TxnInfo = TxnInfo {
+    id :: String
+  , status :: Common.APIPaymentStatus
+}
+
+
+instance makeGetPaymentHistoryReq :: RestEndpoint GetPaymentHistoryReq GetPaymentHistoryResp where
+ makeRequest reqBody@(GetPaymentHistoryReq from to status) headers = defaultMakeRequest GET (EP.paymentHistory from to status) headers reqBody
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericGetPaymentHistoryReq :: Generic GetPaymentHistoryReq _
+instance standardEncodeGetPaymentHistoryReq :: StandardEncode GetPaymentHistoryReq where standardEncode res = standardEncode {}
+instance showGetPaymentHistoryReq :: Show GetPaymentHistoryReq where show = genericShow
+instance decodeGetPaymentHistoryReq :: Decode GetPaymentHistoryReq where decode = defaultDecode
+instance encodeGetPaymentHistoryReq :: Encode GetPaymentHistoryReq where encode = defaultEncode
+
+derive instance genericGetPaymentHistoryResp :: Generic GetPaymentHistoryResp _
+derive instance newtypeGetPaymentHistoryResp:: Newtype GetPaymentHistoryResp _
+instance standardEncodeGetPaymentHistoryResp :: StandardEncode GetPaymentHistoryResp where standardEncode (GetPaymentHistoryResp res) = standardEncode res
+instance showGetPaymentHistoryResp :: Show GetPaymentHistoryResp where show = genericShow
+instance decodeGetPaymentHistoryResp :: Decode GetPaymentHistoryResp where decode = defaultDecode
+instance encodeGetPaymentHistoryResp :: Encode GetPaymentHistoryResp where encode = defaultEncode
+
+derive instance genericPaymentDetailsEntity :: Generic PaymentDetailsEntity _
+derive instance newtypePaymentDetailsEntity:: Newtype PaymentDetailsEntity _
+instance standardEncodePaymentDetailsEntity :: StandardEncode PaymentDetailsEntity where standardEncode (PaymentDetailsEntity res) = standardEncode res
+instance showPaymentDetailsEntity :: Show PaymentDetailsEntity where show = genericShow
+instance decodePaymentDetailsEntity :: Decode PaymentDetailsEntity where decode = defaultDecode
+instance encodePaymentDetailsEntity :: Encode PaymentDetailsEntity where encode = defaultEncode
+
+derive instance genericPaymentBreakUp :: Generic PaymentBreakUp _
+derive instance newtypePaymentBreakUp:: Newtype PaymentBreakUp _
+instance standardEncodePaymentBreakUp :: StandardEncode PaymentBreakUp where standardEncode (PaymentBreakUp res) = standardEncode res
+instance showPaymentBreakUp :: Show PaymentBreakUp where show = genericShow
+instance decodePaymentBreakUp :: Decode PaymentBreakUp where decode = defaultDecode
+instance encodePaymentBreakUp :: Encode PaymentBreakUp where encode = defaultEncode
+
+derive instance genericTxnInfo :: Generic TxnInfo _
+derive instance newtypeTxnInfo:: Newtype TxnInfo _
+instance standardEncodeTxnInfo :: StandardEncode TxnInfo where standardEncode (TxnInfo res) = standardEncode res
+instance showTxnInfo :: Show TxnInfo where show = genericShow
+instance decodeTxnInfo :: Decode TxnInfo where decode = defaultDecode
+instance encodeTxnInfo :: Encode TxnInfo where encode = defaultEncode

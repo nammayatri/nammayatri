@@ -63,7 +63,7 @@ import android.widget.NumberPicker;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
-
+import android.widget.HorizontalScrollView;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.browser.customtabs.CustomTabsIntent;
@@ -1694,6 +1694,22 @@ public class MobilityCommonBridge extends HyperBridge {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 effect = VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE);
                 vibrator.vibrate(effect);
+            }
+        }
+    }
+
+    @JavascriptInterface
+    public void horizontalScrollToPos(final String id, final String childId) {
+        if (bridgeComponents.getActivity() != null) {
+            Activity activity = bridgeComponents.getActivity();
+            HorizontalScrollView scrollView = activity.findViewById(Integer.parseInt(id));
+            View child = activity.findViewById(Integer.parseInt(childId));
+            final int x;
+            final int y;
+            x = child.getLeft();
+            y = child.getTop();
+            if (scrollView != null) {
+                scrollView.scrollTo(x, y);
             }
         }
     }

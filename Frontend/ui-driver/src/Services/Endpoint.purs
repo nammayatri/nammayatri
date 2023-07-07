@@ -15,8 +15,9 @@
 
 module Services.EndPoints where
 
-import Prelude ((<>), show)
+import Prelude (show, (<>), (==))
 import Services.Config (getBaseUrl)
+import Data.Maybe(Maybe(..))
 
 
 triggerOTP :: String -> String
@@ -49,11 +50,11 @@ logout dummyString = (getBaseUrl "") <> "/auth/logout"
 getDriverInfo :: String -> String
 getDriverInfo dummyString = (getBaseUrl "") <> "/driver/profile"
 
-getRideHistory :: String -> String -> String -> String -> String
-getRideHistory limit offset isActive status = do
+getRideHistory :: String -> String -> String -> String -> String -> String
+getRideHistory limit offset isActive status day= do
   case status of
     "null" -> (getBaseUrl "") <> "/driver/ride/list?limit="<>limit<>"&offset="<>offset<>"&onlyActive="<>isActive
-    _ -> (getBaseUrl "") <> "/driver/ride/list?limit="<>limit<>"&offset="<>offset<>"&onlyActive="<>isActive<>"&status="<>(show status)
+    _ -> (getBaseUrl "") <> "/driver/ride/list?onlyActive="<>isActive<>"&status="<> (show status) <> if day == "null" then "" else "&day=" <> day
 
 offerRide :: String -> String
 offerRide dummyString = (getBaseUrl "") <> "/driver/searchRequest/quote/offer"
@@ -156,3 +157,17 @@ leaderBoardDaily date = (getBaseUrl "") <> "/driver/leaderBoard/daily?date=" <> 
 
 leaderBoardWeekly :: String -> String -> String
 leaderBoardWeekly fromDate toDate = (getBaseUrl "") <> "/driver/leaderBoard/weekly?fromDate=" <> fromDate <> "&toDate=" <> toDate
+
+createOrder :: String -> String
+createOrder id = (getBaseUrl "37") <> "/payment/" <> id <>"/createOrder"
+
+orderStatus :: String -> String
+orderStatus orderId = (getBaseUrl "37") <> "/payment/" <> orderId <>"/status"
+
+paymentHistory :: String -> String -> Maybe String -> String
+paymentHistory from to status = case status of
+  Nothing -> (getBaseUrl "") <> "/driver/payments/history?from=" <> from <> "&to=" <> to
+  Just status' -> (getBaseUrl "") <> "/driver/payments/history" <> "?status=" <> (show status')
+
+getOrder :: String -> String
+getOrder orderId = (getBaseUrl "37") <> "/payment/" <> orderId
