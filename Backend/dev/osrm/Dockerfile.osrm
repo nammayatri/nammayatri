@@ -1,4 +1,4 @@
-FROM osrm/osrm-backend
+FROM osrm/osrm-backend AS stage1
 
 COPY ./dev/osrm /data
 
@@ -6,4 +6,10 @@ RUN osrm-extract -p /opt/car.lua /data/southern-zone-latest.osm.pbf
 RUN osrm-partition /data/southern-zone-latest.osrm
 RUN osrm-customize /data/southern-zone-latest.osrm
 
+FROM osrm/osrm-backend
+
+COPY --from=stage1 /data /data
+
 ENTRYPOINT [ "osrm-routed", "--algorithm", "mld", "/data/southern-zone-latest.osrm" ]
+
+RUN rm /data/southern-zone-latest.osm.pbf /data/southern-zone-latest.osrm /data/Dockerfile.osrm /data/README
