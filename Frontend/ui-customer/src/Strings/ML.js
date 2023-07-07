@@ -275,8 +275,8 @@ const malayalamStrings = {
   "DO_YOU_NEED_EMERGENCY_HELP": "നിങ്ങൾക്ക് അടിയന്തിര സഹായം ആവശ്യമുണ്ടോ?",
   "CALL_SUPPORT": "സപ്പോർട്ട് ടീമിനെ വിളിക്കുക",
   "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "നിങ്ങൾ നമ്മ യാത്രി സപ്പോർട്ട് ടീമിനെ കാൾ ചെയ്യാൻ പോകുകയാണ്. തുടരണോ?",
-  "YOU_ARE_ABOUT_TO_CALL_POLICE": "നിങ്ങൾ പോലീസിനെ  കാൾ ചെയ്യാൻ പോകുകയാണ്. തുടരണോ?",
-  "DAIL_100": "100 ഡയൽ ചെയ്യണോ?",
+  "YOU_ARE_ABOUT_TO_CALL_NEAREST_EMERGENCY_CENTRE": "നിങ്ങൾ അടുത്തുള്ള എമർജൻസി സെന്ററിലേക്ക് വിളിക്കാൻ പോകുകയാണ്. നിങ്ങൾക്ക് തുടരണോ?",
+  "DIAL_112": "112 ഡയൽ ചെയ്യണോ?",
   "HELP_US_WITH_YOUR_FEEDBACK": "നിങ്ങളുടെ പ്രതികരണം  രേഖപ്പെടുത്തി ഞങ്ങളെ സഹായിക്കൂ",
   "WAIT_TIME": "കാത്തിരിപ്പ്",
   "FAVOURITES": "ഫേവറൈറ്സ്",
@@ -350,7 +350,7 @@ const malayalamStrings = {
   "LET_TRY_THAT_AGAIN": "നമുക്ക് വീണ്ടും ശ്രമിക്കാം ...",
   "EMERGENCY_CONTACTS": "അടിയന്തര കോൺടാക്റ്റുകൾ",
   "NO_EMERGENCY_CONTACTS_SET": "അടിയന്തര കോൺടാക്‌റ്റുകളൊന്നും സജ്ജീകരിച്ചിട്ടില്ല",
-  "EMERGENCY_CONTACTS_SCREEN_DESCRIPTION": "അടിയന്തര സാഹചര്യത്തിൽ 3 എമർജൻസി കോൺടാക്റ്റുകളുമായി \n നിങ്ങളുടെ റൈഡ് സ്റ്റാറ്റസ് പങ്കിടാം.",
+  "EMERGENCY_CONTACTS_SCREEN_DESCRIPTION": "അടിയന്തര സാഹചര്യത്തിൽ 3 എമർജൻസി കോൺടാക്റ്റുകളുമായി നിങ്ങളുടെ റൈഡ് സ്റ്റാറ്റസ് പങ്കിടാം.",
   "ADD_EMERGENCY_CONTACTS": "അടിയന്തര കോൺടാക്റ്റുകൾ ചേർക്കുക",
   "DAY_TIMES_OF": "",
   "NIGHT_TIMES_OF": "",
@@ -482,6 +482,10 @@ const malayalamStrings = {
   "MESSAGE_FROM_DRIVER": "ഡ്രൈവറിൽ നിന്നുള്ള സന്ദേശം",
   "REPLY": "മറുപടി",
   "NAME_SHOULD_BE_MORE_THAN_2_CHARACTERS" : "പേര് 2 പ്രതീകങ്ങളിൽ കൂടുതലായിരിക്കണം",
-  "THIS_FIELD_IS_REQUIRED" : "ഈ ഫീൽഡ് പൂരിപ്പിക്കേണ്ടതുണ്ട്", 
-  "EMAIL_EXISTS_ALREADY" : "ഇമെയില് നേരത്തെ ഉള്ളതാണ്"
+  "THIS_FIELD_IS_REQUIRED" : "ഈ ഫീൽഡ് പൂരിപ്പിക്കേണ്ടതുണ്ട്",
+  "EMAIL_EXISTS_ALREADY" : "ഇമെയില് നേരത്തെ ഉള്ളതാണ്",
+  "OKAY_GOT_IT" : "ശരി മനസ്സിലായി",
+  "CALL_NAMMA_YATRI_SUPPORT" : "നമ്മ യാത്രി സപ്പോർട്ടിലേക്ക് വിളിക്കുക",
+  "CALL_112": "വിളിക്കുക 112",
+  "CALL_EMERGENCY_CENTRE": "എമർജൻസി സെന്ററിലേക്ക് വിളിക്കുക"
 }

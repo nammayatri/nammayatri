@@ -63,6 +63,7 @@ data RideT f = RideT
     driverName :: B.C f Text,
     driverRating :: B.C f (Maybe Centesimal),
     driverMobileNumber :: B.C f Text,
+    driverMobileCountryCode :: B.C f (Maybe Text),
     driverRegisteredAt :: B.C f Time.UTCTime,
     vehicleNumber :: B.C f Text,
     vehicleModel :: B.C f Text,
@@ -132,7 +133,8 @@ rideTMod =
       rideEndTime = B.fieldNamed "ride_end_time",
       rideRating = B.fieldNamed "ride_rating",
       createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
+      updatedAt = B.fieldNamed "updated_at",
+      driverMobileCountryCode = B.fieldNamed "driver_mobile_country_code"
     }
 
 defaultRide :: Ride
@@ -163,7 +165,8 @@ defaultRide =
       rideEndTime = Nothing,
       rideRating = Nothing,
       createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
+      updatedAt = defaultUTCDate,
+      driverMobileCountryCode = Nothing
     }
 
 instance Serialize Ride where

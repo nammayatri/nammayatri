@@ -10,7 +10,7 @@ import Font.Style as FontStyle
 import JBridge (openUrlInApp, loaderText)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, (/=), discard, (||), (&&))
+import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, (/=), discard, (||), (&&),(-))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, relativeLayout, clickable, imageWithFallback)
 import Screens.EmergencyContactsScreen.Controller (Action(..), ScreenOutput, eval, contactColorsList)
 import Screens.Types (EmergencyContactsScreenState, ContactDetail, NewContacts)
@@ -149,7 +149,7 @@ emptyContactsView push state =
         ]
     , textView
         [ height $ WRAP_CONTENT
-        , width if os == "IOS" then (V 360) else (WRAP_CONTENT)
+        , width if os == "IOS" then V (screenWidth unit - 20) else WRAP_CONTENT
         , gravity CENTER
         , text (getString EMERGENCY_CONTACTS_SCREEN_DESCRIPTION)
         , color Color.black700
@@ -172,7 +172,7 @@ emergencyContactsListView push state =
     ]
     [ textView
         [ height $ WRAP_CONTENT
-        , width if os == "IOS" then (V 360) else (WRAP_CONTENT)
+        , width if os == "IOS" then V (screenWidth unit - 20) else WRAP_CONTENT
         , text (getString EMERGENCY_CONTACTS_SCREEN_DESCRIPTION)
         , color Color.black700
         , textSize 14
@@ -192,7 +192,7 @@ contactCardView :: forall w. (Action -> Effect Unit) -> EmergencyContactsScreenS
 contactCardView push state contact index =
   linearLayout
     [ height $ WRAP_CONTENT
-    , width if os == "IOS" then (V 360) else (MATCH_PARENT)
+    , width MATCH_PARENT
     , padding $ Padding 18 18 18 18
     , margin $ Margin 0 5 0 5
     , cornerRadius 8.0

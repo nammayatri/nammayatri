@@ -107,7 +107,7 @@ instance loggableAction :: Loggable Action where
       DescriptionEditTextAC act -> case act of
         PrimaryEditText.TextChanged _ _-> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "description_edit_text_changed" "primary_edit_text"
         PrimaryEditText.FocusChanged _-> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "description_edit_text_focus_changed" "primary_edit_text"
-      PrimaryButtonAC act -> case act of 
+      PrimaryButtonAC act -> case act of
         PrimaryButton.OnClick -> do
             trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "primary_button_action" "go_to_home/submit"
             trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
@@ -169,9 +169,9 @@ eval :: Action -> HelpAndSupportScreenState -> Eval Action ScreenOutput HelpAndS
 
 eval (BackPressed flag ) state = if state.props.isCallConfirmation
   then continue state{props{isCallConfirmation = false}}
-  else if state.props.showDeleteAccountView then continue state{props {showDeleteAccountView = false}}
   else if state.data.accountStatus == CONFIRM_REQ then continue state{data{accountStatus = ACTIVE}}
-  else if state.data.accountStatus == DEL_REQUESTED then continue state
+  else if state.data.accountStatus == DEL_REQUESTED then updateAndExit (state {data{accountStatus = ACTIVE}} ) $ GoHome
+  else if state.props.showDeleteAccountView then continue state{props {showDeleteAccountView = false}}
   else exit GoBack
 
 eval ContactUs state = exit $ GoToSupportScreen state.data.bookingId
@@ -203,7 +203,7 @@ eval (RideBookingListAPIResponseAction rideList status) state = do
 eval (PopupModelActionController (PopUpModal.OnButton1Click)) state = continue state{props{isCallConfirmation = false}}
 
 eval (PopupModelActionController (PopUpModal.OnButton2Click)) state = do
-  void $ pure $ showDialer $ getSupportNumber ""
+  void $ pure $ showDialer (getSupportNumber "") true
   continue state{props{isCallConfirmation = false}}
 
 eval (APIFailureActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit GoBack

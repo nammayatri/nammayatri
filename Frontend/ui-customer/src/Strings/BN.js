@@ -281,8 +281,8 @@ const bengaliStrings = {
   "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "আপনি নাম্মা ইয়াত্রি সমর্থন দলকে কল করতে চলেছেন। আপনি কি এগিয়ে যেতে চান?",
   "YOU_ARE_ABOUT_TO_CALL_JATRI_SATHI_SUPPORT": "You are about to place a call to the Jatri Sathi Support Team. Do you want to proceed?",
   "YOU_ARE_ABOUT_TO_CALL_YATRI_SUPPORT": "You are about to place a call to the Yatri Support Team. Do you want to proceed?",
-  "YOU_ARE_ABOUT_TO_CALL_POLICE": "আপনি পুলিশকে কল করতে চলেছেন। আপনি কি এগিয়ে যেতে চান?",
-  "DAIL_100": "ডায়াল 100?",
+  "YOU_ARE_ABOUT_TO_CALL_NEAREST_EMERGENCY_CENTRE": "আপনি নিকটতম জরুরি কেন্দ্রে কল করতে চলেছেন৷ আপনি কি এগিয়ে যেতে চান?",
+  "DIAL_112": "ডায়াল 112?",
   "HELP_US_WITH_YOUR_FEEDBACK": "আপনার মতামত দিয়ে আমাদের সহায়তা করুন",
   "WAIT_TIME": "অপেক্ষার সময়",
   "FAVOURITES": "প্রিয়",
@@ -358,7 +358,7 @@ const bengaliStrings = {
   "ADD_EMERGENCY_CONTACTS": "জরুরী পরিচিতি যোগ করুন",
   "ADD_ANOTHER_CONTACT": "আরেকটি পরিচিতি যোগ করুন",
   "NO_EMERGENCY_CONTACTS_SET": "কোনো জরুরী পরিচিতি সেট নেই",
-  "EMERGENCY_CONTACTS_SCREEN_DESCRIPTION": "আপনি একটি জরুরী পরিস্থিতিতে আপনার রাইড স্ট্যাটাস 3 জন \n পর্যন্ত জরুরি পরিচিতির সাথে শেয়ার করতে পারেন।",
+  "EMERGENCY_CONTACTS_SCREEN_DESCRIPTION": "আপনি একটি জরুরী পরিস্থিতিতে আপনার রাইড স্ট্যাটাস 3 জন পর্যন্ত জরুরি পরিচিতির সাথে শেয়ার করতে পারেন।",
   "CONTACTS_SELECTED": "পরিচিতি নির্বাচিত",
   "SELECT_CONTACTS": "পরিচিতি নির্বাচন করুন",
   "CONFIRM_EMERGENCY_CONTACTS": "জরুরী যোগাযোগ নিশ্চিত করুন",
@@ -483,5 +483,10 @@ const bengaliStrings = {
   "REPLY": "উত্তর দিন",
   "NAME_SHOULD_BE_MORE_THAN_2_CHARACTERS" : "নাম 2 অক্ষরের বেশি হওয়া উচিত",
   "THIS_FIELD_IS_REQUIRED" : "ঘরটি অবশ্যই পূরণ করতে হবে",
-  "EMAIL_EXISTS_ALREADY" : "ই - মেইল ​​টি আগে থেকেই আছে"
+  "EMAIL_EXISTS_ALREADY" : "ই - মেইল টি আগে থেকেই আছে",
+  "OKAY_GOT_IT" : "আচ্ছা আমি বুঝে গেছি",
+  "CALL_NAMMA_YATRI_SUPPORT" : "নম্মা যাত্রী সমর্থনে কল করুন",
+  "EMAIL_EXISTS_ALREADY" : "ই - মেইল   টি আগে থেকেই আছে",
+  "CALL_112": "112 কল করুন",
+  "CALL_EMERGENCY_CENTRE": "ইমার্জেন্সি সেন্টারে কল করুন"
 }

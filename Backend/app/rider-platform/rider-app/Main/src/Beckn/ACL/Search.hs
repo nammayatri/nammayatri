@@ -45,6 +45,9 @@ buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
     (shortestRouteInfo >>= (.duration))
     customerLanguage
     merchant
+    (getPoints shortestRouteInfo)
+  where
+    getPoints val = val >>= (\routeInfo -> Just routeInfo.points)
 
 buildRentalSearchReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
@@ -61,6 +64,7 @@ buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
     Nothing
     Nothing
     merchant
+    Nothing
 
 buildSearchReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
@@ -73,14 +77,15 @@ buildSearchReq ::
   Maybe Seconds ->
   Maybe Maps.Language ->
   DM.Merchant ->
+  Maybe [Maps.LatLong] ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin mbDestination searchId startTime device distance duration customerLanguage merchant = do
+buildSearchReq origin mbDestination searchId startTime device distance duration customerLanguage merchant points = do
   let transactionId = getId searchId
       messageId = transactionId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/cab/v1/" <> T.unpack merchant.id.getId)
   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.city merchant.country
   let intent = mkIntent origin mbDestination startTime customerLanguage
-  let mbRouteInfo = Search.RouteInfo {distance, duration}
+  let mbRouteInfo = Search.RouteInfo {distance, duration, points}
   let searchMessage = Search.SearchMessage intent (Just mbRouteInfo) device
 
   pure $ BecknReq context searchMessage

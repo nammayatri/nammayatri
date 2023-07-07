@@ -452,10 +452,10 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     @JavascriptInterface
     public void addCarousel(String stringifyArray,String id){
-        if (activity == null) return;
+        LinearLayout parentLayout = activity.findViewById(Integer.parseInt(id));
+        if (activity == null || parentLayout == null ) return;
         activity.runOnUiThread(() -> {
             ViewPager2 viewPager2 = new ViewPager2(context);
-            LinearLayout parentLayout = activity.findViewById(Integer.parseInt(id));
             LinearLayout sliderDotsPanel= new LinearLayout(context);
             LinearLayout.LayoutParams sliderDotsPanelParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
             ViewGroup.LayoutParams scrollViewParams = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
@@ -1599,6 +1599,27 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
+    public void cleverTapEvent(String event, String params){
+
+        if (clevertapDefaultInstance!=null){
+            Map<String, Object> resultMap = new HashMap<>();
+            try {
+                JSONArray jsonArray = new JSONArray(params);
+
+                for (int i = 0; i < jsonArray.length(); i++) {
+                    JSONObject jsonObject = jsonArray.getJSONObject(i);
+                    String key = jsonObject.getString("key");
+                    Object value = jsonObject.get("value");
+                    resultMap.put(key, value);
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+                return;
+            }
+            clevertapDefaultInstance.pushEvent(event,resultMap);}
+    }
+
+    @JavascriptInterface
     public void cleverTapCustomEventWithParams(String event, String paramKey, String paramValue){
         HashMap<String, Object> mapCustomEvent = new HashMap<String, Object>();
         mapCustomEvent.put(paramKey,paramValue);
@@ -1613,19 +1634,13 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
-    public void showDialer(String phoneNum) {
-        Intent intent = new Intent();
-        intent.setAction(Intent.ACTION_CALL);
-        phoneNumber = phoneNum;
-        if (ContextCompat.checkSelfPermission(activity, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+    public void showDialer(String phoneNum, boolean call) {
+        Intent intent = new Intent(call ? Intent.ACTION_CALL : Intent.ACTION_DIAL);
+        intent.setData(Uri.parse("tel:" + phoneNum));
+        if (call && ContextCompat.checkSelfPermission(activity, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.CALL_PHONE}, REQUEST_CALL);
         } else {
-            if (intent != null) {
-                phoneNumber = "tel:" + phoneNum;
-                intent.setData(Uri.parse(phoneNumber));
-                activity.startActivity(intent);
-            }
-
+            activity.startActivity(intent);
         }
     }
 
@@ -3321,7 +3336,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     sendIntent.setType("text/plain");
                    if (thumbnailBitmap != null &&  Build.VERSION.SDK_INT > 28) {
                         Uri thumbnailUri = getImageUri(context, thumbnailBitmap);
-                        ClipData clipData = ClipData.newUri(context.getContentResolver(), "ThumbnailImage", thumbnailUri);
+                        ClipData clipData = ClipData.newUri(context.getContentResolver(), "ThumbnailImage" + System.currentTimeMillis(), thumbnailUri);
                         sendIntent.setClipData(clipData);
                    }
                     sendIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);

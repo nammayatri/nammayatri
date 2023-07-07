@@ -156,7 +156,7 @@ foreign import getKeyInSharedPrefKeysConfigEff :: String -> Effect String
 
 foreign import updateInputString :: String -> Unit
 
-foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
+foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> Boolean -> action) -> Boolean -> Effect Unit
 
 foreign import clearWaitingTimer :: String -> Unit
 foreign import clearCountDownTimer :: String -> Unit

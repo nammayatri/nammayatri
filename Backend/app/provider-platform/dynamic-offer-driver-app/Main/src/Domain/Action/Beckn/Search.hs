@@ -19,6 +19,7 @@ module Domain.Action.Beckn.Search
     SpecialZoneQuoteInfo (..),
     handler,
     validateRequest,
+    searchRequestKey,
   )
 where
 
@@ -37,6 +38,7 @@ import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.QuoteSpecialZone as DQuoteSpecialZone
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
+import Domain.Types.SearchRequestRoute
 import qualified Domain.Types.SearchRequestSpecialZone as DSRSZ
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
@@ -51,6 +53,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude (Alternative (empty), whenJustM)
 import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Geofencing
@@ -91,7 +94,8 @@ data DSearchReq = DSearchReq
     routeDistance :: Maybe Meters,
     routeDuration :: Maybe Seconds,
     device :: Maybe Text,
-    customerLanguage :: Maybe Maps.Language
+    customerLanguage :: Maybe Maps.Language,
+    routePoints :: Maybe [LatLong]
   }
 
 data SpecialZoneQuoteInfo = SpecialZoneQuoteInfo
@@ -186,17 +190,16 @@ handler merchant sReq = do
         -- Esq.runTransaction $
         for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
         return (Just (mkQuoteInfo fromLocation toLocation now <$> listOfSpecialZoneQuotes), Nothing)
-      DFareProduct.NORMAL -> buildEstimates farePolicies result fromLocation toLocation allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area
-
+      DFareProduct.NORMAL -> buildEstimates farePolicies result fromLocation toLocation allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area RouteInfo {distance = sReq.routeDistance, duration = sReq.routeDuration, points = sReq.routePoints}
   merchantPaymentMethods <- CQMPM.findAllByMerchantId merchantId
   let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
   buildSearchRes merchant fromLocationLatLong toLocationLatLong mbEstimateInfos quotes searchMetricsMVar paymentMethodsInfo
   where
     listVehicleVariantHelper farePolicy = catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleVariant)) farePolicy
 
-    buildEstimates farePolicies result fromLocation toLocation specialLocationTag area = do
+    buildEstimates farePolicies result fromLocation toLocation specialLocationTag area routeInfo = do
       driverPoolCfg <- getDriverPoolConfig merchant.id result.distance
-      estimateInfos <- buildEstimatesInfos fromLocation toLocation driverPoolCfg result farePolicies specialLocationTag area
+      estimateInfos <- buildEstimatesInfos fromLocation toLocation driverPoolCfg result farePolicies specialLocationTag area routeInfo
       return (Nothing, Just estimateInfos)
 
     selectFarePolicy distance farePolicies = do
@@ -224,8 +227,9 @@ handler merchant sReq = do
       [DFP.FullFarePolicy] ->
       Maybe Text ->
       DFareProduct.Area ->
+      RouteInfo ->
       Flow [EstimateInfo]
-    buildEstimatesInfos fromLocation toLocation driverPoolCfg result farePolicies specialLocationTag area = do
+    buildEstimatesInfos fromLocation toLocation driverPoolCfg result farePolicies specialLocationTag area routeInfo = do
       let merchantId = merchant.id
       if null farePolicies
         then do
@@ -247,6 +251,7 @@ handler merchant sReq = do
 
           let onlyFPWithDrivers = filter (\fp -> isJust (find (\dp -> dp.variant == fp.vehicleVariant) driverPool)) farePolicies
           searchReq <- buildSearchRequest sReq merchantId fromLocation toLocation result.distance result.duration specialLocationTag area
+          Redis.hSetExp (searchRequestKey $ getId merchantId) (getId searchReq.id) routeInfo 3600
           estimates <- mapM (SHEst.buildEstimate searchReq.id sReq.pickupTime result.distance specialLocationTag) onlyFPWithDrivers
           triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId}
 
@@ -420,7 +425,7 @@ validateRequest merchantId sReq = do
         case geofencingConfig.destination of
           Unrestricted -> pure True
           Regions regions -> do
-            maybe (pure True) ((flip someGeometriesContain) regions) mbDestination
+            maybe (pure True) (`someGeometriesContain` regions) mbDestination
       pure $ originServiceable && destinationServiceable
 
 buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.SearchReqLocation
@@ -467,3 +472,6 @@ decodeAddress BA.Address {..} = do
 
 isEmpty :: Maybe Text -> Bool
 isEmpty = maybe True (T.null . T.replace " " "")
+
+searchRequestKey :: Text -> Text
+searchRequestKey mId = "Driver:Search:Request:" <> mId

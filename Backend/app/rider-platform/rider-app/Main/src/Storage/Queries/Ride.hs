@@ -512,7 +512,8 @@ transformBeamRideToDomain BeamR.RideT {..} = do
         rideEndTime = rideEndTime,
         rideRating = rideRating,
         createdAt = createdAt,
-        updatedAt = updatedAt
+        updatedAt = updatedAt,
+        driverMobileCountryCode = driverMobileCountryCode
       }
 
 transformDomainRideToBeam :: Ride -> BeamR.Ride
@@ -543,5 +544,6 @@ transformDomainRideToBeam Ride {..} =
       BeamR.rideEndTime = rideEndTime,
       BeamR.rideRating = rideRating,
       BeamR.createdAt = createdAt,
-      BeamR.updatedAt = updatedAt
+      BeamR.updatedAt = updatedAt,
+      BeamR.driverMobileCountryCode = driverMobileCountryCode
     }

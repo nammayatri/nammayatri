@@ -328,18 +328,19 @@ export const updateInputString = function (a){
 
 var timerIdDebounce = null;
 export const debounceFunction = function (delay) {
-  return function (cb){
-    return function (action){
-      return function(){
-        console.log("CALLED :- ");
-        var callback = callbackMapper.map(function () {
-          if (timerIdDebounce) clearTimeout(timerIdDebounce);
-          timerIdDebounce = setTimeout(() => {
-            timerIdDebounce = "MAKEAPICALL";
-            cb(action (inputForDebounce))();
-          },delay);
-        });
-        window.callUICallback(callback);
+  return function (cb) {
+    return function (action) {
+      return function (isSource) {
+        return function () {
+          var callback = callbackMapper.map(function () {
+            if (timerIdDebounce) clearTimeout(timerIdDebounce);
+            timerIdDebounce = setTimeout(() => {
+              timerIdDebounce = "MAKEAPICALL";
+              cb(action(inputForDebounce)(isSource))();
+            }, delay);
+          });
+          window.callUICallback(callback);
+        }
       }
     }
   }

@@ -325,11 +325,11 @@ sosView push state =
     , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]) && (not state.props.showChatNotification) then VISIBLE else GONE
     , orientation VERTICAL
     , gravity if os == "IOS" then CENTER_VERTICAL else BOTTOM
-    , onClick push $ const OpenEmergencyHelp
     ][ imageView
         [ imageWithFallback "ny_ic_sos,https://assets.juspay.in/nammayatri/images/user/ny_ic_sos.png"
         , height $ V 50
         , width $ V 50
+        , onClick push $ const OpenEmergencyHelp
         ]
     ]
 

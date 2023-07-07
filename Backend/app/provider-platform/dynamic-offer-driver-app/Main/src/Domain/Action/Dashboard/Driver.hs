@@ -27,6 +27,7 @@ module Domain.Action.Dashboard.Driver
     deleteDriver,
     unlinkVehicle,
     unlinkDL,
+    unlinkAadhaar,
     endRCAssociation,
     updatePhoneNumber,
     addVehicle,
@@ -647,6 +648,24 @@ unlinkDL merchantShortId driverId = do
   _ <- QDriverLicense.deleteByDriverId personId
   _ <- CQDriverInfo.updateEnabledVerifiedState driverId_ False False
   logTagInfo "dashboard -> unlinkDL : " (show personId)
+  pure Success
+
+---------------------------------------------------------------------
+unlinkAadhaar :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
+unlinkAadhaar merchantShortId driverId = do
+  merchant <- findMerchantByShortId merchantShortId
+
+  let driverId_ = cast @Common.Driver @DP.Driver driverId
+  let personId = cast @Common.Driver @DP.Person driverId
+
+  -- _ <- Esq.runInReplica $ AV.findByDriverId personId >>= fromMaybeM (InvalidRequest "can't unlink Aadhaar")
+  _ <- AV.findByDriverId personId >>= fromMaybeM (InvalidRequest "can't unlink Aadhaar")
+
+  -- Esq.runTransaction $ do
+  AV.deleteByDriverId personId
+  CQDriverInfo.updateAadhaarVerifiedState driverId_ False
+  unless (merchant.aadhaarVerificationRequired) $ void $ CQDriverInfo.updateEnabledVerifiedState driverId_ False False
+  logTagInfo "dashboard -> unlinkAadhaar : " (show personId)
   pure Success
 
 ---------------------------------------------------------------------

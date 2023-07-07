@@ -45,17 +45,13 @@
       },
       "locked": {
         "lastModified": 1688652213,
-        "narHash": "sha256-ErhMJ6bOillqcpQOEePwWqBdXRIWpAPsA3P6EXZ/esg=",
-        "owner": "nammayatri",
-        "repo": "beckn-gateway",
-        "rev": "af7d5c783b55dbe22b1746c9bfb4e4909336c9a2",
-        "type": "github"
+        "narHash": "sha256-e/nY0Y/1uhitwVPfYO9c6fzCzm47NRgpv2zORKYNqX4=",
+        "type": "git",
+        "url": "file:///Users/apoorv.agarwal/Documents/projects/nammayatri/beckn-gateway"
       },
       "original": {
-        "owner": "nammayatri",
-        "ref": "updatedEulerHS",
-        "repo": "beckn-gateway",
-        "type": "github"
+        "type": "git",
+        "url": "file:///Users/apoorv.agarwal/Documents/projects/nammayatri/beckn-gateway"
       }
     },
     "cachix": {
@@ -2348,11 +2344,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1688650457,
-        "narHash": "sha256-D/dmzUWC+DEsKWwroQaJf7GQgNUH28FaWnU5tI9dfcA=",
+        "lastModified": 1688713432,
+        "narHash": "sha256-0K853CwaXYass2rRGd3gDpm4GXZ26F5piF33BrZUn1k=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "7d5010b6c9c90ce24df1cd5d363081f0a10285f3",
+        "rev": "b49a615c196eadc181ce8c5a9967d135eaff38bf",
         "type": "github"
       },
       "original": {

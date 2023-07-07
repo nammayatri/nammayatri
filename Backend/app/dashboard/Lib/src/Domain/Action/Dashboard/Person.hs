@@ -15,6 +15,7 @@
 module Domain.Action.Dashboard.Person where
 
 import Dashboard.Common
+import qualified Data.Text as T
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantAccess as DAccess
@@ -76,6 +77,21 @@ data CreatePersonReq = CreatePersonReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+newtype ChangeEmailByAdminReq = ChangeEmailByAdminReq
+  { newEmail :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+newtype ChangeMobileNumberByAdminReq = ChangeMobileNumberByAdminReq
+  { newMobileNumber :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+newtype ChangePasswordByAdminReq = ChangePasswordByAdminReq
+  { newPassword :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
 validateCreatePerson :: Validate CreatePersonReq
 validateCreatePerson CreatePersonReq {..} =
   sequenceA_
@@ -83,6 +99,12 @@ validateCreatePerson CreatePersonReq {..} =
       validateField "lastName" lastName $ NotEmpty `And` P.name,
       validateField "mobileNumber" mobileNumber P.mobileNumber,
       validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
+    ]
+
+validateChangeMobileNumberReq :: Validate ChangeMobileNumberByAdminReq
+validateChangeMobileNumberReq ChangeMobileNumberByAdminReq {..} =
+  sequenceA_
+    [ validateField "mobileNumber" newMobileNumber P.mobileNumber
     ]
 
 newtype CreatePersonRes = CreatePersonRes
@@ -251,12 +273,50 @@ getAccessMatrix tokenInfo = do
   accessMatrixItems <- runInReplica $ QMatrix.findAllByRoleId encPerson.roleId
   pure $ DMatrix.mkAccessMatrixRowAPIEntity accessMatrixItems role
 
+changePasswordByAdmin ::
+  (EsqDBFlow m r, EncFlow m r) =>
+  TokenInfo ->
+  Id DP.Person ->
+  ChangePasswordByAdminReq ->
+  m APISuccess
+changePasswordByAdmin _ personId req = do
+  _ <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  newHash <- getDbHash req.newPassword
+  Esq.runTransaction $
+    QP.updatePersonPassword personId newHash
+  pure Success
+
+changeMobileNumberByAdmin ::
+  (EsqDBFlow m r, EncFlow m r) =>
+  TokenInfo ->
+  Id DP.Person ->
+  ChangeMobileNumberByAdminReq ->
+  m APISuccess
+changeMobileNumberByAdmin _ personId req = do
+  runRequestValidation validateChangeMobileNumberReq req
+  _ <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  encMobileNum <- encrypt req.newMobileNumber
+  Esq.runTransaction $ QP.updatePersonMobile personId encMobileNum
+  pure Success
+
+changeEmailByAdmin ::
+  (EsqDBFlow m r, EncFlow m r) =>
+  TokenInfo ->
+  Id DP.Person ->
+  ChangeEmailByAdminReq ->
+  m APISuccess
+changeEmailByAdmin _ personId req = do
+  _ <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  encEmail <- encrypt $ T.toLower req.newEmail
+  Esq.runTransaction $ QP.updatePersonEmail personId encEmail
+  pure Success
+
 buildPerson :: (EncFlow m r) => CreatePersonReq -> m SP.Person
 buildPerson req = do
   pid <- generateGUID
   now <- getCurrentTime
   mobileNumber <- encrypt req.mobileNumber
-  email <- encrypt req.email
+  email <- encrypt (T.toLower req.email)
   passwordHash <- getDbHash req.password
   return
     SP.Person

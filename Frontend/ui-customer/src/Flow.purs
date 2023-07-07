@@ -878,6 +878,7 @@ homeScreenFlow = do
                                       _ <- pure $ clearWaitingTimer <$> state.props.waitingTimeTimerIds
                                       homeScreenFlow
             "DRIVER_ASSIGNMENT"   -> if (not (isLocalStageOn RideAccepted || isLocalStageOn RideStarted )) then do
+                                        _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_DRIVER_ARRIVAL"
                                         _ <- pure $ firebaseLogEvent "ny_fs_driver_assignment"
                                         currentRideFlow true
                                         homeScreenFlow

@@ -30,6 +30,7 @@ module API.UI.Driver
     DDriver.DriverAlternateNumberRes (..),
     DDriver.DriverAlternateNumberOtpReq (..),
     DDriver.ResendAuth (..),
+    DDriver.MetaDataReq (..),
     API,
     handler,
   )
@@ -101,6 +102,10 @@ type API =
                         :> MandatoryQueryParam "day" Day
                         :> Get '[JSON] DDriver.DriverStatsRes
                   )
+             :<|> "metaData"
+               :> TokenAuth
+               :> ReqBody '[JSON] DDriver.MetaDataReq
+               :> Post '[JSON] APISuccess
              :<|> "alternateNumber"
                :> ( "validate"
                       :> TokenAuth
@@ -144,6 +149,7 @@ handler =
                       :<|> updateDriver
                       :<|> getStats
                   )
+             :<|> updateMetaData
              :<|> ( validate
                       :<|> verifyAuth
                       :<|> resendOtp
@@ -192,6 +198,9 @@ respondQuote (personId, driverId) = withFlowHandlerAPI . DDriver.respondQuote (p
 
 getStats :: (Id SP.Person, Id Merchant.Merchant) -> Day -> FlowHandler DDriver.DriverStatsRes
 getStats day = withFlowHandlerAPI . DDriver.getStats day
+
+updateMetaData :: (Id SP.Person, Id Merchant.Merchant) -> DDriver.MetaDataReq -> FlowHandler APISuccess
+updateMetaData req = withFlowHandlerAPI . DDriver.updateMetaData req
 
 validate :: (Id SP.Person, Id Merchant.Merchant) -> DDriver.DriverAlternateNumberReq -> FlowHandler DDriver.DriverAlternateNumberRes
 validate alternateNumber = withFlowHandlerAPI . DDriver.validate alternateNumber

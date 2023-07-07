@@ -61,6 +61,7 @@ parseEvent _ (OnUpdate.RideAssigned taEvent) =
         otp = taEvent.fulfillment.start.authorization.token,
         driverName = taEvent.fulfillment.agent.name,
         driverMobileNumber = taEvent.fulfillment.agent.phone,
+        driverMobileCountryCode = taEvent.fulfillment.agent.phoneCountryCode,
         driverRating = realToFrac <$> taEvent.fulfillment.agent.rating,
         driverRegisteredAt = taEvent.fulfillment.agent.tags.registered_at,
         vehicleNumber = taEvent.fulfillment.vehicle.registration,

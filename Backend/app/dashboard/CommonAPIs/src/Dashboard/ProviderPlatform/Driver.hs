@@ -41,6 +41,7 @@ data DriverEndpoint
   | DeleteDriverEndpoint
   | UnlinkVehicleEndpoint
   | UnlinkDLEndpoint
+  | UnlinkAadhaarEndpoint
   | EndRCAssociationEndpoint
   | UpdatePhoneNumberEndpoint
   | AddVehicleEndpoint
@@ -454,6 +455,14 @@ type UnlinkVehicleAPI =
 type UnlinkDLAPI =
   Capture "driverId" (Id Driver)
     :> "unlinkDL"
+    :> Post '[JSON] APISuccess
+
+---------------------------------------------------------
+-- unlink Aadhaar -----------------------------------------
+
+type UnlinkAadhaarAPI =
+  Capture "driverId" (Id Driver)
+    :> "unlinkAadhaar"
     :> Post '[JSON] APISuccess
 
 ---------------------------------------------------------

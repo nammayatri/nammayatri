@@ -64,6 +64,7 @@ library
       API.UI.Registration
       API.UI.Ride
       API.UI.Route
+      API.UI.SearchRequestRoute
       API.UI.Transporter
       API.UI.Vehicle
       API.UI.Whatsapp
@@ -139,6 +140,7 @@ library
       Domain.Action.UI.Ride.StartRide
       Domain.Action.UI.Ride.StartRide.Internal
       Domain.Action.UI.Route
+      Domain.Action.UI.SearchRequestRoute
       Domain.Action.UI.Transporter
       Domain.Action.UI.Vehicle
       Domain.Action.UI.Whatsapp
@@ -199,6 +201,7 @@ library
       Domain.Types.Message.Message
       Domain.Types.Message.MessageReport
       Domain.Types.Message.MessageTranslation
+      Domain.Types.MetaData
       Domain.Types.Person
       Domain.Types.QuoteSpecialZone
       Domain.Types.Rating
@@ -209,6 +212,7 @@ library
       Domain.Types.SearchRequest
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.SearchRequestForDriver
+      Domain.Types.SearchRequestRoute
       Domain.Types.SearchRequestSpecialZone
       Domain.Types.SearchTry
       Domain.Types.Vehicle
@@ -397,6 +401,7 @@ library
       Storage.Queries.Message.Message
       Storage.Queries.Message.MessageReport
       Storage.Queries.Message.MessageTranslation
+      Storage.Queries.MetaData
       Storage.Queries.Person
       Storage.Queries.QuoteSpecialZone
       Storage.Queries.Rating
@@ -432,6 +437,7 @@ library
       Storage.Tabular.FarePolicy.Table
       Storage.Tabular.Merchant
       Storage.Tabular.Merchant.MerchantPaymentMethod
+      Storage.Tabular.MetaData
       Storage.Tabular.Person
       Storage.Tabular.Ride
       Storage.Tabular.Ride.Instances

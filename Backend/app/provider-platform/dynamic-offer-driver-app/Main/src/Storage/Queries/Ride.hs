@@ -435,7 +435,8 @@ updateAll rideId ride = do
           Se.Set BeamR.fareParametersId (getId <$> ride.fareParametersId),
           Se.Set BeamR.distanceCalculationFailed ride.distanceCalculationFailed,
           Se.Set BeamR.pickupDropOutsideOfThreshold ride.pickupDropOutsideOfThreshold,
-          Se.Set BeamR.updatedAt now
+          Se.Set BeamR.updatedAt now,
+          Se.Set BeamR.numberOfDeviation ride.numberOfDeviation
         ]
         [Se.Is BeamR.id (Se.Eq $ getId rideId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
@@ -711,7 +712,8 @@ transformBeamRideToDomain BeamR.RideT {..} = do
         fareParametersId = Id <$> fareParametersId,
         distanceCalculationFailed = distanceCalculationFailed,
         createdAt = createdAt,
-        updatedAt = updatedAt
+        updatedAt = updatedAt,
+        numberOfDeviation = numberOfDeviation
       }
 
 transformDomainRideToBeam :: Ride -> BeamR.Ride
@@ -739,5 +741,6 @@ transformDomainRideToBeam Ride {..} =
       BeamR.fareParametersId = getId <$> fareParametersId,
       BeamR.distanceCalculationFailed = distanceCalculationFailed,
       BeamR.createdAt = createdAt,
-      BeamR.updatedAt = updatedAt
+      BeamR.updatedAt = updatedAt,
+      BeamR.numberOfDeviation = numberOfDeviation
     }
