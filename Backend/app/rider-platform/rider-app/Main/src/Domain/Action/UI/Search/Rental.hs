@@ -29,6 +29,7 @@ import Kernel.Serviceability
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Types.Version (Version)
@@ -55,7 +56,9 @@ data RentalSearchRes = RentalSearchRes
     --TODO: This supposed to be temporary solution. Check if we still need it
     gatewayUrl :: BaseUrl,
     searchRequestExpiry :: UTCTime,
-    merchant :: DM.Merchant
+    merchant :: DM.Merchant,
+    city :: Context.City,
+    country :: Context.Country
   }
 
 rentalSearch ::
@@ -78,10 +81,10 @@ rentalSearch personId bundleVersion clientVersion device req = do
   merchant <-
     QMerchant.findById person.merchantId
       >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
-  validateServiceability merchant.geofencingConfig
+  (city, country) <- rideServiceable merchant.geofencingConfig someGeometriesContain req.origin.gps Nothing
   fromLocation <- DSearch.buildSearchReqLoc req.origin
   now <- getCurrentTime
-  searchRequest <- DSearch.buildSearchRequest person fromLocation Nothing Nothing Nothing now bundleVersion clientVersion device Nothing
+  searchRequest <- DSearch.buildSearchRequest person fromLocation Nothing Nothing Nothing now bundleVersion clientVersion device Nothing city country
   Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId
@@ -97,7 +100,3 @@ rentalSearch personId bundleVersion clientVersion device req = do
             ..
           }
   return dSearchRes
-  where
-    validateServiceability geoConfig = do
-      unlessM (rideServiceable geoConfig someGeometriesContain req.origin.gps Nothing) $
-        throwError RideNotServiceable

@@ -394,8 +394,7 @@ validateRequest merchantId sReq = do
   unless merchant.enabled $ throwError AgencyDisabled
   let fromLocationLatLong = sReq.pickupLocation
       toLocationLatLong = sReq.dropLocation
-  unlessM (rideServiceable merchant.geofencingConfig QGeometry.someGeometriesContain fromLocationLatLong (Just toLocationLatLong)) $
-    throwError RideNotServiceable
+  rideServiceable merchant.geofencingConfig QGeometry.someGeometriesContain fromLocationLatLong (Just toLocationLatLong)
   return merchant
 
 buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.SearchReqLocation

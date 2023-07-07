@@ -22,6 +22,7 @@ import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Hedis (HedisFlow)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
@@ -52,7 +53,9 @@ data OnInitRes = OnInitRes
     riderPhoneNumber :: Text,
     mbRiderName :: Maybe Text,
     transactionId :: Text,
-    merchant :: DM.Merchant
+    merchant :: DM.Merchant,
+    city :: Context.City,
+    country :: Context.Country
   }
   deriving (Generic, Show)
 
@@ -78,6 +81,8 @@ onInit req = do
       { bookingId = booking.id,
         bppId = booking.providerId,
         bppUrl = booking.providerUrl,
+        city = fromMaybe merchant.city booking.city,
+        country = fromMaybe merchant.country booking.country,
         estimatedTotalFare = booking.estimatedTotalFare,
         fromLocationAddress = fromLocation.address,
         mbToLocationAddress = mbToLocation <&> (.address),

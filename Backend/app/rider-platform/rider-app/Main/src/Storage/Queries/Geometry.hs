@@ -18,6 +18,7 @@ import Domain.Types.Geometry
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Types.Beckn.Context as Context
 import Storage.Tabular.Geometry
 
 findGeometriesContaining :: Transactionable m => LatLong -> [Text] -> m [Geometry]
@@ -29,7 +30,7 @@ findGeometriesContaining gps regions =
         &&. containsPoint (gps.lon, gps.lat)
     return geometry
 
-someGeometriesContain :: Transactionable m => LatLong -> [Text] -> m Bool
+someGeometriesContain :: Transactionable m => LatLong -> [Text] -> m (Maybe (Context.City, Context.Country))
 someGeometriesContain gps regions = do
   geometries <- findGeometriesContaining gps regions
-  pure $ not $ null geometries
+  pure $ ((.city), (.country)) <$> listToMaybe geometries

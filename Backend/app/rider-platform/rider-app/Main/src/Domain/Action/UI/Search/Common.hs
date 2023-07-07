@@ -26,6 +26,7 @@ import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
 import Kernel.External.Maps.Types
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Tools.Metrics (CoreMetrics)
@@ -45,8 +46,10 @@ buildSearchRequest ::
   Maybe Version ->
   Maybe Text ->
   Maybe Seconds ->
+  Context.City ->
+  Context.Country ->
   m SearchRequest.SearchRequest
-buildSearchRequest person pickup mbDrop mbMaxDistance mbDistance now bundleVersion clientVersion device duration = do
+buildSearchRequest person pickup mbDrop mbMaxDistance mbDistance now bundleVersion clientVersion device duration city country = do
   searchRequestId <- generateGUID
   validTill <- getSearchRequestExpiry now
   return
@@ -70,7 +73,9 @@ buildSearchRequest person pickup mbDrop mbMaxDistance mbDistance now bundleVersi
         autoAssignEnabled = Nothing,
         autoAssignEnabledV2 = Nothing,
         availablePaymentMethods = [],
-        selectedPaymentMethodId = Nothing
+        selectedPaymentMethodId = Nothing,
+        city = Just city,
+        country = Just country
       }
   where
     getSearchRequestExpiry :: (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]) => UTCTime -> m UTCTime

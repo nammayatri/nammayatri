@@ -27,6 +27,7 @@ import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Servant.API
@@ -79,6 +80,8 @@ data Booking = Booking
     bookingDetails :: BookingDetails,
     tripTerms :: Maybe DTripTerms.TripTerms,
     merchantId :: Id DMerchant.Merchant,
+    city :: Maybe Context.City,
+    country :: Maybe Context.Country,
     specialLocationTag :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

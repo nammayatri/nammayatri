@@ -43,6 +43,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto (runInReplica)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Types.Predicate
@@ -79,6 +80,8 @@ data DSelectRes = DSelectRes
     variant :: VehicleVariant,
     customerExtraFee :: Maybe Money,
     merchant :: DM.Merchant,
+    city :: Context.City,
+    country :: Context.Country,
     autoAssignEnabled :: Bool
   }
 
@@ -136,6 +139,8 @@ select personId estimateId req@DSelectReq {..} = do
       { providerId = estimate.providerId,
         providerUrl = estimate.providerUrl,
         variant = estimate.vehicleVariant,
+        city = fromMaybe merchant.city searchRequest.city,
+        country = fromMaybe merchant.country searchRequest.country,
         ..
       }
 

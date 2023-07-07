@@ -48,6 +48,8 @@ data SearchRequest = SearchRequest
     autoAssignEnabledV2 :: Maybe Bool,
     availablePaymentMethods :: [Id DMPM.MerchantPaymentMethod],
     selectedPaymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod),
+    city :: Maybe Context.City,
+    country :: Maybe Context.Country,
     createdAt :: UTCTime
   }
   deriving (Generic, Show)

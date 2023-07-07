@@ -26,6 +26,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Environment as App
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -48,7 +49,9 @@ data FeedbackRes = FeedbackRes
     providerId :: Text,
     providerUrl :: BaseUrl,
     transactionId :: Text,
-    merchant :: DM.Merchant
+    merchant :: DM.Merchant,
+    city :: Context.City,
+    country :: Context.Country
   }
 
 feedback :: FeedbackReq -> App.Flow FeedbackRes
@@ -71,5 +74,7 @@ feedback request = do
       { providerId = booking.providerId,
         providerUrl = booking.providerUrl,
         transactionId = booking.transactionId,
+        city = fromMaybe merchant.city booking.city,
+        country = fromMaybe merchant.country booking.country,
         ..
       }

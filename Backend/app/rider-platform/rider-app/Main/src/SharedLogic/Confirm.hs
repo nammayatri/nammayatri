@@ -65,6 +65,8 @@ data DConfirmRes = DConfirmRes
     booking :: DRB.Booking,
     searchRequestId :: Id DSReq.SearchRequest,
     merchant :: DM.Merchant,
+    city :: Context.City,
+    country :: Context.Country,
     maxEstimatedDistance :: Maybe HighPrecMeters,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
   }
@@ -136,6 +138,8 @@ confirm DConfirmReq {..} = do
         quoteDetails = details,
         startTime = searchRequest.startTime,
         searchRequestId = searchRequest.id,
+        city = fromMaybe merchant.city searchRequest.city,
+        country = fromMaybe merchant.country searchRequest.country,
         maxEstimatedDistance = searchRequest.maxDistance,
         paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> paymentMethod,
         ..
@@ -186,6 +190,8 @@ buildBooking searchRequest quote fromLoc mbToLoc exophone now otpCode paymentMet
         bookingDetails,
         tripTerms = quote.tripTerms,
         merchantId = searchRequest.merchantId,
+        city = searchRequest.city,
+        country = searchRequest.country,
         specialLocationTag = quote.specialLocationTag,
         createdAt = now,
         updatedAt = now

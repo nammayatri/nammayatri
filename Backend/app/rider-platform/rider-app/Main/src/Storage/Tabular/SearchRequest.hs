@@ -24,6 +24,7 @@ import qualified Domain.Types.SearchRequest as Domain
 import Kernel.External.Maps (Language)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Version
@@ -55,6 +56,8 @@ mkPersist
       autoAssignEnabledV2 Bool Maybe
       bundleVersion Text Maybe
       clientVersion Text Maybe
+      city Context.City Maybe
+      country Context.Country Maybe
       createdAt UTCTime
       Primary id
       deriving Generic

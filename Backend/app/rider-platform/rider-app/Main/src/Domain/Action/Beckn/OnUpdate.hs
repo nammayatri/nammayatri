@@ -343,7 +343,9 @@ onUpdate ValidatedRideCompletedReq {..} = do
   --           bppId = booking.providerId,
   --           bppUrl = booking.providerUrl,
   --           transactionId = booking.transactionId,
-  --           merchant
+  --           city = fromMaybe merchant.city booking.city,
+  --           country = fromMaybe merchant.country booking.country,
+  --           merchant,
   --         }
   --   becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
   --   void . withShortRetry $ CallBPP.update booking.providerUrl becknUpdateReq

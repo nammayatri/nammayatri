@@ -25,6 +25,7 @@ import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import qualified Domain.Types.VehicleVariant as VehVar (VehicleVariant)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Error
@@ -69,6 +70,8 @@ mkPersist
       tripTermsId STripTerms.TripTermsTId Maybe
       rentalSlabId SRentalSlab.RentalSlabTId Maybe
       merchantId SMerchant.MerchantTId
+      city Context.City Maybe
+      country Context.Country Maybe
       specialLocationTag Text Maybe
       createdAt UTCTime
       updatedAt UTCTime

@@ -129,6 +129,8 @@ callTrack booking ride = do
             bppId = booking.providerId,
             bppUrl = booking.providerUrl,
             transactionId = booking.transactionId,
+            city = fromMaybe merchant.city booking.city,
+            country = fromMaybe merchant.country booking.country,
             ..
           }
   void . callBecknAPIWithSignature merchant.bapId "track" API.trackAPI booking.providerUrl =<< TrackACL.buildTrackReq trackBUildReq

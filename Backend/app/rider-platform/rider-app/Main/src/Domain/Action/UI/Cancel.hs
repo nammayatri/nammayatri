@@ -36,6 +36,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (HedisFlow)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
@@ -64,7 +65,9 @@ data CancelRes = CancelRes
     bppUrl :: BaseUrl,
     cancellationSource :: SBCR.CancellationSource,
     transactionId :: Text,
-    merchant :: DM.Merchant
+    merchant :: DM.Merchant,
+    city :: Context.City,
+    country :: Context.Country
   }
 
 data CancelSearch = CancelSearch
@@ -108,7 +111,9 @@ cancel bookingId _ req = do
         bppUrl = booking.providerUrl,
         cancellationSource = SBCR.ByUser,
         transactionId = booking.transactionId,
-        merchant = merchant
+        merchant = merchant,
+        city = fromMaybe merchant.city booking.city,
+        country = fromMaybe merchant.country booking.country
       }
   where
     buildBookingCancelationReason currentDriverLocation disToPickup merchantId = do

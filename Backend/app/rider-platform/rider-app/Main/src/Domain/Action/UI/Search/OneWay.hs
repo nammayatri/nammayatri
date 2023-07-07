@@ -31,6 +31,7 @@ import Kernel.Serviceability
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis (HedisFlow)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Types.Version (Version)
@@ -66,7 +67,9 @@ data OneWaySearchRes = OneWaySearchRes
     merchant :: DM.Merchant,
     customerLanguage :: Maybe Maps.Language,
     device :: Maybe Text,
-    shortestRouteInfo :: Maybe Maps.RouteInfo
+    shortestRouteInfo :: Maybe Maps.RouteInfo,
+    city :: Context.City,
+    country :: Context.Country
   }
 
 oneWaySearch ::
@@ -90,9 +93,7 @@ oneWaySearch ::
 oneWaySearch personId req bundleVersion clientVersion device = do
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   merchant <- QMerc.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
-
-  validateServiceability merchant.geofencingConfig
-
+  (city, country) <- rideServiceable merchant.geoConfig someGeometriesContain req.origin.gps (Just req.destination.gps)
   let sourceLatlong = req.origin.gps
   let destinationLatLong = req.destination.gps
   let request =
@@ -122,6 +123,8 @@ oneWaySearch personId req bundleVersion clientVersion device = do
       clientVersion
       device
       shortestRouteDuration
+      city
+      country
   Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId
@@ -149,10 +152,6 @@ oneWaySearch personId req bundleVersion clientVersion device = do
     mFraudDetected <- SMC.anyFraudDetected personId person.merchantId merchantConfigs
     whenJust mFraudDetected $ \mc -> SMC.blockCustomer personId (Just mc.id)
   return dSearchRes
-  where
-    validateServiceability geoConfig =
-      unlessM (rideServiceable geoConfig someGeometriesContain req.origin.gps (Just req.destination.gps)) $
-        throwError RideNotServiceable
 
 getLongestRouteDistance :: [Maps.RouteInfo] -> Maybe Maps.RouteInfo
 getLongestRouteDistance [] = Nothing

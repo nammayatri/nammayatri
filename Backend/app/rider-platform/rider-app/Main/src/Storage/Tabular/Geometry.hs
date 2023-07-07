@@ -23,6 +23,7 @@ module Storage.Tabular.Geometry where
 import qualified Domain.Types.Geometry as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id (Id (..))
 
 mkPersist
@@ -31,6 +32,8 @@ mkPersist
     GeometryT sql=geometry
       id Text
       region Text
+      city Context.City Maybe
+      country Context.Country Maybe
       Primary id
       deriving Generic
     |]
