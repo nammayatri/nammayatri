@@ -93,6 +93,7 @@ findWindowsWithStatus driverId startTime endTime mbStatus limitVal offsetVal = d
         &&. driverFee ^. DriverFeeStartTime >=. val startTime
         &&. driverFee ^. DriverFeeEndTime <=. val endTime
         &&. whenJust_ mbStatus (\status -> driverFee ^. DriverFeeStatus ==. val status)
+    orderBy [desc $ driverFee ^. DriverFeeCreatedAt]
     limit $ fromIntegral limitVal
     offset $ fromIntegral offsetVal
     return driverFee
