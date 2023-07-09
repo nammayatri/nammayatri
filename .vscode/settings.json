@@ -1,4 +1,5 @@
 {
+  "search.useIgnoreFiles": true,
   // Disabled until https://github.com/nammayatri/nammayatri/issues/737
   // "editor.formatOnType": true,
   // "editor.formatOnSave": true,
