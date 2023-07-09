@@ -42,7 +42,7 @@ import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime,stringToVersion)
 import Engineering.Helpers.Utils (loaderText, toggleLoader)
 import Foreign.Class (class Encode, encode, decode)
-import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getDatebyCount, startPP, consumeBackPress)
+import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getDatebyCount, startPP, consumeBP)
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
 import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, generateSessionId, stopChatListenerService, hideKeyboardOnNavigation, metaLogEvent, saveSuggestions, saveSuggestionDefs, withinTimeRange)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
@@ -148,6 +148,7 @@ getLatestAndroidVersion merchant =
     MOBILITY_PM -> 1
     MOBILITY_RS -> 1
     PASSCULTURE -> 1
+    MOBILITY_RS -> 1
 
 ifNotRegistered :: Unit -> Boolean
 ifNotRegistered _ = getValueToLocalStore REGISTERATION_TOKEN == "__failed"
@@ -1506,12 +1507,14 @@ startPaymentPageFlow = do
       let finalPayload = PayPayload $ innerpayload{
         clientId = Just "yatrisathi", 
         merchantId = Just "yatrisathi"
-        -- environment = Just "sandbox"
+        -- environment = Just "production"
+        -- lastName = Just "wick"
+        -- options_getUpiDeepLinks = Just ""
         } 
       let (final_payload) = PaymentPagePayload $ sdk_payload{payload = finalPayload}
-      paymentPageOutput <- startPP listResp.sdk_payload--  final_payload --
-      let _ = consumeBackPress unit
-      when (paymentPageOutput == "backpressed") homeScreenFlow -- backpressed FAIL
+      paymentPageOutput <- startPP  listResp.sdk_payload-- final_payload --
+      let _ = consumeBP unit
+      if (paymentPageOutput == "backpressed") then homeScreenFlow else pure unit-- backpressed FAIL
       orderStatus <- lift $ lift $ Remote.paymentOrderStatus homeScreenState.data.paymentState.driverFeeId
       case orderStatus of
         Right (OrderStatusRes resp) -> 

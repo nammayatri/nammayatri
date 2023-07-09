@@ -33,6 +33,7 @@ downloadStatementView push state =
     , width WRAP_CONTENT
     , margin $ MarginVertical 16 24
     , padding $ Padding 5 5 5 5
+    , visibility GONE -- TODO
     ]
     [ textView
         $ [ height WRAP_CONTENT

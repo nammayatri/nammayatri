@@ -699,7 +699,7 @@ export const startPP1 = function (payload) {
 	}
 }
 
-export const consumeBackPress = function (unit) {
+export const consumeBP = function (unit){
   var jpConsumingBackpress = {
     event: "jp_consuming_backpress",
     payload: { jp_consuming_backpress: true }

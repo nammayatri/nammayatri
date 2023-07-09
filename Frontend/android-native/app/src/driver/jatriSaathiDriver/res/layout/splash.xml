@@ -4,7 +4,7 @@
     android:layout_height="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
-    android:background="@color/white"
+    android:background="#ED000000"
     android:id="@+id/splash">
 
     <LinearLayout
@@ -14,22 +14,11 @@
         android:orientation="vertical">
 
         <ImageView
-            android:layout_width="100dp"
-            android:layout_height="100dp"
+            android:layout_width="300dp"
+            android:layout_height="300dp"
             android:layout_gravity="center"
-            android:src="@drawable/ic_launcher" />
+            android:src="@drawable/ic_ysd" />
 
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingHorizontal="70dp"
-            android:layout_marginTop="1dp"
-            android:layout_gravity="center"
-            android:fontFamily="@font/plus_jakarta_sans_bold"
-            android:textSize="20dp"
-            android:textColor="#BC3A1D"
-            android:text="jatri sathi driver" />
     </LinearLayout>
 
     <LinearLayout
@@ -47,7 +36,7 @@
             android:fontFamily="@font/plus_jakartasans_regular"
             android:lineHeight="15sp"
             android:paddingBottom="8dp"
-            android:text="Powered by"
+            android:text="Backed by"
             android:textColor="@color/Black500"
             android:textSize="12sp" />
 
@@ -58,8 +47,8 @@
             android:orientation="horizontal">
 
             <ImageView
-                android:layout_width="231dp"
-                android:layout_height="32dp"
+                android:layout_width="200dp"
+                android:layout_height="40dp"
                 android:layout_gravity="center"
                 android:src="@drawable/ic_powered_by" />
         </LinearLayout>

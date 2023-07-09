@@ -160,7 +160,7 @@ screen initialState =
                                 _ <- pure $ setValueToLocalStore SESSION_ID (JB.generateSessionId unit)
                                 _ <- checkPermissionAndUpdateDriverMarker initialState
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ checkCurrentRide push Notification
-                                _ <- launchAff $ EHC.flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.paymentState.driverFeeId 10 5000.0 initialState push PaymentStatusAction
+                                _ <- launchAff $ EHC.flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.paymentState.driverFeeId 4 5000.0 initialState push PaymentStatusAction
                                 pure unit
           pure $ pure unit
         )
@@ -277,13 +277,28 @@ rateCardView push state =
 paymentStatusBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 paymentStatusBanner state push =
   linearLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , orientation HORIZONTAL
-  , background Color.transparent
-  , padding $ Padding 10 0 10 16
-  , gravity BOTTOM
-  ][ Banner.view (push <<< PaymentBannerAC) (paymentStatusConfig state)]
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin $ Margin 10 10 10 10
+    , gravity BOTTOM
+    ][  linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , gravity RIGHT
+        ][ imageView
+            [ height $ V 24
+            , width $ V 24
+            , gravity RIGHT
+            , margin $ MarginRight 4
+            , onClick push $ const RemovePaymentBanner
+            , imageWithFallback "ny_ic_grey_cross,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_grey_cross_icon.png"
+            , visibility if state.data.paymentState.blockedDueToPayment then GONE else VISIBLE
+            ] 
+          , Banner.view (push <<< PaymentBannerAC) (paymentStatusConfig state)
+        ]
+    ]
 
 
 alternateNumberOrOTPView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -1086,7 +1101,7 @@ rideRequestPolling pollingId count duration state push action = do
 
 paymentStatusPooling :: forall action. String -> Int -> Number -> HomeScreenState -> (action -> Effect Unit) -> (APIPaymentStatus -> action) -> Flow GlobalState Unit
 paymentStatusPooling orderId count delayDuration state push action = do
-  if (getValueToLocalStore PAYMENT_STATUS_POOLING) == "true" && isLocalStageOn HomeScreen && count > 0 then do
+  if (getValueToLocalStore PAYMENT_STATUS_POOLING) == "true" && isLocalStageOn HomeScreen && count > 0 && orderId /= "" then do
     orderStatus <- Remote.paymentOrderStatus orderId
     _ <- pure $ spy "polling inside paymentStatusPooling function" orderStatus
     case orderStatus of

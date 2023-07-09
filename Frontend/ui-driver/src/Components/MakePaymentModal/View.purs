@@ -1,26 +1,24 @@
 module Components.MakePaymentModal.View where
 
-import Components.MakePaymentModal.Controller (Action(..), MakePaymentModalState, FeeItem, FeeOptions(..))
-import Effect (Effect)
-import PrestoDOM.Types.Core (PrestoDOM)
-import PrestoDOM.Types.DomAttributes (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Corners(..))
-import PrestoDOM.Properties (alpha, background, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageWithFallback, margin, orientation, padding, singleLine, stroke, text, textSize, visibility, weight, width, cornerRadii)
-import PrestoDOM.Elements.Elements (imageView, textView, linearLayout)
-import PrestoDOM.Events (afterRender, onBackPressed, onClick)
-import Styles.Colors as Color
-import PrestoDOM.Animation as PrestoAnim
+import Prelude
+
 import Animation as Anim
 import Animation.Config as AnimConfig
+import Common.Types.App (LazyCheck(..))
+import Components.MakePaymentModal.Controller (Action(..), MakePaymentModalState, FeeItem, FeeOptions(..))
 import Components.PrimaryButton as PrimaryButton
-import Font.Size as FontSize
-import Font.Style as FontStyle
-import Common.Types.App(LazyCheck(..))
-import Halogen.VDom.DOM.Prop (Prop)
-import Engineering.Helpers.Commons (screenWidth)
-import JBridge as JBridge
 import Data.Array as DA
-import Prelude
-import Data.Maybe(Maybe(..))
+import Data.Maybe (Maybe(..))
+import Effect (Effect)
+import Font.Style as FontStyle
+import Halogen.VDom.DOM.Prop (Prop)
+import PrestoDOM.Animation as PrestoAnim
+import PrestoDOM.Elements.Elements (imageView, textView, linearLayout)
+import PrestoDOM.Events (afterRender, onBackPressed, onClick)
+import PrestoDOM.Properties (background, clickable, color, cornerRadii, cornerRadius, gravity, height, imageWithFallback, margin, orientation, padding, text, visibility, weight, width)
+import PrestoDOM.Types.Core (PrestoDOM)
+import PrestoDOM.Types.DomAttributes (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Corners(..))
+import Styles.Colors as Color
 
 
 view :: forall w . (Action -> Effect Unit) -> MakePaymentModalState -> PrestoDOM (Effect Unit) w
@@ -30,6 +28,7 @@ view push state =
   , height MATCH_PARENT
   , orientation VERTICAL
   , background Color.black9000
+  -- , clickable true
   , gravity BOTTOM
   ][ PrestoAnim.animationSet [ Anim.translateYAnim AnimConfig.translateYAnimConfig ] $
       linearLayout
@@ -39,6 +38,7 @@ view push state =
       , orientation VERTICAL
       , background Color.white900
       , padding $ Padding 16 10 16 20
+      , clickable true
       , gravity CENTER
       ][ commonTV push state.title Color.black800 FontStyle.h2 CENTER 8 NoAction
         , commonTV push state.description Color.black800 FontStyle.subHeading1 CENTER 8 NoAction

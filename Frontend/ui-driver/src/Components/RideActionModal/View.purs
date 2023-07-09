@@ -91,6 +91,7 @@ getCurrentAndroidVersion merchant =
     MOBILITY_PM -> 1
     MOBILITY_RS -> 1
     PASSCULTURE -> 1
+    MOBILITY_RS -> 1
 
 checkVersionForChat :: Int -> Boolean
 checkVersionForChat reqVersion =

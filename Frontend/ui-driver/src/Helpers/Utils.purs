@@ -267,7 +267,7 @@ type MicroAPPInvokeSignature = String -> (AffSuccess String) ->  Effect Unit
 
 foreign import startPP1 :: MicroAPPInvokeSignature
 
-foreign import consumeBackPress :: Unit -> Effect Unit
+foreign import consumeBP :: Unit -> Unit
 
 startPP'' :: forall a. PaymentPagePayload -> Flow a String
 startPP'' payload = do

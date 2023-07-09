@@ -148,7 +148,8 @@ data Action = Dummy
 
 eval :: Action -> RideHistoryScreenState -> Eval Action ScreenOutput RideHistoryScreenState
 eval AfterRender state = continue state
-eval BackPressed state = exit GoBack
+eval BackPressed state = if state.props.showPaymentHistory then continue state{ props {showPaymentHistory = false }}
+                          else exit GoBack
 eval (OnFadeComplete _ ) state = if (not state.recievedResponse) then continue state else
   continue state { shimmerLoader = case state.shimmerLoader of
                               AnimatedIn ->AnimatedOut

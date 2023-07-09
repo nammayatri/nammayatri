@@ -177,6 +177,7 @@ instance loggableAction :: Loggable Action where
     RateCardAC act -> pure unit
     PaymentBannerAC act -> pure unit
     PaymentStatusAction _ -> pure unit
+    RemovePaymentBanner -> pure unit
 
 
 data ScreenOutput =   Refresh ST.HomeScreenState
@@ -246,6 +247,7 @@ data Action = NoAction
             | MakePaymentModalAC MakePaymentModal.Action
             | RateCardAC RateCard.Action
             | PaymentStatusAction Common.APIPaymentStatus
+            | RemovePaymentBanner
   
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -265,9 +267,11 @@ eval BackPressed state = do
             continue state {props{cancelConfirmationPopup = false}, data{cancelRideConfirmationPopUp{timerID = "" , continueEnabled=false, enableTimer=false}}}
               else if state.props.showBonusInfo then do
                 continue state { props { showBonusInfo = false } }
-                  else do
-                    _ <- pure $ minimizeApp ""
-                    continue state
+                  else if state.data.paymentState.showRateCard then
+                    continue state { data { paymentState{ showRateCard = false } } }
+                      else do
+                        _ <- pure $ minimizeApp ""
+                        continue state
 
 eval TriggerMaps state = continueWithCmd state[ do
   _ <- pure $ openNavigation 0.0 0.0 state.data.activeRide.dest_lat state.data.activeRide.dest_lon
@@ -587,7 +591,10 @@ eval (RequestInfoCardAction RequestInfoCard.NoAction) state = continue state
 
 eval (GenderBannerModal (Banner.OnClick)) state = exit $ GotoEditGenderScreen
 
-eval (PaymentBannerAC (Banner.OnClick)) state = if state.data.paymentState.blockedDueToPayment then 
+-- eval (PaymentBannerAC (Banner.OnClick)) state = if state.data.paymentState.blockedDueToPayment then 
+--                                                   continue state else continue state {data { paymentState {paymentStatusBanner = false}}}
+
+eval RemovePaymentBanner state = if state.data.paymentState.blockedDueToPayment then 
                                                   continue state else continue state {data { paymentState {paymentStatusBanner = false}}}
 
 eval RemoveGenderBanner state = do

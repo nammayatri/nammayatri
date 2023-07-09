@@ -97,17 +97,9 @@ window.onMerchantEvent = function (event, payload) {
   var clientPaylod = JSON.parse(payload);
   var clientId = clientPaylod.payload.clientId
   if (event == "initiate") {
-    let payload = {
-      event: "initiate_result"
-      , service: "in.juspay.becknui"
-      , payload: { status: "SUCCESS" }
-      , error: false
-      , errorMessage: ""
-      , errorCode: ""
-    }
     if (clientId == "open-kochi") {
       window.merchantID = "YATRI"
-    } else if(clientId == "jatrisaathiprovider" || clientId == "jatrisaathidriver"){
+    } else if(clientId == "jatrisaathiprovider" || clientId == "jatrisaathidriver" || clientId == "yatrisathiprovider"){
       window.merchantID = "JATRISAATHI"
     }else if (clientId.includes("provider")){
       var merchant = clientId.replace("mobility","")
@@ -117,7 +109,6 @@ window.onMerchantEvent = function (event, payload) {
       // window.merchantID = clientPaylod.payload.clientId.toUpperCase();
       window.merchantID = "NAMMAYATRI";
     }
-    JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
   } else if (event == "process") {
     window.__payload.sdkVersion = "2.0.1"
     console.warn("Process called");
@@ -229,6 +220,20 @@ window["onEvent'"] = function (event, args) {
     }
 }
 }
+window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyperPay
+  console.log("onEvent Payload", jsonPayload);
+  if ((JSON.parse(jsonPayload)).event == "initiate_result"){
+    let payload = {
+      event: "initiate_result"
+      , service: "in.juspay.becknui"
+      , payload: { status: "SUCCESS" }
+      , error: false
+      , errorMessage: ""
+      , errorCode: ""
+    }
+    JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
+  }
+}
 
 function refreshFlow(){
   let currentDate = new Date();
@@ -249,6 +254,7 @@ function disableConsoleLogs() {
 
 if (typeof window.JOS != "undefined") {
   window.JOS.addEventListener("onEvent'")();
+  window.JOS.addEventListener("onEvent")(); // adding onEvent listener for hyperPay
   window.JOS.addEventListener("onMerchantEvent")();
   window.JOS.addEventListener("onActivityResult")();
   console.error("Calling action DUI_READY");
