@@ -276,7 +276,8 @@ data EndRideRequest = EndRideRequest String EndRideReq
 
 newtype EndRideReq = EndRideReq
     {
-      point :: Point
+      point :: Point,
+      numberOfDeviation :: Maybe Boolean 
     }
 
 newtype EndRideResponse = EndRideResponse ApiSuccessResult
