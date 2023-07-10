@@ -899,7 +899,7 @@ rideRequestFlowView push state =
         ]
         [ PrestoAnim.animationSet [ fadeIn true ]
             $ if (state.props.currentStage == SettingPrice) then
-                if (state.props.isSpecialZone && (getMerchant FunctionCall == JATRISAATHI))  || ((getMerchant FunctionCall) /= NAMMAYATRI) then
+                if (state.props.isSpecialZone && (getValueFromConfig "specialLocationView") == "true") then
                   ChooseYourRide.view (push <<< ChooseYourRideAction) (chooseYourRideConfig state)
                 else
                 suggestedPriceView push state
@@ -1491,7 +1491,7 @@ confirmPickUpLocationView push state =
             , width MATCH_PARENT
             , fontStyle $ FontStyle.bold LanguageStyle
             ]
-        , if  ((getMerchant FunctionCall == JATRISAATHI) && state.props.isSpecialZone ) then  nearByPickUpPointsView state push else currentLocationView push state
+        , if  ((getValueFromConfig "specialLocationView") == "true" && state.props.isSpecialZone ) then  nearByPickUpPointsView state push else currentLocationView push state
         , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfirmPickupConfig state)
         ]
     ]
@@ -1756,7 +1756,7 @@ getEstimate action flowStatusAction count duration push state = do
         Right response -> do
           _ <- pure $ printLog "api Results " response
           let (GetQuotesRes resp) = response
-          if not (state.props.isSpecialZone && (null resp.quotes) || ((not state.props.isSpecialZone) && null resp.estimates)) then do
+          if not (null resp.quotes) || not (null resp.estimates) then do
             doAff do liftEffect $ push $ action response
             pure unit
           else do
