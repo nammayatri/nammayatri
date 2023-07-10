@@ -828,6 +828,9 @@ eval (CheckBoxClick autoAssign) state = do
   let event = if autoAssign then "ny_user_pref_autoassigned" else "ny_user_pref_driveroffers"
   _ <- pure $ firebaseLogEvent event
   _ <- pure $ setValueToLocalStore FLOW_WITHOUT_OFFERS (show autoAssign)
+  _ <- pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT $ if autoAssign then "4" else "17"
+  _ <- pure $ setValueToLocalStore TEST_POLLING_INTERVAL $ if autoAssign then "8000.0" else "1500.0"
+  _ <- pure $ setValueToLocalStore TEST_POLLING_COUNT $ if autoAssign then "22" else "117"
   continue state
 
 eval (OnIconClick autoAssign) state = do

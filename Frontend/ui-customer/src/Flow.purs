@@ -95,9 +95,9 @@ baseAppFlow gPayload refreshFlow = do
   _ <- pure $ setValueToLocalStore TRACKING_DRIVER "False"
   _ <- pure $ setValueToLocalStore TRACKING_ENABLED "True"
   _ <- pure $ setValueToLocalStore RELOAD_SAVED_LOCATION "true"
-  _ <- pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT "17"
-  _ <- pure $ setValueToLocalStore TEST_POLLING_INTERVAL "1500.0"
-  _ <- pure $ setValueToLocalStore TEST_POLLING_COUNT "117"
+  _ <- pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT if (flowWithoutOffers WithoutOffers) then "4" else "17"
+  _ <- pure $ setValueToLocalStore TEST_POLLING_INTERVAL if (flowWithoutOffers WithoutOffers) then "8000.0" else "1500.0"
+  _ <- pure $ setValueToLocalStore TEST_POLLING_COUNT if (flowWithoutOffers WithoutOffers) then "22" else "117"
   _ <- pure $ setValueToLocalStore RATING_SKIPPED "false"
   _ <- pure $ setValueToLocalStore POINTS_FACTOR "3"
   _ <- pure $ setValueToLocalStore ACCURACY_THRESHOLD "23.0"
@@ -245,8 +245,12 @@ currentRideFlow rideAssigned = do
                                 Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
                                 Nothing        -> "")
                 currentDate =  getCurrentDate ""
-            if(lastRideDate /= currentDate) then
-              setValueToLocalStore FLOW_WITHOUT_OFFERS "true"
+            if(lastRideDate /= currentDate) then do
+              _ <- pure $ setValueToLocalStore FLOW_WITHOUT_OFFERS "true"
+              _ <- pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT "4"
+              _ <- pure $ setValueToLocalStore TEST_POLLING_INTERVAL "8000.0"
+              _ <- pure $ setValueToLocalStore TEST_POLLING_COUNT "22"
+              pure unit
               else pure unit
             when (isNothing currRideListItem.rideRating) $ do
               when (resp.status /= "CANCELLED" && length listResp.list > 0) $ do
