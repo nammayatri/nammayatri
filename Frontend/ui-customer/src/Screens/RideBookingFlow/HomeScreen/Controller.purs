@@ -62,7 +62,7 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os, getExpiryTime, convertUTCtoISC, getCurrentUTC)
-import Helpers.Utils (Merchant(..), addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, getMerchant, performHapticFeedback)
+import Helpers.Utils (Merchant(..), addToRecentSearches, clearCountDownTimer, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, getMerchant, performHapticFeedback)
 import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, startLottieProcess, getSuggestionfromKey)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
@@ -955,14 +955,14 @@ eval OpenSettings state = do
 
 eval (SearchExpireCountDown seconds id status timerID) state = do
   if status == "EXPIRED" then do
-    _ <- pure $ clearTimer timerID
+    _ <- pure $ clearCountDownTimer timerID
     let tipViewData = HomeScreenData.initData.props.tipViewProps
     _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
     continue state { props { searchExpire = seconds } }
   else
     if any ( _ == state.props.currentStage) [FindingQuotes , QuoteList] then continue state { props { searchExpire = seconds ,timerId = timerID , tipViewProps {isVisible = state.props.customerTip.enableTips && (seconds <= (getSearchExpiryTime "LazyCheck")-30 || state.props.tipViewProps.isVisible) && (state.props.customerTip.tipActiveIndex >0) }} }
       else do
-        _ <- pure $ clearTimer timerID
+        _ <- pure $ clearCountDownTimer timerID
         let tipViewData = HomeScreenData.initData.props.tipViewProps
         _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
         continue state { props { searchExpire = (getSearchExpiryTime "LazyCheck") ,timerId = timerID , tipViewProps {isVisible = false}} }
@@ -1018,7 +1018,9 @@ eval (DriverInfoCardActionController (DriverInfoCardController.Support)) state =
 
 eval (CancelSearchAction PopUpModal.DismissPopup) state = do continue state {props { cancelSearchCallDriver = false }}
 
-eval (CancelSearchAction PopUpModal.OnButton1Click) state = do continue state {props {showCallPopUp = true, cancelSearchCallDriver = false}}
+eval (CancelSearchAction PopUpModal.OnButton1Click) state = do 
+  _ <- pure $ clearCountDownTimer state.props.timerId
+  continue state {props {showCallPopUp = true, cancelSearchCallDriver = false}}
 
 eval (CancelSearchAction PopUpModal.OnButton2Click) state = do
   continue state { props { isCancelRide = true, cancellationReasons = cancelReasons "", cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "", cancelSearchCallDriver = false } }
@@ -1293,7 +1295,7 @@ eval (QuoteListModelActionController (QuoteListModelController.CancelAutoAssigni
 
 
 eval (QuoteListModelActionController (QuoteListModelController.TipViewPrimaryButtonClick PrimaryButtonController.OnClick)) state = do
-  _ <- pure $ clearTimer state.props.timerId
+  _ <- pure $ clearCountDownTimer state.props.timerId
   _ <- pure $ startLottieProcess "progress_loader_line" (getNewIDWithTag "lottieLoaderAnimProgress") true 0.6 "CENTER_CROP"
   let tipViewData = state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH }
   let newState = state{ props{findingRidesAgain = true ,searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = TryAgain, sourceSelectedOnMap = true, isPopUp = NoPopUp ,tipViewProps = tipViewData ,customerTip {tipForDriver = (fromMaybe 10 (state.props.tipViewProps.customerTipArrayWithValues !! state.props.tipViewProps.activeIndex)) , tipActiveIndex = state.props.tipViewProps.activeIndex+1 , isTipSelected = true } }}
