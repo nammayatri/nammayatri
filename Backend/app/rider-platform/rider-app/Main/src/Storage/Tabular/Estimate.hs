@@ -42,6 +42,7 @@ mkPersist
       requestId SSearchRequest.SearchRequestTId
       merchantId MerchantTId Maybe
       bppEstimateId Text
+      itemId Text
       estimatedFare HighPrecMoney
       discount HighPrecMoney Maybe
       estimatedTotalFare HighPrecMoney

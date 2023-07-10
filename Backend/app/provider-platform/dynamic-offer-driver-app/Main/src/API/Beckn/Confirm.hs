@@ -60,7 +60,6 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
       fork "confirm" $ do
         Redis.whenWithLockRedis (confirmProcessingLockKey dConfirmReq.bookingId.getId) 60 $ do
           dConfirmRes <- DConfirm.handler transporter dConfirmReq eitherQuote
-          now <- getCurrentTime
           case dConfirmRes.booking.bookingType of
             DBooking.NormalBooking -> do
               ride <- dConfirmRes.ride & fromMaybeM (RideNotFound dConfirmRes.booking.id.getId)
@@ -68,7 +67,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
               driver <- runInReplica $ QPerson.findById driverQuote.driverId >>= fromMaybeM (PersonNotFound driverQuote.driverId.getId)
               fork "on_confirm/on_update" $ do
                 handle (errHandler dConfirmRes transporter (Just driver)) $ do
-                  onConfirmMessage <- ACL.buildOnConfirmMessage now dConfirmRes
+                  onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes
                   void $
                     BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
                   void $
@@ -77,7 +76,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
             DBooking.SpecialZoneBooking -> do
               fork "on_confirm/on_update" $ do
                 handle (errHandler' dConfirmRes transporter) $ do
-                  onConfirmMessage <- ACL.buildOnConfirmMessage now dConfirmRes
+                  onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes
                   void $
                     BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
     pure Ack

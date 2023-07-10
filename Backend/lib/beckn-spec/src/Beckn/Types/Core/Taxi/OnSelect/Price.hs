@@ -13,7 +13,7 @@
 -}
 
 module Beckn.Types.Core.Taxi.OnSelect.Price
-  ( Price (..),
+  ( module Beckn.Types.Core.Taxi.OnSelect.Price,
     module Reexport,
   )
 where
@@ -21,8 +21,15 @@ where
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Kernel.Prelude
 
+data PriceBreakup = PriceBreakup
+  { title :: Text,
+    price :: Price
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
 data Price = Price
   { currency :: Text,
-    value :: DecimalValue
+    value :: DecimalValue,
+    offered_value :: DecimalValue
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

@@ -16,6 +16,7 @@ module Beckn.Types.Core.Taxi.Common.Address where
 
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import Kernel.Prelude
+import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Address = Address
@@ -29,7 +30,13 @@ data Address = Address
     ward :: Maybe Text,
     door :: Maybe Text
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show)
 
 instance ToSchema Address where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance ToJSON Address where
+  toJSON = genericToJSON removeNullFields
+
+instance FromJSON Address where
+  parseJSON = genericParseJSON removeNullFields

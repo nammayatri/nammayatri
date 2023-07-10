@@ -59,7 +59,7 @@ in  { esqDBCfg
     , hedisNonCriticalCfg = rcfg
     , hedisNonCriticalClusterCfg = rccfg
     , hedisMigrationStage = True
-    , cutOffHedisCluster = False
+    , cutOffHedisCluster = True
     , port = +8017
     , migrationPath = Some
         (   env:RIDER_DASHBOARD_MIGRATION_PATH as Text

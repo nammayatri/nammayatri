@@ -68,6 +68,7 @@ mkPersist
       estimatedDuration Seconds
       fareParametersId Fare.FareParametersTId
       riderName Text Maybe
+      paymentUrl Text Maybe
       paymentMethodId SMPM.MerchantPaymentMethodTId Maybe
       createdAt UTCTime
       updatedAt UTCTime

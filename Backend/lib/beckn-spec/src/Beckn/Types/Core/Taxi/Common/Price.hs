@@ -21,7 +21,8 @@ where
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Kernel.Prelude
 
-newtype Price = Price
-  { value :: DecimalValue
+data Price = Price
+  { value :: DecimalValue,
+    currency :: Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

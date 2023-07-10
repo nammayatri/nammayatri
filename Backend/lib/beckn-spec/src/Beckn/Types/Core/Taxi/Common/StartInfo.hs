@@ -12,23 +12,26 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnConfirm.Location
-  ( module Beckn.Types.Core.Taxi.OnConfirm.Location,
-    module Reexport,
-  )
-where
+module Beckn.Types.Core.Taxi.Common.StartInfo where
 
-import Beckn.Types.Core.Taxi.Common.Address as Reexport
-import Beckn.Types.Core.Taxi.Common.Gps as Reexport
+import Beckn.Types.Core.Taxi.Common.Authorization
+import Beckn.Types.Core.Taxi.Common.Location (Location)
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
-import Kernel.Prelude
+import EulerHS.Prelude hiding (id)
+import Kernel.Utils.JSON (removeNullFields)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
-data Location = Location
-  { gps :: Gps,
-    address :: Address
+data StartInfo = StartInfo
+  { location :: Location,
+    authorization :: Maybe Authorization
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show)
 
-instance ToSchema Location where
+instance ToJSON StartInfo where
+  toJSON = genericToJSON removeNullFields
+
+instance FromJSON StartInfo where
+  parseJSON = genericParseJSON removeNullFields
+
+instance ToSchema StartInfo where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

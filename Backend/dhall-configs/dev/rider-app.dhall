@@ -144,7 +144,7 @@ in  { esqDBCfg
     , hedisNonCriticalCfg = hcfg
     , hedisNonCriticalClusterCfg = hccfg
     , hedisMigrationStage = True
-    , cutOffHedisCluster = False
+    , cutOffHedisCluster = True
     , cutOffNonCriticalHedisCluster = False
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig

@@ -26,6 +26,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Common (Centesimal, Meters (..))
 import qualified Kernel.Types.Common as Common
 import Kernel.Types.Id
+import Storage.Tabular.Estimate (EstimateTId)
 import qualified Storage.Tabular.FareParameters as Fare
 import qualified Storage.Tabular.FareParameters.Instances as Fare
 import Storage.Tabular.Merchant (MerchantTId)
@@ -45,6 +46,7 @@ mkPersist
       requestId SearchRequestTId sql=search_request_id
       searchTryId SearchTryTId
       searchRequestForDriverId SRFD.SearchRequestForDriverTId Maybe
+      estimateId EstimateTId
       driverId PersonTId
       driverName Text
       driverRating Centesimal Maybe
@@ -84,6 +86,7 @@ instance FromTType FullDriverQuoteT Domain.DriverQuote where
           driverId = fromKey driverId,
           durationToPickup = roundToIntegral durationToPickup,
           providerId = fromKey providerId,
+          estimateId = fromKey estimateId,
           ..
         }
 
@@ -98,6 +101,7 @@ instance ToTType FullDriverQuoteT Domain.DriverQuote where
           durationToPickup = realToFrac durationToPickup,
           fareParametersId = toKey fareParams.id,
           providerId = toKey providerId,
+          estimateId = toKey estimateId,
           ..
         },
       toTType fareParams

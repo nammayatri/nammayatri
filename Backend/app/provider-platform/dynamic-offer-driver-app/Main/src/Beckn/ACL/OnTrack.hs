@@ -23,6 +23,7 @@ mkOnTrackMessage res = do
     { tracking =
         OnTrack.Tracking
           { url = res.url,
-            content_type = "application/json"
+            content_type = "application/json",
+            status = if res.isRideCompleted then OnTrack.INACTIVE else OnTrack.ACTIVE
           }
     }

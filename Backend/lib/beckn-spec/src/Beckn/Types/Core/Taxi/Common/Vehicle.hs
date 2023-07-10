@@ -12,9 +12,25 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Init.StopInfo
-  ( module Reexport,
-  )
-where
+module Beckn.Types.Core.Taxi.Common.Vehicle where
 
-import Beckn.Types.Core.Taxi.Search.StopInfo as Reexport
+import Kernel.Prelude
+
+newtype Vehicle = Vehicle
+  { category :: VehicleVariant
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
+  deriving
+    ( Show,
+      Eq,
+      Read,
+      Generic,
+      ToJSON,
+      FromJSON,
+      ToSchema,
+      ToParamSchema,
+      Enum,
+      Bounded
+    )
