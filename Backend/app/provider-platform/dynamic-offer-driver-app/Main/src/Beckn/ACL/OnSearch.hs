@@ -104,8 +104,7 @@ mkStartInfo dReq =
         OS.Location
           { gps = OS.Gps {lat = dReq.fromLocation.lat, lon = dReq.fromLocation.lon},
             address = Nothing
-          },
-      time = OS.TimeTimestamp dReq.now
+          }
     }
 
 mkStopInfo :: DSearch.DSearchRes -> OS.StopInfo
@@ -136,8 +135,9 @@ mkQuoteEntities start end estInfo = do
       fulfillment =
         OS.FulfillmentInfo
           { start,
-            end = Just end,
-            id = "ARDU_" <> show estimate.vehicleVariant,
+            end = end,
+            id = estimate.id.getId,
+            _type = OS.RIDE,
             vehicle = OS.FulfillmentVehicle {category = Common.castVariant estimate.vehicleVariant}
           }
       item =
@@ -251,8 +251,9 @@ mkQuoteEntitiesSpecialZone start end it = do
       fulfillment =
         OS.FulfillmentInfo
           { start,
-            end = Just end,
-            id = "fulf_" <> show it.quoteId,
+            end = end,
+            id = it.quoteId.getId,
+            _type = OS.RIDE_OTP,
             vehicle = OS.FulfillmentVehicle {category = Common.castVariant it.vehicleVariant}
           }
       item =

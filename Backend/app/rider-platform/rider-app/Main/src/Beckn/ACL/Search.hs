@@ -37,7 +37,6 @@ buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
     origin
     destination
     searchId
-    now
     city
     device
     (shortestRouteInfo >>= (.distance))
@@ -53,7 +52,6 @@ buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
     origin
     origin
     searchId
-    startTime
     city
     Nothing
     Nothing
@@ -65,20 +63,19 @@ buildSearchReq ::
   DSearchCommon.SearchReqLocation ->
   DSearchCommon.SearchReqLocation ->
   Id DSearchReq.SearchRequest ->
-  UTCTime ->
   Text ->
   Maybe Text ->
   Maybe Meters ->
   Maybe Seconds ->
   Maybe Maps.Language ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin destination searchId startTime city _ distance duration customerLanguage = do
+buildSearchReq origin destination searchId city _ distance duration customerLanguage = do
   let transactionId = getId searchId
       messageId = transactionId
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) bapIDs.cabs bapURIs.cabs Nothing Nothing city
-  let intent = mkIntent origin destination startTime customerLanguage distance duration
+  let intent = mkIntent origin destination customerLanguage distance duration
   -- let mbRouteInfo = Search.RouteInfo {distance, duration}
   let searchMessage = Search.SearchMessage intent
 
@@ -87,16 +84,14 @@ buildSearchReq origin destination searchId startTime city _ distance duration cu
 mkIntent ::
   DSearchCommon.SearchReqLocation ->
   DSearchCommon.SearchReqLocation ->
-  UTCTime ->
   Maybe Maps.Language ->
   Maybe Meters ->
   Maybe Seconds ->
   Search.Intent
-mkIntent origin destination startTime customerLanguage distance duration = do
+mkIntent origin destination customerLanguage distance duration = do
   let startLocation =
         Search.StartInfo
-          { location = mkLocation origin,
-            time = Search.TimeTimestamp startTime
+          { location = mkLocation origin
           }
       endLocation =
         Search.StopInfo
