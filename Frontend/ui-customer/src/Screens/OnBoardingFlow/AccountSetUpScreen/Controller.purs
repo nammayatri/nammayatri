@@ -27,6 +27,7 @@ import Prelude (class Show, bind, discard, pure, unit, not, ($), (/=), (&&), (>=
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
+import Helpers.Utils (clearCountDownTimer)
 import Screens.Types (AccountSetUpScreenState, Gender(..), ActiveFieldAccountSetup(..), ErrorType(..))
 import Engineering.Helpers.Commons(getNewIDWithTag)
 import Data.Maybe(Maybe(..))
@@ -125,6 +126,7 @@ eval (AnimationEnd _)  state = continue state{props{showOptions = false}}
 
 eval BackPressed state = do
   _ <- pure $ hideKeyboardOnNavigation true
+  _ <- pure $ clearCountDownTimer ""
   continue state { props { backPressed = true } }
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state { props { backPressed = false } }
