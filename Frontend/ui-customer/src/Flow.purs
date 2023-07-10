@@ -1428,6 +1428,9 @@ emergencyScreenFlow = do
       _ <- pure $ setValueToLocalStore CONTACTS (contactsInString)
       modifyScreenState $  EmergencyContactsScreenStateType (\emergencyContactsScreen -> state{data{contactsList = contacts}})
       emergencyScreenFlow
+    REFRESH_EMERGECY_CONTACTS_SCREEN state -> do
+      modifyScreenState $  EmergencyContactsScreenStateType (\emergencyContactsScreen -> state)
+      emergencyScreenFlow
 
 aboutUsScreenFlow :: FlowBT String Unit
 aboutUsScreenFlow = do

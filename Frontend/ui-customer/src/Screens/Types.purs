@@ -42,6 +42,14 @@ type NewContacts = {
   isSelected :: Boolean
 }
 
+type NewContactsProp = {
+  name :: PropValue,
+  number :: PropValue,
+  isSelected :: PropValue,
+  contactBackgroundColor :: PropValue,
+  isSelectImage :: PropValue
+}
+
 type EditTextInLabelState =
  {
     topLabel :: String
@@ -746,7 +754,12 @@ type EmergencyContactsScreenData = {
   contactsCount :: Int,
   contactsList :: Array NewContacts,
   contactsNewList :: Array NewContacts,
+  contactsUpdatedNewList :: Array NewContacts,
+  prestoListArrayItems :: Array NewContactsProp,
+  loadMoreDisabled :: Boolean,
   removedContactDetail :: NewContacts,
+  offsetForEmergencyContacts :: Int,
+  limitForEmergencyContacts :: Int,
   editedText :: String
 }
 
