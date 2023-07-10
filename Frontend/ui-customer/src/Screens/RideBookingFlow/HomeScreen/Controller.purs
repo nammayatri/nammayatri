@@ -818,7 +818,7 @@ eval (UpdateLocation key lat lon) state = case key of
 eval (UpdatePickupLocation  key lat lon) state =
   case key of
     "LatLon" -> do
-      exit $ UpdatePickupName state (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
+      exit $ UpdatePickupName state{props{defaultPickUpPoint = ""}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
     _ -> if length (filter( \ (item) -> (item.place == key)) state.data.nearByPickUpPoints) > 0 then do
           exit $ UpdatePickupName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
             else continue state
@@ -1463,7 +1463,7 @@ eval (StartLocationTracking item) state = do
     _ -> continue state
 
 eval (GetEstimates (GetQuotesRes quotesRes)) state = do
-  case state.props.isSpecialZone of
+  case not (null quotesRes.quotes) of
     true -> specialZoneFlow quotesRes.quotes state
     false -> case (getMerchant FunctionCall) of
       NAMMAYATRI -> estimatesFlow quotesRes.estimates state
