@@ -44,14 +44,18 @@
         ]
       },
       "locked": {
-        "lastModified": 1688652213,
+        "lastModified": 1688969121,
         "narHash": "sha256-e/nY0Y/1uhitwVPfYO9c6fzCzm47NRgpv2zORKYNqX4=",
-        "type": "git",
-        "url": "file:///Users/apoorv.agarwal/Documents/projects/nammayatri/beckn-gateway"
+        "owner": "nammayatri",
+        "repo": "beckn-gateway",
+        "rev": "6f89aca7ed7917e961aca9b68e582e0b684143d4",
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///Users/apoorv.agarwal/Documents/projects/nammayatri/beckn-gateway"
+        "owner": "nammayatri",
+        "ref": "updatedEulerHS",
+        "repo": "beckn-gateway",
+        "type": "github"
       }
     },
     "cachix": {

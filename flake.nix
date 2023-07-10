@@ -4,8 +4,7 @@
 
     # Backend inputs
     shared-kernel.url = "github:nammayatri/shared-kernel/updatedEulerHS";
-    # beckn-gateway.url = "github:nammayatri/beckn-gateway/updatedEulerHS";
-    beckn-gateway.url = "/Users/apoorv.agarwal/Documents/projects/nammayatri/beckn-gateway/";
+    beckn-gateway.url = "github:nammayatri/beckn-gateway/updatedEulerHS";
     beckn-gateway.inputs.common.follows = "common";
     beckn-gateway.inputs.shared-kernel.follows = "shared-kernel";
     beckn-gateway.inputs.flake-parts.follows = "common/flake-parts";
