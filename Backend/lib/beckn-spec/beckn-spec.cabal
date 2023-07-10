@@ -84,6 +84,7 @@ library
       Beckn.Types.Core.Taxi.Common.PaymentInstrument
       Beckn.Types.Core.Taxi.Common.PaymentType
       Beckn.Types.Core.Taxi.Common.Price
+      Beckn.Types.Core.Taxi.Common.Tags
       Beckn.Types.Core.Taxi.Common.TimeDuration
       Beckn.Types.Core.Taxi.Common.TimeTimestamp
       Beckn.Types.Core.Taxi.Common.VehicleVariant
@@ -134,6 +135,7 @@ library
       Beckn.Types.Core.Taxi.OnSearch.StopInfo
       Beckn.Types.Core.Taxi.OnSelect
       Beckn.Types.Core.Taxi.OnSelect.Addon
+      Beckn.Types.Core.Taxi.OnSelect.Agent
       Beckn.Types.Core.Taxi.OnSelect.Category
       Beckn.Types.Core.Taxi.OnSelect.Descriptor
       Beckn.Types.Core.Taxi.OnSelect.Fulfillment
@@ -145,6 +147,7 @@ library
       Beckn.Types.Core.Taxi.OnSelect.Price
       Beckn.Types.Core.Taxi.OnSelect.Provider
       Beckn.Types.Core.Taxi.OnSelect.ProviderLocation
+      Beckn.Types.Core.Taxi.OnSelect.Quote
       Beckn.Types.Core.Taxi.OnSelect.StartInfo
       Beckn.Types.Core.Taxi.OnSelect.StopInfo
       Beckn.Types.Core.Taxi.OnStatus

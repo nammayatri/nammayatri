@@ -54,7 +54,7 @@ buildSelectReq subscriber req = do
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
         pickupTime = pickup.time.timestamp,
-        autoAssignEnabled = order.fulfillment.tags.auto_assign_enabled,
+        autoAssignEnabled = isJust context.max_callbacks && (fromMaybe 0 context.max_callbacks == 1),
         customerExtraFee = customerExtraFee,
         estimateId = Id item.id
       }

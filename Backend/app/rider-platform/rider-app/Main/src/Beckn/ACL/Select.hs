@@ -66,8 +66,8 @@ mkOrder res = do
           { start =
               Select.StartInfo
                 { time = Select.TimeTimestamp res.searchRequest.startTime
-                },
-            tags = Select.Tags res.autoAssignEnabled
+                }
+                -- tags = Select.Tags res.autoAssignEnabled
           },
       quote =
         Select.Quote

@@ -19,16 +19,20 @@ import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
 import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..))
+import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Domain.Types.OnSearchEvent
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (id, state, unpack)
+import GHC.Float (int2Double)
+import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
 import Kernel.Product.Validation.Context (validateContext)
 import Kernel.Storage.Esqueleto (runTransaction)
 import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -60,7 +64,7 @@ searchCbService context catalog = do
   -- do we need throw an error when we have more than one provider?
   let (provider :| _) = catalog.bpp_providers
   let items = provider.items
-  (estimatesInfo, quotesInfo) <- partitionEithers <$> traverse buildEstimateOrQuoteInfo items
+  (estimatesInfo, quotesInfo) <- partitionEithers <$> traverse (buildEstimateOrQuoteInfo provider.locations) items
   let providerInfo =
         DOnSearch.ProviderInfo
           { providerId = providerId,
@@ -91,9 +95,10 @@ logOnSearchEvent (BecknCallbackReq context (leftToMaybe -> mbErr)) = do
 
 buildEstimateOrQuoteInfo ::
   (MonadThrow m, Log m) =>
+  [LatLong] ->
   OnSearch.Item ->
   m (Either DOnSearch.EstimateInfo DOnSearch.QuoteInfo)
-buildEstimateOrQuoteInfo item = do
+buildEstimateOrQuoteInfo driversLocation item = do
   let itemCode = item.descriptor.code
       vehicleVariant = castVehicleVariant itemCode.vehicleVariant
       estimatedFare = roundToIntegral item.price.value
@@ -102,8 +107,8 @@ buildEstimateOrQuoteInfo item = do
       descriptions = item.quote_terms
       nightShiftInfo = buildNightShiftInfo =<< item.tags
       waitingCharges = buildWaitingChargeInfo <$> item.tags
-      driversLocation = fromMaybe [] $ item.tags <&> (.drivers_location)
-      specialLocationTag = item.tags >>= (.special_location_tag)
+      -- driversLocation = provider_locations--fromMaybe [] $ item.tags <&> (.drivers_location)
+      specialLocationTag = buildSpecialLocationTag =<< item.tags -- >>= (.special_location_tag)
   validatePrices estimatedFare estimatedTotalFare
   let totalFareRange =
         DEstimate.FareRange
@@ -141,7 +146,7 @@ buildOneWayQuoteDetails ::
   m DOnSearch.OneWayQuoteDetails
 buildOneWayQuoteDetails item = do
   distanceToNearestDriver <-
-    (item.tags >>= (.distance_to_nearest_driver))
+    (item.tags >>= buildDistanceToNearestDriver)
       & fromMaybeM (InvalidRequest "Trip type is ONE_WAY, but distanceToNearestDriver is Nothing")
   pure
     DOnSearch.OneWayQuoteDetails
@@ -192,20 +197,111 @@ buildNightShiftInfo ::
   OnSearch.ItemTags ->
   Maybe DOnSearch.NightShiftInfo
 buildNightShiftInfo itemTags = do
-  ((,,,) <$> itemTags.night_shift_charge <*> itemTags.old_night_shift_charge <*> itemTags.night_shift_start <*> itemTags.night_shift_end)
-    <&> \(nightShiftCharge, oldNightShiftCharge, nightShiftStart, nightShiftEnd) ->
-      DOnSearch.NightShiftInfo
-        { oldNightShiftCharge = realToFrac oldNightShiftCharge,
-          ..
-        }
+  nightShiftCharge <- getNightShiftCharge itemTags
+  oldNightShiftCharge <- getOldNightShiftCharge itemTags
+  nightShiftStart <- getNightShiftStart itemTags
+  nightShiftEnd <- getNightShiftEnd itemTags
+  -- ((,,,) <$> nightShiftCharge <*> oldNightShiftCharge <*> nightShiftStart <*> nightShiftEnd)
+  --   <&> \(nightShiftCharge, oldNightShiftCharge, nightShiftStart, nightShiftEnd) ->
+  Just $
+    DOnSearch.NightShiftInfo
+      { oldNightShiftCharge = realToFrac oldNightShiftCharge,
+        ..
+      }
 
-buildWaitingChargeInfo ::
-  OnSearch.ItemTags ->
+buildWaitingChargeInfo' :: OnSearch.ItemTags -> Maybe Money
+buildWaitingChargeInfo' tags = do
+  code_1 <- tags.code_1
+  list4Code <- tags.list_4_code
+  if list4Code == "waiting_charge_per_min" && code_1 == "fare_policy"
+    then do
+      list4Value <- tags.list_4_value
+      waitingChargeValue <- readMaybe $ T.unpack list4Value
+      Just $ Money waitingChargeValue
+    else Nothing
+
+buildWaitingChargeInfo :: OnSearch.ItemTags -> DOnSearch.WaitingChargesInfo
+buildWaitingChargeInfo tags = do
   DOnSearch.WaitingChargesInfo
-buildWaitingChargeInfo itemTags = do
-  DOnSearch.WaitingChargesInfo
-    { waitingChargePerMin = itemTags.waiting_charge_per_min
+    { waitingChargePerMin = buildWaitingChargeInfo' tags
     }
+
+buildSpecialLocationTag :: OnSearch.ItemTags -> Maybe Text
+buildSpecialLocationTag tags = do
+  code_2 <- tags.code_2
+  list22Code <- tags.list_2_2_code
+  if list22Code == "special_location_tag" && code_2 == "general_info"
+    then do
+      tags.list_2_2_value
+    else -- waitingChargeValue <- readMaybe $ T.unpack list22Value
+    -- Just $ Meters waitingChargeValue
+      Nothing
+
+getNightShiftCharge :: OnSearch.ItemTags -> Maybe Money
+getNightShiftCharge tags = do
+  code_1 <- tags.code_1
+  list1Code <- tags.list_1_code
+  if list1Code == "night_shift_charge" && code_1 == "fare_policy"
+    then do
+      list1Value <- tags.list_1_value
+      nightShiftCharge <- readMaybe $ T.unpack list1Value
+      Just $ Money nightShiftCharge
+    else Nothing
+
+getOldNightShiftCharge :: OnSearch.ItemTags -> Maybe DecimalValue
+getOldNightShiftCharge tags = do
+  code_1 <- tags.code_1
+  list2Code <- tags.list_2_code
+  if list2Code == "old_night_shift_charge" && code_1 == "fare_policy"
+    then do
+      list2Value <- tags.list_2_value
+      DecimalValue.valueFromString list2Value
+    else -- Just $ Money oldNightShiftCharge
+      Nothing
+
+buildDistanceToNearestDriver :: OnSearch.ItemTags -> Maybe DecimalValue
+buildDistanceToNearestDriver tags = do
+  code_2 <- tags.code_2
+  list21Code <- tags.list_2_1_code
+  if list21Code == "distance_to_nearest_driver" && code_2 == "general_info"
+    then do
+      list21Value <- tags.list_2_1_value
+      distanceToNearestDriver <- readMaybe $ T.unpack list21Value
+      -- HighPrecMeters . realToFrac $ int2Double n
+      Just $ realToFrac $ int2Double distanceToNearestDriver
+    else Nothing
+
+-- buildWaitingChargeInfo' tags
+
+-- buildWaitingChargeInfo ::
+--   OnSearch.ItemTags ->
+--   DOnSearch.WaitingChargesInfo
+-- buildWaitingChargeInfo itemTags = do
+--   DOnSearch.WaitingChargesInfo
+--     { waitingChargePerMin = itemTags.waiting_charge_per_min
+--     }
+
+getNightShiftStart :: OnSearch.ItemTags -> Maybe TimeOfDay
+getNightShiftStart tags = do
+  code_1 <- tags.code_1
+  list3Code <- tags.list_3_code
+  if list3Code == "night_shift_start" && code_1 == "fare_policy"
+    then do
+      list3Value <- tags.list_3_value
+      readMaybe $ T.unpack list3Value
+    else -- Just $ Money nightShiftStart
+      Nothing
+
+getNightShiftEnd :: OnSearch.ItemTags -> Maybe TimeOfDay
+getNightShiftEnd tags = do
+  code_1 <- tags.code_1
+  list5Code <- tags.list_5_code
+  if list5Code == "night_shift_start" && code_1 == "fare_policy"
+    then do
+      list5Value <- tags.list_5_value
+      readMaybe $ T.unpack list5Value
+    else -- Just $ Money nightShiftStart
+      Nothing
 
 mkPayment :: OnSearch.Payment -> Maybe DMPM.PaymentMethodInfo
 mkPayment OnSearch.Payment {..} =

@@ -12,36 +12,25 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnSelect.Fulfillment
-  ( module Beckn.Types.Core.Taxi.OnSelect.Fulfillment,
+module Beckn.Types.Core.Taxi.OnSelect.Quote
+  ( module Beckn.Types.Core.Taxi.OnSelect.Quote,
     module Reexport,
   )
 where
 
-import Beckn.Types.Core.Taxi.Common.VehicleVariant as Reexport
-import Beckn.Types.Core.Taxi.OnSelect.Agent
-import Beckn.Types.Core.Taxi.OnSelect.StartInfo
-import Beckn.Types.Core.Taxi.OnSelect.StopInfo
+import Beckn.Types.Core.Taxi.Common.Gps as Reexport
+import Beckn.Types.Core.Taxi.OnSelect.Price as Reexport
+import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
-data FulfillmentInfo = FulfillmentInfo
-  { id :: Text,
-    start :: StartInfo,
-    end :: Maybe StopInfo,
-    vehicle :: FulfillmentVehicle,
-    agent :: Agent
+data Quote = Quote
+  { price :: Price,
+    ttl :: Maybe Text,
+    breakup :: Maybe [PriceBreakup]
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, Show, ToJSON, FromJSON)
 
-instance ToSchema FulfillmentInfo where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-newtype FulfillmentVehicle = FulfillmentVehicle
-  { category :: VehicleVariant
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema FulfillmentVehicle where
+instance ToSchema Quote where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

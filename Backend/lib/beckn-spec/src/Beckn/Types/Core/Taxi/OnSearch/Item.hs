@@ -22,7 +22,7 @@ import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Taxi.Common.ItemCode as Reexport
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions, fromAesonOptions)
-import Kernel.External.Maps
+-- import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
@@ -104,15 +104,47 @@ data BreakupPrice = BreakupPrice
 instance ToSchema BreakupPrice where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
+-- data ItemTags = ItemTags
+--   { distance_to_nearest_driver :: Maybe DecimalValue,
+--     night_shift_charge :: Maybe Money,
+--     old_night_shift_charge :: Maybe DecimalValue, -- TODO: Doesn't make sense, to be removed
+--     night_shift_start :: Maybe TimeOfDay,
+--     night_shift_end :: Maybe TimeOfDay,
+--     waiting_charge_per_min :: Maybe Money,
+--     -- drivers_location :: [LatLong],
+--     special_location_tag :: Maybe Text
+--   }
+--   deriving (Generic, Show)
+
 data ItemTags = ItemTags
-  { distance_to_nearest_driver :: Maybe DecimalValue,
-    night_shift_charge :: Maybe Money,
-    old_night_shift_charge :: Maybe DecimalValue, -- TODO: Doesn't make sense, to be removed
-    night_shift_start :: Maybe TimeOfDay,
-    night_shift_end :: Maybe TimeOfDay,
-    waiting_charge_per_min :: Maybe Money,
-    drivers_location :: [LatLong],
-    special_location_tag :: Maybe Text
+  { --customer_language :: Maybe Language,
+    code_1 :: Maybe Text,
+    name_1 :: Maybe Text,
+    -- display_1 :: Bool,
+    list_1_code :: Maybe Text,
+    list_1_name :: Maybe Text,
+    list_1_value :: Maybe Text,
+    list_2_code :: Maybe Text,
+    list_2_name :: Maybe Text,
+    list_2_value :: Maybe Text,
+    list_3_code :: Maybe Text,
+    list_3_name :: Maybe Text,
+    list_3_value :: Maybe Text,
+    list_4_code :: Maybe Text,
+    list_4_name :: Maybe Text,
+    list_4_value :: Maybe Text,
+    list_5_code :: Maybe Text,
+    list_5_name :: Maybe Text,
+    list_5_value :: Maybe Text,
+    code_2 :: Maybe Text,
+    name_2 :: Maybe Text,
+    list_2_1_code :: Maybe Text,
+    list_2_1_name :: Maybe Text,
+    list_2_1_value :: Maybe Text,
+    list_2_2_code :: Maybe Text,
+    list_2_2_name :: Maybe Text,
+    list_2_2_value :: Maybe Text
+    -- display :: Bool,
   }
   deriving (Generic, Show)
 
@@ -125,15 +157,48 @@ instance FromJSON ItemTags where
 instance ToSchema ItemTags where
   declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions itemTagsJSONOptions
 
+-- itemTagsJSONOptions :: Options
+-- itemTagsJSONOptions =
+--   defaultOptions
+--     { fieldLabelModifier = \case
+--         "distance_to_nearest_driver" -> "./komn/distance_to_nearest_driver"
+--         "night_shift_multiplier" -> "./komn/night_shift_multiplier"
+--         "night_shift_start" -> "./komn/night_shift_start"
+--         "night_shift_end" -> "./komn/night_shift_end"
+--         "waiting_time_estimated_threshold" -> "./komn/waiting_time_estimated_threshold"
+--         "waiting_charge_per_min" -> "./komn/waiting_charge_per_min"
+--         a -> a
+--     }
+
 itemTagsJSONOptions :: Options
 itemTagsJSONOptions =
   defaultOptions
     { fieldLabelModifier = \case
-        "distance_to_nearest_driver" -> "./komn/distance_to_nearest_driver"
-        "night_shift_multiplier" -> "./komn/night_shift_multiplier"
-        "night_shift_start" -> "./komn/night_shift_start"
-        "night_shift_end" -> "./komn/night_shift_end"
-        "waiting_time_estimated_threshold" -> "./komn/waiting_time_estimated_threshold"
-        "waiting_charge_per_min" -> "./komn/waiting_charge_per_min"
+        "code_1" -> "groups/1/descriptor/code"
+        "name_1" -> "groups/1/descriptor/name"
+        "code_2" -> "groups/2/descriptor/code"
+        "name_2" -> "groups/2/descriptor/name"
+        "list_1_code" -> "groups/1/list/1/descriptor/code"
+        "list_1_name" -> "groups/1/list/1/descriptor/name"
+        "list_1_value" -> "groups/1/list/1/value"
+        "list_2_code" -> "groups/1/list/2/descriptor/code"
+        "list_2_name" -> "groups/1/list/2/descriptor/name"
+        "list_2_value" -> "groups/1/list/2/value"
+        "list_3_code" -> "groups/1/list/3/descriptor/code"
+        "list_3_name" -> "groups/1/list/3/descriptor/name"
+        "list_3_value" -> "groups/1/list/3/value"
+        "list_4_code" -> "groups/1/list/4/descriptor/code"
+        "list_4_name" -> "groups/1/list/4/descriptor/name"
+        "list_4_value" -> "groups/1/list/4/value"
+        "list_5_code" -> "groups/1/list/5/descriptor/code"
+        "list_5_name" -> "groups/1/list/5/descriptor/name"
+        "list_5_value" -> "groups/1/list/5/value"
+        "list_2_1_code" -> "groups/2/list/1/descriptor/code"
+        "list_2_1_name" -> "groups/2/list/1/descriptor/name"
+        "list_2_1_value" -> "groups/2/list/1/value"
+        "list_2_2_code" -> "groups/2/list/2/descriptor/code"
+        "list_2_2_name" -> "groups/2/list/2/descriptor/name"
+        "list_2_2_value" -> "groups/2/list/2/value"
+        -- "display" -> "groups/1/display"
         a -> a
     }

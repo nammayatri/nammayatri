@@ -23,9 +23,10 @@ import Beckn.Types.Core.Taxi.OnSelect.Category
 import Beckn.Types.Core.Taxi.OnSelect.Descriptor
 import Beckn.Types.Core.Taxi.OnSelect.Fulfillment
 import Beckn.Types.Core.Taxi.OnSelect.Item
-import Beckn.Types.Core.Taxi.OnSelect.Offer
+-- import Beckn.Types.Core.Taxi.OnSelect.Offer
 import Beckn.Types.Core.Taxi.OnSelect.Payment
 import Beckn.Types.Core.Taxi.OnSelect.ProviderLocation
+import Beckn.Types.Core.Taxi.OnSelect.Quote
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), fromAesonOptions)
 import Kernel.Prelude
@@ -37,11 +38,12 @@ data Provider = Provider
     locations :: [ProviderLocation],
     categories :: [Category],
     items :: [Item], --FIXME this should be list of only RENTAL or only ONE_WAY items
-    offers :: [Offer],
+    -- offers :: [Offer],
     add_ons :: [Addon],
-    fulfillments :: [FulfillmentInfo],
+    fulfillment :: FulfillmentInfo,
     contacts :: Text,
     tags :: ProviderTags,
+    quote :: Quote,
     payment :: Payment
   }
   deriving (Generic, Show)
