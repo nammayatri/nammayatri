@@ -70,6 +70,8 @@ data DriverInformationE e = DriverInformation
     canDowngradeToTaxi :: Bool,
     mode :: Maybe DriverMode,
     aadhaarVerified :: Bool,
+    blockedReason :: Maybe Text,
+    blockExpiryTime :: Maybe UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

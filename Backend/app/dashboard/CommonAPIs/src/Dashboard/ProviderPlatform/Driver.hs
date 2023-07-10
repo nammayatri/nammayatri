@@ -296,7 +296,33 @@ type DisableDriverAPI =
 type BlockDriverAPI =
   Capture "driverId" (Id Driver)
     :> "block"
+    :> ReqBody '[JSON] BlockDriverReq
     :> Post '[JSON] APISuccess
+
+data BlockDriverReq = BlockDriverReq
+  { code :: Text,
+    blockReason :: Maybe Text,
+    blockTimeInHours :: Maybe Int
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+----------------------------------------------------------
+-- block driver ----------------------------------------
+
+type DriverBlockReasonListAPI =
+  "blockReasonList"
+    :> Get '[JSON] [BlockReason]
+
+newtype BlockReasonCode = BlockReasonCode Text
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data BlockReason = BlockReason
+  { reasonCode :: BlockReasonCode,
+    blockReason :: Maybe Text,
+    blockTimeInHours :: Maybe Int
+  }
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 ---------------------------------------------------------
 -- unblock driver ---------------------------------------

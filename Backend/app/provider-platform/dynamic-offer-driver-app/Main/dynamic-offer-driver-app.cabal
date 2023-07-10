@@ -153,6 +153,7 @@ library
       Domain.Types.CancellationReason
       Domain.Types.Common
       Domain.Types.Driver.DriverFlowStatus
+      Domain.Types.DriverBlockReason
       Domain.Types.DriverFee
       Domain.Types.DriverInformation
       Domain.Types.DriverLocation
@@ -277,6 +278,7 @@ library
       Storage.Queries.CallStatus
       Storage.Queries.CancellationReason
       Storage.Queries.Driver.DriverFlowStatus
+      Storage.Queries.DriverBlockReason
       Storage.Queries.DriverFee
       Storage.Queries.DriverInformation
       Storage.Queries.DriverLocation
@@ -342,6 +344,7 @@ library
       Storage.Tabular.CallStatus
       Storage.Tabular.CancellationReason
       Storage.Tabular.Driver.DriverFlowStatus
+      Storage.Tabular.DriverBlockReason
       Storage.Tabular.DriverFee
       Storage.Tabular.DriverInformation
       Storage.Tabular.DriverLocation
