@@ -464,6 +464,8 @@ createDriverDetails personId adminId merchantId = do
             canDowngradeToTaxi = False,
             mode = Just DriverInfo.OFFLINE,
             lastEnabledOn = Just now,
+            blockedReason = Nothing,
+            blockExpiryTime = Nothing,
             createdAt = now,
             updatedAt = now
           }

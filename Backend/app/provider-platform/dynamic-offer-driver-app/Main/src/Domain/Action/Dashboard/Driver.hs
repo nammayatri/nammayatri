@@ -21,6 +21,7 @@ module Domain.Action.Dashboard.Driver
     enableDriver,
     disableDriver,
     blockDriver,
+    blockReasonList,
     unblockDriver,
     driverLocation,
     driverInfo,
@@ -44,6 +45,7 @@ import Data.Coerce
 import Data.List.NonEmpty (nonEmpty)
 import Domain.Action.UI.DriverOnboarding.Status (ResponseStatus (..))
 import qualified Domain.Action.UI.DriverOnboarding.Status as St
+import qualified Domain.Types.DriverBlockReason as DBR
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DrInfo
 import Domain.Types.DriverOnboarding.DriverLicense
@@ -66,6 +68,7 @@ import Kernel.Utils.Validation (runRequestValidation)
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import qualified SharedLogic.DriverLocation as DLoc
 import SharedLogic.Merchant (findMerchantByShortId)
+import Storage.CachedQueries.DriverBlockReason as DBR
 import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.DriverInformation as CQDriverInfo
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
@@ -290,8 +293,9 @@ disableDriver merchantShortId reqDriverId = do
   pure Success
 
 ---------------------------------------------------------------------
-blockDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
-blockDriver merchantShortId reqDriverId = do
+
+blockDriver :: ShortId DM.Merchant -> Id Common.Driver -> Common.BlockDriverReq -> Flow APISuccess
+blockDriver merchantShortId reqDriverId req = do
   merchant <- findMerchantByShortId merchantShortId
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
@@ -304,9 +308,27 @@ blockDriver merchantShortId reqDriverId = do
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
   driverInf <- CQDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
-  when (not driverInf.blocked) (CQDriverInfo.updateBlockedState driverId True)
+  when (not driverInf.blocked) do
+    CQDriverInfo.updateDynamicBlockedState driverId req.blockReason req.blockTimeInHours True
   logTagInfo "dashboard -> blockDriver : " (show personId)
   pure Success
+
+---------------------------------------------------------------------
+
+blockReasonList :: Flow [Common.BlockReason]
+blockReasonList = do
+  convertToBlockReasonList <$> DBR.findAll
+
+convertToBlockReasonList :: [DBR.DriverBlockReason] -> [Common.BlockReason]
+convertToBlockReasonList = map convertToCommon
+
+convertToCommon :: DBR.DriverBlockReason -> Common.BlockReason
+convertToCommon res =
+  Common.BlockReason
+    { reasonCode = cast res.reasonCode,
+      blockReason = res.blockReason,
+      blockTimeInHours = res.blockTimeInHours
+    }
 
 ---------------------------------------------------------------------
 collectCash :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess

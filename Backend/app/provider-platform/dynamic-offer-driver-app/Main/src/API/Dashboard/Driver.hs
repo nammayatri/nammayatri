@@ -35,6 +35,7 @@ type API =
            :<|> Common.EnableDriverAPI
            :<|> Common.DisableDriverAPI
            :<|> Common.BlockDriverAPI
+           :<|> Common.DriverBlockReasonListAPI
            :<|> Common.DriverCashCollectionAPI
            :<|> Common.UnblockDriverAPI
            :<|> Common.DriverLocationAPI
@@ -61,6 +62,7 @@ handler merchantId =
     :<|> enableDriver merchantId
     :<|> disableDriver merchantId
     :<|> blockDriver merchantId
+    :<|> blockReasonList merchantId
     :<|> collectCash merchantId
     :<|> unblockDriver merchantId
     :<|> driverLocation merchantId
@@ -99,8 +101,11 @@ enableDriver merchantShortId = withFlowHandlerAPI . DDriver.enableDriver merchan
 disableDriver :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
 disableDriver merchantShortId = withFlowHandlerAPI . DDriver.disableDriver merchantShortId
 
-blockDriver :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
-blockDriver merchantShortId = withFlowHandlerAPI . DDriver.blockDriver merchantShortId
+blockDriver :: ShortId DM.Merchant -> Id Common.Driver -> Common.BlockDriverReq -> FlowHandler APISuccess
+blockDriver merchantShortId driverId = withFlowHandlerAPI . DDriver.blockDriver merchantShortId driverId
+
+blockReasonList :: ShortId DM.Merchant -> FlowHandler [Common.BlockReason]
+blockReasonList _ = withFlowHandlerAPI DDriver.blockReasonList
 
 collectCash :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
 collectCash merchantShortId = withFlowHandlerAPI . DDriver.collectCash merchantShortId
