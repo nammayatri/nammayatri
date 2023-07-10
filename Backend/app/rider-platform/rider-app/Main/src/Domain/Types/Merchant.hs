@@ -11,6 +11,8 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Domain.Types.Merchant where
 
@@ -41,6 +43,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     signingPublicKey :: Base64,
     cipherText :: Maybe Base64,
     signatureExpiry :: Int,
+    dirCacheSlot :: [Slot],
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -51,3 +54,11 @@ type Merchant = MerchantD 'Safe
 instance FromJSON (MerchantD 'Unsafe)
 
 instance ToJSON (MerchantD 'Unsafe)
+
+data Slot = Slot
+  { startTime :: TimeOfDay,
+    endTime :: TimeOfDay,
+    slot :: Int
+  }
+  deriving stock (Generic, Show, Read)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
