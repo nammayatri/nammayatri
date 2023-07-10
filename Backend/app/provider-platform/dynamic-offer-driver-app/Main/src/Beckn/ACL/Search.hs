@@ -16,7 +16,7 @@ module Beckn.ACL.Search where
 
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import qualified Beckn.Types.Core.Taxi.Search as Search
-import qualified Data.Text as T
+-- import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Search as DSearch
 import Kernel.External.Maps.Interface (LatLong (..))
 import Kernel.External.Types (Language)
@@ -38,7 +38,9 @@ buildSearchReq subscriber req = do
   let intent = req.message.intent
   let pickup = intent.fulfillment.start
       dropOff = intent.fulfillment.end
-  let (distance, duration) = maybe (Nothing, Nothing) (buildDistanceAndDuration) intent.fulfillment.tags
+  let distance = maybe Nothing (getDistance) intent.fulfillment.tags
+  let duration = maybe Nothing (getDuration) intent.fulfillment.tags
+  -- let (distance, duration) = maybe (Nothing, Nothing) (buildDistanceAndDuration) intent.fulfillment.tags
   let customerLanguage = maybe Nothing (buildCustomerLanguage) intent.fulfillment.customer
   unless (subscriber.subscriber_id == context.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
@@ -65,47 +67,63 @@ buildSearchReq subscriber req = do
         customerLanguage = customerLanguage --intent.fulfillment.tags.customer_language
       }
 
-buildDistanceAndDuration :: Search.Tags -> (Maybe Meters, Maybe Seconds)
-buildDistanceAndDuration tags =
-  if tags.code == "route_info"
-    then
-      let distance = getDistance tags
-          duration = getDuration tags
-       in (distance, duration)
-    else (Nothing, Nothing)
+-- buildDistanceAndDuration :: [Search.TagGroup] -> (Maybe Meters, Maybe Seconds)
+-- buildDistanceAndDuration tags = do
+--   tagGroup <- find (\tagGroup -> tagGroup.code == "route_info") tags
+--   if tags.code == "route_info"
+--     then
+--       let distance = getDistance tagGroup
+--           duration = getDuration tagGroup
+--        in (distance, duration)
+--     else (Nothing, Nothing)
 
-getDistance :: Search.Tags -> Maybe Meters
-getDistance tags = do
-  list1Code <- tags.list_1_code
-  if list1Code == "distance_info_in_m"
-    then do
-      list1Value <- tags.list_1_value
-      distanceValue <- readMaybe $ T.unpack list1Value
-      Just $ Meters distanceValue
-    else Nothing
+getDistance :: [Search.TagGroup] -> Maybe Meters
+getDistance tagGroups = do
+  tagGroup <- find (\tagGroup -> tagGroup.code == "route_info") tagGroups
+  tag <- find (\tag -> tag.code == Just "distance_info_in_m") tagGroup.list
+  tagValue <- tag.value
+  distanceValue <- readMaybe tagValue
+  Just $ Meters distanceValue
 
-getDuration :: Search.Tags -> Maybe Seconds
-getDuration tags = do
-  list2Code <- tags.list_2_code
-  if list2Code == "duration_info_in_s"
-    then do
-      list2Value <- tags.list_2_value
-      durationValue <- readMaybe $ T.unpack list2Value
-      Just $ Seconds durationValue
-    else -- readMaybe list2Value
-      Nothing
+-- if list1Code == "distance_info_in_m"
+--   then do
+--     list1Value <- tags.list_1_value
+--     distanceValue <- readMaybe $ T.unpack list1Value
+--     Just $ Meters distanceValue
+--   else Nothing
+
+getDuration :: [Search.TagGroup] -> Maybe Seconds
+getDuration tagGroups = do
+  tagGroup <- find (\tagGroup -> tagGroup.code == "route_info") tagGroups
+  tag <- find (\tag -> tag.code == Just "duration_info_in_s") tagGroup.list
+  tagValue <- tag.value
+  durationValue <- readMaybe tagValue
+  Just $ Seconds durationValue
+
+-- list2Code <- tags.list_2_code
+-- if list2Code == "duration_info_in_s"
+--   then do
+--     list2Value <- tags.list_2_value
+--     durationValue <- readMaybe $ T.unpack list2Value
+--     Just $ Seconds durationValue
+--   else -- readMaybe list2Value
+--     Nothing
 
 buildCustomerLanguage :: Search.Customer -> Maybe Language
 buildCustomerLanguage Search.Customer {..} = do
-  let tags = person.tags
-  list1Code <- tags.list_1_code
-  if tags.code == "customer_info" && list1Code == "customer_language"
-    then do
-      list1Value <- tags.list_1_value
-      readMaybe $ T.unpack list1Value
-    else -- Just $ Seconds durationValue
-    -- readMaybe list2Value
-      Nothing
+  tagGroup <- find (\tagGroup -> tagGroup.code == "customer_info") person.tags
+  tag <- find (\tag -> tag.code == Just "customer_language") tagGroup.list
+  tagValue <- tag.value
+  readMaybe tagValue
+
+-- list1Code <- tags.list_1_code
+-- if tags.code == "customer_info" && list1Code == "customer_language"
+--   then do
+--     list1Value <- tags.list_1_value
+--     readMaybe $ T.unpack list1Value
+--   else -- Just $ Seconds durationValue
+--   -- readMaybe list2Value
+--     Nothing
 
 -- when isRouteTag $ do
 --   distance <- if isDistanceTag then

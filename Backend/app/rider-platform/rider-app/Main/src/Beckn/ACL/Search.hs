@@ -117,19 +117,21 @@ mkIntent origin destination startTime customerLanguage distance duration = do
             tags =
               if (isJust distance || isJust duration)
                 then
-                  Just $
-                    Search.Tags
-                      { --customer_language = customerLanguage
-                        code = "route_info",
-                        name = "Route Information",
-                        list_1_code = maybe Nothing (\_ -> Just "distance_info_in_m") distance,
-                        list_1_name = maybe Nothing (\_ -> Just "Distance Information In Meters") distance, --"Distance Information In Meters",
-                        list_1_value = maybe Nothing (\distanceInM -> Just $ show distanceInM.getMeters) distance,
-                        list_2_code = maybe Nothing (\_ -> Just "duration_info_in_s") duration, --"duration_info_in_s",
-                        list_2_name = maybe Nothing (\_ -> Just "Duration Information In Seconds") duration, --"Duration Information In Seconds",
-                        list_2_value = maybe Nothing (\durationInS -> Just $ show durationInS.getSeconds) duration
-                      }
-                else Nothing,
+                  Just
+                    [ mkRouteInfoTags
+                    ]
+                else -- Search.Tags
+                --   { --customer_language = customerLanguage
+                --     code = "route_info",
+                --     name = "Route Information",
+                --     list_1_code = maybe Nothing (\_ -> Just "distance_info_in_m") distance,
+                --     list_1_name = maybe Nothing (\_ -> Just "Distance Information In Meters") distance, --"Distance Information In Meters",
+                --     list_1_value = maybe Nothing (\distanceInM -> Just $ show distanceInM.getMeters) distance,
+                --     list_2_code = maybe Nothing (\_ -> Just "duration_info_in_s") duration, --"duration_info_in_s",
+                --     list_2_name = maybe Nothing (\_ -> Just "Duration Information In Seconds") duration, --"Duration Information In Seconds",
+                --     list_2_value = maybe Nothing (\durationInS -> Just $ show durationInS.getSeconds) duration
+                --   }
+                  Nothing,
             customer =
               if isJust customerLanguage
                 then
@@ -137,18 +139,18 @@ mkIntent origin destination startTime customerLanguage distance duration = do
                     Search.Customer
                       { person =
                           Search.Person
-                            { tags =
-                                Search.Tags
-                                  { --customer_language = customerLanguage
-                                    code = "customer_info",
-                                    name = "Customer Information",
-                                    list_1_code = maybe Nothing (\_ -> Just "customer_language") customerLanguage,
-                                    list_1_name = maybe Nothing (\_ -> Just "Customer Language") customerLanguage, --"Distance Information In Meters",
-                                    list_1_value = maybe Nothing (\language -> Just $ show language) customerLanguage,
-                                    list_2_code = Nothing,
-                                    list_2_name = Nothing,
-                                    list_2_value = Nothing
-                                  }
+                            { tags = [mkCustomerInfoTags]
+                            -- Search.Tags
+                            --   { --customer_language = customerLanguage
+                            --     code = "customer_info",
+                            --     name = "Customer Information",
+                            --     list_1_code = maybe Nothing (\_ -> Just "customer_language") customerLanguage,
+                            --     list_1_name = maybe Nothing (\_ -> Just "Customer Language") customerLanguage, --"Distance Information In Meters",
+                            --     list_1_value = maybe Nothing (\language -> Just $ show language) customerLanguage,
+                            --     list_2_code = Nothing,
+                            --     list_2_name = Nothing,
+                            --     list_2_value = Nothing
+                            --   }
                             }
                       }
                 else Nothing
@@ -178,3 +180,53 @@ mkIntent origin destination startTime customerLanguage distance duration = do
                   ward = info.address.ward
                 }
         }
+    mkRouteInfoTags =
+      Search.TagGroup
+        { display = False,
+          code = "route_info",
+          name = "Route Information",
+          list =
+            [ Search.Tag
+                { display = maybe Nothing (\_ -> Just False) distance,
+                  code = maybe Nothing (\_ -> Just "distance_info_in_m") distance,
+                  name = maybe Nothing (\_ -> Just "Distance Information In Meters") distance,
+                  value = maybe Nothing (\distanceInM -> Just $ show distanceInM.getMeters) distance
+                },
+              Search.Tag
+                { display = maybe Nothing (\_ -> Just False) duration,
+                  code = maybe Nothing (\_ -> Just "duration_info_in_s") duration,
+                  name = maybe Nothing (\_ -> Just "Duration Information In Seconds") duration,
+                  value = maybe Nothing (\durationInS -> Just $ show durationInS.getSeconds) duration
+                }
+            ]
+        }
+
+    mkCustomerInfoTags =
+      Search.TagGroup
+        { display = False,
+          code = "customer_info",
+          name = "Customer Information",
+          list =
+            [ Search.Tag
+                { display = maybe Nothing (\_ -> Just False) customerLanguage,
+                  code = maybe Nothing (\_ -> Just "customer_language") customerLanguage,
+                  name = maybe Nothing (\_ -> Just "Customer Language") customerLanguage,
+                  value = maybe Nothing (\language -> Just $ show language) customerLanguage
+                }
+            ]
+        }
+
+-- data TagGroup = TagGroup
+--   { display :: Bool,
+--     code :: String,
+--     name :: String,
+--     list :: [Tag]
+--   }
+--   deriving (Generic, Show, ToSchema)
+
+-- data Tag = Tag
+--   { display :: Bool,
+--     code :: String,
+--     name :: String,
+--     value :: String
+--   }

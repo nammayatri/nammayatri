@@ -19,12 +19,15 @@ module Beckn.Types.Core.Taxi.Search.Fulfillment
 where
 
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
+-- import Kernel.External.Types (Language)
+
+import Beckn.Types.Core.Taxi.Common.Tags
 import Beckn.Types.Core.Taxi.Search.StartInfo
 import Beckn.Types.Core.Taxi.Search.StopInfo
 import Data.Aeson
-import Data.OpenApi (ToSchema (..), defaultSchemaOptions, fromAesonOptions)
--- import Kernel.External.Types (Language)
+import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import Kernel.Prelude
+import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 -- If end = Nothing, then bpp sends quotes only for RENTAL
@@ -32,13 +35,19 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 data FulfillmentInfo = FulfillmentInfo
   { start :: StartInfo,
     end :: StopInfo,
-    tags :: Maybe Tags,
+    tags :: Maybe [TagGroup],
     customer :: Maybe Customer
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, Show)
 
 instance ToSchema FulfillmentInfo where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance ToJSON FulfillmentInfo where
+  toJSON = genericToJSON removeNullFields
+
+instance FromJSON FulfillmentInfo where
+  parseJSON = genericParseJSON removeNullFields
 
 newtype Customer = Customer
   { person :: Person
@@ -49,7 +58,7 @@ instance ToSchema Customer where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
 newtype Person = Person
-  { tags :: Tags
+  { tags :: [TagGroup]
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
@@ -88,42 +97,42 @@ instance ToSchema Person where
 --         a -> a
 --     }
 
-data Tags = Tags
-  { --customer_language :: Maybe Language,
-    code :: Text,
-    name :: Text,
-    list_1_code :: Maybe Text,
-    list_1_name :: Maybe Text,
-    list_1_value :: Maybe Text,
-    list_2_code :: Maybe Text,
-    list_2_name :: Maybe Text,
-    list_2_value :: Maybe Text
-    -- display :: Bool,
-  }
-  deriving (Generic, Show)
+-- data Tags = Tags
+--   { --customer_language :: Maybe Language,
+--     code :: Text,
+--     name :: Text,
+--     list_1_code :: Maybe Text,
+--     list_1_name :: Maybe Text,
+--     list_1_value :: Maybe Text,
+--     list_2_code :: Maybe Text,
+--     list_2_name :: Maybe Text,
+--     list_2_value :: Maybe Text
+--     -- display :: Bool,
+--   }
+--   deriving (Generic, Show)
 
-instance ToJSON Tags where
-  toJSON = genericToJSON tagsJSONOptions
+-- instance ToJSON Tags where
+--   toJSON = genericToJSON tagsJSONOptions
 
-instance FromJSON Tags where
-  parseJSON = genericParseJSON tagsJSONOptions
+-- instance FromJSON Tags where
+--   parseJSON = genericParseJSON tagsJSONOptions
 
-instance ToSchema Tags where
-  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions tagsJSONOptions
+-- instance ToSchema Tags where
+--   declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions tagsJSONOptions
 
-tagsJSONOptions :: Options
-tagsJSONOptions =
-  defaultOptions
-    { fieldLabelModifier = \case
-        "code" -> "groups/1/descriptor/code"
-        "name" -> "groups/1/descriptor/name"
-        "list_1_code" -> "groups/1/list/1/descriptor/code"
-        "list_1_name" -> "groups/1/list/1/descriptor/name"
-        "list_1_value" -> "groups/1/list/1/value"
-        "list_2_code" -> "groups/1/list/2/descriptor/code"
-        "list_2_name" -> "groups/1/list/2/descriptor/name"
-        "list_2_value" -> "groups/1/list/2/value"
-        -- "display" -> "groups/1/display"
-        a -> a,
-      omitNothingFields = True
-    }
+-- tagsJSONOptions :: Options
+-- tagsJSONOptions =
+--   defaultOptions
+--     { fieldLabelModifier = \case
+--         "code" -> "groups/1/descriptor/code"
+--         "name" -> "groups/1/descriptor/name"
+--         "list_1_code" -> "groups/1/list/1/descriptor/code"
+--         "list_1_name" -> "groups/1/list/1/descriptor/name"
+--         "list_1_value" -> "groups/1/list/1/value"
+--         "list_2_code" -> "groups/1/list/2/descriptor/code"
+--         "list_2_name" -> "groups/1/list/2/descriptor/name"
+--         "list_2_value" -> "groups/1/list/2/value"
+--         -- "display" -> "groups/1/display"
+--         a -> a,
+--       omitNothingFields = True
+--     }

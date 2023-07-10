@@ -25,7 +25,7 @@ data TagGroup = TagGroup
   { display :: Bool,
     code :: String,
     name :: String,
-    list :: [Tags]
+    list :: [Tag]
   }
   deriving (Generic, Show, ToSchema)
 
@@ -35,16 +35,16 @@ instance FromJSON TagGroup where
 instance ToJSON TagGroup where
   toJSON = genericToJSON removeNullFields
 
-data Tags = Tags
-  { display :: Bool,
-    code :: String,
-    name :: String,
-    value :: String
+data Tag = Tag
+  { display :: Maybe Bool,
+    code :: Maybe String,
+    name :: Maybe String,
+    value :: Maybe String
   }
   deriving (Generic, Show, ToSchema)
 
-instance FromJSON Tags where
+instance FromJSON Tag where
   parseJSON = genericParseJSON removeNullFields
 
-instance ToJSON Tags where
+instance ToJSON Tag where
   toJSON = genericToJSON removeNullFields

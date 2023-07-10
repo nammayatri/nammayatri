@@ -18,6 +18,7 @@ module Beckn.Types.Core.Taxi.Search
   )
 where
 
+import Beckn.Types.Core.Taxi.Common.Tags as Reexport
 import Beckn.Types.Core.Taxi.Search.Fulfillment as Reexport
 import Beckn.Types.Core.Taxi.Search.Intent as Reexport
 import Beckn.Types.Core.Taxi.Search.Location as Reexport
@@ -36,7 +37,7 @@ import Kernel.Utils.JSON
 --   }
 --   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data SearchMessage = SearchMessage
+newtype SearchMessage = SearchMessage
   { intent :: Intent
   -- routeInfo :: Maybe RouteInfo,
   -- device :: Maybe Text
