@@ -82,8 +82,9 @@ nameEditTextConfig state = let
                 _ -> ""
             , fontStyle = FontStyle.regular LanguageStyle
             , color = Color.textDanger
-            },
-            id = (EHC.getNewIDWithTag "UserNameEditText")
+            }
+            , id = (EHC.getNewIDWithTag "UserNameEditText")
+            , width = MATCH_PARENT
         }
     in primaryEditTextConfig'
 
@@ -115,8 +116,10 @@ emailEditTextConfig state = let
                 _ -> ""
             , fontStyle = FontStyle.regular LanguageStyle
             , color = Color.textDanger
-            },
-            id = (EHC.getNewIDWithTag "EmailEditText")
+            }
+            , id = (EHC.getNewIDWithTag "EmailEditText")
+            , width = MATCH_PARENT
+
         }
     in primaryEditTextConfig'
 

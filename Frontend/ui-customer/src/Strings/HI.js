@@ -492,8 +492,6 @@ const hindiStrings = {
   "DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST": "ड्राइवर ने आपके विशेष अनुरोध को प्राथमिकता दी और पहले ही ",
   "AND_HAS_TRAVELLED": " की यात्रा कर चुका है।",
   "PLEASE_FIND_REVISED_FARE_ESTIMATE": "कृपया संशोधित अनुमानित किराया ज्ञात करें। रात का शुल्क दिन के शुल्क का 1.5 गुना है।",
-  "REGISTERED_ADDRESS_DESCRIPTION" : "Juspay Technologies Private Limited <br> Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala Bengaluru, Karnataka- 560095, India.",
-  "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "Website: <u>https://nammayatri.in/</u>",
   "NAVIGATE_TO_PICKUP" : "पिकअप पर नेविगेट करें" ,
   "FARE_ESTIMATE" : "किराया अनुमान" ,
   "TIP_SELECTED" : "टिप चयनित",
