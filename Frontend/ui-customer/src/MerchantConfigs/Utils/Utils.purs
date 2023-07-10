@@ -58,4 +58,4 @@ getLanguagesList lazy = case (getMerchant FunctionCall) of
     ]
 
 showCarouselScreen :: LazyCheck -> Boolean
-showCarouselScreen a = os == "ANDROID" && (getMerchant FunctionCall) == NAMMAYATRI
+showCarouselScreen a = (getMerchant FunctionCall) == NAMMAYATRI

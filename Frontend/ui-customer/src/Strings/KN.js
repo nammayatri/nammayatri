@@ -20,7 +20,7 @@ const kannadaStrings = {
   "TRIP_CHARGES": "ಟ್ರಿಪ್ ಶುಲ್ಕ",
   "PROMOTION": "ಪ್ರಚಾರ",
   "SEND_EMAIL": "ಇಮೇಲ್ ಕಳುಹಿಸಿ",
-  "YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE": "ನಿಮ್ಮ ಸಮಸ್ಯೆಯನ್ನು ಇಲ್ಲಿ ವಿವರಿಸಬಹುದು / ನೀವು ಎದುರಿಸಿದ ಸಮಸ್ಯೆಯನ್ನು ಇಲ್ಲಿ ವಿವರಿಸಬಹುದು",
+  "YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE": "ಇಲ್ಲಿ ಎದುರಿಸಿದ ಸಮಸ್ಯೆಯನ್ನು ನೀವು ವಿವರಿಸಬಹುದು",
   "THANK_YOU_FOR_WRITING": "ನಮಗೆ ಬರೆದಿದ್ದಕ್ಕಾಗಿ ಧನ್ಯವಾದಗಳು!",
   "WE_HAVE_RECEIVED_YOUR_ISSUE": "ನಿಮ್ಮ ಸಮಸ್ಯೆಯನ್ನು ನಾವು ಸ್ವೀಕರಿಸಿದ್ದೇವೆ. ನಾವು ಸ್ವಲ್ಪ ಸಮಯದಲ್ಲಿ ನಿಮ್ಮನ್ನು ಸಂಪರ್ಕಿಸುತ್ತೇವೆ.",
   "GO_HOME_": "ಮನೆಗೆ ಹೋಗಿ",
@@ -423,7 +423,7 @@ const kannadaStrings = {
   "NO_DONT": "ಇಲ್ಲ, ಬೇಡ",
   "YES_CANCEL_SEARCH": "ಹೌದು, ಹುಡುಕಾಟ ರದ್ದುಮಾಡಿ",
   "TRY_LOOKING_FOR_RIDES_AGAIN": "ಇದು ತುಂಬಾ ಬಿಡುವಿಲ್ಲದ ದಿನವಾಗಿದೆ ಎಂದು ತೋರುತ್ತದೆ. ನೀವು ಮತ್ತೆ ಸವಾರಿಗಳನ್ನು ಹುಡುಕಲು ಪ್ರಯತ್ನಿಸಬಹುದು",
-  "NO_TIP": "ಇನಾಮು ಇಲ್ಲ",
+  "NO_TIP": "0 ಟಿಪ್",
   "CUSTOMER_SELECTED_FARE": "ಗ್ರಾಹಕ ಸಲಹೆ^",
   "CUSTOMER_TIP_DESCRIPTION": "^ರೈಡ್ ಪಡೆಯುವ ಸಾಧ್ಯತೆಗಳನ್ನು ಹೆಚ್ಚಿಸಲು ಗ್ರಾಹಕರು ಹೆಚ್ಚುವರಿ ಮೊತ್ತವನ್ನು ಸೇರಿಸಿದ್ದಾರೆ.",
   "PLACE_CALL": "ಕರೆ ಮಾಡಿ",
@@ -505,5 +505,6 @@ const kannadaStrings = {
   "OKAY_GOT_IT" : "ಸರಿ ಅರ್ಥವಾಯಿತು",
   "CALL_NAMMA_YATRI_SUPPORT" : "ನಮ್ಮ ಯಾತ್ರಿ ಬೆಂಬಲಕ್ಕೆ ಕರೆ ಮಾಡಿ",
   "CALL_112": "112 ಗೆ ಕರೆ ಮಾಡಿ",
-  "CALL_EMERGENCY_CENTRE": "ತುರ್ತು ಕೇಂದ್ರಕ್ಕೆ ಕರೆ ಮಾಡಿ"
+  "CALL_EMERGENCY_CENTRE": "ತುರ್ತು ಕೇಂದ್ರಕ್ಕೆ ಕರೆ ಮಾಡಿ",
+  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS" : "ವಿವರಣೆಯು 10 ಅಕ್ಷರಗಳಿಗಿಂತ ಹೆಚ್ಚು ಇರಬೇಕು"
 }
