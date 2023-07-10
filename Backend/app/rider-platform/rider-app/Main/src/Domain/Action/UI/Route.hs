@@ -11,10 +11,13 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use lambda-case" #-}
 
 module Domain.Action.UI.Route
-  ( Maps.GetRoutesReq,
-    Maps.GetRoutesResp,
+  ( SDC.GetRoutesReq,
+    SDC.GetRoutesResp,
     getRoutes,
     getPickupRoutes,
     getTripRoutes,
@@ -23,15 +26,17 @@ where
 
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DP
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.DirectionsCache as SDC
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Tools.Maps as Maps
 import Tools.Metrics (CoreMetrics)
 
-getRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
-getRoutes (_, merchantId) req = do
-  Maps.getRoutes merchantId req
+getRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m, HasField "esqDBReplicaEnv" r EsqDBEnv) => (Id DP.Person, Id Merchant.Merchant) -> SDC.GetRoutesReq -> m SDC.GetRoutesResp
+getRoutes (_, merchantId) = SDC.getRoutes merchantId
 
 getPickupRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getPickupRoutes (_, merchantId) req = do
