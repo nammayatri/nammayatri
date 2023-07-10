@@ -18,7 +18,11 @@ module Beckn.ACL.Confirm (buildConfirmReq) where
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnInit as DOnInit
-import qualified Domain.Types.LocationAddress as DBL
+import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.Booking.BookingLocation as DBL
+import qualified Domain.Types.LocationAddress as DLA
+import qualified Domain.Types.VehicleVariant as VehVar
+-- import Environment
 import EulerHS.Prelude hiding (id, state)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
@@ -33,72 +37,121 @@ buildConfirmReq ::
 buildConfirmReq res = do
   messageId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/cab/v1/" <> T.unpack res.merchant.id.getId)
-  context <- buildTaxiContext Context.CONFIRM messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchant.city res.merchant.country
-  pure $ BecknReq context $ mkConfirmMessage res
+  context <- buildTaxiContext Context.CONFIRM messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchant.city res.merchant.country False
+  message <- mkConfirmMessage res
+  pure $ BecknReq context message
 
-mkConfirmMessage :: DOnInit.OnInitRes -> Confirm.ConfirmMessage
-mkConfirmMessage res =
-  Confirm.ConfirmMessage
-    { order =
-        Confirm.Order
-          { id = getId res.bppBookingId,
-            fulfillment = mkFulfillment res.fromLocationAddress res.mbToLocationAddress,
-            customer =
-              Confirm.OrderCustomer
-                { contact =
-                    Confirm.Contact
-                      { phone =
-                          Confirm.Phone
-                            { country_code = res.riderPhoneCountryCode,
-                              number = res.riderPhoneNumber
-                            }
-                      },
-                  person =
-                    res.mbRiderName <&> \riderName ->
-                      Confirm.OrderPerson
-                        { name = riderName
-                        }
-                },
-            payment = mkPayment res.estimatedTotalFare
-          }
-    }
+mkConfirmMessage :: (MonadFlow m) => DOnInit.OnInitRes -> m Confirm.ConfirmMessage
+mkConfirmMessage res = do
+  let vehicleVariant = castVehicleVariant res.vehicleVariant
+  pure
+    Confirm.ConfirmMessage
+      { order =
+          Confirm.Order
+            { id = getId res.bppBookingId,
+              items =
+                [ Confirm.OrderItem
+                    { id = res.itemId,
+                      price = Nothing
+                    }
+                ],
+              fulfillment = mkFulfillment res.fulfillmentId fulfillmentType res.fromLocation res.mbToLocation res.riderPhoneCountryCode res.riderPhoneNumber res.mbRiderName vehicleVariant,
+              payment = mkPayment res.estimatedTotalFare res.paymentUrl,
+              quote = Nothing,
+              provider =
+                res.driverId >>= \dId ->
+                  Just
+                    Confirm.Provider
+                      { id = dId
+                      }
+            }
+      }
+  where
+    castVehicleVariant = \case
+      VehVar.SEDAN -> Confirm.SEDAN
+      VehVar.SUV -> Confirm.SUV
+      VehVar.HATCHBACK -> Confirm.HATCHBACK
+      VehVar.AUTO_RICKSHAW -> Confirm.AUTO_RICKSHAW
+      VehVar.TAXI -> Confirm.TAXI
+      VehVar.TAXI_PLUS -> Confirm.TAXI_PLUS
+    fulfillmentType = case res.bookingDetails of
+      DRB.OneWaySpecialZoneDetails _ -> Confirm.RIDE_OTP
+      _ -> Confirm.RIDE
 
-mkFulfillment :: DBL.LocationAddress -> Maybe DBL.LocationAddress -> Confirm.FulfillmentInfo
-mkFulfillment startLoc mbStopLoc =
+mkFulfillment :: Maybe Text -> Confirm.FulfillmentType -> DBL.BookingLocation -> Maybe DBL.BookingLocation -> Text -> Text -> Maybe Text -> Confirm.VehicleVariant -> Confirm.FulfillmentInfo
+mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountryCode riderPhoneNumber mbRiderName vehicleVariant =
   Confirm.FulfillmentInfo
-    { start =
+    { id = fulfillmentId,
+      _type = fulfillmentType,
+      start =
         Confirm.StartInfo
-          { location = mkLocation startLoc
+          { location =
+              Confirm.Location
+                { gps =
+                    Confirm.Gps
+                      { lat = startLoc.lat,
+                        lon = startLoc.lon
+                      },
+                  address = mkAddress startLoc.address
+                },
+            authorization = Nothing
           },
       end =
         mbStopLoc <&> \stopLoc ->
           Confirm.StopInfo
-            { location = mkLocation stopLoc
-            }
-    }
-
-mkLocation :: DBL.LocationAddress -> Confirm.Location
-mkLocation DBL.LocationAddress {..} =
-  Confirm.Location
-    { address =
-        Confirm.Address
-          { area_code = areaCode,
-            locality = area,
-            ward = ward,
-            door = door,
-            ..
+            { location =
+                Confirm.Location
+                  { gps =
+                      Confirm.Gps
+                        { lat = stopLoc.lat,
+                          lon = stopLoc.lon
+                        },
+                    address = mkAddress stopLoc.address
+                  }
+            },
+      customer =
+        Confirm.OrderCustomer
+          { contact =
+              Confirm.Contact
+                { phone =
+                    Confirm.Phone
+                      { country_code = riderPhoneCountryCode,
+                        number = riderPhoneNumber
+                      }
+                },
+            person =
+              mbRiderName <&> \riderName ->
+                Confirm.OrderPerson
+                  { name = riderName
+                  }
+          },
+      vehicle =
+        Confirm.Vehicle
+          { category = vehicleVariant
           }
     }
 
-mkPayment :: Money -> Confirm.Payment
-mkPayment estimatedTotalFare =
+mkAddress :: DLA.LocationAddress -> Confirm.Address
+mkAddress DLA.LocationAddress {..} =
+  Confirm.Address
+    { area_code = areaCode,
+      locality = area,
+      ward = ward,
+      door = door,
+      ..
+    }
+
+mkPayment :: Money -> Maybe Text -> Confirm.Payment
+mkPayment estimatedTotalFare uri =
   Confirm.Payment
-    { collected_by = "BAP",
+    { _type = Confirm.ON_FULFILLMENT,
+      time = Confirm.TimeDuration "P2D",
       params =
         Confirm.PaymentParams
-          { amount = realToFrac estimatedTotalFare,
-            currency = "INR"
+          { collected_by = Confirm.BAP,
+            instrument = Nothing,
+            currency = Just "INR",
+            amount = Just $ realToFrac estimatedTotalFare
           },
-      time = Confirm.TimeDuration "P2D",
-      _type = Confirm.ON_FULFILLMENT
+      uri
     }

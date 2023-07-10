@@ -11,10 +11,21 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+module Beckn.Types.Core.Taxi.Common.Agent where
 
-module Beckn.Types.Core.Taxi.Select.BreakupItem
-  ( module Reexport,
-  )
-where
+import Beckn.Types.Core.Taxi.Common.Tags
+import Data.Aeson as A
+import Data.OpenApi hiding (Example, example, name, tags)
+import Kernel.Prelude
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
-import Beckn.Types.Core.Taxi.OnInit.BreakupItem as Reexport
+data Agent = Agent
+  { name :: Text,
+    rateable :: Bool,
+    phone :: Maybe Text,
+    tags :: TagGroups
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+instance ToSchema Agent where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

@@ -92,6 +92,7 @@ data EstimateInfo = EstimateInfo
     estimatedFare :: Money,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
+    itemId :: Text,
     totalFareRange :: DEstimate.FareRange,
     descriptions :: [Text],
     estimateBreakupList :: [EstimateBreakupInfo],
@@ -128,6 +129,7 @@ data QuoteInfo = QuoteInfo
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
     quoteDetails :: QuoteDetails,
+    itemId :: Text,
     descriptions :: [Text],
     specialLocationTag :: Maybe Text
   }

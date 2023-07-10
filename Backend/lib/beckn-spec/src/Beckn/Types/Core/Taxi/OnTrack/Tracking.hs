@@ -17,14 +17,17 @@ module Beckn.Types.Core.Taxi.OnTrack.Tracking
   )
 where
 
-import Data.Aeson as A
+import Data.Aeson
+import Data.Aeson.Types
 import Data.OpenApi (ToSchema (..), fromAesonOptions)
+import Data.Text
 import Kernel.Prelude
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Tracking = Tracking
   { url :: BaseUrl,
-    content_type :: Text
+    content_type :: Text,
+    status :: TrackingStatus
   }
   deriving (Generic, Show)
 
@@ -37,10 +40,24 @@ instance FromJSON Tracking where
 instance ToJSON Tracking where
   toJSON = genericToJSON trackingJSONOptions
 
-trackingJSONOptions :: A.Options
+trackingJSONOptions :: Options
 trackingJSONOptions =
   defaultOptions
     { fieldLabelModifier = \case
-        "content_type" -> "./komn/content-type"
+        "content_type" -> "content_type"
         a -> a
     }
+
+data TrackingStatus = ACTIVE | INACTIVE
+  deriving (Show, Generic, ToSchema)
+
+instance FromJSON TrackingStatus where
+  parseJSON (String "ACTIVE") = pure ACTIVE -------this won't happen ideally but just for safer side
+  parseJSON (String "INACTIVE") = pure INACTIVE -------this won't happen ideally but just for safer side
+  parseJSON (String "active") = pure ACTIVE
+  parseJSON (String "inactive") = pure INACTIVE
+  parseJSON (String _) = parseFail "Expected \"ACTIVE OR INACTIVE\""
+  parseJSON e = typeMismatch "String" e
+
+instance ToJSON TrackingStatus where
+  toJSON = String . toLower . show

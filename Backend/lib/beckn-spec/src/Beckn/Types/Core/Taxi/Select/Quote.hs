@@ -14,7 +14,7 @@
 
 module Beckn.Types.Core.Taxi.Select.Quote where
 
-import Beckn.Types.Core.Taxi.Select.BreakupItem
+import Beckn.Types.Core.Taxi.Common.BreakupItem
 import Data.OpenApi
 import Kernel.Prelude
 import Kernel.Utils.Schema

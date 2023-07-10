@@ -12,10 +12,10 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnInit.Quote where
+module Beckn.Types.Core.Taxi.Common.Quote where
 
+import Beckn.Types.Core.Taxi.Common.BreakupItem
 import Beckn.Types.Core.Taxi.Common.DecimalValue
-import Beckn.Types.Core.Taxi.OnInit.BreakupItem
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import Kernel.Prelude
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)

@@ -12,27 +12,20 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnSelect.Payment
-  ( module Beckn.Types.Core.Taxi.OnSelect.Payment,
-    module Reexport,
-  )
-where
+module Beckn.Types.Core.Taxi.Common.FulfillmentType where
 
-import Beckn.Types.Core.Taxi.Common.PaymentType as Reexport
-import Beckn.Types.Core.Taxi.Common.TimeDuration as Reexport
-import Data.OpenApi (ToSchema)
-import EulerHS.Prelude hiding (State, (.=))
-import Kernel.Utils.JSON
+import Kernel.Prelude hiding (show)
 
-data Payment = Payment
-  { collected_by :: Text,
-    _type :: PaymentType,
-    time :: TimeDuration
-  }
-  deriving (Generic, Show, ToSchema)
-
-instance FromJSON Payment where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Payment where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+data FulfillmentType
+  = RIDE
+  | RIDE_OTP
+  deriving
+    ( Eq,
+      Ord,
+      Generic,
+      ToSchema,
+      Show,
+      FromJSON,
+      ToJSON,
+      Read
+    )

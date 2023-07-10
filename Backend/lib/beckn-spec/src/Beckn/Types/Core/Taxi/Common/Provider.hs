@@ -12,17 +12,12 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Confirm.StartInfo where
+module Beckn.Types.Core.Taxi.Common.Provider where
 
-import Beckn.Types.Core.Taxi.Confirm.Location (Location)
-import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
-import EulerHS.Prelude hiding (id)
-import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
+import Data.OpenApi (ToSchema)
+import EulerHS.Prelude hiding (State, id, (.=))
 
-newtype StartInfo = StartInfo
-  { location :: Location
+newtype Provider = Provider
+  { id :: Text
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-instance ToSchema StartInfo where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+  deriving (Generic, Show, ToSchema, ToJSON, FromJSON)

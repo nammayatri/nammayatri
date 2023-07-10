@@ -19,9 +19,12 @@ import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.Init as Init
 import Control.Lens ((%~))
 import qualified Data.Text as T
+import qualified Domain.Types.Booking.BookingLocation as DBL
+import qualified Domain.Types.LocationAddress as DLA
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.VehicleVariant as VehVar
-import Kernel.External.Maps.Types (LatLong)
+-- import Environment
+-- import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context as Context
@@ -37,32 +40,27 @@ buildInitReq ::
 buildInitReq res = do
   let transactionId = res.searchRequestId.getId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/cab/v1/" <> T.unpack res.merchant.id.getId)
-  context <- buildTaxiContext Context.INIT res.booking.id.getId (Just transactionId) res.merchant.bapId bapUrl (Just res.providerId) (Just res.providerUrl) res.merchant.city res.merchant.country
+  context <- buildTaxiContext Context.INIT res.booking.id.getId (Just transactionId) res.merchant.bapId bapUrl (Just res.providerId) (Just res.providerUrl) res.merchant.city res.merchant.country False
   initMessage <- buildInitMessage res
   pure $ BecknReq context initMessage
 
 buildInitMessage :: (MonadThrow m, Log m) => SConfirm.DConfirmRes -> m Init.InitMessage
 buildInitMessage res = do
-  let (fareProductType, mbDistance, mbDuration, mbBppItemId) = case res.quoteDetails of
-        SConfirm.ConfirmOneWayDetails -> (Init.ONE_WAY_TRIP, Nothing, Nothing, Nothing)
-        SConfirm.ConfirmRentalDetails r -> (Init.RENTAL_TRIP, Just r.baseDistance, Just r.baseDuration, Nothing)
-        SConfirm.ConfirmAutoDetails bppQuoteId -> (Init.DRIVER_OFFER, Nothing, Nothing, Just bppQuoteId.getId)
-        SConfirm.ConfirmOneWaySpecialZoneDetails specialZoneQuoteId -> (Init.ONE_WAY_SPECIAL_ZONE, Nothing, Nothing, Just specialZoneQuoteId) --need to be  checked
+  let (fulfillmentType, mbBppFullfillmentId, mbDriverId) = case res.quoteDetails of
+        SConfirm.ConfirmOneWayDetails -> (Init.RIDE, Nothing, Nothing)
+        SConfirm.ConfirmRentalDetails _ -> (Init.RIDE, Nothing, Nothing)
+        SConfirm.ConfirmAutoDetails estimateId driverId -> (Init.RIDE, Just estimateId, driverId)
+        SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> (Init.RIDE_OTP, Just quoteId, Nothing) --need to be  checked
   let vehicleVariant = castVehicleVariant res.vehicleVariant
-  let itemCode =
-        Init.ItemCode
-          { fareProductType,
-            vehicleVariant,
-            distance = mbDistance,
-            duration = mbDuration
-          }
   pure
     Init.InitMessage
       { order =
           Init.Order
-            { items = [mkOrderItem mbBppItemId itemCode],
-              fulfillment = mkFulfillmentInfo res.fromLoc res.toLoc res.startTime res.maxEstimatedDistance,
-              payment = mkPayment res.paymentMethodInfo
+            { items = [mkOrderItem res.itemId],
+              quote = Nothing,
+              fulfillment = mkFulfillmentInfo fulfillmentType mbBppFullfillmentId res.fromLoc res.toLoc res.maxEstimatedDistance vehicleVariant,
+              payment = mkPayment res.paymentMethodInfo,
+              provider = mkProvider mbDriverId
             }
       }
   where
@@ -74,23 +72,42 @@ buildInitMessage res = do
       VehVar.TAXI -> Init.TAXI
       VehVar.TAXI_PLUS -> Init.TAXI_PLUS
 
-mkOrderItem :: Maybe Text -> Init.ItemCode -> Init.OrderItem
-mkOrderItem mbBppItemId code =
+mkProvider :: Maybe Text -> Maybe Init.Provider
+mkProvider driverId =
+  driverId >>= \dId ->
+    Just
+      Init.Provider
+        { id = dId
+        }
+
+mkOrderItem :: Text -> Init.OrderItem
+mkOrderItem itemId =
   Init.OrderItem
-    { id = mbBppItemId,
-      descriptor =
-        Init.Descriptor
-          { code = code
-          }
+    { id = itemId,
+      price = Nothing
     }
 
-mkFulfillmentInfo :: LatLong -> Maybe LatLong -> UTCTime -> Maybe HighPrecMeters -> Init.FulfillmentInfo
-mkFulfillmentInfo fromLoc mbToLoc startTime maxDistance =
+mkFulfillmentInfo :: Init.FulfillmentType -> Maybe Text -> DBL.BookingLocation -> Maybe DBL.BookingLocation -> Maybe HighPrecMeters -> Init.VehicleVariant -> Init.FulfillmentInfo
+mkFulfillmentInfo fulfillmentType mbBppFullfillmentId fromLoc mbToLoc maxDistance vehicleVariant =
   Init.FulfillmentInfo
-    { tags =
-        Init.Tags
-          { max_estimated_distance = maxDistance
-          },
+    { id = mbBppFullfillmentId,
+      _type = fulfillmentType,
+      tags =
+        Init.TG
+          [ Init.TagGroup
+              { display = True,
+                code = "estimations",
+                name = "Estimations",
+                list =
+                  [ Init.Tag
+                      { display = Just True,
+                        code = Just "max_estimated_distance",
+                        name = Just "Max Estimated Distance",
+                        value = Just $ show maxDistance
+                      }
+                  ]
+              }
+          ],
       start =
         Init.StartInfo
           { location =
@@ -100,9 +117,9 @@ mkFulfillmentInfo fromLoc mbToLoc startTime maxDistance =
                       { lat = fromLoc.lat,
                         lon = fromLoc.lon
                       },
-                  address = Nothing
+                  address = mkAddress fromLoc.address
                 },
-            time = Init.TimeTimestamp startTime
+            authorization = Nothing
           },
       end =
         mbToLoc >>= \toLoc ->
@@ -115,24 +132,50 @@ mkFulfillmentInfo fromLoc mbToLoc startTime maxDistance =
                           { lat = toLoc.lat,
                             lon = toLoc.lon
                           },
-                      address = Nothing
+                      address = mkAddress toLoc.address
                     }
-              }
+              },
+      vehicle =
+        Init.Vehicle
+          { category = vehicleVariant
+          }
+    }
+
+mkAddress :: DLA.LocationAddress -> Init.Address
+mkAddress DLA.LocationAddress {..} =
+  Init.Address
+    { area_code = areaCode,
+      locality = area,
+      ward = ward,
+      door = door,
+      ..
     }
 
 mkPayment :: Maybe DMPM.PaymentMethodInfo -> Init.Payment
 mkPayment (Just DMPM.PaymentMethodInfo {..}) =
   Init.Payment
-    { collected_by = Common.castDPaymentCollector collectedBy,
-      _type = Common.castDPaymentType paymentType,
-      instrument = Just $ Common.castDPaymentInstrument paymentInstrument,
-      time = Init.TimeDuration "P2A" -- FIXME: what is this?
+    { _type = Common.castDPaymentType paymentType,
+      time = Init.TimeDuration "P2A", -- FIXME: what is this?
+      params =
+        Init.PaymentParams
+          { collected_by = Common.castDPaymentCollector collectedBy,
+            instrument = Just $ Common.castDPaymentInstrument paymentInstrument,
+            currency = Nothing,
+            amount = Nothing
+          },
+      uri = Nothing
     }
 -- for backward compatibility
 mkPayment Nothing =
   Init.Payment
-    { collected_by = Init.BAP,
-      _type = Init.ON_FULFILLMENT,
-      instrument = Nothing,
-      time = Init.TimeDuration "P2A" -- FIXME: what is this?
+    { _type = Init.ON_FULFILLMENT,
+      time = Init.TimeDuration "P2A", -- FIXME: what is this?
+      params =
+        Init.PaymentParams
+          { collected_by = Init.BAP,
+            instrument = Nothing,
+            currency = Nothing,
+            amount = Nothing
+          },
+      uri = Nothing
     }

@@ -15,9 +15,16 @@
 module Beckn.ACL.Common where
 
 import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
-import qualified Beckn.Types.Core.Taxi.Common.VehicleVariant as Common
+-- import qualified Domain.Types.Merchant as DM
+
+import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
+import qualified Beckn.Types.Core.Taxi.Common.Vehicle as Common
+import qualified Beckn.Types.Core.Taxi.Search as Search
+import Data.Maybe
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.Vehicle.Variant as Variant
+import Kernel.Prelude
 
 castVariant :: Variant.Variant -> Common.VehicleVariant
 castVariant Variant.SEDAN = Common.SEDAN
@@ -56,3 +63,30 @@ castPaymentInstrument (Payment.Wallet Payment.DefaultWalletType) = DMPM.Wallet D
 castPaymentInstrument Payment.UPI = DMPM.UPI
 castPaymentInstrument Payment.NetBanking = DMPM.NetBanking
 castPaymentInstrument Payment.Cash = DMPM.Cash
+
+makeLocation :: DLoc.SearchReqLocation -> Search.Location
+makeLocation DLoc.SearchReqLocation {..} =
+  Search.Location
+    { gps = Search.Gps {..},
+      address =
+        Just
+          Search.Address
+            { area_code = areaCode,
+              locality = Nothing,
+              ward = area,
+              ..
+            }
+    }
+
+mkItemId :: Text -> Variant.Variant -> Text
+mkItemId providerId variant = providerId <> " " <> show variant
+
+type TagGroupCode = Text
+
+type TagCode = Text
+
+getTag :: TagGroupCode -> TagCode -> Tags.TagGroups -> Maybe Text
+getTag tagGroupCode tagCode (Tags.TG tagGroups) = do
+  tagGroup <- find (\tagGroup -> tagGroup.code == tagGroupCode) tagGroups
+  tag <- find (\tag -> tag.code == Just tagCode) tagGroup.list
+  tag.value
