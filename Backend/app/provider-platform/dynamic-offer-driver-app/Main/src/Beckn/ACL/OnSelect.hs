@@ -27,7 +27,7 @@ import Kernel.Types.Id (ShortId)
 data DOnSelectReq = DOnSelectReq
   { transporterInfo :: TransporterInfo,
     searchRequest :: SearchRequest,
-    quotes :: [DQuote.DriverQuote],
+    driverQuote :: DQuote.DriverQuote,
     now :: UTCTime
   }
 
@@ -54,12 +54,14 @@ mkOnSelectMessage ::
   DOnSelectReq ->
   OS.OnSelectMessage
 mkOnSelectMessage req@DOnSelectReq {..} = do
-  let quoteEntitiesList :: [QuoteEntities]
-      quoteEntitiesList = map (mkQuoteEntities req) quotes
-      fulfillments_ = map (.fulfillment) quoteEntitiesList
-      categories_ = map (.category) quoteEntitiesList
-      offers_ = mapMaybe (.offer) quoteEntitiesList
-      items_ = map (.item) quoteEntitiesList
+  -- let quoteEntitiesList :: QuoteEntities
+  --     quote = mkQuoteEntities req driverQuote
+  let fulfillment = mkFulfillment req driverQuote
+      -- fulfillments_ = quote.fulfillment quote
+      categories_ = [driverOfferCategory]
+      -- offers_ = mapMaybe (.offer) quoteEntitiesList
+      item = mkItem fulfillment.id driverQuote
+      items_ = [item]
 
   let provider =
         OS.Provider
@@ -68,10 +70,11 @@ mkOnSelectMessage req@DOnSelectReq {..} = do
             locations = [],
             categories = categories_,
             items = items_,
-            offers = offers_,
+            -- offers = offers_,
             add_ons = [],
-            fulfillments = fulfillments_,
+            fulfillment = fulfillment,
             contacts = transporterInfo.contacts,
+            quote = mkQuote driverQuote,
             tags =
               OS.ProviderTags
                 { rides_inprogress = transporterInfo.ridesInProgress,
@@ -88,20 +91,19 @@ mkOnSelectMessage req@DOnSelectReq {..} = do
   OS.OnSelectMessage $
     OS.Order {..}
 
-data QuoteEntities = QuoteEntities
-  { fulfillment :: OS.FulfillmentInfo,
-    category :: OS.Category,
-    offer :: Maybe OS.Offer,
-    item :: OS.Item
-  }
+-- data QuoteEntities = QuoteEntities
+--   { category :: OS.Category,
+--     -- offer :: Maybe OS.Offer,
+--     item :: OS.Item
+--   }
 
-mkQuoteEntities :: DOnSelectReq -> DQuote.DriverQuote -> QuoteEntities
-mkQuoteEntities dReq quote = do
-  let fulfillment = mkFulfillment dReq quote
-      category = driverOfferCategory
-      offer = Nothing
-      item = mkItem category.id fulfillment.id quote
-  QuoteEntities {..}
+-- mkQuoteEntities :: DOnSelectReq -> DQuote.DriverQuote -> QuoteEntities
+-- mkQuoteEntities dReq quote = do
+--   let fulfillment = mkFulfillment dReq quote
+--       category = driverOfferCategory
+--       -- offer = Nothing
+--       item = mkItem fulfillment.id quote
+--   QuoteEntities {..}
 
 mkFulfillment :: DOnSelectReq -> DQuote.DriverQuote -> OS.FulfillmentInfo
 mkFulfillment dReq quote = do
@@ -122,19 +124,30 @@ mkFulfillment dReq quote = do
       vehicle =
         OS.FulfillmentVehicle
           { category = castVariant quote.vehicleVariant
+          },
+      agent =
+        OS.Agent
+          { name = Just quote.driverName,
+            rateable = Just True,
+            tags =
+              Just $
+                OS.AgentTags
+                  { agent_info_rating = maybe Nothing (\rating -> Just $ show $ rating.getCenti) quote.driverRating,
+                    agent_info_duration_to_pickup_in_s = Just $ show $ quote.durationToPickup.getSeconds
+                  }
           }
     }
   where
     mkFulfId quoteId = "fulf_" <> quoteId
 
-mkItem :: OS.FareProductType -> Text -> DQuote.DriverQuote -> OS.Item
-mkItem categoryId fulfillmentId q =
+mkItem :: Text -> DQuote.DriverQuote -> OS.Item
+mkItem fulfillmentId q =
   OS.Item
     { id = q.id.getId,
-      category_id = categoryId,
+      category_id = driverOfferCategory.id,
       fulfillment_id = fulfillmentId,
-      offer_id = Nothing,
-      price = price_,
+      -- offer_id = Nothing,
+      price = mkPrice q,
       descriptor =
         OS.ItemDescriptor
           { name = "",
@@ -146,25 +159,46 @@ mkItem categoryId fulfillmentId q =
                   duration = Nothing
                 }
           },
-      quote_terms = [],
+      -- quote_terms = [],
       tags =
         Just $
           OS.ItemTags
             { distance_to_nearest_driver = OS.DecimalValue $ toRational q.distanceToPickup.getMeters,
               special_location_tag = q.specialLocationTag
             },
-      base_distance = Nothing,
-      base_duration = Nothing,
+      -- base_distance = Nothing,
+      -- base_duration = Nothing,
       driver_name = Just q.driverName,
       duration_to_pickup = Just q.durationToPickup.getSeconds,
       valid_till = Just q.validTill,
       rating = q.driverRating
     }
-  where
-    price_ = do
-      let value_ = fromIntegral q.estimatedFare
-      OS.ItemPrice
+
+-- where
+--   price_ = do
+--     let value_ = fromIntegral q.estimatedFare
+--     OS.ItemPrice
+--       { currency = "INR",
+--         value = value_,
+--         offered_value = value_
+--       }
+
+mkPrice :: DQuote.DriverQuote -> OS.Price
+mkPrice quote =
+  let value_ = fromIntegral quote.estimatedFare
+   in OS.Price
         { currency = "INR",
           value = value_,
           offered_value = value_
         }
+
+mkQuote :: DQuote.DriverQuote -> OS.Quote
+mkQuote driverQuote =
+  OS.Quote
+    { price = mkPrice driverQuote,
+      ttl = Nothing, --------- todo
+      breakup = Nothing
+    }
+
+-- (fromIntegral $ div (fromEnum . nominalDiffTimeToSeconds $ latency) 1000000000000)
+-- let Duration =

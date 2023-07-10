@@ -17,6 +17,7 @@ module Beckn.ACL.OnSelect where
 import Beckn.ACL.Common
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as OnSelect
 import qualified Beckn.Types.Core.Taxi.OnSelect as OnSelect
+import Data.Text as T
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
 import Domain.Types.VehicleVariant
 import Kernel.Prelude
@@ -83,7 +84,7 @@ buildQuoteInfo item = do
       vehicleVariant = itemCode.vehicleVariant
       estimatedFare = roundToIntegral item.price.value
       estimatedTotalFare = roundToIntegral item.price.offered_value
-      descriptions = item.quote_terms
+      descriptions = []
       specialLocationTag = item.tags >>= (.special_location_tag)
   validatePrices estimatedFare estimatedTotalFare
   -- if we get here, the discount >= 0, estimatedFare >= estimatedTotalFare
@@ -121,3 +122,12 @@ buildDriverOfferQuoteDetails item = do
         bppDriverQuoteId = Id bppQuoteId,
         ..
       }
+
+-- getDriverName :: OnSelect.Agent -> Maybe Text
+-- getDriverName agent = (.name) =<< fulfillment.agent
+
+getDriverRating :: OnSelect.Agent -> Maybe Centesimal
+getDriverRating agent = do
+  rating <- (.agent_info_rating) =<< agent.tags
+  driverRating <- readMaybe $ T.unpack rating
+  Just $ Centesimal driverRating

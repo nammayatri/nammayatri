@@ -25,16 +25,17 @@ import Beckn.Types.Core.Taxi.OnSearch.Descriptor
 import Beckn.Types.Core.Taxi.OnSearch.Fulfillment
 import Beckn.Types.Core.Taxi.OnSearch.Item
 import Beckn.Types.Core.Taxi.OnSearch.Offer
-import Beckn.Types.Core.Taxi.OnSearch.ProviderLocation
+-- import Beckn.Types.Core.Taxi.OnSearch.ProviderLocation
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), fromAesonOptions)
+import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Provider = Provider
   { id :: Text,
     descriptor :: Descriptor,
-    locations :: [ProviderLocation],
+    locations :: [LatLong],
     categories :: [Category],
     items :: [Item], --FIXME this should be list of only RENTAL or only ONE_WAY items
     offers :: [Offer],

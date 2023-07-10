@@ -244,13 +244,13 @@ sendDriverOffer ::
   DDQ.DriverQuote ->
   m ()
 sendDriverOffer transporter searchReq searchTry driverQuote = do
-  callOnSelect transporter searchReq searchTry =<< (buildOnSelectReq transporter searchReq [driverQuote] <&> ACL.mkOnSelectMessage)
+  callOnSelect transporter searchReq searchTry =<< (buildOnSelectReq transporter searchReq driverQuote <&> ACL.mkOnSelectMessage)
   where
     buildOnSelectReq ::
       (MonadTime m, HasPrettyLogger m r) =>
       DM.Merchant ->
       DSR.SearchRequest ->
-      [DDQ.DriverQuote] ->
+      DDQ.DriverQuote ->
       m ACL.DOnSelectReq
     buildOnSelectReq org searchRequest quotes = do
       now <- getCurrentTime
@@ -268,7 +268,7 @@ sendDriverOffer transporter searchReq searchTry driverQuote = do
       pure $
         ACL.DOnSelectReq
           { transporterInfo,
-            quotes,
+            driverQuote,
             now,
             searchRequest
           }

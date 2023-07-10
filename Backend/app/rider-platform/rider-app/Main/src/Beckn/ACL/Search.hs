@@ -35,7 +35,7 @@ buildOneWaySearchReq ::
 buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
   buildSearchReq
     origin
-    (Just destination)
+    destination
     searchId
     now
     city
@@ -51,7 +51,7 @@ buildRentalSearchReq ::
 buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
   buildSearchReq
     origin
-    Nothing
+    origin
     searchId
     startTime
     city
@@ -63,7 +63,7 @@ buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
 buildSearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
   DSearchCommon.SearchReqLocation ->
-  Maybe DSearchCommon.SearchReqLocation ->
+  DSearchCommon.SearchReqLocation ->
   Id DSearchReq.SearchRequest ->
   UTCTime ->
   Text ->
@@ -72,44 +72,80 @@ buildSearchReq ::
   Maybe Seconds ->
   Maybe Maps.Language ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin mbDestination searchId startTime city device distance duration customerLanguage = do
+buildSearchReq origin destination searchId startTime city _ distance duration customerLanguage = do
   let transactionId = getId searchId
       messageId = transactionId
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) bapIDs.cabs bapURIs.cabs Nothing Nothing city
-  let intent = mkIntent origin mbDestination startTime customerLanguage
-  let mbRouteInfo = Search.RouteInfo {distance, duration}
-  let searchMessage = Search.SearchMessage intent (Just mbRouteInfo) device
+  let intent = mkIntent origin destination startTime customerLanguage distance duration
+  -- let mbRouteInfo = Search.RouteInfo {distance, duration}
+  let searchMessage = Search.SearchMessage intent
 
   pure $ BecknReq context searchMessage
 
 mkIntent ::
   DSearchCommon.SearchReqLocation ->
-  Maybe DSearchCommon.SearchReqLocation ->
+  DSearchCommon.SearchReqLocation ->
   UTCTime ->
   Maybe Maps.Language ->
+  Maybe Meters ->
+  Maybe Seconds ->
   Search.Intent
-mkIntent origin mbDestination startTime customerLanguage = do
+mkIntent origin destination startTime customerLanguage distance duration = do
   let startLocation =
         Search.StartInfo
           { location = mkLocation origin,
             time = Search.TimeTimestamp startTime
           }
-      mkStopInfo destination =
+      endLocation =
         Search.StopInfo
           { location = mkLocation destination
           }
-      mbEndLocation = mkStopInfo <$> mbDestination
+      -- endLocation = mkStopInfo
 
       fulfillment =
         Search.FulfillmentInfo
           { start = startLocation,
-            end = mbEndLocation,
+            end = endLocation,
             tags =
-              Search.Tags
-                { customer_language = customerLanguage
-                }
+              if (isJust distance || isJust duration)
+                then
+                  Just $
+                    Search.Tags
+                      { --customer_language = customerLanguage
+                        code = "route_info",
+                        name = "Route Information",
+                        list_1_code = maybe Nothing (\_ -> Just "distance_info_in_m") distance,
+                        list_1_name = maybe Nothing (\_ -> Just "Distance Information In Meters") distance, --"Distance Information In Meters",
+                        list_1_value = maybe Nothing (\distanceInM -> Just $ show distanceInM.getMeters) distance,
+                        list_2_code = maybe Nothing (\_ -> Just "duration_info_in_s") duration, --"duration_info_in_s",
+                        list_2_name = maybe Nothing (\_ -> Just "Duration Information In Seconds") duration, --"Duration Information In Seconds",
+                        list_2_value = maybe Nothing (\durationInS -> Just $ show durationInS.getSeconds) duration
+                      }
+                else Nothing,
+            customer =
+              if isJust customerLanguage
+                then
+                  Just $
+                    Search.Customer
+                      { person =
+                          Search.Person
+                            { tags =
+                                Search.Tags
+                                  { --customer_language = customerLanguage
+                                    code = "customer_info",
+                                    name = "Customer Information",
+                                    list_1_code = maybe Nothing (\_ -> Just "customer_language") customerLanguage,
+                                    list_1_name = maybe Nothing (\_ -> Just "Customer Language") customerLanguage, --"Distance Information In Meters",
+                                    list_1_value = maybe Nothing (\language -> Just $ show language) customerLanguage,
+                                    list_2_code = Nothing,
+                                    list_2_name = Nothing,
+                                    list_2_value = Nothing
+                                  }
+                            }
+                      }
+                else Nothing
           }
   Search.Intent
     { ..
