@@ -66,7 +66,7 @@ data EndRideReq = DriverReq DriverEndRideReq | DashboardReq DashboardEndRideReq 
 data DriverEndRideReq = DriverEndRideReq
   { point :: LatLong,
     requestor :: DP.Person,
-    numberOfDeviation :: Maybe Double
+    numberOfDeviation :: Maybe Bool
   }
 
 data DashboardEndRideReq = DashboardEndRideReq

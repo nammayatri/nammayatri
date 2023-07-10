@@ -35,8 +35,8 @@ import qualified API.UI.Payment as Payment
 import qualified API.UI.Performance as Performance
 import qualified API.UI.Registration as Registration
 import qualified API.UI.Ride as Ride
+import qualified API.UI.RideRoute as RideRoute
 import qualified API.UI.Route as Route
-import qualified API.UI.SearchRequestRoute as SearchRequestRoute
 import qualified API.UI.Transporter as Transporter
 import qualified API.UI.Vehicle as Vehicle
 import qualified API.UI.Whatsapp as Whatsapp
@@ -70,7 +70,7 @@ type API =
            :<|> ExotelEndRide.API
            :<|> LeaderBoard.API
            :<|> OnMessage.API
-           :<|> SearchRequestRoute.API
+           :<|> RideRoute.API
        )
 
 handler :: FlowServer API
@@ -97,4 +97,4 @@ handler =
     :<|> ExotelEndRide.handler
     :<|> LeaderBoard.handler
     :<|> OnMessage.handler
-    :<|> SearchRequestRoute.handler
+    :<|> RideRoute.handler

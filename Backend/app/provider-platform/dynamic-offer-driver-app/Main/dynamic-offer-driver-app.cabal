@@ -63,8 +63,8 @@ library
       API.UI.Performance
       API.UI.Registration
       API.UI.Ride
+      API.UI.RideRoute
       API.UI.Route
-      API.UI.SearchRequestRoute
       API.UI.Transporter
       API.UI.Vehicle
       API.UI.Whatsapp
@@ -139,8 +139,8 @@ library
       Domain.Action.UI.Ride.EndRide.Internal
       Domain.Action.UI.Ride.StartRide
       Domain.Action.UI.Ride.StartRide.Internal
+      Domain.Action.UI.RideRoute
       Domain.Action.UI.Route
-      Domain.Action.UI.SearchRequestRoute
       Domain.Action.UI.Transporter
       Domain.Action.UI.Vehicle
       Domain.Action.UI.Whatsapp
@@ -208,10 +208,10 @@ library
       Domain.Types.Ride
       Domain.Types.RideDetails
       Domain.Types.RiderDetails
+      Domain.Types.RideRoute
       Domain.Types.SearchRequest
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.SearchRequestForDriver
-      Domain.Types.SearchRequestRoute
       Domain.Types.SearchRequestSpecialZone
       Domain.Types.SearchTry
       Domain.Types.Vehicle
