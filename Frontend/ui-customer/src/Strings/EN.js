@@ -429,7 +429,7 @@ const englishStrings = {
   "NO_DONT": "No, Don’t",
   "YES_CANCEL_SEARCH": "Yes, Cancel Search",
   "TRY_LOOKING_FOR_RIDES_AGAIN": "It seems to be a very busy day. You may try looking for rides again",
-  "NO_TIP": "No Tip",
+  "NO_TIP": "0 Tip",
   "CUSTOMER_TIP_DESCRIPTION": "^Extra amount added by the customer to increase the chances of getting a ride.",
   "PLEASE_WAIT_I_WILL_BE_THERE": "Please wait, I'll be there",
   "UNREACHABLE_PLEASE_CALL_BACK": "Unreachable, Please call back",
@@ -510,5 +510,6 @@ const englishStrings = {
   "OKAY_GOT_IT" : "Ok, Got it",
   "CALL_NAMMA_YATRI_SUPPORT" : "Call Namma Yatri Support",
   "CALL_112": "Call 112",
-  "CALL_EMERGENCY_CENTRE": "Call Emergency Centre"
+  "CALL_EMERGENCY_CENTRE": "Call Emergency Centre",
+  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS" : "Description should be more than 10 characters"
 }

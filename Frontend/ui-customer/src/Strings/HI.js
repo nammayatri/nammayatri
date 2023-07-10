@@ -21,7 +21,7 @@ const hindiStrings = {
   "TRIP_CHARGES": "यात्रा शुल्क",
   "PROMOTION": "पदोन्नति",
   "SEND_EMAIL": "ईमेल भेजें",
-  "YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE": "आप यहां जिस समस्या का सामना कर रहे हैं उसका वर्णन कर सकते हैं",
+  "YOU_CAN_DESCRIBE_THE_ISSUE_YOU_FACED_HERE": "आप यहां इस मुद्दे का वर्णन कर सकते हैं",
   "THANK_YOU_FOR_WRITING": "हमें सूचित करने के लिए धन्यवाद!",
   "WE_HAVE_RECEIVED_YOUR_ISSUE": "हमें आपका मुद्दा मिल गया है। हम कुछ समय में आप तक पहुंचेंगे.",
   "GO_HOME_": "गो होम",
@@ -429,7 +429,7 @@ const hindiStrings = {
   "NO_DONT": "नहीं",
   "YES_CANCEL_SEARCH": "हाँ, खोज रद्द करें",
   "TRY_LOOKING_FOR_RIDES_AGAIN": "ऐसा लगता है कि यह बहुत ही व्यस्त दिन है। आप फिर से राइड खोजने की कोशिश कर सकते हैं",
-  "NO_TIP": "कोई टिप नहीं",
+  "NO_TIP": "0 टिप",
   "CUSTOMER_SELECTED_FARE": "ग्राहक टिप^",
   "CUSTOMER_TIP_DESCRIPTION": "^राइड मिलने की संभावना बढ़ाने के लिए ग्राहक द्वारा जोड़ी गई अतिरिक्त राशि।",
   "PLACE_CALL": "फोन करें",
@@ -511,5 +511,6 @@ const hindiStrings = {
   "OKAY_GOT_IT" : "ठीक है समझ आ गया",
   "CALL_NAMMA_YATRI_SUPPORT" : "नम्मा यात्री सहायता को कॉल करें",
   "CALL_112": "112 पर कॉल करें",
-  "CALL_EMERGENCY_CENTRE": "आपातकालीन केंद्र को कॉल करें"
+  "CALL_EMERGENCY_CENTRE": "आपातकालीन केंद्र को कॉल करें",
+  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS" :"विवरण 10 अक्षरों से अधिक होना चाहिए"
 }

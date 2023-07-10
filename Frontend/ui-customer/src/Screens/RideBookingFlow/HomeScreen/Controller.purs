@@ -958,14 +958,14 @@ eval OpenSettings state = do
 
 eval (SearchExpireCountDown seconds id status timerID) state = do
   if status == "EXPIRED" then do
-    _ <- pure $ clearCountDownTimer timerID
+    _ <- pure $ clearTimer timerID
     let tipViewData = HomeScreenData.initData.props.tipViewProps
     _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
     continue state { props { searchExpire = seconds } }
   else
     if any ( _ == state.props.currentStage) [FindingQuotes , QuoteList] then continue state { props { searchExpire = seconds ,timerId = timerID , tipViewProps {isVisible = state.props.customerTip.enableTips && (seconds <= (getSearchExpiryTime "LazyCheck")-30 || state.props.tipViewProps.isVisible) && (state.props.customerTip.tipActiveIndex >0) }} }
       else do
-        _ <- pure $ clearCountDownTimer timerID
+        _ <- pure $ clearTimer timerID
         let tipViewData = HomeScreenData.initData.props.tipViewProps
         _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
         continue state { props { searchExpire = (getSearchExpiryTime "LazyCheck") ,timerId = timerID , tipViewProps {isVisible = false}} }
@@ -1021,9 +1021,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.Support)) state =
 
 eval (CancelSearchAction PopUpModal.DismissPopup) state = do continue state {props { cancelSearchCallDriver = false }}
 
-eval (CancelSearchAction PopUpModal.OnButton1Click) state = do 
-  _ <- pure $ clearCountDownTimer state.props.timerId
-  continue state {props {showCallPopUp = true, cancelSearchCallDriver = false}}
+eval (CancelSearchAction PopUpModal.OnButton1Click) state = continue state {props {showCallPopUp = true, cancelSearchCallDriver = false}}
 
 eval (CancelSearchAction PopUpModal.OnButton2Click) state = do
   continue state { props { isCancelRide = true, cancellationReasons = cancelReasons "", cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "", cancelSearchCallDriver = false } }
@@ -1209,7 +1207,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Destina
 eval (SearchLocationModelActionController (SearchLocationModelController.EditTextFocusChanged textType)) state = do
   _ <- pure $ spy "searchLocationModal" textType
   if textType == "D" then
-    continueWithCmd state { props { isSource = Just false }, data { locationList = state.data.recentSearchs.predictionArray } }
+    continueWithCmd state { props { isSource = Just false }}
       [ do
           if state.props.isSearchLocation /= LocateOnMap then do
             _ <- (setText' (getNewIDWithTag "DestinationEditText") state.data.destination)
@@ -1218,7 +1216,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.EditTex
             pure $ NoAction
       ]
   else
-    continueWithCmd state { props { isSource = Just true}, data { locationList = state.data.recentSearchs.predictionArray } }
+    continueWithCmd state { props { isSource = Just true}}
       [ do
           if state.props.isSearchLocation /= LocateOnMap && state.props.isSource == Just true then do
             _ <- (setText' (getNewIDWithTag "SourceEditText") state.data.source)
@@ -1298,7 +1296,7 @@ eval (QuoteListModelActionController (QuoteListModelController.CancelAutoAssigni
 
 
 eval (QuoteListModelActionController (QuoteListModelController.TipViewPrimaryButtonClick PrimaryButtonController.OnClick)) state = do
-  _ <- pure $ clearCountDownTimer state.props.timerId
+  _ <- pure $ clearTimer state.props.timerId
   _ <- pure $ startLottieProcess "progress_loader_line" (getNewIDWithTag "lottieLoaderAnimProgress") true 0.6 "CENTER_CROP"
   let tipViewData = state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH }
   let newState = state{ props{findingRidesAgain = true ,searchExpire = (getSearchExpiryTime "LazyCheck"), currentStage = TryAgain, sourceSelectedOnMap = true, isPopUp = NoPopUp ,tipViewProps = tipViewData ,customerTip {tipForDriver = (fromMaybe 10 (state.props.tipViewProps.customerTipArrayWithValues !! state.props.tipViewProps.activeIndex)) , tipActiveIndex = state.props.tipViewProps.activeIndex+1 , isTipSelected = true } }}

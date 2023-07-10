@@ -33,9 +33,9 @@ import Font.Style as FontStyle
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, discard, map, pure, unit, ($), (-), (/=), (<<<), (<=), (<>), (==), (||))
+import Prelude (Unit, bind, const, discard, map, pure, unit, ($), (-), (/=), (<<<), (<=), (<>), (==), (||), (<))
 import Presto.Core.Types.Language.Flow (Flow, doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Shadow(..), Visibility(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, shadow, stroke, text, textSize, textView, visibility, width, imageWithFallback, weight, layoutGravity, clickable, alignParentBottom, scrollView, adjustViewWithKeyboard)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Shadow(..), Visibility(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, shadow, stroke, text, textSize, textView, visibility, width, imageWithFallback, weight, layoutGravity, clickable, alignParentBottom, scrollView, adjustViewWithKeyboard, lineHeight, singleLine, alpha)
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.HelpAndSupportScreen.Controller (Action(..), ScreenOutput, eval)
@@ -48,6 +48,7 @@ import Common.Types.App
 import Screens.CustomerUtils.HelpAndSupportScreen.ComponentConfig
 import Components.PrimaryEditText as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
+import Data.String as DS
 
 screen :: ST.HelpAndSupportScreenState -> Screen Action ST.HelpAndSupportScreenState ScreenOutput
 screen initialState =
@@ -379,7 +380,38 @@ editTextView state push =
       , orientation VERTICAL
       ][
           PrimaryEditText.view (push <<< EmailEditTextAC) (primaryEditTextConfigEmail state)
-        , PrimaryEditText.view (push <<< DescriptionEditTextAC) (primaryEditTextConfigDescription state)
+        , linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          ][  PrimaryEditText.view (push <<< DescriptionEditTextAC) (primaryEditTextConfigDescription state)
+            , linearLayout
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , orientation HORIZONTAL
+              , gravity CENTER_VERTICAL
+              , padding $ PaddingLeft 10
+              , margin $ MarginTop 5
+              , visibility if DS.length state.data.description < 10 then VISIBLE else GONE
+              ][  imageView $
+                  [ width $ V 16
+                  , height $ V 16
+                  , padding $ PaddingVertical 5 3
+                  , margin $ MarginRight 5
+                  , imageWithFallback "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png" 
+                  ]
+                , textView $
+                  [ height WRAP_CONTENT
+                  , width WRAP_CONTENT
+                  , text $ getString DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS
+                  , color Color.black600
+                  , gravity LEFT
+                  , margin $ Margin 0 0 0 0
+                  , lineHeight "28"
+                  , singleLine true
+                  , alpha 1.0
+                  ]  <> FontStyle.body3 TypoGraphy
+              ] ]
       ]
     ]
   ]
