@@ -64,6 +64,7 @@ import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverReferral as DR
 import Domain.Types.DriverStats
+import qualified Domain.Types.Estimate as DEstimate
 import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as Fare
 import Domain.Types.FarePolicy (DriverExtraFeeBounds (..))
@@ -910,7 +911,7 @@ respondQuote (driverId, _) req = do
                   customerExtraFee = searchTry.customerExtraFee,
                   nightShiftCharge = Nothing
                 }
-          driverQuote <- buildDriverQuote driver searchReq sReqFD fareParams
+          driverQuote <- buildDriverQuote driver searchReq sReqFD searchTry.estimateId fareParams
           triggerQuoteEvent QuoteEventData {quote = driverQuote}
           Esq.runTransaction $ do
             QDrQt.create driverQuote
@@ -940,9 +941,10 @@ respondQuote (driverId, _) req = do
       SP.Person ->
       DSR.SearchRequest ->
       SearchRequestForDriver ->
+      Id DEstimate.Estimate ->
       Fare.FareParameters ->
       m DDrQuote.DriverQuote
-    buildDriverQuote driver searchReq sd fareParams = do
+    buildDriverQuote driver searchReq sd estimateId fareParams = do
       guid <- generateGUID
       now <- getCurrentTime
       driverQuoteExpirationSeconds <- asks (.driverQuoteExpirationSeconds)
@@ -967,6 +969,7 @@ respondQuote (driverId, _) req = do
             providerId = searchReq.providerId,
             estimatedFare,
             fareParams,
+            estimateId,
             specialLocationTag = searchReq.specialLocationTag
           }
     thereAreActiveQuotes = do

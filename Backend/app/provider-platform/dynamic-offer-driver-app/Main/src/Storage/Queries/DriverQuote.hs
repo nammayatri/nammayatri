@@ -16,9 +16,11 @@ module Storage.Queries.DriverQuote where
 
 import Data.Int (Int32)
 import qualified Domain.Types.DriverQuote as Domain
+import qualified Domain.Types.Estimate as DEstimate
 import Domain.Types.Person
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
+import qualified Domain.Types.Vehicle.Variant as VehVar
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
@@ -28,6 +30,9 @@ import Storage.Queries.FullEntityBuilders (buildFullDriverQuote)
 import Storage.Tabular.DriverQuote
 import qualified Storage.Tabular.FareParameters as Fare
 import qualified Storage.Tabular.FareParameters.Instances as FareParamsT
+
+-- import Domain.Action.UI.Cancel (CancelSearch(estimateId))
+-- import Domain.Action.UI.Cancel (CancelSearch(estimateId))
 
 create :: Domain.DriverQuote -> SqlDB ()
 create dQuote = Esq.runTransaction $
@@ -58,6 +63,21 @@ findById dQuoteId = buildDType $ do
     where_ $ dQuote ^. DriverQuoteTId ==. val (toKey dQuoteId)
     pure (dQuote, farePars)
   join <$> mapM buildFullDriverQuote res
+
+findActiveQuoteByDriverIdAndVehVarAndEstimateId :: (Transactionable m) => Id DEstimate.Estimate -> Id Person -> VehVar.Variant -> UTCTime -> m (Maybe Domain.DriverQuote)
+findActiveQuoteByDriverIdAndVehVarAndEstimateId estimateId driverId vehicleVariant now = do
+  buildDType $ do
+    res <- Esq.findOne' $ do
+      (dQuote :& farePars) <-
+        from baseDriverQuoteQuery
+      where_ $
+        dQuote ^. DriverQuoteEstimateId ==. val (toKey estimateId)
+          &&. dQuote ^. DriverQuoteDriverId ==. val (toKey driverId)
+          &&. dQuote ^. DriverQuoteStatus ==. val Domain.Active
+          &&. dQuote ^. DriverQuoteVehicleVariant ==. val vehicleVariant
+          &&. dQuote ^. DriverQuoteValidTill >=. val now
+      pure (dQuote, farePars)
+    join <$> mapM buildFullDriverQuote res
 
 setInactiveBySTId :: Id DST.SearchTry -> SqlDB ()
 setInactiveBySTId searchTryId = Esq.update $ \p -> do
@@ -117,3 +137,16 @@ findDriverQuoteBySTId searchTryId = Esq.findOne' $ do
   driverQuote <- from $ table @DriverQuoteT
   where_ $ driverQuote ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
   pure driverQuote
+
+setInactiveAllDQByEstId :: Id DEstimate.Estimate -> UTCTime -> SqlDB ()
+setInactiveAllDQByEstId estimateId now = do
+  Esq.update $ \p -> do
+    set
+      p
+      [ DriverQuoteStatus =. val Domain.Inactive,
+        DriverQuoteUpdatedAt =. val now
+      ]
+    where_ $
+      p ^. DriverQuoteEstimateId ==. val (toKey estimateId)
+        &&. p ^. DriverQuoteStatus ==. val Domain.Active
+        &&. p ^. DriverQuoteValidTill >=. val now

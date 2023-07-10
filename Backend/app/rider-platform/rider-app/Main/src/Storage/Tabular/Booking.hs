@@ -44,6 +44,8 @@ mkPersist
     BookingT sql=booking
       id Text
       transactionId Text
+      fulfillmentId Text Maybe
+      driverId Text Maybe
       fareProductType DQuote.FareProductType
       bppBookingId Text Maybe sql=bpp_ride_booking_id
       quoteId SQuote.QuoteTId Maybe
@@ -53,6 +55,7 @@ mkPersist
       status Domain.BookingStatus
       providerId Text
       providerUrl Text
+      itemId Text
       providerName Text
       providerMobileNumber Text
       primaryExophone Text

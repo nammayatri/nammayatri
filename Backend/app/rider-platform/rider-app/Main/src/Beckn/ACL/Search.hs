@@ -15,6 +15,7 @@
 
 module Beckn.ACL.Search (buildRentalSearchReq, buildOneWaySearchReq) where
 
+import Beckn.ACL.Common (mkLocation)
 import qualified Beckn.Types.Core.Taxi.Search as Search
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Search.Common as DSearchCommon
@@ -37,9 +38,8 @@ buildOneWaySearchReq ::
 buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
   buildSearchReq
     origin
-    (Just destination)
+    destination
     searchId
-    now
     device
     (shortestRouteInfo >>= (.distance))
     (shortestRouteInfo >>= (.duration))
@@ -56,9 +56,8 @@ buildRentalSearchReq ::
 buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
   buildSearchReq
     origin
-    Nothing
+    origin
     searchId
-    startTime
     Nothing
     Nothing
     Nothing
@@ -69,9 +68,8 @@ buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
 buildSearchReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DSearchCommon.SearchReqLocation ->
-  Maybe DSearchCommon.SearchReqLocation ->
+  DSearchCommon.SearchReqLocation ->
   Id DSearchReq.SearchRequest ->
-  UTCTime ->
   Maybe Text ->
   Maybe Meters ->
   Maybe Seconds ->
@@ -79,66 +77,155 @@ buildSearchReq ::
   DM.Merchant ->
   Maybe [Maps.LatLong] ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin mbDestination searchId startTime device distance duration customerLanguage merchant points = do
+buildSearchReq origin destination searchId _ distance duration customerLanguage merchant _ = do
   let transactionId = getId searchId
       messageId = transactionId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/cab/v1/" <> T.unpack merchant.id.getId)
-  context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.city merchant.country
-  let intent = mkIntent origin mbDestination startTime customerLanguage
-  let mbRouteInfo = Search.RouteInfo {distance, duration, points}
-  let searchMessage = Search.SearchMessage intent (Just mbRouteInfo) device
+  context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.city merchant.country False
+  let intent = mkIntent origin destination customerLanguage distance duration
+  -- let mbRouteInfo = Search.RouteInfo {distance, duration, points}
+  let searchMessage = Search.SearchMessage intent
 
   pure $ BecknReq context searchMessage
 
 mkIntent ::
   DSearchCommon.SearchReqLocation ->
-  Maybe DSearchCommon.SearchReqLocation ->
-  UTCTime ->
+  DSearchCommon.SearchReqLocation ->
   Maybe Maps.Language ->
+  Maybe Meters ->
+  Maybe Seconds ->
   Search.Intent
-mkIntent origin mbDestination startTime customerLanguage = do
+mkIntent origin destination customerLanguage distance duration = do
   let startLocation =
         Search.StartInfo
-          { location = mkLocation origin,
-            time = Search.TimeTimestamp startTime
+          { location = mkLocation origin
           }
-      mkStopInfo destination =
+      endLocation =
         Search.StopInfo
           { location = mkLocation destination
           }
-      mbEndLocation = mkStopInfo <$> mbDestination
+      -- endLocation = mkStopInfo
 
       fulfillment =
         Search.FulfillmentInfo
           { start = startLocation,
-            end = mbEndLocation,
+            end = endLocation,
             tags =
-              Search.Tags
-                { customer_language = customerLanguage
-                }
+              if isJust distance || isJust duration
+                then
+                  Just $
+                    Search.TG
+                      [ mkRouteInfoTags
+                      ]
+                else -- Search.Tags
+                --   { --customer_language = customerLanguage
+                --     code = "route_info",
+                --     name = "Route Information",
+                --     list_1_code = maybe Nothing (\_ -> Just "distance_info_in_m") distance,
+                --     list_1_name = maybe Nothing (\_ -> Just "Distance Information In Meters") distance, --"Distance Information In Meters",
+                --     list_1_value = maybe Nothing (\distanceInM -> Just $ show distanceInM.getMeters) distance,
+                --     list_2_code = maybe Nothing (\_ -> Just "duration_info_in_s") duration, --"duration_info_in_s",
+                --     list_2_name = maybe Nothing (\_ -> Just "Duration Information In Seconds") duration, --"Duration Information In Seconds",
+                --     list_2_value = maybe Nothing (\durationInS -> Just $ show durationInS.getSeconds) duration
+                --   }
+                  Nothing,
+            customer =
+              if isJust customerLanguage
+                then
+                  Just $
+                    Search.Customer
+                      { person =
+                          Search.Person
+                            { tags = Search.TG [mkCustomerInfoTags]
+                            -- Search.Tags
+                            --   { --customer_language = customerLanguage
+                            --     code = "customer_info",
+                            --     name = "Customer Information",
+                            --     list_1_code = maybe Nothing (\_ -> Just "customer_language") customerLanguage,
+                            --     list_1_name = maybe Nothing (\_ -> Just "Customer Language") customerLanguage, --"Distance Information In Meters",
+                            --     list_1_value = maybe Nothing (\language -> Just $ show language) customerLanguage,
+                            --     list_2_code = Nothing,
+                            --     list_2_name = Nothing,
+                            --     list_2_value = Nothing
+                            --   }
+                            }
+                      }
+                else Nothing
           }
   Search.Intent
     { ..
     }
   where
-    mkLocation info =
-      Search.Location
-        { gps =
-            Search.Gps
-              { lat = info.gps.lat,
-                lon = info.gps.lon
-              },
-          address =
-            Just
-              Search.Address
-                { locality = info.address.area,
-                  state = info.address.state,
-                  country = info.address.country,
-                  building = info.address.building,
-                  street = info.address.street,
-                  city = info.address.city,
-                  area_code = info.address.areaCode,
-                  door = info.address.door,
-                  ward = info.address.ward
+    -- mkLocation info =
+    --   Search.Location
+    --     { gps =
+    --         Search.Gps
+    --           { lat = info.gps.lat,
+    --             lon = info.gps.lon
+    --           },
+    --       address =
+    --         Just
+    --           Search.Address
+    --             { locality = info.address.area,
+    --               state = info.address.state,
+    --               country = info.address.country,
+    --               building = info.address.building,
+    --               street = info.address.street,
+    --               city = info.address.city,
+    --               area_code = info.address.areaCode,
+    --               door = info.address.door,
+    --               ward = info.address.ward
+    --             }
+    --     }
+    mkRouteInfoTags =
+      Search.TagGroup
+        { display = False,
+          code = "route_info",
+          name = "Route Information",
+          list =
+            [ Search.Tag
+                { display = (\_ -> Just False) =<< distance,
+                  code = (\_ -> Just "distance_info_in_m") =<< distance,
+                  name = (\_ -> Just "Distance Information In Meters") =<< distance,
+                  value = (\distanceInM -> Just $ show distanceInM.getMeters) =<< distance
+                },
+              Search.Tag
+                { display = (\_ -> Just False) =<< duration,
+                  code = (\_ -> Just "duration_info_in_s") =<< duration,
+                  name = (\_ -> Just "Duration Information In Seconds") =<< duration,
+                  value = (\durationInS -> Just $ show durationInS.getSeconds) =<< duration
                 }
+            ]
         }
+
+    mkCustomerInfoTags =
+      Search.TagGroup
+        { display = False,
+          code = "customer_info",
+          name = "Customer Information",
+          list =
+            [ Search.Tag
+                { display = (\_ -> Just False) =<< customerLanguage,
+                  code = (\_ -> Just "customer_language") =<< customerLanguage,
+                  name = (\_ -> Just "Customer Language") =<< customerLanguage,
+                  value = (Just . show) =<< customerLanguage
+                }
+            ]
+        }
+
+-- data TagGroup = TagGroup
+--   { display :: Bool,
+--     code :: String,
+--     name :: String,
+--     list :: [Tag]
+--   }
+--   deriving (Generic, Show, ToSchema)
+
+-- data Tag = Tag
+--   { display :: Bool,
+--     code :: String,
+--     name :: String,
+--     value :: String
+--   }
+-- variant = Common.castVariant estimate.vehicleVariant
+-- vehicle = OS.FulfillmentVehicle {category = variant}

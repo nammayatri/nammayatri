@@ -12,9 +12,25 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Init.Location
-  ( module Reexport,
+module Beckn.Types.Core.Taxi.OnSelect.Quote
+  ( module Beckn.Types.Core.Taxi.OnSelect.Quote,
+    module Reexport,
   )
 where
 
-import Beckn.Types.Core.Taxi.Search.Location as Reexport
+import Beckn.Types.Core.Taxi.Common.Gps as Reexport
+import Beckn.Types.Core.Taxi.OnSelect.Price as Reexport
+import Data.Aeson
+import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
+import EulerHS.Prelude
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
+
+data Quote = Quote
+  { price :: Price,
+    ttl :: Maybe Text,
+    breakup :: Maybe [PriceBreakup]
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+instance ToSchema Quote where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

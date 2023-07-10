@@ -37,7 +37,8 @@ newtype DTrackReq = TrackReq
 
 data DTrackRes = TrackRes
   { url :: BaseUrl,
-    transporter :: DM.Merchant
+    transporter :: DM.Merchant,
+    isRideCompleted :: Bool
   }
 
 track ::
@@ -53,6 +54,7 @@ track transporterId req = do
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let transporterId' = booking.providerId
   unless (transporterId' == transporterId) $ throwError AccessDenied
+  let isRideCompleted = ride.status == DRide.COMPLETED
   return $
     TrackRes
       { url = ride.trackingUrl,

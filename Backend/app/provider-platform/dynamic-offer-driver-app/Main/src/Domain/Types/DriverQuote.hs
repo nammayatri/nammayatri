@@ -15,6 +15,7 @@
 
 module Domain.Types.DriverQuote where
 
+import Domain.Types.Estimate
 import qualified Domain.Types.FareParameters as Params
 import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Person
@@ -36,6 +37,7 @@ data DriverQuote = DriverQuote
     requestId :: Id SearchRequest,
     searchTryId :: Id SearchTry,
     searchRequestForDriverId :: Maybe (Id SearchRequestForDriver),
+    estimateId :: Id Estimate,
     driverId :: Id Person,
     driverName :: Text,
     driverRating :: Maybe Centesimal,

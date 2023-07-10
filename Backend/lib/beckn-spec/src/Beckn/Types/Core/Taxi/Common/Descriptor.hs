@@ -12,19 +12,14 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Init.Descriptor
-  ( module Beckn.Types.Core.Taxi.Init.Descriptor,
-    module Reexport,
-  )
-where
+module Beckn.Types.Core.Taxi.Common.Descriptor where
 
-import Beckn.Types.Core.Taxi.Common.ItemCode as Reexport
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
-import EulerHS.Prelude hiding (State, id, state)
+import EulerHS.Prelude hiding (exp, id)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 newtype Descriptor = Descriptor
-  { code :: ItemCode
+  { short_desc :: Text
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 

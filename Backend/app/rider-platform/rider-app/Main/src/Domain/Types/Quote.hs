@@ -40,6 +40,7 @@ data Quote = Quote
     providerUrl :: BaseUrl,
     providerName :: Text,
     providerMobileNumber :: Text,
+    itemId :: Text,
     providerCompletedRidesCount :: Int,
     vehicleVariant :: VehicleVariant,
     tripTerms :: Maybe DTripTerms.TripTerms,
