@@ -100,6 +100,7 @@ data ABOUT_US_SCREEN_OUTPUT = GO_TO_HOME_FROM_ABOUT
 data EMERGECY_CONTACTS_SCREEN_OUTPUT = GO_TO_HOME_FROM_EMERGENCY_CONTACTS
                                       | POST_CONTACTS EmergencyContactsScreenState
                                       | GET_CONTACTS EmergencyContactsScreenState
+                                      | REFRESH_EMERGECY_CONTACTS_SCREEN EmergencyContactsScreenState
 
 data HOME_SCREEN_OUTPUT = LOGOUT
                         | RELOAD Boolean
