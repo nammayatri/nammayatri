@@ -36,9 +36,9 @@ import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.DriverPoolConfig (DriverPoolConfig)
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.QuoteSpecialZone as DQuoteSpecialZone
+import Domain.Types.RideRoute
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
-import Domain.Types.SearchRequestRoute
 import qualified Domain.Types.SearchRequestSpecialZone as DSRSZ
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
@@ -244,7 +244,7 @@ handler merchant sReq = do
 
           let onlyFPWithDrivers = filter (\fp -> isJust (find (\dp -> dp.variant == fp.vehicleVariant) driverPool)) farePolicies
           searchReq <- buildSearchRequest sReq merchantId fromLocation toLocation result.distance result.duration specialLocationTag area
-          Redis.hSetExp (searchRequestKey $ getId merchantId) (getId searchReq.id) routeInfo 3600
+          Redis.setExp (searchRequestKey $ getId searchReq.id) routeInfo 3600
           estimates <- mapM (SHEst.buildEstimate searchReq.id sReq.pickupTime result.distance specialLocationTag) onlyFPWithDrivers
           triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId}
 
@@ -444,4 +444,4 @@ isEmpty :: Maybe Text -> Bool
 isEmpty = maybe True (T.null . T.replace " " "")
 
 searchRequestKey :: Text -> Text
-searchRequestKey mId = "Driver:Search:Request:" <> mId
+searchRequestKey sId = "Driver:Search:Request:" <> sId
