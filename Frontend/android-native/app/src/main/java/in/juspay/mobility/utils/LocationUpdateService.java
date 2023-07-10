@@ -55,6 +55,8 @@ import com.google.android.gms.tasks.CancellationTokenSource;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.maps.android.PolyUtil;
+import com.google.android.gms.maps.model.LatLng;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -69,6 +71,7 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.Timer;
@@ -83,6 +86,7 @@ import in.juspay.mobility.R;
 
 public class LocationUpdateService extends Service {
     private static final String LOG_TAG = "LocationServices";
+    private static FirebaseAnalytics mFirebaseAnalytics;
     private String LOCATION_DESCRIPTION = "LOCATION_IS_UPDATING";
     private String LOCATION_UPDATES = "LOCATION_UPDATES";
     private String MAX_LIMIT_TO_STORE_LOCATION_PT = "MAX_LIMIT_TO_STORE_LOCATION_PT";
@@ -115,6 +119,8 @@ public class LocationUpdateService extends Service {
     private int noOfPointsToRemove = 10;
     private float minDispDistanceNew = 25.0f, minDispDistance = 25.0f;
     private TimerTask timerTask;
+
+    private String rideWaypoints = null;
     // JSONArray payload = new JSONArray();
     CancellationTokenSource cancellationTokenSource;
     static JSONArray metaDataForLocation;
@@ -368,8 +374,186 @@ public class LocationUpdateService extends Service {
         });
     }
 
+    private String getValueFromStorage(String k) {
+        SharedPreferences sharedPreff = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        String val = sharedPreff.getString(k, null);
+        return val;
+    }
+
+    private JSONObject getLatLng(Double lat , Double lng) throws JSONException {
+        JSONObject latLng = new JSONObject();
+        latLng.put("lat", lat);
+        latLng.put("lon", lng);
+        return latLng;
+    }
+
+    private void getRoute(Double startLat, Double startLng, Double endLat, Double endLng) {
+        StringBuilder result = new StringBuilder();
+
+        String regToken = getValueFromStorage("REGISTERATION_TOKEN");
+        String baseUrl = getValueFromStorage("BASE_URL");
+        String version = getValueFromStorage("VERSION_NAME");
+
+        if(regToken == null || baseUrl == null || version == null) {
+            return;
+        }
+        try {
+            String rideId = getValueFromStorage("RIDE_ID");
+            if(rideId == null){
+                return;
+            }
+            String url = baseUrl+ "/" + rideId + "/route";
+            HttpURLConnection connection = (HttpURLConnection) (new URL(url).openConnection());
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Content-Type", "application/json");
+            connection.setRequestProperty("token", regToken);
+            connection.setRequestProperty("x-client-version", version);
+
+            connection.connect();
+            int respCode = connection.getResponseCode();
+            InputStreamReader respReader;
+            if (respCode == 200) {
+                respReader = new InputStreamReader(connection.getInputStream());
+                BufferedReader in = new BufferedReader(respReader);
+                String inputLine;
+                while ((inputLine = in.readLine()) != null) {
+                    result.append(inputLine);
+                }
+                JSONObject res = new JSONObject(String.valueOf(result));
+                JSONArray pathLatLng = (JSONArray) res.get("points");
+                rideWaypoints = String.valueOf(pathLatLng);
+            } else if(respCode == 404) {
+                String routeFallbackUrl = baseUrl+ "/trip/route";
+                HttpURLConnection fallbackConnection = (HttpURLConnection) (new URL(routeFallbackUrl).openConnection());
+                fallbackConnection.setRequestMethod("POST");
+                fallbackConnection.setRequestProperty("Content-Type", "application/json");
+                fallbackConnection.setRequestProperty("token", regToken);
+                fallbackConnection.setRequestProperty("x-client-version", version);
+
+                JSONObject payload = new JSONObject();
+
+                JSONObject startLatLng = getLatLng(startLat, startLng);
+                JSONObject endLatLng = getLatLng(endLat, endLng);
+
+                JSONArray waypoints = new JSONArray();
+                waypoints.put(startLatLng);
+                waypoints.put(endLatLng);
+
+                payload.put("waypoints", waypoints);
+                payload.put("mode", "CAR");
+                payload.put("calcPoints", true);
+
+
+                OutputStream fallbackStream = fallbackConnection.getOutputStream();
+                fallbackStream.write(payload.toString().getBytes());
+                fallbackConnection.connect();
+                int respC = fallbackConnection.getResponseCode();
+
+                InputStreamReader fallbackRespReader;
+                if (respC == 200) {
+                    fallbackRespReader = new InputStreamReader(fallbackConnection.getInputStream());
+                    BufferedReader in = new BufferedReader(fallbackRespReader);
+                    String inputLine;
+                    while ((inputLine = in.readLine()) != null) {
+                        result.append(inputLine);
+                    }
+                    JSONObject res = (JSONObject) new JSONArray(String.valueOf(result)).get(0);
+                    JSONArray pathLatLng = (JSONArray) res.get("points");
+                    rideWaypoints = String.valueOf(pathLatLng);
+                } else {
+                    Bundle params = new Bundle();
+                    mFirebaseAnalytics.logEvent("LS_ERROR_GETTING_ROUTE", params);
+                }
+            }
+            else  {
+                Bundle params = new Bundle();
+                mFirebaseAnalytics.logEvent("LS_ERROR_GETTING_ROUTE", params);
+            }
+        } catch (Exception e) {
+            Log.e("get route api exception", e.toString());
+        }
+    }
+
+
+    private void updateDeviation(double latitude, double longitude, String waypoints) {
+        try {
+            List<LatLng> latLngPoints = new ArrayList<LatLng>();
+            JSONArray waypointArray = new JSONArray(waypoints);
+
+            for (int i = 0; i < waypointArray.length(); i++) {
+                JSONObject pt = waypointArray.getJSONObject(i);
+                latLngPoints.add(new LatLng((Double) pt.get("lat"), (Double) pt.get("lon")));
+            }
+
+            String toleranceEarth = getValueFromStorage("TOLERANCE_EARTH");
+            Double toleranceEarthVal = toleranceEarth == null ? 30.0 : Double.valueOf(toleranceEarth);
+
+            int resultIndex = PolyUtil.locationIndexOnEdgeOrPath(new LatLng(latitude, longitude), latLngPoints, PolyUtil.isClosedPolygon(latLngPoints), true, toleranceEarthVal);
+
+            if (resultIndex == -1) {
+                Integer devCount = Integer.parseInt(getValueFromStorage("WAYPOINT_DEVIATION_COUNT"));
+                if(devCount == null){
+                    return;
+                }
+                devCount = devCount + 1;
+                updateStorage("WAYPOINT_DEVIATION_COUNT", String.valueOf(devCount));
+
+                Log.d("ride deviation count" , String.valueOf(devCount));
+                if(devCount != 0 && devCount % 3 == 0) {
+                    Integer rideDevCount = Integer.parseInt(getValueFromStorage("RIDE_WAYPOINT_DEVIATION_COUNT"));
+                    rideDevCount = rideDevCount + 1;
+                    updateStorage("RIDE_WAYPOINT_DEVIATION_COUNT", String.valueOf(rideDevCount));
+                    Log.d("total deviation count" , String.valueOf(rideDevCount));
+                }
+            } else {
+               Log.d(  "in path", String.valueOf(resultIndex));
+            }
+        }
+        catch (Exception e) {
+            Log.e("deviation update exception", e.toString());
+        }
+    }
+
     /*Location update API call*/
-    private void callDriverCurrentLocationAPI(double latitude, double longitude, float accuracy, String locTime, String log, String locationSource, String triggerFunctionValue) {
+    private void callDriverCurrentLocationAPI(double latitude, double longitude, float accuracy, String locTime, String log, String locationSource, String triggerFunctionValue)  {
+        try {
+            String localStage = getValueFromStorage("LOCAL_STAGE");
+
+            if (localStage.equals("RideStarted")) {
+                if (rideWaypoints == null) {
+                    ExecutorService executor1 = Executors.newSingleThreadExecutor();
+                    executor1.execute(() -> {
+                        try {
+                            Handler routeHandler = new Handler(Looper.getMainLooper());
+                            String rideStartLat = getValueFromStorage("RIDE_START_LAT");
+                            String rideStartLon = getValueFromStorage("RIDE_START_LON");
+                            String rideEndLat = getValueFromStorage("RIDE_END_LAT");
+                            String rideEndLon = getValueFromStorage("RIDE_END_LON");
+
+                            if(rideStartLat == null || rideStartLon == null || rideEndLat == null || rideEndLon == null) {
+                                return;
+                            }
+
+                            getRoute(Double.parseDouble(rideStartLat), Double.parseDouble(rideStartLon), Double.parseDouble(rideEndLat), Double.parseDouble(rideEndLon));
+                            routeHandler.post(() -> {
+                                updateDeviation(latitude, longitude, rideWaypoints);
+                            });
+                        } catch (Exception e) {
+                            Log.e("get route exception", e.toString());
+                        }
+                    });
+                } else {
+                    updateDeviation(latitude, longitude, rideWaypoints);
+                }
+            }
+            else if(localStage.equals("RideCompleted")){
+                rideWaypoints = null;
+            }
+        }
+        catch (Exception e){
+            Log.e("callDriverCurrentLocationAPI", e.toString());
+        }
+
         ExecutorService executor = Executors.newSingleThreadExecutor();
         Handler handler = new Handler(Looper.getMainLooper());
         executor.execute(() ->
@@ -747,7 +931,7 @@ public class LocationUpdateService extends Service {
                                        else {
                                            System.out.println("LOCATION_UPDATE: CURRENT LOCATION IS NULL");
                                            callDriverCurrentLocationAPI(0.0,0.0, 0, sdf.format(new Date()), "timer_task_null_location", LocationSource.CurrentLocation.toString(), TriggerFunction.TimerTask.toString() );
-                                       }
+                                        }
                                     }
                                 })
                                 .addOnFailureListener(new OnFailureListener() {
