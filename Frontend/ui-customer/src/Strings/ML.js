@@ -276,7 +276,7 @@ const malayalamStrings = {
   "CALL_SUPPORT": "സപ്പോർട്ട് ടീമിനെ വിളിക്കുക",
   "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "നിങ്ങൾ നമ്മ യാത്രി സപ്പോർട്ട് ടീമിനെ കാൾ ചെയ്യാൻ പോകുകയാണ്. തുടരണോ?",
   "YOU_ARE_ABOUT_TO_CALL_NEAREST_EMERGENCY_CENTRE": "നിങ്ങൾ അടുത്തുള്ള എമർജൻസി സെന്ററിലേക്ക് വിളിക്കാൻ പോകുകയാണ്. നിങ്ങൾക്ക് തുടരണോ?",
-  "DIAL_112": "112 ഡയൽ ചെയ്യണോ?",
+  "DIAL_112": "112 ഡയൽ ചെയ്യണോ",
   "HELP_US_WITH_YOUR_FEEDBACK": "നിങ്ങളുടെ പ്രതികരണം  രേഖപ്പെടുത്തി ഞങ്ങളെ സഹായിക്കൂ",
   "WAIT_TIME": "കാത്തിരിപ്പ്",
   "FAVOURITES": "ഫേവറൈറ്സ്",

@@ -1,12 +1,28 @@
+{-
+ Copyright 2022-23, Juspay India Pvt Ltd
+
+ This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+
+ as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+
+ is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+
+ the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+-}
+
 module Storage.Queries.DriverOffer where
 
 import Database.Beam.MySQL ()
 import Domain.Types.DriverOffer
+import Domain.Types.Estimate
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude hiding (Generic)
+import Kernel.Types.Common
 import Kernel.Types.Id
 import Lib.Utils
 import qualified Sequelize as Se
@@ -39,6 +55,34 @@ findByBPPQuoteId (Id bppQuoteId) = do
     Just dbCOnf' -> either (pure []) (transformBeamDriverOfferToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDO.bppQuoteId $ Se.Eq bppQuoteId]
     Nothing -> pure []
 
+-- updateStatus :: Id Estimate -> DriverOfferStatus -> SqlDB ()
+-- updateStatus estimateId status = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [ DriverOfferStatus =. val status,
+--         DriverOfferUpdatedAt =. val now
+--       ]
+--     where_ $ tbl ^. DriverOfferEstimateId ==. val (toKey estimateId)
+
+updateStatus :: (L.MonadFlow m, MonadTime m) => Id Estimate -> DriverOfferStatus -> m (MeshResult ())
+updateStatus (Id estimateId) status_ = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamDO.DriverOfferT
+  let updatedMeshConfig = setMeshConfig modelName
+  now <- getCurrentTime
+  case dbConf of
+    Just dbConf' ->
+      KV.updateWoReturningWithKVConnector
+        dbConf'
+        updatedMeshConfig
+        [ Se.Set BeamDO.updatedAt now,
+          Se.Set BeamDO.status status_
+        ]
+        [Se.Is BeamDO.id (Se.Eq estimateId)]
+    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
 transformBeamDriverOfferToDomain :: BeamDO.DriverOffer -> DriverOffer
 transformBeamDriverOfferToDomain BeamDO.DriverOfferT {..} = do
   DriverOffer
@@ -50,7 +94,9 @@ transformBeamDriverOfferToDomain BeamDO.DriverOfferT {..} = do
       distanceToPickup = distanceToPickup,
       validTill = validTill,
       bppQuoteId = Id bppQuoteId,
-      rating = rating
+      rating = rating,
+      status = status,
+      updatedAt = updatedAt
     }
 
 transformDomainDriverOfferToBeam :: DriverOffer -> BeamDO.DriverOffer
@@ -64,5 +110,7 @@ transformDomainDriverOfferToBeam DriverOffer {..} =
       BeamDO.distanceToPickup = distanceToPickup,
       BeamDO.validTill = validTill,
       BeamDO.bppQuoteId = getId bppQuoteId,
-      BeamDO.rating = rating
+      BeamDO.rating = rating,
+      BeamDO.status = status,
+      BeamDO.updatedAt = updatedAt
     }

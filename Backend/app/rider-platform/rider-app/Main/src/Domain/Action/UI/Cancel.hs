@@ -24,6 +24,7 @@ where
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as SCR
+import qualified Domain.Types.DriverOffer as DDO
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant as Merchant
@@ -43,6 +44,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
+import qualified Storage.Queries.DriverOffer as QDOffer
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QR
@@ -170,17 +172,20 @@ cancelSearch ::
   CancelSearch ->
   m ()
 cancelSearch personId dcr = do
-  if dcr.estimateStatus == DEstimate.GOT_DRIVER_QUOTE
-    then -- then Esq.runTransaction $ do
-    do
-      -- Esq.runTransaction $
-      _ <- QPFS.updateStatus personId DPFS.IDLE
-      void $ QEstimate.updateStatus dcr.estimateId DEstimate.DRIVER_QUOTE_CANCELLED
-    else do
-      -- Esq.runTransaction $ do
-      -- Esq.runTransaction $
-      _ <- QPFS.updateStatus personId DPFS.IDLE
-      void $ QEstimate.updateStatus dcr.estimateId DEstimate.CANCELLED
+  _ <-
+    if dcr.estimateStatus == DEstimate.GOT_DRIVER_QUOTE
+      then -- then Esq.runTransaction $ do
+      do
+        -- Esq.runTransaction $
+        _ <- QPFS.updateStatus personId DPFS.IDLE
+        void $ QEstimate.updateStatus dcr.estimateId DEstimate.DRIVER_QUOTE_CANCELLED
+        QDOffer.updateStatus dcr.estimateId DDO.INACTIVE
+      else do
+        -- Esq.runTransaction $ do
+        -- Esq.runTransaction $
+        _ <- QPFS.updateStatus personId DPFS.IDLE
+        void $ QEstimate.updateStatus dcr.estimateId DEstimate.CANCELLED
+        QDOffer.updateStatus dcr.estimateId DDO.INACTIVE
   QPFS.clearCache personId
 
 driverDistanceToPickup ::

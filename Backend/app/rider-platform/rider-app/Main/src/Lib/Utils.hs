@@ -19,6 +19,7 @@ import Database.Beam.Postgres.Syntax
 import qualified Database.Beam.Query as BQ
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
+import qualified Domain.Types.DriverOffer as DomainDO
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.KVConnector.Types (MeshConfig (..))
 import qualified EulerHS.Language as L
@@ -261,6 +262,21 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Context.Country whe
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Context.Country
 
 instance FromBackendRow Postgres Context.Country
+
+instance FromField DomainDO.DriverOfferStatus where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be DomainDO.DriverOfferStatus where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainDO.DriverOfferStatus
+
+instance FromBackendRow Postgres DomainDO.DriverOfferStatus
+
+instance IsString DomainDO.DriverOfferStatus where
+  fromString = show
+
+deriving stock instance Ord DomainDO.DriverOfferStatus
 
 fromFieldJSON ::
   (Typeable a, FromJSON a) =>

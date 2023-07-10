@@ -11,14 +11,14 @@ suggestionsDefinitions dummy = [
   {key : "cis2AP", value : {en_us : "Reaching shortly", ta_in : "விரைவில் வருகிறேன்", kn_in : "ಶೀಘ್ರದಲ್ಲೇ ತಲುಪುತ್ತೇನೆ", hi_in : "मैं थोड़ी देर में आ रहा हूँ", ml_in : "ഉടൻ എത്തും", bn_in : "আমি শীঘ্রই পৌঁছাচ্ছি" }},
   {key : "cis3AP", value : {en_us : "Call me, You're unreachable", ta_in : "அணுக முடியவில்லை. கால் செய்யுங்கள்", kn_in : "ಕರೆ ಮಾಡಿ, ನೀವು ತಲುಪಲು ಸಾಧ್ಯವಿಲ್ಲ", hi_in : "आपका फ़ोन नहीं लग रहा, कॉल करिये ", ml_in : "എന്നെ വിളിക്കൂ, താങ്കൾ പരിധിക്കു പുറത്താണ്", bn_in : "আমাকে কল করুন, আপনার ফোনে যোগাযোগ করা যাচ্ছে না" }},
   {key : "cis1BP", value : {en_us : "Are you starting ?", ta_in : "நீங்கள் தொடங்குகிறீர்களா?", kn_in : "ನೀವು ಪ್ರಾರಂಭಿಸುತ್ತಿದ್ದೀರಾ?", hi_in : "आप आ रहे है क्या? ", ml_in : "താങ്കൾ പുറപ്പെടുകയാണോ?", bn_in : "আপনি কি আসছেন ?" }},
-  {key : "cis2BP", value : {en_us : "Urgent, come soon", ta_in : "அவசரம், சீக்கிரம் வாருங்கள்", kn_in : "ಅರ್ಜೆಂಟ್, ಬೇಗ ಬನ್ನಿ", hi_in : "अर्जेंट है प्लीज जड़ली आइये", ml_in : "അത്യാവശ്യമാണ്, വേഗം വരൂ", bn_in : "জরুরী আছে, দয়া করে তাড়াতাড়ি আসুন" }},
+  {key : "cis2BP", value : {en_us : "Urgent, come soon", ta_in : "அவசரம், சீக்கிரம் வாருங்கள்", kn_in : "ಅರ್ಜೆಂಟ್, ಬೇಗ ಬನ್ನಿ", hi_in : "अर्जेंट है प्लीज जल्दी आइये", ml_in : "അത്യാവശ്യമാണ്, വേഗം വരൂ", bn_in : "জরুরী আছে, দয়া করে তাড়াতাড়ি আসুন" }},
   {key : "cis3BP", value : {en_us : "Waiting at Pick-up", ta_in : "பிக்-அப்பில்  காத்திருக்கிறேன்", kn_in : "ಪಿಕ್-ಅಪ್‌ನಲ್ಲಿ ಕಾಯುತ್ತಿದ್ದೇನೆ", hi_in : "मैं लोकेशन पे आपके लिए रुका हूँ", ml_in : "ഞാൻ പിക്ക്-അപ്പിൽ കാത്തിരിക്കുകയാണ്", bn_in : "আমি পিক-আপ স্থানে অপেক্ষা করছি" }},
   {key : "cis4BP", value : {en_us : "Call me once you reach", ta_in : "சேர்ந்தவுடன் கால் செய்யவும்", kn_in : "ನೀವು ತಲುಪಿದ ನಂತರ ಕರೆ ಮಾಡಿ", hi_in : "पहुँच जाओगे तब मुझे एक बार कॉल कर देना", ml_in : "താങ്കൾ എത്തിക്കഴിയുമ്പോൾ എന്നെ വിളിക്കുക", bn_in : "পৌঁছে গেলে আমাকে ফোন করুন" }},
   {key : "cis1dr1AP", value : {en_us : "Waiting for you", ta_in : "உங்களுக்காக காத்திருக்கிறேன்", kn_in : "ನಿಮಗಾಗಿ ಕಾಯುತ್ತಿದ್ದೇನೆ", hi_in : "मैं आपके लिए रुका हूँ", ml_in : "താങ്കൾക്കായി കാത്തിരിക്കുകയാണ്", bn_in : "আপনার জন্য অপেক্ষা করছি" }},
   {key : "cis1dr2AP", value : {en_us : "Call me, You're unreachable", ta_in : "அணுக முடியவில்லை. கால் செய்யுங்கள்", kn_in : "ಕರೆ ಮಾಡಿ, ನೀವು ತಲುಪಲು ಸಾಧ್ಯವಿಲ್ಲ", hi_in : "आपका फ़ोन नहीं लग रहा, कॉल करिये ", ml_in : "എന്നെ വിളിക്കൂ, താങ്കൾ പരിധിക്കു പുറത്താണ്", bn_in : "আমাকে কল করুন, আপনার ফোনে যোগাযোগ করা যাচ্ছে না" }},
   {key : "cis2dr1AP", value : {en_us : "Waiting for you", ta_in : "உங்களுக்காக காத்திருக்கிறேன்", kn_in : "ನಿಮಗಾಗಿ ಕಾಯುತ್ತಿದ್ದೇನೆ", hi_in : "मैं आपके लिए रुका हूँ", ml_in : "താങ്കൾക്കായി കാത്തിരിക്കുകയാണ്", bn_in : "আপনার জন্য অপেক্ষা করছি" }},
   {key : "cis2dr2AP", value : {en_us : "Call me, You're unreachable", ta_in : "அணுக முடியவில்லை. கால் செய்யுங்கள்", kn_in : "ಕರೆ ಮಾಡಿ, ನೀವು ತಲುಪಲು ಸಾಧ್ಯವಿಲ್ಲ", hi_in : "आपका फ़ोन नहीं लग रहा, कॉल करिये ", ml_in : "എന്നെ വിളിക്കൂ, താങ്കൾ പരിധിക്കു പുറത്താണ്", bn_in : "আমাকে কল করুন, আপনার ফোনে যোগাযোগ করা যাচ্ছে না" }},
-  {key : "cis1dr1AP", value : {en_us : "Ok", ta_in : "சரி", kn_in : "ಸರಿ", hi_in : "ठीक है", ml_in : "ഓക്കേ", bn_in : "ঠিক আছে" }},
+  {key : "cis3dr1AP", value : {en_us : "Ok", ta_in : "சரி", kn_in : "ಸರಿ", hi_in : "ठीक है", ml_in : "ഓക്കേ", bn_in : "ঠিক আছে" }},
   {key : "cis3dr2AP", value : {en_us : "Please wait", ta_in : "தயவுசெய்து காத்திருக்கவும்", kn_in : "ದಯವಿಟ್ಟು ನಿರೀಕ್ಷಿಸಿ", hi_in : "प्लीज थोड़ी देर रुकिए", ml_in : "ദയവായി കാത്തിരിക്കുക", bn_in : "দয়া করে অপেক্ষা করুন" }},
   {key : "cis1dr1BP", value : {en_us : "On my way", ta_in : "வந்துகொண்டிருக்கிறேன்", kn_in : "ಬರುತ್ತಿದ್ದೇನೆ", hi_in : "मैं आ रहा हूँ", ml_in : "ഞാൻ വന്നുകൊണ്ടിരിക്കുകയാണ്", bn_in : "আমি আসছি" }},
   {key : "cis1dr2BP", value : {en_us : "Starting shortly, Please wait", ta_in : "விரைவில் துவங்குவேன். வருகிறேன்", kn_in : "ಪ್ರಾರಂಭಿಸಲಾಗುತ್ತಿದೆ,ದಯವಿಟ್ಟು ನಿರೀಕ್ಷಿಸಿ", hi_in : "थोड़ी देर में आ रहा हूँ", ml_in : "ഉടനെ പുറപ്പെടും, ദയവായി കാത്തിരിക്കുക", bn_in : "আমি শীঘ্রই আসছি, দয়া করে অপেক্ষা করুন" }},
@@ -241,7 +241,7 @@ getMessageFromKey key language = do
     let suggestions = (suggestionsDefinitions "")
     let message = filter(\item -> item.key == key) suggestions
     case head message of
-      Just value -> case language of 
+      Just value -> case language of
                       "EN_US" -> value.value.en_us
                       "HI_IN" -> value.value.hi_in
                       "KN_IN" -> value.value.kn_in
@@ -256,7 +256,7 @@ getSuggestionsfromKey :: String -> Array String
 getSuggestionsfromKey key = do
   let decodedSuggestions = getSuggestionsfromLocal key
   case (head decodedSuggestions) of
-    Just value -> if value == "error" then do 
+    Just value -> if value == "error" then do
                                             let suggestions = (getSuggestions "")
                                             let replies = filter(\item -> item.key == key) suggestions
                                             concatMap (\item -> item.value) replies

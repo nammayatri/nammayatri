@@ -61,8 +61,8 @@ isBatchNumExceedLimit driverPoolConfig searchTryId = do
   currentBatchNum <- getPoolBatchNum searchTryId
   return $ currentBatchNum >= maxNumberOfBatches
 
-previouslyAttemptedDriversKey :: Id DSR.SearchRequest -> Text
-previouslyAttemptedDriversKey searchReqId = "Driver-Offer:PreviouslyAttemptedDrivers:SearchReqId-" <> searchReqId.getId
+previouslyAttemptedDriversKey :: Id DST.SearchTry -> Text
+previouslyAttemptedDriversKey searchTryId = "Driver-Offer:PreviouslyAttemptedDrivers:SearchTryId-" <> searchTryId.getId
 
 prepareDriverPoolBatch ::
   ( EncFlow m r,
@@ -88,10 +88,14 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
       radiusStep <- getPoolRadiusStep searchReq.id
       transporterConfig <- TC.findByMerchantId searchReq.providerId >>= fromMaybeM (TransporterConfigDoesNotExist searchReq.providerId.getId)
       intelligentPoolConfig <- DIP.findByMerchantId searchReq.providerId >>= fromMaybeM (InternalError "Intelligent Pool Config not found")
+
+      blockListedDrivers <- getBlockListedDrivers (mkBlockListedDriversKey searchReq.id)
+
       allNearbyDriversCurrentlyNotOnRide <- calcDriverPool radiusStep
       let reduceRadiusValue = driverPoolCfg.radiusShrinkValueForDriversOnRide
       allNearbyDriversCurrentlyOnRide <- calcDriverCurrentlyOnRidePool radiusStep reduceRadiusValue transporterConfig
-      let allNearbyDrivers = allNearbyDriversCurrentlyOnRide ++ allNearbyDriversCurrentlyNotOnRide
+      let driverPoolList = allNearbyDriversCurrentlyOnRide ++ allNearbyDriversCurrentlyNotOnRide
+      let allNearbyDrivers = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` blockListedDrivers) driverPoolList
       let sortingType = driverPoolCfg.poolSortingType
       let batchSize = driverPoolCfg.driverBatchSize
       logDebug $ "DriverPool-" <> show allNearbyDrivers
@@ -108,6 +112,8 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
           else calculatePool batchSize sortingType onlyNewDrivers allNearbyDrivers intelligentPoolConfig transporterConfig
       pure $ addDistanceSplitConfigBasedDelaysForDriversWithinBatch driverPoolWithoutBatchSplitDelays
       where
+        getBlockListedDrivers = Redis.getList
+
         calculatePool batchSize sortingType onlyNewDrivers allNearbyDrivers intelligentPoolConfig transporterConfig = do
           driverPoolBatch <- mkDriverPoolBatch batchSize sortingType onlyNewDrivers intelligentPoolConfig transporterConfig
           logDebug $ "DriverPoolBatch-" <> show driverPoolBatch
@@ -198,8 +204,8 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
           Random -> pure $ take fillSize driversWithValidReqAmount
     cacheBatch batch = do
       logDebug $ "Caching batch-" <> show batch
-      batches <- previouslyAttemptedDrivers searchReq.id
-      Redis.withCrossAppRedis $ Redis.setExp (previouslyAttemptedDriversKey searchReq.id) (batches <> batch) (60 * 30)
+      batches <- previouslyAttemptedDrivers searchTry.id
+      Redis.withCrossAppRedis $ Redis.setExp (previouslyAttemptedDriversKey searchTry.id) (batches <> batch) (60 * 30)
     -- splitDriverPoolForSorting :: minQuotes Int -> [DriverPool Array] -> ([GreaterThanMinQuotesDP], [LessThanMinQuotesDP])
     splitDriverPoolForSorting merchantId minQuotes =
       foldrM
@@ -219,7 +225,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
       let maxRadiusStep = ceiling $ (maxRadiusOfSearch - minRadiusOfSearch) / radiusStepSize
       return $ maxRadiusStep <= radiusStep
     getPreviousBatchesDrivers = do
-      batches <- previouslyAttemptedDrivers searchReq.id
+      batches <- previouslyAttemptedDrivers searchTry.id
       return $ (.driverPoolResult.driverId) <$> batches
     -- util function
     bimapM fna fnb (a, b) = (,) <$> fna a <*> fnb b
@@ -232,11 +238,11 @@ splitSilentDriversAndSortWithDistance drivers = do
 previouslyAttemptedDrivers ::
   ( Redis.HedisFlow m r
   ) =>
-  Id DSR.SearchRequest ->
+  Id DST.SearchTry ->
   m [DriverPoolWithActualDistResult]
-previouslyAttemptedDrivers searchReqId = do
+previouslyAttemptedDrivers searchTryId = do
   Redis.withCrossAppRedis $
-    Redis.safeGet (previouslyAttemptedDriversKey searchReqId)
+    Redis.safeGet (previouslyAttemptedDriversKey searchTryId)
       >>= maybe whenFoundNothing whenFoundSomething
   where
     whenFoundNothing = do

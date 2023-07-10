@@ -318,11 +318,11 @@ currentFlowStatus = do
         resp <- lift $ lift $ Remote.updateProfile (Remote.mkUpdateProfileRequest)
         pure unit
 
-      let middleName = case response.middleName of 
+      let middleName = case response.middleName of
                     Just ""  -> ""
                     Just name -> (" " <> name)
                     Nothing -> ""
-          lastName   = case response.lastName of 
+          lastName   = case response.lastName of
                     Just "" -> ""
                     Just name -> (" " <> name)
                     Nothing -> ""
@@ -518,7 +518,7 @@ accountSetUpScreenFlow = do
       case gender of
           Just value -> void $ pure $ setCleverTapUserData "gender" value
           Nothing -> pure unit
-      
+
       resp <- lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
       case resp of
         Right response -> do
@@ -812,6 +812,7 @@ homeScreenFlow = do
       _ <- Remote.cancelRideBT (Remote.makeCancelRequest state) (state.props.bookingId)
       _ <- pure $ clearWaitingTimer <$> state.props.waitingTimeTimerIds
       _ <- pure $ firebaseLogEvent "ny_user_ride_cancelled_by_user"
+      removeChatService ""
       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props { isBanner = state.props.isBanner}})
       homeScreenFlow
     FCM_NOTIFICATION notification state-> do

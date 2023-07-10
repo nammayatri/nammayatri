@@ -43,8 +43,9 @@ import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (Stage(..), ZoneType(..))
-import Storage (isLocalStageOn)
+import Storage (isLocalStageOn, getValueToLocalStore)
 import Styles.Colors as Color
+import Storage (KeyStore(..))
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -423,7 +424,7 @@ messageNotificationView push state =
               , text $ getString REPLY
               , color Color.black900
               , ellipsize true
-              , padding $ if os == "IOS" then PaddingBottom 1 else PaddingBottom 0
+              , margin $ MarginTop $ if (getValueToLocalStore LANGUAGE_KEY) == "KN_IN" then 6 else 0
               , textSize FontSize.a_12
               , lineHeight "15"
               , fontStyle $ FontStyle.bold LanguageStyle
