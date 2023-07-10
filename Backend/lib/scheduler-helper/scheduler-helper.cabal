@@ -4,9 +4,9 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 
-name:           scheduler
+name:           scheduler-helper
 version:        0.1.0.0
-description:    Please see the README on GitHub
+description:    Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
 homepage:       https://github.com/nammayatri/nammayatri#readme
 bug-reports:    https://github.com/nammayatri/nammayatri/issues
 author:         nammayatri
@@ -21,20 +21,10 @@ source-repository head
 
 library
   exposed-modules:
-      Lib.Scheduler
-      Lib.Scheduler.App
-      Lib.Scheduler.Environment
-      Lib.Scheduler.Error
-      Lib.Scheduler.Handler
-      Lib.Scheduler.JobHandler
-      Lib.Scheduler.JobStorageType.DB.Queries
-      Lib.Scheduler.JobStorageType.DB.Table
-      Lib.Scheduler.JobStorageType.Redis.Queries
-      Lib.Scheduler.Metrics
-      Lib.Scheduler.ScheduleJob
-      Lib.Scheduler.Types
+      Storage.Redis.Queries
+      Storage.Redis.Types
   other-modules:
-      Paths_scheduler
+      Paths_scheduler_helper
   hs-source-dirs:
       src
   default-extensions:
@@ -55,7 +45,9 @@ library
       MultiWayIf
       NamedFieldPuns
       NoImplicitPrelude
+      OverloadedLabels
       OverloadedStrings
+      PackageImports
       PatternSynonyms
       PolyKinds
       RankNTypes
@@ -69,23 +61,16 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns
   build-depends:
       aeson
     , base >=4.7 && <5
-    , containers
-    , exceptions
-    , mobility-core
-    , prometheus-client
+    , bytestring
+    , hedis
     , record-dot-preprocessor
     , record-hasfield
-    , scheduler-helper
-    , servant-server
-    , singletons
+    , string-conversions
     , text
+    , text-conversions
     , time
-    , transformers
-    , unliftio
-    , unliftio-core
-    , uuid
   default-language: Haskell2010

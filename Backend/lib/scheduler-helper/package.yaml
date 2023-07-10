@@ -1,4 +1,4 @@
-name: scheduler
+name: scheduler-helper
 version: 0.1.0.0
 github: "nammayatri/nammayatri"
 license: AllRightsReserved
@@ -13,7 +13,7 @@ copyright: "2023 Juspay Technologies Private Limited"
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description: Please see the README on GitHub
+description: Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
 
 default-extensions:
   - ConstraintKinds
@@ -33,7 +33,9 @@ default-extensions:
   - MultiWayIf
   - NamedFieldPuns
   - NoImplicitPrelude
+  - OverloadedLabels
   - OverloadedStrings
+  - PackageImports
   - PatternSynonyms
   - PolyKinds
   - RankNTypes
@@ -49,41 +51,29 @@ default-extensions:
   - UndecidableInstances
 
 dependencies:
+  - aeson
   - base >= 4.7 && < 5
+  - bytestring
   - record-dot-preprocessor
   - record-hasfield
   - text
   - time
-  - aeson
-  - exceptions
-  - containers
-  - transformers
-  - unliftio
-  - unliftio-core
-  - prometheus-client
-  - servant-server
-  - singletons
-  - uuid
+  - string-conversions
+  - hedis
+  - bytestring
+  - text-conversions
 
 ghc-options:
-  - -fwrite-ide-info
-  - -hiedir=.hie
   - -Wall
   - -Wcompat
-  - -Widentities
-  - -fhide-source-paths
   - -Werror
+  - -Widentities
+  - -Wunused-imports
   - -fplugin=RecordDotPreprocessor
+  - -fwrite-ide-info
+  - -hiedir=.hie
 
 library:
-  source-dirs:
-    - src
+  source-dirs: src
   ghc-options:
-    - -Wall
-    - -Wcompat
-    - -Widentities
-    - -fhide-source-paths
-    - -Werror
-  dependencies:
-    - mobility-core
-    - scheduler-helper
+    - -Wincomplete-uni-patterns

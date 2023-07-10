@@ -27,6 +27,7 @@ packages:
   lib/beckn-services
   lib/payment
   lib/shared-services
+  lib/scheduler-helper
   lib/location-updates
   lib/special-zone
   lib/scheduler

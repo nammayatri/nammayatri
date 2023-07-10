@@ -28,6 +28,7 @@ where
 
 import qualified Data.Map as M
 import EulerHS.Prelude (newEmptyTMVarIO)
+import Job.Creator
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Infobip.Types (InfoBIPConfig, WebengageConfig)
 import Kernel.External.Slack.Types (SlackConfig)
@@ -167,6 +168,7 @@ data AppEnv = AppEnv
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
+  scheduleJob
   hostname <- getPodName
   version <- lookupDeploymentVersion
   isShuttingDown <- newEmptyTMVarIO

@@ -104,7 +104,8 @@ data AppCfg = AppCfg
     enablePrometheusMetricLogging :: Bool,
     enableAPILatencyLogging :: Bool,
     enableAPIPrometheusMetricLogging :: Bool,
-    eventStreamMap :: [EventStreamMap]
+    eventStreamMap :: [EventStreamMap],
+    jobStreamName :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -171,7 +172,8 @@ data AppEnv = AppEnv
     enablePrometheusMetricLogging :: Bool,
     enableAPILatencyLogging :: Bool,
     enableAPIPrometheusMetricLogging :: Bool,
-    eventStreamMap :: [EventStreamMap]
+    eventStreamMap :: [EventStreamMap],
+    jobStreamName :: Text
   }
   deriving (Generic)
 
