@@ -12,22 +12,20 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Search.StartInfo
-  ( module Beckn.Types.Core.Taxi.Search.StartInfo,
-    module Reexport,
-  )
-where
+module Beckn.Types.Core.Taxi.Common.FulfillmentType where
 
-import Beckn.Types.Core.Taxi.Common.TimeTimestamp as Reexport
-import Beckn.Types.Core.Taxi.Search.Location (Location)
-import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
-import EulerHS.Prelude hiding (id)
-import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
+import Kernel.Prelude hiding (show)
 
-data StartInfo = StartInfo
-  { location :: Location
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-instance ToSchema StartInfo where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+data FulfillmentType
+  = RIDE
+  | RIDE_OTP
+  deriving
+    ( Eq,
+      Ord,
+      Generic,
+      ToSchema,
+      Show,
+      FromJSON,
+      ToJSON,
+      Read
+    )

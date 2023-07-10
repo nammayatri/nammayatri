@@ -61,7 +61,7 @@ buildInitMessage res = do
       { order =
           Init.Order
             { items = [mkOrderItem mbBppItemId itemCode],
-              fulfillment = mkFulfillmentInfo res.fromLoc res.toLoc res.startTime res.maxEstimatedDistance,
+              fulfillment = mkFulfillmentInfo res.fromLoc res.toLoc res.maxEstimatedDistance,
               payment = mkPayment res.paymentMethodInfo
             }
       }
@@ -84,8 +84,8 @@ mkOrderItem mbBppItemId code =
           }
     }
 
-mkFulfillmentInfo :: LatLong -> Maybe LatLong -> UTCTime -> Maybe HighPrecMeters -> Init.FulfillmentInfo
-mkFulfillmentInfo fromLoc mbToLoc startTime maxDistance =
+mkFulfillmentInfo :: LatLong -> Maybe LatLong -> Maybe HighPrecMeters -> Init.FulfillmentInfo
+mkFulfillmentInfo fromLoc mbToLoc maxDistance =
   Init.FulfillmentInfo
     { tags =
         Init.Tags
@@ -101,8 +101,7 @@ mkFulfillmentInfo fromLoc mbToLoc startTime maxDistance =
                         lon = fromLoc.lon
                       },
                   address = Nothing
-                },
-            time = Init.TimeTimestamp startTime
+                }
           },
       end =
         mbToLoc >>= \toLoc ->

@@ -33,6 +33,7 @@ buildSearchReq ::
   Search.SearchReq ->
   m DSearch.DSearchReq
 buildSearchReq subscriber req = do
+  now <- getCurrentTime
   let context = req.context
   validateContext Context.SEARCH context
   let intent = req.message.intent
@@ -57,7 +58,7 @@ buildSearchReq subscriber req = do
         bapCity = context.city,
         bapCountry = context.country,
         pickupLocation = LatLong {lat = pickup.location.gps.lat, lon = pickup.location.gps.lon},
-        pickupTime = pickup.time.timestamp,
+        pickupTime = now,
         dropLocation = LatLong {lat = dropOff.location.gps.lat, lon = dropOff.location.gps.lon},
         pickupAddress = pickup.location.address,
         dropAddrress = dropOff.location.address,

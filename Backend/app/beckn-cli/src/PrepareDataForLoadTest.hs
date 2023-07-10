@@ -98,8 +98,7 @@ generateSearchRequest = do
                                 API.Location
                                   { gps = API.Gps {lat = 20.5937, lon = 78.9629},
                                     address = Nothing
-                                  },
-                              time = API.TimeTimestamp example
+                                  }
                             },
                         end =
                           API.StopInfo
@@ -124,7 +123,5 @@ generateSearchRequest = do
                         --   }
                       }
                 }
-                -- routeInfo = Nothing,
-                -- device = Nothing
           }
   pure $ API.BecknReq context intent

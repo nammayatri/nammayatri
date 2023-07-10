@@ -39,7 +39,6 @@ buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
     origin
     destination
     searchId
-    now
     device
     (shortestRouteInfo >>= (.distance))
     (shortestRouteInfo >>= (.duration))
@@ -58,7 +57,6 @@ buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
     origin
     origin
     searchId
-    startTime
     Nothing
     Nothing
     Nothing
@@ -71,7 +69,6 @@ buildSearchReq ::
   DSearchCommon.SearchReqLocation ->
   DSearchCommon.SearchReqLocation ->
   Id DSearchReq.SearchRequest ->
-  UTCTime ->
   Maybe Text ->
   Maybe Meters ->
   Maybe Seconds ->
@@ -79,12 +76,12 @@ buildSearchReq ::
   DM.Merchant ->
   Maybe [Maps.LatLong] ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin destination searchId startTime _ distance duration customerLanguage merchant points = do
+buildSearchReq origin destination searchId _ distance duration customerLanguage merchant points = do
   let transactionId = getId searchId
       messageId = transactionId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/cab/v1/" <> T.unpack merchant.id.getId)
   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.city merchant.country
-  let intent = mkIntent origin destination startTime customerLanguage distance duration
+  let intent = mkIntent origin destination customerLanguage distance duration
   -- let mbRouteInfo = Search.RouteInfo {distance, duration, points}
   let searchMessage = Search.SearchMessage intent
 
@@ -93,16 +90,14 @@ buildSearchReq origin destination searchId startTime _ distance duration custome
 mkIntent ::
   DSearchCommon.SearchReqLocation ->
   DSearchCommon.SearchReqLocation ->
-  UTCTime ->
   Maybe Maps.Language ->
   Maybe Meters ->
   Maybe Seconds ->
   Search.Intent
-mkIntent origin destination startTime customerLanguage distance duration = do
+mkIntent origin destination customerLanguage distance duration = do
   let startLocation =
         Search.StartInfo
-          { location = mkLocation origin,
-            time = Search.TimeTimestamp startTime
+          { location = mkLocation origin
           }
       endLocation =
         Search.StopInfo

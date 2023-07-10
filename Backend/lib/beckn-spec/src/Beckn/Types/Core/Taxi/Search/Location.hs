@@ -22,13 +22,20 @@ import Beckn.Types.Core.Taxi.Common.Address as Reexport
 import Beckn.Types.Core.Taxi.Common.Gps as Reexport
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude
+import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Location = Location
   { gps :: Gps,
     address :: Maybe Address
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show)
 
 instance ToSchema Location where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance ToJSON Location where
+  toJSON = genericToJSON removeNullFields
+
+instance FromJSON Location where
+  parseJSON = genericParseJSON removeNullFields
