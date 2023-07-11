@@ -32,7 +32,7 @@ data Payment = Payment
   { collected_by :: Maybe PaymentCollector,
     _type :: Maybe PaymentType,
     instrument :: Maybe PaymentInstrument, -- FIXME find proper fields
-    time :: TimeDuration, -- FIXME: what is this?
+    status :: Text,
     uri :: Maybe Text
   }
   deriving (Generic, Show)

@@ -177,6 +177,8 @@ sendRideStartedUpdateToBAP booking ride = do
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   let rideStartedBuildReq = ACL.RideStartedBuildReq {..}
   rideStartedMsg <- ACL.buildOnUpdateMessage rideStartedBuildReq
 
@@ -204,7 +206,9 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  let rideCompletedBuildReq = ACL.RideCompletedBuildReq {ride, fareParams, paymentMethodInfo, paymentUrl}
+  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+  let rideCompletedBuildReq = ACL.RideCompletedBuildReq {..}
   rideCompletedMsg <- ACL.buildOnUpdateMessage rideCompletedBuildReq
 
   retryConfig <- asks (.longDurationRetryCfg)
@@ -291,7 +295,9 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  let driverArrivedBuildReq = ACL.DriverArrivedBuildReq {ride, arrivalTime}
+  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+  let driverArrivedBuildReq = ACL.DriverArrivedBuildReq {..}
   driverArrivedMsg <- ACL.buildOnUpdateMessage driverArrivedBuildReq
 
   retryConfig <- asks (.shortDurationRetryCfg)

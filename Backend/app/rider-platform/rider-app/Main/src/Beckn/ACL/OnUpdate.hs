@@ -16,6 +16,7 @@ module Beckn.ACL.OnUpdate (buildOnUpdateReq) where
 
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as OnUpdate
+import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnUpdate as DOnUpdate
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import EulerHS.Prelude hiding (state)
@@ -53,35 +54,54 @@ handleError etr action =
       pure Nothing
 
 parseEvent :: (MonadFlow m) => Text -> OnUpdate.OnUpdateEvent -> m DOnUpdate.OnUpdateReq
-parseEvent _ (OnUpdate.RideAssigned taEvent) =
+parseEvent _ (OnUpdate.RideAssigned taEvent) = do
+  vehicle <- fromMaybeM (InvalidRequest "vehicle is not present in RideAssigned Event.") $ taEvent.fulfillment.vehicle
+  agent <- fromMaybeM (InvalidRequest "agent is not present in RideAssigned Event.") $ taEvent.fulfillment.agent
+  logDebug "This One Blew"
   return $
     DOnUpdate.RideAssignedReq
       { bppBookingId = Id taEvent.id,
         bppRideId = Id taEvent.fulfillment.id,
         otp = taEvent.fulfillment.start.authorization.token,
-        driverName = taEvent.fulfillment.agent.name,
-        driverMobileNumber = taEvent.fulfillment.agent.phone,
-        driverRating = realToFrac <$> taEvent.fulfillment.agent.rating,
-        driverRegisteredAt = taEvent.fulfillment.agent.tags.registered_at,
-        vehicleNumber = taEvent.fulfillment.vehicle.registration,
-        vehicleColor = taEvent.fulfillment.vehicle.color,
-        vehicleModel = taEvent.fulfillment.vehicle.model
+        driverName = agent.name,
+        driverMobileNumber = agent.phone,
+        driverRating = realToFrac <$> agent.tags.rating,
+        driverRegisteredAt = agent.tags.registered_at,
+        vehicleNumber = vehicle.registration,
+        vehicleColor = vehicle.color,
+        vehicleModel = vehicle.model
       }
-parseEvent _ (OnUpdate.RideStarted rsEvent) =
+parseEvent _ (OnUpdate.RideStarted rsEvent) = do
+  logDebug "This One Blew RideStarted"
   return $
     DOnUpdate.RideStartedReq
       { bppBookingId = Id rsEvent.id,
         bppRideId = Id rsEvent.fulfillment.id
       }
-parseEvent _ (OnUpdate.RideCompleted rcEvent) =
+parseEvent _ (OnUpdate.RideCompleted rcEvent) = do
+  logDebug "This One Blew RideCompleted"
+  let tagsGroup = rcEvent.fulfillment.tags
+      distanceInfoGroup = find (\tagGroup -> tagGroup.code == "ride_distance_details") tagsGroup -- maybe don't have tags and all in our domain types, get rid of them in formJSON toJSON itself similar to agentTags above?
+  chargeableDistance :: HighPrecMeters <-
+    fromMaybeM (InvalidRequest "chargeable_distance is not present.") $
+      readMaybe . T.unpack
+        =<< (.value)
+        =<< find (\tag -> tag.code == Just "chargeable_distance") . (.list)
+        =<< distanceInfoGroup
+  traveledDistance :: HighPrecMeters <-
+    fromMaybeM (InvalidRequest "traveled_distance is not present.") $
+      readMaybe . T.unpack
+        =<< (.value)
+        =<< find (\tag -> tag.code == Just "traveled_distance") . (.list)
+        =<< distanceInfoGroup
   return $
     DOnUpdate.RideCompletedReq
       { bppBookingId = Id rcEvent.id,
         bppRideId = Id rcEvent.fulfillment.id,
         fare = roundToIntegral rcEvent.quote.price.value,
         totalFare = roundToIntegral rcEvent.quote.price.computed_value,
-        chargeableDistance = realToFrac rcEvent.fulfillment.chargeable_distance,
-        traveledDistance = realToFrac rcEvent.fulfillment.traveled_distance,
+        chargeableDistance = chargeableDistance,
+        traveledDistance = traveledDistance,
         fareBreakups = mkOnUpdateFareBreakup <$> rcEvent.quote.breakup,
         paymentUrl = rcEvent.payment >>= (.uri)
       }
@@ -91,27 +111,40 @@ parseEvent _ (OnUpdate.RideCompleted rcEvent) =
         { amount = realToFrac breakup.price.value,
           description = breakup.title
         }
-parseEvent _ (OnUpdate.BookingCancelled tcEvent) =
+parseEvent _ (OnUpdate.BookingCancelled tcEvent) = do
+  logDebug "This One Blew BookingCancelled"
   return $
     DOnUpdate.BookingCancelledReq
       { bppBookingId = Id $ tcEvent.id,
         cancellationSource = castCancellationSource tcEvent.cancellation_reason
       }
-parseEvent _ (OnUpdate.BookingReallocation rbrEvent) =
+parseEvent _ (OnUpdate.BookingReallocation rbrEvent) = do
+  logDebug "This One Blew BookingReallocation"
   return $
     DOnUpdate.BookingReallocationReq
       { bppBookingId = Id $ rbrEvent.id,
         bppRideId = Id rbrEvent.fulfillment.id,
         reallocationSource = castCancellationSource rbrEvent.reallocation_reason
       }
-parseEvent _ (OnUpdate.DriverArrived daEvent) =
+parseEvent _ (OnUpdate.DriverArrived daEvent) = do
+  logDebug "This One Blew DriverArrived"
+  let tagsGroup = daEvent.fulfillment.tags
+      driverArrivalGroup = find (\tagGroup -> tagGroup.code == "driver_arrived_info") tagsGroup
+  logDebug "No its me"
+  arrival_time <-
+    fromMaybeM (InvalidRequest "arrival_time is not present.") $
+      readMaybe . T.unpack
+        =<< (.value)
+        =<< find (\tag -> tag.code == Just "arrival_time") . (.list)
+        =<< driverArrivalGroup
   return $
     DOnUpdate.DriverArrivedReq
       { bppBookingId = Id daEvent.id,
         bppRideId = Id daEvent.fulfillment.id,
-        arrivalTime = daEvent.arrival_time
+        arrivalTime = arrival_time
       }
-parseEvent _ (OnUpdate.NewMessage daEvent) =
+parseEvent _ (OnUpdate.NewMessage daEvent) = do
+  logDebug "This One Blew NewMessage"
   return $
     DOnUpdate.NewMessageReq
       { bppBookingId = Id daEvent.id,
@@ -119,13 +152,23 @@ parseEvent _ (OnUpdate.NewMessage daEvent) =
         message = daEvent.message
       }
 parseEvent transactionId (OnUpdate.EstimateRepetition erEvent) = do
+  logDebug "This One Blew EstimateRepetition"
+  let tagsGroup = erEvent.fulfillment.tags
+      previousCancellationReasonsGroup = find (\tagGroup -> tagGroup.code == "previous_cancellation_reasons") tagsGroup
+  cancellationReason <-
+    fromMaybeM (InvalidRequest "cancellation_reason is not present.") $
+      readMaybe . T.unpack
+        =<< (.value)
+        =<< find (\tag -> tag.code == Just "cancellation_reason") . (.list)
+        =<< previousCancellationReasonsGroup
+
   return $
     DOnUpdate.EstimateRepetitionReq
       { searchRequestId = Id transactionId,
         bppEstimateId = Id erEvent.item.id,
         bppBookingId = Id $ erEvent.id,
         bppRideId = Id erEvent.fulfillment.id,
-        cancellationSource = castCancellationSource erEvent.cancellation_reason
+        cancellationSource = castCancellationSource cancellationReason
       }
 
 castCancellationSource :: OnUpdate.CancellationSource -> SBCR.CancellationSource

@@ -72,10 +72,11 @@ library
       Beckn.Types.Core.Taxi.API.Update
       Beckn.Types.Core.Taxi.Cancel.Req
       Beckn.Types.Core.Taxi.Common.Address
+      Beckn.Types.Core.Taxi.Common.Agent
       Beckn.Types.Core.Taxi.Common.CancellationSource
       Beckn.Types.Core.Taxi.Common.DecimalValue
       Beckn.Types.Core.Taxi.Common.FareProductType
-      Beckn.Types.Core.Taxi.Common.FulfillmentType
+      Beckn.Types.Core.Taxi.Common.FulfillmentInfo
       Beckn.Types.Core.Taxi.Common.Gps
       Beckn.Types.Core.Taxi.Common.ItemCode
       Beckn.Types.Core.Taxi.Common.Payment
