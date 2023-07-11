@@ -89,7 +89,8 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
       transporterConfig <- TC.findByMerchantId searchReq.providerId >>= fromMaybeM (TransporterConfigDoesNotExist searchReq.providerId.getId)
       intelligentPoolConfig <- DIP.findByMerchantId searchReq.providerId >>= fromMaybeM (InternalError "Intelligent Pool Config not found")
 
-      blockListedDrivers <- getBlockListedDrivers (mkBlockListedDriversKey searchReq.id)
+      blockListedDrivers <- Redis.withCrossAppRedis $ Redis.getList (mkBlockListedDriversKey searchReq.id)
+      logDebug $ "Blocked Driver List-" <> show blockListedDrivers
 
       allNearbyDriversCurrentlyNotOnRide <- calcDriverPool radiusStep
       let reduceRadiusValue = driverPoolCfg.radiusShrinkValueForDriversOnRide
@@ -112,8 +113,6 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
           else calculatePool batchSize sortingType onlyNewDrivers allNearbyDrivers intelligentPoolConfig transporterConfig
       pure $ addDistanceSplitConfigBasedDelaysForDriversWithinBatch driverPoolWithoutBatchSplitDelays
       where
-        getBlockListedDrivers = Redis.getList
-
         calculatePool batchSize sortingType onlyNewDrivers allNearbyDrivers intelligentPoolConfig transporterConfig = do
           driverPoolBatch <- mkDriverPoolBatch batchSize sortingType onlyNewDrivers intelligentPoolConfig transporterConfig
           logDebug $ "DriverPoolBatch-" <> show driverPoolBatch

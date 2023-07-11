@@ -129,11 +129,11 @@ cancelRideImpl rideId bookingCReason = do
     addDriverToSearchCancelledList searchReqId ride = do
       let keyForDriverCancelledList = DP.mkBlockListedDriversKey searchReqId
       cacheBlockListedDrivers keyForDriverCancelledList ride.driverId
-      Redis.getList keyForDriverCancelledList
+      Redis.withCrossAppRedis $ Redis.getList keyForDriverCancelledList
 
     cacheBlockListedDrivers key driverId = do
       searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
-      Redis.rPushExp key [driverId] (round searchRequestExpirationSeconds)
+      Redis.withCrossAppRedis $ Redis.rPushExp key [driverId] (round searchRequestExpirationSeconds)
 
 cancelRideTransaction ::
   ( EsqDBFlow m r,
