@@ -31,7 +31,7 @@ import Data.String (length)
 import JBridge (hideKeyboardOnNavigation, toast, showDialer, firebaseLogEvent, scrollToEnd)
 import Services.Config (getSupportNumber)
 import Debug (spy)
-import Helpers.Utils (clearTimer, getPastDays, getPastWeeks, convertUTCtoISC)
+import Helpers.Utils (setRefreshing, clearTimer, getPastDays, getPastWeeks, convertUTCtoISC)
 import Storage (setValueToLocalNativeStore, KeyStore(..))
 import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC)
 import Data.Array (last, (!!), init, replicate, filter, sortWith, any)
@@ -51,6 +51,7 @@ instance loggableAction :: Loggable Action where
     BackPressed -> do
       trackAppBackPress appId (getScreen REFERRAL_SCREEN)
       trackAppEndScreen appId (getScreen REFERRAL_SCREEN)
+    RefreshScreen -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "in_screen" "refresh"
     BottomNavBarAction (BottomNavBar.OnNavigate item) -> do
       trackAppActionClick appId (getScreen REFERRAL_SCREEN) "bottom_nav_bar" "on_navigate"
       trackAppEndScreen appId (getScreen REFERRAL_SCREEN)
@@ -123,6 +124,7 @@ data Action = BottomNavBarAction BottomNavBar.Action
             | GoToAlertScreen
             | EnableReferralFlow
             | BackPressed
+            | RefreshScreen
             | EnableReferralFlowNoAction
             | SuccessScreenRenderAction
             | ChangeLeaderBoardtab LeaderBoardType
@@ -143,6 +145,7 @@ data ScreenOutput = GoToHomeScreen
 eval :: Action -> ReferralScreenState -> Eval Action ScreenOutput ReferralScreenState
 
 eval (UpdateLeaderBoard (LeaderBoardRes leaderBoardRes)) state = do
+  _ <- pure $ firebaseLogEvent "ny_driver_leaderboard"
   let dataLength = DA.length leaderBoardRes.driverList
       rankersData = sortWith (_.rank) (transformLeaderBoardList (filter (\(DriversInfo info) -> info.rank <= 10 && info.totalRides > 0 && info.rank > 0) leaderBoardRes.driverList)) <> (replicate (10 - dataLength) RSD.dummyRankData)
       currentDriverData = case (filter (\(DriversInfo info) -> info.isCurrentDriver && info.rank > 0 && info.totalRides > 0) leaderBoardRes.driverList) !! 0 of
@@ -150,6 +153,7 @@ eval (UpdateLeaderBoard (LeaderBoardRes leaderBoardRes)) state = do
                             Nothing         -> RSD.dummyRankData
       lastUpdatedAt = convertUTCtoISC (fromMaybe (getCurrentUTC "") leaderBoardRes.lastUpdatedAt) "h:mm A"
   let newState = state{ props { rankersData = rankersData, currentDriverData = currentDriverData, showShimmer = false, noData = not (dataLength > 0), lastUpdatedAt = lastUpdatedAt } }
+  _ <- pure $ setRefreshing (getNewIDWithTag "ReferralRefreshView") false
   if (any (_ == "") [state.props.selectedDay.utcDate, state.props.selectedWeek.utcStartDate, state.props.selectedWeek.utcEndDate]) then do
     let pastDates = getPastDays 7
         pastWeeks = getPastWeeks 4
@@ -162,7 +166,9 @@ eval (UpdateLeaderBoard (LeaderBoardRes leaderBoardRes)) state = do
     continue newState{ props{ days = pastDates, weeks = pastWeeks, selectedDay = selectedDay, selectedWeek = selectedWeek } }
   else continue newState
 
-eval UpdateLeaderBoardFailed state = continue state{ props{ showShimmer = false, noData = true } }
+eval UpdateLeaderBoardFailed state = do 
+  _ <- pure $ setRefreshing (getNewIDWithTag "ReferralRefreshView") false
+  continue state{ props{ showShimmer = false, noData = true } }
 
 eval (ChangeDate (DaySelector item)) state = do
   if state.props.selectedDay == item then
@@ -188,6 +194,8 @@ eval (ChangeLeaderBoardtab tab) state = do
   updateAndExit newState $ Refresh newState
 
 eval BackPressed state = exit $ GoBack
+
+eval RefreshScreen state = exit $ Refresh state
 
 eval EnableReferralFlow state = do
   if (state.props.enableReferralFlowCount >= 5 ) then do

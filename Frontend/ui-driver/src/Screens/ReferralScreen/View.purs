@@ -33,7 +33,7 @@ import JBridge (openUrlInApp, startTimerWithTime, toast)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, discard, show, (>), void, (/=), (/), (*), (+), not, (||), negate, (<=), (&&), (-))
-import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Gradient(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, alpha, relativeLayout, scrollView, alignParentRight, alignParentBottom, imageWithFallback, frameLayout, horizontalScrollView, scrollBarX, scrollBarY, id, gradient, rotation, rotationY, shimmerFrameLayout)
+import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Gradient(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, alpha, relativeLayout, scrollView, alignParentRight, alignParentBottom, imageWithFallback, frameLayout, horizontalScrollView, scrollBarX, scrollBarY, id, gradient, rotation, rotationY, shimmerFrameLayout, onRefresh,  swipeRefreshLayout)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -54,7 +54,7 @@ import Effect.Class (liftEffect)
 import Control.Monad.Except.Trans (runExceptT , lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Presto.Core.Types.Language.Flow (doAff)
-import Helpers.Utils (countDown, getPastWeeks, convertUTCtoISC, getPastDays, getPastWeeks)
+import Helpers.Utils (setRefreshing, countDown, getPastWeeks, convertUTCtoISC, getPastDays, getPastWeeks)
 import Screens.ReferralScreen.ComponentConfig
 import Screens as ScreenNames
 import Data.Either (Either(..))
@@ -74,6 +74,7 @@ screen initialState =
                                               Just day -> day
                                               Nothing -> initialState.props.selectedDay
                                           else initialState.props.selectedDay
+
                       leaderBoardRes <- lift $ lift $ Remote.leaderBoard $ DailyRequest (convertUTCtoISC selectedDay.utcDate "YYYY-MM-DD")
                       case leaderBoardRes of
                         Right res -> lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoard res
@@ -232,7 +233,7 @@ leaderBoard push state =
       ]([ if state.props.noData then
             noDataView state
           else
-            leaderBoardRanks state
+            leaderBoardRanksCover push state
         , dateSelector push state
           ]<> if state.props.currentDriverData.rank > 10 then [currentDriverRank state] else []
       )
@@ -347,8 +348,19 @@ dateAndTime push state =
         , gravity RIGHT
         , weight 1.0
         ]
-    ]
+  ]
 
+leaderBoardRanksCover :: forall w . (Action -> Effect Unit) -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
+leaderBoardRanksCover push state = 
+  swipeRefreshLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , orientation VERTICAL
+  , onRefresh push $ const RefreshScreen
+  , id (getNewIDWithTag "ReferralRefreshView")
+  ][  leaderBoardRanks state
+  ]
+  
 leaderBoardRanks :: forall w . ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
 leaderBoardRanks state =
   scrollView
