@@ -19,6 +19,7 @@ module API.ProviderPlatform.DynamicOfferDriver.Merchant
 where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as Common
+import Domain.Types.AccessMatrix.BPP.MerchantActionType
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
@@ -30,7 +31,7 @@ import Kernel.Utils.Validation (runRequestValidation)
 import qualified ProviderPlatformClient.DynamicOfferDriver as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
-import "lib-dashboard" Tools.Auth
+import "lib-dashboard" Tools.Auth hiding (MerchantActionType (..))
 import "lib-dashboard" Tools.Auth.Merchant
 
 type API =
@@ -57,79 +58,79 @@ type API =
        )
 
 type MerchantUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'MERCHANT_UPDATE
+  ApiAuth ('DriverOfferBPP ('MERCHANT 'UPDATE))
     :> Common.MerchantUpdateAPI
 
 type MerchantCommonConfigAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'MERCHANT_COMMON_CONFIG
+  ApiAuth ('DriverOfferBPP ('MERCHANT 'COMMON_CONFIG))
     :> Common.MerchantCommonConfigAPI
 
 type MerchantCommonConfigUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'MERCHANT_COMMON_CONFIG_UPDATE
+  ApiAuth ('DriverOfferBPP ('MERCHANT 'COMMON_CONFIG_UPDATE))
     :> Common.MerchantCommonConfigUpdateAPI
 
 type DriverPoolConfigAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'DRIVER_POOL_CONFIG
+  ApiAuth ('DriverOfferBPP ('MERCHANT 'DRIVER_POOL_CONFIG))
     :> Common.DriverPoolConfigAPI
 
 type DriverPoolConfigUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'DRIVER_POOL_CONFIG_UPDATE
+  ApiAuth ('DriverOfferBPP ('MERCHANT 'DRIVER_POOL_CONFIG_UPDATE))
     :> Common.DriverPoolConfigUpdateAPI
 
 type DriverPoolConfigCreateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'DRIVER_POOL_CONFIG_CREATE
+  ApiAuth ('DriverOfferBPP ('MERCHANT 'DRIVER_POOL_CONFIG_CREATE))
     :> Common.DriverPoolConfigCreateAPI
 
 type DriverIntelligentPoolConfigAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'DRIVER_INTELLIGENT_POOL_CONFIG
+  ApiAuth ('DriverOfferBPP ('MERCHANT 'DRIVER_INTELLIGENT_POOL_CONFIG))
     :> Common.DriverIntelligentPoolConfigAPI
 
 type DriverIntelligentPoolConfigUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'DRIVER_INTELLIGENT_POOL_CONFIG_UPDATE
+  ApiAuth ('DriverOfferBPP ('MERCHANT 'DRIVER_INTELLIGENT_POOL_CONFIG_UPDATE))
     :> Common.DriverIntelligentPoolConfigUpdateAPI
 
 type OnboardingDocumentConfigAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'ONBOARDING_DOCUMENT_CONFIG
+  ApiAuth ('DriverOfferBPP ('MERCHANT 'ONBOARDING_DOCUMENT_CONFIG))
     :> Common.OnboardingDocumentConfigAPI
 
 type OnboardingDocumentConfigUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'ONBOARDING_DOCUMENT_CONFIG_UPDATE
+  ApiAuth ('DriverOfferBPP ('MERCHANT 'ONBOARDING_DOCUMENT_CONFIG_UPDATE))
     :> Common.OnboardingDocumentConfigUpdateAPI
 
 type OnboardingDocumentConfigCreateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'ONBOARDING_DOCUMENT_CONFIG_CREATE
+  ApiAuth ('DriverOfferBPP ('MERCHANT 'ONBOARDING_DOCUMENT_CONFIG_CREATE))
     :> Common.OnboardingDocumentConfigCreateAPI
 
 type ServiceUsageConfigAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'SERVICE_USAGE_CONFIG
+  ApiAuth ('DriverOfferBPP ('MERCHANT 'SERVICE_USAGE_CONFIG))
     :> Common.ServiceUsageConfigAPI
 
 type MapsServiceConfigUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'MAPS_SERVICE_CONFIG_UPDATE
+  ApiAuth ('DriverOfferBPP ('MERCHANT 'MAPS_SERVICE_CONFIG_UPDATE))
     :> Common.MapsServiceConfigUpdateAPI
 
 type MapsServiceUsageConfigUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'MAPS_SERVICE_USAGE_CONFIG_UPDATE
+  ApiAuth ('DriverOfferBPP ('MERCHANT 'MAPS_SERVICE_USAGE_CONFIG_UPDATE))
     :> Common.MapsServiceUsageConfigUpdateAPI
 
 type SmsServiceConfigUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'SMS_SERVICE_CONFIG_UPDATE
+  ApiAuth ('DriverOfferBPP ('MERCHANT 'SMS_SERVICE_CONFIG_UPDATE))
     :> Common.SmsServiceConfigUpdateAPI
 
 type SmsServiceUsageConfigUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'SMS_SERVICE_USAGE_CONFIG_UPDATE
+  ApiAuth ('DriverOfferBPP ('MERCHANT 'SMS_SERVICE_USAGE_CONFIG_UPDATE))
     :> Common.SmsServiceUsageConfigUpdateAPI
 
 type VerificationServiceConfigUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'VERIFICATION_SERVICE_CONFIG_UPDATE
+  ApiAuth ('DriverOfferBPP ('MERCHANT 'VERIFICATION_SERVICE_CONFIG_UPDATE))
     :> Common.VerificationServiceConfigUpdateAPI
 
 type CreateFPDriverExtraFee =
-  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'CREATE_FP_DRIVER_EXTRA_FEE
+  ApiAuth ('DriverOfferBPP ('MERCHANT 'CREATE_FP_DRIVER_EXTRA_FEE))
     :> Common.CreateFPDriverExtraFee
 
 type UpdateFPDriverExtraFee =
-  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'UPDATE_FP_DRIVER_EXTRA_FEE
+  ApiAuth ('DriverOfferBPP ('MERCHANT 'UPDATE_FP_DRIVER_EXTRA_FEE))
     :> Common.UpdateFPDriverExtraFee
 
 handler :: ShortId DM.Merchant -> FlowServer API

@@ -17,6 +17,7 @@ module API.RiderPlatform.RideBooking.Search where
 import qualified "rider-app" API.Dashboard.RideBooking.Search as BAP
 import qualified "rider-app" API.UI.Search as SH
 import qualified Dashboard.RiderPlatform.Customer as Common
+import Domain.Types.AccessMatrix.BAP
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "rider-app" Domain.Types.Person as DP
 import qualified Domain.Types.Transaction as DT
@@ -32,7 +33,7 @@ import Tools.Auth.Merchant
 
 type API =
   "search"
-    :> ApiAuth 'APP_BACKEND 'CUSTOMERS 'SEARCH
+    :> ApiAuth ('AppBackendBAP ('CUSTOMERS 'SEARCH))
     :> BAP.CustomerRideSearchAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API

@@ -36,8 +36,7 @@ data CreateRoleReq = CreateRoleReq
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data AssignAccessLevelReq = AssignAccessLevelReq
-  { apiEntity :: DMatrix.ApiEntity,
-    userActionType :: DMatrix.UserActionType,
+  { userActionType :: DMatrix.UserActionType,
     userAccessType :: DMatrix.UserAccessType
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -85,7 +84,7 @@ assignAccessLevel ::
   m APISuccess
 assignAccessLevel _ roleId req = do
   _role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
-  mbAccessMatrixItem <- QMatrix.findByRoleIdAndEntityAndActionType roleId req.apiEntity req.userActionType
+  mbAccessMatrixItem <- QMatrix.findByRoleIdAndEntityAndActionType roleId req.userActionType
   case mbAccessMatrixItem of
     Just accessMatrixItem -> do
       Esq.runTransaction $ do
@@ -108,7 +107,6 @@ buildAccessMatrixItem roleId req = do
     DMatrix.AccessMatrixItem
       { id = uid,
         roleId = roleId,
-        apiEntity = req.apiEntity,
         userActionType = req.userActionType,
         userAccessType = req.userAccessType,
         createdAt = now,

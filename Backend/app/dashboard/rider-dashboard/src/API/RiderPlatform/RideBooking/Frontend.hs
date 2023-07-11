@@ -17,6 +17,7 @@ module API.RiderPlatform.RideBooking.Frontend where
 import qualified "rider-app" API.Dashboard.RideBooking.Frontend as BAP
 import qualified Dashboard.RiderPlatform.Customer as Common
 import qualified "rider-app" Domain.Action.UI.Frontend as DFrontend
+import Domain.Types.AccessMatrix.BAP
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "rider-app" Domain.Types.Person as DP
 import qualified Domain.Types.Transaction as DT
@@ -32,9 +33,9 @@ import Tools.Auth.Merchant
 
 type API =
   "frontend"
-    :> ( ApiAuth 'APP_BACKEND 'CUSTOMERS 'FLOW_STATUS
+    :> ( ApiAuth ('AppBackendBAP ('CUSTOMERS 'FLOW_STATUS))
            :> BAP.PersonFlowStatusAPI
-           :<|> ApiAuth 'APP_BACKEND 'CUSTOMERS 'NOTIFYEVENT
+           :<|> ApiAuth ('AppBackendBAP ('CUSTOMERS 'NOTIFYEVENT))
              :> BAP.NotifyEventAPI
        )
 

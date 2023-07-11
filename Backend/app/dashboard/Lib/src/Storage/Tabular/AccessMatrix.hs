@@ -27,7 +27,6 @@ import Kernel.Types.Id
 import Storage.Tabular.Role (RoleTId)
 
 derivePersistField "Domain.UserAccessType"
-derivePersistField "Domain.ApiEntity"
 derivePersistField "Domain.UserActionType"
 
 mkPersist
@@ -36,7 +35,6 @@ mkPersist
     AccessMatrixT sql=access_matrix
       id Text
       roleId RoleTId
-      apiEntity Domain.ApiEntity
       userActionType Domain.UserActionType
       userAccessType Domain.UserAccessType
       createdAt UTCTime

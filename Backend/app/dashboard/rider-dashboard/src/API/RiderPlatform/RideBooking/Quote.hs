@@ -16,6 +16,7 @@ module API.RiderPlatform.RideBooking.Quote where
 
 import qualified "rider-app" API.Dashboard.RideBooking.Quote as BAP
 import qualified "rider-app" Domain.Action.UI.Quote as DQuote
+import Domain.Types.AccessMatrix.BAP
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "rider-app" Domain.Types.Person as DP
 import qualified "rider-app" Domain.Types.SearchRequest as SSR
@@ -30,7 +31,7 @@ import Tools.Auth.Merchant
 
 type API =
   "quote"
-    :> ApiAuth 'APP_BACKEND 'CUSTOMERS 'GETQUOTE
+    :> ApiAuth ('AppBackendBAP ('CUSTOMERS 'GETQUOTE))
     :> BAP.CustomerGetQuoteAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API

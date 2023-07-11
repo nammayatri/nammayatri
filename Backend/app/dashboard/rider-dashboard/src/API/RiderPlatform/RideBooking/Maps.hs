@@ -17,6 +17,7 @@ module API.RiderPlatform.RideBooking.Maps where
 import qualified "rider-app" API.Dashboard.RideBooking.Maps as BAP
 import qualified Dashboard.RiderPlatform.Customer as Common
 import qualified "rider-app" Domain.Action.UI.Maps as DMaps
+import Domain.Types.AccessMatrix.BAP
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "rider-app" Domain.Types.Person as DP
 import qualified Domain.Types.Transaction as DT
@@ -32,11 +33,11 @@ import Tools.Auth.Merchant
 
 type API =
   "maps"
-    :> ( ApiAuth 'APP_BACKEND 'CUSTOMERS 'AUTOCOMPLETE
+    :> ( ApiAuth ('AppBackendBAP ('CUSTOMERS 'AUTOCOMPLETE))
            :> BAP.RideAutoCompleteAPI
-           :<|> ApiAuth 'APP_BACKEND 'CUSTOMERS 'PLACEDETAIL
+           :<|> ApiAuth ('AppBackendBAP ('CUSTOMERS 'PLACEDETAIL))
              :> BAP.RideGetPlaceDetailsAPI
-           :<|> ApiAuth 'APP_BACKEND 'CUSTOMERS 'PLACENAME
+           :<|> ApiAuth ('AppBackendBAP ('CUSTOMERS 'PLACENAME))
              :> BAP.RideGetPlaceNameAPI
        )
 

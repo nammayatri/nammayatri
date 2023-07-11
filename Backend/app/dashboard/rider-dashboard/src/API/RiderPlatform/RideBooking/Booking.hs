@@ -17,6 +17,7 @@ module API.RiderPlatform.RideBooking.Booking where
 import qualified "rider-app" API.Dashboard.RideBooking.Booking as BAP
 import qualified Dashboard.RiderPlatform.Customer as Common
 import qualified "rider-app" Domain.Action.UI.Booking as DBooking
+import Domain.Types.AccessMatrix.BAP
 import qualified "rider-app" Domain.Types.Booking as SRB
 import qualified "rider-app" Domain.Types.Booking.API as DB
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
@@ -34,9 +35,9 @@ import Tools.Auth.Merchant
 
 type API =
   "booking"
-    :> ( ApiAuth 'APP_BACKEND 'CUSTOMERS 'BOOKING_STATUS
+    :> ( ApiAuth ('AppBackendBAP ('CUSTOMERS 'BOOKING_STATUS))
            :> BAP.CustomerBookingStatusAPI
-           :<|> ApiAuth 'APP_BACKEND 'CUSTOMERS 'BOOKINGLIST
+           :<|> ApiAuth ('AppBackendBAP ('CUSTOMERS 'BOOKINGLIST))
              :> BAP.CustomerBookingListAPI
        )
 
