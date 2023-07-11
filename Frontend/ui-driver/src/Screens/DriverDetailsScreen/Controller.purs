@@ -106,17 +106,23 @@ data Action = NoAction
 eval :: Action -> DriverDetailsScreenState -> Eval Action ScreenOutput DriverDetailsScreenState
 
 eval BackPressed state = do
-  if state.props.keyboardModalType /= NONE then continueWithCmd state[do 
-    pure $ InAppKeyboardModalMobile (InAppKeyboardModal.BackPressed)
+  if state.props.keyboardModalType /= NONE then continueWithCmd state[
+      do 
+        pure $ InAppKeyboardModalMobile (InAppKeyboardModal.BackPressed)
     ] 
-    else exit (GoBack state {data = state.data {driverEditAlternateMobile = Nothing} ,props = state.props { keyboardModalType = NONE,
-      otpAttemptsExceeded = false,
-      enterOtpFocusIndex = 0,
-      otpIncorrect = false,
-      alternateMobileOtp = "",
-      removeNumberPopup = false,
-      isEditAlternateMobile = false,
-      numberExistError = false}})
+  else if state.props.genderSelectionModalShow then continueWithCmd state[
+      do
+        pure $ GenderSelectionModalAction (SelectListModal.OnGoBack)
+    ]
+  else exit (GoBack state {data = state.data {driverEditAlternateMobile = Nothing} ,props = state.props { keyboardModalType = NONE,
+    otpAttemptsExceeded = false,
+    enterOtpFocusIndex = 0,
+    otpIncorrect = false,
+    alternateMobileOtp = "",
+    removeNumberPopup = false,
+    isEditAlternateMobile = false,
+    numberExistError = false,
+    genderSelectionModalShow = false}})
 
 eval (CallBackImageUpload image imageName imagePath) state = if (image /= "") then
                                             continueWithCmd (state { data { base64Image = image}}) [do pure RenderBase64Image]

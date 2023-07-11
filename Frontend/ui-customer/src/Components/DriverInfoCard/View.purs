@@ -659,8 +659,8 @@ contactView push state =
   ][  linearLayout
       [ width (V (((screenWidth unit)/3 * 2)-27))
       , height WRAP_CONTENT
-      , orientation if length state.data.driverName > 16 then VERTICAL else HORIZONTAL
-      ][  textView
+      , orientation if length state.data.driverName > 10 then VERTICAL else HORIZONTAL
+      ][ textView
           [ text $ state.data.driverName <> " "
           , textSize FontSize.a_16
           , fontStyle $ FontStyle.semiBold LanguageStyle
@@ -668,22 +668,27 @@ contactView push state =
           , ellipsize true
           , singleLine true
           ]
-        , textView
-          [ text $"is " <> secondsToHms state.data.eta
-          , textSize FontSize.a_16
-          , fontStyle $ FontStyle.semiBold LanguageStyle
-          , color Color.black800
-          , visibility if state.data.distance > 1000 then VISIBLE else GONE
-          ]
-        , textView
-          [ text case state.data.distance > 1000 of
-            true -> getString AWAY
-            false -> if state.data.waitingTime == "--" then getString IS_ON_THE_WAY else getString IS_WAITING_FOR_YOU
-          , textSize FontSize.a_16
-          , fontStyle $ FontStyle.semiBold LanguageStyle
-          , color Color.black800
-          ]
-      ]
+      , linearLayout
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , orientation HORIZONTAL
+        ][ textView
+            [ text $"is " <> secondsToHms state.data.eta
+            , textSize FontSize.a_16
+            , fontStyle $ FontStyle.semiBold LanguageStyle
+            , color Color.black800
+            , visibility if state.data.distance > 1000 then VISIBLE else GONE
+            ]
+          , textView
+            [ text case state.data.distance > 1000 of
+              true -> getString AWAY
+              false -> if state.data.waitingTime == "--" then getString IS_ON_THE_WAY else getString IS_WAITING_FOR_YOU
+            , textSize FontSize.a_16
+            , fontStyle $ FontStyle.semiBold LanguageStyle
+            , color Color.black800
+            ]
+          ] 
+        ]
     , linearLayout[
       width MATCH_PARENT
     , gravity RIGHT

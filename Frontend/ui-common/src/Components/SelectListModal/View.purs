@@ -68,7 +68,6 @@ view push config =
           , orientation VERTICAL
           , background Color.white900
           , padding (Padding 20 20 20 0)
-          , onBackPressed push (const OnGoBack)
           ][  headingText config push ,
               optionListView push config
            ]
