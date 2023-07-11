@@ -20,9 +20,11 @@ where
 
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Taxi.Common.ItemCode as Reexport
+-- import Kernel.External.Maps
+
+import Beckn.Types.Core.Taxi.Common.Tags
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions, fromAesonOptions)
--- import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
@@ -37,7 +39,7 @@ data Item = Item
     descriptor :: ItemDescriptor,
     quote_terms :: [Text],
     -- Only when FareProductType.ONE_WAY_TRIP
-    tags :: Maybe ItemTags,
+    tags :: Maybe [TagGroup],
     -- Only when FareProductType.RENTAL_TRIP
     base_distance :: Maybe Kilometers,
     base_duration :: Maybe Hours

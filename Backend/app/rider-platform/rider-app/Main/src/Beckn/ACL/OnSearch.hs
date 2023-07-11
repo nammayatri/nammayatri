@@ -25,9 +25,9 @@ import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Domain.Types.OnSearchEvent
 import qualified Domain.Types.VehicleVariant as VehVar
-import EulerHS.Prelude hiding (id, state, unpack)
+import EulerHS.Prelude hiding (find, id, state, unpack)
 import GHC.Float (int2Double)
-import Kernel.External.Maps (LatLong)
+-- import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
 import Kernel.Product.Validation.Context (validateContext)
 import Kernel.Storage.Esqueleto (runTransaction)
@@ -39,6 +39,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.OnSearchEvent as OnSearchEvent
 import Tools.Error
+
+-- import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as provider
 
 buildOnSearchReq ::
   ( HasFlowEnv m r '["coreVersion" ::: Text],
@@ -64,7 +66,7 @@ searchCbService context catalog = do
   -- do we need throw an error when we have more than one provider?
   let (provider :| _) = catalog.bpp_providers
   let items = provider.items
-  (estimatesInfo, quotesInfo) <- partitionEithers <$> traverse (buildEstimateOrQuoteInfo provider.locations) items
+  (estimatesInfo, quotesInfo) <- partitionEithers <$> traverse (buildEstimateOrQuoteInfo provider) items
   let providerInfo =
         DOnSearch.ProviderInfo
           { providerId = providerId,
@@ -95,19 +97,20 @@ logOnSearchEvent (BecknCallbackReq context (leftToMaybe -> mbErr)) = do
 
 buildEstimateOrQuoteInfo ::
   (MonadThrow m, Log m) =>
-  [LatLong] ->
+  OnSearch.Provider ->
   OnSearch.Item ->
   m (Either DOnSearch.EstimateInfo DOnSearch.QuoteInfo)
-buildEstimateOrQuoteInfo driversLocation item = do
-  let itemCode = item.descriptor.code
-      vehicleVariant = castVehicleVariant itemCode.vehicleVariant
+buildEstimateOrQuoteInfo provider item = do
+  fulfillment <- find (\fulf -> fulf.id == item.fulfillment_id) provider.fulfillments & fromMaybeM (InvalidRequest "Missing fulfillment")
+  -- let itemCode = item.descriptor.code     ----------fulfillment Vehicle
+  let vehicleVariant = castVehicleVariant fulfillment.vehicle.category ----------fulfillment Vehicle
       estimatedFare = roundToIntegral item.price.value
       estimatedTotalFare = roundToIntegral item.price.offered_value
       estimateBreakupList = buildEstimateBreakUpList <$> item.price.value_breakup
       descriptions = item.quote_terms
       nightShiftInfo = buildNightShiftInfo =<< item.tags
       waitingCharges = buildWaitingChargeInfo <$> item.tags
-      -- driversLocation = provider_locations--fromMaybe [] $ item.tags <&> (.drivers_location)
+      driversLocation = provider.locations -- provider_locations --fromMaybe [] $ item.tags <&> (.drivers_location)
       specialLocationTag = buildSpecialLocationTag =<< item.tags -- >>= (.special_location_tag)
   validatePrices estimatedFare estimatedTotalFare
   let totalFareRange =
@@ -194,7 +197,7 @@ buildEstimateBreakUpList BreakupItem {..} = do
     }
 
 buildNightShiftInfo ::
-  OnSearch.ItemTags ->
+  [OnSearch.TagGroup] ->
   Maybe DOnSearch.NightShiftInfo
 buildNightShiftInfo itemTags = do
   nightShiftCharge <- getNightShiftCharge itemTags
@@ -209,99 +212,147 @@ buildNightShiftInfo itemTags = do
         ..
       }
 
-buildWaitingChargeInfo' :: OnSearch.ItemTags -> Maybe Money
-buildWaitingChargeInfo' tags = do
-  code_1 <- tags.code_1
-  list4Code <- tags.list_4_code
-  if list4Code == "waiting_charge_per_min" && code_1 == "fare_policy"
-    then do
-      list4Value <- tags.list_4_value
-      waitingChargeValue <- readMaybe $ T.unpack list4Value
-      Just $ Money waitingChargeValue
-    else Nothing
+buildWaitingChargeInfo' :: [OnSearch.TagGroup] -> Maybe Money
+buildWaitingChargeInfo' tagGroups = do
+  tagGroup <- find (\tagGroup -> tagGroup.code == "fare_policy") tagGroups
+  tag <- find (\tag -> tag.code == Just "waiting_charge_per_min") tagGroup.list
+  tagValue <- tag.value
+  waitingChargeValue <- readMaybe $ T.unpack tagValue
+  Just $ Money waitingChargeValue
 
-buildWaitingChargeInfo :: OnSearch.ItemTags -> DOnSearch.WaitingChargesInfo
+-- code_1 <- tags.code_1
+-- list4Code <- tags.list_4_code
+-- if list4Code == "waiting_charge_per_min" && code_1 == "fare_policy"
+--   then do
+--     list4Value <- tags.list_4_value
+--     waitingChargeValue <- readMaybe $ T.unpack list4Value
+--     Just $ Money waitingChargeValue
+--   else Nothing
+
+buildWaitingChargeInfo :: [OnSearch.TagGroup] -> DOnSearch.WaitingChargesInfo
 buildWaitingChargeInfo tags = do
   DOnSearch.WaitingChargesInfo
     { waitingChargePerMin = buildWaitingChargeInfo' tags
     }
 
-buildSpecialLocationTag :: OnSearch.ItemTags -> Maybe Text
-buildSpecialLocationTag tags = do
-  code_2 <- tags.code_2
-  list22Code <- tags.list_2_2_code
-  if list22Code == "special_location_tag" && code_2 == "general_info"
-    then do
-      tags.list_2_2_value
-    else -- waitingChargeValue <- readMaybe $ T.unpack list22Value
-    -- Just $ Meters waitingChargeValue
-      Nothing
+buildSpecialLocationTag :: [OnSearch.TagGroup] -> Maybe Text
+buildSpecialLocationTag tagGroups = do
+  -- code_2 <- tags.code_2
+  -- list22Code <- tags.list_2_2_code
+  -- if list22Code == "special_location_tag" && code_2 == "general_info"
+  --   then do
+  --     tags.list_2_2_value
+  --   else -- waitingChargeValue <- readMaybe $ T.unpack list22Value
+  --   -- Just $ Meters waitingChargeValue
+  --     Nothing
 
-getNightShiftCharge :: OnSearch.ItemTags -> Maybe Money
-getNightShiftCharge tags = do
-  code_1 <- tags.code_1
-  list1Code <- tags.list_1_code
-  if list1Code == "night_shift_charge" && code_1 == "fare_policy"
-    then do
-      list1Value <- tags.list_1_value
-      nightShiftCharge <- readMaybe $ T.unpack list1Value
-      Just $ Money nightShiftCharge
-    else Nothing
+  tagGroup <- find (\tagGroup -> tagGroup.code == "general_info") tagGroups
+  tag <- find (\tag -> tag.code == Just "special_location_tag") tagGroup.list
+  tag.value
 
-getOldNightShiftCharge :: OnSearch.ItemTags -> Maybe DecimalValue
-getOldNightShiftCharge tags = do
-  code_1 <- tags.code_1
-  list2Code <- tags.list_2_code
-  if list2Code == "old_night_shift_charge" && code_1 == "fare_policy"
-    then do
-      list2Value <- tags.list_2_value
-      DecimalValue.valueFromString list2Value
-    else -- Just $ Money oldNightShiftCharge
-      Nothing
+-- distanceValue <- readMaybe $ T.unpack tagValue
+-- Just $ Meters distanceValue
 
-buildDistanceToNearestDriver :: OnSearch.ItemTags -> Maybe DecimalValue
-buildDistanceToNearestDriver tags = do
-  code_2 <- tags.code_2
-  list21Code <- tags.list_2_1_code
-  if list21Code == "distance_to_nearest_driver" && code_2 == "general_info"
-    then do
-      list21Value <- tags.list_2_1_value
-      distanceToNearestDriver <- readMaybe $ T.unpack list21Value
-      -- HighPrecMeters . realToFrac $ int2Double n
-      Just $ realToFrac $ int2Double distanceToNearestDriver
-    else Nothing
+getNightShiftCharge :: [OnSearch.TagGroup] -> Maybe Money
+getNightShiftCharge tagGroups = do
+  tagGroup <- find (\tagGroup -> tagGroup.code == "fare_policy") tagGroups
+  tag <- find (\tag -> tag.code == Just "night_shift_charge") tagGroup.list
+  tagValue <- tag.value
+  nightShiftCharge <- readMaybe $ T.unpack tagValue
+  Just $ Money nightShiftCharge
+
+-- code_1 <- tags.code_1
+-- list1Code <- tags.list_1_code
+-- if list1Code == "night_shift_charge" && code_1 == "fare_policy"
+-- then do
+--   list1Value <- tags.list_1_value
+--   nightShiftCharge <- readMaybe $ T.unpack list1Value
+--   Just $ Money nightShiftCharge
+-- else Nothing
+
+getOldNightShiftCharge :: [OnSearch.TagGroup] -> Maybe DecimalValue
+getOldNightShiftCharge tagGroups = do
+  tagGroup <- find (\tagGroup -> tagGroup.code == "fare_policy") tagGroups
+  tag <- find (\tag -> tag.code == Just "old_night_shift_charge") tagGroup.list
+  tagValue <- tag.value
+  DecimalValue.valueFromString tagValue
+
+-- tags = do
+-- code_1 <- tags.code_1
+-- list2Code <- tags.list_2_code
+-- if list2Code == "old_night_shift_charge" && code_1 == "fare_policy"
+--   then do
+--     list2Value <- tags.list_2_value
+--     DecimalValue.valueFromString list2Value
+--   else -- Just $ Money oldNightShiftCharge
+--     Nothing
+
+buildDistanceToNearestDriver :: [OnSearch.TagGroup] -> Maybe DecimalValue
+buildDistanceToNearestDriver tagGroups = do
+  tagGroup <- find (\tagGroup -> tagGroup.code == "general_info") tagGroups
+  tag <- find (\tag -> tag.code == Just "distance_to_nearest_driver") tagGroup.list
+  tagValue <- tag.value
+  distanceToNearestDriver <- readMaybe $ T.unpack tagValue
+  Just $ realToFrac $ int2Double distanceToNearestDriver
+
+-- DecimalValue.valueFromString list2Value
+
+-- code_2 <- tags.code_2
+-- list21Code <- tags.list_2_1_code
+-- if list21Code == "distance_to_nearest_driver" && code_2 == "general_info"
+--   then do
+--     list21Value <- tags.list_2_1_value
+--     distanceToNearestDriver <- readMaybe $ T.unpack list21Value
+--     -- HighPrecMeters . realToFrac $ int2Double n
+--     Just $ realToFrac $ int2Double distanceToNearestDriver
+--   else Nothing
 
 -- buildWaitingChargeInfo' tags
 
 -- buildWaitingChargeInfo ::
---   OnSearch.ItemTags ->
+--   [OnSearch.TagGroup] ->
 --   DOnSearch.WaitingChargesInfo
 -- buildWaitingChargeInfo itemTags = do
 --   DOnSearch.WaitingChargesInfo
 --     { waitingChargePerMin = itemTags.waiting_charge_per_min
 --     }
 
-getNightShiftStart :: OnSearch.ItemTags -> Maybe TimeOfDay
-getNightShiftStart tags = do
-  code_1 <- tags.code_1
-  list3Code <- tags.list_3_code
-  if list3Code == "night_shift_start" && code_1 == "fare_policy"
-    then do
-      list3Value <- tags.list_3_value
-      readMaybe $ T.unpack list3Value
-    else -- Just $ Money nightShiftStart
-      Nothing
+getNightShiftStart :: [OnSearch.TagGroup] -> Maybe TimeOfDay
+getNightShiftStart tagGroups = do
+  tagGroup <- find (\tagGroup -> tagGroup.code == "fare_policy") tagGroups
+  tag <- find (\tag -> tag.code == Just "night_shift_start") tagGroup.list
+  tagValue <- tag.value
+  readMaybe $ T.unpack tagValue
 
-getNightShiftEnd :: OnSearch.ItemTags -> Maybe TimeOfDay
-getNightShiftEnd tags = do
-  code_1 <- tags.code_1
-  list5Code <- tags.list_5_code
-  if list5Code == "night_shift_start" && code_1 == "fare_policy"
-    then do
-      list5Value <- tags.list_5_value
-      readMaybe $ T.unpack list5Value
-    else -- Just $ Money nightShiftStart
-      Nothing
+-- nightShiftCharge <- readMaybe $ T.unpack tagValue
+-- Just $ Money nightShiftCharge
+
+-- tags = do
+--   code_1 <- tags.code_1
+--   list3Code <- tags.list_3_code
+--   if list3Code == "night_shift_start" && code_1 == "fare_policy"
+--     then do
+--       list3Value <- tags.list_3_value
+--       readMaybe $ T.unpack list3Value
+--     else -- Just $ Money nightShiftStart
+--       Nothing
+
+getNightShiftEnd :: [OnSearch.TagGroup] -> Maybe TimeOfDay
+getNightShiftEnd tagGroups = do
+  tagGroup <- find (\tagGroup -> tagGroup.code == "fare_policy") tagGroups
+  tag <- find (\tag -> tag.code == Just "night_shift_end") tagGroup.list
+  tagValue <- tag.value
+  readMaybe $ T.unpack tagValue
+
+-- tags = do
+--   code_1 <- tags.code_1
+--   list5Code <- tags.list_5_code
+--   if list5Code == "night_shift_start" && code_1 == "fare_policy"
+--     then do
+--       list5Value <- tags.list_5_value
+--       readMaybe $ T.unpack list5Value
+--     else -- Just $ Money nightShiftStart
+--       Nothing
 
 mkPayment :: OnSearch.Payment -> Maybe DMPM.PaymentMethodInfo
 mkPayment OnSearch.Payment {..} =

@@ -20,6 +20,8 @@ where
 
 import Beckn.Types.Core.Taxi.Common.FulfillmentType as Reexport
 import Beckn.Types.Core.Taxi.Common.Payment as Reexport
+-- import Beckn.Types.Core.Taxi.Common.FulfillmentType as Reexport
+import Beckn.Types.Core.Taxi.Common.Tags as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.Addon as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.Catalog as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.Category as Reexport

@@ -17,6 +17,8 @@ module Beckn.ACL.Search where
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import qualified Beckn.Types.Core.Taxi.Search as Search
 -- import qualified Data.Text as T
+
+import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Search as DSearch
 import Kernel.External.Maps.Interface (LatLong (..))
 import Kernel.External.Types (Language)
@@ -81,7 +83,7 @@ getDistance tagGroups = do
   tagGroup <- find (\tagGroup -> tagGroup.code == "route_info") tagGroups
   tag <- find (\tag -> tag.code == Just "distance_info_in_m") tagGroup.list
   tagValue <- tag.value
-  distanceValue <- readMaybe tagValue
+  distanceValue <- readMaybe $ T.unpack tagValue
   Just $ Meters distanceValue
 
 -- if list1Code == "distance_info_in_m"
@@ -96,7 +98,7 @@ getDuration tagGroups = do
   tagGroup <- find (\tagGroup -> tagGroup.code == "route_info") tagGroups
   tag <- find (\tag -> tag.code == Just "duration_info_in_s") tagGroup.list
   tagValue <- tag.value
-  durationValue <- readMaybe tagValue
+  durationValue <- readMaybe $ T.unpack tagValue
   Just $ Seconds durationValue
 
 -- list2Code <- tags.list_2_code
@@ -113,7 +115,7 @@ buildCustomerLanguage Search.Customer {..} = do
   tagGroup <- find (\tagGroup -> tagGroup.code == "customer_info") person.tags
   tag <- find (\tag -> tag.code == Just "customer_language") tagGroup.list
   tagValue <- tag.value
-  readMaybe tagValue
+  readMaybe $ T.unpack tagValue
 
 -- list1Code <- tags.list_1_code
 -- if tags.code == "customer_info" && list1Code == "customer_language"

@@ -23,8 +23,8 @@ import Kernel.Utils.JSON
 
 data TagGroup = TagGroup
   { display :: Bool,
-    code :: String,
-    name :: String,
+    code :: Text,
+    name :: Text,
     list :: [Tag]
   }
   deriving (Generic, Show, ToSchema)
@@ -37,9 +37,9 @@ instance ToJSON TagGroup where
 
 data Tag = Tag
   { display :: Maybe Bool,
-    code :: Maybe String,
-    name :: Maybe String,
-    value :: Maybe String
+    code :: Maybe Text,
+    name :: Maybe Text,
+    value :: Maybe Text
   }
   deriving (Generic, Show, ToSchema)
 
