@@ -21,7 +21,8 @@ where
 import qualified "rider-app" API.Dashboard.Ride as BAP
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import qualified "rider-app" Domain.Action.Dashboard.Ride as Domain
-import "lib-dashboard" Domain.Types.AccessMatrix
+import "lib-dashboard" Domain.Types.AccessMatrix hiding (UserActionType (DriverOfferBPP))
+import Domain.Types.AccessMatrix.BAP (BAPActionType (CUSTOMERS, RIDES))
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Domain.Types.ServerName
 import qualified Domain.Types.Transaction as DT
@@ -35,7 +36,7 @@ import Kernel.Utils.SlidingWindowLimiter
 import qualified RiderPlatformClient.RiderApp as Client
 import Servant
 import qualified SharedLogic.Transaction as T
-import "lib-dashboard" Tools.Auth hiding (BECKN_TRANSPORT, DRIVER_OFFER_BPP)
+import "lib-dashboard" Tools.Auth hiding (BECKN_TRANSPORT, BPPActionType, RIDES)
 import Tools.Auth.Merchant
 
 type API =
@@ -55,15 +56,15 @@ type ShareRideInfoAPI = Common.ShareRideInfoAPI
 type TripRouteAPI = Common.TripRouteAPI
 
 type RideInfoAPI =
-  ApiAuth 'APP_BACKEND 'CUSTOMERS 'RIDE_INFO_CUSTOMER
+  ApiAuth ('AppBackendBAP ('CUSTOMERS 'RIDE_INFO))
     :> Common.RideInfoAPI
 
 type MultipleRideCancelAPI =
-  ApiAuth 'APP_BACKEND 'RIDES 'MULTIPLE_RIDE_CANCEL
+  ApiAuth ('AppBackendBAP ('RIDES 'MULTIPLE_RIDE_CANCEL))
     :> BAP.MultipleRideCancelAPI
 
 type RideForceSyncAPI =
-  ApiAuth 'APP_BACKEND 'RIDES 'RIDE_FORCE_SYNC
+  ApiAuth ('AppBackendBAP ('RIDES 'FORCE_SYNC))
     :> Common.RideForceSyncAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API

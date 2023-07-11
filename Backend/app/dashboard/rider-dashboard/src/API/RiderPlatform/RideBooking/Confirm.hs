@@ -17,6 +17,7 @@ module API.RiderPlatform.RideBooking.Confirm where
 import qualified "rider-app" API.Dashboard.RideBooking.Confirm as BAP
 import qualified "rider-app" API.UI.Confirm as UC
 import qualified Dashboard.RiderPlatform.Customer as Common
+import Domain.Types.AccessMatrix.BAP
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "rider-app" Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified "rider-app" Domain.Types.Person as DP
@@ -34,7 +35,7 @@ import Tools.Auth.Merchant
 
 type API =
   "confirm"
-    :> ApiAuth 'APP_BACKEND 'CUSTOMERS 'CONFIRM
+    :> ApiAuth ('AppBackendBAP ('CUSTOMERS 'CONFIRM))
     :> BAP.CustomerConfirmAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API

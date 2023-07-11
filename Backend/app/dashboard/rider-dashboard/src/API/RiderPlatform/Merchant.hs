@@ -19,6 +19,7 @@ module API.RiderPlatform.Merchant
 where
 
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Merchant as Common
+import Domain.Types.AccessMatrix.BAP
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
@@ -31,7 +32,7 @@ import Kernel.Utils.Validation (runRequestValidation)
 import qualified RiderPlatformClient.RiderApp as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
-import "lib-dashboard" Tools.Auth
+import "lib-dashboard" Tools.Auth hiding (MERCHANT)
 import "lib-dashboard" Tools.Auth.Merchant
 
 type API =
@@ -45,27 +46,27 @@ type API =
        )
 
 type MerchantUpdateAPI =
-  ApiAuth 'APP_BACKEND 'MERCHANT 'MERCHANT_UPDATE
+  ApiAuth ('AppBackendBAP ('MERCHANT 'UPDATE))
     :> Common.MerchantUpdateAPI
 
 type ServiceUsageConfigAPI =
-  ApiAuth 'APP_BACKEND 'MERCHANT 'SERVICE_USAGE_CONFIG
+  ApiAuth ('AppBackendBAP ('MERCHANT 'SERVICE_USAGE_CONFIG))
     :> Common.ServiceUsageConfigAPI
 
 type MapsServiceConfigUpdateAPI =
-  ApiAuth 'APP_BACKEND 'MERCHANT 'MAPS_SERVICE_CONFIG_UPDATE
+  ApiAuth ('AppBackendBAP ('MERCHANT 'MAPS_SERVICE_CONFIG_UPDATE))
     :> Common.MapsServiceConfigUpdateAPI
 
 type MapsServiceUsageConfigUpdateAPI =
-  ApiAuth 'APP_BACKEND 'MERCHANT 'MAPS_SERVICE_USAGE_CONFIG_UPDATE
+  ApiAuth ('AppBackendBAP ('MERCHANT 'MAPS_SERVICE_USAGE_CONFIG_UPDATE))
     :> Common.MapsServiceUsageConfigUpdateAPI
 
 type SmsServiceConfigUpdateAPI =
-  ApiAuth 'APP_BACKEND 'MERCHANT 'SMS_SERVICE_CONFIG_UPDATE
+  ApiAuth ('AppBackendBAP ('MERCHANT 'SMS_SERVICE_CONFIG_UPDATE))
     :> Common.SmsServiceConfigUpdateAPI
 
 type SmsServiceUsageConfigUpdateAPI =
-  ApiAuth 'APP_BACKEND 'MERCHANT 'SMS_SERVICE_USAGE_CONFIG_UPDATE
+  ApiAuth ('AppBackendBAP ('MERCHANT 'SMS_SERVICE_USAGE_CONFIG_UPDATE))
     :> Common.SmsServiceUsageConfigUpdateAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API

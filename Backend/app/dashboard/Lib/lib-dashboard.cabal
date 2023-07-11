@@ -31,6 +31,19 @@ library
       Domain.Action.Dashboard.Registration
       Domain.Action.Dashboard.Roles
       Domain.Types.AccessMatrix
+      Domain.Types.AccessMatrix.BAP
+      Domain.Types.AccessMatrix.BAP.CustomerActionType
+      Domain.Types.AccessMatrix.BAP.MerchantActionType
+      Domain.Types.AccessMatrix.BAP.RideActionType
+      Domain.Types.AccessMatrix.BPP
+      Domain.Types.AccessMatrix.BPP.DriverActionType
+      Domain.Types.AccessMatrix.BPP.DriverReferralActionType
+      Domain.Types.AccessMatrix.BPP.IssueActionType
+      Domain.Types.AccessMatrix.BPP.MerchantActionType
+      Domain.Types.AccessMatrix.BPP.MessageActionType
+      Domain.Types.AccessMatrix.BPP.RideActionType
+      Domain.Types.AccessMatrix.BPP.VolunteerActionType
+      Domain.Types.AccessMatrix.SpecialZone
       Domain.Types.Merchant
       Domain.Types.MerchantAccess
       Domain.Types.Person

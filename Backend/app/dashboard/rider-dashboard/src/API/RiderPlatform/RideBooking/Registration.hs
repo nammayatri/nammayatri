@@ -17,6 +17,7 @@ module API.RiderPlatform.RideBooking.Registration where
 import qualified "rider-app" API.Dashboard.RideBooking.Registration as BAP
 import qualified Dashboard.RiderPlatform.Customer as Common
 import qualified "rider-app" Domain.Action.UI.Registration as DR
+import Domain.Types.AccessMatrix.BAP
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "rider-app" Domain.Types.Person as SP
 import qualified "rider-app" Domain.Types.RegistrationToken as DTR
@@ -34,13 +35,13 @@ import Tools.Auth.Merchant (merchantAccessCheck)
 
 type API =
   "registration"
-    :> ( ApiAuth 'APP_BACKEND 'CUSTOMERS 'AUTH
+    :> ( ApiAuth ('AppBackendBAP ('CUSTOMERS 'AUTH))
            :> BAP.CustomerAuthAPI
-           :<|> ApiAuth 'APP_BACKEND 'CUSTOMERS 'VERIFY
+           :<|> ApiAuth ('AppBackendBAP ('CUSTOMERS 'VERIFY))
              :> BAP.CustomerVerify
-           :<|> ApiAuth 'APP_BACKEND 'CUSTOMERS 'RESEND
+           :<|> ApiAuth ('AppBackendBAP ('CUSTOMERS 'RESEND))
              :> BAP.CustomerResend
-           :<|> ApiAuth 'APP_BACKEND 'CUSTOMERS 'LOGOUT
+           :<|> ApiAuth ('AppBackendBAP ('CUSTOMERS 'LOGOUT))
              :> BAP.CustomerLogout
        )
 

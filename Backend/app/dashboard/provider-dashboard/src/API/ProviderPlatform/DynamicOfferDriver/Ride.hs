@@ -19,6 +19,7 @@ module API.ProviderPlatform.DynamicOfferDriver.Ride
 where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
+import Domain.Types.AccessMatrix.BPP.RideActionType
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
@@ -29,7 +30,7 @@ import Kernel.Utils.Common (MonadFlow, Money, withFlowHandlerAPI)
 import qualified ProviderPlatformClient.DynamicOfferDriver as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
-import "lib-dashboard" Tools.Auth hiding (BECKN_TRANSPORT)
+import "lib-dashboard" Tools.Auth hiding (BECKN_TRANSPORT, CustomerActionType (..), RideActionType (..))
 import "lib-dashboard" Tools.Auth.Merchant
 
 type API =
@@ -47,43 +48,43 @@ type API =
        )
 
 type RideListAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'RIDE_LIST
+  ApiAuth ('DriverOfferBPP ('RIDES 'LIST))
     :> Common.RideListAPI
 
 type RideRouteAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'RIDE_ROUTE
+  ApiAuth ('DriverOfferBPP ('RIDES 'LIST))
     :> Common.RideRouteAPI
 
 type RideStartAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'RIDE_START
+  ApiAuth ('DriverOfferBPP ('RIDES 'START))
     :> Common.RideStartAPI
 
 type RideEndAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'RIDE_END
+  ApiAuth ('DriverOfferBPP ('RIDES 'END))
     :> Common.RideEndAPI
 
 type MultipleRideEndAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'MULTIPLE_RIDE_END
+  ApiAuth ('DriverOfferBPP ('RIDES 'MULTIPLE_RIDE_END))
     :> Common.MultipleRideEndAPI
 
 type RideCancelAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'RIDE_CANCEL
+  ApiAuth ('DriverOfferBPP ('RIDES 'CANCEL))
     :> Common.RideCancelAPI
 
 type MultipleRideCancelAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'MULTIPLE_RIDE_CANCEL
+  ApiAuth ('DriverOfferBPP ('RIDES 'MULTIPLE_RIDE_CANCEL))
     :> Common.MultipleRideCancelAPI
 
 type RideInfoAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'RIDE_INFO
+  ApiAuth ('DriverOfferBPP ('RIDES 'INFO))
     :> Common.RideInfoAPI
 
 type RideSyncAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'RIDE_SYNC
+  ApiAuth ('DriverOfferBPP ('RIDES 'SYNC))
     :> Common.RideSyncAPI
 
 type MultipleRideSyncAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'MULTIPLE_RIDE_SYNC
+  ApiAuth ('DriverOfferBPP ('RIDES 'MULTIPLE_RIDE_SYNC))
     :> Common.MultipleRideSyncAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API

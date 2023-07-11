@@ -16,8 +16,10 @@
 module Domain.Types.AccessMatrix where
 
 import Data.Singletons.TH
+import Domain.Types.AccessMatrix.BAP as DBap
+import Domain.Types.AccessMatrix.BPP as DBpp
+import Domain.Types.AccessMatrix.SpecialZone as SpecialZone
 import Domain.Types.Role as DRole
-import Domain.Types.ServerName as DSN
 import Kernel.Prelude
 import Kernel.Types.Id
 
@@ -29,131 +31,17 @@ data UserAccessType
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data UserActionType
-  = DOCUMENTS_INFO
-  | AADHAAR_INFO
-  | LIST
-  | ACTIVITY
-  | ENABLE
-  | DISABLE
-  | BLOCK
-  | UNBLOCK
-  | LOCATION
-  | INFO
-  | DELETE_DRIVER
-  | UNLINK_VEHICLE
-  | END_RC_ASSOCIATION
-  | UNLINK_DL
-  | UNLINK_AADHAAR
-  | UPDATE_PHONE_NUMBER
-  | ADD_VEHICLE
-  | UPDATE_DRIVER_NAME
-  | STUCK_BOOKING_CANCEL
-  | REFERRAL_PROGRAM_PASSWORD_UPDATE
-  | REFERRAL_PROGRAM_LINK_CODE
-  | ISSUE_LIST
-  | ISSUE_CATEGORY_LIST
-  | ISSUE_INFO
-  | ISSUE_UPDATE
-  | ISSUE_ADD_COMMENT
-  | ISSUE_FETCH_MEDIA
-  | MERCHANT_UPDATE
-  | MERCHANT_COMMON_CONFIG
-  | MERCHANT_COMMON_CONFIG_UPDATE
-  | DRIVER_POOL_CONFIG
-  | DRIVER_POOL_CONFIG_UPDATE
-  | DRIVER_POOL_CONFIG_CREATE
-  | DRIVER_INTELLIGENT_POOL_CONFIG
-  | DRIVER_INTELLIGENT_POOL_CONFIG_UPDATE
-  | ONBOARDING_DOCUMENT_CONFIG
-  | ONBOARDING_DOCUMENT_CONFIG_UPDATE
-  | ONBOARDING_DOCUMENT_CONFIG_CREATE
-  | SERVICE_USAGE_CONFIG
-  | MAPS_SERVICE_CONFIG_UPDATE
-  | MAPS_SERVICE_USAGE_CONFIG_UPDATE
-  | SMS_SERVICE_CONFIG_UPDATE
-  | SMS_SERVICE_USAGE_CONFIG_UPDATE
-  | VERIFICATION_SERVICE_CONFIG_UPDATE
-  | UPLOAD_FILE
-  | ADD_LINK
-  | ADD_MESSAGE
-  | SEND_MESSAGE
-  | MESSAGE_LIST
-  | MESSAGE_INFO
-  | MESSAGE_DELIVERY_INFO
-  | MESSAGE_RECEIVER_LIST
-  | RIDE_LIST
-  | RIDE_ROUTE
-  | RIDE_START
-  | RIDE_END
-  | MULTIPLE_RIDE_END
-  | RIDE_CANCEL
-  | MULTIPLE_RIDE_CANCEL
-  | RIDE_INFO
-  | RIDE_SYNC
-  | MULTIPLE_RIDE_SYNC
-  | RIDE_FORCE_SYNC
-  | CUSTOMER_LIST
-  | CUSTOMER_BLOCK
-  | CUSTOMER_UNBLOCK
-  | CUSTOMER_DELETE
-  | CUSTOMER_INFO
-  | DOCUMENT_LIST
-  | GET_DOCUMENT
-  | UPLOAD_DOCUMENT
-  | REGISTER_DL
-  | REGISTER_RC
-  | GENERATE_AADHAAR_OTP
-  | VERIFY_AADHAAR_OTP
-  | VOLUNTEER_BOOKING_INFO
-  | VOLUNTEER_ASSIGN_CREATE_AND_START_OTP_RIDE
-  | BOOKING_STATUS
-  | BOOKINGLIST
-  | CONFIRM
-  | AUTOCOMPLETE
-  | PLACEDETAIL
-  | PLACENAME
-  | PERSONDETAIL
-  | UPDATEPERSON
-  | GETQUOTE
-  | AUTH
-  | VERIFY
-  | RESEND
-  | LOGOUT
-  | SEARCH
-  | SELECT
-  | SELECTLIST
-  | SELECTRESULT
-  | CANCELSEARCH
-  | FLOW_STATUS
-  | NOTIFYEVENT
-  | CANCEL_BOOKING
-  | SPECIAL_ZONE_CREATE
-  | SPECIAL_ZONE_DELETE
-  | SPECIAL_ZONE_UPDATE
-  | SPECIAL_ZONE_LOOKUP
-  | LIST_ISSUE
-  | TRIP_ROUTE
-  | RIDE_INFO_CUSTOMER
-  | CLEAR_ON_RIDE_STUCK_DRIVER_IDS
-  | CREATE_FP_DRIVER_EXTRA_FEE
-  | UPDATE_FP_DRIVER_EXTRA_FEE
-  | BALANCE_DUE
-  | COLLECT_CASH
+  = AppBackendBAP DBap.BAPActionType
+  | DriverOfferBPP DBpp.BPPActionType
+  | SpecialZones SpecialZone.SpecialZoneActions
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''UserActionType]
 
 -------- Required access levels for helper api --------
 
-data ApiEntity = CUSTOMERS | DRIVERS | RIDES | MONITORING | MERCHANT | MESSAGE | REFERRAL | ISSUE | VOLUNTEER | SPECIAL_ZONES
-  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
-
-genSingletons [''ApiEntity]
-
-data ApiAccessLevel = ApiAccessLevel
-  { serverName :: DSN.ServerName,
-    apiEntity :: ApiEntity,
-    userActionType :: UserActionType
+newtype ApiAccessLevel = ApiAccessLevel
+  { userActionType :: UserActionType
   }
 
 -------- Access Matrix item --------
@@ -163,7 +51,6 @@ data ApiAccessLevel = ApiAccessLevel
 data AccessMatrixItem = AccessMatrixItem
   { id :: Id AccessMatrixItem,
     roleId :: Id DRole.Role,
-    apiEntity :: ApiEntity,
     userAccessType :: UserAccessType,
     userActionType :: UserActionType,
     createdAt :: UTCTime,
@@ -181,8 +68,7 @@ data AccessMatrixRowAPIEntity = AccessMatrixRowAPIEntity
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data AccessMatrixItemAPIEntity = AccessMatrixItemAPIEntity
-  { apiEntity :: ApiEntity,
-    userAccessType :: UserAccessType,
+  { userAccessType :: UserAccessType,
     userActionType :: UserActionType
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)

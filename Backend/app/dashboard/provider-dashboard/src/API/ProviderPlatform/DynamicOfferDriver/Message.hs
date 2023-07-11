@@ -20,6 +20,7 @@ where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import qualified Data.Text as DT
+import Domain.Types.AccessMatrix.BPP.MessageActionType
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
@@ -31,7 +32,7 @@ import Kernel.Utils.Common (MonadFlow, throwError, withFlowHandlerAPI)
 import qualified ProviderPlatformClient.DynamicOfferDriver as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
-import "lib-dashboard" Tools.Auth hiding (BECKN_TRANSPORT)
+import "lib-dashboard" Tools.Auth hiding (BECKN_TRANSPORT, CustomerActionType (..))
 import "lib-dashboard" Tools.Auth.Merchant
 
 type API =
@@ -47,35 +48,35 @@ type API =
        )
 
 type UploadFileAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'MESSAGE 'UPLOAD_FILE
+  ApiAuth ('DriverOfferBPP ('MESSAGE 'UPLOAD_FILE))
     :> Common.UploadFileAPI
 
 type AddLinkAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'MESSAGE 'ADD_LINK
+  ApiAuth ('DriverOfferBPP ('MESSAGE 'ADD_LINK))
     :> Common.AddLinkAPI
 
 type AddMessageAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'MESSAGE 'ADD_MESSAGE
+  ApiAuth ('DriverOfferBPP ('MESSAGE 'ADD))
     :> Common.AddMessageAPI
 
 type SendMessageAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'MESSAGE 'SEND_MESSAGE
+  ApiAuth ('DriverOfferBPP ('MESSAGE 'SEND))
     :> Common.SendMessageAPI
 
 type MessageListAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'MESSAGE 'MESSAGE_LIST
+  ApiAuth ('DriverOfferBPP ('MESSAGE 'LIST))
     :> Common.MessageListAPI
 
 type MessageInfoAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'MESSAGE 'MESSAGE_INFO
+  ApiAuth ('DriverOfferBPP ('MESSAGE 'INFO))
     :> Common.MessageInfoAPI
 
 type MessageDeliveryInfoAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'MESSAGE 'MESSAGE_DELIVERY_INFO
+  ApiAuth ('DriverOfferBPP ('MESSAGE 'DELIVERY_INFO))
     :> Common.MessageDeliveryInfoAPI
 
 type MessageReceiverListAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'MESSAGE 'MESSAGE_RECEIVER_LIST
+  ApiAuth ('DriverOfferBPP ('MESSAGE 'RECEIVER_LIST))
     :> Common.MessageReceiverListAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API

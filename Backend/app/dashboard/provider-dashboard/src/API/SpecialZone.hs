@@ -22,6 +22,7 @@ where
 import qualified "special-zone" API.Types as SzAPI
 import Dashboard.Common (HideSecrets)
 import qualified "dashboard-helper-api" Dashboard.Common.SpecialZone as Common
+import Domain.Types.AccessMatrix.SpecialZone
 import Domain.Types.ServerName
 import "special-zone" Domain.Types.SpecialZone
 import qualified Domain.Types.Transaction as DT
@@ -32,16 +33,16 @@ import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI)
 import qualified ProviderPlatformClient.SpecialZone as Client
-import Servant
+import Servant hiding (DELETE)
 import qualified SharedLogic.Transaction as T
-import "lib-dashboard" Tools.Auth
+import "lib-dashboard" Tools.Auth hiding (CustomerActionType (..), UPDATE)
 
 type API =
   "specialZone"
-    :> ( (ApiAuth 'SPECIAL_ZONE 'SPECIAL_ZONES 'SPECIAL_ZONE_LOOKUP :> SzAPI.RegionLookupAPI)
-           :<|> (ApiAuth 'SPECIAL_ZONE 'SPECIAL_ZONES 'SPECIAL_ZONE_CREATE :> SzAPI.CreateSpecialZoneAPI)
-           :<|> (ApiAuth 'SPECIAL_ZONE 'SPECIAL_ZONES 'SPECIAL_ZONE_UPDATE :> SzAPI.UpdateSpecialZoneAPI)
-           :<|> (ApiAuth 'SPECIAL_ZONE 'SPECIAL_ZONES 'SPECIAL_ZONE_DELETE :> SzAPI.DeleteSpecialZoneAPI)
+    :> ( (ApiAuth ('SpecialZones ('SPECIAL_ZONES 'LOOKUP)) :> SzAPI.RegionLookupAPI)
+           :<|> (ApiAuth ('SpecialZones ('SPECIAL_ZONES 'CREATE)) :> SzAPI.CreateSpecialZoneAPI)
+           :<|> (ApiAuth ('SpecialZones ('SPECIAL_ZONES 'UPDATE)) :> SzAPI.UpdateSpecialZoneAPI)
+           :<|> (ApiAuth ('SpecialZones ('SPECIAL_ZONES 'DELETE)) :> SzAPI.DeleteSpecialZoneAPI)
        )
 
 handler :: FlowServer API

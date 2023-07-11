@@ -19,30 +19,31 @@ module API.RiderPlatform.Customer
 where
 
 import qualified Dashboard.RiderPlatform.Customer as Common
+import Domain.Types.AccessMatrix.BAP
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Utils.Common hiding (INFO)
 import qualified RiderPlatformClient.RiderApp as Client
-import Servant hiding (throwError)
+import Servant hiding (DELETE, throwError)
 import qualified SharedLogic.Transaction as T
 import "lib-dashboard" Tools.Auth
 import Tools.Auth.Merchant
 
 type API =
   "customer"
-    :> ( ApiAuth 'APP_BACKEND 'CUSTOMERS 'CUSTOMER_LIST
+    :> ( ApiAuth ('AppBackendBAP ('CUSTOMERS 'LIST))
            :> Common.CustomerListAPI
-           :<|> ApiAuth 'APP_BACKEND 'CUSTOMERS 'CUSTOMER_DELETE
+           :<|> ApiAuth ('AppBackendBAP ('CUSTOMERS 'DELETE))
              :> Common.CustomerDeleteAPI
-           :<|> ApiAuth 'APP_BACKEND 'CUSTOMERS 'CUSTOMER_BLOCK
+           :<|> ApiAuth ('AppBackendBAP ('CUSTOMERS 'BLOCK))
              :> Common.CustomerBlockAPI
-           :<|> ApiAuth 'APP_BACKEND 'CUSTOMERS 'CUSTOMER_UNBLOCK
+           :<|> ApiAuth ('AppBackendBAP ('CUSTOMERS 'UNBLOCK))
              :> Common.CustomerUnblockAPI
-           :<|> ApiAuth 'APP_BACKEND 'CUSTOMERS 'CUSTOMER_INFO
+           :<|> ApiAuth ('AppBackendBAP ('CUSTOMERS 'INFO))
              :> Common.CustomerInfoAPI
        )
 

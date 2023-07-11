@@ -19,6 +19,7 @@ module API.ProviderPlatform.DynamicOfferDriver.Issue
 where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Issue as Common
+import Domain.Types.AccessMatrix.BPP.IssueActionType
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
@@ -33,7 +34,7 @@ import qualified ProviderPlatformClient.DynamicOfferDriver as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
 import qualified "lib-dashboard" Storage.Queries.Person as QP
-import "lib-dashboard" Tools.Auth hiding (BECKN_TRANSPORT)
+import "lib-dashboard" Tools.Auth hiding (BECKN_TRANSPORT, CustomerActionType (..), MerchantActionType (..))
 import "lib-dashboard" Tools.Auth.Merchant
 
 type API =
@@ -47,27 +48,27 @@ type API =
        )
 
 type IssueCategoryListAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'ISSUE 'ISSUE_CATEGORY_LIST
+  ApiAuth ('DriverOfferBPP ('ISSUE 'CATEGORY_LIST))
     :> Common.IssueCategoryListAPI
 
 type IssueListAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'ISSUE 'ISSUE_LIST
+  ApiAuth ('DriverOfferBPP ('ISSUE 'LIST))
     :> Common.IssueListAPI
 
 type IssueInfoAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'ISSUE 'ISSUE_INFO
+  ApiAuth ('DriverOfferBPP ('ISSUE 'INFO))
     :> Common.IssueInfoAPI
 
 type IssueUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'ISSUE 'ISSUE_UPDATE
+  ApiAuth ('DriverOfferBPP ('ISSUE 'UPDATE))
     :> Common.IssueUpdateAPI
 
 type IssueAddCommentAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'ISSUE 'ISSUE_ADD_COMMENT
+  ApiAuth ('DriverOfferBPP ('ISSUE 'ADD_COMMENT))
     :> Common.IssueAddCommentAPI
 
 type IssueFetchMediaAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'ISSUE 'ISSUE_FETCH_MEDIA
+  ApiAuth ('DriverOfferBPP ('ISSUE 'FETCH_MEDIA))
     :> Common.IssueFetchMediaAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API

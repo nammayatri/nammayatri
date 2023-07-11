@@ -19,6 +19,7 @@ module API.RiderPlatform.Booking
 where
 
 import qualified "dashboard-helper-api" Dashboard.Common.Booking as Common
+import Domain.Types.AccessMatrix.BAP (BAPActionType (RIDES))
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
@@ -28,7 +29,7 @@ import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI)
 import qualified RiderPlatformClient.RiderApp as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
-import "lib-dashboard" Tools.Auth hiding (BECKN_TRANSPORT, DRIVER_OFFER_BPP)
+import "lib-dashboard" Tools.Auth hiding (BECKN_TRANSPORT, BPPActionType (..), DRIVER_OFFER_BPP)
 import "lib-dashboard" Tools.Auth.Merchant
 
 type API =
@@ -36,7 +37,7 @@ type API =
     :> StuckBookingsCancelAPI
 
 type StuckBookingsCancelAPI =
-  ApiAuth 'APP_BACKEND 'RIDES 'STUCK_BOOKING_CANCEL -- 'WRITE_ACCESS 'BOOKINGS ?
+  ApiAuth ('AppBackendBAP ('RIDES 'STUCK_BOOKING_CANCEL)) -- 'WRITE_ACCESS 'BOOKINGS ?
     :> Common.StuckBookingsCancelAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API

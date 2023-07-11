@@ -20,6 +20,7 @@ where
 
 import qualified API.ProviderPlatform.DynamicOfferDriver.Driver.Registration as Reg
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
+import Domain.Types.AccessMatrix.BPP.DriverActionType
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
@@ -30,9 +31,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (MonadFlow, throwError, withFlowHandlerAPI)
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified ProviderPlatformClient.DynamicOfferDriver as Client
-import Servant hiding (throwError)
+import Servant hiding (DELETE, throwError)
 import qualified SharedLogic.Transaction as T
-import "lib-dashboard" Tools.Auth hiding (BECKN_TRANSPORT)
+import "lib-dashboard" Tools.Auth hiding (BECKN_TRANSPORT, CustomerActionType (..))
 import "lib-dashboard" Tools.Auth.Merchant
 
 type API =
@@ -62,87 +63,87 @@ type API =
        )
 
 type DriverDocumentsInfoAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'DOCUMENTS_INFO
+  ApiAuth ('DriverOfferBPP ('DRIVERS 'DOCUMENTS_INFO))
     :> Common.DriverDocumentsInfoAPI
 
 type DriverAadhaarInfoAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'AADHAAR_INFO
+  ApiAuth ('DriverOfferBPP ('DRIVERS 'AADHAAR_INFO))
     :> Common.DriverAadhaarInfoAPI
 
 type DriverListAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'LIST
+  ApiAuth ('DriverOfferBPP ('DRIVERS 'LIST))
     :> Common.DriverListAPI
 
 type DriverOutstandingBalanceAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'BALANCE_DUE
+  ApiAuth ('DriverOfferBPP ('DRIVERS 'BALANCE_DUE))
     :> Common.DriverOutstandingBalanceAPI
 
 type DriverCashCollectionAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'COLLECT_CASH
+  ApiAuth ('DriverOfferBPP ('DRIVERS 'COLLECT_CASH))
     :> Common.DriverCashCollectionAPI
 
 type DriverActivityAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'ACTIVITY
+  ApiAuth ('DriverOfferBPP ('DRIVERS 'ACTIVITY))
     :> Common.DriverActivityAPI
 
 type EnableDriverAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'ENABLE
+  ApiAuth ('DriverOfferBPP ('DRIVERS 'ENABLE))
     :> Common.EnableDriverAPI
 
 type DisableDriverAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'DISABLE
+  ApiAuth ('DriverOfferBPP ('DRIVERS 'DISABLE))
     :> Common.DisableDriverAPI
 
 type BlockDriverAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'BLOCK
+  ApiAuth ('DriverOfferBPP ('DRIVERS 'BLOCK))
     :> Common.BlockDriverAPI
 
 type UnblockDriverAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UNBLOCK
+  ApiAuth ('DriverOfferBPP ('DRIVERS 'UNBLOCK))
     :> Common.UnblockDriverAPI
 
 type DriverLocationAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'LOCATION
+  ApiAuth ('DriverOfferBPP ('DRIVERS 'LOCATION))
     :> Common.DriverLocationAPI
 
 type DriverInfoAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'INFO
+  ApiAuth ('DriverOfferBPP ('DRIVERS 'INFO))
     :> Common.DriverInfoAPI
 
 type DeleteDriverAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'DELETE_DRIVER
+  ApiAuth ('DriverOfferBPP ('DRIVERS 'DELETE))
     :> Common.DeleteDriverAPI
 
 type UnlinkVehicleAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UNLINK_VEHICLE
+  ApiAuth ('DriverOfferBPP ('DRIVERS 'UNLINK_VEHICLE))
     :> Common.UnlinkVehicleAPI
 
 type EndRCAssociationAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'END_RC_ASSOCIATION
+  ApiAuth ('DriverOfferBPP ('DRIVERS 'END_RC_ASSOCIATION))
     :> Common.EndRCAssociationAPI
 
 type UnlinkDLAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UNLINK_DL
+  ApiAuth ('DriverOfferBPP ('DRIVERS 'UNLINK_DL))
     :> Common.UnlinkDLAPI
 
 type UnlinkAadhaarAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UNLINK_AADHAAR
+  ApiAuth ('DriverOfferBPP ('DRIVERS 'UNLINK_AADHAAR))
     :> Common.UnlinkAadhaarAPI
 
 type UpdatePhoneNumberAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UPDATE_PHONE_NUMBER
+  ApiAuth ('DriverOfferBPP ('DRIVERS 'UPDATE_PHONE_NUMBER))
     :> Common.UpdatePhoneNumberAPI
 
 type AddVehicleAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'ADD_VEHICLE
+  ApiAuth ('DriverOfferBPP ('DRIVERS 'ADD_VEHICLE))
     :> Common.AddVehicleAPI
 
 type UpdateDriverNameAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UPDATE_DRIVER_NAME
+  ApiAuth ('DriverOfferBPP ('DRIVERS 'UPDATE_DRIVER_NAME))
     :> Common.UpdateDriverNameAPI
 
 type ClearOnRideStuckDrivers =
-  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'CLEAR_ON_RIDE_STUCK_DRIVER_IDS
+  ApiAuth ('DriverOfferBPP ('DRIVERS 'CLEAR_ON_RIDE_STUCK_DRIVER_IDS))
     :> Common.ClearOnRideStuckDrivers
 
 handler :: ShortId DM.Merchant -> FlowServer API

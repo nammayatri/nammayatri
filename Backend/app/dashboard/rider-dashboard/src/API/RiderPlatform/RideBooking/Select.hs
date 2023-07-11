@@ -17,6 +17,8 @@ module API.RiderPlatform.RideBooking.Select where
 import qualified "rider-app" API.Dashboard.RideBooking.Select as BAP
 import qualified Dashboard.RiderPlatform.Customer as Common
 import qualified "rider-app" Domain.Action.UI.Select as DSelect
+import Domain.Types.AccessMatrix.BAP
+import Domain.Types.AccessMatrix.BAP.CustomerActionType
 import qualified "rider-app" Domain.Types.Estimate as DEstimate
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "rider-app" Domain.Types.Person as DP
@@ -34,13 +36,13 @@ import Tools.Auth.Merchant
 
 type API =
   "select"
-    :> ( ApiAuth 'APP_BACKEND 'CUSTOMERS 'SELECT
+    :> ( ApiAuth ('AppBackendBAP ('CUSTOMERS 'SELECT)) -- 'APP_BACKEND 'CUSTOMERS 'SELECT
            :> BAP.CustomerSelectAPI
-           :<|> ApiAuth 'APP_BACKEND 'CUSTOMERS 'SELECTLIST
+           :<|> ApiAuth ('AppBackendBAP ('CUSTOMERS 'SELECT_LIST))
              :> BAP.CustomerSelectListAPI
-           :<|> ApiAuth 'APP_BACKEND 'CUSTOMERS 'SELECTRESULT
+           :<|> ApiAuth ('AppBackendBAP ('CUSTOMERS 'SELECT_RESULT))
              :> BAP.CustomerSelectResultAPI
-           :<|> ApiAuth 'APP_BACKEND 'CUSTOMERS 'CANCELSEARCH
+           :<|> ApiAuth ('AppBackendBAP ('CUSTOMERS 'CANCEL_SEARCH))
              :> BAP.CustomerCancelSearchAPI
        )
 

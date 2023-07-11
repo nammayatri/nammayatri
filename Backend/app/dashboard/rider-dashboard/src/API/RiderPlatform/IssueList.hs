@@ -16,6 +16,7 @@ module API.RiderPlatform.IssueList where
 
 import qualified "rider-app" API.Dashboard.IssueList as BAP
 import qualified "rider-app" Domain.Action.Dashboard.IssueList as DI
+import Domain.Types.AccessMatrix.BAP
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Environment
 import Kernel.Prelude
@@ -28,7 +29,7 @@ import Tools.Auth.Merchant
 
 type API =
   "issue"
-    :> ApiAuth 'APP_BACKEND 'CUSTOMERS 'LIST_ISSUE
+    :> ApiAuth ('AppBackendBAP ('CUSTOMERS 'LIST_ISSUE))
     :> BAP.ListCustomerIssue
 
 handler :: ShortId DM.Merchant -> FlowServer API

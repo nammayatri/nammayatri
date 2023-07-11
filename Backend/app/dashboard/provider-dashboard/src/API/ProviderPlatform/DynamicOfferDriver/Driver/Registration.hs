@@ -15,6 +15,7 @@
 module API.ProviderPlatform.DynamicOfferDriver.Driver.Registration where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Common
+import Domain.Types.AccessMatrix.BPP.DriverActionType
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
@@ -47,19 +48,19 @@ handler merchantId =
     :<|> generateAadhaarOtp merchantId
     :<|> verifyAadhaarOtp merchantId
 
-type DocumentsListAPI = ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'DOCUMENT_LIST :> Common.DocumentsListAPI
+type DocumentsListAPI = ApiAuth ('DriverOfferBPP ('DRIVERS 'DOCUMENT_LIST)) :> Common.DocumentsListAPI
 
-type GetDocumentAPI = ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'GET_DOCUMENT :> Common.GetDocumentAPI
+type GetDocumentAPI = ApiAuth ('DriverOfferBPP ('DRIVERS 'GET_DOCUMENT)) :> Common.GetDocumentAPI
 
-type UploadDocumentAPI = ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UPLOAD_DOCUMENT :> Common.UploadDocumentAPI
+type UploadDocumentAPI = ApiAuth ('DriverOfferBPP ('DRIVERS 'UPLOAD_DOCUMENT)) :> Common.UploadDocumentAPI
 
-type RegisterDLAPI = ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'REGISTER_DL :> Common.RegisterDLAPI
+type RegisterDLAPI = ApiAuth ('DriverOfferBPP ('DRIVERS 'REGISTER_DL)) :> Common.RegisterDLAPI
 
-type RegisterRCAPI = ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'REGISTER_RC :> Common.RegisterRCAPI
+type RegisterRCAPI = ApiAuth ('DriverOfferBPP ('DRIVERS 'REGISTER_RC)) :> Common.RegisterRCAPI
 
-type GenerateAadhaarOtpAPI = ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'GENERATE_AADHAAR_OTP :> Common.GenerateAadhaarOtpAPI
+type GenerateAadhaarOtpAPI = ApiAuth ('DriverOfferBPP ('DRIVERS 'GENERATE_AADHAAR_OTP)) :> Common.GenerateAadhaarOtpAPI
 
-type VerifyAadhaarOtpAPI = ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'VERIFY_AADHAAR_OTP :> Common.VerifyAadhaarOtpAPI
+type VerifyAadhaarOtpAPI = ApiAuth ('DriverOfferBPP ('DRIVERS 'VERIFY_AADHAAR_OTP)) :> Common.VerifyAadhaarOtpAPI
 
 buildTransaction ::
   ( MonadFlow m,

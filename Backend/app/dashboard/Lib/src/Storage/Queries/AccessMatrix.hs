@@ -29,14 +29,12 @@ create = Esq.create
 findByRoleIdAndEntityAndActionType ::
   (Transactionable m) =>
   Id DRole.Role ->
-  DMatrix.ApiEntity ->
   DMatrix.UserActionType ->
   m (Maybe DMatrix.AccessMatrixItem)
-findByRoleIdAndEntityAndActionType roleId apiEntity userActionType = findOne $ do
+findByRoleIdAndEntityAndActionType roleId userActionType = findOne $ do
   accessMatrix <- from $ table @AccessMatrixT
   where_ $
     accessMatrix ^. AccessMatrixRoleId ==. val (toKey roleId)
-      &&. accessMatrix ^. AccessMatrixApiEntity ==. val apiEntity
       &&. accessMatrix ^. AccessMatrixUserActionType ==. val userActionType
   return accessMatrix
 

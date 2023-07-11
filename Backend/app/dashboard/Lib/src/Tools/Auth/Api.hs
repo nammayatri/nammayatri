@@ -16,8 +16,14 @@
 module Tools.Auth.Api (module Tools.Auth.Api, module Reexport) where
 
 import Data.Singletons.TH
-import Domain.Types.AccessMatrix as Reexport (ApiEntity (..), UserActionType (..))
+import Domain.Types.AccessMatrix as Reexport (ApiAccessLevel (userActionType), UserActionType (..))
 import qualified Domain.Types.AccessMatrix as DMatrix
+import Domain.Types.AccessMatrix.BAP.CustomerActionType as Reexport
+import Domain.Types.AccessMatrix.BAP.MerchantActionType as Reexport
+import Domain.Types.AccessMatrix.BAP.RideActionType as Reexport
+import Domain.Types.AccessMatrix.BPP as Reexport
+import Domain.Types.AccessMatrix.BPP.DriverReferralActionType as Reexport
+import Domain.Types.AccessMatrix.BPP.VolunteerActionType as Reexport
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Domain.Types.ServerName as Reexport (ServerName (..))
@@ -38,16 +44,16 @@ import Tools.Servant.HeaderAuth
 
 instance
   SanitizedUrl (sub :: Type) =>
-  SanitizedUrl (ApiAuth sn ae uat :> sub)
+  SanitizedUrl (ApiAuth uat :> sub)
   where
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
 
 -- | Performs token verification with checking api access level.
-type ApiAuth sn ae uat = HeaderAuthWithPayload "token" VerifyApi (ApiPayload sn ae uat)
+type ApiAuth uat = HeaderAuthWithPayload "token" VerifyApi (ApiPayload uat)
 
 data VerifyApi
 
-data ApiPayload (sn :: DSN.ServerName) (ae :: DMatrix.ApiEntity) (uat :: DMatrix.UserActionType)
+data ApiPayload (uat :: DMatrix.UserActionType)
 
 data ApiTokenInfo = ApiTokenInfo
   { personId :: Id DP.Person,
@@ -76,25 +82,23 @@ verifyApi ::
 verifyApi requiredAccessLevel token = do
   (personId, merchantId) <- Common.verifyPerson token
   verifiedPersonId <- verifyAccessLevel requiredAccessLevel personId
-  verifiedMerchant <- verifyServer requiredAccessLevel.serverName merchantId
+  verifiedMerchant <- verifyServer requiredAccessLevel merchantId
   pure ApiTokenInfo {personId = verifiedPersonId, merchant = verifiedMerchant}
 
 instance
-  forall (sn :: DSN.ServerName) (ae :: DMatrix.ApiEntity) (uat :: DMatrix.UserActionType).
-  (SingI sn, SingI ae, SingI uat) =>
-  (VerificationPayload DMatrix.ApiAccessLevel) (ApiPayload sn ae uat)
+  forall (uat :: DMatrix.UserActionType).
+  SingI uat =>
+  (VerificationPayload DMatrix.ApiAccessLevel) (ApiPayload uat)
   where
   toPayloadType _ =
     DMatrix.ApiAccessLevel
-      { serverName = fromSing (sing @sn),
-        apiEntity = fromSing (sing @ae),
-        userActionType = fromSing (sing @uat)
+      { userActionType = fromSing (sing @uat)
       }
 
 verifyAccessLevel :: EsqDBFlow m r => DMatrix.ApiAccessLevel -> Id DP.Person -> m (Id DP.Person)
 verifyAccessLevel requiredApiAccessLevel personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  mbAccessMatrixItem <- QAccessMatrix.findByRoleIdAndEntityAndActionType person.roleId requiredApiAccessLevel.apiEntity requiredApiAccessLevel.userActionType
+  mbAccessMatrixItem <- QAccessMatrix.findByRoleIdAndEntityAndActionType person.roleId requiredApiAccessLevel.userActionType
   let userAccessType = maybe DMatrix.USER_NO_ACCESS (.userAccessType) mbAccessMatrixItem
   unless (checkUserAccess userAccessType) $
     throwError AccessDenied
@@ -106,10 +110,16 @@ checkUserAccess DMatrix.USER_NO_ACCESS = False
 
 verifyServer ::
   EsqDBFlow m r =>
-  DSN.ServerName ->
+  DMatrix.ApiAccessLevel ->
   Id DM.Merchant ->
   m DM.Merchant
 verifyServer requiredServerAccess merchantId = do
   merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  unless (requiredServerAccess == merchant.serverName) $ throwError AccessDenied
+  case requiredServerAccess.userActionType of
+    AppBackendBAP _ ->
+      unless (merchant.serverName == DSN.APP_BACKEND) $ throwError AccessDenied
+    DriverOfferBPP _ ->
+      unless (merchant.serverName == DSN.DRIVER_OFFER_BPP || merchant.serverName == DSN.BECKN_TRANSPORT) $ throwError AccessDenied
+    SpecialZones _ ->
+      unless (merchant.serverName == DSN.SPECIAL_ZONE) $ throwError AccessDenied
   return merchant
