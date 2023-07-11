@@ -19,6 +19,8 @@ module Beckn.ACL.OnUpdate
 where
 
 import qualified Beckn.ACL.Common as Common
+import qualified Beckn.Types.Core.Taxi.Common.FulfillmentInfo as RideFulfillment
+import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as BookingCancelledOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.DriverArrivedEvent as DriverArrivedOU
@@ -48,13 +50,20 @@ data OnUpdateBuildReq
   = RideAssignedBuildReq
       { driver :: SP.Person,
         vehicle :: SVeh.Vehicle,
-        ride :: DRide.Ride
+        ride :: DRide.Ride,
+        booking :: DRB.Booking
       }
   | RideStartedBuildReq
-      { ride :: DRide.Ride
+      { driver :: SP.Person,
+        vehicle :: SVeh.Vehicle,
+        ride :: DRide.Ride,
+        booking :: DRB.Booking
       }
   | RideCompletedBuildReq
       { ride :: DRide.Ride,
+        driver :: SP.Person,
+        vehicle :: SVeh.Vehicle,
+        booking :: DRB.Booking,
         fareParams :: Fare.FareParameters,
         paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
         paymentUrl :: Maybe Text
@@ -65,6 +74,9 @@ data OnUpdateBuildReq
       }
   | DriverArrivedBuildReq
       { ride :: DRide.Ride,
+        driver :: SP.Person,
+        vehicle :: SVeh.Vehicle,
+        booking :: DRB.Booking,
         arrivalTime :: Maybe UTCTime
       }
   | EstimateRepetitionBuildReq
@@ -78,67 +90,104 @@ data OnUpdateBuildReq
         message :: Text
       }
 
+mkFullfillment ::
+  (EsqDBFlow m r, EncFlow m r) =>
+  Maybe SP.Person ->
+  DRide.Ride ->
+  DRB.Booking ->
+  Maybe SVeh.Vehicle ->
+  [Tags.TagGroup] ->
+  m RideFulfillment.FulfillmentInfo
+mkFullfillment mbDriver ride booking mbVehicle tags = do
+  agent <-
+    flip mapM mbDriver $ \driver -> do
+      mobileNumber <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present.")
+      name <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
+      pure $
+        RideAssignedOU.Agent
+          { name = name,
+            phone = mobileNumber,
+            tags = RideAssignedOU.AgentTags {registered_at = driver.createdAt, rating = realToFrac <$> driver.rating}
+          }
+  let veh =
+        mbVehicle <&> \vehicle ->
+          RideAssignedOU.Vehicle
+            { model = vehicle.model,
+              variant = show vehicle.variant,
+              color = vehicle.color,
+              registration = vehicle.registrationNo
+            }
+  pure $
+    RideAssignedOU.FulfillmentInfo
+      { id = ride.id.getId,
+        start =
+          RideAssignedOU.StartInfo
+            { authorization =
+                RideAssignedOU.Authorization
+                  { _type = "OTP",
+                    token = ride.otp
+                  },
+              location =
+                RideAssignedOU.Location
+                  { gps = RideAssignedOU.Gps {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
+                  }
+            },
+        end =
+          RideAssignedOU.EndInfo
+            { location =
+                RideAssignedOU.Location
+                  { gps = RideAssignedOU.Gps {lat = booking.toLocation.lat, lon = booking.toLocation.lon}
+                  }
+            },
+        agent,
+        _type = RideAssignedOU.RIDE,
+        vehicle = veh,
+        ..
+      }
+
 buildOnUpdateMessage ::
   (EsqDBFlow m r, EncFlow m r) =>
   OnUpdateBuildReq ->
   m OnUpdate.OnUpdateMessage
 buildOnUpdateMessage RideAssignedBuildReq {..} = do
-  mobileNumber <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present.")
-  name <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
-  let agent =
-        RideAssignedOU.Agent
-          { name = name,
-            phone = mobileNumber,
-            phoneCountryCode = driver.mobileCountryCode,
-            rating = realToFrac <$> driver.rating,
-            tags = RideAssignedOU.AgentTags {registered_at = driver.createdAt}
-          }
-      veh =
-        RideAssignedOU.Vehicle
-          { model = vehicle.model,
-            variant = show vehicle.variant,
-            color = vehicle.color,
-            registration = vehicle.registrationNo
-          }
-      fulfillment =
-        RideAssignedOU.FulfillmentInfo
-          { id = ride.id.getId,
-            start =
-              RideAssignedOU.StartInfo
-                { authorization =
-                    RideAssignedOU.Authorization
-                      { _type = "OTP",
-                        token = ride.otp
-                      }
-                },
-            agent,
-            vehicle = veh,
-            ..
-          }
+  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) []
   return $
     OnUpdate.OnUpdateMessage $
       OnUpdate.RideAssigned
         RideAssignedOU.RideAssignedEvent
-          { id = ride.bookingId.getId,
+          { id = ride.id.getId,
             state = "ACTIVE",
-            update_target = "state,fufillment.state.code,fulfillment.start.authorization,fulfillment.agent,fulfillment.vehicle",
+            update_target = "order.fufillment.id, order.fufillment.state.code, order.fulfillment.start.authorization, order.fulfillment.agent, order.fulfillment.vehicle",
             ..
           }
 buildOnUpdateMessage RideStartedBuildReq {..} = do
+  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) []
   return $
     OnUpdate.OnUpdateMessage $
       OnUpdate.RideStarted
         RideStartedOU.RideStartedEvent
-          { id = ride.bookingId.getId,
-            update_target = "fufillment.state.code",
-            fulfillment = RideStartedOU.FulfillmentInfo ride.id.getId
+          { id = ride.id.getId,
+            update_target = "order.fufillment.state.code",
+            ..
           }
 buildOnUpdateMessage req@RideCompletedBuildReq {} = do
-  fare <- realToFrac <$> req.ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
-  chargeableDistance <-
+  chargeableDistance :: HighPrecMeters <-
     realToFrac <$> req.ride.chargeableDistance
       & fromMaybeM (InternalError "Ride chargeable distance is not present.")
-  let traveledDistance = realToFrac req.ride.traveledDistance
+  let traveledDistance :: HighPrecMeters = req.ride.traveledDistance
+  let tagGroups =
+        Tags.TagGroup
+          { display = False,
+            code = "ride_distance_details",
+            name = "Ride Distance Details",
+            list =
+              [ Tags.Tag Nothing (Just "chargeable_distance") (Just "Chargeable Distance") (Just $ show chargeableDistance),
+                Tags.Tag Nothing (Just "traveled_distance") (Just "Traveled Distance") (Just $ show traveledDistance)
+              ]
+          } :
+        []
+  fulfillment <- mkFullfillment (Just req.driver) req.ride req.booking (Just req.vehicle) tagGroups
+  fare <- realToFrac <$> req.ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
   let currency = "INR"
       ride = req.ride
       price =
@@ -154,8 +203,8 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
     OnUpdate.OnUpdateMessage $
       OnUpdate.RideCompleted
         RideCompletedOU.RideCompletedEvent
-          { id = ride.bookingId.getId,
-            update_target = "fulfillment.state.code,quote.price,quote.breakup,payment.uri",
+          { id = ride.id.getId,
+            update_target = "order.fulfillment, order.payment, order.quote, order.fulfillment.tags",
             quote =
               RideCompletedOU.RideCompletedQuote
                 { price,
@@ -167,15 +216,10 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
                   { collected_by = Common.castDPaymentCollector . (.collectedBy) <$> req.paymentMethodInfo,
                     _type = Common.castDPaymentType . (.paymentType) <$> req.paymentMethodInfo,
                     instrument = Common.castDPaymentInstrument . (.paymentInstrument) <$> req.paymentMethodInfo,
-                    time = RideCompletedOU.TimeDuration "FIXME",
+                    status = "ON-FULFILLMENT",
                     uri = req.paymentUrl
                   },
-            fulfillment =
-              RideCompletedOU.FulfillmentInfo
-                { id = ride.id.getId,
-                  chargeable_distance = chargeableDistance,
-                  traveled_distance = traveledDistance
-                }
+            fulfillment = fulfillment
           }
   where
     filterRequiredBreakups fParamsType breakup = do
@@ -208,26 +252,42 @@ buildOnUpdateMessage BookingCancelledBuildReq {..} = do
             cancellation_reason = castCancellationSource cancellationSource
           }
 buildOnUpdateMessage DriverArrivedBuildReq {..} = do
+  let tagGroups =
+        Tags.TagGroup
+          { display = False,
+            code = "driver_arrived_info",
+            name = "Driver Arrived Info",
+            list = [Tags.Tag Nothing (Just "arrival_time") (Just "Chargeable Distance") (show <$> arrivalTime) | isJust arrivalTime]
+          } :
+        []
+  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) tagGroups
   return $
     OnUpdate.OnUpdateMessage $
       OnUpdate.DriverArrived
         DriverArrivedOU.DriverArrivedEvent
           { id = ride.bookingId.getId,
-            update_target = "state,fufillment.state.code",
-            fulfillment = DriverArrivedOU.FulfillmentInfo ride.id.getId,
-            arrival_time = arrivalTime
+            update_target = "order.fufillment.state.code, order.fulfillment.tags",
+            fulfillment
           }
 buildOnUpdateMessage EstimateRepetitionBuildReq {..} = do
+  let tagGroups =
+        Tags.TagGroup
+          { display = False,
+            code = "previous_cancellation_reasons",
+            name = "Previous Cancellation Reasons",
+            list = [Tags.Tag Nothing (Just "cancellation_reason") (Just "Chargeable Distance") (Just . show $ castCancellationSource cancellationSource)]
+          } :
+        []
+  fulfillment <- mkFullfillment Nothing ride booking Nothing tagGroups
   let item = EstimateRepetitionOU.Item {id = estimateId.getId}
   return $
     OnUpdate.OnUpdateMessage $
       OnUpdate.EstimateRepetition
         EstimateRepetitionOU.EstimateRepetitionEvent
           { id = booking.id.getId,
-            update_target = "state,fufillment.state.code",
+            update_target = "order.fufillment.state.code, order.tags",
             item = item,
-            fulfillment = EstimateRepetitionOU.FulfillmentInfo ride.id.getId,
-            cancellation_reason = castCancellationSource cancellationSource
+            fulfillment
           }
 buildOnUpdateMessage NewMessageBuildReq {..} = do
   return $

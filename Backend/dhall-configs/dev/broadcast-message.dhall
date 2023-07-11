@@ -59,7 +59,7 @@ in  { hedisCfg
     , hedisNonCriticalCfg = hedisCfg
     , hedisNonCriticalClusterCfg = hedisClusterCfg
     , hedisMigrationStage = True
-    , cutOffHedisCluster = False
+    , cutOffHedisCluster = True
     , esqDBCfg
     , esqDBReplicaCfg
     , cacheConfig

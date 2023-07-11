@@ -18,7 +18,7 @@ module Beckn.Types.Core.Taxi.OnSearch.Fulfillment
   )
 where
 
-import Beckn.Types.Core.Taxi.Common.FulfillmentType as Reexport
+import Beckn.Types.Core.Taxi.Common.FulfillmentInfo (FulfillmentType)
 import Beckn.Types.Core.Taxi.Common.VehicleVariant as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.StartInfo as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.StopInfo as Reexport
