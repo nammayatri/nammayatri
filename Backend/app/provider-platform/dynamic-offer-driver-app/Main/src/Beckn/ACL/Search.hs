@@ -80,8 +80,8 @@ buildSearchReq subscriber req = do
 --        in (distance, duration)
 --     else (Nothing, Nothing)
 
-getDistance :: [Search.TagGroup] -> Maybe Meters
-getDistance tagGroups = do
+getDistance :: Search.TagGroups -> Maybe Meters
+getDistance (Search.TG tagGroups) = do
   tagGroup <- find (\tagGroup -> tagGroup.code == "route_info") tagGroups
   tag <- find (\tag -> tag.code == Just "distance_info_in_m") tagGroup.list
   tagValue <- tag.value
@@ -95,8 +95,8 @@ getDistance tagGroups = do
 --     Just $ Meters distanceValue
 --   else Nothing
 
-getDuration :: [Search.TagGroup] -> Maybe Seconds
-getDuration tagGroups = do
+getDuration :: Search.TagGroups -> Maybe Seconds
+getDuration (Search.TG tagGroups) = do
   tagGroup <- find (\tagGroup -> tagGroup.code == "route_info") tagGroups
   tag <- find (\tag -> tag.code == Just "duration_info_in_s") tagGroup.list
   tagValue <- tag.value
@@ -114,10 +114,13 @@ getDuration tagGroups = do
 
 buildCustomerLanguage :: Search.Customer -> Maybe Language
 buildCustomerLanguage Search.Customer {..} = do
-  tagGroup <- find (\tagGroup -> tagGroup.code == "customer_info") person.tags
+  tagGroup <- findTagGroup "customer_info" person.tags -- find (\tagGroup -> tagGroup.code == "customer_info") person.tags
   tag <- find (\tag -> tag.code == Just "customer_language") tagGroup.list
   tagValue <- tag.value
   readMaybe $ T.unpack tagValue
+
+findTagGroup :: String -> Search.TagGroups -> Maybe Search.TagGroup
+findTagGroup code (Search.TG tagGroups) = find (\tagGroup -> T.unpack tagGroup.code == code) tagGroups
 
 -- list1Code <- tags.list_1_code
 -- if tags.code == "customer_info" && list1Code == "customer_language"
