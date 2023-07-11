@@ -12,27 +12,30 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnInit.BreakupItem where
+module Beckn.Types.Core.Taxi.Common.Location
+  ( module Beckn.Types.Core.Taxi.Common.Location,
+    module Reexport,
+  )
+where
 
-import Beckn.Types.Core.Taxi.Common.DecimalValue
+import Beckn.Types.Core.Taxi.Common.Address as Reexport
+import Beckn.Types.Core.Taxi.Common.Gps as Reexport
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
-import Kernel.Prelude
+import EulerHS.Prelude
+import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
-data BreakupItem = BreakupItem
-  { title :: Text,
-    price :: BreakupItemPrice
+data Location = Location
+  { gps :: Gps,
+    address :: Maybe Address
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, Show)
 
-instance ToSchema BreakupItem where
+instance ToSchema Location where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
-data BreakupItemPrice = BreakupItemPrice
-  { currency :: Text,
-    value :: DecimalValue
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
+instance ToJSON Location where
+  toJSON = genericToJSON removeNullFields
 
-instance ToSchema BreakupItemPrice where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+instance FromJSON Location where
+  parseJSON = genericParseJSON removeNullFields

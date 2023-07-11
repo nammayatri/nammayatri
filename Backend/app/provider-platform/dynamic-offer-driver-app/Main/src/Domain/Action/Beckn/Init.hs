@@ -53,6 +53,8 @@ import Tools.Error
 
 data InitReq = InitReq
   { driverQuoteId :: Text,
+    driverId :: Maybe Text,
+    vehicleVariant :: Veh.Variant,
     bapId :: Text,
     bapUri :: BaseUrl,
     initTypeReq :: InitTypeReq,
@@ -66,7 +68,9 @@ data InitRes = InitRes
   { booking :: DRB.Booking,
     transporter :: DM.Merchant,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
-    paymentUrl :: Maybe Text
+    paymentUrl :: Maybe Text,
+    driverName :: Maybe Text,
+    driverId :: Maybe Text
   }
 
 buildBookingLocation :: (MonadGuid m) => DLoc.SearchReqLocation -> m DLoc.BookingLocation
@@ -130,18 +134,19 @@ handler merchantId req eitherReq = do
     let mbPaymentMethod = find (compareMerchantPaymentMethod paymentMethodInfo) allPaymentMethods
     mbPaymentMethod & fromMaybeM (InvalidRequest "Payment method not allowed")
 
-  booking <- case req.initTypeReq of
+  (booking, driverName, driverId) <- case req.initTypeReq of
     InitNormalReq -> do
       case eitherReq of
         Left (driverQuote, searchRequest, searchTry) -> do
-          buildBooking searchRequest driverQuote searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id))
+          booking <- buildBooking searchRequest driverQuote searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id))
+          return (booking, Just driverQuote.driverName, Just driverQuote.driverId.getId)
         Right _ -> throwError $ InvalidRequest "Can't have specialZoneQuote in normal booking"
     InitSpecialZoneReq -> do
       case eitherReq of
         Right (specialZoneQuote, searchRequest) -> do
-          buildBooking searchRequest specialZoneQuote searchRequest.startTime DRB.SpecialZoneBooking now (mbPaymentMethod <&> (.id))
+          booking <- buildBooking searchRequest specialZoneQuote searchRequest.startTime DRB.SpecialZoneBooking now (mbPaymentMethod <&> (.id))
+          return (booking, Nothing, Nothing)
         Left _ -> throwError $ InvalidRequest "Can't have driverQuote in specialZone booking"
-
   let paymentUrl = DMPM.getPrepaidPaymentUrl =<< mbPaymentMethod
   let paymentMethodInfo = req.paymentMethodInfo
   Esq.runTransaction $
@@ -216,7 +221,8 @@ validateRequest merchantId req = do
   now <- getCurrentTime
   case req.initTypeReq of
     InitNormalReq -> do
-      driverQuote <- QDQuote.findById (Id req.driverQuoteId) >>= fromMaybeM (QuoteNotFound req.driverQuoteId)
+      driverId <- req.driverId & fromMaybeM (InvalidRequest "driverId Not Found for Normal Booking")
+      driverQuote <- QDQuote.findActiveQuoteByDriverIdAndVehVar (Id driverId) req.vehicleVariant >>= fromMaybeM (QuoteNotFound req.driverQuoteId)
       when (driverQuote.validTill < now) $
         throwError $ QuoteExpired driverQuote.id.getId
       searchRequest <- QSR.findById driverQuote.requestId >>= fromMaybeM (SearchRequestNotFound driverQuote.requestId.getId)

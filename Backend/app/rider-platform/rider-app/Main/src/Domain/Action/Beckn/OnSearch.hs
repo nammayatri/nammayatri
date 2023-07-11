@@ -243,6 +243,7 @@ buildQuote requestId providerInfo now merchantId QuoteInfo {..} = do
         providerName = providerInfo.name,
         providerCompletedRidesCount = providerInfo.ridesCompleted,
         providerId = providerInfo.providerId,
+        providerShortId = "NAMMA_YATRI",
         providerUrl = providerInfo.url,
         createdAt = now,
         quoteDetails = quoteDetails',

@@ -14,20 +14,39 @@
 
 module Beckn.Types.Core.Taxi.OnInit.Order where
 
+import Beckn.Types.Core.Taxi.Common.Descriptor
+import Beckn.Types.Core.Taxi.Common.ItemId
+import Beckn.Types.Core.Taxi.Common.Payment
+import Beckn.Types.Core.Taxi.Common.Price
+import Beckn.Types.Core.Taxi.Common.Provider
+import Beckn.Types.Core.Taxi.Common.Quote
+import Beckn.Types.Core.Taxi.OnInit.Fulfillment
 import Beckn.Types.Core.Taxi.OnInit.OrderState
-import Beckn.Types.Core.Taxi.OnInit.Payment
-import Beckn.Types.Core.Taxi.OnInit.Quote
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (State, id, state)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Order = Order
   { id :: Text,
+    items :: [OrderItem],
+    fulfillment :: FulfillmentInfo,
     state :: OrderState,
     quote :: Quote,
-    payment :: Payment
+    payment :: Payment,
+    provider :: Maybe Provider
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
 instance ToSchema Order where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+data OrderItem = OrderItem
+  { id :: ItemId,
+    fulfillment_id :: Text,
+    price :: Price,
+    descriptor :: Descriptor
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema OrderItem where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

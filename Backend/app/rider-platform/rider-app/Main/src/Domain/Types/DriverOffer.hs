@@ -21,17 +21,16 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 
-data BPPQuote
-
 data DriverOffer = DriverOffer
   { id :: Id DriverOffer,
     estimateId :: Id DEstimate.Estimate,
     merchantId :: Maybe (Id DMerchant.Merchant),
     driverName :: Text,
+    driverId :: Text,
     durationToPickup :: Int, -- Seconds?
     distanceToPickup :: HighPrecMeters,
     validTill :: UTCTime,
-    bppQuoteId :: Id BPPQuote,
+    bppQuoteId :: Text,
     rating :: Maybe Centesimal
   }
   deriving (Generic, Show, PrettyShow)

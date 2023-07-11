@@ -14,8 +14,11 @@
 
 module Beckn.Types.Core.Taxi.Init.Order where
 
+import Beckn.Types.Core.Taxi.Common.ItemId
 import Beckn.Types.Core.Taxi.Common.Payment
-import Beckn.Types.Core.Taxi.Init.Descriptor
+import Beckn.Types.Core.Taxi.Common.Price
+import Beckn.Types.Core.Taxi.Common.Provider
+import Beckn.Types.Core.Taxi.Common.Quote
 import Beckn.Types.Core.Taxi.Init.Fulfillment
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (State, id, state)
@@ -24,7 +27,9 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 data Order = Order
   { items :: [OrderItem],
     fulfillment :: FulfillmentInfo,
-    payment :: Payment
+    payment :: Payment,
+    quote :: Maybe Quote, -- TODO :: Remove Maybe
+    provider :: Maybe Provider
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
@@ -32,8 +37,8 @@ instance ToSchema Order where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
 data OrderItem = OrderItem
-  { id :: Maybe Text, -- for those cases where INIT API can't be stateless
-    descriptor :: Descriptor
+  { id :: ItemId,
+    price :: Price
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 

@@ -12,21 +12,27 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Init.Descriptor
-  ( module Beckn.Types.Core.Taxi.Init.Descriptor,
-    module Reexport,
-  )
-where
+module Beckn.Types.Core.Taxi.Common.BreakupItem where
 
-import Beckn.Types.Core.Taxi.Common.ItemCode as Reexport
+import Beckn.Types.Core.Taxi.Common.DecimalValue
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
-import EulerHS.Prelude hiding (State, id, state)
+import Kernel.Prelude
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
-newtype Descriptor = Descriptor
-  { code :: ItemCode
+data BreakupItem = BreakupItem
+  { title :: Text,
+    price :: BreakupItemPrice
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
-instance ToSchema Descriptor where
+instance ToSchema BreakupItem where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+data BreakupItemPrice = BreakupItemPrice
+  { currency :: Text,
+    value :: DecimalValue
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema BreakupItemPrice where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

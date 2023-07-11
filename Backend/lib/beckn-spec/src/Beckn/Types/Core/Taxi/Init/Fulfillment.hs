@@ -17,12 +17,15 @@ module Beckn.Types.Core.Taxi.Init.Fulfillment
   )
 where
 
-import Beckn.Types.Core.Taxi.Init.StartInfo
-import Beckn.Types.Core.Taxi.Init.StopInfo
+import Beckn.Types.Core.Taxi.Common.FulfillmentType
+import Beckn.Types.Core.Taxi.Common.StartInfo
+import Beckn.Types.Core.Taxi.Common.StopInfo
+import Beckn.Types.Core.Taxi.Common.Vehicle
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions, fromAesonOptions)
 import EulerHS.Prelude hiding (id)
 import Kernel.Utils.Common (HighPrecMeters)
+import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 newtype Tags = Tags
@@ -50,11 +53,20 @@ tagsJSONOptions =
 -- If end = Nothing, then bpp sends quotes only for RENTAL
 -- If end is Just, then bpp sends quotes both for RENTAL and ONE_WAY
 data FulfillmentInfo = FulfillmentInfo
-  { start :: StartInfo,
+  { id :: Maybe Text,
+    _type :: FulfillmentType,
+    start :: StartInfo,
     end :: Maybe StopInfo,
-    tags :: Tags
+    tags :: Tags,
+    vehicle :: Vehicle
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, Show)
 
 instance ToSchema FulfillmentInfo where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON FulfillmentInfo where
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+
+instance ToJSON FulfillmentInfo where
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

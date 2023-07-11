@@ -12,8 +12,8 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnConfirm.Fulfillment
-  ( module Beckn.Types.Core.Taxi.OnConfirm.Fulfillment,
+module Beckn.Types.Core.Taxi.OnInit.Fulfillment
+  ( module Beckn.Types.Core.Taxi.OnInit.Fulfillment,
   )
 where
 
@@ -23,7 +23,8 @@ import Beckn.Types.Core.Taxi.Common.StartInfo
 import Beckn.Types.Core.Taxi.Common.StopInfo
 import Beckn.Types.Core.Taxi.Common.Vehicle
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
-import Kernel.Prelude
+import EulerHS.Prelude hiding (id)
+import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 -- If end = Nothing, then bpp sends quotes only for RENTAL
@@ -31,21 +32,18 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 data FulfillmentInfo = FulfillmentInfo
   { id :: Text,
     _type :: FulfillmentType,
-    state :: FulfillmentState,
     start :: StartInfo,
     end :: Maybe StopInfo,
     vehicle :: Vehicle,
     agent :: Maybe Agent -- If NormalBooking then Just else Nothing for SpecialZoneBooking
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, Show)
 
 instance ToSchema FulfillmentInfo where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
-newtype FulfillmentState = FulfillmentState
-  { code :: Text
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
+instance FromJSON FulfillmentInfo where
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
-instance ToSchema FulfillmentState where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+instance ToJSON FulfillmentInfo where
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

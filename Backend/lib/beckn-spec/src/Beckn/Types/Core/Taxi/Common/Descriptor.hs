@@ -12,9 +12,17 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Init.StopInfo
-  ( module Reexport,
-  )
-where
+module Beckn.Types.Core.Taxi.Common.Descriptor where
 
-import Beckn.Types.Core.Taxi.Search.StopInfo as Reexport
+import Beckn.Types.Core.Taxi.Common.ItemId
+import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
+import EulerHS.Prelude hiding (exp, id)
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
+
+newtype Descriptor = Descriptor
+  { short_desc :: ItemId
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema Descriptor where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

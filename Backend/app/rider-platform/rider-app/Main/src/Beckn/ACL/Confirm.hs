@@ -16,7 +16,9 @@ module Beckn.ACL.Confirm (buildConfirmReq) where
 
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
 import qualified Domain.Action.Beckn.OnInit as DOnInit
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.LocationAddress as DBL
+import qualified Domain.Types.Vehicle.Variant as VehVar
 import Environment
 import EulerHS.Prelude hiding (id, state)
 import qualified Kernel.Types.Beckn.Context as Context
@@ -37,68 +39,121 @@ buildConfirmReq res = do
   pure $ BecknReq context $ mkConfirmMessage res
 
 mkConfirmMessage :: DOnInit.OnInitRes -> Confirm.ConfirmMessage
-mkConfirmMessage res =
-  Confirm.ConfirmMessage
-    { order =
-        Confirm.Order
-          { id = getId res.bppBookingId,
-            fulfillment = mkFulfillment res.fromLocationAddress res.mbToLocationAddress,
-            customer =
-              Confirm.OrderCustomer
-                { contact =
-                    Confirm.Contact
-                      { phone =
-                          Confirm.Phone
-                            { country_code = res.riderPhoneCountryCode,
-                              number = res.riderPhoneNumber
-                            }
-                      },
-                  person =
-                    res.mbRiderName <&> \riderName ->
-                      Confirm.OrderPerson
-                        { name = riderName
-                        }
-                },
-            payment = mkPayment res.estimatedTotalFare
+mkConfirmMessage res = do
+  let vehicleVariant = castVehicleVariant res.vehicleVariant
+  let itemId =
+        Confirm.ItemId
+          { providerName = res.providerShortId,
+            vehicleVariant
           }
-    }
+  pure
+    Confirm.ConfirmMessage
+      { order =
+          Confirm.Order
+            { id = getId res.bppBookingId,
+              items =
+                [ Confirm.OrderItem
+                    { id = itemId,
+                      price = Nothing
+                    }
+                ],
+              fulfillment = mkFulfillment res.fulfillmentId fulfillmentType res.fromLocationAddress res.mbToLocationAddress res.riderPhoneCountryCode res.riderPhoneNumber res.mbRiderName,
+              payment = mkPayment res.estimatedTotalFare res.paymentUrl,
+              quote = Nothing,
+              provider =
+                res.driverId >>= \dId ->
+                  Just
+                    Confirm.Provider
+                      { id = dId
+                      }
+            }
+      }
+  where
+    castVehicleVariant = \case
+      VehVar.SEDAN -> Confirm.SEDAN
+      VehVar.SUV -> Confirm.SUV
+      VehVar.HATCHBACK -> Confirm.HATCHBACK
+      VehVar.AUTO_RICKSHAW -> Confirm.AUTO_RICKSHAW
+      VehVar.TAXI -> Confirm.TAXI
+      VehVar.TAXI_PLUS -> Confirm.TAXI_PLUS
+    fulfillmentType = case res.bookingDetails of
+      DRB.OneWaySpecialZoneDetails _ -> Confirm.RIDE_OTP
+      _ -> Confirm.RIDE
 
-mkFulfillment :: DBL.LocationAddress -> Maybe DBL.LocationAddress -> Confirm.FulfillmentInfo
-mkFulfillment startLoc mbStopLoc =
+mkFulfillment :: Maybe Text -> Confirm.FulfillmentType -> DBL.BookingLocation -> Maybe DBL.BookingLocation -> Text -> Text -> Maybe Text -> VehVar.Variant -> Confirm.FulfillmentInfo
+mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountryCode riderPhoneNumber mbRiderName vehicleVariant =
   Confirm.FulfillmentInfo
-    { start =
+    { id = fulfillmentId,
+      _type = fulfillmentType,
+      start =
         Confirm.StartInfo
-          { location = mkLocation startLoc
+          { location =
+              Confirm.Location
+                { gps =
+                    Confirm.Gps
+                      { lat = startLoc.lat,
+                        lon = startLoc.lon
+                      },
+                  address = Just $ mkLocation startLoc
+                },
+            authorization = Nothing
           },
       end =
         mbStopLoc <&> \stopLoc ->
           Confirm.StopInfo
-            { location = mkLocation stopLoc
-            }
-    }
-
-mkLocation :: DBL.LocationAddress -> Confirm.Location
-mkLocation DBL.LocationAddress {..} =
-  Confirm.Location
-    { address =
-        Confirm.Address
-          { area_code = areaCode,
-            locality = area,
-            ward = ward,
-            door = door,
-            ..
+            { location =
+                Confirm.Location
+                  { gps =
+                      Confirm.Gps
+                        { lat = stopLoc.lat,
+                          lon = stopLoc.lon
+                        },
+                    address = Just $ mkLocation stopLoc
+                  }
+            },
+      customer =
+        Confirm.OrderCustomer
+          { contact =
+              Confirm.Contact
+                { phone =
+                    Confirm.Phone
+                      { country_code = riderPhoneCountryCode,
+                        number = riderPhoneNumber
+                      }
+                },
+            person =
+              mbRiderName <&> \riderName ->
+                Confirm.OrderPerson
+                  { name = riderName
+                  }
+          },
+      vehicle =
+        Init.Vehicle
+          { category = vehicleVariant
           }
     }
 
-mkPayment :: Money -> Confirm.Payment
-mkPayment estimatedTotalFare =
+mkLocation :: DBL.LocationAddress -> Confirm.LocationAddress
+mkLocation DBL.LocationAddress {..} =
+  Confirm.Address
+    { area_code = areaCode,
+      locality = area,
+      ward = ward,
+      door = door,
+      ..
+    }
+
+mkPayment :: Money -> Maybe Text -> Confirm.Payment
+mkPayment estimatedTotalFare uri =
   Confirm.Payment
-    { collected_by = "BAP",
-      params =
-        Confirm.PaymentParams
-          { amount = realToFrac estimatedTotalFare,
-            currency = "INR"
-          },
+    { _type = Confirm.ON_FULFILLMENT,
       time = Confirm.TimeDuration "P2D",
-      _type = Confirm.ON_FULFILLMENT
+      params =
+        Init.PaymentParams
+          { collected_by = "BAP",
+            instrument = Nothing,
+            currency = "INR",
+            amount = Just realToFrac estimatedTotalFare
+          },
+      uri
     }

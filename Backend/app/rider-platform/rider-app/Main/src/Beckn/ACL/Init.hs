@@ -43,26 +43,26 @@ buildInitReq res = do
 
 buildInitMessage :: (MonadThrow m, Log m) => SConfirm.DConfirmRes -> m Init.InitMessage
 buildInitMessage res = do
-  let (fareProductType, mbDistance, mbDuration, mbBppItemId) = case res.quoteDetails of
-        SConfirm.ConfirmOneWayDetails -> (Init.ONE_WAY_TRIP, Nothing, Nothing, Nothing)
-        SConfirm.ConfirmRentalDetails r -> (Init.RENTAL_TRIP, Just r.baseDistance, Just r.baseDuration, Nothing)
-        SConfirm.ConfirmAutoDetails bppQuoteId -> (Init.DRIVER_OFFER, Nothing, Nothing, Just bppQuoteId.getId)
-        SConfirm.ConfirmOneWaySpecialZoneDetails specialZoneQuoteId -> (Init.ONE_WAY_SPECIAL_ZONE, Nothing, Nothing, Just specialZoneQuoteId) --need to be  checked
+  let (fareProductType, mbDistance, mbDuration, fulfillmentType, mbBppFullfillmentId, mbDriverId) = case res.quoteDetails of
+        SConfirm.ConfirmOneWayDetails -> (Init.ONE_WAY_TRIP, Nothing, Nothing, Init.RIDE, Nothing, Nothing)
+        SConfirm.ConfirmRentalDetails r -> (Init.RENTAL_TRIP, Just r.baseDistance, Just r.baseDuration, Init.RIDE, Nothing, Nothing)
+        SConfirm.ConfirmAutoDetails estimateId driverId -> (Init.DRIVER_OFFER, Nothing, Nothing, Init.RIDE, Just estimateId.getId, Just driverId)
+        SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> (Init.ONE_WAY_SPECIAL_ZONE, Nothing, Nothing, Init.RIDE_OTP, Just quoteId, Nothing) --need to be  checked
   let vehicleVariant = castVehicleVariant res.vehicleVariant
-  let itemCode =
-        Init.ItemCode
-          { fareProductType,
-            vehicleVariant,
-            distance = mbDistance,
-            duration = mbDuration
+  let itemId =
+        Init.ItemId
+          { providerName = res.providerShortId,
+            vehicleVariant
           }
   pure
     Init.InitMessage
       { order =
           Init.Order
-            { items = [mkOrderItem mbBppItemId itemCode],
-              fulfillment = mkFulfillmentInfo res.fromLoc res.toLoc res.maxEstimatedDistance,
-              payment = mkPayment res.paymentMethodInfo
+            { items = [mkOrderItem itemId],
+              quote = Nothing,
+              fulfillment = mkFulfillmentInfo fulfillmentType mbBppFullfillmentId res.fromLoc res.toLoc res.maxEstimatedDistance vehicleVariant,
+              payment = mkPayment res.paymentMethodInfo,
+              provider = mkProvider mbDriverId
             }
       }
   where
@@ -74,20 +74,27 @@ buildInitMessage res = do
       VehVar.TAXI -> Init.TAXI
       VehVar.TAXI_PLUS -> Init.TAXI_PLUS
 
-mkOrderItem :: Maybe Text -> Init.ItemCode -> Init.OrderItem
-mkOrderItem mbBppItemId code =
+mkProvider :: Maybe Text -> Maybe Init.Provider
+mkProvider driverId =
+  driverId >>= \dId ->
+    Just
+      Init.Provider
+        { id = dId
+        }
+
+mkOrderItem :: Init.ItemId -> Init.OrderItem
+mkOrderItem itemId =
   Init.OrderItem
-    { id = mbBppItemId,
-      descriptor =
-        Init.Descriptor
-          { code = code
-          }
+    { id = itemId,
+      price = Nothing
     }
 
-mkFulfillmentInfo :: LatLong -> Maybe LatLong -> Maybe HighPrecMeters -> Init.FulfillmentInfo
-mkFulfillmentInfo fromLoc mbToLoc maxDistance =
+mkFulfillmentInfo :: Init.FulfillmentType -> Maybe Text -> LatLong -> Maybe LatLong -> Maybe HighPrecMeters -> VehVar.Variant -> Init.FulfillmentInfo
+mkFulfillmentInfo fulfillmentType mbBppFullfillmentId fromLoc mbToLoc maxDistance vehicleVariant =
   Init.FulfillmentInfo
-    { tags =
+    { id = mbBppFullfillmentId,
+      _type = fulfillmentType,
+      tags =
         Init.Tags
           { max_estimated_distance = maxDistance
           },
@@ -101,7 +108,8 @@ mkFulfillmentInfo fromLoc mbToLoc maxDistance =
                         lon = fromLoc.lon
                       },
                   address = Nothing
-                }
+                },
+            authorization = Nothing
           },
       end =
         mbToLoc >>= \toLoc ->
@@ -116,22 +124,38 @@ mkFulfillmentInfo fromLoc mbToLoc maxDistance =
                           },
                       address = Nothing
                     }
-              }
+              },
+      vehicle =
+        Init.Vehicle
+          { category = vehicleVariant
+          }
     }
 
 mkPayment :: Maybe DMPM.PaymentMethodInfo -> Init.Payment
 mkPayment (Just DMPM.PaymentMethodInfo {..}) =
   Init.Payment
-    { collected_by = Common.castDPaymentCollector collectedBy,
-      _type = Common.castDPaymentType paymentType,
-      instrument = Just $ Common.castDPaymentInstrument paymentInstrument,
-      time = Init.TimeDuration "P2A" -- FIXME: what is this?
+    { _type = Common.castDPaymentType paymentType,
+      time = Init.TimeDuration "P2A", -- FIXME: what is this?
+      params =
+        Init.PaymentParams
+          { collected_by = Common.castDPaymentCollector collectedBy,
+            instrument = Just $ Common.castDPaymentInstrument paymentInstrument,
+            currency = Nothing,
+            amount = Nothing
+          },
+      uri = Nothing
     }
 -- for backward compatibility
 mkPayment Nothing =
   Init.Payment
-    { collected_by = Init.BAP,
-      _type = Init.ON_FULFILLMENT,
-      instrument = Nothing,
-      time = Init.TimeDuration "P2A" -- FIXME: what is this?
+    { _type = Init.ON_FULFILLMENT,
+      time = Init.TimeDuration "P2A", -- FIXME: what is this?
+      params =
+        Init.PaymentParams
+          { collected_by = Init.BAP,
+            instrument = Nothing,
+            currency = Nothing,
+            amount = Nothing
+          },
+      uri = Nothing
     }

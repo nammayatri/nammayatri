@@ -12,20 +12,16 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Common.VehicleVariant where
+module Beckn.Types.Core.Taxi.Common.Agent
+  ( module Beckn.Types.Core.Taxi.Common.Agent,
+  )
+where
 
-import Kernel.Prelude
+import Data.OpenApi (ToSchema)
+import EulerHS.Prelude hiding (State, (.=))
 
-data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
-  deriving
-    ( Show,
-      Eq,
-      Read,
-      Generic,
-      ToJSON,
-      FromJSON,
-      ToSchema,
-      ToParamSchema,
-      Enum,
-      Bounded
-    )
+data Agent = Agent
+  { name :: Text,
+    rateable :: Bool
+  }
+  deriving (Generic, Show, ToSchema, ToJSON, FromJSON)

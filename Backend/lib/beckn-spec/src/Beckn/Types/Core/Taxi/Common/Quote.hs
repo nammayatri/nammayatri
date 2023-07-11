@@ -12,17 +12,29 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Confirm.StartInfo where
+module Beckn.Types.Core.Taxi.Common.Quote where
 
-import Beckn.Types.Core.Taxi.Confirm.Location (Location)
+import Beckn.Types.Core.Taxi.Common.BreakupItem
+import Beckn.Types.Core.Taxi.Common.DecimalValue
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
-import EulerHS.Prelude hiding (id)
+import Kernel.Prelude
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
-newtype StartInfo = StartInfo
-  { location :: Location
+data Quote = Quote
+  { price :: QuotePrice,
+    breakup :: [BreakupItem]
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, FromJSON, ToJSON, Show)
 
-instance ToSchema StartInfo where
+instance ToSchema Quote where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+data QuotePrice = QuotePrice
+  { currency :: Text,
+    value :: DecimalValue,
+    offered_value :: DecimalValue
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema QuotePrice where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

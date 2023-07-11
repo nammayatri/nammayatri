@@ -17,53 +17,34 @@ module Beckn.Types.Core.Taxi.Confirm.Order
   )
 where
 
+import Beckn.Types.Core.Taxi.Common.ItemId
+import Beckn.Types.Core.Taxi.Common.Payment
+import Beckn.Types.Core.Taxi.Common.Price
+import Beckn.Types.Core.Taxi.Common.Provider
+import Beckn.Types.Core.Taxi.Common.Quote
 import Beckn.Types.Core.Taxi.Confirm.Fulfillment
-import Beckn.Types.Core.Taxi.Confirm.Payment
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (State, id, state)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Order = Order
   { id :: Text,
+    items :: [OrderItem],
     fulfillment :: FulfillmentInfo,
-    customer :: OrderCustomer,
-    payment :: Payment
+    quote :: Maybe Quote, -- TODO :: Remove Maybe
+    payment :: Payment,
+    provider :: Maybe Provider
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
 instance ToSchema Order where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
-data OrderCustomer = OrderCustomer
-  { contact :: Contact,
-    person :: Maybe OrderPerson
+data OrderItem = OrderItem
+  { id :: ItemId,
+    price :: Price
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
-instance ToSchema OrderCustomer where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-newtype Contact = Contact
-  { phone :: Phone
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema Contact where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-data Phone = Phone
-  { country_code :: Text,
-    number :: Text
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema Phone where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-newtype OrderPerson = OrderPerson
-  { name :: Text
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema OrderPerson where
+instance ToSchema OrderItem where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

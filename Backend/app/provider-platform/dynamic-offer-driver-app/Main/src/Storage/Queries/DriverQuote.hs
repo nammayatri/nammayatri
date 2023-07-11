@@ -18,6 +18,7 @@ import Data.Int (Int32)
 import qualified Domain.Types.DriverQuote as Domain
 import Domain.Types.Person
 import qualified Domain.Types.SearchTry as DST
+import qualified Domain.Types.Vehicle.Variant as VehVar
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
@@ -57,6 +58,19 @@ findById dQuoteId = buildDType $ do
     where_ $ dQuote ^. DriverQuoteTId ==. val (toKey dQuoteId)
     pure (dQuote, farePars)
   join <$> mapM buildFullDriverQuote res
+
+findActiveQuoteByDriverIdAndVehVar :: (Transactionable m) => Id Person -> VehVar.Variant -> m (Maybe Domain.DriverQuote)
+findActiveQuoteByDriverIdAndVehVar driverId vehicleVariant = do
+  buildDType $ do
+    res <- Esq.findOne' $ do
+      (dQuote :& farePars) <-
+        from baseDriverQuoteQuery
+      where_ $
+        dQuote ^. DriverQuoteDriverId ==. val (toKey driverId)
+          &&. dQuote ^. DriverQuoteStatus ==. val Domain.Active
+          &&. dQuote ^. DriverQuoteVehicleVariant ==. val vehicleVariant
+      pure (dQuote, farePars)
+    join <$> mapM buildFullDriverQuote res
 
 setInactiveBySTId :: Id DST.SearchTry -> SqlDB ()
 setInactiveBySTId searchTryId = Esq.update $ \p -> do

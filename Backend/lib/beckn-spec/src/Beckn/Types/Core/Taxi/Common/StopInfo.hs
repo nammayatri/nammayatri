@@ -12,25 +12,17 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnConfirm.StartInfo
-  ( module Beckn.Types.Core.Taxi.OnConfirm.StartInfo,
-    module Reexport,
-  )
-where
+module Beckn.Types.Core.Taxi.Common.StopInfo where
 
-import Beckn.Types.Core.Taxi.Common.TimeTimestamp as Reexport
-import Beckn.Types.Core.Taxi.OnConfirm.Location (Location)
-import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent as Reexport (Authorization (..))
+import Beckn.Types.Core.Taxi.Common.Location (Location)
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (id)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
-data StartInfo = StartInfo
-  { time :: TimeTimestamp,
-    location :: Location,
-    authorization :: Maybe Authorization
+newtype StopInfo = StopInfo
+  { location :: Location
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
-instance ToSchema StartInfo where
+instance ToSchema StopInfo where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

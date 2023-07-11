@@ -38,6 +38,7 @@ data Quote = Quote
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
     providerId :: Text,
+    providerShortId :: Text,
     providerUrl :: BaseUrl,
     providerName :: Text,
     providerMobileNumber :: Text,

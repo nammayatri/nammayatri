@@ -18,7 +18,7 @@ module Beckn.Types.Core.Taxi.OnSelect.Fulfillment
   )
 where
 
-import Beckn.Types.Core.Taxi.Common.VehicleVariant as Reexport
+import Beckn.Types.Core.Taxi.Common.Vehicle as Reexport
 import Beckn.Types.Core.Taxi.OnSelect.Agent
 import Beckn.Types.Core.Taxi.OnSelect.StartInfo
 import Beckn.Types.Core.Taxi.OnSelect.StopInfo
