@@ -196,7 +196,8 @@ checkSearchRateLimit personId = do
   let key = searchHitsCountKey personId
   hitsLimit <- asks (.searchRateLimitOptions.limit)
   limitResetTimeInSec <- asks (.searchRateLimitOptions.limitResetTimeInSec)
-  unlessM (slidingWindowLimiter key hitsLimit limitResetTimeInSec) $ do
+  (res, _) <- slidingWindowLimiter key hitsLimit limitResetTimeInSec
+  unless res $ do
     msgTemplate <- asks (.searchLimitExceedNotificationTemplate)
     let message = T.replace "{#cust-id#}" (getId personId) msgTemplate
     _ <- SF.postMessage message

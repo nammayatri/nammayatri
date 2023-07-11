@@ -238,7 +238,8 @@ checkLocationUpdatesRateLimit personId = do
   let key = locationUpdatesHitsCountKey personId
   hitsLimit <- asks (.driverLocationUpdateRateLimitOptions.limit)
   limitResetTimeInSec <- asks (.driverLocationUpdateRateLimitOptions.limitResetTimeInSec)
-  unlessM (slidingWindowLimiter key hitsLimit limitResetTimeInSec) $ do
+  (res, _) <- slidingWindowLimiter key hitsLimit limitResetTimeInSec
+  unless res $ do
     logError "Location updates hitting limit, ignoring"
     throwError $ HitsLimitError limitResetTimeInSec
 

@@ -66,7 +66,7 @@ data ServiceHandle m = ServiceHandle
     findLocationByDriverId :: Id DP.Person -> m (Maybe DDrLoc.DriverLocation),
     startRideAndUpdateLocation :: Id DP.Person -> DRide.Ride -> Id SRB.Booking -> LatLong -> Id DM.Merchant -> m (),
     notifyBAPRideStarted :: SRB.Booking -> DRide.Ride -> m (),
-    rateLimitStartRide :: Id DP.Person -> Id DRide.Ride -> m (),
+    rateLimitStartRide :: Id DP.Person -> Id DRide.Ride -> m Int,
     initializeDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> LatLong -> m (),
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m ()
   }
@@ -117,7 +117,7 @@ startRide ::
 startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId) $ do
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = ride.driverId
-  rateLimitStartRide driverId ride.id -- do we need it for dashboard?
+  _ <- rateLimitStartRide driverId ride.id -- do we need it for dashboard?
   booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
 
   case req of

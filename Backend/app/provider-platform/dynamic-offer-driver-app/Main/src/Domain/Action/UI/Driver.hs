@@ -1242,7 +1242,7 @@ verifyAuth (personId, _) req = do
   Redis.whenWithLockRedis (makeAlternatePhoneNumberKey personId) 60 $ do
     runRequestValidation validateAuthVerifyReq req
     person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-    checkSlidingWindowLimit (verifyHitsCountKey personId)
+    remainingAttempts <- checkSlidingWindowLimit (verifyHitsCountKey personId)
     verified <- Redis.get (makeAlternateNumberVerifiedKey personId) >>= fromMaybeM (InvalidRequest "Verified not found")
     when verified $ throwError $ AuthBlocked "Already verified."
     altMobNo <- Redis.get (makeAlternatePhoneNumberKey personId) >>= fromMaybeM (InvalidRequest "Alternate Number not found")
@@ -1250,7 +1250,7 @@ verifyAuth (personId, _) req = do
     authValueHash <- case val of
       Nothing -> throwError $ InternalError "Auth not found"
       Just a -> return a
-    unless (authValueHash == req.otp) $ throwError InvalidAuthData
+    unless (authValueHash == req.otp) $ throwError $ InvalidAuthData remainingAttempts
     encNewNum <- encrypt altMobNo
     let driver =
           person

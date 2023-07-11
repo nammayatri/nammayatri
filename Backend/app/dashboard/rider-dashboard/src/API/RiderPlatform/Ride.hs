@@ -96,7 +96,7 @@ shareRideInfo ::
   FlowHandler Common.ShareRideInfoRes
 shareRideInfo merchantShortId rideId = withFlowHandlerAPI $ do
   shareRideApiRateLimitOptions <- asks (.shareRideApiRateLimitOptions)
-  checkSlidingWindowLimitWithOptions (rideInfoHitsCountKey rideId) shareRideApiRateLimitOptions
+  _ <- checkSlidingWindowLimitWithOptions (rideInfoHitsCountKey rideId) shareRideApiRateLimitOptions
   checkedMerchantId <- merchantAccessCheck merchantShortId merchantShortId
   Client.callRiderApp checkedMerchantId (.rides.shareRideInfo) rideId
 

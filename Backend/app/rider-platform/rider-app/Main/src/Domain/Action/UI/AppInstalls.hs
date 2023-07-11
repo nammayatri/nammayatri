@@ -57,7 +57,7 @@ createAppInstallsDetails ::
   AppInstallsReq ->
   m APISuccess.APISuccess
 createAppInstallsDetails req = do
-  checkSlidingWindowLimit (appInstallsHitsCountKey req.deviceToken)
+  _ <- checkSlidingWindowLimit (appInstallsHitsCountKey req.deviceToken)
   merchant <- QMerchant.findByShortId req.merchantId >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
   appInstallsId <- generateGUID
   now <- getCurrentTime

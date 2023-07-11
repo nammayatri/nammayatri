@@ -193,7 +193,7 @@ auth req mbBundleVersion mbClientVersion = do
   person <-
     Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id
       >>= maybe (createPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion merchant.id) return
-  checkSlidingWindowLimit (authHitsCountKey person)
+  _ <- checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
@@ -385,10 +385,10 @@ verify ::
 verify tokenId req = do
   runRequestValidation validateAuthVerifyReq req
   regToken@SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
-  checkSlidingWindowLimit (verifyHitsCountKey $ Id entityId)
+  remainingAttempts <- checkSlidingWindowLimit (verifyHitsCountKey $ Id entityId)
   when verified $ throwError $ AuthBlocked "Already verified."
   checkForExpiry authExpiry updatedAt
-  unless (authValueHash == req.otp) $ throwError InvalidAuthData
+  unless (authValueHash == req.otp) $ throwError $ InvalidAuthData remainingAttempts
   person <- checkPersonExists entityId
   let deviceToken = Just req.deviceToken
   personWithSameDeviceToken <- listToMaybe <$> DB.runInReplica (Person.findBlockedByDeviceToken deviceToken)

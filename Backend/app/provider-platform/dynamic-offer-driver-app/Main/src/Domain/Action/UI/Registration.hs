@@ -140,7 +140,7 @@ auth isDashboard req mbBundleVersion mbClientVersion = do
   person <-
     QP.findByMobileNumberAndMerchant countryCode mobileNumberHash merchant.id
       >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion merchant.id isDashboard) return
-  checkSlidingWindowLimit (authHitsCountKey person)
+  _ <- checkSlidingWindowLimit $ authHitsCountKey person
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
@@ -310,10 +310,10 @@ verify ::
 verify tokenId req = do
   runRequestValidation validateAuthVerifyReq req
   SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
-  checkSlidingWindowLimit (verifyHitsCountKey $ Id entityId)
+  attemptsLeft <- checkSlidingWindowLimit (verifyHitsCountKey $ Id entityId)
   when verified $ throwError $ AuthBlocked "Already verified."
   checkForExpiry authExpiry updatedAt
-  unless (authValueHash == req.otp) $ throwError InvalidAuthData
+  unless (authValueHash == req.otp) $ throwError $ InvalidAuthData attemptsLeft
   person <- checkPersonExists entityId
   let isNewPerson = person.isNew
   let deviceToken = Just req.deviceToken
