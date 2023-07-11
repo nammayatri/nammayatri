@@ -22,7 +22,7 @@ import Effect (Effect)
 import Language.Types (STR(..))
 import Language.Strings (getString)
 import Prelude (Unit, const, map, ($), (&&), (/=), (<<<), (<=), (<>), (==))
-import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), Gravity(..), Visibility(..), PrestoDOM, Screen, linearLayout, frameLayout, gravity, orientation, height, width, imageView, imageUrl, text, textSize, textView, padding, color, margin, fontStyle, background, cornerRadius, stroke, editText, weight, hint, onClick, visibility, pattern, onChange, scrollView, relativeLayout, alignParentBottom, onBackPressed, afterRender, multiLineEditText, disableClickFeedback, imageWithFallback, hintColor)
+import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), Gravity(..), Visibility(..), PrestoDOM, Screen, linearLayout, frameLayout, gravity, orientation, height, width, imageView, imageUrl, text, textSize, textView, padding, color, margin, fontStyle, background, cornerRadius, stroke, editText, weight, hint, onClick, visibility, pattern, onChange, scrollView, relativeLayout, alignParentBottom, onBackPressed, afterRender, multiLineEditText, disableClickFeedback, imageWithFallback, hintColor, adjustViewWithKeyboard)
 import Screens.Types as ST 
 import Screens.Types (PaymentMode(..))
 import Screens.TripDetailsScreen.Controller (Action(..), ScreenOutput, eval)
@@ -69,6 +69,7 @@ view push state =
       [ width MATCH_PARENT
       , height MATCH_PARENT
       , visibility if state.props.issueReported then GONE else VISIBLE
+      , adjustViewWithKeyboard "true"
       ][  tripDetailsLayout state push
         , linearLayout
           [ height WRAP_CONTENT

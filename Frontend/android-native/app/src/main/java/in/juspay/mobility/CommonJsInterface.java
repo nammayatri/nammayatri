@@ -3356,7 +3356,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         try {
             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, bytes);
-            String path = MediaStore.Images.Media.insertImage(context.getContentResolver(), bitmap, "ThumbnailImage", null);
+            String path = MediaStore.Images.Media.insertImage(context.getContentResolver(), bitmap, "ThumbnailImage" + System.currentTimeMillis(), null);
             return Uri.parse(path);
         } catch (Exception e) {
             return null;
