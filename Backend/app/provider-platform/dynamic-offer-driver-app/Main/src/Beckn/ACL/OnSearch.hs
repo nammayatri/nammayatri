@@ -16,7 +16,7 @@ module Beckn.ACL.OnSearch where
 
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
-import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..), BreakupPrice (..), ItemTags (..))
+import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..), BreakupPrice (..))
 import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
@@ -138,7 +138,7 @@ mkQuoteEntities start end estInfo = do
             end = end,
             id = estimate.id.getId,
             _type = OS.RIDE,
-            vehicle = OS.FulfillmentVehicle {category = Common.castVariant estimate.vehicleVariant}
+            vehicle = OS.FulfillmentVehicle {category = variant}
           }
       item =
         OS.Item
@@ -162,34 +162,37 @@ mkQuoteEntities start end estInfo = do
                 },
             quote_terms = [],
             tags =
-              Just $
-                OS.ItemTags
-                  { code_1 = Just "fare_policy",
-                    name_1 = Just "Fare Policy",
-                    list_1_code = maybe Nothing (\_ -> Just "night_shift_charge") (estimate.nightShiftInfo <&> (.nightShiftCharge)), --"night_shift_charge",
-                    list_1_name = maybe Nothing (\_ -> Just "Night Shift Charges") (estimate.nightShiftInfo <&> (.nightShiftCharge)),
-                    list_1_value = maybe Nothing (\charges -> Just $ show charges.getMoney) (estimate.nightShiftInfo <&> (.nightShiftCharge)),
-                    list_2_code = maybe Nothing (\_ -> Just "old_night_shift_charge") (OS.DecimalValue . toRational <$> (estimate.nightShiftInfo <&> (.oldNightShiftCharge))),
-                    list_2_name = maybe Nothing (\_ -> Just "Old Night Shift Charges") (OS.DecimalValue . toRational <$> (estimate.nightShiftInfo <&> (.oldNightShiftCharge))),
-                    list_2_value = maybe Nothing (\charges -> Just $ DecimalValue.valueToString charges) (OS.DecimalValue . toRational <$> (estimate.nightShiftInfo <&> (.oldNightShiftCharge))),
-                    list_3_code = maybe Nothing (\_ -> Just "night_shift_start") (estimate.nightShiftInfo <&> (.nightShiftStart)),
-                    list_3_name = maybe Nothing (\_ -> Just "Night Shift Start Timings") (estimate.nightShiftInfo <&> (.nightShiftStart)),
-                    list_3_value = maybe Nothing (\time -> Just $ show time) (estimate.nightShiftInfo <&> (.nightShiftStart)),
-                    list_4_code = maybe Nothing (\_ -> Just "waiting_charge_per_min") estimate.waitingCharges.waitingChargePerMin,
-                    list_4_name = maybe Nothing (\_ -> Just "Waiting Charges Per Min") estimate.waitingCharges.waitingChargePerMin,
-                    list_4_value = maybe Nothing (\charges -> Just $ show charges.getMoney) estimate.waitingCharges.waitingChargePerMin,
-                    list_5_code = maybe Nothing (\_ -> Just "night_shift_end") (estimate.nightShiftInfo <&> (.nightShiftEnd)),
-                    list_5_name = maybe Nothing (\_ -> Just "Night Shift End Timings") (estimate.nightShiftInfo <&> (.nightShiftEnd)),
-                    list_5_value = maybe Nothing (\time -> Just $ show time) (estimate.nightShiftInfo <&> (.nightShiftEnd)),
-                    code_2 = Just "general_info",
-                    name_2 = Just "General Information",
-                    list_2_1_code = Just "distance_to_nearest_driver",
-                    list_2_1_name = Just "Distance To Nearest Driver",
-                    list_2_1_value = Just $ show . double2Int . realToFrac $ estInfo.distanceToNearestDriver,
-                    list_2_2_code = maybe Nothing (\_ -> Just "special_location_tag") estimate.specialLocationTag,
-                    list_2_2_name = maybe Nothing (\_ -> Just "Special Location Tag") estimate.specialLocationTag,
-                    list_2_2_value = estimate.specialLocationTag
-                  },
+              Just
+                [ mkGeneralInfoTag estimate,
+                  mkFarePolicyTag estimate
+                ],
+            -- OS.TagGroup
+            --   { code_1 = Just "fare_policy",
+            --     name_1 = Just "Fare Policy",
+            --     list_1_code = maybe Nothing (\_ -> Just "night_shift_charge") (estimate.nightShiftInfo <&> (.nightShiftCharge)), --"night_shift_charge",
+            --     list_1_name = maybe Nothing (\_ -> Just "Night Shift Charges") (estimate.nightShiftInfo <&> (.nightShiftCharge)),
+            --     list_1_value = maybe Nothing (\charges -> Just $ show charges.getMoney) (estimate.nightShiftInfo <&> (.nightShiftCharge)),
+            --     list_2_code = maybe Nothing (\_ -> Just "old_night_shift_charge") (OS.DecimalValue . toRational <$> (estimate.nightShiftInfo <&> (.oldNightShiftCharge))),
+            --     list_2_name = maybe Nothing (\_ -> Just "Old Night Shift Charges") (OS.DecimalValue . toRational <$> (estimate.nightShiftInfo <&> (.oldNightShiftCharge))),
+            --     list_2_value = maybe Nothing (\charges -> Just $ DecimalValue.valueToString charges) (OS.DecimalValue . toRational <$> (estimate.nightShiftInfo <&> (.oldNightShiftCharge))),
+            --     list_3_code = maybe Nothing (\_ -> Just "night_shift_start") (estimate.nightShiftInfo <&> (.nightShiftStart)),
+            --     list_3_name = maybe Nothing (\_ -> Just "Night Shift Start Timings") (estimate.nightShiftInfo <&> (.nightShiftStart)),
+            --     list_3_value = maybe Nothing (\time -> Just $ show time) (estimate.nightShiftInfo <&> (.nightShiftStart)),
+            --     list_4_code = maybe Nothing (\_ -> Just "waiting_charge_per_min") estimate.waitingCharges.waitingChargePerMin,
+            --     list_4_name = maybe Nothing (\_ -> Just "Waiting Charges Per Min") estimate.waitingCharges.waitingChargePerMin,
+            --     list_4_value = maybe Nothing (\charges -> Just $ show charges.getMoney) estimate.waitingCharges.waitingChargePerMin,
+            --     list_5_code = maybe Nothing (\_ -> Just "night_shift_end") (estimate.nightShiftInfo <&> (.nightShiftEnd)),
+            --     list_5_name = maybe Nothing (\_ -> Just "Night Shift End Timings") (estimate.nightShiftInfo <&> (.nightShiftEnd)),
+            --     list_5_value = maybe Nothing (\time -> Just $ show time) (estimate.nightShiftInfo <&> (.nightShiftEnd)),
+            --     code_2 = Just "general_info",
+            --     name_2 = Just "General Information",
+            --     list_2_1_code = Just "distance_to_nearest_driver",
+            --     list_2_1_name = Just "Distance To Nearest Driver",
+            --     list_2_1_value = Just $ show . double2Int . realToFrac $ estInfo.distanceToNearestDriver,
+            --     list_2_2_code = maybe Nothing (\_ -> Just "special_location_tag") estimate.specialLocationTag,
+            --     list_2_2_name = maybe Nothing (\_ -> Just "Special Location Tag") estimate.specialLocationTag,
+            --     list_2_2_value = estimate.specialLocationTag
+            --   },
             -- { distance_to_nearest_driver = Just $ realToFrac estInfo.distanceToNearestDriver,
             --   -- night_shift_charge = estimate.nightShiftInfo <&> (.nightShiftCharge),
             --   -- old_night_shift_charge = OS.DecimalValue . toRational <$> (estimate.nightShiftInfo <&> (.oldNightShiftCharge)),
@@ -243,6 +246,71 @@ mkQuoteEntities start end estInfo = do
     { fulfillment,
       item
     }
+  where
+    mkGeneralInfoTag estimate =
+      let specialLocationTag = estimate.specialLocationTag
+       in OS.TagGroup
+            { display = False,
+              code = "general_info",
+              name = "General Information",
+              list =
+                [ OS.Tag
+                    { display = maybe Nothing (\_ -> Just False) specialLocationTag,
+                      code = maybe Nothing (\_ -> Just "special_location_tag") specialLocationTag,
+                      name = maybe Nothing (\_ -> Just "Special Location Tag") specialLocationTag,
+                      value = specialLocationTag
+                    },
+                  OS.Tag
+                    { display = Just False,
+                      code = Just "distance_to_nearest_driver",
+                      name = Just "Distance To Nearest Driver",
+                      value = Just $ show . double2Int . realToFrac $ estInfo.distanceToNearestDriver
+                    }
+                ]
+            }
+    mkFarePolicyTag estimate =
+      let nightShiftCharges = (estimate.nightShiftInfo <&> (.nightShiftCharge))
+          oldNightShiftCharges = (OS.DecimalValue . toRational <$> (estimate.nightShiftInfo <&> (.oldNightShiftCharge)))
+          nightShiftStart = (estimate.nightShiftInfo <&> (.nightShiftStart))
+          waitingChargePerMin = (estimate.waitingCharges.waitingChargePerMin)
+          nightShiftEnd = (estimate.nightShiftInfo <&> (.nightShiftEnd))
+       in OS.TagGroup
+            { display = False,
+              code = "fare_policy",
+              name = "Fare Policy",
+              list =
+                [ OS.Tag
+                    { display = maybe Nothing (\_ -> Just False) nightShiftCharges,
+                      code = maybe Nothing (\_ -> Just "night_shift_charge") nightShiftCharges,
+                      name = maybe Nothing (\_ -> Just "Night Shift Charges") nightShiftCharges,
+                      value = maybe Nothing (\charges -> Just $ show charges.getMoney) nightShiftCharges
+                    },
+                  OS.Tag
+                    { display = maybe Nothing (\_ -> Just False) oldNightShiftCharges,
+                      code = maybe Nothing (\_ -> Just "old_night_shift_charge") oldNightShiftCharges,
+                      name = maybe Nothing (\_ -> Just "Old Night Shift Charges") oldNightShiftCharges,
+                      value = maybe Nothing (\charges -> Just $ DecimalValue.valueToString charges) oldNightShiftCharges
+                    },
+                  OS.Tag
+                    { display = maybe Nothing (\_ -> Just False) nightShiftStart,
+                      code = maybe Nothing (\_ -> Just "night_shift_start") nightShiftStart,
+                      name = maybe Nothing (\_ -> Just "Night Shift Start Timings") nightShiftStart,
+                      value = maybe Nothing (\time -> Just $ show time) nightShiftStart
+                    },
+                  OS.Tag
+                    { display = maybe Nothing (\_ -> Just False) waitingChargePerMin,
+                      code = maybe Nothing (\_ -> Just "waiting_charge_per_min") waitingChargePerMin,
+                      name = maybe Nothing (\_ -> Just "Waiting Charges Per Min") waitingChargePerMin,
+                      value = maybe Nothing (\charges -> Just $ show charges.getMoney) waitingChargePerMin
+                    },
+                  OS.Tag
+                    { display = maybe Nothing (\_ -> Just False) nightShiftEnd,
+                      code = maybe Nothing (\_ -> Just "night_shift_end") nightShiftEnd,
+                      name = maybe Nothing (\_ -> Just "Night Shift End Timings") nightShiftEnd,
+                      value = maybe Nothing (\time -> Just $ show time) nightShiftEnd
+                    }
+                ]
+            }
 
 mkQuoteEntitiesSpecialZone :: OS.StartInfo -> OS.StopInfo -> DSearch.SpecialZoneQuoteInfo -> QuoteEntities
 mkQuoteEntitiesSpecialZone start end it = do
@@ -278,45 +346,36 @@ mkQuoteEntitiesSpecialZone start end it = do
                 },
             quote_terms = [],
             tags =
-              Just $
-                OS.ItemTags
-                  { code_1 = Nothing,
-                    name_1 = Nothing,
-                    list_1_code = Nothing,
-                    list_1_name = Nothing,
-                    list_1_value = Nothing,
-                    list_2_code = Nothing,
-                    list_2_name = Nothing,
-                    list_2_value = Nothing,
-                    list_3_code = Nothing,
-                    list_3_name = Nothing,
-                    list_3_value = Nothing,
-                    list_4_code = Nothing,
-                    list_4_name = Nothing,
-                    list_4_value = Nothing,
-                    list_5_code = Nothing,
-                    list_5_name = Nothing,
-                    list_5_value = Nothing,
-                    code_2 = Just "general_info",
-                    name_2 = Just "General Information",
-                    list_2_1_code = Nothing,
-                    list_2_1_name = Nothing,
-                    list_2_1_value = Nothing,
-                    list_2_2_code = maybe Nothing (\_ -> Just "special_location_tag") it.specialLocationTag,
-                    list_2_2_name = maybe Nothing (\_ -> Just "Special Location Tag") it.specialLocationTag,
-                    list_2_2_value = it.specialLocationTag
-                  },
-            -- Just $
-            --   OS.ItemTags
-            --     { --distance_to_nearest_driver = Nothing,
-            --       -- night_shift_charge = Nothing,
-            --       -- old_night_shift_charge = Nothing,
-            --       -- night_shift_start = Nothing,
-            --       -- night_shift_end = Nothing,
-            --       -- waiting_charge_per_min = Nothing,
-            --       -- drivers_location = [],
-            --       special_location_tag = it.specialLocationTag
-            --     },
+              if isJust it.specialLocationTag
+                then Just [mkSpecialLocationTag it.specialLocationTag]
+                else -- OS.ItemTags
+                --   { code_1 = Nothing,
+                --     name_1 = Nothing,
+                --     list_1_code = Nothing,
+                --     list_1_name = Nothing,
+                --     list_1_value = Nothing,
+                --     list_2_code = Nothing,
+                --     list_2_name = Nothing,
+                --     list_2_value = Nothing,
+                --     list_3_code = Nothing,
+                --     list_3_name = Nothing,
+                --     list_3_value = Nothing,
+                --     list_4_code = Nothing,
+                --     list_4_name = Nothing,
+                --     list_4_value = Nothing,
+                --     list_5_code = Nothing,
+                --     list_5_name = Nothing,
+                --     list_5_value = Nothing,
+                --     code_2 = Just "general_info",
+                --     name_2 = Just "General Information",
+                --     list_2_1_code = Nothing,
+                --     list_2_1_name = Nothing,
+                --     list_2_1_value = Nothing,
+                --     list_2_2_code = maybe Nothing (\_ -> Just "special_location_tag") it.specialLocationTag,
+                --     list_2_2_name = maybe Nothing (\_ -> Just "Special Location Tag") it.specialLocationTag,
+                --     list_2_2_value = it.specialLocationTag
+                --   }
+                  Nothing,
             base_distance = Nothing,
             base_duration = Nothing
           }
@@ -324,6 +383,21 @@ mkQuoteEntitiesSpecialZone start end it = do
     { fulfillment,
       item
     }
+  where
+    mkSpecialLocationTag specialLocationTag =
+      OS.TagGroup
+        { display = False,
+          code = "general_info",
+          name = "General Information",
+          list =
+            [ OS.Tag
+                { display = maybe Nothing (\_ -> Just False) specialLocationTag,
+                  code = maybe Nothing (\_ -> Just "special_location_tag") specialLocationTag,
+                  name = maybe Nothing (\_ -> Just "Special Location Tag") specialLocationTag,
+                  value = specialLocationTag
+                }
+            ]
+        }
 
 buildEstimateBreakUpList ::
   DEst.EstimateBreakup ->
@@ -346,3 +420,20 @@ mkPayment DMPM.PaymentMethodInfo {..} =
       instrument = Just $ Common.castDPaymentInstrument paymentInstrument,
       time = OS.TimeDuration "P2A" -- FIXME: what is this?
     }
+
+-- mkSpecialLocationTag ::
+
+--     mkSpecialLocationTag =
+--       Search.TagGroup
+--         { display = False,
+--           code = "general_info",
+--           name = "General Information",
+--           list =
+--             [ Search.Tag
+--                 { display = maybe Nothing (\_ -> Just False) specialLocationTag,
+--                   code = maybe Nothing (\_ -> Just "special_location_tag") specialLocationTag,
+--                   name = maybe Nothing (\_ -> Just "Special Location Tag") specialLocationTag,
+--                   value = it.specialLocationTag
+--                 }
+--             ]
+--         }
