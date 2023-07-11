@@ -35,7 +35,7 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 data FulfillmentInfo = FulfillmentInfo
   { start :: StartInfo,
     end :: StopInfo,
-    tags :: Maybe [TagGroup],
+    tags :: Maybe TagGroups,
     customer :: Maybe Customer
   }
   deriving (Generic, Show)
@@ -58,7 +58,7 @@ instance ToSchema Customer where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
 newtype Person = Person
-  { tags :: [TagGroup]
+  { tags :: TagGroups
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
