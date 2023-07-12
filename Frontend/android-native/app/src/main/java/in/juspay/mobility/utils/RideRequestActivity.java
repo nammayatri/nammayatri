@@ -85,12 +85,29 @@ public class RideRequestActivity extends AppCompatActivity {
             holder.destinationAddress.setText(model.getDestinationAddress());
             holder.textIncPrice.setText(String.valueOf(model.getNegotiationUnit()));
             holder.textDecPrice.setText(String.valueOf(model.getNegotiationUnit()));
+            if(model.getSourcePinCode() != null &&  model.getSourcePinCode().trim().length()>0){
+                holder.sourcePinCode.setText(model.getSourcePinCode().trim());
+                holder.sourcePinCode.setVisibility(View.VISIBLE);
+            }else{
+                holder.sourceAddress.setMaxLines(2);
+                holder.sourcePinCode.setVisibility(View.GONE);
+            }
+            if(model.getDestinationPinCode() != null && model.getDestinationPinCode().trim().length()>0){
+                holder.destinationPinCode.setText(model.getDestinationPinCode());
+                holder.destinationPinCode.setVisibility(View.VISIBLE);
+            }else{
+                holder.destinationAddress.setMaxLines(2);
+                holder.destinationPinCode.setVisibility(View.GONE);
+            }
             if (holder.specialLocationTag != null){
                 rideRequestUtils.setSpecialZoneAttrs(holder, model.getspecialLocationTag(), RideRequestActivity.this);
             }
             if (model.getDriverMaxExtraFee() == 0) {
                 holder.buttonIncreasePrice.setVisibility(View.GONE);
                 holder.buttonDecreasePrice.setVisibility(View.GONE);
+            }else {
+                holder.buttonIncreasePrice.setVisibility(View.VISIBLE);
+                holder.buttonDecreasePrice.setVisibility(View.VISIBLE);
             }
             holder.reqButton.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -258,7 +275,9 @@ public class RideRequestActivity extends AppCompatActivity {
                         rideRequestBundle.getInt("rideRequestPopupDelayDuration"),
                         negotiationUnit,
                         rideRequestBundle.getInt("customerTip"),
-                        rideRequestBundle.getString("specialLocationTag"));
+                        rideRequestBundle.getString("specialLocationTag"),
+                        rideRequestBundle.getString("sourcePinCode"),
+                        rideRequestBundle.getString("destinationPinCode"));
 
                 sheetArrayList.add(sheetModel);
                 sheetAdapter.updateSheetList(sheetArrayList);
