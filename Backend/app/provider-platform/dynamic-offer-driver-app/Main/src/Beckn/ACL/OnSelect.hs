@@ -235,7 +235,7 @@ mkItem fulfillmentId q provider =
                 { display = Just False,
                   code = Just "distance_to_nearest_driver_in_m",
                   name = Just "Distance To Nearest Driver In Meters",
-                  value = Just $ show $ OS.DecimalValue $ toRational q.distanceToPickup.getMeters
+                  value = Just $ show $ q.distanceToPickup.getMeters
                 },
               OS.Tag
                 { display = Just False,
