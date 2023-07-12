@@ -16,8 +16,9 @@ module Domain.Action.Beckn.OnInit where
 
 import Domain.Types.Booking (BPPBooking, Booking)
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.LocationAddress as DBL
+import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.VehicleVariant as Veh
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
@@ -43,10 +44,16 @@ data OnInitReq = OnInitReq
 data OnInitRes = OnInitRes
   { bookingId :: Id DRB.Booking,
     bppBookingId :: Id DRB.BPPBooking,
+    bookingDetails :: DRB.BookingDetails,
+    driverId :: Maybe Text,
+    paymentUrl :: Maybe Text,
+    vehicleVariant :: Veh.VehicleVariant,
+    providerShortId :: Maybe Text,
+    fulfillmentId :: Maybe Text,
     bppId :: Text,
     bppUrl :: BaseUrl,
-    fromLocationAddress :: DBL.LocationAddress,
-    mbToLocationAddress :: Maybe DBL.LocationAddress,
+    fromLocation :: DBL.BookingLocation,
+    mbToLocation :: Maybe DBL.BookingLocation,
     estimatedTotalFare :: Money,
     riderPhoneCountryCode :: Text,
     riderPhoneNumber :: Text,
@@ -76,11 +83,17 @@ onInit req = do
   return $
     OnInitRes
       { bookingId = booking.id,
+        driverId = booking.driverId,
+        paymentUrl = booking.paymentUrl,
+        providerShortId = booking.providerShortId,
+        vehicleVariant = booking.vehicleVariant,
+        fulfillmentId = booking.fulfillmentId,
+        bookingDetails = booking.bookingDetails,
         bppId = booking.providerId,
         bppUrl = booking.providerUrl,
         estimatedTotalFare = booking.estimatedTotalFare,
-        fromLocationAddress = fromLocation.address,
-        mbToLocationAddress = mbToLocation <&> (.address),
+        fromLocation = fromLocation,
+        mbToLocation = mbToLocation,
         mbRiderName = decRider.firstName,
         transactionId = booking.transactionId,
         merchant = merchant,

@@ -156,6 +156,7 @@ mkItem categoryId fulfillmentId q =
       base_distance = Nothing,
       base_duration = Nothing,
       driver_name = Just q.driverName,
+      driver_id = q.driverId.getId,
       duration_to_pickup = Just q.durationToPickup.getSeconds,
       valid_till = Just q.validTill,
       rating = q.driverRating

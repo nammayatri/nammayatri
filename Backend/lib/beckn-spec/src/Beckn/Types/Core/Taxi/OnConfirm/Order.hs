@@ -14,10 +14,13 @@
 
 module Beckn.Types.Core.Taxi.OnConfirm.Order where
 
-import Beckn.Types.Core.Taxi.OnConfirm.Descriptor
+import Beckn.Types.Core.Taxi.Common.Descriptor
+import Beckn.Types.Core.Taxi.Common.ItemId
+import Beckn.Types.Core.Taxi.Common.Payment
+import Beckn.Types.Core.Taxi.Common.Price
+import Beckn.Types.Core.Taxi.Common.Provider
+import Beckn.Types.Core.Taxi.Common.Quote
 import Beckn.Types.Core.Taxi.OnConfirm.Fulfillment
-import Beckn.Types.Core.Taxi.OnConfirm.Payment
-import Beckn.Types.Core.Taxi.OnConfirm.Quote
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (State, id, state)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
@@ -28,15 +31,19 @@ data Order = Order
     items :: [OrderItem],
     fulfillment :: FulfillmentInfo,
     quote :: Quote,
-    payment :: Payment
+    payment :: Payment,
+    provider :: Maybe Provider
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
 instance ToSchema Order where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
-newtype OrderItem = OrderItem
-  { descriptor :: Descriptor
+data OrderItem = OrderItem
+  { id :: ItemId,
+    fulfillment_id :: Text,
+    price :: Price,
+    descriptor :: Descriptor
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 

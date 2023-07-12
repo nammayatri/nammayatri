@@ -22,8 +22,6 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty (PrettyShow, Showable (..))
 
-data BPPQuote
-
 data DriverOfferStatus = ACTIVE | INACTIVE
   deriving (Generic, Show, Read)
   deriving (PrettyShow) via Showable DriverOfferStatus
@@ -33,10 +31,11 @@ data DriverOffer = DriverOffer
     estimateId :: Id DEstimate.Estimate,
     merchantId :: Maybe (Id DMerchant.Merchant),
     driverName :: Text,
+    driverId :: Maybe Text,
     durationToPickup :: Int, -- Seconds?
     distanceToPickup :: HighPrecMeters,
     validTill :: UTCTime,
-    bppQuoteId :: Id BPPQuote,
+    bppQuoteId :: Text,
     rating :: Maybe Centesimal,
     status :: DriverOfferStatus,
     updatedAt :: UTCTime

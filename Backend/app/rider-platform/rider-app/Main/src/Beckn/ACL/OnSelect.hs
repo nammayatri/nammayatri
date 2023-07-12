@@ -115,9 +115,10 @@ buildDriverOfferQuoteDetails item = do
   validTill <- item.valid_till & fromMaybeM (InvalidRequest "Missing valid_till in driver offer select item")
   let rating = item.rating
   let bppQuoteId = item.id
+  let driverId = item.driver_id
   pure $
     DOnSelect.DriverOfferQuoteDetails
       { distanceToPickup = realToFrac distanceToPickup',
-        bppDriverQuoteId = Id bppQuoteId,
+        bppDriverQuoteId = bppQuoteId,
         ..
       }

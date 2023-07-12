@@ -75,6 +75,14 @@ searchCbService context catalog = do
       { requestId = Id context.message_id,
         ..
       }
+  where
+    mkPayment OnSearch.Payment {..} =
+      params.instrument <&> \instrument' -> do
+        DMPM.PaymentMethodInfo
+          { collectedBy = Common.castPaymentCollector params.collected_by,
+            paymentType = Common.castPaymentType _type,
+            paymentInstrument = Common.castPaymentInstrument instrument'
+          }
 
 logOnSearchEvent :: EsqDBFlow m r => OnSearch.OnSearchReq -> m ()
 logOnSearchEvent (BecknCallbackReq context (leftToMaybe -> mbErr)) = do
@@ -206,12 +214,3 @@ buildWaitingChargeInfo itemTags = do
   DOnSearch.WaitingChargesInfo
     { waitingChargePerMin = itemTags.waiting_charge_per_min
     }
-
-mkPayment :: OnSearch.Payment -> Maybe DMPM.PaymentMethodInfo
-mkPayment OnSearch.Payment {..} =
-  instrument <&> \instrument' -> do
-    DMPM.PaymentMethodInfo
-      { collectedBy = Common.castPaymentCollector collected_by,
-        paymentType = Common.castPaymentType _type,
-        paymentInstrument = Common.castPaymentInstrument instrument'
-      }

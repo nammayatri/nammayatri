@@ -74,50 +74,43 @@ library
       Beckn.Types.Core.Taxi.API.Update
       Beckn.Types.Core.Taxi.Cancel.Req
       Beckn.Types.Core.Taxi.Common.Address
+      Beckn.Types.Core.Taxi.Common.Agent
+      Beckn.Types.Core.Taxi.Common.Authorization
+      Beckn.Types.Core.Taxi.Common.BreakupItem
       Beckn.Types.Core.Taxi.Common.CancellationSource
       Beckn.Types.Core.Taxi.Common.DecimalValue
+      Beckn.Types.Core.Taxi.Common.Descriptor
       Beckn.Types.Core.Taxi.Common.FareProductType
+      Beckn.Types.Core.Taxi.Common.FulfillmentType
       Beckn.Types.Core.Taxi.Common.Gps
       Beckn.Types.Core.Taxi.Common.ItemCode
+      Beckn.Types.Core.Taxi.Common.ItemId
+      Beckn.Types.Core.Taxi.Common.Location
       Beckn.Types.Core.Taxi.Common.Payment
       Beckn.Types.Core.Taxi.Common.PaymentCollector
       Beckn.Types.Core.Taxi.Common.PaymentInstrument
       Beckn.Types.Core.Taxi.Common.PaymentType
       Beckn.Types.Core.Taxi.Common.Price
+      Beckn.Types.Core.Taxi.Common.Provider
+      Beckn.Types.Core.Taxi.Common.Quote
+      Beckn.Types.Core.Taxi.Common.StartInfo
+      Beckn.Types.Core.Taxi.Common.StopInfo
       Beckn.Types.Core.Taxi.Common.TimeDuration
       Beckn.Types.Core.Taxi.Common.TimeTimestamp
-      Beckn.Types.Core.Taxi.Common.VehicleVariant
+      Beckn.Types.Core.Taxi.Common.Vehicle
       Beckn.Types.Core.Taxi.Confirm
       Beckn.Types.Core.Taxi.Confirm.Fulfillment
-      Beckn.Types.Core.Taxi.Confirm.Location
       Beckn.Types.Core.Taxi.Confirm.Order
-      Beckn.Types.Core.Taxi.Confirm.Payment
-      Beckn.Types.Core.Taxi.Confirm.StartInfo
-      Beckn.Types.Core.Taxi.Confirm.StopInfo
       Beckn.Types.Core.Taxi.Init
-      Beckn.Types.Core.Taxi.Init.Descriptor
       Beckn.Types.Core.Taxi.Init.Fulfillment
-      Beckn.Types.Core.Taxi.Init.Location
       Beckn.Types.Core.Taxi.Init.Order
-      Beckn.Types.Core.Taxi.Init.StartInfo
-      Beckn.Types.Core.Taxi.Init.StopInfo
       Beckn.Types.Core.Taxi.OnConfirm
-      Beckn.Types.Core.Taxi.OnConfirm.BreakupItem
-      Beckn.Types.Core.Taxi.OnConfirm.Descriptor
       Beckn.Types.Core.Taxi.OnConfirm.Fulfillment
-      Beckn.Types.Core.Taxi.OnConfirm.Location
       Beckn.Types.Core.Taxi.OnConfirm.Order
-      Beckn.Types.Core.Taxi.OnConfirm.Payment
-      Beckn.Types.Core.Taxi.OnConfirm.Provider
-      Beckn.Types.Core.Taxi.OnConfirm.Quote
-      Beckn.Types.Core.Taxi.OnConfirm.StartInfo
-      Beckn.Types.Core.Taxi.OnConfirm.StopInfo
       Beckn.Types.Core.Taxi.OnInit
-      Beckn.Types.Core.Taxi.OnInit.BreakupItem
+      Beckn.Types.Core.Taxi.OnInit.Fulfillment
       Beckn.Types.Core.Taxi.OnInit.Order
       Beckn.Types.Core.Taxi.OnInit.OrderState
-      Beckn.Types.Core.Taxi.OnInit.Payment
-      Beckn.Types.Core.Taxi.OnInit.Quote
       Beckn.Types.Core.Taxi.OnSearch
       Beckn.Types.Core.Taxi.OnSearch.Addon
       Beckn.Types.Core.Taxi.OnSearch.Catalog
@@ -174,7 +167,6 @@ library
       Beckn.Types.Core.Taxi.Search.StopInfo
       Beckn.Types.Core.Taxi.Search.Time
       Beckn.Types.Core.Taxi.Select
-      Beckn.Types.Core.Taxi.Select.BreakupItem
       Beckn.Types.Core.Taxi.Select.Fulfillment
       Beckn.Types.Core.Taxi.Select.Order
       Beckn.Types.Core.Taxi.Select.Quote

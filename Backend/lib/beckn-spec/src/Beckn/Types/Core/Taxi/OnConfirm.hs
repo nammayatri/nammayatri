@@ -18,15 +18,21 @@ module Beckn.Types.Core.Taxi.OnConfirm
   )
 where
 
-import Beckn.Types.Core.Taxi.OnConfirm.BreakupItem as Reexport
-import Beckn.Types.Core.Taxi.OnConfirm.Descriptor as Reexport
+import Beckn.Types.Core.Taxi.Common.Agent as Reexport
+import Beckn.Types.Core.Taxi.Common.Authorization as Reexport
+import Beckn.Types.Core.Taxi.Common.BreakupItem as Reexport
+import Beckn.Types.Core.Taxi.Common.Descriptor as Reexport
+import Beckn.Types.Core.Taxi.Common.FulfillmentType as Reexport
+import Beckn.Types.Core.Taxi.Common.ItemId as Reexport
+import Beckn.Types.Core.Taxi.Common.Location as Reexport
+import Beckn.Types.Core.Taxi.Common.Payment as Reexport
+import Beckn.Types.Core.Taxi.Common.Price as Reexport
+import Beckn.Types.Core.Taxi.Common.Provider as Reexport
+import Beckn.Types.Core.Taxi.Common.Quote as Reexport
+import Beckn.Types.Core.Taxi.Common.StartInfo as Reexport
+import Beckn.Types.Core.Taxi.Common.StopInfo as Reexport
 import Beckn.Types.Core.Taxi.OnConfirm.Fulfillment as Reexport
-import Beckn.Types.Core.Taxi.OnConfirm.Location as Reexport
 import Beckn.Types.Core.Taxi.OnConfirm.Order as Reexport
-import Beckn.Types.Core.Taxi.OnConfirm.Payment as Reexport
-import Beckn.Types.Core.Taxi.OnConfirm.Quote as Reexport
-import Beckn.Types.Core.Taxi.OnConfirm.StartInfo as Reexport
-import Beckn.Types.Core.Taxi.OnConfirm.StopInfo as Reexport
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
 

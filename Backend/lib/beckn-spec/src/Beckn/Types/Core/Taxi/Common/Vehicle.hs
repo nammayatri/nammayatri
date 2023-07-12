@@ -12,23 +12,25 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnConfirm.Location
-  ( module Beckn.Types.Core.Taxi.OnConfirm.Location,
-    module Reexport,
-  )
-where
+module Beckn.Types.Core.Taxi.Common.Vehicle where
 
-import Beckn.Types.Core.Taxi.Common.Address as Reexport
-import Beckn.Types.Core.Taxi.Common.Gps as Reexport
-import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import Kernel.Prelude
-import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
-data Location = Location
-  { gps :: Gps,
-    address :: Address
+newtype Vehicle = Vehicle
+  { category :: VehicleVariant
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-instance ToSchema Location where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
+  deriving
+    ( Show,
+      Eq,
+      Read,
+      Generic,
+      ToJSON,
+      FromJSON,
+      ToSchema,
+      ToParamSchema,
+      Enum,
+      Bounded
+    )

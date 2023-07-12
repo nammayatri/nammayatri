@@ -59,6 +59,8 @@ data BPPBooking
 data Booking = Booking
   { id :: Id Booking,
     transactionId :: Text,
+    driverId :: Maybe Text,
+    fulfillmentId :: Maybe Text,
     bppBookingId :: Maybe (Id BPPBooking),
     quoteId :: Maybe (Id DQuote.Quote),
     paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod),
@@ -66,6 +68,7 @@ data Booking = Booking
     status :: BookingStatus,
     providerId :: Text,
     providerUrl :: BaseUrl,
+    providerShortId :: Maybe Text,
     providerName :: Text,
     providerMobileNumber :: Text,
     primaryExophone :: Text,

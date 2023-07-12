@@ -41,6 +41,7 @@ data Item = Item
     base_duration :: Maybe Hours,
     -- Only when FareProductType.DRIVER_OFFER
     driver_name :: Maybe Text,
+    driver_id :: Text,
     duration_to_pickup :: Maybe Int, -- Seconds?
     valid_till :: Maybe UTCTime,
     rating :: Maybe Centesimal

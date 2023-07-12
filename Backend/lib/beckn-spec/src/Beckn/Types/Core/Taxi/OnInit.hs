@@ -18,11 +18,21 @@ module Beckn.Types.Core.Taxi.OnInit
   )
 where
 
-import Beckn.Types.Core.Taxi.OnInit.BreakupItem as Reexport
+import Beckn.Types.Core.Taxi.Common.Agent as Reexport
+import Beckn.Types.Core.Taxi.Common.BreakupItem as Reexport
+import Beckn.Types.Core.Taxi.Common.Descriptor as Reexport
+import Beckn.Types.Core.Taxi.Common.FulfillmentType as Reexport
+import Beckn.Types.Core.Taxi.Common.ItemId as Reexport
+import Beckn.Types.Core.Taxi.Common.Location as Reexport
+import Beckn.Types.Core.Taxi.Common.Payment as Reexport
+import Beckn.Types.Core.Taxi.Common.Price as Reexport
+import Beckn.Types.Core.Taxi.Common.Provider as Reexport
+import Beckn.Types.Core.Taxi.Common.Quote as Reexport
+import Beckn.Types.Core.Taxi.Common.StartInfo as Reexport
+import Beckn.Types.Core.Taxi.Common.StopInfo as Reexport
+import Beckn.Types.Core.Taxi.OnInit.Fulfillment as Reexport
 import Beckn.Types.Core.Taxi.OnInit.Order as Reexport
 import Beckn.Types.Core.Taxi.OnInit.OrderState as Reexport
-import Beckn.Types.Core.Taxi.OnInit.Payment as Reexport
-import Beckn.Types.Core.Taxi.OnInit.Quote as Reexport
 import Kernel.Prelude
 
 newtype OnInitMessage = OnInitMessage

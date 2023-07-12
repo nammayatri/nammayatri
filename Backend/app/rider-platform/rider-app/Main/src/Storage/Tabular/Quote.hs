@@ -47,6 +47,7 @@ mkPersist
       providerId Text
       providerUrl Text
       providerName Text
+      providerShortId Text Maybe
       providerMobileNumber Text
       providerCompletedRidesCount Int
       distanceToNearestDriver HighPrecMeters Maybe

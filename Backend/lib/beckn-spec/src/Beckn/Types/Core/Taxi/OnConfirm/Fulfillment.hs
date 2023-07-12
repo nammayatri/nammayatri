@@ -17,8 +17,11 @@ module Beckn.Types.Core.Taxi.OnConfirm.Fulfillment
   )
 where
 
-import Beckn.Types.Core.Taxi.OnConfirm.StartInfo
-import Beckn.Types.Core.Taxi.OnConfirm.StopInfo
+import Beckn.Types.Core.Taxi.Common.Agent
+import Beckn.Types.Core.Taxi.Common.FulfillmentType
+import Beckn.Types.Core.Taxi.Common.StartInfo
+import Beckn.Types.Core.Taxi.Common.StopInfo
+import Beckn.Types.Core.Taxi.Common.Vehicle
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import Kernel.Prelude
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
@@ -26,9 +29,13 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 -- If end = Nothing, then bpp sends quotes only for RENTAL
 -- If end is Just, then bpp sends quotes both for RENTAL and ONE_WAY
 data FulfillmentInfo = FulfillmentInfo
-  { state :: FulfillmentState,
+  { id :: Text,
+    _type :: FulfillmentType,
+    state :: FulfillmentState,
     start :: StartInfo,
-    end :: Maybe StopInfo
+    end :: Maybe StopInfo,
+    vehicle :: Vehicle,
+    agent :: Maybe Agent -- If NormalBooking then Just else Nothing for SpecialZoneBooking
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 

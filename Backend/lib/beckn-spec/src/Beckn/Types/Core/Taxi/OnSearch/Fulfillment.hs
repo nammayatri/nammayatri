@@ -12,13 +12,9 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnSearch.Fulfillment
-  ( module Beckn.Types.Core.Taxi.OnSearch.Fulfillment,
-    module Reexport,
-  )
-where
+module Beckn.Types.Core.Taxi.OnSearch.Fulfillment where
 
-import Beckn.Types.Core.Taxi.Common.VehicleVariant as Reexport
+import Beckn.Types.Core.Taxi.Common.Vehicle
 import Beckn.Types.Core.Taxi.OnSearch.StartInfo
 import Beckn.Types.Core.Taxi.OnSearch.StopInfo
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
@@ -29,17 +25,9 @@ data FulfillmentInfo = FulfillmentInfo
   { id :: Text,
     start :: StartInfo,
     end :: Maybe StopInfo,
-    vehicle :: FulfillmentVehicle
+    vehicle :: Vehicle
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
 instance ToSchema FulfillmentInfo where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-newtype FulfillmentVehicle = FulfillmentVehicle
-  { category :: VehicleVariant
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema FulfillmentVehicle where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

@@ -246,6 +246,7 @@ buildQuote requestId providerInfo now merchantId QuoteInfo {..} = do
         providerName = providerInfo.name,
         providerCompletedRidesCount = providerInfo.ridesCompleted,
         providerId = providerInfo.providerId,
+        providerShortId = Just "NAMMA_YATRI", -- TODO :: It should come from BPP in OnSearch
         providerUrl = providerInfo.url,
         createdAt = now,
         quoteDetails = quoteDetails',

@@ -65,10 +65,16 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
       -- TODO For backwards compatibility, remove it. Only payments field used in logic.
       payment =
         OS.Payment
-          { collected_by = OS.BPP,
+          { params =
+              OS.PaymentParams
+                { collected_by = OS.BPP,
+                  instrument = Nothing,
+                  currency = Nothing,
+                  amount = Nothing
+                },
             _type = OS.ON_FULFILLMENT,
-            time = OS.TimeDuration "P2A", -- FIXME: what is this?
-            instrument = Nothing
+            time = OS.TimeDuration "P2A",
+            uri = Nothing
           }
   let providerSpec =
         OS.Provider
@@ -132,7 +138,7 @@ mkQuoteEntities start end estInfo = do
           { start,
             end = Just end,
             id = "ARDU_" <> show estimate.vehicleVariant,
-            vehicle = OS.FulfillmentVehicle {category = Common.castVariant estimate.vehicleVariant}
+            vehicle = OS.Vehicle {category = Common.castVariant estimate.vehicleVariant}
           }
       item =
         OS.Item
@@ -184,7 +190,7 @@ mkQuoteEntitiesSpecialZone start end it = do
           { start,
             end = Just end,
             id = "fulf_" <> show it.quoteId,
-            vehicle = OS.FulfillmentVehicle {category = Common.castVariant it.vehicleVariant}
+            vehicle = OS.Vehicle {category = Common.castVariant it.vehicleVariant}
           }
       item =
         OS.Item
@@ -243,8 +249,14 @@ buildEstimateBreakUpList DEst.EstimateBreakup {..} = do
 mkPayment :: DMPM.PaymentMethodInfo -> OS.Payment
 mkPayment DMPM.PaymentMethodInfo {..} =
   OS.Payment
-    { collected_by = Common.castDPaymentCollector collectedBy,
+    { params =
+        OS.PaymentParams
+          { collected_by = Common.castDPaymentCollector collectedBy,
+            instrument = Just $ Common.castDPaymentInstrument paymentInstrument,
+            currency = Nothing,
+            amount = Nothing
+          },
       _type = Common.castDPaymentType paymentType,
-      instrument = Just $ Common.castDPaymentInstrument paymentInstrument,
-      time = OS.TimeDuration "P2A" -- FIXME: what is this?
+      time = OS.TimeDuration "P2A",
+      uri = Nothing
     }

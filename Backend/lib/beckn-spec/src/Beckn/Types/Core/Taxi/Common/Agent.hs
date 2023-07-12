@@ -12,9 +12,16 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnConfirm.Quote
-  ( module Reexport,
+module Beckn.Types.Core.Taxi.Common.Agent
+  ( module Beckn.Types.Core.Taxi.Common.Agent,
   )
 where
 
-import Beckn.Types.Core.Taxi.OnInit.Quote as Reexport
+import Data.OpenApi (ToSchema)
+import EulerHS.Prelude hiding (State, (.=))
+
+data Agent = Agent
+  { name :: Text,
+    rateable :: Bool
+  }
+  deriving (Generic, Show, ToSchema, ToJSON, FromJSON)

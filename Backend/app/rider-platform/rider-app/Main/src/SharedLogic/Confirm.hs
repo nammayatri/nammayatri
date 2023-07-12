@@ -16,7 +16,6 @@ module SharedLogic.Confirm where
 
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBL
-import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Merchant as DM
@@ -28,7 +27,6 @@ import Domain.Types.RentalSlab
 import qualified Domain.Types.SearchRequest as DSReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DSRLoc
 import Domain.Types.VehicleVariant (VehicleVariant)
-import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
 import qualified Kernel.Storage.Esqueleto as DB
@@ -57,11 +55,11 @@ data DConfirmReq = DConfirmReq
 data DConfirmRes = DConfirmRes
   { providerId :: Text,
     providerUrl :: BaseUrl,
-    fromLoc :: LatLong,
-    toLoc :: Maybe LatLong,
+    providerShortId :: Maybe Text,
+    fromLoc :: DBL.BookingLocation,
+    toLoc :: Maybe DBL.BookingLocation,
     vehicleVariant :: VehicleVariant,
     quoteDetails :: ConfirmQuoteDetails,
-    startTime :: UTCTime,
     booking :: DRB.Booking,
     searchRequestId :: Id DSReq.SearchRequest,
     merchant :: DM.Merchant,
@@ -73,7 +71,7 @@ data DConfirmRes = DConfirmRes
 data ConfirmQuoteDetails
   = ConfirmOneWayDetails
   | ConfirmRentalDetails RentalSlabAPIEntity
-  | ConfirmAutoDetails (Id DDriverOffer.BPPQuote)
+  | ConfirmAutoDetails Text (Maybe Text)
   | ConfirmOneWaySpecialZoneDetails Text
   deriving (Show, Generic)
 
@@ -104,14 +102,14 @@ confirm DConfirmReq {..} = do
   unless (searchRequest.riderId == personId) $ throwError AccessDenied
   let fromLocation = searchRequest.fromLocation
       mbToLocation = searchRequest.toLocation
+      driverId = getDriverId quote.quoteDetails
   bFromLocation <- buildBookingLocation now fromLocation
   mbBToLocation <- traverse (buildBookingLocation now) mbToLocation
   exophone <- findRandomExophone searchRequest.merchantId
-  booking <- buildBooking searchRequest quote bFromLocation mbBToLocation exophone now Nothing paymentMethodId
+  booking <- buildBooking searchRequest quote bFromLocation mbBToLocation exophone now Nothing paymentMethodId driverId
   triggerBookingCreatedEvent BookingEventData {booking = booking}
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   let details = mkConfirmQuoteDetails quote.quoteDetails
-
   paymentMethod <- forM paymentMethodId $ \paymentMethodId' -> do
     paymentMethod <-
       CQMPM.findByIdAndMerchantId paymentMethodId' searchRequest.merchantId
@@ -130,22 +128,26 @@ confirm DConfirmReq {..} = do
       { booking,
         providerId = quote.providerId,
         providerUrl = quote.providerUrl,
-        fromLoc = LatLong {lat = fromLocation.lat, lon = fromLocation.lon},
-        toLoc = mbToLocation <&> \toLocation -> LatLong {lat = toLocation.lat, lon = toLocation.lon},
+        providerShortId = quote.providerShortId,
+        fromLoc = bFromLocation,
+        toLoc = mbBToLocation,
         vehicleVariant = quote.vehicleVariant,
         quoteDetails = details,
-        startTime = searchRequest.startTime,
         searchRequestId = searchRequest.id,
         maxEstimatedDistance = searchRequest.maxDistance,
         paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> paymentMethod,
         ..
       }
   where
+    getDriverId :: DQuote.QuoteDetails -> Maybe Text
+    getDriverId = \case
+      DQuote.DriverOfferDetails driverOffer -> driverOffer.driverId
+      _ -> Nothing
     mkConfirmQuoteDetails :: DQuote.QuoteDetails -> ConfirmQuoteDetails
     mkConfirmQuoteDetails = \case
       DQuote.OneWayDetails _ -> ConfirmOneWayDetails
       DQuote.RentalDetails RentalSlab {..} -> ConfirmRentalDetails $ RentalSlabAPIEntity {..}
-      DQuote.DriverOfferDetails driverOffer -> ConfirmAutoDetails driverOffer.bppQuoteId
+      DQuote.DriverOfferDetails driverOffer -> ConfirmAutoDetails driverOffer.estimateId.getId driverOffer.driverId
       DQuote.OneWaySpecialZoneDetails details -> ConfirmOneWaySpecialZoneDetails details.quoteId
 
 buildBooking ::
@@ -158,8 +160,9 @@ buildBooking ::
   UTCTime ->
   Maybe Text ->
   Maybe (Id DMPM.MerchantPaymentMethod) ->
+  Maybe Text ->
   m DRB.Booking
-buildBooking searchRequest quote fromLoc mbToLoc exophone now otpCode paymentMethodId = do
+buildBooking searchRequest quote fromLoc mbToLoc exophone now otpCode paymentMethodId driverId = do
   id <- generateGUID
   bookingDetails <- buildBookingDetails
   return $
@@ -167,6 +170,8 @@ buildBooking searchRequest quote fromLoc mbToLoc exophone now otpCode paymentMet
       { id = Id id,
         transactionId = searchRequest.id.getId,
         bppBookingId = Nothing,
+        driverId,
+        fulfillmentId = mkFulfillmentId,
         quoteId = Just quote.id,
         paymentMethodId,
         paymentUrl = Nothing,
@@ -175,6 +180,7 @@ buildBooking searchRequest quote fromLoc mbToLoc exophone now otpCode paymentMet
         primaryExophone = exophone.primaryPhone,
         providerUrl = quote.providerUrl,
         providerName = quote.providerName,
+        providerShortId = quote.providerShortId,
         providerMobileNumber = quote.providerMobileNumber,
         startTime = searchRequest.startTime,
         riderId = searchRequest.riderId,
@@ -191,6 +197,10 @@ buildBooking searchRequest quote fromLoc mbToLoc exophone now otpCode paymentMet
         updatedAt = now
       }
   where
+    mkFulfillmentId = case quote.quoteDetails of
+      DQuote.DriverOfferDetails driverOffer -> Just driverOffer.estimateId.getId
+      DQuote.OneWaySpecialZoneDetails details -> Just details.quoteId
+      _ -> Nothing
     buildBookingDetails = case quote.quoteDetails of
       DQuote.OneWayDetails _ -> DRB.OneWayDetails <$> buildOneWayDetails
       DQuote.RentalDetails rentalSlab -> pure $ DRB.RentalDetails rentalSlab

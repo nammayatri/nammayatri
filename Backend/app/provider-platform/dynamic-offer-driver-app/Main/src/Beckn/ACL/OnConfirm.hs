@@ -20,31 +20,36 @@ import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.Booking as DConfirm
 import qualified Domain.Types.Booking.BookingLocation as DBL
 import Kernel.Prelude
+import Kernel.Types.Beckn.DecimalValue
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FareCalculator
 
-buildOnConfirmMessage :: MonadFlow m => UTCTime -> DConfirm.DConfirmRes -> m OnConfirm.OnConfirmMessage
-buildOnConfirmMessage now res = do
+buildOnConfirmMessage :: MonadFlow m => DConfirm.DConfirmRes -> m OnConfirm.OnConfirmMessage
+buildOnConfirmMessage res = do
   let booking = res.booking
   let vehicleVariant = Common.castVariant res.booking.vehicleVariant
-  let itemCode = OnConfirm.ItemCode OnConfirm.ONE_WAY_TRIP vehicleVariant Nothing Nothing
+  let itemId =
+        OnConfirm.ItemId
+          { providerName = res.transporter.shortId.getShortId,
+            vehicleVariant
+          }
       fareParams = booking.fareParams
       totalFareDecimal = fromIntegral booking.estimatedFare
       currency = "INR"
   fulfillmentDetails <- case booking.bookingType of
     DConfirm.SpecialZoneBooking -> do
       otpCode <- booking.specialZoneOtpCode & fromMaybeM (OtpNotFoundForSpecialZoneBooking booking.id.getId)
-      return $ mkSpecialZoneFulfillmentInfo res.fromLocation res.toLocation now otpCode
-    DConfirm.NormalBooking -> return $ mkFulfillmentInfo res.fromLocation res.toLocation now
+      return $ mkSpecialZoneFulfillmentInfo res.fromLocation res.toLocation otpCode booking.quoteId OnConfirm.RIDE vehicleVariant
+    DConfirm.NormalBooking -> return $ mkFulfillmentInfo res.fromLocation res.toLocation booking.quoteId OnConfirm.RIDE_OTP res.driverName vehicleVariant
   return $
     OnConfirm.OnConfirmMessage
       { order =
           OnConfirm.Order
             { id = getId booking.id,
               state = "ACTIVE",
-              items = [mkOrderItem itemCode],
+              items = [mkOrderItem itemId booking.quoteId currency totalFareDecimal],
               fulfillment = fulfillmentDetails,
               quote =
                 OnConfirm.Quote
@@ -60,26 +65,41 @@ buildOnConfirmMessage now res = do
                         OnConfirm.BreakupItem
                         fareParams
                   },
+              provider =
+                res.driverId >>= \dId ->
+                  Just $
+                    OnConfirm.Provider
+                      { id = dId
+                      },
               payment =
                 OnConfirm.Payment
-                  { collected_by = "BAP",
-                    params =
+                  { params =
                       OnConfirm.PaymentParams
-                        { currency,
-                          amount = totalFareDecimal
+                        { collected_by = OnConfirm.BAP,
+                          instrument = Nothing,
+                          currency = Just currency,
+                          amount = Just totalFareDecimal
                         },
                     _type = OnConfirm.ON_FULFILLMENT,
-                    time = OnConfirm.TimeDuration "P2D"
+                    time = OnConfirm.TimeDuration "P2D",
+                    uri = booking.paymentUrl
                   }
             }
       }
 
-mkOrderItem :: OnConfirm.ItemCode -> OnConfirm.OrderItem
-mkOrderItem code =
+mkOrderItem :: OnConfirm.ItemId -> Text -> Text -> DecimalValue -> OnConfirm.OrderItem
+mkOrderItem itemId fulfillmentId currency totalFareDecimal =
   OnConfirm.OrderItem
-    { descriptor =
+    { id = itemId,
+      fulfillment_id = fulfillmentId,
+      price =
+        OnConfirm.Price
+          { currency,
+            value = totalFareDecimal
+          },
+      descriptor =
         OnConfirm.Descriptor
-          { code = code
+          { short_desc = itemId
           }
     }
 
@@ -96,25 +116,37 @@ mklocation loc =
   where
     castAddress DBL.LocationAddress {..} = OnConfirm.Address {area_code = areaCode, locality = area, ward = Nothing, ..}
 
-mkFulfillmentInfo :: DBL.BookingLocation -> DBL.BookingLocation -> UTCTime -> OnConfirm.FulfillmentInfo
-mkFulfillmentInfo fromLoc toLoc startTime =
+mkFulfillmentInfo :: DBL.BookingLocation -> DBL.BookingLocation -> Text -> OnConfirm.FulfillmentType -> Maybe Text -> OnConfirm.VehicleVariant -> OnConfirm.FulfillmentInfo
+mkFulfillmentInfo fromLoc toLoc fulfillmentId fulfillmentType driverName vehicleVariant =
   OnConfirm.FulfillmentInfo
-    { state = OnConfirm.FulfillmentState "TRIP_ASSIGNED",
+    { id = fulfillmentId,
+      _type = fulfillmentType,
+      state = OnConfirm.FulfillmentState "TRIP_ASSIGNED",
       start =
         OnConfirm.StartInfo
           { location = mklocation fromLoc,
-            time = OnConfirm.TimeTimestamp startTime,
             authorization = Nothing
           },
       end =
         Just
           OnConfirm.StopInfo
             { location = mklocation toLoc
-            }
+            },
+      vehicle =
+        OnConfirm.Vehicle
+          { category = vehicleVariant
+          },
+      agent =
+        driverName >>= \dName ->
+          Just
+            OnConfirm.Agent
+              { name = dName,
+                rateable = True
+              }
     }
 
-mkSpecialZoneFulfillmentInfo :: DBL.BookingLocation -> DBL.BookingLocation -> UTCTime -> Text -> OnConfirm.FulfillmentInfo
-mkSpecialZoneFulfillmentInfo fromLoc toLoc startTime otp = do
+mkSpecialZoneFulfillmentInfo :: DBL.BookingLocation -> DBL.BookingLocation -> Text -> Text -> OnConfirm.FulfillmentType -> OnConfirm.VehicleVariant -> OnConfirm.FulfillmentInfo
+mkSpecialZoneFulfillmentInfo fromLoc toLoc otp fulfillmentId fulfillmentType vehicleVariant = do
   let authorization =
         Just $
           OnConfirm.Authorization
@@ -122,16 +154,22 @@ mkSpecialZoneFulfillmentInfo fromLoc toLoc startTime otp = do
               token = otp
             }
   OnConfirm.FulfillmentInfo
-    { state = OnConfirm.FulfillmentState "NEW",
+    { id = fulfillmentId,
+      _type = fulfillmentType,
+      state = OnConfirm.FulfillmentState "NEW",
       start =
         OnConfirm.StartInfo
           { location = mklocation fromLoc,
-            time = OnConfirm.TimeTimestamp startTime,
             authorization = authorization
           },
       end =
         Just
           OnConfirm.StopInfo
             { location = mklocation toLoc
-            }
+            },
+      vehicle =
+        OnConfirm.Vehicle
+          { category = vehicleVariant
+          },
+      agent = Nothing
     }

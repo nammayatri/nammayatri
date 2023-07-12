@@ -34,12 +34,12 @@ buildConfirmReq ::
 buildConfirmReq req = do
   validateContext Context.CONFIRM req.context
   let bookingId = Id req.message.order.id
-      phone = req.message.order.customer.contact.phone
+      fulfillment = req.message.order.fulfillment
+      phone = fulfillment.customer.contact.phone
       customerMobileCountryCode = phone.country_code
       customerPhoneNumber = phone.number
-      fulfillment = req.message.order.fulfillment
       fromAddress = castAddress fulfillment.start.location.address
-      mbRiderName = req.message.order.customer.person <&> (.name)
+      mbRiderName = fulfillment.customer.person <&> (.name)
   toAddress <- (castAddress . (.location.address) <$> fulfillment.end) & fromMaybeM (InvalidRequest "end location missing")
 
   return $
