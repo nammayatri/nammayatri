@@ -21,7 +21,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, ($), (/=), (<>), (==), pure, (<<<), (-), discard, unit, bind)
+import Prelude (Unit, const, map, ($), (/=), (<>), (==), pure, (<<<), (-), discard, unit, bind, show)
 import Data.Array (take, (!!), drop, head, mapWithIndex, null)
 import Data.String as DS
 import Data.Array as DA
@@ -37,6 +37,8 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, isPreviousVersion)
 import Helpers.Utils (getPreviousVersion)
 import Storage (getValueToLocalStore, KeyStore(..))
+import Data.String as DS
+import Data.Ord as DO
 
 view :: forall w .  (Action  -> Effect Unit) -> EmergencyHelpModelState  -> PrestoDOM (Effect Unit) w
 view push state =
@@ -439,6 +441,8 @@ allContactsView state push =
                     , fontStyle $ FontStyle.regular LanguageStyle
                     , margin $ MarginHorizontal 10 10
                     ]
+                  ]
+          ]
                 ]
             ]
           ]
