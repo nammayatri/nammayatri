@@ -19,10 +19,13 @@ import qualified Beckn.Types.Core.Taxi.OnSearch as OS
 import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..), BreakupPrice (..))
 import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Estimate as DEst
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import GHC.Float (double2Int)
 import Kernel.Prelude
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
+
+-- import qualified Domain.Types.BlackListOrg as provider
 
 autoOneWayCategory :: OS.Category
 autoOneWayCategory =
@@ -51,40 +54,40 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
   let startInfo = mkStartInfo res
   let stopInfo = mkStopInfo res
   let (quoteEntitiesList :: [QuoteEntities]) = case (estimateList, specialQuoteList) of
-        (Just estimates, _) -> map (mkQuoteEntities startInfo stopInfo) estimates
-        (Nothing, Just quotes) -> map (mkQuoteEntitiesSpecialZone startInfo stopInfo) quotes
-        (_, _) -> map (mkQuoteEntities startInfo stopInfo) [] --this won't happen
+        (Just estimates, _) -> map (mkQuoteEntities startInfo stopInfo provider) estimates
+        (Nothing, Just quotes) -> map (mkQuoteEntitiesSpecialZone startInfo stopInfo provider) quotes
+        (_, _) -> map (mkQuoteEntities startInfo stopInfo provider) [] --this won't happen
   let items = map (.item) quoteEntitiesList
       fulfillments = map (.fulfillment) quoteEntitiesList
-      contacts = fromMaybe "" provider.mobileNumber
-      tags =
-        OS.ProviderTags
-          { rides_inprogress = 0, --FIXME
-            rides_completed = 0, --FIXME
-            rides_confirmed = 0 --FIXME
-          }
+      -- contacts = fromMaybe "" provider.mobileNumber
+      -- tags =
+      --   OS.ProviderTags
+      --     { rides_inprogress = 0, --FIXME
+      --       rides_completed = 0, --FIXME
+      --       rides_confirmed = 0 --FIXME
+      --     }
       payments = Just $ mkPayment <$> paymentMethodsInfo
-      -- TODO For backwards compatibility, remove it. Only payments field used in logic.
-      payment =
-        OS.Payment
-          { collected_by = OS.BPP,
-            _type = OS.ON_FULFILLMENT,
-            time = OS.TimeDuration "P2A", -- FIXME: what is this?
-            instrument = Nothing
-          }
+  -- TODO For backwards compatibility, remove it. Only payments field used in logic.
+  -- payment =
+  --   OS.Payment
+  --     { collected_by = OS.BPP,
+  --       _type = OS.ON_FULFILLMENT,
+  --       time = OS.TimeDuration "P2A", -- FIXME: what is this?
+  --       instrument = Nothing
+  --     }
   let providerSpec =
         OS.Provider
           { id = provider.subscriberId.getShortId,
             descriptor = OS.Descriptor {name = provider.name},
-            locations = maybe [] (mkProviderLocations) estimateList,
-            categories = [autoOneWayCategory, oneWaySpecialZoneCategory],
+            locations = maybe [] mkProviderLocations estimateList,
+            -- categories = [autoOneWayCategory, oneWaySpecialZoneCategory],
             items,
-            offers = [],
-            add_ons = [],
+            -- offers = [],
+            -- add_ons = [],
             fulfillments,
-            contacts,
-            tags,
-            payment,
+            -- contacts,
+            -- tags,
+            -- payment,
             payments
           }
   OS.OnSearchMessage $
@@ -125,8 +128,8 @@ data QuoteEntities = QuoteEntities
 currency' :: Text
 currency' = "INR"
 
-mkQuoteEntities :: OS.StartInfo -> OS.StopInfo -> DSearch.EstimateInfo -> QuoteEntities
-mkQuoteEntities start end estInfo = do
+mkQuoteEntities :: OS.StartInfo -> OS.StopInfo -> DM.Merchant -> DSearch.EstimateInfo -> QuoteEntities
+mkQuoteEntities start end provider estInfo = do
   let estimate = estInfo.estimate
       variant = Common.castVariant estimate.vehicleVariant
       minPriceDecimalValue = OS.DecimalValue $ toRational estimate.minFare
@@ -142,10 +145,10 @@ mkQuoteEntities start end estInfo = do
           }
       item =
         OS.Item
-          { id = estInfo.estimate.id.getId,
-            category_id = autoOneWayCategory.id,
+          { id = Common.mkItemId provider.subscriberId.getShortId estimate.vehicleVariant,
+            -- category_id = autoOneWayCategory.id,
             fulfillment_id = fulfillment.id,
-            offer_id = Nothing,
+            -- offer_id = Nothing,
             price =
               OS.ItemPrice
                 { currency = currency',
@@ -160,87 +163,87 @@ mkQuoteEntities start end estInfo = do
                 { name = "",
                   code = OS.ItemCode OS.DRIVER_OFFER_ESTIMATE variant Nothing Nothing
                 },
-            quote_terms = [],
+            -- quote_terms = [],
             tags =
               Just
                 [ mkGeneralInfoTag estimate,
                   mkFarePolicyTag estimate
-                ],
-            -- OS.TagGroup
-            --   { code_1 = Just "fare_policy",
-            --     name_1 = Just "Fare Policy",
-            --     list_1_code = maybe Nothing (\_ -> Just "night_shift_charge") (estimate.nightShiftInfo <&> (.nightShiftCharge)), --"night_shift_charge",
-            --     list_1_name = maybe Nothing (\_ -> Just "Night Shift Charges") (estimate.nightShiftInfo <&> (.nightShiftCharge)),
-            --     list_1_value = maybe Nothing (\charges -> Just $ show charges.getMoney) (estimate.nightShiftInfo <&> (.nightShiftCharge)),
-            --     list_2_code = maybe Nothing (\_ -> Just "old_night_shift_charge") (OS.DecimalValue . toRational <$> (estimate.nightShiftInfo <&> (.oldNightShiftCharge))),
-            --     list_2_name = maybe Nothing (\_ -> Just "Old Night Shift Charges") (OS.DecimalValue . toRational <$> (estimate.nightShiftInfo <&> (.oldNightShiftCharge))),
-            --     list_2_value = maybe Nothing (\charges -> Just $ DecimalValue.valueToString charges) (OS.DecimalValue . toRational <$> (estimate.nightShiftInfo <&> (.oldNightShiftCharge))),
-            --     list_3_code = maybe Nothing (\_ -> Just "night_shift_start") (estimate.nightShiftInfo <&> (.nightShiftStart)),
-            --     list_3_name = maybe Nothing (\_ -> Just "Night Shift Start Timings") (estimate.nightShiftInfo <&> (.nightShiftStart)),
-            --     list_3_value = maybe Nothing (\time -> Just $ show time) (estimate.nightShiftInfo <&> (.nightShiftStart)),
-            --     list_4_code = maybe Nothing (\_ -> Just "waiting_charge_per_min") estimate.waitingCharges.waitingChargePerMin,
-            --     list_4_name = maybe Nothing (\_ -> Just "Waiting Charges Per Min") estimate.waitingCharges.waitingChargePerMin,
-            --     list_4_value = maybe Nothing (\charges -> Just $ show charges.getMoney) estimate.waitingCharges.waitingChargePerMin,
-            --     list_5_code = maybe Nothing (\_ -> Just "night_shift_end") (estimate.nightShiftInfo <&> (.nightShiftEnd)),
-            --     list_5_name = maybe Nothing (\_ -> Just "Night Shift End Timings") (estimate.nightShiftInfo <&> (.nightShiftEnd)),
-            --     list_5_value = maybe Nothing (\time -> Just $ show time) (estimate.nightShiftInfo <&> (.nightShiftEnd)),
-            --     code_2 = Just "general_info",
-            --     name_2 = Just "General Information",
-            --     list_2_1_code = Just "distance_to_nearest_driver",
-            --     list_2_1_name = Just "Distance To Nearest Driver",
-            --     list_2_1_value = Just $ show . double2Int . realToFrac $ estInfo.distanceToNearestDriver,
-            --     list_2_2_code = maybe Nothing (\_ -> Just "special_location_tag") estimate.specialLocationTag,
-            --     list_2_2_name = maybe Nothing (\_ -> Just "Special Location Tag") estimate.specialLocationTag,
-            --     list_2_2_value = estimate.specialLocationTag
-            --   },
-            -- { distance_to_nearest_driver = Just $ realToFrac estInfo.distanceToNearestDriver,
-            --   -- night_shift_charge = estimate.nightShiftInfo <&> (.nightShiftCharge),
-            --   -- old_night_shift_charge = OS.DecimalValue . toRational <$> (estimate.nightShiftInfo <&> (.oldNightShiftCharge)),
-            --   night_shift_start = estimate.nightShiftInfo <&> (.nightShiftStart),
-            --   night_shift_end = estimate.nightShiftInfo <&> (.nightShiftEnd),
-            --   waiting_charge_per_min = estimate.waitingCharges.waitingChargePerMin,
-            --   -- drivers_location = toList estInfo.driverLatLongs,
-            --   special_location_tag = estimate.specialLocationTag
-            -- },
-            -- data ItemTags = ItemTags
-            --   { distance_to_nearest_driver :: Maybe DecimalValue,
-            --     night_shift_charge :: Maybe Money,
-            --     old_night_shift_charge :: Maybe DecimalValue, -- TODO: Doesn't make sense, to be removed
-            --     night_shift_start :: Maybe TimeOfDay,
-            --     night_shift_end :: Maybe TimeOfDay,
-            --     waiting_charge_per_min :: Maybe Money,
-            --     -- drivers_location :: [LatLong],
-            --     special_location_tag :: Maybe Text
-            --   }
+                ]
+                -- OS.TagGroup
+                --   { code_1 = Just "fare_policy",
+                --     name_1 = Just "Fare Policy",
+                --     list_1_code = maybe Nothing (\_ -> Just "night_shift_charge") (estimate.nightShiftInfo <&> (.nightShiftCharge)), --"night_shift_charge",
+                --     list_1_name = maybe Nothing (\_ -> Just "Night Shift Charges") (estimate.nightShiftInfo <&> (.nightShiftCharge)),
+                --     list_1_value = maybe Nothing (\charges -> Just $ show charges.getMoney) (estimate.nightShiftInfo <&> (.nightShiftCharge)),
+                --     list_2_code = maybe Nothing (\_ -> Just "old_night_shift_charge") (OS.DecimalValue . toRational <$> (estimate.nightShiftInfo <&> (.oldNightShiftCharge))),
+                --     list_2_name = maybe Nothing (\_ -> Just "Old Night Shift Charges") (OS.DecimalValue . toRational <$> (estimate.nightShiftInfo <&> (.oldNightShiftCharge))),
+                --     list_2_value = maybe Nothing (\charges -> Just $ DecimalValue.valueToString charges) (OS.DecimalValue . toRational <$> (estimate.nightShiftInfo <&> (.oldNightShiftCharge))),
+                --     list_3_code = maybe Nothing (\_ -> Just "night_shift_start") (estimate.nightShiftInfo <&> (.nightShiftStart)),
+                --     list_3_name = maybe Nothing (\_ -> Just "Night Shift Start Timings") (estimate.nightShiftInfo <&> (.nightShiftStart)),
+                --     list_3_value = maybe Nothing (\time -> Just $ show time) (estimate.nightShiftInfo <&> (.nightShiftStart)),
+                --     list_4_code = maybe Nothing (\_ -> Just "waiting_charge_per_min") estimate.waitingCharges.waitingChargePerMin,
+                --     list_4_name = maybe Nothing (\_ -> Just "Waiting Charges Per Min") estimate.waitingCharges.waitingChargePerMin,
+                --     list_4_value = maybe Nothing (\charges -> Just $ show charges.getMoney) estimate.waitingCharges.waitingChargePerMin,
+                --     list_5_code = maybe Nothing (\_ -> Just "night_shift_end") (estimate.nightShiftInfo <&> (.nightShiftEnd)),
+                --     list_5_name = maybe Nothing (\_ -> Just "Night Shift End Timings") (estimate.nightShiftInfo <&> (.nightShiftEnd)),
+                --     list_5_value = maybe Nothing (\time -> Just $ show time) (estimate.nightShiftInfo <&> (.nightShiftEnd)),
+                --     code_2 = Just "general_info",
+                --     name_2 = Just "General Information",
+                --     list_2_1_code = Just "distance_to_nearest_driver",
+                --     list_2_1_name = Just "Distance To Nearest Driver",
+                --     list_2_1_value = Just $ show . double2Int . realToFrac $ estInfo.distanceToNearestDriver,
+                --     list_2_2_code = maybe Nothing (\_ -> Just "special_location_tag") estimate.specialLocationTag,
+                --     list_2_2_name = maybe Nothing (\_ -> Just "Special Location Tag") estimate.specialLocationTag,
+                --     list_2_2_value = estimate.specialLocationTag
+                --   },
+                -- { distance_to_nearest_driver = Just $ realToFrac estInfo.distanceToNearestDriver,
+                --   -- night_shift_charge = estimate.nightShiftInfo <&> (.nightShiftCharge),
+                --   -- old_night_shift_charge = OS.DecimalValue . toRational <$> (estimate.nightShiftInfo <&> (.oldNightShiftCharge)),
+                --   night_shift_start = estimate.nightShiftInfo <&> (.nightShiftStart),
+                --   night_shift_end = estimate.nightShiftInfo <&> (.nightShiftEnd),
+                --   waiting_charge_per_min = estimate.waitingCharges.waitingChargePerMin,
+                --   -- drivers_location = toList estInfo.driverLatLongs,
+                --   special_location_tag = estimate.specialLocationTag
+                -- },
+                -- data ItemTags = ItemTags
+                --   { distance_to_nearest_driver :: Maybe DecimalValue,
+                --     night_shift_charge :: Maybe Money,
+                --     old_night_shift_charge :: Maybe DecimalValue, -- TODO: Doesn't make sense, to be removed
+                --     night_shift_start :: Maybe TimeOfDay,
+                --     night_shift_end :: Maybe TimeOfDay,
+                --     waiting_charge_per_min :: Maybe Money,
+                --     -- drivers_location :: [LatLong],
+                --     special_location_tag :: Maybe Text
+                --   }
 
-            -- code_1 :: Maybe Text,
-            -- name_1 :: Maybe Text,
-            -- -- display_1 :: Bool,
-            -- list_1_code :: Maybe Text,
-            -- list_1_name :: Maybe Text,
-            -- list_1_value :: Maybe Text,
-            -- list_2_code :: Maybe Text,
-            -- list_2_name :: Maybe Text,
-            -- list_2_value :: Maybe Text,
-            -- list_3_code :: Maybe Text,
-            -- list_3_name :: Maybe Text,
-            -- list_3_value :: Maybe Text,
-            -- list_4_code :: Maybe Text,
-            -- list_4_name :: Maybe Text,
-            -- list_4_value :: Maybe Text,
-            -- list_5_code :: Maybe Text,
-            -- list_5_name :: Maybe Text,
-            -- list_5_value :: Maybe Text,
-            -- code_2 :: Maybe Text,
-            -- name_2 :: Maybe Text,
-            -- list_2_1_code :: Maybe Text,
-            -- list_2_1_name :: Maybe Text,
-            -- list_2_1_value :: Maybe Text,
-            -- list_2_2_code :: Maybe Text,
-            -- list_2_2_name :: Maybe Text,
-            -- list_2_2_value :: Maybe Text,
-            base_distance = Nothing,
-            base_duration = Nothing
+                -- code_1 :: Maybe Text,
+                -- name_1 :: Maybe Text,
+                -- -- display_1 :: Bool,
+                -- list_1_code :: Maybe Text,
+                -- list_1_name :: Maybe Text,
+                -- list_1_value :: Maybe Text,
+                -- list_2_code :: Maybe Text,
+                -- list_2_name :: Maybe Text,
+                -- list_2_value :: Maybe Text,
+                -- list_3_code :: Maybe Text,
+                -- list_3_name :: Maybe Text,
+                -- list_3_value :: Maybe Text,
+                -- list_4_code :: Maybe Text,
+                -- list_4_name :: Maybe Text,
+                -- list_4_value :: Maybe Text,
+                -- list_5_code :: Maybe Text,
+                -- list_5_name :: Maybe Text,
+                -- list_5_value :: Maybe Text,
+                -- code_2 :: Maybe Text,
+                -- name_2 :: Maybe Text,
+                -- list_2_1_code :: Maybe Text,
+                -- list_2_1_name :: Maybe Text,
+                -- list_2_1_value :: Maybe Text,
+                -- list_2_2_code :: Maybe Text,
+                -- list_2_2_name :: Maybe Text,
+                -- list_2_2_value :: Maybe Text,
+                -- base_distance = Nothing,
+                -- base_duration = Nothing
           }
   QuoteEntities
     { fulfillment,
@@ -255,9 +258,9 @@ mkQuoteEntities start end estInfo = do
               name = "General Information",
               list =
                 [ OS.Tag
-                    { display = maybe Nothing (\_ -> Just False) specialLocationTag,
-                      code = maybe Nothing (\_ -> Just "special_location_tag") specialLocationTag,
-                      name = maybe Nothing (\_ -> Just "Special Location Tag") specialLocationTag,
+                    { display = (\_ -> Just False) =<< specialLocationTag,
+                      code = (\_ -> Just "special_location_tag") =<< specialLocationTag,
+                      name = (\_ -> Just "Special Location Tag") =<< specialLocationTag,
                       value = specialLocationTag
                     },
                   OS.Tag
@@ -280,40 +283,40 @@ mkQuoteEntities start end estInfo = do
               name = "Fare Policy",
               list =
                 [ OS.Tag
-                    { display = maybe Nothing (\_ -> Just False) nightShiftCharges,
-                      code = maybe Nothing (\_ -> Just "night_shift_charge") nightShiftCharges,
-                      name = maybe Nothing (\_ -> Just "Night Shift Charges") nightShiftCharges,
-                      value = maybe Nothing (\charges -> Just $ show charges.getMoney) nightShiftCharges
+                    { display = (\_ -> Just False) =<< nightShiftCharges,
+                      code = (\_ -> Just "night_shift_charge") =<< nightShiftCharges,
+                      name = (\_ -> Just "Night Shift Charges") =<< nightShiftCharges,
+                      value = (\charges -> Just $ show charges.getMoney) =<< nightShiftCharges
                     },
                   OS.Tag
-                    { display = maybe Nothing (\_ -> Just False) oldNightShiftCharges,
-                      code = maybe Nothing (\_ -> Just "old_night_shift_charge") oldNightShiftCharges,
-                      name = maybe Nothing (\_ -> Just "Old Night Shift Charges") oldNightShiftCharges,
-                      value = maybe Nothing (\charges -> Just $ DecimalValue.valueToString charges) oldNightShiftCharges
+                    { display = (\_ -> Just False) =<< oldNightShiftCharges,
+                      code = (\_ -> Just "old_night_shift_charge") =<< oldNightShiftCharges,
+                      name = (\_ -> Just "Old Night Shift Charges") =<< oldNightShiftCharges,
+                      value = (Just . DecimalValue.valueToString) =<< oldNightShiftCharges
                     },
                   OS.Tag
-                    { display = maybe Nothing (\_ -> Just False) nightShiftStart,
-                      code = maybe Nothing (\_ -> Just "night_shift_start") nightShiftStart,
-                      name = maybe Nothing (\_ -> Just "Night Shift Start Timings") nightShiftStart,
-                      value = maybe Nothing (\time -> Just $ show time) nightShiftStart
+                    { display = (\_ -> Just False) =<< nightShiftStart,
+                      code = (\_ -> Just "night_shift_start") =<< nightShiftStart,
+                      name = (\_ -> Just "Night Shift Start Timings") =<< nightShiftStart,
+                      value = (Just . show) =<< nightShiftStart
                     },
                   OS.Tag
-                    { display = maybe Nothing (\_ -> Just False) waitingChargePerMin,
-                      code = maybe Nothing (\_ -> Just "waiting_charge_per_min") waitingChargePerMin,
-                      name = maybe Nothing (\_ -> Just "Waiting Charges Per Min") waitingChargePerMin,
-                      value = maybe Nothing (\charges -> Just $ show charges.getMoney) waitingChargePerMin
+                    { display = (\_ -> Just False) =<< waitingChargePerMin,
+                      code = (\_ -> Just "waiting_charge_per_min") =<< waitingChargePerMin,
+                      name = (\_ -> Just "Waiting Charges Per Min") =<< waitingChargePerMin,
+                      value = (\charges -> Just $ show charges.getMoney) =<< waitingChargePerMin
                     },
                   OS.Tag
-                    { display = maybe Nothing (\_ -> Just False) nightShiftEnd,
-                      code = maybe Nothing (\_ -> Just "night_shift_end") nightShiftEnd,
-                      name = maybe Nothing (\_ -> Just "Night Shift End Timings") nightShiftEnd,
-                      value = maybe Nothing (\time -> Just $ show time) nightShiftEnd
+                    { display = (\_ -> Just False) =<< nightShiftEnd,
+                      code = (\_ -> Just "night_shift_end") =<< nightShiftEnd,
+                      name = (\_ -> Just "Night Shift End Timings") =<< nightShiftEnd,
+                      value = (Just . show) =<< nightShiftEnd
                     }
                 ]
             }
 
-mkQuoteEntitiesSpecialZone :: OS.StartInfo -> OS.StopInfo -> DSearch.SpecialZoneQuoteInfo -> QuoteEntities
-mkQuoteEntitiesSpecialZone start end it = do
+mkQuoteEntitiesSpecialZone :: OS.StartInfo -> OS.StopInfo -> DM.Merchant -> DSearch.SpecialZoneQuoteInfo -> QuoteEntities
+mkQuoteEntitiesSpecialZone start end provider it = do
   let variant = Common.castVariant it.vehicleVariant
       estimatedFare = OS.DecimalValue $ toRational it.estimatedFare
       fulfillment =
@@ -326,10 +329,10 @@ mkQuoteEntitiesSpecialZone start end it = do
           }
       item =
         OS.Item
-          { id = it.quoteId.getId,
-            category_id = oneWaySpecialZoneCategory.id,
+          { id = Common.mkItemId provider.subscriberId.getShortId it.vehicleVariant,
+            -- category_id = oneWaySpecialZoneCategory.id,
             fulfillment_id = fulfillment.id,
-            offer_id = Nothing,
+            -- offer_id = Nothing,
             price =
               OS.ItemPrice
                 { currency = currency',
@@ -344,7 +347,7 @@ mkQuoteEntitiesSpecialZone start end it = do
                 { name = "",
                   code = OS.ItemCode OS.ONE_WAY_SPECIAL_ZONE variant Nothing Nothing
                 },
-            quote_terms = [],
+            -- quote_terms = [],
             tags =
               if isJust it.specialLocationTag
                 then Just [mkSpecialLocationTag it.specialLocationTag]
@@ -375,9 +378,9 @@ mkQuoteEntitiesSpecialZone start end it = do
                 --     list_2_2_name = maybe Nothing (\_ -> Just "Special Location Tag") it.specialLocationTag,
                 --     list_2_2_value = it.specialLocationTag
                 --   }
-                  Nothing,
-            base_distance = Nothing,
-            base_duration = Nothing
+                  Nothing
+                  -- base_distance = Nothing,
+                  -- base_duration = Nothing
           }
   QuoteEntities
     { fulfillment,
@@ -391,9 +394,9 @@ mkQuoteEntitiesSpecialZone start end it = do
           name = "General Information",
           list =
             [ OS.Tag
-                { display = maybe Nothing (\_ -> Just False) specialLocationTag,
-                  code = maybe Nothing (\_ -> Just "special_location_tag") specialLocationTag,
-                  name = maybe Nothing (\_ -> Just "Special Location Tag") specialLocationTag,
+                { display = (\_ -> Just False) =<< specialLocationTag,
+                  code = (\_ -> Just "special_location_tag") =<< specialLocationTag,
+                  name = (\_ -> Just "Special Location Tag") =<< specialLocationTag,
                   value = specialLocationTag
                 }
             ]

@@ -51,6 +51,7 @@ data Estimate = Estimate
     providerMobileNumber :: Text,
     providerCompletedRidesCount :: Int,
     vehicleVariant :: VehicleVariant,
+    itemId :: Text,
     tripTerms :: Maybe DTripTerms.TripTerms,
     estimateBreakupList :: [EstimateBreakup],
     nightShiftInfo :: Maybe NightShiftInfo,

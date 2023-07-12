@@ -15,7 +15,11 @@
 module Beckn.ACL.Common where
 
 import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
+import qualified Beckn.Types.Core.Taxi.Common.VehicleVariant as Common
+import qualified Beckn.Types.Core.Taxi.Search as Search
+import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.VehicleVariant as Variant
 import Kernel.Prelude
 import Kernel.Utils.Common
 import Tools.Error
@@ -55,3 +59,34 @@ castPaymentInstrument (Payment.Wallet Payment.DefaultWalletType) = DMPM.Wallet D
 castPaymentInstrument Payment.UPI = DMPM.UPI
 castPaymentInstrument Payment.NetBanking = DMPM.NetBanking
 castPaymentInstrument Payment.Cash = DMPM.Cash
+
+mkLocation :: DSearchCommon.SearchReqLocation -> Search.Location
+mkLocation info =
+  Search.Location
+    { gps =
+        Search.Gps
+          { lat = info.gps.lat,
+            lon = info.gps.lon
+          },
+      address =
+        Just
+          Search.Address
+            { locality = info.address.area,
+              state = info.address.state,
+              country = info.address.country,
+              building = info.address.building,
+              street = info.address.street,
+              city = info.address.city,
+              area_code = info.address.areaCode,
+              door = info.address.door,
+              ward = info.address.ward
+            }
+    }
+
+castVariant :: Variant.VehicleVariant -> Common.VehicleVariant
+castVariant Variant.SEDAN = Common.SEDAN
+castVariant Variant.HATCHBACK = Common.HATCHBACK
+castVariant Variant.SUV = Common.SUV
+castVariant Variant.AUTO_RICKSHAW = Common.AUTO_RICKSHAW
+castVariant Variant.TAXI = Common.TAXI
+castVariant Variant.TAXI_PLUS = Common.TAXI_PLUS

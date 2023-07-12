@@ -41,10 +41,10 @@ buildSearchReq subscriber req = do
   let intent = req.message.intent
   let pickup = intent.fulfillment.start
       dropOff = intent.fulfillment.end
-  let distance = maybe Nothing (getDistance) intent.fulfillment.tags
-  let duration = maybe Nothing (getDuration) intent.fulfillment.tags
+  let distance = getDistance =<< intent.fulfillment.tags
+  let duration = getDuration =<< intent.fulfillment.tags
   -- let (distance, duration) = maybe (Nothing, Nothing) (buildDistanceAndDuration) intent.fulfillment.tags
-  let customerLanguage = maybe Nothing (buildCustomerLanguage) intent.fulfillment.customer
+  let customerLanguage = buildCustomerLanguage =<< intent.fulfillment.customer
   unless (subscriber.subscriber_id == context.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
   unless (subscriber.subscriber_url == context.bap_uri) $

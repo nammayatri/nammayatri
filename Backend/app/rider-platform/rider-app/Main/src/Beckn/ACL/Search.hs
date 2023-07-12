@@ -15,6 +15,7 @@
 
 module Beckn.ACL.Search (buildRentalSearchReq, buildOneWaySearchReq) where
 
+import Beckn.ACL.Common (mkLocation)
 import qualified Beckn.Types.Core.Taxi.Search as Search
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Search.Common as DSearchCommon
@@ -80,7 +81,7 @@ buildSearchReq origin destination searchId _ distance duration customerLanguage 
   let transactionId = getId searchId
       messageId = transactionId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/cab/v1/" <> T.unpack merchant.id.getId)
-  context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.city merchant.country
+  context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.city merchant.country False
   let intent = mkIntent origin destination customerLanguage distance duration
   -- let mbRouteInfo = Search.RouteInfo {distance, duration, points}
   let searchMessage = Search.SearchMessage intent
@@ -110,7 +111,7 @@ mkIntent origin destination customerLanguage distance duration = do
           { start = startLocation,
             end = endLocation,
             tags =
-              if (isJust distance || isJust duration)
+              if isJust distance || isJust duration
                 then
                   Just
                     [ mkRouteInfoTags
@@ -154,27 +155,27 @@ mkIntent origin destination customerLanguage distance duration = do
     { ..
     }
   where
-    mkLocation info =
-      Search.Location
-        { gps =
-            Search.Gps
-              { lat = info.gps.lat,
-                lon = info.gps.lon
-              },
-          address =
-            Just
-              Search.Address
-                { locality = info.address.area,
-                  state = info.address.state,
-                  country = info.address.country,
-                  building = info.address.building,
-                  street = info.address.street,
-                  city = info.address.city,
-                  area_code = info.address.areaCode,
-                  door = info.address.door,
-                  ward = info.address.ward
-                }
-        }
+    -- mkLocation info =
+    --   Search.Location
+    --     { gps =
+    --         Search.Gps
+    --           { lat = info.gps.lat,
+    --             lon = info.gps.lon
+    --           },
+    --       address =
+    --         Just
+    --           Search.Address
+    --             { locality = info.address.area,
+    --               state = info.address.state,
+    --               country = info.address.country,
+    --               building = info.address.building,
+    --               street = info.address.street,
+    --               city = info.address.city,
+    --               area_code = info.address.areaCode,
+    --               door = info.address.door,
+    --               ward = info.address.ward
+    --             }
+    --     }
     mkRouteInfoTags =
       Search.TagGroup
         { display = False,
@@ -182,16 +183,16 @@ mkIntent origin destination customerLanguage distance duration = do
           name = "Route Information",
           list =
             [ Search.Tag
-                { display = maybe Nothing (\_ -> Just False) distance,
-                  code = maybe Nothing (\_ -> Just "distance_info_in_m") distance,
-                  name = maybe Nothing (\_ -> Just "Distance Information In Meters") distance,
-                  value = maybe Nothing (\distanceInM -> Just $ show distanceInM.getMeters) distance
+                { display = (\_ -> Just False) =<< distance,
+                  code = (\_ -> Just "distance_info_in_m") =<< distance,
+                  name = (\_ -> Just "Distance Information In Meters") =<< distance,
+                  value = (\distanceInM -> Just $ show distanceInM.getMeters) =<< distance
                 },
               Search.Tag
-                { display = maybe Nothing (\_ -> Just False) duration,
-                  code = maybe Nothing (\_ -> Just "duration_info_in_s") duration,
-                  name = maybe Nothing (\_ -> Just "Duration Information In Seconds") duration,
-                  value = maybe Nothing (\durationInS -> Just $ show durationInS.getSeconds) duration
+                { display = (\_ -> Just False) =<< duration,
+                  code = (\_ -> Just "duration_info_in_s") =<< duration,
+                  name = (\_ -> Just "Duration Information In Seconds") =<< duration,
+                  value = (\durationInS -> Just $ show durationInS.getSeconds) =<< duration
                 }
             ]
         }
@@ -203,10 +204,10 @@ mkIntent origin destination customerLanguage distance duration = do
           name = "Customer Information",
           list =
             [ Search.Tag
-                { display = maybe Nothing (\_ -> Just False) customerLanguage,
-                  code = maybe Nothing (\_ -> Just "customer_language") customerLanguage,
-                  name = maybe Nothing (\_ -> Just "Customer Language") customerLanguage,
-                  value = maybe Nothing (\language -> Just $ show language) customerLanguage
+                { display = (\_ -> Just False) =<< customerLanguage,
+                  code = (\_ -> Just "customer_language") =<< customerLanguage,
+                  name = (\_ -> Just "Customer Language") =<< customerLanguage,
+                  value = (Just . show) =<< customerLanguage
                 }
             ]
         }
@@ -225,3 +226,5 @@ mkIntent origin destination customerLanguage distance duration = do
 --     name :: String,
 --     value :: String
 --   }
+-- variant = Common.castVariant estimate.vehicleVariant
+-- vehicle = OS.FulfillmentVehicle {category = variant}

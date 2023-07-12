@@ -18,33 +18,31 @@ module Beckn.Types.Core.Taxi.OnSelect.Provider
   )
 where
 
-import Beckn.Types.Core.Taxi.OnSelect.Addon
-import Beckn.Types.Core.Taxi.OnSelect.Category
-import Beckn.Types.Core.Taxi.OnSelect.Descriptor
-import Beckn.Types.Core.Taxi.OnSelect.Fulfillment
-import Beckn.Types.Core.Taxi.OnSelect.Item
+-- import Beckn.Types.Core.Taxi.OnSelect.Category
+-- import Beckn.Types.Core.Taxi.OnSelect.Descriptor
+
 -- import Beckn.Types.Core.Taxi.OnSelect.Offer
-import Beckn.Types.Core.Taxi.OnSelect.Payment
-import Beckn.Types.Core.Taxi.OnSelect.ProviderLocation
-import Beckn.Types.Core.Taxi.OnSelect.Quote
+
+-- import Beckn.Types.Core.Taxi.OnSelect.ProviderLocation
+
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), fromAesonOptions)
 import Kernel.Prelude
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
-data Provider = Provider
-  { id :: Text,
-    descriptor :: Descriptor,
-    locations :: [ProviderLocation],
-    categories :: [Category],
-    items :: [Item], --FIXME this should be list of only RENTAL or only ONE_WAY items
-    -- offers :: [Offer],
-    add_ons :: [Addon],
-    fulfillment :: FulfillmentInfo,
-    contacts :: Text,
-    tags :: ProviderTags,
-    quote :: Quote,
-    payment :: Payment
+newtype Provider = Provider
+  { id :: Text
+  -- descriptor :: Descriptor,
+  -- locations :: [ProviderLocation],
+  -- categories :: [Category]
+  -- items :: [Item], --FIXME this should be list of only RENTAL or only ONE_WAY items
+  -- offers :: [Offer],
+  -- add_ons :: [Addon],
+  -- fulfillment :: FulfillmentInfo,
+  -- contacts :: Text,
+  -- tags :: ProviderTags
+  -- quote :: Quote,
+  -- payment :: Payment
   }
   deriving (Generic, Show)
 
