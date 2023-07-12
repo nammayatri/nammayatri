@@ -15,6 +15,8 @@
 module Beckn.ACL.Select (buildSelectReq) where
 
 import qualified Beckn.Types.Core.Taxi.API.Select as Select
+import qualified Beckn.Types.Core.Taxi.Common.Tags as Select
+import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Select as DSelect
 import Kernel.Prelude hiding (error, setField)
 import Kernel.Product.Validation.Context
@@ -35,8 +37,8 @@ buildSelectReq ::
 buildSelectReq subscriber req = do
   let context = req.context
   validateContext Context.SELECT context
+  now <- getCurrentTime
   let order = req.message.order
-  let pickup = order.fulfillment.start
   unless (subscriber.subscriber_id == context.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
   unless (subscriber.subscriber_url == context.bap_uri) $
@@ -46,15 +48,24 @@ buildSelectReq subscriber req = do
   item <- case order.items of
     [item] -> pure item
     _ -> throwError $ InvalidRequest "There should be only one item"
-  let customerExtraFee = listToMaybe order.quote.breakup <&> roundToIntegral . (.price.value)
+  let customerExtraFee = getCustomerExtraFee =<< item.tags
+
   pure
     DSelect.DSelectReq
       { messageId = messageId,
         transactionId = transactionId,
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
-        pickupTime = pickup.time.timestamp,
+        pickupTime = now,
         autoAssignEnabled = isJust context.max_callbacks && (fromMaybe 0 context.max_callbacks == 1),
         customerExtraFee = customerExtraFee,
-        estimateId = Id item.id
+        estimateId = Id order.fulfillment.id
       }
+
+getCustomerExtraFee :: [Select.TagGroup] -> Maybe Money
+getCustomerExtraFee tagGroups = do
+  tagGroup <- find (\tagGroup -> tagGroup.code == "customer_tip_info") tagGroups
+  tag <- find (\tag -> tag.code == Just "customer_tip") tagGroup.list
+  tagValue <- tag.value
+  customerExtraFee <- readMaybe $ T.unpack tagValue
+  Just $ Money customerExtraFee

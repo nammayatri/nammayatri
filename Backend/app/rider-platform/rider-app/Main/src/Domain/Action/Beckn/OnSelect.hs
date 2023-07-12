@@ -162,6 +162,7 @@ buildSelectedQuote estimate providerInfo now merchantId QuoteInfo {..} = do
             createdAt = now,
             quoteDetails = DQuote.DriverOfferDetails driverOffer,
             requestId = estimate.requestId,
+            itemId = estimate.itemId,
             merchantId,
             ..
           }

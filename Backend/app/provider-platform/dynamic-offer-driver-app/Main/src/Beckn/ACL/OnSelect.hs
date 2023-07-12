@@ -14,15 +14,19 @@
 
 module Beckn.ACL.OnSelect where
 
+-- import Beckn.ACL.Common
+-- import Beckn.Types.Core.Taxi.Common.Gps as Common
+-- import Beckn.Types.Core.Taxi.Common.TimeTimestamp as Common
+
 import Beckn.ACL.Common
-import Beckn.Types.Core.Taxi.Common.Gps as Common
-import Beckn.Types.Core.Taxi.Common.TimeTimestamp as Common
 import qualified Beckn.Types.Core.Taxi.OnSelect as OS
 import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.SearchRequest (SearchRequest)
 import Kernel.Prelude
 import Kernel.Types.Id (ShortId)
+
+-- import qualified Kernel.Utils.Common
 
 data DOnSelectReq = DOnSelectReq
   { transporterInfo :: TransporterInfo,
@@ -40,15 +44,15 @@ data TransporterInfo = TransporterInfo
     ridesConfirmed :: Int
   }
 
-driverOfferCategory :: OS.Category
-driverOfferCategory =
-  OS.Category
-    { id = OS.DRIVER_OFFER,
-      descriptor =
-        OS.Descriptor
-          { name = ""
-          }
-    }
+-- driverOfferCategory :: OS.Category
+-- driverOfferCategory =
+--   OS.Category
+--     { id = OS.DRIVER_OFFER,
+--       descriptor =
+--         OS.Descriptor
+--           { name = ""
+--           }
+--     }
 
 mkOnSelectMessage ::
   DOnSelectReq ->
@@ -58,35 +62,43 @@ mkOnSelectMessage req@DOnSelectReq {..} = do
   --     quote = mkQuoteEntities req driverQuote
   let fulfillment = mkFulfillment req driverQuote
       -- fulfillments_ = quote.fulfillment quote
-      categories_ = [driverOfferCategory]
+      -- categories_ = [driverOfferCategory]
       -- offers_ = mapMaybe (.offer) quoteEntitiesList
-      item = mkItem fulfillment.id driverQuote
-      items_ = [item]
+      item = mkItem fulfillment.id driverQuote transporterInfo
+      items = [item]
+      quote = mkQuote driverQuote
+      -- add_ons = []
+      payment =
+        OS.Payment
+          { collected_by = "BPP",
+            _type = OS.ON_FULFILLMENT,
+            time = OS.TimeDuration "P2A" -- FIXME: what is this?
+          }
 
   let provider =
         OS.Provider
-          { id = transporterInfo.subscriberId.getShortId,
-            descriptor = OS.Descriptor {name = transporterInfo.name},
-            locations = [],
-            categories = categories_,
-            items = items_,
-            -- offers = offers_,
-            add_ons = [],
-            fulfillment = fulfillment,
-            contacts = transporterInfo.contacts,
-            quote = mkQuote driverQuote,
-            tags =
-              OS.ProviderTags
-                { rides_inprogress = transporterInfo.ridesInProgress,
-                  rides_completed = transporterInfo.ridesCompleted,
-                  rides_confirmed = transporterInfo.ridesConfirmed
-                },
-            payment =
-              OS.Payment
-                { collected_by = "BPP",
-                  _type = OS.ON_FULFILLMENT,
-                  time = OS.TimeDuration "P2A" -- FIXME: what is this?
-                }
+          { id = driverQuote.driverId.getId
+          -- descriptor = OS.Descriptor {name = transporterInfo.name},
+          -- locations = [],
+          -- categories = categories_
+          -- items = items_,
+          -- offers = offers_,
+          -- add_ons = [],
+          -- fulfillment = fulfillment,
+          -- contacts = transporterInfo.contacts,
+          -- quote = mkQuote driverQuote,
+          -- tags =
+          --   OS.ProviderTags
+          --     { rides_inprogress = transporterInfo.ridesInProgress,
+          --       rides_completed = transporterInfo.ridesCompleted,
+          --       rides_confirmed = transporterInfo.ridesConfirmed
+          --     }
+          -- payment =
+          --   OS.Payment
+          --     { collected_by = "BPP",
+          --       _type = OS.ON_FULFILLMENT,
+          --       time = OS.TimeDuration "P2A" -- FIXME: what is this?
+          --     }
           }
   OS.OnSelectMessage $
     OS.Order {..}
@@ -110,69 +122,129 @@ mkFulfillment dReq quote = do
   let fromLocation = dReq.searchRequest.fromLocation
   let toLocation = dReq.searchRequest.toLocation
   OS.FulfillmentInfo
-    { id = mkFulfId quote.id.getId,
+    { id = quote.estimateId.getId,
       start =
         OS.StartInfo
-          { location = OS.Location $ Common.Gps {lat = fromLocation.lat, lon = fromLocation.lon},
-            time = Common.TimeTimestamp dReq.now
+          { location = makeLocation fromLocation
           },
       end =
-        Just
-          OS.StopInfo
-            { location = OS.Location $ Common.Gps {lat = toLocation.lat, lon = toLocation.lon}
-            },
+        OS.StopInfo
+          { location = makeLocation toLocation
+          },
       vehicle =
         OS.FulfillmentVehicle
           { category = castVariant quote.vehicleVariant
           },
+      _type = OS.RIDE,
       agent =
         OS.Agent
           { name = Just quote.driverName,
             rateable = Just True,
-            tags =
-              Just $
-                OS.AgentTags
-                  { agent_info_rating = maybe Nothing (\rating -> Just $ show $ rating.getCenti) quote.driverRating,
-                    agent_info_duration_to_pickup_in_s = Just $ show $ quote.durationToPickup.getSeconds
-                  }
+            tags = [mkAgentTags]
+            -- Just $
+            --   OS.AgentTags
+            --     { agent_info_rating = (\rating -> Just $ show $ rating.getCenti) =<< quote.driverRating,
+            --       agent_info_duration_to_pickup_in_s = Just $ show $ quote.durationToPickup.getSeconds
+            --     }
           }
     }
   where
-    mkFulfId quoteId = "fulf_" <> quoteId
+    mkAgentTags =
+      OS.TagGroup
+        { display = False,
+          code = "agent_info",
+          name = "Agent Info",
+          list =
+            [ OS.Tag
+                { display = (\_ -> Just False) =<< quote.driverRating,
+                  code = (\_ -> Just "rating") =<< quote.driverRating,
+                  name = (\_ -> Just "Agent Rating") =<< quote.driverRating,
+                  value = (\rating -> Just $ show $ rating.getCenti) =<< quote.driverRating
+                },
+              OS.Tag
+                { display = Just False,
+                  code = Just "duration_to_pickup_in_s",
+                  name = Just "Agent Duration to Pickup in Seconds",
+                  value = Just $ show $ quote.durationToPickup.getSeconds
+                }
+            ]
+        }
 
-mkItem :: Text -> DQuote.DriverQuote -> OS.Item
-mkItem fulfillmentId q =
+-- mkCustomerTipTags =
+--   Select.TagGroup
+--     { display = False,
+--       code = "customer_tip_info",
+--       name = "Customer Tip Info",
+--       list =
+--         [ Select.Tag
+--             { display = (\_ -> Just False) =<< res.customerExtraFee,
+--               code = (\_ -> Just "customer_tip") =<< res.customerExtraFee,
+--               name = (\_ -> Just "Customer Tip") =<< res.customerExtraFee,
+--               value = (\charges -> Just $ show charges.getMoney) =<< res.customerExtraFee
+--             }
+--         ]
+--     }
+
+mkItem :: Text -> DQuote.DriverQuote -> TransporterInfo -> OS.Item
+mkItem fulfillmentId q provider =
   OS.Item
-    { id = q.id.getId,
-      category_id = driverOfferCategory.id,
+    { id = mkItemId provider.subscriberId.getShortId q.vehicleVariant,
+      -- category_id = driverOfferCategory.id,
       fulfillment_id = fulfillmentId,
       -- offer_id = Nothing,
       price = mkPrice q,
-      descriptor =
-        OS.ItemDescriptor
-          { name = "",
-            code =
-              OS.ItemCode
-                { fareProductType = OS.DRIVER_OFFER,
-                  vehicleVariant = castVariant q.vehicleVariant,
-                  distance = Nothing,
-                  duration = Nothing
-                }
-          },
+      -- descriptor =
+      --   OS.ItemDescriptor
+      --     { name = "",
+      --       code =
+      --         OS.ItemCode
+      --           { fareProductType = OS.DRIVER_OFFER,
+      --             vehicleVariant = castVariant q.vehicleVariant,
+      --             distance = Nothing,
+      --             duration = Nothing
+      --           }
+      --     },
       -- quote_terms = [],
-      tags =
-        Just $
-          OS.ItemTags
-            { distance_to_nearest_driver = OS.DecimalValue $ toRational q.distanceToPickup.getMeters,
-              special_location_tag = q.specialLocationTag
-            },
+      tags = Just [mkItemTags],
+      -- Just $
+      --   OS.ItemTags
+      --     { distance_to_nearest_driver = OS.DecimalValue $ toRational q.distanceToPickup.getMeters,
+      --       special_location_tag = q.specialLocationTag
+      --     },
       -- base_distance = Nothing,
       -- base_duration = Nothing,
-      driver_name = Just q.driverName,
-      duration_to_pickup = Just q.durationToPickup.getSeconds,
-      valid_till = Just q.validTill,
-      rating = q.driverRating
+      -- driver_name = Just q.driverName,
+      -- duration_to_pickup = Just q.durationToPickup.getSeconds,
+      valid_till = Just q.validTill
+      -- rating = q.driverRating
     }
+  where
+    mkItemTags =
+      OS.TagGroup
+        { display = False,
+          code = "general_info",
+          name = "General Info",
+          list =
+            [ OS.Tag
+                { display = (\_ -> Just False) =<< q.specialLocationTag,
+                  code = (\_ -> Just "special_location_tag") =<< q.specialLocationTag,
+                  name = (\_ -> Just "Special Zone Tag") =<< q.specialLocationTag,
+                  value = q.specialLocationTag
+                },
+              OS.Tag
+                { display = Just False,
+                  code = Just "distance_to_nearest_driver_in_m",
+                  name = Just "Distance To Nearest Driver In Meters",
+                  value = Just $ show $ OS.DecimalValue $ toRational q.distanceToPickup.getMeters
+                },
+              OS.Tag
+                { display = Just False,
+                  code = Just "bpp_quote_id",
+                  name = Just "BPP Quote Id",
+                  value = Just q.id.getId
+                }
+            ]
+        }
 
 -- where
 --   price_ = do

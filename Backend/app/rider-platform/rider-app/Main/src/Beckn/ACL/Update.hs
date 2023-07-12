@@ -50,7 +50,7 @@ buildUpdateReq res = do
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   messageId <- generateGUID
-  context <- buildTaxiContext Context.UPDATE messageId (Just res.transactionId) bapIDs.cabs bapURIs.cabs (Just res.bppId) (Just res.bppUrl) res.city
+  context <- buildTaxiContext Context.UPDATE messageId (Just res.transactionId) bapIDs.cabs bapURIs.cabs (Just res.bppId) (Just res.bppUrl) res.city False
   pure $ BecknReq context $ mkUpdateMessage res
 
 mkUpdateMessage ::

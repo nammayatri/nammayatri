@@ -19,12 +19,12 @@ module Beckn.Types.Core.Taxi.OnSearch.Provider
 where
 
 import Beckn.Types.Core.Taxi.Common.Payment
-import Beckn.Types.Core.Taxi.OnSearch.Addon
-import Beckn.Types.Core.Taxi.OnSearch.Category
+-- import Beckn.Types.Core.Taxi.OnSearch.Addon
+-- import Beckn.Types.Core.Taxi.OnSearch.Category
 import Beckn.Types.Core.Taxi.OnSearch.Descriptor
 import Beckn.Types.Core.Taxi.OnSearch.Fulfillment
 import Beckn.Types.Core.Taxi.OnSearch.Item
-import Beckn.Types.Core.Taxi.OnSearch.Offer
+-- import Beckn.Types.Core.Taxi.OnSearch.Offer
 -- import Beckn.Types.Core.Taxi.OnSearch.ProviderLocation
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), fromAesonOptions)
@@ -36,14 +36,14 @@ data Provider = Provider
   { id :: Text,
     descriptor :: Descriptor,
     locations :: [LatLong],
-    categories :: [Category],
+    -- categories :: [Category],
     items :: [Item], --FIXME this should be list of only RENTAL or only ONE_WAY items
-    offers :: [Offer],
-    add_ons :: [Addon],
+    -- offers :: [Offer],
+    -- add_ons :: [Addon],
     fulfillments :: [FulfillmentInfo],
-    contacts :: Text,
-    tags :: ProviderTags,
-    payment :: Payment, -- TODO For backwards compatibility, remove it. Only payments field used in logic.
+    -- contacts :: Text,
+    -- tags :: ProviderTags,
+    -- payment :: Payment, -- TODO For backwards compatibility, remove it. Only payments field used in logic.
     payments :: Maybe [Payment]
   }
   deriving (Generic, Show)

@@ -72,8 +72,8 @@ searchCbService context catalog = do
           { providerId = providerId,
             name = provider.descriptor.name,
             url = providerUrl,
-            mobileNumber = provider.contacts,
-            ridesCompleted = provider.tags.rides_completed
+            mobileNumber = "", ----------TODO----------Need to remove it or make it maybe in db
+            ridesCompleted = 0 ----------TODO----------Need to remove it or make it maybe in db
           }
   let paymentMethodsInfo = mkPayment `mapMaybe` (fromMaybe [] provider.payments)
   pure
@@ -102,12 +102,13 @@ buildEstimateOrQuoteInfo ::
   m (Either DOnSearch.EstimateInfo DOnSearch.QuoteInfo)
 buildEstimateOrQuoteInfo provider item = do
   fulfillment <- find (\fulf -> fulf.id == item.fulfillment_id) provider.fulfillments & fromMaybeM (InvalidRequest "Missing fulfillment")
+  let itemId = item.id
   -- let itemCode = item.descriptor.code     ----------fulfillment Vehicle
   let vehicleVariant = castVehicleVariant fulfillment.vehicle.category ----------fulfillment Vehicle
       estimatedFare = roundToIntegral item.price.value
       estimatedTotalFare = roundToIntegral item.price.offered_value
       estimateBreakupList = buildEstimateBreakUpList <$> item.price.value_breakup
-      descriptions = item.quote_terms
+      descriptions = []
       nightShiftInfo = buildNightShiftInfo =<< item.tags
       waitingCharges = buildWaitingChargeInfo <$> item.tags
       driversLocation = provider.locations -- provider_locations --fromMaybe [] $ item.tags <&> (.drivers_location)
@@ -122,17 +123,17 @@ buildEstimateOrQuoteInfo provider item = do
 
   -- if we get here, the discount >= 0, estimatedFare >= estimatedTotalFare
   let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedFare - estimatedTotalFare
-  case item.category_id of
-    OnSearch.ONE_WAY_TRIP -> do
-      quoteDetails <- DOnSearch.OneWayDetails <$> buildOneWayQuoteDetails item
-      pure $ Right DOnSearch.QuoteInfo {..}
-    OnSearch.RENTAL_TRIP -> do
-      quoteDetails <- DOnSearch.RentalDetails <$> buildRentalQuoteDetails item
-      pure $ Right DOnSearch.QuoteInfo {..}
-    OnSearch.DRIVER_OFFER_ESTIMATE -> pure $ Left DOnSearch.EstimateInfo {bppEstimateId = Id item.id, ..}
-    OnSearch.DRIVER_OFFER -> throwError $ InvalidRequest "DRIVER_OFFER supported in on_select, use DRIVER_OFFER_ESTIMATE"
-    OnSearch.ONE_WAY_SPECIAL_ZONE -> do
-      quoteDetails <- DOnSearch.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneQuoteDetails item
+  case fulfillment._type of
+    -- OnSearch.ONE_WAY_TRIP -> do
+    --   quoteDetails <- DOnSearch.OneWayDetails <$> buildOneWayQuoteDetails item
+    --   pure $ Right DOnSearch.QuoteInfo {..}
+    -- OnSearch.RENTAL_TRIP -> do
+    --   quoteDetails <- DOnSearch.RentalDetails <$> buildRentalQuoteDetails item
+    --   pure $ Right DOnSearch.QuoteInfo {..}
+    OnSearch.RIDE -> pure $ Left DOnSearch.EstimateInfo {bppEstimateId = Id fulfillment.id, ..}
+    -- OnSearch.DRIVER_OFFER -> throwError $ InvalidRequest "DRIVER_OFFER supported in on_select, use DRIVER_OFFER_ESTIMATE"
+    OnSearch.RIDE_OTP -> do
+      quoteDetails <- DOnSearch.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneQuoteDetails fulfillment
       pure $ Right DOnSearch.QuoteInfo {..}
   where
     castVehicleVariant = \case
@@ -158,12 +159,12 @@ buildOneWayQuoteDetails item = do
 
 buildOneWaySpecialZoneQuoteDetails ::
   (MonadThrow m, Log m) =>
-  OnSearch.Item ->
+  OnSearch.FulfillmentInfo ->
   m DOnSearch.OneWaySpecialZoneQuoteDetails
-buildOneWaySpecialZoneQuoteDetails item = do
+buildOneWaySpecialZoneQuoteDetails fulfillment = do
   pure
     DOnSearch.OneWaySpecialZoneQuoteDetails
-      { quoteId = item.id
+      { quoteId = fulfillment.id
       }
 
 -- FIXME remove round by using Kilometers and Hours in spec
@@ -171,9 +172,9 @@ buildRentalQuoteDetails ::
   (MonadThrow m, Log m) =>
   OnSearch.Item ->
   m DOnSearch.RentalQuoteDetails
-buildRentalQuoteDetails item = do
-  baseDistance <- item.base_distance & fromMaybeM (InvalidRequest "Missing base_distance in rental search item")
-  baseDuration <- item.base_duration & fromMaybeM (InvalidRequest "Missing base_duration in rental search item")
+buildRentalQuoteDetails _ = do
+  baseDistance <- Nothing & fromMaybeM (InvalidRequest "Missing base_distance in rental search item")
+  baseDuration <- Nothing & fromMaybeM (InvalidRequest "Missing base_duration in rental search item")
   pure DOnSearch.RentalQuoteDetails {..}
 
 validateFareRange :: (MonadThrow m, Log m) => Money -> DEstimate.FareRange -> m ()

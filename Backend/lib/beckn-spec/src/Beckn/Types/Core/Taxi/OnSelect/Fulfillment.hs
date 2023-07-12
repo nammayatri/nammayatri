@@ -18,10 +18,11 @@ module Beckn.Types.Core.Taxi.OnSelect.Fulfillment
   )
 where
 
+import Beckn.Types.Core.Taxi.Common.FulfillmentType as Reexport
 import Beckn.Types.Core.Taxi.Common.VehicleVariant as Reexport
 import Beckn.Types.Core.Taxi.OnSelect.Agent
-import Beckn.Types.Core.Taxi.OnSelect.StartInfo
-import Beckn.Types.Core.Taxi.OnSelect.StopInfo
+import Beckn.Types.Core.Taxi.Search.StartInfo
+import Beckn.Types.Core.Taxi.Search.StopInfo
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (id)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
@@ -29,8 +30,9 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 data FulfillmentInfo = FulfillmentInfo
   { id :: Text,
     start :: StartInfo,
-    end :: Maybe StopInfo,
+    end :: StopInfo,
     vehicle :: FulfillmentVehicle,
+    _type :: FulfillmentType,
     agent :: Agent
   }
   deriving (Generic, FromJSON, ToJSON, Show)

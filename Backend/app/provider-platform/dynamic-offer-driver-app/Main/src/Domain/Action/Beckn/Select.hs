@@ -42,6 +42,7 @@ import SharedLogic.DriverPool (getDriverPoolConfig)
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified Storage.CachedQueries.Merchant as QMerch
+import Storage.Queries.DriverQuote (setInactiveAllDQByEstId)
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchTry as QST
@@ -62,7 +63,9 @@ data DSelectReq = DSelectReq
 handler :: DM.Merchant -> DSelectReq -> DEst.Estimate -> Flow ()
 handler merchant sReq estimate = do
   let merchantId = merchant.id
+  now <- getCurrentTime
   searchReq <- QSR.findById estimate.requestId >>= fromMaybeM (SearchRequestNotFound estimate.requestId.getId)
+  Esq.runNoTransaction $ setInactiveAllDQByEstId sReq.estimateId now
   farePolicy <- getFarePolicy merchantId estimate.vehicleVariant searchReq.area
 
   searchTry <- createNewSearchTry farePolicy searchReq

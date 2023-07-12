@@ -16,6 +16,7 @@ module Storage.Queries.DriverQuote where
 
 import Data.Int (Int32)
 import qualified Domain.Types.DriverQuote as Domain
+import qualified Domain.Types.Estimate as DEstimate
 import Domain.Types.Person
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
@@ -27,6 +28,9 @@ import Storage.Queries.FullEntityBuilders (buildFullDriverQuote)
 import Storage.Tabular.DriverQuote
 import qualified Storage.Tabular.FareParameters as Fare
 import qualified Storage.Tabular.FareParameters.Instances as FareParamsT
+
+-- import Domain.Action.UI.Cancel (CancelSearch(estimateId))
+-- import Domain.Action.UI.Cancel (CancelSearch(estimateId))
 
 create :: Domain.DriverQuote -> SqlDB ()
 create dQuote = Esq.runTransaction $
@@ -111,3 +115,16 @@ findDriverQuoteBySTId searchTryId = Esq.findOne' $ do
   driverQuote <- from $ table @DriverQuoteT
   where_ $ driverQuote ^. DriverQuoteSearchTryId ==. val (toKey searchTryId)
   pure driverQuote
+
+setInactiveAllDQByEstId :: Id DEstimate.Estimate -> UTCTime -> SqlDB ()
+setInactiveAllDQByEstId estimateId now = do
+  Esq.update $ \p -> do
+    set
+      p
+      [ DriverQuoteStatus =. val Domain.Inactive,
+        DriverQuoteUpdatedAt =. val now
+      ]
+    where_ $
+      p ^. DriverQuoteEstimateId ==. val (toKey estimateId)
+        &&. p ^. DriverQuoteStatus ==. val Domain.Active
+        &&. p ^. DriverQuoteValidTill >=. val now

@@ -31,7 +31,7 @@ buildCancelReq res = do
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   messageId <- generateGUID
-  context <- buildTaxiContext Context.CANCEL messageId (Just res.transactionId) bapIDs.cabs bapURIs.cabs (Just res.bppId) (Just res.bppUrl) res.city
+  context <- buildTaxiContext Context.CANCEL messageId (Just res.transactionId) bapIDs.cabs bapURIs.cabs (Just res.bppId) (Just res.bppUrl) res.city False
   pure $ BecknReq context $ mkCancelMessage res
 
 mkCancelMessage :: DCancel.CancelRes -> Cancel.CancelMessage
@@ -52,7 +52,7 @@ buildCancelSearchReq res = do
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   let messageId = res.estimateId.getId
-  context <- buildTaxiContext Context.CANCEL messageId (Just res.searchReqId.getId) bapIDs.cabs bapURIs.cabs (Just res.providerId) (Just res.providerUrl) res.city
+  context <- buildTaxiContext Context.CANCEL messageId (Just res.searchReqId.getId) bapIDs.cabs bapURIs.cabs (Just res.providerId) (Just res.providerUrl) res.city False
   pure $ BecknReq context $ mkCancelSearchMessage res
 
 mkCancelSearchMessage :: DCancel.CancelSearch -> Cancel.CancelMessage
