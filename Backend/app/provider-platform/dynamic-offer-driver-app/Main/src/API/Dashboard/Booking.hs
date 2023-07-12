@@ -25,11 +25,17 @@ import Servant hiding (throwError)
 
 type API =
   "booking"
-    :> Common.StuckBookingsCancelAPI
+    :> ( Common.StuckBookingsCancelAPI
+           :<|> Common.MultipleBookingSyncAPI
+       )
 
 handler :: ShortId DM.Merchant -> FlowServer API
-handler =
-  stuckBookingsCancel
+handler merchantId =
+  stuckBookingsCancel merchantId
+    :<|> multipleBookingSync merchantId
 
 stuckBookingsCancel :: ShortId DM.Merchant -> Common.StuckBookingsCancelReq -> FlowHandler Common.StuckBookingsCancelRes
 stuckBookingsCancel merchantShortId = withFlowHandlerAPI . DBooking.stuckBookingsCancel merchantShortId
+
+multipleBookingSync :: ShortId DM.Merchant -> Common.MultipleBookingSyncReq -> FlowHandler Common.MultipleBookingSyncResp
+multipleBookingSync merchantShortId = withFlowHandlerAPI . DBooking.multipleBookingSync merchantShortId

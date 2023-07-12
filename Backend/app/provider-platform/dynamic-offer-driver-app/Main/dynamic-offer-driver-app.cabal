@@ -252,6 +252,7 @@ library
       SharedLogic.Person
       SharedLogic.Ride
       SharedLogic.SearchTryLocker
+      SharedLogic.SyncRide
       Storage.CachedQueries.BapMetadata
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.DriverInformation

@@ -33,6 +33,8 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Types.Predicate
+import Kernel.Utils.Validation
 import Servant hiding (Summary)
 
 ---------------------------------------------------------
@@ -127,19 +129,21 @@ newtype EndRideReq = EndRideReq
 instance HideSecrets EndRideReq where
   hideSecrets = identity
 
---------------------------- MultipleRideEndAPI -----------------------------
+---------------------------------------------------------
+-- multiple ride end ------------------------------
+
 type MultipleRideEndAPI =
   "end"
     :> ReqBody '[JSON] MultipleRideEndReq
-    :> Post '[JSON] APISuccess
+    :> Post '[JSON] MultipleRideEndResp
 
 newtype MultipleRideEndReq = MultipleRideEndReq
-  { rides :: [MultipleRideItem]
+  { rides :: [MultipleRideEndItem]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data MultipleRideItem = MultipleRideItem
+data MultipleRideEndItem = MultipleRideEndItem
   { rideId :: Id Ride,
     point :: Maybe LatLong
   }
@@ -148,6 +152,12 @@ data MultipleRideItem = MultipleRideItem
 
 instance HideSecrets MultipleRideEndReq where
   hideSecrets = identity
+
+type MultipleRideEndResp = MultipleRideSyncResp
+
+validateMultipleRideEndReq :: Validate MultipleRideEndReq
+validateMultipleRideEndReq MultipleRideEndReq {..} = do
+  validateField "rides" rides $ UniqueField @"rideId"
 
 -- ride cancel ------------------------------------------
 
@@ -167,14 +177,21 @@ data CancelRideReq = CancelRideReq
 instance HideSecrets CancelRideReq where
   hideSecrets = identity
 
--- Multipleride cancel ------------------------------------------
+---------------------------------------------------------
+-- multiple ride cancel ---------------------------
 
 type MultipleRideCancelAPI =
   "cancel"
     :> ReqBody '[JSON] MultipleRideCancelReq
-    :> Post '[JSON] APISuccess
+    :> Post '[JSON] MultipleRideCancelResp
 
-data MultipleRideCancelInfo = MultipleRideCancelInfo
+newtype MultipleRideCancelReq = MultipleRideCancelReq
+  { rides :: [MultipleRideCancelItem]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MultipleRideCancelItem = MultipleRideCancelItem
   { rideId :: Id Ride,
     reasonCode :: CancellationReasonCode,
     additionalInfo :: Maybe Text
@@ -182,14 +199,14 @@ data MultipleRideCancelInfo = MultipleRideCancelInfo
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-newtype MultipleRideCancelReq = MultipleRideCancelReq
-  { multiRideCancelReason :: [MultipleRideCancelInfo]
-  }
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 instance HideSecrets MultipleRideCancelReq where
   hideSecrets = identity
+
+type MultipleRideCancelResp = MultipleRideSyncResp
+
+validateMultipleRideCancelReq :: Validate MultipleRideCancelReq
+validateMultipleRideCancelReq MultipleRideCancelReq {..} = do
+  validateField "rides" rides $ UniqueField @"rideId"
 
 ---------------------------------------------------------
 -- ride info --------------------------------------------

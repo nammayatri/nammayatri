@@ -15,6 +15,8 @@
 
 module Dashboard.Common where
 
+import Data.Aeson
+import Data.OpenApi
 import Kernel.Prelude
 
 data Customer
@@ -67,3 +69,32 @@ data Summary = Summary
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ListItemResult = SuccessItem | FailItem Text
+  deriving stock (Show, Generic)
+
+instance ToJSON ListItemResult where
+  toJSON = genericToJSON listItemOptions
+
+instance FromJSON ListItemResult where
+  parseJSON = genericParseJSON listItemOptions
+
+instance ToSchema ListItemResult where
+  declareNamedSchema = genericDeclareNamedSchema $ fromAesonOptions listItemOptions
+
+listItemOptions :: Options
+listItemOptions =
+  defaultOptions
+    { sumEncoding = listItemTaggedObject
+    }
+
+listItemTaggedObject :: SumEncoding
+listItemTaggedObject =
+  TaggedObject
+    { tagFieldName = "result",
+      contentsFieldName = "errorMessage"
+    }
+
+-- is it correct to show every error?
+listItemErrHandler :: Monad m => SomeException -> m ListItemResult
+listItemErrHandler = pure . FailItem . show @Text @SomeException

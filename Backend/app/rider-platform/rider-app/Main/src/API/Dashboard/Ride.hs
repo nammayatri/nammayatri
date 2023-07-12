@@ -24,7 +24,9 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Validation (runRequestValidation)
 import Servant hiding (throwError)
+import SharedLogic.Merchant (findMerchantByShortId)
 
 type API =
   "ride"
@@ -33,7 +35,7 @@ type API =
            :<|> Common.TripRouteAPI
            :<|> Common.RideInfoAPI
            :<|> MultipleRideCancelAPI
-           :<|> Common.RideForceSyncAPI
+           :<|> Common.MultipleRideSyncAPI
        )
 
 type ShareRideInfoAPI = Common.ShareRideInfoAPI
@@ -48,9 +50,9 @@ handler merchantId =
   shareRideInfo merchantId
     :<|> rideList merchantId
     :<|> callGetTripRoute merchantId
-    :<|> callrideInfo merchantId
-    :<|> multipleRideCancel
-    :<|> rideForceSync merchantId
+    :<|> callRideInfo merchantId
+    :<|> multipleRideCancel -- FIXME merchantId ?
+    :<|> multipleRideSync merchantId
 
 shareRideInfo ::
   ShortId DM.Merchant ->
@@ -75,16 +77,28 @@ rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustom
 callGetTripRoute :: ShortId DM.Merchant -> Id Common.Ride -> Double -> Double -> FlowHandler Maps.GetRoutesResp
 callGetTripRoute merchantShortId rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI $ mkGetLocation merchantShortId rideId pickupLocationLat pickupLocationLon
 
-callrideInfo ::
+callRideInfo ::
   ShortId DM.Merchant ->
   Id Common.Ride ->
   FlowHandler Common.RideInfoRes
-callrideInfo merchantShortId rideId = withFlowHandlerAPI $ DRide.rideInfo merchantShortId rideId
+callRideInfo merchantShortId rideId = withFlowHandlerAPI $ DRide.rideInfo merchantShortId rideId
 
 multipleRideCancel ::
   DRide.MultipleRideCancelReq ->
   FlowHandler APISuccess
 multipleRideCancel = withFlowHandlerAPI . DRide.multipleRideCancel
 
-rideForceSync :: ShortId DM.Merchant -> Id Common.Ride -> FlowHandler APISuccess
-rideForceSync merchantShortId rideId = withFlowHandlerAPI $ DRide.rideForceSync merchantShortId rideId
+multipleRideSync ::
+  ShortId DM.Merchant ->
+  Common.MultipleRideSyncReq ->
+  FlowHandler Common.MultipleRideSyncResp
+multipleRideSync merchantShortId req = withFlowHandlerAPI $ do
+  runRequestValidation Common.validateMultipleRideSyncReq req
+  merchant <- findMerchantByShortId merchantShortId
+  logTagInfo "dashboard -> multipleRideSync : " $ show (req.rides <&> (.rideId))
+  respItems <- forM req.rides $ \reqItem -> do
+    info <- handle Common.listItemErrHandler $ do
+      void $ DRide.rideSync merchant reqItem.rideId
+      pure Common.SuccessItem
+    pure $ Common.MultipleRideSyncRespItem {rideId = reqItem.rideId, info}
+  pure $ Common.MultipleRideSyncResp {list = respItems}

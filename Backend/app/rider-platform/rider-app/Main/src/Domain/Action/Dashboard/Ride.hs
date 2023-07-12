@@ -19,11 +19,11 @@ module Domain.Action.Dashboard.Ride
     rideInfo,
     multipleRideCancel,
     MultipleRideCancelReq,
-    rideForceSync,
+    rideSync,
   )
 where
 
-import Beckn.ACL.Status (buildStatusReq)
+import Beckn.ACL.Status
 import qualified "dashboard-helper-api" Dashboard.Common as Common
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import Data.Coerce (coerce)
@@ -304,18 +304,18 @@ multipleRideCancel req = do
   pure Success
 
 ---------------------------------------------------------------------
-
-rideForceSync ::
-  ShortId DM.Merchant ->
+rideSync ::
+  DM.Merchant ->
   Id Common.Ride ->
   Flow APISuccess
-rideForceSync merchantShortId rideId = do
-  ride <- runInReplica $ QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+rideSync merchant reqRideId = do
+  let rideId = cast @Common.Ride @DRide.Ride reqRideId
+  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
 
-  merchant <- findMerchantByShortId merchantShortId
-
-  becknStatusReq <- buildStatusReq ride.bppRideId booking merchant
+  unless (merchant.id == booking.merchantId) $
+    throwError (RideDoesNotExist rideId.getId)
+  let dStatusReq = DStatusReq {booking, merchant}
+  becknStatusReq <- buildStatusReq dStatusReq
   void $ withShortRetry $ CallBPP.callStatus booking.providerUrl becknStatusReq
-
   pure Success

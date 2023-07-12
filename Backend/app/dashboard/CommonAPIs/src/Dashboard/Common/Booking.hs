@@ -25,11 +25,14 @@ import Data.Aeson
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import Kernel.Types.Predicate
+import Kernel.Utils.Validation
 import Servant hiding (Summary)
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs
 data BookingEndpoint
   = StuckBookingsCancelEndpoint
+  | MultipleBookingSyncEndpoint
   deriving (Show, Read)
 
 derivePersistField "BookingEndpoint"
@@ -77,3 +80,52 @@ instance HideSecrets StuckBookingsCancelReq where
 
 instance HideSecrets StuckBookingsCancelRes where
   hideSecrets = identity
+
+---------------------------------------------------------
+-- multiple booking sync --------------------------
+
+type MultipleBookingSyncAPI =
+  "sync"
+    :> ReqBody '[JSON] MultipleBookingSyncReq
+    :> Post '[JSON] MultipleBookingSyncResp
+
+newtype MultipleBookingSyncReq = MultipleBookingSyncReq
+  { bookings :: [MultipleBookingItem]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+newtype MultipleBookingItem = MultipleBookingItem
+  { bookingId :: Id Booking
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets MultipleBookingSyncReq where
+  hideSecrets = identity
+
+newtype MultipleBookingSyncResp = MultipleBookingSyncResp
+  { list :: [MultipleBookingSyncRespItem]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MultipleBookingSyncRespItem = MultipleBookingSyncRespItem
+  { bookingId :: Id Booking,
+    info :: ListItemResult
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets MultipleBookingSyncResp where
+  hideSecrets = identity
+
+syncBookingCode :: CancellationReasonCode
+syncBookingCode = CancellationReasonCode "SYNC_BOOKING_WITH_CANCELLED_RIDE"
+
+syncBookingCodeWithNoRide :: CancellationReasonCode
+syncBookingCodeWithNoRide = CancellationReasonCode "SYNC_BOOKING_WITH_NO_RIDE"
+
+validateMultipleBookingSyncReq :: Validate MultipleBookingSyncReq
+validateMultipleBookingSyncReq MultipleBookingSyncReq {..} = do
+  validateField "bookings" bookings $ UniqueField @"bookingId"

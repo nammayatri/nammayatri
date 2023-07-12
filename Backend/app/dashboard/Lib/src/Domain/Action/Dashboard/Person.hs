@@ -316,6 +316,7 @@ buildPerson req = do
   pid <- generateGUID
   now <- getCurrentTime
   mobileNumber <- encrypt req.mobileNumber
+  --TODO write query to make existing email in person table to lower case
   email <- encrypt (T.toLower req.email)
   passwordHash <- getDbHash req.password
   return
