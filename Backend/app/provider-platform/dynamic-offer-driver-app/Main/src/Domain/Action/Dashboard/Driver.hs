@@ -68,11 +68,11 @@ import Kernel.Utils.Validation (runRequestValidation)
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import qualified SharedLogic.DriverLocation as DLoc
 import SharedLogic.Merchant (findMerchantByShortId)
+import Storage.CachedQueries.DriverBlockReason as DBR
 import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.DriverInformation as CQDriverInfo
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
-import Storage.Queries.DriverBlockReason as DBR
 import Storage.Queries.DriverFee (findPendingFeesByDriverId)
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as AV
