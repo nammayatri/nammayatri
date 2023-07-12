@@ -5,7 +5,11 @@
 
 module DBSync.DBSync where
 
+import qualified Config.Config as Config
+import qualified Config.Env as Env
+import qualified Constants as C
 import Control.Monad.Trans.Except
+import DBSync.Create
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.HashMap.Strict as HM
@@ -14,21 +18,10 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DTE
 import qualified Data.Vector as V
 import qualified Database.Redis as R
-import qualified Euler.Config.Config as Config
-import qualified Euler.Config.Env as Env
-import qualified Euler.Constants as C
-import Euler.DBSync.Create
-import Euler.DBSync.Delete
-import Euler.DBSync.Update
-import Euler.Types.Config
-import Euler.Types.DBSync
-import qualified Euler.Types.Event as Event
-import Euler.Utils.Config
-import Euler.Utils.Parse
-import Euler.Utils.Redis
-import qualified Euler.Utils.Redis as RQ
-import Euler.Utils.Utils
-import Euler.WebService.Logging
+-- import DBSync.Delete
+-- import DBSync.Update
+
+-- import Euler.WebService.Logging
 import qualified EulerHS.Interpreters as R
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (fail, id, succ)
@@ -36,6 +29,14 @@ import qualified EulerHS.Runtime as R
 import qualified EulerHS.Types as ET
 import GHC.Float (int2Double)
 import System.Posix.Signals (Handler (Catch), installHandler, sigINT, sigTERM)
+import Types.Config
+import Types.DBSync
+import qualified Types.Event as Event
+import Utils.Config
+import Utils.Parse
+import Utils.Redis
+import qualified Utils.Redis as RQ
+import Utils.Utils
 
 peekDBCommand :: Text -> Integer -> Flow (Either ET.KVDBReply (Maybe [(EL.KVDBStreamEntryID, [(Text, ByteString)])]))
 peekDBCommand dbStreamKey count = do

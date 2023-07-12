@@ -24,6 +24,7 @@ library
       Config.Config
       Config.Env
       Constants
+      DBSync.Create
       DBSync.DBSync
       Event.Event
       Types.Config
