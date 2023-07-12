@@ -51,7 +51,7 @@ public class InAppNotification extends AppCompatActivity {
             notification = (Notification) notificationChannels.get(channelId);
         }
 
-        if(!notification.equals(null)){
+        if(notification != null){
             notification.bringToFront();
             // if stack of notification is empty or the notification ( channelId ) which is visible on the front is not equals to new channelId then we will start animation else we will just change the content .
             if(notificationStack.isEmpty() || !notificationStack.get(notificationStack.size()-1).equals(channelId)){

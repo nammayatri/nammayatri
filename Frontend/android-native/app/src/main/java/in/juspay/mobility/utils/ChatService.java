@@ -93,7 +93,11 @@ public class ChatService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        handler.postDelayed(this::handleMessages, 1000);
+        if(BuildConfig.MERCHANT_TYPE.equals("DRIVER")){
+            handler.postDelayed(this::handleMessages, 2000);
+        } else {
+            handler.postDelayed(this::handleMessages, 1000);
+        }
         return  START_STICKY;
     }
 
@@ -115,7 +119,11 @@ public class ChatService extends Service {
    }
 
    private void startChatService() {
-       handler.postDelayed(() -> addChatListener(), 1000);
+    if(BuildConfig.MERCHANT_TYPE.equals("DRIVER")) {
+        handler.postDelayed(this::addChatListener, 3000);
+    } else {
+        handler.postDelayed(this::addChatListener, 1000);
+    }
    }
 
     private void signInAnonymously(){

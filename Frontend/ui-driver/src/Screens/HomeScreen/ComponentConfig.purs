@@ -16,7 +16,7 @@
 module Screens.HomeScreen.ComponentConfig where
 
 import Language.Strings (getString)
-import Prelude(unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||))
+import Prelude(unit, show, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Visibility(..))
 import Components.SelectListModal as SelectListModal
 import Components.Banner as Banner
@@ -208,7 +208,7 @@ chatViewConfig state = let
     , messagesSize = state.data.messagesSize
     , sendMessageActive = state.props.sendMessageActive
     , vehicleNo = ""
-    , suggestionsList = getDriverSuggestions state
+    , suggestionsList = if state.data.messagesSize == (show $ (DA.length state.data.messages) - 1) then getDriverSuggestions state else []
     , hint = (getString MESSAGE)
     , suggestionHeader = (getString START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS)
     , emptyChatHeader = (getString START_YOUR_CHAT_WITH_THE_DRIVER)
