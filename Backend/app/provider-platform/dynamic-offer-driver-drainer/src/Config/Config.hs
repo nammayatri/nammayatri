@@ -5,9 +5,9 @@
 module Config.Config where
 
 import Config.Env as Env
-import Database.Beam.MySQL (MySQLM)
+-- import Database.Beam.MySQL (MySQLM)
 import Database.Beam.Postgres as BP
-import Euler.Types.Errors (internalError)
+import Errors.Errors (internalError)
 import EulerHS.Extra.EulerDB as Extra
 import EulerHS.Language as L
 import EulerHS.Prelude
@@ -59,8 +59,8 @@ mkConfigFromEnv = do
 config' :: IO Config
 config' = mkConfigFromEnv
 
-getEulerDbConf :: (L.MonadFlow m) => m (T.DBConfig MySQLM)
-getEulerDbConf = Extra.getEulerDbConf internalError
+-- getEulerDbConf :: (L.MonadFlow m) => m (T.DBConfig MySQLM)
+-- getEulerDbConf = Extra.getEulerDbConf internalError
 
 getEulerPgDbConf :: (L.MonadFlow m) => m (T.DBConfig BP.Pg)
 getEulerPgDbConf = Extra.getEulerPsqlDbConf internalError

@@ -6,7 +6,7 @@
 module Types.DBSync
   ( module X,
     Env (..),
-    Euler.Types.DBSync.Flow,
+    Types.DBSync.Flow,
     History,
     StateRef (..),
     DBSyncException (..),

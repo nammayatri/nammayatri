@@ -33,6 +33,7 @@ default-extensions:
   - MultiWayIf
   - NamedFieldPuns
   - OverloadedStrings
+  - PackageImports
   - PatternSynonyms
   - PolyKinds
   - RankNTypes
@@ -49,6 +50,7 @@ default-extensions:
 dependencies:
   - base >=4.7 && <5
   - aeson
+  - aeson-pretty
   - async
   - beam-core
   - beam-mysql
@@ -105,6 +107,7 @@ library:
     - -Werror
   dependencies:
     - dynamic-offer-driver-app
+    - mobility-core
 
 executables:
   dynamic-offer-driver-drainer-exe:
@@ -118,3 +121,4 @@ executables:
     dependencies:
       - dynamic-offer-driver-drainer
       - dynamic-offer-driver-app
+      - mobility-core

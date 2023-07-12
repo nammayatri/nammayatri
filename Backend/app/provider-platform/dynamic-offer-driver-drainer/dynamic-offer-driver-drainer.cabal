@@ -26,6 +26,11 @@ library
       Constants
       DBSync.Create
       DBSync.DBSync
+      DBSync.Delete
+      DBSync.Update
+      Errors.Errors
+      Errors.PredefinedErrors
+      Errors.Types
       Event.Event
       Types.Config
       Types.DBSync
@@ -60,6 +65,7 @@ library
       MultiWayIf
       NamedFieldPuns
       OverloadedStrings
+      PackageImports
       PatternSynonyms
       PolyKinds
       RankNTypes
@@ -75,6 +81,7 @@ library
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
       aeson
+    , aeson-pretty
     , async
     , base >=4.7 && <5
     , beam-core
@@ -97,6 +104,7 @@ library
     , http-types
     , juspay-extra
     , lens
+    , mobility-core
     , pcg-random
     , record-dot-preprocessor
     , record-hasfield
@@ -140,6 +148,7 @@ executable dynamic-offer-driver-drainer-exe
       MultiWayIf
       NamedFieldPuns
       OverloadedStrings
+      PackageImports
       PatternSynonyms
       PolyKinds
       RankNTypes
@@ -155,6 +164,7 @@ executable dynamic-offer-driver-drainer-exe
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       aeson
+    , aeson-pretty
     , async
     , base >=4.7 && <5
     , beam-core
@@ -178,6 +188,7 @@ executable dynamic-offer-driver-drainer-exe
     , http-types
     , juspay-extra
     , lens
+    , mobility-core
     , pcg-random
     , record-dot-preprocessor
     , record-hasfield

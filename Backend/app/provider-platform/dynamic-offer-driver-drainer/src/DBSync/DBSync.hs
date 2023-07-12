@@ -10,6 +10,8 @@ import qualified Config.Env as Env
 import qualified Constants as C
 import Control.Monad.Trans.Except
 import DBSync.Create
+import DBSync.Delete
+import DBSync.Update
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.HashMap.Strict as HM
@@ -18,9 +20,6 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DTE
 import qualified Data.Vector as V
 import qualified Database.Redis as R
--- import DBSync.Delete
--- import DBSync.Update
-
 -- import Euler.WebService.Logging
 import qualified EulerHS.Interpreters as R
 import qualified EulerHS.Language as EL
@@ -238,14 +237,14 @@ process dbStreamKey count = do
           pure cnt
         Right cnt -> pure cnt
 
-spawnDrainerThread :: Int -> R.FlowRuntime -> Env -> IO ()
-spawnDrainerThread 0 _ _ = pure ()
-spawnDrainerThread count flowRt env = do
-  ctx <- IORef.newIORef mempty
-  newCounter <- IORef.newIORef 0
-  let newFlowRt = changeLogContextAndResetCounter ctx flowRt newCounter
-  void $ forkIO $ R.runFlow newFlowRt (runReaderT startDBSync env)
-  spawnDrainerThread (count - 1) flowRt env
+-- spawnDrainerThread :: Int -> R.FlowRuntime -> Env -> IO ()
+-- spawnDrainerThread 0 _ _ = pure ()
+-- spawnDrainerThread count flowRt env = do
+--   ctx <- IORef.newIORef mempty
+--   newCounter <- IORef.newIORef 0
+--   let newFlowRt = changeLogContextAndResetCounter ctx flowRt newCounter
+--   void $ forkIO $ R.runFlow newFlowRt (runReaderT startDBSync env)
+--   spawnDrainerThread (count - 1) flowRt env
 
 startDBSync :: Flow ()
 startDBSync = do

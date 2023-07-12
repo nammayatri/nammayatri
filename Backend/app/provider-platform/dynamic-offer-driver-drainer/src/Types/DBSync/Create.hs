@@ -1,8 +1,84 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
 module Types.DBSync.Create where
 
-import qualified "dynamic-offer-driver-app" Storage.Beam.RegistrationToken as BeamRT
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Booking as Booking
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Booking.BookingLocation as BookingLocation
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.BookingCancellationReason as BookingCancellationReason
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.BusinessEvent as BusinessEvent
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.CallStatus as CallStatus
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.CancellationReason as CancellationReason
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Common as Common
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Driver.DriverFlowStatus as DriverFlowStatus
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.DriverFee as DriverFee
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.DriverInformation as DriverInformation
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.DriverLocation as DriverLocation
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.AadhaarOtpReq as AadhaarOtpReq
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.AadhaarOtpVerify as AadhaarOtpVerify
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.AadhaarVerification as AadhaarVerification
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.DriverLicense as DriverLicense
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.DriverRCAssociation as DriverRCAssociation
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.IdfyVerification as IdfyVerification
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.Image as Image
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.OperatingCity as OperatingCity
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as VehicleRegistrationCertificate
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.DriverQuote as DriverQuote
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.DriverReferral as DriverReferral
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.DriverStats as DriverStats
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Estimate as Estimate
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Exophone as Exophone
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.FareParameters as FareParameters
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.FareParameters.FareParametersProgressiveDetails as FareParametersProgressiveDetails
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.FareParameters.FareParametersSlabDetails as FareParametersSlabDetails
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy as FarePolicy
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.DriverExtraFeeBounds as DriverExtraFeeBounds
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as FarePolicyProgressiveDetails
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as FarePolicyProgressiveDetailsPerExtraKmRateSection
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as FarePolicySlabDetailsSlab
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.FarePolicy.RestrictedExtraFare as RestrictedExtraFare
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.FareProduct as FareProduct
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Geometry as Geometry
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.Comment as Comment
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueCategory as IssueCategory
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueOption as IssueOption
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueReport as IssueReport
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Issue.IssueTranslation as IssueTranslation
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.LeaderBoardConfig as LeaderBoardConfig
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.MediaFile as MediaFile
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant as Merchant
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.DriverIntelligentPoolConfig as DriverIntelligentPoolConfig
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.DriverPoolConfig as DriverPoolConfig
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.LeaderBoardConfig as MerchantLeaderBoardConfig
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantMessage as MerchantMessage
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantPaymentMethod as MerchantPaymentMethod
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantServiceConfig as MerchantServiceConfig
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantServiceUsageConfig as MerchantServiceUsageConfig
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.OnboardingDocumentConfig as MerchantOnboardingDocumentConfig
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.TransporterConfig as TransporterConfig
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Message.Message as Message
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageReport as MessageReport
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageTranslation as MessageTranslation
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.OnboardingDocumentConfig as OnboardingDocumentConfig
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Person as Person
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.QuoteSpecialZone as QuoteSpecialZone
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Rating as Rating
 
--- import EulerHS.Prelude
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Ride.Table as Ride
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.RideDetails as RideDetails
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.RiderDetails as RiderDetails
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequest as SearchRequest
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequest.SearchReqLocation as SearchReqLocation
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestForDriver as SearchRequestForDriver
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestSpecialZone as SearchRequestSpecialZone
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.SearchTry as SearchTry
+-- import qualified "dynamic-offer-driver-app" Storage.Beam.Vehicle as Vehicle
+
+import EulerHS.Prelude
+import Storage.Beam.RegistrationToken
+import qualified "dynamic-offer-driver-app" Storage.Beam.RegistrationToken as RegistrationToken
+
 -- import Euler.DB.Storage.Types
 --   ( TxnOfferInfo
 --   , HdfcHashedNum
@@ -188,6 +264,10 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.RegistrationToken as Be
 --   | AuthMappingObject AuthMapping
 --   deriving (Generic, FromJSON, ToJSON, Show)
 
+newtype DBCreateObject
+  = RegistrationTokenObject RegistrationToken
+  deriving (Generic, FromJSON, ToJSON, Show)
+
 -- -- Convert database storage types into DBObject types
 -- -- which are part of a command and can be deserialized.
 
@@ -281,3 +361,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.RegistrationToken as Be
 -- modelName (UserRoleObject _                     ) = "UserRole"
 -- modelName (TxnIntentDetailObject _              ) = "TxnIntentDetail"
 -- modelName (AuthMappingObject _                  ) = "AuthMapping"
+
+modelName :: DBCreateObject -> Text
+modelName (RegistrationTokenObject _) = "RegistrationToken"
