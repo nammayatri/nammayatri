@@ -25,12 +25,16 @@ data Category
   | SureSchool
   | SureHospital
   | SureStation
+  | SureBlockedAreaForAutos
+  | SureBlockedArea
   | UnSureShoppingMall
   | UnSureMetro
   | UnSureAirport
   | UnSureSchool
   | UnSureHospital
   | UnSureStation
+  | UnSureBlockedAreaForAutos
+  | UnSureBlockedArea
   deriving (Read, Show, Generic, Eq, FromJSON, ToJSON, ToSchema)
 
 data SpecialLocation = SpecialLocation
