@@ -496,5 +496,6 @@ const hindiStrings = {
   CONGRATULATIONS_YOU_ARE_RANK : "बधाई हो ! आपकी रैंक है ",
   YOU : " (आप)",
   DAILY : "दैनिक",
-  WEEKLY : "साप्ताहिक"
+  WEEKLY : "साप्ताहिक",
+  ACCEPT_RIDES_TO_ENTER_RANKINGS : "रैंकिंग में प्रवेश करने के लिए सवारी स्वीकार करें!"
 }
