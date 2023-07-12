@@ -234,7 +234,9 @@
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
                                     android:gravity="center_vertical"
-                                    android:orientation="vertical">
+                                    android:orientation="vertical"
+                                    android:layout_marginTop="5dp"
+                                    >
                                     <TextView
                                         android:id="@+id/sourceArea"
                                         android:layout_width="wrap_content"
@@ -243,7 +245,7 @@
                                         android:ellipsize="end"
                                         android:fontFamily="@font/plus_jakartasans_medium"
                                         android:gravity="bottom"
-                                        android:lines="2"
+                                        android:lines="1"
                                         android:singleLine="false"
                                         android:text="Area"
                                         android:textColor="#454545"
@@ -257,11 +259,22 @@
                                         android:ellipsize="end"
                                         android:fontFamily="@font/plus_jakartasans_medium"
                                         android:lineHeight="18dp"
-                                        android:lines="2"
+                                        android:lines="1"
                                         android:text="source Address"
                                         android:textColor="#868B98"
                                         android:textFontWeight="500"
                                         android:textSize="14dp" />
+                                    <TextView
+                                        android:id="@+id/sourcePinCode"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="560065"
+                                        android:textColor="#454545"
+                                        android:textSize="14dp"
+                                        android:fontFamily="@font/plus_jakartasans_medium"
+                                        android:textStyle="bold"
+                                        android:visibility="gone"
+                                        />
                                 </LinearLayout>
 
                                 <ImageView
@@ -276,7 +289,7 @@
                                 android:id="@+id/distanceToBeCovered"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="108dp"
+                                android:layout_marginTop="85dp"
                                 android:background="@drawable/ic_roundcorner_overlay"
                                 android:elevation="1dp"
                                 android:fontFamily="@font/plus_jakartasans_semibold"
@@ -291,7 +304,7 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginLeft="27dp"
-                                android:layout_marginTop="164dp">
+                                android:layout_marginTop="140dp">
                                 <LinearLayout
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
@@ -305,7 +318,7 @@
                                         android:layout_gravity="center_vertical"
                                         android:ellipsize="end"
                                         android:fontFamily="@font/plus_jakartasans_medium"
-                                        android:maxLines="2"
+                                        android:maxLines="1"
                                         android:singleLine="false"
                                         android:text="Area"
                                         android:textColor="#454545"
@@ -320,11 +333,22 @@
                                         android:ellipsize="end"
                                         android:fontFamily="@font/plus_jakartasans_medium"
                                         android:lineHeight="18dp"
-                                        android:lines="2"
+                                        android:lines="1"
                                         android:text="dest Address"
                                         android:textColor="#868B98"
                                         android:textFontWeight="500"
                                         android:textSize="14dp" />
+                                    <TextView
+                                        android:id="@+id/destinationPinCode"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="560065"
+                                        android:textColor="#454545"
+                                        android:textSize="14dp"
+                                        android:fontFamily="@font/plus_jakartasans_medium"
+                                        android:textStyle="bold"
+                                        android:visibility="gone"
+                                        />
                                 </LinearLayout>
                             <ImageView
                                 android:layout_width="40dp"
@@ -349,7 +373,7 @@
                                     <com.google.android.material.card.MaterialCardView
                                         android:layout_width="15dp"
                                         android:layout_height="15dp"
-                                        android:layout_marginTop="20dp"
+                                        android:layout_marginTop="5dp"
                                         android:theme="@style/Theme.MaterialComponents.Light"
                                         app:cardCornerRadius="45dp"
                                         app:strokeColor="#2BB631"

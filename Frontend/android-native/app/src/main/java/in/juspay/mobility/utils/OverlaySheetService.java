@@ -144,6 +144,20 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             holder.destinationAddress.setText(model.getDestinationAddress());
             holder.textIncPrice.setText(String.valueOf(model.getNegotiationUnit()));
             holder.textDecPrice.setText(String.valueOf(model.getNegotiationUnit()));
+            if(model.getSourcePinCode() != null &&  model.getSourcePinCode().trim().length()>0){
+                holder.sourcePinCode.setText(model.getSourcePinCode().trim());
+                holder.sourcePinCode.setVisibility(View.VISIBLE);
+            }else{
+                holder.sourceAddress.setMaxLines(2);
+                holder.sourcePinCode.setVisibility(View.GONE);
+            }
+            if(model.getDestinationPinCode() != null && model.getDestinationPinCode().trim().length()>0){
+                holder.destinationPinCode.setText(model.getDestinationPinCode());
+                holder.destinationPinCode.setVisibility(View.VISIBLE);
+            }else{
+                holder.destinationAddress.setMaxLines(2);
+                holder.destinationPinCode.setVisibility(View.GONE);
+            }
             if (holder.specialLocationTag != null){
                 rideRequestUtils.setSpecialZoneAttrs(holder, model.getspecialLocationTag(), OverlaySheetService.this);
             }
@@ -506,6 +520,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         int driverMinExtraFee = rideRequestBundle.getInt("driverMinExtraFee");
                         int rideRequestPopupDelayDuration = rideRequestBundle.getInt("rideRequestPopupDelayDuration");
                         String specialLocationTag = rideRequestBundle.getString("specialLocationTag");
+                        String sourcePinCode = rideRequestBundle.getString("sourcePinCode");
+                        String destinationPinCode = rideRequestBundle.getString("destinationPinCode");
                         DecimalFormat df = new DecimalFormat();
                         df.setMaximumFractionDigits(2);
 
@@ -535,7 +551,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                                 rideRequestPopupDelayDuration,
                                 negotiationUnit,
                                 customerExtraFee,
-                                specialLocationTag);
+                                specialLocationTag,
+                                sourcePinCode,
+                                destinationPinCode);       
                         if (floatyView == null) {
                             startTimer();
                             showOverLayPopup();
