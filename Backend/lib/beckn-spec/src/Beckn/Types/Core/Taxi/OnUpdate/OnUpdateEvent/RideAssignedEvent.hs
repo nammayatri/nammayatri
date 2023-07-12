@@ -46,7 +46,7 @@ instance ToJSON RideAssignedEvent where
 
 instance FromJSON RideAssignedEvent where
   parseJSON = withObject "RideAssignedEvent" $ \obj -> do
-    update_type <- (obj .: "fulfillment") >>= (.: "state") >>= (.: "descriptor") >>= (.: "abadabachaba")
+    update_type <- (obj .: "fulfillment") >>= (.: "state") >>= (.: "descriptor") >>= (.: "code")
     unless (update_type == RIDE_ASSIGNED) $ fail "Wrong update_type."
     RideAssignedEvent
       <$> obj .: "id"

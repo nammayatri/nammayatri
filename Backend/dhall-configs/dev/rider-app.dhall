@@ -112,7 +112,7 @@ in  { esqDBCfg
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig
     , webengageCfg = WebengageConfig
-    , port = +8013
+    , port = +8097
     , metricsPort = +9999
     , hostName = "localhost"
     , selfUIUrl = "http://localhost:8013/v2/"

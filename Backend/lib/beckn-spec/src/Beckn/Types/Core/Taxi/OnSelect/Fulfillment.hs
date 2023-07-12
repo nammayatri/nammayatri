@@ -15,10 +15,11 @@
 module Beckn.Types.Core.Taxi.OnSelect.Fulfillment
   ( module Beckn.Types.Core.Taxi.OnSelect.Fulfillment,
     module Reexport,
+    FulfillmentType (..),
   )
 where
 
-import Beckn.Types.Core.Taxi.Common.FulfillmentType as Reexport
+import Beckn.Types.Core.Taxi.Common.FulfillmentInfo (FulfillmentType (..))
 import Beckn.Types.Core.Taxi.Common.VehicleVariant as Reexport
 import Beckn.Types.Core.Taxi.OnSelect.Agent
 import Beckn.Types.Core.Taxi.Search.StartInfo

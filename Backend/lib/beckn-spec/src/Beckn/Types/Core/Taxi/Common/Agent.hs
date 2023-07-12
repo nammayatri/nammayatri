@@ -13,7 +13,7 @@
 -}
 module Beckn.Types.Core.Taxi.Common.Agent where
 
-import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
+import Beckn.Types.Core.Taxi.Common.Tags
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, name, tags)
 import Kernel.Prelude
@@ -22,54 +22,9 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 data Agent = Agent
   { name :: Text,
     phone :: Text,
-    tags :: AgentTags
+    tags :: [TagGroup]
   }
-  deriving (Eq, Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 instance ToSchema Agent where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-data AgentTags = AgentTags
-  { registered_at :: UTCTime,
-    rating :: Maybe DecimalValue
-  }
-  deriving (Eq, Generic, Show)
-
-instance ToSchema AgentTags where
-  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions agentTagsJSONOptions
-
-instance FromJSON AgentTags where
-  parseJSON = withObject "AgentTags" $ \obj -> do
-    tagGroupCode <- (obj .: "groups/1/descriptor/code")
-    tag1Code <- (obj .: "groups/1/list/1/descriptor/code")
-    tag2Code :: Maybe Text <- (obj .:? "groups/1/list/2/descriptor/code")
-    unless (tagGroupCode == "driver_details") $ fail ("Wrong tag group code: " <> tagGroupCode)
-    unless (tag1Code == "registered_at") $ fail ("Wrong tag code registered_at: " <> tag1Code)
-    unless (tag2Code == Just "rating") $ fail ("Wrong tag code for rating: " <> show tag2Code)
-    AgentTags
-      <$> obj .: "groups/1/list/1/value"
-      <*> (fmap read <$> obj .:? "groups/1/list/2/value")
-
-instance ToJSON AgentTags where
-  toJSON AgentTags {..} = do
-    A.Object $
-      "groups/1/descriptor/name" .= A.String "Driver Details"
-        <> "groups/1/descriptor/code" .= A.String "driver_details"
-        <> "groups/1/list/1/descriptor/name" .= A.String "Registered At"
-        <> "groups/1/list/1/descriptor/code" .= A.String "registered_at"
-        <> "groups/1/list/1/value" .= registered_at
-        <> ( case rating of
-               Just ratingVal ->
-                 "groups/1/list/2/descriptor/name" .= A.String "Rating"
-                   <> "groups/1/list/2/descriptor/code" .= A.String "rating"
-                   <> "groups/1/list/2/value" .= A.String (show ratingVal)
-               Nothing -> mempty
-           )
-
-agentTagsJSONOptions :: A.Options
-agentTagsJSONOptions =
-  defaultOptions
-    { fieldLabelModifier = \case
-        "registered_at" -> "registered_at"
-        a -> a
-    }

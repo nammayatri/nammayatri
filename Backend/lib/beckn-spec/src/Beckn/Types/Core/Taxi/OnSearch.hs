@@ -15,11 +15,9 @@
 module Beckn.Types.Core.Taxi.OnSearch
   ( module Beckn.Types.Core.Taxi.OnSearch,
     module Reexport,
-    FulfillmentType (..),
   )
 where
 
-import Beckn.Types.Core.Taxi.Common.FulfillmentInfo (FulfillmentType (..))
 import Beckn.Types.Core.Taxi.Common.Payment as Reexport
 import Beckn.Types.Core.Taxi.Common.Tags as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.Addon as Reexport

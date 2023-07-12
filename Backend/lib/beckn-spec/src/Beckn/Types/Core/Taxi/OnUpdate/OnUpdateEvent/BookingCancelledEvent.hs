@@ -45,7 +45,7 @@ instance ToJSON BookingCancelledEvent where
 
 instance FromJSON BookingCancelledEvent where
   parseJSON = withObject "BookingCancelledEvent" $ \obj -> do
-    update_type <- (obj .: "fulfillment") >>= (.: "state") >>= (.: "code")
+    update_type <- (obj .: "fulfillment") >>= (.: "state") >>= (.: "BookingCancelledEvent")
     unless (update_type == RIDE_BOOKING_CANCELLED) $ fail "Wrong update_type."
     BookingCancelledEvent
       <$> obj .: "id"
