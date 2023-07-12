@@ -326,7 +326,9 @@ sendNewMessageToBAP booking ride message = do
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  let newMessageBuildReq = ACL.NewMessageBuildReq {ride, message}
+  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+  let newMessageBuildReq = ACL.NewMessageBuildReq {..}
   newMessageMsg <- ACL.buildOnUpdateMessage newMessageBuildReq
   retryConfig <- asks (.shortDurationRetryCfg)
   void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId newMessageMsg retryConfig

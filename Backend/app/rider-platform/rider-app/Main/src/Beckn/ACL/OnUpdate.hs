@@ -57,7 +57,18 @@ parseEvent :: (MonadFlow m) => Text -> OnUpdate.OnUpdateEvent -> m DOnUpdate.OnU
 parseEvent _ (OnUpdate.RideAssigned taEvent) = do
   vehicle <- fromMaybeM (InvalidRequest "vehicle is not present in RideAssigned Event.") $ taEvent.fulfillment.vehicle
   agent <- fromMaybeM (InvalidRequest "agent is not present in RideAssigned Event.") $ taEvent.fulfillment.agent
-  logDebug "This One Blew"
+  let agentTagGroup = find (\tagGroup -> tagGroup.code == "driver_details") agent.tags
+  registeredAt :: UTCTime <-
+    fromMaybeM (InvalidRequest "registered_at is not present.") $
+      readMaybe . T.unpack
+        =<< (.value)
+        =<< find (\tag -> tag.code == Just "registered_at") . (.list)
+        =<< agentTagGroup
+  let rating :: Maybe HighPrecMeters =
+        readMaybe . T.unpack
+          =<< (.value)
+          =<< find (\tag -> tag.code == Just "rating") . (.list)
+          =<< agentTagGroup
   return $
     DOnUpdate.RideAssignedReq
       { bppBookingId = Id taEvent.id,
@@ -66,21 +77,19 @@ parseEvent _ (OnUpdate.RideAssigned taEvent) = do
         driverName = agent.name,
         driverMobileNumber = agent.phone,
         driverMobileCountryCode = Just "+91", -----------TODO needs to be added in agent Tags------------
-        driverRating = realToFrac <$> agent.tags.rating,
-        driverRegisteredAt = agent.tags.registered_at,
+        driverRating = realToFrac <$> rating,
+        driverRegisteredAt = registeredAt,
         vehicleNumber = vehicle.registration,
         vehicleColor = vehicle.color,
         vehicleModel = vehicle.model
       }
 parseEvent _ (OnUpdate.RideStarted rsEvent) = do
-  logDebug "This One Blew RideStarted"
   return $
     DOnUpdate.RideStartedReq
       { bppBookingId = Id rsEvent.id,
         bppRideId = Id rsEvent.fulfillment.id
       }
 parseEvent _ (OnUpdate.RideCompleted rcEvent) = do
-  logDebug "This One Blew RideCompleted"
   let tagsGroup = rcEvent.fulfillment.tags
       distanceInfoGroup = find (\tagGroup -> tagGroup.code == "ride_distance_details") tagsGroup -- maybe don't have tags and all in our domain types, get rid of them in formJSON toJSON itself similar to agentTags above?
   chargeableDistance :: HighPrecMeters <-
@@ -113,14 +122,12 @@ parseEvent _ (OnUpdate.RideCompleted rcEvent) = do
           description = breakup.title
         }
 parseEvent _ (OnUpdate.BookingCancelled tcEvent) = do
-  logDebug "This One Blew BookingCancelled"
   return $
     DOnUpdate.BookingCancelledReq
       { bppBookingId = Id $ tcEvent.id,
         cancellationSource = castCancellationSource tcEvent.cancellation_reason
       }
 parseEvent _ (OnUpdate.BookingReallocation rbrEvent) = do
-  logDebug "This One Blew BookingReallocation"
   return $
     DOnUpdate.BookingReallocationReq
       { bppBookingId = Id $ rbrEvent.id,
@@ -128,10 +135,8 @@ parseEvent _ (OnUpdate.BookingReallocation rbrEvent) = do
         reallocationSource = castCancellationSource rbrEvent.reallocation_reason
       }
 parseEvent _ (OnUpdate.DriverArrived daEvent) = do
-  logDebug "This One Blew DriverArrived"
   let tagsGroup = daEvent.fulfillment.tags
       driverArrivalGroup = find (\tagGroup -> tagGroup.code == "driver_arrived_info") tagsGroup
-  logDebug "No its me"
   arrival_time <-
     fromMaybeM (InvalidRequest "arrival_time is not present.") $
       readMaybe . T.unpack
@@ -145,15 +150,20 @@ parseEvent _ (OnUpdate.DriverArrived daEvent) = do
         arrivalTime = arrival_time
       }
 parseEvent _ (OnUpdate.NewMessage daEvent) = do
-  logDebug "This One Blew NewMessage"
+  let tagsGroup = daEvent.fulfillment.tags
+      driverArrivalGroup = find (\tagGroup -> tagGroup.code == "driver_new_message") tagsGroup
+  message :: Text <-
+    fromMaybeM (InvalidRequest "message is not present.") $
+      (.value)
+        =<< find (\tag -> tag.code == Just "message") . (.list)
+        =<< driverArrivalGroup
   return $
     DOnUpdate.NewMessageReq
       { bppBookingId = Id daEvent.id,
         bppRideId = Id daEvent.fulfillment.id,
-        message = daEvent.message
+        message = message
       }
 parseEvent transactionId (OnUpdate.EstimateRepetition erEvent) = do
-  logDebug "This One Blew EstimateRepetition"
   let tagsGroup = erEvent.fulfillment.tags
       previousCancellationReasonsGroup = find (\tagGroup -> tagGroup.code == "previous_cancellation_reasons") tagsGroup
   cancellationReason <-
@@ -162,7 +172,6 @@ parseEvent transactionId (OnUpdate.EstimateRepetition erEvent) = do
         =<< (.value)
         =<< find (\tag -> tag.code == Just "cancellation_reason") . (.list)
         =<< previousCancellationReasonsGroup
-
   return $
     DOnUpdate.EstimateRepetitionReq
       { searchRequestId = Id transactionId,

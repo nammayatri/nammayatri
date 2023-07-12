@@ -87,6 +87,9 @@ data OnUpdateBuildReq
       }
   | NewMessageBuildReq
       { ride :: DRide.Ride,
+        driver :: SP.Person,
+        vehicle :: SVeh.Vehicle,
+        booking :: DRB.Booking,
         message :: Text
       }
 
@@ -101,13 +104,24 @@ mkFullfillment ::
 mkFullfillment mbDriver ride booking mbVehicle tags = do
   agent <-
     flip mapM mbDriver $ \driver -> do
+      let agentTags =
+            Tags.TagGroup
+              { display = False,
+                code = "driver_details",
+                name = "Driver Details",
+                list =
+                  [ Tags.Tag Nothing (Just "registered_at") (Just "Registered At") (Just $ show driver.createdAt),
+                    Tags.Tag Nothing (Just "rating") (Just "rating") (Just $ show driver.rating)
+                  ]
+              } :
+            []
       mobileNumber <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present.")
       name <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
       pure $
         RideAssignedOU.Agent
           { name = name,
             phone = mobileNumber,
-            tags = RideAssignedOU.AgentTags {registered_at = driver.createdAt, rating = realToFrac <$> driver.rating}
+            tags = agentTags
           }
   let veh =
         mbVehicle <&> \vehicle ->
@@ -155,9 +169,9 @@ buildOnUpdateMessage RideAssignedBuildReq {..} = do
     OnUpdate.OnUpdateMessage $
       OnUpdate.RideAssigned
         RideAssignedOU.RideAssignedEvent
-          { id = ride.id.getId,
+          { id = booking.id.getId,
             state = "ACTIVE",
-            update_target = "order.fufillment.id, order.fufillment.state.code, order.fulfillment.start.authorization, order.fulfillment.agent, order.fulfillment.vehicle",
+            update_target = "order.fufillment.state.code, order.fulfillment.start.authorization, order.fulfillment.agent, order.fulfillment.vehicle",
             ..
           }
 buildOnUpdateMessage RideStartedBuildReq {..} = do
@@ -166,7 +180,7 @@ buildOnUpdateMessage RideStartedBuildReq {..} = do
     OnUpdate.OnUpdateMessage $
       OnUpdate.RideStarted
         RideStartedOU.RideStartedEvent
-          { id = ride.id.getId,
+          { id = booking.id.getId,
             update_target = "order.fufillment.state.code",
             ..
           }
@@ -189,7 +203,6 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
   fulfillment <- mkFullfillment (Just req.driver) req.ride req.booking (Just req.vehicle) tagGroups
   fare <- realToFrac <$> req.ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
   let currency = "INR"
-      ride = req.ride
       price =
         RideCompletedOU.QuotePrice
           { currency,
@@ -203,8 +216,8 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
     OnUpdate.OnUpdateMessage $
       OnUpdate.RideCompleted
         RideCompletedOU.RideCompletedEvent
-          { id = ride.id.getId,
-            update_target = "order.fulfillment, order.payment, order.quote, order.fulfillment.tags",
+          { id = req.booking.id.getId,
+            update_target = "order.payment, order.quote, order.fulfillment.tags, order.fulfillment.state.tags",
             quote =
               RideCompletedOU.RideCompletedQuote
                 { price,
@@ -215,7 +228,6 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
                 RideCompletedOU.Payment
                   { collected_by = Common.castDPaymentCollector . (.collectedBy) <$> req.paymentMethodInfo,
                     _type = Common.castDPaymentType . (.paymentType) <$> req.paymentMethodInfo,
-                    instrument = Common.castDPaymentInstrument . (.paymentInstrument) <$> req.paymentMethodInfo,
                     status = "ON-FULFILLMENT",
                     uri = req.paymentUrl
                   },
@@ -290,14 +302,22 @@ buildOnUpdateMessage EstimateRepetitionBuildReq {..} = do
             fulfillment
           }
 buildOnUpdateMessage NewMessageBuildReq {..} = do
+  let tagGroups =
+        Tags.TagGroup
+          { display = False,
+            code = "driver_new_message",
+            name = "Driver New Message",
+            list = [Tags.Tag Nothing (Just "message") (Just "New Message") (Just message)]
+          } :
+        []
+  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) tagGroups
   return $
     OnUpdate.OnUpdateMessage $
       OnUpdate.NewMessage
         NewMessageOU.NewMessageEvent
           { id = ride.bookingId.getId,
-            update_target = "state,fufillment.state.code",
-            fulfillment = NewMessageOU.FulfillmentInfo ride.id.getId,
-            message = message
+            update_target = "order.fufillment.state.code, order.fulfillment.tags",
+            fulfillment = fulfillment
           }
 
 castCancellationSource :: SBCR.CancellationSource -> BookingCancelledOU.CancellationSource

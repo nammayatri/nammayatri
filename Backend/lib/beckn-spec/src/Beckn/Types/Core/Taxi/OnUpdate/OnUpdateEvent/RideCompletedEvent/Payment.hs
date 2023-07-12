@@ -31,7 +31,6 @@ import Kernel.Utils.Schema
 data Payment = Payment
   { collected_by :: Maybe PaymentCollector,
     _type :: Maybe PaymentType,
-    instrument :: Maybe PaymentInstrument, -- FIXME find proper fields
     status :: Text,
     uri :: Maybe Text
   }
