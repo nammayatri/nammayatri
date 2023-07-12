@@ -1,0 +1,283 @@
+module Types.DBSync.Create where
+
+import qualified "dynamic-offer-driver-app" Storage.Beam.RegistrationToken as BeamRT
+
+-- import EulerHS.Prelude
+-- import Euler.DB.Storage.Types
+--   ( TxnOfferInfo
+--   , HdfcHashedNum
+--   , MerchantGatewayAccount
+--   , Rule
+--   , MerchantGatewayAccountSubInfo
+--   , OrderReference
+--   , Mandate
+--   , GatewayTxnData
+--   , MerchantGatewayCardInfo
+--   , TxnRiskCheck
+--   , PaymentMethod
+--   , OfferBenefitInfo
+--   , MerchantIframePreferences
+--   , ResellerAccount
+--   , UnifiedGatewayResponse
+--   , WalletTopUpTxn
+--   , IsinRoutes
+--   , TxnCardInfo
+--   , OrderAddress
+--   , LockerAccount
+--   , JuspayBankCode
+--   , IssuerRoutes
+--   , Refund
+--   , SecondFactor
+--   , GatewayOutage
+--   , TxnDetail
+--   , EmiPlan
+--   , MerchantKey
+--   , NetworkCardFingerprint
+--   , TokenRequestor
+--   , TxnOfferDetail
+--   , SecondFactorResponse
+--   , OfferRedemption
+--   , CardBrandRoutes
+--   , Customer
+--   , MerchantAccount
+--   , ExternalMerchantCustomer
+--   , TokenBinInfo
+--   , MerchantGatewayPaymentMethod
+--   , Promotion
+--   , LockerTokenRequestor
+--   , BankAccount
+--   , Agency
+--   , Provider
+--   , GatewayCardInfo
+--   , PaymentGatewayResponse
+--   , Metadata
+--   , Chargeback
+--   , WalletAccount
+--   , GatewayStatusMap
+--   , Token
+--   , MerchantLockerAccount
+--   , TempCard
+--   , MerchantRiskSettings
+--   , User
+--   , CofDetails
+--   , OrderMetadataV2
+--   , StoredCard
+--   , TokenCustomer
+--   , EnrolledPan
+--   , Offers
+--   , Role
+--   , Feature
+--   , GatewayBankEmiSupport
+--   , AuthenticationAccount
+--   , PaymentGatewayResponseV1
+--   , SavedPaymentMethod
+--   , MerchantProviderDetails
+--   , TxnOffer
+--   , GatewayHealth
+--   , RiskManagementAccount
+--   , CardInfo
+--   , DeviceBinding
+--   , Notification
+--   , OrderBasket
+--   , GatewayPaymentMethod
+--   , JuspayEvent
+--   , ProcessTracker
+--   , PaymentLinks
+--   , CustomerAccount
+--   , EntityMap
+--   , FormInput
+--   , IngressRule
+--   , Installment
+--   , InstallmentRefund
+--   , PaymentForm
+--   , UserRole
+--   , TxnIntentDetail
+--   , AuthMapping
+--   )
+
+-- -- Create Object
+-- data DBCreateObject
+--   = TxnOfferInfoObject TxnOfferInfo
+--   | JuspayEventObject JuspayEvent
+--   | HdfcHashedNumObject HdfcHashedNum
+--   | MerchantGatewayAccountObject MerchantGatewayAccount
+--   | RuleObject Rule
+--   | MerchantGatewayAccountSubInfoObject MerchantGatewayAccountSubInfo
+--   | OrderReferenceObject OrderReference
+--   | MandateObject Mandate
+--   | GatewayTxnDataObject GatewayTxnData
+--   | MerchantGatewayCardInfoObject MerchantGatewayCardInfo
+--   | TxnRiskCheckObject TxnRiskCheck
+--   | PaymentMethodObject PaymentMethod
+--   | OfferBenefitInfoObject OfferBenefitInfo
+--   | MerchantIframePreferencesObject MerchantIframePreferences
+--   | ResellerAccountObject ResellerAccount
+--   | UnifiedGatewayResponseObject UnifiedGatewayResponse
+--   | WalletTopUpTxnObject WalletTopUpTxn
+--   | IsinRoutesObject IsinRoutes
+--   | TxnCardInfoObject TxnCardInfo
+--   | OrderAddressObject OrderAddress
+--   | LockerAccountObject LockerAccount
+--   | JuspayBankCodeObject JuspayBankCode
+--   | IssuerRoutesObject IssuerRoutes
+--   | RefundObject Refund
+--   | SecondFactorObject SecondFactor
+--   | GatewayOutageObject GatewayOutage
+--   | TxnDetailObject TxnDetail
+--   | EmiPlanObject EmiPlan
+--   | MerchantKeyObject MerchantKey
+--   | NetworkCardFingerprintObject NetworkCardFingerprint
+--   | TokenRequestorObject TokenRequestor
+--   | TxnOfferDetailObject TxnOfferDetail
+--   | SecondFactorResponseObject SecondFactorResponse
+--   | OfferRedemptionObject OfferRedemption
+--   | CardBrandRoutesObject CardBrandRoutes
+--   | CustomerObject Customer
+--   | MerchantAccountObject MerchantAccount
+--   | ExternalMerchantCustomerObject ExternalMerchantCustomer
+--   | TokenBinInfoObject TokenBinInfo
+--   | MerchantGatewayPaymentMethodObject MerchantGatewayPaymentMethod
+--   | PromotionObject Promotion
+--   | LockerTokenRequestorObject LockerTokenRequestor
+--   | BankAccountObject BankAccount
+--   | AgencyObject Agency
+--   | ProviderObject Provider
+--   | GatewayCardInfoObject GatewayCardInfo
+--   | PaymentGatewayResponseObject PaymentGatewayResponse
+--   | MetadataObject Metadata
+--   | ChargebackObject Chargeback
+--   | WalletAccountObject WalletAccount
+--   | GatewayStatusMapObject GatewayStatusMap
+--   | TokenObject Token
+--   | MerchantLockerAccountObject MerchantLockerAccount
+--   | TempCardObject TempCard
+--   | MerchantRiskSettingsObject MerchantRiskSettings
+--   | UserObject User
+--   | CofDetailsObject CofDetails
+--   | OrderMetadataV2Object OrderMetadataV2
+--   | StoredCardObject StoredCard
+--   | TokenCustomerObject TokenCustomer
+--   | EnrolledPanObject EnrolledPan
+--   | OffersObject Offers
+--   | RoleObject Role
+--   | FeatureObject Feature
+--   | GatewayBankEmiSupportObject GatewayBankEmiSupport
+--   | AuthenticationAccountObject AuthenticationAccount
+--   | PaymentGatewayResponseV1Object PaymentGatewayResponseV1
+--   | SavedPaymentMethodObject SavedPaymentMethod
+--   | MerchantProviderDetailsObject MerchantProviderDetails
+--   | TxnOfferObject TxnOffer
+--   | GatewayHealthObject GatewayHealth
+--   | RiskManagementAccountObject RiskManagementAccount
+--   | CardInfoObject CardInfo
+--   | DeviceBindingObject DeviceBinding
+--   | NotificationObject Notification
+--   | OrderBasketObject OrderBasket
+--   | GatewayPaymentMethodObject GatewayPaymentMethod
+--   | ProcessTrackerObject ProcessTracker
+--   | PaymentLinksObject PaymentLinks
+--   | CustomerAccountObject CustomerAccount
+--   | EntityMapObject EntityMap
+--   | FormInputObject FormInput
+--   | IngressRuleObject IngressRule
+--   | InstallmentObject Installment
+--   | InstallmentRefundObject InstallmentRefund
+--   | PaymentFormObject PaymentForm
+--   | UserRoleObject UserRole
+--   | TxnIntentDetailObject TxnIntentDetail
+--   | AuthMappingObject AuthMapping
+--   deriving (Generic, FromJSON, ToJSON, Show)
+
+-- -- Convert database storage types into DBObject types
+-- -- which are part of a command and can be deserialized.
+
+-- modelName :: DBCreateObject -> Text
+-- modelName (TxnOfferInfoObject _                 ) = "TxnOfferInfo"
+-- modelName (JuspayEventObject _                  ) = "JuspayEvent"
+-- modelName (HdfcHashedNumObject _                ) = "HdfcHashedNum"
+-- modelName (MerchantGatewayAccountObject _       ) = "MerchantGatewayAccount"
+-- modelName (RuleObject _                         ) = "Rule"
+-- modelName (MerchantGatewayAccountSubInfoObject _) = "MerchantGatewayAccountSubInfo"
+-- modelName (OrderReferenceObject _               ) = "OrderReference"
+-- modelName (MandateObject _                      ) = "Mandate"
+-- modelName (GatewayTxnDataObject _               ) = "GatewayTxnData"
+-- modelName (MerchantGatewayCardInfoObject _      ) = "MerchantGatewayCardInfo"
+-- modelName (TxnRiskCheckObject _                 ) = "TxnRiskCheck"
+-- modelName (PaymentMethodObject _                ) = "PaymentMethod"
+-- modelName (OfferBenefitInfoObject _             ) = "OfferBenefitInfo"
+-- modelName (MerchantIframePreferencesObject _    ) = "MerchantIframePreferences"
+-- modelName (ResellerAccountObject _              ) = "ResellerAccount"
+-- modelName (UnifiedGatewayResponseObject _       ) = "UnifiedGatewayResponse"
+-- modelName (WalletTopUpTxnObject _               ) = "WalletTopUpTxn"
+-- modelName (IsinRoutesObject _                   ) = "IsinRoutes"
+-- modelName (TxnCardInfoObject _                  ) = "TxnCardInfo"
+-- modelName (OrderAddressObject _                 ) = "OrderAddress"
+-- modelName (LockerAccountObject _                ) = "LockerAccount"
+-- modelName (JuspayBankCodeObject _               ) = "JuspayBankCode"
+-- modelName (IssuerRoutesObject _                 ) = "IssuerRoutes"
+-- modelName (RefundObject _                       ) = "Refund"
+-- modelName (SecondFactorObject _                 ) = "SecondFactor"
+-- modelName (GatewayOutageObject _                ) = "GatewayOutage"
+-- modelName (TxnDetailObject _                    ) = "TxnDetail"
+-- modelName (EmiPlanObject _                      ) = "EmiPlan"
+-- modelName (MerchantKeyObject _                  ) = "MerchantKey"
+-- modelName (NetworkCardFingerprintObject _       ) = "NetworkCardFingerprint"
+-- modelName (TokenRequestorObject _               ) = "TokenRequestor"
+-- modelName (TxnOfferDetailObject _               ) = "TxnOfferDetail"
+-- modelName (SecondFactorResponseObject _         ) = "SecondFactorResponse"
+-- modelName (OfferRedemptionObject _              ) = "OfferRedemption"
+-- modelName (CardBrandRoutesObject _              ) = "CardBrandRoutes"
+-- modelName (CustomerObject _                     ) = "Customer"
+-- modelName (MerchantAccountObject _              ) = "MerchantAccount"
+-- modelName (ExternalMerchantCustomerObject _     ) = "ExternalMerchantCustomer"
+-- modelName (TokenBinInfoObject _                 ) = "TokenBinInfo"
+-- modelName (MerchantGatewayPaymentMethodObject _ ) = "MerchantGatewayPaymentMethod"
+-- modelName (PromotionObject _                    ) = "Promotion"
+-- modelName (LockerTokenRequestorObject _         ) = "LockerTokenRequestor"
+-- modelName (BankAccountObject _                  ) = "BankAccount"
+-- modelName (AgencyObject _                       ) = "Agency"
+-- modelName (ProviderObject _                     ) = "Provider"
+-- modelName (GatewayCardInfoObject _              ) = "GatewayCardInfo"
+-- modelName (PaymentGatewayResponseObject _       ) = "PaymentGatewayResponse"
+-- modelName (MetadataObject _                     ) = "Metadata"
+-- modelName (ChargebackObject _                   ) = "Chargeback"
+-- modelName (WalletAccountObject _                ) = "WalletAccount"
+-- modelName (GatewayStatusMapObject _             ) = "GatewayStatusMap"
+-- modelName (TokenObject _                        ) = "Token"
+-- modelName (MerchantLockerAccountObject _        ) = "MerchantLockerAccount"
+-- modelName (TempCardObject _                     ) = "TempCard"
+-- modelName (MerchantRiskSettingsObject _         ) = "MerchantRiskSettings"
+-- modelName (UserObject _                         ) = "User"
+-- modelName (CofDetailsObject _                   ) = "CofDetails"
+-- modelName (OrderMetadataV2Object _              ) = "OrderMetadataV2"
+-- modelName (StoredCardObject _                   ) = "StoredCard"
+-- modelName (TokenCustomerObject _                ) = "TokenCustomer"
+-- modelName (EnrolledPanObject _                  ) = "EnrolledPan"
+-- modelName (OffersObject _                       ) = "Offers"
+-- modelName (RoleObject _                         ) = "Role"
+-- modelName (FeatureObject _                      ) = "Feature"
+-- modelName (GatewayBankEmiSupportObject _        ) = "GatewayBankEmiSupport"
+-- modelName (AuthenticationAccountObject _        ) = "AuthenticationAccount"
+-- modelName (PaymentGatewayResponseV1Object _     ) = "PaymentGatewayResponseV1"
+-- modelName (SavedPaymentMethodObject _           ) = "SavedPaymentMethod"
+-- modelName (MerchantProviderDetailsObject _      ) = "MerchantProviderDetails"
+-- modelName (TxnOfferObject _                     ) = "TxnOffer"
+-- modelName (GatewayHealthObject _                ) = "GatewayHealth"
+-- modelName (RiskManagementAccountObject _        ) = "RiskManagementAccount"
+-- modelName (CardInfoObject _                     ) = "CardInfo"
+-- modelName (DeviceBindingObject _                ) = "DeviceBinding"
+-- modelName (NotificationObject _                 ) = "Notification"
+-- modelName (OrderBasketObject _                  ) = "OrderBasket"
+-- modelName (GatewayPaymentMethodObject _         ) = "GatewayPaymentMethod"
+-- modelName (ProcessTrackerObject _               ) = "ProcessTracker"
+-- modelName (PaymentLinksObject _                 ) = "PaymentLinks"
+-- modelName (CustomerAccountObject _              ) = "CustomerAccount"
+-- modelName (EntityMapObject _                    ) = "EntityMap"
+-- modelName (FormInputObject _                    ) = "FormInput"
+-- modelName (IngressRuleObject _                  ) = "IngressRule"
+-- modelName (InstallmentObject _                  ) = "Installment"
+-- modelName (InstallmentRefundObject _            ) = "InstallmentRefund"
+-- modelName (PaymentFormObject _                  ) = "PaymentForm"
+-- modelName (UserRoleObject _                     ) = "UserRole"
+-- modelName (TxnIntentDetailObject _              ) = "TxnIntentDetail"
+-- modelName (AuthMappingObject _                  ) = "AuthMapping"
