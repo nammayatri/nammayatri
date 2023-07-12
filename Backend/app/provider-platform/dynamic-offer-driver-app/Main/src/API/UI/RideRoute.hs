@@ -7,16 +7,33 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.SearchRequestRoute where
+module API.UI.RideRoute
+  ( API,
+    handler,
+  )
+where
 
-import Data.OpenApi (ToSchema)
+import qualified Domain.Action.UI.RideRoute as DRideRoute
+import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Person as Person
+import Domain.Types.Ride
+import Domain.Types.RideRoute
+import Environment
 import EulerHS.Prelude
-import Kernel.External.Maps (LatLong)
+import Kernel.Types.Id
 import Kernel.Utils.Common
+import Servant
+import Tools.Auth
 
-data RouteInfo = RouteInfo
-  { duration :: Maybe Seconds,
-    distance :: Maybe Meters,
-    points :: Maybe [LatLong]
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+type API =
+  Capture "rideId" (Id Ride)
+    :> "route"
+    :> TokenAuth
+    :> Post '[JSON] RouteInfo
+
+handler :: FlowServer API
+handler =
+  rideRoute
+
+rideRoute :: Id Ride -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler RouteInfo
+rideRoute rideId (personId, merchantId) = withFlowHandlerAPI $ withPersonIdLogTag personId $ DRideRoute.rideRoute rideId (personId, merchantId)

@@ -125,7 +125,7 @@ screen initialState =
               FindingQuotes -> do
                 when ((getValueToLocalStore FINDING_QUOTES_POLLING) == "false") $ do
                   _ <- pure $ setValueToLocalStore FINDING_QUOTES_POLLING "true"
-                  _ <- if os == "IOS" then startTimerWithTime (show initialState.props.searchExpire) "" "1" push SearchExpireCountDown else countDown initialState.props.searchExpire "" push SearchExpireCountDown
+                  _ <- countDown initialState.props.searchExpire "" push SearchExpireCountDown
                   _ <- pure $ setValueToLocalStore GOT_ONE_QUOTE "FALSE"
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   let pollingCount = ceil ((toNumber initialState.props.searchExpire)/((fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) / 1000.0))
@@ -899,7 +899,7 @@ rideRequestFlowView push state =
         ]
         [ PrestoAnim.animationSet [ fadeIn true ]
             $ if (state.props.currentStage == SettingPrice) then
-                if (state.props.isSpecialZone && (getMerchant FunctionCall == JATRISAATHI))  || ((getMerchant FunctionCall) /= NAMMAYATRI) then
+                if (state.props.isSpecialZone && (getValueFromConfig "specialLocationView") == "true") then
                   ChooseYourRide.view (push <<< ChooseYourRideAction) (chooseYourRideConfig state)
                 else
                 suggestedPriceView push state
@@ -1491,7 +1491,7 @@ confirmPickUpLocationView push state =
             , width MATCH_PARENT
             , fontStyle $ FontStyle.bold LanguageStyle
             ]
-        , if  ((getMerchant FunctionCall == JATRISAATHI) && state.props.isSpecialZone ) then  nearByPickUpPointsView state push else currentLocationView push state
+        , if  ((getValueFromConfig "specialLocationView") == "true" && state.props.isSpecialZone ) then  nearByPickUpPointsView state push else currentLocationView push state
         , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfirmPickupConfig state)
         ]
     ]
@@ -1756,7 +1756,7 @@ getEstimate action flowStatusAction count duration push state = do
         Right response -> do
           _ <- pure $ printLog "api Results " response
           let (GetQuotesRes resp) = response
-          if not (state.props.isSpecialZone && (null resp.quotes) || ((not state.props.isSpecialZone) && null resp.estimates)) then do
+          if not (null resp.quotes) || not (null resp.estimates) then do
             doAff do liftEffect $ push $ action response
             pure unit
           else do

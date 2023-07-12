@@ -59,7 +59,7 @@ mkPersist
       distanceCalculationFailed Bool Maybe
       createdAt UTCTime
       updatedAt UTCTime
-      numberOfDeviation Double Maybe
+      numberOfDeviation Bool Maybe
       Primary id
       deriving Generic
     |]

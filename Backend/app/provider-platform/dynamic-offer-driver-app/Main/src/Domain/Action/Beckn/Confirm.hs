@@ -16,6 +16,7 @@ module Domain.Action.Beckn.Confirm where
 
 import Data.String.Conversions
 import qualified Data.Text as T
+import Domain.Action.Beckn.Search
 import Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.BookingCancellationReason as DBCR
@@ -26,6 +27,7 @@ import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.QuoteSpecialZone as DQSZ
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as SRD
+import Domain.Types.RideRoute
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchRequestForDriver as SReqD
 import Kernel.External.Encryption
@@ -33,7 +35,7 @@ import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
-import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Storage.Hedis
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -118,6 +120,10 @@ handler transporter req quote = do
           triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = transporter.id}
           rideDetails <- buildRideDetails ride driver
           driverSearchReqs <- QSRD.findAllActiveBySTId driverQuote.searchTryId
+          routeInfo :: Maybe RouteInfo <- safeGet (searchRequestKey $ getId driverQuote.requestId)
+          case routeInfo of
+            Just route -> setExp (searchRequestKey $ getId ride.id) route 14400
+            Nothing -> logDebug "Unable to get the key"
           -- Esq.runTransaction $ do
           when isNewRider $ void $ QRD.create riderDetails
           _ <- QRB.updateRiderId booking.id riderDetails.id

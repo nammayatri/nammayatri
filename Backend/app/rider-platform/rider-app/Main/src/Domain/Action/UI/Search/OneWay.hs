@@ -41,6 +41,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
+import SharedLogic.DirectionsCache as SDC
 import qualified SharedLogic.MerchantConfig as SMC
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerc
@@ -107,7 +108,7 @@ oneWaySearch personId req bundleVersion clientVersion device = do
             calcPoints = True,
             mode = Just Maps.CAR
           }
-  routeResponse <- Maps.getRoutes person.merchantId request
+  routeResponse <- SDC.getRoutes person.merchantId request
   let shortestRouteInfo = getRouteInfoWithShortestDuration routeResponse
   let longestRouteDistance = (.distance) =<< getLongestRouteDistance routeResponse
   let shortestRouteDistance = (.distance) =<< shortestRouteInfo

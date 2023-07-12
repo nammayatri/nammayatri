@@ -97,7 +97,7 @@ data StartRideReq = StartRideReq
 
 data EndRideReq = EndRideReq
   { point :: LatLong,
-    numberOfDeviation :: Maybe Double
+    numberOfDeviation :: Maybe Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 

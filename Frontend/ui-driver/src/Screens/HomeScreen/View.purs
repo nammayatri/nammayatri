@@ -59,7 +59,7 @@ import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..
 import Screens.Types as ST
 import Services.APITypes (GetRidesHistoryResp(..))
 import Services.Backend as Remote
-import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn)
+import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn, setValueToLocalNativeStore)
 import Styles.Colors as Color
 import Types.App (GlobalState)
 import Data.Int(toNumber, ceil)
@@ -127,6 +127,13 @@ screen initialState =
                                   pure unit
                                   else pure unit
             "RideStarted"    -> do
+                                _ <- pure $ setValueToLocalNativeStore RIDE_START_LAT (HU.toString initialState.data.activeRide.src_lat)
+                                _ <- pure $ setValueToLocalNativeStore RIDE_START_LON (HU.toString initialState.data.activeRide.src_lon)
+                                _ <- pure $ setValueToLocalNativeStore RIDE_END_LAT (HU.toString initialState.data.activeRide.dest_lat)
+                                _ <- pure $ setValueToLocalNativeStore RIDE_END_LON (HU.toString initialState.data.activeRide.dest_lon)
+                                _ <- pure $ setValueToLocalNativeStore RIDE_WAYPOINT_DEVIATION_COUNT "0"
+                                _ <- pure $ setValueToLocalNativeStore WAYPOINT_DEVIATION_COUNT "0"
+                                _ <- pure $ setValueToLocalNativeStore TOLERANCE_EARTH "30.0"
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "50000"
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
                                 _ <- push RemoveChat

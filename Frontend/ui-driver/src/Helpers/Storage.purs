@@ -72,6 +72,14 @@ data KeyStore = USER_NAME
                 | HAS_TAKEN_FIRST_RIDE
                 | IS_BANNER_ACTIVE
                 | IS_DRIVER_AT_PICKUP
+                | RIDE_START_LAT
+                | RIDE_START_LON
+                | RIDE_END_LAT
+                | RIDE_END_LON
+                | RIDE_WAYPOINT_DEVIATION_COUNT
+                | WAYPOINT_DEVIATION_COUNT
+                | TOLERANCE_EARTH
+                | RIDE_ID
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

@@ -85,7 +85,7 @@ eval (EditProfile fieldType) state = do
       _ <- pure $ requestKeyboardShow (getNewIDWithTag "EmailEditText")
       pure unit
     _ -> pure unit
-  continue state { props { updateProfile = true , isEmailValid = true}, data { editedName = state.data.name, editedEmailId = state.data.emailId, editedGender = state.data.gender} }
+  continue state { props { isBtnEnabled = false , updateProfile = true , isEmailValid = true}, data { editedName = state.data.name, editedEmailId = state.data.emailId, editedGender = state.data.gender} }
 eval ShowOptions state = do
   _ <- pure $ hideKeyboardOnNavigation true
   continue state{props{genderOptionExpanded = not state.props.genderOptionExpanded, showOptions = true, expandEnabled = true}}

@@ -60,9 +60,9 @@ editTextLayout push config =
     , cornerRadius config.cornerRadius
     , gravity CENTER_VERTICAL
     , stroke if config.showErrorLabel then config.warningStroke else if config.editText.focused then config.focusedStroke else config.stroke
-    ][  constantField push config 
-      , editTextView push config
-      ]
+    ](  if config.showConstantField then 
+          [constantField push config, editTextView push config ] 
+          else [editTextView push config])
 
 
 constantField :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 

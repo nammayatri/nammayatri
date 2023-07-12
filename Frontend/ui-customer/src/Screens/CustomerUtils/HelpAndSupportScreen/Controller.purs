@@ -203,7 +203,7 @@ eval (RideBookingListAPIResponseAction rideList status) state = do
 eval (PopupModelActionController (PopUpModal.OnButton1Click)) state = continue state{props{isCallConfirmation = false}}
 
 eval (PopupModelActionController (PopUpModal.OnButton2Click)) state = do
-  void $ pure $ showDialer (getSupportNumber "") true
+  void $ pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
   continue state{props{isCallConfirmation = false}}
 
 eval (APIFailureActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit GoBack
@@ -212,7 +212,9 @@ eval (NoRidesActionController (ErrorModal.PrimaryButtonActionController PrimaryB
 
 eval (EmailEditTextAC (PrimaryEditText.TextChanged id a)) state = continue state{data {email = trim(a)},props{btnActive = length (trim a) > 0  && length (trim state.data.description) > 9 && validateEmail a}}
 
-eval (DescriptionEditTextAC (PrimaryEditText.TextChanged id a)) state = continue state{data {description = a},props{btnActive = length state.data.email > 0 && length (trim a) > 9 && validateEmail state.data.email}}
+eval (DescriptionEditTextAC (PrimaryEditText.TextChanged id a)) state = do 
+  let email= if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else state.data.email
+  continue state{data {description = a},props{btnActive = length email > 0 && length (trim a) > 9 && validateEmail email}}
 
 eval DeleteAccount state = continue state {props {showDeleteAccountView = true}, data{description = "", email = ""}}
 
@@ -223,7 +225,9 @@ eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
   continue state{ data { accountStatus = CONFIRM_REQ} }
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state {data{ accountStatus= ACTIVE}}
-eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ ConfirmDeleteAccount state
+eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do 
+  let email = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else state.data.email
+  exit $ ConfirmDeleteAccount state{data{email=email}}
 eval (AccountDeletedModalAction (PopUpModal.OnButton1Click)) state =  updateAndExit (state {data{accountStatus = ACTIVE}} ) $ GoHome
 eval (AccountDeletedModalAction (PopUpModal.OnButton2Click)) state =  updateAndExit (state {data{accountStatus = ACTIVE}} ) $ GoHome
 

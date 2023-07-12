@@ -426,7 +426,7 @@ const bengaliStrings = {
   "NO_DONT" : "না, না",
   "YES_CANCEL_SEARCH" : "হ্যাঁ, অনুসন্ধান বাতিল করুন",
   "TRY_LOOKING_FOR_RIDES_AGAIN" : "এটি খুব ব্যস্ত দিন বলে মনে হচ্ছে। আপনি আবার রাইড খুঁজছেন চেষ্টা করতে পারেন",
-  "NO_TIP" : "কোন টিপ নেই",
+  "NO_TIP" : "0 টিপ্",
   "CUSTOMER_TIP_DESCRIPTION" : "^যাত্রা পাওয়ার সম্ভাবনা বাড়ানোর জন্য গ্রাহক কর্তৃক অতিরিক্ত পরিমাণ যুক্ত করা হয়েছে।",
   "PLACE_CALL" : "একটি কল করুন",
   "REQUEST_CALLBACK" : "কলব্যাকের অনুরোধ করুন",
@@ -488,5 +488,6 @@ const bengaliStrings = {
   "CALL_NAMMA_YATRI_SUPPORT" : "নম্মা যাত্রী সমর্থনে কল করুন",
   "EMAIL_EXISTS_ALREADY" : "ই - মেইল   টি আগে থেকেই আছে",
   "CALL_112": "112 কল করুন",
-  "CALL_EMERGENCY_CENTRE": "ইমার্জেন্সি সেন্টারে কল করুন"
+  "CALL_EMERGENCY_CENTRE": "ইমার্জেন্সি সেন্টারে কল করুন",
+  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS" : "বিবরণ 10 অক্ষরের বেশি হওয়া উচিত"
 }

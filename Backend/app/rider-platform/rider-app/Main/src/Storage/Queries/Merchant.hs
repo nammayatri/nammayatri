@@ -171,7 +171,8 @@ transformBeamMerchantToDomain BeamM.MerchantT {..} = do
           cipherText = cipherText,
           signatureExpiry = signatureExpiry,
           createdAt = createdAt,
-          updatedAt = updatedAt
+          updatedAt = updatedAt,
+          dirCacheSlot = dirCacheSlot
         }
 
 transformDomainMerchantToBeam :: Merchant -> BeamM.Merchant
@@ -198,5 +199,6 @@ transformDomainMerchantToBeam Merchant {..} = do
       BeamM.cipherText = cipherText,
       BeamM.signatureExpiry = signatureExpiry,
       BeamM.createdAt = createdAt,
-      BeamM.updatedAt = updatedAt
+      BeamM.updatedAt = updatedAt,
+      BeamM.dirCacheSlot = dirCacheSlot
     }

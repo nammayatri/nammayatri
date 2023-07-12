@@ -159,6 +159,7 @@ library
       Domain.Types.Geometry
       Domain.Types.Issue
       Domain.Types.LocationAddress
+      Domain.Types.Maps.DirectionsCache
       Domain.Types.Maps.PlaceNameCache
       Domain.Types.Merchant
       Domain.Types.Merchant.MerchantMessage
@@ -189,6 +190,7 @@ library
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
       SharedLogic.Confirm
+      SharedLogic.DirectionsCache
       SharedLogic.GoogleTranslate
       SharedLogic.Merchant
       SharedLogic.MerchantConfig
@@ -238,6 +240,7 @@ library
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.Exophone
+      Storage.CachedQueries.Maps.DirectionsCache
       Storage.CachedQueries.Maps.PlaceNameCache
       Storage.CachedQueries.Merchant
       Storage.CachedQueries.Merchant.MerchantMessage
@@ -262,6 +265,7 @@ library
       Storage.Queries.FullEntityBuilders
       Storage.Queries.Geometry
       Storage.Queries.Issues
+      Storage.Queries.Maps.DirectionsCache
       Storage.Queries.Maps.PlaceNameCache
       Storage.Queries.Merchant
       Storage.Queries.Merchant.MerchantMessage
@@ -290,6 +294,7 @@ library
       Storage.Tabular.DriverOffer
       Storage.Tabular.Estimate
       Storage.Tabular.Issue
+      Storage.Tabular.Maps.DirectionsCache
       Storage.Tabular.Merchant
       Storage.Tabular.Merchant.MerchantPaymentMethod
       Storage.Tabular.MerchantConfig

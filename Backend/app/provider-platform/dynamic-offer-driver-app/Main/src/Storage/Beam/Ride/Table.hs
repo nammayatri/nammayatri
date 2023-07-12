@@ -78,7 +78,7 @@ data RideT f = RideT
     distanceCalculationFailed :: B.C f (Maybe Bool),
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime,
-    numberOfDeviation :: B.C f (Maybe Double)
+    numberOfDeviation :: B.C f (Maybe Bool)
   }
   deriving (Generic, B.Beamable)
 
