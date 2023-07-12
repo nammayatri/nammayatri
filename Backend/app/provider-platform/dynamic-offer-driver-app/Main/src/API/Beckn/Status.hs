@@ -53,6 +53,6 @@ status transporterId (SignatureAuthResult _ subscriber) req =
     let context = req.context
     void $
       CallBAP.withCallback dStatusRes.transporter Context.STATUS OnStatus.onStatusAPI context context.bap_uri $
-        pure $ ACL.mkOnStatusMessage (Id req.message.order_id) dStatusRes
+        pure $ ACL.mkOnStatusMessage dStatusRes
 
     pure Ack

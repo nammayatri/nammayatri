@@ -20,21 +20,24 @@ import Control.Lens ((%~))
 import qualified Data.Text as T
 import Domain.Types.Booking.Type (Booking)
 import Domain.Types.Merchant (Merchant)
-import Domain.Types.Ride (BPPRide)
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
-import Kernel.Types.Id (Id)
+import Kernel.Types.Error
 import Kernel.Utils.Common
+
+data DStatusReq = DStatusReq
+  { booking :: Booking,
+    merchant :: Merchant
+  }
 
 buildStatusReq ::
   (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
-  Id BPPRide ->
-  Booking ->
-  Merchant ->
+  DStatusReq ->
   m (BecknReq Status.StatusMessage)
-buildStatusReq bppRideId booking merchant = do
+buildStatusReq DStatusReq {..} = do
+  bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
   messageId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/cab/v1/" <> T.unpack merchant.id.getId)
   context <-
@@ -48,4 +51,8 @@ buildStatusReq bppRideId booking merchant = do
       (Just booking.providerUrl)
       merchant.city
       merchant.country
-  pure $ BecknReq context $ Status.StatusMessage bppRideId.getId
+  pure $
+    BecknReq context $
+      Status.StatusMessage
+        { order_id = bppBookingId.getId
+        }

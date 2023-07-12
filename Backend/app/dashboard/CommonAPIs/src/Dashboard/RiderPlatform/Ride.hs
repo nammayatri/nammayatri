@@ -31,10 +31,11 @@ import Kernel.External.Maps
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
-import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Centesimal
 import Kernel.Types.Id
+import Kernel.Types.Predicate
 import Kernel.Utils.Common
+import Kernel.Utils.Validation
 import Servant hiding (Summary)
 
 ---------------------------------------------------------
@@ -202,9 +203,29 @@ type TripRouteAPI =
     :> MandatoryQueryParam "lon" Double
     :> Get '[JSON] Maps.GetRoutesResp
 
--- ride force sync ---------------------------------------------
+---------------------------------------------------------
+-- multiple ride sync -----------------------------
 
-type RideForceSyncAPI =
-  Capture "rideId" (Id Ride)
-    :> "forceSync"
-    :> Post '[JSON] APISuccess
+type MultipleRideSyncAPI =
+  "sync"
+    :> ReqBody '[JSON] MultipleRideSyncReq
+    :> Post '[JSON] MultipleRideSyncResp
+
+newtype MultipleRideSyncReq = MultipleRideSyncReq
+  { rides :: [MultipleRideItem]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+newtype MultipleRideItem = MultipleRideItem
+  { rideId :: Id Ride
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets MultipleRideSyncReq where
+  hideSecrets = identity
+
+validateMultipleRideSyncReq :: Validate MultipleRideSyncReq
+validateMultipleRideSyncReq MultipleRideSyncReq {..} = do
+  validateField "rides" rides $ UniqueField @"rideId"

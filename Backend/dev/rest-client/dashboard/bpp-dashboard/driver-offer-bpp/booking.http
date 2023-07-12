@@ -22,3 +22,23 @@ content-type: application/json
         "74458af9-e0b0-4c89-95ae-2fdf1446750e"
         ]
 }
+
+
+###
+
+# @name multipleBookingsSync
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/booking/sync
+content-type: application/json
+token: {{customer_service}}
+
+{
+  "bookings": [
+    {
+      "bookingId": "45e81015-14d3-4768-9658-b656892dc202"
+    },
+    {
+      "bookingId": "fakeBookingId"
+    }
+  ]
+}

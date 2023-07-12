@@ -32,14 +32,20 @@ buildOnStatusReq ::
   m (Maybe DOnStatus.OnStatusReq)
 buildOnStatusReq req = do
   validateContext Context.ON_STATUS req.context
-  handleError req.contents $ \message -> do
+  handleError req.contents $ \message ->
     return $
       DOnStatus.OnStatusReq
         { bppBookingId = Id message.order.id,
           bookingStatus = mapToDomainBookingStatus message.order.status,
-          bppRideId = Id message.order.fulfillment.id,
-          rideStatus = mapToDomainRideStatus message.order.fulfillment.status
+          mbRideInfo = mkRideInfo <$> message.order.fulfillment
         }
+
+mkRideInfo :: OnStatus.FulfillmentInfo -> DOnStatus.RideInfo
+mkRideInfo fulfillment =
+  DOnStatus.RideInfo
+    { bppRideId = Id fulfillment.id,
+      rideStatus = mapToDomainRideStatus fulfillment.status
+    }
 
 handleError ::
   (MonadFlow m) =>

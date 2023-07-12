@@ -1,1 +1,0 @@
---TODO write query to make existing email in person table to lower case

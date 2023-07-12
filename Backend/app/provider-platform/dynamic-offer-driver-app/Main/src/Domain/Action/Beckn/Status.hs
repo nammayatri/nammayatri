@@ -23,37 +23,37 @@ import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude
-import Kernel.Types.Common
+import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 
 newtype DStatusReq = StatusReq
-  { rideId :: Id DRide.Ride
+  { bookingId :: Id DBooking.Booking
   }
 
 data DStatusRes = StatusRes
   { transporter :: DM.Merchant,
     bookingId :: Id DBooking.Booking,
     bookingStatus :: DBooking.BookingStatus,
-    rideStatus :: DRide.RideStatus
+    mbRide :: Maybe DRide.Ride
   }
 
 handler ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
   Id DM.Merchant ->
   DStatusReq ->
   m DStatusRes
 handler transporterId req = do
   transporter <-
-    QM.findById transporterId
+    CQM.findById transporterId
       >>= fromMaybeM (MerchantNotFound transporterId.getId)
-  ride <- QRide.findById req.rideId >>= fromMaybeM (RideDoesNotExist req.rideId.getId)
-  booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  booking <- Esq.runInReplica $ QRB.findById req.bookingId >>= fromMaybeM (BookingNotFound req.bookingId.getId)
+  mbRide <- Esq.runInReplica $ QRide.findActiveByRBId booking.id
   let transporterId' = booking.providerId
   unless (transporterId' == transporterId) $ throwError AccessDenied
 
@@ -61,6 +61,6 @@ handler transporterId req = do
     StatusRes
       { bookingId = booking.id,
         bookingStatus = booking.status,
-        rideStatus = ride.status,
-        ..
+        mbRide,
+        transporter
       }

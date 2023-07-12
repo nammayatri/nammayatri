@@ -25,6 +25,7 @@ import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI)
+import Kernel.Utils.Validation (runRequestValidation)
 import qualified RiderPlatformClient.RiderApp as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
@@ -33,15 +34,22 @@ import "lib-dashboard" Tools.Auth.Merchant
 
 type API =
   "booking"
-    :> StuckBookingsCancelAPI
+    :> ( StuckBookingsCancelAPI
+           :<|> MultipleBookingSyncAPI
+       )
 
 type StuckBookingsCancelAPI =
-  ApiAuth 'APP_BACKEND 'RIDES 'STUCK_BOOKING_CANCEL -- 'WRITE_ACCESS 'BOOKINGS ?
+  ApiAuth 'APP_BACKEND 'RIDES 'STUCK_BOOKING_CANCEL -- ApiAuth 'DRIVER_OFFER_BPP 'BOOKINGS ?
     :> Common.StuckBookingsCancelAPI
 
+type MultipleBookingSyncAPI =
+  ApiAuth 'APP_BACKEND 'RIDES 'MULTIPLE_BOOKING_SYNC
+    :> Common.MultipleBookingSyncAPI
+
 handler :: ShortId DM.Merchant -> FlowServer API
-handler =
-  stuckBookingsCancel
+handler merchantId =
+  stuckBookingsCancel merchantId
+    :<|> multipleBookingSync merchantId
 
 buildTransaction ::
   ( MonadFlow m,
@@ -60,3 +68,11 @@ stuckBookingsCancel merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
   transaction <- buildTransaction Common.StuckBookingsCancelEndpoint apiTokenInfo (Just req)
   T.withResponseTransactionStoring transaction $
     Client.callRiderApp checkedMerchantId (.bookings.stuckBookingsCancel) req
+
+multipleBookingSync :: ShortId DM.Merchant -> ApiTokenInfo -> Common.MultipleBookingSyncReq -> FlowHandler Common.MultipleBookingSyncResp
+multipleBookingSync merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
+  runRequestValidation Common.validateMultipleBookingSyncReq req
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.MultipleBookingSyncEndpoint apiTokenInfo (Just req)
+  T.withResponseTransactionStoring transaction $
+    Client.callRiderApp checkedMerchantId (.bookings.multipleBookingSync) req

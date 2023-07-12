@@ -15,9 +15,11 @@
 
 module Storage.Queries.Booking where
 
+import qualified Data.HashMap.Strict as HashMap
 import Domain.Types.Booking
 import Domain.Types.DriverQuote (DriverQuote)
 import Domain.Types.Merchant
+import qualified Domain.Types.Ride as DRide
 import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
@@ -28,6 +30,7 @@ import qualified Storage.Queries.DriverQuote as QDQuote
 import Storage.Queries.FullEntityBuilders
 import Storage.Tabular.Booking
 import Storage.Tabular.DriverQuote as DriverQuote
+import Storage.Tabular.Ride as Ride
 
 -- fareParams already created with driverQuote
 create :: Booking -> SqlDB ()
@@ -145,3 +148,27 @@ cancelBookings bookingIds now = do
         BookingUpdatedAt =. val now
       ]
     where_ $ tbl ^. BookingTId `in_` valList (toKey <$> bookingIds)
+
+findRideBookingsById :: Transactionable m => Id Merchant -> [Id Booking] -> m (HashMap.HashMap (Id Booking) (Booking, Maybe DRide.Ride))
+findRideBookingsById merchantId bookingIds = do
+  bookings <- findBookingsById merchantId bookingIds
+  rides <- findRidesByBookingId (bookings <&> (.id))
+  let tuple = map (\booking -> (booking.id, (booking, find (\ride -> ride.bookingId == booking.id) rides))) bookings
+  pure $ HashMap.fromList tuple
+
+findBookingsById :: Transactionable m => Id Merchant -> [Id Booking] -> m [Booking]
+findBookingsById merchantId bookingIds = Esq.buildDType $ do
+  bookingTs <- Esq.findAll' $ do
+    booking <- from $ table @BookingT
+    where_ $
+      booking ^. BookingProviderId ==. val (toKey merchantId)
+        &&. booking ^. BookingTId `in_` valList (toKey <$> bookingIds)
+    return booking
+  catMaybes <$> forM bookingTs buildFullBooking
+
+findRidesByBookingId :: Transactionable m => [Id Booking] -> m [DRide.Ride]
+findRidesByBookingId bookingIds = Esq.findAll $ do
+  ride <- from $ table @Ride.RideT
+  where_ $
+    ride ^. RideBookingId `in_` valList (toKey <$> bookingIds)
+  return ride
