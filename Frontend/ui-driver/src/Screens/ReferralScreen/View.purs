@@ -32,7 +32,7 @@ import Font.Style as FontStyle
 import JBridge (openUrlInApp, startTimerWithTime, toast)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, discard, show, (>), void, (/=), (/), (*), (+), not, (||), negate, (<=), (&&), (-))
+import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, discard, show, (>), void, (/=), (/), (*), (+), not, (||), negate, (<=), (&&), (-), (<))
 import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Gradient(..), background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, alpha, relativeLayout, scrollView, alignParentRight, alignParentBottom, imageWithFallback, frameLayout, horizontalScrollView, scrollBarX, scrollBarY, id, gradient, rotation, rotationY, shimmerFrameLayout, onRefresh,  swipeRefreshLayout)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
@@ -235,7 +235,7 @@ leaderBoard push state =
           else
             leaderBoardRanksCover push state
         , dateSelector push state
-          ]<> if state.props.currentDriverData.rank > 10 then [currentDriverRank state] else []
+          ]<> if (state.props.currentDriverData.rank > 10 || state.props.currentDriverData.rank < 1) then [currentDriverRank state] else []
       )
    ]
 
@@ -371,7 +371,7 @@ leaderBoardRanks state =
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , orientation VERTICAL
-    , padding (PaddingBottom if state.props.currentDriverData.rank > 10 then 68 else 8)
+    , padding (PaddingBottom if (state.props.currentDriverData.rank > 10 || state.props.currentDriverData.rank < 1)then 68 else 8)
     ][ shimmerView state
      , congratsBar state
      , topRankers state
@@ -479,6 +479,7 @@ rankCard item aboveThreshold state =
           , height WRAP_CONTENT
           , gravity CENTER_HORIZONTAL
           , margin (MarginHorizontal 8 6)
+          , visibility $ if checkDriverWithZeroRides item aboveThreshold state then GONE else VISIBLE
           ][ textView
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
@@ -498,22 +499,24 @@ rankCard item aboveThreshold state =
         , textView
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text $ (DS.take 12 item.goodName) <> (if DS.length item.goodName > 12 then "..." else "")
+          , text ((DS.take 12 item.goodName) <> (if DS.length item.goodName > 12 then "..." else "")) 
           , textSize FontSize.a_14
           , color if aboveThreshold || (item == currentDriverData && currentDriverData.rank > 0) then Color.white900 else Color.black800
+          , visibility $ if checkDriverWithZeroRides item aboveThreshold state then GONE else VISIBLE 
           ]
         ]
       , linearLayout
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
-        , gravity RIGHT
+        , gravity $ if checkDriverWithZeroRides item aboveThreshold state then LEFT else RIGHT
+        , padding $ PaddingLeft (if checkDriverWithZeroRides item aboveThreshold state then 10 else 0 )
         , weight 1.0
         ][ textView
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , gravity CENTER_VERTICAL
-          , text $ (show item.rides) <> " " <> (getString RIDES)
-          , textSize FontSize.a_16
+          , text $ if checkDriverWithZeroRides item aboveThreshold state then  getString ACCEPT_RIDES_TO_ENTER_RANKINGS else (show item.rides) <> " " <> (getString RIDES)
+          , textSize $ if checkDriverWithZeroRides item aboveThreshold state then FontSize.a_18 else FontSize.a_16
           , fontStyle  $ FontStyle.semiBold LanguageStyle
           , color if aboveThreshold || (item == currentDriverData && currentDriverData.rank > 0) then Color.white900 else Color.black800
           ]
@@ -1169,3 +1172,8 @@ emptyView =
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   ][]
+
+checkDriverWithZeroRides :: ST.RankCardData -> Boolean -> ST.ReferralScreenState -> Boolean
+checkDriverWithZeroRides item aboveThreshold state = 
+  let currentDriverData = state.props.currentDriverData
+  in aboveThreshold && (item == currentDriverData && currentDriverData.rank == 0) 

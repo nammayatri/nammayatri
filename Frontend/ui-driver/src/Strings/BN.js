@@ -495,5 +495,6 @@ const bengaliStrings = {
 	CONGRATULATIONS_YOU_ARE_RANK : "অভিনন্দন! আপনার র্যাঙ্ক হল ",
 	YOU : " (আপনি)",
 	DAILY : "দৈনিক",
-	WEEKLY : "সাপ্তাহিক"
+	WEEKLY : "সাপ্তাহিক",
+	ACCEPT_RIDES_TO_ENTER_RANKINGS : "র‌্যাঙ্কিং এ প্রবেশ করতে রাইড গ্রহণ করুন!"
 	}

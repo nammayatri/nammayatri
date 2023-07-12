@@ -494,5 +494,6 @@ const englishStrings = {
   CONGRATULATIONS_YOU_ARE_RANK : "Congratulations! You are RANK ",
   YOU : " (you)",
   DAILY : "Daily",
-  WEEKLY : "Weekly"
+  WEEKLY : "Weekly",
+  ACCEPT_RIDES_TO_ENTER_RANKINGS : "Accept rides to enter rankings!"
 }

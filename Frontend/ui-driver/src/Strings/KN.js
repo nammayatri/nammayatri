@@ -492,5 +492,6 @@ const kannadaStrings = {
   CONGRATULATIONS_YOU_ARE_RANK : "ಅಭಿನಂದನೆಗಳು ! ನಿಮ್ಮ ಶ್ರೇಣಿ ",
   YOU : " (ನೀವು)",
   DAILY : "ಪ್ರತಿದಿನ",
-  WEEKLY : "ಸಾಪ್ತಾಹಿಕ"
+  WEEKLY : "ಸಾಪ್ತಾಹಿಕ",
+  ACCEPT_RIDES_TO_ENTER_RANKINGS : "ಶ್ರೇಯಾಂಕಗಳನ್ನು ಪ್ರವೇಶಿಸಲು ಸವಾರಿಗಳನ್ನು ಸ್ವೀಕರಿಸಿ!"
 }
