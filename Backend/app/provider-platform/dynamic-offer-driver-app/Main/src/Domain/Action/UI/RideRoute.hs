@@ -27,4 +27,4 @@ import Kernel.Utils.Common
 rideRoute :: (EncFlow m r, CoreMetrics m, HedisFlow m r) => Id Ride -> (Id Person.Person, Id Merchant.Merchant) -> m RouteInfo
 rideRoute rideId (_, _) = do
   let key = searchRequestKey (getId rideId)
-  safeGet key >>= fromMaybeM (RideNotFound $ getId rideId)
+  safeGet key >>= fromMaybeM (RideDoesNotExist $ getId rideId)
