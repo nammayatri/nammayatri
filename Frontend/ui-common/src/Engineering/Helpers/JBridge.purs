@@ -155,6 +155,7 @@ foreign import openNavigation  :: Number -> Number -> Number -> Number -> Effect
 foreign import stopLocationPollingAPI :: Effect Unit
 foreign import startLocationPollingAPI :: Effect Unit
 foreign import startChatListenerService :: Effect Unit
+foreign import scrollOnResume :: forall action. (action -> Effect Unit) -> (action) -> Effect Unit
 foreign import stopChatListenerService :: Effect Unit
 foreign import storeCallBackMessageUpdated :: forall action. (action -> Effect Unit) -> String -> String  -> (String -> String -> String -> String -> action) -> Effect Unit
 foreign import storeCallBackOpenChatScreen :: forall action. (action -> Effect Unit) -> (action) -> Effect Unit

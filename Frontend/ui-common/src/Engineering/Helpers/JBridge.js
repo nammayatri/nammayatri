@@ -625,6 +625,24 @@ export const openChatScreen = function() {
   }
 }
 
+export const scrollOnResume = function (cb) {
+  return function (action) {
+    try {
+      var callback = function () {
+        cb(action)();
+      }
+      var scroll = function () {
+        if(JBridge.getKeysInSharedPrefs("LOCAL_STAGE") === "ChatWithCustomer" || JBridge.getKeysInSharedPrefs("LOCAL_STAGE") === "ChatWithDriver") {
+           setTimeout(callback, 500);
+        }
+      }
+      window.scrollAction = scroll;
+    } catch (e) {
+      console.error("Error in scrollOnResume : " + e);
+    }
+  }
+}
+
 export const startChatListenerService = function() {
   if (JBridge.startChatListenerService) {
     JBridge.startChatListenerService();

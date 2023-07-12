@@ -5,15 +5,16 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.PixelFormat;
+import android.graphics.Typeface;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
-import android.view.textclassifier.ConversationAction;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import androidx.core.content.res.ResourcesCompat;
 import com.google.android.material.button.MaterialButton;
 
 import org.json.JSONArray;
@@ -30,6 +31,7 @@ public class MessageOverlay implements View.OnClickListener {
     LinearLayout messageSheetHeader = null;
     TextView messageTextView = null;
     TextView TimestampView = null;
+    TextView HeaderTextView = null;
     MaterialButton suggestion1View = null;
     MaterialButton suggestion2View = null;
     MaterialButton suggestion3View = null;
@@ -62,8 +64,10 @@ public class MessageOverlay implements View.OnClickListener {
                 suggestion1View = overlayView.findViewById(R.id.suggestion1);
                 suggestion2View = overlayView.findViewById(R.id.suggestion2);
                 suggestion3View = overlayView.findViewById(R.id.suggestion3);
+                HeaderTextView = overlayView.findViewById(R.id.HeaderTextView);
                 messageTextView.setText(message);
                 TimestampView.setText(timestamp);
+                HeaderTextView.setText(R.string.message_from_customer);
                 if (overlayView != null && !overlayView.isAttachedToWindow()) {
                     windowManager.addView(overlayView, widgetLayoutParams);
                 }
@@ -80,6 +84,14 @@ public class MessageOverlay implements View.OnClickListener {
             SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             String language = sharedPref.getString("LANGUAGE_KEY", "null");
 
+            Typeface typeface;
+            if(language.equals("KN_IN")) {
+                typeface = Typeface.createFromAsset(context.getAssets(), "fonts/NotoSansKannada-SemiBold.ttf");
+                HeaderTextView.setTypeface(typeface);
+            } else {
+                typeface = ResourcesCompat.getFont(context, R.font.plus_jakartasans_semibold);
+            }
+
             if(suggestions != null) {
                 String suggestion1 = getSuggestionFromKey(context, suggestions.s1, language);
                 String suggestion2 = getSuggestionFromKey(context, suggestions.s2, language);
@@ -95,16 +107,19 @@ public class MessageOverlay implements View.OnClickListener {
                 }
                 if (suggestion1View != null && suggestion1 != "") {
                     suggestion1View.setText(suggestion1);
+                    suggestion1View.setTypeface(typeface);
                     suggestion1View.setVisibility(View.VISIBLE);
                     suggestion1View.setOnClickListener(this);
                 }
                 if (suggestion2View != null && suggestion2 != "") {
                     suggestion2View.setText(suggestion2);
+                    suggestion2View.setTypeface(typeface);
                     suggestion2View.setVisibility(View.VISIBLE);
                     suggestion2View.setOnClickListener(this);
                 }
                 if (suggestion3View != null && suggestion3 != "") {
                     suggestion3View.setText(suggestion3);
+                    suggestion3View.setTypeface(typeface);
                     suggestion3View.setVisibility(View.VISIBLE);
                     suggestion3View.setOnClickListener(this);
                 }
@@ -129,18 +144,20 @@ public class MessageOverlay implements View.OnClickListener {
 
     @Override
     public void onClick(View view) {
+        SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        String suggestions_enabled = sharedPref.getString("SUGGESTIONS_ENABLED", "null");
         switch (view.getId()) {
             case R.id.message_sheet_header:
                 startMainActivity();
                 break;
             case R.id.suggestion1:
-                if(suggestions != null) ChatService.sendMessage(getSuggestionFromKey(context, suggestions.s1, "EN_US"));
+                if(suggestions != null) ChatService.sendMessage(suggestions_enabled.equals("true") ? suggestions.s1 : getSuggestionFromKey(context, suggestions.s1, "EN_US"));
                 break;
             case R.id.suggestion2:
-                if(suggestions != null) ChatService.sendMessage(getSuggestionFromKey(context, suggestions.s2, "EN_US"));
+                if(suggestions != null) ChatService.sendMessage(suggestions_enabled.equals("true") ? suggestions.s2 : getSuggestionFromKey(context, suggestions.s2, "EN_US"));
                 break;
             case R.id.suggestion3:
-                if(suggestions != null) ChatService.sendMessage(getSuggestionFromKey(context, suggestions.s3, "EN_US"));
+                if(suggestions != null) ChatService.sendMessage(suggestions_enabled.equals("true") ? suggestions.s3 : getSuggestionFromKey(context, suggestions.s3, "EN_US"));
                 break;
         }
         overlayView.setVisibility(View.GONE);
@@ -214,10 +231,10 @@ public class MessageOverlay implements View.OnClickListener {
         try {
             JSONObject dols1BP = new JSONObject("{\"ta_in\":\"சரி\",\"ml_in\":\"ഓക്കേ\",\"kn_in\":\"ಸರಿ\",\"hi_in\":\"ठीक है\",\"en_us\":\"Ok\",\"bn_in\":\"ঠিক আছে\"}");
             JSONObject dols2BP = new JSONObject("{\"en_us\":\"Yes\",\"ta_in\":\"ஆம்\",\"kn_in\":\"ಹೌದು\",\"hi_in\":\"हाँ\",\"ml_in\":\"അതെ\",\"bn_in\":\"হ্যাঁ\"}");
-            JSONObject dols3BP = new JSONObject("{\"en_us\":\"On my way\",\"ta_in\":\"வந்துகொண்டிருக்கிறேன்\",\"kn_in\":\"ಬರುತ್ತಿದ್ದೇನೆ\",\"hi_in\":\"मैं आ रहा हूँ\",\"ml_in\":\"ഞാൻ വന്നുകൊണ്ടിരിക്കുകയാണ്\",\"bn_in\":\"আমি আসছি\"}");
+            JSONObject dols3BP = new JSONObject("{\"en_us\":\"On my way\",\"ta_in\":\"வந்துகொண்டிருக்கிறேன்\",\"kn_in\":\"ಬರುತ್ತಿದ್ದೇನೆ\",\"hi_in\":\"मैं आ रहा हूँ \",\"ml_in\":\"ഞാൻ വന്നുകൊണ്ടിരിക്കുകയാണ്\",\"bn_in\":\"আমি আসছি\"}");
             JSONObject dols1AP = new JSONObject("{\"en_us\":\"Yes\",\"ta_in\":\"ஆம்\",\"kn_in\":\"ಹೌದು\",\"hi_in\":\"हाँ\",\"ml_in\":\"അതെ\",\"bn_in\":\"হ্যাঁ\"}");
             JSONObject dols2AP = new JSONObject("{\"ta_in\":\"சரி\",\"ml_in\":\"ഓക്കേ\",\"kn_in\":\"ಸರಿ\",\"hi_in\":\"ठीक है\",\"en_us\":\"Ok\",\"bn_in\":\"ঠিক আছে\"}");
-            JSONObject dols3AP = new JSONObject("{\"en_us\" : \"At pick-up\", \"ta_in\" : \"பிக்-அப்பில் உள்ளேன்\", \"kn_in\" : \"ಪಿಕ್ ಅಪ್ ನಲ್ಲಿ\", \"hi_in\" : \"मैं लोकेशन पे हूँ\", \"ml_in\" : \"ഞാൻ പിക്ക്-അപ്പിൽ ആണ്\", \"bn_in\" : \"আমি পিক-আপ স্থানে আছি\" }");
+            JSONObject dols3AP = new JSONObject("{\"en_us\" : \"At pick-up\", \"ta_in\" : \"பிக்-அப்பில் உள்ளேன்\", \"kn_in\" : \"ಪಿಕ್ ಅಪ್ ನಲ್ಲಿ \", \"hi_in\" : \"मैं लोकेशन पे हूँ\", \"ml_in\" : \"ഞാൻ പിക്ക്-അപ്പിൽ ആണ്\", \"bn_in\" : \"আমি পিক-আপ স্থানে আছি\" }");
             JSONObject suggestions = new JSONObject();
             suggestions.put("dols1BP", dols1BP);
             suggestions.put("dols2BP", dols2BP);

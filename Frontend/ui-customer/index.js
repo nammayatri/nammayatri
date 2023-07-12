@@ -193,6 +193,9 @@ window.onPause = function () {
   }
 }
 window.onResume = function () {
+  if(window.scrollAction) {
+    window.scrollAction();
+  }
   if (window.eventListeners && window.eventListeners["onResume"]) {
     if (Array.isArray(window.eventListeners["onResume"])) {
       var onResumeEvents = window.eventListeners["onResume"];

@@ -35,17 +35,18 @@
                         android:layout_width="32dp"
                         android:layout_height="32dp"
                         android:layout_marginRight="12dp"
-                        android:src="@drawable/ny_logo_dark">
+                        android:layout_gravity="center_vertical"
+                        android:src="@drawable/ny_ic_launcher">
                     </ImageView>
                     <TextView
+                        android:id="@+id/HeaderTextView"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textSize="16dp"
                         android:layout_gravity="center_vertical"
                         android:textColor="@color/Black800"
                         android:fontFamily="@font/plus_jakartasans_semibold"
-                        android:lineHeight="16dp"
-                        android:includeFontPadding="false"
+                        android:includeFontPadding="true"
                         android:text="Message from Customer"
                         android:textFontWeight="600">
                     </TextView>
@@ -133,11 +134,10 @@
                             android:includeFontPadding="false"
                             android:textColor="#2194FF"
                             android:layout_marginRight="16dp"
-                            android:paddingVertical="16dp"
+                            android:paddingVertical="14dp"
                             android:paddingHorizontal="20dp"
                             android:textFontWeight="600"
                             android:textSize="18dp"
-                            android:lineHeight="22dp"
                             android:theme="@style/Theme.MaterialComponents.Light"
                             app:cornerRadius="32dp"
                             app:strokeColor="@color/grey900" />
@@ -156,11 +156,10 @@
                             android:includeFontPadding="false"
                             android:textColor="#2194FF"
                             android:layout_marginRight="16dp"
-                            android:paddingVertical="16dp"
+                            android:paddingVertical="14dp"
                             android:paddingHorizontal="20dp"
                             android:textFontWeight="600"
                             android:textSize="18dp"
-                            android:lineHeight="22dp"
                             android:theme="@style/Theme.MaterialComponents.Light"
                             app:cornerRadius="32dp"
                             app:strokeColor="@color/grey900" />
@@ -179,11 +178,10 @@
                             android:includeFontPadding="false"
                             android:textColor="#2194FF"
                             android:layout_marginRight="16dp"
-                            android:paddingVertical="16dp"
+                            android:paddingVertical="14dp"
                             android:paddingHorizontal="20dp"
                             android:textFontWeight="600"
                             android:textSize="18dp"
-                            android:lineHeight="22dp"
                             android:theme="@style/Theme.MaterialComponents.Light"
                             app:cornerRadius="32dp"
                             app:strokeColor="@color/grey900" />

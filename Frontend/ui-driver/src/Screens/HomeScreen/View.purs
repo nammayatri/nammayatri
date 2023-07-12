@@ -74,6 +74,7 @@ import Screens.HomeScreen.ComponentConfig
 import Screens as ScreenNames
 import Merchant.Utils (getValueFromConfig)
 import Engineering.Helpers.Commons (flowRunner)
+import Engineering.Helpers.Suggestions (getMessageFromKey)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -112,6 +113,7 @@ screen initialState =
                                   _ <- JB.storeCallBackMessageUpdated push initialState.data.activeRide.id "Driver" UpdateMessages
                                   _ <- JB.storeCallBackOpenChatScreen push OpenChatScreen
                                   _ <- JB.startChatListenerService
+                                  _ <- pure $ JB.scrollOnResume push ScrollToBottom
                                   push InitializeChat
                                   pure unit
                                 else pure unit
@@ -145,7 +147,7 @@ screen initialState =
                                   else pure unit
             "ChatWithCustomer" -> do
                                 if (initialState.data.activeRide.notifiedCustomer && (not initialState.props.updatedArrivalInChat)) then do
-                                  _ <- pure $ JB.sendMessage (getEN I_HAVE_ARRIVED)
+                                  _ <- pure $ JB.sendMessage $ getMessageFromKey "dis1AP" "EN_US"
                                   push UpdateInChat
                                   else pure unit
             _                -> do
