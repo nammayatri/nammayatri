@@ -123,7 +123,7 @@ buildDriverOfferQuoteDetails item fulfillment = do
   bppQuoteId <- (getTag "general_info" "bpp_quote_id" =<< item.tags) & fromMaybeM (InvalidRequest "Missing bpp quoteId select item")
   pure $
     DOnSelect.DriverOfferQuoteDetails
-      { distanceToPickup = distanceToPickup',
+      { distanceToPickup = realToFrac distanceToPickup',
         bppDriverQuoteId = Id bppQuoteId,
         ..
       }
@@ -146,11 +146,11 @@ getDurationToPickup tagGroups = do
   tagValue <- getTag "agent_info" "duration_to_pickup_in_s" tagGroups
   readMaybe $ T.unpack tagValue
 
-getDistanceToNearestDriver :: [OnSelect.TagGroup] -> Maybe HighPrecMeters
+getDistanceToNearestDriver :: [OnSelect.TagGroup] -> Maybe Meters
 getDistanceToNearestDriver tagGroups = do
   tagValue <- getTag "general_info" "distance_to_nearest_driver_in_m" tagGroups
   distanceToPickup <- readMaybe $ T.unpack tagValue
-  Just $ HighPrecMeters distanceToPickup
+  Just $ Meters distanceToPickup
 
 getTag :: Text -> Text -> [OnSelect.TagGroup] -> Maybe Text
 getTag tagGroupCode tagCode tagGroups = do
