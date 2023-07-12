@@ -42,7 +42,7 @@ content-type: application/json
 
 ###
 
-# @name merchanServiceUsageConfig
+# @name merchantServiceUsageConfig
 
 GET {{bap-dashboard-host}}/bap/YATRI/merchant/serviceUsageConfig
 token: {{juspay_admin}}
@@ -122,12 +122,62 @@ POST {{bap-dashboard-host}}/bap/YATRI/merchant/serviceUsageConfig/maps/update
 token: {{juspay_admin}}
 content-type: application/json
 
-{ "getDistances" : "Google",
-  "getRoutes" : "Google",
-  "snapToRoad" : "OSRM",
-  "getPlaceName" : "Google",
-  "getPlaceDetails" : "Google",
-  "autoComplete" : "MMI"
+{ "getDistances" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 11,
+      "osrmPercentage" : 19,
+      "mmiPercentage" : 70
+    },
+  "getRoutes" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 50,
+      "osrmPercentage" : 50,
+      "mmiPercentage" : null
+    },
+  "getPickupRoutes" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 11,
+      "osrmPercentage" : null,
+      "mmiPercentage" : 89
+    },
+  "getTripRoutes" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 100,
+      "osrmPercentage" : 0,
+      "mmiPercentage" : 0
+    },
+  "snapToRoad" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 11,
+      "osrmPercentage" : 19,
+      "mmiPercentage" : 70
+    },
+  "getPlaceName" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 100,
+      "osrmPercentage" : null,
+      "mmiPercentage" : 0
+    },
+  "getPlaceDetails" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 100,
+      "osrmPercentage" : null,
+      "mmiPercentage" : 0
+    },
+  "autoComplete" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 100,
+      "osrmPercentage" : null,
+      "mmiPercentage" : 0
+    }
 }
 
 ###

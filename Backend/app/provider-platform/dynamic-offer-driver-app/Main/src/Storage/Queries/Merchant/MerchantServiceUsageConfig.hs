@@ -21,11 +21,13 @@ where
 
 import Domain.Types.Merchant as DOrg
 import Domain.Types.Merchant.MerchantServiceUsageConfig
+import qualified Kernel.External.Maps.Types as Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (findById)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common (encodeToText)
 import Storage.Tabular.Merchant.MerchantServiceUsageConfig
 
 findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
@@ -42,17 +44,26 @@ updateMerchantServiceUsageConfig ::
 updateMerchantServiceUsageConfig MerchantServiceUsageConfig {..} = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
+    let updUsage dbField dbFieldPercentage dField =
+          [ dbField =. val (Maps.mapsService dField),
+            dbFieldPercentage =. (val . encodeToText . Maps.mkMapsServiceUsagePercentage $ dField)
+          ]
     set
       tbl
-      [ MerchantServiceUsageConfigGetDistances =. val getDistances,
-        MerchantServiceUsageConfigGetEstimatedPickupDistances =. val getEstimatedPickupDistances,
-        MerchantServiceUsageConfigGetRoutes =. val getRoutes,
-        MerchantServiceUsageConfigSnapToRoad =. val snapToRoad,
-        MerchantServiceUsageConfigGetPlaceName =. val getPlaceName,
-        MerchantServiceUsageConfigGetPlaceDetails =. val getPlaceDetails,
-        MerchantServiceUsageConfigAutoComplete =. val autoComplete,
-        MerchantServiceUsageConfigSmsProvidersPriorityList =. val (PostgresList smsProvidersPriorityList),
-        MerchantServiceUsageConfigUpdatedAt =. val now
-      ]
+      $ concat
+        [ updUsage MerchantServiceUsageConfigGetDistances MerchantServiceUsageConfigGetDistancesPercentage getDistances,
+          updUsage MerchantServiceUsageConfigGetEstimatedPickupDistances MerchantServiceUsageConfigGetEstimatedPickupDistancesPercentage getEstimatedPickupDistances,
+          updUsage MerchantServiceUsageConfigGetRoutes MerchantServiceUsageConfigGetRoutesPercentage getRoutes,
+          updUsage MerchantServiceUsageConfigGetPickupRoutes MerchantServiceUsageConfigGetPickupRoutesPercentage getPickupRoutes,
+          updUsage MerchantServiceUsageConfigGetTripRoutes MerchantServiceUsageConfigGetTripRoutesPercentage getTripRoutes,
+          updUsage MerchantServiceUsageConfigSnapToRoad MerchantServiceUsageConfigSnapToRoadPercentage snapToRoad,
+          updUsage MerchantServiceUsageConfigGetPlaceName MerchantServiceUsageConfigGetPlaceNamePercentage getPlaceName,
+          updUsage MerchantServiceUsageConfigGetPlaceDetails MerchantServiceUsageConfigGetPlaceDetailsPercentage getPlaceDetails,
+          updUsage MerchantServiceUsageConfigAutoComplete MerchantServiceUsageConfigAutoCompletePercentage autoComplete,
+          updUsage MerchantServiceUsageConfigGetDistancesForCancelRide MerchantServiceUsageConfigGetDistancesForCancelRidePercentage getDistancesForCancelRide,
+          [ MerchantServiceUsageConfigSmsProvidersPriorityList =. val (PostgresList smsProvidersPriorityList),
+            MerchantServiceUsageConfigUpdatedAt =. val now
+          ]
+        ]
     where_ $
       tbl ^. MerchantServiceUsageConfigTId ==. val (toKey merchantId)

@@ -498,15 +498,15 @@ type ServiceUsageConfigAPI =
 
 -- Fields with one possible value (verificationService, initiateCall, whatsappProvidersPriorityList) not included here
 data ServiceUsageConfigRes = ServiceUsageConfigRes
-  { getDistances :: Maps.MapsService,
-    getEstimatedPickupDistances :: Maybe Maps.MapsService,
-    getRoutes :: Maps.MapsService,
-    getPickupRoutes :: Maybe Maps.MapsService,
-    getTripRoutes :: Maybe Maps.MapsService,
-    snapToRoad :: Maps.MapsService,
-    getPlaceName :: Maps.MapsService,
-    getPlaceDetails :: Maps.MapsService,
-    autoComplete :: Maps.MapsService,
+  { getDistances :: Maps.MapsServiceUsage,
+    getEstimatedPickupDistances :: Maybe Maps.MapsServiceUsage,
+    getRoutes :: Maps.MapsServiceUsage,
+    getPickupRoutes :: Maybe Maps.MapsServiceUsage,
+    getTripRoutes :: Maybe Maps.MapsServiceUsage,
+    snapToRoad :: Maps.MapsServiceUsage,
+    getPlaceName :: Maps.MapsServiceUsage,
+    getPlaceDetails :: Maps.MapsServiceUsage,
+    autoComplete :: Maps.MapsServiceUsage,
     smsProvidersPriorityList :: [SMS.SmsService],
     updatedAt :: UTCTime,
     createdAt :: UTCTime
@@ -525,35 +525,76 @@ type MapsServiceUsageConfigUpdateAPI =
     :> Post '[JSON] APISuccess
 
 data MapsServiceUsageConfigUpdateReq = MapsServiceUsageConfigUpdateReq
-  { getDistances :: Maybe Maps.MapsService,
-    getEstimatedPickupDistances :: Maybe Maps.MapsService,
-    getRoutes :: Maybe Maps.MapsService,
-    snapToRoad :: Maybe Maps.MapsService,
-    getPlaceName :: Maybe Maps.MapsService,
-    getPlaceDetails :: Maybe Maps.MapsService,
-    autoComplete :: Maybe Maps.MapsService
+  { getDistances :: Maybe Maps.MapsServiceUsage,
+    getEstimatedPickupDistances :: Maybe Maps.MapsServiceUsage,
+    getRoutes :: Maybe Maps.MapsServiceUsage,
+    getPickupRoutes :: Maybe Maps.MapsServiceUsage,
+    getTripRoutes :: Maybe Maps.MapsServiceUsage,
+    snapToRoad :: Maybe Maps.MapsServiceUsage,
+    getPlaceName :: Maybe Maps.MapsServiceUsage,
+    getPlaceDetails :: Maybe Maps.MapsServiceUsage,
+    autoComplete :: Maybe Maps.MapsServiceUsage,
+    getDistancesForCancelRide :: Maybe Maps.MapsServiceUsage
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 mapsServiceUsedInReq :: MapsServiceUsageConfigUpdateReq -> Maps.MapsService -> Bool
-mapsServiceUsedInReq (MapsServiceUsageConfigUpdateReq a b c d e f g) service = service `elem` catMaybes [a, b, c, d, e, f, g]
+mapsServiceUsedInReq (MapsServiceUsageConfigUpdateReq a b c d e f g h i j) service = any (mapsServiceUsedInReqItem service) $ catMaybes [a, b, c, d, e, f, g, h, i, j]
+
+mapsServiceUsedInReqItem :: Maps.MapsService -> Maps.MapsServiceUsage -> Bool
+mapsServiceUsedInReqItem service req =
+  service == req.mapsService || case service of
+    Maps.Google -> isJust req.googlePercentage
+    Maps.OSRM -> isJust req.osrmPercentage
+    Maps.MMI -> isJust req.mmiPercentage
 
 instance HideSecrets MapsServiceUsageConfigUpdateReq where
   hideSecrets = identity
 
 validateMapsServiceUsageConfigUpdateReq :: Validate MapsServiceUsageConfigUpdateReq
-validateMapsServiceUsageConfigUpdateReq MapsServiceUsageConfigUpdateReq {..} = do
-  let mkMessage field = field <> " value is not allowed"
+validateMapsServiceUsageConfigUpdateReq MapsServiceUsageConfigUpdateReq {..} =
   sequenceA_
-    [ validateField "getDistances" getDistances $ InMaybe $ PredicateFunc mkMessage Maps.getDistancesProvided,
-      validateField "getEstimatedPickupDistances" getEstimatedPickupDistances $ InMaybe $ PredicateFunc mkMessage Maps.getDistancesProvided,
-      validateField "getRoutes" getRoutes $ InMaybe $ PredicateFunc mkMessage Maps.getRoutesProvided,
-      validateField "snapToRoad" snapToRoad $ InMaybe $ PredicateFunc mkMessage Maps.snapToRoadProvided,
-      validateField "getPlaceName" getPlaceName $ InMaybe $ PredicateFunc mkMessage Maps.getPlaceNameProvided,
-      validateField "getPlaceDetails" getPlaceDetails $ InMaybe $ PredicateFunc mkMessage Maps.getPlaceDetailsProvided,
-      validateField "autoComplete" autoComplete $ InMaybe $ PredicateFunc mkMessage Maps.autoCompleteProvided
+    [ validateServiceUsageConfig "getDistances" getDistances Maps.getDistancesProvided,
+      validateServiceUsageConfig "getEstimatedPickupDistances" getEstimatedPickupDistances Maps.getDistancesProvided,
+      validateServiceUsageConfig "getRoutes" getRoutes Maps.getRoutesProvided,
+      validateServiceUsageConfig "getPickupRoutes" getPickupRoutes Maps.getRoutesProvided,
+      validateServiceUsageConfig "getTripRoutes" getTripRoutes Maps.getRoutesProvided,
+      validateServiceUsageConfig "snapToRoad" snapToRoad Maps.snapToRoadProvided,
+      validateServiceUsageConfig "getPlaceName" getPlaceName Maps.getPlaceNameProvided,
+      validateServiceUsageConfig "getPlaceDetails" getPlaceDetails Maps.getPlaceDetailsProvided,
+      validateServiceUsageConfig "autoComplete" autoComplete Maps.autoCompleteProvided,
+      validateServiceUsageConfig "getDistancesForCancelRide" getDistancesForCancelRide Maps.getDistancesProvided
     ]
+
+validateServiceUsageConfig :: Text -> Maybe Maps.MapsServiceUsage -> (Maps.MapsService -> Bool) -> Validation
+validateServiceUsageConfig fieldName field fieldProvided = do
+  let mkNotAllowedMessage f = f <> " value is not allowed"
+  let mkIncorrectSumMessage f = "sum of percentages should be 100 for field: " <> f
+  sequenceA_
+    [ validateField fieldName field $
+        InMaybe $
+          PredicateFunc mkIncorrectSumMessage incorrectSumPredicate
+            `And` PredicateFunc mkNotAllowedMessage (mkNotAllowedPredicate fieldProvided),
+      whenJust field \mapsServiceUsage ->
+        sequenceA_
+          [ validateField "googlePercentage" mapsServiceUsage.googlePercentage $ InMaybe $ InRange @Int 0 100,
+            validateField "osrmPercentage" mapsServiceUsage.osrmPercentage $ InMaybe $ InRange @Int 0 100,
+            validateField "mmiPercentage" mapsServiceUsage.mmiPercentage $ InMaybe $ InRange @Int 0 100
+          ]
+    ]
+
+mkNotAllowedPredicate :: (Maps.MapsService -> Bool) -> Maps.MapsServiceUsage -> Bool
+mkNotAllowedPredicate fieldProvided mapsServiceUsage =
+  fieldProvided mapsServiceUsage.mapsService
+    && (isNothing mapsServiceUsage.googlePercentage || fieldProvided Maps.Google)
+    && (isNothing mapsServiceUsage.osrmPercentage || fieldProvided Maps.OSRM)
+    && (isNothing mapsServiceUsage.mmiPercentage || fieldProvided Maps.MMI)
+
+incorrectSumPredicate :: Maps.MapsServiceUsage -> Bool
+incorrectSumPredicate Maps.MapsServiceUsage {..} = do
+  let percentages = catMaybes [googlePercentage, osrmPercentage, mmiPercentage]
+  null percentages || sum percentages == 100
 
 ---------------------------------------------------------
 -- merchant sms service config usage update -------------

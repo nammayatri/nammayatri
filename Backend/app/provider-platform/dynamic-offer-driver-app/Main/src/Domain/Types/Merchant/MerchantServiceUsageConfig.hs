@@ -18,7 +18,7 @@ import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
 import Kernel.External.AadhaarVerification.Types (AadhaarVerificationService)
 import Kernel.External.Call (CallService)
-import Kernel.External.Maps.Types (MapsService)
+import Kernel.External.Maps.Types (MapsServiceUsage)
 import Kernel.External.SMS.Types
 import Kernel.External.Verification.Types (VerificationService)
 import Kernel.External.Whatsapp.Types
@@ -28,16 +28,16 @@ import Kernel.Types.Id
 data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
   { merchantId :: Id Merchant,
     initiateCall :: CallService,
-    getDistances :: MapsService,
-    getEstimatedPickupDistances :: MapsService,
-    getRoutes :: MapsService,
-    getPickupRoutes :: MapsService,
-    getTripRoutes :: MapsService,
-    snapToRoad :: MapsService,
-    getPlaceName :: MapsService,
-    getPlaceDetails :: MapsService,
-    autoComplete :: MapsService,
-    getDistancesForCancelRide :: MapsService,
+    getDistances :: MapsServiceUsage,
+    getEstimatedPickupDistances :: MapsServiceUsage,
+    getRoutes :: MapsServiceUsage,
+    getPickupRoutes :: MapsServiceUsage,
+    getTripRoutes :: MapsServiceUsage,
+    snapToRoad :: MapsServiceUsage,
+    getPlaceName :: MapsServiceUsage,
+    getPlaceDetails :: MapsServiceUsage,
+    autoComplete :: MapsServiceUsage,
+    getDistancesForCancelRide :: MapsServiceUsage,
     smsProvidersPriorityList :: [SmsService],
     whatsappProvidersPriorityList :: [WhatsappService],
     verificationService :: VerificationService,

@@ -30,7 +30,10 @@ import Kernel.External.Whatsapp.Types (WhatsappService)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import Kernel.Utils.Common (decodeFromText, encodeToText)
+import Kernel.Utils.Error
 import Storage.Tabular.Merchant (MerchantTId)
+import Tools.Error
 
 mkPersist
   defaultSqlSettings
@@ -39,14 +42,23 @@ mkPersist
       merchantId MerchantTId
       initiateCall CallService
       getDistances MapsService
+      getDistancesPercentage Text
       getRoutes MapsService
+      getRoutesPercentage Text
       snapToRoad MapsService
+      snapToRoadPercentage Text
       getPlaceName MapsService
+      getPlaceNamePercentage Text
       getPickupRoutes MapsService
+      getPickupRoutesPercentage Text
       getTripRoutes MapsService
+      getTripRoutesPercentage Text
       getPlaceDetails MapsService
+      getPlaceDetailsPercentage Text
       autoComplete MapsService
+      autoCompletePercentage Text
       getDistancesForCancelRide MapsService
+      getDistancesForCancelRidePercentage Text
       notifyPerson NotificationService
       useFraudDetection Bool
       smsProvidersPriorityList (PostgresList SmsService)
@@ -64,19 +76,60 @@ instance TEntityKey MerchantServiceUsageConfigT where
 
 instance FromTType MerchantServiceUsageConfigT Domain.MerchantServiceUsageConfig where
   fromTType MerchantServiceUsageConfigT {..} = do
+    getDistances' <- parseField "getDistances" getDistances getDistancesPercentage
+    getRoutes' <- parseField "getRoutes" getRoutes getRoutesPercentage
+    getPickupRoutes' <- parseField "getPickupRoutes" getPickupRoutes getPickupRoutesPercentage
+    getTripRoutes' <- parseField "getTripRoutes" getTripRoutes getTripRoutesPercentage
+    snapToRoad' <- parseField "snapToRoad" snapToRoad snapToRoadPercentage
+    getPlaceName' <- parseField "getPlaceName" getPlaceName getPlaceNamePercentage
+    getPlaceDetails' <- parseField "getPlaceDetails" getPlaceDetails getPlaceDetailsPercentage
+    autoComplete' <- parseField "autoComplete" autoComplete autoCompletePercentage
+    getDistancesForCancelRide' <- parseField "getDistancesForCancelRide" getDistancesForCancelRide getDistancesForCancelRidePercentage
     return $
       Domain.MerchantServiceUsageConfig
         { merchantId = fromKey merchantId,
           smsProvidersPriorityList = unPostgresList smsProvidersPriorityList,
           whatsappProvidersPriorityList = unPostgresList whatsappProvidersPriorityList,
+          getDistances = getDistances',
+          getRoutes = getRoutes',
+          getPickupRoutes = getPickupRoutes',
+          getTripRoutes = getTripRoutes',
+          snapToRoad = snapToRoad',
+          getPlaceName = getPlaceName',
+          getPlaceDetails = getPlaceDetails',
+          autoComplete = autoComplete',
+          getDistancesForCancelRide = getDistancesForCancelRide',
           ..
         }
+    where
+      parseField fieldName field fieldPercentage = do
+        mapsServiceUsagePercentage <- decodeFromText fieldPercentage & fromMaybeM (InternalError $ "Unable to decode MerchantServiceUsageConfigT." <> fieldName <> "Percentage")
+        pure $ mkMapsServiceUsage field mapsServiceUsagePercentage
 
 instance ToTType MerchantServiceUsageConfigT Domain.MerchantServiceUsageConfig where
   toTType Domain.MerchantServiceUsageConfig {..} = do
+    let mkPercentage = encodeToText . mkMapsServiceUsagePercentage
     MerchantServiceUsageConfigT
       { merchantId = toKey merchantId,
         smsProvidersPriorityList = PostgresList smsProvidersPriorityList,
         whatsappProvidersPriorityList = PostgresList whatsappProvidersPriorityList,
+        getDistances = getDistances.mapsService,
+        getDistancesPercentage = mkPercentage getDistances,
+        getRoutes = getRoutes.mapsService,
+        getRoutesPercentage = mkPercentage getRoutes,
+        getPickupRoutes = getPickupRoutes.mapsService,
+        getPickupRoutesPercentage = mkPercentage getPickupRoutes,
+        getTripRoutes = getTripRoutes.mapsService,
+        getTripRoutesPercentage = mkPercentage getTripRoutes,
+        snapToRoad = snapToRoad.mapsService,
+        snapToRoadPercentage = mkPercentage snapToRoad,
+        getPlaceName = getPlaceName.mapsService,
+        getPlaceNamePercentage = mkPercentage getPlaceName,
+        getPlaceDetails = getPlaceDetails.mapsService,
+        getPlaceDetailsPercentage = mkPercentage getPlaceDetails,
+        autoComplete = autoComplete.mapsService,
+        autoCompletePercentage = mkPercentage autoComplete,
+        getDistancesForCancelRide = getDistancesForCancelRide.mapsService,
+        getDistancesForCancelRidePercentage = mkPercentage getDistancesForCancelRide,
         ..
       }

@@ -292,14 +292,71 @@ POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/merchant/servic
 token: {{juspay_admin}}
 content-type: application/json
 
-{ "getDistances" : "Google",
-  "getEstimatedPickupDistances" : "Google",
-  "getRoutes" : "Google",
-  "snapToRoad" : "OSRM",
-  "getPlaceName" : "Google",
-  "getPlaceDetails" : "Google",
-  "autoComplete" : "MMI"
+{ "getDistances" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 100,
+      "osrmPercentage" : 0,
+      "mmiPercentage" : 0
+    },
+  "getEstimatedPickupDistances" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 100,
+      "osrmPercentage" : 0,
+      "mmiPercentage" : 0
+    },
+  "getRoutes" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 100,
+      "osrmPercentage" : 0,
+      "mmiPercentage" : 0
+    },
+  "getPickupRoutes" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 100,
+      "osrmPercentage" : 0,
+      "mmiPercentage" : 0
+    },
+  "getTripRoutes" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 100,
+      "osrmPercentage" : 0,
+      "mmiPercentage" : 0
+    },
+  "snapToRoad" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 100,
+      "osrmPercentage" : 0,
+      "mmiPercentage" : 0
+    },
+  "getPlaceName" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 100,
+      "osrmPercentage" : null,
+      "mmiPercentage" : 0
+    },
+  "getPlaceDetails" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 100,
+      "osrmPercentage" : null,
+      "mmiPercentage" : 0
+    },
+  "autoComplete" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 100,
+      "osrmPercentage" : null,
+      "mmiPercentage" : 0
+    }
 }
+
 ###
 
 # @name merchantMyValueFirstConfigUpdate

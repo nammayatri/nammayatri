@@ -542,10 +542,13 @@ mapsServiceUsageConfigUpdate merchantShortId req = do
         merchantServiceUsageConfig{getDistances = fromMaybe merchantServiceUsageConfig.getDistances req.getDistances,
                                    getEstimatedPickupDistances = fromMaybe merchantServiceUsageConfig.getEstimatedPickupDistances req.getEstimatedPickupDistances,
                                    getRoutes = fromMaybe merchantServiceUsageConfig.getRoutes req.getRoutes,
+                                   getPickupRoutes = fromMaybe merchantServiceUsageConfig.getPickupRoutes req.getPickupRoutes,
+                                   getTripRoutes = fromMaybe merchantServiceUsageConfig.getTripRoutes req.getTripRoutes,
                                    snapToRoad = fromMaybe merchantServiceUsageConfig.snapToRoad req.snapToRoad,
                                    getPlaceName = fromMaybe merchantServiceUsageConfig.getPlaceName req.getPlaceName,
                                    getPlaceDetails = fromMaybe merchantServiceUsageConfig.getPlaceDetails req.getPlaceDetails,
-                                   autoComplete = fromMaybe merchantServiceUsageConfig.autoComplete req.autoComplete
+                                   autoComplete = fromMaybe merchantServiceUsageConfig.autoComplete req.autoComplete,
+                                   getDistancesForCancelRide = fromMaybe merchantServiceUsageConfig.getDistancesForCancelRide req.getDistancesForCancelRide
                                   }
   Esq.runTransaction $ do
     CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
