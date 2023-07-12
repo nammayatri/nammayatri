@@ -236,7 +236,7 @@ eval (PasswordModalAction (PopUpModal.ETextController (PrimaryEditTextController
 
 eval (ContactSupportAction (PopUpModal.OnButton1Click)) state = continue state { props = state.props { callSupportPopUpVisible = not state.props.callSupportPopUpVisible  }}
 eval (ContactSupportAction (PopUpModal.OnButton2Click)) state = do
-    void $ pure $ showDialer (getSupportNumber "") true
+    void $ pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
     continue state { props = state.props { callSupportPopUpVisible = not state.props.callSupportPopUpVisible  }}
 
 eval (SuccessScreenExpireCountDwon seconds id status timerId) state = if status == "EXPIRED" then do
