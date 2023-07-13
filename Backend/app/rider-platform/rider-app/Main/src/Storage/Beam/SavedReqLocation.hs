@@ -28,7 +28,7 @@ import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -94,28 +94,6 @@ savedReqLocationTMod =
       tag = B.fieldNamed "tag",
       riderId = B.fieldNamed "rider_id",
       ward = B.fieldNamed "ward"
-    }
-
-defaultSavedReqLocation :: SavedReqLocation
-defaultSavedReqLocation =
-  SavedReqLocationT
-    { id = "",
-      lat = 0.0,
-      lon = 0.0,
-      street = Nothing,
-      door = Nothing,
-      city = Nothing,
-      state = Nothing,
-      country = Nothing,
-      building = Nothing,
-      areaCode = Nothing,
-      area = Nothing,
-      placeId = Nothing,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate,
-      tag = "",
-      riderId = "",
-      ward = Nothing
     }
 
 instance Serialize SavedReqLocation where

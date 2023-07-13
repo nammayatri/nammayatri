@@ -288,7 +288,7 @@ transformBeamEstimateToDomain e@BeamE.EstimateT {..} = do
 
 transformDomainEstimateToBeam :: Estimate -> BeamE.Estimate
 transformDomainEstimateToBeam Estimate {..} =
-  BeamE.defaultEstimate
+  BeamE.EstimateT
     { BeamE.id = getId id,
       BeamE.requestId = getId requestId,
       BeamE.merchantId = getId <$> merchantId,

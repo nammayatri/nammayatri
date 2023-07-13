@@ -178,7 +178,7 @@ transformBeamMerchantToDomain BeamM.MerchantT {..} = do
 transformDomainMerchantToBeam :: Merchant -> BeamM.Merchant
 transformDomainMerchantToBeam Merchant {..} = do
   let Geo.GeofencingConfig {..} = geofencingConfig
-  BeamM.defaultMerchant
+  BeamM.MerchantT
     { BeamM.id = getId id,
       BeamM.subscriberId = getShortId subscriberId,
       BeamM.shortId = getShortId shortId,

@@ -68,7 +68,7 @@ transformBeamMerchantConfigToDomain BeamMC.MerchantConfigT {..} = do
 
 transformDomainMerchantConfigToBeam :: MerchantConfig -> BeamMC.MerchantConfig
 transformDomainMerchantConfigToBeam MerchantConfig {..} =
-  BeamMC.defaultMerchantConfig
+  BeamMC.MerchantConfigT
     { BeamMC.id = getId id,
       BeamMC.merchantId = getId merchantId,
       BeamMC.fraudBookingCancellationCountThreshold = fraudBookingCancellationCountThreshold,

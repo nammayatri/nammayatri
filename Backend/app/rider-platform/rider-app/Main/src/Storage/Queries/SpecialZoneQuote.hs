@@ -55,7 +55,7 @@ transformBeamSpecialZoneQuoteToDomain BeamSZQ.SpecialZoneQuoteT {..} = do
 
 transformDomainSpecialZoneQuoteToBeam :: SpecialZoneQuote -> BeamSZQ.SpecialZoneQuote
 transformDomainSpecialZoneQuoteToBeam SpecialZoneQuote {..} =
-  BeamSZQ.defaultSpecialZoneQuote
+  BeamSZQ.SpecialZoneQuoteT
     { BeamSZQ.id = getId id,
       BeamSZQ.quoteId = quoteId
     }

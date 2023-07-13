@@ -70,7 +70,7 @@ transformBeamEstimateBreakupToDomain BeamEB.EstimateBreakupT {..} = do
 
 transformDomainEstimateBreakupToBeam :: EstimateBreakup -> BeamEB.EstimateBreakup
 transformDomainEstimateBreakupToBeam EstimateBreakup {..} =
-  BeamEB.defaultEstimateBreakup
+  BeamEB.EstimateBreakupT
     { BeamEB.id = getId id,
       BeamEB.estimateId = getId estimateId,
       BeamEB.title = title,

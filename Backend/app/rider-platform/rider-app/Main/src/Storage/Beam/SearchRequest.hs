@@ -30,7 +30,7 @@ import GHC.Generics (Generic)
 import Kernel.External.Maps (Language)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -102,31 +102,6 @@ searchRequestTMod =
       bundleVersion = B.fieldNamed "bundle_version",
       clientVersion = B.fieldNamed "client_version",
       createdAt = B.fieldNamed "created_at"
-    }
-
-defaultSearchRequest :: SearchRequest
-defaultSearchRequest =
-  SearchRequestT
-    { id = "",
-      startTime = defaultUTCDate,
-      validTill = defaultUTCDate,
-      riderId = "",
-      fromLocationId = "",
-      toLocationId = Nothing,
-      distance = Nothing,
-      maxDistance = Nothing,
-      estimatedRideDuration = Nothing,
-      device = Nothing,
-      merchantId = "",
-      language = Nothing,
-      customerExtraFee = Nothing,
-      availablePaymentMethods = [],
-      selectedPaymentMethodId = Nothing,
-      autoAssignEnabled = Nothing,
-      autoAssignEnabledV2 = Nothing,
-      bundleVersion = Nothing,
-      clientVersion = Nothing,
-      createdAt = defaultUTCDate
     }
 
 instance Serialize SearchRequest where

@@ -35,7 +35,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -90,16 +90,6 @@ merchantMessageTMod =
       message = B.fieldNamed "message",
       updatedAt = B.fieldNamed "updated_at",
       createdAt = B.fieldNamed "created_at"
-    }
-
-defaultMerchantMessage :: MerchantMessage
-defaultMerchantMessage =
-  MerchantMessageT
-    { merchantId = "",
-      messageKey = "",
-      message = "",
-      updatedAt = defaultUTCDate,
-      createdAt = defaultUTCDate
     }
 
 instance Serialize MerchantMessage where

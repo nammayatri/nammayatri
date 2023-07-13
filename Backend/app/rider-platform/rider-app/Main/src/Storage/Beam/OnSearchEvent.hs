@@ -28,7 +28,7 @@ import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -74,18 +74,6 @@ onSearchEventTMod =
       errorType = B.fieldNamed "error_type",
       errorMessage = B.fieldNamed "error_message",
       createdAt = B.fieldNamed "created_at"
-    }
-
-defaultOnSearchEvent :: OnSearchEvent
-defaultOnSearchEvent =
-  OnSearchEventT
-    { id = "",
-      bppId = "",
-      messageId = "",
-      errorCode = Nothing,
-      errorType = Nothing,
-      errorMessage = Nothing,
-      createdAt = defaultUTCDate
     }
 
 instance Serialize OnSearchEvent where

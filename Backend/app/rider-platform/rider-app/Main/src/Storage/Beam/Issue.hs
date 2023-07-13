@@ -28,7 +28,7 @@ import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -76,19 +76,6 @@ issueTMod =
       description = B.fieldNamed "description",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
-    }
-
-defaultIssue :: Issue
-defaultIssue =
-  IssueT
-    { id = "",
-      customerId = "",
-      bookingId = Nothing,
-      contactEmail = Nothing,
-      reason = "",
-      description = "",
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
     }
 
 instance Serialize Issue where

@@ -76,7 +76,7 @@ transformBeamSosToDomain BeamS.SosT {..} = do
 
 transformDomainSosToBeam :: Sos -> BeamS.Sos
 transformDomainSosToBeam Sos {..} =
-  BeamS.defaultSos
+  BeamS.SosT
     { BeamS.id = getId id,
       BeamS.personId = getId personId,
       BeamS.rideId = getId rideId,

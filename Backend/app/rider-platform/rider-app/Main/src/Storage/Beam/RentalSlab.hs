@@ -99,14 +99,6 @@ rentalSlabTMod =
       baseDuration = B.fieldNamed "base_duration"
     }
 
-defaultRentalSlab :: RentalSlab
-defaultRentalSlab =
-  RentalSlabT
-    { id = "",
-      baseDistance = "",
-      baseDuration = ""
-    }
-
 instance Serialize RentalSlab where
   put = error "undefined"
   get = error "undefined"

@@ -120,7 +120,7 @@ transformBeamCallStatusToDomain BeamCS.CallStatusT {..} = do
 
 transformDomainCallStatusToBeam :: CallStatus -> BeamCS.CallStatus
 transformDomainCallStatusToBeam CallStatus {..} =
-  BeamCS.defaultCallStatus
+  BeamCS.CallStatusT
     { BeamCS.id = getId id,
       BeamCS.callId = callId,
       BeamCS.rideId = getId rideId,

@@ -50,7 +50,7 @@ transformBeamCallbackRequestToDomain BeamCR.CallbackRequestT {..} = do
 
 transformDomainCallbackRequestToBeam :: CallbackRequest -> BeamCR.CallbackRequest
 transformDomainCallbackRequestToBeam CallbackRequest {..} =
-  BeamCR.defaultCallbackRequest
+  BeamCR.CallbackRequestT
     { BeamCR.id = getId id,
       BeamCR.merchantId = getId merchantId,
       BeamCR.customerName = customerName,

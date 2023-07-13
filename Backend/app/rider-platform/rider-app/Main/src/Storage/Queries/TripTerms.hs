@@ -55,7 +55,7 @@ transformBeamTripTermsToDomain BeamTT.TripTermsT {..} = do
 
 transformDomainTripTermsToBeam :: TripTerms -> BeamTT.TripTerms
 transformDomainTripTermsToBeam TripTerms {..} =
-  BeamTT.defaultTripTerms
+  BeamTT.TripTermsT
     { BeamTT.id = getId id,
       BeamTT.descriptions = DTT.intercalateDescriptions descriptions
     }

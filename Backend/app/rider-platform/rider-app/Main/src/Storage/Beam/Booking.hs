@@ -37,7 +37,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -153,40 +153,6 @@ bookingTMod =
       specialLocationTag = B.fieldNamed "special_location_tag",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
-    }
-
-defaultBooking :: Booking
-defaultBooking =
-  BookingT
-    { id = "",
-      transactionId = "",
-      fareProductType = "",
-      bppBookingId = Nothing,
-      quoteId = Nothing,
-      riderId = "",
-      paymentMethodId = Nothing,
-      paymentUrl = Nothing,
-      status = "",
-      providerId = "",
-      providerUrl = "",
-      providerName = "",
-      providerMobileNumber = "",
-      primaryExophone = "",
-      startTime = defaultUTCDate,
-      fromLocationId = "",
-      toLocationId = Nothing,
-      estimatedFare = "",
-      discount = Nothing,
-      estimatedTotalFare = "",
-      distance = Nothing,
-      otpCode = Nothing,
-      vehicleVariant = "",
-      tripTermsId = Nothing,
-      rentalSlabId = Nothing,
-      merchantId = "",
-      specialLocationTag = Nothing,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
     }
 
 instance Serialize Booking where

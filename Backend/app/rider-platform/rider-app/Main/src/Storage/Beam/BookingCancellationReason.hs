@@ -139,21 +139,6 @@ bookingCancellationReasonToPSModifiers :: M.Map Text (A.Value -> A.Value)
 bookingCancellationReasonToPSModifiers =
   M.empty
 
-defaultBookingCancellationReason :: BookingCancellationReason
-defaultBookingCancellationReason =
-  BookingCancellationReasonT
-    { bookingId = "",
-      rideId = Nothing,
-      merchantId = Nothing,
-      source = "",
-      reasonCode = Nothing,
-      reasonStage = Nothing,
-      additionalInfo = Nothing,
-      driverCancellationLocationLat = Nothing,
-      driverCancellationLocationLon = Nothing,
-      driverDistToPickup = Nothing
-    }
-
 instance Serialize BookingCancellationReason where
   put = error "undefined"
   get = error "undefined"

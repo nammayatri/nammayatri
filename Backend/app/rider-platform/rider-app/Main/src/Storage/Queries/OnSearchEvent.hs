@@ -50,7 +50,7 @@ transformBeamOnSearchEventToDomain BeamOSE.OnSearchEventT {..} = do
 
 transformDomainOnSearchEventToBeam :: OnSearchEvent -> BeamOSE.OnSearchEvent
 transformDomainOnSearchEventToBeam OnSearchEvent {..} =
-  BeamOSE.defaultOnSearchEvent
+  BeamOSE.OnSearchEventT
     { BeamOSE.id = getId id,
       BeamOSE.bppId = bppId,
       BeamOSE.messageId = messageId,

@@ -518,7 +518,7 @@ transformBeamRideToDomain BeamR.RideT {..} = do
 
 transformDomainRideToBeam :: Ride -> BeamR.Ride
 transformDomainRideToBeam Ride {..} =
-  BeamR.defaultRide
+  BeamR.RideT
     { BeamR.id = getId id,
       BeamR.bppRideId = getId bppRideId,
       BeamR.bookingId = getId bookingId,

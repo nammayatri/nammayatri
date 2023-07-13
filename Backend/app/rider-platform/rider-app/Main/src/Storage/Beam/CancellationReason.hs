@@ -74,18 +74,6 @@ cancellationReasonTMod =
       priority = B.fieldNamed "priority"
     }
 
-defaultCancellationReason :: CancellationReason
-defaultCancellationReason =
-  CancellationReasonT
-    { reasonCode = "",
-      description = "",
-      enabled = False,
-      onSearch = False,
-      onConfirm = False,
-      onAssign = False,
-      priority = 0
-    }
-
 instance Serialize CancellationReason where
   put = error "undefined"
   get = error "undefined"

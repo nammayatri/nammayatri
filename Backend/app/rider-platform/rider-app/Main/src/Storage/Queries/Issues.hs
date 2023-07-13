@@ -99,7 +99,7 @@ transformBeamIssueToDomain BeamI.IssueT {..} = do
 
 transformDomainIssueToBeam :: Issue -> BeamI.Issue
 transformDomainIssueToBeam Issue {..} =
-  BeamI.defaultIssue
+  BeamI.IssueT
     { BeamI.id = getId id,
       BeamI.customerId = getId customerId,
       BeamI.bookingId = getId <$> bookingId,

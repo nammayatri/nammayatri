@@ -64,13 +64,6 @@ specialZoneQuoteTMod =
       quoteId = B.fieldNamed "quote_id"
     }
 
-defaultSpecialZoneQuote :: SpecialZoneQuote
-defaultSpecialZoneQuote =
-  SpecialZoneQuoteT
-    { id = "",
-      quoteId = ""
-    }
-
 instance Serialize SpecialZoneQuote where
   put = error "undefined"
   get = error "undefined"

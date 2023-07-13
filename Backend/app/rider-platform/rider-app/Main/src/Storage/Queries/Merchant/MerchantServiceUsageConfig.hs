@@ -116,7 +116,7 @@ transformBeamMerchantServiceUsageConfigToDomain BeamMSUC.MerchantServiceUsageCon
 
 transformDomainMerchantServiceUsageConfigToBeam :: MerchantServiceUsageConfig -> BeamMSUC.MerchantServiceUsageConfig
 transformDomainMerchantServiceUsageConfigToBeam MerchantServiceUsageConfig {..} =
-  BeamMSUC.defaultMerchantServiceUsageConfig
+  BeamMSUC.MerchantServiceUsageConfigT
     { BeamMSUC.merchantId = getId merchantId,
       BeamMSUC.initiateCall = initiateCall,
       BeamMSUC.notifyPerson = notifyPerson,

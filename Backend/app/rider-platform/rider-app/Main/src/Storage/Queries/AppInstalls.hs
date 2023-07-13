@@ -63,7 +63,7 @@ transformBeamAppInstallsToDomain BeamAI.AppInstallsT {..} = do
 
 transformDomainAppInstallsToBeam :: AppInstalls -> BeamAI.AppInstalls
 transformDomainAppInstallsToBeam AppInstalls {..} =
-  BeamAI.defaultAppInstalls
+  BeamAI.AppInstallsT
     { BeamAI.id = getId id,
       BeamAI.deviceToken = deviceToken,
       BeamAI.source = source,

@@ -59,7 +59,7 @@ transformBeamSearchReqLocationToDomain BeamSRL.SearchReqLocationT {..} = do
 
 transformDomainSearchReqLocationToBeam :: SearchReqLocation -> BeamSRL.SearchReqLocation
 transformDomainSearchReqLocationToBeam SearchReqLocation {..} =
-  BeamSRL.defaultSearchReqLocation
+  BeamSRL.SearchReqLocationT
     { BeamSRL.id = getId id,
       BeamSRL.lat = lat,
       BeamSRL.lon = lon,

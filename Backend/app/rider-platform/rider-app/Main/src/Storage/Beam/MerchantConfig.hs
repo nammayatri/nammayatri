@@ -111,23 +111,6 @@ merchantConfigTMod =
       enabled = B.fieldNamed "enabled"
     }
 
-defaultMerchantConfig :: MerchantConfig
-defaultMerchantConfig =
-  MerchantConfigT
-    { id = "",
-      merchantId = "",
-      fraudBookingCancellationCountThreshold = 0,
-      fraudBookingCancellationCountWindow = "",
-      fraudBookingTotalCountThreshold = 0,
-      fraudBookingCancelledByDriverCountThreshold = 0,
-      fraudBookingCancelledByDriverCountWindow = "",
-      fraudSearchCountThreshold = 0,
-      fraudSearchCountWindow = "",
-      fraudRideCountThreshold = 0,
-      fraudRideCountWindow = "",
-      enabled = False
-    }
-
 instance Serialize MerchantConfig where
   put = error "undefined"
   get = error "undefined"

@@ -30,7 +30,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -84,22 +84,6 @@ driverOfferTMod =
       rating = B.fieldNamed "rating",
       status = B.fieldNamed "status",
       updatedAt = B.fieldNamed "updated_at"
-    }
-
-defaultDriverOffer :: DriverOffer
-defaultDriverOffer =
-  DriverOfferT
-    { id = "",
-      estimateId = "",
-      merchantId = Nothing,
-      driverName = "",
-      durationToPickup = 0,
-      distanceToPickup = "",
-      validTill = defaultUTCDate,
-      bppQuoteId = "",
-      rating = Nothing,
-      status = "",
-      updatedAt = defaultUTCDate
     }
 
 instance Serialize DriverOffer where

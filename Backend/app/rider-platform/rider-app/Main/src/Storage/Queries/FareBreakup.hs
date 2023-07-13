@@ -68,7 +68,7 @@ transformBeamFareBreakupToDomain BeamFB.FareBreakupT {..} = do
 
 transformDomainFareBreakupToBeam :: FareBreakup -> BeamFB.FareBreakup
 transformDomainFareBreakupToBeam FareBreakup {..} =
-  BeamFB.defaultFareBreakup
+  BeamFB.FareBreakupT
     { BeamFB.id = getId id,
       BeamFB.bookingId = getId bookingId,
       BeamFB.description = description,

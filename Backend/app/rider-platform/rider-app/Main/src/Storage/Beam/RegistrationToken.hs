@@ -35,7 +35,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -136,26 +136,6 @@ registrationTokenTMod =
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at",
       info = B.fieldNamed "info"
-    }
-
-defaultRegistrationToken :: RegistrationToken
-defaultRegistrationToken =
-  RegistrationTokenT
-    { id = "",
-      token = "",
-      attempts = 0,
-      authMedium = "",
-      authType = "",
-      authValueHash = "",
-      verified = False,
-      authExpiry = 0,
-      tokenExpiry = 0,
-      entityId = "",
-      merchantId = "",
-      entityType = "",
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate,
-      info = Nothing
     }
 
 instance Serialize RegistrationToken where

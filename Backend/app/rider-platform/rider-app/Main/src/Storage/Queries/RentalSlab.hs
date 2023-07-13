@@ -57,7 +57,7 @@ transformBeamRentalSlabToDomain BeamRS.RentalSlabT {..} = do
 
 transformDomainRentalSlabToBeam :: RentalSlab -> BeamRS.RentalSlab
 transformDomainRentalSlabToBeam RentalSlab {..} =
-  BeamRS.defaultRentalSlab
+  BeamRS.RentalSlabT
     { BeamRS.id = getId id,
       BeamRS.baseDistance = baseDistance,
       BeamRS.baseDuration = baseDuration

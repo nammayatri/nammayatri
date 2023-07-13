@@ -28,7 +28,7 @@ import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -78,20 +78,6 @@ appInstallsTMod =
       appVersion = B.fieldNamed "app_version",
       bundleVersion = B.fieldNamed "bundle_version",
       platform = B.fieldNamed "platform"
-    }
-
-defaultAppInstalls :: AppInstalls
-defaultAppInstalls =
-  AppInstallsT
-    { id = "",
-      merchantId = "",
-      deviceToken = "",
-      source = "",
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate,
-      appVersion = Nothing,
-      bundleVersion = Nothing,
-      platform = Nothing
     }
 
 instance Serialize AppInstalls where

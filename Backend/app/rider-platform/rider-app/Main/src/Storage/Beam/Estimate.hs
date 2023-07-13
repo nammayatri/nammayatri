@@ -38,7 +38,7 @@ import GHC.Generics (Generic)
 import Kernel.External.Maps hiding (status)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -161,40 +161,6 @@ estimateTMod =
       specialLocationTag = B.fieldNamed "special_location_tag",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
-    }
-
-defaultEstimate :: Estimate
-defaultEstimate =
-  EstimateT
-    { id = "",
-      requestId = "",
-      merchantId = Nothing,
-      bppEstimateId = "",
-      estimatedFare = "",
-      discount = Nothing,
-      estimatedTotalFare = "",
-      minTotalFare = "",
-      maxTotalFare = "",
-      estimatedDuration = Nothing,
-      estimatedDistance = Nothing,
-      device = Nothing,
-      providerId = "",
-      providerUrl = "",
-      providerName = "",
-      providerMobileNumber = "",
-      providerCompletedRidesCount = 0,
-      vehicleVariant = "",
-      driversLocation = [],
-      tripTermsId = Nothing,
-      nightShiftCharge = Nothing,
-      oldNightShiftCharge = Nothing,
-      nightShiftStart = Nothing,
-      nightShiftEnd = Nothing,
-      status = "",
-      waitingChargePerMin = Nothing,
-      specialLocationTag = Nothing,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
     }
 
 instance Serialize Estimate where

@@ -91,7 +91,7 @@ transformBeamPersonDefaultEmergencyNumberToDomain BeamPDEN.PersonDefaultEmergenc
 
 transformDomainPersonDefaultEmergencyNumberToBeam :: PersonDefaultEmergencyNumber -> BeamPDEN.PersonDefaultEmergencyNumber
 transformDomainPersonDefaultEmergencyNumberToBeam PersonDefaultEmergencyNumber {..} =
-  BeamPDEN.defaultPersonDefaultEmergencyNumber
+  BeamPDEN.PersonDefaultEmergencyNumberT
     { BeamPDEN.personId = getId personId,
       BeamPDEN.name = name,
       BeamPDEN.mobileCountryCode = mobileCountryCode,

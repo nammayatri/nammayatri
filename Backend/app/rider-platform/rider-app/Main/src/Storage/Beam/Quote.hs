@@ -36,7 +36,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -121,31 +121,6 @@ quoteTMod =
       specialZoneQuoteId = B.fieldNamed "special_zone_quote_id",
       specialLocationTag = B.fieldNamed "special_location_tag",
       createdAt = B.fieldNamed "created_at"
-    }
-
-defaultQuote :: Quote
-defaultQuote =
-  QuoteT
-    { id = "",
-      fareProductType = "",
-      requestId = "",
-      estimatedFare = "",
-      discount = Nothing,
-      estimatedTotalFare = "",
-      providerId = "",
-      providerUrl = "",
-      providerName = "",
-      providerMobileNumber = "",
-      providerCompletedRidesCount = 0,
-      distanceToNearestDriver = Nothing,
-      vehicleVariant = "",
-      tripTermsId = Nothing,
-      rentalSlabId = Nothing,
-      driverOfferId = Nothing,
-      merchantId = "",
-      specialZoneQuoteId = Nothing,
-      specialLocationTag = Nothing,
-      createdAt = defaultUTCDate
     }
 
 instance Serialize Quote where

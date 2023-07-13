@@ -56,7 +56,7 @@ transformBeamBlackListOrgToDomain BeamBLO.BlackListOrgT {..} = do
 
 transformDomainBlackListOrgToBeam :: BlackListOrg -> BeamBLO.BlackListOrg
 transformDomainBlackListOrgToBeam BlackListOrg {..} =
-  BeamBLO.defaultBlackListOrg
+  BeamBLO.BlackListOrgT
     { BeamBLO.id = getId id,
       BeamBLO.subscriberId = getShortId subscriberId,
       BeamBLO.orgType = _type

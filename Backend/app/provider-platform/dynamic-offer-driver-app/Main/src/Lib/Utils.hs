@@ -10,7 +10,6 @@ import Data.Fixed (Centi)
 -- import Kernel.External.AadhaarVerification.Types
 
 import qualified Data.Serialize as Serialize
-import Data.Time
 -- import qualified Data.Vector as V
 import Database.Beam
 import qualified Database.Beam as B
@@ -41,54 +40,6 @@ import Kernel.Types.Error
 import Kernel.Utils.Common (encodeToText, throwError)
 import Lib.Mesh as Mesh
 import Sequelize (Model, ModelMeta (modelTableName), OrderBy, Set, Where)
-
-defaultDate :: LocalTime
-defaultDate =
-  LocalTime
-    { localDay = toEnum 1, --   :: Day,
-      localTimeOfDay = defaultTimeOfDay --  :: TimeOfDay
-    }
-
-defaultTimeOfDay :: TimeOfDay
-defaultTimeOfDay =
-  TimeOfDay
-    { todHour = 1, -- :: Int,-  range 0 - 23
-      todMin = 1, -- :: Int, --  range 0 - 59
-      -- Note that 0 <= 'todSec' < 61, accomodating leap seconds.
-      -- Any local minute may have a leap second, since leap seconds happen in all zones simultaneously
-      todSec = 1 -- :: Pico, type Pico = Fixed E12
-    }
-
-defaultUTCDate :: UTCTime
-defaultUTCDate = localTimeToUTC utc defaultDate
-
--- instance HasSqlValueSyntax be Int => HasSqlValueSyntax be Money where
---   sqlValueSyntax = sqlValueSyntax . getMoney
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Money
-
--- instance FromBackendRow Postgres Money
-
--- instance FromField Money where
---   fromField = fromFieldJSON
-
--- instance FromField Centi where
---   fromField = fromFieldCenti
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Minutes where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Minutes
-
--- instance FromBackendRow Postgres Minutes
-
-fromFieldMoney ::
-  DPSF.Field ->
-  Maybe ByteString ->
-  DPSF.Conversion Money
-fromFieldMoney f mbValue = case mbValue of
-  Nothing -> DPSF.returnError UnexpectedNull f mempty
-  Just _ -> Money <$> fromField f mbValue
 
 fromFieldCenti ::
   DPSF.Field ->

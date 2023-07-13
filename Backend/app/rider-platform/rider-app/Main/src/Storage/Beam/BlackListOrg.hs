@@ -89,14 +89,6 @@ blackListOrgTMod =
       orgType = B.fieldNamed "type"
     }
 
-defaultBlackListOrg :: BlackListOrg
-defaultBlackListOrg =
-  BlackListOrgT
-    { id = "",
-      subscriberId = "",
-      orgType = ""
-    }
-
 instance Serialize BlackListOrg where
   put = error "undefined"
   get = error "undefined"

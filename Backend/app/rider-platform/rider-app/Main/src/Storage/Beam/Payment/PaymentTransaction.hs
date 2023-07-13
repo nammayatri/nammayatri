@@ -30,7 +30,7 @@ import GHC.Generics (Generic)
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -96,28 +96,6 @@ paymentTransactionTMod =
       juspayResponse = B.fieldNamed "juspay_response",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
-    }
-
-defaultPaymentTransaction :: PaymentTransaction
-defaultPaymentTransaction =
-  PaymentTransactionT
-    { id = "",
-      txnUUID = "",
-      paymentMethodType = "",
-      paymentMethod = "",
-      respMessage = Nothing,
-      respCode = Nothing,
-      gatewayReferenceId = Nothing,
-      orderId = "",
-      merchantId = "",
-      amount = "",
-      currency = "",
-      dateCreated = Nothing,
-      statusId = 0,
-      status = "",
-      juspayResponse = Nothing,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
     }
 
 instance Serialize PaymentTransaction where

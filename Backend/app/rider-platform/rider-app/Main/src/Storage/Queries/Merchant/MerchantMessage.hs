@@ -60,7 +60,7 @@ transformBeamMerchantMessageToDomain BeamMM.MerchantMessageT {..} = do
 
 transformDomainMerchantMessageToBeam :: MerchantMessage -> BeamMM.MerchantMessage
 transformDomainMerchantMessageToBeam MerchantMessage {..} =
-  BeamMM.defaultMerchantMessage
+  BeamMM.MerchantMessageT
     { BeamMM.merchantId = getId merchantId,
       BeamMM.messageKey = messageKey,
       BeamMM.message = message,

@@ -42,7 +42,7 @@ import Kernel.External.SMS (SmsService)
 import Kernel.External.Whatsapp.Types (WhatsappService)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -189,28 +189,6 @@ merchantServiceUsageConfigTMod =
       whatsappProvidersPriorityList = B.fieldNamed "whatsapp_providers_priority_list",
       updatedAt = B.fieldNamed "updated_at",
       createdAt = B.fieldNamed "created_at"
-    }
-
-defaultMerchantServiceUsageConfig :: MerchantServiceUsageConfig
-defaultMerchantServiceUsageConfig =
-  MerchantServiceUsageConfigT
-    { merchantId = "",
-      initiateCall = "",
-      getDistances = "",
-      getRoutes = "",
-      snapToRoad = "",
-      getPlaceName = "",
-      getPickupRoutes = "",
-      getTripRoutes = "",
-      getPlaceDetails = "",
-      autoComplete = "",
-      getDistancesForCancelRide = "",
-      notifyPerson = "",
-      useFraudDetection = False,
-      smsProvidersPriorityList = [],
-      whatsappProvidersPriorityList = [],
-      updatedAt = defaultUTCDate,
-      createdAt = defaultUTCDate
     }
 
 instance Serialize MerchantServiceUsageConfig where

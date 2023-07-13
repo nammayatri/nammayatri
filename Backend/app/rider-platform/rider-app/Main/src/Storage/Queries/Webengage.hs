@@ -78,7 +78,7 @@ transformBeamWebengageToDomain BeamW.WebengageT {..} = do
 
 transformDomainWebengageToBeam :: Webengage -> BeamW.Webengage
 transformDomainWebengageToBeam Webengage {..} =
-  BeamW.defaultWebengage
+  BeamW.WebengageT
     { BeamW.id = getId id,
       BeamW.version = version,
       BeamW.contentTemplateId = contentTemplateId,

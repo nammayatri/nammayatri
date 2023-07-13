@@ -345,7 +345,7 @@ transformDomainQuoteToBeam Quote {..} =
         DQ.RentalDetails rentalSlab -> (DFFP.RENTAL, Nothing, Just $ getId rentalSlab.id, Nothing, Nothing)
         DQ.DriverOfferDetails driverOffer -> (DFFP.DRIVER_OFFER, Nothing, Nothing, Just $ getId driverOffer.id, Nothing)
         DQ.OneWaySpecialZoneDetails specialZoneQuote -> (DFFP.ONE_WAY_SPECIAL_ZONE, Nothing, Nothing, Nothing, Just $ getId specialZoneQuote.id)
-   in BeamQ.defaultQuote
+   in BeamQ.QuoteT
         { BeamQ.id = getId id,
           BeamQ.fareProductType = fareProductType,
           BeamQ.requestId = getId requestId,

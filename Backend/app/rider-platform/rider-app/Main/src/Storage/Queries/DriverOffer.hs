@@ -101,7 +101,7 @@ transformBeamDriverOfferToDomain BeamDO.DriverOfferT {..} = do
 
 transformDomainDriverOfferToBeam :: DriverOffer -> BeamDO.DriverOffer
 transformDomainDriverOfferToBeam DriverOffer {..} =
-  BeamDO.defaultDriverOffer
+  BeamDO.DriverOfferT
     { BeamDO.id = getId id,
       BeamDO.estimateId = getId estimateId,
       BeamDO.merchantId = getId <$> merchantId,

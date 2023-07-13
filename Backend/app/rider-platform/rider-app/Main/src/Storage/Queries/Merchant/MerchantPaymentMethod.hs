@@ -72,7 +72,7 @@ transformBeamMerchantPaymentMethodToDomain BeamMPM.MerchantPaymentMethodT {..} =
 
 transformDomainMerchantPaymentMethodToBeam :: MerchantPaymentMethod -> BeamMPM.MerchantPaymentMethod
 transformDomainMerchantPaymentMethodToBeam MerchantPaymentMethod {..} =
-  BeamMPM.defaultMerchantPaymentMethod
+  BeamMPM.MerchantPaymentMethodT
     { BeamMPM.id = getId id,
       BeamMPM.merchantId = getId merchantId,
       BeamMPM.paymentType = paymentType,

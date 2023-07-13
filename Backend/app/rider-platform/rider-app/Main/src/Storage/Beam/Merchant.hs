@@ -45,7 +45,7 @@ import Kernel.Types.Base64
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing (GeoRestriction)
 import qualified Kernel.Types.Geofencing as Geo
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -229,33 +229,6 @@ merchantTMod =
       updatedAt = B.fieldNamed "updated_at",
       createdAt = B.fieldNamed "created_at",
       dirCacheSlot = B.fieldNamed "dir_cache_slot"
-    }
-
-defaultMerchant :: Merchant
-defaultMerchant =
-  MerchantT
-    { id = "",
-      shortId = "",
-      subscriberId = "",
-      name = "",
-      city = "",
-      country = "",
-      bapId = "",
-      bapUniqueKeyId = "",
-      originRestriction = "",
-      destinationRestriction = "",
-      gatewayUrl = "",
-      registryUrl = "",
-      driverOfferBaseUrl = "",
-      driverOfferApiKey = "",
-      driverOfferMerchantId = "",
-      geoHashPrecisionValue = 0,
-      signingPublicKey = "",
-      cipherText = Nothing,
-      signatureExpiry = 0,
-      updatedAt = defaultUTCDate,
-      createdAt = defaultUTCDate,
-      dirCacheSlot = []
     }
 
 instance Serialize Merchant where

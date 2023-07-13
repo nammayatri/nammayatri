@@ -137,7 +137,7 @@ transformBeamSavedReqLocationToDomain BeamSRL.SavedReqLocationT {..} = do
 
 transformDomainSavedReqLocationToBeam :: SavedReqLocation -> BeamSRL.SavedReqLocation
 transformDomainSavedReqLocationToBeam SavedReqLocation {..} =
-  BeamSRL.defaultSavedReqLocation
+  BeamSRL.SavedReqLocationT
     { BeamSRL.id = getId id,
       BeamSRL.lat = lat,
       BeamSRL.lon = lon,

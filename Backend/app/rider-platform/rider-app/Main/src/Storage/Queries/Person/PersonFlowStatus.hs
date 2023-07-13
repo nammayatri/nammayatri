@@ -144,7 +144,7 @@ transformBeamPersonFlowStatusToDomain BeamPFS.PersonFlowStatusT {..} = do
 
 transformDomainPersonFlowStatusToBeam :: PersonFlowStatus -> BeamPFS.PersonFlowStatus
 transformDomainPersonFlowStatusToBeam PersonFlowStatus {..} =
-  BeamPFS.defaultPersonFlowStatus
+  BeamPFS.PersonFlowStatusT
     { BeamPFS.personId = getId personId,
       BeamPFS.flowStatus = flowStatus,
       BeamPFS.updatedAt = updatedAt

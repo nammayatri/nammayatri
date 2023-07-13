@@ -35,7 +35,7 @@ import GHC.Generics (Generic)
 import qualified Kernel.External.Call.Interface as CallTypes
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -98,19 +98,6 @@ callStatusTMod =
       recordingUrl = B.fieldNamed "recording_url",
       conversationDuration = B.fieldNamed "conversation_duration",
       createdAt = B.fieldNamed "created_at"
-    }
-
-defaultCallStatus :: CallStatus
-defaultCallStatus =
-  CallStatusT
-    { id = "",
-      callId = "",
-      rideId = "",
-      dtmfNumberUsed = Nothing,
-      status = "",
-      recordingUrl = Nothing,
-      conversationDuration = 0,
-      createdAt = defaultUTCDate
     }
 
 instance Serialize CallStatus where

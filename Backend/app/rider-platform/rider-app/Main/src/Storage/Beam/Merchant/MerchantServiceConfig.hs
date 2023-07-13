@@ -43,7 +43,7 @@ import qualified Kernel.External.SMS.Interface as Sms
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -98,16 +98,6 @@ merchantServiceConfigTMod =
       configJSON = B.fieldNamed "config_json",
       updatedAt = B.fieldNamed "updated_at",
       createdAt = B.fieldNamed "created_at"
-    }
-
-defaultMerchantServiceConfig :: MerchantServiceConfig
-defaultMerchantServiceConfig =
-  MerchantServiceConfigT
-    { merchantId = "",
-      serviceName = "",
-      configJSON = "",
-      updatedAt = defaultUTCDate,
-      createdAt = defaultUTCDate
     }
 
 getServiceNameConfigJSON :: Domain.ServiceConfig -> (Domain.ServiceName, A.Value)

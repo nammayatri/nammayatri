@@ -267,7 +267,7 @@ transformBeamSearchRequestToDomain BeamSR.SearchRequestT {..} = do
 
 transformDomainSearchRequestToBeam :: SearchRequest -> BeamSR.SearchRequest
 transformDomainSearchRequestToBeam SearchRequest {..} =
-  BeamSR.defaultSearchRequest
+  BeamSR.SearchRequestT
     { BeamSR.id = getId id,
       BeamSR.startTime = startTime,
       BeamSR.validTill = validTill,

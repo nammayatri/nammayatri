@@ -695,7 +695,7 @@ transformDomainBookingToBeam DRB.Booking {..} =
         DRB.RentalDetails rentalSlab -> (DQuote.RENTAL, Nothing, Nothing, Just . getId $ rentalSlab.id, Nothing)
         DRB.DriverOfferDetails details -> (DQuote.DRIVER_OFFER, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
         DRB.OneWaySpecialZoneDetails details -> (DQuote.ONE_WAY_SPECIAL_ZONE, Just (getId details.toLocation.id), Just details.distance, Nothing, details.otpCode)
-   in BeamB.defaultBooking
+   in BeamB.BookingT
         { BeamB.id = getId id,
           BeamB.transactionId = transactionId,
           BeamB.fareProductType = fareProductType,

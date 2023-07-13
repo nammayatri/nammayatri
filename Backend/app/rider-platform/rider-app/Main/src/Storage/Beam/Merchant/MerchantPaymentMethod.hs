@@ -35,7 +35,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -122,19 +122,6 @@ merchantPaymentMethodTMod =
       priority = B.fieldNamed "priority",
       updatedAt = B.fieldNamed "updated_at",
       createdAt = B.fieldNamed "created_at"
-    }
-
-defaultMerchantPaymentMethod :: MerchantPaymentMethod
-defaultMerchantPaymentMethod =
-  MerchantPaymentMethodT
-    { id = "",
-      merchantId = "",
-      paymentType = "",
-      paymentInstrument = "",
-      collectedBy = "",
-      priority = 0,
-      updatedAt = defaultUTCDate,
-      createdAt = defaultUTCDate
     }
 
 instance Serialize MerchantPaymentMethod where

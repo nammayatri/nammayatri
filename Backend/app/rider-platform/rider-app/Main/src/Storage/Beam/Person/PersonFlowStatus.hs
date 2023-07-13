@@ -37,7 +37,7 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import Kernel.Utils.Text (encodeToText)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -90,14 +90,6 @@ personFlowStatusTMod =
     { personId = B.fieldNamed "person_id",
       flowStatus = B.fieldNamed "flow_status",
       updatedAt = B.fieldNamed "updated_at"
-    }
-
-defaultPersonFlowStatus :: PersonFlowStatus
-defaultPersonFlowStatus =
-  PersonFlowStatusT
-    { personId = "",
-      flowStatus = "",
-      updatedAt = defaultUTCDate
     }
 
 instance Serialize PersonFlowStatus where

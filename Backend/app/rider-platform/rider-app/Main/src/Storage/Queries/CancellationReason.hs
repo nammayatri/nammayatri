@@ -64,7 +64,7 @@ transformBeamCancellationReasonToDomain BeamCR.CancellationReasonT {..} = do
 
 transformDomainCancellationReasonToBeam :: CancellationReason -> BeamCR.CancellationReason
 transformDomainCancellationReasonToBeam CancellationReason {..} =
-  BeamCR.defaultCancellationReason
+  BeamCR.CancellationReasonT
     { BeamCR.reasonCode = let (Domain.CancellationReasonCode rc) = reasonCode in rc,
       BeamCR.description = description,
       BeamCR.enabled = enabled,

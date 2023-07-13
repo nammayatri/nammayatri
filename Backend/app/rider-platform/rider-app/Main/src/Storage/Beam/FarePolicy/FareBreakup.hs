@@ -70,15 +70,6 @@ fareBreakupTMod =
       amount = B.fieldNamed "amount"
     }
 
-defaultFareBreakup :: FareBreakup
-defaultFareBreakup =
-  FareBreakupT
-    { id = "",
-      bookingId = "",
-      description = "",
-      amount = ""
-    }
-
 instance Serialize FareBreakup where
   put = error "undefined"
   get = error "undefined"

@@ -38,7 +38,7 @@ import Kernel.External.Maps (Language)
 import Kernel.External.Whatsapp.Interface.Types (OptApiMethods (..))
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -192,45 +192,6 @@ personTMod =
       hasTakenValidRide = B.fieldNamed "has_taken_valid_ride",
       referralCode = B.fieldNamed "referral_code",
       referredAt = B.fieldNamed "referred_at"
-    }
-
-defaultPerson :: Person
-defaultPerson =
-  PersonT
-    { id = "",
-      firstName = Nothing,
-      middleName = Nothing,
-      lastName = Nothing,
-      role = "",
-      gender = "",
-      identifierType = "",
-      emailEncrypted = Nothing,
-      emailHash = Nothing,
-      unencryptedMobileNumber = Nothing,
-      mobileNumberEncrypted = Nothing,
-      mobileNumberHash = Nothing,
-      mobileCountryCode = Nothing,
-      passwordHash = Nothing,
-      identifier = Nothing,
-      rating = Nothing,
-      language = Nothing,
-      isNew = False,
-      enabled = False,
-      blocked = False,
-      deviceToken = Nothing,
-      notificationToken = Nothing,
-      description = Nothing,
-      merchantId = "",
-      whatsappNotificationEnrollStatus = Nothing,
-      createdAt = defaultUTCDate,
-      blockedAt = Nothing,
-      blockedByRuleId = Nothing,
-      updatedAt = defaultUTCDate,
-      bundleVersion = Nothing,
-      clientVersion = Nothing,
-      hasTakenValidRide = False,
-      referralCode = Nothing,
-      referredAt = Nothing
     }
 
 instance Serialize Person where
