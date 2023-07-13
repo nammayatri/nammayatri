@@ -136,7 +136,6 @@ library
       Beckn.Types.Core.Taxi.OnSelect.Location
       Beckn.Types.Core.Taxi.OnSelect.Offer
       Beckn.Types.Core.Taxi.OnSelect.Order
-      Beckn.Types.Core.Taxi.OnSelect.Payment
       Beckn.Types.Core.Taxi.OnSelect.Price
       Beckn.Types.Core.Taxi.OnSelect.Provider
       Beckn.Types.Core.Taxi.OnSelect.ProviderLocation

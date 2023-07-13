@@ -14,9 +14,9 @@
 
 module Beckn.Types.Core.Taxi.OnSelect.Order where
 
+import Beckn.Types.Core.Taxi.Common.Payment
 import Beckn.Types.Core.Taxi.OnSelect.Fulfillment
 import Beckn.Types.Core.Taxi.OnSelect.Item
-import Beckn.Types.Core.Taxi.OnSelect.Payment
 import Beckn.Types.Core.Taxi.OnSelect.Provider
 -- import Beckn.Types.Core.Taxi.OnSelect.Addon
 import Beckn.Types.Core.Taxi.OnSelect.Quote

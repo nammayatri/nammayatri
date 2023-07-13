@@ -23,6 +23,7 @@ import Beckn.Types.Core.Taxi.Common.PaymentCollector as Reexport
 import Beckn.Types.Core.Taxi.Common.PaymentInstrument as Reexport
 import Beckn.Types.Core.Taxi.Common.PaymentType as Reexport
 import Beckn.Types.Core.Taxi.Common.TimeDuration as Reexport
+import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (State, (.=))
 import Kernel.Utils.JSON
@@ -37,10 +38,10 @@ data Payment = Payment
   deriving (Generic, Show, ToSchema)
 
 instance FromJSON Payment where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
 
 instance ToJSON Payment where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
 
 data PaymentParams = PaymentParams
   { collected_by :: PaymentCollector,
@@ -48,7 +49,13 @@ data PaymentParams = PaymentParams
     currency :: Maybe Text,
     amount :: Maybe DecimalValue
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show)
 
 instance ToSchema PaymentParams where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON PaymentParams where
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+instance ToJSON PaymentParams where
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
