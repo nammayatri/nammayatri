@@ -15,6 +15,7 @@
 module Beckn.ACL.Common where
 
 import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
+import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.Common.VehicleVariant as Common
 import qualified Beckn.Types.Core.Taxi.Search as Search
 import qualified Domain.Action.UI.Search.Common as DSearchCommon
@@ -90,3 +91,13 @@ castVariant Variant.SUV = Common.SUV
 castVariant Variant.AUTO_RICKSHAW = Common.AUTO_RICKSHAW
 castVariant Variant.TAXI = Common.TAXI
 castVariant Variant.TAXI_PLUS = Common.TAXI_PLUS
+
+type TagGroupCode = Text
+
+type TagCode = Text
+
+getTag :: TagGroupCode -> TagCode -> Tags.TagGroups -> Maybe Text
+getTag tagGroupCode tagCode (Tags.TG tagGroups) = do
+  tagGroup <- find (\tagGroup -> tagGroup.code == tagGroupCode) tagGroups
+  tag <- find (\tag -> tag.code == Just tagCode) tagGroup.list
+  tag.value

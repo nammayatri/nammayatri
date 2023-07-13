@@ -53,14 +53,14 @@ data Item = Item
     -- descriptor :: ItemDescriptor,
     -- quote_terms :: [Text],
     -- Only when FareProductType.ONE_WAY_TRIP
-    tags :: Maybe [TagGroup],
+    tags :: Maybe TagGroups
     -- Only when FareProductType.RENTAL_TRIP
     -- base_distance :: Maybe Kilometers,
     -- base_duration :: Maybe Hours,
     -- Only when FareProductType.DRIVER_OFFER
     -- driver_name :: Maybe Text,
     -- duration_to_pickup :: Maybe Int, -- Seconds?
-    valid_till :: Maybe UTCTime
+    -- valid_till :: Maybe UTCTime
     -- rating :: Maybe Centesimal
     -- TODO consider to make proper Item type for different FareProductType without Maybes with custom To/FromJSON
   }

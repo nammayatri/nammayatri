@@ -35,7 +35,7 @@ instance ToSchema Order where
 data OrderItem = OrderItem
   { id :: Text,
     price :: Price,
-    tags :: Maybe [TagGroup]
+    tags :: Maybe TagGroups
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 

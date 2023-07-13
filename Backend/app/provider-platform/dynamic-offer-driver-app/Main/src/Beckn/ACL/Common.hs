@@ -15,9 +15,11 @@
 module Beckn.ACL.Common where
 
 import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
+-- import qualified Domain.Types.Merchant as DM
+
+import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.Common.VehicleVariant as Common
 import qualified Beckn.Types.Core.Taxi.Search as Search
--- import qualified Domain.Types.Merchant as DM
 import Data.Maybe
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
@@ -78,3 +80,13 @@ makeLocation DLoc.SearchReqLocation {..} =
 
 mkItemId :: Text -> Variant.Variant -> Text
 mkItemId providerId variant = providerId <> " " <> show variant
+
+type TagGroupCode = Text
+
+type TagCode = Text
+
+getTag :: TagGroupCode -> TagCode -> Tags.TagGroups -> Maybe Text
+getTag tagGroupCode tagCode (Tags.TG tagGroups) = do
+  tagGroup <- find (\tagGroup -> tagGroup.code == tagGroupCode) tagGroups
+  tag <- find (\tag -> tag.code == Just tagCode) tagGroup.list
+  tag.value

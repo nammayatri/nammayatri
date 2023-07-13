@@ -144,7 +144,7 @@ mkFulfillment dReq quote = do
         OS.Agent
           { name = Just quote.driverName,
             rateable = Just True,
-            tags = [mkAgentTags]
+            tags = OS.TG [mkAgentTags]
             -- Just $
             --   OS.AgentTags
             --     { agent_info_rating = (\rating -> Just $ show $ rating.getCenti) =<< quote.driverRating,
@@ -209,7 +209,7 @@ mkItem fulfillmentId q provider =
       --           }
       --     },
       -- quote_terms = [],
-      tags = Just [mkItemTags],
+      tags = Just $ OS.TG [mkItemTags]
       -- Just $
       --   OS.ItemTags
       --     { distance_to_nearest_driver = OS.DecimalValue $ toRational q.distanceToPickup.getMeters,
@@ -219,7 +219,7 @@ mkItem fulfillmentId q provider =
       -- base_duration = Nothing,
       -- driver_name = Just q.driverName,
       -- duration_to_pickup = Just q.durationToPickup.getSeconds,
-      valid_till = Just q.validTill
+      -- valid_till = Just q.validTill
       -- rating = q.driverRating
     }
   where
@@ -275,7 +275,7 @@ mkQuote driverQuote _ = do
   -- let iso8601Duration = formatShow iso8601Format diffDuration
   OS.Quote
     { price = mkPrice driverQuote,
-      ttl = Nothing, --------- todo
+      ttl = Just $ show driverQuote.validTill, --------- todo
       breakup = Nothing
     }
 

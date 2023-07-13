@@ -14,10 +14,11 @@
 
 module Beckn.ACL.Search where
 
-import qualified Beckn.Types.Core.Taxi.API.Search as Search
-import qualified Beckn.Types.Core.Taxi.Search as Search
 -- import qualified Data.Text as T
 
+import Beckn.ACL.Common (getTag)
+import qualified Beckn.Types.Core.Taxi.API.Search as Search
+import qualified Beckn.Types.Core.Taxi.Search as Search
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Search as DSearch
 import Kernel.External.Maps.Interface (LatLong (..))
@@ -79,10 +80,11 @@ buildSearchReq subscriber req = do
 --     else (Nothing, Nothing)
 
 getDistance :: Search.TagGroups -> Maybe Meters
-getDistance (Search.TG tagGroups) = do
-  tagGroup <- find (\tagGroup -> tagGroup.code == "route_info") tagGroups
-  tag <- find (\tag -> tag.code == Just "distance_info_in_m") tagGroup.list
-  tagValue <- tag.value
+getDistance tagGroups = do
+  tagValue <- getTag "route_info" "distance_info_in_m" tagGroups
+  -- tagGroup <- find (\tagGroup -> tagGroup.code == "route_info") tagGroups
+  -- tag <- find (\tag -> tag.code == Just "distance_info_in_m") tagGroup.list
+  -- tagValue <- tag.value
   distanceValue <- readMaybe $ T.unpack tagValue
   Just $ Meters distanceValue
 
@@ -94,10 +96,11 @@ getDistance (Search.TG tagGroups) = do
 --   else Nothing
 
 getDuration :: Search.TagGroups -> Maybe Seconds
-getDuration (Search.TG tagGroups) = do
-  tagGroup <- find (\tagGroup -> tagGroup.code == "route_info") tagGroups
-  tag <- find (\tag -> tag.code == Just "duration_info_in_s") tagGroup.list
-  tagValue <- tag.value
+getDuration tagGroups = do
+  tagValue <- getTag "route_info" "duration_info_in_s" tagGroups
+  -- tagGroup <- find (\tagGroup -> tagGroup.code == "route_info") tagGroups
+  -- tag <- find (\tag -> tag.code == Just "duration_info_in_s") tagGroup.list
+  -- tagValue <- tag.value
   durationValue <- readMaybe $ T.unpack tagValue
   Just $ Seconds durationValue
 
@@ -112,13 +115,14 @@ getDuration (Search.TG tagGroups) = do
 
 buildCustomerLanguage :: Search.Customer -> Maybe Language
 buildCustomerLanguage Search.Customer {..} = do
-  tagGroup <- findTagGroup "customer_info" person.tags -- find (\tagGroup -> tagGroup.code == "customer_info") person.tags
-  tag <- find (\tag -> tag.code == Just "customer_language") tagGroup.list
-  tagValue <- tag.value
+  tagValue <- getTag "customer_info" "customer_language" person.tags
+  -- tagGroup <- findTagGroup "customer_info" person.tags
+  -- tag <- find (\tag -> tag.code == Just "customer_language") tagGroup.list
+  -- tagValue <- tag.value
   readMaybe $ T.unpack tagValue
 
-findTagGroup :: String -> Search.TagGroups -> Maybe Search.TagGroup
-findTagGroup code (Search.TG tagGroups) = find (\tagGroup -> T.unpack tagGroup.code == code) tagGroups
+-- findTagGroup :: Text -> Search.TagGroups -> Maybe Search.TagGroup
+-- findTagGroup code (Search.TG tagGroups) = find (\tagGroup -> tagGroup.code == code) tagGroups
 
 -- list1Code <- tags.list_1_code
 -- if tags.code == "customer_info" && list1Code == "customer_language"
