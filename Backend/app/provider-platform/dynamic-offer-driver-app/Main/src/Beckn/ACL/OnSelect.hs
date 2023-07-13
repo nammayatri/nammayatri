@@ -136,7 +136,7 @@ mkFulfillment dReq quote = do
           { location = makeLocation toLocation
           },
       vehicle =
-        OS.FulfillmentVehicle
+        OS.Vehicle
           { category = castVariant quote.vehicleVariant
           },
       _type = OS.RIDE,

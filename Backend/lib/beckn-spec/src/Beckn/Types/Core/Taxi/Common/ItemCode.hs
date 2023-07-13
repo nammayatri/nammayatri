@@ -20,7 +20,7 @@ where
 
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Taxi.Common.FareProductType as Reexport
-import Beckn.Types.Core.Taxi.Common.VehicleVariant as Reexport
+import Beckn.Types.Core.Taxi.Common.Vehicle as Reexport
 import Data.Aeson
 import qualified Data.List as List
 import Data.OpenApi

@@ -18,19 +18,21 @@ module Beckn.Types.Core.Taxi.Common.Payment
   )
 where
 
+import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Taxi.Common.PaymentCollector as Reexport
 import Beckn.Types.Core.Taxi.Common.PaymentInstrument as Reexport
 import Beckn.Types.Core.Taxi.Common.PaymentType as Reexport
 import Beckn.Types.Core.Taxi.Common.TimeDuration as Reexport
-import Data.OpenApi (ToSchema)
+import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (State, (.=))
 import Kernel.Utils.JSON
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Payment = Payment
-  { collected_by :: PaymentCollector,
+  { params :: PaymentParams,
     _type :: PaymentType,
-    instrument :: Maybe PaymentInstrument, -- FIXME find proper fields
-    time :: TimeDuration -- FIXME: what is this?
+    time :: TimeDuration,
+    uri :: Maybe Text
   }
   deriving (Generic, Show, ToSchema)
 
@@ -39,3 +41,14 @@ instance FromJSON Payment where
 
 instance ToJSON Payment where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
+
+data PaymentParams = PaymentParams
+  { collected_by :: PaymentCollector,
+    instrument :: Maybe PaymentInstrument,
+    currency :: Maybe Text,
+    amount :: Maybe DecimalValue
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+instance ToSchema PaymentParams where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

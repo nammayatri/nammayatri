@@ -95,13 +95,13 @@ findById quoteId = Esq.buildDType $ do
     pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote)
   join <$> mapM buildFullQuote mbFullQuoteT
 
-findByBppIdAndBPPQuoteId :: Transactionable m => Text -> Id BPPQuote -> m (Maybe Quote)
+findByBppIdAndBPPQuoteId :: Transactionable m => Text -> Text -> m (Maybe Quote)
 findByBppIdAndBPPQuoteId bppId bppQuoteId = buildDType $ do
   mbFullQuoteT <- Esq.findOne' $ do
     (quote :& mbTripTerms :& mbRentalSlab :& mbDriverOffer :& mbspecialZoneQuote) <- from fullQuoteTable
     where_ $
       quote ^. QuoteProviderId ==. val bppId
-        &&. mbDriverOffer ?. DriverOfferBppQuoteId ==. just (val bppQuoteId.getId)
+        &&. mbDriverOffer ?. DriverOfferBppQuoteId ==. just (val bppQuoteId)
     pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote)
   join <$> mapM buildFullQuote mbFullQuoteT
 

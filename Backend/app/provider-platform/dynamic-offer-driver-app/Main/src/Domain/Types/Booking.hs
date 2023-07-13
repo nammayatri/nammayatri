@@ -78,7 +78,8 @@ data Booking = Booking
     riderName :: Maybe Text,
     paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod),
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    paymentUrl :: Maybe Text
   }
   deriving (Generic)
 

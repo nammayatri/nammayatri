@@ -43,7 +43,7 @@ buildOnSelectReq req = do
     providerUrl <- context.bpp_uri & fromMaybeM (InvalidRequest "Missing bpp_uri")
     -- let provider = message.order.provider
     let items = message.order.items
-    quotesInfo <- traverse (buildQuoteInfo message.order.fulfillment message.order.quote) items
+    quotesInfo <- traverse (buildQuoteInfo message.order.provider.id message.order.fulfillment message.order.quote) items
     let providerInfo =
           DOnSelect.ProviderInfo
             { providerId = providerId,
@@ -73,15 +73,16 @@ handleError etr action =
 
 buildQuoteInfo ::
   (MonadThrow m, Log m) =>
+  Text ->
   OnSelect.FulfillmentInfo ->
   OnSelect.Quote ->
   OnSelect.Item ->
   m DOnSelect.QuoteInfo
-buildQuoteInfo fulfillment quote item = do
+buildQuoteInfo driverId fulfillment quote item = do
   quoteDetails <- case fulfillment._type of
     -- OnSelect.ONE_WAY_TRIP -> throwError $ InvalidRequest "select not supported for one way trip"
     -- OnSelect.RENTAL_TRIP -> throwError $ InvalidRequest "select not supported for rental trip"
-    OnSelect.RIDE -> buildDriverOfferQuoteDetails item fulfillment quote
+    OnSelect.RIDE -> buildDriverOfferQuoteDetails item fulfillment quote driverId
     -- OnSelect.DRIVER_OFFER -> buildDriverOfferQuoteDetails item
     -- OnSelect.DRIVER_OFFER_ESTIMATE -> throwError $ InvalidRequest "Estimates are only supported in on_search"
     OnSelect.RIDE_OTP -> throwError $ InvalidRequest "select not supported for ride otp trip"
@@ -113,8 +114,9 @@ buildDriverOfferQuoteDetails ::
   OnSelect.Item ->
   OnSelect.FulfillmentInfo ->
   OnSelect.Quote ->
+  Text ->
   m DOnSelect.DriverOfferQuoteDetails
-buildDriverOfferQuoteDetails item fulfillment quote = do
+buildDriverOfferQuoteDetails item fulfillment quote driverId = do
   driverName <- fulfillment.agent.name & fromMaybeM (InvalidRequest "Missing driver_name in driver offer select item")
   durationToPickup <- getDurationToPickup fulfillment.agent.tags & fromMaybeM (InvalidRequest "Missing duration_to_pickup in driver offer select item")
   distanceToPickup' <- (getDistanceToNearestDriver =<< item.tags) & fromMaybeM (InvalidRequest "Trip type is DRIVER_OFFER, but distance_to_nearest_driver is Nothing")
@@ -126,7 +128,7 @@ buildDriverOfferQuoteDetails item fulfillment quote = do
   pure $
     DOnSelect.DriverOfferQuoteDetails
       { distanceToPickup = realToFrac distanceToPickup',
-        bppDriverQuoteId = Id bppQuoteId,
+        bppDriverQuoteId = bppQuoteId,
         ..
       }
 

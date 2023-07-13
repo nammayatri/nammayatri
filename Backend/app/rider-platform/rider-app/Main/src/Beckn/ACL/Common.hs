@@ -16,7 +16,7 @@ module Beckn.ACL.Common where
 
 import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
-import qualified Beckn.Types.Core.Taxi.Common.VehicleVariant as Common
+import qualified Beckn.Types.Core.Taxi.Common.Vehicle as Common
 import qualified Beckn.Types.Core.Taxi.Search as Search
 import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM

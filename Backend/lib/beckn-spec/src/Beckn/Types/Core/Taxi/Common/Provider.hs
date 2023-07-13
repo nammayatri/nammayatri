@@ -12,9 +12,12 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Select.BreakupItem
-  ( module Reexport,
-  )
-where
+module Beckn.Types.Core.Taxi.Common.Provider where
 
-import Beckn.Types.Core.Taxi.OnInit.BreakupItem as Reexport
+import Data.OpenApi (ToSchema)
+import EulerHS.Prelude hiding (State, id, (.=))
+
+newtype Provider = Provider
+  { id :: Text
+  }
+  deriving (Generic, Show, ToSchema, ToJSON, FromJSON)

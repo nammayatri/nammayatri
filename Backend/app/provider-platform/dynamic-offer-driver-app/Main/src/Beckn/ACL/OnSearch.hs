@@ -141,7 +141,7 @@ mkQuoteEntities start end provider estInfo = do
             end = end,
             id = estimate.id.getId,
             _type = OS.RIDE,
-            vehicle = OS.FulfillmentVehicle {category = variant}
+            vehicle = OS.Vehicle {category = variant}
           }
       item =
         OS.Item
@@ -326,7 +326,7 @@ mkQuoteEntitiesSpecialZone start end provider it = do
             end = end,
             id = it.quoteId.getId,
             _type = OS.RIDE_OTP,
-            vehicle = OS.FulfillmentVehicle {category = Common.castVariant it.vehicleVariant}
+            vehicle = OS.Vehicle {category = Common.castVariant it.vehicleVariant}
           }
       item =
         OS.Item
@@ -419,10 +419,16 @@ buildEstimateBreakUpList DEst.EstimateBreakup {..} = do
 mkPayment :: DMPM.PaymentMethodInfo -> OS.Payment
 mkPayment DMPM.PaymentMethodInfo {..} =
   OS.Payment
-    { collected_by = Common.castDPaymentCollector collectedBy,
+    { params =
+        OS.PaymentParams
+          { collected_by = Common.castDPaymentCollector collectedBy,
+            instrument = Just $ Common.castDPaymentInstrument paymentInstrument,
+            currency = Nothing,
+            amount = Nothing
+          },
       _type = Common.castDPaymentType paymentType,
-      instrument = Just $ Common.castDPaymentInstrument paymentInstrument,
-      time = OS.TimeDuration "P2A" -- FIXME: what is this?
+      time = OS.TimeDuration "P2A",
+      uri = Nothing
     }
 
 -- mkSpecialLocationTag ::

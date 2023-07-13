@@ -33,10 +33,11 @@ data DriverOffer = DriverOffer
     estimateId :: Id DEstimate.Estimate,
     merchantId :: Maybe (Id DMerchant.Merchant),
     driverName :: Text,
+    driverId :: Maybe Text,
     durationToPickup :: Int, -- Seconds?
     distanceToPickup :: HighPrecMeters,
     validTill :: UTCTime,
-    bppQuoteId :: Id BPPQuote,
+    bppQuoteId :: Text,
     rating :: Maybe Centesimal,
     status :: DriverOfferStatus,
     updatedAt :: UTCTime

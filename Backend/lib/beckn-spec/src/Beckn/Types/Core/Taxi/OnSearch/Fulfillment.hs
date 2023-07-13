@@ -19,8 +19,8 @@ module Beckn.Types.Core.Taxi.OnSearch.Fulfillment
   )
 where
 
-import Beckn.Types.Core.Taxi.Common.FulfillmentInfo (FulfillmentType (..), stripPrefixUnderscoreAndRemoveNullFields)
-import Beckn.Types.Core.Taxi.Common.VehicleVariant as Reexport
+import Beckn.Types.Core.Taxi.Common.FulfillmentInfo as Reexport (FulfillmentType (..), stripPrefixUnderscoreAndRemoveNullFields)
+import Beckn.Types.Core.Taxi.Common.Vehicle as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.StartInfo as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.StopInfo as Reexport
 -- import Data.Aeson (Options (..))
@@ -34,7 +34,7 @@ data FulfillmentInfo = FulfillmentInfo
     start :: StartInfo,
     _type :: FulfillmentType,
     end :: StopInfo,
-    vehicle :: FulfillmentVehicle
+    vehicle :: Vehicle
   }
   deriving (Generic, Show)
 
@@ -45,12 +45,4 @@ instance ToJSON FulfillmentInfo where
   toJSON = genericToJSON stripPrefixUnderscoreAndRemoveNullFields
 
 instance ToSchema FulfillmentInfo where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-newtype FulfillmentVehicle = FulfillmentVehicle
-  { category :: VehicleVariant
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema FulfillmentVehicle where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

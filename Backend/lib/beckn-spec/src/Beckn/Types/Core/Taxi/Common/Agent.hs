@@ -21,7 +21,8 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Agent = Agent
   { name :: Text,
-    phone :: Text,
+    rateable :: Bool,
+    phone :: Maybe Text,
     tags :: TagGroups
   }
   deriving (Generic, Show, FromJSON, ToJSON)
