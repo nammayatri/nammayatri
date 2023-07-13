@@ -21,6 +21,7 @@ import Beckn.Types.Core.Taxi.Common.Agent as Reexport
 import Beckn.Types.Core.Taxi.Common.Gps as Reexport
 import qualified Beckn.Types.Core.Taxi.Common.Tags as T
 import Data.Aeson (omitNothingFields)
+import Data.Aeson.Types (Options)
 import Data.OpenApi hiding (tags)
 import Kernel.Prelude
 import Kernel.Utils.JSON (stripPrefixUnderscoreIfAny)
@@ -68,13 +69,13 @@ data FulfillmentInfo = FulfillmentInfo
   deriving (Generic, Show)
 
 instance FromJSON FulfillmentInfo where
-  parseJSON = genericParseJSON (stripPrefixUnderscoreIfAny {omitNothingFields = True})
+  parseJSON = genericParseJSON stripPrefixUnderscoreAndRemoveNullFields
 
 instance ToJSON FulfillmentInfo where
-  toJSON = genericToJSON (stripPrefixUnderscoreIfAny {omitNothingFields = True})
+  toJSON = genericToJSON stripPrefixUnderscoreAndRemoveNullFields
 
 instance ToSchema FulfillmentInfo where
-  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions stripPrefixUnderscoreIfAny
+  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions stripPrefixUnderscoreAndRemoveNullFields
 
 newtype EndInfo = EndInfo
   { location :: Location
@@ -99,3 +100,9 @@ newtype Location = Location
   { gps :: Gps
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+stripPrefixUnderscoreAndRemoveNullFields :: Options
+stripPrefixUnderscoreAndRemoveNullFields =
+  stripPrefixUnderscoreIfAny
+    { omitNothingFields = True
+    }

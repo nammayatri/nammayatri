@@ -110,8 +110,8 @@ mkFullfillment mbDriver ride booking mbVehicle tags = do
                   code = "driver_details",
                   name = "Driver Details",
                   list =
-                    [ Tags.Tag Nothing (Just "registered_at") (Just "Registered At") (Just $ show driver.createdAt),
-                      Tags.Tag Nothing (Just "rating") (Just "rating") (Just $ show driver.rating)
+                    [ Tags.Tag (Just False) (Just "registered_at") (Just "Registered At") (Just $ show driver.createdAt),
+                      Tags.Tag (Just False) (Just "rating") (Just "rating") (Just $ show driver.rating)
                     ]
                 }
             ]
@@ -195,8 +195,8 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
               code = "ride_distance_details",
               name = "Ride Distance Details",
               list =
-                [ Tags.Tag Nothing (Just "chargeable_distance") (Just "Chargeable Distance") (Just $ show chargeableDistance),
-                  Tags.Tag Nothing (Just "traveled_distance") (Just "Traveled Distance") (Just $ show traveledDistance)
+                [ Tags.Tag (Just False) (Just "chargeable_distance") (Just "Chargeable Distance") (Just $ show chargeableDistance),
+                  Tags.Tag (Just False) (Just "traveled_distance") (Just "Traveled Distance") (Just $ show traveledDistance)
                 ]
             }
         ]
@@ -268,7 +268,7 @@ buildOnUpdateMessage DriverArrivedBuildReq {..} = do
             { display = False,
               code = "driver_arrived_info",
               name = "Driver Arrived Info",
-              list = [Tags.Tag Nothing (Just "arrival_time") (Just "Chargeable Distance") (show <$> arrivalTime) | isJust arrivalTime]
+              list = [Tags.Tag (Just False) (Just "arrival_time") (Just "Chargeable Distance") (show <$> arrivalTime) | isJust arrivalTime]
             }
         ]
   fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) (Tags.TG tagGroups)
@@ -286,7 +286,7 @@ buildOnUpdateMessage EstimateRepetitionBuildReq {..} = do
             { display = False,
               code = "previous_cancellation_reasons",
               name = "Previous Cancellation Reasons",
-              list = [Tags.Tag Nothing (Just "cancellation_reason") (Just "Chargeable Distance") (Just . show $ castCancellationSource cancellationSource)]
+              list = [Tags.Tag (Just False) (Just "cancellation_reason") (Just "Chargeable Distance") (Just . show $ castCancellationSource cancellationSource)]
             }
         ]
   fulfillment <- mkFullfillment Nothing ride booking Nothing (Tags.TG tagGroups)
@@ -306,7 +306,7 @@ buildOnUpdateMessage NewMessageBuildReq {..} = do
             { display = False,
               code = "driver_new_message",
               name = "Driver New Message",
-              list = [Tags.Tag Nothing (Just "message") (Just "New Message") (Just message)]
+              list = [Tags.Tag (Just False) (Just "message") (Just "New Message") (Just message)]
             }
         ]
   fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) (Tags.TG tagGroups)

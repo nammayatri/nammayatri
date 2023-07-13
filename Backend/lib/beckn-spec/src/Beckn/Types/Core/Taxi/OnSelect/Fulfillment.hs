@@ -19,12 +19,13 @@ module Beckn.Types.Core.Taxi.OnSelect.Fulfillment
   )
 where
 
-import Beckn.Types.Core.Taxi.Common.FulfillmentInfo (FulfillmentType (..))
+import Beckn.Types.Core.Taxi.Common.FulfillmentInfo (FulfillmentType (..), stripPrefixUnderscoreAndRemoveNullFields)
 import Beckn.Types.Core.Taxi.Common.VehicleVariant as Reexport
 import Beckn.Types.Core.Taxi.OnSelect.Agent
 import Beckn.Types.Core.Taxi.Search.StartInfo
 import Beckn.Types.Core.Taxi.Search.StopInfo
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
+import Data.OpenApi.Schema (fromAesonOptions)
 import EulerHS.Prelude hiding (id)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
@@ -36,10 +37,7 @@ data FulfillmentInfo = FulfillmentInfo
     _type :: FulfillmentType,
     agent :: Agent
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema FulfillmentInfo where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+  deriving (Generic, Show)
 
 newtype FulfillmentVehicle = FulfillmentVehicle
   { category :: VehicleVariant
@@ -48,3 +46,12 @@ newtype FulfillmentVehicle = FulfillmentVehicle
 
 instance ToSchema FulfillmentVehicle where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON FulfillmentInfo where
+  parseJSON = genericParseJSON stripPrefixUnderscoreAndRemoveNullFields
+
+instance ToJSON FulfillmentInfo where
+  toJSON = genericToJSON stripPrefixUnderscoreAndRemoveNullFields
+
+instance ToSchema FulfillmentInfo where
+  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions stripPrefixUnderscoreAndRemoveNullFields

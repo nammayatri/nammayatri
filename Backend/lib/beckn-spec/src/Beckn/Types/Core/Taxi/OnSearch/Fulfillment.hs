@@ -19,14 +19,14 @@ module Beckn.Types.Core.Taxi.OnSearch.Fulfillment
   )
 where
 
-import Beckn.Types.Core.Taxi.Common.FulfillmentInfo (FulfillmentType (..))
+import Beckn.Types.Core.Taxi.Common.FulfillmentInfo (FulfillmentType (..), stripPrefixUnderscoreAndRemoveNullFields)
 import Beckn.Types.Core.Taxi.Common.VehicleVariant as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.StartInfo as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.StopInfo as Reexport
-import Data.Aeson (Options (..))
+-- import Data.Aeson (Options (..))
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (id)
-import Kernel.Utils.JSON
+-- import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data FulfillmentInfo = FulfillmentInfo
@@ -54,9 +54,3 @@ newtype FulfillmentVehicle = FulfillmentVehicle
 
 instance ToSchema FulfillmentVehicle where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-stripPrefixUnderscoreAndRemoveNullFields :: Options
-stripPrefixUnderscoreAndRemoveNullFields =
-  stripPrefixUnderscoreIfAny
-    { omitNothingFields = True
-    }
