@@ -56,20 +56,31 @@ buildTestInterpolationHandler config = do
   RideInterpolationHandler
     { batchSize = 30,
       addPoints = addPointsImplementation,
+      addPickupPoints = addPickupPointsImplementation,
       clearLocationUpdates = clearLocationUpdatesImplementation,
+      clearPickupLocationUpdates = clearPickupLocationUpdatesImplementation,
       getWaypointsNumber = getWaypointsNumberImplementation,
+      getPickupWaypointsNumber = getPickupWaypointsNumberImplementation,
       getFirstNwaypoints = getFirstNwaypointsImplementation,
+      getFirstNPickupwaypoints = getFirstNPickupwaypointsImplementation,
       deleteFirstNwaypoints = deleteFirstNwaypointsImplementation,
+      deleteFirstNPickupwaypoints = deleteFirstNPickupwaypointsImplementation,
       addInterpolatedPoints = addInterpolatedPointsImplementation,
+      addPickupInterpolatedPoints = addPickupInterpolatedPointsImplementation,
       clearInterpolatedPoints = clearInterpolatedPointsImplementation,
+      clearPickupInterpolatedPoints = clearPickupInterpolatedPointsImplementation,
       getInterpolatedPoints = getInterpolatedPointsImplementation,
+      getPickupInterpolatedPoints = getPickupInterpolatedPointsImplementation,
       expireInterpolatedPoints = expireInterpolatedPointsImplementation,
+      expirePickupInterpolatedPoints = expirePickupInterpolatedPointsImplementation,
       interpolatePointsAndCalculateDistance = \req -> do
         res <- Maps.snapToRoad config $ SnapToRoadReq req
         pure (res.distance, res.snappedPoints),
       updateDistance = updateDistanceTest,
       wrapDistanceCalculation = wrapDistanceCalculationImplementation,
-      isDistanceCalculationFailed = isDistanceCalculationFailedImplementation
+      isDistanceCalculationFailed = isDistanceCalculationFailedImplementation,
+      wrapPickupDistanceCalculation = wrapDistanceCalculationImplementation,
+      isPickupDistanceCalculationFailed = isPickupDistanceCalculationFailedImplementation
     }
 
 testDriverId :: Id Person

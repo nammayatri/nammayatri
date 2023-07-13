@@ -16,6 +16,7 @@ module Lib.LocationUpdates
   ( module Reexport,
     whenWithLocationUpdatesLock,
     buildRideInterpolationHandler,
+    buildPickupRideInterpolationHandler,
   )
 where
 
@@ -46,6 +47,19 @@ buildRideInterpolationHandler orgId isEndRide = do
       return $
         mkRideInterpolationHandler isEndRide cfg $
           \driverId dist -> Esq.runTransaction $ QRide.updateDistance driverId dist
+    _ -> throwError $ InternalError "Unknown Service Config"
+
+buildPickupRideInterpolationHandler :: Id Merchant -> Bool -> Flow (RideInterpolationHandler Person.Person Flow)
+buildPickupRideInterpolationHandler orgId isEndRide = do
+  orgMapsConfig <- QOMC.findByMerchantId orgId >>= fromMaybeM (MerchantServiceUsageConfigNotFound orgId.getId)
+  orgMapsServiceConfig <-
+    QOMSC.findByMerchantIdAndService orgId (DOSC.MapsService orgMapsConfig.pickupSnapToRoad)
+      >>= fromMaybeM (MerchantServiceConfigNotFound orgId.getId "Maps" (show orgMapsConfig.pickupSnapToRoad))
+  case orgMapsServiceConfig.serviceConfig of
+    DOSC.MapsServiceConfig cfg ->
+      return $
+        mkRideInterpolationHandler isEndRide cfg $
+          \driverId dist -> Esq.runTransaction $ QRide.updatePickupDistance driverId dist
     _ -> throwError $ InternalError "Unknown Service Config"
 
 whenWithLocationUpdatesLock :: (HedisFlow m r, MonadMask m) => Id DP.Person -> m () -> m ()

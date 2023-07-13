@@ -224,6 +224,22 @@ updateDistance driverId distance = do
       tbl ^. RideDriverId ==. val (toKey driverId)
         &&. tbl ^. RideStatus ==. val Ride.INPROGRESS
 
+updatePickupDistance ::
+  Id Person ->
+  HighPrecMeters ->
+  SqlDB ()
+updatePickupDistance driverId distance = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ RidePickupTraveledDistance +=. val distance,
+        RideUpdatedAt =. val now
+      ]
+    where_ $
+      tbl ^. RideDriverId ==. val (toKey driverId)
+        &&. tbl ^. RideStatus ==. val Ride.NEW
+
 updateAll ::
   Id Ride ->
   Ride ->
