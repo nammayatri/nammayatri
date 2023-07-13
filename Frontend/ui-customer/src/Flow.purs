@@ -110,6 +110,7 @@ baseAppFlow (GlobalPayload gPayload) refreshFlow = do
   setValueToLocalNativeStore BUNDLE_VERSION bundle
   _ <- pure $ setValueToLocalStore TRACKING_DRIVER "False"
   _ <- pure $ setValueToLocalStore TRACKING_ENABLED "True"
+  _ <- pure $ setValueToLocalStore LANGUAGE_KEY "FR_FR" -- added for hotfix need to find root cause.
   _ <- pure $ setValueToLocalStore RELOAD_SAVED_LOCATION "true"
   _ <- pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT if (flowWithoutOffers WithoutOffers) then "4" else "17"
   _ <- pure $ setValueToLocalStore TEST_POLLING_INTERVAL if (flowWithoutOffers WithoutOffers) then "8000.0" else "1500.0"
@@ -128,8 +129,8 @@ baseAppFlow (GlobalPayload gPayload) refreshFlow = do
   when (not refreshFlow) $ void $ UI.splashScreen state.splashScreen
   _ <- lift $ lift $ liftFlow $ logEventWithParams logField_ "ny_user_app_version" "version" versionName
   _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_entered_app"
-  if (getMerchant FunctionCall) == PASSCULTURE then setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
-    else pure unit
+  -- if (getMerchant FunctionCall) == PASSCULTURE then setValueToLocalStore LANGUAGE_KEY $ getValueFromConfig "defaultLanguage"
+  --   else pure unit
   if getValueToLocalStore REGISTERATION_TOKEN /= "__failed" && getValueToLocalStore REGISTERATION_TOKEN /= "(null)" &&  (isNothing $ (gPayload.payload)^._signatureAuthData)
     then currentFlowStatus
     else do
@@ -151,7 +152,7 @@ baseAppFlow (GlobalPayload gPayload) refreshFlow = do
                 Nothing -> pure unit
               currentFlowStatus
             Left err -> do
-              liftFlowBT $ hideLoader
+              liftFlowBT $ pure $ runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload { event : "signature_auth_failed", payload : Nothing}
               pure unit
         Nothing -> if (showCarouselScreen FunctionCall) then welcomeScreenFlow else enterMobileNumberScreenFlow
 
@@ -319,6 +320,7 @@ currentRideFlow rideAssigned = do
                           , rideEndTimeUTC = ""
                           , offeredFare = resp.estimatedTotalFare
                           , distanceDifference = differenceOfDistance
+                          , bookingId = resp.id
                           , feedback = ""
                           , rideStartTime = case currRideListItem.rideStartTime of
                                               Just startTime -> (convertUTCtoISC startTime "h:mm A")
@@ -876,6 +878,7 @@ homeScreenFlow = do
       _ <- pure $ currentPosition ""
       _ <- updateLocalStage HomeScreen
       _ <- Remote.cancelRideBT (Remote.makeCancelRequest state) (state.props.bookingId)
+      lift $ lift $ triggerRideStatusEvent "CANCELLED_PRODUCT" Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
       _ <- pure $ clearWaitingTimer <$> state.props.waitingTimeTimerIds
       liftFlowBT $ logEvent logField_ "ny_user_ride_cancelled_by_user" 
       liftFlowBT $ logEvent logField_ $ "ny_user_cancellation_reason: " <> state.props.cancelReasonCode
@@ -910,7 +913,7 @@ homeScreenFlow = do
                                       let newState = state{data{route = Nothing},props{isCancelRide = false,waitingTimeTimerIds = [], currentStage = RideStarted, forFirst = true , showShareAppPopUp = (INT.round $ (fromMaybe 0.0 (fromString (getValueToLocalStore SHARE_APP_COUNT)))) `mod` 4 == 0, showChatNotification = false }}
                                       _ <- updateLocalStage RideStarted
                                       modifyScreenState $ HomeScreenStateType (\homeScreen -> newState)
-                                      lift $ lift $ triggerRideStatusEvent notification Nothing Nothing $ getScreenFromStage state.props.currentStage
+                                      lift $ lift $ triggerRideStatusEvent notification Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
                                       when state.props.isSpecialZone $ currentRideFlow true
                                       homeScreenFlow
             "TRIP_FINISHED"       -> do -- TRIP FINISHED
@@ -931,7 +934,7 @@ homeScreenFlow = do
                                         let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
                                         let (RideBookingDetails contents) = bookingDetails.contents
                                         let (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (resp.rideList !! 0)
-                                        let finalAmount =  INT.round $ fromMaybe 0.0 (fromString (getFinalAmount (RideBookingRes resp)))
+                                        let finalAmount =  getFinalAmount (RideBookingRes resp)
                                         let differenceOfDistance = fromMaybe 0 contents.estimatedDistance - (fromMaybe 0 ride.chargeableRideDistance)
                                         lift $ lift $ triggerRideStatusEvent notification (Just finalAmount) (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
                                         setValueToLocalStore PICKUP_DISTANCE "0"
@@ -951,7 +954,7 @@ homeScreenFlow = do
             "DRIVER_ASSIGNMENT"   -> if (not (isLocalStageOn RideAccepted || isLocalStageOn RideStarted )) then do
                                         _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_DRIVER_ARRIVAL"
                                         _ <- liftFlowBT $ logEvent logField_ "ny_fs_driver_assignment"  
-                                        lift $ lift $ triggerRideStatusEvent notification Nothing Nothing $ getScreenFromStage state.props.currentStage
+                                        lift $ lift $ triggerRideStatusEvent notification Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
                                         currentRideFlow true
                                         homeScreenFlow
                                      else homeScreenFlow
@@ -973,12 +976,14 @@ homeScreenFlow = do
     SUBMIT_RATING state -> do
       _ <- Remote.rideFeedbackBT (Remote.makeFeedBackReq (state.data.previousRideRatingState.rating) (state.data.previousRideRatingState.rideId) (state.data.previousRideRatingState.feedback))
       _ <- updateLocalStage HomeScreen
+      let finalAmount = if state.data.finalAmount == 0 then state.data.previousRideRatingState.finalAmount else state.data.finalAmount
+      let bookingId = if state.props.bookingId == "" then state.data.previousRideRatingState.bookingId else state.props.bookingId
       pure $ runFn3 emitJOSEvent "java" "onEvent" $ encode $ EventPayload {
                                           event : "process_result"
                                         , payload : Just {
                                           action : "feedback_submitted"
-                                        , trip_amount : Nothing
-                                        , trip_id : Nothing
+                                        , trip_amount : Just finalAmount
+                                        , trip_id : Just bookingId
                                         , ride_status : Nothing
                                         , screen : Just $ getScreenFromStage state.props.currentStage
                                         , exit_app : false
@@ -1355,11 +1360,11 @@ dummyAddressGeometry = AddressGeometry {
   }
  }
 
-getFinalAmount :: RideBookingRes -> String
+getFinalAmount :: RideBookingRes -> Int
 getFinalAmount (RideBookingRes resp) =
     let rideList = resp.rideList
         (RideAPIEntity ride) = (fromMaybe dummyRideAPIEntity (rideList !! 0))
-    in (show (fromMaybe 0 ride.computedPrice))
+    in INT.round $ fromMaybe 0.0 $ fromString (show (fromMaybe 0 ride.computedPrice))
 
 tripDetailsScreenFlow :: Boolean ->  FlowBT String Unit
 tripDetailsScreenFlow fromMyRides = do

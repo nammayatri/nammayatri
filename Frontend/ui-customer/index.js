@@ -232,8 +232,8 @@ window["onEvent'"] = function (event, args) {
 function refreshFlow(){
   let currentDate = new Date();
   let diff = Math.abs(previousDateObject - currentDate) / 1000;
-  let token = (window.JBridge.getKeysInSharedPrefs("REGISTERATION_TOKEN"));
-  let currentState = (window.JBridge.getKeysInSharedPrefs("LOCAL_STAGE"));
+  let token = (window.JBridge.getKeysInSharedPref("REGISTERATION_TOKEN"));
+  let currentState = (window.JBridge.getKeysInSharedPref("LOCAL_STAGE"));
   if ((diff > refreshThreshold) && 
       (token != "__failed") && 
       (token != "(null)") &&
@@ -254,7 +254,7 @@ if (typeof window.JOS != "undefined") {
 }
 
 var sessionInfo = JSON.parse(JBridge.getDeviceInfo())
-if(sessionInfo.package_name.includes(".debug")){
+if(sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.includes(".staging")){
   logger.enableLogger();
 }else{
   logger.disableLogger();

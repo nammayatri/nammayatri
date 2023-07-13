@@ -286,7 +286,7 @@ export function getStringValue(key) {
     "DO_YOU_NEED_EMERGENCY_HELP" : "Avez-vous besoin d'une aide d'urgence?",
     "CALL_SUPPORT" : "Call Assistance",
     "YOU_ARE_ABOUT_TO_CALL_YATRI_SUPPORT" : "Vous êtes sur le point de passer un appel à l'équipe de soutien Yatri. Voulez-vous continuer?",
-    "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT" : "Vous êtes sur le point de passer un appel à l'équipe de soutien Namma Yatri. Voulez-vous continuer?",
+    "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT" : "Vous êtes sur le point de passer un appel à l'équipe de soutien Pass culture. Voulez-vous continuer?",
     "YOU_ARE_ABOUT_TO_CALL_POLICE" : "Vous êtes sur le point de passer un appel à la police. Voulez-vous continuer?",
     "DAIL_100" : "Composez 100?",
     "HELP_US_WITH_YOUR_FEEDBACK" : "Aidez-nous avec vos commentaires",
@@ -478,5 +478,11 @@ export function getStringValue(key) {
     "THE_PICKUP_LOCATION_ENTERED_WAS_WRONG" : "Le lieu de prise en charge saisi était erroné",
     "SOME_OTHER_REASON" : "Une autre raison.",
     "WAIT_FOR_DRIVER" : "Attendre le chauffeur",
-    "DRIVER_WAS_TAKING_TOO_LONG_TO_REACH_THE_PICKUP_LOCATION" : "Le chauffeur mettait trop de temps à atteindre le lieu de prise en charge"
+    "DRIVER_WAS_TAKING_TOO_LONG_TO_REACH_THE_PICKUP_LOCATION" : "Le chauffeur mettait trop de temps à atteindre le lieu de prise en charge",
+    "ALLOW_LOCATION_ACCESS": "Autoriser l'accès à la position",
+    "CALL_NAMMA_YATRI_SUPPORT" : "Prise en charge de la culture de passe d'appel",
+    "CALL_112": "Appelez le 112",
+    "CALL_EMERGENCY_CENTRE": "Appeler le centre d'urgence",
+    "DIAL_112": "Composez le 112 ?",
+    "YOU_ARE_ABOUT_TO_CALL_NEAREST_EMERGENCY_CENTRE": "Vous êtes sur le point d'appeler le centre d'urgence le plus proche. Voulez-vous poursuivre?"
   }

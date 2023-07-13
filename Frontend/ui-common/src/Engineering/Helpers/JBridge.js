@@ -1599,3 +1599,7 @@ export const emitJOSEvent = function (mapp,eventType,payload) {
   console.log("payload" , payload);
   JOS.emitEvent(mapp)(eventType)(JSON.stringify(payload))()()
 }
+
+export const hideLoader = function () {
+  JOS.emitEvent("java")("onEvent")(JSON.stringify({event : "hide_loader"}))()()
+}

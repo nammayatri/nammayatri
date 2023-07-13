@@ -77,6 +77,7 @@ type DriverInfoConfig = {
   ratingStroke :: String,
   ratingCornerRadius :: Number,
   callBackground :: String,
+  showTrackingButton :: Boolean,
   callButtonStroke :: String,
   cardStroke :: String,
   otpStroke :: String,

@@ -68,7 +68,7 @@ primaryButtonConfig  state = let
         { text = getString if EHC.os == "IOS" then CONTINUE
                   else if (getValueToLocalStore PERMISSION_POPUP_TIRGGERED) /= "true" then ALLOW_LOCATION_ACCESS else GRANT_ACCESS
         , textStyle = FontStyle.Body7
-        , color = Color.yellow900
+        , color = state.appConfig.primaryTextColor
         }
       , width = MATCH_PARENT 
       , background = state.appConfig.primaryBackground

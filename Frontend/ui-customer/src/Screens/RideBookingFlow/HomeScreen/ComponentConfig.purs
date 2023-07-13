@@ -1006,7 +1006,7 @@ requestInfoCardConfig _ = let
       text = getString ENABLE_THIS_FEATURE_TO_CHOOSE_YOUR_RIDE
     }
   , imageConfig {
-      imageUrl = "ny_ic_select_offer,https://assets.juspay.in/nammayatri/images/user/ny_ic_select_offer.png",
+      imageUrl = "ny_ic_select_offer," <> getAssetStoreLink FunctionCall <> "ny_ic_select_offer.png",
       height = V 122,
       width = V 116
     }

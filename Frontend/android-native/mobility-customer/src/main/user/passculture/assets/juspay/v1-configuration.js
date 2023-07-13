@@ -84,7 +84,7 @@ window.getMerchantConfig = function () {
       "topMargin": 0,
       "noQuotesImageHeight": 225,
       "noQuotesImageWidth": 340,
-      "closeIcon" : "ny_ic_close_white,https://assets.juspay.in/beckn/passculture/user/ny_ic_close_white.png"
+      "closeIcon" : "ny_ic_close_white,https://assets.juspay.in/beckn/passculture/user/images/ny_ic_close_white.png"
     },
     "driverInfoConfig": {
       "ratingTextColor": "#EB0055",
