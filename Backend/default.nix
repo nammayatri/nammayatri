@@ -30,6 +30,10 @@
         location-updates.check = false;
         beckn-test.check = false;
       };
+      defaults.settings.default = {
+        haddock = false;
+        libraryProfiling = true;
+      };
     };
 
     packages = {

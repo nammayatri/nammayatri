@@ -37,7 +37,7 @@ _:
               };
             };
             config = {
-              command = "set -x; cabal run ${config.cabalTarget}";
+              command = "set -x; cabal run --enable-profiling ${config.cabalTarget} -- +RTS -hc -Pa -potestprofile -RTS";
             };
           };
       };
