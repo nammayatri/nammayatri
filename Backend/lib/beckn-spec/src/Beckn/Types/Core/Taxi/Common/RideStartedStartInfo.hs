@@ -12,27 +12,24 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnInit.BreakupItem where
+module Beckn.Types.Core.Taxi.Common.RideStartedStartInfo
+  ( module Beckn.Types.Core.Taxi.Common.RideStartedStartInfo,
+    module Reexport,
+  )
+where
 
-import Beckn.Types.Core.Taxi.Common.DecimalValue
-import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
-import Kernel.Prelude
-import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
+import Beckn.Types.Core.Taxi.Common.Authorization as Reexport
+import Beckn.Types.Core.Taxi.Common.TimeTimestamp as Reexport
+import Data.Aeson as A
+import Data.OpenApi hiding (Example, example)
+import EulerHS.Prelude hiding (id, (.=))
+import Kernel.Utils.Schema
 
-data BreakupItem = BreakupItem
-  { title :: Text,
-    price :: BreakupItemPrice
+data RideStartedStartInfo = RideStartedStartInfo
+  { authorization :: Authorization,
+    time :: TimeTimestamp
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
-instance ToSchema BreakupItem where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-data BreakupItemPrice = BreakupItemPrice
-  { currency :: Text,
-    value :: DecimalValue
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema BreakupItemPrice where
+instance ToSchema RideStartedStartInfo where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

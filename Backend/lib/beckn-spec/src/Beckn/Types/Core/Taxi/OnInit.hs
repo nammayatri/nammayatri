@@ -18,7 +18,7 @@ module Beckn.Types.Core.Taxi.OnInit
   )
 where
 
-import Beckn.Types.Core.Taxi.OnInit.BreakupItem as Reexport
+import Beckn.Types.Core.Taxi.Common.BreakupItem as Reexport
 import Beckn.Types.Core.Taxi.OnInit.Order as Reexport
 import Beckn.Types.Core.Taxi.OnInit.OrderState as Reexport
 import Beckn.Types.Core.Taxi.OnInit.Payment as Reexport

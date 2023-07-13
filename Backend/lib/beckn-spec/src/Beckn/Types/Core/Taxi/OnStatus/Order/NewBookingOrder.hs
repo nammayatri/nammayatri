@@ -12,16 +12,19 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnStatus
-  ( module Beckn.Types.Core.Taxi.OnStatus,
-    module Reexport,
+module Beckn.Types.Core.Taxi.OnStatus.Order.NewBookingOrder
+  ( module Beckn.Types.Core.Taxi.OnStatus.Order.NewBookingOrder,
   )
 where
 
-import Beckn.Types.Core.Taxi.OnStatus.Order as Reexport
+import Beckn.Types.Core.Taxi.OnStatus.Order.OrderState (NewBookingOrderCode (NEW_BOOKING))
 import Kernel.Prelude
 
-newtype OnStatusMessage = OnStatusMessage
-  { order :: Order
+data NewBookingOrder = NewBookingOrder
+  { id :: Text,
+    state :: NewBookingOrderCode
   }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+orderState :: NewBookingOrderCode
+orderState = NEW_BOOKING

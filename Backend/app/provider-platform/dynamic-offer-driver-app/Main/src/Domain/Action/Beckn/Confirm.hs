@@ -30,6 +30,7 @@ import qualified Domain.Types.RideDetails as SRD
 import Domain.Types.RideRoute
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchRequestForDriver as SReqD
+import qualified Domain.Types.Vehicle as DVeh
 import Kernel.External.Encryption
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
@@ -79,11 +80,16 @@ data DConfirmReq = DConfirmReq
 
 data DConfirmRes = DConfirmRes
   { booking :: DRB.Booking,
-    ride :: Maybe DRide.Ride,
+    normalBookingInfo :: Maybe NormalBookingInfo,
     fromLocation :: DBL.BookingLocation,
     toLocation :: DBL.BookingLocation,
     riderDetails :: DRD.RiderDetails,
     transporter :: DM.Merchant
+  }
+
+data NormalBookingInfo = NormalBookingInfo
+  { ride :: DRide.Ride,
+    vehicle :: DVeh.Vehicle
   }
 
 handler ::
@@ -118,7 +124,10 @@ handler transporter req quote = do
         Left (driver, driverQuote) -> do
           ride <- buildRide driver.id booking
           triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = transporter.id}
-          rideDetails <- buildRideDetails ride driver
+          vehicle <-
+            QVeh.findById ride.driverId
+              >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+          let rideDetails = mkRideDetails ride driver vehicle
           driverSearchReqs <- QSRD.findAllActiveBySTId driverQuote.searchTryId
           routeInfo :: Maybe RouteInfo <- safeGet (searchRequestKey $ getId driverQuote.requestId)
           case routeInfo of
@@ -157,7 +166,7 @@ handler transporter req quote = do
           pure
             DConfirmRes
               { booking = uBooking,
-                ride = Just ride,
+                normalBookingInfo = Just NormalBookingInfo {ride, vehicle},
                 riderDetails,
                 transporter,
                 fromLocation = uBooking.fromLocation,
@@ -182,7 +191,7 @@ handler transporter req quote = do
           pure
             DConfirmRes
               { booking = uBooking,
-                ride = Nothing,
+                normalBookingInfo = Nothing,
                 riderDetails,
                 transporter,
                 fromLocation = uBooking.fromLocation,
@@ -262,36 +271,23 @@ getRiderDetails merchantId customerMobileCountryCode customerPhoneNumber now =
             hasTakenValidRideAt = Nothing
           }
 
-buildRideDetails ::
-  ( HasCacheConfig r,
-    HedisFlow m r,
-    EsqDBFlow m r,
-    HedisFlow m r,
-    HasPrettyLogger m r,
-    EncFlow m r,
-    CoreMetrics m,
-    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
-  ) =>
+mkRideDetails ::
   DRide.Ride ->
   DPerson.Person ->
-  m SRD.RideDetails
-buildRideDetails ride driver = do
-  vehicle <-
-    QVeh.findById ride.driverId
-      >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
-  return
-    SRD.RideDetails
-      { id = ride.id,
-        driverName = driver.firstName,
-        driverNumber = driver.mobileNumber,
-        driverCountryCode = driver.mobileCountryCode,
-        vehicleNumber = vehicle.registrationNo,
-        vehicleColor = Just vehicle.color,
-        vehicleVariant = Just vehicle.variant,
-        vehicleModel = Just vehicle.model,
-        vehicleClass = Nothing
-      }
+  DVeh.Vehicle ->
+  SRD.RideDetails
+mkRideDetails ride driver vehicle = do
+  SRD.RideDetails
+    { id = ride.id,
+      driverName = driver.firstName,
+      driverNumber = driver.mobileNumber,
+      driverCountryCode = driver.mobileCountryCode,
+      vehicleNumber = vehicle.registrationNo,
+      vehicleColor = Just vehicle.color,
+      vehicleVariant = Just vehicle.variant,
+      vehicleModel = Just vehicle.model,
+      vehicleClass = Nothing
+    }
 
 cancelBooking ::
   ( EsqDBFlow m r,

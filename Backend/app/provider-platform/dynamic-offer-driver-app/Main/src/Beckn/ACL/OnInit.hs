@@ -28,7 +28,7 @@ mkOnInitMessage res = do
       currency = "INR"
       breakup_ =
         mkBreakupList (OnInit.BreakupItemPrice currency . fromIntegral) OnInit.BreakupItem rb.fareParams
-          & filter (filterRequiredBreakups $ DFParams.getFareParametersType rb.fareParams) -- TODO: Remove after roll out
+          & filter (Common.filterRequiredBreakups $ DFParams.getFareParametersType rb.fareParams) -- TODO: Remove after roll out
   OnInit.OnInitMessage
     { order =
         OnInit.Order
@@ -59,22 +59,3 @@ mkOnInitMessage res = do
                 }
           }
     }
-  where
-    filterRequiredBreakups fParamsType breakup = do
-      case fParamsType of
-        DFParams.Progressive ->
-          breakup.title == "BASE_FARE"
-            || breakup.title == "DEAD_KILOMETER_FARE"
-            || breakup.title == "EXTRA_DISTANCE_FARE"
-            || breakup.title == "DRIVER_SELECTED_FARE"
-            || breakup.title == "CUSTOMER_SELECTED_FARE"
-            || breakup.title == "TOTAL_FARE"
-        DFParams.Slab ->
-          breakup.title == "BASE_FARE"
-            || breakup.title == "SERVICE_CHARGE"
-            || breakup.title == "WAITING_OR_PICKUP_CHARGES"
-            || breakup.title == "PLATFORM_FEE"
-            || breakup.title == "SGST"
-            || breakup.title == "CGST"
-            || breakup.title == "FIXED_GOVERNMENT_RATE"
-            || breakup.title == "TOTAL_FARE"

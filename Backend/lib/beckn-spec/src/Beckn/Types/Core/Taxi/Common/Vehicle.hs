@@ -12,16 +12,20 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnStatus
-  ( module Beckn.Types.Core.Taxi.OnStatus,
-    module Reexport,
-  )
-where
+module Beckn.Types.Core.Taxi.Common.Vehicle where
 
-import Beckn.Types.Core.Taxi.OnStatus.Order as Reexport
+import Data.Aeson as A
+import Data.OpenApi hiding (Example, example, name, tags)
 import Kernel.Prelude
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
-newtype OnStatusMessage = OnStatusMessage
-  { order :: Order
+data Vehicle = Vehicle
+  { model :: Text,
+    variant :: Text,
+    color :: Text,
+    registration :: Text
   }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema Vehicle where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

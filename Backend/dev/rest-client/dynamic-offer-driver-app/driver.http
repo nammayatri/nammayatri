@@ -1,5 +1,5 @@
 
-@driver-offer-bpp-host = http://localhost:8016
+@driver-offer-bpp-host = http://localhost:8016 --
 @token = favorit-suv-000000000000000000-token
 
 @today = {{$localDatetime 'YYYY-MM-DD'}}

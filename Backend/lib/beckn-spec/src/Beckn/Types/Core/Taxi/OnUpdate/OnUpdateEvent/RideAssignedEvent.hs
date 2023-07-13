@@ -18,14 +18,15 @@ module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent
   )
 where
 
-import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
+import Beckn.Types.Core.Taxi.Common.Agent as Reexport
+import Beckn.Types.Core.Taxi.Common.StartInfo as Reexport
+import Beckn.Types.Core.Taxi.Common.Vehicle as Reexport
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_ASSIGNED))
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, name, tags)
 import GHC.Exts (fromList)
 import Kernel.Prelude
-import Kernel.Utils.JSON (stripPrefixUnderscoreIfAny)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data RideAssignedEvent = RideAssignedEvent
@@ -98,72 +99,4 @@ data FulfillmentInfo = FulfillmentInfo
   deriving (Generic, Show, FromJSON, ToJSON)
 
 instance ToSchema FulfillmentInfo where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-newtype StartInfo = StartInfo
-  { authorization :: Authorization
-  }
-  deriving (Eq, Generic, Show, FromJSON, ToJSON)
-
-instance ToSchema StartInfo where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-data Authorization = Authorization
-  { _type :: Text,
-    token :: Text
-  }
-  deriving (Eq, Generic, Show)
-
-instance ToSchema Authorization where
-  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions stripPrefixUnderscoreIfAny
-
-instance FromJSON Authorization where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Authorization where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
-
-data Agent = Agent
-  { name :: Text,
-    phone :: Text,
-    phoneCountryCode :: Maybe Text,
-    rating :: Maybe DecimalValue,
-    tags :: AgentTags
-  }
-  deriving (Eq, Generic, Show, FromJSON, ToJSON)
-
-instance ToSchema Agent where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-newtype AgentTags = AgentTags
-  { registered_at :: UTCTime
-  }
-  deriving (Eq, Generic, Show)
-
-instance ToSchema AgentTags where
-  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions agentTagsJSONOptions
-
-instance FromJSON AgentTags where
-  parseJSON = genericParseJSON agentTagsJSONOptions
-
-instance ToJSON AgentTags where
-  toJSON = genericToJSON agentTagsJSONOptions
-
-agentTagsJSONOptions :: A.Options
-agentTagsJSONOptions =
-  defaultOptions
-    { fieldLabelModifier = \case
-        "registered_at" -> "./komn/registered_at"
-        a -> a
-    }
-
-data Vehicle = Vehicle
-  { model :: Text,
-    variant :: Text,
-    color :: Text,
-    registration :: Text
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema Vehicle where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

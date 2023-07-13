@@ -360,7 +360,7 @@ onUpdate ValidatedRideCompletedReq {..} = do
           }
 onUpdate ValidatedBookingCancelledReq {..} = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show cancellationSource)
-  bookingCancellationReason <- buildBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource booking.merchantId
+  let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource booking.merchantId
   merchantConfigs <- CMC.findAllByMerchantId booking.merchantId
   case cancellationSource of
     SBCR.ByUser -> SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
@@ -387,7 +387,7 @@ onUpdate ValidatedBookingCancelledReq {..} = do
   Notify.notifyOnBookingCancelled booking cancellationSource
 onUpdate ValidatedBookingReallocationReq {..} = do
   mbRide <- QRide.findActiveByRBId booking.id
-  bookingCancellationReason <- buildBookingCancellationReason booking.id (mbRide <&> (.id)) reallocationSource booking.merchantId
+  let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) reallocationSource booking.merchantId
   DB.runTransaction $ do
     QRB.updateStatus booking.id SRB.AWAITING_REASSIGNMENT
     QRide.updateStatus ride.id SRide.CANCELLED
@@ -403,7 +403,7 @@ onUpdate ValidatedDriverArrivedReq {..} = do
 onUpdate ValidatedNewMessageReq {..} = do
   Notify.notifyOnNewMessage booking message
 onUpdate ValidatedEstimateRepetitionReq {..} = do
-  bookingCancellationReason <- buildBookingCancellationReason booking.id (Just ride.id) cancellationSource booking.merchantId
+  let bookingCancellationReason = mkBookingCancellationReason booking.id (Just ride.id) cancellationSource booking.merchantId
   logTagInfo ("EstimateId-" <> getId estimate.id) "Estimate repetition."
 
   DB.runTransaction $ do
@@ -491,23 +491,21 @@ validateRequest EstimateRepetitionReq {..} = do
   estimate <- QEstimate.findByBPPEstimateId bppEstimateId >>= fromMaybeM (EstimateDoesNotExist bppEstimateId.getId)
   return $ ValidatedEstimateRepetitionReq {..}
 
-buildBookingCancellationReason ::
-  (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r, CoreMetrics m) =>
+mkBookingCancellationReason ::
   Id SRB.Booking ->
   Maybe (Id SRide.Ride) ->
   SBCR.CancellationSource ->
   Id DMerchant.Merchant ->
-  m SBCR.BookingCancellationReason
-buildBookingCancellationReason bookingId mbRideId cancellationSource merchantId = do
-  return
-    SBCR.BookingCancellationReason
-      { bookingId = bookingId,
-        rideId = mbRideId,
-        merchantId = Just merchantId,
-        source = cancellationSource,
-        reasonCode = Nothing,
-        reasonStage = Nothing,
-        additionalInfo = Nothing,
-        driverCancellationLocation = Nothing,
-        driverDistToPickup = Nothing
-      }
+  SBCR.BookingCancellationReason
+mkBookingCancellationReason bookingId mbRideId cancellationSource merchantId = do
+  SBCR.BookingCancellationReason
+    { bookingId = bookingId,
+      rideId = mbRideId,
+      merchantId = Just merchantId,
+      source = cancellationSource,
+      reasonCode = Nothing,
+      reasonStage = Nothing,
+      additionalInfo = Nothing,
+      driverCancellationLocation = Nothing,
+      driverDistToPickup = Nothing
+    }

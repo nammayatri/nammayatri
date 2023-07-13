@@ -12,8 +12,8 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent.Payment
-  ( module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent.Payment,
+module Beckn.Types.Core.Taxi.Common.RideCompletedPayment
+  ( module Beckn.Types.Core.Taxi.Common.RideCompletedPayment,
     module Reexport,
   )
 where
@@ -23,12 +23,12 @@ import Beckn.Types.Core.Taxi.Common.PaymentCollector as Reexport
 import Beckn.Types.Core.Taxi.Common.PaymentInstrument as Reexport
 import Beckn.Types.Core.Taxi.Common.PaymentType as Reexport
 import Beckn.Types.Core.Taxi.Common.TimeDuration as Reexport
-import Data.OpenApi (ToSchema (..), defaultSchemaOptions, fromAesonOptions)
+import Data.OpenApi (ToSchema (declareNamedSchema), fromAesonOptions)
 import Kernel.Prelude
 import Kernel.Utils.JSON as JSON
 import Kernel.Utils.Schema
 
-data Payment = Payment
+data RideCompletedPayment = RideCompletedPayment
   { collected_by :: Maybe PaymentCollector,
     _type :: Maybe PaymentType,
     instrument :: Maybe PaymentInstrument, -- FIXME find proper fields
@@ -37,20 +37,11 @@ data Payment = Payment
   }
   deriving (Generic, Show)
 
-instance FromJSON Payment where
+instance FromJSON RideCompletedPayment where
   parseJSON = genericParseJSON JSON.stripPrefixUnderscoreIfAny
 
-instance ToJSON Payment where
+instance ToJSON RideCompletedPayment where
   toJSON = genericToJSON JSON.stripPrefixUnderscoreIfAny
 
-instance ToSchema Payment where
+instance ToSchema RideCompletedPayment where
   declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions JSON.stripPrefixUnderscoreIfAny
-
-data PaymentParams = PaymentParams
-  { currency :: Text,
-    amount :: DecimalValue
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
-
-instance ToSchema PaymentParams where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

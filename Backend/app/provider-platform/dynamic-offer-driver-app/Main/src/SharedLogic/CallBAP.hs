@@ -44,9 +44,11 @@ import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as Fare
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
+import qualified Domain.Types.Vehicle as DVeh
 import Kernel.Prelude
 import Kernel.Storage.Hedis
 import qualified Kernel.Types.Beckn.Context as Context
@@ -58,8 +60,6 @@ import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
 
@@ -150,13 +150,13 @@ sendRideAssignedUpdateToBAP ::
   ) =>
   DRB.Booking ->
   SRide.Ride ->
+  DP.Person ->
+  DVeh.Vehicle ->
   m ()
-sendRideAssignedUpdateToBAP booking ride = do
+sendRideAssignedUpdateToBAP booking ride driver vehicle = do
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   let rideAssignedBuildReq = ACL.RideAssignedBuildReq {..}
   rideAssignedMsg <- ACL.buildOnUpdateMessage rideAssignedBuildReq
 

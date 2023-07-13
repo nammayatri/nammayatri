@@ -74,6 +74,9 @@ library
       Beckn.Types.Core.Taxi.API.Update
       Beckn.Types.Core.Taxi.Cancel.Req
       Beckn.Types.Core.Taxi.Common.Address
+      Beckn.Types.Core.Taxi.Common.Agent
+      Beckn.Types.Core.Taxi.Common.Authorization
+      Beckn.Types.Core.Taxi.Common.BreakupItem
       Beckn.Types.Core.Taxi.Common.CancellationSource
       Beckn.Types.Core.Taxi.Common.DecimalValue
       Beckn.Types.Core.Taxi.Common.FareProductType
@@ -84,8 +87,13 @@ library
       Beckn.Types.Core.Taxi.Common.PaymentInstrument
       Beckn.Types.Core.Taxi.Common.PaymentType
       Beckn.Types.Core.Taxi.Common.Price
+      Beckn.Types.Core.Taxi.Common.RideCompletedPayment
+      Beckn.Types.Core.Taxi.Common.RideCompletedQuote
+      Beckn.Types.Core.Taxi.Common.RideStartedStartInfo
+      Beckn.Types.Core.Taxi.Common.StartInfo
       Beckn.Types.Core.Taxi.Common.TimeDuration
       Beckn.Types.Core.Taxi.Common.TimeTimestamp
+      Beckn.Types.Core.Taxi.Common.Vehicle
       Beckn.Types.Core.Taxi.Common.VehicleVariant
       Beckn.Types.Core.Taxi.Confirm
       Beckn.Types.Core.Taxi.Confirm.Fulfillment
@@ -113,7 +121,6 @@ library
       Beckn.Types.Core.Taxi.OnConfirm.StartInfo
       Beckn.Types.Core.Taxi.OnConfirm.StopInfo
       Beckn.Types.Core.Taxi.OnInit
-      Beckn.Types.Core.Taxi.OnInit.BreakupItem
       Beckn.Types.Core.Taxi.OnInit.Order
       Beckn.Types.Core.Taxi.OnInit.OrderState
       Beckn.Types.Core.Taxi.OnInit.Payment
@@ -148,8 +155,13 @@ library
       Beckn.Types.Core.Taxi.OnSelect.StartInfo
       Beckn.Types.Core.Taxi.OnSelect.StopInfo
       Beckn.Types.Core.Taxi.OnStatus
-      Beckn.Types.Core.Taxi.OnStatus.Fulfillment
       Beckn.Types.Core.Taxi.OnStatus.Order
+      Beckn.Types.Core.Taxi.OnStatus.Order.BookingCancelledOrder
+      Beckn.Types.Core.Taxi.OnStatus.Order.NewBookingOrder
+      Beckn.Types.Core.Taxi.OnStatus.Order.OrderState
+      Beckn.Types.Core.Taxi.OnStatus.Order.RideAssignedOrder
+      Beckn.Types.Core.Taxi.OnStatus.Order.RideCompletedOrder
+      Beckn.Types.Core.Taxi.OnStatus.Order.RideStartedOrder
       Beckn.Types.Core.Taxi.OnTrack
       Beckn.Types.Core.Taxi.OnTrack.Tracking
       Beckn.Types.Core.Taxi.OnUpdate
@@ -162,7 +174,6 @@ library
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
-      Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent.Payment
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent
       Beckn.Types.Core.Taxi.Rating
       Beckn.Types.Core.Taxi.Rating.FeedbackForm

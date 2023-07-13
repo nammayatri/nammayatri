@@ -32,3 +32,9 @@ findAllByBookingId bookingId =
     fareBreakup <- from $ table @FareBreakupT
     where_ $ fareBreakup ^. FareBreakupBookingId ==. val (toKey bookingId)
     return fareBreakup
+
+deleteAllByBookingId :: Id Booking -> SqlDB ()
+deleteAllByBookingId bookingId =
+  delete $ do
+    fareBreakup <- from $ table @FareBreakupT
+    where_ $ fareBreakup ^. FareBreakupBookingId ==. val (toKey bookingId)

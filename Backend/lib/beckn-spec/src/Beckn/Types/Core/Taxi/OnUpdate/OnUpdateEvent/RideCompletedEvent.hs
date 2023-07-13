@@ -19,14 +19,14 @@ module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
 where
 
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
+import Beckn.Types.Core.Taxi.Common.RideCompletedPayment as Reexport
+import Beckn.Types.Core.Taxi.Common.RideCompletedQuote as Reexport
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_COMPLETED))
-import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent.Payment as Reexport
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, title, value)
 import EulerHS.Prelude hiding (id, (.=))
 import GHC.Exts (fromList)
-import Kernel.Utils.GenericPretty (PrettyShow)
 import Kernel.Utils.Schema
 
 data RideCompletedEvent = RideCompletedEvent
@@ -34,7 +34,7 @@ data RideCompletedEvent = RideCompletedEvent
     update_target :: Text,
     quote :: RideCompletedQuote,
     fulfillment :: FulfillmentInfo,
-    payment :: Maybe Payment
+    payment :: Maybe RideCompletedPayment
   }
   deriving (Generic, Show)
 
@@ -63,7 +63,7 @@ instance ToSchema RideCompletedEvent where
   declareNamedSchema _ = do
     txt <- declareSchemaRef (Proxy :: Proxy Text)
     quote <- declareSchemaRef (Proxy :: Proxy RideCompletedQuote)
-    payment <- declareSchemaRef (Proxy :: Proxy Payment)
+    payment <- declareSchemaRef (Proxy :: Proxy RideCompletedPayment)
     update_type <- declareSchemaRef (Proxy :: Proxy OnUpdateEventType)
     let st =
           mempty
@@ -96,43 +96,6 @@ instance ToSchema RideCompletedEvent where
                    "fulfillment",
                    "payment"
                  ]
-
-data RideCompletedQuote = RideCompletedQuote
-  { price :: QuotePrice,
-    breakup :: [BreakupItem]
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema RideCompletedQuote where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-data QuotePrice = QuotePrice
-  { currency :: Text,
-    value :: DecimalValue,
-    computed_value :: DecimalValue
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema QuotePrice where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-data BreakupItem = BreakupItem
-  { title :: Text,
-    price :: BreakupPrice
-  }
-  deriving (Generic, FromJSON, ToJSON, Show, PrettyShow)
-
-instance ToSchema BreakupItem where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-data BreakupPrice = BreakupPrice
-  { currency :: Text,
-    value :: DecimalValue
-  }
-  deriving (Generic, FromJSON, ToJSON, Show, PrettyShow)
-
-instance ToSchema BreakupPrice where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
 data FulfillmentInfo = FulfillmentInfo
   { id :: Text, -- bppRideId

@@ -17,4 +17,4 @@ module Beckn.Types.Core.Taxi.Select.BreakupItem
   )
 where
 
-import Beckn.Types.Core.Taxi.OnInit.BreakupItem as Reexport
+import Beckn.Types.Core.Taxi.Common.BreakupItem as Reexport

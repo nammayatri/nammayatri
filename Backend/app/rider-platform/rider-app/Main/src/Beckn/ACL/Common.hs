@@ -14,7 +14,9 @@
 
 module Beckn.ACL.Common where
 
+import qualified Beckn.Types.Core.Taxi.Common.CancellationSource as Common
 import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
+import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Kernel.Prelude
 import Kernel.Utils.Common
@@ -55,3 +57,11 @@ castPaymentInstrument (Payment.Wallet Payment.DefaultWalletType) = DMPM.Wallet D
 castPaymentInstrument Payment.UPI = DMPM.UPI
 castPaymentInstrument Payment.NetBanking = DMPM.NetBanking
 castPaymentInstrument Payment.Cash = DMPM.Cash
+
+castCancellationSource :: Common.CancellationSource -> SBCR.CancellationSource
+castCancellationSource = \case
+  Common.ByUser -> SBCR.ByUser
+  Common.ByDriver -> SBCR.ByDriver
+  Common.ByMerchant -> SBCR.ByMerchant
+  Common.ByAllocator -> SBCR.ByAllocator
+  Common.ByApplication -> SBCR.ByApplication

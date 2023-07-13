@@ -12,16 +12,25 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnStatus
-  ( module Beckn.Types.Core.Taxi.OnStatus,
-    module Reexport,
-  )
-where
+module Beckn.Types.Core.Taxi.Common.Authorization where
 
-import Beckn.Types.Core.Taxi.OnStatus.Order as Reexport
+import Data.Aeson as A
+import Data.OpenApi hiding (Example, example, name, tags)
 import Kernel.Prelude
+import Kernel.Utils.JSON (stripPrefixUnderscoreIfAny)
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
-newtype OnStatusMessage = OnStatusMessage
-  { order :: Order
+data Authorization = Authorization
+  { _type :: Text,
+    token :: Text
   }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+  deriving (Eq, Generic, Show)
+
+instance ToSchema Authorization where
+  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions stripPrefixUnderscoreIfAny
+
+instance FromJSON Authorization where
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+
+instance ToJSON Authorization where
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

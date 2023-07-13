@@ -18,8 +18,8 @@ content-type: application/json
 
 {
     "bookingIds" : [
-        "0dad7bf0-7472-41c3-86c9-b886f1088848",
-        "0b7c2b71-9e98-41f0-976e-5e11a9f4d537"
+        "decf30d4-09ec-410c-a016-0da387728a25",
+        "f621af6e-be7a-4e63-b18a-f85258b7bc1a"
         ]
 }
 
@@ -34,7 +34,7 @@ content-type: application/json
 {
     "bookings" :
     [
-        {"bookingId" : "06a79dca-b1ab-450d-8b9b-485ba345905b"},
-        {"bookingId" : "fakeBookingId"}
+        {"bookingId" : "9a6de4cd-1764-47f0-beea-30d2d1e27f22"},
+        {"bookingId" : "eaf87a90-50b5-456c-a15d-c9a01cd1450a"}
     ]
 }

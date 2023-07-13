@@ -14,10 +14,15 @@
 
 module Beckn.ACL.Common where
 
+import qualified Beckn.Types.Core.Taxi.Common.BreakupItem as Common
+import qualified Beckn.Types.Core.Taxi.Common.CancellationSource as Common
 import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
 import qualified Beckn.Types.Core.Taxi.Common.VehicleVariant as Common
+import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Vehicle.Variant as Variant
+import Kernel.Prelude
 
 castVariant :: Variant.Variant -> Common.VehicleVariant
 castVariant Variant.SEDAN = Common.SEDAN
@@ -56,3 +61,36 @@ castPaymentInstrument (Payment.Wallet Payment.DefaultWalletType) = DMPM.Wallet D
 castPaymentInstrument Payment.UPI = DMPM.UPI
 castPaymentInstrument Payment.NetBanking = DMPM.NetBanking
 castPaymentInstrument Payment.Cash = DMPM.Cash
+
+castCancellationSource :: DBCR.CancellationSource -> Common.CancellationSource
+castCancellationSource = \case
+  DBCR.ByUser -> Common.ByUser
+  DBCR.ByDriver -> Common.ByDriver
+  DBCR.ByMerchant -> Common.ByMerchant
+  DBCR.ByAllocator -> Common.ByAllocator
+  DBCR.ByApplication -> Common.ByApplication
+
+filterRequiredBreakups :: DFParams.FareParametersType -> Common.BreakupItem -> Bool
+filterRequiredBreakups fParamsType breakup = do
+  let title = breakup.title
+  case fParamsType of
+    DFParams.Progressive ->
+      title
+        `elem` [ "BASE_FARE",
+                 "DEAD_KILOMETER_FARE",
+                 "EXTRA_DISTANCE_FARE",
+                 "DRIVER_SELECTED_FARE",
+                 "CUSTOMER_SELECTED_FARE",
+                 "TOTAL_FARE"
+               ]
+    DFParams.Slab ->
+      title
+        `elem` [ "BASE_FARE",
+                 "SERVICE_CHARGE",
+                 "WAITING_OR_PICKUP_CHARGES",
+                 "PLATFORM_FEE",
+                 "SGST",
+                 "CGST",
+                 "FIXED_GOVERNMENT_RATE",
+                 "TOTAL_FARE"
+               ]

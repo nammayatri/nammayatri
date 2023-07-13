@@ -28,6 +28,6 @@ content-type: application/json
     "rides" :
     [
         {"rideId" : "{{rideId}}"},
-        {"rideId" : "fakeRideId"}
+        {"rideId" : "faa88413-8e75-434d-a81e-f176232029a5"}
     ]
 }

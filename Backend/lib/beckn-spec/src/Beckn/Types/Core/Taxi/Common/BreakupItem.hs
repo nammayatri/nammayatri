@@ -12,16 +12,27 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnStatus
-  ( module Beckn.Types.Core.Taxi.OnStatus,
-    module Reexport,
-  )
-where
+module Beckn.Types.Core.Taxi.Common.BreakupItem where
 
-import Beckn.Types.Core.Taxi.OnStatus.Order as Reexport
+import Beckn.Types.Core.Taxi.Common.DecimalValue
+import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import Kernel.Prelude
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
-newtype OnStatusMessage = OnStatusMessage
-  { order :: Order
+data BreakupItem = BreakupItem
+  { title :: Text,
+    price :: BreakupItemPrice
   }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema BreakupItem where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+data BreakupItemPrice = BreakupItemPrice
+  { currency :: Text,
+    value :: DecimalValue
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema BreakupItemPrice where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

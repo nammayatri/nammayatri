@@ -148,8 +148,8 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
             computed_value = fare
           }
       breakup =
-        mkBreakupList (OnUpdate.BreakupPrice currency . fromIntegral) OnUpdate.BreakupItem req.fareParams
-          & filter (filterRequiredBreakups $ DFParams.getFareParametersType req.fareParams) -- TODO: Remove after roll out
+        mkBreakupList (OnUpdate.BreakupItemPrice currency . fromIntegral) OnUpdate.BreakupItem req.fareParams
+          & filter (Common.filterRequiredBreakups $ DFParams.getFareParametersType req.fareParams) -- TODO: Remove after roll out
   return $
     OnUpdate.OnUpdateMessage $
       OnUpdate.RideCompleted
@@ -163,7 +163,7 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
                 },
             payment =
               Just
-                RideCompletedOU.Payment
+                RideCompletedOU.RideCompletedPayment
                   { collected_by = Common.castDPaymentCollector . (.collectedBy) <$> req.paymentMethodInfo,
                     _type = Common.castDPaymentType . (.paymentType) <$> req.paymentMethodInfo,
                     instrument = Common.castDPaymentInstrument . (.paymentInstrument) <$> req.paymentMethodInfo,
@@ -177,25 +177,6 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
                   traveled_distance = traveledDistance
                 }
           }
-  where
-    filterRequiredBreakups fParamsType breakup = do
-      case fParamsType of
-        DFParams.Progressive ->
-          breakup.title == "BASE_FARE"
-            || breakup.title == "DEAD_KILOMETER_FARE"
-            || breakup.title == "EXTRA_DISTANCE_FARE"
-            || breakup.title == "DRIVER_SELECTED_FARE"
-            || breakup.title == "CUSTOMER_SELECTED_FARE"
-            || breakup.title == "TOTAL_FARE"
-        DFParams.Slab ->
-          breakup.title == "BASE_FARE"
-            || breakup.title == "SERVICE_CHARGE"
-            || breakup.title == "WAITING_OR_PICKUP_CHARGES"
-            || breakup.title == "PLATFORM_FEE"
-            || breakup.title == "SGST"
-            || breakup.title == "CGST"
-            || breakup.title == "FIXED_GOVERNMENT_RATE"
-            || breakup.title == "TOTAL_FARE"
 buildOnUpdateMessage BookingCancelledBuildReq {..} = do
   return $
     OnUpdate.OnUpdateMessage $
