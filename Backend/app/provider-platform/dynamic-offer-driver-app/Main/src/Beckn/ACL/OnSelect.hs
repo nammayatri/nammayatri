@@ -20,10 +20,10 @@ module Beckn.ACL.OnSelect where
 
 import Beckn.ACL.Common
 import qualified Beckn.Types.Core.Taxi.OnSelect as OS
-import qualified Data.Text as T
-import Data.Time (diffUTCTime)
-import Data.Time.Format.ISO8601
-import Data.Time.LocalTime (calendarTimeTime)
+-- import qualified Data.Text as T
+-- import Data.Time (diffUTCTime)
+-- import Data.Time.Format.ISO8601
+-- import Data.Time.LocalTime (calendarTimeTime)
 import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.SearchRequest (SearchRequest)
@@ -269,13 +269,13 @@ mkPrice quote =
         }
 
 mkQuote :: DQuote.DriverQuote -> UTCTime -> OS.Quote
-mkQuote driverQuote now = do
-  let nominalDifferenceTime = diffUTCTime now driverQuote.validTill
-  let diffDuration = calendarTimeTime nominalDifferenceTime
-  let iso8601Duration = formatShow iso8601Format diffDuration
+mkQuote driverQuote _ = do
+  -- let nominalDifferenceTime = diffUTCTime now driverQuote.validTill
+  -- let diffDuration = calendarTimeTime nominalDifferenceTime
+  -- let iso8601Duration = formatShow iso8601Format diffDuration
   OS.Quote
     { price = mkPrice driverQuote,
-      ttl = Just $ T.pack iso8601Duration, --------- todo
+      ttl = Nothing, --------- todo
       breakup = Nothing
     }
 
