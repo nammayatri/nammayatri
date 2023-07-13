@@ -212,6 +212,7 @@ foreign import cleverTapSetLocation :: Unit -> Effect Unit
 foreign import saveSuggestions :: String -> Suggestions -> Unit
 foreign import saveSuggestionDefs :: String -> SuggestionDefinitions -> Unit
 
+foreign import hideLoader :: Effect Unit
 foreign import emitJOSEvent :: Fn3 String String Foreign Unit
 
 -- -- keyStoreEntryPresent :: String -> Flow Boolean
@@ -403,9 +404,3 @@ fromMetersToKm distanceInMeters
   | distanceInMeters >= 1000 = parseFloat (toNumber distanceInMeters / 1000.0) 1 <> " km"
   | otherwise = show distanceInMeters <> " m"
 
-hideLoader :: Effect Unit
-hideLoader = do
-  pure $ runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload {
-    event : "hide_loader"
-  , payload : Nothing
-}

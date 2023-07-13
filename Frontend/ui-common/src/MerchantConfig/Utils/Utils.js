@@ -36,10 +36,12 @@ function getStringFromCommon(key) {
       return malayalamStrings.getStringValue(key);
     case "TA_IN":
       return tamilStrings.getStringValue(key);
+    case "EN_US":
+      return englishStrings.getStringValue(key);
     case "FR_FR":
       return frenchStrings.getStringValue(key);
     default:
-      return englishStrings.getStringValue(key);
+      return frenchStrings.getStringValue(key);
   }
 }
 

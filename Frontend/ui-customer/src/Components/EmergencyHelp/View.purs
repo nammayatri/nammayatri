@@ -185,7 +185,11 @@ callPoliceConfig state  =
     }
     , option2 {
       text = getString DIAL_112
-    , width = (V 140) }
+    , width = (V 140) 
+    , strokeColor = state.config.primaryBackground
+    , background = state.config.primaryBackground
+    , color = state.config.primaryTextColor
+    }
     , backgroundClickable = true
     , secondaryText {
       text = getString YOU_ARE_ABOUT_TO_CALL_NEAREST_EMERGENCY_CENTRE

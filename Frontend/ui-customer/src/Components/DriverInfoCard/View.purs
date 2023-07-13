@@ -296,7 +296,7 @@ locationTrackButton push state =
   , gravity CENTER
   , background Color.white900
   , stroke $ "1,"<> Color.grey900
-  , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]) && (not state.props.showChatNotification) then VISIBLE else GONE
+  , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]) && (not state.props.showChatNotification) && state.data.config.driverInfoConfig.showTrackingButton then VISIBLE else GONE
   , cornerRadius 20.0
   , onClick push (const $ LocationTracking)
   , margin $ MarginTop 8
@@ -585,17 +585,17 @@ driverInfoView push state =
               ][]
               , if state.props.isSpecialZone  then headerTextView push state else contactView push state
               , otpAndWaitView push state
-              , separator (MarginHorizontal 16 16) (V 1) Color.grey900 (Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver ])
+              , separator (Margin 16 (if(state.props.currentStage == RideStarted && state.data.config.nyBrandingVisibility) then 16 else 0) 16 0) (V 1) Color.grey900 $ ((state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) && state.data.config.nyBrandingVisibility) || (state.props.currentStage == RideAccepted && not state.data.config.showPickUpandDrop)
               , driverDetailsView push state
               , separator (MarginHorizontal 16 16) (V 1) Color.grey900 true
               , paymentMethodView push state (getString RIDE_FARE) true
-              ,  separator (Margin 16 0 16 0) (V 1) Color.grey900 (state.data.config.showPickUpandDrop == true)
+              , separator (Margin 16 0 16 0) (V 1) Color.grey900 (state.data.config.showPickUpandDrop)
               , (if os == "IOS" then scrollView else linearLayout)
                 [ width MATCH_PARENT
                 , height if os == "IOS" then (V 210) else WRAP_CONTENT
                 , orientation VERTICAL
-                ][ if state.props.isSpecialZone then destinationView push state else  sourceDistanceView push state
-                  , separator (Margin 0 0 0 0) (V 1) Color.grey900 (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ])
+                ][ if state.props.isSpecialZone then destinationView push state else if state.data.config.showPickUpandDrop == false then dummyView push else sourceDistanceView push state
+                  , separator (Margin 0 0 0 0) (V 1) Color.grey900 (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ] && (state.data.config.showPickUpandDrop == true))
                   , cancelRideLayout push state
                 ]
               ]
@@ -609,7 +609,7 @@ cancelRideLayout push state =
  [ width MATCH_PARENT
  , height WRAP_CONTENT
  , gravity CENTER
- , margin $ if state.data.config.showPickUpandDrop == false then MarginTop 0 else MarginTop 16
+ , margin $ if state.data.config.showPickUpandDrop then MarginTop 16 else MarginTop 0
  , padding $ PaddingBottom if os == "IOS" then (if safeMarginBottom == 0 then 24 else safeMarginBottom) else 0
  , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver ]) then VISIBLE else GONE
  ][ linearLayout
@@ -673,12 +673,13 @@ contactView push state =
               , width $ V 64
               , gravity CENTER
               , cornerRadius 20.0
-              , background Color.green200
+              , background state.data.config.driverInfoConfig.callBackground
+              , stroke state.data.config.driverInfoConfig.callButtonStroke
               , onClick push (const MessageDriver)
               ][ imageView
-                  [ imageWithFallback $ if (getValueFromConfig "isChatEnabled") == "true" then if state.props.unReadMessages then "ic_chat_badge_green," <> (getAssetStoreLink FunctionCall) <> "ic_chat_badge_green.png" else "ic_call_msg," <> (getAssetStoreLink FunctionCall) <> "ic_call_msg.png" else "ny_ic_call," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_call.png"
-                  , height $ V 24
-                  , width $ V 24
+                  [ imageWithFallback $ if (getValueFromConfig "isChatEnabled") == "true" then if state.props.unReadMessages then "ic_chat_badge_green," <> (getAssetStoreLink FunctionCall) <> "ic_chat_badge_green.png" else "ic_call_msg," <> (getAssetStoreLink FunctionCall) <> "ic_call_msg.png" else "ny_ic_call," <> (getAssetStoreLink FunctionCall) <> "ny_ic_call.png"
+                  , height $ V state.data.config.driverInfoConfig.callHeight
+                  , width $ V state.data.config.driverInfoConfig.callWidth
                   ]
               ]
             ]

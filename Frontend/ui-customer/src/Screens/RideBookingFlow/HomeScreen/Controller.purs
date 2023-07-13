@@ -702,10 +702,14 @@ eval RemoveChat state = do
   ]
 
 eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) state = do
-  _ <- pure $ performHapticFeedback unit
-  _ <- pure $ updateLocalStage ChatWithDriver
-  _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
-  continue state {props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false }}
+  if (getValueFromConfig "isChatEnabled") == "true" then do
+    _ <- pure $ performHapticFeedback unit
+    _ <- pure $ updateLocalStage ChatWithDriver
+    _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
+    continue state {props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false }}
+    else continueWithCmd state[ do
+          pure $ DriverInfoCardActionController (DriverInfoCardController.CallDriver)
+        ]
 
 eval (DriverInfoCardActionController (DriverInfoCardController.RemoveNotification)) state = do
   continue state {props { showChatNotification = false}}
@@ -978,8 +982,8 @@ eval (SkipButtonActionController (PrimaryButtonController.OnClick)) state = do
                                           event : "process_result"
                                         , payload : Just {
                                           action : "feedback_skipped"
-                                        , trip_amount : Nothing
-                                        , trip_id : Nothing
+                                        , trip_amount : Just state.data.finalAmount
+                                        , trip_id : Just state.props.bookingId
                                         , ride_status : Nothing
                                         , screen : Just $ getScreenFromStage state.props.currentStage
                                         , exit_app : false

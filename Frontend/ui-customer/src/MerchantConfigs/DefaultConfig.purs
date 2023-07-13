@@ -69,6 +69,7 @@ config =
     , callWidth: 24
     , numberPlateBackground : "#E9BE4D"
     , showCancelPrevention : false
+    , showTrackingButton : true
     }
   , ratingConfig : 
     { secondaryButtonTextColor : "#2C2F3A"
