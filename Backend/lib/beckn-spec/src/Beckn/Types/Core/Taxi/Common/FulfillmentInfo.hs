@@ -63,7 +63,7 @@ data FulfillmentInfo = FulfillmentInfo
     agent :: Maybe Agent,
     _type :: FulfillmentType,
     vehicle :: Maybe Vehicle,
-    tags :: [T.TagGroup]
+    tags :: T.TagGroups
   }
   deriving (Generic, Show)
 

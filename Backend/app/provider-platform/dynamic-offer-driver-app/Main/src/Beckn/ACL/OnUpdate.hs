@@ -99,29 +99,29 @@ mkFullfillment ::
   DRide.Ride ->
   DRB.Booking ->
   Maybe SVeh.Vehicle ->
-  [Tags.TagGroup] ->
+  Tags.TagGroups ->
   m RideFulfillment.FulfillmentInfo
 mkFullfillment mbDriver ride booking mbVehicle tags = do
   agent <-
     flip mapM mbDriver $ \driver -> do
       let agentTags =
-            Tags.TagGroup
-              { display = False,
-                code = "driver_details",
-                name = "Driver Details",
-                list =
-                  [ Tags.Tag Nothing (Just "registered_at") (Just "Registered At") (Just $ show driver.createdAt),
-                    Tags.Tag Nothing (Just "rating") (Just "rating") (Just $ show driver.rating)
-                  ]
-              } :
-            []
+            [ Tags.TagGroup
+                { display = False,
+                  code = "driver_details",
+                  name = "Driver Details",
+                  list =
+                    [ Tags.Tag Nothing (Just "registered_at") (Just "Registered At") (Just $ show driver.createdAt),
+                      Tags.Tag Nothing (Just "rating") (Just "rating") (Just $ show driver.rating)
+                    ]
+                }
+            ]
       mobileNumber <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present.")
       name <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
       pure $
         RideAssignedOU.Agent
           { name = name,
             phone = mobileNumber,
-            tags = agentTags
+            tags = Tags.TG agentTags
           }
   let veh =
         mbVehicle <&> \vehicle ->
@@ -164,7 +164,7 @@ buildOnUpdateMessage ::
   OnUpdateBuildReq ->
   m OnUpdate.OnUpdateMessage
 buildOnUpdateMessage RideAssignedBuildReq {..} = do
-  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) []
+  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) (Tags.TG [])
   return $
     OnUpdate.OnUpdateMessage $
       OnUpdate.RideAssigned
@@ -175,7 +175,7 @@ buildOnUpdateMessage RideAssignedBuildReq {..} = do
             ..
           }
 buildOnUpdateMessage RideStartedBuildReq {..} = do
-  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) []
+  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) (Tags.TG [])
   return $
     OnUpdate.OnUpdateMessage $
       OnUpdate.RideStarted
@@ -190,17 +190,17 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
       & fromMaybeM (InternalError "Ride chargeable distance is not present.")
   let traveledDistance :: HighPrecMeters = req.ride.traveledDistance
   let tagGroups =
-        Tags.TagGroup
-          { display = False,
-            code = "ride_distance_details",
-            name = "Ride Distance Details",
-            list =
-              [ Tags.Tag Nothing (Just "chargeable_distance") (Just "Chargeable Distance") (Just $ show chargeableDistance),
-                Tags.Tag Nothing (Just "traveled_distance") (Just "Traveled Distance") (Just $ show traveledDistance)
-              ]
-          } :
-        []
-  fulfillment <- mkFullfillment (Just req.driver) req.ride req.booking (Just req.vehicle) tagGroups
+        [ Tags.TagGroup
+            { display = False,
+              code = "ride_distance_details",
+              name = "Ride Distance Details",
+              list =
+                [ Tags.Tag Nothing (Just "chargeable_distance") (Just "Chargeable Distance") (Just $ show chargeableDistance),
+                  Tags.Tag Nothing (Just "traveled_distance") (Just "Traveled Distance") (Just $ show traveledDistance)
+                ]
+            }
+        ]
+  fulfillment <- mkFullfillment (Just req.driver) req.ride req.booking (Just req.vehicle) (Tags.TG tagGroups)
   fare <- realToFrac <$> req.ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
   let currency = "INR"
       price =
@@ -264,14 +264,14 @@ buildOnUpdateMessage BookingCancelledBuildReq {..} = do
           }
 buildOnUpdateMessage DriverArrivedBuildReq {..} = do
   let tagGroups =
-        Tags.TagGroup
-          { display = False,
-            code = "driver_arrived_info",
-            name = "Driver Arrived Info",
-            list = [Tags.Tag Nothing (Just "arrival_time") (Just "Chargeable Distance") (show <$> arrivalTime) | isJust arrivalTime]
-          } :
-        []
-  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) tagGroups
+        [ Tags.TagGroup
+            { display = False,
+              code = "driver_arrived_info",
+              name = "Driver Arrived Info",
+              list = [Tags.Tag Nothing (Just "arrival_time") (Just "Chargeable Distance") (show <$> arrivalTime) | isJust arrivalTime]
+            }
+        ]
+  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) (Tags.TG tagGroups)
   return $
     OnUpdate.OnUpdateMessage $
       OnUpdate.DriverArrived
@@ -282,14 +282,14 @@ buildOnUpdateMessage DriverArrivedBuildReq {..} = do
           }
 buildOnUpdateMessage EstimateRepetitionBuildReq {..} = do
   let tagGroups =
-        Tags.TagGroup
-          { display = False,
-            code = "previous_cancellation_reasons",
-            name = "Previous Cancellation Reasons",
-            list = [Tags.Tag Nothing (Just "cancellation_reason") (Just "Chargeable Distance") (Just . show $ castCancellationSource cancellationSource)]
-          } :
-        []
-  fulfillment <- mkFullfillment Nothing ride booking Nothing tagGroups
+        [ Tags.TagGroup
+            { display = False,
+              code = "previous_cancellation_reasons",
+              name = "Previous Cancellation Reasons",
+              list = [Tags.Tag Nothing (Just "cancellation_reason") (Just "Chargeable Distance") (Just . show $ castCancellationSource cancellationSource)]
+            }
+        ]
+  fulfillment <- mkFullfillment Nothing ride booking Nothing (Tags.TG tagGroups)
   let item = EstimateRepetitionOU.Item {id = estimateId.getId}
   return $
     OnUpdate.OnUpdateMessage $
@@ -302,14 +302,14 @@ buildOnUpdateMessage EstimateRepetitionBuildReq {..} = do
           }
 buildOnUpdateMessage NewMessageBuildReq {..} = do
   let tagGroups =
-        Tags.TagGroup
-          { display = False,
-            code = "driver_new_message",
-            name = "Driver New Message",
-            list = [Tags.Tag Nothing (Just "message") (Just "New Message") (Just message)]
-          } :
-        []
-  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) tagGroups
+        [ Tags.TagGroup
+            { display = False,
+              code = "driver_new_message",
+              name = "Driver New Message",
+              list = [Tags.Tag Nothing (Just "message") (Just "New Message") (Just message)]
+            }
+        ]
+  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) (Tags.TG tagGroups)
   return $
     OnUpdate.OnUpdateMessage $
       OnUpdate.NewMessage

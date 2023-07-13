@@ -22,7 +22,7 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 data Agent = Agent
   { name :: Text,
     phone :: Text,
-    tags :: [TagGroup]
+    tags :: TagGroups
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
