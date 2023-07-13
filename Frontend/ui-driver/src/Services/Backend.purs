@@ -810,6 +810,16 @@ deleteIssueBT issueId = do
     where
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
+
+----------------------------------- currentDateAndTime -------------------------------------
+currentDateAndTimeBT :: String -> FlowBT String CurrentDateAndTimeRes
+currentDateAndTimeBT _ = do
+     headers <- getHeaders' ""
+     withAPIResultBT (EP.currentDateAndTime "") (\x → x) errorHandler (lift $ lift $ callAPI headers (CurrentDateAndTimeReq ""))
+    where
+        errorHandler (ErrorPayload errorPayload) =  do
+            BackT $ pure GoBack
+
 ---------------------------------------- otpRide ---------------------------------------------
 
 otpRide dummyRideOtp payload = do
