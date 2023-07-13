@@ -490,5 +490,6 @@ const kannadaStrings = {
   "TERRIBLE_EXPERIENCE": "ಭಯಂಕರ ಅನುಭವ 😠",
   "NEEDS_IMPROVEMENT": "ಮೇಲ್ಪಂಕ್ತಿ ಆವಶ್ಯಕ 😕",
   "ALMOST_PERFECT": "ಪ್ರಾಯಶ್ಚಿತ್ತ! 🙂",
-  "AMAZING": "ಅದ್ಭುತ!!! 🤩"
+  "AMAZING": "ಅದ್ಭುತ!!! 🤩",
+  "ASKED_FOR_EXTRA_FARE": "ಹೆಚ್ಚುವರಿ ದರ ಕೇಳಿದೆ"
 }

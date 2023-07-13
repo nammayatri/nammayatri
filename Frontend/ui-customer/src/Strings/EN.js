@@ -497,5 +497,6 @@ const englishStrings = {
   "TERRIBLE_EXPERIENCE": "Terrible Experience 😠",
   "NEEDS_IMPROVEMENT": "Needs Improvement 😕",
   "ALMOST_PERFECT": "Almost Perfect! 🙂",
-  "AMAZING": "Amazing!!! 🤩"
+  "AMAZING": "Amazing!!! 🤩",
+  "ASKED_FOR_EXTRA_FARE":  "Asked for Extra Fare"
 }

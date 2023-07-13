@@ -507,6 +507,7 @@ data STR
   | NEEDS_IMPROVEMENT
   | ALMOST_PERFECT
   | AMAZING
+  | ASKED_FOR_EXTRA_FARE
 
 getKeyString :: STR -> String
 getKeyString key = case key of
@@ -1002,3 +1003,4 @@ getKeyString key = case key of
   NEEDS_IMPROVEMENT -> "NEEDS_IMPROVEMENT"
   ALMOST_PERFECT -> "ALMOST_PERFECT"
   AMAZING -> "AMAZING"
+  ASKED_FOR_EXTRA_FARE -> "ASKED_FOR_EXTRA_FARE"

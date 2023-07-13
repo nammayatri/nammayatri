@@ -20,7 +20,7 @@ import Components.FareBreakUp as FareBreakUp
 import Components.PrimaryButton as PrimaryButton
 import Components.RatingCard.Controller (Action(..), RatingCardState)
 import Components.SourceToDestination as SourceToDestination
-import Data.Array (mapWithIndex, (!!), any)
+import Data.Array (mapWithIndex, (!!), any, elem, find, head, filter)
 import Data.Maybe (fromMaybe)
 import Data.String (split, Pattern(..))
 import Effect (Effect)
@@ -30,7 +30,7 @@ import Font.Style as FontStyle
 import JBridge (getBtnLoader, getKeyInSharedPrefKeys)
 import Language.Strings (getString, getKey, LANGUAGE_KEY(..))
 import Language.Types (STR(..))
-import Prelude (Unit, map, const, unit, ($), (-), (<<<), (<=), (<>), (==), (<), (/), (/=), not, (&&))
+import Prelude (Unit, map, const, unit, ($), (-), (<<<), (<=), (<>), (==), (<), (/), (/=), not, (&&), (<$>))
 import PrestoDOM (Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, visibility, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, imageUrl, imageView, inputType, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, singleLine, stroke, text, textSize, textView, weight, width, multiLineEditText, pattern, maxLines, editText, imageWithFallback, scrollBarY, scrollView)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
@@ -39,6 +39,7 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Screens.Types(Stage(..))
 import Common.Types.App
+import Services.API(FeedbackAnswer)
 
 
 view :: forall w. (Action -> Effect Unit) -> RatingCardState -> PrestoDOM ( Effect Unit ) w
@@ -121,16 +122,16 @@ feedbackPillView state push =
                 [ height WRAP_CONTENT
                 , width WRAP_CONTENT
                 , cornerRadius 20.0
-                , stroke ("1," <> if checkPillSelected item state.data.feedbackList then Color.blue900 else Color.grey900)
+                , stroke ("1," <> if checkPillSelected item.text state.data.feedbackList item.id then Color.blue900 else Color.grey900)
                 , margin $ Margin 6 6 6 6
-                , background if checkPillSelected item state.data.feedbackList then Color.blue600 else Color.white900
-                , onClick push $ const $ SelectPill item
+                , background if checkPillSelected item.text state.data.feedbackList item.id then Color.blue600 else Color.white900
+                , onClick push $ const $ SelectPill item.text item.id
                 ][ textView
                     [ height WRAP_CONTENT
                     , textSize FontSize.a_12
                     , fontStyle $ FontStyle.medium LanguageStyle
-                    , text item
-                    , color if checkPillSelected item state.data.feedbackList then Color.blue900 else Color.black800
+                    , text item.text
+                    , color if checkPillSelected item.text state.data.feedbackList item.id then Color.blue900 else Color.black800
                     , padding $ Padding 12 12 12 12
                     ]
                 ]
@@ -139,22 +140,71 @@ feedbackPillView state push =
       ) (getFeedbackPillData state.data.rating)
     ) 
 
-getFeedbackPillData :: Int -> Array (Array String) 
-getFeedbackPillData rating = if rating < 3 then feedbackPillDataWithLowRating 
-                             else if rating < 5 then feedbackPillDataWithMediumRating
-                             else feedbackPillDataWithHighRating
+getFeedbackPillData :: Int -> Array(Array {id :: String , text :: String})
+getFeedbackPillData rating = if rating ==1 then feedbackPillDataWithRating1
+                             else if rating == 2 then feedbackPillDataWithRating2
+                             else if rating == 3 then feedbackPillDataWithRating3
+                             else if rating == 4 then feedbackPillDataWithRating4
+                             else feedbackPillDataWithRating5
 
+checkPillSelected :: String -> Array FeedbackAnswer -> String -> Boolean
+checkPillSelected feedbackItem feedbackList itemId =
+  let
+    selectedItems = filter (\item -> item.questionId == itemId) feedbackList
+  in
+    any (\item -> feedbackItem `elem` item.answer) selectedItems
 
-checkPillSelected :: String -> Array String -> Boolean
-checkPillSelected feedbackItem feedbackList = (any (_ == feedbackItem) feedbackList)
-feedbackPillDataWithLowRating :: Array (Array String) 
-feedbackPillDataWithLowRating  = [[(getString RUDE_DRIVER), (getString FELT_UNSAFE), (getString TOO_MANY_CALLS)], [(getString RECKLESS_DRIVING), (getString DRIVER_CHARGED_MORE)], [(getString LATE_DROP_OFF), (getString LATE_PICK_UP)]]
+feedbackPillDataWithRating1 :: Array(Array {id :: String , text :: String})
+feedbackPillDataWithRating1 = [
+  [{id : "6", text : getString RUDE_DRIVER},
+  {id : "1", text : getString FELT_UNSAFE},
+  {id : "1", text : getString TOO_MANY_CALLS}],
+  [{id : "6", text : getString RECKLESS_DRIVING},
+  {id : "6", text : getString DRIVER_CHARGED_MORE}],
+  [{id : "1", text : getString LATE_DROP_OFF},
+  {id : "1", text : getString LATE_PICK_UP}]
+]
 
-feedbackPillDataWithMediumRating :: Array (Array String) 
-feedbackPillDataWithMediumRating  = [[(getString UNPROFESSIONAL_DRIVER), (getString RASH_DRIVING)], [(getString DRIVER_CHARGED_MORE), (getString UNCOMFORTABLE_AUTO)], [(getString TRIP_GOT_DELAYED), (getString FELT_UNSAFE)]]
+feedbackPillDataWithRating2 :: Array(Array {id :: String , text :: String})
+feedbackPillDataWithRating2 = [
+  [{id : "7", text : getString RUDE_DRIVER},
+  {id : "2", text : getString FELT_UNSAFE},
+  {id : "2", text : getString TOO_MANY_CALLS}],
+  [{id : "7", text : getString RECKLESS_DRIVING},
+  {id : "7", text : getString DRIVER_CHARGED_MORE}],
+  [{id : "2", text : getString LATE_DROP_OFF},
+  {id : "2", text : getString LATE_PICK_UP}]
+]
 
-feedbackPillDataWithHighRating :: Array (Array String) 
-feedbackPillDataWithHighRating  = [[(getString POLITE_DRIVER), (getString EXPERT_DRIVING), (getString SAFE_RIDE)], [(getString CLEAN_AUTO), (getString ON_TIME)], [getString SKILLED_NAVIGATOR]]
+feedbackPillDataWithRating3 :: Array(Array {id :: String , text :: String})
+feedbackPillDataWithRating3 = [
+  [{id : "8", text : getString UNPROFESSIONAL_DRIVER},
+  {id : "8", text : getString RASH_DRIVING}],
+  [{id : "8", text : getString DRIVER_CHARGED_MORE},
+  {id : "11", text : getString UNCOMFORTABLE_AUTO}],
+  [{id : "3", text : getString TRIP_GOT_DELAYED},
+  {id : "3", text : getString SAFE_RIDE}]
+]
+
+feedbackPillDataWithRating4 :: Array(Array {id :: String , text :: String})
+feedbackPillDataWithRating4 = [
+  [{id : "9", text : getString POLITE_DRIVER},
+  {id : "9", text : getString EXPERT_DRIVING}],
+  [{id : "9", text : getString ASKED_FOR_EXTRA_FARE},
+  {id : "11", text : getString UNCOMFORTABLE_AUTO}],
+  [{id : "4", text : getString TRIP_GOT_DELAYED},
+  {id : "4", text : getString SAFE_RIDE}]
+]
+
+feedbackPillDataWithRating5 :: Array(Array {id :: String , text :: String})
+feedbackPillDataWithRating5 = [
+  [{id : "10", text : getString POLITE_DRIVER},
+  {id : "5", text : getString EXPERT_DRIVING}],
+  [{id : "12", text : getString CLEAN_AUTO},
+  {id : "10", text : getString ON_TIME}],
+  [{id : "10", text : getString SKILLED_NAVIGATOR},
+  {id : "5", text : getString SAFE_RIDE}]
+]
 --------------------------------------------------------------------------------------------------------------------
 
 --------------------------------------------------- editTextView ---------------------------------------------------

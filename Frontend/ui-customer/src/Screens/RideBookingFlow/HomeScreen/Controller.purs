@@ -50,7 +50,7 @@ import Components.SettingSideBar.Controller as SettingSideBarController
 import Components.SourceToDestination.Controller as SourceToDestinationController
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union)
+import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem)
 import Data.Int (toNumber, round)
 import Data.Int (toNumber, round, fromString)
 import Data.Lens ((^.))
@@ -78,7 +78,7 @@ import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList)
 import Screens.SuccessScreen.Handler as UI
 import Screens.Types (HomeScreenState, Location, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), RateCardType(..), CallType(..))
-import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..))
+import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), FeedbackAnswer)
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, getValueToLocalStoreEff, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
@@ -88,6 +88,8 @@ import Effect.Class (liftEffect)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Types.App (defaultGlobalState)
 import Screens.RideBookingFlow.HomeScreen.Config(reportIssueOptions)
+import Data.Function (const)
+import Data.List ((:))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -864,10 +866,12 @@ eval (RatingCardAC (RatingCard.Rating index)) state = do
   let temp = if index == state.data.rideRatingState.rating then state.data.rideRatingState.feedbackList else []
   _ <- pure $ spy "feedback lsit "  temp
   continue state { data { rideRatingState { rating = index , feedbackList = if index == state.data.rideRatingState.rating then state.data.rideRatingState.feedbackList else []}, ratingViewState { selectedRating = index} } }
-eval (RatingCardAC (RatingCard.SelectPill feedbackItem)) state = do
-  let temp = addItemToFeedbackList state.data.rideRatingState.feedbackList feedbackItem
-  _ <- pure $ spy "feedback lsit "  temp
-  continue state { data { rideRatingState {  feedbackList = addItemToFeedbackList state.data.rideRatingState.feedbackList feedbackItem} } }
+
+eval (RatingCardAC (RatingCard.SelectPill feedbackItem id)) state = do
+  let newFeedbackList = updateFeedback id feedbackItem state.data.rideRatingState.feedbackList
+      filterFeedbackList = filter (\fa -> length fa.answer > 0) newFeedbackList
+  _ <- pure $ spy "feedback lsit "  filterFeedbackList
+  continue state { data { rideRatingState {  feedbackList = filterFeedbackList} } }
 
 eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = do
   _ <- pure $ firebaseLogEvent "ny_user_ride_give_feedback"
@@ -1716,6 +1720,28 @@ checkPermissionAndUpdatePersonMarker state = do
       _ <- checkPermissionAndUpdatePersonMarker state
       pure unit
     else pure unit
+
+updateFeedback :: String -> String -> Array FeedbackAnswer -> Array FeedbackAnswer
+updateFeedback feedbackId feedbackItem feedbackList =
+  if hasFeedbackId feedbackId feedbackList
+    then updateFeedbackAnswer feedbackId feedbackItem feedbackList
+    else addFeedbackAnswer feedbackId feedbackItem feedbackList
+  where
+    hasFeedbackId :: String -> Array FeedbackAnswer -> Boolean
+    hasFeedbackId fid list = any (\feedback -> feedback.questionId == fid) list
+
+    updateFeedbackAnswer :: String -> String -> Array FeedbackAnswer -> Array FeedbackAnswer
+    updateFeedbackAnswer fid newItem list =
+      map (\feedback ->
+        if feedback.questionId == fid
+                then feedback { answer = if newItem `elem` (feedback.answer) then filter (\x -> x /= newItem) feedback.answer else feedback.answer <> [newItem] }
+          else feedback
+        ) list
+
+    addFeedbackAnswer :: String -> String -> Array FeedbackAnswer -> Array FeedbackAnswer
+    addFeedbackAnswer fid newItem list = do
+      let config = {questionId : fid, answer : [newItem]}
+      list <> [config]
 
 showPersonMarker :: HomeScreenState -> String -> Location -> Effect Unit
 showPersonMarker state marker location = do

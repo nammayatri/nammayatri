@@ -20,6 +20,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.FareBreakUp as FareBreakUp
 import Components.SourceToDestination as SourceToDestination
 import Data.Maybe
+import Services.API(FeedbackAnswer)
 
 data Action = NoAction
             | BackPressed 
@@ -29,7 +30,7 @@ data Action = NoAction
             | SourceToDestinationAC SourceToDestination.Action
             | SkipButtonAC PrimaryButton.Action
             | FeedbackChanged String
-            | SelectPill String
+            | SelectPill String String
 
 type RatingCardState = 
   { data :: RatingCardData
@@ -55,5 +56,5 @@ type RatingCardData =
   , offeredFare :: Int
   , distanceDifference :: Int
   , feedback :: String
-  , feedbackList :: Array String
+  , feedbackList :: Array FeedbackAnswer
   }
