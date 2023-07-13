@@ -58,6 +58,7 @@ parseEvent :: (MonadFlow m) => Text -> OnUpdate.OnUpdateEvent -> m DOnUpdate.OnU
 parseEvent _ (OnUpdate.RideAssigned taEvent) = do
   vehicle <- fromMaybeM (InvalidRequest "vehicle is not present in RideAssigned Event.") $ taEvent.fulfillment.vehicle
   agent <- fromMaybeM (InvalidRequest "agent is not present in RideAssigned Event.") $ taEvent.fulfillment.agent
+  agentPhone <- fromMaybeM (InvalidRequest "agent phoneNumber is not present in RideAssigned Event.") $ agent.phone
   -- let agentTagGroup = find (\tagGroup -> tagGroup.code == "driver_details") agent.tags
   registeredAt :: UTCTime <-
     fromMaybeM (InvalidRequest "registered_at is not present.") $
@@ -77,7 +78,7 @@ parseEvent _ (OnUpdate.RideAssigned taEvent) = do
         bppRideId = Id taEvent.fulfillment.id,
         otp = taEvent.fulfillment.start.authorization.token,
         driverName = agent.name,
-        driverMobileNumber = agent.phone,
+        driverMobileNumber = agentPhone,
         driverRating = realToFrac <$> rating,
         driverRegisteredAt = registeredAt,
         vehicleNumber = vehicle.registration,

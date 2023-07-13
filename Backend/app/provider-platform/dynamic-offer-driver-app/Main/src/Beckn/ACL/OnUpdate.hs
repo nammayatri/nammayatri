@@ -120,7 +120,8 @@ mkFullfillment mbDriver ride booking mbVehicle tags = do
       pure $
         RideAssignedOU.Agent
           { name = name,
-            phone = mobileNumber,
+            rateable = True,
+            phone = Just mobileNumber,
             tags = Tags.TG agentTags
           }
   let veh =

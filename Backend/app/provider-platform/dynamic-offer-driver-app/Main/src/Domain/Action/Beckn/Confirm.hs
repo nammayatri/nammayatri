@@ -79,7 +79,9 @@ data DConfirmRes = DConfirmRes
     fromLocation :: DBL.BookingLocation,
     toLocation :: DBL.BookingLocation,
     riderDetails :: DRD.RiderDetails,
-    transporter :: DM.Merchant
+    transporter :: DM.Merchant,
+    driverId :: Maybe Text,
+    driverName :: Maybe Text
   }
 
 handler ::
@@ -151,7 +153,9 @@ handler transporter req quote = do
                 riderDetails,
                 transporter,
                 fromLocation = uBooking.fromLocation,
-                toLocation = uBooking.toLocation
+                toLocation = uBooking.toLocation,
+                driverId = Just driver.id.getId,
+                driverName = Just driver.firstName
               }
         Right _ -> throwError AccessDenied
     DRB.SpecialZoneBooking -> do
@@ -176,7 +180,9 @@ handler transporter req quote = do
                 riderDetails,
                 transporter,
                 fromLocation = uBooking.fromLocation,
-                toLocation = uBooking.toLocation
+                toLocation = uBooking.toLocation,
+                driverId = Nothing,
+                driverName = Nothing
               }
   where
     notificationType = FCM.DRIVER_ASSIGNMENT

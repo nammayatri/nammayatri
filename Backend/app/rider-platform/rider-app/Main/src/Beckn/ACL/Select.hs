@@ -90,7 +90,7 @@ buildOrder res = do
                   { location = end
                   },
               id = res.estimate.bppEstimateId.getId,
-              vehicle = Select.FulfillmentVehicle {category = variant},
+              vehicle = Select.Vehicle {category = variant},
               _type = Select.RIDE
               -- tags = Select.Tags res.autoAssignEnabled
             }

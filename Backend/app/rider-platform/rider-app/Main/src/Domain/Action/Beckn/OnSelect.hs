@@ -75,11 +75,12 @@ data QuoteInfo = QuoteInfo
 
 data DriverOfferQuoteDetails = DriverOfferQuoteDetails
   { driverName :: Text,
+    driverId :: Text,
     durationToPickup :: Int, -- Seconds?
     distanceToPickup :: HighPrecMeters,
     validTill :: UTCTime,
     rating :: Maybe Centesimal,
-    bppDriverQuoteId :: Id DDriverOffer.BPPQuote
+    bppDriverQuoteId :: Text
   }
   deriving (Generic, Show)
 
@@ -180,6 +181,7 @@ buildDriverOffer estimateId DriverOfferQuoteDetails {..} merchantId = do
     DDriverOffer.DriverOffer
       { id = uid,
         merchantId = Just merchantId,
+        driverId = Just driverId,
         bppQuoteId = bppDriverQuoteId,
         ..
       }
@@ -208,7 +210,7 @@ validateRequest DOnSelectReq {..} = do
       { ..
       }
   where
-    duplicateCheckCond :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => [Id DDriverOffer.BPPQuote] -> Text -> m Bool
+    duplicateCheckCond :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => [Text] -> Text -> m Bool
     duplicateCheckCond [] _ = return False
     duplicateCheckCond (bppQuoteId_ : _) bppId_ =
       isJust <$> runInReplica (QQuote.findByBppIdAndBPPQuoteId bppId_ bppQuoteId_)

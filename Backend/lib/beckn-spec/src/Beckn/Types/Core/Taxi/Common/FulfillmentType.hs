@@ -12,9 +12,20 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Init.StopInfo
-  ( module Reexport,
-  )
-where
+module Beckn.Types.Core.Taxi.Common.FulfillmentType where
 
-import Beckn.Types.Core.Taxi.Search.StopInfo as Reexport
+import Kernel.Prelude hiding (show)
+
+data FulfillmentType
+  = RIDE
+  | RIDE_OTP
+  deriving
+    ( Eq,
+      Ord,
+      Generic,
+      ToSchema,
+      Show,
+      FromJSON,
+      ToJSON,
+      Read
+    )
