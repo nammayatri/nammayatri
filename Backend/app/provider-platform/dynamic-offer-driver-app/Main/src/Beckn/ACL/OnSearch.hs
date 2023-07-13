@@ -59,14 +59,14 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
         (_, _) -> map (mkQuoteEntities startInfo stopInfo provider) [] --this won't happen
   let items = map (.item) quoteEntitiesList
       fulfillments = map (.fulfillment) quoteEntitiesList
-      -- contacts = fromMaybe "" provider.mobileNumber
-      -- tags =
-      --   OS.ProviderTags
-      --     { rides_inprogress = 0, --FIXME
-      --       rides_completed = 0, --FIXME
-      --       rides_confirmed = 0 --FIXME
-      --     }
-      payments = Just $ mkPayment <$> paymentMethodsInfo
+  -- contacts = fromMaybe "" provider.mobileNumber
+  -- tags =
+  --   OS.ProviderTags
+  --     { rides_inprogress = 0, --FIXME
+  --       rides_completed = 0, --FIXME
+  --       rides_confirmed = 0 --FIXME
+  --     }
+  -- payments = Just $ mkPayment <$> paymentMethodsInfo
   -- TODO For backwards compatibility, remove it. Only payments field used in logic.
   -- payment =
   --   OS.Payment
@@ -84,11 +84,10 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
             items,
             -- offers = [],
             -- add_ons = [],
-            fulfillments,
+            fulfillments
             -- contacts,
             -- tags,
             -- payment,
-            payments
           }
   OS.OnSearchMessage $
     OS.Catalog
@@ -158,11 +157,11 @@ mkQuoteEntities start end provider estInfo = do
                   maximum_value = maxPriceDecimalValue,
                   value_breakup = estimateBreakupList
                 },
-            descriptor =
-              OS.ItemDescriptor
-                { name = "",
-                  code = OS.ItemCode OS.DRIVER_OFFER_ESTIMATE variant Nothing Nothing
-                },
+            -- descriptor =
+            --   OS.ItemDescriptor
+            --     { name = "",
+            --       code = OS.ItemCode OS.DRIVER_OFFER_ESTIMATE variant Nothing Nothing
+            --     },
             -- quote_terms = [],
             tags =
               Just $
@@ -326,7 +325,7 @@ mkQuoteEntitiesSpecialZone start end provider it = do
             end = end,
             id = it.quoteId.getId,
             _type = OS.RIDE_OTP,
-            vehicle = OS.Vehicle {category = Common.castVariant it.vehicleVariant}
+            vehicle = OS.Vehicle {category = variant}
           }
       item =
         OS.Item
@@ -343,11 +342,11 @@ mkQuoteEntitiesSpecialZone start end provider it = do
                   maximum_value = estimatedFare,
                   value_breakup = []
                 },
-            descriptor =
-              OS.ItemDescriptor
-                { name = "",
-                  code = OS.ItemCode OS.ONE_WAY_SPECIAL_ZONE variant Nothing Nothing
-                },
+            -- descriptor =
+            --   OS.ItemDescriptor
+            --     { name = "",
+            --       code = OS.ItemCode OS.ONE_WAY_SPECIAL_ZONE variant Nothing Nothing
+            --     },
             -- quote_terms = [],
             tags =
               if isJust it.specialLocationTag

@@ -18,7 +18,7 @@ module Beckn.Types.Core.Taxi.OnSearch.Provider
   )
 where
 
-import Beckn.Types.Core.Taxi.Common.Payment
+-- import Beckn.Types.Core.Taxi.Common.Payment
 -- import Beckn.Types.Core.Taxi.OnSearch.Addon
 -- import Beckn.Types.Core.Taxi.OnSearch.Category
 import Beckn.Types.Core.Taxi.OnSearch.Descriptor
@@ -40,11 +40,11 @@ data Provider = Provider
     items :: [Item], --FIXME this should be list of only RENTAL or only ONE_WAY items
     -- offers :: [Offer],
     -- add_ons :: [Addon],
-    fulfillments :: [FulfillmentInfo],
+    fulfillments :: [FulfillmentInfo]
     -- contacts :: Text,
     -- tags :: ProviderTags,
     -- payment :: Payment, -- TODO For backwards compatibility, remove it. Only payments field used in logic.
-    payments :: Maybe [Payment]
+    -- payments :: Maybe [Payment]
   }
   deriving (Generic, Show)
 

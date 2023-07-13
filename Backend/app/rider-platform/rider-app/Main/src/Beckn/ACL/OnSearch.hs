@@ -75,7 +75,7 @@ searchCbService context catalog = do
             mobileNumber = "", ----------TODO----------Need to remove it or make it maybe in db
             ridesCompleted = 0 ----------TODO----------Need to remove it or make it maybe in db
           }
-  let paymentMethodsInfo = mkPayment `mapMaybe` (fromMaybe [] provider.payments)
+  let paymentMethodsInfo = [] ----------TODO----------Need to remove it or make it maybe in db
   pure
     DOnSearch.DOnSearchReq
       { requestId = Id context.message_id,
