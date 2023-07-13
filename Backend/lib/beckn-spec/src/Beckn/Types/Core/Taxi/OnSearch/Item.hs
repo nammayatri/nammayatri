@@ -27,6 +27,8 @@ import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions, fromAesonOptions)
 import Kernel.Prelude
 -- import Kernel.Types.Common
+
+import Kernel.Utils.JSON (removeNullFields)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Item = Item
@@ -36,7 +38,7 @@ data Item = Item
     fulfillment_id :: Text,
     -- offer_id :: Maybe Text,
     price :: ItemPrice,
-    descriptor :: ItemDescriptor,
+    -- descriptor :: ItemDescriptor,
     -- quote_terms :: [Text],
     -- Only when FareProductType.ONE_WAY_TRIP
     tags :: Maybe TagGroups
@@ -48,23 +50,23 @@ data Item = Item
   deriving (Generic, Show)
 
 instance ToJSON Item where
-  toJSON = genericToJSON itemJSONOptions
+  toJSON = genericToJSON removeNullFields
 
 instance FromJSON Item where
-  parseJSON = genericParseJSON itemJSONOptions
+  parseJSON = genericParseJSON removeNullFields
 
 instance ToSchema Item where
-  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions itemJSONOptions
+  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions removeNullFields
 
-itemJSONOptions :: Options
-itemJSONOptions =
-  defaultOptions
-    { fieldLabelModifier = \case
-        "base_distance" -> "./komn/rental/base_distance_km"
-        "base_duration" -> "./komn/rental/base_duration_hr"
-        "quote_terms" -> "./komn/quote_terms"
-        a -> a
-    }
+-- itemJSONOptions :: Options
+-- itemJSONOptions =
+--   defaultOptions
+--     { fieldLabelModifier = \case
+--         "base_distance" -> "./komn/rental/base_distance_km"
+--         "base_duration" -> "./komn/rental/base_duration_hr"
+--         "quote_terms" -> "./komn/quote_terms"
+--         a -> a
+--     }
 
 data ItemDescriptor = ItemDescriptor
   { name :: Text,
