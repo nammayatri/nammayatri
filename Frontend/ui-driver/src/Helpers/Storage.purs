@@ -81,6 +81,7 @@ data KeyStore = USER_NAME
                 | TOLERANCE_EARTH
                 | RIDE_ID
                 | SUGGESTIONS_ENABLED
+                | LAUNCH_DATE_SETTING
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

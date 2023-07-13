@@ -8,6 +8,10 @@ export function getStringValue(key) {
 }
 
 const kannadaStrings = {
+  INACCURATE_DATE_AND_TIME: "ತಪ್ಪಾದ ದಿನಾಂಕ ಮತ್ತು ಸಮಯ!",
+  ADJUST_YOUR_DEVICE_DATE_AND_TIME_AND_TRY_AGAIN: "ನಿಮ್ಮ ಮೊಬೈಲ್ ದಿನಾಂಕ ಮತ್ತು ಸಮಯವನ್ನು ಹೊಂದಿಸಿ ಮತ್ತು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
+  THE_CURRENT_DATE_AND_TIME_IS: "ಪ್ರಸ್ತುತ ದಿನಾಂಕ ಮತ್ತು ಸಮಯ",
+  GO_TO_SETTING: "ಸೆಟ್ಟಿಂಗ್‌ಗಳಿಗೆ ಹೋಗಿ",
   LETS_GET_STARTED: "ಪ್ರಾರಂಭಿಸೋಣ",
   YOUR_APPLICATION_HAS_BEEN_SUBMITTED_SUCCESSFULLY_AND_IS_UNDER_VERIFICATION: "ನಿಮ್ಮ ಅರ್ಜಿಯನ್ನು ಯಶಸ್ವಿಯಾಗಿ ಸಲ್ಲಿಸಲಾಗಿದೆ ಮತ್ತು ಪರಿಶೀಲನೆ ಹಂತದಲ್ಲಿದೆ",
   VIEW_STATUS: "ಸ್ಥಿತಿಯನ್ನು ವೀಕ್ಷಿಸಿ",

@@ -17,10 +17,12 @@ module Screens.AppUpdatePopUpScreen.View where
 
 import Animation as Anim
 import Animation.Config as AnimConfig
-import Prelude (Unit, bind, const, pure, unit, ($), (<>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, Visibility(..), alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, width, visibility, afterRender)
+import Prelude (Unit, bind, const, pure, unit, ($), (<>), (<<<), (==))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, Visibility(..), alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, width, visibility, afterRender, imageWithFallback)
 import Screens.Types as ST
+import Screens.Types (UpdatePopupType(..))
 import Data.Maybe (Maybe(..))
+import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
 import Effect (Effect)
 import JBridge as JB
 import Language.Strings (getString)
@@ -32,7 +34,9 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
 import Merchant.Utils (getValueFromConfig)
-
+import Components.PrimaryButton.View as PrimaryButton
+import Components.PrimaryButton.Controller as PrimaryButtonConfig
+import Language.Types(STR(..))
 
 screen :: ST.AppUpdatePopUpScreenState -> ScopedScreen Action ST.AppUpdatePopUpScreenState ScreenOutput
 screen initialState =
@@ -40,12 +44,86 @@ screen initialState =
   , view
   , parent : Just "AppUpdatePopUpScreen"
   , name : "PopUpScreen"
+  , eval 
   , globalEvents : []
-  , eval
   }
-view :: forall w .  (Action  -> Effect Unit) -> ST.AppUpdatePopUpScreenState -> PrestoDOM (Effect Unit) w
+
+view :: forall w . (Action  -> Effect Unit) -> ST.AppUpdatePopUpScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-   linearLayout [
+  linearLayout
+  [ height MATCH_PARENT
+    , width MATCH_PARENT
+  ]
+  [ if (state.updatePopup == AppVersion) then  updateRequiredView push state
+    else inaccurateDateAndTimeView push state 
+  ] 
+
+inaccurateDateAndTimeView :: forall w. (Action  -> Effect Unit) -> ST.AppUpdatePopUpScreenState -> PrestoDOM (Effect Unit) w
+inaccurateDateAndTimeView push state =
+  linearLayout
+  [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , background Color.white900
+    , gravity CENTER_HORIZONTAL
+    , orientation VERTICAL
+  ]
+  [ imageView
+    [ imageWithFallback "ny_ic_app_date_and_time,https://assets.juspay.in/beckn/jatrisaathi/driver/images/ny_ic_app_date_and_time.png"
+    , height $ V 250
+    , width $ V 250
+    , margin $ MarginTop 208
+    ]
+    , textView
+      [ text (getString INACCURATE_DATE_AND_TIME)
+      , textSize FontSize.a_18
+      , fontStyle $ FontStyle.bold LanguageStyle
+      , color Color.textPrimary
+      , margin (MarginVertical 16 16)
+      ]
+    , textView
+      [ text (getString ADJUST_YOUR_DEVICE_DATE_AND_TIME_AND_TRY_AGAIN)
+      , color Color.black700
+      , fontStyle $ FontStyle.regular LanguageStyle
+      , textSize FontSize.a_14
+      ]
+    , linearLayout [
+      width MATCH_PARENT
+      , height MATCH_PARENT
+      , orientation VERTICAL
+      , gravity BOTTOM
+      ]
+      [ textView
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , gravity CENTER 
+        , text (getString THE_CURRENT_DATE_AND_TIME_IS <>  ((convertUTCtoISC (getCurrentUTC "") "   DD/MM/YYYY   HH:mm:ss")))
+        , color Color.black700
+        , fontStyle $ FontStyle.regular LanguageStyle
+        , textSize FontSize.a_14
+        ]
+        , PrimaryButton.view (push <<< PrimaryButtonActionController ) (primaryButtonConfig)
+      ]
+
+  ]
+
+primaryButtonConfig ::  PrimaryButtonConfig.Config
+primaryButtonConfig  = let
+    config = PrimaryButtonConfig.config
+    primaryButtonConfig' = config
+      { textConfig
+      { text = (getString GO_TO_SETTING)
+      , color = Color.primaryButtonColor
+      , textSize = FontSize.a_18}
+      , background = Color.black900
+      , height = (V 50)
+      , margin = (Margin 16 16 16 16)
+      , cornerRadius = 8.0
+      }
+  in primaryButtonConfig'
+
+updateRequiredView :: forall w. (Action  -> Effect Unit) -> ST.AppUpdatePopUpScreenState -> PrestoDOM (Effect Unit) w
+updateRequiredView push state =
+  linearLayout [
     width MATCH_PARENT
     , height MATCH_PARENT
     , orientation VERTICAL
@@ -105,8 +183,7 @@ view push state =
           ][ linearLayout 
               [ width WRAP_CONTENT  
               , height WRAP_CONTENT
-              ][
-                  linearLayout
+              ][ linearLayout
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
                 , padding (Padding 20 11 20 11)
@@ -115,20 +192,20 @@ view push state =
                 , alpha 0.6
                 , visibility GONE
                 ][
-                    textView
-                    [ width WRAP_CONTENT
-                    , height WRAP_CONTENT
-                    , text (getString NOT_NOW)
-                    , color Color.textSecondary
-                    , alpha 0.6
-                    , fontStyle $ FontStyle.bold LanguageStyle
-                    , textSize FontSize.a_14
-                    , clickable true
-                    , onClick (\action -> do
-                                _<- push action
-                                pure unit
-                                ) (const OnCloseClick)
-                    ]
+                  textView
+                  [ width WRAP_CONTENT
+                  , height WRAP_CONTENT
+                  , text (getString NOT_NOW)
+                  , color Color.textSecondary
+                  , alpha 0.6
+                  , fontStyle $ FontStyle.bold LanguageStyle
+                  , textSize FontSize.a_14
+                  , clickable true
+                  , onClick (\action -> do
+                              _<- push action
+                              pure unit
+                              ) (const OnCloseClick)
+                  ]
                 ]
             , linearLayout
               [ width WRAP_CONTENT

@@ -1707,3 +1707,31 @@ instance showDriversInfo :: Show DriversInfo where show = genericShow
 instance standardEncodeDriversInfo :: StandardEncode DriversInfo where standardEncode (DriversInfo res) = standardEncode res
 instance decodeDriversInfo :: Decode DriversInfo where decode = defaultDecode
 instance encodeDriversInfo :: Encode DriversInfo where encode = defaultEncode
+
+------------------------------------------ currentDateAndTime --------------------------------------
+
+newtype CurrentDateAndTimeReq = CurrentDateAndTimeReq String
+newtype CurrentDateAndTimeRes =  CurrentDateAndTimeRes 
+  { 
+    timestamp :: Maybe Number
+  }
+
+
+instance makeCurrentDateAndTimeReq :: RestEndpoint CurrentDateAndTimeReq CurrentDateAndTimeRes where
+  makeRequest reqBody headers = defaultMakeRequest GET (EP.currentDateAndTime "") headers reqBody
+  decodeResponse = decodeJSON
+  encodeRequest req = defaultEncode req
+
+derive instance genericCurrentDateAndTimeReq :: Generic CurrentDateAndTimeReq _
+derive instance newtypeCurrentDateAndTimeReq :: Newtype CurrentDateAndTimeReq _
+instance standardEncodeCurrentDateAndTimeReq :: StandardEncode CurrentDateAndTimeReq where standardEncode (CurrentDateAndTimeReq reqBody) = standardEncode reqBody
+instance showDCurrentDateAndTimeReq :: Show CurrentDateAndTimeReq where show = genericShow
+instance decodeCurrentDateAndTimeReq :: Decode CurrentDateAndTimeReq where decode = defaultDecode
+instance encodeCurrentDateAndTimeReq :: Encode CurrentDateAndTimeReq where encode = defaultEncode
+
+derive instance genericCurrentDateAndTimeRes :: Generic CurrentDateAndTimeRes _
+derive instance newtypeCurrentDateAndTimeRes :: Newtype CurrentDateAndTimeRes _
+instance standardEncodeCurrentDateAndTimeRes :: StandardEncode CurrentDateAndTimeRes where standardEncode (CurrentDateAndTimeRes res) = standardEncode res
+instance showCurrentDateAndTimeRes :: Show CurrentDateAndTimeRes where show = genericShow
+instance decodeCurrentDateAndTimeRes :: Decode CurrentDateAndTimeRes  where decode = defaultDecode
+instance encodeCurrentDateAndTimeRes :: Encode CurrentDateAndTimeRes where encode = defaultEncode

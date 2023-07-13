@@ -15,14 +15,19 @@
 
 module Screens.AppUpdatePopUpScreen.Controller where
 
-import Prelude (Unit, pure, unit, class Show)
+import Prelude (Unit, pure, unit, class Show, bind)
 
 import Effect (Effect)
 import PrestoDOM (Eval, Props, exit, continue)
+import Prelude (($))
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (AppUpdatePopUpScreenState)
 import Screens (ScreenName(..), getScreen)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
+import Components.PrimaryButton.Controller as PrimaryButtonController
+import JBridge as JB
+import Components.PrimaryButton as PrimaryButton
+import Storage (KeyStore(..), setValueToLocalStore)
 
 data ScreenOutput = Decline | Accept 
 
@@ -34,17 +39,22 @@ instance loggableAction :: Loggable Action where
     AfterRender -> trackAppScreenRender appId "screen" (getScreen APP_UPDATE_POPUP_SCREEN)
     OnCloseClick -> trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "on_close_click"
     OnAccept -> trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "on_accept_click"
+    PrimaryButtonActionController action-> trackAppActionClick appId (getScreen APP_UPDATE_POPUP_SCREEN) "in_screen" "on_accept_click"
     
 data Action = OnCloseClick
             | OnAccept
             | AfterRender
+            | PrimaryButtonActionController PrimaryButtonController.Action
 
 eval :: Action -> AppUpdatePopUpScreenState -> Eval Action ScreenOutput AppUpdatePopUpScreenState
 eval OnCloseClick state = do
     exit Decline 
 eval OnAccept state = do 
     exit Accept 
-
+eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do 
+  _ <- pure $ JB.launchDateSettings ""
+  _ <- pure $ setValueToLocalStore LAUNCH_DATE_SETTING "true"
+  continue state
 eval _ state = continue state
 
 overrides :: String -> (Action -> Effect Unit) -> AppUpdatePopUpScreenState -> Props (Effect Unit)

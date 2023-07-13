@@ -8,6 +8,10 @@ export function getStringValue(key) {
 }
 
 const bengaliStrings = {
+	INACCURATE_DATE_AND_TIME: "ভুল তারিখ ও সময়!",
+	ADJUST_YOUR_DEVICE_DATE_AND_TIME_AND_TRY_AGAIN: "আপনার ডিভাইসের তারিখ এবং সময় সামঞ্জস্য করুন এবং আবার চেষ্টা করুন",
+	THE_CURRENT_DATE_AND_TIME_IS: "বর্তমান তারিখ এবং সময় হল",
+	GO_TO_SETTING: "সেটিংস এ যান",
 	LETS_GET_STARTED: "চল শুরু করি",
 	YOUR_APPLICATION_HAS_BEEN_SUBMITTED_SUCCESSFULLY_AND_IS_UNDER_VERIFICATION: "আপনার আবেদন সফলভাবে জমা দেওয়া হয়েছে এবং যাচাইয়ের অধীনে রয়েছে",
 	VIEW_STATUS: "স্থিতি দেখুন",
