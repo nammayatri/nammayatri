@@ -133,9 +133,9 @@ checkDateAndTime _ = do
     let currentTimeStamp = current.timestamp
     let deviceDateTimeStamp = getCurrentTimeStamp unit
     let timeDiff = (((fromMaybe ( toNumber 0) currentTimeStamp )) - deviceDateTimeStamp)
-    let timeDiffInMins = (timeDiff) / toNumber (1000 * 60)
+    let timeDiffInMins = (timeDiff) / toNumber (1000)
     let absTimeDiff = if timeDiffInMins < toNumber 0 then timeDiffInMins * toNumber (-1) else timeDiffInMins
-    when (absTimeDiff >= toNumber 60 ) do
+    when (absTimeDiff >= toNumber 10 ) do
       _ <- pure $ setValueToLocalStore LAUNCH_DATE_SETTING "true"
       modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState -> appUpdatePopUpScreenState { updatePopup =DateAndTime })
       lift $ lift $ doAff do liftEffect hideSplash
