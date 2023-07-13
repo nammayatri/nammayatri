@@ -36,6 +36,7 @@ module SharedLogic.DriverPool
     updateDriverSpeedInRedis,
     getDriverAverageSpeed,
     mkAvailableTimeKey,
+    mkBlockListedDriversKey,
     PoolCalculationStage (..),
     module Reexport,
   )
@@ -424,6 +425,9 @@ getDriverAverageSpeed merchantId driverId = Redis.withCrossAppRedis $ do
               locationUpdatesPairs
       pure . fromRational . toRational $ totalDistanceTravelled.getHighPrecMeters.getCenti / totalTimeTaken
     else pure defaultDriverSpeed
+
+mkBlockListedDriversKey :: Id SearchRequest -> Text
+mkBlockListedDriversKey searchReqId = "Block-Listed-Drivers-Key:SearchRequestId-" <> searchReqId.getId
 
 calculateDriverPool ::
   ( EncFlow m r,

@@ -26,7 +26,6 @@ import Kernel.Types.Id
 import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.DriverLicense as BeamDL
-import Storage.Tabular.Person ()
 
 create :: L.MonadFlow m => DriverLicense -> m (MeshResult ())
 create driverLicense = do

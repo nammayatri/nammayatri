@@ -24,7 +24,7 @@ module API.UI.Search
   )
 where
 
-import qualified Beckn.ACL.Metro.Search as MetroACL
+-- import qualified Beckn.ACL.Metro.Search as MetroACL
 import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson
 import Data.OpenApi hiding (Header)
@@ -134,11 +134,10 @@ oneWaySearch ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     HedisFlow m r,
-    HasFlowEnv m r '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     CoreMetrics m,
-    HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
+    HasFlowEnv m r ["searchRequestExpiry" ::: Maybe Seconds, "nwAddress" ::: BaseUrl],
     HasBAPMetrics m r,
     MonadProducer PublicTransportSearch m,
     EventStreamFlow m r
@@ -154,9 +153,9 @@ oneWaySearch personId bundleVersion clientVersion device req = do
   fork "search cabs" . withShortRetry $ do
     becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes
     void $ CallBPP.search dSearchRes.gatewayUrl becknTaxiReq
-  fork "search metro" . withShortRetry $ do
-    becknMetroReq <- MetroACL.buildSearchReq dSearchRes
-    CallBPP.searchMetro dSearchRes.gatewayUrl becknMetroReq
+  -- fork "search metro" . withShortRetry $ do
+  --   becknMetroReq <- MetroACL.buildSearchReq dSearchRes
+  --   CallBPP.searchMetro dSearchRes.gatewayUrl becknMetroReq
   fork "search public-transport" $ PublicTransport.sendPublicTransportSearchRequest personId dSearchRes
   return (dSearchRes.searchId, dSearchRes.searchRequestExpiry, dSearchRes.shortestRouteInfo)
 
@@ -165,11 +164,10 @@ rentalSearch ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     HedisFlow m r,
-    HasFlowEnv m r '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     CoreMetrics m,
-    HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
+    HasFlowEnv m r ["searchRequestExpiry" ::: Maybe Seconds, "nwAddress" ::: BaseUrl],
     HasBAPMetrics m r
   ) =>
   Id Person.Person ->

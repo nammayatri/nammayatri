@@ -97,7 +97,8 @@ type ButtonConfig = {
   timerValue :: Int,
   enableTimer :: Boolean,
   timerID :: String,
-  fontStyle :: String
+  fontStyle :: String,
+  height :: Length
 }
 
 type DismissPopupConfig =
@@ -170,6 +171,7 @@ config = {
     , enableTimer : false
     , timerID : ""
     , fontStyle : FontStyle.bold LanguageStyle
+    , height : (V 48)
   }
   , option1 : {
       background : Color.white900
@@ -186,6 +188,7 @@ config = {
     , enableTimer : false
     , timerID : ""
     , fontStyle : FontStyle.bold LanguageStyle
+    , height : (V 48)
     }
   , option2 : {
       background : Color.black900
@@ -202,6 +205,7 @@ config = {
     , enableTimer : false
     , timerID : ""
     , fontStyle : FontStyle.bold LanguageStyle
+    , height : (V 48)
     }
     , dismissPopupConfig :
     { imageUrl : "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"

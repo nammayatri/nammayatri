@@ -16,6 +16,7 @@ import Prelude ((<>), (==))
 import PrestoDOM (Length(..), Margin(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, height, margin, padding, text, textSize, width, imageUrl, visibility, stroke)
 import Screens.Types (EmergencyContactsScreenState)
 import Styles.Colors as Color
+import Data.Show (show)
 
 --------------------------------------------------- genericHeaderConfig -----------------------------------------------------
 genericHeaderConfig :: EmergencyContactsScreenState -> GenericHeader.Config
@@ -34,7 +35,7 @@ genericHeaderConfig state =
           }
         , padding = (Padding 0 5 0 5)
         , textConfig
-          { text = (getString EMERGENCY_CONTACTS)
+          { text = if state.props.showContactList then (show (length state.data.contactsList) <> "/3 " <> (getString CONTACTS_SELECTED)) else  (getString EMERGENCY_CONTACTS)
           , textSize = FontSize.a_18
           , color = Color.darkDescriptionText
           , fontStyle = FontStyle.semiBold LanguageStyle

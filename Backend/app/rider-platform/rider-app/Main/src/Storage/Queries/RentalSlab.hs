@@ -20,14 +20,10 @@ import EulerHS.KVConnector.Types (MeshError (MKeyNotFound), MeshResult)
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
--- import Kernel.Storage.Esqueleto as Esq
--- import Kernel.Types.Common
 import Kernel.Types.Id
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.RentalSlab as BeamRS
-
--- import Storage.Tabular.RentalSlab
 
 createRentalSlab :: L.MonadFlow m => RentalSlab -> m (MeshResult ())
 createRentalSlab rentalSlab = do

@@ -25,6 +25,7 @@ import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
+import qualified Domain.Types.DriverOffer as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
@@ -42,7 +43,9 @@ data DriverOfferT f = DriverOfferT
     distanceToPickup :: B.C f HighPrecMeters,
     validTill :: B.C f Time.UTCTime,
     bppQuoteId :: B.C f Text,
-    rating :: B.C f (Maybe Centesimal)
+    rating :: B.C f (Maybe Centesimal),
+    status :: B.C f Domain.DriverOfferStatus,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -78,7 +81,9 @@ driverOfferTMod =
       distanceToPickup = B.fieldNamed "distance_to_pickup",
       validTill = B.fieldNamed "valid_till",
       bppQuoteId = B.fieldNamed "bpp_quote_id",
-      rating = B.fieldNamed "rating"
+      rating = B.fieldNamed "rating",
+      status = B.fieldNamed "status",
+      updatedAt = B.fieldNamed "updated_at"
     }
 
 defaultDriverOffer :: DriverOffer
@@ -92,7 +97,9 @@ defaultDriverOffer =
       distanceToPickup = "",
       validTill = defaultUTCDate,
       bppQuoteId = "",
-      rating = Nothing
+      rating = Nothing,
+      status = "",
+      updatedAt = defaultUTCDate
     }
 
 instance Serialize DriverOffer where

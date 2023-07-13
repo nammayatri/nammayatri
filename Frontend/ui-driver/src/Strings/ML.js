@@ -491,7 +491,7 @@ const mlStrings = {
   GETTING_THE_LEADERBOARD_READY : "ലീഡർബോർഡ് സൃഷ്ടിക്കുന്നു!",
   PLEASE_WAIT_WHILE_WE_UPDATE_THE_DETAILS : "ഞങ്ങൾ വിശദാംശങ്ങൾ അപ്ഡേറ്റ് ചെയ്യുമ്പോൾ ദയവായി കാത്തിരിക്കുക",
   LAST_UPDATED : "അവസാന പരിഷ്കാരം: ",
-  CONGRATULATIONS_YOU_ARE_RANK : "അഭിനന്ദനങ്ങൾ! നിങ്ങൾ റാങ്ക് ",
+  CONGRATULATIONS_YOU_ARE_RANK : "അഭിനന്ദനങ്ങൾ ! നിങ്ങളുടെ റാങ്ക് ആണ് ",
   YOU : " (നിങ്ങൾ)",
   DAILY : "ദിവസേന",
   WEEKLY : "പ്രതിവാരം"

@@ -36,27 +36,10 @@ import qualified Domain.Types.Driver.DriverFlowStatus as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
--- fromPersistValue (PersistByteString v) = case decode $ fromStrict v of
---     Just res -> Right res
---     Nothing -> Left "Unable to parse WaitingCharge."
--- fromFieldFlowStatus ::
---   -- (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion Domain.FlowStatus
--- fromFieldFlowStatus f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' ->
---     case (A.decode $ fromStrict value') of
---       Just val -> pure val
---       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
-
 fromFieldFlowStatus ::
-  -- (Typeable a, Read a) =>
   DPSF.Field ->
   Maybe ByteString ->
   DPSF.Conversion Domain.FlowStatus
@@ -65,17 +48,6 @@ fromFieldFlowStatus f mbValue = do
   case A.fromJSON value of
     A.Success a -> pure a
     _ -> DPSF.returnError ConversionFailed f "Conversion failed"
-
--- fromFieldSWC ::
---   -- (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion Domain.FlowStatus
--- fromFieldSWC f mbValue = do
---   value <- fromField f mbValue
---   case A.fromJSON value of
---     A.Success a -> pure a
---     _           -> DPSF.returnError ConversionFailed f "Conversion failed"
 
 instance FromField Domain.FlowStatus where
   fromField = fromFieldFlowStatus
@@ -122,24 +94,12 @@ deriving stock instance Ord Domain.FlowStatus
 
 deriving stock instance Read Domain.FlowStatus
 
--- deriving stock instance Read (SearchRequest)
-
--- deriving stock instance Read (Merchant)
-
 driverFlowStatusTMod :: DriverFlowStatusT (B.FieldModification (B.TableField DriverFlowStatusT))
 driverFlowStatusTMod =
   B.tableModification
     { personId = B.fieldNamed "person_id",
       flowStatus = B.fieldNamed "flow_status",
       updatedAt = B.fieldNamed "updated_at"
-    }
-
-defaultDriverFlowStatus :: DriverFlowStatus
-defaultDriverFlowStatus =
-  DriverFlowStatusT
-    { personId = "",
-      flowStatus = "",
-      updatedAt = defaultUTCDate
     }
 
 instance Serialize DriverFlowStatus where

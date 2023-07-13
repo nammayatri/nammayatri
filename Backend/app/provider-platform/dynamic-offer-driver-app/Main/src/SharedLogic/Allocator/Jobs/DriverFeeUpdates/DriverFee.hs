@@ -79,7 +79,7 @@ sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
           _ <- updateStatus PAYMENT_PENDING driverFee.id now
           updatePendingPayment True (cast person.id)
         Just oDFee -> do
-          mergeDriverFee driverFee oDFee now
+          mergeDriverFee oDFee driverFee now
   case listToMaybe feeZipDriver of
     Nothing -> return Complete
     Just (driverFee, _) -> do

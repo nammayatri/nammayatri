@@ -32,6 +32,7 @@ module Domain.Action.UI.Driver
     DriverAlternateNumberOtpReq (..),
     ResendAuth (..),
     DriverPaymentHistoryResp,
+    MetaDataReq (..),
     getInformation,
     setActivity,
     listDriver,
@@ -50,6 +51,7 @@ module Domain.Action.UI.Driver
     remove,
     getDriverPayments,
     DriverInfo.DriverMode,
+    updateMetaData,
   )
 where
 
@@ -68,6 +70,7 @@ import Domain.Types.FarePolicy (DriverExtraFeeBounds (..))
 import qualified Domain.Types.FarePolicy as DFarePolicy
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.TransporterConfig
+import qualified Domain.Types.MetaData as MD
 import Domain.Types.Person (Person, PersonAPIEntity)
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.SearchRequest as DSR
@@ -92,7 +95,7 @@ import qualified Kernel.External.SMS.MyValueFirst.Flow as SF
 import qualified Kernel.External.SMS.MyValueFirst.Types as SMS
 import Kernel.Prelude (NominalDiffTime)
 import Kernel.Sms.Config
--- import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocDBFlow)
 -- import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB, runInReplica)
 import qualified Kernel.Storage.Hedis as Redis
@@ -120,6 +123,7 @@ import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.SearchTryLocker as CS
+import qualified Storage.CachedQueries.BapMetadata as CQSM
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -131,6 +135,7 @@ import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as QFP
+import qualified Storage.Queries.MetaData as QMeta
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.RegistrationToken as QRegister
@@ -213,7 +218,8 @@ data DriverEntityRes = DriverEntityRes
 -- Create Person request and response
 data OnboardDriverReq = OnboardDriverReq
   { person :: CreatePerson,
-    vehicle :: CreateVehicle
+    vehicle :: CreateVehicle,
+    metaData :: MetaDataReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -367,6 +373,14 @@ data DriverTxnInfo = DriverTxnInfo
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
+data MetaDataReq = MetaDataReq
+  { device :: Maybe Text,
+    deviceOS :: Maybe Text,
+    deviceDateTime :: Maybe UTCTime,
+    appPermissions :: Maybe Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
 createDriver ::
   ( HasCacheConfig r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
@@ -392,11 +406,13 @@ createDriver admin req = do
     "Person with this mobile number already exists"
   person <- buildDriver req.person merchantId
   vehicle <- buildVehicle req.vehicle person.id merchantId
+  metaData <- buildMetaData req.metaData person.id
   -- Esq.runTransaction $ do
   _ <- QPerson.create person
   _ <- QDFS.create $ makeIdleDriverFlowStatus person
   createDriverDetails person.id admin.id merchantId
   _ <- QVehicle.create vehicle
+  Esq.runTransaction $ QMeta.create metaData
   now <- getCurrentTime
   -- runInLocationDB $ QDriverLocation.create person.id initLatLong now admin.merchantId
   QDriverLocation.create person.id initLatLong now admin.merchantId
@@ -666,6 +682,19 @@ updateDriver (personId, _) req = do
           when (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True || req.canDowngradeToTaxi == Just True) $
             throwError $ InvalidRequest "Can't downgrade if not vehicle assigned to driver"
 
+updateMetaData ::
+  ( EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r
+  ) =>
+  (Id SP.Person, Id DM.Merchant) ->
+  MetaDataReq ->
+  m APISuccess
+updateMetaData (personId, _) req = do
+  _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  Esq.runTransaction $ do QMeta.updateMetaData personId req.device req.deviceOS req.deviceDateTime req.appPermissions
+  return Success
+
 sendInviteSms ::
   ( MonadFlow m,
     CoreMetrics m,
@@ -747,6 +776,20 @@ buildVehicle req personId merchantId = do
         SV.updatedAt = now
       }
 
+buildMetaData :: MonadFlow m => MetaDataReq -> Id SP.Person -> m MD.MetaData
+buildMetaData req personId = do
+  now <- getCurrentTime
+  return $
+    MD.MetaData
+      { MD.driverId = personId,
+        MD.device = req.device,
+        MD.deviceOS = req.deviceOS,
+        MD.deviceDateTime = req.deviceDateTime,
+        MD.appPermissions = req.appPermissions,
+        MD.createdAt = now,
+        MD.updatedAt = now
+      }
+
 makeDriverInformationRes :: DriverEntityRes -> DM.Merchant -> Maybe (Id DR.DriverReferral) -> DriverStats -> DriverInformationRes
 makeDriverInformationRes DriverEntityRes {..} org referralCode driverStats =
   DriverInformationRes
@@ -779,8 +822,9 @@ getNearbySearchRequests (driverId, merchantId) = do
       searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
       -- searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
       searchRequest <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
+      bapMetadata <- CQSM.findById (Id searchRequest.bapId)
       popupDelaySeconds <- DP.getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
-      return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry popupDelaySeconds (Seconds 0) -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+      return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds (Seconds 0) -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
@@ -838,6 +882,8 @@ respondQuote ::
   DriverRespondReq ->
   m APISuccess
 respondQuote (driverId, _) req = do
+  logDebug $ "[Apoorv] SearchRequestId: " <> show req.searchRequestId
+  logDebug $ "[Apoorv] SearchTryId: " <> show req.searchTryId
   Redis.whenWithLockRedis (offerQuoteLockKey driverId) 60 $ do
     searchTryId <- req.searchRequestId <|> req.searchTryId & fromMaybeM (InvalidRequest "searchTryId field is not present.")
     searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)

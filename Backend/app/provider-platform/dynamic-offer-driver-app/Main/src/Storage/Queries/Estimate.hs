@@ -23,7 +23,6 @@ import Kernel.Types.Id
 import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as BeamE
-import Storage.Tabular.Estimate ()
 
 create :: L.MonadFlow m => Domain.Estimate -> m ()
 create estimate = do

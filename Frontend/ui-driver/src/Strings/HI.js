@@ -489,7 +489,7 @@ const hindiStrings = {
   GETTING_THE_LEADERBOARD_READY : "लीडरबोर्ड तैयार किया जा रहा है!",
   PLEASE_WAIT_WHILE_WE_UPDATE_THE_DETAILS : "जब तक हम विवरण अपडेट करते हैं कृपया प्रतीक्षा करें",
   LAST_UPDATED : "आखरी अपडेट: ",
-  CONGRATULATIONS_YOU_ARE_RANK : "बधाई हो! आप रैंक है ",
+  CONGRATULATIONS_YOU_ARE_RANK : "बधाई हो ! आपकी रैंक है ",
   YOU : " (आप)",
   DAILY : "दैनिक",
   WEEKLY : "साप्ताहिक"

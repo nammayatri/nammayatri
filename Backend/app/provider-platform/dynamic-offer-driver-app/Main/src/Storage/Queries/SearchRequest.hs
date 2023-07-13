@@ -26,8 +26,6 @@ import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest as BeamSR
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
--- import Storage.Tabular.SearchRequest
-import Storage.Tabular.SearchRequest.SearchReqLocation ()
 
 createDSReq :: L.MonadFlow m => SearchRequest -> m (MeshResult ())
 createDSReq sReq = do
@@ -104,7 +102,7 @@ updateAutoAssign searchRequestId autoAssignedEnabled = do
         KV.updateWoReturningWithKVConnector
           dbConf'
           updatedMeshConfig
-          [Se.Set BeamSR.autoAssignEnabled $ Just $ autoAssignedEnabled]
+          [Se.Set BeamSR.autoAssignEnabled $ Just autoAssignedEnabled]
           [Se.Is BeamSR.id (Se.Eq $ getId searchRequestId)]
     Nothing -> pure ()
 
@@ -126,6 +124,8 @@ transformBeamSearchRequestToDomain BeamSR.SearchRequestT {..} = do
               area = area,
               bapId = bapId,
               bapUri = pUrl,
+              bapCity = bapCity,
+              bapCountry = bapCountry,
               estimatedDistance = estimatedDistance,
               estimatedDuration = estimatedDuration,
               customerLanguage = customerLanguage,
@@ -147,6 +147,8 @@ transformDomainSearchRequestToBeam SearchRequest {..} =
       BeamSR.area = area,
       BeamSR.bapId = bapId,
       BeamSR.bapUri = showBaseUrl bapUri,
+      BeamSR.bapCity = bapCity,
+      BeamSR.bapCountry = bapCountry,
       BeamSR.estimatedDistance = estimatedDistance,
       BeamSR.estimatedDuration = estimatedDuration,
       BeamSR.customerLanguage = customerLanguage,

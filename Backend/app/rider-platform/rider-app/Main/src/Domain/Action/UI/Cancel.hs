@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Domain.Action.UI.Cancel
   ( cancel,
     CancelReq (..),
@@ -25,7 +24,9 @@ where
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as SCR
+import qualified Domain.Types.DriverOffer as DDO
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
@@ -43,6 +44,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
+import qualified Storage.Queries.DriverOffer as QDOffer
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QR
@@ -63,17 +65,17 @@ data CancelRes = CancelRes
     bppUrl :: BaseUrl,
     cancellationSource :: SBCR.CancellationSource,
     transactionId :: Text,
-    city :: Text
+    merchant :: DM.Merchant
   }
 
 data CancelSearch = CancelSearch
   { estimateId :: Id DEstimate.Estimate,
     providerUrl :: BaseUrl,
     providerId :: Text,
-    city :: Text,
     estimateStatus :: DEstimate.EstimateStatus,
     searchReqId :: Id SearchRequest,
-    sendToBpp :: Bool
+    sendToBpp :: Bool,
+    merchant :: DM.Merchant
   }
 
 cancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, HasCacheConfig r, HedisFlow m r, Metrics.CoreMetrics m) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> CancelReq -> m CancelRes
@@ -109,7 +111,7 @@ cancel bookingId _ req = do
         bppUrl = booking.providerUrl,
         cancellationSource = SBCR.ByUser,
         transactionId = booking.transactionId,
-        city = merchant.city
+        merchant = merchant
       }
   where
     buildBookingCancelationReason currentDriverLocation disToPickup merchantId = do
@@ -137,7 +139,7 @@ isBookingCancellable booking
   | otherwise = pure False
 
 mkDomainCancelSearch ::
-  (EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, HasCacheConfig r, HedisFlow m r) =>
+  (HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, HasCacheConfig r, HedisFlow m r) =>
   Id Person.Person ->
   Id DEstimate.Estimate ->
   m CancelSearch
@@ -158,9 +160,10 @@ mkDomainCancelSearch personId estimateId = do
             providerUrl = estimate.providerUrl,
             providerId = estimate.providerId,
             searchReqId = searchRequestId,
-            city = merchant.city,
             estimateStatus = estStatus,
-            sendToBpp
+            sendToBpp,
+            merchant = merchant,
+            ..
           }
 
 cancelSearch ::
@@ -169,17 +172,20 @@ cancelSearch ::
   CancelSearch ->
   m ()
 cancelSearch personId dcr = do
-  if dcr.estimateStatus == DEstimate.GOT_DRIVER_QUOTE
-    then -- then Esq.runTransaction $ do
-    do
-      -- Esq.runTransaction $
-      _ <- QPFS.updateStatus personId DPFS.IDLE
-      void $ QEstimate.updateStatus dcr.estimateId DEstimate.DRIVER_QUOTE_CANCELLED
-    else do
-      -- Esq.runTransaction $ do
-      -- Esq.runTransaction $
-      _ <- QPFS.updateStatus personId DPFS.IDLE
-      void $ QEstimate.updateStatus dcr.estimateId DEstimate.CANCELLED
+  _ <-
+    if dcr.estimateStatus == DEstimate.GOT_DRIVER_QUOTE
+      then -- then Esq.runTransaction $ do
+      do
+        -- Esq.runTransaction $
+        _ <- QPFS.updateStatus personId DPFS.IDLE
+        void $ QEstimate.updateStatus dcr.estimateId DEstimate.DRIVER_QUOTE_CANCELLED
+        QDOffer.updateStatus dcr.estimateId DDO.INACTIVE
+      else do
+        -- Esq.runTransaction $ do
+        -- Esq.runTransaction $
+        _ <- QPFS.updateStatus personId DPFS.IDLE
+        void $ QEstimate.updateStatus dcr.estimateId DEstimate.CANCELLED
+        QDOffer.updateStatus dcr.estimateId DDO.INACTIVE
   QPFS.clearCache personId
 
 driverDistanceToPickup ::

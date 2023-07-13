@@ -39,18 +39,6 @@ import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
--- fromFieldEnum ::
---   (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldEnum f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' ->
---     case (readMaybe (unpackChars value')) of
---       Just val -> pure val
---       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
-
 instance FromField Domain.VerificationStatus where
   fromField = fromFieldEnum
 
@@ -63,19 +51,6 @@ instance FromBackendRow Postgres Domain.VerificationStatus
 
 instance IsString Domain.VerificationStatus where
   fromString = show
-
--- instance FromField DbHash where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be DbHash where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be DbHash
-
--- instance FromBackendRow Postgres DbHash
-
--- instance IsString DbHash where
---   fromString = show
 
 data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
   { id :: B.C f Text,
@@ -145,30 +120,6 @@ vehicleRegistrationCertificateTMod =
       failedRules = B.fieldNamed "failed_rules",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
-    }
-
-defaultVehicleRegistrationCertificate :: VehicleRegistrationCertificate
-defaultVehicleRegistrationCertificate =
-  VehicleRegistrationCertificateT
-    { id = "",
-      documentImageId = "",
-      certificateNumberEncrypted = "",
-      certificateNumberHash = "",
-      fitnessExpiry = defaultUTCDate,
-      permitExpiry = Nothing,
-      pucExpiry = Nothing,
-      insuranceValidity = Nothing,
-      vehicleClass = Nothing,
-      vehicleVariant = Nothing,
-      vehicleManufacturer = Nothing,
-      vehicleCapacity = Nothing,
-      vehicleModel = Nothing,
-      vehicleColor = Nothing,
-      vehicleEnergyType = Nothing,
-      verificationStatus = "",
-      failedRules = [],
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
     }
 
 instance Serialize VehicleRegistrationCertificate where

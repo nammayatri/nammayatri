@@ -84,7 +84,7 @@ primaryEditTextConfig state = let
         , fontStyle = FontStyle.semiBold LanguageStyle
         , textSize = FontSize.a_14
         , pattern = Just "[a-zA-Z0-9'‘’. ]*,30"
-        , text = if (DS.toLower state.data.placeName == "home" || DS.toLower state.data.placeName == "work" ) then "" else state.data.placeName
+        , text = state.data.placeName
         }
       , background = Color.white900
       , topLabel
@@ -102,6 +102,7 @@ primaryEditTextConfig state = let
         , margin = (MarginTop 1)
         }
       , showErrorLabel = state.props.placeNameExists
+      , width = MATCH_PARENT
       }
     in primaryEditTextConfig'
 

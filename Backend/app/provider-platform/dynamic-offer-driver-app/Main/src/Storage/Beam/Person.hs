@@ -43,28 +43,6 @@ import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
--- fromFieldEnum ::
---   (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldEnum f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' ->
---     case (readMaybe (unpackChars value')) of
---       Just val -> pure val
---       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
-
--- instance FromField Centesimal where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Centesimal where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Centesimal
-
--- instance FromBackendRow Postgres Centesimal
-
 instance FromField OptApiMethods where
   fromField = fromFieldEnum
 
@@ -88,16 +66,6 @@ instance FromBackendRow Postgres Domain.Gender
 instance IsString Domain.Gender where
   fromString = show
 
--- instance FromField DbHash where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be DbHash where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be DbHash
-
--- instance FromBackendRow Postgres DbHash
-
 instance FromField Domain.Role where
   fromField = fromFieldEnum
 
@@ -111,16 +79,8 @@ instance FromBackendRow Postgres Domain.Role
 instance IsString Domain.Role where
   fromString = show
 
--- instance FromField FCMRecipientToken
--- -- instance FromField FCMRecipientToken where
--- --   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be FCMRecipientToken where
---   sqlValueSyntax = autoSqlValueSyntax
-
 deriving newtype instance FromField FCMRecipientToken
 
--- deriving newtype instance (BeamSqlBackend be => B.HasSqlEqualityCheck be FCMRecipientToken)
 instance HasSqlValueSyntax be Text => HasSqlValueSyntax be FCMRecipientToken where
   sqlValueSyntax = sqlValueSyntax . getFCMRecipientToken
 
@@ -247,39 +207,6 @@ personToHSModifiers =
 personToPSModifiers :: M.Map Text (A.Value -> A.Value)
 personToPSModifiers =
   M.empty
-
-defaultPerson :: Person
-defaultPerson =
-  PersonT
-    { id = "",
-      firstName = "",
-      middleName = Nothing,
-      lastName = Nothing,
-      role = "",
-      gender = "",
-      identifierType = "",
-      email = Nothing,
-      unencryptedMobileNumber = Nothing,
-      mobileNumberEncrypted = Nothing,
-      mobileNumberHash = Nothing,
-      mobileCountryCode = Nothing,
-      passwordHash = Nothing,
-      identifier = Nothing,
-      rating = Nothing,
-      isNew = False,
-      merchantId = "",
-      deviceToken = Nothing,
-      language = Nothing,
-      whatsappNotificationEnrollStatus = Nothing,
-      description = Nothing,
-      alternateMobileNumberEncrypted = Nothing,
-      unencryptedAlternateMobileNumber = Nothing,
-      alternateMobileNumberHash = Nothing,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate,
-      bundleVersion = Nothing,
-      clientVersion = Nothing
-    }
 
 instance Serialize Person where
   put = error "undefined"

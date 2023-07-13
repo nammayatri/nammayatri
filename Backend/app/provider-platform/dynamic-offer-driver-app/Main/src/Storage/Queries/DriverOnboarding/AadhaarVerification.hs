@@ -73,6 +73,26 @@ findByDriverId (Id driverId) = do
     Just dbConf' -> either (pure Nothing) (transformBeamAadhaarVerificationToDomain <$>) <$> KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamAV.driverId $ Se.Eq driverId]
     Nothing -> pure Nothing
 
+-- deleteByDriverId :: Id Person -> SqlDB ()
+-- deleteByDriverId driverId =
+--   Esq.delete $ do
+--     aadhaar <- from $ table @AadhaarVerificationT
+--     where_ $ aadhaar ^. AadhaarVerificationDriverId ==. val (toKey driverId)
+
+deleteByDriverId :: L.MonadFlow m => Id Person -> m ()
+deleteByDriverId (Id driverId) = do
+  dbConf <- L.getOption KBT.PsqlDbCfg
+  let modelName = Se.modelTableName @BeamAV.AadhaarVerificationT
+  let updatedMeshConfig = setMeshConfig modelName
+  case dbConf of
+    Just dbConf' ->
+      void $
+        KV.deleteWithKVConnector
+          dbConf'
+          updatedMeshConfig
+          [Se.Is BeamAV.driverId (Se.Eq driverId)]
+    Nothing -> pure ()
+
 transformBeamAadhaarVerificationToDomain :: BeamAV.AadhaarVerification -> AadhaarVerification
 transformBeamAadhaarVerificationToDomain BeamAV.AadhaarVerificationT {..} = do
   AadhaarVerification
@@ -87,7 +107,7 @@ transformBeamAadhaarVerificationToDomain BeamAV.AadhaarVerificationT {..} = do
 
 transformDomainAadhaarVerificationToBeam :: AadhaarVerification -> BeamAV.AadhaarVerification
 transformDomainAadhaarVerificationToBeam AadhaarVerification {..} =
-  BeamAV.defaultAadhaarVerification
+  BeamAV.AadhaarVerificationT
     { BeamAV.id = getId id,
       BeamAV.driverId = getId driverId,
       BeamAV.driverName = driverName,

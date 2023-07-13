@@ -98,56 +98,49 @@ triggerRideCreatedEvent ::
   ) =>
   RideEventData ->
   m ()
-triggerRideCreatedEvent rideData = do
-  triggerRideEvent rideData RideCreated
+triggerRideCreatedEvent = triggerRideEvent RideCreated
 
 triggerRideEndEvent ::
   ( EventStreamFlow m r
   ) =>
   RideEventData ->
   m ()
-triggerRideEndEvent rideData = do
-  triggerRideEvent rideData RideEnded
+triggerRideEndEvent = triggerRideEvent RideEnded
 
 triggerRideCancelledEvent ::
   ( EventStreamFlow m r
   ) =>
   RideEventData ->
   m ()
-triggerRideCancelledEvent rideData = do
-  triggerRideEvent rideData RideCancelled
+triggerRideCancelledEvent = triggerRideEvent RideCancelled
 
 triggerRideStartedEvent ::
   ( EventStreamFlow m r
   ) =>
   RideEventData ->
   m ()
-triggerRideStartedEvent rideData = do
-  triggerRideEvent rideData RideStarted
+triggerRideStartedEvent = triggerRideEvent RideStarted
 
 triggerBookingCreatedEvent ::
   ( EventStreamFlow m r
   ) =>
   BookingEventData ->
   m ()
-triggerBookingCreatedEvent bookingData = do
-  triggerBookingEvent bookingData BookingCreated
+triggerBookingCreatedEvent = triggerBookingEvent BookingCreated
 
 triggerBookingCancelledEvent ::
   ( EventStreamFlow m r
   ) =>
   BookingEventData ->
   m ()
-triggerBookingCancelledEvent bookingData = do
-  triggerBookingEvent bookingData BookingCancelled
+triggerBookingCancelledEvent = triggerBookingEvent BookingCancelled
 
 triggerBookingCompletedEvent ::
   ( EventStreamFlow m r
   ) =>
   BookingEventData ->
   m ()
-triggerBookingCompletedEvent bookingData = do
-  triggerBookingEvent bookingData BookingCompleted
+triggerBookingCompletedEvent = triggerBookingEvent BookingCompleted
 
 triggerQuoteEvent ::
   ( EventStreamFlow m r
@@ -172,10 +165,10 @@ triggerSearchEvent searchData = do
 triggerRideEvent ::
   ( EventStreamFlow m r
   ) =>
-  RideEventData ->
   EventType ->
+  RideEventData ->
   m ()
-triggerRideEvent rideData eventType = do
+triggerRideEvent eventType rideData = do
   let ridePayload = Ride {rId = rideData.ride.id, rs = rideData.ride.status, cAt = rideData.ride.createdAt, uAt = rideData.ride.updatedAt}
   envt <- createEvent (Just $ getId rideData.personId) (getId rideData.merchantId) eventType RIDER_APP System (Just ridePayload) (Just $ getId rideData.ride.id)
   triggerEvent envt
@@ -183,10 +176,10 @@ triggerRideEvent rideData eventType = do
 triggerBookingEvent ::
   ( EventStreamFlow m r
   ) =>
-  BookingEventData ->
   EventType ->
+  BookingEventData ->
   m ()
-triggerBookingEvent bookingData eventType = do
+triggerBookingEvent eventType bookingData = do
   let bookingPayload = Booking {bId = bookingData.booking.id, bs = bookingData.booking.status, cAt = bookingData.booking.createdAt, uAt = bookingData.booking.updatedAt}
   event <- createEvent (Just $ getId bookingData.booking.riderId) (getId bookingData.booking.merchantId) eventType RIDER_APP System (Just bookingPayload) (Just $ getId bookingData.booking.id)
   triggerEvent event

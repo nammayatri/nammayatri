@@ -62,8 +62,8 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os, getExpiryTime, convertUTCtoISC, getCurrentUTC)
-import Helpers.Utils (Merchant(..), addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, getMerchant, performHapticFeedback)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, startLottieProcess, getSuggestionsfromKey, getSuggestionfromKey)
+import Helpers.Utils (Merchant(..), addToRecentSearches, clearCountDownTimer, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, parseNewContacts, saveRecents, setText', updateInputString, withinTimeRange, getMerchant, performHapticFeedback)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, startLottieProcess, getSuggestionfromKey)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
@@ -91,6 +91,7 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Types.App (defaultGlobalState)
 import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData)
 import Screens.Types (TipViewData(..) , TipViewProps(..))
+import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 
 
 instance showAction :: Show Action where
@@ -626,15 +627,15 @@ eval OnResumeCallback state =
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
 
 eval (UpdateMessages message sender timeStamp size) state = do
-  let messages = state.data.messages <> [((ChatView.makeChatComponent (getSuggestionfromKey message (getValueToLocalStore LANGUAGE_KEY) ) sender timeStamp))]
+  let messages = state.data.messages <> [((ChatView.makeChatComponent (getMessageFromKey message (getValueToLocalStore LANGUAGE_KEY)) sender timeStamp))]
   case (last messages) of
-    Just value -> if value.sentBy == "Customer"
-                    then updateMessagesWithCmd state {data {messages = messages, messagesSize = size, suggestionsList = []}}
-                  else do
-                    let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
-                    let unReadMessages = (if readMessages == 0 then true else (if (readMessages < (length messages) && state.props.currentStage /= ChatWithDriver) then true else false)) 
-                    let suggestions = getSuggestionsfromKey message
-                    updateMessagesWithCmd state {data {messages = messages, suggestionsList = suggestions, lastMessage = value , messagesSize = size}, props {unReadMessages = unReadMessages, showChatNotification = unReadMessages}}
+    Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}} else
+                    if value.sentBy == "Customer" then updateMessagesWithCmd state {data {messages = messages, messagesSize = size, suggestionsList = []}}
+                    else do
+                      let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
+                      let unReadMessages = (if readMessages == 0 && state.props.currentStage /= ChatWithDriver then true else (if (readMessages < (length messages) && state.props.currentStage /= ChatWithDriver) then true else false))
+                      let suggestions = getSuggestionsfromKey message
+                      updateMessagesWithCmd state {data {messages = messages, suggestionsList = suggestions, lastMessage = value , messagesSize = size}, props {unReadMessages = unReadMessages, showChatNotification = unReadMessages}}
     Nothing -> continue state
 
 eval (OpenChatScreen) state = do
@@ -665,7 +666,7 @@ eval (ChatViewActionController (ChatView.SendMessage)) state = do
     continue state
 
 eval (ChatViewActionController (ChatView.SendSuggestion chatSuggestion)) state = do
-  let message = getSuggestionfromKey chatSuggestion "EN_US"
+  let message = getMessageFromKey chatSuggestion "EN_US"
   _ <- pure $ sendMessage message
   _ <- pure $ firebaseLogEvent $ "ny_" <> STR.toLower (STR.replaceAll (STR.Pattern "'") (STR.Replacement "") (STR.replaceAll (STR.Pattern ",") (STR.Replacement "") (STR.replaceAll (STR.Pattern " ") (STR.Replacement "_") chatSuggestion)))
   continue state
@@ -758,6 +759,7 @@ eval BackPressed state = do
                           else if state.props.showMultipleRideInfo then continue state{props{showMultipleRideInfo=false}}
                           else if state.props.emergencyHelpModelState.showContactSupportPopUp then continue state {props {emergencyHelpModelState{showContactSupportPopUp = false}}}
                           else if state.props.emergencyHelpModelState.showCallPolicePopUp then continue state {props{emergencyHelpModelState{showCallPolicePopUp = false}}}
+                          else if state.props.emergencyHelpModelState.showCallSuccessfulPopUp then continue state {props{emergencyHelpModelState{showCallSuccessfulPopUp = false}}}
                           else if state.props.showLiveDashboard then do
                             continueWithCmd state [do
                               _ <- pure $ goBackPrevWebPage (getNewIDWithTag "webview")
@@ -816,7 +818,7 @@ eval (UpdateLocation key lat lon) state = case key of
 eval (UpdatePickupLocation  key lat lon) state =
   case key of
     "LatLon" -> do
-      exit $ UpdatePickupName state (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
+      exit $ UpdatePickupName state{props{defaultPickUpPoint = ""}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
     _ -> if length (filter( \ (item) -> (item.place == key)) state.data.nearByPickUpPoints) > 0 then do
           exit $ UpdatePickupName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
             else continue state
@@ -826,6 +828,9 @@ eval (CheckBoxClick autoAssign) state = do
   let event = if autoAssign then "ny_user_pref_autoassigned" else "ny_user_pref_driveroffers"
   _ <- pure $ firebaseLogEvent event
   _ <- pure $ setValueToLocalStore FLOW_WITHOUT_OFFERS (show autoAssign)
+  _ <- pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT $ if autoAssign then "4" else "17"
+  _ <- pure $ setValueToLocalStore TEST_POLLING_INTERVAL $ if autoAssign then "8000.0" else "1500.0"
+  _ <- pure $ setValueToLocalStore TEST_POLLING_COUNT $ if autoAssign then "22" else "117"
   continue state
 
 eval (OnIconClick autoAssign) state = do
@@ -986,7 +991,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.PrimaryButtonAC P
   _ <- pure $ performHapticFeedback unit
   continueWithCmd state
     [ do
-        _ <- pure $ showDialer (getDriverNumber "")
+        _ <- pure $ showDialer (getDriverNumber "") false -- TODO: FIX_DIALER
         _ <- (firebaseLogEventWithTwoParams "ny_user_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
         pure NoAction
     ]
@@ -1016,7 +1021,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.Support)) state =
 
 eval (CancelSearchAction PopUpModal.DismissPopup) state = do continue state {props { cancelSearchCallDriver = false }}
 
-eval (CancelSearchAction PopUpModal.OnButton1Click) state = do continue state {props {showCallPopUp = true, cancelSearchCallDriver = false}}
+eval (CancelSearchAction PopUpModal.OnButton1Click) state = continue state {props {showCallPopUp = true, cancelSearchCallDriver = false}}
 
 eval (CancelSearchAction PopUpModal.OnButton2Click) state = do
   continue state { props { isCancelRide = true, cancellationReasons = cancelReasons "", cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "", cancelSearchCallDriver = false } }
@@ -1062,7 +1067,7 @@ eval (EmergencyHelpModalAC (EmergencyHelpController.StoreContacts)) state  = do
 eval (EmergencyHelpModalAC (EmergencyHelpController.AddedEmergencyContacts)) state  =  updateAndExit state{props{emergencyHelpModelState{isSelectEmergencyContact = true}}} $ GoToEmergencyContacts state {props {emergencyHelpModelState{isSelectEmergencyContact = true}}}
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.CallEmergencyContact PopUpModal.OnButton2Click)) state = do
-    void <- pure $ showDialer state.props.emergencyHelpModelState.currentlySelectedContact.phoneNo
+    void <- pure $ showDialer state.props.emergencyHelpModelState.currentlySelectedContact.phoneNo false -- TODO: FIX_DIALER
     updateAndExit state{props{emergencyHelpModelState{showCallContactPopUp = false}}} $ CallContact state {props {emergencyHelpModelState{showCallContactPopUp = false}}}
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.CallSuccessful PopUpModal.OnButton1Click)) state = do
@@ -1072,12 +1077,12 @@ eval (EmergencyHelpModalAC (EmergencyHelpController.CallSuccessful PopUpModal.On
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.CallPolice PopUpModal.OnButton1Click)) state = continue state{props{emergencyHelpModelState{showCallPolicePopUp = false}}}
 eval (EmergencyHelpModalAC (EmergencyHelpController.CallPolice PopUpModal.OnButton2Click)) state = do
-    void $ pure $  showDialer "100"
+    void $ pure $  showDialer "112" false
     updateAndExit state{props{emergencyHelpModelState{showCallPolicePopUp = false}}} $ CallPolice state {props {emergencyHelpModelState{showCallPolicePopUp = false}}}
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.ContactSupport PopUpModal.OnButton1Click)) state = continue state{props{emergencyHelpModelState{showContactSupportPopUp = false}}}
 eval (EmergencyHelpModalAC (EmergencyHelpController.ContactSupport PopUpModal.OnButton2Click)) state = do
-    void $ pure $  showDialer $ getSupportNumber ""
+    void $ pure $  showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
     updateAndExit state{props{emergencyHelpModelState{showContactSupportPopUp = false}}} $ CallSupport state {props {emergencyHelpModelState{showContactSupportPopUp = false}}}
 
 eval (CancelRidePopUpAction (CancelRidePopUp.Button1 PrimaryButtonController.OnClick)) state = do
@@ -1161,11 +1166,11 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Primary
                     Nothing, true, "QuoteList"            -> exit $ GoToHome
                     _,_,_                                 -> continue state
 
-eval (SearchLocationModelActionController (SearchLocationModelController.DebounceCallBack searchString)) state = do
-  if (STR.length searchString > 2) then
+eval (SearchLocationModelActionController (SearchLocationModelController.DebounceCallBack searchString isSource)) state = do
+  if (STR.length searchString > 2) && (isSource == fromMaybe true state.props.isSource) then
     validateSearchInput state searchString
   else
-    continue state
+    continue state{data{ locationList = state.data.recentSearchs.predictionArray }}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SourceChanged input)) state = do
   _ <- pure $ (setText' (getNewIDWithTag "SourceEditText") input)
@@ -1202,7 +1207,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Destina
 eval (SearchLocationModelActionController (SearchLocationModelController.EditTextFocusChanged textType)) state = do
   _ <- pure $ spy "searchLocationModal" textType
   if textType == "D" then
-    continueWithCmd state { props { isSource = Just false } }
+    continueWithCmd state { props { isSource = Just false }}
       [ do
           if state.props.isSearchLocation /= LocateOnMap then do
             _ <- (setText' (getNewIDWithTag "DestinationEditText") state.data.destination)
@@ -1211,7 +1216,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.EditTex
             pure $ NoAction
       ]
   else
-    continueWithCmd state { props { isSource = Just true} }
+    continueWithCmd state { props { isSource = Just true}}
       [ do
           if state.props.isSearchLocation /= LocateOnMap && state.props.isSource == Just true then do
             _ <- (setText' (getNewIDWithTag "SourceEditText") state.data.source)
@@ -1229,7 +1234,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SourceC
     pure unit
   else
     pure unit
-  continue state { props { isSource = Just true, isSrcServiceable = true, isRideServiceable = true } }
+  continue state { data { source = ""}, props { isSource = Just true, isSrcServiceable = true, isRideServiceable = true } }
 
 eval (SearchLocationModelActionController (SearchLocationModelController.DestinationClear)) state = do
   _ <- pure $ performHapticFeedback unit
@@ -1435,16 +1440,16 @@ eval CloseShowCallDialer state = continue state { props { showCallPopUp = false 
 eval (ShowCallDialer item) state = do
   case item of
     ANONYMOUS_CALLER -> do
-      continueWithCmd state
+      continueWithCmd state{props{ showCallPopUp = false }}
         [ do
-            _ <- pure $ showDialer (if (STR.take 1 state.data.driverInfoCardState.merchantExoPhone) == "0" then state.data.driverInfoCardState.merchantExoPhone else "0" <> state.data.driverInfoCardState.merchantExoPhone)
+            _ <- pure $ showDialer (if (STR.take 1 state.data.driverInfoCardState.merchantExoPhone) == "0" then state.data.driverInfoCardState.merchantExoPhone else "0" <> state.data.driverInfoCardState.merchantExoPhone) false -- TODO: FIX_DIALER
             _ <- (firebaseLogEventWithTwoParams "ny_user_anonymous_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
             pure NoAction
         ]
     DIRECT_CALLER -> do
-      continueWithCmd state
+      continueWithCmd state{props{ showCallPopUp = false }}
         [ do
-            _ <- pure $ showDialer $ fromMaybe state.data.driverInfoCardState.merchantExoPhone state.data.driverInfoCardState.driverNumber
+            _ <- pure $ showDialer (fromMaybe state.data.driverInfoCardState.merchantExoPhone state.data.driverInfoCardState.driverNumber) false -- TODO: FIX_DIALER
             _ <- (firebaseLogEventWithTwoParams "ny_user_direct_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
             pure NoAction
         ]
@@ -1461,7 +1466,7 @@ eval (StartLocationTracking item) state = do
     _ -> continue state
 
 eval (GetEstimates (GetQuotesRes quotesRes)) state = do
-  case state.props.isSpecialZone of
+  case not (null quotesRes.quotes) of
     true -> specialZoneFlow quotesRes.quotes state
     false -> case (getMerchant FunctionCall) of
       NAMMAYATRI -> estimatesFlow quotesRes.estimates state
@@ -1582,6 +1587,8 @@ eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state 
 
 eval (RequestInfoCardAction RequestInfoCard.NoAction) state = continue state
 
+eval (GenderBannerModal Banner.OnClick) state = exit $ GoToMyProfile state true
+
 eval ShowRateCard state = do
   continue state { props { showRateCard = true } }
 
@@ -1598,7 +1605,7 @@ eval (CallSupportAction PopUpModal.OnButton1Click) state= do
 
 eval (CallSupportAction PopUpModal.OnButton2Click) state= do
   _ <- pure $ performHapticFeedback unit
-  _ <- pure $ showDialer (getSupportNumber "")
+  _ <- pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
   _ <- pure $ firebaseLogEvent "ny_user_ride_support_click"
   continue state{props{callSupportPopUp=false}}
 

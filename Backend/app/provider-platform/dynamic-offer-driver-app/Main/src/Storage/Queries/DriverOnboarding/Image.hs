@@ -37,8 +37,6 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.Person as QP
 
--- import Storage.Tabular.DriverOnboarding.Image
-
 -- create :: Image -> SqlDB ()
 -- create = Esq.create
 

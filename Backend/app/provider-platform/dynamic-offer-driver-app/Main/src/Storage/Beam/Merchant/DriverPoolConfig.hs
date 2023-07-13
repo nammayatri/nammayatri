@@ -143,32 +143,6 @@ driverPoolConfigTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-defaultDriverPoolConfig :: DriverPoolConfig
-defaultDriverPoolConfig =
-  DriverPoolConfigT
-    { merchantId = "",
-      distanceBasedBatchSplit = [],
-      minRadiusOfSearch = "",
-      maxRadiusOfSearch = "",
-      radiusStepSize = "",
-      driverPositionInfoExpiry = Nothing,
-      actualDistanceThreshold = Nothing,
-      maxDriverQuotesRequired = 0,
-      maxParallelSearchRequests = 0,
-      driverQuoteLimit = 0,
-      driverRequestCountLimit = 0,
-      driverBatchSize = 0,
-      maxNumberOfBatches = 0,
-      poolSortingType = "",
-      singleBatchProcessTime = "",
-      tripDistance = "",
-      radiusShrinkValueForDriversOnRide = 0,
-      driverToDestinationDistanceThreshold = "",
-      driverToDestinationDuration = "",
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
-
 instance Serialize DriverPoolConfig where
   put = error "undefined"
   get = error "undefined"

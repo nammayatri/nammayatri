@@ -33,7 +33,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, not, pure, unit, (-), ($), (<<<), (==), (||), (/=), (<>))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, fontStyle, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, width, afterRender, onClick, visibility, alignParentBottom, weight, imageWithFallback, editText, onChange, hint, hintColor, pattern, id, singleLine, stroke, clickable, inputTypeI, hintColor, relativeLayout, scrollView, frameLayout, scrollBarY, onAnimationEnd)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, fontStyle, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, width, afterRender, onClick, visibility, alignParentBottom, weight, imageWithFallback, editText, onChange, hint, hintColor, pattern, id, singleLine, stroke, clickable, inputTypeI, hintColor, relativeLayout, scrollView, frameLayout, scrollBarY, onAnimationEnd, adjustViewWithKeyboard)
 import Screens.MyProfileScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Services.Backend as Remote
@@ -73,6 +73,7 @@ view push state =
       , width MATCH_PARENT
       , orientation VERTICAL
       , background Color.white900
+      , adjustViewWithKeyboard "true"
       ][
         linearLayout
             [ height MATCH_PARENT
@@ -236,10 +237,7 @@ updatePersonalDetails state push =
               , orientation VERTICAL
               , background Color.white900
               ]
-              [ if state.props.updateProfile then userNameEditTextView push state else textView[]
-              , emailIdEditTextView push state
-              , genderCaptureView state push
-              ]
+              ([] <> (if state.props.updateProfile then [userNameEditTextView push state, emailIdEditTextView push state, genderCaptureView state push ] else []))
           ]
       ]
 

@@ -72,7 +72,7 @@ createOrder (personId, merchantId) rideId = do
             customerId = person.id.getId,
             customerEmail,
             customerPhone,
-            paymentPageClientId = person.id.getId, -- FIXME
+            paymentPageClientId = "yatrisathi",
             customerFirstName = person.firstName,
             customerLastName = person.lastName
           }

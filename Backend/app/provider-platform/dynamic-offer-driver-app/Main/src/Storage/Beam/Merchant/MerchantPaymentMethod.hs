@@ -98,7 +98,7 @@ instance B.Table MerchantPaymentMethodT where
 instance ModelMeta MerchantPaymentMethodT where
   modelFieldModification = merchantPaymentMethodTMod
   modelTableName = "merchant_payment_method"
-  modelSchemaName = Just "atlas_app"
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type MerchantPaymentMethod = MerchantPaymentMethodT Identity
 
@@ -121,19 +121,6 @@ merchantPaymentMethodTMod =
       priority = B.fieldNamed "priority",
       updatedAt = B.fieldNamed "updated_at",
       createdAt = B.fieldNamed "created_at"
-    }
-
-defaultMerchantPaymentMethod :: MerchantPaymentMethod
-defaultMerchantPaymentMethod =
-  MerchantPaymentMethodT
-    { id = "",
-      merchantId = "",
-      paymentType = "",
-      paymentInstrument = "",
-      collectedBy = "",
-      priority = 0,
-      updatedAt = defaultUTCDate,
-      createdAt = defaultUTCDate
     }
 
 instance Serialize MerchantPaymentMethod where

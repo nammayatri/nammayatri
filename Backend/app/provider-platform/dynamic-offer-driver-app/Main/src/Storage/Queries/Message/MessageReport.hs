@@ -46,7 +46,6 @@ import Storage.Beam.Person as BeamP (PersonT (createdAt, id))
 import Storage.Queries.Message.Message as QMM hiding (create)
 import Storage.Queries.Message.MessageTranslation as QMMT hiding (create)
 import qualified Storage.Queries.Person as QP
-import Storage.Tabular.Message.Instances ()
 
 createMany :: L.MonadFlow m => [MessageReport] -> m ()
 createMany = traverse_ create

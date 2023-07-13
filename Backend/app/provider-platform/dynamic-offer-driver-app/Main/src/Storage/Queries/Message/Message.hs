@@ -28,7 +28,6 @@ import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Message.Message as BeamM
 import qualified Storage.Queries.Message.MessageTranslation as MT
-import Storage.Tabular.Message.Instances ()
 
 createMessage :: L.MonadFlow m => Message -> m (MeshResult ())
 createMessage message = do

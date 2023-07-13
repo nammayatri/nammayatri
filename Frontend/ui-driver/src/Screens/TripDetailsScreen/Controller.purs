@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -22,7 +22,7 @@ import PrestoDOM (Eval, exit, continue, continueWithCmd)
 import Components.PrimaryButton as PrimaryButton
 import Components.GenericHeader as GenericHeader
 import Components.SourceToDestination as SourceToDestination
-import JBridge (copyToClipboard, toast, showDialer)
+import JBridge (copyToClipboard, toast)
 import Language.Types(STR(..))
 import Language.Strings (getString)
 import Services.Config (getSupportNumber)
@@ -66,9 +66,9 @@ instance loggableAction :: Loggable Action where
 
 data Action = PrimaryButtonActionController TripDetailsScreenState PrimaryButton.Action
             | GenericHeaderActionController GenericHeader.Action
-            | SourceToDestinationActionController SourceToDestination.Action 
+            | SourceToDestinationActionController SourceToDestination.Action
             | BackPressed
-            | ReportIssue 
+            | ReportIssue
             | MessageTextChanged String
             | Copy
             | HelpAndSupport
@@ -90,10 +90,10 @@ eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = c
 
 eval (PrimaryButtonActionController primaryButtonState PrimaryButton.OnClick) state = do
     _ <- pure $ hideKeyboardOnNavigation true
-    if state.props.issueReported then exit GoHome 
+    if state.props.issueReported then exit GoHome
     else continue state{props{issueReported = true}}
 
-eval Copy state = continueWithCmd state [ do 
+eval Copy state = continueWithCmd state [ do
     _ <- pure $ copyToClipboard state.data.tripId
     _ <- pure $ toast (getString COPIED)
     pure NoAction

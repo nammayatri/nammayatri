@@ -150,17 +150,8 @@ in  { esqDBCfg
     , port = +8013
     , metricsPort = +9999
     , hostName = "localhost"
+    , nwAddress = "http://localhost:8013/beckn"
     , selfUIUrl = "http://localhost:8013/v2/"
-    , bapSelfIds =
-      { cabs = "JUSPAY.CABS.BAP", metro = "JUSPAY.MOBILITY.APP.UAT.2" }
-    , bapSelfURIs =
-      { cabs = "http://localhost:8013/cab/v1/"
-      , metro = "http://localhost:8013/metro/v1/"
-      }
-    , bapSelfUniqueKeyIds =
-      { cabs = "juspay-mobility-bap-1-key"
-      , metro = "juspay-mobility-bap-1-key"
-      }
     , signingKey = sec.signingKey
     , signatureExpiry = common.signatureExpiry
     , searchRequestExpiry = Some +600

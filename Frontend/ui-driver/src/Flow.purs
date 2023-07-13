@@ -35,7 +35,7 @@ import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks)
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
-import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, loaderText, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, toggleLoader, generateSessionId, stopChatListenerService, hideKeyboardOnNavigation, metaLogEvent, saveSuggestions)
+import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, loaderText, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, toggleLoader, generateSessionId, stopChatListenerService, hideKeyboardOnNavigation, metaLogEvent, saveSuggestions, saveSuggestionDefs)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -81,8 +81,8 @@ baseAppFlow baseFlow = do
     cacheAppParameters versionCode
     when baseFlow $ void $ UI.splashScreen state.splashScreen
     let regToken = getValueToLocalStore REGISTERATION_TOKEN
-    _ <- pure $ saveSuggestions "SUGGESTIONS" getSuggestions
-    _ <- pure $ saveSuggestions "SUGGESTIONS_DEFINITIONS" suggestionsDefinitions
+    _ <- pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
+    _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
     if isTokenValid regToken
       then do
         setValueToLocalNativeStore REGISTERATION_TOKEN regToken
@@ -102,6 +102,7 @@ baseAppFlow baseFlow = do
       setValueToLocalNativeStore BUNDLE_VERSION bundle
       setValueToLocalNativeStore GPS_METHOD "CURRENT"
       setValueToLocalNativeStore MAKE_NULL_API_CALL "NO"
+      setValueToLocalStore IS_DRIVER_AT_PICKUP "false"
       when ((getValueToLocalStore SESSION_ID == "__failed") || (getValueToLocalStore SESSION_ID == "(null)")) $ do
         setValueToLocalStore SESSION_ID (generateSessionId unit)
       void $ lift $ lift $ setLogField "driver_id" $ encode (driverId)
@@ -1196,6 +1197,7 @@ homeScreenFlow = do
       startRideResp <- lift $ lift $ Remote.startRide id (Remote.makeStartRideReq otp (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon))) -- driver's lat long during starting ride
       case startRideResp of
         Right startRideResp -> do
+          _ <- pure $ setValueToLocalNativeStore RIDE_ID id
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false, showDottedRoute = true}, data{ route = [], activeRide{status = INPROGRESS}}})
           void $ lift $ lift $ toggleLoader false
           _ <- updateStage $ HomeScreenStage RideStarted
@@ -1236,7 +1238,8 @@ homeScreenFlow = do
       _ <- pure $ printLog "HOME_SCREEN_FLOW GO_TO_END_RIDE" "."
       void $ lift $ lift $ loaderText (getString END_RIDE) ""
       void $ lift $ lift $ toggleLoader true
-      endRideResp <- Remote.endRide id (Remote.makeEndRideReq (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon)))-- driver's  lat long during ending ride
+      let numDeviation = Just $ (fromMaybe 0 (fromString $ getValueToLocalNativeStore RIDE_WAYPOINT_DEVIATION_COUNT)) > 0
+      endRideResp <- Remote.endRide id (Remote.makeEndRideReq (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon)) numDeviation)-- driver's  lat long during ending ride
       _ <- pure $ removeAllPolylines ""
       _ <- pure $ setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
       _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"

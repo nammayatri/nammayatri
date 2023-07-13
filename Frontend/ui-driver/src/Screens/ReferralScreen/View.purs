@@ -547,11 +547,14 @@ rankers size rank themeColor showCrown fontSize detail imageUrl =
        , height (V $ size + bottomMargin + 30)
        ][ linearLayout
           [ width MATCH_PARENT
-          , height (V 22)
+          , height WRAP_CONTENT
           , gravity CENTER_HORIZONTAL
           ][ imageView
-             [ imageWithFallback "ny_ic_crown,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_crown.png"
+             [ height (V 31)
+             , width (V 31)
+             , imageWithFallback "ny_ic_crown,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_crown.png"
              , visibility if rank == 1 then VISIBLE else GONE
+             , padding (PaddingBottom 5)
              ]
            ]
         , linearLayout

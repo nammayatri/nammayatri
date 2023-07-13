@@ -34,6 +34,7 @@ import Kernel.Randomizer (getRandomElement)
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis
 import Kernel.Tools.Metrics.CoreMetrics
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -57,6 +58,8 @@ data InitReq = InitReq
   { driverQuoteId :: Text,
     bapId :: Text,
     bapUri :: BaseUrl,
+    bapCity :: Context.City,
+    bapCountry :: Context.Country,
     initTypeReq :: InitTypeReq,
     maxEstimatedDistance :: Maybe HighPrecMeters,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
@@ -154,7 +157,6 @@ handler merchantId req eitherReq = do
       case eitherReq of
         Right (specialZoneQuote, searchRequest) -> do
           booking <- buildBooking searchRequest specialZoneQuote searchRequest.startTime DRB.SpecialZoneBooking now (mbPaymentMethod <&> (.id))
-          -- Esq.runTransaction $
           _ <- QRB.create booking
           return booking
         Left _ -> throwError $ InvalidRequest "Can't have driverQuote in specialZone booking"
@@ -198,6 +200,8 @@ handler merchantId req eitherReq = do
             primaryExophone = exophone.primaryPhone,
             bapId = req.bapId,
             bapUri = req.bapUri,
+            bapCity = Just req.bapCity,
+            bapCountry = Just req.bapCountry,
             riderId = Nothing,
             vehicleVariant = driverQuote.vehicleVariant,
             estimatedDistance = driverQuote.distance,
@@ -232,7 +236,7 @@ validateRequest merchantId req = do
   case req.initTypeReq of
     InitNormalReq -> do
       driverQuote <- QDQuote.findById (Id req.driverQuoteId) >>= fromMaybeM (QuoteNotFound req.driverQuoteId)
-      when (driverQuote.validTill < now) $
+      when (driverQuote.validTill < now || driverQuote.status == DDQ.Inactive) $
         throwError $ QuoteExpired driverQuote.id.getId
       searchRequest <- QSR.findById driverQuote.requestId >>= fromMaybeM (SearchRequestNotFound driverQuote.requestId.getId)
       searchTry <- QST.findById driverQuote.searchTryId >>= fromMaybeM (SearchTryNotFound driverQuote.searchTryId.getId)

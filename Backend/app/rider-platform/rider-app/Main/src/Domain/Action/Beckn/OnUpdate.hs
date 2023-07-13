@@ -37,7 +37,7 @@ import Domain.Types.Ride
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.VehicleVariant
-import Environment
+import Environment ()
 import qualified EulerHS.Language as L
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
@@ -76,6 +76,7 @@ data OnUpdateReq
         bppRideId :: Id SRide.BPPRide,
         driverName :: Text,
         driverMobileNumber :: Text,
+        driverMobileCountryCode :: Maybe Text,
         driverRating :: Maybe Centesimal,
         driverRegisteredAt :: UTCTime,
         otp :: Text,
@@ -130,6 +131,7 @@ data ValidatedOnUpdateReq
         bppRideId :: Id SRide.BPPRide,
         driverName :: Text,
         driverMobileNumber :: Text,
+        driverMobileCountryCode :: Maybe Text,
         driverRating :: Maybe Centesimal,
         driverRegisteredAt :: UTCTime,
         otp :: Text,
@@ -235,20 +237,16 @@ data BreakupPriceInfo = BreakupPriceInfo
   }
 
 onUpdate ::
-  ( HasCacheConfig r,
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasCacheConfig r,
     EsqDBFlow m r,
     L.MonadFlow m,
     EncFlow m r,
     EsqDBReplicaFlow m r,
     CoreMetrics m,
-    HasBapInfo r m,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     -- HasShortDurationRetryCfg r c, -- uncomment for test update api
-    HasFlowEnv
-      m
-      r
-      '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
     HedisFlow m r,
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
     EventStreamFlow m r
@@ -346,7 +344,7 @@ onUpdate ValidatedRideCompletedReq {..} = do
   --           bppId = booking.providerId,
   --           bppUrl = booking.providerUrl,
   --           transactionId = booking.transactionId,
-  --           city = merchant.city
+  --           merchant
   --         }
   --   becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
   --   void . withShortRetry $ CallBPP.update booking.providerUrl becknUpdateReq
@@ -424,13 +422,10 @@ validateRequest ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     CoreMetrics m,
-    HasBapInfo r m,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    HasFlowEnv
-      m
-      r
-      '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
+    MonadFlow m,
+    MonadReader r m,
     HedisFlow m r,
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
   ) =>

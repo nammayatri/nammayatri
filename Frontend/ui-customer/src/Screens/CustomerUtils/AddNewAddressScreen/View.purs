@@ -526,7 +526,7 @@ savePlaceView state push =
           , margin (MarginTop 24)
           , padding (PaddingBottom 2)
           , visibility if state.data.activeIndex == Just 2 then VISIBLE else GONE
-          ][ PrimaryEditText.view (push <<< PrimaryEditTextAC ) (primaryEditTextConfig state) ]
+          ](if state.data.activeIndex == Just 2 then [PrimaryEditText.view (push <<< PrimaryEditTextAC ) (primaryEditTextConfig state)] else [] )
         ]]
     , linearLayout
       [ alignParentBottom "true,-1"
@@ -590,7 +590,7 @@ tagView state push =
               ]
           ]) [  { activeImageUrl : "ny_ic_home_blue,https://assets.juspay.in/nammayatri/images/user/ny_ic_home_blue.png", inActiveImageUrl : "ny_ic_home,https://assets.juspay.in/nammayatri/images/user/ny_ic_home.png", text : (getString HOME), tag : "HOME"},
                 { activeImageUrl : "ny_ic_work_blue,https://assets.juspay.in/nammayatri/images/user/ny_ic_work_blue.png", inActiveImageUrl : "ny_ic_work,https://assets.juspay.in/nammayatri/images/user/ny_ic_work.png", text : (getString WORK), tag : "WORK"},
-                { activeImageUrl : "ny_ic_fav_blue,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav_blue.png",inActiveImageUrl : "ny_ic_fav_tag,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav_inactive.png", text : (getString FAVOURITE), tag : "FAVOURITE"}] )
+                { activeImageUrl : "ny_ic_fav_blue,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav_blue.png",inActiveImageUrl : "ny_ic_fav_tag,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav_tag.png", text : (getString FAVOURITE), tag : "FAVOURITE"}] )
 
   ]
 

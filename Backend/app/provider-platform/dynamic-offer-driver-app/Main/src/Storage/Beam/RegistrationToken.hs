@@ -68,16 +68,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.RTEntityType
 
 instance FromBackendRow Postgres Domain.RTEntityType
 
--- instance FromField RegToken where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be RegToken where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be RegToken
-
--- instance FromBackendRow Postgres RegToken
-
 data RegistrationTokenT f = RegistrationTokenT
   { id :: B.C f Text,
     token :: B.C f RegToken,
@@ -165,27 +155,6 @@ registrationTokenToHSModifiers =
 registrationTokenToPSModifiers :: M.Map Text (A.Value -> A.Value)
 registrationTokenToPSModifiers =
   M.empty
-
-defaultRegistrationToken :: RegistrationToken
-defaultRegistrationToken =
-  RegistrationTokenT
-    { id = "",
-      token = "",
-      attempts = 0,
-      authMedium = "",
-      authType = "",
-      authValueHash = "",
-      verified = False,
-      authExpiry = 10,
-      tokenExpiry = 10,
-      entityId = "",
-      merchantId = "",
-      entityType = "",
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate,
-      info = Nothing,
-      alternateNumberAttempts = 0
-    }
 
 instance Serialize RegistrationToken where
   put = error "undefined"

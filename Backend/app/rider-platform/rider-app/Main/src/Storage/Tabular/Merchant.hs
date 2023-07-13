@@ -20,14 +20,21 @@
 
 module Storage.Tabular.Merchant where
 
+import Data.Aeson (decode, encode)
+import Data.ByteString.Lazy (ByteString)
+import Domain.Types.Merchant (Slot)
 import qualified Domain.Types.Merchant as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Base64
+import Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Error
 import Kernel.Types.Geofencing (GeoRestriction)
 import qualified Kernel.Types.Geofencing as Geo
 import Kernel.Types.Id
+import Kernel.Utils.Common (fromMaybeM)
 
+derivePersistField "ByteString"
 mkPersist
   defaultSqlSettings
   [defaultQQ|
@@ -36,7 +43,10 @@ mkPersist
       shortId Text
       subscriberId Text
       name Text
-      city Text
+      city Context.City
+      country Context.Country
+      bapId Text
+      bapUniqueKeyId Text
       originRestriction GeoRestriction
       destinationRestriction GeoRestriction
       gatewayUrl Text
@@ -53,6 +63,7 @@ mkPersist
       Primary id
       UniqueMerchantShortId shortId
       deriving Generic
+      dirCacheSlot ByteString
     |]
 
 instance TEntityKey MerchantT where
@@ -70,6 +81,7 @@ instance FromTType MerchantT Domain.Merchant where
     gwUrl <- parseBaseUrl gatewayUrl
     regUrl <- parseBaseUrl registryUrl
     doBaseUrl <- parseBaseUrl driverOfferBaseUrl
+    decodedSlot <- fromMaybeM (InternalError "Failed to parse Slots stored") (decode dirCacheSlot :: Maybe [Slot])
     return $
       Domain.Merchant
         { id = Id id,
@@ -78,6 +90,7 @@ instance FromTType MerchantT Domain.Merchant where
           registryUrl = regUrl,
           gatewayUrl = gwUrl,
           driverOfferBaseUrl = doBaseUrl,
+          dirCacheSlot = decodedSlot,
           ..
         }
 
@@ -93,5 +106,6 @@ instance ToTType MerchantT Domain.Merchant where
         gatewayUrl = showBaseUrl gatewayUrl,
         registryUrl = showBaseUrl registryUrl,
         driverOfferBaseUrl = showBaseUrl driverOfferBaseUrl,
+        dirCacheSlot = encode dirCacheSlot,
         ..
       }

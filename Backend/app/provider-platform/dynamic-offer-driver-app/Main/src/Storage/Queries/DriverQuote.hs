@@ -24,7 +24,6 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (addUTCTime, secondsToNominalDiffTime)
@@ -33,10 +32,7 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.DriverQuote as BeamDQ
 import Storage.Queries.FareParameters as BeamQFP
 import qualified Storage.Queries.FareParameters as SQFP
-import Storage.Tabular.DriverQuote
-import qualified Storage.Tabular.FareParameters as Fare
 
--- TODO @Vijay Gupta - update the following function Done
 -- create :: Domain.DriverQuote -> SqlDB ()
 -- create dQuote = Esq.runTransaction $
 --   withFullEntity dQuote $ \(dQuoteT, (fareParams', fareParamsDetais)) -> do
@@ -57,17 +53,17 @@ create dQuote = do
       KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainDriverQuoteToBeam dQuote)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-baseDriverQuoteQuery ::
-  From
-    ( SqlExpr (Entity DriverQuoteT)
-        :& SqlExpr (Entity Fare.FareParametersT)
-    )
-baseDriverQuoteQuery =
-  table @DriverQuoteT
-    `innerJoin` table @Fare.FareParametersT
-      `Esq.on` ( \(rb :& farePars) ->
-                   rb ^. DriverQuoteFareParametersId ==. farePars ^. Fare.FareParametersTId
-               )
+-- baseDriverQuoteQuery ::
+--   From
+--     ( SqlExpr (Entity DriverQuoteT)
+--         :& SqlExpr (Entity Fare.FareParametersT)
+--     )
+-- baseDriverQuoteQuery =
+--   table @DriverQuoteT
+--     `innerJoin` table @Fare.FareParametersT
+--       `Esq.on` ( \(rb :& farePars) ->
+--                    rb ^. DriverQuoteFareParametersId ==. farePars ^. Fare.FareParametersTId
+--                )
 
 findById :: (L.MonadFlow m) => Id Domain.DriverQuote -> m (Maybe Domain.DriverQuote)
 findById (Id driverQuoteId) = do

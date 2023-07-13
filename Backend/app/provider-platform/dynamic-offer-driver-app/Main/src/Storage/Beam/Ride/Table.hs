@@ -77,7 +77,8 @@ data RideT f = RideT
     fareParametersId :: B.C f (Maybe Text),
     distanceCalculationFailed :: B.C f (Maybe Bool),
     createdAt :: B.C f Time.UTCTime,
-    updatedAt :: B.C f Time.UTCTime
+    updatedAt :: B.C f Time.UTCTime,
+    numberOfDeviation :: B.C f (Maybe Bool)
   }
   deriving (Generic, B.Beamable)
 
@@ -127,7 +128,8 @@ rideTMod =
       fareParametersId = B.fieldNamed "fare_parameters_id",
       distanceCalculationFailed = B.fieldNamed "distance_calculation_failed",
       createdAt = B.fieldNamed "created_at",
-      updatedAt = B.fieldNamed "updated_at"
+      updatedAt = B.fieldNamed "updated_at",
+      numberOfDeviation = B.fieldNamed "number_of_deviation"
     }
 
 defaultRide :: Ride
@@ -155,7 +157,8 @@ defaultRide =
       fareParametersId = Nothing,
       distanceCalculationFailed = Nothing,
       createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
+      updatedAt = defaultUTCDate,
+      numberOfDeviation = Nothing
     }
 
 instance Serialize Ride where

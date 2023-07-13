@@ -107,7 +107,7 @@ instance loggableAction :: Loggable Action where
       DescriptionEditTextAC act -> case act of
         PrimaryEditText.TextChanged _ _-> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "description_edit_text_changed" "primary_edit_text"
         PrimaryEditText.FocusChanged _-> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "description_edit_text_focus_changed" "primary_edit_text"
-      PrimaryButtonAC act -> case act of 
+      PrimaryButtonAC act -> case act of
         PrimaryButton.OnClick -> do
             trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "primary_button_action" "go_to_home/submit"
             trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
@@ -169,9 +169,9 @@ eval :: Action -> HelpAndSupportScreenState -> Eval Action ScreenOutput HelpAndS
 
 eval (BackPressed flag ) state = if state.props.isCallConfirmation
   then continue state{props{isCallConfirmation = false}}
-  else if state.props.showDeleteAccountView then continue state{props {showDeleteAccountView = false}}
   else if state.data.accountStatus == CONFIRM_REQ then continue state{data{accountStatus = ACTIVE}}
-  else if state.data.accountStatus == DEL_REQUESTED then continue state
+  else if state.data.accountStatus == DEL_REQUESTED then updateAndExit (state {data{accountStatus = ACTIVE}} ) $ GoHome
+  else if state.props.showDeleteAccountView then continue state{props {showDeleteAccountView = false}}
   else exit GoBack
 
 eval ContactUs state = exit $ GoToSupportScreen state.data.bookingId
@@ -203,7 +203,7 @@ eval (RideBookingListAPIResponseAction rideList status) state = do
 eval (PopupModelActionController (PopUpModal.OnButton1Click)) state = continue state{props{isCallConfirmation = false}}
 
 eval (PopupModelActionController (PopUpModal.OnButton2Click)) state = do
-  void $ pure $ showDialer $ getSupportNumber ""
+  void $ pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
   continue state{props{isCallConfirmation = false}}
 
 eval (APIFailureActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit GoBack
@@ -212,9 +212,11 @@ eval (NoRidesActionController (ErrorModal.PrimaryButtonActionController PrimaryB
 
 eval (EmailEditTextAC (PrimaryEditText.TextChanged id a)) state = continue state{data {email = trim(a)},props{btnActive = length (trim a) > 0  && length (trim state.data.description) > 9 && validateEmail a}}
 
-eval (DescriptionEditTextAC (PrimaryEditText.TextChanged id a)) state = continue state{data {description = a},props{btnActive = length state.data.email > 0 && length (trim a) > 9 && validateEmail state.data.email}}
+eval (DescriptionEditTextAC (PrimaryEditText.TextChanged id a)) state = do 
+  let email= if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else state.data.email
+  continue state{data {description = a},props{btnActive = length email > 0 && length (trim a) > 9 && validateEmail email}}
 
-eval DeleteAccount state = continue state {props {showDeleteAccountView = true}}
+eval DeleteAccount state = continue state {props {showDeleteAccountView = true}, data{description = "", email = ""}}
 
 eval (DeleteGenericHeaderAC(GenericHeader.PrefixImgOnClick )) state = continue state {props {showDeleteAccountView = false}}
 
@@ -223,7 +225,9 @@ eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
   continue state{ data { accountStatus = CONFIRM_REQ} }
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state {data{ accountStatus= ACTIVE}}
-eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ ConfirmDeleteAccount state
+eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do 
+  let email = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else state.data.email
+  exit $ ConfirmDeleteAccount state{data{email=email}}
 eval (AccountDeletedModalAction (PopUpModal.OnButton1Click)) state =  updateAndExit (state {data{accountStatus = ACTIVE}} ) $ GoHome
 eval (AccountDeletedModalAction (PopUpModal.OnButton2Click)) state =  updateAndExit (state {data{accountStatus = ACTIVE}} ) $ GoHome
 

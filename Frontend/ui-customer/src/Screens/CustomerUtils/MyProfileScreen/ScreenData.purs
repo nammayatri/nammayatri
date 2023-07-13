@@ -25,6 +25,7 @@ initData = {
         genderOptionExpanded : false,
         expandEnabled : false,
         isEmailValid : true,
+        isNameValid : true,
         isBtnEnabled : true,
         showOptions : false,
         fromHomeScreen : false
@@ -37,6 +38,7 @@ initData = {
         gender : Nothing,
         editedGender : Nothing,
         editedEmailId  : Nothing,
-        errorMessage : Nothing
+        nameErrorMessage : Nothing,
+        emailErrorMessage : Nothing
     }
 }

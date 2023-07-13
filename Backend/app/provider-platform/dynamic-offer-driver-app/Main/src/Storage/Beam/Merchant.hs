@@ -28,23 +28,19 @@ import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres
--- import Database.Beam.Postgres
---   ( Postgres,
---   )
--- import Database.Beam.Postgres.Syntax
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Merchant as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
 fromFieldEnum' ::
-  -- (Typeable a, Read a) =>
   DPSF.Field ->
   Maybe ByteString ->
   DPSF.Conversion GeoRestriction
@@ -94,7 +90,7 @@ data MerchantT f = MerchantT
     aadhaarVerificationRequired :: B.C f Bool,
     headCount :: B.C f (Maybe Int),
     status :: B.C f Domain.Status,
-    city :: B.C f Text,
+    city :: B.C f Context.City,
     verified :: B.C f Bool,
     enabled :: B.C f Bool,
     internalApiKey :: B.C f Text,
@@ -132,6 +128,8 @@ deriving stock instance Ord Domain.Status
 deriving stock instance Ord GeoRestriction
 
 deriving stock instance Eq GeoRestriction
+
+deriving stock instance Ord Context.City
 
 merchantTMod :: MerchantT (B.FieldModification (B.TableField MerchantT))
 merchantTMod =
@@ -172,35 +170,6 @@ merchantToHSModifiers =
 merchantToPSModifiers :: M.Map Text (A.Value -> A.Value)
 merchantToPSModifiers =
   M.empty
-
-defaultMerchant :: Merchant
-defaultMerchant =
-  MerchantT
-    { id = "",
-      name = "",
-      description = Nothing,
-      subscriberId = "",
-      uniqueKeyId = "",
-      shortId = "",
-      mobileNumber = Nothing,
-      mobileCountryCode = Nothing,
-      gstin = Nothing,
-      fromTime = Nothing,
-      toTime = Nothing,
-      headCount = Nothing,
-      geoHashPrecisionValue = 0,
-      aadhaarVerificationRequired = False,
-      status = "",
-      city = "",
-      verified = False,
-      enabled = False,
-      internalApiKey = "",
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate,
-      originRestriction = "",
-      destinationRestriction = "",
-      info = Nothing
-    }
 
 instance Serialize Merchant where
   put = error "undefined"

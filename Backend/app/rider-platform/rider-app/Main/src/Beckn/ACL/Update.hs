@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE OverloadedLabels #-}
 
 module Beckn.ACL.Update
   ( buildUpdateReq,
@@ -21,10 +22,12 @@ where
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.Update as Update
 import qualified Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent as PaymentCompletedU
+import Control.Lens ((%~))
+import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Ride as DRide
-import Environment
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
@@ -39,18 +42,17 @@ data UpdateBuildReq = PaymentCompletedBuildReq
     bppId :: Text,
     bppUrl :: BaseUrl,
     transactionId :: Text,
-    city :: Text
+    merchant :: DM.Merchant
   }
 
 buildUpdateReq ::
-  (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   UpdateBuildReq ->
   m (BecknReq Update.UpdateMessage)
 buildUpdateReq res = do
-  bapURIs <- asks (.bapSelfURIs)
-  bapIDs <- asks (.bapSelfIds)
   messageId <- generateGUID
-  context <- buildTaxiContext Context.UPDATE messageId (Just res.transactionId) bapIDs.cabs bapURIs.cabs (Just res.bppId) (Just res.bppUrl) res.city
+  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/cab/v1/" <> T.unpack res.merchant.id.getId)
+  context <- buildTaxiContext Context.UPDATE messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchant.city res.merchant.country
   pure $ BecknReq context $ mkUpdateMessage res
 
 mkUpdateMessage ::

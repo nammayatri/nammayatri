@@ -43,7 +43,6 @@ import Lib.UtilsTH
 import Sequelize
 
 fromFieldAddressResp ::
-  -- (Typeable a, Read a) =>
   DPSF.Field ->
   Maybe ByteString ->
   DPSF.Conversion [Domain.AddressResp]
@@ -86,7 +85,7 @@ instance B.Table PlaceNameCacheT where
 instance ModelMeta PlaceNameCacheT where
   modelFieldModification = placeNameCacheTMod
   modelTableName = "place_name_cache"
-  modelSchemaName = Just "atlas_app"
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type PlaceNameCache = PlaceNameCacheT Identity
 
@@ -110,20 +109,6 @@ placeNameCacheTMod =
       geoHash = B.fieldNamed "geo_hash",
       addressComponents = B.fieldNamed "address_components",
       createdAt = B.fieldNamed "created_at"
-    }
-
-defaultPlaceNameCache :: PlaceNameCache
-defaultPlaceNameCache =
-  PlaceNameCacheT
-    { id = "",
-      formattedAddress = Nothing,
-      plusCode = Nothing,
-      lat = 0.0,
-      lon = 0.0,
-      placeId = Nothing,
-      geoHash = Nothing,
-      addressComponents = [],
-      createdAt = defaultUTCDate
     }
 
 instance Serialize PlaceNameCache where

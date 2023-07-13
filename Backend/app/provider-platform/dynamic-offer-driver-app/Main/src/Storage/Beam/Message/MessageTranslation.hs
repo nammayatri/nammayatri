@@ -21,7 +21,6 @@ import qualified Data.Aeson as A
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import qualified Data.Serialize
-import qualified Data.Time as T
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
@@ -29,22 +28,10 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.External.Types (Language)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Person ()
-
--- fromFieldEnum ::
---   (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldEnum f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' ->
---     case (readMaybe (unpackChars value')) of
---       Just val -> pure val
---       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
 instance IsString Language where
   fromString = show
@@ -91,18 +78,6 @@ messageTranslationTMod =
       shortDescription = B.fieldNamed "short_description",
       label = B.fieldNamed "label",
       createdAt = B.fieldNamed "created_at"
-    }
-
-defaultMessageTranslation :: MessageTranslation
-defaultMessageTranslation =
-  MessageTranslationT
-    { messageId = "",
-      language = "",
-      title = "",
-      description = "",
-      shortDescription = "",
-      label = Nothing,
-      createdAt = T.utcToLocalTime T.utc defaultUTCDate
     }
 
 instance Data.Serialize.Serialize MessageTranslation where

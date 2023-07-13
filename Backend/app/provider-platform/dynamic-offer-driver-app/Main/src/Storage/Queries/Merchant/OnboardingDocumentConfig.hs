@@ -35,19 +35,6 @@ import Kernel.Utils.Common
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.OnboardingDocumentConfig as BeamODC
-import Storage.Tabular.Merchant.OnboardingDocumentConfig
-
--- import qualified Lib.Mesh as Mesh
--- import qualified Sequelize as Se
--- import qualified Storage.Beam.OnboardingDocumentConfig as BeamODC
--- import qualified EulerHS.KVConnector.Flow as KV
--- import EulerHS.KVConnector.Types
--- import qualified EulerHS.Language as L
--- import qualified EulerHS.Extra.EulerDB as Extra
--- import qualified Domain.Types.Merchant.OnboardingDocumentConfig as Domain
-
--- create :: OnboardingDocumentConfig -> SqlDB ()
--- create = Esq.create
 
 create :: L.MonadFlow m => OnboardingDocumentConfig -> m (MeshResult ())
 create config = do
@@ -122,7 +109,7 @@ update config = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamODC.OnboardingDocumentConfigT
   let updatedMeshConfig = setMeshConfig modelName
-  let supportedClassJson = getConfigJSON config.supportedVehicleClasses
+  let supportedClassJson = BeamODC.getConfigJSON config.supportedVehicleClasses
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -162,19 +149,14 @@ transformBeamOnboardingDocumentConfigToDomain BeamODC.OnboardingDocumentConfigT 
 
 transformDomainOnboardingDocumentConfigToBeam :: OnboardingDocumentConfig -> BeamODC.OnboardingDocumentConfig
 transformDomainOnboardingDocumentConfigToBeam OnboardingDocumentConfig {..} =
-  BeamODC.defaultOnboardingDocumentConfig
+  BeamODC.OnboardingDocumentConfigT
     { BeamODC.merchantId = getId merchantId,
       BeamODC.documentType = documentType,
       BeamODC.checkExtraction = checkExtraction,
       BeamODC.checkExpiry = checkExpiry,
-      BeamODC.supportedVehicleClassesJSON = getConfigJSON' supportedVehicleClasses,
+      BeamODC.supportedVehicleClassesJSON = BeamODC.getConfigJSON supportedVehicleClasses,
       BeamODC.vehicleClassCheckType = vehicleClassCheckType,
       BeamODC.rcNumberPrefix = rcNumberPrefix,
       BeamODC.createdAt = createdAt,
       BeamODC.updatedAt = updatedAt
     }
-  where
-    getConfigJSON' :: Domain.SupportedVehicleClasses -> Text
-    getConfigJSON' = \case
-      Domain.DLValidClasses cfg -> encodeToText cfg
-      Domain.RCValidClasses cfg -> encodeToText cfg

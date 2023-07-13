@@ -20,7 +20,6 @@ module Environment
     AppCfg (),
     AppEnv (..),
     BAPs (..),
-    HasBapInfo,
     RideConfig (..),
     buildAppEnv,
     releaseAppEnv,
@@ -74,9 +73,6 @@ data AppCfg = AppCfg
     port :: Int,
     metricsPort :: Int,
     hostName :: Text,
-    bapSelfIds :: BAPs Text,
-    bapSelfURIs :: BAPs BaseUrl,
-    bapSelfUniqueKeyIds :: BAPs Text,
     searchRequestExpiry :: Maybe Seconds,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
@@ -99,6 +95,7 @@ data AppCfg = AppCfg
     disableSignatureAuth :: Bool,
     encTools :: EncTools,
     kafkaProducerCfg :: KafkaProducerCfg,
+    nwAddress :: BaseUrl,
     selfUIUrl :: BaseUrl,
     rideCfg :: RideConfig,
     dashboardToken :: Text,
@@ -119,8 +116,6 @@ data AppEnv = AppEnv
     infoBIPCfg :: InfoBIPConfig,
     webengageCfg :: WebengageConfig,
     hostName :: Text,
-    bapSelfIds :: BAPs Text,
-    bapSelfURIs :: BAPs BaseUrl,
     searchRequestExpiry :: Maybe Seconds,
     coreVersion :: Text,
     loggerConfig :: LoggerConfig,
@@ -139,6 +134,7 @@ data AppEnv = AppEnv
     signatureExpiry :: Seconds,
     disableSignatureAuth :: Bool,
     encTools :: EncTools,
+    nwAddress :: BaseUrl,
     selfUIUrl :: BaseUrl,
     hedisEnv :: HedisEnv,
     hedisNonCriticalEnv :: HedisEnv,
@@ -214,12 +210,6 @@ data BAPs a = BAPs
     cabs :: a
   }
   deriving (Generic, FromDhall)
-
-type HasBapInfo r m =
-  ( HasField "bapSelfIds" r (BAPs Text),
-    HasField "bapSelfURIs" r (BAPs BaseUrl),
-    MonadReader r m
-  )
 
 instance AuthenticatingEntity AppEnv where
   getSigningKey = (.signingKey)

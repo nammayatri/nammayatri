@@ -15,8 +15,12 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import in.juspay.mobility.utils.LocationUpdateService;
 import in.juspay.mobility.utils.WidgetService;
+
+import android.os.Bundle;
+import android.os.Handler;
 import android.provider.Settings;
 import android.util.Log;
+
 
 public class BootUpReceiver extends BroadcastReceiver {
 
@@ -29,21 +33,36 @@ public class BootUpReceiver extends BroadcastReceiver {
         SharedPreferences sharedPrefs = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         String driverStatus = sharedPrefs.getString("DRIVER_STATUS", "__failed");
         String key = BuildConfig.MERCHANT_TYPE;
+
+        Intent restartIntent = new Intent(context, MainActivity.class);
+        restartIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+
         if (key.equals("DRIVER")) {
             if (driverStatus.equals("true")) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    context.startForegroundService(locationUpdateService);
+                    context.getApplicationContext().startForegroundService(locationUpdateService);
                 } else {
-                    context.startService(locationUpdateService);
+                    context.getApplicationContext().startService(locationUpdateService);
                 }
             }
             if(Settings.canDrawOverlays(context)){
                 try{
                     context.startService(widgetReloadService);
+                    Handler handler = new Handler();
+                    handler.postDelayed(() -> {
+                        context.startActivity(restartIntent);
+                        minimizeApp(context);
+                    }, 5000);
                 } catch (Exception e) {
                     Log.e("BootUpReceiver", "Unable to Start Widget Service");
                 }
             }
         }
+    }
+    public void minimizeApp(Context context) {
+        Intent startMain = new Intent(Intent.ACTION_MAIN);
+        startMain.addCategory(Intent.CATEGORY_HOME);
+        startMain.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        context.startActivity(startMain);
     }
 }

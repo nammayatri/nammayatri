@@ -42,30 +42,7 @@ import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
--- fromFieldEnum ::
---   (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldEnum f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' ->
---     case (readMaybe (unpackChars value')) of
---       Just val -> pure val
---       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
-
--- instance FromField Minutes where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Minutes where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Minutes
-
--- instance FromBackendRow Postgres Minutes
-
 fromFieldSWC ::
-  -- (Typeable a, Read a) =>
   DPSF.Field ->
   Maybe ByteString ->
   DPSF.Conversion SWC.SlidingWindowOptions
@@ -80,9 +57,6 @@ instance IsString Minutes where
 
 instance FromField SWC.SlidingWindowOptions where
   fromField = fromFieldSWC
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be SWC.SlidingWindowOptions where
---   sqlValueSyntax = autoSqlValueSyntax
 
 instance HasSqlValueSyntax be ByteString => HasSqlValueSyntax be SWC.SlidingWindowOptions where
   sqlValueSyntax = sqlValueSyntax . toStrict . A.encode
@@ -165,34 +139,6 @@ driverIntelligentPoolConfigTMod =
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
     }
-
--- instance IsString SWC.SlidingWindowOptions where
---   fromString = show
-
--- instance IsString Minutes where
--- fromString = show
-
--- defaultDriverIntelligentPoolConfig :: DriverIntelligentPoolConfig
--- defaultDriverIntelligentPoolConfig =
---   DriverIntelligentPoolConfigT
---     { merchantId = "",
---       availabilityTimeWeightage = 0,
---       availabilityTimeWindowOption = "",
---       acceptanceRatioWeightage = 0,
---       acceptanceRatioWindowOption = "",
---       cancellationRatioWeightage = 0,
---       cancellationRatioWindowOption = "",
---       minQuotesToQualifyForIntelligentPool = 0,
---       minQuotesToQualifyForIntelligentPoolWindowOption = "",
---       intelligentPoolPercentage = Nothing,
---       speedNormalizer = 0.0,
---       driverSpeedWeightage = 0,
---       locationUpdateSampleTime = "",
---       minLocationUpdates = 0,
---       defaultDriverSpeed = 0.0,
---       createdAt = defaultUTCDate,
---       updatedAt = defaultUTCDate
---     }
 
 instance Serialize DriverIntelligentPoolConfig where
   put = error "undefined"

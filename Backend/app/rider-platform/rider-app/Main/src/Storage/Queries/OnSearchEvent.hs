@@ -26,7 +26,6 @@ import Kernel.Types.Id
 import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.OnSearchEvent as BeamOSE
-import Storage.Tabular.OnSearchEvent ()
 
 create :: L.MonadFlow m => OnSearchEvent -> m (MeshResult ())
 create onSearchEvent = do

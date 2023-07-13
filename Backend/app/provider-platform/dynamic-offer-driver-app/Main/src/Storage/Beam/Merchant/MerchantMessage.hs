@@ -37,18 +37,6 @@ import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
--- fromFieldEnum ::
---   (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldEnum f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' ->
---     case (readMaybe (unpackChars value')) of
---       Just val -> pure val
---       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
-
 instance FromField Domain.MessageKey where
   fromField = fromFieldEnum
 
@@ -100,16 +88,6 @@ merchantMessageTMod =
       message = B.fieldNamed "message",
       updatedAt = B.fieldNamed "updated_at",
       createdAt = B.fieldNamed "created_at"
-    }
-
-defaultMerchantMessage :: MerchantMessage
-defaultMerchantMessage =
-  MerchantMessageT
-    { merchantId = "",
-      messageKey = "",
-      message = "",
-      updatedAt = defaultUTCDate,
-      createdAt = defaultUTCDate
     }
 
 instance Serialize MerchantMessage where

@@ -23,7 +23,6 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq hiding (create)
 import Kernel.Types.Common
 import Kernel.Types.Id (Id (Id, getId))
 import Lib.Utils
@@ -32,8 +31,6 @@ import qualified Storage.Beam.Estimate as BeamE
 import qualified Storage.Queries.EstimateBreakup as QEB
 -- import Storage.Queries.FullEntityBuilders (buildFullEstimate)
 import qualified Storage.Queries.TripTerms as QTT
-import Storage.Tabular.Estimate
-import Storage.Tabular.TripTerms
 
 -- import qualified Kernel.Beam.Types as KBT
 -- import qualified Sequelize as Se
@@ -77,17 +74,17 @@ createMany :: L.MonadFlow m => [Estimate] -> m ()
 createMany estimates = do
   traverse_ create estimates
 
-fullEstimateTable ::
-  From
-    ( Table EstimateT
-        :& Esq.MbTable TripTermsT
-    )
-fullEstimateTable =
-  table @EstimateT
-    `leftJoin` table @TripTermsT
-      `Esq.on` ( \(estimate :& mbTripTerms) ->
-                   estimate ^. EstimateTripTermsId ==. mbTripTerms ?. TripTermsTId
-               )
+-- fullEstimateTable ::
+--   From
+--     ( Table EstimateT
+--         :& Esq.MbTable TripTermsT
+--     )
+-- fullEstimateTable =
+--   table @EstimateT
+--     `leftJoin` table @TripTermsT
+--       `Esq.on` ( \(estimate :& mbTripTerms) ->
+--                    estimate ^. EstimateTripTermsId ==. mbTripTerms ?. TripTermsTId
+--                )
 
 -- findById :: Transactionable m => Id Estimate -> m (Maybe Estimate)
 -- findById estimateId = Esq.buildDType $ do

@@ -22,9 +22,6 @@
 module Storage.Beam.DriverLocation where
 
 import qualified Data.Aeson as A
--- import Database.Beam.Postgres.Syntax
--- import qualified Database.Beam.Query as BQ
-
 import Data.ByteString.Internal (ByteString)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
@@ -46,7 +43,6 @@ import Lib.UtilsTH
 import Sequelize
 
 fromFieldPoint ::
-  -- (Typeable a, Read a) =>
   DPSF.Field ->
   Maybe ByteString ->
   DPSF.Conversion Point

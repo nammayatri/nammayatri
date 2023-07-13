@@ -25,7 +25,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.SearchLocationModel.Controller (Action(..), SearchLocationModelState)
 import Data.Array (mapWithIndex, length)
 import Data.Function (flip)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Debug (spy)
 import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag, os, safeMarginBottom, safeMarginTop, screenHeight, screenWidth, isPreviousVersion, setText')
@@ -261,7 +261,7 @@ sourceDestinationEditTextView state push =
             , id $ getNewIDWithTag "SourceEditText"
             , onChange
                 ( \action -> do
-                    _ <- debounceFunction getDelayForAutoComplete push DebounceCallBack
+                    _ <- debounceFunction getDelayForAutoComplete push DebounceCallBack (fromMaybe false state.isSource)
                     _ <- push action
                     pure unit
                 )
@@ -301,6 +301,7 @@ sourceDestinationEditTextView state push =
         [ height $ V 1
         , width MATCH_PARENT
         , background Color.grey900
+        , visibility if state.isSource == Just false then VISIBLE else GONE
         ]
         []
     , linearLayout
@@ -325,7 +326,7 @@ sourceDestinationEditTextView state push =
               , id $ getNewIDWithTag "DestinationEditText"
               , onChange
                   ( \action -> do
-                      _ <- debounceFunction getDelayForAutoComplete push DebounceCallBack
+                      _ <- debounceFunction getDelayForAutoComplete push DebounceCallBack (fromMaybe false state.isSource)
                       _ <- push action
                       pure unit
                   )
@@ -407,6 +408,7 @@ primaryButtonConfig state =
         { text = if state.isSearchLocation == LocateOnMap then if state.isSource == Just true then (getString CONFIRM_PICKUP_LOCATION) else (getString CONFIRM_DROP_LOCATION) else ""
         , color = Color.yellow900
         , textSize = FontSize.a_16
+        , height = V 40
         }
       , height = V 60
       , gravity = CENTER
@@ -480,7 +482,7 @@ bottomBtnsView state push =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , padding (PaddingBottom if os == "IOS" then 16 else 0)
+    , padding (PaddingBottom if os == "IOS" then 10 else 0)
     , alignParentBottom "true,-1"
     , background Color.white900
     , visibility if state.isSearchLocation == LocateOnMap || (not state.isRideServiceable) then GONE else VISIBLE

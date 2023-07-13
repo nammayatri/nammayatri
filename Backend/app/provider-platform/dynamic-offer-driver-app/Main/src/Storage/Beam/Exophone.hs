@@ -27,25 +27,12 @@ import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import qualified Database.Beam.Schema.Tables as B
+import qualified Database.Beam.Schema.Tables as BST
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
-
--- fromFieldEnum ::
---   (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldEnum f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' ->
---     case (readMaybe (unpackChars value')) of
---       Just val -> pure val
---       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
 data ExophoneT f = ExophoneT
   { id :: B.C f Text,
@@ -60,7 +47,7 @@ data ExophoneT f = ExophoneT
 
 dExophone :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity ExophoneT)
 dExophone =
-  B.setEntitySchema (Just "atlas_driver_offer_bpp")
+  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
     <> B.setEntityName "exophone"
     <> B.modifyTableFields exophoneTMod
 
@@ -107,18 +94,6 @@ exophoneToHSModifiers =
 exophoneToPSModifiers :: M.Map Text (A.Value -> A.Value)
 exophoneToPSModifiers =
   M.empty
-
-defaultExophone :: Exophone
-defaultExophone =
-  ExophoneT
-    { id = "",
-      merchantId = "",
-      primaryPhone = "",
-      backupPhone = "",
-      isPrimaryDown = False,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
 
 instance Serialize Exophone where
   put = error "undefined"

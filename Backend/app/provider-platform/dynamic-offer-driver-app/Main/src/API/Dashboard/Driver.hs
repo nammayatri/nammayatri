@@ -42,6 +42,7 @@ type API =
            :<|> Common.DeleteDriverAPI
            :<|> Common.UnlinkVehicleAPI
            :<|> Common.UnlinkDLAPI
+           :<|> Common.UnlinkAadhaarAPI
            :<|> Common.EndRCAssociationAPI
            :<|> Common.UpdatePhoneNumberAPI
            :<|> Common.AddVehicleAPI
@@ -67,6 +68,7 @@ handler merchantId =
     :<|> deleteDriver merchantId
     :<|> unlinkVehicle merchantId
     :<|> unlinkDL merchantId
+    :<|> unlinkAadhaar merchantId
     :<|> endRCAssociation merchantId
     :<|> updatePhoneNumber merchantId
     :<|> addVehicle merchantId
@@ -120,6 +122,9 @@ unlinkVehicle merchantShortId = withFlowHandlerAPI . DDriver.unlinkVehicle merch
 
 unlinkDL :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
 unlinkDL merchantShortId = withFlowHandlerAPI . DDriver.unlinkDL merchantShortId
+
+unlinkAadhaar :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
+unlinkAadhaar merchantShortId = withFlowHandlerAPI . DDriver.unlinkAadhaar merchantShortId
 
 endRCAssociation :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
 endRCAssociation merchantShortId = withFlowHandlerAPI . DDriver.endRCAssociation merchantShortId

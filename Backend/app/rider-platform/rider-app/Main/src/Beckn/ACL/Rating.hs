@@ -11,12 +11,14 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE OverloadedLabels #-}
 
 module Beckn.ACL.Rating (buildRatingReq) where
 
 import qualified Beckn.Types.Core.Taxi.Rating as Rating
+import Control.Lens ((%~))
+import qualified Data.Text as T
 import qualified Domain.Action.UI.Feedback as DFeedback
-import Environment
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
@@ -24,14 +26,13 @@ import Kernel.Types.Common
 import Kernel.Utils.Common
 
 buildRatingReq ::
-  (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DFeedback.FeedbackRes ->
   m (BecknReq Rating.RatingMessage)
 buildRatingReq DFeedback.FeedbackRes {..} = do
-  bapURIs <- asks (.bapSelfURIs)
-  bapIDs <- asks (.bapSelfIds)
   msgId <- generateGUID
-  context <- buildTaxiContext Context.RATING msgId (Just transactionId) bapIDs.cabs bapURIs.cabs (Just providerId) (Just providerUrl) city
+  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/cab/v1/" <> T.unpack merchant.id.getId)
+  context <- buildTaxiContext Context.RATING msgId (Just transactionId) merchant.bapId bapUrl (Just providerId) (Just providerUrl) merchant.city merchant.country
   let message =
         Rating.RatingMessage
           { id = bppBookingId.getId,

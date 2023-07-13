@@ -38,18 +38,6 @@ import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
--- fromFieldEnum ::
---   (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldEnum f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' ->
---     case (readMaybe (unpackChars value')) of
---       Just val -> pure val
---       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
-
 instance FromField Domain.VerificationStatus where
   fromField = fromFieldEnum
 
@@ -59,16 +47,6 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.Verification
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.VerificationStatus
 
 instance FromBackendRow Postgres Domain.VerificationStatus
-
--- instance FromField DbHash where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be DbHash where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be DbHash
-
--- instance FromBackendRow Postgres DbHash
 
 data DriverLicenseT f = DriverLicenseT
   { id :: B.C f Text,
@@ -144,9 +122,6 @@ driverLicenseToHSModifiers =
 driverLicenseToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverLicenseToPSModifiers =
   M.empty
-
--- instance IsString DbHash where
---   fromString = show
 
 instance IsString Domain.VerificationStatus where
   fromString = show

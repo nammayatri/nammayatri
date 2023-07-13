@@ -654,61 +654,100 @@ export const scrollToEnd = function (id) {
   }
 }
 
-export const getSuggestionsfromKey = function(key) {
+export const saveSuggestions = function(key){
+  return function (suggestions) {
+    try {
+      let convertedJSON = {};
+      if (!Array.isArray(suggestions)) {
+        return;
+      } else {
+        suggestions.map(item => convertedJSON[item.key] = item.value);
+      }
+      window.suggestions = convertedJSON;
+      JBridge.setKeysInSharedPrefs(key,JSON.stringify(convertedJSON));
+    } catch (error) {
+      console.error("Error in saveSuggestions " + error);
+    }
+  }
+}
+
+export const saveSuggestionDefs = function(key){
+  return function (suggestionDefs) {
+    try {
+      let convertedJSON = {};
+      if (!Array.isArray(suggestionDefs)) {
+        return;
+      } else {
+        suggestionDefs.map(item => convertedJSON[item.key] = item.value);
+      }
+
+      window.suggestionsDefs = convertedJSON;
+      JBridge.setKeysInSharedPrefs(key,JSON.stringify(convertedJSON));
+    } catch (error) {
+      console.error("Error in saveSuggestionDefs " + error);
+    }
+  }
+}
+
+export const getSuggestionsfromLocal = function(key) {
     try {
       if(!window.suggestions) {
-        window.suggestions = new Map(Object.entries(JSON.parse(JBridge.getKeyInNativeSharedPrefKeys("SUGGESTIONS"))));
+        window.suggestions = JSON.parse(JBridge.getKeysInSharedPrefs("SUGGESTIONS"));
       }
       let suggestions = window.suggestions;
-      let keys = suggestions.get(key);
-      let arr = [];
+      let keys = suggestions[key];
       if(keys) {
-        for (let key of keys) {
-            arr.push(key);
-        }
+        return keys;
       };
-      return arr;
-    } catch (error) {
-      console.error(error);
       return [];
+    } catch (error) {
+      console.error("Error in getSuggestionsfromKey " + error);
+      return ["error"];
     }
   }
 
 export const getSuggestionfromKey = function (key) {
   return function (language) {
     try {
-      if(!window.suggestionsDefs) {
-        window.suggestionsDefs = new Map(Object.entries(JSON.parse(JBridge.getKeyInNativeSharedPrefKeys("SUGGESTIONS_DEFINITIONS"))));
+      if (!window.suggestionsDefs) {
+        window.suggestionsDefs = JSON.parse(JBridge.getKeysInSharedPrefs("SUGGESTIONS_DEFINITIONS"));
       }
-      let suggestionsDefs = window.suggestionsDefs;
-      let val = suggestionsDefs.get(key);
-      if(val) {
-      const operations = {
-        "EN_US": (val) => val.value.en_us,
-        "HI_IN": (val) => val.value.hi_in,
-        "KN_IN": (val) => val.value.kn_in,
-        "BN_IN": (val) => val.value.bn_in,
-        "ML_IN": (val) => val.value.ml_in,
-        "TA_IN": (val) => val.value.ta_in,
-        _ : (val) => val.value.en_us
-        };
-        const action = (key, val) => operations[key](val);
-        return action(language, val);
-        } else return key;
-      } catch (error) {
-        console.error(error);
+      let suggestionsDefs = window.suggestionDefs;
+      let val = suggestionsDefs[key];
+      let suggestion = "";
+      if (val) {
+        switch(language) {
+          case "EN_US" :
+            suggestion = val[en_us];
+            break;
+          case "HI_IN" : 
+            suggestion = val[hi_in];
+            break;
+          case "KN_IN" :
+            suggestion = val[kn_in];
+            break;
+          case "BN_IN" :
+            suggestion = val[bn_in];
+            break;
+          case "ML_IN" :
+            suggestion = val[ml_in];
+            break;
+          case "TA_IN" :
+            suggestion = val[ta_in];
+            break;
+          default :
+            suggestion = val[en_us];
+            break;
+        }
+        return suggestion;
+      } else
         return key;
-      }
-   }
+    } catch (error) {
+      console.error("Error in getSuggestionfromKey : " + error);
+      return "";
+    }
 }
-
-export const saveToLocalStoreImpl = function(key) {
-  return function (state) {
-      window.JBridge.setKeysInSharedPrefs(key, state);
-      return function () {
-      };
-    };
-}
+};
 
 export const addMediaFile = function (viewID) {
   return function (source) {
@@ -1051,7 +1090,13 @@ export const loaderTextImpl = function (mainTxt) {
 
 
 export const showDialer = function (str) {
-  window.JBridge.showDialer(str);
+  return function (call) {
+    try {
+      window.JBridge.showDialer(str, call);
+    } catch (error) {
+      window.JBridge.showDialer(str);
+    }
+  }
 };
 
 export const startLocationPollingAPI = function () {
@@ -1441,11 +1486,13 @@ export const startTimerWithTime = function (time) {
     return function (interval) {
       return function (cb) {
         return function (action) {
-          var callback = callbackMapper.map(function (seconds,quoteID,status,timerID) {
-            cb(action(seconds)(quoteID)(status)(timerID))();
-          });
-          if (JBridge.startCountDownTimerWithTime)  {
-            return JBridge.startCountDownTimerWithTime(time, interval, qouteId, callback);}
+          return function () {
+            var callback = callbackMapper.map(function (seconds,quoteID,status,timerID) {
+              cb(action(seconds)(quoteID)(status)(timerID))();
+            });
+            if (JBridge.startCountDownTimerWithTime)  {
+              return JBridge.startCountDownTimerWithTime(time, interval, qouteId, callback);}
+          }
         }
       }
     }
@@ -1513,7 +1560,7 @@ export const setCleverTapUserData = function (key) {
         }
   };
  };
- 
+
  export const setCleverTapUserProp = function (key) {
    return function (value) {
          if(window.JBridge.setCleverTapUserProp){

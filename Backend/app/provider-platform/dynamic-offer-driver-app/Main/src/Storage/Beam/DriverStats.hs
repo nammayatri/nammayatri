@@ -28,21 +28,9 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
-
--- fromFieldEnum ::
---   (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldEnum f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' ->
---     case (readMaybe (unpackChars value')) of
---       Just val -> pure val
---       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
 data DriverStatsT f = DriverStatsT
   { driverId :: B.C f Text,
@@ -96,17 +84,6 @@ driverStatsToHSModifiers =
 driverStatsToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverStatsToPSModifiers =
   M.empty
-
-defaultDriverStats :: DriverStats
-defaultDriverStats =
-  DriverStatsT
-    { driverId = "",
-      idleSince = defaultUTCDate,
-      totalRides = 0,
-      totalDistance = 0,
-      ridesCancelled = Just 0,
-      totalRidesAssigned = Just 0
-    }
 
 instance Serialize DriverStats where
   put = error "undefined"

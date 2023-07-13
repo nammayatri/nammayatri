@@ -7,11 +7,14 @@ import qualified Data.Aeson as A
 import Data.ByteString.Internal (ByteString, unpackChars)
 import Data.ByteString.Lazy (fromStrict)
 import Data.Fixed (Centi)
+-- import Kernel.External.AadhaarVerification.Types
+
+import qualified Data.Serialize as Serialize
 import Data.Time
 import qualified Data.Vector as V
 import Database.Beam
 import qualified Database.Beam as B
-import Database.Beam.Backend
+import Database.Beam.Backend hiding (tableName)
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres
 import Database.Beam.Postgres.Syntax
@@ -22,16 +25,22 @@ import Domain.Types.DriverFee
 import qualified Domain.Types.FarePolicy as DomainFP
 import qualified Domain.Types.FareProduct as FareProductD
 import Domain.Types.Vehicle.Variant (Variant (..))
-import EulerHS.KVConnector.Types (MeshConfig (..))
+import EulerHS.CachedSqlDBQuery (SqlReturning)
+import qualified EulerHS.KVConnector.Flow as KV
+import EulerHS.KVConnector.Types (KVConnector (..), MeshConfig (..), MeshMeta)
 import qualified EulerHS.Language as L
--- import Kernel.External.AadhaarVerification.Types
+import EulerHS.Types (BeamRunner, BeamRuntime, DBConfig)
+import Kernel.Beam.Types (PsqlDbCfg (..))
 import Kernel.External.Encryption
 import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Types
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
-import Kernel.Utils.Common (encodeToText)
+import Kernel.Types.Error
+import Kernel.Utils.Common (encodeToText, throwError)
 import Lib.Mesh as Mesh
+import Sequelize (Model, ModelMeta (modelTableName), OrderBy, Set, Where)
 
 defaultDate :: LocalTime
 defaultDate =
@@ -279,6 +288,26 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainFP.WaitingChargeInf
 
 instance FromBackendRow Postgres DomainFP.WaitingChargeInfo
 
+instance FromField Context.City where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Context.City where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Context.City
+
+instance FromBackendRow Postgres Context.City
+
+instance FromField Context.Country where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be Context.Country where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be Context.Country
+
+instance FromBackendRow Postgres Context.Country
+
 instance IsString HighPrecMeters where
   fromString = show
 
@@ -376,4 +405,192 @@ kvHardKilledTables :: [Text]
 kvHardKilledTables = ["registration_token", "search_request", "search_request_for_driver", "search_try", "driver_information", "driver_flow_status", "business_event", "booking", "ride", "estimate", "fare_parameters", "fare_parameters_progressive_details", "booking_location", "ride_details", "rider_details", "driver_stats", "driver_quote", "search_request_location"]
 
 setMeshConfig :: Text -> MeshConfig
-setMeshConfig modelTableName = meshConfig {meshEnabled = modelTableName `elem` kvTables, kvHardKilled = modelTableName `notElem` kvHardKilledTables}
+setMeshConfig modelName = meshConfig {meshEnabled = modelName `elem` kvTables, kvHardKilled = modelName `notElem` kvHardKilledTables}
+
+setMeshConfig' :: Text -> MeshConfig -> MeshConfig
+setMeshConfig' modelName meshConfig' = meshConfig' {meshEnabled = modelName `elem` kvTables, kvHardKilled = modelName `notElem` kvHardKilledTables}
+
+class
+  FromTType' t a
+    | t -> a
+  where
+  fromTType' :: (MonadThrow m, Log m, L.MonadFlow m) => t -> m (Maybe a)
+
+class
+  ToTType' t a
+    | a -> t
+  where
+  toTType' :: a -> t
+
+findOneWithKV ::
+  forall table m a.
+  ( HasCallStack,
+    FromTType' (table Identity) a,
+    BeamRuntime Postgres Pg,
+    B.HasQBuilder Postgres,
+    BeamRunner Pg,
+    Model Postgres table,
+    MeshMeta Postgres table,
+    KVConnector (table Identity),
+    FromJSON (table Identity),
+    ToJSON (table Identity),
+    Serialize.Serialize (table Identity),
+    L.MonadFlow m,
+    Show (table Identity),
+    Log m,
+    MonadThrow m
+  ) =>
+  -- DBConfig beM ->
+  Where Postgres table ->
+  m (Maybe a)
+-- m (Maybe (table Identity))
+findOneWithKV where' = do
+  let updatedMeshConfig = setMeshConfig' (modelTableName @table) meshConfig
+  dbConf' <- getMasterDBConfig'
+  result <- KV.findWithKVConnector dbConf' updatedMeshConfig where'
+  case result of
+    Right (Just res) -> fromTType' res
+    Right Nothing -> pure Nothing
+    Left err -> throwError $ InternalError $ show err
+
+findAllWithKV ::
+  forall table m a.
+  ( HasCallStack,
+    FromTType' (table Identity) a,
+    BeamRuntime Postgres Pg,
+    B.HasQBuilder Postgres,
+    BeamRunner Pg,
+    Model Postgres table,
+    MeshMeta Postgres table,
+    KVConnector (table Identity),
+    FromJSON (table Identity),
+    ToJSON (table Identity),
+    Serialize.Serialize (table Identity),
+    L.MonadFlow m,
+    Show (table Identity),
+    Log m,
+    MonadThrow m
+  ) =>
+  -- DBConfig beM ->
+  Where Postgres table ->
+  m [a]
+-- m (Maybe (table Identity))
+findAllWithKV where' = do
+  let updatedMeshConfig = setMeshConfig' (modelTableName @table) meshConfig
+  dbConf' <- getMasterDBConfig'
+  result <- KV.findAllWithKVConnector dbConf' updatedMeshConfig where'
+  case result of
+    Right res -> do
+      res' <- mapM fromTType' res
+      pure $ catMaybes res'
+    Left err -> throwError $ InternalError $ show err
+
+findAllWithOptionsKV ::
+  forall table m a.
+  ( HasCallStack,
+    FromTType' (table Identity) a,
+    BeamRuntime Postgres Pg,
+    B.HasQBuilder Postgres,
+    BeamRunner Pg,
+    Model Postgres table,
+    MeshMeta Postgres table,
+    KVConnector (table Identity),
+    FromJSON (table Identity),
+    ToJSON (table Identity),
+    Serialize.Serialize (table Identity),
+    L.MonadFlow m,
+    Show (table Identity),
+    Log m,
+    MonadThrow m
+  ) =>
+  -- DBConfig beM ->
+  Where Postgres table ->
+  OrderBy table ->
+  Maybe Int ->
+  Maybe Int ->
+  m [a]
+-- m (Maybe (table Identity))
+findAllWithOptionsKV where' orderBy mbLimit mbOffset = do
+  let updatedMeshConfig = setMeshConfig' (modelTableName @table) meshConfig
+  dbConf <- getMasterDBConfig'
+  result <- KV.findAllWithOptionsKVConnector dbConf updatedMeshConfig where' orderBy mbLimit mbOffset
+  case result of
+    Right res -> do
+      res' <- mapM fromTType' res
+      pure $ catMaybes res'
+    Left err -> throwError $ InternalError $ show err
+
+updateWithKV ::
+  forall table m.
+  ( HasCallStack,
+    -- FromTType' (table Identity) a,
+    BeamRuntime Postgres Pg,
+    SqlReturning Pg Postgres,
+    B.HasQBuilder Postgres,
+    BeamRunner Pg,
+    Model Postgres table,
+    MeshMeta Postgres table,
+    KVConnector (table Identity),
+    FromJSON (table Identity),
+    ToJSON (table Identity),
+    Serialize.Serialize (table Identity),
+    L.MonadFlow m,
+    Show (table Identity),
+    Log m,
+    MonadThrow m
+  ) =>
+  -- DBConfig beM ->throwError
+  [Set Postgres table] ->
+  Where Postgres table ->
+  m ()
+-- m (Maybe (table Identity))
+updateWithKV setClause whereClause = do
+  let updatedMeshConfig = setMeshConfig' (modelTableName @table) meshConfig
+  dbConf <- getMasterDBConfig'
+  res <- KV.updateWoReturningWithKVConnector dbConf updatedMeshConfig setClause whereClause
+  case res of
+    Right _ -> pure ()
+    Left err -> L.throwException $ InternalError $ show err
+
+createWithKV ::
+  forall table m a.
+  ( HasCallStack,
+    ToTType' (table Identity) a,
+    SqlReturning Pg Postgres,
+    BeamRuntime Postgres Pg,
+    B.HasQBuilder Postgres,
+    BeamRunner Pg,
+    Model Postgres table,
+    MeshMeta Postgres table,
+    KVConnector (table Identity),
+    FromJSON (table Identity),
+    ToJSON (table Identity),
+    Serialize.Serialize (table Identity),
+    L.MonadFlow m,
+    Show (table Identity),
+    Log m,
+    MonadThrow m
+  ) =>
+  -- DBConfig Pg ->
+  a ->
+  m ()
+createWithKV a = do
+  let tType = toTType' a
+      updatedMeshConfig = setMeshConfig' (modelTableName @table) meshConfig
+  dbConf' <- getMasterDBConfig'
+  result <- KV.createWoReturingKVConnector dbConf' updatedMeshConfig tType
+  case result of
+    Right _ -> pure ()
+    Left err -> throwError $ InternalError $ show err
+
+-- findWithKV :: (FromTType t a) =>
+-- findWithKV = do
+-- res <- findOneWithKV dbConf meshConfig where'
+-- pure $ fromTType' <$> res
+
+getMasterDBConfig' :: (HasCallStack, L.MonadFlow m) => m (DBConfig Pg)
+getMasterDBConfig' = do
+  dbConf <- L.getOption PsqlDbCfg
+  case dbConf of
+    Just dbCnf' -> pure dbCnf'
+    Nothing -> L.throwException $ InternalError "DB Config not found"

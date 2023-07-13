@@ -164,7 +164,7 @@ transformBeamRegistrationTokenToDomain BeamRT.RegistrationTokenT {..} = do
 
 transformDomainRegistrationTokenToBeam :: RegistrationToken -> BeamRT.RegistrationToken
 transformDomainRegistrationTokenToBeam RegistrationToken {..} =
-  BeamRT.defaultRegistrationToken
+  BeamRT.RegistrationTokenT
     { BeamRT.id = getId id,
       BeamRT.token = token,
       BeamRT.attempts = attempts,

@@ -38,18 +38,6 @@ import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
--- fromFieldEnum ::
---   (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldEnum f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' ->
---     case (readMaybe (unpackChars value')) of
---       Just val -> pure val
---       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
-
 instance FromField Domain.EventType where
   fromField = fromFieldEnum
 
@@ -152,21 +140,6 @@ businessEventToHSModifiers =
 businessEventToPSModifiers :: M.Map Text (A.Value -> A.Value)
 businessEventToPSModifiers =
   M.empty
-
-defaultBusinessEvent :: BusinessEvent
-defaultBusinessEvent =
-  BusinessEventT
-    { id = "",
-      driverId = Nothing,
-      eventType = "",
-      timeStamp = defaultUTCDate,
-      bookingId = Nothing,
-      whenPoolWasComputed = Nothing,
-      vehicleVariant = Nothing,
-      distance = Nothing,
-      duration = Nothing,
-      rideId = Nothing
-    }
 
 instance Serialize BusinessEvent where
   put = error "undefined"

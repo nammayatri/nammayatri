@@ -16,6 +16,7 @@
 module Storage.Queries.Person where
 
 import Control.Applicative (liftA2)
+import qualified Data.Text as T
 import Database.Esqueleto.PostgreSQL
 import Domain.Types.Merchant as Merchant
 import Domain.Types.Person as Person
@@ -44,7 +45,7 @@ findByEmail ::
   Text ->
   m (Maybe Person)
 findByEmail email = do
-  emailDbHash <- getDbHash email
+  emailDbHash <- getDbHash (T.toLower email)
   findOne $ do
     person <- from $ table @PersonT
     where_ $
@@ -57,7 +58,7 @@ findByEmailAndPassword ::
   Text ->
   m (Maybe Person)
 findByEmailAndPassword email password = do
-  emailDbHash <- getDbHash email
+  emailDbHash <- getDbHash (T.toLower email)
   passwordDbHash <- getDbHash password
   findOne $ do
     person <- from $ table @PersonT
@@ -152,6 +153,30 @@ updatePersonPassword personId newPasswordHash = do
     set
       tbl
       [ PersonPasswordHash =. val newPasswordHash,
+        PersonUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+
+updatePersonEmail :: Id Person -> EncryptedHashed Text -> SqlDB ()
+updatePersonEmail personId encEmail = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ PersonEmailEncrypted =. val (unEncrypted encEmail.encrypted),
+        PersonEmailHash =. val encEmail.hash,
+        PersonUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+
+updatePersonMobile :: Id Person -> EncryptedHashed Text -> SqlDB ()
+updatePersonMobile personId encMobileNumber = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ PersonMobileNumberEncrypted =. val (unEncrypted encMobileNumber.encrypted),
+        PersonMobileNumberHash =. val encMobileNumber.hash,
         PersonUpdatedAt =. val now
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)

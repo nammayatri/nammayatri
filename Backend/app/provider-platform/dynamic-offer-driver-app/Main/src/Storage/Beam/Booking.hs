@@ -33,6 +33,7 @@ import qualified Domain.Types.Vehicle.Variant as Veh
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
@@ -72,6 +73,8 @@ data BookingT f = BookingT
     primaryExophone :: B.C f Text,
     bapId :: B.C f Text,
     bapUri :: B.C f Text,
+    bapCity :: B.C f (Maybe Context.City),
+    bapCountry :: B.C f (Maybe Context.Country),
     startTime :: B.C f Time.UTCTime,
     riderId :: B.C f (Maybe Text),
     fromLocationId :: B.C f Text,
@@ -122,6 +125,10 @@ instance ToJSON Booking where
 
 deriving stock instance Show Booking
 
+deriving stock instance Ord Context.City
+
+deriving stock instance Ord Context.Country
+
 bookingTMod :: BookingT (B.FieldModification (B.TableField BookingT))
 bookingTMod =
   B.tableModification
@@ -137,6 +144,8 @@ bookingTMod =
       primaryExophone = B.fieldNamed "primary_exophone",
       bapId = B.fieldNamed "bap_id",
       bapUri = B.fieldNamed "bap_uri",
+      bapCity = B.fieldNamed "bap_city",
+      bapCountry = B.fieldNamed "bap_country",
       startTime = B.fieldNamed "start_time",
       riderId = B.fieldNamed "rider_id",
       fromLocationId = B.fieldNamed "from_location_id",

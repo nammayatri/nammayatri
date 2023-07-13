@@ -146,7 +146,7 @@ foreign import toggleLoaderImpl :: Boolean -> Effect Unit
 foreign import loaderTextImpl :: String -> String -> Effect Unit
 foreign import generatePDF :: forall invoiceScreenState. invoiceScreenState -> String -> Unit
 foreign import requestKeyboardShow :: String -> Effect Unit
-foreign import showDialer          :: String -> Unit
+foreign import showDialer :: String -> Boolean -> Unit
 foreign import getAAID :: String -> String
 -- -- foreign import removePolyLineById :: Int -> Effect Unit
 foreign import removeAllPolylines :: String -> Unit
@@ -159,7 +159,7 @@ foreign import stopChatListenerService :: Effect Unit
 foreign import storeCallBackMessageUpdated :: forall action. (action -> Effect Unit) -> String -> String  -> (String -> String -> String -> String -> action) -> Effect Unit
 foreign import storeCallBackOpenChatScreen :: forall action. (action -> Effect Unit) -> (action) -> Effect Unit
 foreign import sendMessage :: String -> Unit
-foreign import getSuggestionsfromKey :: String -> Array String
+foreign import getSuggestionsfromLocal :: String -> Array String
 foreign import getSuggestionfromKey :: String -> String -> String
 foreign import scrollToEnd :: String -> Boolean -> Effect Unit
 foreign import metaLogEvent :: String -> Unit
@@ -200,7 +200,8 @@ foreign import setCleverTapUserProp :: String -> String -> Unit
 foreign import cleverTapCustomEvent :: String -> Unit
 foreign import cleverTapCustomEventWithParams :: String -> String -> String -> Effect Unit
 foreign import cleverTapSetLocation :: Unit -> Effect Unit
-foreign import saveToLocalStoreImpl :: String -> String -> EffectFnAff Unit
+foreign import saveSuggestions :: String -> Suggestions -> Unit
+foreign import saveSuggestionDefs :: String -> SuggestionDefinitions -> Unit
 
 -- -- keyStoreEntryPresent :: String -> Flow Boolean
 -- -- keyStoreEntryPresent = liftFlow <<< _keyStoreEntryPresent
@@ -353,6 +354,19 @@ type UpdateRouteMarker = {
   , destIcon :: String
   , specialLocation :: SpecialLocationTag
 }
+
+type Suggestions = Array
+  {
+    key :: String,
+    value :: Array String
+  }
+
+type SuggestionDefinitions = Array
+  {
+    key :: String,
+    value :: {en_us :: String, ta_in :: String, kn_in :: String, hi_in :: String, ml_in :: String, bn_in :: String}
+  }
+
 -- type Point = Array Number
 
 -- type Markers = {
@@ -384,20 +398,5 @@ fromMetersToKm distanceInMeters
   | distanceInMeters >= 1000 = parseFloat (toNumber distanceInMeters / 1000.0) 1 <> " km"
   | otherwise = show distanceInMeters <> " m"
 
-saveToLocalStore' :: String -> String -> EffectFnAff Unit
-saveToLocalStore' = saveToLocalStoreImpl
-
-class Serializable a where
-  serialize :: a -> String
-  deserialize :: String -> Maybe a
-
-instance genericSerializable :: (Encode a, Decode a) => Serializable a where
-  serialize = encodeJSON
-  deserialize = decodeJSON >>> runExcept >>> hush
-
-saveSuggestions :: forall s. Serializable s => String -> s -> Flow GlobalState Unit
-saveSuggestions objName obj =
-  doAff do
-    (fromEffectFnAff <<< saveToLocalStore' objName $ (serialize obj))
 
 

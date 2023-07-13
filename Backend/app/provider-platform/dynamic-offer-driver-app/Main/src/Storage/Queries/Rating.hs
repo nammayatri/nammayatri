@@ -87,7 +87,7 @@ transformBeamRatingToDomain BeamR.RatingT {..} = do
 
 transformDomainRatingToBeam :: Rating -> BeamR.Rating
 transformDomainRatingToBeam Rating {..} =
-  BeamR.defaultRating
+  BeamR.RatingT
     { BeamR.id = getId id,
       BeamR.rideId = getId rideId,
       BeamR.driverId = getId driverId,

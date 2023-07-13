@@ -11,12 +11,15 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Domain.Types.Merchant where
 
 import Domain.Types.Common
 import Kernel.Prelude
 import Kernel.Types.Base64 (Base64)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
@@ -26,10 +29,13 @@ data MerchantD (s :: UsageSafety) = Merchant
     subscriberId :: ShortId Subscriber,
     shortId :: ShortId Merchant,
     name :: Text,
-    city :: Text,
+    city :: Context.City,
+    country :: Context.Country,
     geofencingConfig :: GeofencingConfig,
     gatewayUrl :: BaseUrl,
     registryUrl :: BaseUrl,
+    bapId :: Text,
+    bapUniqueKeyId :: Text,
     driverOfferBaseUrl :: BaseUrl,
     driverOfferApiKey :: Text,
     driverOfferMerchantId :: Text,
@@ -37,6 +43,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     signingPublicKey :: Base64,
     cipherText :: Maybe Base64,
     signatureExpiry :: Int,
+    dirCacheSlot :: [Slot],
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -47,3 +54,11 @@ type Merchant = MerchantD 'Safe
 instance FromJSON (MerchantD 'Unsafe)
 
 instance ToJSON (MerchantD 'Unsafe)
+
+data Slot = Slot
+  { startTime :: TimeOfDay,
+    endTime :: TimeOfDay,
+    slot :: Int
+  }
+  deriving stock (Generic, Show, Read, Eq)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

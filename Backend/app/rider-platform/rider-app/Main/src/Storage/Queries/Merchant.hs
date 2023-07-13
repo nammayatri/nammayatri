@@ -157,6 +157,9 @@ transformBeamMerchantToDomain BeamM.MerchantT {..} = do
           shortId = ShortId shortId,
           name = name,
           city = city,
+          country = country,
+          bapId = bapId,
+          bapUniqueKeyId = bapUniqueKeyId,
           geofencingConfig = geofencingConfig,
           gatewayUrl = gwUrl,
           registryUrl = regUrl,
@@ -168,7 +171,8 @@ transformBeamMerchantToDomain BeamM.MerchantT {..} = do
           cipherText = cipherText,
           signatureExpiry = signatureExpiry,
           createdAt = createdAt,
-          updatedAt = updatedAt
+          updatedAt = updatedAt,
+          dirCacheSlot = dirCacheSlot
         }
 
 transformDomainMerchantToBeam :: Merchant -> BeamM.Merchant
@@ -180,6 +184,9 @@ transformDomainMerchantToBeam Merchant {..} = do
       BeamM.shortId = getShortId shortId,
       BeamM.name = name,
       BeamM.city = city,
+      BeamM.country = country,
+      BeamM.bapId = bapId,
+      BeamM.bapUniqueKeyId = bapUniqueKeyId,
       BeamM.originRestriction = origin,
       BeamM.destinationRestriction = destination,
       BeamM.gatewayUrl = showBaseUrl gatewayUrl,
@@ -192,5 +199,6 @@ transformDomainMerchantToBeam Merchant {..} = do
       BeamM.cipherText = cipherText,
       BeamM.signatureExpiry = signatureExpiry,
       BeamM.createdAt = createdAt,
-      BeamM.updatedAt = updatedAt
+      BeamM.updatedAt = updatedAt,
+      BeamM.dirCacheSlot = dirCacheSlot
     }

@@ -116,16 +116,15 @@ topTextView push state =
 logoView :: forall w . ST.AboutUsScreenState -> PrestoDOM (Effect Unit) w
 logoView state = 
   linearLayout
-        [ height $ V 48
+        [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , margin (MarginTop 48)
         , gravity CENTER
-        , cornerRadius 10.0
+        , margin $ MarginTop 48
         ][  imageView
-              [ height $ V 48
-              , width $ V 48
-              , imageWithFallback "ic_launcher,https://assets.juspay.in/nammayatri/images/common/ny_ic_launcher.png"
-              ]
+            [ height $ V 52
+            , width $ V 176
+            , imageWithFallback $ getValueFromConfig "ABOUT_US_LOGO" 
+            ]
           ]
 
 --------------------------------------------------- bottomLinksView -----------------------------------------------------

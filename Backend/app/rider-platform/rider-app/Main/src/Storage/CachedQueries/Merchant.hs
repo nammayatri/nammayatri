@@ -15,7 +15,8 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant
-  ( findById,
+  ( loadAllBaps,
+    findById,
     findByShortId,
     findBySubscriberId,
     update,
@@ -35,6 +36,9 @@ import Kernel.Types.Registry (Subscriber)
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant as Queries
+
+loadAllBaps :: L.MonadFlow m => m [Merchant]
+loadAllBaps = Queries.findAll
 
 findById :: (CacheFlow m r, EsqDBFlow m r, L.MonadFlow m) => Id Merchant -> m (Maybe Merchant)
 findById id =

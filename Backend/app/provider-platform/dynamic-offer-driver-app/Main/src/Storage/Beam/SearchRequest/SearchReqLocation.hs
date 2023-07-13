@@ -27,21 +27,8 @@ import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
-
--- fromFieldEnum ::
---   (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldEnum f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' ->
---     case (readMaybe (unpackChars value')) of
---       Just val -> pure val
---       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
 
 data SearchReqLocationT f = SearchReqLocationT
   { id :: B.C f Text,
@@ -99,25 +86,6 @@ searchReqLocationTMod =
       area = B.fieldNamed "area",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
-    }
-
-defaultSearchReqLocation :: SearchReqLocation
-defaultSearchReqLocation =
-  SearchReqLocationT
-    { id = "",
-      lat = 0.0,
-      lon = 0.0,
-      street = Nothing,
-      door = Nothing,
-      city = Nothing,
-      state = Nothing,
-      country = Nothing,
-      building = Nothing,
-      full_address = Nothing,
-      areaCode = Nothing,
-      area = Nothing,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
     }
 
 instance Serialize SearchReqLocation where

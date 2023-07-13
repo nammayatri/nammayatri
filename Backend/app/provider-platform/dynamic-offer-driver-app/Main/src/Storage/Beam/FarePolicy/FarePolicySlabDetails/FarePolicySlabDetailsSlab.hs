@@ -38,39 +38,6 @@ import Storage.Tabular.Vehicle ()
 instance IsString Vehicle.Variant where
   fromString = show
 
--- instance IsString Money where
---   fromString = show
-
--- instance FromField Domain.WaitingCharge where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.WaitingCharge where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.WaitingCharge
-
--- instance FromBackendRow Postgres Domain.WaitingCharge
-
--- instance FromField HighPrecMoney where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be HighPrecMoney where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be HighPrecMoney
-
--- instance FromBackendRow Postgres HighPrecMoney
-
--- instance FromField Domain.NightShiftCharge where
---   fromField = fromFieldEnum
-
--- instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.NightShiftCharge where
---   sqlValueSyntax = autoSqlValueSyntax
-
--- instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.NightShiftCharge
-
--- instance FromBackendRow Postgres Domain.NightShiftCharge
-
 data FarePolicySlabsDetailsSlabT f = FarePolicySlabsDetailsSlabT
   { id :: B.C f (Maybe Int),
     farePolicyId :: B.C f Text,
@@ -113,10 +80,6 @@ deriving stock instance Ord Domain.WaitingChargeInfo
 deriving stock instance Ord Domain.NightShiftCharge
 
 deriving stock instance Ord Domain.PlatformFeeCharge
-
--- deriving stock instance Read Domain.NightShiftCharge
-
--- deriving stock instance Read Domain.WaitingCharge
 
 farePolicySlabsDetailsSlabTMod :: FarePolicySlabsDetailsSlabT (B.FieldModification (B.TableField FarePolicySlabsDetailsSlabT))
 farePolicySlabsDetailsSlabTMod =

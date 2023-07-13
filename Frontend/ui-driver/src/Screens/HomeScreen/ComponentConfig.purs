@@ -40,6 +40,7 @@ import Styles.Colors as Color
 import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge as JB
 import Common.Types.App (LazyCheck(..))
+import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 
 
 
@@ -229,10 +230,10 @@ chatViewConfig state = let
 
 getDriverSuggestions :: ST.HomeScreenState -> Array String
 getDriverSuggestions state = case (DA.length state.data.suggestionsList == 0), (DA.length state.data.messages == 0 ) of
-                                  true, true -> if (state.data.activeRide.isDriverArrived || state.data.activeRide.notifiedCustomer) then JB.getSuggestionsfromKey "driverInitialAP" else JB.getSuggestionsfromKey "driverInitialBP"
-                                  true, false -> if (showSuggestions state) then (if (state.data.activeRide.isDriverArrived || state.data.activeRide.notifiedCustomer) then JB.getSuggestionsfromKey "driverDefaultAP" else JB.getSuggestionsfromKey "driverDefaultBP") else []
+                                  true, true -> if (state.data.activeRide.isDriverArrived || state.data.activeRide.notifiedCustomer) then getSuggestionsfromKey "driverInitialAP" else getSuggestionsfromKey "driverInitialBP"
+                                  true, false -> if (showSuggestions state) then (if (state.data.activeRide.isDriverArrived || state.data.activeRide.notifiedCustomer) then getSuggestionsfromKey "driverDefaultAP" else getSuggestionsfromKey "driverDefaultBP") else []
                                   false, false -> state.data.suggestionsList
-                                  false, true -> JB.getSuggestionsfromKey "driverDefaultAP" 
+                                  false, true -> getSuggestionsfromKey "driverDefaultAP" 
 
 showSuggestions :: ST.HomeScreenState -> Boolean
 showSuggestions state = do

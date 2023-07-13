@@ -269,6 +269,17 @@ export const clearWaitingTimer = function (id){
   }
 }
 
+export const clearCountDownTimer = function (id){
+  if(__OS == "IOS"){
+    if (window.JBridge.clearCountDownTimer) {
+      window.JBridge.clearCountDownTimer();
+    }
+  }
+  else {
+    clearInterval(parseInt(id));
+  }
+}
+
 function getTwoDigitsNumber(number) {
   return number >= 10 ? number : "0"+number.toString();
 }
@@ -317,18 +328,19 @@ export const updateInputString = function (a){
 
 var timerIdDebounce = null;
 export const debounceFunction = function (delay) {
-  return function (cb){
-    return function (action){
-      return function(){
-        console.log("CALLED :- ");
-        var callback = callbackMapper.map(function () {
-          if (timerIdDebounce) clearTimeout(timerIdDebounce);
-          timerIdDebounce = setTimeout(() => {
-            timerIdDebounce = "MAKEAPICALL";
-            cb(action (inputForDebounce))();
-          },delay);
-        });
-        window.callUICallback(callback);
+  return function (cb) {
+    return function (action) {
+      return function (isSource) {
+        return function () {
+          var callback = callbackMapper.map(function () {
+            if (timerIdDebounce) clearTimeout(timerIdDebounce);
+            timerIdDebounce = setTimeout(() => {
+              timerIdDebounce = "MAKEAPICALL";
+              cb(action(inputForDebounce)(isSource))();
+            }, delay);
+          });
+          window.callUICallback(callback);
+        }
       }
     }
   }

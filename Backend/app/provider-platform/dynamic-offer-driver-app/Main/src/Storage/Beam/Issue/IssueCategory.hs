@@ -29,18 +29,6 @@ import Kernel.Prelude hiding (Generic)
 import Lib.UtilsTH
 import Sequelize
 
--- fromFieldEnum ::
---   (Typeable a, Read a) =>
---   DPSF.Field ->
---   Maybe ByteString ->
---   DPSF.Conversion a
--- fromFieldEnum f mbValue = case mbValue of
---   Nothing -> DPSF.returnError UnexpectedNull f mempty
---   Just value' ->
---     case (readMaybe (unpackChars value')) of
---       Just val -> pure val
---       _ -> DPSF.returnError ConversionFailed f "Could not 'read' value for 'Rule'."
-
 data IssueCategoryT f = IssueCategoryT
   { id :: B.C f Text,
     category :: B.C f Text,
@@ -75,14 +63,6 @@ issueCategoryTMod =
     { id = B.fieldNamed "id",
       category = B.fieldNamed "category",
       logoUrl = B.fieldNamed "logo_url"
-    }
-
-defaultIssueCategory :: IssueCategory
-defaultIssueCategory =
-  IssueCategoryT
-    { id = "",
-      category = "",
-      logoUrl = ""
     }
 
 instance Serialize IssueCategory where

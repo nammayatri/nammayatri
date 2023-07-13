@@ -32,6 +32,7 @@ import Common.Styles.Colors (white900) as Color
 import PrestoDOM.Elements.Elements (progressBar)
 import PrestoDOM.Events (afterRender)
 import Engineering.Helpers.Commons (screenHeight, safeMarginTop)
+import Engineering.Helpers.Suggestions(getMessageFromKey)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -53,6 +54,7 @@ chatHeaderView config push =
   [ orientation VERTICAL
   , height $ V 80
   , width MATCH_PARENT
+  , margin $ MarginTop $ if os == "IOS" then safeMarginTop else 0
   , visibility if config.showHeader then VISIBLE else GONE
   ][ linearLayout
       [ width MATCH_PARENT
@@ -185,7 +187,7 @@ chatView config push =
   , weight 1.0
   , orientation VERTICAL
   ] ([ scrollView
-      [ height if config.spanParent then MATCH_PARENT else if os == "IOS" then (V (((screenHeight unit)-188)-(safeMarginTop + 16) - length config.suggestionsList * 52)) else WRAP_CONTENT
+      [ height if config.spanParent then MATCH_PARENT else if (os == "IOS" && (length config.messages == 1)) then (V (((screenHeight unit)-188)-(safeMarginTop + 32) - length config.suggestionsList * 52)) else WRAP_CONTENT
       , width MATCH_PARENT
       , id (getNewIDWithTag "ChatScrollView")
       , adjustViewWithKeyboard "true"
@@ -214,6 +216,8 @@ chatFooterView config push =
   , orientation VERTICAL
   , background config.white900
   , visibility if config.showTextEdit then VISIBLE else GONE
+  , margin $ MarginBottom $ if os == "IOS" then 16 else 0
+  , adjustViewWithKeyboard "true"
   ][ suggestionsView config push
    , linearLayout
      [ width (V (screenWidth unit))
@@ -292,7 +296,7 @@ suggestionsView config push =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , gravity RIGHT
-    , margin if config.spanParent then (Margin 0 0 16 20) else MarginRight $ 16
+    , margin if config.spanParent then (Margin 0 0 16 20) else (Margin 0 (if os == "IOS" then 8 else 0) 16 0)
     , onAnimationEnd push (const EnableSuggestions)
     , alpha if config.spanParent then 0.0 else 1.0
     , visibility if (length config.suggestionsList == 0 ) then GONE else VISIBLE
@@ -322,7 +326,7 @@ quickMessageView config message isLastItem push =
   , orientation VERTICAL
   , onClick push (if config.enableSuggestionClick then const (SendSuggestion message) else (const NoAction))
   ][ textView
-     [ text $ getSuggestionfromKey message config.languageKey
+     [ text $ getMessageFromKey message config.languageKey
      , color config.blue800
      , padding (Padding 12 16 12 16)
      , textSize FontSize.a_14
@@ -426,6 +430,7 @@ chatComponent state push config isLastItem userType =
           , textSize FontSize.a_14
           , singleLine false
           , lineHeight "18"
+          , margin $ MarginTop $ if state.languageKey == "KN_IN" then 6 else 0
           , color (getChatConfig state config.sentBy isLastItem (STR.length config.timeStamp > 0)).textColor
           , fontStyle $ FontStyle.medium LanguageStyle
           ]

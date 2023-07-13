@@ -34,6 +34,7 @@ import qualified Domain.Types.Merchant.OnboardingDocumentConfig as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
+import Kernel.Utils.Common (encodeToText)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
@@ -98,6 +99,11 @@ instance ToJSON OnboardingDocumentConfig where
 
 deriving stock instance Show OnboardingDocumentConfig
 
+getConfigJSON :: Domain.SupportedVehicleClasses -> Text
+getConfigJSON = \case
+  Domain.DLValidClasses cfg -> encodeToText cfg
+  Domain.RCValidClasses cfg -> encodeToText cfg
+
 onboardingDocumentConfigTMod :: OnboardingDocumentConfigT (B.FieldModification (B.TableField OnboardingDocumentConfigT))
 onboardingDocumentConfigTMod =
   B.tableModification
@@ -110,20 +116,6 @@ onboardingDocumentConfigTMod =
       vehicleClassCheckType = B.fieldNamed "vehicle_class_check_type",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
-    }
-
-defaultOnboardingDocumentConfig :: OnboardingDocumentConfig
-defaultOnboardingDocumentConfig =
-  OnboardingDocumentConfigT
-    { merchantId = "",
-      documentType = "",
-      checkExtraction = False,
-      checkExpiry = False,
-      supportedVehicleClassesJSON = "",
-      rcNumberPrefix = "",
-      vehicleClassCheckType = "",
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
     }
 
 instance Serialize OnboardingDocumentConfig where

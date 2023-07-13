@@ -26,12 +26,6 @@ import Kernel.Types.Id
 import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.RideDetails as BeamRD
-import Storage.Tabular.RideDetails ()
-
---
-
--- create :: RideDetails -> SqlDB ()
--- create = Esq.create
 
 create :: L.MonadFlow m => DRD.RideDetails -> m (MeshResult ())
 create rideDetails = do
@@ -41,12 +35,6 @@ create rideDetails = do
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRideDetailsToBeam rideDetails)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
-
--- findById ::
---   Transactionable m =>
---   Id SR.Ride ->
---   m (Maybe RideDetails)
--- findById = Esq.findById
 
 findById :: L.MonadFlow m => Id SR.Ride -> m (Maybe RideDetails)
 findById (Id rideDetailsId) = do

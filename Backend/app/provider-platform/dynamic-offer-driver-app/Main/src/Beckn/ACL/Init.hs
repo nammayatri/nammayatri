@@ -55,6 +55,8 @@ buildInitReq subscriber req = do
       { driverQuoteId = itemId,
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
+        bapCity = context.city,
+        bapCountry = context.country,
         maxEstimatedDistance = order.fulfillment.tags.max_estimated_distance,
         paymentMethodInfo = mkPaymentMethodInfo order.payment,
         ..

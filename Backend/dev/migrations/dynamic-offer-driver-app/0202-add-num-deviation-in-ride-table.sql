@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN number_of_deviation double precision

@@ -1,6 +1,5 @@
 module SharedLogic.CallBPPInternal where
 
-import Environment
 import EulerHS.Types (EulerClient, client)
 import Kernel.External.Slack.Types
 import Kernel.Prelude
@@ -33,8 +32,7 @@ likeRefereeApi = Proxy
 
 linkReferee ::
   ( MonadFlow m,
-    CoreMetrics m,
-    HasBapInfo r m
+    CoreMetrics m
   ) =>
   Text ->
   BaseUrl ->

@@ -43,8 +43,9 @@ import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (Stage(..), ZoneType(..))
-import Storage (isLocalStageOn)
+import Storage (isLocalStageOn, getValueToLocalStore)
 import Styles.Colors as Color
+import Storage (KeyStore(..))
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -197,7 +198,7 @@ otpView push state =
             , text item
             , textSize FontSize.a_18
             , color Color.white900
-            , fontStyle $ FontStyle.bold LanguageStyle
+            , fontStyle $ FontStyle.fontByOS "PlusJakartaSans-Bold" "PlusJakartaSans-Bold" "Arial"
             ]
         ]) $ split (Pattern "")  state.data.otp)
 
@@ -325,16 +326,16 @@ sosView push state =
     , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]) && (not state.props.showChatNotification) then VISIBLE else GONE
     , orientation VERTICAL
     , gravity if os == "IOS" then CENTER_VERTICAL else BOTTOM
-    , onClick push $ const OpenEmergencyHelp
     ][ imageView
         [ imageWithFallback "ny_ic_sos,https://assets.juspay.in/nammayatri/images/user/ny_ic_sos.png"
         , height $ V 50
         , width $ V 50
+        , onClick push $ const OpenEmergencyHelp
         ]
     ]
 
 messageNotificationView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
-messageNotificationView push state = 
+messageNotificationView push state =
   PrestoAnim.animationSet [ fadeIn state.props.showChatNotification ] $
   linearLayout
   [ height $ V 84
@@ -423,7 +424,7 @@ messageNotificationView push state =
               , text $ getString REPLY
               , color Color.black900
               , ellipsize true
-              , padding $ if os == "IOS" then PaddingBottom 1 else PaddingBottom 0
+              , margin $ MarginTop $ if (getValueToLocalStore LANGUAGE_KEY) == "KN_IN" then 6 else 0
               , textSize FontSize.a_12
               , lineHeight "15"
               , fontStyle $ FontStyle.bold LanguageStyle
@@ -572,7 +573,7 @@ driverInfoView push state =
                 [ width (V 15)
                 , height (V 15)
                 , margin (MarginRight 6)
-                , imageWithFallback "ny_ic_metro_white,https://assets.juspay.in/nammayatri/images/common/ny_ic_metro_white.png"
+                , imageWithFallback "ny_ic_metro_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_metro_white.png"
                 ]
               , textView
                 [ width WRAP_CONTENT

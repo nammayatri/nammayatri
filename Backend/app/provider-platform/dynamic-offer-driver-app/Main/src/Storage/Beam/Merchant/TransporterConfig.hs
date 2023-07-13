@@ -130,38 +130,6 @@ transporterConfigTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
--- defaultTransporterConfig :: TransporterConfig
--- defaultTransporterConfig =
---   TransporterConfigT
---     { merchantId = "",
---       pickupLocThreshold = "",
---       dropLocThreshold = "",
---       rideTimeEstimatedThreshold = "",
---       includeDriverCurrentlyOnRide = False,
---       defaultPopupDelay = "",
---       popupDelayToAddAsPenalty = Nothing,
---       thresholdCancellationScore = Nothing,
---       minRidesForCancellationScore = Nothing,
---       mediaFileUrlPattern = "",
---       mediaFileSizeUpperLimit = 0,
---       waitingTimeEstimatedThreshold = "",
---       referralLinkPassword = "",
---       fcmUrl = "",
---       fcmServiceAccount = "",
---       fcmTokenKeyPrefix = "",
---       onboardingTryLimit = 0,
---       onboardingRetryTimeInHours = 0,
---       checkImageExtractionForDashboard = False,
---       searchRepeatLimit = 0,
---       actualRideDistanceDiffThreshold = "",
---       upwardsRecomputeBuffer = "",
---       approxRideDistanceDiffThreshold = "",
---       driverLeaderBoardExpiry = Nothing,
---       minLocationAccuracy = 0.0,
---       createdAt = defaultUTCDate,
---       updatedAt = defaultUTCDate
---     }
-
 instance Serialize TransporterConfig where
   put = error "undefined"
   get = error "undefined"

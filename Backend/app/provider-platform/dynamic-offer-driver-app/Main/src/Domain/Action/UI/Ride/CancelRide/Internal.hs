@@ -26,6 +26,7 @@ import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
@@ -76,7 +77,8 @@ cancelRideImpl ::
     HasField "maxShards" r Int,
     HasCacheConfig r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    EventStreamFlow m r
+    EventStreamFlow m r,
+    HasField "searchRequestExpirationSeconds" r NominalDiffTime
   ) =>
   Id DRide.Ride ->
   SBCR.BookingCancellationReason ->
@@ -114,12 +116,24 @@ cancelRideImpl rideId bookingCReason = do
             && maybe True (\nsBounds -> isJust booking.fareParams.nightShiftCharge == isNightShift nsBounds now) farePolicy.nightShiftBounds
     if isRepeatSearch
       then do
+        blockListedDriverList <- addDriverToSearchCancelledList searchReq.id ride
         driverPoolCfg <- getDriverPoolConfig merchant.id searchReq.estimatedDistance
+        logDebug $ "BlockListed Drivers-" <> show blockListedDriverList
         driverPool <- calculateDriverPool DP.Estimate driverPoolCfg (Just searchTry.vehicleVariant) searchReq.fromLocation merchant.id True Nothing
-        if not (null driverPool)
+        let newDriverPool = filter (\dpr -> cast dpr.driverId `notElem` blockListedDriverList) driverPool
+        if not (null newDriverPool)
           then repeatSearch merchant farePolicy searchReq searchTry booking ride SBCR.ByDriver now driverPoolCfg
           else BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
       else BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
+  where
+    addDriverToSearchCancelledList searchReqId ride = do
+      let keyForDriverCancelledList = DP.mkBlockListedDriversKey searchReqId
+      cacheBlockListedDrivers keyForDriverCancelledList ride.driverId
+      Redis.withCrossAppRedis $ Redis.getList keyForDriverCancelledList
+
+    cacheBlockListedDrivers key driverId = do
+      searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
+      Redis.withCrossAppRedis $ Redis.rPushExp key [driverId] (round searchRequestExpirationSeconds)
 
 cancelRideTransaction ::
   ( EsqDBFlow m r,

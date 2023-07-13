@@ -34,7 +34,6 @@ import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as BeamFPP
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QueriesDEFB
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as QueriesFPPD
 import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as QueriesFPSDS
-import Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab ()
 
 findById :: (L.MonadFlow m) => Id FarePolicy -> m (Maybe FarePolicy)
 findById (Id farePolicyId) = do

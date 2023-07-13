@@ -28,7 +28,6 @@ import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
@@ -74,18 +73,6 @@ aadhaarVerificationTMod =
       driverDob = B.fieldNamed "driver_dob",
       driverImage = B.fieldNamed "driver_image",
       createdAt = B.fieldNamed "created_at"
-    }
-
-defaultAadhaarVerification :: AadhaarVerification
-defaultAadhaarVerification =
-  AadhaarVerificationT
-    { id = "",
-      driverId = "",
-      driverName = "",
-      driverGender = "",
-      driverDob = "",
-      driverImage = "",
-      createdAt = defaultUTCDate
     }
 
 instance Serialize AadhaarVerification where

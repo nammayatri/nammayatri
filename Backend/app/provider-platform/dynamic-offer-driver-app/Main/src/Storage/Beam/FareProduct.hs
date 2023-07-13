@@ -33,7 +33,6 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
--- import Kernel.Types.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
@@ -53,9 +52,6 @@ data FareProductT f = FareProductT
     flow :: B.C f Domain.FlowType
   }
   deriving (Generic, B.Beamable)
-
--- instance IsString Money where
---   fromString = show
 
 instance B.Table FareProductT where
   data PrimaryKey FareProductT f

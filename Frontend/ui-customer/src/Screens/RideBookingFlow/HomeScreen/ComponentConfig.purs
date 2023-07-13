@@ -65,6 +65,7 @@ import Foreign.Class (class Encode)
 import Data.Array ((!!))
 import Resources.Constants (getKmMeter)
 import Common.Types.App (LazyCheck(..))
+import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -459,10 +460,10 @@ logOutPopUpModelConfig state =
             , fontSize = FontSize.a_22
             },
           secondaryText {
-            text = (getString BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS)
+            text = (getString BOOST_YOUR_RIDE_CHANCES_AND_HELP_DRIVERS_WITH_TIPS) 
           , fontSize = FontSize.a_14
           , color = Color.black650}
-          , tipLayoutMargin = (Margin 22 0 22 22)
+          , tipLayoutMargin = (Margin 22 2 22 22)
           , buttonLayoutMargin = (MarginHorizontal 16 16)
           , activeIndex = state.props.customerTip.tipActiveIndex
           , tipButton {
@@ -491,6 +492,7 @@ logOutPopUpModelConfig state =
           , padding = PaddingBottom $ getBottomMargin
           , color = Color.black650
           , fontStyle = FontStyle.semiBold LanguageStyle
+          , height = WRAP_CONTENT
           },
           cornerRadius = (Corners 15.0 true true false false)
 
@@ -705,10 +707,10 @@ chatViewConfig state = let
 
 getCustomerSuggestions :: ST.HomeScreenState -> Array String
 getCustomerSuggestions state = case (DA.length state.data.suggestionsList == 0), (DA.length state.data.messages == 0 ) of
-                                  true, true -> (if (metersToKm state.data.driverInfoCardState.distance state) == (getString AT_PICKUP) then JB.getSuggestionsfromKey "customerInitialAP" else JB.getSuggestionsfromKey "customerInitialBP")
-                                  true, false -> if (showSuggestions state) then (if (metersToKm state.data.driverInfoCardState.distance state) == (getString AT_PICKUP) then JB.getSuggestionsfromKey "customerDefaultAP" else JB.getSuggestionsfromKey "customerDefaultBP") else []
+                                  true, true -> (if (metersToKm state.data.driverInfoCardState.distance state) == (getString AT_PICKUP) then getSuggestionsfromKey "customerInitialAP" else getSuggestionsfromKey "customerInitialBP")
+                                  true, false -> if (showSuggestions state) then (if (metersToKm state.data.driverInfoCardState.distance state) == (getString AT_PICKUP) then getSuggestionsfromKey "customerDefaultAP" else getSuggestionsfromKey "customerDefaultBP") else []
                                   false, false -> state.data.suggestionsList
-                                  false, true -> JB.getSuggestionsfromKey "customerDefaultAP"
+                                  false, true -> getSuggestionsfromKey "customerDefaultAP"
 
 showSuggestions :: ST.HomeScreenState -> Boolean
 showSuggestions state = do

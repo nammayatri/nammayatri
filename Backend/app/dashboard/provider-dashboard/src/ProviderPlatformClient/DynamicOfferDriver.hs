@@ -79,6 +79,7 @@ data DriversAPIs = DriversAPIs
     verifyAadhaarOtp :: Id Driver.Driver -> Registration.VerifyAadhaarOtpReq -> Euler.EulerClient Registration.VerifyAadhaarOtpRes,
     unlinkVehicle :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     unlinkDL :: Id Driver.Driver -> Euler.EulerClient APISuccess,
+    unlinkAadhaar :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     endRCAssociation :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     updatePhoneNumber :: Id Driver.Driver -> Driver.UpdatePhoneNumberReq -> Euler.EulerClient APISuccess,
     addVehicle :: Id Driver.Driver -> Driver.AddVehicleReq -> Euler.EulerClient APISuccess,
@@ -191,6 +192,7 @@ mkDriverOfferAPIs merchantId token = do
       :<|> deleteDriver
       :<|> unlinkVehicle
       :<|> unlinkDL
+      :<|> unlinkAadhaar
       :<|> endRCAssociation
       :<|> updatePhoneNumber
       :<|> addVehicle

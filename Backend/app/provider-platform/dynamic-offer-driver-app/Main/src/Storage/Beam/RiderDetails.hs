@@ -28,7 +28,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.External.Encryption
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -96,23 +96,6 @@ riderDetailsToHSModifiers =
 riderDetailsToPSModifiers :: M.Map Text (A.Value -> A.Value)
 riderDetailsToPSModifiers =
   M.empty
-
-defaultRiderDetails :: RiderDetails
-defaultRiderDetails =
-  RiderDetailsT
-    { id = "",
-      mobileCountryCode = "",
-      mobileNumberEncrypted = "",
-      mobileNumberHash = "",
-      merchantId = "",
-      referralCode = Nothing,
-      referredByDriver = Nothing,
-      referredAt = Nothing,
-      hasTakenValidRide = False,
-      hasTakenValidRideAt = Nothing,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
 
 instance Serialize RiderDetails where
   put = error "undefined"

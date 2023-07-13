@@ -40,7 +40,7 @@ import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, bundleVersion
 import Foreign.Class (class Encode)
 import Foreign.Class (encode)
 import Helpers.Utils (hideSplash, getDistanceBwCordinates, adjustViewWithKeyboard, decodeErrorCode, getObjFromLocal, differenceOfLocationLists, filterRecentSearches, setText', seperateByWhiteSpaces, getNewTrackingId, checkPrediction, getRecentSearches, addToRecentSearches, saveRecents, clearWaitingTimer, toString, parseFloat, getCurrentLocationsObjFromLocal, addToPrevCurrLoc, saveCurrentLocations, getCurrentDate, getPrediction, getCurrentLocationMarker, parseNewContacts, getMerchant, Merchant(..), drawPolygon,requestKeyboardShow, removeLabelFromMarker, sortPredctionByDistance, withinTimeRange)
-import JBridge (metaLogEvent, currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, loaderText, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, toggleLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker, generateSessionId, stopChatListenerService, updateRouteMarker, setCleverTapUserProp, setCleverTapUserData, cleverTapSetLocation, saveSuggestions)
+import JBridge (metaLogEvent, currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, loaderText, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, toggleLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker, generateSessionId, stopChatListenerService, updateRouteMarker, setCleverTapUserProp, setCleverTapUserData, cleverTapSetLocation, saveSuggestions, saveSuggestionDefs)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -63,7 +63,7 @@ import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
-import Screens.Types (CardType(..), AddNewAddressScreenState(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), EmailErrorType(..), ZoneType(..), TipViewData(..))
+import Screens.Types (CardType(..), AddNewAddressScreenState(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..))
 import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), SelectEstimateRes(..),UpdateProfileReq(..), OnCallRes(..), Snapped(..))
 import Services.Backend as Remote
 import Screens.Types (Gender(..)) as Gender
@@ -95,14 +95,14 @@ baseAppFlow gPayload refreshFlow = do
   _ <- pure $ setValueToLocalStore TRACKING_DRIVER "False"
   _ <- pure $ setValueToLocalStore TRACKING_ENABLED "True"
   _ <- pure $ setValueToLocalStore RELOAD_SAVED_LOCATION "true"
-  _ <- pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT "17"
-  _ <- pure $ setValueToLocalStore TEST_POLLING_INTERVAL "1500.0"
-  _ <- pure $ setValueToLocalStore TEST_POLLING_COUNT "117"
+  _ <- pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT if (flowWithoutOffers WithoutOffers) then "4" else "17"
+  _ <- pure $ setValueToLocalStore TEST_POLLING_INTERVAL if (flowWithoutOffers WithoutOffers) then "8000.0" else "1500.0"
+  _ <- pure $ setValueToLocalStore TEST_POLLING_COUNT if (flowWithoutOffers WithoutOffers) then "22" else "117"
   _ <- pure $ setValueToLocalStore RATING_SKIPPED "false"
   _ <- pure $ setValueToLocalStore POINTS_FACTOR "3"
   _ <- pure $ setValueToLocalStore ACCURACY_THRESHOLD "23.0"
-  _ <- pure $ saveSuggestions "SUGGESTIONS" getSuggestions
-  _ <- pure $ saveSuggestions "SUGGESTIONS_DEFINITIONS" suggestionsDefinitions
+  _ <- pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
+  _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
   when ((getValueToLocalStore SESSION_ID == "__failed") || (getValueToLocalStore SESSION_ID == "(null)")) $ do
     setValueToLocalStore SESSION_ID (generateSessionId unit)
   _ <- lift $ lift $ setLogField "customer_id" $ encode (customerId)
@@ -245,8 +245,12 @@ currentRideFlow rideAssigned = do
                                 Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
                                 Nothing        -> "")
                 currentDate =  getCurrentDate ""
-            if(lastRideDate /= currentDate) then
-              setValueToLocalStore FLOW_WITHOUT_OFFERS "true"
+            if(lastRideDate /= currentDate) then do
+              _ <- pure $ setValueToLocalStore FLOW_WITHOUT_OFFERS "true"
+              _ <- pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT "4"
+              _ <- pure $ setValueToLocalStore TEST_POLLING_INTERVAL "8000.0"
+              _ <- pure $ setValueToLocalStore TEST_POLLING_COUNT "22"
+              pure unit
               else pure unit
             when (isNothing currRideListItem.rideRating) $ do
               when (resp.status /= "CANCELLED" && length listResp.list > 0) $ do
@@ -318,11 +322,11 @@ currentFlowStatus = do
         resp <- lift $ lift $ Remote.updateProfile (Remote.mkUpdateProfileRequest)
         pure unit
 
-      let middleName = case response.middleName of 
+      let middleName = case response.middleName of
                     Just ""  -> ""
                     Just name -> (" " <> name)
                     Nothing -> ""
-          lastName   = case response.lastName of 
+          lastName   = case response.lastName of
                     Just "" -> ""
                     Just name -> (" " <> name)
                     Nothing -> ""
@@ -487,14 +491,16 @@ enterMobileNumberScreenFlow = do
             setValueToLocalStore MOBILE_NUMBER (state.data.mobileNumber)
             void $ pure $ setCleverTapUserData "Phone" ("+91" <> (getValueToLocalStore MOBILE_NUMBER))
             (TriggerOTPResp triggerOtpResp) <- Remote.triggerOTPBT (Remote.makeTriggerOTPReq state.data.mobileNumber)
-            modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen { data { tokenId = triggerOtpResp.authId, attempts = triggerOtpResp.attempts}, props {enterOTP = true,resendEnable = true}})
+            modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen { data { tokenId = triggerOtpResp.authId, attempts = triggerOtpResp.attempts}, props {enterOTP = true,resendEnable = false}})
             modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{data{settingSideBar{number = state.data.mobileNumber}}})
             enterMobileNumberScreenFlow
     ResendOTP state -> do
             (ResendOTPResp resendResp) <- Remote.resendOTPBT state.data.tokenId
             modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen { data { tokenId = resendResp.authId, attempts = resendResp.attempts}})
             enterMobileNumberScreenFlow
-    GoBack state  ->  enterMobileNumberScreenFlow
+    GoBack state  ->  do
+            modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen { data {timer = 30 }, props {enterOTP = false,resendEnable = false}})
+            enterMobileNumberScreenFlow
     GoToWelcomeScreen state -> welcomeScreenFlow
 
 welcomeScreenFlow :: FlowBT String Unit
@@ -516,7 +522,7 @@ accountSetUpScreenFlow = do
       case gender of
           Just value -> void $ pure $ setCleverTapUserData "gender" value
           Nothing -> pure unit
-      
+
       resp <- lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
       case resp of
         Right response -> do
@@ -677,7 +683,7 @@ homeScreenFlow = do
                                               }) srcSpecialLocation.gates
         (ServiceabilityResDestination destServiceabilityResp) <- Remote.destServiceabilityBT (Remote.makeServiceabilityReqForDest bothLocationChangedState.props.destinationLat bothLocationChangedState.props.destinationLong)
         let destServiceable = destServiceabilityResp.serviceable
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson,nearByPickUpPoints=pickUpPoints},props{isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing && (getMerchant FunctionCall) == JATRISAATHI, defaultPickUpPoint = (fromMaybe HomeScreenData.dummyLocation (state.data.nearByPickUpPoints!!0)).place}})
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson,nearByPickUpPoints=pickUpPoints},props{isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing && (MU.getValueFromConfig "specialLocationView") == "true" , defaultPickUpPoint = (fromMaybe HomeScreenData.dummyLocation (state.data.nearByPickUpPoints!!0)).place}})
         if (addToRecents) then
           addLocationToRecents item bothLocationChangedState sourceServiceabilityResp.serviceable destServiceabilityResp.serviceable
           else pure unit
@@ -810,6 +816,7 @@ homeScreenFlow = do
       _ <- Remote.cancelRideBT (Remote.makeCancelRequest state) (state.props.bookingId)
       _ <- pure $ clearWaitingTimer <$> state.props.waitingTimeTimerIds
       _ <- pure $ firebaseLogEvent "ny_user_ride_cancelled_by_user"
+      removeChatService ""
       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props { isBanner = state.props.isBanner}})
       homeScreenFlow
     FCM_NOTIFICATION notification state-> do
@@ -837,7 +844,7 @@ homeScreenFlow = do
                                         setValueToLocalStore SHARE_APP_COUNT (show ((INT.round $ (fromMaybe 0.0 (fromString (shareAppCount))))+1))
                                       else pure unit
                                       _ <- pure $ clearWaitingTimer <$> state.props.waitingTimeTimerIds
-                                      let newState = state{data{route = Nothing},props{waitingTimeTimerIds = [], currentStage = RideStarted, forFirst = true , showShareAppPopUp = (INT.round $ (fromMaybe 0.0 (fromString (getValueToLocalStore SHARE_APP_COUNT)))) `mod` 4 == 0, showChatNotification = false }}
+                                      let newState = state{data{route = Nothing},props{isCancelRide = false,waitingTimeTimerIds = [], currentStage = RideStarted, forFirst = true , showShareAppPopUp = (INT.round $ (fromMaybe 0.0 (fromString (getValueToLocalStore SHARE_APP_COUNT)))) `mod` 4 == 0, showChatNotification = false }}
                                       _ <- updateLocalStage RideStarted
                                       modifyScreenState $ HomeScreenStateType (\homeScreen -> newState)
                                       when state.props.isSpecialZone $ currentRideFlow true
@@ -876,6 +883,7 @@ homeScreenFlow = do
                                       _ <- pure $ clearWaitingTimer <$> state.props.waitingTimeTimerIds
                                       homeScreenFlow
             "DRIVER_ASSIGNMENT"   -> if (not (isLocalStageOn RideAccepted || isLocalStageOn RideStarted )) then do
+                                        _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_DRIVER_ARRIVAL"
                                         _ <- pure $ firebaseLogEvent "ny_fs_driver_assignment"
                                         currentRideFlow true
                                         homeScreenFlow
@@ -915,7 +923,7 @@ homeScreenFlow = do
           if state.homeScreen.props.sourceLat/=0.0 && state.homeScreen.props.sourceLong /= 0.0 then do
             (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq state.homeScreen.props.sourceLat state.homeScreen.props.sourceLong)
             if (sourceServiceabilityResp.serviceable ) then do
-              if (isJust sourceServiceabilityResp.geoJson && (getMerchant FunctionCall) == JATRISAATHI ) then do
+              if (isJust sourceServiceabilityResp.geoJson && MU.getValueFromConfig "specialLocationView" == "true") then do
                 let (SpecialLocation specialLocation) = (fromMaybe (HomeScreenData.specialLocation) sourceServiceabilityResp.specialLocation)
                 lift $ lift $ doAff do liftEffect $ drawPolygon (fromMaybe "" sourceServiceabilityResp.geoJson) (specialLocation.locationName)
                 else lift $ lift $ doAff do liftEffect $ removeLabelFromMarker unit
@@ -935,7 +943,7 @@ homeScreenFlow = do
     CHECK_SERVICEABILITY updatedState lat long-> do
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq lat long)
       let (SpecialLocation specialLocation) = (fromMaybe (HomeScreenData.specialLocation) sourceServiceabilityResp.specialLocation)
-      if (sourceServiceabilityResp.serviceable && isJust sourceServiceabilityResp.geoJson && (getMerchant FunctionCall) == JATRISAATHI) then
+      if (sourceServiceabilityResp.serviceable && isJust sourceServiceabilityResp.geoJson && ((MU.getValueFromConfig "specialLocationView") == "true" || updatedState.props.currentStage == ConfirmingLocation)) then
         lift $ lift $ doAff do liftEffect $ drawPolygon (fromMaybe "" sourceServiceabilityResp.geoJson) (specialLocation.locationName)
         else lift $ lift $ doAff do liftEffect $ removeLabelFromMarker unit
       let sourceLat = if sourceServiceabilityResp.serviceable then lat else updatedState.props.sourceLat
@@ -1198,7 +1206,7 @@ rideSearchFlow flowType = do
     then do
       case ((not finalState.props.isSpecialZone) && finalState.props.sourceSelectedOnMap) of
         false -> do
-          _ <- pure $ locateOnMap false finalState.props.sourceLat finalState.props.sourceLong (if (getMerchant FunctionCall == JATRISAATHI) then finalState.data.polygonCoordinates else "")  (if (getMerchant FunctionCall == JATRISAATHI) then finalState.data.nearByPickUpPoints else [])
+          _ <- pure $ locateOnMap false finalState.props.sourceLat finalState.props.sourceLong (if (MU.getValueFromConfig "specialLocationView" == "true") then finalState.data.polygonCoordinates else "")  (if (MU.getValueFromConfig "specialLocationView" == "true") then finalState.data.nearByPickUpPoints else [])
           _ <- pure $ removeAllPolylines ""
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingLocation,rideRequestFlow = true}})
           _ <- pure $ updateLocalStage ConfirmingLocation
@@ -1225,6 +1233,11 @@ rideSearchFlow flowType = do
                   let distance = if response.distance < 1000 then toString(response.distance)  <> " m" else parseFloat(INT.toNumber(response.distance) / 1000.0) 2 <> " km"
                       duration = (show (response.duration / 60)) <> " min"
                       tipEnabled = isTipEnabled response.distance
+                      Snapped points = response.points
+                  case head points, last points of
+                    Just (LatLong source), Just (LatLong dest) -> do
+                      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ routeEndPoints = Just ({ source : { lat : source.lat, lng : source.lon, place : address.formattedAddress }, destination : { lat : dest.lat, lng : dest.lon, place : finalState.data.destination } }) } })
+                    _ , _ -> pure unit
                   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration,source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] finalState.props.sourcePlaceId}, props{customerTip{enableTips = tipEnabled}}})
                   _ <- setValueToLocalStore ENABLE_TIPS $ show tipEnabled
                   if ((getMerchant FunctionCall) /= YATRI && response.distance >= 50000 )then do
@@ -1415,6 +1428,9 @@ emergencyScreenFlow = do
       _ <- pure $ setValueToLocalStore CONTACTS (contactsInString)
       modifyScreenState $  EmergencyContactsScreenStateType (\emergencyContactsScreen -> state{data{contactsList = contacts}})
       emergencyScreenFlow
+    REFRESH_EMERGECY_CONTACTS_SCREEN state -> do
+      modifyScreenState $  EmergencyContactsScreenStateType (\emergencyContactsScreen -> state)
+      emergencyScreenFlow
 
 aboutUsScreenFlow :: FlowBT String Unit
 aboutUsScreenFlow = do
@@ -1483,7 +1499,7 @@ myProfileScreenFlow = do
           case codeMessage of
             "PERSON_EMAIL_ALREADY_EXISTS" -> do
               _ <- lift $ lift $ liftFlow (setText' (getNewIDWithTag "EmailEditText") "" )
-              modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState -> myProfileScreenState{props{isEmailValid = false, updateProfile = true}, data{errorMessage = Just EMAIL_EXISTS, name = state.data.name, editedName = state.data.editedName, emailId = state.data.emailId, gender = state.data.gender, editedGender = state.data.editedGender}})
+              modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState -> myProfileScreenState{props{isEmailValid = false, updateProfile = true}, data{emailErrorMessage = Just EMAIL_EXISTS, name = state.data.name, editedName = state.data.editedName, emailId = state.data.emailId, gender = state.data.gender, editedGender = state.data.editedGender}})
             _ -> pure $ toast (getString ERROR_OCCURED)
           myProfileScreenFlow
       myProfileScreenFlow

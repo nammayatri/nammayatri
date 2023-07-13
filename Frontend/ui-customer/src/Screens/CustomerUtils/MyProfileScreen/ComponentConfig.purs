@@ -62,6 +62,7 @@ nameEditTextConfig state = let
     primaryEditTextConfig' = config
         {
             margin = (Margin 16 32 16 0),
+            showErrorLabel = (not state.props.isNameValid),
             topLabel {
                 text = (getString NAME),
                 textSize = FontSize.a_12,
@@ -72,9 +73,18 @@ nameEditTextConfig state = let
                 text = state.data.name,
                 textSize = FontSize.a_16,
                 fontStyle = FontStyle.semiBold LanguageStyle,
-                pattern = Just "[a-zA-Z ]*,30"
+                pattern = Just "[a-zA-Z. ]*,30"
             },
-            id = (EHC.getNewIDWithTag "UserNameEditText")
+            errorLabel{
+              text = case state.data.nameErrorMessage of 
+                Just ST.INVALID_NAME -> getString NAME_SHOULD_BE_MORE_THAN_2_CHARACTERS
+                Just ST.NAME_CANNOT_BE_BLANK -> getString THIS_FIELD_IS_REQUIRED
+                _ -> ""
+            , fontStyle = FontStyle.regular LanguageStyle
+            , color = Color.textDanger
+            }
+            , id = (EHC.getNewIDWithTag "UserNameEditText")
+            , width = MATCH_PARENT
         }
     in primaryEditTextConfig'
 
@@ -99,14 +109,17 @@ emailEditTextConfig state = let
                 fontStyle = FontStyle.semiBold LanguageStyle
             },
             errorLabel{
-              text = case state.data.errorMessage of 
-                Just ST.EMAIL_EXISTS -> "Email already exists"
-                Just ST.INVALID_EMAIL -> "Please enter a valid email"
-                Nothing -> ""
+              text = case state.data.emailErrorMessage of 
+                Just ST.EMAIL_EXISTS -> getString EMAIL_EXISTS_ALREADY
+                Just ST.INVALID_EMAIL -> getString PLEASE_ENTER_A_VALID_EMAIL
+                Just ST.EMAIL_CANNOT_BE_BLANK -> getString THIS_FIELD_IS_REQUIRED
+                _ -> ""
             , fontStyle = FontStyle.regular LanguageStyle
             , color = Color.textDanger
-            },
-            id = (EHC.getNewIDWithTag "EmailEditText")
+            }
+            , id = (EHC.getNewIDWithTag "EmailEditText")
+            , width = MATCH_PARENT
+
         }
     in primaryEditTextConfig'
 

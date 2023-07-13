@@ -22,6 +22,7 @@ module Domain.Action.UI.Search.OneWay
 where
 
 import qualified Domain.Action.UI.Search.Common as DSearch
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.SearchRequest as DSearchReq
@@ -40,6 +41,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
+import SharedLogic.DirectionsCache as SDC
 import qualified SharedLogic.MerchantConfig as SMC
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerc
@@ -67,7 +69,7 @@ data OneWaySearchRes = OneWaySearchRes
     now :: UTCTime,
     gatewayUrl :: BaseUrl,
     searchRequestExpiry :: UTCTime,
-    city :: Text,
+    merchant :: DM.Merchant,
     customerLanguage :: Maybe Maps.Language,
     device :: Maybe Text,
     shortestRouteInfo :: Maybe Maps.RouteInfo
@@ -106,7 +108,7 @@ oneWaySearch personId req bundleVersion clientVersion device = do
             calcPoints = True,
             mode = Just Maps.CAR
           }
-  routeResponse <- Maps.getRoutes person.merchantId request
+  routeResponse <- SDC.getRoutes person.merchantId request
   let shortestRouteInfo = getRouteInfoWithShortestDuration routeResponse
   let longestRouteDistance = (.distance) =<< getLongestRouteDistance routeResponse
   let shortestRouteDistance = (.distance) =<< shortestRouteInfo
@@ -143,10 +145,10 @@ oneWaySearch personId req bundleVersion clientVersion device = do
             now = now,
             gatewayUrl = merchant.gatewayUrl,
             searchRequestExpiry = searchRequest.validTill,
-            city = merchant.city,
             customerLanguage = searchRequest.language,
             device,
-            shortestRouteInfo
+            shortestRouteInfo,
+            ..
           }
   fork "updating search counters" $ do
     merchantConfigs <- QMC.findAllByMerchantId person.merchantId

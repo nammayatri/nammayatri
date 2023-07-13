@@ -25,7 +25,6 @@ import Kernel.Types.Id
 import Lib.Utils (setMeshConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.CallbackRequest as BeamCR
-import Storage.Tabular.CallbackRequest ()
 
 create :: L.MonadFlow m => CallbackRequest -> m (MeshResult ())
 create callbackRequest = do

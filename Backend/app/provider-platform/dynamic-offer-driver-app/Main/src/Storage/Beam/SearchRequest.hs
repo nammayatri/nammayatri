@@ -30,6 +30,7 @@ import qualified Domain.Types.Vehicle.Variant as Variant (Variant)
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Lib.Utils ()
 import Lib.UtilsTH
@@ -51,6 +52,8 @@ data SearchRequestT f = SearchRequestT
     area :: B.C f (Maybe FareProductD.Area),
     bapId :: B.C f Text,
     bapUri :: B.C f Text,
+    bapCity :: B.C f (Maybe Context.City),
+    bapCountry :: B.C f (Maybe Context.Country),
     estimatedDistance :: B.C f Meters,
     estimatedDuration :: B.C f Seconds,
     customerLanguage :: B.C f (Maybe Maps.Language),
@@ -85,6 +88,10 @@ instance ToJSON SearchRequest where
 
 deriving stock instance Show SearchRequest
 
+deriving stock instance Ord Context.City
+
+deriving stock instance Ord Context.Country
+
 searchRequestTMod :: SearchRequestT (B.FieldModification (B.TableField SearchRequestT))
 searchRequestTMod =
   B.tableModification
@@ -95,7 +102,9 @@ searchRequestTMod =
       toLocationId = B.fieldNamed "to_location_id",
       area = B.fieldNamed "area",
       bapId = B.fieldNamed "bap_id",
+      bapCity = B.fieldNamed "bap_city",
       bapUri = B.fieldNamed "bap_uri",
+      bapCountry = B.fieldNamed "bap_country",
       estimatedDistance = B.fieldNamed "estimated_distance",
       estimatedDuration = B.fieldNamed "estimated_duration",
       customerLanguage = B.fieldNamed "customer_language",

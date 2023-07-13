@@ -60,7 +60,7 @@ import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, lift
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (Merchant(..), decodeErrorMessage, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getMerchant, getNewTrackingId, getPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, waitingCountdownTimer)
-import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen)
+import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, startTimerWithTime, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -184,18 +184,19 @@ screen initialState =
                     pure (pure unit)
                   else do
                     getCurrentCustomerLocation push initialState
-                _, _ ->
-                  if (initialState.props.currentStage == HomeScreen) then do
-                    pure (pure unit)
-                  else do
-                    let src = initialState.data.source
-                    if src == "" || src == "Current Location" then do
-                        if (checkCurrentLocation initialState.props.sourceLat initialState.props.sourceLong initialState.data.previousCurrentLocations.pastCurrentLocations  && initialState.props.storeCurrentLocs )|| checkSavedLocations initialState.props.sourceLat initialState.props.sourceLong initialState.data.savedLocations
-                          then push $ UpdateSourceFromPastLocations
-                          else
-                            pure unit
-                        pure (pure unit)
-                    else  pure (pure unit)
+                _, _ -> pure (pure unit)
+                  -- TODO : Handle the case when location in stored in PREVIOUS_CURRENT_LOCATION
+                  -- if (initialState.props.currentStage == HomeScreen) then do
+                  --   pure (pure unit)
+                  -- else do
+                    -- let src = initialState.data.source
+                    -- if src == "" || src == "Current Location" then do
+                    --     if (checkCurrentLocation initialState.props.sourceLat initialState.props.sourceLong initialState.data.previousCurrentLocations.pastCurrentLocations  && initialState.props.storeCurrentLocs )|| checkSavedLocations initialState.props.sourceLat initialState.props.sourceLong initialState.data.savedLocations
+                    --       then push $ UpdateSourceFromPastLocations
+                    --       else
+                    --         pure unit
+                    --     pure (pure unit)
+                    -- else  pure (pure unit)
             else
               pure (pure unit)
         )
@@ -331,7 +332,7 @@ cancelSearchPopUp push state =
 
 chatView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 chatView push state =
-  PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 300 ] $ 
+  PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 300 ] $
   relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -415,12 +416,12 @@ driverCallPopUp push state =
 driverCallPopUpData :: HomeScreenState -> Array { text :: String, imageWithFallback :: String, type :: CallType, data :: String }
 driverCallPopUpData state =
   [ { text: (getString ANONYMOUS_CALL)
-    , imageWithFallback: "ny_ic_anonymous_call,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_anonymous_call.png"
+    , imageWithFallback: "ic_anonymous_call,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_anonymous_call.png"
     , type: ANONYMOUS_CALLER
     , data: (getString YOUR_NUMBER_WILL_NOT_BE_SHOWN_TO_THE_DRIVER_THE_CALL_WILL_BE_RECORDED_FOR_COMPLIANCE)
     }
   , { text: (getString DIRECT_CALL)
-    , imageWithFallback: "ny_ic_direct_call,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_direct_call.png"
+    , imageWithFallback: "ic_direct_call,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_direct_call.png"
     , type: DIRECT_CALLER
     , data: (getString YOUR_NUMBER_WILL_BE_VISIBLE_TO_THE_DRIVER_USE_IF_NOT_CALLING_FROM_REGISTERED_NUMBER)
     }
@@ -707,8 +708,7 @@ genderBannerView state push =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , margin (Margin 10 10 10 10)
-    , gravity BOTTOM
+    , margin $ MarginVertical 10 10
     ][
         genderBanner push state
     ]
@@ -899,7 +899,7 @@ rideRequestFlowView push state =
         ]
         [ PrestoAnim.animationSet [ fadeIn true ]
             $ if (state.props.currentStage == SettingPrice) then
-                if (state.props.isSpecialZone && (getMerchant FunctionCall == JATRISAATHI))  || ((getMerchant FunctionCall) /= NAMMAYATRI) then
+                if (state.props.isSpecialZone && (getValueFromConfig "specialLocationView") == "true") then
                   ChooseYourRide.view (push <<< ChooseYourRideAction) (chooseYourRideConfig state)
                 else
                 suggestedPriceView push state
@@ -958,7 +958,7 @@ rideCompletedCardView state push =
             ][ imageView
                 [ width (V 20)
                 , height (V 20)
-                , imageWithFallback "ny_ic_metro_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_metro_blue.png"
+                , imageWithFallback "ny_ic_metro_blue,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_metro_blue.png"
                 , margin (MarginRight 5)
                 ]
               , textView
@@ -1124,7 +1124,7 @@ suggestedPriceView push state =
           [ width (V 15)
           , height (V 15)
           , margin (MarginRight 6)
-          , imageWithFallback "ny_ic_metro_white,https://assets.juspay.in/nammayatri/images/common/ny_ic_metro_white.png"
+          , imageWithFallback "ny_ic_metro_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_metro_white.png"
           ]
         , textView
           [ width WRAP_CONTENT
@@ -1491,7 +1491,7 @@ confirmPickUpLocationView push state =
             , width MATCH_PARENT
             , fontStyle $ FontStyle.bold LanguageStyle
             ]
-        , if  ((getMerchant FunctionCall == JATRISAATHI) && state.props.isSpecialZone ) then  nearByPickUpPointsView state push else currentLocationView push state
+        , if  ((getValueFromConfig "specialLocationView") == "true" && state.props.isSpecialZone ) then  nearByPickUpPointsView state push else currentLocationView push state
         , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfirmPickupConfig state)
         ]
     ]
@@ -1756,7 +1756,7 @@ getEstimate action flowStatusAction count duration push state = do
         Right response -> do
           _ <- pure $ printLog "api Results " response
           let (GetQuotesRes resp) = response
-          if not (state.props.isSpecialZone && (null resp.quotes) || ((not state.props.isSpecialZone) && null resp.estimates)) then do
+          if not (null resp.quotes) || not (null resp.estimates) then do
             doAff do liftEffect $ push $ action response
             pure unit
           else do

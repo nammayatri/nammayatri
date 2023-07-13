@@ -25,17 +25,12 @@ import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
--- import Kernel.Storage.Esqueleto as Esq hiding (create)
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Error
 import Lib.Utils
 import qualified Sequelize as Se
--- import Storage.Queries.FullEntityBuilders (buildFullQuote)
-
--- import Storage.Tabular.Quote.Instances
-
 import qualified Storage.Beam.DriverOffer as BeamDO
 import qualified Storage.Beam.Quote as BeamQ
 import qualified Storage.Queries.DriverOffer as QueryDO
@@ -244,9 +239,9 @@ findAllBySRId searchRequestId = do
 --         MaybeT $ Esq.findById' @TripTermsT tripTermsId
 --       return $ extractSolidType @Quote (quoteT, mbTripTermsT, quoteDetailsT)
 
-findAllByEstimateId :: (L.MonadFlow m, Log m) => Id Estimate -> m [Quote]
-findAllByEstimateId estimateId = do
-  driverOffers <- findDOfferByEstimateId estimateId
+findAllByEstimateId :: (L.MonadFlow m, Log m) => Id Estimate -> DriverOfferStatus -> m [Quote]
+findAllByEstimateId estimateId status = do
+  driverOffers <- findDOfferByEstimateId estimateId status
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamDO.DriverOfferT
       updatedMeshConfig = setMeshConfig modelName
@@ -267,13 +262,18 @@ findAllByEstimateId estimateId = do
 --     where_ $ driverOffer ^. DriverOfferEstimateId ==. val (toKey estimateId)
 --     return driverOffer
 
-findDOfferByEstimateId :: (L.MonadFlow m, Log m) => Id Estimate -> m [DriverOffer]
-findDOfferByEstimateId (Id estimateId) = do
+findDOfferByEstimateId :: (L.MonadFlow m, Log m) => Id Estimate -> DriverOfferStatus -> m [DriverOffer]
+findDOfferByEstimateId (Id estimateId) status = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamDO.DriverOfferT
   let updatedMeshConfig = setMeshConfig modelName
   case dbConf of
-    Just dbCOnf' -> either (pure []) (QueryDO.transformBeamDriverOfferToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDO.estimateId $ Se.Eq estimateId]
+    Just dbCOnf' ->
+      either (pure []) (QueryDO.transformBeamDriverOfferToDomain <$>)
+        <$> KV.findAllWithKVConnector
+          dbCOnf'
+          updatedMeshConfig
+          [Se.And [Se.Is BeamDO.estimateId $ Se.Eq estimateId, Se.Is BeamDO.status $ Se.Eq status]]
     Nothing -> pure []
 
 -- findQuotesByDriverOfferId' :: Transactionable m => Id DriverOffer -> DTypeBuilder m (Maybe QuoteT)

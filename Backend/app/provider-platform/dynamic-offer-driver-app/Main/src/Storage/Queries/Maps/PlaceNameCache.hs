@@ -108,7 +108,7 @@ transformBeamPlaceNameCacheToDomain BeamPNC.PlaceNameCacheT {..} = do
 
 transformDomainPlaceNameCacheToBeam :: PlaceNameCache -> BeamPNC.PlaceNameCache
 transformDomainPlaceNameCacheToBeam PlaceNameCache {..} =
-  BeamPNC.defaultPlaceNameCache
+  BeamPNC.PlaceNameCacheT
     { BeamPNC.id = getId id,
       BeamPNC.formattedAddress = formattedAddress,
       BeamPNC.plusCode = plusCode,

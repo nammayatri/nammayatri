@@ -44,6 +44,7 @@ mkPersist
       driverName Text
       driverRating Centesimal Maybe
       driverMobileNumber Text
+      driverMobileCountryCode Text Maybe
       driverRegisteredAt UTCTime
       vehicleNumber Text
       vehicleModel Text

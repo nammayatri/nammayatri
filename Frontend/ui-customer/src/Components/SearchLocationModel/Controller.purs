@@ -35,7 +35,7 @@ data Action = GoBack
             | EditTextFocusChanged String
             | LocationListItemActionController LocationListItem.Action
             | PrimaryButtonActionController PrimaryButton.Action
-            | DebounceCallBack String
+            | DebounceCallBack String Boolean
             | SavedAddressClicked LocationTagBarController.Action
             | UpdateCurrentLocation String String
             | RecenterCurrentLocation

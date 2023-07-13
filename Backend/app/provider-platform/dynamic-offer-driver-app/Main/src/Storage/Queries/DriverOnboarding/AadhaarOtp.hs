@@ -25,8 +25,6 @@ import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.AadhaarOtpReq as BeamAOR
 import qualified Storage.Beam.DriverOnboarding.AadhaarOtpVerify as BeamAOV
-import Storage.Tabular.DriverOnboarding.AadhaarOtpReq ()
-import Storage.Tabular.DriverOnboarding.AadhaarOtpVerify ()
 
 createForGenerate :: L.MonadFlow m => AadhaarOtpReq -> m (MeshResult ())
 createForGenerate aadhaarOtpReq = do
@@ -62,7 +60,7 @@ transformBeamAadhaarOtpReqToDomain BeamAOR.AadhaarOtpReqT {..} = do
 
 transformDomainAadhaarOtpReqToBeam :: AadhaarOtpReq -> BeamAOR.AadhaarOtpReq
 transformDomainAadhaarOtpReqToBeam AadhaarOtpReq {..} =
-  BeamAOR.defaultAadhaarOtpReq
+  BeamAOR.AadhaarOtpReqT
     { BeamAOR.id = getId id,
       BeamAOR.driverId = getId driverId,
       BeamAOR.requestId = requestId,
@@ -86,7 +84,7 @@ transformBeamAadhaarOtpVerifyToDomain BeamAOV.AadhaarOtpVerifyT {..} = do
 
 transformDomainAadhaarOtpVerifyToBeam :: AadhaarOtpVerify -> BeamAOV.AadhaarOtpVerify
 transformDomainAadhaarOtpVerifyToBeam AadhaarOtpVerify {..} =
-  BeamAOV.defaultAadhaarOtpVerify
+  BeamAOV.AadhaarOtpVerifyT
     { BeamAOV.id = getId id,
       BeamAOV.driverId = getId driverId,
       BeamAOV.requestId = requestId,

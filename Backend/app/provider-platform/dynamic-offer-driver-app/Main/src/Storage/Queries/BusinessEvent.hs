@@ -28,7 +28,6 @@ import Kernel.Types.Id
 import Lib.Utils
 import Sequelize as Se
 import qualified Storage.Beam.BusinessEvent as BeamBE
-import Storage.Tabular.BusinessEvent ()
 
 logBusinessEvent ::
   (L.MonadFlow m, MonadGuid m, MonadTime m) =>
@@ -117,7 +116,7 @@ transformBeamBusinessEventToDomain BeamBE.BusinessEventT {..} = do
 
 transformDomainBusinessEventToBeam :: BusinessEvent -> BeamBE.BusinessEvent
 transformDomainBusinessEventToBeam BusinessEvent {..} =
-  BeamBE.defaultBusinessEvent
+  BeamBE.BusinessEventT
     { BeamBE.id = getId id,
       BeamBE.driverId = getId <$> driverId,
       BeamBE.eventType = eventType,
