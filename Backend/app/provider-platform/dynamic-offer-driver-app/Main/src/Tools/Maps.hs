@@ -22,6 +22,7 @@ module Tools.Maps
     getPlaceName,
     getRoutes,
     snapToRoad,
+    pickupSnapToRoad,
     getPickupRoutes,
     getTripRoutes,
     getDistanceForCancelRide,
@@ -122,6 +123,18 @@ snapToRoad ::
   SnapToRoadReq ->
   m SnapToRoadResp
 snapToRoad = runWithServiceConfig Maps.snapToRoad (.snapToRoad)
+
+pickupSnapToRoad ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    CoreMetrics m,
+    HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters]
+  ) =>
+  Id Merchant ->
+  SnapToRoadReq ->
+  m SnapToRoadResp
+pickupSnapToRoad = runWithServiceConfig Maps.snapToRoad (.pickupSnapToRoad)
 
 autoComplete :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id Merchant -> AutoCompleteReq -> m AutoCompleteResp
 autoComplete = runWithServiceConfig Maps.autoComplete (.autoComplete)

@@ -277,6 +277,7 @@ otpRideCreate driver otpCode booking = do
             fare = Nothing,
             traveledDistance = 0,
             chargeableDistance = Nothing,
+            pickupTraveledDistance = 0,
             driverArrivalTime = Nothing,
             tripStartTime = Nothing,
             tripEndTime = Nothing,

@@ -42,18 +42,29 @@ testInterpolationHandler batchSize =
   RideInterpolationHandler
     { batchSize,
       addPoints = addPointsImplementation,
+      addPickupPoints = addPickupPointsImplementation,
       clearLocationUpdates = clearLocationUpdatesImplementation,
+      clearPickupLocationUpdates = clearPickupLocationUpdatesImplementation,
       getWaypointsNumber = getWaypointsNumberImplementation,
+      getPickupWaypointsNumber = getPickupWaypointsNumberImplementation,
       getFirstNwaypoints = getFirstNwaypointsImplementation,
+      getFirstNPickupwaypoints = getFirstNPickupwaypointsImplementation,
       deleteFirstNwaypoints = deleteFirstNwaypointsImplementation,
+      deleteFirstNPickupwaypoints = deleteFirstNPickupwaypointsImplementation,
       addInterpolatedPoints = addInterpolatedPointsImplementation,
+      addPickupInterpolatedPoints = addPickupInterpolatedPointsImplementation,
       clearInterpolatedPoints = clearInterpolatedPointsImplementation,
+      clearPickupInterpolatedPoints = clearPickupInterpolatedPointsImplementation,
       getInterpolatedPoints = getInterpolatedPointsImplementation,
+      getPickupInterpolatedPoints = getPickupInterpolatedPointsImplementation,
       expireInterpolatedPoints = expireInterpolatedPointsImplementation,
+      expirePickupInterpolatedPoints = expirePickupInterpolatedPointsImplementation,
       interpolatePointsAndCalculateDistance = \pts -> pure (getRouteLinearLength pts, pts),
       updateDistance = updateDistanceTest,
       wrapDistanceCalculation = wrapDistanceCalculationImplementation,
-      isDistanceCalculationFailed = isDistanceCalculationFailedImplementation
+      isDistanceCalculationFailed = isDistanceCalculationFailedImplementation,
+      wrapPickupDistanceCalculation = wrapDistanceCalculationImplementation,
+      isPickupDistanceCalculationFailed = isPickupDistanceCalculationFailedImplementation
     }
 
 ------------------- generating test points batches ----

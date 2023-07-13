@@ -21,6 +21,14 @@ module Lib.LocationUpdates
     addIntermediateRoutePoints,
     getInterpolatedPoints,
     clearInterpolatedPoints,
+    isPickupDistanceCalculationFailed,
+    initializePickupDistanceCalculation,
+    finalPickupDistanceCalculation,
+    getPickupInterpolatedPoints,
+    clearPickupInterpolatedPoints,
+    addIntermediatePickupRoutePoints,
+    getFirstNPickupwaypoints,
+    updatePickupDistance,
   )
 where
 
@@ -59,3 +67,31 @@ addIntermediateRoutePoints ih rideId driverId = withRideIdLogTag rideId . I.proc
 
 isDistanceCalculationFailed :: I.RideInterpolationHandler person m -> Id person -> m Bool
 isDistanceCalculationFailed ih = ih.isDistanceCalculationFailed
+
+initializePickupDistanceCalculation :: (Monad m, Log m) => I.RideInterpolationHandler person m -> Id ride -> Id person -> LatLong -> m ()
+initializePickupDistanceCalculation ih rideId driverId pt = withRideIdLogTag rideId $ do
+  ih.clearPickupLocationUpdates driverId
+  ih.clearPickupInterpolatedPoints driverId
+  ih.expirePickupInterpolatedPoints driverId
+  ih.addPickupPoints driverId $ pt :| []
+
+finalPickupDistanceCalculation :: (Log m, MonadThrow m) => I.RideInterpolationHandler person m -> Id ride -> Id person -> LatLong -> m ()
+finalPickupDistanceCalculation ih rideId driverId pt = withRideIdLogTag rideId $ I.processPickupWaypoints ih driverId True $ pt :| []
+
+getPickupInterpolatedPoints :: I.RideInterpolationHandler person m -> Id person -> m [LatLong]
+getPickupInterpolatedPoints ih = ih.getPickupInterpolatedPoints
+
+clearPickupInterpolatedPoints :: I.RideInterpolationHandler person m -> Id person -> m ()
+clearPickupInterpolatedPoints ih = ih.clearPickupInterpolatedPoints
+
+addIntermediatePickupRoutePoints :: (Log m, MonadThrow m) => I.RideInterpolationHandler person m -> Id ride -> Id person -> NonEmpty LatLong -> m ()
+addIntermediatePickupRoutePoints ih rideId driverId = withRideIdLogTag rideId . I.processPickupWaypoints ih driverId False
+
+isPickupDistanceCalculationFailed :: I.RideInterpolationHandler person m -> Id person -> m Bool
+isPickupDistanceCalculationFailed ih = ih.isPickupDistanceCalculationFailed
+
+getFirstNPickupwaypoints :: I.RideInterpolationHandler person m -> Id person -> Integer -> m [LatLong]
+getFirstNPickupwaypoints ih = ih.getFirstNPickupwaypoints
+
+updatePickupDistance :: I.RideInterpolationHandler person m -> Id person -> HighPrecMeters -> m ()
+updatePickupDistance ih = ih.updateDistance

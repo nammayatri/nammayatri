@@ -218,6 +218,7 @@ handler transporter req quote = do
             fare = Nothing,
             traveledDistance = 0,
             chargeableDistance = Nothing,
+            pickupTraveledDistance = 0,
             driverArrivalTime = Nothing,
             tripStartTime = Nothing,
             tripEndTime = Nothing,

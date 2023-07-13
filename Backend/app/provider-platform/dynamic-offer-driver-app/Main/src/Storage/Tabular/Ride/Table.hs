@@ -47,6 +47,7 @@ mkPersist
       fare Money Maybe
       traveledDistance HighPrecMeters
       chargeableDistance Meters Maybe
+      pickupTraveledDistance HighPrecMeters
       driverArrivalTime UTCTime Maybe
       tripStartTime UTCTime Maybe
       tripEndTime UTCTime Maybe
