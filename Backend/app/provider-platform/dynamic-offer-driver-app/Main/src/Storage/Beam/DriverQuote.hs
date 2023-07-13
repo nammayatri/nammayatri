@@ -34,7 +34,7 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Common as Common
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Vehicle ()
@@ -78,8 +78,8 @@ instance IsString Domain.DriverQuoteStatus where
 instance IsString Variant.Variant where
   fromString = show
 
-instance IsString Common.Money where
-  fromString = show
+-- instance IsString Common.Money where
+--   fromString = show
 
 instance B.Table DriverQuoteT where
   data PrimaryKey DriverQuoteT f

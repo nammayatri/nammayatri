@@ -38,8 +38,8 @@ import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
 
-instance IsString Money where
-  fromString = show
+-- instance IsString Money where
+--   fromString = show
 
 instance FromField Domain.RideStatus where
   fromField = fromFieldEnum

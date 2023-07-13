@@ -34,6 +34,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import qualified Kernel.External.Call.Interface as CallTypes
 import Kernel.Prelude hiding (Generic)
+import Kernel.Types.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize

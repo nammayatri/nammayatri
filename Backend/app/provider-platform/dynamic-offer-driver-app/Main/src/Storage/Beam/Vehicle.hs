@@ -32,8 +32,9 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
-import Lib.UtilsTH
+import Kernel.Types.Common hiding (id)
+import Lib.Utils ()
+import Lib.UtilsTH (enableKVPG)
 import Sequelize
 
 instance FromField Domain.RegistrationCategory where

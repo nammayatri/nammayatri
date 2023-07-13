@@ -54,8 +54,8 @@ data QuoteSpecialZoneT f = QuoteSpecialZoneT
 instance IsString Variant.Variant where
   fromString = show
 
-instance IsString Common.Money where
-  fromString = show
+-- instance IsString Common.Money where
+--   fromString = show
 
 instance B.Table QuoteSpecialZoneT where
   data PrimaryKey QuoteSpecialZoneT f

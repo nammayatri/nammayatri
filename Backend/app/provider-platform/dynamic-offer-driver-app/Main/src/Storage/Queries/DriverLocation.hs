@@ -177,7 +177,7 @@ getDriverLocsFromMerchId mbDriverPositionInfoExpiry gps radiusMeters merchantId'
                   ( \BeamDL.DriverLocationT {..} ->
                       merchantId B.==?. B.val_ (getId merchantId')
                         B.&&?. (B.sqlBool_ (B.val_ (Mb.isNothing mbDriverPositionInfoExpiry)) B.||?. B.sqlBool_ (coordinatesCalculatedAt B.>=. B.val_ (addUTCTime (fromIntegral (-1 * expTime)) now)))
-                        B.&&?. buildRadiusWithin' (gps.lat, gps.lon) radiusMeters
+                        B.&&?. buildRadiusWithin'' (gps.lat, gps.lon) radiusMeters
                   )
                   $ B.all_ (BeamCommon.driverLocation BeamCommon.atlasDB)
       pure (either (const []) (transformBeamDriverLocationToDomain <$>) dlocs)

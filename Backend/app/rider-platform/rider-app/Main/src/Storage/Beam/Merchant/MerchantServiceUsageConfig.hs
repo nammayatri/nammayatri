@@ -41,6 +41,7 @@ import Kernel.External.Notification.Types (NotificationService)
 import Kernel.External.SMS (SmsService)
 import Kernel.External.Whatsapp.Types (WhatsappService)
 import Kernel.Prelude hiding (Generic)
+import Kernel.Types.Common hiding (id)
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
