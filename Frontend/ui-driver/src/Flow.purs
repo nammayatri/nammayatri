@@ -35,7 +35,7 @@ import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks)
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
-import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, loaderText, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, toggleLoader, generateSessionId, stopChatListenerService, hideKeyboardOnNavigation, metaLogEvent, saveSuggestions, saveSuggestionDefs)
+import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, loaderText, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, toggleLoader, generateSessionId, stopChatListenerService, hideKeyboardOnNavigation, metaLogEvent, saveSuggestions, saveSuggestionDefs, setCleverTapUserData, setCleverTapUserProp, cleverTapSetLocation)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -94,6 +94,9 @@ baseAppFlow baseFlow = do
       let bundle = bundleVersion unit
           driverId = (getValueToLocalStore DRIVER_ID)
       versionName <- lift $ lift $ liftFlow $ getVersionName
+      void $ pure $ setCleverTapUserProp "App Version" versionName
+      void $ pure $ setCleverTapUserProp "Bundle version" bundle
+      void $ pure $ setCleverTapUserProp "Platform" os
       setValueToLocalStore VERSION_NAME versionName
       setValueToLocalStore BUNDLE_VERSION bundle
       setValueToLocalStore BASE_URL (getBaseUrl "dummy")
@@ -105,7 +108,8 @@ baseAppFlow baseFlow = do
       setValueToLocalStore IS_DRIVER_AT_PICKUP "false"
       when ((getValueToLocalStore SESSION_ID == "__failed") || (getValueToLocalStore SESSION_ID == "(null)")) $ do
         setValueToLocalStore SESSION_ID (generateSessionId unit)
-      void $ lift $ lift $ setLogField "driver_id" $ encode (driverId)
+      if(driverId == "__failed") then void $ lift $ lift $ setLogField "driver_id" $ encode ("null")
+        else void $ lift $ lift $ setLogField "driver_id" $ encode (driverId)
       void $ lift $ lift $ setLogField "app_version" $ encode (show versionCode)
       void $ lift $ lift $ setLogField "bundle_version" $ encode (bundle)
       void $ lift $ lift $ setLogField "platform" $ encode (os)
@@ -135,6 +139,7 @@ loginFlow = do
   lift $ lift $ doAff do liftEffect hideSplash
   runInternetCondition
   setValueToLocalStore LANGUAGE_KEY "EN_US"
+  void $ pure $ setCleverTapUserProp "Preferred Language" "EN_US"
   languageType <- UI.chooseLanguage
   mobileNo <- UI.enterMobileNumber
   case mobileNo of
@@ -158,8 +163,14 @@ enterOTPFlow = do
       _ <- pure $ firebaseLogEvent "ny_driver_verify_otp"
       _ <- pure $ metaLogEvent "ny_driver_verify_otp"
       let driverId = ((resp.person)^. _id)
-      _ <- lift $ lift $ setLogField "driver_id" $ encode (driverId)
+      if(driverId == "__failed") then do
+        _ <- lift $ lift $ setLogField "driver_id" $ encode ("null")
+        pure unit
+        else do
+          _ <- lift $ lift $ setLogField "driver_id" $ encode (driverId)
+          pure unit
       setValueToLocalStore DRIVER_ID driverId
+      void $ pure $ setCleverTapUserData "Identity" (getValueToLocalStore DRIVER_ID)
       setValueToLocalStore REGISTERATION_TOKEN resp.token -- add from response
       void $ lift $ lift $ toggleLoader false
       (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT $ mkUpdateDriverInfoReq ""
@@ -194,6 +205,54 @@ getDriverInfoFlow = do
     Right getDriverInfoResp -> do
       let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
       modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen -> applicationStatusScreen {props{alternateNumberAdded = isJust getDriverInfoResp.alternateNumber}})
+      case getDriverInfoResp.mobileNumber of
+          Just value -> void $ pure $ setCleverTapUserData "Phone" ("+91" <> value)
+          Nothing -> pure unit
+
+      let middleName = case getDriverInfoResp.middleName of 
+                        Just ""  -> ""
+                        Just name -> (" " <> name)
+                        Nothing -> ""
+          lastName   = case getDriverInfoResp.lastName of 
+                        Just "" -> ""
+                        Just name -> (" " <> name)
+                        Nothing -> ""
+          name = getDriverInfoResp.firstName <> middleName <> lastName
+      void $ pure $ setCleverTapUserData "Name" name
+
+      when (fromMaybe "UNKNOWN" (getDriverInfoResp.gender) /= "UNKNOWN") $ do
+              case getDriverInfoResp.gender of
+                  Just value -> void $ pure $ setCleverTapUserData "gender" value
+                  Nothing -> pure unit
+
+      case getDriverInfoResp.alternateNumber of
+        Just value -> void $ pure $ setCleverTapUserData "Alternate Number" ("+91" <> value)
+        Nothing -> pure unit
+
+      case getDriverInfoResp.numberOfRides of
+        Just value -> void $ pure $ setCleverTapUserData "Total Rides" (show $ value)
+        Nothing -> pure unit
+
+      void $ pure $ setCleverTapUserData "Identity" (getValueToLocalStore DRIVER_ID)
+
+      case getDriverInfoResp.rating of
+        Just value -> void $ pure $ setCleverTapUserData "Rating" (show $ value)
+        Nothing -> pure unit
+      
+      let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
+      void $ pure $ setCleverTapUserProp "Vehicle Variant" linkedVehicle.variant
+
+      case getDriverInfoResp.blocked of
+        Just value -> void $ pure $ setCleverTapUserProp "Blocked" (show $ value)
+        Nothing -> pure unit
+      
+      case getDriverInfoResp.mode of
+        Just currentMode -> void $ pure $ setCleverTapUserProp "Mode" currentMode
+        Nothing -> pure unit
+      
+      if fromMaybe 0 getDriverInfoResp.numberOfRides > 0 then void $ pure $ setCleverTapUserProp "First ride taken" "true"
+        else void $ pure $ setCleverTapUserProp "First ride taken" "false"
+
       let dbClientVersion = getDriverInfoResp.clientVersion
       let dbBundleVersion = getDriverInfoResp.bundleVersion
       updateDriverVersion dbClientVersion dbBundleVersion
@@ -1089,6 +1148,7 @@ homeScreenFlow = do
   _ <- pure $ delay $ Milliseconds 1.0
   _ <- pure $ printLog "Registration token" (getValueToLocalStore REGISTERATION_TOKEN)
   _ <- pure $ firebaseUserID (getValueToLocalStore DRIVER_ID)
+  _ <- pure $ cleverTapSetLocation unit
   if (getValueToLocalNativeStore IS_RIDE_ACTIVE) == "true" && not (isLocalStageOn RideAccepted) && not (isLocalStageOn RideStarted) && not (isLocalStageOn ChatWithCustomer) then
     currentRideFlow
   else pure unit
@@ -1103,11 +1163,13 @@ homeScreenFlow = do
   case getDriverInfoResp.mode of
     Just currentMode -> case currentMode of
                           "OFFLINE" -> do
+                              void $ pure $ setCleverTapUserProp "Mode" currentMode
                               lift $ lift $ liftFlow $ stopLocationPollingAPI
                               setDriverStatusInLocal "false" (show $ getDriverStatusFromMode currentMode)
                               _ <- pure $ spy "setting offline zxc " (getValueToLocalStore DRIVER_STATUS_N)
                               pure unit
                           _ ->        do
+                                      void $ pure $ setCleverTapUserProp "Mode" currentMode
                                       setDriverStatusInLocal "true" (show $ getDriverStatusFromMode currentMode)
                                       lift $ lift $ liftFlow $ startLocationPollingAPI
                                       _ <- pure $ spy "setting ONLINE/SILENT zxc " (getValueToLocalStore DRIVER_STATUS_N)

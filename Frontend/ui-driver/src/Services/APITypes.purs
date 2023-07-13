@@ -393,6 +393,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , bundleVersion         :: Maybe Version
     , gender                :: Maybe String
     , numberOfRides :: Maybe Int
+    , blocked :: Maybe Boolean
     }
 
 
