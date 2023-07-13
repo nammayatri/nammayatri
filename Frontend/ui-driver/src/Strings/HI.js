@@ -492,5 +492,6 @@ const hindiStrings = {
   CONGRATULATIONS_YOU_ARE_RANK : "बधाई हो ! आपकी रैंक है ",
   YOU : " (आप)",
   DAILY : "दैनिक",
-  WEEKLY : "साप्ताहिक"
+  WEEKLY : "साप्ताहिक",
+  NEW_ : "नया"
 }

@@ -491,5 +491,6 @@ const bengaliStrings = {
 	CONGRATULATIONS_YOU_ARE_RANK : "অভিনন্দন! আপনার র্যাঙ্ক হল ",
 	YOU : " (আপনি)",
 	DAILY : "দৈনিক",
-	WEEKLY : "সাপ্তাহিক"
+	WEEKLY : "সাপ্তাহিক",
+	NEW_ : "নতুন"
 	}

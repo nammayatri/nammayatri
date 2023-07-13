@@ -494,5 +494,6 @@ const mlStrings = {
   CONGRATULATIONS_YOU_ARE_RANK : "അഭിനന്ദനങ്ങൾ ! നിങ്ങളുടെ റാങ്ക് ആണ് ",
   YOU : " (നിങ്ങൾ)",
   DAILY : "ദിവസേന",
-  WEEKLY : "പ്രതിവാരം"
+  WEEKLY : "പ്രതിവാരം",
+  NEW_ : "പുതിയത്"
 }

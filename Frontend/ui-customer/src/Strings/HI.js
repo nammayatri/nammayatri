@@ -89,8 +89,9 @@ const hindiStrings = {
   "LANGUAGE": "भाषा",
   "OTP": "ओटीपी",
   "PAYMENT_METHOD": "भुगतान का तरीका",
-  "PAYMENT_METHOD_STRING": "नकद/किसी भी UPI ऐप का उपयोग करें",
-  "CANCEL_RIDE": "सवारी रद्द करें",
+  "PAYMENT_METHOD_STRING": "कैश / यूपीआई ऐप का इस्तेमाल करें",
+  "PAYMENT_METHOD_STRING_": "कैश / यूपीआई ऐप का इस्तेमाल करें",
+  "CANCEL_RIDE": "मेरी राइड रद्द करें",
   "SUPPORT": "सहायता",
   "PICKUP_AND_DROP": "पिकअप और ड्रॉप",
   "CANCELLED": "रद्द",
@@ -248,6 +249,7 @@ const hindiStrings = {
   "RATE_YOUR_RIDE_WITH": " के साथ अपनी राइड को रेट करें",
   "VIEW_BREAKDOWN": "ब्रेकडाउन देखें",
   "PAY_DRIVER_USING_CASH_OR_UPI": "Cash/UPI का उपयोग कर ड्राइवर को भुगतान करें",
+  "PAY_DRIVER_USING_CASH_OR_UPI_": "Cash/UPI का उपयोग कर ड्राइवर को भुगतान करें",
   "RATE_YOUR_DRIVER": "अपने ड्राइवर को रेट करें",
   "MY_RIDES": "मेरी सवारी",
   "RIDE_ID": "सवारी आईडी",
@@ -512,5 +514,8 @@ const hindiStrings = {
   "CALL_NAMMA_YATRI_SUPPORT" : "नम्मा यात्री सहायता को कॉल करें",
   "CALL_112": "112 पर कॉल करें",
   "CALL_EMERGENCY_CENTRE": "आपातकालीन केंद्र को कॉल करें",
-  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS" :"विवरण 10 अक्षरों से अधिक होना चाहिए"
+  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS" :"विवरण 10 अक्षरों से अधिक होना चाहिए",
+  "THIS_FIELD_IS_REQUIRED" : "यह फ़ील्ड आवश्यक है", 
+  "EMAIL_EXISTS_ALREADY" : "ईमेल पहले से ही मौजूद है",
+  "PLATFORM_FEE" : "प्लेटफार्म शुल्क"
 }

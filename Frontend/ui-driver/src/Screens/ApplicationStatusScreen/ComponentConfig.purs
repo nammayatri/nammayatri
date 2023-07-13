@@ -19,7 +19,7 @@ primaryButtonConfig state = let
       { textConfig
       { text = if state.props.onBoardingFailure then getString COMPLETE_ONBOARDING else getString ADD_ALTERNATE_NUMBER
       , color = Color.primaryButtonColor
-      , textSize = FontSize.a_18}
+      }
       , cornerRadius = 8.0
       , background = Color.black900
       , height = (V 48)

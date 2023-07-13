@@ -26,6 +26,9 @@ import Language.Types (STR(..))
 import PrestoDOM
 import Screens.Types as ST
 import Styles.Colors as Color
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 ---------------- genericHeaderConfig ----------------
 genericHeaderConfig :: ST.TripDetailsScreenState -> GenericHeader.Config 
@@ -38,15 +41,13 @@ genericHeaderConfig state= let
         height = (V 30)
       , width = (V 30)
       , margin = (Margin 16 16 25 16)
-      , imageUrl = "ny_ic_back,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
+      , imageUrl = "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_back.png"
       , padding = (Padding 5 5 5 5 )
       , visibility = if state.props.issueReported then GONE else VISIBLE
       }
     , textConfig {
         text = if state.props.issueReported then "" else (getString TRIP_DETAILS)
-      , textSize = FontSize.a_20
       , color = Color.black
-      , fontStyle = FontStyle.semiBold LanguageStyle
       }
     , suffixImageConfig {
         visibility = GONE
@@ -64,25 +65,23 @@ sourceToDestinationConfig state = let
     , sourceMargin = (Margin 0 10 0 25)
     , lineMargin = (Margin 4 12 0 0)
     , sourceImageConfig {
-        imageUrl = "ny_ic_green_circle,https://assets.juspay.in/nammayatri/images/common/ny_ic_green_circle.png"
+        imageUrl = "ny_ic_green_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_green_circle.png"
       , margin = (MarginTop 3)
       }
     , sourceTextConfig {
         text = state.data.source
-      , textSize = FontSize.a_15
       , padding = (Padding 2 0 2 2)
       , margin = (Margin 12 0 15 0)
       , ellipsize = false
       , maxLines = 2
       }
     , destinationImageConfig {
-        imageUrl = "ny_ic_red_circle,https://assets.juspay.in/nammayatri/images/common/ny_ic_red_circle.png"
+        imageUrl = "ny_ic_red_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_red_circle.png"
       , margin = (MarginTop 3)
       }
     , destinationBackground = Color.blue600
     , destinationTextConfig {
         text = state.data.destination
-      , textSize = 15
       , padding = (Padding 2 0 2 2)
       , margin = (Margin 12 0 15 0)
       , ellipsize = false
@@ -96,7 +95,7 @@ primaryButtonConfig :: ST.TripDetailsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
     primaryButtonConfig' = config 
-      { textConfig{ text = if state.props.issueReported then (getString GO_HOME) else (getString SUBMIT), textSize = FontSize.a_18 }
+      { textConfig{ text = if state.props.issueReported then (getString GO_HOME) else (getString SUBMIT) }
       , width = MATCH_PARENT
       , margin = (Margin 0 0 0 0 )
       , cornerRadius = 0.0

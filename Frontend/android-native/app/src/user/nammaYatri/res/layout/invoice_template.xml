@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="960px"
     android:layout_height="1338px"
@@ -137,19 +136,22 @@
             android:paddingVertical="20px"
             android:orientation="vertical"
             android:id="@+id/fareBreakupContainer">
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:id="@+id/fareBreakupElements">
-            </LinearLayout>
+                android:id="@+id/fareBreakupElements"></LinearLayout>
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="1px"
                 android:layout_marginVertical="18px"
                 android:background="@color/Black500" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -209,6 +211,7 @@
                 android:textFontWeight="600"
                 android:textSize="20px"
                 android:textStyle="bold" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -262,6 +265,7 @@
                     android:textFontWeight="400"
                     android:textSize="18px" />
             </LinearLayout>
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
@@ -325,13 +329,15 @@
                     <ImageView
                         android:layout_width="12px"
                         android:layout_height="12px"
-                        android:src="@drawable/ny_ic_red_circle"/>
+                        android:src="@drawable/ny_ic_red_circle" />
                 </LinearLayout>
+
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginLeft="12px"
                     android:orientation="vertical">
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -342,6 +348,7 @@
                         android:textFontWeight="400"
                         android:id="@+id/rideStartTime"
                         android:textSize="16px" />
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -354,6 +361,7 @@
                         android:textColor="@color/Black800"
                         android:textFontWeight="400"
                         android:textSize="16px" />
+
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -365,6 +373,7 @@
                         android:textFontWeight="400"
                         android:layout_marginTop="38px"
                         android:textSize="16px" />
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"

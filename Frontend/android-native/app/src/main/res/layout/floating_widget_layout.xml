@@ -1,26 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/root_container"
     android:layout_width="match_parent"
     android:layout_height="90dp"
     android:orientation="vertical"
 
     android:layout_margin="16dp">
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/dismiss_silent_reqID"
-        android:visibility="gone"
-        >
+        android:visibility="gone">
+
         <ImageView
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/dismiss_silent_request"
-            android:layout_marginBottom="5dp"
-            />
+            android:layout_marginBottom="5dp" />
 
     </LinearLayout>
 
@@ -35,6 +33,7 @@
             android:layout_height="match_parent"
             android:id="@+id/message_view_left"
             android:orientation="horizontal">
+
             <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent">
@@ -46,49 +45,47 @@
                     android:orientation="vertical"
                     android:visibility="gone"
                     android:id="@+id/silent_ride_request_background"
-                    >
+                    android:paddingStart="64dp">
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
-                        android:orientation="horizontal"
-                        android:gravity="center">
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
 
 
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="$12000"
+                            android:gravity="end"
+                            android:textColor="#FFFFFF"
+                            android:textSize="20dp"
+                            android:id="@+id/ride_fare" />
 
-                    <TextView
-                        android:layout_width="50dp"
-                        android:layout_height="wrap_content"
-                        android:text="$120"
-                        android:gravity="end"
-                        android:textColor="#FFFFFF"
-                        android:layout_marginLeft="54dp"
-                        android:textSize="20dp"
-                        android:id="@+id/ride_fare"/>
+                        <ImageView
+                            android:layout_width="4dp"
+                            android:layout_height="4dp"
+                            android:layout_marginHorizontal="6dp"
+                            android:src="@drawable/separator_silent_mode" />
 
-                    <ImageView
-                        android:layout_width="4dp"
-                        android:layout_height="4dp"
-                        android:layout_marginHorizontal="6dp"
-                        android:src="@drawable/separator_silent_mode"
-                        ></ImageView>
+                        <TextView
+                            android:layout_width="100dp"
+                            android:layout_height="wrap_content"
+                            android:singleLine="true"
+                            android:text="900m pickup"
+                            android:textSize="16dp"
+                            android:textColor="#FFFFFF"
+                            android:id="@+id/distance_to_pickup" />
 
-                    <TextView
-                        android:layout_width="100dp"
-                        android:layout_height="wrap_content"
-                        android:text="900m pickup"
-                        android:textSize="16dp"
-                        android:textColor="#FFFFFF"
-                        android:id="@+id/distance_to_pickup"/>
-
-                    <TextView
-                        android:layout_width="80dp"
-                        android:layout_height="wrap_content"
-                        android:gravity="end"
-                        android:text="View now"
-                        android:textSize="18dp"
-                        android:textColor="#FCC32C"></TextView>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="View now"
+                            android:textSize="18dp"
+                            android:singleLine="true"
+                            android:textColor="#FCC32C" />
                     </LinearLayout>
-
 
 
                 </LinearLayout>
@@ -107,12 +104,14 @@
                     android:visibility="gone"
                     android:progress="100"
                     android:layout_marginHorizontal="25dp"
-                    android:indeterminate="false"/>
+                    android:indeterminate="false" />
+
                 <ImageView
                     android:layout_width="64dp"
                     android:layout_height="64dp"
                     android:src="@drawable/ic_floating_widget"
-                    android:id="@+id/floating_logo"/>
+                    android:id="@+id/floating_logo" />
+
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
@@ -124,6 +123,7 @@
                     android:visibility="gone"
                     android:layout_marginVertical="5dp"
                     android:id="@+id/message_view_right">
+
                     <TextView
                         android:id="@+id/messageTextView_right_header"
                         android:layout_width="wrap_content"
@@ -133,6 +133,7 @@
                         android:paddingRight="10dp"
                         android:text="New Ride assigned"
                         android:textColor="@color/white" />
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="match_parent"

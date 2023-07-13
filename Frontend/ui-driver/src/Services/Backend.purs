@@ -24,7 +24,7 @@ import Presto.Core.Types.API (Header(..), Headers(..))
 import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
 import Helpers.Utils (decodeErrorCode, decodeErrorMessage, toString,getTime)
 import Foreign.Generic (encode)
-import JBridge (setKeyInSharedPrefKeys,toast,factoryResetApp, toggleLoader, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService)
+import JBridge (setKeyInSharedPrefKeys,toast,factoryResetApp, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService)
 import Juspay.OTP.Reader as Readers
 import Types.ModifyScreenState(modifyScreenState)
 import Types.App (GlobalState, FlowBT, ScreenType(..))
@@ -45,6 +45,7 @@ import Effect.Class (liftEffect)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Screens.Types (DriverStatus)
 import Debug (spy)
+import Engineering.Helpers.Utils (toggleLoader)
 
 getHeaders :: String -> Flow GlobalState Headers
 getHeaders dummy = do
@@ -195,7 +196,7 @@ withAPIResultBT' url enableCache key f errorHandler flow = do
 --------------------------------- triggerOTPBT---------------------------------------------------------------------------------------------------------------------------------
 triggerOTPBT :: TriggerOTPReq → FlowBT String TriggerOTPResp
 triggerOTPBT payload = do
-    _ <- lift $ lift $ doAff Readers.initiateSMSRetriever
+    -- _ <- lift $ lift $ doAff Readers.initiateSMSRetriever
     headers <- getHeaders' ""
     withAPIResultBT (EP.triggerOTP "") (\x → x) errorHandler (lift $ lift $ callAPI headers payload)
     where

@@ -28,6 +28,7 @@ import Engineering.Helpers.Commons (getNewIDWithTag)
 import Effect.Class (liftEffect)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
+import MerchantConfig.Utils (getValueFromConfig)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -71,12 +72,13 @@ eval (PrimaryEditTextAction (PrimaryEditText.TextChanged valId newVal)) state = 
   _ <- if length newVal == 10 then do
             pure $ hideKeyboardOnNavigation true 
             else pure unit    
-  let isValidMobileNumber = case (charAt 0 newVal) of 
-                                    Just a -> if a=='0' || a=='1' || a=='2' || a=='5' then false 
-                                                else if a=='3' || a=='4' then
-                                                    if newVal=="4000400040" || newVal=="3000300030" then true else false 
-                                                        else true 
-                                    Nothing -> true 
+  let isValidMobileNumber = if getValueFromConfig "allowAllMobileNumber" then true
+                              else case (charAt 0 newVal) of 
+                                Just a -> if a=='0' || a=='1' || a=='2' || a=='5' then false 
+                                            else if a=='3' || a=='4' then
+                                                if newVal=="4000400040" || newVal=="3000300030" then true else false 
+                                                    else true 
+                                Nothing -> true
   continue state { props = state.props { btnActive = if (length newVal == 10 && isValidMobileNumber) then true else false
                                         , isValid = not isValidMobileNumber }
                                         , data = state.data { mobileNumber = if length newVal <= 10 then newVal else state.data.mobileNumber}}

@@ -16,9 +16,13 @@
 module Screens.AddNewAddressScreen.View where
 
 import Common.Types.App
+import Common.Types.App
+import Debug
+import Screens.CustomerUtils.AddNewAddressScreen.ComponentConfig
 import Screens.CustomerUtils.AddNewAddressScreen.ComponentConfig
 
 import Animation as Anim
+import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Components.LocationListItem (dummyAddress)
 import Components.LocationListItem as LocationListItem
@@ -27,21 +31,21 @@ import Components.PrimaryEditText as PrimaryEditText
 import Data.Array as DA
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
+import Effect.Uncurried (runEffectFn5)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (LANGUAGE_KEY(..), getString, getKey)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, not, pure, show, unit, ($), (&&), (*), (-), (/), (/=), (<<<), (<>), (==), (||))
-import PrestoDOM (Length(..), Margin(..), Orientation(..), Gravity(..), Visibility(..), Padding(..), PrestoDOM, Screen, height, width, color, background, orientation, padding, margin, onBackPressed, linearLayout, gravity, textView, text, textSize, fontStyle, scrollView, scrollBarY, relativeLayout, editText, hint, singleLine, hintColor, ellipsize, cornerRadius, lineHeight, stroke, onChange, id, visibility, maxLines, onClick, imageView, imageUrl, alignParentBottom, afterRender, adjustViewWithKeyboard, weight, alpha, frameLayout, clickable, onFocus, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
 import Screens.AddNewAddressScreen.Controller (Action(..), ScreenOutput, eval, validTag)
 import Screens.Types as ST
-import Styles.Colors as Color
-import Common.Types.App
-import Screens.CustomerUtils.AddNewAddressScreen.ComponentConfig
 import Storage (KeyStore(..), getValueToLocalStore)
+import Styles.Colors as Color
 
 screen :: ST.AddNewAddressScreenState -> Screen Action ST.AddNewAddressScreenState ScreenOutput
 screen initialState =
@@ -55,7 +59,10 @@ screen initialState =
                         _ <- HU.storeCallBackLocateOnMap push UpdateLocation
                         pure unit
                         pure (pure unit))]
-  , eval
+  , eval : \action state -> do
+        let _ = spy "AddNewAddressScreenState action " action
+        let _ = spy "AddNewAddressScreenState state " state
+        eval action state
   }
 
 view :: forall w . (Action  -> Effect Unit) -> ST.AddNewAddressScreenState -> PrestoDOM (Effect Unit) w
@@ -70,7 +77,7 @@ view push state =
           _ <- (JB.showMap (EHC.getNewIDWithTag "AddNewAddressHomeScreenMap") true "satellite" (19.0) push MAPREADY)
           _ <- HU.setText' (EHC.getNewIDWithTag "SavedLocationEditText") (state.data.address)
           _ <- HU.setText' (EHC.getNewIDWithTag "SaveAsEditText") (state.data.addressSavedAs)
-          _ <- pure $ JB.locateOnMap true 0.0 0.0 "" []
+          _ <- runEffectFn5 JB.locateOnMap true 0.0 0.0 "" []
           _ <- if (state.data.activeIndex == Just 2 && state.props.showSavePlaceView) then JB.requestKeyboardShow (EHC.getNewIDWithTag ("SaveAsEditText")) else pure unit
           pure unit
           ) (const AfterRender)
@@ -94,8 +101,8 @@ view push state =
       , gravity CENTER
       ][ imageView
          [ width $ V 60
-         , height $ V 60
-         , imageWithFallback $ (HU.getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) <> ",https://assets.juspay.in/nammayatri/images/user/ny_ic_customer_current_location.png"
+         , height $ V 60 
+         , imageWithFallback $ (HU.getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) <> "," <> (getAssetStoreLink FunctionCall) <> "ny_ic_customer_current_location.png"
          ]
        ]
     , relativeLayout
@@ -108,7 +115,7 @@ view push state =
         [ height $ V ((EHC.screenHeight unit) / 7)
         , width MATCH_PARENT
         , clickable true
-        , background Color.black900
+        , background state.data.config.searchLocationConfig.searchLocationTheme
         , padding (Padding 0 EHC.safeMarginTop 0 0)
         ][]
       , GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
@@ -140,9 +147,9 @@ recenterButtonView state push =
   , width MATCH_PARENT
   , gravity RIGHT
   ][  imageView
-      [ imageWithFallback "ny_ic_recenter_btn,https://assets.juspay.in/nammayatri/images/common/ny_ic_recenter_btn.png"
-      , height $ V 40
-      , width $ V 40
+      [ imageWithFallback $ "ny_ic_recenter_btn," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_recenter_btn.png"
+      , height $ V 40 
+      , width $ V 40 
       , onClick (\action -> do
         _ <- push action
         _ <- JB.getCurrentPosition push UpdateCurrentLocation
@@ -217,8 +224,9 @@ bottomBtnsView state push =
         ]) $ btnData state)]
 
 btnData :: ST.AddNewAddressScreenState ->  Array {text :: String, imageUrl :: String, action :: Action, tag :: String}
-btnData state = [ {text : (getString SELECT_ON_MAP), imageUrl : "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png", action : SetLocationOnMap, tag : "LOCATE_ON_MAP"}]
-                  -- {text : (getString CURRENT_LOCATION), imageUrl : "ny_ic_current_location,https://assets.juspay.in/nammayatri/images/user/ny_ic_current_location.png", action : CurrentLocationAction, tag : "CURRENT_LOCATION"}]
+btnData state = [ {text : (getString SELECT_ON_MAP), imageUrl : "ny_ic_locate_on_map," <> (getAssetStoreLink FunctionCall) <> "ny_ic_locate_on_map.png", action : SetLocationOnMap, tag : "LOCATE_ON_MAP"}
+                  -- ,{text : (getString CURRENT_LOCATION), imageUrl : "ny_ic_current_location," <> (getAssetStoreLink FunctionCall) <> "ny_ic_current_location.png", action : CurrentLocationAction, tag : "CURRENT_LOCATION"}
+                  ]
 
 addNewScreenView :: forall w. ST.AddNewAddressScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 addNewScreenView state push =
@@ -244,11 +252,10 @@ addNewScreenView state push =
           , visibility if state.props.isLocateOnMap then GONE else VISIBLE
           , stroke ("1,"<>Color.grey900)
           , background Color.white900
-          ][  editText
+          ][  editText $
               [ height WRAP_CONTENT
               , color Color.black800
               , hint (getString ENTER_A_LOCATION)
-              , fontStyle $ FontStyle.semiBold LanguageStyle
               , singleLine true
               , weight 1.0
               , cornerRadius 8.0
@@ -262,11 +269,10 @@ addNewScreenView state push =
                   ) (const RenderKeyboardActin)
               , ellipsize true
               , padding (Padding 21 27 16 27)
-              , textSize FontSize.a_16
               , lineHeight "24"
               , onChange push AddressChanged
               , hintColor "#A7A7A7"
-              ]
+              ] <> FontStyle.subHeading1 LanguageStyle
         ,linearLayout
           [  height MATCH_PARENT
           , width WRAP_CONTENT
@@ -282,7 +288,7 @@ addNewScreenView state push =
           ][imageView
             [ height $ V 16
             , width $ V 16
-            , imageWithFallback "ny_ic_clear,https://assets.juspay.in/nammayatri/images/user/ny_ic_clear.png"
+            , imageWithFallback $ "ny_ic_clear," <> (getAssetStoreLink FunctionCall) <> "ny_ic_clear.png"
             ]
           ]
         ]
@@ -298,23 +304,20 @@ addNewScreenView state push =
         , clickable true
         , visibility if state.props.isLocateOnMap then VISIBLE else GONE
       ][  imageView
-          [ imageWithFallback "ny_ic_loc_grey,https://assets.juspay.in/nammayatri/images/user/ny_ic_loc_grey.png"
+          [ imageWithFallback $ "ny_ic_loc_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_loc_grey.png"
           , height $ V 21
           , width $ V 18
           , margin (MarginRight 11)
           ]
-        , textView
+        , textView $
         [ color Color.black800
-        , fontStyle $ FontStyle.semiBold LanguageStyle
         , singleLine true
         , width MATCH_PARENT
         , height MATCH_PARENT
         , gravity CENTER
         , text state.data.locSelectedFromMap
         , ellipsize true
-        , textSize FontSize.a_16
-        , lineHeight "24"
-        ]]
+        ] <> FontStyle.subHeading1 LanguageStyle]
     , bottomLayout state push
 
   ]  ) ]
@@ -331,21 +334,18 @@ textViews state push =
   , gravity CENTER_VERTICAL
   , cornerRadius 8.0
 ][  imageView
-    [ imageWithFallback "ny_ic_loc_grey,https://assets.juspay.in/nammayatri/images/user/ny_ic_loc_grey.png"
+    [ imageWithFallback $ "ny_ic_loc_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_loc_grey.png"
     , height $ V 21
     , width $ V 18
     , margin (MarginRight 11)
     ]
-  , textView
+  , textView $
   [ color Color.black800
-  , fontStyle $ FontStyle.semiBold LanguageStyle
   , singleLine true
   , width MATCH_PARENT
   , text (state.data.selectedItem.description)
   , ellipsize true
-  , textSize FontSize.a_16
-  , lineHeight "24"
-  ]]
+  ] <> FontStyle.subHeading1 LanguageStyle]
 
 bottomLayout :: forall w. ST.AddNewAddressScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 bottomLayout state push =
@@ -393,7 +393,7 @@ searchResultsView state push =
 
 bottomBtnsData :: ST.AddNewAddressScreenState ->  Array ST.LocationListItemState 
 bottomBtnsData state = 
-  [ { prefixImageUrl : "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png"
+  [ { prefixImageUrl : "ny_ic_locate_on_map," <> (getAssetStoreLink FunctionCall) <> "ny_ic_locate_on_map.png"
     , title : (getString CHOOSE_ON_MAP)
     , subTitle :  (getString DRAG_THE_MAP )
     , placeId : Nothing
@@ -417,7 +417,7 @@ bottomBtnsData state =
     , distance : Nothing
     , showDistance : Just false
     }
-  , { prefixImageUrl : "ny_ic_current_location,https://assets.juspay.in/nammayatri/images/user/ny_ic_current_location.png"
+  , { prefixImageUrl : "ny_ic_current_location," <> (getAssetStoreLink FunctionCall) <> "ny_ic_current_location.png"
     , title :  (getString USE_CURRENT_LOCATION)
     , subTitle : (getString FAVOURITE_YOUR_CURRENT_LOCATION)
     , placeId : Nothing
@@ -463,16 +463,13 @@ savePlaceView state push =
       , cornerRadius 8.0
       , padding (Padding 16 20 16 20)
       , background Color.white900
-      ][  textView
+      ][  textView $
           [ text (getString LOCATION)
           , color Color.black600
-          , textSize FontSize.a_12
-          , lineHeight "15"
-          , fontStyle $ FontStyle.medium LanguageStyle
           , width MATCH_PARENT
           , margin (MarginBottom 8)
           , gravity LEFT
-          ]
+          ] <> FontStyle.tags LanguageStyle
         , linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -486,39 +483,35 @@ savePlaceView state push =
                           _ <- HU.setText' (EHC.getNewIDWithTag "SavedLocationEditText") state.data.address
                           pure unit)
               $ const ChangeAddress
-          ][  textView
-              ([ text (state.data.selectedItem).description 
-              , textSize FontSize.a_14
-              , fontStyle $ FontStyle.medium LanguageStyle
+          ][  textView $ 
+              [ text (state.data.selectedItem).description
               , color Color.black600
               , height WRAP_CONTENT
               , gravity CENTER_VERTICAL
               , padding (PaddingRight 8)
               , maxLines 1
               , ellipsize true 
-              ] <> (if EHC.os == "IOS" then [width $ V (4 * (EHC.screenWidth unit / 5) - 75)] else [weight 1.0]) )
+              , width $ V (4 * (EHC.screenWidth unit / 5) - (if EHC.os == "IOS" then 75 else 50))
+              ] <> FontStyle.body1 LanguageStyle
             , linearLayout([
               height WRAP_CONTENT
             , gravity RIGHT 
-            ] <> (if EHC.os == "IOS" then [weight 1.0] else [width WRAP_CONTENT]) )[  textView
+            ] <> (if EHC.os == "IOS" then [weight 1.0] else [width WRAP_CONTENT]))
+            [  textView $
                 [ text (getString EDIT)
                 , color Color.blue900
+                , width MATCH_PARENT
                 , onFocus push $ const $ EditTextFocusChanged
-                , gravity CENTER_VERTICAL
-                , textSize FontSize.a_14
-                , fontStyle $ FontStyle.medium LanguageStyle
-                , lineHeight "18"
-                ]]
+                , gravity CENTER_VERTICAL 
+                ] <> FontStyle.body1 LanguageStyle]
           ]
-         , textView
+         , textView $
           [ text if state.props.isLocationServiceable then (getText state) else (getString LOCATION_UNSERVICEABLE)
-          , textSize FontSize.a_12
           , gravity LEFT
           , margin (MarginTop 4)
           , visibility if ((state.props.tagExists && state.data.existsAs /= "") || (not state.props.isLocationServiceable)) then VISIBLE else GONE
-          , fontStyle $ FontStyle.medium LanguageStyle
           , color Color.red
-          ]
+          ] <> FontStyle.body3 TypoGraphy
         , tagView state push
         , linearLayout
           [ height WRAP_CONTENT
@@ -545,16 +538,13 @@ tagView state push =
   , width MATCH_PARENT
   , margin (MarginTop 24)
   , orientation VERTICAL
-  ][  textView
+  ][  textView $
       [ text (getString ADD_TAG)
       , color Color.black800
-      , textSize FontSize.a_12
-      , lineHeight "15"
-      , fontStyle $ FontStyle.medium LanguageStyle
       , width MATCH_PARENT
       , margin (MarginBottom 8)
       , gravity LEFT
-      ]
+      ] <> FontStyle.tags LanguageStyle
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -580,17 +570,14 @@ tagView state push =
               , height $ V 15
               , margin (MarginRight 8)
               ]
-            , textView
+            , textView $
               [ text  item.text
-              , textSize FontSize.a_12
-              , lineHeight "16"
               , gravity CENTER
               , color if (Just index) == state.data.activeIndex then Color.blue900 else Color.black800
-              , fontStyle $ FontStyle.medium LanguageStyle
-              ]
-          ]) [  { activeImageUrl : "ny_ic_home_blue,https://assets.juspay.in/nammayatri/images/user/ny_ic_home_blue.png", inActiveImageUrl : "ny_ic_home,https://assets.juspay.in/nammayatri/images/user/ny_ic_home.png", text : (getString HOME), tag : "HOME"},
-                { activeImageUrl : "ny_ic_work_blue,https://assets.juspay.in/nammayatri/images/user/ny_ic_work_blue.png", inActiveImageUrl : "ny_ic_work,https://assets.juspay.in/nammayatri/images/user/ny_ic_work.png", text : (getString WORK), tag : "WORK"},
-                { activeImageUrl : "ny_ic_fav_blue,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav_blue.png",inActiveImageUrl : "ny_ic_fav_tag,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav_tag.png", text : (getString FAVOURITE), tag : "FAVOURITE"}] )
+              ] <> FontStyle.tags LanguageStyle
+          ]) [  { activeImageUrl : "ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png", inActiveImageUrl : "ny_ic_home," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home.png", text : (getString HOME), tag : "HOME"},
+                { activeImageUrl : "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png", inActiveImageUrl : "ny_ic_work," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work.png", text : (getString WORK), tag : "WORK"},
+                { activeImageUrl : "ny_ic_fav_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_blue.png",inActiveImageUrl : "ny_ic_fav_tag," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_inactive.png", text : (getString FAVOURITE), tag : "FAVOURITE"}] )
 
   ]
 
@@ -604,8 +591,8 @@ locationUnserviceableView state push =
   , visibility if state.props.isSearchedLocationServiceable then GONE else VISIBLE
   , background "#F5F5F5"
   , gravity CENTER
-  ][  imageView
-      [ imageWithFallback "ny_ic_location_unserviceable,https://assets.juspay.in/nammayatri/images/user/ny_ic_location_unserviceable.png"
+  ][  imageView 
+      [ imageWithFallback $ "ny_ic_location_unserviceable," <> (getAssetStoreLink FunctionCall) <> "ny_ic_location_unserviceable.png"
       , height $ V 99
       , width $ V 133
       , margin $ (MarginBottom 20)
@@ -615,25 +602,21 @@ locationUnserviceableView state push =
       , height WRAP_CONTENT
       , gravity CENTER
       , margin (MarginBottom 10)
-      ][  textView
+      ][  textView $
           [ text (getString LOCATION_UNSERVICEABLE)
-          , textSize FontSize.a_18
           , color Color.black800
           , gravity CENTER
-          , fontStyle $ FontStyle.bold LanguageStyle
-          ]
+          ] <> FontStyle.h2 LanguageStyle
         ]
     , linearLayout
       [ width (V (EHC.screenWidth unit - 40 ))
       , height WRAP_CONTENT
       , gravity CENTER
-      ][  textView
+      ][  textView $
           [ text (getString  CURRENTLY_WE_ARE_LIVE_IN_)
-          , textSize FontSize.a_14
           , gravity CENTER
           , color Color.black700
-          , fontStyle $ FontStyle.regular LanguageStyle
-          ]
+          ] <> FontStyle.paragraphText LanguageStyle
         ]
   ]
 

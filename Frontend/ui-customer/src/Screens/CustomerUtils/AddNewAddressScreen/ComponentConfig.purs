@@ -31,6 +31,8 @@ import PrestoDOM (Length(..), Margin(..), Visibility(..))
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
 
 primaryButtonConfigConfirmLoc :: ST.AddNewAddressScreenState -> PrimaryButton.Config 
 primaryButtonConfigConfirmLoc state = let 
@@ -38,10 +40,9 @@ primaryButtonConfigConfirmLoc state = let
   primaryButtonConfig' = config 
     { textConfig 
       { text = (getString CONFIRM_LOCATION)
-      , color = Color.yellow900
-      , textSize = FontSize.a_16
+      , color = state.data.config.primaryTextColor
       }
-    , background = Color.black900
+    , background = state.data.config.primaryBackground
     , margin = (Margin 0 22 0 16)
     , id = "AddNewaddressConfirmLocationButton"
     }
@@ -59,13 +60,13 @@ genericHeaderConfig state = let
       , width = (V 25)
       , margin = (Margin 10 17 16 15)
       , visibility = VISIBLE
-      , imageUrl = if state.props.showSavePlaceView then "ny_ic_close_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_close_white.png" else "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png"
+      , imageUrl = if state.data.config.nyBrandingVisibility && (not state.props.showSavePlaceView) then config.prefixImageConfig.imageUrl 
+                    else if state.props.showSavePlaceView then if state.data.config.nyBrandingVisibility then "ny_ic_close,"<> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_close.png"
+                      else  "ny_ic_close_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_close_white.png" else config.prefixImageConfig.imageUrl
       }
     , textConfig {
         text = if state.props.showSavePlaceView then (getString FAVOURITE_LOCATION) else if state.props.editLocation then (getString EDIT_FAVOURITE) else (getString ADD_FAVOURITE)
-      , textSize = FontSize.a_18
-      , color = Color.white900
-      , fontStyle = FontStyle.semiBold LanguageStyle
+      , color = state.data.config.quoteListModel.textColor
       }
     , suffixImageConfig {
         visibility = GONE
@@ -81,24 +82,21 @@ primaryEditTextConfig state = let
         { color = Color.black800
         , singleLine = true
         , placeholder = (getString GIVE_THIS_LOCATION_A_NAME) 
-        , fontStyle = FontStyle.semiBold LanguageStyle
-        , textSize = FontSize.a_14
+        , textStyle = FontStyle.Body1
         , pattern = Just "[a-zA-Z0-9'‘’. ]*,30"
         , text = state.data.placeName
         }
       , background = Color.white900
       , topLabel
-        { textSize = FontSize.a_12
-        , text = (getString SAVE_AS)
+        { text = (getString SAVE_AS)
         , color = Color.black800
-        , fontStyle = FontStyle.medium LanguageStyle
+        , textStyle = FontStyle.Tags
         }
       , stroke = ("1,"<> Color.black500)
       , margin = (Margin 0 0 0 0)
       , id = (EHC.getNewIDWithTag "SaveAsEditText")
       , errorLabel 
         { text = (getString NAME_ALREADY_IN_USE)
-        , fontStyle = FontStyle.medium LanguageStyle
         , margin = (MarginTop 1)
         }
       , showErrorLabel = state.props.placeNameExists
@@ -111,11 +109,12 @@ primaryButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config 
       { textConfig{ text = if (state.props.editSavedLocation) then (getString CONFIRM_CHANGES) else (getString CONFIRM_AND_SAVE)
-      , textSize = FontSize.a_16 }
-      , margin = (MarginBottom 24)
+      , color = state.data.config.primaryTextColor }
+      , margin = MarginBottom 24
       , isClickable = (state.props.isBtnActive && state.props.isLocationServiceable && (not state.props.tagExists))
       , alpha = if (state.props.isBtnActive && state.props.isLocationServiceable && (not state.props.tagExists)) then 1.0 else 0.4
       , id = "AddNewAddressButton"
       , enableLoader = (JB.getBtnLoader "AddNewAddressButton")
+      , background = state.data.config.primaryBackground
       }
   in primaryButtonConfig'

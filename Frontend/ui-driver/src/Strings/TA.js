@@ -487,5 +487,6 @@ const tamilStrings = {
   CONGRATULATIONS_YOU_ARE_RANK : "வாழ்த்துகள் ! உங்கள் ரேங்க் ",
   YOU : " (நீங்கள்)",
   DAILY : "தினசரி",
-  WEEKLY : "வாரந்தோறும்"
+  WEEKLY : "வாரந்தோறும்",
+  NEW_ : "புதியது"
 }

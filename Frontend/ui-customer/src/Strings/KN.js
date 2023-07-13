@@ -88,8 +88,9 @@ const kannadaStrings = {
   "LANGUAGE": "ಭಾಷೆಗಳು",
   "OTP": "ಒತ್ತು",
   "PAYMENT_METHOD": "ಪಾವತಿ ವಿಧಾನ",
-  "PAYMENT_METHOD_STRING": "ನಗದು / ಯಾವುದೇ UPI ಅಪ್ಲಿಕೇಶನ್ ಬಳಸಿ",
-  "CANCEL_RIDE": "ಸವಾರಿ ರದ್ದುಗೊಳಿಸಿ",
+  "PAYMENT_METHOD_STRING": "ನಗದು / UPI ಅಪ್ಲಿಕೇಶನ್ ಬಳಸಿ",
+  "PAYMENT_METHOD_STRING_": "ನಗದು / UPI ಅಪ್ಲಿಕೇಶನ್ ಬಳಸಿ",
+  "CANCEL_RIDE": "ನನ್ನ ಸವಾರಿಯನ್ನು ರದ್ದುಮಾಡಿ",
   "SUPPORT": "ಬೆಂಬಲ",
   "PICKUP_AND_DROP": "ಪಿಕಪ್ ಮತ್ತು ಡ್ರಾಪ್",
   "CANCELLED": "ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ",
@@ -248,6 +249,7 @@ const kannadaStrings = {
   "RATE_YOUR_RIDE_WITH": " ಜೊತೆಗೆ ನಿಮ್ಮ ಸವಾರಿಯನ್ನು ರೇಟ್ ಮಾಡಿ",
   "VIEW_BREAKDOWN": "ವಿಭಜನೆಯನ್ನು ವೀಕ್ಷಿಸಿ",
   "PAY_DRIVER_USING_CASH_OR_UPI": "Cash/UPI ಬಳಸಿಕೊಂಡು ಚಾಲಕನಿಗೆ ಪಾವತಿಸಿ",
+  "PAY_DRIVER_USING_CASH_OR_UPI_": "Cash/UPI ಬಳಸಿಕೊಂಡು ಚಾಲಕನಿಗೆ ಪಾವತಿಸಿ",
   "RATE_YOUR_DRIVER": "ನಿಮ್ಮ ಡ್ರೈವರ್ ಅನ್ನು ರೇಟ್ ಮಾಡಿ",
   "MY_RIDES": "ನನ್ನ ಸವಾರಿಗಳು",
   "RIDE_ID": "ರೈಡ್ ಐಡಿ",
@@ -506,5 +508,8 @@ const kannadaStrings = {
   "CALL_NAMMA_YATRI_SUPPORT" : "ನಮ್ಮ ಯಾತ್ರಿ ಬೆಂಬಲಕ್ಕೆ ಕರೆ ಮಾಡಿ",
   "CALL_112": "112 ಗೆ ಕರೆ ಮಾಡಿ",
   "CALL_EMERGENCY_CENTRE": "ತುರ್ತು ಕೇಂದ್ರಕ್ಕೆ ಕರೆ ಮಾಡಿ",
-  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS" : "ವಿವರಣೆಯು 10 ಅಕ್ಷರಗಳಿಗಿಂತ ಹೆಚ್ಚು ಇರಬೇಕು"
+  "DESCRIPTION_SHOULD_BE_MORE_THAN_10_CHARACTERS" : "ವಿವರಣೆಯು 10 ಅಕ್ಷರಗಳಿಗಿಂತ ಹೆಚ್ಚು ಇರಬೇಕು",
+  "THIS_FIELD_IS_REQUIRED" : "ಈ ಜಾಗ ಬೇಕಾಗಿದೆ", 
+  "EMAIL_EXISTS_ALREADY" : "ಇಮೇಲ್ ಈಗಾಗಲೇ ಅಸ್ತಿತ್ವದಲ್ಲಿದೆ",
+  "PLATFORM_FEE" : "ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಶುಲ್ಕ"
 }

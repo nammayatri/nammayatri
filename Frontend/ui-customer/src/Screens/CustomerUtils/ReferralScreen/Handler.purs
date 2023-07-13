@@ -18,7 +18,7 @@ module Screens.ReferralScreen.Handler where
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
 import Engineering.Helpers.BackTrack (getState)
-import JBridge (toggleLoader)
+import Engineering.Helpers.Utils (toggleLoader)
 import ModifyScreenState (modifyScreenState)
 import Prelude (bind, discard, ($), (<$>), pure, void)
 import PrestoDOM.Core.Types.Language.Flow (runScreen)

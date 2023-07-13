@@ -31,6 +31,8 @@ import Styles.Colors as Color
 import Common.Types.App
 import Engineering.Helpers.Commons as EHC
 import Data.Maybe 
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Prelude ((<>))
 
 requestDeletePopUp :: ST.SavedLocationScreenState -> PopUpModal.Config 
 requestDeletePopUp state = let 
@@ -47,18 +49,15 @@ requestDeletePopUp state = let
         },
       option1 {
         text = (getString CANCEL_STR)
-      , fontSize = FontSize.a_16 
       , color = Color.black700
       , strokeColor = Color.black700
-      , fontStyle = FontStyle.semiBold LanguageStyle
       },
       option2 {text = (getString YES_REMOVE)
       , background = Color.red
       , color = Color.white900
       , strokeColor = Color.red
-      , fontSize = FontSize.a_16 
       , margin = (MarginLeft 12)
-      , fontStyle = FontStyle.semiBold LanguageStyle }
+      }
      
     }
   in popUpConfig'
@@ -70,18 +69,19 @@ primaryButtonConfig state = let
       { textConfig
         {
           text = (getString ADD_NEW_FAVOURITE)
-        , fontStyle = FontStyle.semiBold LanguageStyle
+        , color = state.data.config.primaryTextColor
         }
-      , margin = (Margin 16 15 16 if EHC.os == "IOS" then 0 else 24)
+      , margin = (Margin 16 0 16 if EHC.os == "IOS" then 0 else 24)
       , height = V 52
       , id = "AddNewAddressSavedLocationScreen"
       , enableLoader = (JB.getBtnLoader "AddNewAddressSavedLocationScreen")
+      , background = state.data.config.primaryBackground
       }
   in primaryButtonConfig'
 
 genericHeaderConfig :: ST.SavedLocationScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
-  config = GenericHeader.config
+  config = if state.data.config.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
   genericHeaderConfig' = config 
     {
       height = WRAP_CONTENT
@@ -90,19 +90,14 @@ genericHeaderConfig state = let
     , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
-      , margin = (Margin 12 12 12 12)
+      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
       } 
     , textConfig {
         text = (getString FAVOURITES)
-      , textSize = FontSize.a_18
-      , color = Color.black800
-      , fontStyle = FontStyle.semiBold LanguageStyle
       }
     , suffixImageConfig {
         visibility = GONE
       }
-    , padding = (Padding 0 5 0 5)
     }
   in genericHeaderConfig'
 
@@ -111,7 +106,7 @@ errorModalConfig state = let
   config = ErrorModal.config 
   errorModalConfig' = config 
     { imageConfig {
-        imageUrl = "ny_ic_no_saved_address,https://assets.juspay.in/nammayatri/images/user/ny_ic_no_saved_address.png"
+        imageUrl = "ny_ic_no_saved_address," <> (getAssetStoreLink FunctionCall) <> "ny_ic_no_saved_address.png"
       , height = V 110
       , width = V 124
       , margin = (MarginBottom 31)
@@ -120,25 +115,19 @@ errorModalConfig state = let
         text = (getString NO_FAVOURITES_SAVED_YET)
       , margin = (MarginBottom 7)  
       , color = Color.black900
-      , textSize = FontSize.a_18
-      , fontStyle = FontStyle.bold LanguageStyle
       }
     , errorDescriptionConfig {
         text = (getString SAVED_ADDRESS_HELPS_YOU_KEEP_YOUR_FAVOURITE_PLACES_HANDY)
       , color = Color.black700
-      , textSize = FontSize.a_14
       , margin = (Margin 33 0 33 0)
       , padding = (Padding 16 0 16 16)
-      , fontStyle =  FontStyle.regular LanguageStyle
       }
     , buttonConfig {
         text = (getString ADD_NEW_FAVOURITE)
       , margin = (Margin 16 0 16 if EHC.os == "IOS" then 0 else 24)
-      , background = Color.black900
       , height = V 52
-      , color = Color.yellow900
-      , fontStyle = FontStyle.semiBold LanguageStyle
-      , textSize = FontSize.a_16
+      , color = state.data.config.primaryTextColor
+      , background = state.data.config.primaryBackground
       }
     }
   in errorModalConfig' 

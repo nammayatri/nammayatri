@@ -16,7 +16,7 @@
 module Language.Strings where
 
 import Language.Types (STR, getKeyString)
-import Merchant.Utils (getStringFromConfig, getENStrings)
+import MerchantConfig.Utils (getStringFromConfig, getENStrings)
 import Prelude (($))
 import Data.String.Common (trim)
 

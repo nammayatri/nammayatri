@@ -40,6 +40,9 @@ import Data.Array (mapWithIndex)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants as RSRC
 import Components.StepsHeaderModel as StepsHeaderModel
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Common.Types.App (LazyCheck(..))
+import Prelude ((<>))
 
 
 screen :: ST.AccountSetUpScreenState -> Screen Action ST.AccountSetUpScreenState ScreenOutput
@@ -113,7 +116,7 @@ goBackPopUpView push state =
     , width MATCH_PARENT
     , gravity CENTER
     ]
-    [ PopUpModal.view (push <<< PopUpModalAction) goBackPopUpModelConfig ]
+    [ PopUpModal.view (push <<< PopUpModalAction) (goBackPopUpModelConfig state) ]
 
 ------------------------ emptyTextView ---------------------------
 emptyTextView :: forall w. PrestoDOM (Effect Unit) w
@@ -159,19 +162,18 @@ nameEditTextView state push =
           [ height MATCH_PARENT
           , width WRAP_CONTENT
           , weight 1.0
-          , textSize FontSize.a_16
           , padding $ Padding 20 15 20 15
           , color Color.black800
           , onChange push $ TextChanged
           , onFocus push $ const $ EditTextFocusChanged
           , gravity LEFT
           , cornerRadius 8.0
-          , fontStyle $ FontStyle.semiBold LanguageStyle
           , hint $ getString ENTER_YOUR_NAME
           , hintColor Color.black600
           , pattern "[a-zA-Z ]*,30"
           , id $ EHC.getNewIDWithTag "NameEditText"
-          ] <> if EHC.os == "IOS" then [] else [onClick push $ const NameSectionClick]
+          ] <> FontStyle.subHeading1 LanguageStyle 
+            <> if EHC.os == "IOS" then [] else [onClick push $ const NameSectionClick]
         ]
     , linearLayout 
         [ height $ V 18
@@ -219,17 +221,15 @@ genderCaptureView state push =
     , margin $ MarginTop 14
     , orientation VERTICAL
     ] $
-    [ textView
+    [ textView $
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , text $ getString GENDER_STR
       , color Color.black800
       , gravity LEFT
-      , fontStyle $ FontStyle.regular LanguageStyle
       , singleLine true
-      , textSize FontSize.a_12
       , margin $ MarginBottom 12
-      ]
+      ] <> FontStyle.body3 TypoGraphy
     , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -239,21 +239,19 @@ genderCaptureView state push =
         , stroke if state.props.activeField == Just ST.DropDown then "1,"<> Color.blue800 else "1,"<> Color.borderColorLight
         , gravity CENTER_VERTICAL
         ]
-        [ textView
+        [ textView $
           [ text $ RSRC.getGender state.data.gender (getString SELECT_YOUR_GENDER)
-          , textSize FontSize.a_16
-          , fontStyle $ FontStyle.semiBold LanguageStyle
           , height WRAP_CONTENT
           , width WRAP_CONTENT
           , color if state.data.gender == Nothing then Color.black600 else Color.black800
-          ]
+          ] <> FontStyle.subHeading1 TypoGraphy
         , linearLayout
             [ height WRAP_CONTENT
             , weight 1.0
             , gravity RIGHT
             ]
             [ imageView
-              [ imageWithFallback if state.props.genderOptionExpanded then "ny_ic_chevron_up,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_up.png" else "ny_ic_chevron_down,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_down.png"
+              [ imageWithFallback $ if state.props.genderOptionExpanded then "ny_ic_chevron_up," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_up.png" else "ny_ic_chevron_down," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_down.png"
               , height $ V 24
               , width $ V 15
               ]
@@ -292,13 +290,11 @@ genderOptionsView state push =
         , onClick push $ const $ GenderSelected item.value
         , orientation VERTICAL
         ]
-        [ textView
+        [ textView $
           [ text item.text
-          , textSize FontSize.a_14
-          , fontStyle $ FontStyle.regular LanguageStyle
           , color Color.black900
           , margin $ Margin 16 15 16 15
-          ]
+          ] <> FontStyle.paragraphText TypoGraphy
         , linearLayout
           [ height $ V 1
           , width MATCH_PARENT
