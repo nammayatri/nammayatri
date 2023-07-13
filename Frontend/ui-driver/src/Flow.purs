@@ -78,7 +78,6 @@ baseAppFlow baseFlow = do
     (GlobalState state) <- getState
     versionCode <- lift $ lift $ liftFlow $ getVersionCode
     checkVersion versionCode
-    checkDateAndTime unit
     cacheAppParameters versionCode
     when baseFlow $ void $ UI.splashScreen state.splashScreen
     let regToken = getValueToLocalStore REGISTERATION_TOKEN
