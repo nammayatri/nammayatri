@@ -74,11 +74,17 @@ mkOnSelectMessage req@DOnSelectReq {..} = do
       -- add_ons = []
       payment =
         OS.Payment
-          { collected_by = "BPP",
+          { params =
+              OS.PaymentParams
+                { collected_by = OS.BPP,
+                  instrument = Nothing,
+                  currency = Nothing,
+                  amount = Nothing
+                },
             _type = OS.ON_FULFILLMENT,
-            time = OS.TimeDuration "P2A" -- FIXME: what is this?
+            time = OS.TimeDuration "P2A",
+            uri = Nothing
           }
-
   let provider =
         OS.Provider
           { id = driverQuote.driverId.getId

@@ -15,14 +15,12 @@
 module Beckn.ACL.OnSearch where
 
 import Beckn.ACL.Common (getTag, validatePrices)
-import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
 import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..))
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Types.Estimate as DEstimate
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Domain.Types.OnSearchEvent
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (find, id, state, unpack)
@@ -81,14 +79,6 @@ searchCbService context catalog = do
       { requestId = Id context.message_id,
         ..
       }
-  where
-    mkPayment OnSearch.Payment {..} =
-      params.instrument <&> \instrument' -> do
-        DMPM.PaymentMethodInfo
-          { collectedBy = Common.castPaymentCollector params.collected_by,
-            paymentType = Common.castPaymentType _type,
-            paymentInstrument = Common.castPaymentInstrument instrument'
-          }
 
 logOnSearchEvent :: EsqDBFlow m r => OnSearch.OnSearchReq -> m ()
 logOnSearchEvent (BecknCallbackReq context (leftToMaybe -> mbErr)) = do
