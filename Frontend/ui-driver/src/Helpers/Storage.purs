@@ -65,6 +65,7 @@ data KeyStore = USER_NAME
                 | SESSION_ID
                 | PROFILE_DEMO
                 | SET_ALTERNATE_TIME
+                | NEGOTIATION_UNIT
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where
