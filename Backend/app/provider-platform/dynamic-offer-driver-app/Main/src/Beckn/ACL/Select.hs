@@ -14,6 +14,7 @@
 
 module Beckn.ACL.Select (buildSelectReq) where
 
+import Beckn.ACL.Common (getTag)
 import qualified Beckn.Types.Core.Taxi.API.Select as Select
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Select
 import qualified Data.Text as T
@@ -62,10 +63,11 @@ buildSelectReq subscriber req = do
         estimateId = Id order.fulfillment.id
       }
 
-getCustomerExtraFee :: [Select.TagGroup] -> Maybe Money
+getCustomerExtraFee :: Select.TagGroups -> Maybe Money
 getCustomerExtraFee tagGroups = do
-  tagGroup <- find (\tagGroup -> tagGroup.code == "customer_tip_info") tagGroups
-  tag <- find (\tag -> tag.code == Just "customer_tip") tagGroup.list
-  tagValue <- tag.value
+  tagValue <- getTag "customer_tip_info" "customer_tip" tagGroups
+  -- tagGroup <- find (\tagGroup -> tagGroup.code == "customer_tip_info") tagGroups
+  -- tag <- find (\tag -> tag.code == Just "customer_tip") tagGroup.list
+  -- tagValue <- tag.value
   customerExtraFee <- readMaybe $ T.unpack tagValue
   Just $ Money customerExtraFee

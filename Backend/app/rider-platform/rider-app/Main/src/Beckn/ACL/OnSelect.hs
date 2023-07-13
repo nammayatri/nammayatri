@@ -43,7 +43,7 @@ buildOnSelectReq req = do
     providerUrl <- context.bpp_uri & fromMaybeM (InvalidRequest "Missing bpp_uri")
     -- let provider = message.order.provider
     let items = message.order.items
-    quotesInfo <- traverse (buildQuoteInfo message.order.fulfillment) items
+    quotesInfo <- traverse (buildQuoteInfo message.order.fulfillment message.order.quote) items
     let providerInfo =
           DOnSelect.ProviderInfo
             { providerId = providerId,
@@ -74,13 +74,14 @@ handleError etr action =
 buildQuoteInfo ::
   (MonadThrow m, Log m) =>
   OnSelect.FulfillmentInfo ->
+  OnSelect.Quote ->
   OnSelect.Item ->
   m DOnSelect.QuoteInfo
-buildQuoteInfo fulfillment item = do
+buildQuoteInfo fulfillment quote item = do
   quoteDetails <- case fulfillment._type of
     -- OnSelect.ONE_WAY_TRIP -> throwError $ InvalidRequest "select not supported for one way trip"
     -- OnSelect.RENTAL_TRIP -> throwError $ InvalidRequest "select not supported for rental trip"
-    OnSelect.RIDE -> buildDriverOfferQuoteDetails item fulfillment
+    OnSelect.RIDE -> buildDriverOfferQuoteDetails item fulfillment quote
     -- OnSelect.DRIVER_OFFER -> buildDriverOfferQuoteDetails item
     -- OnSelect.DRIVER_OFFER_ESTIMATE -> throwError $ InvalidRequest "Estimates are only supported in on_search"
     OnSelect.RIDE_OTP -> throwError $ InvalidRequest "select not supported for ride otp trip"
@@ -111,14 +112,15 @@ buildDriverOfferQuoteDetails ::
   (MonadThrow m, Log m) =>
   OnSelect.Item ->
   OnSelect.FulfillmentInfo ->
+  OnSelect.Quote ->
   m DOnSelect.DriverOfferQuoteDetails
-buildDriverOfferQuoteDetails item fulfillment = do
+buildDriverOfferQuoteDetails item fulfillment quote = do
   driverName <- fulfillment.agent.name & fromMaybeM (InvalidRequest "Missing driver_name in driver offer select item")
   durationToPickup <- getDurationToPickup fulfillment.agent.tags & fromMaybeM (InvalidRequest "Missing duration_to_pickup in driver offer select item")
   distanceToPickup' <- (getDistanceToNearestDriver =<< item.tags) & fromMaybeM (InvalidRequest "Trip type is DRIVER_OFFER, but distance_to_nearest_driver is Nothing")
   -- (item.tags <&> (.distance_to_nearest_driver))
   --   & fromMaybeM (InvalidRequest "Trip type is DRIVER_OFFER, but distance_to_nearest_driver is Nothing")
-  validTill <- item.valid_till & fromMaybeM (InvalidRequest "Missing valid_till in driver offer select item")
+  validTill <- (getQuoteValidTill =<< quote.ttl) & fromMaybeM (InvalidRequest "Missing valid_till in driver offer select item")
   let rating = getDriverRating fulfillment.agent.tags
   bppQuoteId <- (getTag "general_info" "bpp_quote_id" =<< item.tags) & fromMaybeM (InvalidRequest "Missing bpp quoteId select item")
   pure $
@@ -131,7 +133,7 @@ buildDriverOfferQuoteDetails item fulfillment = do
 -- getDriverName :: OnSelect.Agent -> Maybe Text
 -- getDriverName agent = (.name) =<< fulfillment.agent
 
-getDriverRating :: [OnSelect.TagGroup] -> Maybe Centesimal
+getDriverRating :: OnSelect.TagGroups -> Maybe Centesimal
 getDriverRating tagGroups = do
   -- tagGroup <- find (\tagGroup -> tagGroup.code == "agent_info") tagGroups
   -- tag <- find (\tag -> tag.code == Just "rating") tagGroup.list
@@ -139,24 +141,33 @@ getDriverRating tagGroups = do
   driverRating <- readMaybe $ T.unpack tagValue
   Just $ Centesimal driverRating
 
-getDurationToPickup :: [OnSelect.TagGroup] -> Maybe Int
+getQuoteValidTill :: Text -> Maybe UTCTime
+getQuoteValidTill time = readMaybe $ T.unpack time
+
+-- -- tagGroup <- find (\tagGroup -> tagGroup.code == "agent_info") tagGroups
+-- -- tag <- find (\tag -> tag.code == Just "rating") tagGroup.list
+-- tagValue <- getTag "agent_info" "rating" tagGroups
+-- driverRating <- readMaybe $ T.unpack tagValue
+-- Just $ Centesimal driverRating
+
+getDurationToPickup :: OnSelect.TagGroups -> Maybe Int
 getDurationToPickup tagGroups = do
   -- tagGroup <- find (\tagGroup -> tagGroup.code == "agent_info") tagGroups
   -- tag <- find (\tag -> tag.code == Just "duration_to_pickup_in_s") tagGroup.list
   tagValue <- getTag "agent_info" "duration_to_pickup_in_s" tagGroups
   readMaybe $ T.unpack tagValue
 
-getDistanceToNearestDriver :: [OnSelect.TagGroup] -> Maybe Meters
+getDistanceToNearestDriver :: OnSelect.TagGroups -> Maybe Meters
 getDistanceToNearestDriver tagGroups = do
   tagValue <- getTag "general_info" "distance_to_nearest_driver_in_m" tagGroups
   distanceToPickup <- readMaybe $ T.unpack tagValue
   Just $ Meters distanceToPickup
 
-getTag :: Text -> Text -> [OnSelect.TagGroup] -> Maybe Text
-getTag tagGroupCode tagCode tagGroups = do
-  tagGroup <- find (\tagGroup -> tagGroup.code == tagGroupCode) tagGroups
-  tag <- find (\tag -> tag.code == Just tagCode) tagGroup.list
-  tag.value
+-- getTag :: Text -> Text -> OnSelect.TagGroups -> Maybe Text
+-- getTag tagGroupCode tagCode tagGroups = do
+--   tagGroup <- find (\tagGroup -> tagGroup.code == tagGroupCode) tagGroups
+--   tag <- find (\tag -> tag.code == Just tagCode) tagGroup.list
+--   tag.value
 
 -- getBppQuoteId :: [OnSelect.TagGroup] -> Maybe Text
 -- getBppQuoteId tagGroups = do

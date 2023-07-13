@@ -30,7 +30,7 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 data Agent = Agent
   { name :: Maybe Text,
     rateable :: Maybe Bool,
-    tags :: [TagGroup]
+    tags :: TagGroups
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 

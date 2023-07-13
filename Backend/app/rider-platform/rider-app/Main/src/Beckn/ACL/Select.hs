@@ -61,7 +61,7 @@ buildOrder res = do
                 { currency = "INR",
                   value = show res.estimate.estimatedFare.getMoney
                 },
-            tags = if isJust res.customerExtraFee then Just [mkCustomerTipTags] else Nothing
+            tags = if isJust res.customerExtraFee then Just $ Select.TG [mkCustomerTipTags] else Nothing
           }
   -- breakups =
   --   catMaybes

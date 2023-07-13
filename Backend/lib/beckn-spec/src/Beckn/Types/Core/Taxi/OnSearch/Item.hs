@@ -39,7 +39,7 @@ data Item = Item
     descriptor :: ItemDescriptor,
     -- quote_terms :: [Text],
     -- Only when FareProductType.ONE_WAY_TRIP
-    tags :: Maybe [TagGroup]
+    tags :: Maybe TagGroups
     -- Only when FareProductType.RENTAL_TRIP
     -- base_distance :: Maybe Kilometers,
     -- base_duration :: Maybe Hours
