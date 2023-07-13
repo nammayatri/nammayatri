@@ -76,7 +76,7 @@ module Types.DBSync.Create where
 -- import qualified "dynamic-offer-driver-app" Storage.Beam.Vehicle as Vehicle
 
 import EulerHS.Prelude
-import Storage.Beam.RegistrationToken
+-- import Storage.Beam.RegistrationToken
 import qualified "dynamic-offer-driver-app" Storage.Beam.RegistrationToken as RegistrationToken
 
 -- import Euler.DB.Storage.Types
@@ -265,7 +265,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.RegistrationToken as Re
 --   deriving (Generic, FromJSON, ToJSON, Show)
 
 newtype DBCreateObject
-  = RegistrationTokenObject RegistrationToken
+  = RegistrationTokenObject RegistrationToken.RegistrationToken
   deriving (Generic, FromJSON, ToJSON, Show)
 
 -- -- Convert database storage types into DBObject types

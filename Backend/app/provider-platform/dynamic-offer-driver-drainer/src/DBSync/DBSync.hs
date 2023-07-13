@@ -15,16 +15,16 @@ import DBSync.Update
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.HashMap.Strict as HM
-import qualified Data.IORef as IORef
+-- import qualified Data.IORef as IORef
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DTE
 import qualified Data.Vector as V
 import qualified Database.Redis as R
 -- import Euler.WebService.Logging
-import qualified EulerHS.Interpreters as R
+-- import qualified EulerHS.Interpreters as R
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (fail, id, succ)
-import qualified EulerHS.Runtime as R
+-- import qualified EulerHS.Runtime as R
 import qualified EulerHS.Types as ET
 import GHC.Float (int2Double)
 import System.Posix.Signals (Handler (Catch), installHandler, sigINT, sigTERM)

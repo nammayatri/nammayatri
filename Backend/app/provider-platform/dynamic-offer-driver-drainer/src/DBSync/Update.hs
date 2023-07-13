@@ -15,7 +15,7 @@ import EulerHS.Types as ET
 -- import           Utils.Logging
 
 import Sequelize (Model, Set, Where)
-import System.CPUTime
+-- import System.CPUTime
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils

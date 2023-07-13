@@ -90,26 +90,24 @@ main = do
 
   bracket (async NW.runMetricServer) cancel $ \_ -> do
     R.withFlowRuntime (Just loggerRt) $
-      ( \_config flowRt' -> do
+      ( \_config flowRt -> do
           putStrLn @String "Initializing DB and KV Connections..."
-          let loggerRuntime = R._loggerRuntime $ R._coreRuntime flowRt'
-          R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
-            runFlow
-              flowRt
-              ( prepareConnection $
-                  ConnectionConfig
-                    { esqDBCfg = appCfg.esqDBCfg,
-                      esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
-                      hedisClusterCfg = appCfg.hedisClusterCfg
-                    }
-              )
-            -- Left (e :: SomeException) -> putStrLn @String ("Exception thrown while running dbConfig: " <> show e)
-            -- Right _ -> do
-            dbSyncMetric <- Event.mkDBSyncMetric
-            let environment = Env (T.pack C.kvRedis) dbSyncMetric
-            threadPerPodCount <- Env.getThreadPerPodCount
-            -- handle graceful shutdown of threads
-            -- DBSync.spawnDrainerThread threadPerPodCount flowRt' environment
-            R.runFlow flowRt' (runReaderT DBSync.startDBSync environment)
+          runFlow
+            flowRt
+            ( prepareConnection $
+                ConnectionConfig
+                  { esqDBCfg = appCfg.esqDBCfg,
+                    esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
+                    hedisClusterCfg = appCfg.hedisClusterCfg
+                  }
+            )
+          -- Left (e :: SomeException) -> putStrLn @String ("Exception thrown while running dbConfig: " <> show e)
+          -- Right _ -> do
+          dbSyncMetric <- Event.mkDBSyncMetric
+          let environment = Env (T.pack C.kvRedis) dbSyncMetric
+          threadPerPodCount <- Env.getThreadPerPodCount
+          -- handle graceful shutdown of threads
+          -- DBSync.spawnDrainerThread threadPerPodCount flowRt' environment
+          R.runFlow flowRt (runReaderT DBSync.startDBSync environment)
       )
         config

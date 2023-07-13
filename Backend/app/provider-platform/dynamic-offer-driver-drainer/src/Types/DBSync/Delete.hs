@@ -5,7 +5,7 @@ module Types.DBSync.Delete where
 import Data.Aeson as A
 import Data.Aeson.Types (Parser)
 import qualified Data.Text as T
-import Database.Beam.MySQL (MySQL)
+-- import Database.Beam.MySQL (MySQL)
 import Database.Beam.Postgres (Postgres)
 -- import Euler.DB.Storage.Types
 --   ( AgencyT,

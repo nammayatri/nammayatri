@@ -10,7 +10,7 @@ import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (id)
 -- import           Utils.Logging
 
-import System.CPUTime
+-- import System.CPUTime
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils

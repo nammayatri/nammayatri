@@ -1,6 +1,6 @@
 module DBSync.Create where
 
-import Config.Config as Config
+-- import Config.Config as Config
 import Config.Env
 -- import Utils.Logging
 
@@ -11,8 +11,8 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Types as ET
 import qualified Kernel.Beam.Types as KBT
-import Storage.Beam.RegistrationToken as BeamRT
-import System.CPUTime
+-- import Storage.Beam.RegistrationToken as BeamRT
+-- import System.CPUTime
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils

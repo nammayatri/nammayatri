@@ -87,9 +87,10 @@ tryRateLimiter n window history now count =
    in (history', if length history' < n then 0 else waitMs)
 
 publishDBSyncMetric :: DBSyncMetric -> Flow ()
-publishDBSyncMetric metric = do
-  environment <- ask
-  L.runIO $ pubDBSyncMetric (_counterHandles environment) metric
+publishDBSyncMetric _ = pure ()
+
+-- environment <- ask
+-- L.runIO $ pubDBSyncMetric (_counterHandles environment) metric
 
 publishDrainLatency :: Text -> L.KVDBStreamEntryID -> Flow ()
 publishDrainLatency action (L.KVDBStreamEntryID id _) = do

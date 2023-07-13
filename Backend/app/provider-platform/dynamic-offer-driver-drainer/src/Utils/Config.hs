@@ -6,7 +6,8 @@ import EulerHS.Prelude
 import Types.Config
 import Types.DBSync
 import Utils.Redis
-import Prelude
+
+-- import Prelude
 
 getDBSyncConfig :: Flow (Either Text DBSyncConfig)
 getDBSyncConfig = runExceptT $ do
