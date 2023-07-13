@@ -17,13 +17,11 @@ module Domain.Types.DriverBlockReason where
 
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
-
-newtype BlockReasonCode = BlockReasonCode Text
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+import Kernel.Types.Id
 
 data DriverBlockReason = DriverBlockReason
-  { reasonCode :: BlockReasonCode,
+  { reasonCode :: Id DriverBlockReason,
     blockReason :: Maybe Text,
     blockTimeInHours :: Maybe Int
   }
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)

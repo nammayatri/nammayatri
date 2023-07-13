@@ -64,8 +64,8 @@ updateBlockedState driverId isBlocked = do
 
 updateDynamicBlockedState :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Maybe Text -> Maybe Int -> Bool -> m ()
 updateDynamicBlockedState driverId blockedReason blockExpiryTime isBlocked = do
-  clearDriverInfoCache driverId
   Esq.runNoTransaction $ Queries.updateDynamicBlockedState driverId blockedReason blockExpiryTime isBlocked
+  clearDriverInfoCache driverId
 
 verifyAndEnableDriver :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person -> m ()
 verifyAndEnableDriver driverId = do

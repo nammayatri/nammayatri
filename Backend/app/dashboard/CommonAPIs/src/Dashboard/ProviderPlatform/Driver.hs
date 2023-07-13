@@ -300,7 +300,7 @@ type BlockDriverAPI =
     :> Post '[JSON] APISuccess
 
 data BlockDriverReq = BlockDriverReq
-  { code :: BlockReasonCode,
+  { code :: Text,
     blockReason :: Maybe Text,
     blockTimeInHours :: Maybe Int
   }
@@ -314,15 +314,12 @@ type DriverBlockReasonListAPI =
   "blockReasonList"
     :> Get '[JSON] [BlockReason]
 
-newtype BlockReasonCode = BlockReasonCode Text
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
-
 data BlockReason = BlockReason
-  { reasonCode :: BlockReasonCode,
+  { reasonCode :: Id BlockReason,
     blockReason :: Maybe Text,
     blockTimeInHours :: Maybe Int
   }
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
 ---------------------------------------------------------
 -- unblock driver ---------------------------------------

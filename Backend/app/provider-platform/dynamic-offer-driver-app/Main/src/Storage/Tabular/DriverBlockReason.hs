@@ -20,9 +20,11 @@
 
 module Storage.Tabular.DriverBlockReason where
 
+import qualified Dashboard.ProviderPlatform.Driver as Domain
 import qualified Domain.Types.DriverBlockReason as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
 
 mkPersist
   defaultSqlSettings
@@ -36,21 +38,21 @@ mkPersist
     |]
 
 instance TEntityKey DriverBlockReasonT where
-  type DomainKey DriverBlockReasonT = Domain.BlockReasonCode
-  fromKey (DriverBlockReasonTKey _id) = Domain.BlockReasonCode _id
-  toKey (Domain.BlockReasonCode id) = DriverBlockReasonTKey id
+  type DomainKey DriverBlockReasonT = Id Domain.BlockReason
+  fromKey (DriverBlockReasonTKey _id) = Id _id
+  toKey (Id id) = DriverBlockReasonTKey id
 
 instance FromTType DriverBlockReasonT Domain.DriverBlockReason where
   fromTType DriverBlockReasonT {..} = do
     return $
       Domain.DriverBlockReason
-        { reasonCode = Domain.BlockReasonCode reasonCode,
+        { reasonCode = Id reasonCode,
           ..
         }
 
 instance ToTType DriverBlockReasonT Domain.DriverBlockReason where
   toTType Domain.DriverBlockReason {..} =
     DriverBlockReasonT
-      { reasonCode = let (Domain.BlockReasonCode rc) = reasonCode in rc,
+      { reasonCode = getId reasonCode,
         ..
       }

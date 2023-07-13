@@ -325,8 +325,7 @@ convertToBlockReasonList = map convertToCommon
 convertToCommon :: DBR.DriverBlockReason -> Common.BlockReason
 convertToCommon res =
   Common.BlockReason
-    { reasonCode = case res.reasonCode of
-        DBR.BlockReasonCode txt -> Common.BlockReasonCode txt,
+    { reasonCode = cast res.reasonCode,
       blockReason = res.blockReason,
       blockTimeInHours = res.blockTimeInHours
     }
