@@ -28,6 +28,7 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.RemoteException;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -47,6 +48,9 @@ import androidx.work.WorkManager;
 
 import com.airbnb.lottie.LottieAnimationView;
 import com.clevertap.android.sdk.CleverTapAPI;
+import com.android.installreferrer.api.InstallReferrerClient;
+import com.android.installreferrer.api.InstallReferrerStateListener;
+import com.android.installreferrer.api.ReferrerDetails;
 import com.google.android.gms.ads.identifier.AdvertisingIdClient;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
@@ -264,6 +268,8 @@ public class MainActivity extends AppCompatActivity {
         Bundle params = new Bundle();
         params.putString("id", androidId);
         mFirebaseAnalytics.logEvent("device_id", params);
+        String refCall = sharedPref.getString("REFERRER_DATA", "PENDING");
+        if (refCall == "PENDING")referrerData();
         widgetService = new Intent(this, WidgetService.class);
         FirebaseDynamicLinks.getInstance()
                 .getDynamicLink(getIntent())
@@ -749,5 +755,39 @@ public class MainActivity extends AppCompatActivity {
         }
         oldSharedPref.edit().clear().apply();
         return true;
+    }
+
+    public void referrerData() {
+        InstallReferrerClient referrerClient;
+        referrerClient = InstallReferrerClient.newBuilder(this).build();
+        referrerClient.startConnection(new InstallReferrerStateListener() {
+            @Override
+            public void onInstallReferrerSetupFinished(int responseCode) {
+                try {
+                    switch (responseCode) {
+                        case InstallReferrerClient.InstallReferrerResponse.OK:
+                            ReferrerDetails response = referrerClient.getInstallReferrer();
+                            if(response != null) {
+                                String referrerUrl = response.getInstallReferrer();
+                                sharedPref.edit().putString("REFERRER_URL", referrerUrl).apply();
+                                sharedPref.edit().putString("REFERRER_DATA", "NATIVE_SUCCESS").apply();
+                            }
+                            else sharedPref.edit().putString("REFERRER_DATA", "NATIVE_FAILED").apply();
+                        case InstallReferrerClient.InstallReferrerResponse.FEATURE_NOT_SUPPORTED:
+                            // API not available on the current Play Store app.
+                            break;
+                        case InstallReferrerClient.InstallReferrerResponse.SERVICE_UNAVAILABLE:
+                            // Connection couldn't be established.
+                            break;
+                    }
+                } catch (RemoteException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            @Override
+            public void onInstallReferrerServiceDisconnected() {
+
+            }
+        });
     }
 }
