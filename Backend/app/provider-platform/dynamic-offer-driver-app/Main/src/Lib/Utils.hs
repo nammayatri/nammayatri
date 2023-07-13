@@ -412,7 +412,7 @@ setMeshConfig' modelName meshConfig' = meshConfig' {meshEnabled = modelName `ele
 
 class
   FromTType' t a
-    | a -> t
+    | t -> a
   where
   fromTType' :: (MonadThrow m, Log m, L.MonadFlow m) => t -> m (Maybe a)
 
@@ -423,14 +423,14 @@ class
   toTType' :: a -> t
 
 findOneWithKV ::
-  forall be table beM m a.
+  forall table m a.
   ( HasCallStack,
     FromTType' (table Identity) a,
-    BeamRuntime be beM,
-    B.HasQBuilder be,
-    BeamRunner beM,
-    Model be table,
-    MeshMeta be table,
+    BeamRuntime Postgres Pg,
+    B.HasQBuilder Postgres,
+    BeamRunner Pg,
+    Model Postgres table,
+    MeshMeta Postgres table,
     KVConnector (table Identity),
     FromJSON (table Identity),
     ToJSON (table Identity),
@@ -440,27 +440,28 @@ findOneWithKV ::
     Log m,
     MonadThrow m
   ) =>
-  DBConfig beM ->
-  Where be table ->
+  -- DBConfig beM ->
+  Where Postgres table ->
   m (Maybe a)
 -- m (Maybe (table Identity))
-findOneWithKV dbConf where' = do
+findOneWithKV where' = do
   let updatedMeshConfig = setMeshConfig' (modelTableName @table) meshConfig
-  result <- KV.findWithKVConnector dbConf updatedMeshConfig where'
+  dbConf' <- getMasterDBConfig'
+  result <- KV.findWithKVConnector dbConf' updatedMeshConfig where'
   case result of
     Right (Just res) -> fromTType' res
     Right Nothing -> pure Nothing
     Left err -> throwError $ InternalError $ show err
 
 findAllWithKV ::
-  forall be table beM m a.
+  forall table m a.
   ( HasCallStack,
     FromTType' (table Identity) a,
-    BeamRuntime be beM,
-    B.HasQBuilder be,
-    BeamRunner beM,
-    Model be table,
-    MeshMeta be table,
+    BeamRuntime Postgres Pg,
+    B.HasQBuilder Postgres,
+    BeamRunner Pg,
+    Model Postgres table,
+    MeshMeta Postgres table,
     KVConnector (table Identity),
     FromJSON (table Identity),
     ToJSON (table Identity),
@@ -470,13 +471,14 @@ findAllWithKV ::
     Log m,
     MonadThrow m
   ) =>
-  DBConfig beM ->
-  Where be table ->
+  -- DBConfig beM ->
+  Where Postgres table ->
   m [a]
 -- m (Maybe (table Identity))
-findAllWithKV dbConf where' = do
+findAllWithKV where' = do
   let updatedMeshConfig = setMeshConfig' (modelTableName @table) meshConfig
-  result <- KV.findAllWithKVConnector dbConf updatedMeshConfig where'
+  dbConf' <- getMasterDBConfig'
+  result <- KV.findAllWithKVConnector dbConf' updatedMeshConfig where'
   case result of
     Right res -> do
       res' <- mapM fromTType' res
@@ -484,14 +486,14 @@ findAllWithKV dbConf where' = do
     Left err -> throwError $ InternalError $ show err
 
 findAllWithOptionsKV ::
-  forall be table beM m a.
+  forall table m a.
   ( HasCallStack,
     FromTType' (table Identity) a,
-    BeamRuntime be beM,
-    B.HasQBuilder be,
-    BeamRunner beM,
-    Model be table,
-    MeshMeta be table,
+    BeamRuntime Postgres Pg,
+    B.HasQBuilder Postgres,
+    BeamRunner Pg,
+    Model Postgres table,
+    MeshMeta Postgres table,
     KVConnector (table Identity),
     FromJSON (table Identity),
     ToJSON (table Identity),
@@ -501,15 +503,16 @@ findAllWithOptionsKV ::
     Log m,
     MonadThrow m
   ) =>
-  DBConfig beM ->
-  Where be table ->
+  -- DBConfig beM ->
+  Where Postgres table ->
   OrderBy table ->
   Maybe Int ->
   Maybe Int ->
   m [a]
 -- m (Maybe (table Identity))
-findAllWithOptionsKV dbConf where' orderBy mbLimit mbOffset = do
+findAllWithOptionsKV where' orderBy mbLimit mbOffset = do
   let updatedMeshConfig = setMeshConfig' (modelTableName @table) meshConfig
+  dbConf <- getMasterDBConfig'
   result <- KV.findAllWithOptionsKVConnector dbConf updatedMeshConfig where' orderBy mbLimit mbOffset
   case result of
     Right res -> do
@@ -518,15 +521,15 @@ findAllWithOptionsKV dbConf where' orderBy mbLimit mbOffset = do
     Left err -> throwError $ InternalError $ show err
 
 updateWithKV ::
-  forall be table beM m.
+  forall table m.
   ( HasCallStack,
     -- FromTType' (table Identity) a,
-    BeamRuntime be beM,
-    SqlReturning beM be,
-    B.HasQBuilder be,
-    BeamRunner beM,
-    Model be table,
-    MeshMeta be table,
+    BeamRuntime Postgres Pg,
+    SqlReturning Pg Postgres,
+    B.HasQBuilder Postgres,
+    BeamRunner Pg,
+    Model Postgres table,
+    MeshMeta Postgres table,
     KVConnector (table Identity),
     FromJSON (table Identity),
     ToJSON (table Identity),
@@ -536,28 +539,29 @@ updateWithKV ::
     Log m,
     MonadThrow m
   ) =>
-  DBConfig beM ->
-  [Set be table] ->
-  Where be table ->
+  -- DBConfig beM ->
+  [Set Postgres table] ->
+  Where Postgres table ->
   m ()
 -- m (Maybe (table Identity))
-updateWithKV dbConf setClause whereClause = do
+updateWithKV setClause whereClause = do
   let updatedMeshConfig = setMeshConfig' (modelTableName @table) meshConfig
+  dbConf <- getMasterDBConfig'
   res <- KV.updateWoReturningWithKVConnector dbConf updatedMeshConfig setClause whereClause
   case res of
     Right _ -> pure ()
     Left err -> throwError $ InternalError $ show err
 
 createWithKV ::
-  forall be table beM m a.
+  forall table m a.
   ( HasCallStack,
     ToTType' (table Identity) a,
-    SqlReturning beM be,
-    BeamRuntime be beM,
-    B.HasQBuilder be,
-    BeamRunner beM,
-    Model be table,
-    MeshMeta be table,
+    SqlReturning Pg Postgres,
+    BeamRuntime Postgres Pg,
+    B.HasQBuilder Postgres,
+    BeamRunner Pg,
+    Model Postgres table,
+    MeshMeta Postgres table,
     KVConnector (table Identity),
     FromJSON (table Identity),
     ToJSON (table Identity),
@@ -567,13 +571,14 @@ createWithKV ::
     Log m,
     MonadThrow m
   ) =>
-  DBConfig beM ->
+  -- DBConfig Pg ->
   a ->
   m ()
-createWithKV dbConf a = do
+createWithKV a = do
   let tType = toTType' a
       updatedMeshConfig = setMeshConfig' (modelTableName @table) meshConfig
-  result <- KV.createWoReturingKVConnector dbConf updatedMeshConfig tType
+  dbConf' <- getMasterDBConfig'
+  result <- KV.createWoReturingKVConnector dbConf' updatedMeshConfig tType
   case result of
     Right _ -> pure ()
     Left err -> throwError $ InternalError $ show err

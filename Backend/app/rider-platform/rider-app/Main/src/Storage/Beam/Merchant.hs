@@ -149,13 +149,13 @@ instance ToJSON Merchant where
 
 deriving stock instance Show Merchant
 
-fromFieldSlot ::
-  DPSF.Field ->
-  Maybe ByteString ->
-  DPSF.Conversion [Domain.Slot]
-fromFieldSlot f mbValue = case mbValue of
-  Nothing -> T.trace ("eturned nothing in fromFieldSlot") $ DPSF.returnError DPSF.UnexpectedNull f mempty
-  Just _ -> V.toList <$> fromField f mbValue
+-- fromFieldSlot ::
+--   DPSF.Field ->
+--   Maybe ByteString ->
+--   DPSF.Conversion [Domain.Slot]
+-- fromFieldSlot f mbValue = case mbValue of
+--   Nothing -> T.trace ("eturned nothing in fromFieldSlot") $ DPSF.returnError DPSF.UnexpectedNull f mempty
+--   Just _ -> V.toList <$> fromField f mbValue
 
 -- fromFieldEnumDbSlot ::
 --   DPSF.Field ->
@@ -164,15 +164,15 @@ fromFieldSlot f mbValue = case mbValue of
 -- fromFieldEnumDbSlot = fromFieldJSON
 
 fromFieldJSON' ::
-  (Typeable a, FromJSON a) =>
+  -- (Typeable a, FromJSON a) =>
   DPSF.Field ->
   Maybe ByteString ->
-  DPSF.Conversion a
+  DPSF.Conversion [Domain.Slot]
 fromFieldJSON' f mbValue = case mbValue of
   Nothing -> T.trace "Returned nothing in fromFieldJSON" $ DPSF.returnError DPSF.UnexpectedNull f mempty
-  Just value' -> T.trace ("Returned from fromFieldJSON" <> show value') $ case A.decode $ fromStrict value' of
-    Just res -> pure res
-    Nothing -> DPSF.returnError DPSF.ConversionFailed f ("Could not 'read'" <> show value')
+  Just value' -> T.trace ("Returned from fromFieldJSON" <> show value') $ case ((A.decode $ fromStrict value' :: Maybe (V.Vector Domain.Slot))) of
+    Just res -> T.trace ("Inside just" <> show res) $ pure $ V.toList res
+    Nothing -> T.trace ("Inside nothing") $ DPSF.returnError DPSF.ConversionFailed f ("Could not 'read'" <> show value')
 
 fromFieldSlots ::
   DPSF.Field ->
@@ -180,15 +180,15 @@ fromFieldSlots ::
   DPSF.Conversion [Domain.Slot]
 fromFieldSlots f mbValue = do
   value <- T.trace ("Check value is" <> show mbValue) $ fromField f mbValue
-  T.trace ("fromFieldSlots value is" <> show value) $ case A.fromJSON value of
-    A.Success a -> pure a
-    _ -> DPSF.returnError DPSF.ConversionFailed f ("Conversion failed for" <> show value)
+  T.trace ("fromFieldSlots value is" <> show value) $ case (A.fromJSON value :: A.Result (V.Vector Domain.Slot)) of
+    A.Success a -> T.trace ("Inside json success") $ pure $ V.toList a
+    _ -> T.trace ("Inside json failure") $ DPSF.returnError DPSF.ConversionFailed f ("Conversion failed for")
 
-instance FromField Domain.Slot where
-  fromField = fromFieldJSON'
+-- instance FromField Domain.Slot where
+--   fromField = fromFieldJSON'
 
 instance FromField [Domain.Slot] where
-  fromField = fromFieldSlots
+  fromField = fromFieldJSON'
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be [Domain.Slot] where
   sqlValueSyntax = autoSqlValueSyntax

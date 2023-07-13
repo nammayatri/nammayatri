@@ -28,7 +28,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Time
 import Kernel.Utils.Common
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV, getMasterDBConfig', setMeshConfig, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV, setMeshConfig, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Queries.Booking.BookingLocation as QBBL
@@ -45,9 +45,7 @@ createBooking booking = do
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
 createBooking' :: (L.MonadFlow m, Log m) => Booking -> m ()
-createBooking' booking = do
-  dbConf <- getMasterDBConfig'
-  createWithKV dbConf booking
+createBooking' = createWithKV
 
 create :: L.MonadFlow m => Booking -> m (MeshResult ())
 create dBooking = do
@@ -69,9 +67,7 @@ findById (Id bookingId) = do
     Nothing -> pure Nothing
 
 findById' :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Booking)
-findById' (Id bookingId) = do
-  dbConf <- getMasterDBConfig'
-  findOneWithKV dbConf [Se.Is BeamB.id $ Se.Eq bookingId]
+findById' (Id bookingId) = findOneWithKV [Se.Is BeamB.id $ Se.Eq bookingId]
 
 findBySTId :: L.MonadFlow m => Id DST.SearchTry -> m (Maybe Booking)
 findBySTId searchTryId = do
@@ -93,9 +89,8 @@ findBySTId searchTryId = do
 
 findBySTId' :: (L.MonadFlow m, Log m) => Id DST.SearchTry -> m (Maybe Booking)
 findBySTId' searchTryId = do
-  dbConf <- getMasterDBConfig'
   mbDriverQuote <- QDQuote.findDriverQuoteBySTId searchTryId
-  maybe (pure Nothing) (\dQ -> findOneWithKV dbConf [Se.Is BeamB.quoteId $ Se.Eq $ getId $ DDQ.id dQ]) mbDriverQuote
+  maybe (pure Nothing) (\dQ -> findOneWithKV [Se.Is BeamB.quoteId $ Se.Eq $ getId $ DDQ.id dQ]) mbDriverQuote
 
 -- case mbDriverQuote of
 --   Nothing -> pure Nothing
@@ -119,6 +114,15 @@ updateStatus rbId rbStatus = do
         ]
         [Se.Is BeamB.id (Se.Eq $ getId rbId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+
+updateStatus' :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> BookingStatus -> m ()
+updateStatus' rbId rbStatus = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamB.status rbStatus,
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
 updateRiderId :: (L.MonadFlow m, MonadTime m) => Id Booking -> Id RiderDetails -> m (MeshResult ())
 updateRiderId rbId riderId = do
@@ -157,9 +161,8 @@ updateRiderName bookingId riderName = do
 
 updateRiderName' :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Text -> m ()
 updateRiderName' bookingId riderName = do
-  dbConf <- getMasterDBConfig'
   now <- getCurrentTime
-  updateWithKV dbConf [Se.Set BeamB.riderName $ Just riderName, Se.Set BeamB.updatedAt now] [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+  updateWithKV [Se.Set BeamB.riderName $ Just riderName, Se.Set BeamB.updatedAt now] [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
 updateSpecialZoneOtpCode :: (L.MonadFlow m, MonadTime m) => Id Booking -> Text -> m (MeshResult ())
 updateSpecialZoneOtpCode bookingId specialZoneOtpCode = do
@@ -181,18 +184,17 @@ updateSpecialZoneOtpCode bookingId specialZoneOtpCode = do
 findStuckBookings' :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
 findStuckBookings' (Id merchantId) bookingIds now = do
   let updatedTimestamp = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
-  dbConf <- getMasterDBConfig'
-  bookings <-
-    findAllWithKV
-      dbConf
-      [ Se.And
-          [ Se.Is BeamB.providerId $ Se.Eq merchantId,
-            Se.Is BeamB.id (Se.In $ getId <$> bookingIds),
-            Se.Is BeamB.status $ Se.In [NEW, TRIP_ASSIGNED],
-            Se.Is BeamB.createdAt $ Se.LessThanOrEq updatedTimestamp
-          ]
-      ]
-  pure $ Domain.Types.Booking.id <$> bookings
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamB.providerId $ Se.Eq merchantId,
+          Se.Is BeamB.id (Se.In $ getId <$> bookingIds),
+          Se.Is BeamB.status $ Se.In [NEW, TRIP_ASSIGNED],
+          Se.Is BeamB.createdAt $ Se.LessThanOrEq updatedTimestamp
+        ]
+    ]
+    <&> (<&> Domain.Types.Booking.id)
+
+-- pure $ Domain.Types.Booking.id <$> bookings
 
 --   case result of
 --     Right booking -> do
