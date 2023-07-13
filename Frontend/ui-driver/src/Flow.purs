@@ -66,7 +66,7 @@ baseAppFlow = do
     checkVersion versionCode
     cacheAppParameters versionCode
     void $ UI.splashScreen state.splashScreen
-    setValueToLocalNativeStore NEGOTIATION_UNIT "20"
+    setValueToLocalNativeStore NEGOTIATION_UNIT if (getMerchant unit == YATRIPARTNER) then "20" else "10"
     let regToken = getValueToLocalStore REGISTERATION_TOKEN
     if isTokenValid regToken
       then do
