@@ -7,6 +7,10 @@ export function getStringValue(key) {
 }
 
 const tamilStrings = {
+  INACCURATE_DATE_AND_TIME: "துல்லியமற்ற தேதி & நேரம்!",
+  ADJUST_YOUR_DEVICE_DATE_AND_TIME_AND_TRY_AGAIN: "உங்கள் மொபைல் தேதி மற்றும் நேரத்தை சரிசெய்து மீண்டும் முயற்சிக்கவும்",
+  THE_CURRENT_DATE_AND_TIME_IS: "தற்போதைய தேதி மற்றும் நேரம்",
+  GO_TO_SETTING: "அமைப்புகளுக்குச் செல்லவும்",
   LETS_GET_STARTED: "ஆரம்பிக்கலாம்",
   YOUR_APPLICATION_HAS_BEEN_SUBMITTED_SUCCESSFULLY_AND_IS_UNDER_VERIFICATION: "உங்கள் விண்ணப்பம் வெற்றிகரமாக சமர்ப்பிக்கப்பட்டு சரிபார்ப்பின் கீழ் உள்ளது",
   VIEW_STATUS: "நிலையைக் காண்க",

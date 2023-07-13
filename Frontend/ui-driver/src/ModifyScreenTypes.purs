@@ -59,7 +59,7 @@ modifyScreenState st =
     NotificationsScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { notificationScreen = a state.notificationScreen})
     ReferralScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state { referralScreen = a state.referralScreen })
     BookingOptionsScreenType a -> modifyState (\(GlobalState state) -> GlobalState $ state { bookingOptionsScreen = a state.bookingOptionsScreen })
-
+    AppUpdatePopUpScreenType a->  modifyState (\(GlobalState state) -> GlobalState $ state { appUpdatePopUpScreen = a state.appUpdatePopUpScreen })
 
 updateStage :: ScreenStage -> FlowBT String Unit
 updateStage stage = do
