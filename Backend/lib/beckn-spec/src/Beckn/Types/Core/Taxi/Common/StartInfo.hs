@@ -24,7 +24,13 @@ data StartInfo = StartInfo
   { location :: Location,
     authorization :: Maybe Authorization
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show)
+
+instance ToJSON StartInfo where
+  toJSON = genericToJSON removeNullFields
+
+instance FromJSON StartInfo where
+  parseJSON = genericParseJSON removeNullFields
 
 instance ToSchema StartInfo where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
