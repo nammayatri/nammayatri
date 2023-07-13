@@ -21,10 +21,11 @@ module Storage.Beam.Merchant where
 
 import qualified Data.Aeson as A
 import Data.ByteString.Internal (ByteString)
-import Data.ByteString.Lazy (fromStrict)
+import Data.ByteString.Lazy (fromStrict, toStrict)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
+import qualified Data.Text.Encoding as TE
 import qualified Data.Time as Time
 import qualified Data.Vector as V
 import qualified Database.Beam as B
@@ -47,6 +48,9 @@ import qualified Kernel.Types.Geofencing as Geo
 import Lib.Utils
 import Lib.UtilsTH
 import Sequelize
+
+-- import qualified Data.Text as T
+-- import Data.Vector
 
 fromFieldEnum' ::
   -- (Typeable a, Read a) =>
@@ -185,17 +189,29 @@ fromFieldSlots f mbValue = do
     _ -> T.trace ("Inside json failure") $ DPSF.returnError DPSF.ConversionFailed f ("Conversion failed for")
 
 -- instance FromField Domain.Slot where
---   fromField = fromFieldJSON'
+--   fromField = fromFieldJSON
 
-instance FromField [Domain.Slot] where
-  fromField = fromFieldJSON'
+-- instance ToField Domain.Slot where
+--   fromField = fromFieldJSON
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be [Domain.Slot] where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance FromField [Domain.Slot] where
+--   fromField f b = do
+--     v <- fromField f b
+--     pure (Data.Vector.toList v)
+
+instance HasSqlValueSyntax be A.Value => HasSqlValueSyntax be [Domain.Slot] where
+  sqlValueSyntax = sqlValueSyntax . (A.String . TE.decodeUtf8 . toStrict . A.encode . A.toJSON)
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Domain.Slot]
 
-instance FromBackendRow Postgres [Domain.Slot]
+instance FromBackendRow Postgres [Domain.Slot] where
+  fromBackendRow = do
+    textVal <- fromBackendRow
+    case T.trace (show textVal) $ A.fromJSON textVal of
+      A.Success (jsonVal :: Text) -> case A.eitherDecode (fromStrict $ TE.encodeUtf8 jsonVal) of
+        Right val -> pure val
+        Left err -> fail ("Error Can't Decode Array of Domain slot :: Error :: " <> err)
+      A.Error err -> fail ("Error Can't Decode Array of Domain slot :: Error :: " <> err)
 
 deriving stock instance Ord Domain.Slot
 

@@ -539,7 +539,7 @@ updateWithKV ::
     Log m,
     MonadThrow m
   ) =>
-  -- DBConfig beM ->
+  -- DBConfig beM ->throwError
   [Set Postgres table] ->
   Where Postgres table ->
   m ()
@@ -550,7 +550,7 @@ updateWithKV setClause whereClause = do
   res <- KV.updateWoReturningWithKVConnector dbConf updatedMeshConfig setClause whereClause
   case res of
     Right _ -> pure ()
-    Left err -> throwError $ InternalError $ show err
+    Left err -> L.throwException $ InternalError $ show err
 
 createWithKV ::
   forall table m a.
@@ -588,9 +588,9 @@ createWithKV a = do
 -- res <- findOneWithKV dbConf meshConfig where'
 -- pure $ fromTType' <$> res
 
-getMasterDBConfig' :: (HasCallStack, L.MonadFlow m, Log m) => m (DBConfig Pg)
+getMasterDBConfig' :: (HasCallStack, L.MonadFlow m) => m (DBConfig Pg)
 getMasterDBConfig' = do
   dbConf <- L.getOption PsqlDbCfg
   case dbConf of
     Just dbCnf' -> pure dbCnf'
-    Nothing -> throwError $ InternalError "DB Config not found"
+    Nothing -> L.throwException $ InternalError "DB Config not found"
