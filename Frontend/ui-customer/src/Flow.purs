@@ -105,7 +105,12 @@ baseAppFlow gPayload refreshFlow = do
   _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
   when ((getValueToLocalStore SESSION_ID == "__failed") || (getValueToLocalStore SESSION_ID == "(null)")) $ do
     setValueToLocalStore SESSION_ID (generateSessionId unit)
-  _ <- lift $ lift $ setLogField "customer_id" $ encode (customerId)
+  if (customerId == "__failed") then do
+    _ <- lift $ lift $ setLogField "customer_id" $ encode ("null")
+    pure unit
+    else do
+      _ <- lift $ lift $ setLogField "customer_id" $ encode (customerId)
+      pure unit
   _ <- lift $ lift $ setLogField "app_version" $ encode (show versionCode)
   _ <- lift $ lift $ setLogField "bundle_version" $ encode (bundle)
   _ <- lift $ lift $ setLogField "platform" $ encode (os)
@@ -335,7 +340,7 @@ currentFlowStatus = do
 
       when (fromMaybe "UNKNOWN" (response.gender) /= "UNKNOWN") $ do
           case response.gender of
-              Just value -> void $ pure $ setCleverTapUserData "gender" (spy "hello" value)
+              Just value -> void $ pure $ setCleverTapUserData "gender" value
               Nothing -> pure unit
 
       case response.language of
@@ -465,7 +470,12 @@ enterMobileNumberScreenFlow = do
                     modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen {props {enterOTP = false}})
                     let (VerifyTokenResp response) = resp
                         customerId = ((response.person)^. _id)
-                    _ <- lift $ lift $ setLogField "customer_id" $ encode (customerId)
+                    if (customerId == "__failed") then do
+                      _ <- lift $ lift $ setLogField "customer_id" $ encode ("null")
+                      pure unit
+                      else do
+                        _ <- lift $ lift $ setLogField "customer_id" $ encode (customerId)
+                        pure unit
                     setValueToLocalStore CUSTOMER_ID customerId
                     void $ pure $ setCleverTapUserData "Identity" (getValueToLocalStore CUSTOMER_ID)
                     setValueToLocalStore REGISTERATION_TOKEN response.token
