@@ -141,6 +141,7 @@ view push state =
                    , padding (Padding 11 6 11 6)
                    , orientation HORIZONTAL
                    , cornerRadius 8.0
+                   , visibility GONE
                    ][ imageView
                       [ width (V 16)
                       , height (V 16)
