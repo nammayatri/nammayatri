@@ -636,7 +636,7 @@ eval (UpdateMessages message sender timeStamp size) state = do
                       let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
                       let unReadMessages = (if readMessages == 0 && state.props.currentStage /= ChatWithDriver then true else (if (readMessages < (length messages) && state.props.currentStage /= ChatWithDriver) then true else false))
                       let suggestions = getSuggestionsfromKey message
-                      updateMessagesWithCmd state {data {messages = messages, suggestionsList = suggestions, lastMessage = value , messagesSize = size}, props {unReadMessages = unReadMessages, showChatNotification = unReadMessages}}
+                      updateMessagesWithCmd state {data {messages = messages, suggestionsList = suggestions, lastMessage = value , messagesSize = size}, props {unReadMessages = unReadMessages, showChatNotification = unReadMessages && (state.data.messagesSize == (show $ (length state.data.messages) - 1) || state.data.messagesSize == "-1")}}
     Nothing -> continue state
 
 eval (OpenChatScreen) state = do

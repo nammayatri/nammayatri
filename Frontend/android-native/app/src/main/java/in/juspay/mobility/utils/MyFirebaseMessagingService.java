@@ -417,6 +417,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 SharedPreferences.Editor editor = sharedPref.edit();
                 editor.putString("READ_MESSAGES", "0");
                 editor.apply();
+                Intent overlayService = new Intent(getApplicationContext(), MessageOverlayService.class);
+                getApplicationContext().stopService(overlayService);
             } catch (Exception e){
                 Log.e("MyFirebaseMessagingService", "Error in stopChatService : " + e);
             }
