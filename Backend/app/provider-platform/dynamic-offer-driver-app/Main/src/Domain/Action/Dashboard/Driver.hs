@@ -65,6 +65,8 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
+import Lib.Scheduler.JobStorageType.DB.Queries
+import SharedLogic.Allocator
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import qualified SharedLogic.DriverLocation as DLoc
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -310,6 +312,16 @@ blockDriver merchantShortId reqDriverId req = do
   driverInf <- CQDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   when (not driverInf.blocked) do
     CQDriverInfo.updateDynamicBlockedState driverId req.blockReason req.blockTimeInHours True
+  maxShards <- asks (.maxShards)
+  case req.blockTimeInHours of
+    Just hrs -> do
+      let unblockDriverJobTs = secondsToNominalDiffTime (fromIntegral hrs) * 60 * 60
+      Esq.runNoTransaction $
+        createJobIn @_ @'UnblockDriver unblockDriverJobTs maxShards $
+          UnblockDriverRequestJobData
+            { driverId = driverId
+            }
+    Nothing -> return ()
   logTagInfo "dashboard -> blockDriver : " (show personId)
   pure Success
 

@@ -30,6 +30,7 @@ import qualified Lib.Scheduler.JobStorageType.DB.Queries as QAllJ
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers)
+import SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
 import qualified Storage.CachedQueries.Merchant as Storage
 
 allocatorHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle AllocatorJobType
@@ -48,6 +49,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendSearchRequestToDrivers)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendPaymentReminderToDriver)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . unsubscribeDriverForPaymentOverdue)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . unblockDriver)
     }
 
 runDriverOfferAllocator ::
