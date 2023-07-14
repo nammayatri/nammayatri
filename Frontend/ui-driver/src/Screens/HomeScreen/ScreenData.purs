@@ -67,7 +67,7 @@ initData = {
           enableTimer : true
         },
         messages : [],
-        messagesSize : "",
+        messagesSize : "-1",
         suggestionsList : [],
         messageToBeSent : ""
     },

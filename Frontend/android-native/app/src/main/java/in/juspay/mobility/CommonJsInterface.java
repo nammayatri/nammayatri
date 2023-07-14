@@ -223,6 +223,7 @@ import in.juspay.mobility.utils.CheckPermissionAutoStart;
 import in.juspay.mobility.utils.CheckPermissionOverlay;
 import in.juspay.mobility.utils.LocationUpdateService;
 import in.juspay.mobility.utils.MediaPlayerView;
+import in.juspay.mobility.utils.MessageOverlayService;
 import in.juspay.mobility.utils.NotificationUtils;
 import in.juspay.mobility.utils.OtpUtils;
 import in.juspay.mobility.utils.carousel.VPAdapter;
@@ -4000,7 +4001,9 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public void stopChatListenerService() {
         try {
             Intent chatListenerService = new Intent(activity, ChatService.class);
+            Intent overlayService = new Intent(activity, MessageOverlayService.class);
             activity.stopService(chatListenerService);
+            activity.stopService(overlayService);
         } catch (Exception e) {
             Log.e(LOG_TAG, "Error in stopChatListenerService : " + e);
         }

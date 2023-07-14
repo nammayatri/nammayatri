@@ -101,6 +101,7 @@ baseAppFlow gPayload refreshFlow = do
   _ <- pure $ setValueToLocalStore RATING_SKIPPED "false"
   _ <- pure $ setValueToLocalStore POINTS_FACTOR "3"
   _ <- pure $ setValueToLocalStore ACCURACY_THRESHOLD "23.0"
+  _ <- pure $ setValueToLocalStore MESSAGES_DELAY "5000"
   _ <- pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
   _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
   when ((getValueToLocalStore SESSION_ID == "__failed") || (getValueToLocalStore SESSION_ID == "(null)")) $ do

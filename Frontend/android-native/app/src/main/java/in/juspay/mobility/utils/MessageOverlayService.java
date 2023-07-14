@@ -1,11 +1,12 @@
 package in.juspay.mobility.utils;
 
-import static android.content.Context.WINDOW_SERVICE;
+import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.PixelFormat;
 import android.graphics.Typeface;
+import android.os.IBinder;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -14,6 +15,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import androidx.annotation.Nullable;
 import androidx.core.content.res.ResourcesCompat;
 import com.google.android.material.button.MaterialButton;
 
@@ -22,7 +24,7 @@ import org.json.JSONObject;
 import in.juspay.mobility.MainActivity;
 import in.juspay.mobility.R;
 
-public class MessageOverlay implements View.OnClickListener {
+public class MessageOverlayService extends Service implements View.OnClickListener {
 
     private View overlayView;
     private WindowManager windowManager;
@@ -37,10 +39,26 @@ public class MessageOverlay implements View.OnClickListener {
     MaterialButton suggestion3View = null;
     Suggestions suggestions = null;
 
+    @Override
+    public void onCreate() {
+        context = getApplicationContext();
+        super.onCreate();
+    }
 
-    public void showMessageOverlay(String message, String timestamp, Context ctx) {
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
         try {
-            context = ctx;
+           String message = intent.getStringExtra("message");
+           String timeStamp = intent.getStringExtra("timestamp");
+           showMessageOverlay(message,timeStamp);
+        } catch (Exception e) {
+            Log.e("MessageOverlayService", "Error in onStartCommand : " + e);
+        }
+        return super.onStartCommand(intent, flags, startId);
+    }
+
+    private void showMessageOverlay(String message, String timestamp) {
+        try {
             if (!Settings.canDrawOverlays(context)) return;
             int LAYOUT_FLAG;
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
@@ -79,7 +97,7 @@ public class MessageOverlay implements View.OnClickListener {
                 messageSheetHeader.setOnClickListener(this);
             }
 
-            suggestions = getDefaultSuggestions(context);
+            suggestions = getDefaultSuggestions();
 
             SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             String language = sharedPref.getString("LANGUAGE_KEY", "null");
@@ -93,9 +111,9 @@ public class MessageOverlay implements View.OnClickListener {
             }
 
             if(suggestions != null) {
-                String suggestion1 = getSuggestionFromKey(context, suggestions.s1, language);
-                String suggestion2 = getSuggestionFromKey(context, suggestions.s2, language);
-                String suggestion3 = getSuggestionFromKey(context, suggestions.s3, language);
+                String suggestion1 = getSuggestionFromKey(suggestions.s1, language);
+                String suggestion2 = getSuggestionFromKey(suggestions.s2, language);
+                String suggestion3 = getSuggestionFromKey(suggestions.s3, language);
                 if(suggestion1.equals("")) {
                     suggestion1 = getFallBackSuggestion(suggestions.s1, language);
                 }
@@ -151,19 +169,19 @@ public class MessageOverlay implements View.OnClickListener {
                 startMainActivity();
                 break;
             case R.id.suggestion1:
-                if(suggestions != null) ChatService.sendMessage(suggestions_enabled.equals("true") ? suggestions.s1 : getSuggestionFromKey(context, suggestions.s1, "EN_US"));
+                if(suggestions != null) ChatService.sendMessage(suggestions_enabled.equals("true") ? suggestions.s1 : getSuggestionFromKey(suggestions.s1, "EN_US"));
                 break;
             case R.id.suggestion2:
-                if(suggestions != null) ChatService.sendMessage(suggestions_enabled.equals("true") ? suggestions.s2 : getSuggestionFromKey(context, suggestions.s2, "EN_US"));
+                if(suggestions != null) ChatService.sendMessage(suggestions_enabled.equals("true") ? suggestions.s2 : getSuggestionFromKey(suggestions.s2, "EN_US"));
                 break;
             case R.id.suggestion3:
-                if(suggestions != null) ChatService.sendMessage(suggestions_enabled.equals("true") ? suggestions.s3 : getSuggestionFromKey(context, suggestions.s3, "EN_US"));
+                if(suggestions != null) ChatService.sendMessage(suggestions_enabled.equals("true") ? suggestions.s3 : getSuggestionFromKey(suggestions.s3, "EN_US"));
                 break;
         }
         overlayView.setVisibility(View.GONE);
     }
 
-    public static Suggestions getDefaultSuggestions(Context context) {
+    public Suggestions getDefaultSuggestions() {
         try {
             SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             String suggestionsStr = sharedPref.getString("SUGGESTIONS", "null");
@@ -181,7 +199,7 @@ public class MessageOverlay implements View.OnClickListener {
         }
     }
 
-    private static String getSuggestionFromKey (Context context, String key, String language) {
+    private String getSuggestionFromKey (String key, String language) {
         try {
             SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             String suggestionsStr = sharedPref.getString("SUGGESTIONS_DEFINITIONS", "null");
@@ -247,6 +265,20 @@ public class MessageOverlay implements View.OnClickListener {
             Log.e("MessageOverlay", "Error in defaultSuggestions " + e);
             return null;
         }
+    }
+
+    @Nullable
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
+
+    @Override
+    public void onDestroy() {
+        if(overlayView != null) {
+            overlayView.setVisibility(View.GONE);
+        }
+        super.onDestroy();
     }
 }
 
