@@ -35,6 +35,8 @@ module Domain.Action.Dashboard.Driver
     clearOnRideStuckDrivers,
     getDriverDue,
     collectCash,
+    getAadhaarDetailsByPhoneNumber,
+    updateAadhaarDetailsByPhoneNumber,
   )
 where
 
@@ -698,3 +700,37 @@ clearOnRideStuckDrivers merchantShortId = do
       )
       driverInfos
   return Common.ClearOnRideStuckDriversRes {driverIds = driverIds}
+
+---------------------------------------------------------------------
+
+getAadhaarDetailsByPhoneNumber :: ShortId DM.Merchant -> Text -> Flow Common.DriverAadhaarInfoRes
+getAadhaarDetailsByPhoneNumber merchantShortId phoneNumber = do
+  mobileNumberHash <- getDbHash phoneNumber
+  merchant <- findMerchantByShortId merchantShortId
+  driver <- QPerson.findByMobileNumberAndMerchant "+91" mobileNumberHash merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
+  res <- AV.findByDriverId driver.id
+  case res of
+    Just aadhaarData -> do
+      pure
+        Common.DriverAadhaarInfoRes
+          { driverName = aadhaarData.driverName,
+            driverGender = aadhaarData.driverGender,
+            driverDob = aadhaarData.driverDob,
+            driverImage = aadhaarData.driverImage
+          }
+    Nothing -> throwError $ InvalidRequest "no aadhaar data is found"
+
+---------------------------------------------------------------------
+
+---------------------------------------------------------------------
+
+updateAadhaarDetailsByPhoneNumber :: ShortId DM.Merchant -> Text -> Common.UpdateDriverDataReq -> Flow APISuccess
+updateAadhaarDetailsByPhoneNumber merchantShortId phoneNumber req = do
+  mobileNumberHash <- getDbHash phoneNumber
+  aadhaarNumberHash <- getDbHash req.driverAadhaarNumber
+  merchant <- findMerchantByShortId merchantShortId
+  driver <- QPerson.findByMobileNumberAndMerchant "+91" mobileNumberHash merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
+  Esq.runTransaction $ AV.findByPhoneNumberAndUpdate req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) req.isVerified driver.id
+  pure Success
+
+---------------------------------------------------------------------

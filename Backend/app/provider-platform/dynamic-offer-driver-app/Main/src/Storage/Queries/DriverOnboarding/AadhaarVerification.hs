@@ -56,3 +56,16 @@ deleteByDriverId driverId =
   Esq.delete $ do
     aadhaar <- from $ table @AadhaarVerificationT
     where_ $ aadhaar ^. AadhaarVerificationDriverId ==. val (toKey driverId)
+
+findByPhoneNumberAndUpdate :: Text -> Text -> Text -> Maybe DbHash -> Bool -> Id Person -> Esq.SqlDB ()
+findByPhoneNumberAndUpdate name gender dob aadhaarNumberHash isVerified personId = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ AadhaarVerificationDriverName =. val name,
+        AadhaarVerificationDriverGender =. val gender,
+        AadhaarVerificationDriverDob =. val dob,
+        AadhaarVerificationAadhaarNumberHash =. val aadhaarNumberHash,
+        AadhaarVerificationIsVerified =. val isVerified
+      ]
+    where_ $ tbl ^. AadhaarVerificationDriverId ==. val (toKey personId)
