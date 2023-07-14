@@ -63,9 +63,9 @@ public class ChatService extends Service {
     private final Handler handler = new Handler();
     private static String merchant = null;
     private static String baseUrl;
+    private int delay = 5000;
     static Random random = new Random();
     String merchantType = BuildConfig.MERCHANT_TYPE;
-    final MessageOverlay messageOverlay = new MessageOverlay();
     @Override
     public void onCreate() {
         super.onCreate();
@@ -77,6 +77,7 @@ public class ChatService extends Service {
         if(sharedPrefs != null) {
             chatChannelID = sharedPrefs.getString("CHAT_CHANNEL_ID", "");
             baseUrl = sharedPrefs.getString("BASE_URL", "null");
+            delay = Integer.parseInt(sharedPrefs.getString("MESSAGES_DELAY", "5000"));
         }
         isSessionCreated();
         if (!isChatServiceRunning){
@@ -93,11 +94,7 @@ public class ChatService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if(BuildConfig.MERCHANT_TYPE.equals("DRIVER")){
-            handler.postDelayed(this::handleMessages, 2000);
-        } else {
-            handler.postDelayed(this::handleMessages, 1000);
-        }
+        handler.postDelayed(this::handleMessages, delay);
         return  START_STICKY;
     }
 
@@ -119,11 +116,7 @@ public class ChatService extends Service {
    }
 
    private void startChatService() {
-    if(BuildConfig.MERCHANT_TYPE.equals("DRIVER")) {
-        handler.postDelayed(this::addChatListener, 3000);
-    } else {
-        handler.postDelayed(this::addChatListener, 1000);
-    }
+        handler.postDelayed(this::addChatListener, delay);
    }
 
     private void signInAnonymously(){
@@ -295,10 +288,13 @@ public class ChatService extends Service {
     private void startOverlayService(String message, String timestamp){
         if ((merchantType.equals("DRIVER")) && Settings.canDrawOverlays(getApplicationContext())  && !sharedPrefs.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPrefs.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPrefs.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
             try{
-                messageOverlay.showMessageOverlay(message, timestamp, context);
+                Intent intent = new Intent(context, MessageOverlayService.class);
+                intent.putExtra("message", message);
+                intent.putExtra("timestamp",timestamp);
+                context.startService(intent);
                 startMediaPlayer(context, R.raw.new_message, false);
             }catch (Exception e) {
-                e.printStackTrace();
+                Log.e(LOG_TAG,"Error in startOverlayService : " + e);
             }
         }
     }

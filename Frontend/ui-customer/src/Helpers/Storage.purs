@@ -75,6 +75,7 @@ data KeyStore
   | PERMISSION_POPUP_TIRGGERED
   | TIP_VIEW_DATA
   | FARE_ESTIMATE_DATA
+  | MESSAGES_DELAY
 
 derive instance genericKeyStore :: Generic KeyStore _
 

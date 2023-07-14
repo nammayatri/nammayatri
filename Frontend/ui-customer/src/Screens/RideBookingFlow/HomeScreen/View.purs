@@ -148,7 +148,7 @@ screen initialState =
                   _ <- storeCallBackMessageUpdated push initialState.data.driverInfoCardState.bppRideId "Customer" UpdateMessages
                   _ <- storeCallBackOpenChatScreen push OpenChatScreen
                   _ <- startChatListenerService
-                  _ <- scrollOnResume push ScrollToBottom
+                  _ <- pure $ scrollOnResume push ScrollToBottom
                   push InitializeChat
                   pure unit
                 else

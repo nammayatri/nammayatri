@@ -66,7 +66,7 @@ initData = {
     , rideDuration : "--"
     , showPreferences : false
     , messages : []
-    , messagesSize : ""
+    , messagesSize : "-1"
     , suggestionsList : []
     , messageToBeSent : ""
     , nearByPickUpPoints : dummyPickUpPoints

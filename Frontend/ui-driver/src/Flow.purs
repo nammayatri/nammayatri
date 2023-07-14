@@ -103,6 +103,7 @@ baseAppFlow baseFlow = do
       setValueToLocalStore RIDE_REQUEST_BUFFER "-3"
       setValueToLocalStore SUGGESTIONS_ENABLED "false"
       setValueToLocalStore IS_BANNER_ACTIVE "True"
+      setValueToLocalStore MESSAGES_DELAY "5000"
       setValueToLocalNativeStore BUNDLE_VERSION bundle
       setValueToLocalNativeStore GPS_METHOD "CURRENT"
       setValueToLocalNativeStore MAKE_NULL_API_CALL "NO"
