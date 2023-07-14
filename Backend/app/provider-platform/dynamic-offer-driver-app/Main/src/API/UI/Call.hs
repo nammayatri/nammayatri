@@ -84,6 +84,8 @@ type FrontendBasedCallAPI =
            :> QueryParam "RecordingUrl" Text
            :> QueryParam "Legs[0][OnCallDuration]" Int
            :> QueryParam "CallDuration" Int
+           :> QueryParam "LegA" Text
+           :> QueryParam "LegB" Text
            :> Get '[JSON] DCall.CallCallbackRes
        )
 
@@ -102,8 +104,8 @@ callStatusCallback = withFlowHandlerAPI . DCall.callStatusCallback
 getCallStatus :: Id CallStatus -> (Id Person.Person, Id DM.Merchant) -> FlowHandler DCall.GetCallStatusRes
 getCallStatus callStatusId _ = withFlowHandlerAPI $ DCall.getCallStatus callStatusId
 
-directCallStatusCallback :: Text -> ExotelCallStatus -> Maybe Text -> Maybe Int -> Maybe Int -> FlowHandler DCall.CallCallbackRes
-directCallStatusCallback callSid dialCallStatus_ recordingUrl_ duration = withFlowHandlerAPI . DCall.directCallStatusCallback callSid dialCallStatus_ recordingUrl_ duration
+directCallStatusCallback :: Text -> ExotelCallStatus -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> FlowHandler DCall.CallCallbackRes
+directCallStatusCallback callSid dialCallStatus_ recordingUrl_ duration duration' _ _ = withFlowHandlerAPI $ DCall.directCallStatusCallback callSid dialCallStatus_ recordingUrl_ duration duration'
 
 getCustomerMobileNumber :: Text -> Text -> Text -> Maybe Text -> ExotelCallStatus -> FlowHandler DCall.GetCustomerMobileNumberResp
 getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber = withFlowHandlerAPI . DCall.getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber
