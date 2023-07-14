@@ -884,10 +884,11 @@ respondQuote (driverId, _) req = do
       case req.response of
         Pulled -> throwError UnexpectedResponseValue
         Accept -> do
-          when (searchReq.autoAssignEnabled == Just True) $ do
-            whenM (CS.isSearchTryCancelled searchTryId) $
-              throwError (InternalError "SEARCH_TRY_CANCELLED")
-            CS.markSearchTryAsAssigned searchTryId
+          when (searchReq.autoAssignEnabled == Just True) $
+            Redis.whenWithLockRedis (CS.driverAcceptAndCustomerSearchLockKey searchReq.id.getId) 15 $ do
+              whenM (CS.isSearchTryCancelled searchTryId) $
+                throwError (InternalError "SEARCH_TRY_CANCELLED")
+              CS.markSearchTryAsAssigned searchTryId
           logDebug $ "offered fare: " <> show req.offeredFare
           whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
           when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)

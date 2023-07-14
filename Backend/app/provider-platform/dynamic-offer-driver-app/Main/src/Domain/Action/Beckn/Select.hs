@@ -29,6 +29,7 @@ import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (addUTCTime, fromMaybeM, logDebug, throwError)
@@ -39,6 +40,7 @@ import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestT
 import SharedLogic.DriverPool (getDriverPoolConfig)
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
+import qualified SharedLogic.SearchTryLocker as CS
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Estimate as QEst
@@ -66,24 +68,25 @@ handler merchant sReq estimate = do
   Esq.runNoTransaction $ QDQ.setInactiveAllDQByEstId sReq.estimateId now
   farePolicy <- getFarePolicy merchantId estimate.vehicleVariant searchReq.area
 
-  searchTry <- createNewSearchTry farePolicy searchReq
-  driverPoolConfig <- getDriverPoolConfig merchantId searchReq.estimatedDistance
-  let inTime = fromIntegral driverPoolConfig.singleBatchProcessTime
+  Redis.withLockRedis (CS.driverAcceptAndCustomerSearchLockKey searchReq.id.getId) 15 $ do
+    searchTry <- createNewSearchTry farePolicy searchReq
+    driverPoolConfig <- getDriverPoolConfig merchantId searchReq.estimatedDistance
+    let inTime = fromIntegral driverPoolConfig.singleBatchProcessTime
 
-  let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
-  res <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds
-  case res of
-    ReSchedule _ -> do
-      maxShards <- asks (.maxShards)
-      Esq.runTransaction $ do
-        QSR.updateAutoAssign searchReq.id sReq.autoAssignEnabled
-        createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
-          SendSearchRequestToDriverJobData
-            { searchTryId = searchTry.id,
-              estimatedRideDistance = searchReq.estimatedDistance,
-              driverExtraFeeBounds = driverExtraFeeBounds
-            }
-    _ -> return ()
+    let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
+    res <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds
+    case res of
+      ReSchedule _ -> do
+        maxShards <- asks (.maxShards)
+        Esq.runTransaction $ do
+          QSR.updateAutoAssign searchReq.id sReq.autoAssignEnabled
+          createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
+            SendSearchRequestToDriverJobData
+              { searchTryId = searchTry.id,
+                estimatedRideDistance = searchReq.estimatedDistance,
+                driverExtraFeeBounds = driverExtraFeeBounds
+              }
+      _ -> return ()
   where
     createNewSearchTry :: DFP.FullFarePolicy -> DSR.SearchRequest -> Flow DST.SearchTry
     createNewSearchTry farePolicy searchReq = do

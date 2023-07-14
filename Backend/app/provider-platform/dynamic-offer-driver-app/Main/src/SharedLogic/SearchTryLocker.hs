@@ -16,6 +16,7 @@ module SharedLogic.SearchTryLocker
   ( whenSearchTryCancellable,
     isSearchTryCancelled,
     markSearchTryAsAssigned,
+    driverAcceptAndCustomerSearchLockKey,
   )
 where
 
@@ -75,3 +76,6 @@ mkCancelledKey searchTryId = "SearchTry:Cancelled:SearchTryId-" <> searchTryId.g
 
 mkAssignedKey :: Id SearchTry -> Text
 mkAssignedKey searchTryId = "SearchTry:Assigned:SearchTryId-" <> searchTryId.getId
+
+driverAcceptAndCustomerSearchLockKey :: Text -> Text
+driverAcceptAndCustomerSearchLockKey id = "Driver:DriverAcceptAndCustomerSearch:SearchRequestId-" <> id
