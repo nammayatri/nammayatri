@@ -33,6 +33,7 @@ import qualified Kernel.External.Payment.Interface.Juspay as Juspay
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (Value)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -156,8 +157,9 @@ processPayment merchantId orderStatus driverFeeId = do
   transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   unless (orderStatus /= Juspay.CHARGED) $ do
-    CDI.updatePendingPayment False driverFee.driverId
-    CDI.updateSubscription True driverFee.driverId
-    Esq.runTransaction $ do
-      QDF.updateStatus DF.CLEARED driverFeeId now
-      QDFS.clearPaymentStatus (cast driverFee.driverId) driverInfo.active
+    Redis.whenWithLockRedis (paymentProcessingLockKey driverFee.driverId.getId) 60 $ do
+      CDI.updatePendingPayment False driverFee.driverId
+      CDI.updateSubscription True driverFee.driverId
+      Esq.runTransaction $ do
+        QDF.updateStatus DF.CLEARED driverFeeId now
+        QDFS.clearPaymentStatus (cast driverFee.driverId) driverInfo.active
