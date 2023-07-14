@@ -1319,7 +1319,7 @@ homeScreenFlow = do
       _ <- pure $ printLog "HOME_SCREEN_FLOW GO_TO_END_RIDE" "."
       void $ lift $ lift $ loaderText (getString END_RIDE) ""
       void $ lift $ lift $ toggleLoader true
-      let numDeviation = Just $ (fromMaybe 0 (fromString $ getValueToLocalNativeStore RIDE_WAYPOINT_DEVIATION_COUNT)) > 0
+      let numDeviation = Just $ (fromMaybe 0 (fromString (getValueToLocalNativeStore RIDE_WAYPOINT_DEVIATION_COUNT))) > 0
       endRideResp <- Remote.endRide id (Remote.makeEndRideReq (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon)) numDeviation)-- driver's  lat long during ending ride
       _ <- pure $ removeAllPolylines ""
       _ <- pure $ setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
