@@ -22,7 +22,7 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.LocationAddress as DLA
 import qualified Domain.Types.VehicleVariant as VehVar
-import Environment
+-- import Environment
 import EulerHS.Prelude hiding (id, state)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
