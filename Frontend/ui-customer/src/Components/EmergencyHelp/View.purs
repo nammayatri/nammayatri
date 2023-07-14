@@ -436,6 +436,7 @@ allContactsView state push =
                 ][ textView
                     [ text $ (getString CALL)
                     , color Color.green900
+                    , onClick push $ const $ CallContactPopUp item
                     , textSize FontSize.a_14
                     , lineHeight "18"
                     , fontStyle $ FontStyle.regular LanguageStyle
