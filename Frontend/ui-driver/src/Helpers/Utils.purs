@@ -22,7 +22,7 @@ module Helpers.Utils
 import Screens.Types (AllocationData, YoutubeData, LeaderBoardDay, LeaderBoardWeek)
 import Language.Strings (getString)
 import Language.Types(STR(..))
-import Data.Array ((!!)) as DA
+import Data.Array ((!!), elemIndex) as DA
 import Data.String (Pattern(..), split) as DS
 import Data.Number (pi, sin, cos, asin, sqrt)
 
@@ -50,6 +50,7 @@ import Prelude (map, (*), (-), (/))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import Data.String (Pattern(..), split)
 import Data.Function.Uncurried (Fn4(..), runFn4)
+import Common.Types.App (OptionButtonList)
 
 -- import Control.Monad.Except (runExcept)
 -- import Data.Array.NonEmpty (fromArray)
@@ -247,3 +248,10 @@ getRequiredTag prop tag = do
                                 Nothing -> Nothing
                                 Just val -> Just val
           _ -> Nothing
+
+getGenderIndex :: String -> Array OptionButtonList -> Maybe Int
+getGenderIndex req arr = do
+  let reqArray = map(\ele -> ele.reasonCode) arr
+      reqIndex = DA.elemIndex req reqArray
+  reqIndex
+
