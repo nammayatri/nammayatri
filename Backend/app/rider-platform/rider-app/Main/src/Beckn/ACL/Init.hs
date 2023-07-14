@@ -23,8 +23,8 @@ import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.LocationAddress as DLA
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.VehicleVariant as VehVar
-import Environment
-import Kernel.External.Maps.Types (LatLong)
+-- import Environment
+-- import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context as Context
