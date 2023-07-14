@@ -54,7 +54,7 @@ import Effect.Class (liftEffect)
 import Control.Monad.Except.Trans (runExceptT , lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Presto.Core.Types.Language.Flow (doAff)
-import Helpers.Utils (setRefreshing, countDown, getPastWeeks, convertUTCtoISC, getPastDays, getPastWeeks)
+import Helpers.Utils (setRefreshing, countDown, getPastWeeks, convertUTCtoISC, getPastDays, getPastWeeks, getcurrentdate)
 import Screens.ReferralScreen.ComponentConfig
 import Screens as ScreenNames
 import Data.Either (Either(..))
@@ -230,10 +230,7 @@ leaderBoard push state =
       [ width MATCH_PARENT
       , height MATCH_PARENT
       , weight 1.0
-      ]([ if state.props.noData then
-            noDataView state
-          else
-            leaderBoardRanksCover push state
+      ]([ leaderBoardRanksCover push state
         , dateSelector push state
           ]<> if (state.props.currentDriverData.rank > 10 || state.props.currentDriverData.rank < 1) then [currentDriverRank state] else []
       )
@@ -241,10 +238,7 @@ leaderBoard push state =
 
 noDataView :: forall w . ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
 noDataView state =
-  linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  ][ scrollView
+   scrollView
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
@@ -288,7 +282,7 @@ noDataView state =
          ]
       ]
      ]
-  ]
+  
 
 currentDriverRank :: forall w . ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
 currentDriverRank state =
@@ -298,6 +292,7 @@ currentDriverRank state =
   , gravity BOTTOM
   , alignParentBottom "true,-1"
   , cornerRadii $ Corners 18.0 true true false false
+  , visibility if( checkDate state || state.props.currentDriverData.rank > 0 )then VISIBLE else GONE
   ][ rankCard state.props.currentDriverData true state
    ]
 
@@ -358,7 +353,10 @@ leaderBoardRanksCover push state =
   , orientation VERTICAL
   , onRefresh push $ const RefreshScreen
   , id (getNewIDWithTag "ReferralRefreshView")
-  ][  leaderBoardRanks state
+  ][ if state.props.noData then
+      noDataView state
+     else
+      leaderBoardRanks state
   ]
   
 leaderBoardRanks :: forall w . ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
@@ -1177,3 +1175,7 @@ checkDriverWithZeroRides :: ST.RankCardData -> Boolean -> ST.ReferralScreenState
 checkDriverWithZeroRides item aboveThreshold state = 
   let currentDriverData = state.props.currentDriverData
   in aboveThreshold && (item == currentDriverData && currentDriverData.rank == 0) 
+
+checkDate :: ST.ReferralScreenState -> Boolean
+checkDate state = if state.props.leaderBoardType == ST.Daily then (getcurrentdate "") == (convertUTCtoISC state.props.selectedDay.utcDate "YYYY-MM-DD") 
+                  else (getcurrentdate "") <= (convertUTCtoISC state.props.selectedWeek.utcEndDate "YYYY-MM-DD") 
