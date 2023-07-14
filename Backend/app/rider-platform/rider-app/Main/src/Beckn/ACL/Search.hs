@@ -107,9 +107,10 @@ mkIntent origin destination customerLanguage distance duration = do
             tags =
               if isJust distance || isJust duration
                 then
-                  Just $ Search.TG
-                    [ mkRouteInfoTags
-                    ]
+                  Just $
+                    Search.TG
+                      [ mkRouteInfoTags
+                      ]
                 else -- Search.Tags
                 --   { --customer_language = customerLanguage
                 --     code = "route_info",
