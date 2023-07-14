@@ -68,7 +68,7 @@ buildSearchReq subscriber req = do
         routeDistance = distance,
         routeDuration = duration,
         device = Nothing,
-        routePoints = Nothing,
+        routePoints = Nothing, --------TODO------Take proper input---------
         customerLanguage = customerLanguage --intent.fulfillment.tags.customer_language
       }
 
