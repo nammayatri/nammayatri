@@ -77,7 +77,7 @@ buildSearchReq ::
   DM.Merchant ->
   Maybe [Maps.LatLong] ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin destination searchId _ distance duration customerLanguage merchant points = do
+buildSearchReq origin destination searchId _ distance duration customerLanguage merchant _ = do
   let transactionId = getId searchId
       messageId = transactionId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/cab/v1/" <> T.unpack merchant.id.getId)
