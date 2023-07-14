@@ -28,7 +28,7 @@ view push state =
   , height MATCH_PARENT
   , orientation VERTICAL
   , background Color.black9000
-  -- , clickable true
+  , clickable true
   , gravity BOTTOM
   ][ PrestoAnim.animationSet [ Anim.translateYAnim AnimConfig.translateYAnimConfig ] $
       linearLayout
@@ -38,7 +38,6 @@ view push state =
       , orientation VERTICAL
       , background Color.white900
       , padding $ Padding 16 10 16 20
-      , clickable true
       , gravity CENTER
       ][ commonTV push state.title Color.black800 FontStyle.h2 CENTER 8 NoAction
         , commonTV push state.description Color.black800 FontStyle.subHeading1 CENTER 8 NoAction

@@ -501,7 +501,6 @@ const englishStrings = {
   PAY : "Pay",
   LATER : "Later",
   GREAT_JOB : "Great Job!",
-  YOU_HAVE_COMPLETED_RIDES_YESTERDAY : "You have completed X Rides yesterday!",
   FEE_BREAKUP : "Fee breakup",
   YATRI_SATHI_FEE_PAYABLE_FOR_DATE : "Yatri Sathi fee payable for",
   FEE_CORRESPONDING_TO_THE_DISTANCE : "A fee corresponding to the distance travelled per trip, will be calculated as shown below.",
