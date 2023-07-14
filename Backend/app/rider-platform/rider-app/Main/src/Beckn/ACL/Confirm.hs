@@ -39,6 +39,7 @@ buildConfirmReq res = do
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/cab/v1/" <> T.unpack res.merchant.id.getId)
   context <- buildTaxiContext Context.CONFIRM messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchant.city res.merchant.country False
   message <- mkConfirmMessage res
+  pure $ BecknReq context message
 
 mkConfirmMessage :: (MonadFlow m) => DOnInit.OnInitRes -> m Confirm.ConfirmMessage
 mkConfirmMessage res = do
