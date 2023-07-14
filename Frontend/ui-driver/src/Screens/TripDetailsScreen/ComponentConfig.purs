@@ -72,8 +72,8 @@ sourceToDestinationConfig state = let
         text = state.data.source
       , padding = (Padding 2 0 2 2)
       , margin = (Margin 12 0 15 0)
-      , ellipsize = false
-      , maxLines = 2
+      , ellipsize = true
+      , maxLines = 1
       }
     , destinationImageConfig {
         imageUrl = "ny_ic_red_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_red_circle.png"

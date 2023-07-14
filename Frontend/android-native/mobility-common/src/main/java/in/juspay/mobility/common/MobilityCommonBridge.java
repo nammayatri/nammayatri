@@ -131,7 +131,6 @@ import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JsCallback;
 import in.juspay.hyper.core.JuspayLogger;
-import in.juspay.mobility.app.Utils;
 
 public class MobilityCommonBridge extends HyperBridge {
 

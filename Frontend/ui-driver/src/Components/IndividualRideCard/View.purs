@@ -15,29 +15,30 @@
 
 module Components.IndividualRideCard.View where
 
-import Prelude (Unit, ($), (<<<) , const, (==), (<>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..),PrestoDOM, linearLayout, clickable,frameLayout, height, width, text, textSize, textView, relativeLayout, orientation, gravity, padding, imageView, imageUrl, background, margin, cornerRadius, shimmerFrameLayout, color, fontStyle, maxLines, ellipsize, layoutGravity, visibility, weight, imageWithFallback)
-import Components.IndividualRideCard.Controller(Action(..)) 
-import Screens.RideSelectionScreen.Controller (Action(..)) as RideSelectionScreen
-import Screens.RideHistoryScreen.Controller (Action(..)) as RideHistoryScreen
+import Common.Types.App
+
+import Components.IndividualRideCard.Controller (Action(..))
+import Components.SeparatorView.View as SeparatorView
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (getCommonAssetStoreLink)
+import JBridge (getArray)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import MerchantConfig.Utils (getValueFromConfig)
+import Prelude (Unit, ($), (<<<), const, (==), (<>))
 import Prelude (Unit, ($), (<<<), const, (==), (<>), map)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, maxLines, orientation, padding, relativeLayout, shimmerFrameLayout, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, maxLines, orientation, padding, relativeLayout, shimmerFrameLayout, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii, orientation, visibility, width)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.RideHistoryScreen.Controller (Action(..)) as RideHistoryScreen
+import Screens.RideHistoryScreen.Controller (Action(..)) as RideHistoryScreen
+import Screens.RideSelectionScreen.Controller (Action(..)) as RideSelectionScreen
 import Screens.Types (IndividualRideCardState)
 import Styles.Colors as Color
-import Common.Types.App
-import Helpers.Utils (getCommonAssetStoreLink)
-import MerchantConfig.Utils(getValueFromConfig)
-import JBridge (getArray)
-import Components.SeparatorView.View as SeparatorView
 
 view :: forall w .  (RideHistoryScreen.Action  -> Effect Unit)  -> PrestoDOM (Effect Unit) w
 view push =
@@ -292,7 +293,7 @@ sourceAndDestination =
       [ orientation HORIZONTAL
       , height WRAP_CONTENT
       , width MATCH_PARENT
-      , gravity CENTER
+      , gravity CENTER_VERTICAL
       ][  imageView
           [ imageWithFallback $  "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
           , height $ V 16
@@ -311,7 +312,7 @@ sourceAndDestination =
         [ orientation HORIZONTAL
         , height WRAP_CONTENT
         , width MATCH_PARENT
-        , gravity CENTER
+        , gravity CENTER_VERTICAL
         , background Color.white900
         ][  imageView
             [ imageWithFallback $ "ny_ic_destination," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_destination.png"
