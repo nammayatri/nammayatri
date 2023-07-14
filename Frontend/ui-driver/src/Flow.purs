@@ -33,7 +33,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime,stringToVersion)
 import Foreign.Class (class Encode, encode, decode)
-import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks)
+import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks,getGenderIndex)
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC, getCurrentTimeStamp)
 import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, loaderText, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, toggleLoader, generateSessionId, stopChatListenerService, hideKeyboardOnNavigation, metaLogEvent, saveSuggestions, saveSuggestionDefs, setCleverTapUserData, setCleverTapUserProp, cleverTapSetLocation)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
@@ -47,7 +47,7 @@ import Screens.BookingOptionsScreen.Controller (downgradeOptionsConfig)
 import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
 import Screens.Handlers as UI
 import Screens.HomeScreen.Controller (activeRideDetail)
-import Screens.DriverDetailsScreen.Controller (getGenderValue,genders)
+import Screens.DriverDetailsScreen.Controller (getGenderValue,genders,getGenderState)
 import Screens.HomeScreen.View (rideRequestPollingData)
 import Screens.PopUpScreen.Controller (transformAllocationData)
 import Screens.Types (ActiveRide, AllocationData, HomeScreenStage(..), Location, KeyboardModalType(..), ReferralType(..), DriverStatus(..), UpdatePopupType(..))
@@ -284,6 +284,9 @@ getDriverInfoFlow = do
           pure unit
         setValueToLocalStore IS_DRIVER_ENABLED "true"
         let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
+        let optionArr = genders FunctionCall
+            element = fromMaybe "UNKNOWN" getDriverInfoResp.gender
+            reqIndex = getGenderIndex element optionArr
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data = homeScreen.data {driverName = getDriverInfoResp.firstName, vehicleType = linkedVehicle.variant ,  driverAlternateMobile =getDriverInfoResp.alternateNumber   }
                                                                            , props {statusOnline =  if (isJust getDriverInfoResp.mode) then
                                                                                                         (any( _ == (updateDriverStatus getDriverInfoResp.active))[Online, Silent])
@@ -298,9 +301,10 @@ getDriverInfoFlow = do
        -- base64Image = updatedState.data.base64Image,
         driverMobile = getDriverInfoResp.mobileNumber,
         driverAlternateMobile = getDriverInfoResp.alternateNumber,
-        driverGender = getDriverInfoResp.gender
+        driverGender = getGenderState getDriverInfoResp.gender,
+        genderSelectionModal{activeIndex = reqIndex}
         }})
-        modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {data = driverProfileScreen.data {driverName = getDriverInfoResp.firstName, driverVehicleType = linkedVehicle.variant, driverRating = getDriverInfoResp.rating , driverAlternateNumber = getDriverInfoResp.alternateNumber, driverGender = getDriverInfoResp.gender,capacity = fromMaybe 2 linkedVehicle.capacity, downgradeOptions = getDowngradeOptions linkedVehicle.variant}})
+        modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {data {driverName = getDriverInfoResp.firstName, driverVehicleType = linkedVehicle.variant, driverRating = getDriverInfoResp.rating , driverAlternateNumber = getDriverInfoResp.alternateNumber, driverGender = getGenderState getDriverInfoResp.gender,capacity = fromMaybe 2 linkedVehicle.capacity, downgradeOptions = getDowngradeOptions linkedVehicle.variant}})
         permissionsGiven <- checkAll3Permissions
         if permissionsGiven
           then currentRideFlow

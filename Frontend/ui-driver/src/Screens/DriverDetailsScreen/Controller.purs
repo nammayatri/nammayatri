@@ -227,7 +227,7 @@ eval (InAppKeyboardModalOtp (InAppKeyboardModal.OnClickDone text)) state = do
 
 
 eval (GenderSelectionModalAction (SelectListModal.UpdateIndex indexValue)) state = continue state { data = state.data { genderSelectionModal  { activeIndex = Just indexValue}}}
-eval (GenderSelectionModalAction (SelectListModal.OnGoBack)) state = continue state { data { genderSelectionModal {activeIndex = Nothing}} ,props{ genderSelectionModalShow = false}}
+eval (GenderSelectionModalAction (SelectListModal.OnGoBack)) state = continue state { data { genderSelectionModal {activeIndex = if (state.data.driverGender == Nothing) then Nothing else state.data.genderSelectionModal.activeIndex}} ,props{ genderSelectionModalShow = false}}
 
 eval GenderSelectionOpen state = do
   continue state{props {genderSelectionModalShow = true},data{genderSelectionModal{selectionOptions = genders FunctionCall}}}
@@ -300,4 +300,12 @@ getGenderValue gender =
       "OTHER" -> Just (getString OTHER)
       "PREFER_NOT_TO_SAY" -> Just (getString PREFER_NOT_TO_SAY)
       _ -> Nothing
+    Nothing -> Nothing
+
+getGenderState :: Maybe String -> Maybe String
+getGenderState gender = 
+  case gender of 
+    Just value -> case value of
+      "UNKNOWN" -> Nothing
+      _ -> Just value
     Nothing -> Nothing
