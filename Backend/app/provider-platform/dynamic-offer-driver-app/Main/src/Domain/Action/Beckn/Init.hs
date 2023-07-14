@@ -15,23 +15,22 @@
 module Domain.Action.Beckn.Init where
 
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FareParameters as DFP
 import qualified Domain.Types.FareProduct as FareProductD
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.QuoteSpecialZone as DQSZ
 import qualified Domain.Types.SearchRequest as DSR
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchRequestSpecialZone as DSRSZ
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Vehicle.Variant as Veh
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
-import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
@@ -73,16 +72,6 @@ data InitRes = InitRes
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
     paymentUrl :: Maybe Text
   }
-
-buildBookingLocation :: (MonadGuid m) => DLoc.SearchReqLocation -> m DLoc.BookingLocation
-buildBookingLocation DLoc.SearchReqLocation {..} = do
-  let address = DLoc.LocationAddress {..}
-  guid <- generateGUIDText
-  pure
-    DLoc.BookingLocation
-      { id = Id guid,
-        ..
-      }
 
 cancelBooking ::
   ( EsqDBFlow m r,
@@ -149,17 +138,18 @@ handler merchantId req eitherReq = do
         Left (driverQuote, searchRequest, searchTry) -> do
           booking <- buildBooking searchRequest driverQuote searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id))
           triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
+          mappings <- DRB.locationMappingMakerForBooking booking
           Esq.runTransaction $ do
             QST.updateStatus searchTry.id DST.COMPLETED
-            QRB.create booking
+            QRB.create booking mappings
           return booking
         Right _ -> throwError $ InvalidRequest "Can't have specialZoneQuote in normal booking"
     InitSpecialZoneReq -> do
       case eitherReq of
         Right (specialZoneQuote, searchRequest) -> do
           booking <- buildBooking searchRequest specialZoneQuote searchRequest.startTime DRB.SpecialZoneBooking now (mbPaymentMethod <&> (.id))
-          Esq.runTransaction $
-            QRB.create booking
+          mappings <- DRB.locationMappingMakerForBooking booking
+          Esq.runNoTransaction $ QRB.create booking mappings
           return booking
         Left _ -> throwError $ InvalidRequest "Can't have driverQuote in specialZone booking"
 
@@ -171,8 +161,8 @@ handler merchantId req eitherReq = do
       ( CacheFlow m r,
         EsqDBFlow m r,
         HasField "transactionId" sr Text,
-        HasField "fromLocation" sr DLoc.SearchReqLocation,
-        HasField "toLocation" sr DLoc.SearchReqLocation,
+        HasField "fromLocation" sr DLoc.Location,
+        HasField "toLocation" sr [DLoc.Location],
         HasField "estimatedDuration" sr Seconds,
         HasField "area" sr (Maybe FareProductD.Area),
         HasField "vehicleVariant" q Veh.Variant,
@@ -190,8 +180,6 @@ handler merchantId req eitherReq = do
       m DRB.Booking
     buildBooking searchRequest driverQuote startTime bookingType now mbPaymentMethodId = do
       id <- Id <$> generateGUID
-      fromLocation <- buildBookingLocation searchRequest.fromLocation
-      toLocation <- buildBookingLocation searchRequest.toLocation
       exophone <- findRandomExophone merchantId
       pure
         DRB.Booking
@@ -210,8 +198,6 @@ handler merchantId req eitherReq = do
             maxEstimatedDistance = req.maxEstimatedDistance,
             createdAt = now,
             updatedAt = now,
-            fromLocation,
-            toLocation,
             estimatedFare = driverQuote.estimatedFare,
             riderName = Nothing,
             estimatedDuration = searchRequest.estimatedDuration,
@@ -220,6 +206,8 @@ handler merchantId req eitherReq = do
             specialZoneOtpCode = Nothing,
             area = searchRequest.area,
             paymentMethodId = mbPaymentMethodId,
+            fromLocation = searchRequest.fromLocation,
+            toLocation = searchRequest.toLocation,
             ..
           }
 

@@ -18,7 +18,9 @@ module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
   )
 where
 
+import Beckn.Types.Core.Taxi.Common.Address (Address (..))
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
+import Beckn.Types.Core.Taxi.Common.Gps (Gps (..))
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_COMPLETED))
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent.Payment as Reexport
 import qualified Control.Lens as L
@@ -137,7 +139,8 @@ instance ToSchema BreakupPrice where
 data FulfillmentInfo = FulfillmentInfo
   { id :: Text, -- bppRideId
     chargeable_distance :: DecimalValue,
-    traveled_distance :: DecimalValue
+    traveled_distance :: DecimalValue,
+    end_location :: Maybe LocationInfo
   }
   deriving (Generic, Show)
 
@@ -157,3 +160,9 @@ fulfillmentInfoJSONOptions =
         "chargeable_distance" -> "./komn/chargeable_distance"
         a -> a
     }
+
+data LocationInfo = LocationInfo
+  { latLon :: Gps,
+    address :: Address
+  }
+  deriving (Generic, Show, ToSchema, FromJSON, ToJSON)

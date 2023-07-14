@@ -17,6 +17,7 @@ module Storage.Queries.Booking where
 
 import Domain.Types.Booking as DRB
 import Domain.Types.Estimate (Estimate)
+import qualified Domain.Types.LocationMapping as DLocationMapping
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
 import Kernel.Prelude
@@ -24,26 +25,42 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Storage.Queries.FullEntityBuilders (buildFullBooking)
+import qualified Storage.Queries.LocationMapping as QLocationMapping
 import Storage.Tabular.Booking
 import qualified Storage.Tabular.Booking as RB
-import qualified Storage.Tabular.Booking.BookingLocation as Loc
 import qualified Storage.Tabular.DriverOffer as DrOff
 import qualified Storage.Tabular.Quote as Quote
-import qualified Storage.Tabular.RentalSlab as RentalSlab
 import qualified Storage.Tabular.Ride as R
-import qualified Storage.Tabular.TripTerms as TripTerms
 
 -- we already created TripTerms and RentalSlab when created Quote
-create :: Booking -> SqlDB ()
-create booking =
-  Esq.withFullEntity booking $ \(bookingT, fromLocT, _mbTripTermsT, bookingDetailsT) -> do
-    Esq.create' fromLocT
+
+create :: Booking -> [DLocationMapping.LocationMapping] -> SqlDB ()
+create booking mappings = do
+  Esq.withFullEntity booking $ \(bookingT, fromLoc, _mbTripTermsT, bookingDetailsT) -> do
+    void $ Esq.createUnique' fromLoc
     case bookingDetailsT of
-      OneWayDetailsT toLocT -> Esq.create' toLocT
+      OneWayDetailsT toLocT -> traverse_ Esq.createUnique' toLocT
       RentalDetailsT _rentalSlabT -> pure ()
-      DriverOfferDetailsT toLocT -> Esq.create' toLocT
-      OneWaySpecialZoneDetailsT toLocT -> Esq.create' toLocT
+      DriverOfferDetailsT toLocT -> traverse_ Esq.createUnique' toLocT
+      OneWaySpecialZoneDetailsT toLocT -> traverse_ Esq.createUnique' toLocT
     Esq.create' bookingT
+  QLocationMapping.createMany mappings
+
+findById :: Transactionable m => Id Booking -> m (Maybe Booking)
+findById bookingId = Esq.buildDType $ do
+  mbFullBookingT <- Esq.findOne' $ do
+    booking <- from $ table @BookingT
+    where_ $ booking ^. RB.BookingTId ==. val (toKey bookingId)
+    pure booking
+  join <$> mapM buildFullBooking mbFullBookingT
+
+findByBPPBookingId :: Transactionable m => Id BPPBooking -> m (Maybe Booking)
+findByBPPBookingId bppRbId = Esq.buildDType $ do
+  mbFullBookingT <- Esq.findOne' $ do
+    booking <- from $ table @BookingT
+    where_ $ booking ^. RB.BookingBppBookingId ==. val (Just $ getId bppRbId)
+    pure booking
+  join <$> mapM buildFullBooking mbFullBookingT
 
 updateStatus :: Id Booking -> BookingStatus -> SqlDB ()
 updateStatus rbId rbStatus = do
@@ -78,33 +95,6 @@ updateOtpCodeBookingId rbId otp = do
       ]
     where_ $ tbl ^. RB.BookingId ==. val (getId rbId)
 
-fullBookingTable ::
-  From
-    ( Table RB.BookingT
-        :& Table Loc.BookingLocationT
-        :& MbTable Loc.BookingLocationT
-        :& MbTable TripTerms.TripTermsT
-        :& MbTable RentalSlab.RentalSlabT
-    )
-fullBookingTable =
-  table @BookingT
-    `innerJoin` table @Loc.BookingLocationT
-      `Esq.on` ( \(s :& loc1) ->
-                   s ^. RB.BookingFromLocationId ==. loc1 ^. Loc.BookingLocationTId
-               )
-    `leftJoin` table @Loc.BookingLocationT
-      `Esq.on` ( \(s :& _ :& mbLoc2) ->
-                   s ^. RB.BookingToLocationId ==. mbLoc2 ?. Loc.BookingLocationTId
-               )
-    `leftJoin` table @TripTerms.TripTermsT
-      `Esq.on` ( \(s :& _ :& _ :& mbTripTerms) ->
-                   s ^. RB.BookingTripTermsId ==. mbTripTerms ?. TripTerms.TripTermsTId
-               )
-    `leftJoin` table @RentalSlab.RentalSlabT
-      `Esq.on` ( \(s :& _ :& _ :& _ :& mbRentalSlab) ->
-                   s ^. RB.BookingRentalSlabId ==. mbRentalSlab ?. RentalSlab.RentalSlabTId
-               )
-
 findLatestByRiderIdAndStatus :: Transactionable m => Id Person -> [BookingStatus] -> m (Maybe BookingStatus)
 findLatestByRiderIdAndStatus riderId statusList =
   Esq.findOne $ do
@@ -116,45 +106,48 @@ findLatestByRiderIdAndStatus riderId statusList =
     limit 1
     pure $ booking ^. RB.BookingStatus
 
-findById :: Transactionable m => Id Booking -> m (Maybe Booking)
-findById bookingId = Esq.buildDType $ do
-  mbFullBookingT <- Esq.findOne' $ do
-    (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
-    where_ $ booking ^. RB.BookingTId ==. val (toKey bookingId)
-    pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
-  join <$> mapM buildFullBooking mbFullBookingT
+compressBooking :: [Booking] -> Maybe Booking
+compressBooking list =
+  if null list
+    then Nothing
+    else do
+      let Booking {..} = head list
+      let toLoc =
+            concatMap
+              ( \booking -> case booking.bookingDetails of
+                  DRB.OneWayDetails owbd -> owbd.toLocation
+                  DRB.RentalDetails _ -> []
+                  DRB.DriverOfferDetails owbd -> owbd.toLocation
+                  DRB.OneWaySpecialZoneDetails owszbd -> owszbd.toLocation
+              )
+              list
 
-findByBPPBookingId :: Transactionable m => Id BPPBooking -> m (Maybe Booking)
-findByBPPBookingId bppRbId = Esq.buildDType $ do
-  mbFullBookingT <- Esq.findOne' $ do
-    (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
-    where_ $ booking ^. RB.BookingBppBookingId ==. val (Just $ getId bppRbId)
-    pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
-  join <$> mapM buildFullBooking mbFullBookingT
+      let finalDetails = case bookingDetails of
+            DRB.OneWayDetails OneWayBookingDetails {..} ->
+              DRB.DriverOfferDetails
+                OneWayBookingDetails
+                  { toLocation = toLoc,
+                    ..
+                  }
+            DRB.RentalDetails rs -> DRB.RentalDetails rs
+            DRB.DriverOfferDetails OneWayBookingDetails {..} ->
+              DRB.DriverOfferDetails
+                OneWayBookingDetails
+                  { toLocation = toLoc,
+                    ..
+                  }
+            DRB.OneWaySpecialZoneDetails OneWaySpecialZoneBookingDetails {..} ->
+              DRB.DriverOfferDetails
+                OneWayBookingDetails
+                  { toLocation = toLoc,
+                    ..
+                  }
 
-findByIdAndMerchantId :: Transactionable m => Id Booking -> Id Merchant -> m (Maybe Booking)
-findByIdAndMerchantId bookingId merchantId = Esq.buildDType $ do
-  mbFullBookingT <- Esq.findOne' $ do
-    (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
-    where_ $
-      booking ^. RB.BookingId ==. val bookingId.getId
-        &&. booking ^. RB.BookingMerchantId ==. val (toKey merchantId)
-    pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
-  join <$> mapM buildFullBooking mbFullBookingT
-
-findAllByRiderId :: Transactionable m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Booking]
-findAllByRiderId personId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
-  let isOnlyActive = Just True == mbOnlyActive
-  fullBookingsT <- Esq.findAll' $ do
-    (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
-    where_ $
-      booking ^. RB.BookingRiderId ==. val (toKey personId)
-        &&. whenTrue_ isOnlyActive (not_ (booking ^. RB.BookingStatus `in_` valList [DRB.COMPLETED, DRB.CANCELLED]))
-    limit $ fromIntegral $ fromMaybe 10 mbLimit
-    offset $ fromIntegral $ fromMaybe 0 mbOffset
-    orderBy [desc $ booking ^. RB.BookingCreatedAt]
-    pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
-  catMaybes <$> mapM buildFullBooking fullBookingsT
+      Just
+        Booking
+          { bookingDetails = finalDetails,
+            ..
+          }
 
 findCountByRideIdAndStatus :: Transactionable m => Id Person -> BookingStatus -> m Int
 findCountByRideIdAndStatus personId status = do
@@ -186,21 +179,21 @@ findCountByRideIdStatusAndTime personId status startTime endTime = do
 findByRiderIdAndStatus :: Transactionable m => Id Person -> [BookingStatus] -> m [Booking]
 findByRiderIdAndStatus personId statusList = Esq.buildDType $ do
   fullBookingsT <- Esq.findAll' $ do
-    (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
+    booking <- from $ table @BookingT
     where_ $
       booking ^. RB.BookingRiderId ==. val (toKey personId)
         &&. booking ^. RB.BookingStatus `in_` valList statusList
-    pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
+    pure booking
   catMaybes <$> mapM buildFullBooking fullBookingsT
 
 findAssignedByRiderId :: Transactionable m => Id Person -> m (Maybe Booking)
 findAssignedByRiderId personId = Esq.buildDType $ do
   fullBookingsT <- Esq.findOne' $ do
-    (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
+    booking <- from $ table @BookingT
     where_ $
       booking ^. RB.BookingRiderId ==. val (toKey personId)
         &&. booking ^. RB.BookingStatus ==. val TRIP_ASSIGNED
-    pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
+    pure booking
   join <$> mapM buildFullBooking fullBookingsT
 
 findBookingIdAssignedByEstimateId :: Transactionable m => Id Estimate -> m (Maybe (Id Booking))
@@ -226,10 +219,10 @@ findAllByRiderIdAndRide :: Transactionable m => Id Person -> Maybe Integer -> Ma
 findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus = Esq.buildDType $ do
   let isOnlyActive = Just True == mbOnlyActive
   fullBookingsT <- Esq.findAll' $ do
-    (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab :& mbRide) <-
+    (booking :& mbRide) <-
       from $
-        fullBookingTable `leftJoin` table @R.RideT
-          `Esq.on` (\(booking :& _ :& _ :& _ :& _ :& mbRide) -> just (booking ^. RB.BookingTId) ==. mbRide ?. R.RideBookingId)
+        table @BookingT `leftJoin` table @R.RideT
+          `Esq.on` (\(booking :& mbRide) -> just (booking ^. RB.BookingTId) ==. mbRide ?. R.RideBookingId)
     where_ $
       booking ^. RB.BookingRiderId ==. val (toKey personId)
         &&. ( whenTrue_ isOnlyActive (not_ (booking ^. RB.BookingStatus `in_` valList [DRB.COMPLETED, DRB.CANCELLED]))
@@ -241,7 +234,21 @@ findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus =
     limit $ fromIntegral $ fromMaybe 10 mbLimit
     offset $ fromIntegral $ fromMaybe 0 mbOffset
     orderBy [desc $ booking ^. RB.BookingCreatedAt]
-    pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
+    pure booking
+  catMaybes <$> mapM buildFullBooking fullBookingsT
+
+findAllByRiderId :: Transactionable m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Booking]
+findAllByRiderId personId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
+  let isOnlyActive = Just True == mbOnlyActive
+  fullBookingsT <- Esq.findAll' $ do
+    booking <- from $ table @BookingT
+    where_ $
+      booking ^. RB.BookingRiderId ==. val (toKey personId)
+        &&. whenTrue_ isOnlyActive (not_ (booking ^. RB.BookingStatus `in_` valList [DRB.COMPLETED, DRB.CANCELLED]))
+    limit $ fromIntegral $ fromMaybe 10 mbLimit
+    offset $ fromIntegral $ fromMaybe 0 mbOffset
+    orderBy [desc $ booking ^. RB.BookingCreatedAt]
+    pure booking
   catMaybes <$> mapM buildFullBooking fullBookingsT
 
 updatePaymentInfo :: Id Booking -> Money -> Maybe Money -> Money -> Maybe Text -> SqlDB ()
@@ -269,6 +276,16 @@ updatePaymentUrl bookingId paymentUrl = do
       ]
     where_ $ tbl ^. RB.BookingId ==. val (getId bookingId)
 
+findByIdAndMerchantId :: Transactionable m => Id Booking -> Id Merchant -> m (Maybe Booking)
+findByIdAndMerchantId bookingId merchantId = Esq.buildDType $ do
+  mbFullBookingT <- Esq.findOne' $ do
+    booking <- from $ table @BookingT
+    where_ $
+      booking ^. RB.BookingId ==. val bookingId.getId
+        &&. booking ^. RB.BookingMerchantId ==. val (toKey merchantId)
+    pure booking
+  join <$> mapM buildFullBooking mbFullBookingT
+
 findAllByPersonIdLimitOffset ::
   Transactionable m =>
   Id Person ->
@@ -277,13 +294,13 @@ findAllByPersonIdLimitOffset ::
   m [Booking]
 findAllByPersonIdLimitOffset personId mlimit moffset = Esq.buildDType $ do
   fullBookingsT <- Esq.findAll' $ do
-    (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
+    booking <- from $ table @BookingT
     where_ $
       booking ^. RB.BookingRiderId ==. val (toKey personId)
     limit $ fromIntegral $ fromMaybe 100 mlimit
     offset $ fromIntegral $ fromMaybe 0 moffset
     orderBy [desc $ booking ^. RB.BookingCreatedAt]
-    pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
+    pure booking
   catMaybes <$> mapM buildFullBooking fullBookingsT
 
 findStuckBookings :: Transactionable m => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]

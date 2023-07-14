@@ -20,17 +20,18 @@ where
 import qualified Data.Map as M
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.Location as DLoc
 import Domain.Types.Merchant.DriverPoolConfig
 import qualified Domain.Types.SearchRequest as DSR
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
+import Kernel.Types.Error (GenericError (InternalError))
 import Kernel.Types.Id
-import Kernel.Utils.Common (addUTCTime, logInfo)
+import Kernel.Utils.Common (addUTCTime, logInfo, throwError)
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
@@ -86,7 +87,10 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
     let translatedSearchReq = fromMaybe searchReq $ M.lookup language languageDictionary
-    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.keepHiddenForSeconds
+    toLoc <- case lastMaybe translatedSearchReq.toLocation of
+      Just toLoc -> return toLoc
+      Nothing -> throwError $ InternalError "To location not found."
+    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.keepHiddenForSeconds toLoc
 
     Notify.notifyOnNewSearchRequestAvailable searchReq.providerId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
   where
@@ -140,17 +144,30 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
               }
       pure searchRequestForDriver
 
-buildTranslatedSearchReqLocation :: (TranslateFlow m r, EsqDBFlow m r, CacheFlow m r) => DLoc.SearchReqLocation -> Maybe Maps.Language -> m DLoc.SearchReqLocation
-buildTranslatedSearchReqLocation DLoc.SearchReqLocation {..} mbLanguage = do
+buildTranslatedSearchReqLocation :: (TranslateFlow m r, EsqDBFlow m r, CacheFlow m r) => DLoc.Location -> Maybe Maps.Language -> m DLoc.Location
+buildTranslatedSearchReqLocation DLoc.Location {..} mbLanguage = do
   areaRegional <- case mbLanguage of
-    Nothing -> return area
+    Nothing -> return address.area
     Just lang -> do
-      mAreaObj <- translate ENGLISH lang `mapM` area
+      mAreaObj <- translate ENGLISH lang `mapM` address.area
       let translation = (\areaObj -> listToMaybe areaObj._data.translations) =<< mAreaObj
       return $ (.translatedText) <$> translation
+  let add =
+        DLoc.LocationAddress
+          { area = areaRegional,
+            street = address.street,
+            door = address.door,
+            city = address.door,
+            state = address.state,
+            country = address.country,
+            building = address.building,
+            areaCode = address.areaCode,
+            full_address = address.full_address,
+            ..
+          }
   pure
-    DLoc.SearchReqLocation
-      { area = areaRegional,
+    DLoc.Location
+      { address = add,
         ..
       }
 
@@ -164,11 +181,11 @@ translateSearchReq ::
   m DSR.SearchRequest
 translateSearchReq DSR.SearchRequest {..} language = do
   from <- buildTranslatedSearchReqLocation fromLocation (Just language)
-  to <- buildTranslatedSearchReqLocation toLocation (Just language)
+  to <- buildTranslatedSearchReqLocation (last toLocation) (Just language)
   pure
     DSR.SearchRequest
       { fromLocation = from,
-        toLocation = to,
+        toLocation = [to],
         ..
       }
 

@@ -28,9 +28,9 @@ import Data.Either.Extra (mapLeft)
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import qualified Domain.Types.Booking as DBooking
-import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.CancellationReason as DCReason
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
@@ -183,6 +183,9 @@ rideInfo merchantShortId reqRideId = do
   customerPhoneNo <- decrypt riderDetails.mobileNumber
   driverPhoneNo <- mapM decrypt rideDetails.driverNumber
   now <- getCurrentTime
+  toLoc <- case lastMaybe booking.toLocation of
+    Just toLoc -> return toLoc
+    Nothing -> throwError $ InternalError "To location not found."
   pure
     Common.RideInfoRes
       { rideId = cast @DRide.Ride @Common.Ride ride.id,
@@ -190,7 +193,7 @@ rideInfo merchantShortId reqRideId = do
         customerPhoneNo,
         rideOtp = ride.otp,
         customerPickupLocation = mkLocationAPIEntity booking.fromLocation,
-        customerDropLocation = Just $ mkLocationAPIEntity booking.toLocation,
+        customerDropLocation = Just $ mkLocationAPIEntity $ toLoc,
         actualDropLocation = ride.tripEndPos,
         driverId = cast @DP.Person @Common.Driver driverId,
         driverName = rideDetails.driverName,
@@ -223,9 +226,9 @@ rideInfo merchantShortId reqRideId = do
         distanceCalculationFailed = ride.distanceCalculationFailed
       }
 
-mkLocationAPIEntity :: DBLoc.BookingLocation -> Common.LocationAPIEntity
-mkLocationAPIEntity DBLoc.BookingLocation {..} = do
-  let DBLoc.LocationAddress {..} = address
+mkLocationAPIEntity :: DLoc.Location -> Common.LocationAPIEntity
+mkLocationAPIEntity DLoc.Location {..} = do
+  let DLoc.LocationAddress {..} = address
   Common.LocationAPIEntity {..}
 
 castCancellationSource :: DBCReason.CancellationSource -> Common.CancellationSource
@@ -281,7 +284,7 @@ syncNewRide ride booking = do
 syncInProgressRide :: DRide.Ride -> DBooking.Booking -> Flow Common.RideSyncRes
 syncInProgressRide ride booking = do
   handle (errHandler ride.status booking.status "ride started") $
-    CallBAP.sendRideStartedUpdateToBAP booking ride
+    CallBAP.sendRideStartedUpdateToBAP booking ride (Just ride.fromLocation)
   pure $ Common.RideSyncRes Common.RIDE_INPROGRESS "Success. Sent ride started update to bap"
 
 syncCancelledRide :: DRide.Ride -> DBooking.Booking -> DM.Merchant -> Flow Common.RideSyncRes
@@ -320,7 +323,7 @@ syncCompletedRide ride booking = do
   let mbPaymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
 
   handle (errHandler ride.status booking.status "ride completed") $
-    CallBAP.sendRideCompletedUpdateToBAP booking ride fareParameters mbPaymentMethodInfo mbPaymentUrl
+    CallBAP.sendRideCompletedUpdateToBAP booking ride fareParameters mbPaymentMethodInfo mbPaymentUrl (lastMaybe ride.toLocation)
   pure $ Common.RideSyncRes Common.RIDE_COMPLETED "Success. Sent ride completed update to bap"
 
 ---------------------------------------------------------------------
@@ -362,7 +365,7 @@ syncNewMultipleRide ride booking = do
 syncInProgressMultipleRide :: DRide.Ride -> DBooking.Booking -> Flow Common.MultipleRideData
 syncInProgressMultipleRide ride booking = do
   handle (errHandler ride.status booking.status "ride started") $
-    CallBAP.sendRideStartedUpdateToBAP booking ride
+    CallBAP.sendRideStartedUpdateToBAP booking ride (Just ride.fromLocation)
   pure $ Common.MultipleRideData {newStatus = Common.RIDE_INPROGRESS, message = "Success. Sent ride started update to bap", rideId = cast @DRide.Ride @Common.Ride ride.id}
 
 syncCancelledMultipleRide :: DRide.Ride -> DBooking.Booking -> DM.Merchant -> Flow Common.MultipleRideData
@@ -393,8 +396,8 @@ syncCompletedMultipleRide ride booking = do
   let mbPaymentUrl = DMPM.getPostpaidPaymentUrl =<< mbPaymentMethod
   let mbPaymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
 
-  handle (errHandler ride.status booking.status "ride completed") $
-    CallBAP.sendRideCompletedUpdateToBAP booking ride fareParameters mbPaymentMethodInfo mbPaymentUrl
+  handle (errHandler ride.status booking.status "ride completed") $ do
+    CallBAP.sendRideCompletedUpdateToBAP booking ride fareParameters mbPaymentMethodInfo mbPaymentUrl (lastMaybe ride.toLocation)
   pure $ Common.MultipleRideData {newStatus = Common.RIDE_COMPLETED, message = "Success. Sent ride completed update to bap", rideId = cast @DRide.Ride @Common.Ride ride.id}
 
 errHandler :: DRide.RideStatus -> DBooking.BookingStatus -> Text -> SomeException -> Flow ()

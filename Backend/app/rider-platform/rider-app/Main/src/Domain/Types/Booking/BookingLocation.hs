@@ -14,20 +14,9 @@
 
 module Domain.Types.Booking.BookingLocation where
 
+import Domain.Types.Location
 import Domain.Types.LocationAddress
-import Kernel.External.Maps.HasCoordinates
 import Kernel.Prelude
-import Kernel.Types.Id
-
-data BookingLocation = BookingLocation
-  { id :: Id BookingLocation,
-    lat :: Double,
-    lon :: Double,
-    address :: LocationAddress,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime
-  }
-  deriving (Generic, Show, Eq, HasCoordinates)
 
 data BookingLocationAPIEntity = BookingLocationAPIEntity
   { lat :: Double,
@@ -45,8 +34,8 @@ data BookingLocationAPIEntity = BookingLocationAPIEntity
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-makeBookingLocationAPIEntity :: BookingLocation -> BookingLocationAPIEntity
-makeBookingLocationAPIEntity BookingLocation {..} = do
+makeBookingLocationAPIEntity :: Location -> BookingLocationAPIEntity
+makeBookingLocationAPIEntity Location {..} = do
   let LocationAddress {..} = address
   BookingLocationAPIEntity
     { ..

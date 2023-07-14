@@ -15,6 +15,7 @@
 module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent where
 
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_STARTED))
+import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as R
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example)
@@ -74,8 +75,9 @@ instance ToSchema RideStartedEvent where
               ]
           & required L..~ ["id", "./komn/update_target", "fulfillment"]
 
-newtype FulfillmentInfo = FulfillmentInfo
-  { id :: Text -- bppRideId
+data FulfillmentInfo = FulfillmentInfo
+  { id :: Text, -- bppRideId
+    start_location :: Maybe R.LocationInfo
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 

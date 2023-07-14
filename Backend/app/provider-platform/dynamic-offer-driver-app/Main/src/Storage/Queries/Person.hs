@@ -19,10 +19,10 @@ import Control.Applicative ((<|>))
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Maybe as Mb
 import qualified Domain.Types.Booking as Booking
-import Domain.Types.Booking.BookingLocation
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverLocation as DriverLocation
 import Domain.Types.DriverQuote as DriverQuote
+import Domain.Types.Location
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.Ride as Ride
@@ -42,8 +42,8 @@ import Kernel.Utils.Common hiding (Value)
 import Kernel.Utils.GenericPretty
 import Storage.Queries.DriverQuote (baseDriverQuoteQuery)
 import Storage.Queries.FullEntityBuilders (buildFullBooking, buildFullDriverQuote)
+import Storage.Queries.LocationMapping
 import Storage.Tabular.Booking
-import Storage.Tabular.Booking.BookingLocation
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
 import Storage.Tabular.DriverOnboarding.DriverLicense
@@ -111,18 +111,18 @@ findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnab
     offset $ fromIntegral offsetVal
     pure (person, info, mbVeh)
 
--- countDrivers :: Transactionable m => Id Merchant -> m Int
--- countDrivers merchantId =
---   mkCount <$> do
---     Esq.findAll $ do
---       person <- from $ table @PersonT
---       where_ $
---         person ^. PersonMerchantId ==. val (toKey merchantId)
---           &&. person ^. PersonRole ==. val Person.DRIVER
---       return (countRows :: SqlExpr (Esq.Value Int))
---   where
---     mkCount [counter] = counter
---     mkCount _ = 0
+countDrivers :: Transactionable m => Id Merchant -> m Int
+countDrivers merchantId =
+  mkCount <$> do
+    Esq.findAll $ do
+      person <- from $ table @PersonT
+      where_ $
+        person ^. PersonMerchantId ==. val (toKey merchantId)
+          &&. person ^. PersonRole ==. val Person.DRIVER
+      return (countRows :: SqlExpr (Esq.Value Int))
+  where
+    mkCount [counter] = counter
+    mkCount _ = 0
 
 findAllDriversByIdsFirstNameAsc ::
   (Transactionable m, Functor m, EsqLocRepDBFlow m r, EsqDBReplicaFlow m r) =>
@@ -306,16 +306,18 @@ getBookingInfo driverQuote = buildDType $ do
 getBookingLocs ::
   (Transactionable m, EsqDBReplicaFlow m r) =>
   [Booking.Booking] ->
-  m [BookingLocation]
+  m [Location]
 getBookingLocs bookings = do
-  runInReplica $
-    Esq.findAll $ do
-      bookingLoc <- from $ table @BookingLocationT
-      where_ $
-        bookingLoc ^. BookingLocationTId `in_` valList toLocKeys
-      return bookingLoc
-  where
-    toLocKeys = toKey . cast <$> fetchToLocationIDFromBooking bookings
+  locs <- mapM getLoc bookings
+  return $ concat locs
+
+getLoc ::
+  (Transactionable m, EsqDBReplicaFlow m r) =>
+  Booking.Booking ->
+  m [Location]
+getLoc booking = do
+  mappings <- runInReplica $ findByTagId booking.id.getId
+  return $ map (.location) mappings
 
 getDriverLocsFromMerchId ::
   (Transactionable m, MonadTime m, EsqLocRepDBFlow m r) =>
@@ -340,9 +342,6 @@ getDriverLocsFromMerchId mbDriverPositionInfoExpiry LatLong {..} radiusMeters me
 
 fetchDriverIDsFromDriverQuotes :: [DriverQuote] -> [Id Person]
 fetchDriverIDsFromDriverQuotes = map DriverQuote.driverId
-
-fetchToLocationIDFromBooking :: [Booking.Booking] -> [Id BookingLocation]
-fetchToLocationIDFromBooking = map (.toLocation.id)
 
 fetchQuoteIdFromDriverQuotes :: [DriverQuote] -> [Text]
 fetchQuoteIdFromDriverQuotes = map (.id.getId)
@@ -858,7 +857,6 @@ getNearestDriversCurrentlyOnRide mbVariant LatLong {..} radiusMeters merchantId 
     bookingLocation <- getBookingLocs bookingInfo
     logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicle:- " <> show (length vehicles) <> " Drivers:- " <> show (length drivers) <> " Dquotes:- " <> show (length driverQuote) <> " BInfos:- " <> show (length bookingInfo) <> " BLocs:- " <> show (length bookingLocation)
     return (linkArrayListForOnRide driverQuote bookingInfo bookingLocation driverLocs driverInfos vehicles drivers LatLong {..} onRideRadius mbVariant)
-  logDebug $ "GetNearestDriversCurrentlyOnRide Result:- " <> show (length res)
   return (makeNearestDriversResult =<< res)
   where
     makeNearestDriversResult :: (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double, Maybe DriverInfo.DriverMode) -> [NearestDriversResultCurrentlyOnRide]
@@ -876,7 +874,7 @@ getNearestDriversCurrentlyOnRide mbVariant LatLong {..} radiusMeters merchantId 
       where
         getResult var cond = [NearestDriversResultCurrentlyOnRide (cast personId) mbDeviceToken mblang onRide dlat dlon var destinationEndLat destinationEndLon (roundToIntegral dist) (roundToIntegral distanceFromDriverToDestination) mode | cond]
 
-linkArrayListForOnRide :: [DriverQuote] -> [Booking.Booking] -> [BookingLocation] -> [DriverLocation] -> [DriverInformation] -> [Vehicle] -> [Person] -> LatLong -> Double -> Maybe Variant -> [(Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double, Maybe DriverInfo.DriverMode)]
+linkArrayListForOnRide :: [DriverQuote] -> [Booking.Booking] -> [Location] -> [DriverLocation] -> [DriverInformation] -> [Vehicle] -> [Person] -> LatLong -> Double -> Maybe Variant -> [(Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double, Maybe DriverInfo.DriverMode)]
 linkArrayListForOnRide driverQuotes bookings bookingLocs driverLocations driverInformations vehicles persons LatLong {..} onRideRadius mbVariant =
   let locationHashMap = buildLocationHashMap driverLocations
       personHashMap = buildPersonHashMap persons
@@ -898,17 +896,18 @@ buildBookingHashMap :: [Booking.Booking] -> HashMap.HashMap Text Booking.Booking
 buildBookingHashMap bookings =
   HashMap.fromList $ map (\booking -> (booking.quoteId, booking)) bookings
 
-buildBookingLocsHashMap :: [BookingLocation] -> HashMap.HashMap Text BookingLocation
+buildBookingLocsHashMap :: [Location] -> HashMap.HashMap Text Location
 buildBookingLocsHashMap bookinglocs =
   HashMap.fromList $ map (\loc -> (loc.id.getId, loc)) bookinglocs
 
-buildFullDriverListOnRide :: HashMap.HashMap Text DriverQuote -> HashMap.HashMap Text Booking.Booking -> HashMap.HashMap Text BookingLocation -> HashMap.HashMap Text DriverLocation -> HashMap.HashMap Text DriverInformation -> HashMap.HashMap Text Person -> LatLong -> Double -> Maybe Variant -> Vehicle -> Maybe (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double, Maybe DriverInfo.DriverMode)
+buildFullDriverListOnRide :: HashMap.HashMap Text DriverQuote -> HashMap.HashMap Text Booking.Booking -> HashMap.HashMap Text Location -> HashMap.HashMap Text DriverLocation -> HashMap.HashMap Text DriverInformation -> HashMap.HashMap Text Person -> LatLong -> Double -> Maybe Variant -> Vehicle -> Maybe (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double, Maybe DriverInfo.DriverMode)
 buildFullDriverListOnRide quotesHashMap bookingHashMap bookingLocsHashMap locationHashMap driverInfoHashMap personHashMap latLon onRideRadius mbVariant vehicle = do
   let driverId' = vehicle.driverId.getId
   location <- HashMap.lookup driverId' locationHashMap
   quote <- HashMap.lookup driverId' quotesHashMap
   booking <- HashMap.lookup quote.id.getId bookingHashMap
-  bookingLocation <- HashMap.lookup booking.toLocation.id.getId bookingLocsHashMap
+  let destination = last booking.toLocation
+  bookingLocation <- HashMap.lookup destination.id.getId bookingLocsHashMap
   info <- HashMap.lookup driverId' driverInfoHashMap
   person <- HashMap.lookup driverId' personHashMap
   let driverLocationPoint = LatLong {lat = location.lat, lon = location.lon}

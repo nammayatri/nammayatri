@@ -42,6 +42,7 @@ import qualified Domain.Types.BookingCancellationReason as SRBCR
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as Fare
+import qualified Domain.Types.Location as DLocation
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Ride as SRide
@@ -176,8 +177,9 @@ sendRideStartedUpdateToBAP ::
   ) =>
   DRB.Booking ->
   SRide.Ride ->
+  Maybe DLocation.Location ->
   m ()
-sendRideStartedUpdateToBAP booking ride = do
+sendRideStartedUpdateToBAP booking ride startLocation = do
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
@@ -203,12 +205,13 @@ sendRideCompletedUpdateToBAP ::
   Fare.FareParameters ->
   Maybe DMPM.PaymentMethodInfo ->
   Maybe Text ->
+  Maybe DLocation.Location ->
   m ()
-sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl = do
+sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl endLocation = do
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  let rideCompletedBuildReq = ACL.RideCompletedBuildReq {ride, fareParams, paymentMethodInfo, paymentUrl}
+  let rideCompletedBuildReq = ACL.RideCompletedBuildReq {ride, fareParams, paymentMethodInfo, paymentUrl, ..}
   rideCompletedMsg <- ACL.buildOnUpdateMessage rideCompletedBuildReq
 
   retryConfig <- asks (.longDurationRetryCfg)

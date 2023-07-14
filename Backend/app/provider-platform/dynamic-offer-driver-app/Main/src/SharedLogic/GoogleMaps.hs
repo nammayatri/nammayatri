@@ -19,6 +19,7 @@ import Control.Applicative ((<|>))
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import Data.Text as T hiding (dropWhile, foldl, head, init, length, map, zip)
+import Domain.Types.Location
 import Kernel.External.Maps.Interface.Types
 import Kernel.Prelude hiding (const, error, getField, setField)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
@@ -37,12 +38,12 @@ data Address = Address
   }
   deriving (Show, Generic)
 
-mkLocation :: (MonadFlow m, CoreMetrics m) => GetPlaceNameResp -> m Address
+mkLocation :: (MonadFlow m, CoreMetrics m) => GetPlaceNameResp -> m LocationAddress
 mkLocation placeNameResp = do
   let resultsResp = head placeNameResp
   let hashMap = iterateAddrResp resultsResp.addressComponents
   pure
-    Address
+    LocationAddress
       { areaCode = getField ["postal_code"] hashMap,
         street = getField ["route", "street_address"] hashMap,
         door = Nothing,

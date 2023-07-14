@@ -27,10 +27,10 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Version
+import qualified Storage.Tabular.Location as Loc
 import qualified Storage.Tabular.Merchant as SMerchant
 import qualified Storage.Tabular.Merchant.MerchantPaymentMethod as SMPM
 import qualified Storage.Tabular.Person as SP
-import qualified Storage.Tabular.SearchRequest.SearchReqLocation as SLoc
 
 mkPersist
   defaultSqlSettings
@@ -40,8 +40,6 @@ mkPersist
       startTime UTCTime
       validTill UTCTime
       riderId SP.PersonTId
-      fromLocationId SLoc.SearchReqLocationTId
-      toLocationId SLoc.SearchReqLocationTId Maybe
       distance Centesimal Maybe
       maxDistance Centesimal Maybe
       estimatedRideDuration Seconds Maybe
@@ -65,7 +63,7 @@ instance TEntityKey SearchRequestT where
   fromKey (SearchRequestTKey _id) = Id _id
   toKey (Id id) = SearchRequestTKey id
 
-type FullSearchRequestT = (SearchRequestT, SLoc.SearchReqLocationT, Maybe SLoc.SearchReqLocationT)
+type FullSearchRequestT = (SearchRequestT, Loc.LocationT, [Loc.LocationT])
 
 instance FromTType FullSearchRequestT Domain.SearchRequest where
   fromTType (SearchRequestT {..}, fromLoc, mbToLoc) = do
@@ -91,13 +89,11 @@ instance FromTType FullSearchRequestT Domain.SearchRequest where
 instance ToTType FullSearchRequestT Domain.SearchRequest where
   toTType Domain.SearchRequest {..} = do
     let fromLoc = toTType fromLocation
-        mbToLoc = toTType <$> toLocation
+        mbToLoc = map toTType toLocation
         searchReq =
           SearchRequestT
             { id = getId id,
               riderId = toKey riderId,
-              fromLocationId = toKey fromLocation.id,
-              toLocationId = toKey <$> (toLocation <&> (.id)),
               distance = getHighPrecMeters <$> distance,
               maxDistance = getHighPrecMeters <$> maxDistance,
               merchantId = toKey merchantId,

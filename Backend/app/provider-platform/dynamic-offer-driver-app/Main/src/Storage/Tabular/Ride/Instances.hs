@@ -21,11 +21,17 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import Storage.Tabular.Location
 import Storage.Tabular.Ride.Table
 
-instance FromTType RideT Domain.Ride where
-  fromTType RideT {..} = do
+type FullRideT = (RideT, LocationT, [LocationT])
+
+instance FromTType FullRideT Domain.Ride where
+  fromTType (RideT {..}, fromLocT, mbToLocT) = do
     tUrl <- parseBaseUrl trackingUrl
+    fromLocation <- fromTType fromLocT
+    toLocation <- mapM fromTType mbToLocT
+
     let mbTripStartLoc = LatLong <$> tripStartLat <*> tripStartLon
     let mbTripEndLoc = LatLong <$> tripEndLat <*> tripEndLon
     return $
@@ -42,19 +48,22 @@ instance FromTType RideT Domain.Ride where
           ..
         }
 
-instance ToTType RideT Domain.Ride where
-  toTType Domain.Ride {..} = do
-    RideT
-      { id = getId id,
-        bookingId = toKey bookingId,
-        shortId = getShortId shortId,
-        driverId = toKey driverId,
-        merchantId = toKey <$> merchantId,
-        trackingUrl = showBaseUrl trackingUrl,
-        tripStartLat = tripStartPos <&> (.lat),
-        tripStartLon = tripStartPos <&> (.lon),
-        tripEndLat = tripEndPos <&> (.lat),
-        tripEndLon = tripEndPos <&> (.lon),
-        fareParametersId = toKey <$> fareParametersId,
-        ..
-      }
+instance ToTType FullRideT Domain.Ride where
+  toTType Domain.Ride {..} =
+    ( RideT
+        { id = getId id,
+          bookingId = toKey bookingId,
+          shortId = getShortId shortId,
+          driverId = toKey driverId,
+          merchantId = toKey <$> merchantId,
+          trackingUrl = showBaseUrl trackingUrl,
+          tripStartLat = tripStartPos <&> (.lat),
+          tripStartLon = tripStartPos <&> (.lon),
+          tripEndLat = tripEndPos <&> (.lat),
+          tripEndLon = tripEndPos <&> (.lon),
+          fareParametersId = toKey <$> fareParametersId,
+          ..
+        },
+      toTType fromLocation,
+      map toTType toLocation
+    )

@@ -53,7 +53,7 @@ data GetDriverLocResp = GetDriverLocResp
 
 data GetRideStatusResp = GetRideStatusResp
   { fromLocation :: BookingLocationAPIEntity,
-    toLocation :: Maybe BookingLocationAPIEntity,
+    toLocation :: [BookingLocationAPIEntity],
     ride :: RideAPIEntity,
     customer :: SPerson.PersonAPIEntity,
     driverPosition :: Maybe MapSearch.LatLong
@@ -111,6 +111,7 @@ getRideStatus ::
   ( HasCacheConfig r,
     EncFlow m r,
     EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
     Redis.HedisFlow m r,
     CoreMetrics m,
     HasField "rideCfg" r RideConfig
@@ -131,10 +132,10 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
     GetRideStatusResp
       { fromLocation = makeBookingLocationAPIEntity booking.fromLocation,
         toLocation = case booking.bookingDetails of
-          DB.OneWayDetails details -> Just $ makeBookingLocationAPIEntity details.toLocation
-          DB.RentalDetails _ -> Nothing
-          DB.OneWaySpecialZoneDetails details -> Just $ makeBookingLocationAPIEntity details.toLocation
-          DB.DriverOfferDetails details -> Just $ makeBookingLocationAPIEntity details.toLocation,
+          DB.OneWayDetails details -> map makeBookingLocationAPIEntity details.toLocation
+          DB.RentalDetails _ -> []
+          DB.OneWaySpecialZoneDetails details -> map makeBookingLocationAPIEntity details.toLocation
+          DB.DriverOfferDetails details -> map makeBookingLocationAPIEntity details.toLocation,
         ride = makeRideAPIEntity ride,
         customer = SPerson.makePersonAPIEntity decRider,
         driverPosition = mbPos <&> (.currPoint)

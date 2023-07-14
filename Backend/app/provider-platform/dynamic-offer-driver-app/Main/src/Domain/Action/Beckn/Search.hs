@@ -32,13 +32,13 @@ import qualified Domain.Types.Estimate as DEst
 import Domain.Types.FareParameters
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FareProduct as DFareProduct
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.DriverPoolConfig (DriverPoolConfig)
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.QuoteSpecialZone as DQuoteSpecialZone
 import Domain.Types.RideRoute
 import qualified Domain.Types.SearchRequest as DSR
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchRequestSpecialZone as DSRSZ
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
@@ -63,6 +63,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import Storage.CachedQueries.Merchant.TransporterConfig as CTC
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.Geometry as QGeometry
+import qualified Storage.Queries.LocationMapping as QLocationMapping
 import qualified Storage.Queries.QuoteSpecialZone as QQuoteSpecialZone
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestSpecialZone as QSearchRequestSpecialZone
@@ -155,9 +156,12 @@ handler merchant sReq = do
         whenJustM
           (QSearchRequestSpecialZone.findByMsgIdAndBapIdAndBppId sReq.messageId sReq.bapId merchantId)
           (\_ -> throwError $ InvalidRequest "Duplicate Search request")
-        searchRequestSpecialZone <- buildSearchRequestSpecialZone sReq merchantId fromLocation toLocation result.distance result.duration allFarePoliciesProduct.area
+        searchRequestSpecialZone <- buildSearchRequestSpecialZone sReq merchantId fromLocation [toLocation] result.distance result.duration allFarePoliciesProduct.area
         Esq.runTransaction $ do
           QSearchRequestSpecialZone.create searchRequestSpecialZone
+        mappings <- DSR.locationMappingMakerForSearchSP searchRequestSpecialZone
+        for_ mappings $ \locMap -> do
+          Esq.runTransaction $ QLocationMapping.create locMap
         now <- getCurrentTime
         let listOfVehicleVariants = listVehicleVariantHelper farePolicies
         listOfSpecialZoneQuotes <- do
@@ -213,8 +217,8 @@ handler merchant sReq = do
         Just dp -> return (estimate, dp)
 
     buildEstimatesInfos ::
-      DLoc.SearchReqLocation ->
-      DLoc.SearchReqLocation ->
+      DLoc.Location ->
+      DLoc.Location ->
       DriverPoolConfig ->
       DistanceAndDuration ->
       [DFP.FullFarePolicy] ->
@@ -250,8 +254,9 @@ handler merchant sReq = do
 
           forM_ estimates $ \est -> do
             triggerEstimateEvent EstimateEventData {estimate = est, merchantId = merchantId}
+          mappings <- DSR.locationMappingMakerForSearch searchReq
           Esq.runTransaction $ do
-            QSR.create searchReq
+            QSR.create searchReq mappings
             QEst.createMany estimates
 
           let mapOfDPRByVariant = foldl (\m dpr -> M.insertWith (<>) dpr.variant (pure dpr) m) mempty driverPool
@@ -296,8 +301,8 @@ buildSearchRequest ::
   ) =>
   DSearchReq ->
   Id DM.Merchant ->
-  DLoc.SearchReqLocation ->
-  DLoc.SearchReqLocation ->
+  DLoc.Location ->
+  DLoc.Location ->
   Meters ->
   Seconds ->
   Maybe Text ->
@@ -314,6 +319,7 @@ buildSearchRequest DSearchReq {..} providerId fromLocation toLocation estimatedD
         bapCity = Just bapCity,
         bapCountry = Just bapCountry,
         autoAssignEnabled = Nothing,
+        toLocation = [toLocation],
         ..
       }
 
@@ -325,8 +331,8 @@ buildSearchRequestSpecialZone ::
   ) =>
   DSearchReq ->
   Id DM.Merchant ->
-  DLoc.SearchReqLocation ->
-  DLoc.SearchReqLocation ->
+  DLoc.Location ->
+  [DLoc.Location] ->
   Meters ->
   Seconds ->
   DFareProduct.Area ->
@@ -379,7 +385,7 @@ buildSpecialZoneQuote productSearchRequest fareParams transporterId distance veh
         ..
       }
 
-mkQuoteInfo :: DLoc.SearchReqLocation -> DLoc.SearchReqLocation -> UTCTime -> DQuoteSpecialZone.QuoteSpecialZone -> SpecialZoneQuoteInfo
+mkQuoteInfo :: DLoc.Location -> DLoc.Location -> UTCTime -> DQuoteSpecialZone.QuoteSpecialZone -> SpecialZoneQuoteInfo
 mkQuoteInfo fromLoc toLoc startTime DQuoteSpecialZone.QuoteSpecialZone {..} = do
   let fromLocation = Maps.getCoordinates fromLoc
       toLocation = Maps.getCoordinates toLoc
@@ -398,13 +404,13 @@ validateRequest merchantId sReq = do
     throwError RideNotServiceable
   return merchant
 
-buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.SearchReqLocation
+buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.Location
 buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@Maps.LatLong {..} = do
-  Address {..} <- case address of
+  addr <- case address of
     Just loc
       | customerLanguage == Just Maps.ENGLISH && isJust loc.ward ->
         pure $
-          Address
+          DLoc.LocationAddress
             { areaCode = loc.area_code,
               street = loc.street,
               door = loc.door,
@@ -420,9 +426,14 @@ buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@
   now <- getCurrentTime
   let createdAt = now
       updatedAt = now
-  pure DLoc.SearchReqLocation {..}
 
-getAddressByGetPlaceName :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> LatLong -> m Address
+  pure
+    DLoc.Location
+      { address = addr,
+        ..
+      }
+
+getAddressByGetPlaceName :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> LatLong -> m DLoc.LocationAddress
 getAddressByGetPlaceName merchantId sessionToken latLong = do
   pickupRes <-
     DMaps.getPlaceName merchantId $

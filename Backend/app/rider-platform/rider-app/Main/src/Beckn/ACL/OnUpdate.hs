@@ -72,7 +72,8 @@ parseEvent _ (OnUpdate.RideStarted rsEvent) =
   return $
     DOnUpdate.RideStartedReq
       { bppBookingId = Id rsEvent.id,
-        bppRideId = Id rsEvent.fulfillment.id
+        bppRideId = Id rsEvent.fulfillment.id,
+        startLocation = rsEvent.fulfillment.start_location
       }
 parseEvent _ (OnUpdate.RideCompleted rcEvent) =
   return $
@@ -84,7 +85,9 @@ parseEvent _ (OnUpdate.RideCompleted rcEvent) =
         chargeableDistance = realToFrac rcEvent.fulfillment.chargeable_distance,
         traveledDistance = realToFrac rcEvent.fulfillment.traveled_distance,
         fareBreakups = mkOnUpdateFareBreakup <$> rcEvent.quote.breakup,
-        paymentUrl = rcEvent.payment >>= (.uri)
+        paymentUrl = rcEvent.payment >>= (.uri),
+        -- startLocation = rcEvent.fulfillment.start_location,
+        endLocation = rcEvent.fulfillment.end_location
       }
   where
     mkOnUpdateFareBreakup breakup =

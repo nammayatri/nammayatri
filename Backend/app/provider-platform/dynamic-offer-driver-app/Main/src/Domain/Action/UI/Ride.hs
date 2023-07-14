@@ -31,6 +31,7 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Exophone as DExophone
+import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
@@ -135,7 +136,10 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = do
     driverNumber <- RD.getDriverNumber rideDetail
     mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
     bapMetadata <- CQSM.findById (Id booking.bapId)
-    pure $ mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata
+    toLoc <- case lastMaybe ride.toLocation of
+      Just toLoc -> return toLoc
+      Nothing -> throwError $ InternalError "To location not found."
+    pure $ mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) ride.fromLocation toLoc bapMetadata
   pure . DriverRideListRes $ driverRideLis
 
 mkDriverRideRes ::
@@ -144,9 +148,11 @@ mkDriverRideRes ::
   Maybe DRating.Rating ->
   Maybe DExophone.Exophone ->
   (DRide.Ride, DRB.Booking) ->
+  DL.Location ->
+  DL.Location ->
   Maybe DSM.BapMetadata ->
   DriverRideRes
-mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata = do
+mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) fromLocation toLocation bapMetadata = do
   let fareParams = booking.fareParams
       estimatedBaseFare =
         fareSum $
@@ -157,8 +163,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
     { id = ride.id,
       shortRideId = ride.shortId,
       status = ride.status,
-      fromLocation = DBLoc.makeBookingLocationAPIEntity booking.fromLocation,
-      toLocation = DBLoc.makeBookingLocationAPIEntity booking.toLocation,
+      fromLocation = DBLoc.makeBookingLocationAPIEntity fromLocation,
+      toLocation = DBLoc.makeBookingLocationAPIEntity toLocation,
       driverName = rideDetails.driverName,
       driverNumber,
       vehicleNumber = rideDetails.vehicleNumber,
@@ -232,9 +238,10 @@ otpRideCreate driver otpCode booking = do
   when driverInfo.onRide $ throwError DriverOnRide
   ride <- buildRide otpCode driver.id (Just transporter.id)
   rideDetails <- buildRideDetails ride
+  mappings <- DRide.locationMappingMakerForRide ride
   Esq.runTransaction $ do
     QBooking.updateStatus booking.id DRB.TRIP_ASSIGNED
-    QRide.create ride
+    QRide.create ride mappings
     QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
     QRideD.create rideDetails
     QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
@@ -247,7 +254,10 @@ otpRideCreate driver otpCode booking = do
   driverNumber <- RD.getDriverNumber rideDetails
   mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   bapMetadata <- CQSM.findById (Id booking.bapId)
-  pure $ mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata
+  toLoc <- case lastMaybe ride.toLocation of
+    Just toLoc -> return toLoc
+    Nothing -> throwError $ InternalError "To location not found."
+  pure $ mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) ride.fromLocation toLoc bapMetadata
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
@@ -284,6 +294,8 @@ otpRideCreate driver otpCode booking = do
             tripEndPos = Nothing,
             fareParametersId = Nothing,
             distanceCalculationFailed = Nothing,
+            fromLocation = booking.fromLocation,
+            toLocation = booking.toLocation,
             createdAt = now,
             updatedAt = now,
             numberOfDeviation = Nothing

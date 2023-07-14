@@ -39,14 +39,16 @@ mkGetLocation shortMerchantId rideId pickupLocationLat pickupLocationLon = do
   ride <- runInReplica $ QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (ride.status == Ride.NEW || ride.status == Ride.INPROGRESS) $ throwError (RideInvalidStatus $ show ride.status)
   booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-  let mbToLocation = case booking.bookingDetails of
-        DRB.RentalDetails _ -> Nothing
-        DRB.OneWayDetails details -> Just details.toLocation
-        DRB.DriverOfferDetails details -> Just details.toLocation
-        DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
-  bookingLocation <- mbToLocation & fromMaybeM (InvalidRequest "Drop location does not exist for this ride")
+  let bookingLocation = case booking.bookingDetails of
+        DRB.RentalDetails _ -> []
+        DRB.OneWayDetails details -> details.toLocation
+        DRB.DriverOfferDetails details -> details.toLocation
+        DRB.OneWaySpecialZoneDetails details -> details.toLocation
+  destination <- case lastMaybe bookingLocation of
+    Just toLoc -> return toLoc
+    Nothing -> throwError $ InternalError "To location not found."
   let fromLocation = LatLong pickupLocationLat pickupLocationLon
-  let toLocation = LatLong bookingLocation.lat bookingLocation.lon
+  let toLocation = LatLong destination.lat destination.lon
   let listOfLatLong = [fromLocation, toLocation]
   let waypointsList = NE.fromList listOfLatLong
   let mkGetRoutesResp =

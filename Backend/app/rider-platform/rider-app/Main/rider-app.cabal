@@ -158,7 +158,9 @@ library
       Domain.Types.FarePolicy.FareProductType
       Domain.Types.Geometry
       Domain.Types.Issue
+      Domain.Types.Location
       Domain.Types.LocationAddress
+      Domain.Types.LocationMapping
       Domain.Types.Maps.PlaceNameCache
       Domain.Types.Merchant
       Domain.Types.Merchant.MerchantMessage
@@ -218,6 +220,8 @@ library
       Storage.Queries.FullEntityBuilders
       Storage.Queries.Geometry
       Storage.Queries.Issues
+      Storage.Queries.Location
+      Storage.Queries.LocationMapping
       Storage.Queries.Maps.PlaceNameCache
       Storage.Queries.Merchant
       Storage.Queries.Merchant.MerchantMessage
@@ -239,7 +243,6 @@ library
       Storage.Tabular.AppInstalls
       Storage.Tabular.BlackListOrg
       Storage.Tabular.Booking
-      Storage.Tabular.Booking.BookingLocation
       Storage.Tabular.BookingCancellationReason
       Storage.Tabular.CallbackRequest
       Storage.Tabular.CallStatus
@@ -252,6 +255,8 @@ library
       Storage.Tabular.FarePolicy.FareBreakup
       Storage.Tabular.Geometry
       Storage.Tabular.Issue
+      Storage.Tabular.Location
+      Storage.Tabular.LocationMapping
       Storage.Tabular.Maps.PlaceNameCache
       Storage.Tabular.Merchant
       Storage.Tabular.Merchant.MerchantMessage
@@ -270,7 +275,6 @@ library
       Storage.Tabular.Ride
       Storage.Tabular.SavedReqLocation
       Storage.Tabular.SearchRequest
-      Storage.Tabular.SearchRequest.SearchReqLocation
       Storage.Tabular.Sos
       Storage.Tabular.SpecialZoneQuote
       Storage.Tabular.TripTerms

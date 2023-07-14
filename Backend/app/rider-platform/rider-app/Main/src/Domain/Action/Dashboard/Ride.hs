@@ -28,10 +28,10 @@ import qualified "dashboard-helper-api" Dashboard.Common as Common
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import Data.Coerce (coerce)
 import qualified Domain.Types.Booking as DTB
-import Domain.Types.Booking.BookingLocation (BookingLocation (..))
 import qualified Domain.Types.Booking.Type as DB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import Domain.Types.CancellationReason
+import Domain.Types.Location
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
@@ -81,10 +81,10 @@ mkCommonRideStatus rs = case rs of
   DRide.COMPLETED -> Common.COMPLETED
   DRide.CANCELLED -> Common.CANCELLED
 
-mkCommonBookingLocation :: BookingLocation -> Common.BookingLocation
-mkCommonBookingLocation BookingLocation {..} =
-  Common.BookingLocation
-    { id = cast @BookingLocation @Common.BookingLocation id,
+mkCommonBookingLocation :: Location -> Common.Location
+mkCommonBookingLocation Location {..} =
+  Common.Location
+    { id = cast @Location @Common.Location id,
       address = mkAddressRes address,
       ..
     }
@@ -106,10 +106,10 @@ shareRideInfo merchantId rideId = do
     DRide.CANCELLED -> throwError $ RideInvalidStatus "This ride is cancelled"
     _ -> pure ()
   person <- runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
-  let mbtoLocation = case booking.bookingDetails of
-        DB.OneWayDetails locationDetail -> Just $ mkCommonBookingLocation locationDetail.toLocation
-        DB.DriverOfferDetails driverOfferDetail -> Just $ mkCommonBookingLocation driverOfferDetail.toLocation
-        _ -> Nothing
+  let toLocation = case booking.bookingDetails of
+        DB.OneWayDetails locationDetail -> map mkCommonBookingLocation locationDetail.toLocation
+        DB.DriverOfferDetails driverOfferDetail -> map mkCommonBookingLocation driverOfferDetail.toLocation
+        _ -> []
   let mbDistance = case booking.bookingDetails of
         DB.OneWayDetails locationDetail -> Just $ locationDetail.distance
         DB.DriverOfferDetails driverOfferDetail -> Just $ driverOfferDetail.distance
@@ -132,7 +132,7 @@ shareRideInfo merchantId rideId = do
         userFirstName = person.firstName,
         userLastName = person.lastName,
         fromLocation = mkCommonBookingLocation booking.fromLocation,
-        toLocation = mbtoLocation
+        toLocation = lastMaybe toLocation
       }
 
 ---------------------------------------------------------------------
@@ -170,14 +170,14 @@ buildRideListItem QRide.RideItem {..} = do
   customerPhoneNo <- mapM decrypt person.mobileNumber
   pure
     Common.RideListItem
-      { rideShortId = coerce @(ShortId DRide.Ride) @(ShortId Common.Ride) ride.shortId,
-        rideCreatedAt = ride.createdAt,
-        rideId = cast @DRide.Ride @Common.Ride ride.id,
+      { rideShortId = coerce @(ShortId DRide.Ride) @(ShortId Common.Ride) rideShortId,
+        rideCreatedAt = rideCreatedAt,
+        rideId = cast @DRide.Ride @Common.Ride rideId,
         customerName = person.firstName,
         customerPhoneNo,
-        driverName = ride.driverName,
-        driverPhoneNo = ride.driverMobileNumber,
-        vehicleNo = ride.vehicleNumber,
+        driverName = driverName,
+        driverPhoneNo = driverPhoneNo,
+        vehicleNo = vehicleNo,
         bookingStatus
       }
 
@@ -208,15 +208,24 @@ rideInfo merchantShortId reqRideId = do
         DRide.CANCELLED -> Just ride.updatedAt
         _ -> Nothing
   let mbtoLocation = case booking.bookingDetails of
-        DB.OneWayDetails locationDetail -> Just $ mkCommonBookingLocation locationDetail.toLocation
-        DB.DriverOfferDetails driverOfferDetail -> Just $ mkCommonBookingLocation driverOfferDetail.toLocation
-        _ -> Nothing
+        DB.OneWayDetails locationDetail -> do
+          toLoc <- case lastMaybe locationDetail.toLocation of
+            Just toLoc -> return toLoc
+            Nothing -> throwError $ InternalError "To location not found."
+          pure $ Just $ mkCommonBookingLocation toLoc
+        DB.DriverOfferDetails driverOfferDetail -> do
+          toLoc <- case lastMaybe driverOfferDetail.toLocation of
+            Just toLoc -> return toLoc
+            Nothing -> throwError $ InternalError "To location not found."
+          pure $ Just $ mkCommonBookingLocation toLoc
+        _ -> pure Nothing
   let mbDistance = case booking.bookingDetails of
         DB.OneWayDetails locationDetail -> Just $ locationDetail.distance
         DB.DriverOfferDetails driverOfferDetail -> Just $ driverOfferDetail.distance
         DB.OneWaySpecialZoneDetails oneWaySpecialZoneDetail -> Just $ oneWaySpecialZoneDetail.distance
         _ -> Nothing
   let cancelledBy = castCancellationSource <$> (mbBCReason <&> (.source))
+  toLoc <- mbtoLocation
   pure
     Common.RideInfoRes
       { rideId = reqRideId,
@@ -226,7 +235,7 @@ rideInfo merchantShortId reqRideId = do
         customerPhoneNo = person.unencryptedMobileNumber,
         rideOtp = ride.otp,
         customerPickupLocation = mkCommonBookingLocation booking.fromLocation,
-        customerDropLocation = mbtoLocation,
+        customerDropLocation = toLoc,
         driverName = ride.driverName,
         driverPhoneNo = Just ride.driverMobileNumber,
         driverRegisteredAt = ride.driverRegisteredAt,

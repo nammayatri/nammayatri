@@ -106,7 +106,7 @@ mkQuoteEntities dReq quote = do
 mkFulfillment :: DOnSelectReq -> DQuote.DriverQuote -> OS.FulfillmentInfo
 mkFulfillment dReq quote = do
   let fromLocation = dReq.searchRequest.fromLocation
-  let toLocation = dReq.searchRequest.toLocation
+  let toLocation = last dReq.searchRequest.toLocation
   OS.FulfillmentInfo
     { id = mkFulfId quote.id.getId,
       start =

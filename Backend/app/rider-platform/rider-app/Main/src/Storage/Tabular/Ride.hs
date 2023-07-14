@@ -27,6 +27,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Common (Centesimal, HighPrecMeters, HighPrecMoney)
 import Kernel.Types.Id
 import qualified Storage.Tabular.Booking as SRB
+import qualified Storage.Tabular.Location as Loc
 import Storage.Tabular.Merchant (MerchantTId)
 
 derivePersistField "Domain.RideStatus"
@@ -72,8 +73,12 @@ instance TEntityKey RideT where
   fromKey (RideTKey _id) = Id _id
   toKey (Id id) = RideTKey id
 
-instance FromTType RideT Domain.Ride where
-  fromTType RideT {..} = do
+type FullRideT = (RideT, Loc.LocationT, [Loc.LocationT])
+
+instance FromTType FullRideT Domain.Ride where
+  fromTType (RideT {..}, fromLocT, mbToLocT) = do
+    fromLocation <- fromTType fromLocT
+    toLocation <- mapM fromTType mbToLocT
     tUrl <- parseBaseUrl `mapM` trackingUrl
     return $
       Domain.Ride
@@ -88,16 +93,20 @@ instance FromTType RideT Domain.Ride where
           ..
         }
 
-instance ToTType RideT Domain.Ride where
-  toTType Domain.Ride {..} =
-    RideT
-      { id = getId id,
-        bppRideId = getId bppRideId,
-        bookingId = toKey bookingId,
-        shortId = getShortId shortId,
-        merchantId = toKey <$> merchantId,
-        trackingUrl = showBaseUrl <$> trackingUrl,
-        fare = realToFrac <$> fare,
-        totalFare = realToFrac <$> totalFare,
-        ..
-      }
+instance ToTType FullRideT Domain.Ride where
+  toTType Domain.Ride {..} = do
+    let fromLoc = toTType fromLocation
+        toLoc = map toTType toLocation
+        ride =
+          RideT
+            { id = getId id,
+              bppRideId = getId bppRideId,
+              bookingId = toKey bookingId,
+              shortId = getShortId shortId,
+              merchantId = toKey <$> merchantId,
+              trackingUrl = showBaseUrl <$> trackingUrl,
+              fare = realToFrac <$> fare,
+              totalFare = realToFrac <$> totalFare,
+              ..
+            }
+    (ride, fromLoc, toLoc)

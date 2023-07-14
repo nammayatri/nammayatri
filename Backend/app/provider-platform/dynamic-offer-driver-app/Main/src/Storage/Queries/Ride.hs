@@ -18,6 +18,7 @@ module Storage.Queries.Ride where
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
 import Data.Time hiding (getCurrentTime)
 import Domain.Types.Booking as Booking
+import Domain.Types.LocationMapping as DLocationMapping
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
@@ -26,42 +27,52 @@ import Domain.Types.RiderDetails as RiderDetails
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto as Esq hiding (findById, isNothing)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Queries.FullEntityBuilders (buildFullBooking)
+import Storage.Queries.FullEntityBuilders
+import Storage.Queries.LocationMapping as QLocationMapping
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.DriverInformation as DriverInfo
 import Storage.Tabular.Ride as Ride
 import Storage.Tabular.RideDetails as RideDetails
 import Storage.Tabular.RiderDetails as RiderDetails
 
-create :: Ride -> SqlDB ()
-create = Esq.create
+create :: Ride -> [DLocationMapping.LocationMapping] -> SqlDB ()
+create dRide mappings = do
+  Esq.runTransaction $
+    withFullEntity dRide $ \(ride, _, _) -> do
+      Esq.create' ride
+  QLocationMapping.createMany mappings
 
 findById :: Transactionable m => Id Ride -> m (Maybe Ride)
-findById rideId = Esq.findOne $ do
-  ride <- from $ table @RideT
-  where_ $ ride ^. RideTId ==. val (toKey rideId)
-  pure ride
+findById rideId = Esq.buildDType $ do
+  res <- Esq.findOne' $ do
+    ride <- from $ table @RideT
+    where_ $ ride ^. RideTId ==. val (toKey rideId)
+    pure ride
+  join <$> mapM buildFullRide res
 
 findAllRidesByDriverId ::
   Transactionable m =>
   Id Person ->
   m [Ride]
-findAllRidesByDriverId driverId =
-  Esq.findAll $ do
+findAllRidesByDriverId driverId = Esq.buildDType $ do
+  res <- Esq.findAll' $ do
     ride <- from $ table @RideT
     where_ $ ride ^. RideDriverId ==. val (toKey driverId)
     return ride
+  catMaybes <$> mapM buildFullRide res
 
 findActiveByRBId :: Transactionable m => Id Booking -> m (Maybe Ride)
-findActiveByRBId rbId = Esq.findOne $ do
-  ride <- from $ table @RideT
-  where_ $
-    ride ^. Ride.RideBookingId ==. val (toKey rbId)
-      &&. ride ^. RideStatus !=. val Ride.CANCELLED
-  pure ride
+findActiveByRBId rbId = Esq.buildDType $ do
+  res <- Esq.findOne' $ do
+    ride <- from $ table @RideT
+    where_ $
+      ride ^. Ride.RideBookingId ==. val (toKey rbId)
+        &&. ride ^. RideStatus !=. val Ride.CANCELLED
+    pure ride
+  join <$> mapM buildFullRide res
 
 findAllByDriverId ::
   Transactionable m =>
@@ -99,7 +110,8 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = Es
       res
       ( \(bookingT, rideT) -> runMaybeT do
           booking <- MaybeT $ buildFullBooking bookingT
-          return (extractSolidType @Ride rideT, booking)
+          ride <- MaybeT $ buildFullRide rideT
+          return (ride, booking)
       )
   where
     minDayTime date = UTCTime (addDays (-1) date) 66600
@@ -125,24 +137,29 @@ findAllRidesBookingsByRideId merchantId rideIds = Esq.buildDType $ do
       res
       ( \(bookingT, rideT) -> runMaybeT do
           booking <- MaybeT $ buildFullBooking bookingT
-          return (extractSolidType @Ride rideT, booking)
+          ride <- MaybeT $ buildFullRide rideT
+          return (ride, booking)
       )
 
 findOneByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
-findOneByDriverId driverId = Esq.findOne $ do
-  ride <- from $ table @RideT
-  where_ $
-    ride ^. RideDriverId ==. val (toKey driverId)
-  limit 1
-  pure ride
+findOneByDriverId driverId = Esq.buildDType $ do
+  res <- Esq.findOne' $ do
+    ride <- from $ table @RideT
+    where_ $
+      ride ^. RideDriverId ==. val (toKey driverId)
+    limit 1
+    pure ride
+  join <$> mapM buildFullRide res
 
 getInProgressByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
-getInProgressByDriverId driverId = Esq.findOne $ do
-  ride <- from $ table @RideT
-  where_ $
-    ride ^. RideDriverId ==. val (toKey driverId)
-      &&. ride ^. RideStatus ==. val Ride.INPROGRESS
-  pure ride
+getInProgressByDriverId driverId = Esq.buildDType $ do
+  res <- Esq.findOne' $ do
+    ride <- from $ table @RideT
+    where_ $
+      ride ^. RideDriverId ==. val (toKey driverId)
+        &&. ride ^. RideStatus ==. val Ride.INPROGRESS
+    pure ride
+  join <$> mapM buildFullRide res
 
 getInProgressOrNewRideIdAndStatusByDriverId :: Transactionable m => Id Person -> m (Maybe (Id Ride, RideStatus))
 getInProgressOrNewRideIdAndStatusByDriverId driverId = do
@@ -155,14 +172,16 @@ getInProgressOrNewRideIdAndStatusByDriverId driverId = do
   pure $ first Id <$> mbTuple
 
 getActiveByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
-getActiveByDriverId driverId = Esq.findOne $ do
-  ride <- from $ table @RideT
-  where_ $
-    ride ^. RideDriverId ==. val (toKey driverId)
-      &&. ( ride ^. RideStatus ==. val Ride.INPROGRESS
-              ||. ride ^. RideStatus ==. val Ride.NEW
-          )
-  pure ride
+getActiveByDriverId driverId = Esq.buildDType $ do
+  res <- Esq.findOne' $ do
+    ride <- from $ table @RideT
+    where_ $
+      ride ^. RideDriverId ==. val (toKey driverId)
+        &&. ( ride ^. RideStatus ==. val Ride.INPROGRESS
+                ||. ride ^. RideStatus ==. val Ride.NEW
+            )
+    pure ride
+  join <$> mapM buildFullRide res
 
 updateStatus ::
   Id Ride ->
@@ -278,14 +297,16 @@ getCountByStatus merchantId = do
 --     mkCount _ = 0
 
 getRidesForDate :: Transactionable m => Id Person -> Day -> Seconds -> m [Ride]
-getRidesForDate driverId date diffTime = Esq.findAll $ do
-  ride <- from $ table @RideT
-  where_ $
-    ride ^. RideDriverId ==. val (toKey driverId)
-      &&. ride ^. RideTripEndTime >=. val (Just minDayTime)
-      &&. ride ^. RideTripEndTime <. val (Just maxDayTime)
-      &&. ride ^. RideStatus ==. val Ride.COMPLETED
-  return ride
+getRidesForDate driverId date diffTime = buildDType $ do
+  res <- Esq.findAll' $ do
+    ride <- from $ table @RideT
+    where_ $
+      ride ^. RideDriverId ==. val (toKey driverId)
+        &&. ride ^. RideTripEndTime >=. val (Just minDayTime)
+        &&. ride ^. RideTripEndTime <. val (Just maxDayTime)
+        &&. ride ^. RideStatus ==. val Ride.COMPLETED
+    return ride
+  catMaybes <$> mapM buildFullRide res
   where
     minDayTime = UTCTime (addDays (-1) date) (86400 - secondsToDiffTime (toInteger diffTime.getSeconds))
     maxDayTime = UTCTime date (86400 - secondsToDiffTime (toInteger diffTime.getSeconds))

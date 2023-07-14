@@ -19,7 +19,10 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
+import qualified Data.Time.Clock.POSIX as Time
 import qualified Domain.Types.Booking.Type as DRB
+import qualified Domain.Types.Location as DLoc
+import qualified Domain.Types.LocationMapping as DLocationMapping
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.Prelude
@@ -72,6 +75,8 @@ data Ride = Ride
     rideStartTime :: Maybe UTCTime,
     rideEndTime :: Maybe UTCTime,
     rideRating :: Maybe Int,
+    fromLocation :: DLoc.Location,
+    toLocation :: [DLoc.Location],
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -114,3 +119,29 @@ makeRideAPIEntity Ride {..} =
           chargeableRideDistance = chargeableDistance,
           ..
         }
+
+locationMappingMakerForRide :: (MonadFlow m) => Ride -> m [DLocationMapping.LocationMapping]
+locationMappingMakerForRide ride = do
+  let rideWithIndexes = zip ([1 ..] :: [Int]) ride.toLocation
+  toLocationMappers <- mapM (locationMappingMakerForRideInstanceMaker ride) rideWithIndexes
+  fromLocationMapping <- locationMappingMakerForRideInstanceMaker ride (0, ride.fromLocation)
+  return $ fromLocationMapping : toLocationMappers
+
+locationMappingMakerForRideInstanceMaker :: (MonadFlow m) => Ride -> (Int, DLoc.Location) -> m DLocationMapping.LocationMapping
+locationMappingMakerForRideInstanceMaker Ride {..} location = do
+  locationMappingId <- generateGUID
+  let getIntEpochTime = round `fmap` Time.getPOSIXTime
+  epochVersion <- liftIO getIntEpochTime
+  let epochVersionLast5Digits = epochVersion `mod` 100000 :: Integer
+  let locationMapping =
+        DLocationMapping.LocationMapping
+          { id = Id locationMappingId,
+            tag = DLocationMapping.Ride,
+            order = fst location,
+            version = show epochVersionLast5Digits,
+            tagId = getId id,
+            location = snd location,
+            ..
+          }
+
+  return locationMapping

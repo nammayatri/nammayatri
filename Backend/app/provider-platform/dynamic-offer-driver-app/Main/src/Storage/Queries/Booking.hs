@@ -17,6 +17,7 @@ module Storage.Queries.Booking where
 
 import Domain.Types.Booking
 import Domain.Types.DriverQuote (DriverQuote)
+import qualified Domain.Types.LocationMapping as DLocationMapping
 import Domain.Types.Merchant
 import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchTry as DST
@@ -26,16 +27,18 @@ import Kernel.Types.Id
 import Kernel.Types.Time
 import qualified Storage.Queries.DriverQuote as QDQuote
 import Storage.Queries.FullEntityBuilders
+import qualified Storage.Queries.LocationMapping as QLocationMapping
 import Storage.Tabular.Booking
 import Storage.Tabular.DriverQuote as DriverQuote
 
 -- fareParams already created with driverQuote
-create :: Booking -> SqlDB ()
-create dBooking =
-  withFullEntity dBooking $ \(booking, fromLoc, toLoc, _fareParams) -> do
-    Esq.create' fromLoc
-    Esq.create' toLoc
-    Esq.create' booking
+
+create :: Booking -> [DLocationMapping.LocationMapping] -> SqlDB ()
+create dBooking mappings = do
+  Esq.runTransaction $
+    withFullEntity dBooking $ \(booking, _, _, _fareParams) -> do
+      Esq.create' booking
+  QLocationMapping.createMany mappings
 
 findById :: Transactionable m => Id Booking -> m (Maybe Booking)
 findById bookingId = buildDType $ do

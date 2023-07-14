@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Domain.Action.Beckn.OnUpdate
   ( onUpdate,
     validateRequest,
@@ -26,10 +25,14 @@ module Domain.Action.Beckn.OnUpdate
   )
 where
 
+import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent (LocationInfo (..))
+import qualified Data.Time.Clock.POSIX as Time
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
+import Domain.Types.Location
+import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
@@ -55,6 +58,8 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FareBreakup as QFareBreakup
+import qualified Storage.Queries.Location as QLocation
+import qualified Storage.Queries.LocationMapping as QLocationMapping
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
@@ -85,7 +90,8 @@ data OnUpdateReq
       }
   | RideStartedReq
       { bppBookingId :: Id SRB.BPPBooking,
-        bppRideId :: Id SRide.BPPRide
+        bppRideId :: Id SRide.BPPRide,
+        startLocation :: Maybe LocationInfo
       }
   | RideCompletedReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -95,7 +101,8 @@ data OnUpdateReq
         fareBreakups :: [OnUpdateFareBreakup],
         chargeableDistance :: HighPrecMeters,
         traveledDistance :: HighPrecMeters,
-        paymentUrl :: Maybe Text
+        paymentUrl :: Maybe Text,
+        endLocation :: Maybe LocationInfo
       }
   | BookingCancelledReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -143,7 +150,8 @@ data ValidatedOnUpdateReq
       { bppBookingId :: Id SRB.BPPBooking,
         bppRideId :: Id SRide.BPPRide,
         booking :: SRB.Booking,
-        ride :: SRide.Ride
+        ride :: SRide.Ride,
+        startLocation :: Maybe LocationInfo
       }
   | ValidatedRideCompletedReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -155,7 +163,8 @@ data ValidatedOnUpdateReq
         booking :: SRB.Booking,
         ride :: SRide.Ride,
         person :: DP.Person,
-        paymentUrl :: Maybe Text
+        paymentUrl :: Maybe Text,
+        endLocation :: Maybe LocationInfo
       }
   | ValidatedBookingCancelledReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -254,9 +263,10 @@ onUpdate ::
 onUpdate ValidatedRideAssignedReq {..} = do
   ride <- buildRide
   triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
+  mappings <- SRide.locationMappingMakerForRide ride
   DB.runTransaction $ do
     QRB.updateStatus booking.id SRB.TRIP_ASSIGNED
-    QRide.create ride
+    QRide.create ride mappings
     QPFS.updateStatus booking.riderId DPFS.RIDE_PICKUP {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, otp, vehicleNumber, fromLocation = Maps.getCoordinates booking.fromLocation, driverLocation = Nothing}
   QPFS.clearCache booking.riderId
   Notify.notifyOnRideAssigned booking ride
@@ -267,9 +277,15 @@ onUpdate ValidatedRideAssignedReq {..} = do
       guid <- generateGUID
       shortId <- generateShortId
       now <- getCurrentTime
+      toLocation <- case booking.bookingDetails of
+        SRB.OneWayDetails details -> return details.toLocation
+        SRB.RentalDetails _ -> return []
+        SRB.DriverOfferDetails details -> return details.toLocation
+        SRB.OneWaySpecialZoneDetails details -> return details.toLocation
       return
         SRide.Ride
           { id = guid,
+            fromLocation = booking.fromLocation,
             bookingId = booking.id,
             merchantId = Just booking.merchantId,
             status = SRide.NEW,
@@ -295,6 +311,24 @@ onUpdate ValidatedRideStartedReq {..} = do
              rideEndTime = Nothing
             }
   triggerRideStartedEvent RideEventData {ride = updRideForStartReq, personId = booking.riderId, merchantId = booking.merchantId}
+  startingLocation <- case startLocation of
+    Nothing -> return Nothing
+    Just location -> do
+      fromLocationId <- generateGUID
+      fromLocation <- buildLocation fromLocationId location
+      return (Just fromLocation)
+  whenJust
+    startingLocation
+    ( \actualFromLocation -> do
+        fromLocationMapping <- QLocationMapping.findByTagIdAndOrder ride.id.getId 0 >>= fromMaybeM (InternalError "location not found")
+        epochVersion <- liftIO $ round `fmap` Time.getPOSIXTime
+        let version = epochVersion `mod` 100000 :: Integer
+        DB.runTransaction $ do
+          logDebug $ "actual from location is " <> show actualFromLocation
+          QLocation.create actualFromLocation
+          logDebug "UPDATED from location "
+          QLocationMapping.updateLocationInMapping fromLocationMapping actualFromLocation version
+    )
   DB.runTransaction $ do
     QRide.updateMultiple updRideForStartReq.id updRideForStartReq
     QPFS.updateStatus booking.riderId DPFS.RIDE_STARTED {rideId = ride.id, bookingId = booking.id, trackingUrl = ride.trackingUrl, driverLocation = Nothing}
@@ -330,6 +364,7 @@ onUpdate ValidatedRideCompletedReq {..} = do
     QFareBreakup.createMany breakups
     QPFS.updateStatus booking.riderId DPFS.PENDING_RATING {rideId = ride.id}
   QPFS.clearCache booking.riderId
+
   -- uncomment for update api test; booking.paymentMethodId should be present
   -- whenJust booking.paymentMethodId $ \paymentMethodId -> do
   --   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
@@ -347,6 +382,32 @@ onUpdate ValidatedRideCompletedReq {..} = do
   --         }
   --   becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
   --   void . withShortRetry $ CallBPP.update booking.providerUrl becknUpdateReq
+  endingLocation <- case endLocation of
+    Nothing -> return Nothing
+    Just location -> do
+      toLocationId <- generateGUID
+      toLocation <- buildLocation toLocationId location
+      return (Just toLocation)
+  whenJust
+    endingLocation
+    ( \actualToLocation ->
+        if null ride.toLocation
+          then do
+            let rideWithIndexes = zip ([1 ..] :: [Int]) [actualToLocation]
+            toLocationMappers <- mapM (SRide.locationMappingMakerForRideInstanceMaker ride) rideWithIndexes
+            for_ toLocationMappers $ \locMap -> do
+              DB.runTransaction $ QLocationMapping.create locMap
+          else do
+            mappers <- QLocationMapping.findByTagId $ ride.id.getId
+            let toLocationMappers = filter (\mapper -> mapper.order /= 0) mappers
+            logDebug $ "actual to location is " <> show actualToLocation
+            DB.runTransaction $ QLocation.create actualToLocation
+            logDebug "UPDATED to location"
+            epochVersion <- liftIO $ round `fmap` Time.getPOSIXTime
+            let version = epochVersion `mod` 100000 :: Integer
+            for_ toLocationMappers $ \locMap -> do
+              DB.runTransaction $ QLocationMapping.updateLocationInMapping locMap actualToLocation version
+    )
 
   Notify.notifyOnRideCompleted booking updRide
   where
@@ -510,4 +571,29 @@ buildBookingCancellationReason bookingId mbRideId cancellationSource merchantId 
         additionalInfo = Nothing,
         driverCancellationLocation = Nothing,
         driverDistToPickup = Nothing
+      }
+
+buildLocation :: (MonadFlow m) => Id Location -> LocationInfo -> m Location
+buildLocation locationId location = do
+  now <- getCurrentTime
+  return $
+    Location
+      { id = locationId,
+        lat = location.latLon.lat,
+        lon = location.latLon.lon,
+        address =
+          LocationAddress
+            { street = location.address.street,
+              city = location.address.city,
+              state = location.address.state,
+              country = location.address.country,
+              building = location.address.building,
+              areaCode = location.address.area_code,
+              area = location.address.locality,
+              door = location.address.door,
+              ward = location.address.ward,
+              placeId = Nothing
+            },
+        createdAt = now,
+        updatedAt = now
       }

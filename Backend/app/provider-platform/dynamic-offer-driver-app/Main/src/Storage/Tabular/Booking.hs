@@ -28,9 +28,9 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
-import Storage.Tabular.Booking.BookingLocation hiding (createdAt, id, updatedAt)
 import qualified Storage.Tabular.FareParameters as Fare
 import qualified Storage.Tabular.FareParameters.Instances as Fare
+import Storage.Tabular.Location hiding (id)
 import Storage.Tabular.Merchant (MerchantTId)
 import qualified Storage.Tabular.Merchant.MerchantPaymentMethod as SMPM
 import Storage.Tabular.RiderDetails (RiderDetailsTId)
@@ -60,8 +60,6 @@ mkPersist
       bapCountry Context.Country Maybe
       startTime UTCTime
       riderId RiderDetailsTId Maybe
-      fromLocationId BookingLocationTId
-      toLocationId BookingLocationTId
       vehicleVariant Veh.Variant
       estimatedDistance Meters
       maxEstimatedDistance Centesimal Maybe
@@ -72,7 +70,6 @@ mkPersist
       paymentMethodId SMPM.MerchantPaymentMethodTId Maybe
       createdAt UTCTime
       updatedAt UTCTime
-
       Primary id
       deriving Generic
     |]
@@ -82,20 +79,18 @@ instance TEntityKey BookingT where
   fromKey (BookingTKey _id) = Id _id
   toKey (Id id) = BookingTKey id
 
-type FullBookingT = (BookingT, BookingLocationT, BookingLocationT, Fare.FullFareParametersT)
+type FullBookingT = (BookingT, LocationT, [LocationT], Fare.FullFareParametersT)
 
 instance FromTType FullBookingT Domain.Booking where
   fromTType (BookingT {..}, fromLoc, toLoc, fareParametersT) = do
     pUrl <- parseBaseUrl bapUri
-    let fromLoc_ = mkDomainBookingLocation fromLoc
-        toLoc_ = mkDomainBookingLocation toLoc
+    let fromLocation = mkDomainBookingLocation fromLoc
+        toLocation = map mkDomainBookingLocation toLoc
     fareParams <- fromTType fareParametersT
     return $
       Domain.Booking
         { id = Id id,
           providerId = fromKey providerId,
-          fromLocation = fromLoc_,
-          toLocation = toLoc_,
           bapUri = pUrl,
           maxEstimatedDistance = HighPrecMeters <$> maxEstimatedDistance,
           riderId = fromKey <$> riderId,
@@ -108,8 +103,6 @@ instance ToTType FullBookingT Domain.Booking where
     ( BookingT
         { id = getId id,
           providerId = toKey providerId,
-          fromLocationId = toKey fromLocation.id,
-          toLocationId = toKey toLocation.id,
           bapUri = showBaseUrl bapUri,
           riderId = toKey <$> riderId,
           maxEstimatedDistance = getHighPrecMeters <$> maxEstimatedDistance,
@@ -118,6 +111,6 @@ instance ToTType FullBookingT Domain.Booking where
           ..
         },
       mkTabularBookingLocation fromLocation,
-      mkTabularBookingLocation toLocation,
+      map mkTabularBookingLocation toLocation,
       toTType fareParams
     )

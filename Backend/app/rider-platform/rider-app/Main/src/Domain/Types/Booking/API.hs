@@ -144,12 +144,12 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
       where
         mkOneWayAPIDetails OneWayBookingDetails {..} =
           OneWayBookingAPIDetails
-            { toLocation = SLoc.makeBookingLocationAPIEntity toLocation,
+            { toLocation = SLoc.makeBookingLocationAPIEntity (last toLocation),
               estimatedDistance = distance
             }
         mkOneWaySpecialZoneAPIDetails OneWaySpecialZoneBookingDetails {..} =
           OneWaySpecialZoneBookingAPIDetails
-            { toLocation = SLoc.makeBookingLocationAPIEntity toLocation,
+            { toLocation = SLoc.makeBookingLocationAPIEntity (last toLocation),
               estimatedDistance = distance,
               ..
             }
@@ -157,7 +157,9 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
 buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> m BookingAPIEntity
 buildBookingAPIEntity booking = do
   mbRide <- runInReplica $ QRide.findActiveByRBId booking.id
+  logDebug $ "ride active print : " <> show mbRide
   rideList <- runInReplica $ QRide.findAllByRBId booking.id
+  logDebug $ "ride list print : " <> show rideList
   fareBreakups <- runInReplica $ QFareBreakup.findAllByBookingId booking.id
   mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do

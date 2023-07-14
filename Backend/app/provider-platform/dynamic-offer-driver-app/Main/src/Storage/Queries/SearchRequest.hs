@@ -14,31 +14,35 @@
 
 module Storage.Queries.SearchRequest where
 
+import qualified Domain.Types.LocationMapping as LM
 import Domain.Types.SearchRequest as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Storage.Queries.FullEntityBuilders
+import Storage.Queries.LocationMapping as QLocationMapping
 import Storage.Tabular.SearchRequest
-import Storage.Tabular.SearchRequest.SearchReqLocation
 
-create :: SearchRequest -> SqlDB ()
-create dsReq = withFullEntity dsReq $ \(sReq, fromLoc, toLoc) -> do
-  Esq.create' fromLoc
-  Esq.create' toLoc
-  Esq.create' sReq
+create :: SearchRequest -> [LM.LocationMapping] -> SqlDB ()
+create dsReq mappings = do
+  Esq.runTransaction $
+    withFullEntity dsReq $ \(sReq, fromLoc, toLoc) -> do
+      Esq.create' sReq
+      void $ Esq.createUnique' fromLoc
+      traverse_ Esq.createUnique' toLoc
+  QLocationMapping.createMany mappings
 
-findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
-findById searchRequestId = buildDType $
-  fmap (fmap $ extractSolidType @Domain.SearchRequest) $
-    Esq.findOne' $ do
-      (sReq :& sFromLoc :& sToLoc) <-
-        from
-          ( table @SearchRequestT
-              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& loc1) -> s ^. SearchRequestFromLocationId ==. loc1 ^. SearchReqLocationTId)
-              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& _ :& loc2) -> s ^. SearchRequestToLocationId ==. loc2 ^. SearchReqLocationTId)
-          )
-      where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
-      pure (sReq, sFromLoc, sToLoc)
+findById ::
+  (Transactionable m) =>
+  Id SearchRequest ->
+  m (Maybe SearchRequest)
+findById searchRequestId = buildDType $ do
+  res <- findOne' $ do
+    searchRequestT <- from $ table @SearchRequestT
+    where_ $
+      searchRequestT ^. SearchRequestId ==. val (getId searchRequestId)
+    return searchRequestT
+  join <$> mapM buildFullSearchRequest res
 
 findByTransactionId ::
   (Transactionable m) =>

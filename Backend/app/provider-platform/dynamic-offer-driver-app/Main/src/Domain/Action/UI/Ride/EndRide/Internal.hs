@@ -28,17 +28,21 @@ where
 
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
+-- import qualified Storage.Queries.Person as QPerson
+
+import qualified Data.Time.Clock.POSIX as Time
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.FareParameters as DFare
+import qualified Domain.Types.Location as DLocation
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.LeaderBoardConfig as LConfig
 import Domain.Types.Merchant.TransporterConfig
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RiderDetails as RD
-import EulerHS.Prelude hiding (foldr, id, length, null)
+import EulerHS.Prelude hiding (foldr, for_, id, length, null)
 import GHC.Float (double2Int)
 import Kernel.External.Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
@@ -54,6 +58,7 @@ import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import SharedLogic.DriverLocation as DLoc
 import SharedLogic.FareCalculator
+import qualified SharedLogic.GoogleMaps as GoogleMaps
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as CDI
@@ -66,6 +71,8 @@ import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as DriverStats
 import qualified Storage.Queries.FareParameters as QFare
+import qualified Storage.Queries.Location as QLocation
+import qualified Storage.Queries.LocationMapping as QLocationMapping
 import Storage.Queries.Person as SQP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
@@ -75,9 +82,12 @@ import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 import Tools.Notifications (sendNotificationToDriver)
 
+-- import qualified Domain.Types.Location as Loc
+
 endRideTransaction ::
   ( Metrics.CoreMetrics m,
     CacheFlow m r,
+    EncFlow m r,
     Hedis.HedisFlow m r,
     EsqDBFlow m r,
     EsqLocDBFlow m r,
@@ -90,15 +100,36 @@ endRideTransaction ::
   Id DP.Driver ->
   SRB.Booking ->
   Ride.Ride ->
+  Bool ->
+  LatLong ->
   Maybe DFare.FareParameters ->
   Maybe (Id RD.RiderDetails) ->
   DFare.FareParameters ->
   TransporterConfig ->
   Id Merchant ->
-  m ()
-endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig merchantId = do
+  m (Maybe DLocation.Location)
+endRideTransaction driverId booking ride pickupDropOutsideOfThreshold tripEndPoint mbFareParams mbRiderDetailsId newFareParams thresholdConfig merchantId = do
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = merchantId}
+  endLocationCustomer <-
+    if pickupDropOutsideOfThreshold
+      then do
+        toLocationResponse <- Maps.getTripPlaceName merchantId GetPlaceNameReq {getBy = ByLatLong LatLong {lat = tripEndPoint.lat, lon = tripEndPoint.lon}, sessionToken = Nothing, language = Nothing}
+        actualToLocationId <- generateGUID
+        toAddress <- GoogleMaps.mkLocation toLocationResponse
+        actualToLocation <- buildLocation actualToLocationId tripEndPoint toAddress
+        mappers <- QLocationMapping.findByTagId $ ride.id.getId
+        let toLocationMappers = filter (\mapper -> mapper.order /= 0) mappers
+        logDebug $ "updating location mappings " <> show toLocationMappers
+        logDebug $ "trip end point is " <> show actualToLocation
+        epochVersion <- liftIO $ round `fmap` Time.getPOSIXTime
+        let epochVersionLast5Digits = epochVersion `mod` 100000 :: Integer
+        Esq.runTransaction $ QLocation.create actualToLocation
+        for_ toLocationMappers $ \locMap -> do
+          Esq.runTransaction $ QLocationMapping.updateLocationInMapping locMap actualToLocation epochVersionLast5Digits
+        return $ Just actualToLocation
+      else return Nothing
+
   driverInfo <- CDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
@@ -145,6 +176,8 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
     updateDriverWeeklyZscore ride rideDate weekStartDate weekEndDate driverWeeklyZscore ride.chargeableDistance merchantId
   DLoc.updateOnRideCacheForCancelledOrEndRide driverId merchantId
   SRide.clearCache $ cast driverId
+
+  return endLocationCustomer
 
 updateDriverDailyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, Metrics.CoreMetrics m, CacheFlow m r, Hedis.HedisFlow m r, MonadFlow m) => Ride.Ride -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> m ()
 updateDriverDailyZscore ride rideDate driverZscore chargeableDistance merchantId = do
@@ -361,3 +394,26 @@ getOverduePaymentCache endTime = Hedis.get (mkOverduePaymentProcessingKey endTim
 
 setOverduePaymentCache :: CacheFlow m r => UTCTime -> NominalDiffTime -> m ()
 setOverduePaymentCache endTime expTime = Hedis.setExp (mkOverduePaymentProcessingKey endTime) False (round expTime)
+
+buildLocation :: (MonadFlow m) => Id DLocation.Location -> LatLong -> DLocation.LocationAddress -> m DLocation.Location
+buildLocation locationId LatLong {..} address = do
+  currTime <- getCurrentTime
+  return $
+    DLocation.Location
+      { id = locationId,
+        address =
+          DLocation.LocationAddress
+            { street = address.street,
+              city = address.city,
+              state = address.state,
+              country = address.country,
+              building = address.building,
+              areaCode = address.areaCode,
+              area = address.area,
+              door = address.door,
+              full_address = address.full_address
+            },
+        createdAt = currTime,
+        updatedAt = currTime,
+        ..
+      }

@@ -18,15 +18,15 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Volunteer as 
 import qualified Domain.Action.UI.Ride as DRide
 import qualified Domain.Action.UI.Ride.StartRide as RideStart
 import qualified Domain.Types.Booking as Domain
-import qualified Domain.Types.Booking.BookingLocation as Domain
+import qualified Domain.Types.Location as Domain
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.APISuccess (APISuccess (Success))
-import Kernel.Types.Common (MonadTime (getCurrentTime))
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM)
+import Kernel.Utils.Common (fromMaybeM, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Person (findPerson)
 import qualified Storage.Queries.Booking as QBooking
@@ -37,19 +37,22 @@ bookingInfo merchantShortId otpCode = do
   merchant <- findMerchantByShortId merchantShortId
   now <- getCurrentTime
   booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP merchant.id otpCode now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp otpCode)
-  return $ buildMessageInfoResponse booking
+  toLoc <- case lastMaybe booking.toLocation of
+    Just toLoc -> return toLoc
+    Nothing -> throwError $ InternalError "To location not found."
+  return $ buildMessageInfoResponse booking toLoc
   where
-    buildMessageInfoResponse Domain.Booking {..} =
+    buildMessageInfoResponse Domain.Booking {..} toLoc =
       Common.BookingInfoResponse
         { bookingId = cast id,
           fromLocation = buildBookingLocation fromLocation,
-          toLocation = buildBookingLocation toLocation,
+          toLocation = buildBookingLocation toLoc,
           estimatedDistance,
           estimatedFare,
           estimatedDuration,
           riderName
         }
-    buildBookingLocation Domain.BookingLocation {..} =
+    buildBookingLocation Domain.Location {..} =
       Common.BookingLocation
         { address = buildLocationAddress address,
           id = cast id,

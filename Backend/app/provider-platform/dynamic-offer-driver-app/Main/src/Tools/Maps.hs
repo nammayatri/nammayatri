@@ -25,6 +25,7 @@ module Tools.Maps
     getPickupRoutes,
     getTripRoutes,
     getDistanceForCancelRide,
+    getTripPlaceName,
   )
 where
 
@@ -131,6 +132,9 @@ getPlaceName = runWithServiceConfig Maps.getPlaceName (.getPlaceName)
 
 getPlaceDetails :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id Merchant -> GetPlaceDetailsReq -> m GetPlaceDetailsResp
 getPlaceDetails = runWithServiceConfig Maps.getPlaceDetails (.getPlaceDetails)
+
+getTripPlaceName :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id Merchant -> GetPlaceNameReq -> m GetPlaceNameResp
+getTripPlaceName = runWithServiceConfig Maps.getPlaceName (.getPlaceNameForTripEnd)
 
 runWithServiceConfig ::
   (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) =>

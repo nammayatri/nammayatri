@@ -31,6 +31,7 @@ import qualified Domain.Types.SearchRequest as SSR
 import Domain.Types.SearchRequest.SearchReqLocation (SearchReqLocationAPIEntity)
 import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
 import EulerHS.Prelude hiding (id)
+import Kernel.Prelude (lastMaybe)
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Storage.Hedis as Hedis
@@ -86,8 +87,8 @@ getQuotes searchRequestId = do
   paymentMethods <- getPaymentMethods searchRequest
   return $
     GetQuotesRes
-      { fromLocation = Location.makeSearchReqLocationAPIEntity searchRequest.fromLocation,
-        toLocation = Location.makeSearchReqLocationAPIEntity <$> searchRequest.toLocation,
+      { fromLocation = Location.makeLocationAPIEntity searchRequest.fromLocation,
+        toLocation = Location.makeLocationAPIEntity <$> lastMaybe searchRequest.toLocation,
         quotes = offers,
         estimates,
         paymentMethods
@@ -96,7 +97,8 @@ getQuotes searchRequestId = do
 getOffers :: (HedisFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m [OfferRes]
 getOffers searchRequest = do
   logDebug $ "search Request is : " <> show searchRequest
-  case searchRequest.toLocation of
+  let destination = lastMaybe searchRequest.toLocation
+  case destination of
     Just _ -> do
       quoteList <- runInReplica $ QQuote.findAllBySRId searchRequest.id
       logDebug $ "quotes are : " <> show quoteList

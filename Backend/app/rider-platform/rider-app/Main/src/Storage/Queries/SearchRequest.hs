@@ -15,6 +15,7 @@
 
 module Storage.Queries.SearchRequest where
 
+import Domain.Types.LocationMapping as DLocationMapping
 import Domain.Types.Merchant.MerchantPaymentMethod (MerchantPaymentMethod)
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Domain.Types.Person (Person)
@@ -23,59 +24,45 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Storage.Queries.FullEntityBuilders
+import Storage.Queries.LocationMapping as QLocationMapping
 import Storage.Tabular.SearchRequest
-import Storage.Tabular.SearchRequest.SearchReqLocation
 
-create :: SearchRequest -> SqlDB ()
-create dsReq = Esq.runTransaction $
-  withFullEntity dsReq $ \(sReq, fromLoc, mbToLoc) -> do
-    Esq.create' fromLoc
-    traverse_ Esq.create' mbToLoc
-    Esq.create' sReq
-
-fullSearchRequestTable ::
-  From
-    ( Table SearchRequestT
-        :& Table SearchReqLocationT
-        :& MbTable SearchReqLocationT
-    )
-fullSearchRequestTable =
-  table @SearchRequestT
-    `innerJoin` table @SearchReqLocationT
-      `Esq.on` ( \(s :& loc1) ->
-                   s ^. SearchRequestFromLocationId ==. loc1 ^. SearchReqLocationTId
-               )
-    `leftJoin` table @SearchReqLocationT
-      `Esq.on` ( \(s :& _ :& mbLoc2) ->
-                   s ^. SearchRequestToLocationId ==. mbLoc2 ?. SearchReqLocationTId
-               )
+create :: SearchRequest -> [DLocationMapping.LocationMapping] -> SqlDB ()
+create dsReq mappings = do
+  Esq.runTransaction $
+    withFullEntity dsReq $ \(sReq, fromLoc, toLoc) -> do
+      Esq.create' sReq
+      void $ Esq.createUnique' fromLoc
+      traverse_ Esq.createUnique' toLoc
+  QLocationMapping.createMany mappings
 
 findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
 findById searchRequestId = Esq.buildDType $ do
-  mbFullSearchReqT <- Esq.findOne' $ do
-    (sReq :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
+  res <- Esq.findOne' $ do
+    sReq <- from $ table @SearchRequestT
     where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
-    pure (sReq, sFromLoc, mbSToLoc)
-  pure $ extractSolidType @SearchRequest <$> mbFullSearchReqT
+    pure sReq
+  join <$> mapM buildFullSearchRequest res
 
 findByPersonId :: Transactionable m => Id Person -> Id SearchRequest -> m (Maybe SearchRequest)
 findByPersonId personId searchRequestId = Esq.buildDType $ do
   mbFullSearchReqT <- Esq.findOne' $ do
-    (searchRequest :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
+    searchRequest <- from $ table @SearchRequestT
     where_ $
       searchRequest ^. SearchRequestRiderId ==. val (toKey personId)
         &&. searchRequest ^. SearchRequestId ==. val (getId searchRequestId)
-    return (searchRequest, sFromLoc, mbSToLoc)
-  pure $ extractSolidType @SearchRequest <$> mbFullSearchReqT
+    return searchRequest
+  join <$> mapM buildFullSearchRequest mbFullSearchReqT
 
 findAllByPerson :: Transactionable m => Id Person -> m [SearchRequest]
 findAllByPerson perId = Esq.buildDType $ do
   fullSearchRequestsT <- Esq.findAll' $ do
-    (searchRequest :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
+    searchRequest <- from $ table @SearchRequestT
     where_ $
       searchRequest ^. SearchRequestRiderId ==. val (toKey perId)
-    return (searchRequest, sFromLoc, mbSToLoc)
-  pure $ extractSolidType @SearchRequest <$> fullSearchRequestsT
+    return searchRequest
+  catMaybes <$> mapM buildFullSearchRequest fullSearchRequestsT
 
 updateCustomerExtraFeeAndPaymentMethod :: Id SearchRequest -> Maybe Money -> Maybe (Id DMPM.MerchantPaymentMethod) -> SqlDB ()
 updateCustomerExtraFeeAndPaymentMethod searchReqId customerExtraFee paymentMethodId =

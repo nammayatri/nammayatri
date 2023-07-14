@@ -18,18 +18,24 @@ module Storage.Queries.FullEntityBuilders where
 import Domain.Types.Booking as Booking
 import Domain.Types.Estimate
 import Domain.Types.FarePolicy.FareProductType
+import qualified Domain.Types.LocationMapping as Domain
 import Domain.Types.Quote as Quote
+import Domain.Types.SearchRequest as SR
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Storage.Queries.EstimateBreakup as QEB
-import Storage.Tabular.Booking as Booking
-import Storage.Tabular.Booking.BookingLocation
+import Storage.Queries.LocationMapping as QLM
+import qualified Storage.Tabular.Booking as Booking
 import Storage.Tabular.DriverOffer
 import Storage.Tabular.Estimate
 import Storage.Tabular.Estimate.Instances
+import Storage.Tabular.Location
+import Storage.Tabular.LocationMapping
 import Storage.Tabular.Quote as Quote
 import Storage.Tabular.Quote.Instances as Quote
 import Storage.Tabular.RentalSlab
+import Storage.Tabular.SearchRequest (FullSearchRequestT, SearchRequestT)
+import qualified Storage.Tabular.SearchRequest as SR
 import Storage.Tabular.SpecialZoneQuote
 import Storage.Tabular.TripTerms
 
@@ -45,17 +51,71 @@ buildFullQuote (quoteT@QuoteT {..}, mbTripTermsT, mbRentalSlab, mbDriverOffer, m
     ONE_WAY_SPECIAL_ZONE -> hoistMaybe (Quote.OneWaySpecialZoneDetailsT <$> mbspecialZoneQuote)
   return $ extractSolidType @Quote (quoteT, mbTripTermsT, quoteDetailsT)
 
+getLocationMappingOrder :: LocationMappingT -> Int
+getLocationMappingOrder LocationMappingT {..} = order
+
+buildFullSearchRequest ::
+  Transactionable m =>
+  SearchRequestT ->
+  DTypeBuilder m (Maybe (SolidType FullSearchRequestT))
+buildFullSearchRequest searchRequestT@SR.SearchRequestT {..} = do
+  mappings <- Esq.findAll' $ do
+    mapping <- from $ table @LocationMappingT
+    where_ $ mapping ^. LocationMappingTagId ==. val id
+    orderBy [asc $ mapping ^. LocationMappingOrder]
+    return mapping
+  let allIds :: [LocationTId] = map (\(LocationMappingT _ locationId _ _ _ _) -> locationId) mappings
+  mAllLocations <- mapM (Esq.findById' @LocationT) allIds
+  let allLocations = sequence mAllLocations
+  case allLocations of
+    Just locations -> do
+      searchReq <- runMaybeT $ do
+        return (searchRequestT, head locations, drop 1 locations)
+      case searchReq of
+        Just sReq -> return $ Just (extractSolidType @SearchRequest sReq)
+        Nothing -> return Nothing
+    Nothing -> return Nothing
+
 buildFullBooking ::
   Transactionable m =>
-  (BookingT, BookingLocationT, Maybe BookingLocationT, Maybe TripTermsT, Maybe RentalSlabT) ->
-  DTypeBuilder m (Maybe (SolidType FullBookingT))
-buildFullBooking (bookingT@BookingT {..}, fromLocT, mbToLocT, mbTripTermsT, mbRentalSlab) = runMaybeT $ do
-  bookingDetails <- case fareProductType of
-    ONE_WAY -> hoistMaybe (Booking.OneWayDetailsT <$> mbToLocT)
-    RENTAL -> hoistMaybe (Booking.RentalDetailsT <$> mbRentalSlab)
-    DRIVER_OFFER -> hoistMaybe (Booking.DriverOfferDetailsT <$> mbToLocT)
-    ONE_WAY_SPECIAL_ZONE -> hoistMaybe (Booking.OneWaySpecialZoneDetailsT <$> mbToLocT)
-  return $ extractSolidType @Booking (bookingT, fromLocT, mbTripTermsT, bookingDetails)
+  Booking.BookingT ->
+  DTypeBuilder m (Maybe (SolidType Booking.FullBookingT))
+buildFullBooking bookingT@Booking.BookingT {..} = do
+  mappings <- Esq.findAll' $ do
+    mapping <- from $ table @LocationMappingT
+    where_ $ mapping ^. LocationMappingTagId ==. val id
+    orderBy [asc $ mapping ^. LocationMappingOrder]
+    return mapping
+  let allIds :: [LocationTId] = map (\(LocationMappingT _ locationId _ _ _ _) -> locationId) mappings
+  mAllLocations <- mapM (Esq.findById' @LocationT) allIds
+  tripTerms <- case tripTermsId of
+    Just _ -> return Nothing
+    Nothing -> return Nothing
+  let allLocations = sequence mAllLocations
+
+  case allLocations of
+    Just locations -> do
+      bookin <- runMaybeT $ do
+        let mbToLocT = drop 1 locations
+        bookingDetails <- case fareProductType of
+          ONE_WAY -> hoistMaybe (Booking.OneWayDetailsT <$> Just mbToLocT)
+          RENTAL -> hoistMaybe (Booking.RentalDetailsT <$> Nothing)
+          DRIVER_OFFER -> hoistMaybe (Booking.DriverOfferDetailsT <$> Just mbToLocT)
+          ONE_WAY_SPECIAL_ZONE -> hoistMaybe (Booking.OneWaySpecialZoneDetailsT <$> Just mbToLocT)
+        return (bookingT, head locations, tripTerms, bookingDetails)
+      case bookin of
+        Just book -> return $ Just (extractSolidType @Booking book)
+        Nothing -> return Nothing
+    Nothing -> return Nothing
+
+selectByTagIdAndOrder :: Transactionable m => Text -> m [Domain.LocationMapping]
+selectByTagIdAndOrder tagId = Esq.buildDType $ do
+  mbFullLocationMappingT <- Esq.findAll' $ do
+    (locationMapping :& location) <- from fullLocationMappingTable
+    where_ $ locationMapping ^. LocationMappingTagId ==. val tagId
+    orderBy [desc $ locationMapping ^. LocationMappingOrder]
+    pure (locationMapping, location)
+  mapM buildFullLocationMapping mbFullLocationMappingT
 
 buildFullEstimate ::
   Transactionable m =>

@@ -27,10 +27,12 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
+import Storage.Tabular.Location hiding (id)
 import Storage.Tabular.Merchant (MerchantTId)
-import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId, mkDomainSearchReqLocation, mkTabularSearchReqLocation)
 import Storage.Tabular.Vehicle ()
 import qualified Tools.Maps as Maps
+
+-- import Storage.Tabular.LocationMapping (LocationMappingT)
 
 derivePersistField "FareProductD.Area"
 
@@ -41,8 +43,6 @@ mkPersist
       id Text
       transactionId Text
       providerId MerchantTId
-      fromLocationId SearchReqLocationTId
-      toLocationId SearchReqLocationTId
       area FareProductD.Area Maybe
       bapId Text
       bapUri Text
@@ -65,20 +65,17 @@ instance TEntityKey SearchRequestT where
   fromKey (SearchRequestTKey _id) = Id _id
   toKey (Id id) = SearchRequestTKey id
 
-type FullSearchRequestT = (SearchRequestT, SearchReqLocationT, SearchReqLocationT)
+type FullSearchRequestT = (SearchRequestT, LocationT, [LocationT])
 
 instance FromTType FullSearchRequestT Domain.SearchRequest where
-  fromTType (SearchRequestT {..}, fromLoc, toLoc) = do
+  fromTType (SearchRequestT {..}, fromLoc, mbToLoc) = do
+    fromLocation <- fromTType fromLoc
+    toLocation <- mapM fromTType mbToLoc
     pUrl <- parseBaseUrl bapUri
-    let fromLoc_ = mkDomainSearchReqLocation fromLoc
-        toLoc_ = mkDomainSearchReqLocation toLoc
-
     return $
       Domain.SearchRequest
         { id = Id id,
           providerId = fromKey providerId,
-          fromLocation = fromLoc_,
-          toLocation = toLoc_,
           bapUri = pUrl,
           ..
         }
@@ -88,11 +85,9 @@ instance ToTType FullSearchRequestT Domain.SearchRequest where
     ( SearchRequestT
         { id = getId id,
           providerId = toKey providerId,
-          fromLocationId = toKey fromLocation.id,
-          toLocationId = toKey toLocation.id,
           bapUri = showBaseUrl bapUri,
           ..
         },
-      mkTabularSearchReqLocation fromLocation,
-      mkTabularSearchReqLocation toLocation
+      toTType fromLocation,
+      map toTType toLocation
     )

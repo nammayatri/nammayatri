@@ -17,7 +17,7 @@ module Beckn.ACL.Confirm where
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
 import Domain.Action.Beckn.Confirm as DConfirm
-import qualified Domain.Types.Booking.BookingLocation as DBL
+import qualified Domain.Types.Location as DL
 import Kernel.Prelude
 import Kernel.Product.Validation.Context
 import Kernel.Types.App
@@ -47,4 +47,4 @@ buildConfirmReq req = do
       { ..
       }
   where
-    castAddress Confirm.Address {..} = DBL.LocationAddress {areaCode = area_code, area = locality, ..}
+    castAddress Confirm.Address {..} = DL.LocationAddress {areaCode = area_code, area = locality, full_address = Nothing, ..}

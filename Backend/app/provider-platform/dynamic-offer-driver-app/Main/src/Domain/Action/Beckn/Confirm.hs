@@ -18,10 +18,10 @@ import Data.String.Conversions
 import qualified Data.Text as T
 import Domain.Action.Beckn.Search
 import Domain.Types.Booking as DRB
-import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverQuote as DDQ
+import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.QuoteSpecialZone as DQSZ
@@ -52,12 +52,12 @@ import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
 import Storage.CachedQueries.Merchant as QM
 import Storage.Queries.Booking as QRB
-import qualified Storage.Queries.Booking.BookingLocation as QBL
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
+import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.QuoteSpecialZone as QQSpecialZone
 import qualified Storage.Queries.Ride as QRide
@@ -72,16 +72,16 @@ data DConfirmReq = DConfirmReq
   { bookingId :: Id DRB.Booking,
     customerMobileCountryCode :: Text,
     customerPhoneNumber :: Text,
-    fromAddress :: DBL.LocationAddress,
-    toAddress :: DBL.LocationAddress,
+    fromAddress :: DL.LocationAddress,
+    toAddress :: DL.LocationAddress,
     mbRiderName :: Maybe Text
   }
 
 data DConfirmRes = DConfirmRes
   { booking :: DRB.Booking,
     ride :: Maybe DRide.Ride,
-    fromLocation :: DBL.BookingLocation,
-    toLocation :: DBL.BookingLocation,
+    fromLocation :: DL.Location,
+    toLocation :: DL.Location,
     riderDetails :: DRD.RiderDetails,
     transporter :: DM.Merchant
   }
@@ -124,14 +124,20 @@ handler transporter req quote = do
           case routeInfo of
             Just route -> setExp (searchRequestKey $ getId ride.id) route 14400
             Nothing -> logDebug "Unable to get the key"
+          let toLocation = lastMaybe booking.toLocation
+          destination <- case toLocation of
+            Just toLoc -> return toLoc
+            Nothing -> throwError $ InternalError "To location not found."
+          mappings <- DRide.locationMappingMakerForRide ride
           Esq.runTransaction $ do
             when isNewRider $ QRD.create riderDetails
             QRB.updateRiderId booking.id riderDetails.id
             QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
-            QBL.updateAddress booking.fromLocation.id req.fromAddress
-            QBL.updateAddress booking.toLocation.id req.toAddress
+            QL.updateAddress booking.fromLocation.id req.fromAddress
+            QL.updateAddress destination.id req.toAddress
             whenJust req.mbRiderName $ QRB.updateRiderName booking.id
-            QRide.create ride
+            QRide.create ride mappings
+          Esq.runTransaction $ do
             QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
             QRideD.create rideDetails
             QBE.logRideConfirmedEvent booking.id
@@ -153,7 +159,9 @@ handler transporter req quote = do
 
           uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
           Notify.notifyDriver transporter.id notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
-
+          toLoc <- case lastMaybe uBooking.toLocation of
+            Just toLoc -> return toLoc
+            Nothing -> throwError $ InternalError "To location not found."
           pure
             DConfirmRes
               { booking = uBooking,
@@ -161,7 +169,7 @@ handler transporter req quote = do
                 riderDetails,
                 transporter,
                 fromLocation = uBooking.fromLocation,
-                toLocation = uBooking.toLocation
+                toLocation = toLoc
               }
         Right _ -> throwError AccessDenied
     DRB.SpecialZoneBooking -> do
@@ -169,12 +177,16 @@ handler transporter req quote = do
         Left _ -> throwError AccessDenied
         Right _ -> do
           otpCode <- generateOTPCode
+          let toLocation = lastMaybe booking.toLocation
+          toLoc <- case toLocation of
+            Just toLoc -> return toLoc
+            Nothing -> throwError $ InternalError "To location not found."
           Esq.runTransaction $ do
             when isNewRider $ QRD.create riderDetails
             QRB.updateRiderId booking.id riderDetails.id
             QRB.updateSpecialZoneOtpCode booking.id otpCode
-            QBL.updateAddress booking.fromLocation.id req.fromAddress
-            QBL.updateAddress booking.toLocation.id req.toAddress
+            QL.updateAddress booking.fromLocation.id req.fromAddress
+            QL.updateAddress toLoc.id req.toAddress
             whenJust req.mbRiderName $ QRB.updateRiderName booking.id
             QBE.logRideConfirmedEvent booking.id
           uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
@@ -186,7 +198,7 @@ handler transporter req quote = do
                 riderDetails,
                 transporter,
                 fromLocation = uBooking.fromLocation,
-                toLocation = uBooking.toLocation
+                toLocation = toLoc
               }
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
@@ -227,7 +239,10 @@ handler transporter req quote = do
             distanceCalculationFailed = Nothing,
             createdAt = now,
             updatedAt = now,
-            numberOfDeviation = Nothing
+            numberOfDeviation = Nothing,
+            fromLocation = booking.fromLocation,
+            toLocation = booking.toLocation,
+            ..
           }
 
     buildTrackingUrl rideId = do

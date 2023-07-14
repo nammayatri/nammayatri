@@ -16,6 +16,7 @@ module Storage.Queries.Ride where
 
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import Domain.Types.Booking.Type (Booking)
+import qualified Domain.Types.LocationMapping as DLocationMapping
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
@@ -24,12 +25,42 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import qualified Storage.Queries.LocationMapping as QLocationMapping
 import Storage.Tabular.Booking as Booking
+import Storage.Tabular.Location
+import Storage.Tabular.LocationMapping
 import Storage.Tabular.Person as Person
+import Storage.Tabular.Ride as R
 import Storage.Tabular.Ride as Ride
 
-create :: Ride -> SqlDB ()
-create = Esq.create
+buildFullRide ::
+  Transactionable m =>
+  Ride.RideT ->
+  DTypeBuilder m (Maybe (SolidType Ride.FullRideT))
+buildFullRide rideT@Ride.RideT {..} = do
+  mappings <- Esq.findAll' $ do
+    mapping <- from $ table @LocationMappingT
+    where_ $ mapping ^. LocationMappingTagId ==. val id
+    orderBy [asc $ mapping ^. LocationMappingOrder]
+    return mapping
+  let allIds :: [LocationTId] = map (\(LocationMappingT _ locationId _ _ _ _) -> locationId) mappings
+  mAllLocations <- mapM (Esq.findById' @LocationT) allIds
+  let allLocations = sequence mAllLocations
+  case allLocations of
+    Just locations -> do
+      ride <- runMaybeT $ do
+        return (rideT, head locations, drop 1 locations)
+      case ride of
+        Just ride' -> return $ Just (extractSolidType @Ride ride')
+        Nothing -> return Nothing
+    Nothing -> return Nothing
+
+create :: Ride -> [DLocationMapping.LocationMapping] -> SqlDB ()
+create dRide mappings = do
+  Esq.runTransaction $
+    withFullEntity dRide $ \(ride, _, _) -> do
+      Esq.create' ride
+  QLocationMapping.createMany mappings
 
 updateStatus ::
   Id Ride ->
@@ -74,14 +105,20 @@ updateRideRating rideId rideRating = do
     where_ $ tbl ^. RideId ==. val (getId rideId)
 
 findById :: Transactionable m => Id Ride -> m (Maybe Ride)
-findById = Esq.findById
+findById rideId = Esq.buildDType $ do
+  res <- Esq.findOne' $ do
+    sr <- from $ table @RideT
+    where_ $ sr ^. RideTId ==. val (toKey rideId)
+    pure sr
+  join <$> mapM buildFullRide res
 
 findByBPPRideId :: Transactionable m => Id BPPRide -> m (Maybe Ride)
-findByBPPRideId bppRideId_ =
-  findOne $ do
+findByBPPRideId bppRideId_ = Esq.buildDType $ do
+  res <- findOne' $ do
     ride <- from $ table @RideT
     where_ $ ride ^. RideBppRideId ==. val (getId bppRideId_)
-    return ride
+    pure ride
+  join <$> mapM buildFullRide res
 
 updateMultiple :: Id Ride -> Ride -> SqlDB ()
 updateMultiple rideId ride = do
@@ -100,21 +137,23 @@ updateMultiple rideId ride = do
     where_ $ tbl ^. RideId ==. val (getId rideId)
 
 findActiveByRBId :: Transactionable m => Id Booking -> m (Maybe Ride)
-findActiveByRBId rbId =
-  findOne $ do
+findActiveByRBId rbId = Esq.buildDType $ do
+  res <- findOne' $ do
     ride <- from $ table @RideT
     where_ $
       ride ^. RideBookingId ==. val (toKey rbId)
         &&. ride ^. RideStatus !=. val CANCELLED
     return ride
+  join <$> mapM buildFullRide res
 
 findAllByRBId :: Transactionable m => Id Booking -> m [Ride]
-findAllByRBId bookingId =
-  findAll $ do
+findAllByRBId bookingId = Esq.buildDType $ do
+  res <- findAll' $ do
     ride <- from $ table @RideT
     where_ $ ride ^. RideBookingId ==. val (toKey bookingId)
     orderBy [desc $ ride ^. RideCreatedAt]
     return ride
+  catMaybes <$> mapM buildFullRide res
 
 updateDriverArrival :: Id Ride -> SqlDB ()
 updateDriverArrival rideId = do
@@ -166,8 +205,13 @@ cancelRides rideIds now = do
     where_ $ tbl ^. RideTId `in_` valList (toKey <$> rideIds)
 
 data RideItem = RideItem
-  { person :: Person,
-    ride :: Ride,
+  { rideShortId :: ShortId Ride,
+    rideCreatedAt :: UTCTime,
+    rideId :: Id Ride,
+    person :: Person,
+    driverName :: Text,
+    driverPhoneNo :: Text,
+    vehicleNo :: Text,
     bookingStatus :: Common.BookingStatus
   }
 
@@ -209,8 +253,13 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
     limit $ fromIntegral limitVal
     offset $ fromIntegral offsetVal
     return
-      ( person,
-        ride,
+      ( ride ^. RideShortId,
+        ride ^. RideCreatedAt,
+        ride ^. RideId,
+        person,
+        ride ^. RideDriverName,
+        ride ^. RideDriverMobileNumber,
+        ride ^. RideVehicleNumber,
         bookingStatusVal
       )
   pure $ mkRideItem <$> res
@@ -227,25 +276,8 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
           when_ (ride ^. Ride.RideStatus ==. val Ride.CANCELLED) then_ $ val Common.RCANCELLED
         ]
         (else_ $ val Common.ONGOING_6HRS)
-    mkRideItem (person, ride, bookingStatus) = do
-      RideItem {..}
-
--- countRides :: Transactionable m => Id Merchant -> m Int
--- countRides merchantId =
---   mkCount <$> do
---     Esq.findAll $ do
---       (_ride :& booking) <-
---         from $
---           table @RideT
---             `innerJoin` table @BookingT
---               `Esq.on` ( \(ride :& booking) ->
---                            ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
---                        )
---       where_ $ booking ^. BookingMerchantId ==. val (toKey merchantId)
---       return (countRows :: SqlExpr (Esq.Value Int))
---   where
---     mkCount [counter] = counter
---     mkCount _ = 0
+    mkRideItem (rideShortId, rideCreatedAt, rideId, person, driverName, driverPhoneNo, vehicleNo, bookingStatus) =
+      RideItem {rideShortId = ShortId rideShortId, rideId = Id rideId, ..}
 
 findRiderIdByRideId :: Transactionable m => Id Ride -> m (Maybe (Id Person))
 findRiderIdByRideId rideId = findOne $ do

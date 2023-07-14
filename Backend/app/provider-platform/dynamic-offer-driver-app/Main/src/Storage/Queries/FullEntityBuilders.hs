@@ -19,6 +19,9 @@ module Storage.Queries.FullEntityBuilders
     buildFullFarePolicy,
     buildFullDriverQuote,
     buildFullQuoteSpecialZone,
+    buildFullSearchRequestSpecialZone,
+    buildFullSearchRequest,
+    buildFullRide,
   )
 where
 
@@ -27,6 +30,9 @@ import qualified Domain.Types.DriverQuote as DriverQuote
 import qualified Domain.Types.FareParameters as FareParams
 import qualified Domain.Types.FarePolicy as FarePolicy
 import qualified Domain.Types.QuoteSpecialZone as QuoteSpecialZone
+import Domain.Types.Ride
+import Domain.Types.SearchRequest
+import Domain.Types.SearchRequestSpecialZone
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (findById, isNothing)
 import Kernel.Types.Id
@@ -34,7 +40,6 @@ import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as FarePolicyDr
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QFarePolicyProgressiveDetailsPerExtraKmRateSection
 import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as FarePolicySlabsDetailsSlab
 import Storage.Tabular.Booking
-import Storage.Tabular.Booking.BookingLocation
 import qualified Storage.Tabular.DriverQuote as DriverQuote
 import Storage.Tabular.FareParameters
 import qualified Storage.Tabular.FareParameters as FareParams
@@ -45,18 +50,90 @@ import Storage.Tabular.FarePolicy
 import qualified Storage.Tabular.FarePolicy as FarePolicy
 import qualified Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails as FarePolicyProgressiveDetails
 import qualified Storage.Tabular.FarePolicy.Instances as FarePolicy
+import Storage.Tabular.Location
+import Storage.Tabular.LocationMapping
 import qualified Storage.Tabular.QuoteSpecialZone as QuoteSpecialZone
+import Storage.Tabular.Ride
+import Storage.Tabular.Ride.Instances
+import Storage.Tabular.SearchRequest
+import Storage.Tabular.SearchRequestSpecialZone
 
 buildFullBooking ::
   Transactionable m =>
   BookingT ->
+  -- <<<<<<< Updated upstream
   DTypeBuilder m (Maybe (SolidType FullBookingT))
-buildFullBooking bookingT@BookingT {..} = runMaybeT $ do
-  fromLocationT <- Esq.findByIdM @BookingLocationT fromLocationId
-  toLocationT <- Esq.findByIdM @BookingLocationT toLocationId
-  fareParamsT <- Esq.findByIdM @FareParams.FareParametersT fareParametersId
-  fullFareParamsData <- MaybeT $ getFullFareParamsData fareParamsT
-  return $ extractSolidType @Booking (bookingT, fromLocationT, toLocationT, fullFareParamsData)
+buildFullBooking bookingT@BookingT {..} = do
+  mappings <- Esq.findAll' $ do
+    mapping <- from $ table @LocationMappingT
+    where_ $ mapping ^. LocationMappingTagId ==. val id
+    orderBy [asc $ mapping ^. LocationMappingOrder]
+    return mapping
+  let allIds :: [LocationTId] = map (\(LocationMappingT _ locationId _ _ _ _) -> locationId) mappings
+  allLocations <- mapM (Esq.findById' @LocationT) allIds
+  let x = sequence allLocations
+
+  case x of
+    Just locations -> do
+      bookin <- runMaybeT $ do
+        fareParamsT <- MaybeT $ Esq.findById' @FareParams.FareParametersT fareParametersId
+        fullFareParamsData <- MaybeT $ getFullFareParamsData fareParamsT
+        return (bookingT, head locations, drop 1 locations, fullFareParamsData)
+      case bookin of
+        Just book -> return $ Just (extractSolidType @Booking book)
+        Nothing -> return Nothing
+    Nothing -> return Nothing
+
+buildFullSearchRequestSpecialZone ::
+  Transactionable m =>
+  SearchRequestSpecialZoneT ->
+  DTypeBuilder m (Maybe (SolidType FullSearchRequestSpecialZoneT))
+buildFullSearchRequestSpecialZone searchRequestSpecialZoneT@SearchRequestSpecialZoneT {..} = do
+  mappings <- Esq.findAll' $ do
+    mapping <- from $ table @LocationMappingT
+    where_ $ mapping ^. LocationMappingTagId ==. val id
+    orderBy [asc $ mapping ^. LocationMappingOrder]
+    return mapping
+  let allIds :: [LocationTId] = map (\(LocationMappingT _ locationId _ _ _ _) -> locationId) mappings
+  allLocations <- mapM (Esq.findById' @LocationT) allIds
+  let x = sequence allLocations
+  case x of
+    Just locations -> return $ Just (extractSolidType @SearchRequestSpecialZone (searchRequestSpecialZoneT, head locations, drop 1 locations))
+    Nothing -> return Nothing
+
+buildFullSearchRequest ::
+  Transactionable m =>
+  SearchRequestT ->
+  DTypeBuilder m (Maybe (SolidType FullSearchRequestT))
+buildFullSearchRequest searchRequestT@SearchRequestT {..} = do
+  mappings <- Esq.findAll' $ do
+    mapping <- from $ table @LocationMappingT
+    where_ $ mapping ^. LocationMappingTagId ==. val id
+    orderBy [asc $ mapping ^. LocationMappingOrder]
+    return mapping
+  let allIds :: [LocationTId] = map (\(LocationMappingT _ locationId _ _ _ _) -> locationId) mappings
+  allLocations <- mapM (Esq.findById' @LocationT) allIds
+  let x = sequence allLocations
+  case x of
+    Just locations -> return $ Just (extractSolidType @SearchRequest (searchRequestT, head locations, drop 1 locations))
+    Nothing -> return Nothing
+
+buildFullRide ::
+  Transactionable m =>
+  RideT ->
+  DTypeBuilder m (Maybe (SolidType FullRideT))
+buildFullRide rideT@RideT {..} = do
+  mappings <- Esq.findAll' $ do
+    mapping <- from $ table @LocationMappingT
+    where_ $ mapping ^. LocationMappingTagId ==. val id
+    orderBy [asc $ mapping ^. LocationMappingOrder]
+    return mapping
+  let allIds :: [LocationTId] = map (\(LocationMappingT _ locationId _ _ _ _) -> locationId) mappings
+  allLocations <- mapM (Esq.findById' @LocationT) allIds
+  let x = sequence allLocations
+  case x of
+    Just locations -> return $ Just (extractSolidType @Ride (rideT, head locations, drop 1 locations))
+    Nothing -> return Nothing
 
 getFullFareParamsData ::
   Transactionable m =>

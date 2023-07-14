@@ -185,6 +185,8 @@ library
       Domain.Types.Issue.IssueOption
       Domain.Types.Issue.IssueReport
       Domain.Types.Issue.IssueTranslation
+      Domain.Types.Location
+      Domain.Types.LocationMapping
       Domain.Types.Maps.PlaceNameCache
       Domain.Types.MediaFile
       Domain.Types.Merchant
@@ -271,7 +273,6 @@ library
       Storage.CachedQueries.Merchant.TransporterConfig
       Storage.Queries.BapMetadata
       Storage.Queries.Booking
-      Storage.Queries.Booking.BookingLocation
       Storage.Queries.BookingCancellationReason
       Storage.Queries.BusinessEvent
       Storage.Queries.CallStatus
@@ -306,6 +307,8 @@ library
       Storage.Queries.Issue.IssueCategory
       Storage.Queries.Issue.IssueOption
       Storage.Queries.Issue.IssueReport
+      Storage.Queries.Location
+      Storage.Queries.LocationMapping
       Storage.Queries.Maps.PlaceNameCache
       Storage.Queries.MediaFile
       Storage.Queries.Merchant
@@ -336,7 +339,6 @@ library
       Storage.Queries.Vehicle
       Storage.Tabular.BapMetadata
       Storage.Tabular.Booking
-      Storage.Tabular.Booking.BookingLocation
       Storage.Tabular.BookingCancellationReason
       Storage.Tabular.BusinessEvent
       Storage.Tabular.CallStatus
@@ -378,6 +380,8 @@ library
       Storage.Tabular.Issue.IssueOption
       Storage.Tabular.Issue.IssueReport
       Storage.Tabular.Issue.IssueTranslation
+      Storage.Tabular.Location
+      Storage.Tabular.LocationMapping
       Storage.Tabular.Maps.PlaceNameCache
       Storage.Tabular.MediaFile
       Storage.Tabular.Merchant
@@ -405,7 +409,6 @@ library
       Storage.Tabular.RideDetails
       Storage.Tabular.RiderDetails
       Storage.Tabular.SearchRequest
-      Storage.Tabular.SearchRequest.SearchReqLocation
       Storage.Tabular.SearchRequestForDriver
       Storage.Tabular.SearchRequestSpecialZone
       Storage.Tabular.SearchTry

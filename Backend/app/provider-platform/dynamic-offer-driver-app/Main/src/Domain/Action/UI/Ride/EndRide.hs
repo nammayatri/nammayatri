@@ -31,6 +31,7 @@ import qualified Domain.Types.DriverLocation as DrLoc
 import Domain.Types.FareParameters as Fare
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FareProduct as DFareProduct
+import Domain.Types.Location
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Merchant.TransporterConfig as DTConf
@@ -41,7 +42,7 @@ import qualified Domain.Types.Vehicle as DVeh
 import Environment (Flow)
 import EulerHS.Prelude hiding (id, pi)
 import Kernel.External.Maps
-import Kernel.Prelude (roundToIntegral)
+import Kernel.Prelude (lastMaybe, roundToIntegral)
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
@@ -82,8 +83,8 @@ data ServiceHandle m = ServiceHandle
   { findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     getMerchant :: Id DM.Merchant -> m (Maybe DM.Merchant),
-    endRideTransaction :: Id DP.Driver -> SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> FareParameters -> DTConf.TransporterConfig -> Id DM.Merchant -> m (),
-    notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> Maybe DMPM.PaymentMethodInfo -> Maybe Text -> m (),
+    endRideTransaction :: Id DP.Driver -> SRB.Booking -> DRide.Ride -> Bool -> LatLong -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> FareParameters -> DTConf.TransporterConfig -> Id DM.Merchant -> m (Maybe Location),
+    notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Maybe Location -> m (),
     getFarePolicy :: Id DM.Merchant -> DVeh.Variant -> Maybe DFareProduct.Area -> m DFP.FullFarePolicy,
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> Money -> Meters -> m (),
@@ -190,7 +191,10 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
           driverLocation <- findDriverLoc booking.providerId driverId >>= fromMaybeM LocationNotFound
           pure $ getCoordinates driverLocation
     CallBasedReq _ -> do
-      pure $ getCoordinates booking.toLocation
+      toLoc <- case lastMaybe booking.toLocation of
+        Just toLoc -> return toLoc
+        Nothing -> throwError $ InternalError "To location not found."
+      pure $ getCoordinates toLoc
 
   whenWithLocationUpdatesLock driverId $ do
     -- here we update the current ride, so below we fetch the updated version
@@ -219,7 +223,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                numberOfDeviation = getDeviations req
               }
     -- we need to store fareParams only when they changed
-    withTimeAPI "endRide" "endRideTransaction" $ endRideTransaction (cast @DP.Person @DP.Driver driverId) booking updRide mbUpdatedFareParams booking.riderId newFareParams thresholdConfig booking.providerId
+    endLocationCustomer <- withTimeAPI "endRide" "endRideTransaction" $ endRideTransaction (cast @DP.Person @DP.Driver driverId) booking updRide pickupDropOutsideOfThreshold tripEndPoint mbUpdatedFareParams booking.riderId newFareParams thresholdConfig booking.providerId
     withTimeAPI "endRide" "clearInterpolatedPoints" $ clearInterpolatedPoints driverId
 
     mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
@@ -228,7 +232,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
     let mbPaymentUrl = DMPM.getPostpaidPaymentUrl =<< mbPaymentMethod
     let mbPaymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
 
-    withTimeAPI "endRide" "notifyCompleteToBAP" $ notifyCompleteToBAP booking updRide newFareParams mbPaymentMethodInfo mbPaymentUrl
+    withTimeAPI "endRide" "notifyCompleteToBAP" $ notifyCompleteToBAP booking updRide newFareParams mbPaymentMethodInfo mbPaymentUrl endLocationCustomer
   return APISuccess.Success
   where
     getDeviations endRideReq = case endRideReq of
@@ -274,7 +278,10 @@ isPickupDropOutsideOfThreshold booking ride tripEndPoint thresholdConfig = do
       let pickupLocThreshold = metersToHighPrecMeters thresholdConfig.pickupLocThreshold
       let dropLocThreshold = metersToHighPrecMeters thresholdConfig.dropLocThreshold
       let pickupDifference = abs $ distanceBetweenInMeters (getCoordinates booking.fromLocation) tripStartLoc
-      let dropDifference = abs $ distanceBetweenInMeters (getCoordinates booking.toLocation) tripEndPoint
+      toLoc <- case lastMaybe booking.toLocation of
+        Just toLoc -> return toLoc
+        Nothing -> throwError $ InternalError "To location not found."
+      let dropDifference = abs $ distanceBetweenInMeters (getCoordinates toLoc) tripEndPoint
       let pickupDropOutsideOfThreshold = (pickupDifference >= pickupLocThreshold) || (dropDifference >= dropLocThreshold)
 
       logTagInfo "Locations differences" $

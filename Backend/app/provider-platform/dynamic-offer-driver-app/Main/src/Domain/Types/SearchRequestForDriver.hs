@@ -17,10 +17,10 @@ module Domain.Types.SearchRequestForDriver where
 
 import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person
 import qualified Domain.Types.SearchRequest as DSR
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.External.Maps.Google.PolyLinePoints
@@ -83,8 +83,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     durationToPickup :: Seconds,
     baseFare :: Money,
     customerExtraFee :: Maybe Money,
-    fromLocation :: DLoc.SearchReqLocation,
-    toLocation :: DLoc.SearchReqLocation,
+    fromLocation :: DLoc.Location,
+    toLocation :: DLoc.Location,
     distance :: Meters,
     driverLatLong :: LatLong,
     driverMinExtraFee :: Maybe Money,
@@ -95,8 +95,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
 
-makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Seconds -> SearchRequestForDriverAPIEntity
-makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration keepHiddenForSeconds =
+makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Seconds -> DLoc.Location -> SearchRequestForDriverAPIEntity
+makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration keepHiddenForSeconds toLoc =
   SearchRequestForDriverAPIEntity
     { searchRequestId = nearbyReq.searchTryId,
       searchTryId = nearbyReq.searchTryId,
@@ -109,7 +109,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       baseFare = searchTry.baseFare,
       customerExtraFee = searchTry.customerExtraFee,
       fromLocation = searchRequest.fromLocation,
-      toLocation = searchRequest.toLocation,
+      toLocation = toLoc,
       distance = searchRequest.estimatedDistance,
       driverLatLong =
         LatLong

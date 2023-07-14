@@ -11,30 +11,39 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE PartialTypeSignatures #-}
 
-module Storage.Queries.Booking.BookingLocation where
+module Storage.Queries.Location where
 
-import Domain.Types.Booking.BookingLocation
+import Domain.Types.Location
+import Domain.Types.LocationAddress
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Tabular.Booking.BookingLocation
+import Storage.Tabular.Location
 
-updateAddress :: Id BookingLocation -> LocationAddress -> SqlDB ()
-updateAddress blId LocationAddress {..} = do
+findById :: Transactionable m => Id Location -> m (Maybe Location)
+findById = Esq.findById
+
+create :: Location -> SqlDB ()
+create = Esq.create
+
+updateLocation :: Id Location -> Location -> SqlDB ()
+updateLocation blId Location {..} = do
+  let LocationAddress {..} = address
   now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
       tbl
-      [ BookingLocationStreet =. val street,
-        BookingLocationCity =. val city,
-        BookingLocationState =. val state,
-        BookingLocationCountry =. val country,
-        BookingLocationBuilding =. val building,
-        BookingLocationAreaCode =. val areaCode,
-        BookingLocationArea =. val area,
-        BookingLocationUpdatedAt =. val now
+      [ LocationStreet =. val street,
+        LocationCity =. val city,
+        LocationState =. val state,
+        LocationCountry =. val country,
+        LocationBuilding =. val building,
+        LocationAreaCode =. val areaCode,
+        LocationArea =. val area,
+        LocationUpdatedAt =. val now,
+        LocationLat =. val lat,
+        LocationLon =. val lon
       ]
-    where_ $ tbl ^. BookingLocationTId ==. val (toKey blId)
+    where_ $ tbl ^. LocationTId ==. val (toKey blId)

@@ -26,8 +26,8 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
+import qualified Storage.Tabular.Location as Loc
 import Storage.Tabular.Merchant (MerchantTId)
-import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId, mkDomainSearchReqLocation, mkTabularSearchReqLocation)
 import Storage.Tabular.Vehicle ()
 
 derivePersistField "FareProductD.Area"
@@ -42,8 +42,6 @@ mkPersist
       startTime UTCTime
       validTill UTCTime
       providerId MerchantTId
-      fromLocationId SearchReqLocationTId
-      toLocationId SearchReqLocationTId
       area FareProductD.Area Maybe
       bapId Text
       bapUri Text
@@ -60,32 +58,29 @@ instance TEntityKey SearchRequestSpecialZoneT where
   fromKey (SearchRequestSpecialZoneTKey _id) = Id _id
   toKey (Id id) = SearchRequestSpecialZoneTKey id
 
-instance FromTType (SearchRequestSpecialZoneT, SearchReqLocationT, SearchReqLocationT) Domain.SearchRequestSpecialZone where
-  fromTType (SearchRequestSpecialZoneT {..}, fromLoc, toLoc) = do
-    pUrl <- parseBaseUrl bapUri
-    let fromLoc_ = mkDomainSearchReqLocation fromLoc
-        toLoc_ = mkDomainSearchReqLocation toLoc
+type FullSearchRequestSpecialZoneT = (SearchRequestSpecialZoneT, Loc.LocationT, [Loc.LocationT])
 
+instance FromTType FullSearchRequestSpecialZoneT Domain.SearchRequestSpecialZone where
+  fromTType (SearchRequestSpecialZoneT {..}, fromLoc, mbToLoc) = do
+    pUrl <- parseBaseUrl bapUri
+    fromLocation <- fromTType fromLoc
+    toLocation <- mapM fromTType mbToLoc
     return $
       Domain.SearchRequestSpecialZone
         { id = Id id,
           providerId = fromKey providerId,
-          fromLocation = fromLoc_,
-          toLocation = toLoc_,
           bapUri = pUrl,
           ..
         }
 
-instance ToTType (SearchRequestSpecialZoneT, SearchReqLocationT, SearchReqLocationT) Domain.SearchRequestSpecialZone where
+instance ToTType FullSearchRequestSpecialZoneT Domain.SearchRequestSpecialZone where
   toTType Domain.SearchRequestSpecialZone {..} =
     ( SearchRequestSpecialZoneT
         { id = getId id,
           providerId = toKey providerId,
-          fromLocationId = toKey fromLocation.id,
-          toLocationId = toKey toLocation.id,
           bapUri = showBaseUrl bapUri,
           ..
         },
-      mkTabularSearchReqLocation fromLocation,
-      mkTabularSearchReqLocation toLocation
+      toTType fromLocation,
+      map toTType toLocation
     )
