@@ -19,12 +19,12 @@ import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.Init as Init
 import Control.Lens ((%~))
 import qualified Data.Text as T
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
-import qualified Domain.Types.VehicleVariant as VehVar
 import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.LocationAddress as DLA
-import Kernel.External.Maps.Types (LatLong)
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.VehicleVariant as VehVar
 import Environment
+import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context as Context
