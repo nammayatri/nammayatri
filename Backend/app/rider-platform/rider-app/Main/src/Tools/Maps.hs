@@ -41,13 +41,12 @@ import Kernel.External.Maps as Reexport hiding
   )
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
-import Kernel.Randomizer
+import qualified Kernel.Randomizer as Random
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
-import qualified Text.Show
 import Tools.Error
 import Tools.Metrics
 
@@ -139,54 +138,18 @@ runWithServiceConfig func fieldName getMapsServiceUsage merchantId req = do
     DMSC.MapsServiceConfig msc -> func msc req
     _ -> throwError $ InternalError "Unknown Service Config"
 
--- TODO move to Lib
-pickService :: MonadFlow m => Id Merchant -> Text -> MapsServiceUsage -> m MapsService
+pickService :: (MonadIO m, Log m) => Id Merchant -> Text -> MapsServiceUsage -> m MapsService
 pickService merchantId fieldName MapsServiceUsage {..} = do
-  let percentages = [(Google, googlePercentage), (OSRM, osrmPercentage), (MMI, mmiPercentage)]
-  let catPercentages = mapMaybe snd percentages
-  unless (null catPercentages || (sum catPercentages == 100)) $
-    throwError (InternalError $ "Sum percentage for merchantId " <> merchantId.getId <> " and field name " <> fieldName <> " should be 100.")
+  let percentages =
+        [(Google, googlePercentage), (OSRM, osrmPercentage), (MMI, mmiPercentage)] <&> \(element, percentage) -> do
+          Random.Percentage {element, percentage = fromMaybe 0 percentage}
   if usePercentage
     then do
-      when (null catPercentages) $
-        -- add logs and not throw error??
-        throwError (InternalError $ "Percentages not configured for merchantId " <> merchantId.getId <> " and field name " <> fieldName <> " should be 100.")
-      random <- getRandomInRange (1, 100)
-      let (ranges, mbPickedService) = foldl (foldRange random) ([], Nothing) percentages
-      logDebug $ "Pick maps service: " <> fieldName <> "; merchantId: " <> merchantId.getId <> "; random: " <> show random <> "; ranges: " <> show ranges <> "; picked: " <> show mbPickedService
-      case mbPickedService of
-        Nothing -> do
-          -- impossible
-          logWarning $ "Fail to pick random service, use configured service instead: " <> show mapsService
+      result <- Random.getRandomElementUsingPercentages percentages
+      logDebug $ "Pick maps service: " <> fieldName <> "; merchantId: " <> merchantId.getId <> "; result: " <> show result
+      case result.pickedElement of
+        Left err -> do
+          logWarning $ "Fail to pick random service: " <> show err <> "; use configured service instead: " <> show mapsService
           pure mapsService
-        Just pickedService -> pure pickedService
+        Right pickedService -> pure pickedService
     else pure mapsService
-
-data ServiceRange = ServiceRange
-  { service :: MapsService,
-    percentage :: Maybe Int,
-    range :: Range
-  }
-  deriving (Show)
-
-newtype Range = Range (Int, Int)
-
-instance Show Range where
-  show (Range (x, y)) = show x <> " < random <= " <> show y
-
--- TODO find proper function in lib for randoms, or move code to lib
-foldRange :: Int -> ([ServiceRange], Maybe MapsService) -> (MapsService, Maybe Int) -> ([ServiceRange], Maybe MapsService)
-foldRange random (serviceRanges, mbPickedService) (service, percentage) = do
-  let Range (_rangeFloor, rangeCeil) = maybe (Range (0, 0)) (.range) (listToMaybe serviceRanges)
-      rangeCeil' = rangeCeil + fromMaybe 0 percentage
-      range' = Range (rangeCeil, rangeCeil')
-  let serviceRange' =
-        ServiceRange
-          { service,
-            percentage,
-            range = range'
-          }
-  let mbPickedServer' = case mbPickedService of
-        Nothing -> if random <= rangeCeil' then Just service else Nothing
-        Just pickedService -> Just pickedService
-  (serviceRange' : serviceRanges, mbPickedServer')

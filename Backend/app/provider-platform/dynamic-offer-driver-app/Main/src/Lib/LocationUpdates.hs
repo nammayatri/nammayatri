@@ -39,7 +39,7 @@ import Tools.Maps as Maps
 buildRideInterpolationHandler :: Id Merchant -> Bool -> Flow (RideInterpolationHandler Person.Person Flow)
 buildRideInterpolationHandler orgId isEndRide = do
   orgMapsConfig <- QOMC.findByMerchantId orgId >>= fromMaybeM (MerchantServiceUsageConfigNotFound orgId.getId)
-  service <- Maps.pickService orgId ".snapToRoad" orgMapsConfig.snapToRoad
+  service <- Maps.pickService orgId "snapToRoad" orgMapsConfig.snapToRoad
   orgMapsServiceConfig <-
     QOMSC.findByMerchantIdAndService orgId (DOSC.MapsService service)
       >>= fromMaybeM (MerchantServiceConfigNotFound orgId.getId "Maps" (show orgMapsConfig.snapToRoad))

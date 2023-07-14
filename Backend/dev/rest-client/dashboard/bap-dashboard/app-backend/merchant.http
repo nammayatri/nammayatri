@@ -132,9 +132,9 @@ content-type: application/json
   "getRoutes" :
     { "mapsService" : "Google",
       "usePercentage" : true,
-      "googlePercentage" : 50,
-      "osrmPercentage" : 50,
-      "mmiPercentage" : null
+      "googlePercentage" : 99,
+      "osrmPercentage" : 1,
+      "mmiPercentage" : 0
     },
   "getPickupRoutes" :
     { "mapsService" : "Google",
@@ -153,9 +153,9 @@ content-type: application/json
   "snapToRoad" :
     { "mapsService" : "Google",
       "usePercentage" : true,
-      "googlePercentage" : 11,
-      "osrmPercentage" : 19,
-      "mmiPercentage" : 70
+      "googlePercentage" : 99,
+      "osrmPercentage" : 1,
+      "mmiPercentage" : 0
     },
   "getPlaceName" :
     { "mapsService" : "Google",
