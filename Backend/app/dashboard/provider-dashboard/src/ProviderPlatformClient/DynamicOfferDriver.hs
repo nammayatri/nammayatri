@@ -84,7 +84,9 @@ data DriversAPIs = DriversAPIs
     updatePhoneNumber :: Id Driver.Driver -> Driver.UpdatePhoneNumberReq -> Euler.EulerClient APISuccess,
     addVehicle :: Id Driver.Driver -> Driver.AddVehicleReq -> Euler.EulerClient APISuccess,
     updateDriverName :: Id Driver.Driver -> Driver.UpdateDriverNameReq -> Euler.EulerClient APISuccess,
-    clearOnRideStuckDrivers :: Euler.EulerClient Driver.ClearOnRideStuckDriversRes
+    clearOnRideStuckDrivers :: Euler.EulerClient Driver.ClearOnRideStuckDriversRes,
+    driverAadhaarInfoByPhone :: Text -> Euler.EulerClient Driver.DriverAadhaarInfoRes,
+    updateDriverAadhaar :: Text -> Driver.UpdateDriverDataReq -> Euler.EulerClient APISuccess
   }
 
 data RidesAPIs = RidesAPIs
@@ -206,8 +208,9 @@ mkDriverOfferAPIs merchantId token = do
                :<|> generateAadhaarOtp
                :<|> verifyAadhaarOtp
              )
-      :<|> clearOnRideStuckDrivers =
-        driversClient
+      :<|> clearOnRideStuckDrivers
+      :<|> driverAadhaarInfoByPhone
+      :<|> updateDriverAadhaar = driversClient
 
     rideList
       :<|> rideStart

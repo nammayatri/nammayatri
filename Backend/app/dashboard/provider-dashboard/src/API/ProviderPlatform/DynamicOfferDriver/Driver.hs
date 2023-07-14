@@ -59,6 +59,8 @@ type API =
            :<|> UpdateDriverNameAPI
            :<|> Reg.API
            :<|> ClearOnRideStuckDrivers
+           :<|> DriverAadhaarInfoByPhoneAPI
+           :<|> UpdateDriverAadhaarAPI
        )
 
 type DriverDocumentsInfoAPI =
@@ -145,6 +147,14 @@ type ClearOnRideStuckDrivers =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'CLEAR_ON_RIDE_STUCK_DRIVER_IDS
     :> Common.ClearOnRideStuckDrivers
 
+type DriverAadhaarInfoByPhoneAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'AADHAAR_INFO_PONE
+    :> Common.DriverAadhaarInfoByPhoneAPI
+
+type UpdateDriverAadhaarAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'AADHAAR_UPDATE
+    :> Common.UpdateDriverAadhaarAPI
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   driverDocuments merchantId
@@ -169,6 +179,8 @@ handler merchantId =
     :<|> updateDriverName merchantId
     :<|> Reg.handler merchantId
     :<|> clearOnRideStuckDrivers merchantId
+    :<|> driverAadhaarInfoByPhone merchantId
+    :<|> updateDriverAadhaar merchantId
 
 buildTransaction ::
   ( MonadFlow m,
@@ -327,3 +339,13 @@ clearOnRideStuckDrivers :: ShortId DM.Merchant -> ApiTokenInfo -> FlowHandler Co
 clearOnRideStuckDrivers merchantShortId apiTokenInfo = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.drivers.clearOnRideStuckDrivers)
+
+driverAadhaarInfoByPhone :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> FlowHandler Common.DriverAadhaarInfoRes
+driverAadhaarInfoByPhone merchantShortId apiTokenInfo phoneNo = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.getAadhaarDetailsByPhoneNumber) phoneNo
+
+updateDriverAadhaar :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> Common.UpdateDriverDataReq -> FlowHandler APISuccess
+updateDriverAadhaar merchantShortId apiTokenInfo phoneNo req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.updateAadhaarDetailsByPhoneNumber) phoneNo req
