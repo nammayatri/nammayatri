@@ -18,6 +18,7 @@ import Beckn.Types.Core.Taxi.Common.Authorization
 import Beckn.Types.Core.Taxi.Common.Location (Location)
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (id)
+import Kernel.Utils.JSON (removeNullFields)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data StartInfo = StartInfo
