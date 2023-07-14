@@ -60,36 +60,40 @@ sendSearchRequestToDrivers ::
   DriverPoolConfig ->
   [DriverPoolWithActualDistResult] ->
   m ()
-sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolConfig driverPool = do
-  logInfo $ "Send search requests to driver pool batch-" <> show driverPool
-  bapMetadata <- CQSM.findById (Id searchReq.bapId)
-  validTill <- getSearchRequestValidTill
-  batchNumber <- getPoolBatchNum searchTry.id
-  languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool
-  DS.driverScoreEventHandler
-    DST.OnNewSearchRequestForDrivers
-      { driverPool = driverPool,
-        merchantId = searchReq.providerId,
-        searchReq = searchReq,
-        searchTry = searchTry,
-        validTill = validTill,
-        batchProcessTime = fromIntegral driverPoolConfig.singleBatchProcessTime
-      }
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber validTill) driverPool
-  let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
-  Esq.runTransaction $ do
-    QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
-    QSRD.createMany searchRequestsForDrivers
-  forM_ driverPoolZipSearchRequests $ \(_, sReqFD) -> do
-    Esq.runNoTransaction $ QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = searchTry.id, searchTryId = searchTry.id, validTill = sReqFD.searchRequestValidTill}
+sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolConfig driverPool =
+  Redis.whenWithLockRedis (newSearchTryLockKey searchReq.id.getId) 60 $ do
+    logInfo $ "Send search requests to driver pool batch-" <> show driverPool
+    bapMetadata <- CQSM.findById (Id searchReq.bapId)
+    validTill <- getSearchRequestValidTill
+    batchNumber <- getPoolBatchNum searchTry.id
+    languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool
+    DS.driverScoreEventHandler
+      DST.OnNewSearchRequestForDrivers
+        { driverPool = driverPool,
+          merchantId = searchReq.providerId,
+          searchReq = searchReq,
+          searchTry = searchTry,
+          validTill = validTill,
+          batchProcessTime = fromIntegral driverPoolConfig.singleBatchProcessTime
+        }
+    searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber validTill) driverPool
+    let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
+    Esq.runTransaction $ do
+      QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
+      QSRD.createMany searchRequestsForDrivers
+    forM_ driverPoolZipSearchRequests $ \(_, sReqFD) -> do
+      Esq.runNoTransaction $ QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = searchTry.id, searchTryId = searchTry.id, validTill = sReqFD.searchRequestValidTill}
 
-  forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
-    let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
-    let translatedSearchReq = fromMaybe searchReq $ M.lookup language languageDictionary
-    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.keepHiddenForSeconds
+    forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
+      let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
+      let translatedSearchReq = fromMaybe searchReq $ M.lookup language languageDictionary
+      let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.keepHiddenForSeconds
 
-    Notify.notifyOnNewSearchRequestAvailable searchReq.providerId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
+      Notify.notifyOnNewSearchRequestAvailable searchReq.providerId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
   where
+    newSearchTryLockKey :: Text -> Text
+    newSearchTryLockKey id = "Driver:NewSearchTry:SearchRequestId-" <> id
+
     getSearchRequestValidTill = do
       now <- getCurrentTime
       let singleBatchProcessTime = fromIntegral driverPoolConfig.singleBatchProcessTime

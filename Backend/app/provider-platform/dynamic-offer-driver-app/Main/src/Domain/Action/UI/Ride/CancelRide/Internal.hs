@@ -184,35 +184,39 @@ repeatSearch ::
   DriverPoolConfig ->
   m ()
 repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSource now driverPoolConfig = do
-  newSearchTry <- buildSearchTry searchTry
+  Redis.whenWithLockRedis (newSearchTryLockKey searchReq.id.getId) 60 $ do
+    newSearchTry <- buildSearchTry searchTry
 
-  Esq.runTransaction $ do
-    QST.create newSearchTry
+    Esq.runTransaction $ do
+      QST.create newSearchTry
 
-  let driverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
-  res <-
-    sendSearchRequestToDrivers'
-      driverPoolConfig
-      searchReq
-      newSearchTry
-      merchant
-      driverExtraFeeBounds
+    let driverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
+    res <-
+      sendSearchRequestToDrivers'
+        driverPoolConfig
+        searchReq
+        newSearchTry
+        merchant
+        driverExtraFeeBounds
 
-  case res of
-    ReSchedule _ -> do
-      let inTime = fromIntegral driverPoolConfig.singleBatchProcessTime
-      maxShards <- asks (.maxShards)
-      Esq.runTransaction $ do
-        createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
-          SendSearchRequestToDriverJobData
-            { searchTryId = newSearchTry.id,
-              estimatedRideDistance = searchReq.estimatedDistance,
-              driverExtraFeeBounds = driverExtraFeeBounds
-            }
-    _ -> return ()
+    case res of
+      ReSchedule _ -> do
+        let inTime = fromIntegral driverPoolConfig.singleBatchProcessTime
+        maxShards <- asks (.maxShards)
+        Esq.runTransaction $ do
+          createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
+            SendSearchRequestToDriverJobData
+              { searchTryId = newSearchTry.id,
+                estimatedRideDistance = searchReq.estimatedDistance,
+                driverExtraFeeBounds = driverExtraFeeBounds
+              }
+      _ -> return ()
 
-  BP.sendEstimateRepetitionUpdateToBAP booking ride searchTry.estimateId cancellationSource
+    BP.sendEstimateRepetitionUpdateToBAP booking ride searchTry.estimateId cancellationSource
   where
+    newSearchTryLockKey :: Text -> Text
+    newSearchTryLockKey id = "Driver:NewSearchTry:SearchRequestId-" <> id
+
     buildSearchTry ::
       ( MonadTime m,
         MonadGuid m,

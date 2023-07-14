@@ -52,6 +52,7 @@ module Domain.Action.UI.Driver
     getDriverPayments,
     DriverInfo.DriverMode,
     updateMetaData,
+    driverAcceptAndCustomerSearchLockKey,
   )
 where
 
@@ -811,6 +812,9 @@ isAllowedExtraFee extraFee val = extraFee.minFee <= val && val <= extraFee.maxFe
 offerQuoteLockKey :: Id Person -> Text
 offerQuoteLockKey driverId = "Driver:OfferQuote:DriverId-" <> driverId.getId
 
+driverAcceptAndCustomerSearchLockKey :: Text -> Text
+driverAcceptAndCustomerSearchLockKey id = "Driver:DriverAcceptAndCustomerSearch:SearchRequestId-" <> id
+
 -- DEPRECATED
 offerQuote ::
   ( HasCacheConfig r,
@@ -871,52 +875,53 @@ respondQuote (driverId, _) req = do
     sReqFD <-
       QSRD.findByDriverAndSearchTryId driverId searchTry.id
         >>= fromMaybeM NoSearchRequestForDriver
-    driverFCMPulledList <-
-      case req.response of
-        Pulled -> throwError UnexpectedResponseValue
-        Accept -> do
-          when (searchReq.autoAssignEnabled == Just True) $ do
-            whenM (CS.isSearchTryCancelled searchTryId) $
-              throwError (InternalError "SEARCH_TRY_CANCELLED")
-            CS.markSearchTryAsAssigned searchTryId
-          logDebug $ "offered fare: " <> show req.offeredFare
-          whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
-          when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
-          quoteLimit <- getQuoteLimit searchReq.providerId searchReq.estimatedDistance
-          quoteCount <- Esq.runInReplica $ QDrQt.countAllBySTId searchTry.id
-          when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
-          farePolicy <- getFarePolicy organization.id sReqFD.vehicleVariant searchReq.area
-          let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
-          whenJust mbOfferedFare $ \off ->
-            whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->
-              unless (isAllowedExtraFee driverExtraFeeBounds' off) $
-                throwError $ NotAllowedExtraFee $ show off
-          fareParams <-
-            calculateFareParameters
-              CalculateFareParametersParams
-                { farePolicy = farePolicy,
-                  distance = searchReq.estimatedDistance,
-                  rideTime = sReqFD.startTime,
-                  waitingTime = Nothing,
-                  driverSelectedFare = mbOfferedFare,
-                  customerExtraFee = searchTry.customerExtraFee
-                }
-          driverQuote <- buildDriverQuote driver searchReq sReqFD fareParams
-          triggerQuoteEvent QuoteEventData {quote = driverQuote}
-          Esq.runTransaction $ do
-            QDrQt.create driverQuote
-            QSRD.updateDriverResponse sReqFD.id req.response
-            QDFS.updateStatus sReqFD.driverId DDFS.OFFERED_QUOTE {quoteId = driverQuote.id, validTill = driverQuote.validTill}
-          let shouldPullFCMForOthers = (quoteCount + 1) >= quoteLimit || (searchReq.autoAssignEnabled == Just True)
-          driverFCMPulledList <- if shouldPullFCMForOthers then QSRD.findAllActiveWithoutRespBySearchTryId searchTryId else pure []
-          -- Adding +1 in quoteCount because one more quote added above (QDrQt.create driverQuote)
-          sendRemoveRideRequestNotification driverFCMPulledList organization.id driverQuote
-          sendDriverOffer organization searchReq searchTry driverQuote
-          pure driverFCMPulledList
-        Reject -> do
-          Esq.runTransaction $ QSRD.updateDriverResponse sReqFD.id req.response
-          pure []
-    DS.driverScoreEventHandler $ buildDriverRespondEventPayload searchTry.id searchReq.providerId driverFCMPulledList
+    Redis.whenWithLockRedis (driverAcceptAndCustomerSearchLockKey searchReq.id.getId) 60 $ do
+      driverFCMPulledList <-
+        case req.response of
+          Pulled -> throwError UnexpectedResponseValue
+          Accept -> do
+            when (searchReq.autoAssignEnabled == Just True) $ do
+              whenM (CS.isSearchTryCancelled searchTryId) $
+                throwError (InternalError "SEARCH_TRY_CANCELLED")
+              CS.markSearchTryAsAssigned searchTryId
+            logDebug $ "offered fare: " <> show req.offeredFare
+            whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
+            when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
+            quoteLimit <- getQuoteLimit searchReq.providerId searchReq.estimatedDistance
+            quoteCount <- Esq.runInReplica $ QDrQt.countAllBySTId searchTry.id
+            when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
+            farePolicy <- getFarePolicy organization.id sReqFD.vehicleVariant searchReq.area
+            let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
+            whenJust mbOfferedFare $ \off ->
+              whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->
+                unless (isAllowedExtraFee driverExtraFeeBounds' off) $
+                  throwError $ NotAllowedExtraFee $ show off
+            fareParams <-
+              calculateFareParameters
+                CalculateFareParametersParams
+                  { farePolicy = farePolicy,
+                    distance = searchReq.estimatedDistance,
+                    rideTime = sReqFD.startTime,
+                    waitingTime = Nothing,
+                    driverSelectedFare = mbOfferedFare,
+                    customerExtraFee = searchTry.customerExtraFee
+                  }
+            driverQuote <- buildDriverQuote driver searchReq sReqFD fareParams
+            triggerQuoteEvent QuoteEventData {quote = driverQuote}
+            Esq.runTransaction $ do
+              QDrQt.create driverQuote
+              QSRD.updateDriverResponse sReqFD.id req.response
+              QDFS.updateStatus sReqFD.driverId DDFS.OFFERED_QUOTE {quoteId = driverQuote.id, validTill = driverQuote.validTill}
+            let shouldPullFCMForOthers = (quoteCount + 1) >= quoteLimit || (searchReq.autoAssignEnabled == Just True)
+            driverFCMPulledList <- if shouldPullFCMForOthers then QSRD.findAllActiveWithoutRespBySearchTryId searchTryId else pure []
+            -- Adding +1 in quoteCount because one more quote added above (QDrQt.create driverQuote)
+            sendRemoveRideRequestNotification driverFCMPulledList organization.id driverQuote
+            sendDriverOffer organization searchReq searchTry driverQuote
+            pure driverFCMPulledList
+          Reject -> do
+            Esq.runTransaction $ QSRD.updateDriverResponse sReqFD.id req.response
+            pure []
+      DS.driverScoreEventHandler $ buildDriverRespondEventPayload searchTry.id searchReq.providerId driverFCMPulledList
   pure Success
   where
     buildDriverRespondEventPayload searchTryId merchantId restActiveDriverSearchReqs =
