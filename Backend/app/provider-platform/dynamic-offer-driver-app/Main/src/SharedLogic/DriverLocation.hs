@@ -17,7 +17,6 @@ module SharedLogic.DriverLocation where
 import Domain.Types.DriverLocation
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.External.Maps
 import Kernel.Prelude
@@ -93,7 +92,7 @@ cacheDriverLocation driverLocation = do
   let driverLocationKey = makeDriverLocationKey driverLocation.driverId
   Hedis.setExp driverLocationKey driverLocation expTime
 
-updateOnRide :: (CacheFlow m r, L.MonadFlow m, MonadTime m, EsqLocDBFlow m r, EsqLocRepDBFlow m r) => Id Person.Driver -> Bool -> Id Merchant -> m (MeshResult ())
+updateOnRide :: (CacheFlow m r, L.MonadFlow m, MonadTime m, EsqLocDBFlow m r, EsqLocRepDBFlow m r) => Id Person.Driver -> Bool -> Id Merchant -> m ()
 updateOnRide driverId onRide merchantId = do
   if onRide
     then do

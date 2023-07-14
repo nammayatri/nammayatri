@@ -27,7 +27,6 @@ where
 import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.Merchant
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Hedis
@@ -91,8 +90,8 @@ makeSubscriberIdKey subscriberId = "driver-offer:CachedQueries:Merchant:Subscrib
 makeShortIdKey :: ShortId Merchant -> Text
 makeShortIdKey shortId = "driver-offer:CachedQueries:Merchant:ShortId-" <> shortId.getShortId
 
-update :: (L.MonadFlow m, MonadTime m) => Merchant -> m (MeshResult ())
+update :: (L.MonadFlow m, MonadTime m, Log m) => Merchant -> m ()
 update = Queries.update
 
-loadAllProviders :: L.MonadFlow m => m [Merchant]
+loadAllProviders :: (L.MonadFlow m, Log m) => m [Merchant]
 loadAllProviders = Queries.loadAllProviders

@@ -11,74 +11,53 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Message.MessageTranslation where
 
 import qualified Data.Time as T
 import qualified Domain.Types.Message.Message as Msg
 import Domain.Types.Message.MessageTranslation
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Id
-import Lib.Utils (setMeshConfig)
+import Kernel.Types.Logging (Log)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Message.MessageTranslation as BeamMT
 
-create :: L.MonadFlow m => MessageTranslation -> m (MeshResult ())
-create messageTranslation = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamMT.MessageTranslationT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainMessageTranslationToBeam messageTranslation)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create :: (L.MonadFlow m, Log m) => MessageTranslation -> m ()
+create = createWithKV
 
-findByMessageIdAndLanguage :: L.MonadFlow m => Id Msg.Message -> Language -> m (Maybe MessageTranslation)
-findByMessageIdAndLanguage (Id messageId) language = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamMT.MessageTranslationT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamMT.messageId $ Se.Eq messageId, Se.Is BeamMT.language $ Se.Eq language]]
-      case result of
-        Right mt -> pure $ transformBeamMessageTranslationToDomain <$> mt
-        Left _ -> pure Nothing
-    Nothing -> pure Nothing
+findByMessageIdAndLanguage :: (L.MonadFlow m, Log m) => Id Msg.Message -> Language -> m (Maybe MessageTranslation)
+findByMessageIdAndLanguage (Id messageId) language = findOneWithKV [Se.And [Se.Is BeamMT.messageId $ Se.Eq messageId, Se.Is BeamMT.language $ Se.Eq language]]
 
-findByMessageId :: L.MonadFlow m => Id Msg.Message -> m [MessageTranslation]
-findByMessageId (Id messageId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamMT.MessageTranslationT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamMessageTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamMT.messageId $ Se.Eq messageId]
-    Nothing -> pure []
+findByMessageId :: (L.MonadFlow m, Log m) => Id Msg.Message -> m [MessageTranslation]
+findByMessageId (Id messageId) = findAllWithKV [Se.Is BeamMT.messageId $ Se.Eq messageId]
 
-transformBeamMessageTranslationToDomain :: BeamMT.MessageTranslation -> MessageTranslation
-transformBeamMessageTranslationToDomain BeamMT.MessageTranslationT {..} = do
-  MessageTranslation
-    { messageId = Id messageId,
-      language = language,
-      title = title,
-      label = label,
-      description = description,
-      shortDescription = shortDescription,
-      createdAt = T.localTimeToUTC T.utc createdAt
-    }
+instance FromTType' BeamMT.MessageTranslation MessageTranslation where
+  fromTType' BeamMT.MessageTranslationT {..} = do
+    pure $
+      Just
+        MessageTranslation
+          { messageId = Id messageId,
+            language = language,
+            title = title,
+            label = label,
+            description = description,
+            shortDescription = shortDescription,
+            createdAt = T.localTimeToUTC T.utc createdAt
+          }
 
-transformDomainMessageTranslationToBeam :: MessageTranslation -> BeamMT.MessageTranslation
-transformDomainMessageTranslationToBeam MessageTranslation {..} =
-  BeamMT.MessageTranslationT
-    { BeamMT.messageId = getId messageId,
-      BeamMT.language = language,
-      BeamMT.title = title,
-      BeamMT.label = label,
-      BeamMT.description = description,
-      BeamMT.shortDescription = shortDescription,
-      BeamMT.createdAt = T.utcToLocalTime T.utc createdAt
-    }
+instance ToTType' BeamMT.MessageTranslation MessageTranslation where
+  toTType' MessageTranslation {..} = do
+    BeamMT.MessageTranslationT
+      { BeamMT.messageId = getId messageId,
+        BeamMT.language = language,
+        BeamMT.title = title,
+        BeamMT.label = label,
+        BeamMT.description = description,
+        BeamMT.shortDescription = shortDescription,
+        BeamMT.createdAt = T.utcToLocalTime T.utc createdAt
+      }

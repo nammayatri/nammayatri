@@ -11,17 +11,16 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.DriverOnboarding.AadhaarVerification where
 
 import Domain.Types.DriverOnboarding.AadhaarVerification
 import Domain.Types.Person (Person)
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Types.Logging (Log)
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.AadhaarVerification as BeamAV
@@ -29,15 +28,8 @@ import qualified Storage.Beam.DriverOnboarding.AadhaarVerification as BeamAV
 -- create :: AadhaarVerification -> Esq.SqlDB ()
 -- create = Esq.create
 
-create :: L.MonadFlow m => AadhaarVerification -> m (MeshResult ())
-create aadhaarVerification = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamAV.AadhaarVerificationT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainAadhaarVerificationToBeam aadhaarVerification)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create :: (L.MonadFlow m, Log m) => AadhaarVerification -> m ()
+create = createWithKV
 
 -- findById ::
 --   Transactionable m =>
@@ -45,14 +37,8 @@ create aadhaarVerification = do
 --   m (Maybe AadhaarVerification)
 -- findById = Esq.findById
 
-findById :: L.MonadFlow m => Id AadhaarVerification -> m (Maybe AadhaarVerification)
-findById (Id aadhaarVerification) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamAV.AadhaarVerificationT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> either (pure Nothing) (transformBeamAadhaarVerificationToDomain <$>) <$> KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamAV.id $ Se.Eq aadhaarVerification]
-    Nothing -> pure Nothing
+findById :: (L.MonadFlow m, Log m) => Id AadhaarVerification -> m (Maybe AadhaarVerification)
+findById (Id aadhaarVerification) = findOneWithKV [Se.Is BeamAV.id $ Se.Eq aadhaarVerification]
 
 -- findByDriverId ::
 --   Transactionable m =>
@@ -64,14 +50,8 @@ findById (Id aadhaarVerification) = do
 --     where_ $ aadhaar ^. AadhaarVerificationDriverId ==. val (toKey driverId)
 --     return aadhaar
 
-findByDriverId :: L.MonadFlow m => Id Person -> m (Maybe AadhaarVerification)
-findByDriverId (Id driverId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamAV.AadhaarVerificationT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> either (pure Nothing) (transformBeamAadhaarVerificationToDomain <$>) <$> KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamAV.driverId $ Se.Eq driverId]
-    Nothing -> pure Nothing
+findByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe AadhaarVerification)
+findByDriverId (Id driverId) = findOneWithKV [Se.Is BeamAV.driverId $ Se.Eq driverId]
 
 -- deleteByDriverId :: Id Person -> SqlDB ()
 -- deleteByDriverId driverId =
@@ -79,40 +59,31 @@ findByDriverId (Id driverId) = do
 --     aadhaar <- from $ table @AadhaarVerificationT
 --     where_ $ aadhaar ^. AadhaarVerificationDriverId ==. val (toKey driverId)
 
-deleteByDriverId :: L.MonadFlow m => Id Person -> m ()
-deleteByDriverId (Id driverId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamAV.AadhaarVerificationT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      void $
-        KV.deleteWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [Se.Is BeamAV.driverId (Se.Eq driverId)]
-    Nothing -> pure ()
+deleteByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteByDriverId (Id driverId) = deleteWithKV [Se.Is BeamAV.driverId (Se.Eq driverId)]
 
-transformBeamAadhaarVerificationToDomain :: BeamAV.AadhaarVerification -> AadhaarVerification
-transformBeamAadhaarVerificationToDomain BeamAV.AadhaarVerificationT {..} = do
-  AadhaarVerification
-    { id = Id id,
-      driverId = Id driverId,
-      driverName = driverName,
-      driverGender = driverGender,
-      driverDob = driverDob,
-      driverImage = driverImage,
-      createdAt = createdAt
-    }
+instance FromTType' BeamAV.AadhaarVerification AadhaarVerification where
+  fromTType' BeamAV.AadhaarVerificationT {..} = do
+    pure $
+      Just
+        AadhaarVerification
+          { id = Id id,
+            driverId = Id driverId,
+            driverName = driverName,
+            driverGender = driverGender,
+            driverDob = driverDob,
+            driverImage = driverImage,
+            createdAt = createdAt
+          }
 
-transformDomainAadhaarVerificationToBeam :: AadhaarVerification -> BeamAV.AadhaarVerification
-transformDomainAadhaarVerificationToBeam AadhaarVerification {..} =
-  BeamAV.AadhaarVerificationT
-    { BeamAV.id = getId id,
-      BeamAV.driverId = getId driverId,
-      BeamAV.driverName = driverName,
-      BeamAV.driverGender = driverGender,
-      BeamAV.driverDob = driverDob,
-      BeamAV.driverImage = driverImage,
-      BeamAV.createdAt = createdAt
-    }
+instance ToTType' BeamAV.AadhaarVerification AadhaarVerification where
+  toTType' AadhaarVerification {..} = do
+    BeamAV.AadhaarVerificationT
+      { BeamAV.id = getId id,
+        BeamAV.driverId = getId driverId,
+        BeamAV.driverName = driverName,
+        BeamAV.driverGender = driverGender,
+        BeamAV.driverDob = driverDob,
+        BeamAV.driverImage = driverImage,
+        BeamAV.createdAt = createdAt
+      }

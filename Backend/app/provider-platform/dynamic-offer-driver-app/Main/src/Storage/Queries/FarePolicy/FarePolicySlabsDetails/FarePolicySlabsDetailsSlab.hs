@@ -11,88 +11,79 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab where
 
 import qualified Domain.Types.FarePolicy as DFP
-import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Kernel.Types.Id as KTI
-import Lib.Utils (setMeshConfig)
+import Kernel.Types.Logging (Log)
+import Lib.Utils
+  ( FromTType' (fromTType'),
+    ToTType' (toTType'),
+    deleteAllWithKV,
+    findAllWithKV,
+    findOneWithKV,
+  )
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as BeamFPSS
-import Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
+
+-- import Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
 
 findAll' ::
-  L.MonadFlow m =>
+  (L.MonadFlow m, Log m) =>
   Id DFP.FarePolicy ->
-  m [FullFarePolicySlabsDetailsSlab]
-findAll' (Id farePolicyId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamFPSS.FarePolicySlabsDetailsSlabT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamFarePolicyProgressiveDetailsToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]
-    Nothing -> pure []
+  m [BeamFPSS.FullFarePolicySlabsDetailsSlab]
+findAll' (Id farePolicyId) = findAllWithKV [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]
 
--- findById'' ::
---   (L.MonadFlow m) =>
---   Id DFP.FarePolicy ->
---   m (Maybe FullFarePolicySlabsDetailsSlab)
--- findById'' (Id farePolicyId) = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
---   let modelName = Se.modelTableName @BeamFPSS.FarePolicySlabsDetailsSlabT
---   let updatedMeshConfig = setMeshConfig modelName
---   case dbConf of
---     Just dbCOnf' -> either (pure Nothing) (transformBeamFarePolicyProgressiveDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]
---     Nothing -> pure Nothing
+findById'' ::
+  (L.MonadFlow m, Log m) =>
+  Id DFP.FarePolicy ->
+  m (Maybe BeamFPSS.FullFarePolicySlabsDetailsSlab)
+findById'' (Id farePolicyId) = findOneWithKV [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]
 
-deleteAll' :: L.MonadFlow m => Id DFP.FarePolicy -> m ()
-deleteAll' (Id farePolicyId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamFPSS.FarePolicySlabsDetailsSlabT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> void $ KV.deleteAllReturningWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]
-    Nothing -> pure ()
+deleteAll' :: (L.MonadFlow m, Log m) => Id DFP.FarePolicy -> m ()
+deleteAll' (Id farePolicyId) = deleteAllWithKV [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]
 
-transformBeamFarePolicyProgressiveDetailsToDomain :: BeamFPSS.FarePolicySlabsDetailsSlab -> FullFarePolicySlabsDetailsSlab
-transformBeamFarePolicyProgressiveDetailsToDomain BeamFPSS.FarePolicySlabsDetailsSlabT {..} = do
-  ( KTI.Id farePolicyId,
-    DFP.FPSlabsDetailsSlab
-      { startDistance = startDistance,
+instance FromTType' BeamFPSS.FarePolicySlabsDetailsSlab BeamFPSS.FullFarePolicySlabsDetailsSlab where
+  fromTType' BeamFPSS.FarePolicySlabsDetailsSlabT {..} = do
+    pure $
+      Just
+        ( KTI.Id farePolicyId,
+          DFP.FPSlabsDetailsSlab
+            { startDistance = startDistance,
+              baseFare = baseFare,
+              waitingChargeInfo =
+                ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
+                  DFP.WaitingChargeInfo
+                    { waitingCharge = waitingCharge',
+                      freeWaitingTime = freeWaitingTime'
+                    },
+              nightShiftCharge = nightShiftCharge,
+              platformFeeInfo =
+                ((,,) <$> platformFeeCharge <*> platformFeeCgst <*> platformFeeSgst) <&> \(platformFeeCharge', platformFeeCgst', platformFeeSgst') ->
+                  DFP.PlatformFeeInfo
+                    { platformFeeCharge = platformFeeCharge',
+                      cgst = platformFeeCgst',
+                      sgst = platformFeeSgst'
+                    }
+            }
+        )
+
+instance ToTType' BeamFPSS.FarePolicySlabsDetailsSlab BeamFPSS.FullFarePolicySlabsDetailsSlab where
+  toTType' (KTI.Id farePolicyId, DFP.FPSlabsDetailsSlab {..}) =
+    BeamFPSS.FarePolicySlabsDetailsSlabT
+      { id = Nothing,
+        farePolicyId = farePolicyId,
+        startDistance = startDistance,
         baseFare = baseFare,
-        waitingChargeInfo =
-          ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
-            DFP.WaitingChargeInfo
-              { waitingCharge = waitingCharge',
-                freeWaitingTime = freeWaitingTime'
-              },
+        platformFeeCharge = DFP.platformFeeCharge <$> platformFeeInfo,
+        platformFeeCgst = DFP.cgst <$> platformFeeInfo,
+        platformFeeSgst = DFP.sgst <$> platformFeeInfo,
+        waitingCharge = DFP.waitingCharge <$> waitingChargeInfo,
         nightShiftCharge = nightShiftCharge,
-        platformFeeInfo =
-          ((,,) <$> platformFeeCharge <*> platformFeeCgst <*> platformFeeSgst) <&> \(platformFeeCharge', platformFeeCgst', platformFeeSgst') ->
-            DFP.PlatformFeeInfo
-              { platformFeeCharge = platformFeeCharge',
-                cgst = platformFeeCgst',
-                sgst = platformFeeSgst'
-              }
+        freeWatingTime = DFP.freeWaitingTime <$> waitingChargeInfo
       }
-    )
-
-transformDomainFarePolicySlabsDetailsSlabToBeam :: FullFarePolicySlabsDetailsSlab -> BeamFPSS.FarePolicySlabsDetailsSlab
-transformDomainFarePolicySlabsDetailsSlabToBeam (KTI.Id farePolicyId, DFP.FPSlabsDetailsSlab {..}) =
-  BeamFPSS.FarePolicySlabsDetailsSlabT
-    { id = Nothing,
-      farePolicyId = farePolicyId,
-      startDistance = startDistance,
-      baseFare = baseFare,
-      platformFeeCharge = DFP.platformFeeCharge <$> platformFeeInfo,
-      platformFeeCgst = DFP.cgst <$> platformFeeInfo,
-      platformFeeSgst = DFP.sgst <$> platformFeeInfo,
-      waitingCharge = DFP.waitingCharge <$> waitingChargeInfo,
-      nightShiftCharge = nightShiftCharge,
-      freeWatingTime = DFP.freeWaitingTime <$> waitingChargeInfo
-    }

@@ -23,11 +23,13 @@ import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
+import qualified Domain.Types.FarePolicy as Domain
 import qualified Domain.Types.Vehicle.Variant as Vehicle
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import qualified Kernel.Types.Id as KTI
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize as Se
@@ -56,6 +58,8 @@ instance ModelMeta FarePolicyProgressiveDetailsPerExtraKmRateSectionT where
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type FarePolicyProgressiveDetailsPerExtraKmRateSection = FarePolicyProgressiveDetailsPerExtraKmRateSectionT Identity
+
+type FullFarePolicyProgressiveDetailsPerExtraKmRateSection = (KTI.Id Domain.FarePolicy, Domain.FPProgressiveDetailsPerExtraKmRateSection)
 
 instance FromJSON FarePolicyProgressiveDetailsPerExtraKmRateSection where
   parseJSON = A.genericParseJSON A.defaultOptions

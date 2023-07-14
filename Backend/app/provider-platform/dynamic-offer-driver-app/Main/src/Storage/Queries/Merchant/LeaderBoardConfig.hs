@@ -11,16 +11,16 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Merchant.LeaderBoardConfig where
 
 import Domain.Types.Merchant
 import Domain.Types.Merchant.LeaderBoardConfig
-import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Types.Logging (Log)
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.LeaderBoardConfig as BeamLBC
@@ -34,37 +34,33 @@ import qualified Storage.Beam.Merchant.LeaderBoardConfig as BeamLBC
 
 --   pure leaderBoardConfig
 
-findLeaderBoardConfigbyType :: L.MonadFlow m => LeaderBoardType -> Id Merchant -> m (Maybe LeaderBoardConfigs)
-findLeaderBoardConfigbyType leaderBType merchantId = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamLBC.LeaderBoardConfigsT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamLeaderBoardConfigToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamLBC.leaderBoardType $ Se.Eq leaderBType, Se.Is BeamLBC.merchantId $ Se.Eq (getId merchantId)]]
-    Nothing -> pure Nothing
+findLeaderBoardConfigbyType :: (L.MonadFlow m, Log m) => LeaderBoardType -> Id Merchant -> m (Maybe LeaderBoardConfigs)
+findLeaderBoardConfigbyType leaderBType merchantId = findOneWithKV [Se.And [Se.Is BeamLBC.leaderBoardType $ Se.Eq leaderBType, Se.Is BeamLBC.merchantId $ Se.Eq (getId merchantId)]]
 
-transformBeamLeaderBoardConfigToDomain :: BeamLBC.LeaderBoardConfigs -> LeaderBoardConfigs
-transformBeamLeaderBoardConfigToDomain BeamLBC.LeaderBoardConfigsT {..} = do
-  LeaderBoardConfigs
-    { id = Id id,
-      leaderBoardType = leaderBoardType,
-      numberOfSets = numberOfSets,
-      leaderBoardExpiry = leaderBoardExpiry,
-      zScoreBase = zScoreBase,
-      leaderBoardLengthLimit = fromIntegral leaderBoardLengthLimit,
-      isEnabled = isEnabled,
-      merchantId = Id merchantId
-    }
+instance FromTType' BeamLBC.LeaderBoardConfigs LeaderBoardConfigs where
+  fromTType' BeamLBC.LeaderBoardConfigsT {..} = do
+    pure $
+      Just
+        LeaderBoardConfigs
+          { id = Id id,
+            leaderBoardType = leaderBoardType,
+            numberOfSets = numberOfSets,
+            leaderBoardExpiry = leaderBoardExpiry,
+            zScoreBase = zScoreBase,
+            leaderBoardLengthLimit = fromIntegral leaderBoardLengthLimit,
+            isEnabled = isEnabled,
+            merchantId = Id merchantId
+          }
 
-transformDomainLeaderBoardConfigToBeam :: LeaderBoardConfigs -> BeamLBC.LeaderBoardConfigs
-transformDomainLeaderBoardConfigToBeam LeaderBoardConfigs {..} =
-  BeamLBC.LeaderBoardConfigsT
-    { BeamLBC.id = getId id,
-      BeamLBC.leaderBoardType = leaderBoardType,
-      BeamLBC.numberOfSets = numberOfSets,
-      BeamLBC.leaderBoardExpiry = leaderBoardExpiry,
-      BeamLBC.zScoreBase = zScoreBase,
-      BeamLBC.leaderBoardLengthLimit = fromIntegral leaderBoardLengthLimit,
-      BeamLBC.isEnabled = isEnabled,
-      BeamLBC.merchantId = getId merchantId
-    }
+instance ToTType' BeamLBC.LeaderBoardConfigs LeaderBoardConfigs where
+  toTType' LeaderBoardConfigs {..} = do
+    BeamLBC.LeaderBoardConfigsT
+      { BeamLBC.id = getId id,
+        BeamLBC.leaderBoardType = leaderBoardType,
+        BeamLBC.numberOfSets = numberOfSets,
+        BeamLBC.leaderBoardExpiry = leaderBoardExpiry,
+        BeamLBC.zScoreBase = zScoreBase,
+        BeamLBC.leaderBoardLengthLimit = fromIntegral leaderBoardLengthLimit,
+        BeamLBC.isEnabled = isEnabled,
+        BeamLBC.merchantId = getId merchantId
+      }

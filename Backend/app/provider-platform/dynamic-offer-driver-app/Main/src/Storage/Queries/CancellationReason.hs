@@ -11,41 +11,37 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.CancellationReason where
 
 import Domain.Types.CancellationReason
-import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude hiding (isNothing)
-import Lib.Utils (setMeshConfig)
+import Kernel.Types.Logging (Log)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findAllWithOptionsKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.CancellationReason as BeamCR
 
-findAll :: L.MonadFlow m => m [CancellationReason]
-findAll = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamCR.CancellationReasonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamCancellationReasonToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamCR.enabled $ Se.Eq True] (Se.Desc BeamCR.priority) Nothing Nothing
-    Nothing -> pure []
+findAll :: (L.MonadFlow m, Log m) => m [CancellationReason]
+findAll = findAllWithOptionsKV [Se.Is BeamCR.enabled $ Se.Eq True] (Se.Desc BeamCR.priority) Nothing Nothing
 
-transformBeamCancellationReasonToDomain :: BeamCR.CancellationReason -> CancellationReason
-transformBeamCancellationReasonToDomain BeamCR.CancellationReasonT {..} = do
-  CancellationReason
-    { reasonCode = CancellationReasonCode reasonCode,
-      description = description,
-      enabled = enabled,
-      priority = priority
-    }
+instance FromTType' BeamCR.CancellationReason CancellationReason where
+  fromTType' BeamCR.CancellationReasonT {..} = do
+    pure $
+      Just
+        CancellationReason
+          { reasonCode = CancellationReasonCode reasonCode,
+            description = description,
+            enabled = enabled,
+            priority = priority
+          }
 
-transformDomainCancellationReasonToBeam :: CancellationReason -> BeamCR.CancellationReason
-transformDomainCancellationReasonToBeam CancellationReason {..} =
-  BeamCR.CancellationReasonT
-    { BeamCR.reasonCode = (\(CancellationReasonCode x) -> x) reasonCode,
-      BeamCR.description = description,
-      BeamCR.enabled = enabled,
-      BeamCR.priority = priority
-    }
+instance ToTType' BeamCR.CancellationReason CancellationReason where
+  toTType' CancellationReason {..} = do
+    BeamCR.CancellationReasonT
+      { BeamCR.reasonCode = (\(CancellationReasonCode x) -> x) reasonCode,
+        BeamCR.description = description,
+        BeamCR.enabled = enabled,
+        BeamCR.priority = priority
+      }

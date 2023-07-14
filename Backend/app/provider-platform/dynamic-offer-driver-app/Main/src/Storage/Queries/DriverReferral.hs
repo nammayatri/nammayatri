@@ -1,43 +1,31 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Storage.Queries.DriverReferral where
 
 import Domain.Types.DriverReferral as DDR
 import qualified Domain.Types.Person as SP
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
-import Lib.Utils (setMeshConfig)
+import Kernel.Types.Logging
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverReferral as BeamDR
 
 -- create :: DriverReferral -> SqlDB ()
 -- create = Esq.create
 
-create :: L.MonadFlow m => DDR.DriverReferral -> m (MeshResult ())
-create driverReferral = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDR.DriverReferralT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainDriverReferralToBeam driverReferral)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create :: (L.MonadFlow m, Log m) => DDR.DriverReferral -> m ()
+create = createWithKV
 
 -- findByRefferalCode :: Transactionable m => Id DriverReferral -> m (Maybe DriverReferral)
 -- findByRefferalCode = Esq.findById
 
 findByRefferalCode ::
-  L.MonadFlow m =>
+  (L.MonadFlow m, Log m) =>
   Id DriverReferral ->
   m (Maybe DriverReferral)
-findByRefferalCode (Id referralId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDR.DriverReferralT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverReferralToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDR.referralCode $ Se.Eq referralId]
-    Nothing -> pure Nothing
+findByRefferalCode (Id referralId) = findOneWithKV [Se.Is BeamDR.referralCode $ Se.Eq referralId]
 
 -- findById ::
 --   Transactionable m =>
@@ -50,29 +38,25 @@ findByRefferalCode (Id referralId) = do
 --     return driverReferral
 
 findById ::
-  L.MonadFlow m =>
+  (L.MonadFlow m, Log m) =>
   Id SP.Person ->
   m (Maybe DriverReferral)
-findById (Id driverId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDR.DriverReferralT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverReferralToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDR.driverId $ Se.Eq driverId]
-    Nothing -> pure Nothing
+findById (Id driverId) = findOneWithKV [Se.Is BeamDR.driverId $ Se.Eq driverId]
 
-transformBeamDriverReferralToDomain :: BeamDR.DriverReferral -> DriverReferral
-transformBeamDriverReferralToDomain BeamDR.DriverReferralT {..} = do
-  DriverReferral
-    { referralCode = Id referralCode,
-      driverId = Id driverId,
-      linkedAt = linkedAt
-    }
+instance FromTType' BeamDR.DriverReferral DriverReferral where
+  fromTType' BeamDR.DriverReferralT {..} = do
+    pure $
+      Just
+        DriverReferral
+          { referralCode = Id referralCode,
+            driverId = Id driverId,
+            linkedAt = linkedAt
+          }
 
-transformDomainDriverReferralToBeam :: DriverReferral -> BeamDR.DriverReferral
-transformDomainDriverReferralToBeam DriverReferral {..} =
-  BeamDR.DriverReferralT
-    { BeamDR.referralCode = getId referralCode,
-      BeamDR.driverId = getId driverId,
-      BeamDR.linkedAt = linkedAt
-    }
+instance ToTType' BeamDR.DriverReferral DriverReferral where
+  toTType' DriverReferral {..} = do
+    BeamDR.DriverReferralT
+      { BeamDR.referralCode = getId referralCode,
+        BeamDR.driverId = getId driverId,
+        BeamDR.linkedAt = linkedAt
+      }

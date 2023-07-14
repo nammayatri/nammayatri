@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.DriverOnboarding.OperatingCity where
 
@@ -20,28 +21,20 @@ import qualified Database.Beam as B
 import Database.Beam.Postgres
 import Domain.Types.DriverOnboarding.OperatingCity
 import Domain.Types.Merchant
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
-import Lib.Utils (setMeshConfig)
+import Kernel.Types.Logging (Log)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV, getMasterDBConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.OperatingCity as BeamOC
 
 -- create :: OperatingCity -> SqlDB ()
 -- create = Esq.create
 
-create :: L.MonadFlow m => OperatingCity -> m (MeshResult ())
-create operatingCity = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamOC.OperatingCityT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainOperatingCityToBeam operatingCity)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create :: (L.MonadFlow m, Log m) => OperatingCity -> m ()
+create = createWithKV
 
 -- findById ::
 --   Transactionable m =>
@@ -49,14 +42,8 @@ create operatingCity = do
 --   m (Maybe OperatingCity)
 -- findById = Esq.findById
 
-findById :: L.MonadFlow m => Id OperatingCity -> m (Maybe OperatingCity)
-findById (Id ocId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamOC.OperatingCityT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamOperatingCityToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamOC.id $ Se.Eq ocId]
-    Nothing -> pure Nothing
+findById :: (L.MonadFlow m, Log m) => Id OperatingCity -> m (Maybe OperatingCity)
+findById (Id ocId) = findOneWithKV [Se.Is BeamOC.id $ Se.Eq ocId]
 
 -- findByMerchantId ::
 --   Transactionable m =>
@@ -65,17 +52,10 @@ findById (Id ocId) = do
 -- findByMerchantId personid = do
 --   findOne $ do
 --     vechileRegCert <- from $ table @OperatingCityT
---     where_ $ vechileRegCert ^. OperatingCityMerchantId ==. val (toKey personid)
 --     return vechileRegCert
 
-findByMerchantId :: L.MonadFlow m => Id Merchant -> m (Maybe OperatingCity)
-findByMerchantId (Id merchantId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamOC.OperatingCityT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamOperatingCityToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamOC.merchantId $ Se.Eq merchantId]
-    Nothing -> pure Nothing
+findByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m (Maybe OperatingCity)
+findByMerchantId (Id merchantId) = findOneWithKV [Se.Is BeamOC.merchantId $ Se.Eq merchantId]
 
 -- findEnabledCityByName ::
 --   Transactionable m =>
@@ -89,21 +69,12 @@ findByMerchantId (Id merchantId) = do
 --         &&. operatingCity ^. OperatingCityEnabled
 --     return operatingCity
 
-findEnabledCityByName :: L.MonadFlow m => Text -> m [OperatingCity]
-findEnabledCityByName city = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamOC.OperatingCityT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      either (pure []) (transformBeamOperatingCityToDomain <$>)
-        <$> KV.findAllWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [ Se.And
-              [Se.Is BeamOC.cityName $ Se.Eq city, Se.Is BeamOC.enabled $ Se.Eq True]
-          ]
-    Nothing -> pure []
+findEnabledCityByName :: (L.MonadFlow m, Log m) => Text -> m [OperatingCity]
+findEnabledCityByName city =
+  findAllWithKV
+    [ Se.And
+        [Se.Is BeamOC.cityName $ Se.Eq city, Se.Is BeamOC.enabled $ Se.Eq True]
+    ]
 
 -- findEnabledCityByMerchantIdAndName ::
 --   Transactionable m =>
@@ -119,10 +90,10 @@ findEnabledCityByName city = do
 --         &&. operatingCity ^. OperatingCityEnabled
 --     return operatingCity
 
-findEnabledCityByMerchantIdAndName :: L.MonadFlow m => Id Merchant -> Text -> m [OperatingCity]
+findEnabledCityByMerchantIdAndName :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> m [OperatingCity]
 findEnabledCityByMerchantIdAndName (Id mId) city = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  conn <- L.getOrInitSqlConn (fromJust dbConf)
+  dbConf <- getMasterDBConfig
+  conn <- L.getOrInitSqlConn dbConf
   case conn of
     Right c -> do
       operatingCities <-
@@ -145,13 +116,26 @@ transformBeamOperatingCityToDomain BeamOC.OperatingCityT {..} = do
       updatedAt = updatedAt
     }
 
-transformDomainOperatingCityToBeam :: OperatingCity -> BeamOC.OperatingCity
-transformDomainOperatingCityToBeam OperatingCity {..} =
-  BeamOC.OperatingCityT
-    { BeamOC.id = getId id,
-      BeamOC.merchantId = getId merchantId,
-      BeamOC.cityName = cityName,
-      BeamOC.enabled = enabled,
-      BeamOC.createdAt = createdAt,
-      BeamOC.updatedAt = updatedAt
-    }
+instance FromTType' BeamOC.OperatingCity OperatingCity where
+  fromTType' BeamOC.OperatingCityT {..} = do
+    pure $
+      Just
+        OperatingCity
+          { id = Id id,
+            merchantId = Id merchantId,
+            cityName = cityName,
+            enabled = enabled,
+            createdAt = createdAt,
+            updatedAt = updatedAt
+          }
+
+instance ToTType' BeamOC.OperatingCity OperatingCity where
+  toTType' OperatingCity {..} = do
+    BeamOC.OperatingCityT
+      { BeamOC.id = getId id,
+        BeamOC.merchantId = getId merchantId,
+        BeamOC.cityName = cityName,
+        BeamOC.enabled = enabled,
+        BeamOC.createdAt = createdAt,
+        BeamOC.updatedAt = updatedAt
+      }

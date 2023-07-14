@@ -16,13 +16,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Beam.DriverOnboarding.AadhaarOtpReq where
+module Storage.Beam.BapMetadata where
 
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
-import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
@@ -31,63 +30,63 @@ import Kernel.Prelude hiding (Generic)
 import Lib.UtilsTH
 import Sequelize
 
-data AadhaarOtpReqT f = AadhaarOtpReqT
+data BapMetadataT f = BapMetadataT
   { id :: B.C f Text,
-    driverId :: B.C f Text,
-    requestId :: B.C f Text,
-    statusCode :: B.C f Text,
-    transactionId :: B.C f (Maybe Text),
-    requestMessage :: B.C f Text,
-    createdAt :: B.C f Time.UTCTime
+    name :: B.C f Text,
+    logoUrl :: B.C f Text
   }
   deriving (Generic, B.Beamable)
 
-instance B.Table AadhaarOtpReqT where
-  data PrimaryKey AadhaarOtpReqT f
+instance B.Table BapMetadataT where
+  data PrimaryKey BapMetadataT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-instance ModelMeta AadhaarOtpReqT where
-  modelFieldModification = aadhaarOtpReqTMod
-  modelTableName = "aadhaar_otp_req"
+instance ModelMeta BapMetadataT where
+  modelFieldModification = bapMetadataTMod
+  modelTableName = "bap_metadata"
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
-type AadhaarOtpReq = AadhaarOtpReqT Identity
+type BapMetadata = BapMetadataT Identity
 
-instance FromJSON AadhaarOtpReq where
+instance FromJSON BapMetadata where
   parseJSON = A.genericParseJSON A.defaultOptions
 
-instance ToJSON AadhaarOtpReq where
+instance ToJSON BapMetadata where
   toJSON = A.genericToJSON A.defaultOptions
 
-deriving stock instance Show AadhaarOtpReq
+deriving stock instance Show BapMetadata
 
-aadhaarOtpReqTMod :: AadhaarOtpReqT (B.FieldModification (B.TableField AadhaarOtpReqT))
-aadhaarOtpReqTMod =
+bapMetadataTMod :: BapMetadataT (B.FieldModification (B.TableField BapMetadataT))
+bapMetadataTMod =
   B.tableModification
     { id = B.fieldNamed "id",
-      driverId = B.fieldNamed "driver_id",
-      requestId = B.fieldNamed "request_id",
-      statusCode = B.fieldNamed "status_code",
-      transactionId = B.fieldNamed "transaction_id",
-      requestMessage = B.fieldNamed "request_message",
-      createdAt = B.fieldNamed "created_at"
+      name = B.fieldNamed "name",
+      logoUrl = B.fieldNamed "logo_url"
     }
 
-instance Serialize AadhaarOtpReq where
+defaultBapMetadata :: BapMetadata
+defaultBapMetadata =
+  BapMetadataT
+    { id = "",
+      name = "",
+      logoUrl = ""
+    }
+
+instance Serialize BapMetadata where
   put = error "undefined"
   get = error "undefined"
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty
 
-aadhaarOtpReqToHSModifiers :: M.Map Text (A.Value -> A.Value)
-aadhaarOtpReqToHSModifiers =
+bapMetadataToHSModifiers :: M.Map Text (A.Value -> A.Value)
+bapMetadataToHSModifiers =
   M.empty
 
-aadhaarOtpReqToPSModifiers :: M.Map Text (A.Value -> A.Value)
-aadhaarOtpReqToPSModifiers =
+bapMetadataToPSModifiers :: M.Map Text (A.Value -> A.Value)
+bapMetadataToPSModifiers =
   M.empty
 
-$(enableKVPG ''AadhaarOtpReqT ['id] [])
+$(enableKVPG ''BapMetadataT ['id] [])

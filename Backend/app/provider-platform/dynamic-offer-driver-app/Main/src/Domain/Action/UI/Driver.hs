@@ -95,7 +95,6 @@ import qualified Kernel.External.SMS.MyValueFirst.Flow as SF
 import qualified Kernel.External.SMS.MyValueFirst.Types as SMS
 import Kernel.Prelude (NominalDiffTime)
 import Kernel.Sms.Config
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocDBFlow)
 -- import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB, runInReplica)
 import qualified Kernel.Storage.Hedis as Redis
@@ -412,7 +411,8 @@ createDriver admin req = do
   _ <- QDFS.create $ makeIdleDriverFlowStatus person
   createDriverDetails person.id admin.id merchantId
   _ <- QVehicle.create vehicle
-  Esq.runTransaction $ QMeta.create metaData
+  -- Esq.runTransaction $ QMeta.create metaData
+  _ <- QMeta.create metaData
   now <- getCurrentTime
   -- runInLocationDB $ QDriverLocation.create person.id initLatLong now admin.merchantId
   QDriverLocation.create person.id initLatLong now admin.merchantId
@@ -692,7 +692,8 @@ updateMetaData ::
   m APISuccess
 updateMetaData (personId, _) req = do
   _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  Esq.runTransaction $ do QMeta.updateMetaData personId req.device req.deviceOS req.deviceDateTime req.appPermissions
+  -- Esq.runTransaction $ do QMeta.updateMetaData personId req.device req.deviceOS req.deviceDateTime req.appPermissions
+  QMeta.updateMetaData personId req.device req.deviceOS req.deviceDateTime req.appPermissions
   return Success
 
 sendInviteSms ::

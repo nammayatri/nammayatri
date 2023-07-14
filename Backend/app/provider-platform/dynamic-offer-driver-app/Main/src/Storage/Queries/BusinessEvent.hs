@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.BusinessEvent where
 
@@ -19,18 +20,15 @@ import Domain.Types.BusinessEvent
 import Domain.Types.Person (Driver)
 import Domain.Types.Ride
 import Domain.Types.Vehicle.Variant (Variant)
-import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Lib.Utils
-import Sequelize as Se
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV)
 import qualified Storage.Beam.BusinessEvent as BeamBE
 
 logBusinessEvent ::
-  (L.MonadFlow m, MonadGuid m, MonadTime m) =>
+  (L.MonadFlow m, MonadGuid m, MonadTime m, Log m) =>
   Maybe (Id Driver) ->
   EventType ->
   Maybe (Id Booking) ->
@@ -56,14 +54,9 @@ logBusinessEvent driverId eventType bookingId whenPoolWasComputed variant distan
             duration = duration,
             rideId = rideId
           }
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamBE.BusinessEventT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainBusinessEventToBeam bE)
-    Nothing -> pure ()
+  createWithKV bE
 
-logDriverAssignedEvent :: (L.MonadFlow m, MonadGuid m, MonadTime m) => Id Driver -> Id Booking -> Id Ride -> m ()
+logDriverAssignedEvent :: (L.MonadFlow m, MonadGuid m, MonadTime m, Log m) => Id Driver -> Id Booking -> Id Ride -> m ()
 logDriverAssignedEvent driverId bookingId rideId = do
   logBusinessEvent
     (Just driverId)
@@ -75,7 +68,7 @@ logDriverAssignedEvent driverId bookingId rideId = do
     Nothing
     (Just rideId)
 
-logRideConfirmedEvent :: (L.MonadFlow m, MonadGuid m, MonadTime m) => Id Booking -> m ()
+logRideConfirmedEvent :: (L.MonadFlow m, MonadGuid m, MonadTime m, Log m) => Id Booking -> m ()
 logRideConfirmedEvent bookingId = do
   logBusinessEvent
     Nothing
@@ -87,7 +80,7 @@ logRideConfirmedEvent bookingId = do
     Nothing
     Nothing
 
-logRideCommencedEvent :: (L.MonadFlow m, MonadGuid m, MonadTime m) => Id Driver -> Id Booking -> Id Ride -> m ()
+logRideCommencedEvent :: (L.MonadFlow m, MonadGuid m, MonadTime m, Log m) => Id Driver -> Id Booking -> Id Ride -> m ()
 logRideCommencedEvent driverId bookingId rideId = do
   logBusinessEvent
     (Just driverId)
@@ -99,32 +92,34 @@ logRideCommencedEvent driverId bookingId rideId = do
     Nothing
     (Just rideId)
 
-transformBeamBusinessEventToDomain :: BeamBE.BusinessEvent -> BusinessEvent
-transformBeamBusinessEventToDomain BeamBE.BusinessEventT {..} = do
-  BusinessEvent
-    { id = Id id,
-      driverId = Id <$> driverId,
-      eventType = eventType,
-      timeStamp = timeStamp,
-      bookingId = Id <$> bookingId,
-      whenPoolWasComputed = whenPoolWasComputed,
-      vehicleVariant = vehicleVariant,
-      distance = Meters <$> distance,
-      duration = Seconds <$> distance,
-      rideId = Id <$> rideId
-    }
+instance FromTType' BeamBE.BusinessEvent BusinessEvent where
+  fromTType' BeamBE.BusinessEventT {..} = do
+    pure $
+      Just
+        BusinessEvent
+          { id = Id id,
+            driverId = Id <$> driverId,
+            eventType = eventType,
+            timeStamp = timeStamp,
+            bookingId = Id <$> bookingId,
+            whenPoolWasComputed = whenPoolWasComputed,
+            vehicleVariant = vehicleVariant,
+            distance = Meters <$> distance,
+            duration = Seconds <$> distance,
+            rideId = Id <$> rideId
+          }
 
-transformDomainBusinessEventToBeam :: BusinessEvent -> BeamBE.BusinessEvent
-transformDomainBusinessEventToBeam BusinessEvent {..} =
-  BeamBE.BusinessEventT
-    { BeamBE.id = getId id,
-      BeamBE.driverId = getId <$> driverId,
-      BeamBE.eventType = eventType,
-      BeamBE.timeStamp = timeStamp,
-      BeamBE.bookingId = getId <$> bookingId,
-      BeamBE.whenPoolWasComputed = whenPoolWasComputed,
-      BeamBE.vehicleVariant = vehicleVariant,
-      BeamBE.distance = getMeters <$> distance,
-      BeamBE.duration = getSeconds <$> duration,
-      BeamBE.rideId = getId <$> rideId
-    }
+instance ToTType' BeamBE.BusinessEvent BusinessEvent where
+  toTType' BusinessEvent {..} = do
+    BeamBE.BusinessEventT
+      { BeamBE.id = getId id,
+        BeamBE.driverId = getId <$> driverId,
+        BeamBE.eventType = eventType,
+        BeamBE.timeStamp = timeStamp,
+        BeamBE.bookingId = getId <$> bookingId,
+        BeamBE.whenPoolWasComputed = whenPoolWasComputed,
+        BeamBE.vehicleVariant = vehicleVariant,
+        BeamBE.distance = getMeters <$> distance,
+        BeamBE.duration = getSeconds <$> duration,
+        BeamBE.rideId = getId <$> rideId
+      }

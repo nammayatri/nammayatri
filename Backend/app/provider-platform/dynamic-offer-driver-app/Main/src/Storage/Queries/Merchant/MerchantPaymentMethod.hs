@@ -11,7 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Merchant.MerchantPaymentMethod
   {-# WARNING
@@ -22,11 +22,10 @@ where
 
 import Domain.Types.Merchant
 import Domain.Types.Merchant.MerchantPaymentMethod
-import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Types.Logging (Log)
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.MerchantPaymentMethod as BeamMPM
@@ -40,37 +39,33 @@ import qualified Storage.Beam.Merchant.MerchantPaymentMethod as BeamMPM
 --     orderBy [desc $ merchantPaymentMethod ^. MerchantPaymentMethodPriority]
 --     return merchantPaymentMethod
 
-findAllByMerchantId :: L.MonadFlow m => Id Merchant -> m [MerchantPaymentMethod]
-findAllByMerchantId (Id merchantId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamMPM.MerchantPaymentMethodT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamMerchantPaymentMethodToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamMPM.merchantId $ Se.Eq merchantId] (Se.Desc BeamMPM.priority) Nothing Nothing
-    Nothing -> pure []
+findAllByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [MerchantPaymentMethod]
+findAllByMerchantId (Id merchantId) = findAllWithOptionsKV [Se.Is BeamMPM.merchantId $ Se.Eq merchantId] (Se.Desc BeamMPM.priority) Nothing Nothing
 
-transformBeamMerchantPaymentMethodToDomain :: BeamMPM.MerchantPaymentMethod -> MerchantPaymentMethod
-transformBeamMerchantPaymentMethodToDomain BeamMPM.MerchantPaymentMethodT {..} = do
-  MerchantPaymentMethod
-    { id = Id id,
-      merchantId = Id merchantId,
-      paymentType = paymentType,
-      paymentInstrument = paymentInstrument,
-      collectedBy = collectedBy,
-      priority = priority,
-      updatedAt = updatedAt,
-      createdAt = createdAt
-    }
+instance FromTType' BeamMPM.MerchantPaymentMethod MerchantPaymentMethod where
+  fromTType' BeamMPM.MerchantPaymentMethodT {..} = do
+    pure $
+      Just
+        MerchantPaymentMethod
+          { id = Id id,
+            merchantId = Id merchantId,
+            paymentType = paymentType,
+            paymentInstrument = paymentInstrument,
+            collectedBy = collectedBy,
+            priority = priority,
+            updatedAt = updatedAt,
+            createdAt = createdAt
+          }
 
-transformDomainMerchantPaymentMethodToBeam :: MerchantPaymentMethod -> BeamMPM.MerchantPaymentMethod
-transformDomainMerchantPaymentMethodToBeam MerchantPaymentMethod {..} =
-  BeamMPM.MerchantPaymentMethodT
-    { BeamMPM.id = getId id,
-      BeamMPM.merchantId = getId merchantId,
-      BeamMPM.paymentType = paymentType,
-      BeamMPM.paymentInstrument = paymentInstrument,
-      BeamMPM.collectedBy = collectedBy,
-      BeamMPM.priority = priority,
-      BeamMPM.updatedAt = updatedAt,
-      BeamMPM.createdAt = createdAt
-    }
+instance ToTType' BeamMPM.MerchantPaymentMethod MerchantPaymentMethod where
+  toTType' MerchantPaymentMethod {..} = do
+    BeamMPM.MerchantPaymentMethodT
+      { BeamMPM.id = getId id,
+        BeamMPM.merchantId = getId merchantId,
+        BeamMPM.paymentType = paymentType,
+        BeamMPM.paymentInstrument = paymentInstrument,
+        BeamMPM.collectedBy = collectedBy,
+        BeamMPM.priority = priority,
+        BeamMPM.updatedAt = updatedAt,
+        BeamMPM.createdAt = createdAt
+      }

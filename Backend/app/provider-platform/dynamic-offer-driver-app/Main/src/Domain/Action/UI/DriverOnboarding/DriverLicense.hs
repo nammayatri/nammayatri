@@ -38,7 +38,6 @@ import Domain.Types.Merchant.OnboardingDocumentConfig (OnboardingDocumentConfig)
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as DTO
 import qualified Domain.Types.Person as Person
 import Environment
-import EulerHS.KVConnector.Types
 import Kernel.External.Encryption
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
@@ -217,8 +216,8 @@ onVerifyDL verificationReq output = do
             Just driverLicense -> do
               Query.upsert driverLicense
               case driverLicense.driverName of
-                Just name_ -> Person.updateName person.id name_
-                Nothing -> pure (Left $ MKeyNotFound "")
+                Just name_ -> void $ Person.updateName person.id name_
+                Nothing -> pure ()
               return Ack
             Nothing -> return Ack
 

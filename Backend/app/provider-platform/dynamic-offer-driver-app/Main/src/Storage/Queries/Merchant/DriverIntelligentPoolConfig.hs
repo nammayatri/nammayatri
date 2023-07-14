@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Merchant.DriverIntelligentPoolConfig
   {-# WARNING
@@ -21,99 +22,85 @@ where
 
 import Domain.Types.Merchant
 import Domain.Types.Merchant.DriverIntelligentPoolConfig
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
-import Lib.Utils (setMeshConfig)
+import Kernel.Types.Logging (Log)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.DriverIntelligentPoolConfig as BeamDIPC
 
-findByMerchantId :: L.MonadFlow m => Id Merchant -> m (Maybe DriverIntelligentPoolConfig)
-findByMerchantId (Id merchantId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDIPC.DriverIntelligentPoolConfigT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverIntelligentPoolConfigToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDIPC.merchantId $ Se.Eq merchantId]
-    Nothing -> pure Nothing
+findByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m (Maybe DriverIntelligentPoolConfig)
+findByMerchantId (Id merchantId) = findOneWithKV [Se.Is BeamDIPC.merchantId $ Se.Eq merchantId]
 
-update :: (L.MonadFlow m, MonadTime m) => DriverIntelligentPoolConfig -> m (MeshResult ())
+update :: (L.MonadFlow m, MonadTime m, Log m) => DriverIntelligentPoolConfig -> m ()
 update config = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDIPC.DriverIntelligentPoolConfigT
-  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamDIPC.availabilityTimeWeightage config.availabilityTimeWeightage,
-          Se.Set BeamDIPC.actualPickupDistanceWeightage config.actualPickupDistanceWeightage,
-          Se.Set BeamDIPC.availabilityTimeWindowOption config.availabilityTimeWindowOption,
-          Se.Set BeamDIPC.acceptanceRatioWeightage config.acceptanceRatioWeightage,
-          Se.Set BeamDIPC.acceptanceRatioWindowOption config.acceptanceRatioWindowOption,
-          Se.Set BeamDIPC.cancellationRatioWeightage config.cancellationRatioWeightage,
-          Se.Set BeamDIPC.cancellationRatioWindowOption config.cancellationRatioWindowOption,
-          Se.Set BeamDIPC.minQuotesToQualifyForIntelligentPool config.minQuotesToQualifyForIntelligentPool,
-          Se.Set BeamDIPC.minQuotesToQualifyForIntelligentPoolWindowOption config.minQuotesToQualifyForIntelligentPoolWindowOption,
-          Se.Set BeamDIPC.intelligentPoolPercentage config.intelligentPoolPercentage,
-          Se.Set BeamDIPC.speedNormalizer config.speedNormalizer,
-          Se.Set BeamDIPC.driverSpeedWeightage config.driverSpeedWeightage,
-          Se.Set BeamDIPC.minLocationUpdates config.minLocationUpdates,
-          Se.Set BeamDIPC.locationUpdateSampleTime config.locationUpdateSampleTime,
-          Se.Set BeamDIPC.defaultDriverSpeed config.defaultDriverSpeed,
-          Se.Set BeamDIPC.updatedAt now
-        ]
-        [Se.Is BeamDIPC.merchantId (Se.Eq $ getId config.merchantId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamDIPC.availabilityTimeWeightage config.availabilityTimeWeightage,
+      Se.Set BeamDIPC.actualPickupDistanceWeightage config.actualPickupDistanceWeightage,
+      Se.Set BeamDIPC.availabilityTimeWindowOption config.availabilityTimeWindowOption,
+      Se.Set BeamDIPC.acceptanceRatioWeightage config.acceptanceRatioWeightage,
+      Se.Set BeamDIPC.acceptanceRatioWindowOption config.acceptanceRatioWindowOption,
+      Se.Set BeamDIPC.cancellationRatioWeightage config.cancellationRatioWeightage,
+      Se.Set BeamDIPC.cancellationRatioWindowOption config.cancellationRatioWindowOption,
+      Se.Set BeamDIPC.minQuotesToQualifyForIntelligentPool config.minQuotesToQualifyForIntelligentPool,
+      Se.Set BeamDIPC.minQuotesToQualifyForIntelligentPoolWindowOption config.minQuotesToQualifyForIntelligentPoolWindowOption,
+      Se.Set BeamDIPC.intelligentPoolPercentage config.intelligentPoolPercentage,
+      Se.Set BeamDIPC.speedNormalizer config.speedNormalizer,
+      Se.Set BeamDIPC.driverSpeedWeightage config.driverSpeedWeightage,
+      Se.Set BeamDIPC.minLocationUpdates config.minLocationUpdates,
+      Se.Set BeamDIPC.locationUpdateSampleTime config.locationUpdateSampleTime,
+      Se.Set BeamDIPC.defaultDriverSpeed config.defaultDriverSpeed,
+      Se.Set BeamDIPC.updatedAt now
+    ]
+    [Se.Is BeamDIPC.merchantId (Se.Eq $ getId config.merchantId)]
 
-transformBeamDriverIntelligentPoolConfigToDomain :: BeamDIPC.DriverIntelligentPoolConfig -> DriverIntelligentPoolConfig
-transformBeamDriverIntelligentPoolConfigToDomain BeamDIPC.DriverIntelligentPoolConfigT {..} = do
-  DriverIntelligentPoolConfig
-    { merchantId = Id merchantId,
-      actualPickupDistanceWeightage = actualPickupDistanceWeightage,
-      availabilityTimeWeightage = availabilityTimeWeightage,
-      availabilityTimeWindowOption = availabilityTimeWindowOption,
-      acceptanceRatioWeightage = acceptanceRatioWeightage,
-      acceptanceRatioWindowOption = acceptanceRatioWindowOption,
-      cancellationRatioWeightage = cancellationRatioWeightage,
-      cancellationRatioWindowOption = cancellationRatioWindowOption,
-      minQuotesToQualifyForIntelligentPool = minQuotesToQualifyForIntelligentPool,
-      minQuotesToQualifyForIntelligentPoolWindowOption = minQuotesToQualifyForIntelligentPoolWindowOption,
-      intelligentPoolPercentage = intelligentPoolPercentage,
-      speedNormalizer = speedNormalizer,
-      driverSpeedWeightage = driverSpeedWeightage,
-      minLocationUpdates = minLocationUpdates,
-      locationUpdateSampleTime = locationUpdateSampleTime,
-      defaultDriverSpeed = defaultDriverSpeed,
-      createdAt = createdAt,
-      updatedAt = updatedAt
-    }
+instance FromTType' BeamDIPC.DriverIntelligentPoolConfig DriverIntelligentPoolConfig where
+  fromTType' BeamDIPC.DriverIntelligentPoolConfigT {..} = do
+    pure $
+      Just
+        DriverIntelligentPoolConfig
+          { merchantId = Id merchantId,
+            actualPickupDistanceWeightage = actualPickupDistanceWeightage,
+            availabilityTimeWeightage = availabilityTimeWeightage,
+            availabilityTimeWindowOption = availabilityTimeWindowOption,
+            acceptanceRatioWeightage = acceptanceRatioWeightage,
+            acceptanceRatioWindowOption = acceptanceRatioWindowOption,
+            cancellationRatioWeightage = cancellationRatioWeightage,
+            cancellationRatioWindowOption = cancellationRatioWindowOption,
+            minQuotesToQualifyForIntelligentPool = minQuotesToQualifyForIntelligentPool,
+            minQuotesToQualifyForIntelligentPoolWindowOption = minQuotesToQualifyForIntelligentPoolWindowOption,
+            intelligentPoolPercentage = intelligentPoolPercentage,
+            speedNormalizer = speedNormalizer,
+            driverSpeedWeightage = driverSpeedWeightage,
+            minLocationUpdates = minLocationUpdates,
+            locationUpdateSampleTime = locationUpdateSampleTime,
+            defaultDriverSpeed = defaultDriverSpeed,
+            createdAt = createdAt,
+            updatedAt = updatedAt
+          }
 
-transformDomainDriverIntelligentPoolConfigToBeam :: DriverIntelligentPoolConfig -> BeamDIPC.DriverIntelligentPoolConfig
-transformDomainDriverIntelligentPoolConfigToBeam DriverIntelligentPoolConfig {..} =
-  BeamDIPC.DriverIntelligentPoolConfigT
-    { BeamDIPC.merchantId = getId merchantId,
-      BeamDIPC.actualPickupDistanceWeightage = actualPickupDistanceWeightage,
-      BeamDIPC.availabilityTimeWeightage = availabilityTimeWeightage,
-      BeamDIPC.availabilityTimeWindowOption = availabilityTimeWindowOption,
-      BeamDIPC.acceptanceRatioWeightage = acceptanceRatioWeightage,
-      BeamDIPC.acceptanceRatioWindowOption = acceptanceRatioWindowOption,
-      BeamDIPC.cancellationRatioWeightage = cancellationRatioWeightage,
-      BeamDIPC.cancellationRatioWindowOption = cancellationRatioWindowOption,
-      BeamDIPC.minQuotesToQualifyForIntelligentPool = minQuotesToQualifyForIntelligentPool,
-      BeamDIPC.minQuotesToQualifyForIntelligentPoolWindowOption = minQuotesToQualifyForIntelligentPoolWindowOption,
-      BeamDIPC.intelligentPoolPercentage = intelligentPoolPercentage,
-      BeamDIPC.speedNormalizer = speedNormalizer,
-      BeamDIPC.driverSpeedWeightage = driverSpeedWeightage,
-      BeamDIPC.minLocationUpdates = minLocationUpdates,
-      BeamDIPC.locationUpdateSampleTime = locationUpdateSampleTime,
-      BeamDIPC.defaultDriverSpeed = defaultDriverSpeed,
-      BeamDIPC.createdAt = createdAt,
-      BeamDIPC.updatedAt = updatedAt
-    }
+instance ToTType' BeamDIPC.DriverIntelligentPoolConfig DriverIntelligentPoolConfig where
+  toTType' DriverIntelligentPoolConfig {..} = do
+    BeamDIPC.DriverIntelligentPoolConfigT
+      { BeamDIPC.merchantId = getId merchantId,
+        BeamDIPC.actualPickupDistanceWeightage = actualPickupDistanceWeightage,
+        BeamDIPC.availabilityTimeWeightage = availabilityTimeWeightage,
+        BeamDIPC.availabilityTimeWindowOption = availabilityTimeWindowOption,
+        BeamDIPC.acceptanceRatioWeightage = acceptanceRatioWeightage,
+        BeamDIPC.acceptanceRatioWindowOption = acceptanceRatioWindowOption,
+        BeamDIPC.cancellationRatioWeightage = cancellationRatioWeightage,
+        BeamDIPC.cancellationRatioWindowOption = cancellationRatioWindowOption,
+        BeamDIPC.minQuotesToQualifyForIntelligentPool = minQuotesToQualifyForIntelligentPool,
+        BeamDIPC.minQuotesToQualifyForIntelligentPoolWindowOption = minQuotesToQualifyForIntelligentPoolWindowOption,
+        BeamDIPC.intelligentPoolPercentage = intelligentPoolPercentage,
+        BeamDIPC.speedNormalizer = speedNormalizer,
+        BeamDIPC.driverSpeedWeightage = driverSpeedWeightage,
+        BeamDIPC.minLocationUpdates = minLocationUpdates,
+        BeamDIPC.locationUpdateSampleTime = locationUpdateSampleTime,
+        BeamDIPC.defaultDriverSpeed = defaultDriverSpeed,
+        BeamDIPC.createdAt = createdAt,
+        BeamDIPC.updatedAt = updatedAt
+      }

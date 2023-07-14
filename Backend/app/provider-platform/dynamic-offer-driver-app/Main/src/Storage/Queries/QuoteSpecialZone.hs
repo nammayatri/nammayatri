@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.QuoteSpecialZone where
 
@@ -19,40 +20,30 @@ import qualified Database.Beam as B
 import Database.Beam.Postgres
 import Domain.Types.QuoteSpecialZone
 import Domain.Types.SearchRequestSpecialZone
-import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
-import Lib.Utils (setMeshConfig)
+import Kernel.Types.Logging
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV)
 import Sequelize
 import qualified Sequelize as Se
 import qualified Storage.Beam.QuoteSpecialZone as BeamQSZ
 import Storage.Queries.FareParameters as BeamQFP
-import qualified Storage.Queries.FareParameters as SQFP
 
 -- create :: QuoteSpecialZone -> SqlDB ()
 -- create quote = Esq.runTransaction $
 --   withFullEntity quote $ \(quoteT, (fareParams', fareParamsDetais)) -> do
 --     Esq.create' fareParams'
---     case fareParamsDetais of
 --       FareParamsT.ProgressiveDetailsT fppdt -> Esq.create' fppdt
 --       FareParamsT.SlabDetailsT -> return ()
 --     Esq.create' quoteT
 
-create :: L.MonadFlow m => QuoteSpecialZone -> m ()
-create quote = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamQSZ.QuoteSpecialZoneT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      SQFP.create quote.fareParams
-      void $ KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainQuoteSpecialZoneToBeam quote)
-    Nothing -> pure ()
+create :: (L.MonadFlow m, Log m) => QuoteSpecialZone -> m ()
+create = createWithKV
 
-countAllByRequestId :: L.MonadFlow m => Id SearchRequestSpecialZone -> m Int
+countAllByRequestId :: (L.MonadFlow m, Log m) => Id SearchRequestSpecialZone -> m Int
 countAllByRequestId searchReqID = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   conn <- L.getOrInitSqlConn (fromJust dbConf)
@@ -68,55 +59,45 @@ countAllByRequestId searchReqID = do
       pure (either (const 0) (fromMaybe 0) resp)
     Left _ -> pure 0
 
-findById :: (L.MonadFlow m) => Id QuoteSpecialZone -> m (Maybe QuoteSpecialZone)
-findById (Id dQuoteId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamQSZ.QuoteSpecialZoneT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> do
-      sR <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamQSZ.id $ Se.Eq dQuoteId]
-      case sR of
-        Right (Just x) -> transformBeamQuoteSpecialZoneToDomain x
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+findById :: (L.MonadFlow m, Log m) => Id QuoteSpecialZone -> m (Maybe QuoteSpecialZone)
+findById (Id dQuoteId) = findOneWithKV [Se.Is BeamQSZ.id $ Se.Eq dQuoteId]
 
-transformBeamQuoteSpecialZoneToDomain :: L.MonadFlow m => BeamQSZ.QuoteSpecialZone -> m (Maybe QuoteSpecialZone)
-transformBeamQuoteSpecialZoneToDomain BeamQSZ.QuoteSpecialZoneT {..} = do
-  fp <- BeamQFP.findById (Id fareParametersId)
-  if isJust fp
-    then
-      pure $
-        Just
-          QuoteSpecialZone
-            { id = Id id,
-              searchRequestId = Id searchRequestId,
-              providerId = Id providerId,
-              vehicleVariant = vehicleVariant,
-              distance = distance,
-              estimatedFinishTime = estimatedFinishTime,
-              createdAt = createdAt,
-              updatedAt = updatedAt,
-              validTill = validTill,
-              estimatedFare = estimatedFare,
-              specialLocationTag = specialLocationTag,
-              fareParams = fromJust fp -- to take a default value?
-            }
-    else pure Nothing
+instance FromTType' BeamQSZ.QuoteSpecialZone QuoteSpecialZone where
+  fromTType' BeamQSZ.QuoteSpecialZoneT {..} = do
+    fp <- BeamQFP.findById (Id fareParametersId)
+    if isJust fp
+      then
+        pure $
+          Just
+            QuoteSpecialZone
+              { id = Id id,
+                searchRequestId = Id searchRequestId,
+                providerId = Id providerId,
+                vehicleVariant = vehicleVariant,
+                distance = distance,
+                estimatedFinishTime = estimatedFinishTime,
+                createdAt = createdAt,
+                updatedAt = updatedAt,
+                validTill = validTill,
+                estimatedFare = estimatedFare,
+                specialLocationTag = specialLocationTag,
+                fareParams = fromJust fp -- to take a default value?
+              }
+      else pure Nothing
 
-transformDomainQuoteSpecialZoneToBeam :: QuoteSpecialZone -> BeamQSZ.QuoteSpecialZone
-transformDomainQuoteSpecialZoneToBeam QuoteSpecialZone {..} =
-  BeamQSZ.QuoteSpecialZoneT
-    { BeamQSZ.id = getId id,
-      BeamQSZ.searchRequestId = getId searchRequestId,
-      BeamQSZ.providerId = getId providerId,
-      BeamQSZ.vehicleVariant = vehicleVariant,
-      BeamQSZ.distance = distance,
-      BeamQSZ.estimatedFinishTime = estimatedFinishTime,
-      BeamQSZ.createdAt = createdAt,
-      BeamQSZ.updatedAt = updatedAt,
-      BeamQSZ.validTill = validTill,
-      BeamQSZ.estimatedFare = estimatedFare,
-      BeamQSZ.specialLocationTag = specialLocationTag,
-      BeamQSZ.fareParametersId = getId fareParams.id
-    }
+instance ToTType' BeamQSZ.QuoteSpecialZone QuoteSpecialZone where
+  toTType' QuoteSpecialZone {..} = do
+    BeamQSZ.QuoteSpecialZoneT
+      { BeamQSZ.id = getId id,
+        BeamQSZ.searchRequestId = getId searchRequestId,
+        BeamQSZ.providerId = getId providerId,
+        BeamQSZ.vehicleVariant = vehicleVariant,
+        BeamQSZ.distance = distance,
+        BeamQSZ.estimatedFinishTime = estimatedFinishTime,
+        BeamQSZ.createdAt = createdAt,
+        BeamQSZ.updatedAt = updatedAt,
+        BeamQSZ.validTill = validTill,
+        BeamQSZ.estimatedFare = estimatedFare,
+        BeamQSZ.specialLocationTag = specialLocationTag,
+        BeamQSZ.fareParametersId = getId fareParams.id
+      }

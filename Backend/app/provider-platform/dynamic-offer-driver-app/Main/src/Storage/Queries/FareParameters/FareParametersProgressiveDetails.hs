@@ -11,41 +11,43 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Storage.Queries.FareParameters.FareParametersProgressiveDetails where
 
 import qualified Domain.Types.FareParameters as Domain
-import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import qualified Kernel.Types.Id as KTI
-import Lib.Utils (setMeshConfig)
+import Kernel.Types.Logging (Log)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV)
 import Sequelize as Se
 import Storage.Beam.FareParameters.FareParametersProgressiveDetails as BeamFPPD
+import qualified Storage.Tabular.FareParameters.FareParametersProgressiveDetails as BeamFPPD
 import qualified Storage.Tabular.FareParameters.FareParametersProgressiveDetails as DomainFPPD
 
-findById' :: L.MonadFlow m => KTI.Id Domain.FareParameters -> m (Maybe DomainFPPD.FullFareParametersProgressiveDetails)
+create :: (L.MonadFlow m, Log m) => DomainFPPD.FullFareParametersProgressiveDetails -> m ()
+create = createWithKV
+
+findById' :: (L.MonadFlow m, Log m) => KTI.Id Domain.FareParameters -> m (Maybe DomainFPPD.FullFareParametersProgressiveDetails)
 findById' (KTI.Id fareParametersId') = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamFPPD.FareParametersProgressiveDetailsT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamFareParametersProgressiveDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is fareParametersId $ Se.Eq fareParametersId']
-    Nothing -> pure Nothing
+  findOneWithKV [Se.Is fareParametersId $ Se.Eq fareParametersId']
 
-transformBeamFareParametersProgressiveDetailsToDomain :: FareParametersProgressiveDetails -> DomainFPPD.FullFareParametersProgressiveDetails
-transformBeamFareParametersProgressiveDetailsToDomain FareParametersProgressiveDetailsT {..} = do
-  ( KTI.Id fareParametersId,
-    Domain.FParamsProgressiveDetails
-      { deadKmFare = deadKmFare,
-        extraKmFare = extraKmFare
+instance FromTType' BeamFPPD.FareParametersProgressiveDetails DomainFPPD.FullFareParametersProgressiveDetails where
+  fromTType' FareParametersProgressiveDetailsT {..} = do
+    pure $
+      Just
+        ( KTI.Id fareParametersId,
+          Domain.FParamsProgressiveDetails
+            { deadKmFare = deadKmFare,
+              extraKmFare = extraKmFare
+            }
+        )
+
+instance ToTType' FareParametersProgressiveDetails BeamFPPD.FullFareParametersProgressiveDetails where
+  toTType' (KTI.Id fareParametersId, fParamsProgressiveDetails) =
+    FareParametersProgressiveDetailsT
+      { fareParametersId = fareParametersId,
+        deadKmFare = Domain.deadKmFare fParamsProgressiveDetails,
+        extraKmFare = Domain.extraKmFare fParamsProgressiveDetails
       }
-    )
-
-transformDomainFareParametersProgressiveDetailsToBeam :: DomainFPPD.FullFareParametersProgressiveDetails -> FareParametersProgressiveDetails
-transformDomainFareParametersProgressiveDetailsToBeam (KTI.Id fareParametersId, Domain.FParamsProgressiveDetails {..}) =
-  FareParametersProgressiveDetailsT
-    { fareParametersId = fareParametersId,
-      deadKmFare = deadKmFare,
-      extraKmFare = extraKmFare
-    }

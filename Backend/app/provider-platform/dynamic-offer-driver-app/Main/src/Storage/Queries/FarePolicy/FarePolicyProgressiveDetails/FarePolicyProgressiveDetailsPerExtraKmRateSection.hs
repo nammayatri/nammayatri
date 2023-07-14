@@ -11,19 +11,18 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection where
 
 -- import Data.Text (pack)
 import qualified Domain.Types.FarePolicy as DFP
-import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
-import Lib.Utils (setMeshConfig)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), deleteWithKV, findAllWithOptionsKV, findOneWithKV)
 import Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as BeamFPPDP
 import Storage.Tabular.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
@@ -43,28 +42,17 @@ findAll' farePolicyId = do
     orderBy [asc $ farePolicyProgressiveDetailsPerExtraKmFareSection ^. FarePolicyProgressiveDetailsPerExtraKmRateSectionStartDistance]
     return farePolicyProgressiveDetailsPerExtraKmFareSection
 
-findById' :: L.MonadFlow m => KTI.Id DFP.FarePolicy -> m (Maybe FullFarePolicyProgressiveDetailsPerExtraKmRateSection)
-findById' farePolicyId' = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSectionT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamFarePolicyProgressiveDetailsPerExtraKmRateSectionToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId')]
-    Nothing -> pure Nothing
+findById' :: (L.MonadFlow m, Log m) => KTI.Id DFP.FarePolicy -> m (Maybe FullFarePolicyProgressiveDetailsPerExtraKmRateSection)
+findById' farePolicyId' = findOneWithKV [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId')]
 
 findAll ::
-  ( L.MonadFlow m
+  ( L.MonadFlow m,
+    Log m
   ) =>
   -- Id DFP.FarePolicy ->
   Id DFP.FarePolicy ->
   m [FullFarePolicyProgressiveDetailsPerExtraKmRateSection]
-findAll farePolicyId = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSectionT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamFarePolicyProgressiveDetailsPerExtraKmRateSectionToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamFPPDP.startDistance) Nothing Nothing
-    Nothing -> pure []
+findAll farePolicyId = findAllWithOptionsKV [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamFPPDP.startDistance) Nothing Nothing
 
 deleteAll' :: Id DFP.FarePolicy -> FullEntitySqlDB ()
 deleteAll' farePolicyId =
@@ -73,34 +61,25 @@ deleteAll' farePolicyId =
     where_ $
       farePolicyProgressiveDetailsPerExtraKmFareSection ^. FarePolicyProgressiveDetailsPerExtraKmRateSectionFarePolicyId ==. val (toKey farePolicyId)
 
-deleteAll'' :: L.MonadFlow m => Id DFP.FarePolicy -> m ()
-deleteAll'' (Id farePolicyId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSectionT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      void $
-        KV.deleteWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [Se.Is BeamFPPDP.farePolicyId $ Se.Eq farePolicyId]
-    Nothing -> pure ()
+deleteAll'' :: (L.MonadFlow m, Log m) => Id DFP.FarePolicy -> m ()
+deleteAll'' (Id farePolicyId) = deleteWithKV [Se.Is BeamFPPDP.farePolicyId $ Se.Eq farePolicyId]
 
-transformBeamFarePolicyProgressiveDetailsPerExtraKmRateSectionToDomain :: BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSection -> FullFarePolicyProgressiveDetailsPerExtraKmRateSection
-transformBeamFarePolicyProgressiveDetailsPerExtraKmRateSectionToDomain BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSectionT {..} = do
-  ( KTI.Id farePolicyId,
-    DFP.FPProgressiveDetailsPerExtraKmRateSection
-      { startDistance = startDistance,
+instance FromTType' BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSection BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection where
+  fromTType' BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSectionT {..} = do
+    pure $
+      Just
+        ( KTI.Id farePolicyId,
+          DFP.FPProgressiveDetailsPerExtraKmRateSection
+            { startDistance = startDistance,
+              perExtraKmRate = perExtraKmRate
+            }
+        )
+
+instance ToTType' BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSection FullFarePolicyProgressiveDetailsPerExtraKmRateSection where
+  toTType' (KTI.Id farePolicyId, DFP.FPProgressiveDetailsPerExtraKmRateSection {..}) =
+    BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSectionT
+      { -- id = id,
+        farePolicyId = farePolicyId,
+        startDistance = startDistance,
         perExtraKmRate = perExtraKmRate
       }
-    )
-
-transformDomainFarePolicyProgressiveDetailsPerExtraKmRateSectionToBeam :: FullFarePolicyProgressiveDetailsPerExtraKmRateSection -> BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSection
-transformDomainFarePolicyProgressiveDetailsPerExtraKmRateSectionToBeam (KTI.Id farePolicyId, DFP.FPProgressiveDetailsPerExtraKmRateSection {..}) =
-  BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSectionT
-    { -- id = id,
-      farePolicyId = farePolicyId,
-      startDistance = startDistance,
-      perExtraKmRate = perExtraKmRate
-    }

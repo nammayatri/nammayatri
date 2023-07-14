@@ -11,62 +11,45 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.MediaFile where
 
 import qualified Data.Time as T
 import Domain.Types.MediaFile as DMF
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
-import Lib.Utils (setMeshConfig)
+import Kernel.Types.Logging (Log)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.MediaFile as BeamMF
 
-create :: L.MonadFlow m => DMF.MediaFile -> m (MeshResult ())
-create mediaFile = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamMF.MediaFileT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainMediaFileToBeam mediaFile)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create :: (L.MonadFlow m, Log m) => DMF.MediaFile -> m ()
+create = createWithKV
 
-findById :: L.MonadFlow m => Id MediaFile -> m (Maybe MediaFile)
-findById (Id mediaFileId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamMF.MediaFileT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamMediaFileToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamMF.id $ Se.Eq mediaFileId]
-    Nothing -> pure Nothing
+findById :: (L.MonadFlow m, Log m) => Id MediaFile -> m (Maybe MediaFile)
+findById (Id mediaFileId) = findOneWithKV [Se.Is BeamMF.id $ Se.Eq mediaFileId]
 
-findAllIn :: L.MonadFlow m => [Id MediaFile] -> m [MediaFile]
-findAllIn mfList = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamMF.MediaFileT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamMediaFileToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamMF.id $ Se.In $ getId <$> mfList]
-    Nothing -> pure []
+findAllIn :: (L.MonadFlow m, Log m) => [Id MediaFile] -> m [MediaFile]
+findAllIn mfList = findAllWithKV [Se.Is BeamMF.id $ Se.In $ getId <$> mfList]
 
-transformBeamMediaFileToDomain :: BeamMF.MediaFile -> MediaFile
-transformBeamMediaFileToDomain BeamMF.MediaFileT {..} = do
-  MediaFile
-    { id = Id id,
-      _type = fileType,
-      url = url,
-      createdAt = T.localTimeToUTC T.utc createdAt
-    }
+instance FromTType' BeamMF.MediaFile MediaFile where
+  fromTType' BeamMF.MediaFileT {..} = do
+    pure $
+      Just
+        MediaFile
+          { id = Id id,
+            _type = fileType,
+            url = url,
+            createdAt = T.localTimeToUTC T.utc createdAt
+          }
 
-transformDomainMediaFileToBeam :: MediaFile -> BeamMF.MediaFile
-transformDomainMediaFileToBeam MediaFile {..} =
-  BeamMF.MediaFileT
-    { BeamMF.id = getId id,
-      BeamMF.fileType = _type,
-      BeamMF.url = url,
-      BeamMF.createdAt = T.utcToLocalTime T.utc createdAt
-    }
+instance ToTType' BeamMF.MediaFile MediaFile where
+  toTType' MediaFile {..} = do
+    BeamMF.MediaFileT
+      { BeamMF.id = getId id,
+        BeamMF.fileType = _type,
+        BeamMF.url = url,
+        BeamMF.createdAt = T.utcToLocalTime T.utc createdAt
+      }

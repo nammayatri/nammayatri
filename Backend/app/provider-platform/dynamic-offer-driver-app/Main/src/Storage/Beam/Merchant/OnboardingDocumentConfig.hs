@@ -88,7 +88,7 @@ instance B.Table OnboardingDocumentConfigT where
 instance ModelMeta OnboardingDocumentConfigT where
   modelFieldModification = onboardingDocumentConfigTMod
   modelTableName = "onboarding_document_configs"
-  modelSchemaName = Just "atlas_app"
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type OnboardingDocumentConfig = OnboardingDocumentConfigT Identity
 

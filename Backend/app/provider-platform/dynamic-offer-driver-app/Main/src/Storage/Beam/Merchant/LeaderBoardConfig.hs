@@ -72,7 +72,7 @@ instance B.Table LeaderBoardConfigsT where
 instance ModelMeta LeaderBoardConfigsT where
   modelFieldModification = leaderBoardConfigsTMod
   modelTableName = "leader_board_configs"
-  modelSchemaName = Just "atlas_app"
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type LeaderBoardConfigs = LeaderBoardConfigsT Identity
 

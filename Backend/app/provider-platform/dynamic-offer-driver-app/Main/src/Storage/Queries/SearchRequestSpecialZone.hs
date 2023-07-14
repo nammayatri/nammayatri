@@ -11,19 +11,17 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.SearchRequestSpecialZone where
 
 import Domain.Types.Merchant
 import Domain.Types.SearchRequestSpecialZone as Domain
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
-import Lib.Utils (setMeshConfig)
+import Kernel.Types.Logging (Log)
+import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequestSpecialZone as BeamSRSZ
 import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
@@ -35,20 +33,11 @@ import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
 --     Esq.create' toLoc
 --     Esq.create' sReq
 
-createSearchRequestSpecialZone :: L.MonadFlow m => SearchRequestSpecialZone -> m (MeshResult ())
-createSearchRequestSpecialZone srsz = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamSRSZ.SearchRequestSpecialZoneT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainSearchRequestSpecialZoneToBeam srsz)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+createSearchRequestSpecialZone :: (L.MonadFlow m, Log m) => SearchRequestSpecialZone -> m ()
+createSearchRequestSpecialZone = createWithKV
 
-create :: L.MonadFlow m => SearchRequestSpecialZone -> m (MeshResult ())
-create srsz = do
-  _ <- createSearchRequestSpecialZone srsz
-  _ <- QSRL.create srsz.fromLocation
-  QSRL.create srsz.toLocation
+create :: (L.MonadFlow m, Log m) => SearchRequestSpecialZone -> m ()
+create srsz = createSearchRequestSpecialZone srsz >> QSRL.create srsz.fromLocation >> QSRL.create srsz.toLocation
 
 -- findById :: Transactionable m => Id SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
 -- findById searchRequestSpecialZoneId = buildDType $
@@ -58,23 +47,11 @@ create srsz = do
 --         from
 --           ( table @SearchRequestSpecialZoneT
 --               `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& loc1) -> s ^. SearchRequestSpecialZoneFromLocationId ==. loc1 ^. SearchReqLocationTId)
---               `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& _ :& loc2) -> s ^. SearchRequestSpecialZoneToLocationId ==. loc2 ^. SearchReqLocationTId)
 --           )
---       where_ $ sReq ^. SearchRequestSpecialZoneTId ==. val (toKey searchRequestSpecialZoneId)
 --       pure (sReq, sFromLoc, sToLoc)
 -- We are already finding SearchRequestLocation in Domain transform function.
-findById :: L.MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
-findById (Id searchRequestSpecialZoneId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamSRSZ.SearchRequestSpecialZoneT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> do
-      sR <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSRSZ.id $ Se.Eq searchRequestSpecialZoneId]
-      case sR of
-        Right (Just x) -> transformBeamSearchRequestSpecialZoneToDomain x
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+findById :: (L.MonadFlow m, Log m) => Id SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
+findById (Id searchRequestSpecialZoneId) = findOneWithKV [Se.Is BeamSRSZ.id $ Se.Eq searchRequestSpecialZoneId]
 
 -- fullSearchRequestTable ::
 --   From
@@ -98,45 +75,21 @@ findById (Id searchRequestSpecialZoneId) = do
 --       searchT ^. SearchRequestSpecialZoneTransactionId ==. val (getId tId)
 --     return $ searchT ^. SearchRequestSpecialZoneTId
 
-getRequestIdfromTransactionId :: L.MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe (Id SearchRequestSpecialZone))
-getRequestIdfromTransactionId (Id tId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamSRSZ.SearchRequestSpecialZoneT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> do
-      srsz <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSRSZ.transactionId $ Se.Eq tId]
-      case srsz of
-        Right (Just x) -> do
-          srsz' <- transformBeamSearchRequestSpecialZoneToDomain x
-          let vTill = Domain.id <$> srsz'
-          pure vTill
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+getRequestIdfromTransactionId :: (L.MonadFlow m, Log m) => Id SearchRequestSpecialZone -> m (Maybe (Id SearchRequestSpecialZone))
+getRequestIdfromTransactionId (Id tId) = findOneWithKV [Se.Is BeamSRSZ.transactionId $ Se.Eq tId] <&> (Domain.id <$>)
 
 -- findByMsgIdAndBapIdAndBppId :: Transactionable m => Text -> Text -> Id Merchant -> m (Maybe SearchRequestSpecialZone)
 -- findByMsgIdAndBapIdAndBppId txnId bapId merchantId = Esq.buildDType $ do
 --   mbFullSearchReqT <- Esq.findOne' $ do
 --     (sReq :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
---     where_ $
 --       sReq ^. SearchRequestSpecialZoneMessageId ==. val txnId
 --         &&. sReq ^. SearchRequestSpecialZoneProviderId ==. val (toKey merchantId)
 --         &&. sReq ^. SearchRequestSpecialZoneBapId ==. val bapId
 --     pure (sReq, sFromLoc, mbSToLoc)
 --   pure $ extractSolidType @SearchRequestSpecialZone <$> mbFullSearchReqT
 
-findByMsgIdAndBapIdAndBppId :: L.MonadFlow m => Text -> Text -> Id Merchant -> m (Maybe SearchRequestSpecialZone)
-findByMsgIdAndBapIdAndBppId txnId bapId (Id merchantId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamSRSZ.SearchRequestSpecialZoneT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> do
-      srsz <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamSRSZ.messageId $ Se.Eq txnId, Se.Is BeamSRSZ.providerId $ Se.Eq merchantId, Se.Is BeamSRSZ.bapId $ Se.Eq bapId]]
-      case srsz of
-        Right (Just x) -> transformBeamSearchRequestSpecialZoneToDomain x
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+findByMsgIdAndBapIdAndBppId :: (L.MonadFlow m, Log m) => Text -> Text -> Id Merchant -> m (Maybe SearchRequestSpecialZone)
+findByMsgIdAndBapIdAndBppId txnId bapId (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamSRSZ.messageId $ Se.Eq txnId, Se.Is BeamSRSZ.providerId $ Se.Eq merchantId, Se.Is BeamSRSZ.bapId $ Se.Eq bapId]]
 
 -- getValidTill ::
 --   (Transactionable m) =>
@@ -160,85 +113,59 @@ findByMsgIdAndBapIdAndBppId txnId bapId (Id merchantId) = do
 --     return $ searchT ^. SearchRequestSpecialZoneTId
 
 findByTransactionId ::
-  (L.MonadFlow m) =>
+  (L.MonadFlow m, Log m) =>
   Id SearchRequestSpecialZone ->
   m (Maybe (Id SearchRequestSpecialZone))
-findByTransactionId (Id tId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamSRSZ.SearchRequestSpecialZoneT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> do
-      srsz <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSRSZ.transactionId $ Se.Eq tId]
-      case srsz of
-        Right (Just x) -> do
-          srsz' <- transformBeamSearchRequestSpecialZoneToDomain x
-          case srsz' of
-            Just val' -> pure $ Just $ Domain.id val'
-            Nothing -> pure Nothing
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+findByTransactionId (Id tId) = findOneWithKV [Se.Is BeamSRSZ.transactionId $ Se.Eq tId] <&> (Domain.id <$>)
 
-getValidTill :: L.MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe UTCTime)
+getValidTill :: (L.MonadFlow m, Log m) => Id SearchRequestSpecialZone -> m (Maybe UTCTime)
 getValidTill (Id searchRequestId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamSRSZ.SearchRequestSpecialZoneT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> do
-      srsz <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSRSZ.id $ Se.Eq searchRequestId]
-      case srsz of
-        Right (Just x) -> do
-          srsz' <- transformBeamSearchRequestSpecialZoneToDomain x
-          let vTill = Domain.validTill <$> srsz'
-          pure vTill
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+  findOneWithKV [Se.Is BeamSRSZ.id $ Se.Eq searchRequestId] <&> (Domain.validTill <$>)
 
-transformBeamSearchRequestSpecialZoneToDomain :: L.MonadFlow m => BeamSRSZ.SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
-transformBeamSearchRequestSpecialZoneToDomain BeamSRSZ.SearchRequestSpecialZoneT {..} = do
-  fl <- QSRL.findById (Id fromLocationId)
-  tl <- QSRL.findById (Id toLocationId)
-  pUrl <- parseBaseUrl bapUri
-  if isJust fl && isJust tl
-    then
-      pure $
-        Just
-          SearchRequestSpecialZone
-            { id = Id id,
-              transactionId = transactionId,
-              messageId = messageId,
-              startTime = startTime,
-              validTill = validTill,
-              providerId = Id providerId,
-              fromLocation = fromJust fl,
-              toLocation = fromJust tl,
-              area = area,
-              bapId = bapId,
-              bapUri = pUrl,
-              estimatedDistance = estimatedDistance,
-              estimatedDuration = estimatedDuration,
-              createdAt = createdAt,
-              updatedAt = updatedAt
-            }
-    else pure Nothing
+instance FromTType' BeamSRSZ.SearchRequestSpecialZone SearchRequestSpecialZone where
+  fromTType' BeamSRSZ.SearchRequestSpecialZoneT {..} = do
+    fl <- QSRL.findById (Id fromLocationId)
+    tl <- QSRL.findById (Id toLocationId)
+    pUrl <- parseBaseUrl bapUri
+    if isJust fl && isJust tl
+      then
+        pure $
+          Just
+            SearchRequestSpecialZone
+              { id = Id id,
+                transactionId = transactionId,
+                messageId = messageId,
+                startTime = startTime,
+                validTill = validTill,
+                providerId = Id providerId,
+                fromLocation = fromJust fl,
+                toLocation = fromJust tl,
+                area = area,
+                bapId = bapId,
+                bapUri = pUrl,
+                estimatedDistance = estimatedDistance,
+                estimatedDuration = estimatedDuration,
+                createdAt = createdAt,
+                updatedAt = updatedAt
+              }
+      else pure Nothing
 
-transformDomainSearchRequestSpecialZoneToBeam :: SearchRequestSpecialZone -> BeamSRSZ.SearchRequestSpecialZone
-transformDomainSearchRequestSpecialZoneToBeam SearchRequestSpecialZone {..} =
-  BeamSRSZ.SearchRequestSpecialZoneT
-    { BeamSRSZ.id = getId id,
-      BeamSRSZ.transactionId = transactionId,
-      BeamSRSZ.messageId = messageId,
-      BeamSRSZ.startTime = startTime,
-      BeamSRSZ.validTill = validTill,
-      BeamSRSZ.providerId = getId providerId,
-      BeamSRSZ.fromLocationId = getId fromLocation.id,
-      BeamSRSZ.toLocationId = getId toLocation.id,
-      BeamSRSZ.area = area,
-      BeamSRSZ.bapId = bapId,
-      BeamSRSZ.bapUri = showBaseUrl bapUri,
-      BeamSRSZ.estimatedDistance = estimatedDistance,
-      BeamSRSZ.estimatedDuration = estimatedDuration,
-      BeamSRSZ.createdAt = createdAt,
-      BeamSRSZ.updatedAt = updatedAt
-    }
+instance ToTType' BeamSRSZ.SearchRequestSpecialZone SearchRequestSpecialZone where
+  toTType' SearchRequestSpecialZone {..} = do
+    BeamSRSZ.SearchRequestSpecialZoneT
+      { BeamSRSZ.id = getId id,
+        BeamSRSZ.transactionId = transactionId,
+        BeamSRSZ.messageId = messageId,
+        BeamSRSZ.startTime = startTime,
+        BeamSRSZ.validTill = validTill,
+        BeamSRSZ.providerId = getId providerId,
+        BeamSRSZ.fromLocationId = getId fromLocation.id,
+        BeamSRSZ.toLocationId = getId toLocation.id,
+        BeamSRSZ.area = area,
+        BeamSRSZ.bapId = bapId,
+        BeamSRSZ.bapUri = showBaseUrl bapUri,
+        BeamSRSZ.estimatedDistance = estimatedDistance,
+        BeamSRSZ.estimatedDuration = estimatedDuration,
+        BeamSRSZ.createdAt = createdAt,
+        BeamSRSZ.updatedAt = updatedAt
+      }

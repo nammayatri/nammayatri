@@ -12,72 +12,61 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE PartialTypeSignatures #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.SearchRequest.SearchReqLocation where
 
 import Domain.Types.SearchRequest.SearchReqLocation
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
-import Lib.Utils (setMeshConfig)
+import Kernel.Types.Logging (Log)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest.SearchReqLocation as BeamSRL
 
-create :: L.MonadFlow m => SearchReqLocation -> m (MeshResult ())
-create bl = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamSRL.SearchReqLocationT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainSearchReqLocationToBeam bl)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create :: (L.MonadFlow m, Log m) => SearchReqLocation -> m ()
+create = createWithKV
 
-findById :: L.MonadFlow m => Id SearchReqLocation -> m (Maybe SearchReqLocation)
-findById (Id searchReqLocationId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamSRL.SearchReqLocationT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamSearchReqLocationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSRL.id $ Se.Eq searchReqLocationId]
-    Nothing -> pure Nothing
+findById :: (L.MonadFlow m, Log m) => Id SearchReqLocation -> m (Maybe SearchReqLocation)
+findById (Id searchReqLocationId) = findOneWithKV [Se.Is BeamSRL.id $ Se.Eq searchReqLocationId]
 
-transformBeamSearchReqLocationToDomain :: BeamSRL.SearchReqLocation -> SearchReqLocation
-transformBeamSearchReqLocationToDomain BeamSRL.SearchReqLocationT {..} = do
-  SearchReqLocation
-    { id = Id id,
-      lat = lat,
-      lon = lon,
-      street = street,
-      door = door,
-      city = city,
-      state = state,
-      country = country,
-      building = building,
-      areaCode = areaCode,
-      area = area,
-      full_address = full_address,
-      createdAt = createdAt,
-      updatedAt = updatedAt
-    }
+instance FromTType' BeamSRL.SearchReqLocation SearchReqLocation where
+  fromTType' BeamSRL.SearchReqLocationT {..} = do
+    pure $
+      Just
+        SearchReqLocation
+          { id = Id id,
+            lat = lat,
+            lon = lon,
+            street = street,
+            door = door,
+            city = city,
+            state = state,
+            country = country,
+            building = building,
+            areaCode = areaCode,
+            full_address = full_address,
+            area = area,
+            createdAt = createdAt,
+            updatedAt = updatedAt
+          }
 
-transformDomainSearchReqLocationToBeam :: SearchReqLocation -> BeamSRL.SearchReqLocation
-transformDomainSearchReqLocationToBeam SearchReqLocation {..} =
-  BeamSRL.SearchReqLocationT
-    { BeamSRL.id = getId id,
-      BeamSRL.lat = lat,
-      BeamSRL.lon = lon,
-      BeamSRL.street = street,
-      BeamSRL.door = door,
-      BeamSRL.city = city,
-      BeamSRL.state = state,
-      BeamSRL.country = country,
-      BeamSRL.building = building,
-      BeamSRL.areaCode = areaCode,
-      BeamSRL.area = area,
-      BeamSRL.full_address = full_address,
-      BeamSRL.createdAt = createdAt,
-      BeamSRL.updatedAt = updatedAt
-    }
+instance ToTType' BeamSRL.SearchReqLocation SearchReqLocation where
+  toTType' SearchReqLocation {..} = do
+    BeamSRL.SearchReqLocationT
+      { BeamSRL.id = getId id,
+        BeamSRL.lat = lat,
+        BeamSRL.lon = lon,
+        BeamSRL.street = street,
+        BeamSRL.door = door,
+        BeamSRL.city = city,
+        BeamSRL.state = state,
+        BeamSRL.country = country,
+        BeamSRL.building = building,
+        BeamSRL.areaCode = areaCode,
+        BeamSRL.area = area,
+        BeamSRL.full_address = full_address,
+        BeamSRL.createdAt = createdAt,
+        BeamSRL.updatedAt = updatedAt
+      }

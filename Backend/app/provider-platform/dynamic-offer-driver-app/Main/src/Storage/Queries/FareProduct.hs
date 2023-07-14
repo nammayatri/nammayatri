@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.FareProduct
   {-# WARNING
@@ -19,17 +20,17 @@ module Storage.Queries.FareProduct
     #-}
 where
 
+import Domain.Types.FareProduct
 import qualified Domain.Types.FareProduct as Domain
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Vehicle.Variant (Variant (..))
-import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
-import Lib.Utils (setMeshConfig)
+import Kernel.Types.Logging
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findAllWithKV, findOneWithKV)
 import qualified Sequelize as Se
-import qualified Storage.Beam.FareProduct as BeamFareProduct
+import qualified Storage.Beam.FareProduct as BeamFP
 
 -- findAllFareProductForVariants ::
 --   Transactionable m =>
@@ -39,31 +40,16 @@ import qualified Storage.Beam.FareProduct as BeamFareProduct
 -- findAllFareProductForVariants merchantId area =
 --   Esq.findAll $ do
 --     fareProduct <- from $ table @FareProductT
---     where_ $
 --       fareProduct ^. FareProductMerchantId ==. val (toKey merchantId)
 --         &&. fareProduct ^. FareProductArea ==. val area
 --     return fareProduct
 
 findAllFareProductForVariants ::
-  L.MonadFlow m =>
+  (L.MonadFlow m, Log m) =>
   Id Merchant ->
   Domain.Area ->
   m [Domain.FareProduct]
-findAllFareProductForVariants (Id merchantId) area = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamFareProduct.FareProductT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <-
-        KV.findAllWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [Se.And [Se.Is BeamFareProduct.merchantId $ Se.Eq merchantId, Se.Is BeamFareProduct.area $ Se.Eq area]]
-      case result of
-        Right x -> pure $ transformBeamFareProductToDomain <$> x
-        Left _ -> pure []
-    Nothing -> pure []
+findAllFareProductForVariants (Id merchantId) area = findAllWithKV [Se.And [Se.Is BeamFP.merchantId $ Se.Eq merchantId, Se.Is BeamFP.area $ Se.Eq area]]
 
 -- findByMerchantVariantArea ::
 --   Transactionable m =>
@@ -74,57 +60,46 @@ findAllFareProductForVariants (Id merchantId) area = do
 -- findByMerchantVariantArea merchantId vehicleVariant area =
 --   Esq.findOne $ do
 --     fareProduct <- from $ table @FareProductT
---     where_ $
 --       fareProduct ^. FareProductMerchantId ==. val (toKey merchantId)
 --         &&. fareProduct ^. FareProductArea ==. val area
 --         &&. fareProduct ^. FareProductVehicleVariant ==. val vehicleVariant
 --     return fareProduct
 
 findByMerchantVariantArea ::
-  (L.MonadFlow m) =>
+  (L.MonadFlow m, Log m) =>
   Id Merchant ->
   Variant ->
   Domain.Area ->
   m (Maybe Domain.FareProduct)
-findByMerchantVariantArea (Id merchantId) vehicleVariant area = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamFareProduct.FareProductT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <-
-        KV.findWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [ Se.And
-              [ Se.Is BeamFareProduct.merchantId $ Se.Eq merchantId,
-                Se.Is BeamFareProduct.area $ Se.Eq area,
-                Se.Is BeamFareProduct.vehicleVariant $ Se.Eq vehicleVariant
-              ]
-          ]
-      case result of
-        Right (Just x) -> pure $ Just $ transformBeamFareProductToDomain x
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+findByMerchantVariantArea (Id merchantId) vehicleVariant area =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamFP.merchantId $ Se.Eq merchantId,
+          Se.Is BeamFP.area $ Se.Eq area,
+          Se.Is BeamFP.vehicleVariant $ Se.Eq vehicleVariant
+        ]
+    ]
 
-transformDomainFareProductToBeam :: Domain.FareProduct -> BeamFareProduct.FareProduct
-transformDomainFareProductToBeam Domain.FareProduct {..} =
-  BeamFareProduct.FareProductT
-    { BeamFareProduct.id = getId id,
-      merchantId = getId merchantId,
-      farePolicyId = getId farePolicyId,
-      vehicleVariant = vehicleVariant,
-      area = area,
-      flow = flow
-    }
+instance ToTType' BeamFP.FareProduct FareProduct where
+  toTType' FareProduct {..} = do
+    BeamFP.FareProductT
+      { BeamFP.id = getId id,
+        merchantId = getId merchantId,
+        farePolicyId = getId farePolicyId,
+        vehicleVariant = vehicleVariant,
+        area = area,
+        flow = flow
+      }
 
-transformBeamFareProductToDomain :: BeamFareProduct.FareProduct -> Domain.FareProduct
-transformBeamFareProductToDomain BeamFareProduct.FareProductT {..} =
-  Domain.FareProduct
-    { id = Id id,
-      merchantId = Id merchantId,
-      farePolicyId = Id farePolicyId,
-      vehicleVariant = vehicleVariant,
-      area = area,
-      flow = flow
-    }
+instance FromTType' BeamFP.FareProduct FareProduct where
+  fromTType' BeamFP.FareProductT {..} = do
+    pure $
+      Just
+        Domain.FareProduct
+          { id = Id id,
+            merchantId = Id merchantId,
+            farePolicyId = Id farePolicyId,
+            vehicleVariant = vehicleVariant,
+            area = area,
+            flow = flow
+          }

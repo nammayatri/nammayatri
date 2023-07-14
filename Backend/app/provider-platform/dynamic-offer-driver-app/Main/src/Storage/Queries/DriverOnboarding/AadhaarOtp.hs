@@ -11,85 +11,73 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.DriverOnboarding.AadhaarOtp where
 
 import Domain.Types.DriverOnboarding.AadhaarOtp
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Types.Logging (Log)
 import Lib.Utils
-import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.AadhaarOtpReq as BeamAOR
 import qualified Storage.Beam.DriverOnboarding.AadhaarOtpVerify as BeamAOV
 
-createForGenerate :: L.MonadFlow m => AadhaarOtpReq -> m (MeshResult ())
-createForGenerate aadhaarOtpReq = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamAOR.AadhaarOtpReqT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainAadhaarOtpReqToBeam aadhaarOtpReq)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+createForGenerate :: (L.MonadFlow m, Log m) => AadhaarOtpReq -> m ()
+createForGenerate = createWithKV
 
-createForVerify :: L.MonadFlow m => AadhaarOtpVerify -> m (MeshResult ())
-createForVerify aadhaarOtpVerify = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamAOV.AadhaarOtpVerifyT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainAadhaarOtpVerifyToBeam aadhaarOtpVerify)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+createForVerify :: (L.MonadFlow m, Log m) => AadhaarOtpVerify -> m ()
+createForVerify = createWithKV
 
-transformBeamAadhaarOtpReqToDomain :: BeamAOR.AadhaarOtpReq -> AadhaarOtpReq
-transformBeamAadhaarOtpReqToDomain BeamAOR.AadhaarOtpReqT {..} = do
-  AadhaarOtpReq
-    { id = Id id,
-      driverId = Id driverId,
-      requestId = requestId,
-      statusCode = statusCode,
-      transactionId = transactionId,
-      requestMessage = requestMessage,
-      createdAt = createdAt
-    }
+instance FromTType' BeamAOR.AadhaarOtpReq AadhaarOtpReq where
+  fromTType' BeamAOR.AadhaarOtpReqT {..} = do
+    pure $
+      Just
+        AadhaarOtpReq
+          { id = Id id,
+            driverId = Id driverId,
+            requestId = requestId,
+            statusCode = statusCode,
+            transactionId = transactionId,
+            requestMessage = requestMessage,
+            createdAt = createdAt
+          }
 
-transformDomainAadhaarOtpReqToBeam :: AadhaarOtpReq -> BeamAOR.AadhaarOtpReq
-transformDomainAadhaarOtpReqToBeam AadhaarOtpReq {..} =
-  BeamAOR.AadhaarOtpReqT
-    { BeamAOR.id = getId id,
-      BeamAOR.driverId = getId driverId,
-      BeamAOR.requestId = requestId,
-      BeamAOR.statusCode = statusCode,
-      BeamAOR.transactionId = transactionId,
-      BeamAOR.requestMessage = requestMessage,
-      BeamAOR.createdAt = createdAt
-    }
+instance ToTType' BeamAOR.AadhaarOtpReq AadhaarOtpReq where
+  toTType' AadhaarOtpReq {..} =
+    BeamAOR.AadhaarOtpReqT
+      { BeamAOR.id = getId id,
+        BeamAOR.driverId = getId driverId,
+        BeamAOR.requestId = requestId,
+        BeamAOR.statusCode = statusCode,
+        BeamAOR.transactionId = transactionId,
+        BeamAOR.requestMessage = requestMessage,
+        BeamAOR.createdAt = createdAt
+      }
 
-transformBeamAadhaarOtpVerifyToDomain :: BeamAOV.AadhaarOtpVerify -> AadhaarOtpVerify
-transformBeamAadhaarOtpVerifyToDomain BeamAOV.AadhaarOtpVerifyT {..} = do
-  AadhaarOtpVerify
-    { id = Id id,
-      driverId = Id driverId,
-      requestId = requestId,
-      statusCode = statusCode,
-      transactionId = transactionId,
-      requestMessage = requestMessage,
-      createdAt = createdAt
-    }
+instance FromTType' BeamAOV.AadhaarOtpVerify AadhaarOtpVerify where
+  fromTType' BeamAOV.AadhaarOtpVerifyT {..} = do
+    pure $
+      Just
+        AadhaarOtpVerify
+          { id = Id id,
+            driverId = Id driverId,
+            requestId = requestId,
+            statusCode = statusCode,
+            transactionId = transactionId,
+            requestMessage = requestMessage,
+            createdAt = createdAt
+          }
 
-transformDomainAadhaarOtpVerifyToBeam :: AadhaarOtpVerify -> BeamAOV.AadhaarOtpVerify
-transformDomainAadhaarOtpVerifyToBeam AadhaarOtpVerify {..} =
-  BeamAOV.AadhaarOtpVerifyT
-    { BeamAOV.id = getId id,
-      BeamAOV.driverId = getId driverId,
-      BeamAOV.requestId = requestId,
-      BeamAOV.statusCode = statusCode,
-      BeamAOV.transactionId = transactionId,
-      BeamAOV.requestMessage = requestMessage,
-      BeamAOV.createdAt = createdAt
-    }
+instance ToTType' BeamAOV.AadhaarOtpVerify AadhaarOtpVerify where
+  toTType' AadhaarOtpVerify {..} =
+    BeamAOV.AadhaarOtpVerifyT
+      { BeamAOV.id = getId id,
+        BeamAOV.driverId = getId driverId,
+        BeamAOV.requestId = requestId,
+        BeamAOV.statusCode = statusCode,
+        BeamAOV.transactionId = transactionId,
+        BeamAOV.requestMessage = requestMessage,
+        BeamAOV.createdAt = createdAt
+      }

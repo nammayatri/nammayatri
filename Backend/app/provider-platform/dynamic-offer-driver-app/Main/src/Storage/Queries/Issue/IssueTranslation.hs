@@ -11,27 +11,34 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Issue.IssueTranslation where
 
+import Control.Applicative
+import Data.Function hiding (id)
+import Data.Maybe
 import Domain.Types.Issue.IssueTranslation
 import Kernel.Types.Id
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'))
 import qualified Storage.Beam.Issue.IssueTranslation as BeamIT
 
-transformBeamIssueTranslationToDomain :: BeamIT.IssueTranslation -> IssueTranslation
-transformBeamIssueTranslationToDomain BeamIT.IssueTranslationT {..} = do
-  IssueTranslation
-    { id = Id id,
-      sentence = sentence,
-      translation = translation,
-      language = language
-    }
+instance FromTType' BeamIT.IssueTranslation IssueTranslation where
+  fromTType' BeamIT.IssueTranslationT {..} = do
+    pure $
+      Just
+        IssueTranslation
+          { id = Id id,
+            sentence = sentence,
+            translation = translation,
+            language = language
+          }
 
-transformDomainIssueTranslationToBeam :: IssueTranslation -> BeamIT.IssueTranslation
-transformDomainIssueTranslationToBeam IssueTranslation {..} =
-  BeamIT.IssueTranslationT
-    { id = getId id,
-      sentence = sentence,
-      translation = translation,
-      language = language
-    }
+instance ToTType' BeamIT.IssueTranslation IssueTranslation where
+  toTType' IssueTranslation {..} = do
+    BeamIT.IssueTranslationT
+      { id = getId id,
+        sentence = sentence,
+        translation = translation,
+        language = language
+      }

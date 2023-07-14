@@ -11,19 +11,18 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.FarePolicy.DriverExtraFeeBounds where
 
-import qualified Domain.Types.FarePolicy as DFP
 -- import qualified Domain.Types.FarePolicy as FarePolicy
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
-import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
-import Kernel.Prelude
+
 -- import Kernel.Storage.Esqueleto as Esq
 
+import Domain.Types.FarePolicy
+import qualified Domain.Types.FarePolicy as DFP
+import qualified EulerHS.Language as L
+import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id as KTI
 import Lib.Utils
@@ -34,14 +33,9 @@ import qualified Storage.Tabular.FarePolicy.DriverExtraFeeBounds as Domain
 -- create :: Domain.FullDriverExtraFeeBounds -> SqlDB ()
 -- create = Esq.create
 
-create :: L.MonadFlow m => Domain.FullDriverExtraFeeBounds -> m (MeshResult ())
+create :: (L.MonadFlow m, Log m) => Domain.FullDriverExtraFeeBounds -> m ()
 create fullDriverExtraFeeBounds = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDEFB.DriverExtraFeeBoundsT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainDriverExtraFeeBoundsToBeam fullDriverExtraFeeBounds)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+  createWithKV fullDriverExtraFeeBounds
 
 -- findByFarePolicyIdAndStartDistance :: Transactionable m => Id DFP.FarePolicy -> Meters -> m (Maybe Domain.FullDriverExtraFeeBounds)
 -- findByFarePolicyIdAndStartDistance farePolicyId startDistance = Esq.findOne $ do
@@ -51,16 +45,8 @@ create fullDriverExtraFeeBounds = do
 --       &&. farePolicy ^. Domain.DriverExtraFeeBoundsStartDistance ==. val startDistance
 --   pure farePolicy
 
-findByFarePolicyIdAndStartDistance :: L.MonadFlow m => Id DFP.FarePolicy -> Meters -> m (Maybe Domain.FullDriverExtraFeeBounds)
-findByFarePolicyIdAndStartDistance (Id farePolicyId) startDistance = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDEFB.DriverExtraFeeBoundsT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      either (pure Nothing) (transformBeamDriverExtraFeeBoundsToDomain <$>)
-        <$> KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamDEFB.farePolicyId $ Se.Eq farePolicyId, Se.Is BeamDEFB.startDistance $ Se.Eq startDistance]]
-    Nothing -> pure Nothing
+findByFarePolicyIdAndStartDistance :: (L.MonadFlow m, Log m) => Id DFP.FarePolicy -> Meters -> m (Maybe Domain.FullDriverExtraFeeBounds)
+findByFarePolicyIdAndStartDistance (Id farePolicyId) startDistance = findOneWithKV [Se.And [Se.Is BeamDEFB.farePolicyId $ Se.Eq farePolicyId, Se.Is BeamDEFB.startDistance $ Se.Eq startDistance]]
 
 -- update :: Id DFP.FarePolicy -> Meters -> Money -> Money -> SqlDB ()
 -- update farePolicyId startDistace minFee maxFee = do
@@ -70,57 +56,44 @@ findByFarePolicyIdAndStartDistance (Id farePolicyId) startDistance = do
 --       [ Domain.DriverExtraFeeBoundsMinFee =. val minFee,
 --         Domain.DriverExtraFeeBoundsMaxFee =. val maxFee
 --       ]
---     where_ $
 --       tbl ^. Domain.DriverExtraFeeBoundsFarePolicyId ==. val (toKey farePolicyId)
 --         &&. tbl ^. Domain.DriverExtraFeeBoundsStartDistance ==. val startDistace
 
-update :: L.MonadFlow m => Id DFP.FarePolicy -> Meters -> Money -> Money -> m ()
-update (Id farePolicyId) startDistance minFee maxFee = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDEFB.DriverExtraFeeBoundsT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      void $
-        KV.updateWoReturningWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [ Se.Set BeamDEFB.minFee minFee,
-            Se.Set BeamDEFB.maxFee maxFee
-          ]
-          [Se.And [Se.Is BeamDEFB.farePolicyId $ Se.Eq farePolicyId, Se.Is BeamDEFB.startDistance $ Se.Eq startDistance]]
-    Nothing -> pure ()
+update :: (L.MonadFlow m, Log m) => Id DFP.FarePolicy -> Meters -> Money -> Money -> m ()
+update (Id farePolicyId) startDistance minFee maxFee =
+  updateWithKV
+    [ Se.Set BeamDEFB.minFee minFee,
+      Se.Set BeamDEFB.maxFee maxFee
+    ]
+    [Se.And [Se.Is BeamDEFB.farePolicyId $ Se.Eq farePolicyId, Se.Is BeamDEFB.startDistance $ Se.Eq startDistance]]
 
 findAll' ::
   ( L.MonadFlow m,
-    MonadThrow m
+    MonadThrow m,
+    Log m
   ) =>
   Id DFP.FarePolicy ->
   m [Domain.FullDriverExtraFeeBounds]
-findAll' farePolicyId = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDEFB.DriverExtraFeeBoundsT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamDriverExtraFeeBoundsToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDEFB.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamDEFB.startDistance) Nothing Nothing
-    Nothing -> pure []
+findAll' farePolicyId = findAllWithOptionsKV [Se.Is BeamDEFB.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamDEFB.startDistance) Nothing Nothing
 
-transformBeamDriverExtraFeeBoundsToDomain :: BeamDEFB.DriverExtraFeeBounds -> Domain.FullDriverExtraFeeBounds
-transformBeamDriverExtraFeeBoundsToDomain BeamDEFB.DriverExtraFeeBoundsT {..} = do
-  ( KTI.Id farePolicyId,
-    DFP.DriverExtraFeeBounds
-      { startDistance = startDistance,
+instance FromTType' BeamDEFB.DriverExtraFeeBounds Domain.FullDriverExtraFeeBounds where
+  fromTType' BeamDEFB.DriverExtraFeeBoundsT {..} = do
+    pure $
+      Just
+        ( KTI.Id farePolicyId,
+          DFP.DriverExtraFeeBounds
+            { startDistance = startDistance,
+              minFee = minFee,
+              maxFee = maxFee
+            }
+        )
+
+instance ToTType' BeamDEFB.DriverExtraFeeBounds Domain.FullDriverExtraFeeBounds where
+  toTType' (KTI.Id farePolicyId, DFP.DriverExtraFeeBounds {..}) =
+    BeamDEFB.DriverExtraFeeBoundsT
+      { id = Nothing,
+        farePolicyId = farePolicyId,
+        startDistance = startDistance,
         minFee = minFee,
         maxFee = maxFee
       }
-    )
-
-transformDomainDriverExtraFeeBoundsToBeam :: Domain.FullDriverExtraFeeBounds -> BeamDEFB.DriverExtraFeeBounds
-transformDomainDriverExtraFeeBoundsToBeam (KTI.Id farePolicyId, DFP.DriverExtraFeeBounds {..}) =
-  BeamDEFB.DriverExtraFeeBoundsT
-    { id = Nothing,
-      farePolicyId = farePolicyId,
-      startDistance = startDistance,
-      minFee = minFee,
-      maxFee = maxFee
-    }

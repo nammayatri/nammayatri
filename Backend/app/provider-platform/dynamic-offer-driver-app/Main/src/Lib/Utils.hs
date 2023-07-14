@@ -37,7 +37,8 @@ import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Error
-import Kernel.Utils.Common (encodeToText, throwError)
+import Kernel.Utils.Common (encodeToText)
+import Kernel.Utils.Error (throwError)
 import Lib.Mesh as Mesh
 import Sequelize (Model, ModelMeta (modelTableName), OrderBy, Set, Where)
 
@@ -397,7 +398,7 @@ findOneWithKV ::
 -- m (Maybe (table Identity))
 findOneWithKV where' = do
   let updatedMeshConfig = setMeshConfig' (modelTableName @table) meshConfig
-  dbConf' <- getMasterDBConfig'
+  dbConf' <- getMasterDBConfig
   result <- KV.findWithKVConnector dbConf' updatedMeshConfig where'
   case result of
     Right (Just res) -> fromTType' res
@@ -428,7 +429,7 @@ findAllWithKV ::
 -- m (Maybe (table Identity))
 findAllWithKV where' = do
   let updatedMeshConfig = setMeshConfig' (modelTableName @table) meshConfig
-  dbConf' <- getMasterDBConfig'
+  dbConf' <- getMasterDBConfig
   result <- KV.findAllWithKVConnector dbConf' updatedMeshConfig where'
   case result of
     Right res -> do
@@ -463,7 +464,7 @@ findAllWithOptionsKV ::
 -- m (Maybe (table Identity))
 findAllWithOptionsKV where' orderBy mbLimit mbOffset = do
   let updatedMeshConfig = setMeshConfig' (modelTableName @table) meshConfig
-  dbConf <- getMasterDBConfig'
+  dbConf <- getMasterDBConfig
   result <- KV.findAllWithOptionsKVConnector dbConf updatedMeshConfig where' orderBy mbLimit mbOffset
   case result of
     Right res -> do
@@ -497,11 +498,11 @@ updateWithKV ::
 -- m (Maybe (table Identity))
 updateWithKV setClause whereClause = do
   let updatedMeshConfig = setMeshConfig' (modelTableName @table) meshConfig
-  dbConf <- getMasterDBConfig'
+  dbConf <- getMasterDBConfig
   res <- KV.updateWoReturningWithKVConnector dbConf updatedMeshConfig setClause whereClause
   case res of
     Right _ -> pure ()
-    Left err -> L.throwException $ InternalError $ show err
+    Left err -> throwError $ InternalError $ show err
 
 createWithKV ::
   forall table m a.
@@ -528,19 +529,74 @@ createWithKV ::
 createWithKV a = do
   let tType = toTType' a
       updatedMeshConfig = setMeshConfig' (modelTableName @table) meshConfig
-  dbConf' <- getMasterDBConfig'
+  dbConf' <- getMasterDBConfig
   result <- KV.createWoReturingKVConnector dbConf' updatedMeshConfig tType
   case result of
     Right _ -> pure ()
     Left err -> throwError $ InternalError $ show err
 
--- findWithKV :: (FromTType t a) =>
--- findWithKV = do
--- res <- findOneWithKV dbConf meshConfig where'
--- pure $ fromTType' <$> res
+deleteWithKV ::
+  forall be table beM m.
+  ( HasCallStack,
+    BeamRuntime be beM,
+    SqlReturning beM be,
+    B.HasQBuilder be,
+    BeamRunner beM,
+    Model be table,
+    MeshMeta be table,
+    KVConnector (table Identity),
+    FromJSON (table Identity),
+    ToJSON (table Identity),
+    Serialize.Serialize (table Identity),
+    L.MonadFlow m,
+    Log m,
+    Show (table Identity),
+    MonadThrow m,
+    SqlReturning Pg be,
+    BeamRuntime be Pg
+  ) =>
+  Where be table ->
+  m ()
+deleteWithKV whereClause = do
+  let updatedMeshConfig = setMeshConfig' (modelTableName @table) meshConfig
+  dbConf <- getMasterDBConfig
+  res <- KV.deleteWithKVConnector dbConf updatedMeshConfig whereClause
+  case res of
+    Right _ -> pure ()
+    Left err -> throwError $ InternalError $ show err
 
-getMasterDBConfig' :: (HasCallStack, L.MonadFlow m) => m (DBConfig Pg)
-getMasterDBConfig' = do
+deleteAllWithKV ::
+  forall be table beM m.
+  ( HasCallStack,
+    BeamRuntime be beM,
+    SqlReturning beM be,
+    B.HasQBuilder be,
+    BeamRunner beM,
+    Model be table,
+    MeshMeta be table,
+    KVConnector (table Identity),
+    FromJSON (table Identity),
+    ToJSON (table Identity),
+    Serialize.Serialize (table Identity),
+    L.MonadFlow m,
+    Log m,
+    Show (table Identity),
+    MonadThrow m,
+    SqlReturning Pg be,
+    BeamRuntime be Pg
+  ) =>
+  Where be table ->
+  m ()
+deleteAllWithKV whereClause = do
+  let updatedMeshConfig = setMeshConfig' (modelTableName @table) meshConfig
+  dbConf <- getMasterDBConfig
+  res <- KV.deleteAllReturningWithKVConnector dbConf updatedMeshConfig whereClause
+  case res of
+    Right _ -> pure ()
+    Left err -> throwError $ InternalError $ show err
+
+getMasterDBConfig :: (HasCallStack, L.MonadFlow m) => m (DBConfig Pg)
+getMasterDBConfig = do
   dbConf <- L.getOption PsqlDbCfg
   case dbConf of
     Just dbCnf' -> pure dbCnf'

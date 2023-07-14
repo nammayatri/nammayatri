@@ -16,7 +16,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Beam.DriverOnboarding.AadhaarOtpReq where
+module Storage.Beam.MetaData where
 
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Internal as HM
@@ -31,63 +31,76 @@ import Kernel.Prelude hiding (Generic)
 import Lib.UtilsTH
 import Sequelize
 
-data AadhaarOtpReqT f = AadhaarOtpReqT
-  { id :: B.C f Text,
-    driverId :: B.C f Text,
-    requestId :: B.C f Text,
-    statusCode :: B.C f Text,
-    transactionId :: B.C f (Maybe Text),
-    requestMessage :: B.C f Text,
-    createdAt :: B.C f Time.UTCTime
+data MetaDataT f = MetaDataT
+  { driverId :: B.C f Text,
+    device :: B.C f (Maybe Text),
+    deviceOS :: B.C f (Maybe Text),
+    deviceDateTime :: B.C f (Maybe Time.UTCTime),
+    appPermissions :: B.C f (Maybe Text),
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
-instance B.Table AadhaarOtpReqT where
-  data PrimaryKey AadhaarOtpReqT f
+instance B.Table MetaDataT where
+  data PrimaryKey MetaDataT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . id
+  primaryKey = Id . driverId
 
-instance ModelMeta AadhaarOtpReqT where
-  modelFieldModification = aadhaarOtpReqTMod
-  modelTableName = "aadhaar_otp_req"
+instance ModelMeta MetaDataT where
+  modelFieldModification = metaDataTMod
+  modelTableName = "meta_data"
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
-type AadhaarOtpReq = AadhaarOtpReqT Identity
+type MetaData = MetaDataT Identity
 
-instance FromJSON AadhaarOtpReq where
+instance FromJSON MetaData where
   parseJSON = A.genericParseJSON A.defaultOptions
 
-instance ToJSON AadhaarOtpReq where
+instance ToJSON MetaData where
   toJSON = A.genericToJSON A.defaultOptions
 
-deriving stock instance Show AadhaarOtpReq
+deriving stock instance Show MetaData
 
-aadhaarOtpReqTMod :: AadhaarOtpReqT (B.FieldModification (B.TableField AadhaarOtpReqT))
-aadhaarOtpReqTMod =
+metaDataTMod :: MetaDataT (B.FieldModification (B.TableField MetaDataT))
+metaDataTMod =
   B.tableModification
-    { id = B.fieldNamed "id",
-      driverId = B.fieldNamed "driver_id",
-      requestId = B.fieldNamed "request_id",
-      statusCode = B.fieldNamed "status_code",
-      transactionId = B.fieldNamed "transaction_id",
-      requestMessage = B.fieldNamed "request_message",
-      createdAt = B.fieldNamed "created_at"
+    { driverId = B.fieldNamed "driver_id",
+      device = B.fieldNamed "device",
+      deviceOS = B.fieldNamed "device_o_s",
+      deviceDateTime = B.fieldNamed "device_date_time",
+      appPermissions = B.fieldNamed "app_permissions",
+      createdAt = B.fieldNamed "created_at",
+      updatedAt = B.fieldNamed "updated_at"
     }
 
-instance Serialize AadhaarOtpReq where
+-- defaultMetaData :: MetaData
+-- defaultMetaData =
+--   MetaDataT
+--     {
+--       driverId = "",
+--       device = Nothing,
+--       deviceOS = Nothing,
+--       deviceDateTime = Nothing,
+--       appPermissions = Nothing,
+--       createdAt = defaultUTCDate,
+--       updatedAt = defaultUTCDate
+--     }
+
+instance Serialize MetaData where
   put = error "undefined"
   get = error "undefined"
 
 psToHs :: HM.HashMap Text Text
 psToHs = HM.empty
 
-aadhaarOtpReqToHSModifiers :: M.Map Text (A.Value -> A.Value)
-aadhaarOtpReqToHSModifiers =
+metaDataToHSModifiers :: M.Map Text (A.Value -> A.Value)
+metaDataToHSModifiers =
   M.empty
 
-aadhaarOtpReqToPSModifiers :: M.Map Text (A.Value -> A.Value)
-aadhaarOtpReqToPSModifiers =
+metaDataToPSModifiers :: M.Map Text (A.Value -> A.Value)
+metaDataToPSModifiers =
   M.empty
 
-$(enableKVPG ''AadhaarOtpReqT ['id] [])
+$(enableKVPG ''MetaDataT ['driverId] [])

@@ -11,44 +11,46 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE InstanceSigs #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Storage.Queries.FareParameters.FareParametersSlabDetails where
 
+import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as Domain
-import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import qualified Kernel.Types.Id as KTI
-import Lib.Utils (setMeshConfig)
+import Kernel.Types.Logging (Log)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV)
 import Sequelize as Se
 import Storage.Beam.FareParameters.FareParametersSlabDetails as BeamFPSD
 
-findById' :: L.MonadFlow m => KTI.Id Domain.FareParameters -> m (Maybe BeamFPSD.FullFareParametersSlabDetails)
-findById' (KTI.Id fareParametersId') = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamFPSD.FareParametersSlabDetailsT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' ->
-      either (pure Nothing) (transformBeamFareParametersSlabDetailsToDomain <$>)
-        <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is fareParametersId $ Se.Eq fareParametersId']
-    Nothing -> pure Nothing
+create :: (L.MonadFlow m, Log m) => FullFareParametersSlabDetails -> m ()
+create = createWithKV
 
-transformBeamFareParametersSlabDetailsToDomain :: FareParametersSlabDetails -> BeamFPSD.FullFareParametersSlabDetails
-transformBeamFareParametersSlabDetailsToDomain FareParametersSlabDetailsT {..} = do
-  ( KTI.Id fareParametersId,
-    Domain.FParamsSlabDetails
-      { platformFee = platformFee,
+findById' :: (L.MonadFlow m, Log m) => KTI.Id Domain.FareParameters -> m (Maybe BeamFPSD.FullFareParametersSlabDetails)
+findById' (KTI.Id fareParametersId') = findOneWithKV [Se.Is fareParametersId $ Se.Eq fareParametersId']
+
+instance ToTType' FareParametersSlabDetails BeamFPSD.FullFareParametersSlabDetails where
+  toTType' :: BeamFPSD.FullFareParametersSlabDetails -> FareParametersSlabDetails
+  toTType' (KTI.Id fareParametersId, Domain.FParamsSlabDetails {..}) = do
+    FareParametersSlabDetailsT
+      { fareParametersId = fareParametersId,
+        platformFee = platformFee,
         sgst = sgst,
         cgst = cgst
       }
-    )
 
-transformDomainFareParametersSlabDetailsToBeam :: BeamFPSD.FullFareParametersSlabDetails -> FareParametersSlabDetails
-transformDomainFareParametersSlabDetailsToBeam (KTI.Id fareParametersId, Domain.FParamsSlabDetails {..}) =
-  FareParametersSlabDetailsT
-    { fareParametersId = fareParametersId,
-      platformFee = platformFee,
-      sgst = sgst,
-      cgst = cgst
-    }
+instance FromTType' FareParametersSlabDetails BeamFPSD.FullFareParametersSlabDetails where
+  -- fromTType' :: (MonadThrow m, L.MonadFlow m) => FareParametersSlabDetails -> m (Maybe BeamFPSD.FullFareParametersSlabDetails)
+  fromTType' FareParametersSlabDetailsT {..} = do
+    pure $
+      Just
+        ( KTI.Id fareParametersId,
+          Domain.FParamsSlabDetails
+            { platformFee = platformFee,
+              sgst = sgst,
+              cgst = cgst
+            }
+        )

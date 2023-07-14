@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Message.Message where
 
@@ -18,97 +19,67 @@ import qualified Data.Time as T
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Message.Message
 import Domain.Types.Message.MessageTranslation as DomainMT
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
-import Lib.Utils (setMeshConfig)
+import Kernel.Types.Logging (Log)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithOptionsKV, findOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Message.Message as BeamM
 import qualified Storage.Queries.Message.MessageTranslation as MT
 
-createMessage :: L.MonadFlow m => Message -> m (MeshResult ())
+createMessage :: (L.MonadFlow m, Log m) => Message -> m ()
 createMessage message = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamM.MessageT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainMessageToBeam message)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+  createWithKV message
 
-create :: L.MonadFlow m => Message -> m ()
-create msg = do
-  _ <- createMessage msg
-  let mT' = map (\(Domain.Types.Message.Message.MessageTranslation language_ title_ description_ shortDescription_ label_ createdAt_) -> DomainMT.MessageTranslation msg.id language_ title_ label_ description_ shortDescription_ createdAt_) msg.messageTranslations
-  traverse_ MT.create mT'
+create :: (L.MonadFlow m, Log m) => Message -> m ()
+create = createWithKV
 
 -- findById :: Transactionable m => Id Message -> m (Maybe RawMessage)
 -- findById = Esq.findById
 
-findById :: L.MonadFlow m => Id Message -> m (Maybe RawMessage)
+findById :: (L.MonadFlow m, Log m) => Id Message -> m (Maybe RawMessage)
 findById (Id messageId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamM.MessageT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamM.id $ Se.Eq messageId]
-      case result of
-        Right msg -> do
-          msg' <- traverse transformBeamMessageToDomain msg
-          pure $
-            ( \Message {..} ->
-                RawMessage
-                  { id = id,
-                    _type = _type,
-                    title = title,
-                    description = description,
-                    shortDescription = shortDescription,
-                    label = label,
-                    likeCount = likeCount,
-                    viewCount = viewCount,
-                    mediaFiles = mediaFiles,
-                    merchantId = merchantId,
-                    createdAt = createdAt
-                  }
-            )
-              <$> msg'
-        Left _ -> pure Nothing
-    Nothing -> pure Nothing
+  message <- findOneWithKV [Se.Is BeamM.id $ Se.Eq messageId]
+  pure $
+    ( \Message {..} ->
+        RawMessage
+          { id = id,
+            _type = _type,
+            title = title,
+            description = description,
+            shortDescription = shortDescription,
+            label = label,
+            likeCount = likeCount,
+            viewCount = viewCount,
+            mediaFiles = mediaFiles,
+            merchantId = merchantId,
+            createdAt = createdAt
+          }
+    )
+      <$> message
 
-findAllWithLimitOffset :: L.MonadFlow m => Maybe Int -> Maybe Int -> Id Merchant -> m [RawMessage]
+findAllWithLimitOffset :: (L.MonadFlow m, Log m) => Maybe Int -> Maybe Int -> Id Merchant -> m [RawMessage]
 findAllWithLimitOffset mbLimit mbOffset merchantIdParam = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamM.MessageT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      srsz <- KV.findAllWithOptionsKVConnector dbConf' updatedMeshConfig [Se.Is BeamM.merchantId $ Se.Eq (getId merchantIdParam)] (Se.Asc BeamM.createdAt) (Just limitVal) (Just offsetVal)
-      case srsz of
-        Left _ -> pure []
-        Right x -> do
-          msg <- traverse transformBeamMessageToDomain x
-          pure $
-            map
-              ( \Message {..} ->
-                  RawMessage
-                    { id = id,
-                      _type = _type,
-                      title = title,
-                      description = description,
-                      shortDescription = shortDescription,
-                      label = label,
-                      likeCount = likeCount,
-                      viewCount = viewCount,
-                      mediaFiles = mediaFiles,
-                      merchantId = merchantId,
-                      createdAt = createdAt
-                    }
-              )
-              msg
-    Nothing -> pure []
+  messages <- findAllWithOptionsKV [Se.Is BeamM.merchantId $ Se.Eq (getId merchantIdParam)] (Se.Asc BeamM.createdAt) (Just limitVal) (Just offsetVal)
+  pure $
+    map
+      ( \Message {..} ->
+          RawMessage
+            { id = id,
+              _type = _type,
+              title = title,
+              description = description,
+              shortDescription = shortDescription,
+              label = label,
+              likeCount = likeCount,
+              viewCount = viewCount,
+              mediaFiles = mediaFiles,
+              merchantId = merchantId,
+              createdAt = createdAt
+            }
+      )
+      messages
   where
     limitVal = min (fromMaybe 10 mbLimit) 10
     offsetVal = fromMaybe 0 mbOffset
@@ -117,90 +88,69 @@ findAllWithLimitOffset mbLimit mbOffset merchantIdParam = do
 -- updateMessageLikeCount messageId value = do
 --   Esq.update $ \msg -> do
 --     set msg [MessageLikeCount =. (msg ^. MessageLikeCount) +. val value]
---     where_ $ msg ^. MessageId ==. val (getId messageId)
 
--- updateMessageLikeCount :: L.MonadFlow m => Id Message -> Int -> m (MeshResult())
+-- updateMessageLikeCount :: (L.MonadFlow m, Log m) => Id Message -> Int -> m (MeshResult())
 -- updateMessageLikeCount :: messageId value = do
 --   messageObject <- findById messageId
 --   likeCount <- mapM DTMM.likeCount messageObject
 
 -- helper
-updateMessageLikeCount :: L.MonadFlow m => Id Message -> Int -> m ()
+updateMessageLikeCount :: (L.MonadFlow m, Log m) => Id Message -> Int -> m ()
 updateMessageLikeCount messageId value = do
-  messageObject <- findById messageId
-  case messageObject of
+  findById messageId >>= \case
+    Nothing -> pure ()
     Just msg -> do
       let likeCount = msg.likeCount
-      dbConf <- L.getOption KBT.PsqlDbCfg
-      let modelName = Se.modelTableName @BeamM.MessageT
-      let updatedMeshConfig = setMeshConfig modelName
-      case dbConf of
-        Just dbConf' ->
-          void $
-            KV.updateWoReturningWithKVConnector
-              dbConf'
-              updatedMeshConfig
-              [Se.Set BeamM.likeCount $ likeCount + value]
-              [Se.Is BeamM.id (Se.Eq $ getId messageId)]
-        Nothing -> pure ()
-    Nothing -> pure ()
+      updateWithKV
+        [Se.Set BeamM.likeCount $ likeCount + value]
+        [Se.Is BeamM.id (Se.Eq $ getId messageId)]
 
-updateMessageViewCount :: L.MonadFlow m => Id Message -> Int -> m ()
+updateMessageViewCount :: (L.MonadFlow m, Log m) => Id Message -> Int -> m ()
 updateMessageViewCount messageId value = do
-  messageObject <- findById messageId
-  case messageObject of
+  findById messageId >>= \case
     Just msg -> do
       let viewCount = msg.viewCount
-      dbConf <- L.getOption KBT.PsqlDbCfg
-      let modelName = Se.modelTableName @BeamM.MessageT
-      let updatedMeshConfig = setMeshConfig modelName
-      case dbConf of
-        Just dbConf' ->
-          void $
-            KV.updateWoReturningWithKVConnector
-              dbConf'
-              updatedMeshConfig
-              [Se.Set BeamM.viewCount $ viewCount + value]
-              [Se.Is BeamM.id (Se.Eq $ getId messageId)]
-        Nothing -> pure ()
+      updateWithKV
+        [Se.Set BeamM.viewCount $ viewCount + value]
+        [Se.Is BeamM.id (Se.Eq $ getId messageId)]
     Nothing -> pure ()
 
 -- Esq.update $ \msg -> do
 --   set msg [MessageViewCount =. (msg ^. MessageViewCount) +. val value]
---   where_ $ msg ^. MessageId ==. val (getId messageId)
 
-transformBeamMessageToDomain :: L.MonadFlow m => BeamM.Message -> m Message
-transformBeamMessageToDomain BeamM.MessageT {..} = do
-  mT' <- MT.findByMessageId (Id id)
-  let mT = (\(DomainMT.MessageTranslation _ language_ title_ label_ description_ shortDescription_ createdAt_) -> Domain.Types.Message.Message.MessageTranslation language_ title_ description_ shortDescription_ label_ createdAt_) <$> mT'
-  pure
-    Message
-      { id = Id id,
-        _type = messageType,
-        title = title,
-        description = description,
-        shortDescription = shortDescription,
-        label = label,
-        likeCount = likeCount,
-        viewCount = viewCount,
-        mediaFiles = Id <$> mediaFiles,
-        messageTranslations = mT,
-        merchantId = Id merchantId,
-        createdAt = T.localTimeToUTC T.utc createdAt
+instance FromTType' BeamM.Message Message where
+  fromTType' BeamM.MessageT {..} = do
+    mT' <- MT.findByMessageId (Id id)
+    let mT = (\(DomainMT.MessageTranslation _ language_ title_ label_ description_ shortDescription_ createdAt_) -> Domain.Types.Message.Message.MessageTranslation language_ title_ description_ shortDescription_ label_ createdAt_) <$> mT'
+    pure $
+      Just
+        Message
+          { id = Id id,
+            _type = messageType,
+            title = title,
+            description = description,
+            shortDescription = shortDescription,
+            label = label,
+            likeCount = likeCount,
+            viewCount = viewCount,
+            mediaFiles = Id <$> mediaFiles,
+            messageTranslations = mT,
+            merchantId = Id merchantId,
+            createdAt = T.localTimeToUTC T.utc createdAt
+          }
+
+instance ToTType' BeamM.Message Message where
+  toTType' Message {..} = do
+    BeamM.MessageT
+      { BeamM.id = getId id,
+        BeamM.messageType = _type,
+        BeamM.title = title,
+        BeamM.description = description,
+        BeamM.shortDescription = shortDescription,
+        BeamM.label = label,
+        BeamM.likeCount = likeCount,
+        BeamM.viewCount = viewCount,
+        BeamM.mediaFiles = getId <$> mediaFiles,
+        BeamM.merchantId = getId merchantId,
+        BeamM.createdAt = T.utcToLocalTime T.utc createdAt
       }
-
-transformDomainMessageToBeam :: Message -> BeamM.Message
-transformDomainMessageToBeam Message {..} =
-  BeamM.MessageT
-    { BeamM.id = getId id,
-      BeamM.messageType = _type,
-      BeamM.title = title,
-      BeamM.description = description,
-      BeamM.shortDescription = shortDescription,
-      BeamM.label = label,
-      BeamM.likeCount = likeCount,
-      BeamM.viewCount = viewCount,
-      BeamM.mediaFiles = getId <$> mediaFiles,
-      BeamM.merchantId = getId merchantId,
-      BeamM.createdAt = T.utcToLocalTime T.utc createdAt
-    }

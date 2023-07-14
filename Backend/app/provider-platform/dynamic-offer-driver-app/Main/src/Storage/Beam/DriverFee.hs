@@ -80,7 +80,7 @@ instance B.Table DriverFeeT where
 instance ModelMeta DriverFeeT where
   modelFieldModification = driverFeeTMod
   modelTableName = "driver_fee"
-  modelSchemaName = Just "atlas_app"
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type DriverFee = DriverFeeT Identity
 

@@ -51,7 +51,7 @@ instance B.Table AadhaarVerificationT where
 instance ModelMeta AadhaarVerificationT where
   modelFieldModification = aadhaarVerificationTMod
   modelTableName = "aadhaar_verification"
-  modelSchemaName = Just "atlas_app"
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type AadhaarVerification = AadhaarVerificationT Identity
 

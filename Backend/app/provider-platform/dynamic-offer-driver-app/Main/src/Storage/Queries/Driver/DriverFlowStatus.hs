@@ -11,105 +11,63 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Driver.DriverFlowStatus where
 
 import Domain.Types.Driver.DriverFlowStatus
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.Person
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 -- import EulerHS.KVConnector.Types (MeshConfig (..))
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Lib.Utils (setMeshConfig)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Driver.DriverFlowStatus as BeamDFS
 
-create :: (L.MonadFlow m, Log m) => DDFS.DriverFlowStatus -> m (MeshResult ())
-create driverFlowStatus = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDFS.DriverFlowStatusT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainDriverFlowStatusToBeam driverFlowStatus)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create :: (L.MonadFlow m, Log m) => DDFS.DriverFlowStatus -> m ()
+create = createWithKV
 
-deleteById :: L.MonadFlow m => Id Person -> m ()
-deleteById (Id driverId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDFS.DriverFlowStatusT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      void $
-        KV.deleteWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [Se.Is BeamDFS.personId (Se.Eq driverId)]
-    Nothing -> pure ()
+deleteById :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteById (Id driverId) = deleteWithKV [Se.Is BeamDFS.personId (Se.Eq driverId)]
 
-getStatus :: L.MonadFlow m => Id Person -> m (Maybe DDFS.FlowStatus)
-getStatus (Id personId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDFS.DriverFlowStatusT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      dfsData <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamDFS.personId $ Se.Eq personId]
-      case dfsData of
-        Left _ -> pure Nothing
-        Right x -> do
-          let dfsData' = transformBeamDriverFlowStatusToDomain <$> x
-          let fs = DDFS.flowStatus <$> dfsData'
-          pure fs
-    Nothing -> pure Nothing
+getStatus :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe DDFS.FlowStatus)
+getStatus (Id personId) = findOneWithKV [Se.Is BeamDFS.personId $ Se.Eq personId] <&> (DDFS.flowStatus <$>)
 
-clearPaymentStatus :: (L.MonadFlow m, MonadTime m) => Id Person -> Bool -> m ()
-clearPaymentStatus personId isActive = do
-  let status = if isActive then DDFS.ACTIVE else DDFS.IDLE
-  updateStatus' False personId status
+clearPaymentStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Bool -> m ()
+clearPaymentStatus personId isActive = updateStatus' False personId (if isActive then DDFS.ACTIVE else DDFS.IDLE)
 
-updateStatus :: (L.MonadFlow m, MonadTime m) => Id Person -> DDFS.FlowStatus -> m ()
+updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> DDFS.FlowStatus -> m ()
 updateStatus = updateStatus' True
 
-updateStatus' :: (L.MonadFlow m, MonadTime m) => Bool -> Id Person -> DDFS.FlowStatus -> m ()
+updateStatus' :: (L.MonadFlow m, MonadTime m, Log m) => Bool -> Id Person -> DDFS.FlowStatus -> m ()
 updateStatus' checkForPayment personId flowStatus = do
-  driverStatus <- getStatus personId
-  case driverStatus of
-    Nothing -> pure ()
-    Just ds -> when (not checkForPayment || not (isPaymentOverdue ds)) $ do
-      dbConf <- L.getOption KBT.PsqlDbCfg
-      let modelName = Se.modelTableName @BeamDFS.DriverFlowStatusT
-      let updatedMeshConfig = setMeshConfig modelName
+  getStatus personId >>= \case
+    Just ds | not checkForPayment || not (isPaymentOverdue ds) -> do
       now <- getCurrentTime
-      case dbConf of
-        Just dbConf' ->
-          void $
-            KV.updateWoReturningWithKVConnector
-              dbConf'
-              updatedMeshConfig
-              [ Se.Set BeamDFS.flowStatus flowStatus,
-                Se.Set BeamDFS.updatedAt now
-              ]
-              [Se.Is BeamDFS.personId $ Se.Eq (getId personId)]
-        Nothing -> pure ()
+      updateWithKV
+        [ Se.Set BeamDFS.flowStatus flowStatus,
+          Se.Set BeamDFS.updatedAt now
+        ]
+        [Se.Is BeamDFS.personId $ Se.Eq (getId personId)]
+    _ -> pure ()
 
-transformBeamDriverFlowStatusToDomain :: BeamDFS.DriverFlowStatus -> DriverFlowStatus
-transformBeamDriverFlowStatusToDomain BeamDFS.DriverFlowStatusT {..} = do
-  DriverFlowStatus
-    { personId = Id personId,
-      flowStatus = flowStatus,
-      updatedAt = updatedAt
-    }
+instance FromTType' BeamDFS.DriverFlowStatus DriverFlowStatus where
+  fromTType' BeamDFS.DriverFlowStatusT {..} = do
+    pure $
+      Just
+        DriverFlowStatus
+          { personId = Id personId,
+            flowStatus = flowStatus,
+            updatedAt = updatedAt
+          }
 
-transformDomainDriverFlowStatusToBeam :: DriverFlowStatus -> BeamDFS.DriverFlowStatus
-transformDomainDriverFlowStatusToBeam DriverFlowStatus {..} =
-  BeamDFS.DriverFlowStatusT
-    { BeamDFS.personId = getId personId,
-      BeamDFS.flowStatus = flowStatus,
-      BeamDFS.updatedAt = updatedAt
-    }
+instance ToTType' BeamDFS.DriverFlowStatus DriverFlowStatus where
+  toTType' DriverFlowStatus {..} = do
+    BeamDFS.DriverFlowStatusT
+      { BeamDFS.personId = getId personId,
+        BeamDFS.flowStatus = flowStatus,
+        BeamDFS.updatedAt = updatedAt
+      }
