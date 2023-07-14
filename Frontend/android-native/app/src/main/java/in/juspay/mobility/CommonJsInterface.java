@@ -3916,7 +3916,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     System.out.println("In mmove camera in catch exception" + e);
                 }
             }
-        });
+        }); 
     }
 
     @JavascriptInterface
