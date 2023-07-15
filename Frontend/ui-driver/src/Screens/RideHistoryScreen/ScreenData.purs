@@ -15,8 +15,10 @@
 
 module Screens.RideHistoryScreen.ScreenData where
 
-import Screens.Types (AnimationState(..), RideHistoryScreenState)
 import Foreign.Object (empty)
+import Prelude ((-))
+import Resource.Constants (tripDatesCount)
+import Screens.Types (AnimationState(..), RideHistoryScreenState)
 
 initData :: RideHistoryScreenState
 initData = {
@@ -49,7 +51,7 @@ initData = {
   loaderButtonVisibility: false,
   logField : empty ,
   datePickerState : {
-    activeIndex : 14 -- based on no of dates we are showing
+    activeIndex : tripDatesCount - 1 -- based on no of dates we are showing
   , selectedItem : {
       date : 0
     , month : ""

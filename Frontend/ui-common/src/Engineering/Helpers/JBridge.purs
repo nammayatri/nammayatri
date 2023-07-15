@@ -218,8 +218,6 @@ foreign import emitJOSEvent :: Fn3 String String Foreign Unit
 
 foreign import getAllDates :: Fn1 Int (Array DateObj)
 
-foreign import getDateFromObj :: Fn1 DateObj String
-
 foreign import horizontalScrollToPos :: EffectFn3 String String Int Unit
 foreign import withinTimeRange :: String -> String -> String -> Boolean
 -- -- keyStoreEntryPresent :: String -> Flow Boolean

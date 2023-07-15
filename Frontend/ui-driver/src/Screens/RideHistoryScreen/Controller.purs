@@ -15,65 +15,66 @@
 
 module Screens.RideHistoryScreen.Controller where
 
+import Effect.Unsafe
+import Log
+
 import Components.BottomNavBar.Controller (Action(..)) as BottomNavBar
 import Components.DatePickerModel as DatePickerModel
 import Components.ErrorModal as ErrorModalController
 import Components.ErrorModal as ErrorModalController
 import Components.GenericHeader as GenericHeader
 import Components.IndividualRideCard.Controller as IndividualRideCardController
-import Components.IndividualRideCard.Controller as IndividualRideCardController
 import Components.PaymentHistoryListItem as PaymentHistoryModelItem
 import Components.PaymentHistoryModel as PaymentHistoryModel
+import Components.PrimaryButton as PrimaryButton
+import Data.Array (union, (!!), filter, length)
 import Data.Array (union, (!!), filter, length)
 import Data.Array (union, (!!), filter, length)
 import Data.Int (ceil)
 import Data.Int (ceil)
+import Data.Int (ceil)
+import Data.Int (fromString, toNumber)
 import Data.Int (fromString, toNumber)
 import Data.Int (fromString, toNumber)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Number (fromString) as NUM
 import Data.Number (fromString) as NUM
 import Data.Number (fromString) as NUM
 import Data.Show (show)
+import Data.Show (show)
 import Data.String (Pattern(..), split)
 import Data.String (Pattern(..), split)
-import Engineering.Helpers.Commons (getNewIDWithTag, strToBool)
-import Engineering.Helpers.Commons (getNewIDWithTag, strToBool)
+import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (convertUTCtoISC)
+import Engineering.Helpers.Commons (getNewIDWithTag, strToBool)
+import Engineering.Helpers.Commons (getNewIDWithTag, strToBool)
+import Engineering.Helpers.Commons (getNewIDWithTag, strToBool)
+import Engineering.Helpers.LogEvent (logEvent)
 import Helpers.Utils (setRefreshing, setEnabled, parseFloat)
 import Helpers.Utils (setRefreshing, setEnabled, parseFloat, getSpecialZoneConfig)
+import Helpers.Utils (setRefreshing, setEnabled, parseFloat, getSpecialZoneConfig, convertUTCtoISC, getRequiredTag)
 import JBridge (firebaseLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
-import Prelude (class Show, pure, unit, ($), map, (==), not, bind, (&&), (<>), (+), (*), (/=), discard, (/), (||))
-import PrestoDOM (Eval, continue, exit, ScrollState(..), updateAndExit)
-import PrestoDOM (Eval, continue, exit, ScrollState(..), updateAndExit)
-import PrestoDOM.Types.Core (class Loggable)
-import PrestoDOM.Types.Core (class Loggable)
-import PrestoDOM.Types.Core (toPropValue)
-import PrestoDOM.Types.Core (toPropValue)
-import Resource.Constants (decodeAddress)
-import Data.Array (union, (!!), filter, length)
-import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Int(fromString, toNumber)
-import Data.Number(fromString) as NUM
-import Data.String (Pattern(..), split)
-import Helpers.Utils (setRefreshing, setEnabled, parseFloat, getSpecialZoneConfig, convertUTCtoISC, getRequiredTag)
-import Engineering.Helpers.Commons (getNewIDWithTag, strToBool)
-import Data.Int (ceil)
-import Styles.Colors as Color
-import Log
-import Data.Show (show)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
+import Prelude (class Show, pure, unit, ($), map, (==), not, bind, (&&), (<>), (+), (*), (/=), discard, (/), (||), (-))
+import PrestoDOM (Eval, continue, exit, ScrollState(..), updateAndExit)
+import PrestoDOM (Eval, continue, exit, ScrollState(..), updateAndExit)
+import PrestoDOM.Types.Core (class Loggable)
+import PrestoDOM.Types.Core (class Loggable)
+import PrestoDOM.Types.Core (toPropValue)
+import PrestoDOM.Types.Core (toPropValue)
+import Resource.Constants (decodeAddress, tripDatesCount)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (RideHistoryScreenState, AnimationState(..), ItemState(..), IndividualRideCardState(..))
 import Screens.Types (RideHistoryScreenState, AnimationState(..), ItemState(..), IndividualRideCardState(..))
 import Services.APITypes (RidesInfo(..), Status(..))
 import Services.APITypes (RidesInfo(..), Status(..))
 import Storage (setValueToLocalNativeStore, KeyStore(..))
-import Engineering.Helpers.LogEvent (logEvent)
-import Effect.Unsafe
+import Styles.Colors as Color
 
 instance showAction :: Show Action where
   show _ = ""
@@ -101,8 +102,7 @@ instance loggableAction :: Loggable Action where
     Dummy -> trackAppScreenEvent appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "dummy_action"
     NoAction -> trackAppScreenEvent appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "no_action"
     ShowDatePicker -> trackAppScreenEvent appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "show_date_picker_action"
-    DatePickerAC act -> case act of 
-      DatePickerModel.OnDateSelect idx item -> trackAppActionClick appId (getScreen RIDE_HISTORY_SCREEN) "date_picker_model" "on_date_select"
+    DatePickerAC act -> trackAppActionClick appId (getScreen RIDE_HISTORY_SCREEN) "date_picker_model" "on_date_select"
     GenericHeaderAC act -> case act of
       GenericHeader.PrefixImgOnClick -> do
           trackAppActionClick appId (getScreen TRIP_DETAILS_SCREEN) "generic_header" "back_icon_on_click"
@@ -208,7 +208,7 @@ eval (Scroll value) state = do
   continue state { loaderButtonVisibility = loadMoreButton}
 
 eval (DatePickerAC (DatePickerModel.OnDateSelect idx item)) state = do
-  let newState = state{datePickerState{activeIndex = idx, selectedItem = item}}
+  let newState = state{datePickerState{activeIndex = idx, selectedItem = item},rideList = [], prestoListArrayItems = []}
   exit $ SelectedTab newState
 
 eval ShowDatePicker state = continue state{props{showDatePicker = not state.props.showDatePicker}}
@@ -216,6 +216,8 @@ eval ShowDatePicker state = continue state{props{showDatePicker = not state.prop
 eval OpenPaymentHistory state = exit $ OpenPaymentHistoryScreen state
 
 eval (PaymentHistoryModelAC (PaymentHistoryModel.GenericHeaderAC (GenericHeader.PrefixImgOnClick))) state = continue state{props{showPaymentHistory = false}}
+
+eval (PaymentHistoryModelAC (PaymentHistoryModel.ErrorModalActionController (ErrorModalController.PrimaryButtonActionController PrimaryButton.OnClick))) state = continue state{props{showPaymentHistory = false}}
 
 eval (PaymentHistoryModelAC (PaymentHistoryModel.PaymentHistoryListItemAC (PaymentHistoryModelItem.OnClick id))) state = do
   let updatedData = map (\item -> if item.id == id then item{isSelected = not item.isSelected} else item) state.data.paymentHistory.paymentHistoryList

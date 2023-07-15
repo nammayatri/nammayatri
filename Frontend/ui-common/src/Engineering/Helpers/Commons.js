@@ -358,6 +358,20 @@ export const convertUTCtoISC = function (str) {
   };
 };
 
+export const getDateFromObj = function (obj){
+  let date = new Date(`${obj.month} ${obj.date}, ${obj.year}`);
+  var dd = String(date.getDate()).padStart(2, '0');
+  var mm = String(date.getMonth() + 1).padStart(2, '0'); //January is 0!
+  var yyyy = date.getFullYear();
+  return  yyyy + '-' + mm + '-' + dd;
+}
+
+
+export const getFormattedDate = function (obj) {
+  var date = getDateFromObj(obj);
+  return formatDates(new Date(date),"MMMM Do, YYYY");
+}
+
 // ---------------------------------- moment ---------------------------------------------
 
 function formatDates(date, format) {
@@ -426,6 +440,10 @@ function formatDates(date, format) {
     },
     'MMM': () => {
       const month = date.toLocaleDateString('en-US', { month: 'short' });
+      return `${month}`;
+    },
+    'MMMM': () => {
+      const month = date.toLocaleDateString('en-US', { month: 'long' });
       return `${month}`;
     },
     'ddd': () => {

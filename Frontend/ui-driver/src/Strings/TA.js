@@ -488,5 +488,6 @@ const tamilStrings = {
   YOU : " (நீங்கள்)",
   DAILY : "தினசரி",
   WEEKLY : "வாரந்தோறும்",
-  NEW_ : "புதியது"
+  NEW_ : "புதியது",
+  TODAY : "இன்று"
 }

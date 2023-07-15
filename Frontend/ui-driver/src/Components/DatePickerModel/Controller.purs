@@ -2,7 +2,10 @@ module Components.DatePickerModel.Controller where
 
 import Common.Types.App (DateObj)
 
-data Action = OnDateSelect Int DateObj
+data Action = 
+    OnDateSelect Int DateObj 
+  | NoAction
+
 
 type Config = {
     activeIndex :: Int

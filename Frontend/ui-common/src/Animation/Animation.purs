@@ -207,7 +207,7 @@ translateOutXBackwardAnim =
     , PrestoAnim.repeatCount PrestoAnim.NoRepeat
     ]
 fadeInWithDelay :: Int -> Boolean -> PrestoAnim.Animation
-fadeInWithDelay dalay = 
+fadeInWithDelay delay = 
   PrestoAnim.Animation
     [ PrestoAnim.duration 250
     , PrestoAnim.toAlpha 1.0

@@ -1,6 +1,8 @@
 module Components.PaymentHistoryListItem.View where
 
+import Animation (translateInXForwardAnim)
 import Common.Types.App (LazyCheck(..))
+import Common.Types.App (PaymentStatus(..))
 import Components.PaymentHistoryListItem.Controller (Action(..), Config)
 import Effect (Effect)
 import Engineering.Helpers.Commons (convertUTCtoISC, screenWidth)
@@ -8,13 +10,15 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Prelude (Unit, const, map, show, unit, ($), (-), (/), (<>), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, circularLoader, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width)
-import Common.Types.App (PaymentStatus(..))
+import PrestoDOM.Animation as PrestoAnim
 import Styles.Colors as Color
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
   let styleConfig = getPaymentCardConfig config.status
   in
+    PrestoAnim.animationSet
+    [ translateInXForwardAnim true] $
    linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT

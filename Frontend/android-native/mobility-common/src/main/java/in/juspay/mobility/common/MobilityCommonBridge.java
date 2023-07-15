@@ -1699,18 +1699,24 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void horizontalScrollToPos(final String id, final String childId) {
+    public void horizontalScrollToPos(final String id, final String childId, final int focus) {
         if (bridgeComponents.getActivity() != null) {
             Activity activity = bridgeComponents.getActivity();
             HorizontalScrollView scrollView = activity.findViewById(Integer.parseInt(id));
             View child = activity.findViewById(Integer.parseInt(childId));
-            final int x;
-            final int y;
-            x = child.getLeft();
-            y = child.getTop();
-            if (scrollView != null) {
-                scrollView.scrollTo(x, y);
+            int x = 0;
+            int y = 0;
+           if (child != null) {
+                x = child.getLeft();
+                y = child.getTop();
             }
+           if (scrollView != null) {
+                if (x ==0 && y == 0) {
+                scrollView.fullScroll(focus);
+                } else {
+                scrollView.scrollTo(x, y);
+                }
+           }
         }
     }
     // endregion

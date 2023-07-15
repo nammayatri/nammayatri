@@ -495,5 +495,6 @@ const mlStrings = {
   YOU : " (നിങ്ങൾ)",
   DAILY : "ദിവസേന",
   WEEKLY : "പ്രതിവാരം",
-  NEW_ : "പുതിയത്"
+  NEW_ : "പുതിയത്",
+  TODAY : "ഇന്ന്"
 }
