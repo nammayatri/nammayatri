@@ -68,6 +68,7 @@ view push state =
       , width MATCH_PARENT
       , onBackPressed push (const BackPressed)
       , afterRender push (const AfterRender)
+      , background Color.white900
       ] ([ relativeLayout
           [ height MATCH_PARENT
           , width MATCH_PARENT

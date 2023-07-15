@@ -102,6 +102,7 @@
       "ic_share_location" : true,
       "ic_suv_ac" : true,
       "ic_transparent_logo" : true,
+      "ic_upi_icon" : true,
       "ic_vehicle_front" : true,
       "ic_vehicle_side_active" : true,
       "ic_vehicle_side_inactive" : true,
