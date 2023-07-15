@@ -38,20 +38,22 @@ instance ToJSON BookingCancelledEvent where
   toJSON BookingCancelledEvent {..} =
     A.Object $
       "id" .= id
-        <> "./komn/update_target" .= update_target
+        <> "update_target" .= update_target
         <> "state" .= state
-        <> "./komn/cancellation_reason" .= cancellation_reason
-        <> "fulfillment" .= (("state" .= (("code" .= RIDE_BOOKING_CANCELLED) :: A.Object)) :: A.Object)
+        <> "cancellation_reason" .= cancellation_reason
+        <> "fulfillment" .= (("state" .= ("descriptor" .= (("code" .= RIDE_BOOKING_CANCELLED <> "name" .= A.String "Ride Cancelled") :: A.Object) :: A.Object)) :: A.Object)
+
+-- <> "fulfillment" .= (("state" .= (("code" .= RIDE_BOOKING_CANCELLED) :: A.Object)) :: A.Object)
 
 instance FromJSON BookingCancelledEvent where
   parseJSON = withObject "BookingCancelledEvent" $ \obj -> do
-    update_type <- (obj .: "fulfillment") >>= (.: "state") >>= (.: "BookingCancelledEvent")
+    update_type <- (obj .: "fulfillment") >>= (.: "state") >>= (.: "descriptor") >>= (.: "code")
     unless (update_type == RIDE_BOOKING_CANCELLED) $ fail "Wrong update_type."
     BookingCancelledEvent
       <$> obj .: "id"
-      <*> obj .: "./komn/update_target"
+      <*> obj .: "update_target"
       <*> obj .: "state"
-      <*> obj .: "./komn/cancellation_reason"
+      <*> obj .: "cancellation_reason"
 
 instance ToSchema BookingCancelledEvent where
   declareNamedSchema _ = do
@@ -63,15 +65,21 @@ instance ToSchema BookingCancelledEvent where
             & type_ L.?~ OpenApiObject
             & properties
               L..~ fromList
-                [("code", update_type)]
-            & required L..~ ["code"]
-        fulfillment =
+                [("code", update_type), ("name", txt)]
+            & required L..~ ["code", "name"]
+        descriptor =
           mempty
             & type_ L.?~ OpenApiObject
             & properties
               L..~ fromList
-                [("state", Inline st)]
-            & required L..~ ["state"]
+                [("descriptor", Inline st)]
+            & required L..~ ["descriptor"]
+        fulfillment =
+          mempty
+            & type_ L.?~ OpenApiObject
+            & properties
+              L.<>~ fromList [("state", Inline descriptor)]
+            & required L.<>~ ["state"]
     return $
       NamedSchema (Just "BookingCancelledEvent") $
         mempty
@@ -79,15 +87,15 @@ instance ToSchema BookingCancelledEvent where
           & properties
             L..~ fromList
               [ ("id", txt),
-                ("./komn/update_target", txt),
+                ("update_target", txt),
                 ("state", txt),
-                ("./komn/cancellation_reason", cancellationSource),
+                ("cancellation_reason", cancellationSource),
                 ("fulfillment", Inline fulfillment)
               ]
           & required
             L..~ [ "id",
-                   "./komn/update_target",
+                   "update_target",
                    "state",
-                   "./komn/cancellation_reason",
+                   "cancellation_reason",
                    "fulfillment"
                  ]
