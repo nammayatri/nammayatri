@@ -543,5 +543,6 @@ const englishStrings = {
   SESSION_EXPIRED : "Session Expired. Please start the process again.",
   OTP_ATTEMPT_EXCEEDED : "OTP attempts exceeded. Please start the process again",
   UPSTREAM_INTERNAL_SERVER_ERROR : "Upstream source/Government source internal server error. Please start the process again.",
-  TRANSACTION_ALREADY_COMPLETED : "Transaction already completed. Cannot do further operation on this transaction."
+  TRANSACTION_ALREADY_COMPLETED : "Transaction already completed. Cannot do further operation on this transaction.",
+  ENTER_AADHAAR_DETAILS : "Enter Aadhaar Details"
 }

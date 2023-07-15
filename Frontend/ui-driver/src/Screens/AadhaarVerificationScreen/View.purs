@@ -80,13 +80,16 @@ view push state =
     , afterRender (\_ -> JB.requestKeyboardShow $ case state.props.currentStage of 
           EnterAadhaar -> (EHC.getNewIDWithTag "EnterAadhaarNumberEditText")
           VerifyAadhaar -> (EHC.getNewIDWithTag "EnterAadhaarOTPEditText")
+          AadhaarDetails -> (EHC.getNewIDWithTag "EnterAadhaarNameEditText")
         ) (const unit)
     , onBackPressed push (const BackPressed)
     ][    PrestoAnim.animationSet
           [ Anim.fadeIn true
           ] $ backArrow state push
+        , verificationFailedView state 
         , enterAadhaarNumberView push state
         , enterAadhaarOTPView push state
+        , enterAadhaarDetailsView push state
         , PrestoAnim.animationSet
           [ Anim.fadeIn true
           ] $ linearLayout
@@ -106,7 +109,7 @@ backArrow state push =
   , width MATCH_PARENT
   , orientation HORIZONTAL
   , gravity CENTER
-  , margin $ MarginBottom 30
+  , margin $ MarginBottom if state.props.currentStage == AadhaarDetails then 0 else 20
   , padding (Padding 16 16 16 16)
   ][ imageView
       [ width ( V 25 )
@@ -128,14 +131,25 @@ backArrow state push =
       ] <> FontStyle.body1 TypoGraphy
   ]
 
-------------------------- enterMobileNumberTextView -------------------
-enterMobileNumberTextView :: ST.AadhaarVerificationScreenState ->  forall w . PrestoDOM (Effect Unit) w
-enterMobileNumberTextView _ =
+------------------------- enterAadhaarNumberTextView -------------------
+enterAadhaarNumberTextView :: ST.AadhaarVerificationScreenState ->  forall w . PrestoDOM (Effect Unit) w
+enterAadhaarNumberTextView _ =
  textView $ 
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
   , text $ getString ENTER_AADHAAR_NUMBER
   , color Color.textPrimary
+  ] <> FontStyle.h1 TypoGraphy
+
+------------------------- enterAadhaarDetailsTextView -------------------
+enterAadhaarDetailsTextView :: ST.AadhaarVerificationScreenState ->  forall w . PrestoDOM (Effect Unit) w
+enterAadhaarDetailsTextView _ =
+ textView $ 
+  [ height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , text $ getString ENTER_AADHAAR_DETAILS
+  , color Color.textPrimary
+  , margin $ MarginBottom 10
   ] <> FontStyle.h1 TypoGraphy
 
 ------------------------- enterAadhaarOTPTextView -------------------
@@ -144,7 +158,7 @@ enterAadhaarOTPTextView _ =
  textView $ 
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
-  , text $ "Enter Aadhaar OTP"
+  , text $ getString ENTER_AADHAAR_OTP_
   , color Color.textPrimary
   , margin $ MarginBottom 32
   ] <> FontStyle.h1 TypoGraphy
@@ -159,13 +173,97 @@ enterAadhaarNumberView push state =
   , padding (Padding 16 16 16 16)
   ][     PrestoAnim.animationSet
           [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
-          ] $ enterMobileNumberTextView state
+          ] $ enterAadhaarNumberTextView state
         , PrestoAnim.animationSet
           [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
           ] $ PrimaryEditText.view (push <<< AadhaarNumberEditText) (aadhaarNumberEditText state)
         , PrestoAnim.animationSet
           [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
           ] $ termsAndConditionsView state]
+
+------------------------- enterAadhaarDetailsView -------------------
+enterAadhaarDetailsView :: (Action -> Effect Unit) -> ST.AadhaarVerificationScreenState ->  forall w . PrestoDOM (Effect Unit) w
+enterAadhaarDetailsView push state =
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , visibility if state.props.currentStage == AadhaarDetails then VISIBLE else GONE
+  , padding (Padding 16 16 16 16)
+  ][ PrestoAnim.animationSet
+          [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
+          ] $ enterAadhaarDetailsTextView state
+        , PrestoAnim.animationSet
+          [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
+          ] $ PrimaryEditText.view (push <<< AadhaarNameEditText) (aadhaarNameEditText state)
+        , dateOfBirth push state
+        , PrestoAnim.animationSet
+          [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
+          ] $ PrimaryEditText.view (push <<< AadhaarGenderEditText) (aadhaarGenderEditText state)
+  ]
+
+verificationFailedView :: ST.AadhaarVerificationScreenState ->  forall w . PrestoDOM (Effect Unit) w
+verificationFailedView state = 
+  PrestoAnim.animationSet
+  [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
+  ] $ linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , background Color.red
+    , padding $ Padding 10 10 10 10
+    , gravity CENTER
+    , visibility if state.props.currentStage == AadhaarDetails then VISIBLE else GONE
+    ][ textView $
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , text $ getString VERIFICATION_FAILED
+      , color Color.white900
+      ] <> FontStyle.body1 TypoGraphy
+    ]
+
+
+dateOfBirth :: (Action -> Effect Unit) -> ST.AadhaarVerificationScreenState -> forall w . PrestoDOM (Effect Unit) w
+dateOfBirth push state = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , visibility VISIBLE
+  ][ textView $
+    [ text (getString DATE_OF_BIRTH)
+    , color Color.greyTextColor
+    ] <> FontStyle.body3 TypoGraphy
+  , linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation HORIZONTAL
+    , margin (MarginVertical 10 10)
+    , padding (Padding 20 16 16 16)
+    , cornerRadius 4.0
+    , stroke ("1," <> Color.borderGreyColor)
+    , onClick (\_ -> do
+                _ <- JB.datePicker "MAXIMUM_PRESENT_DATE" push $ DatePicker "DATE_OF_BIRTH"
+                pure unit
+          ) (const SelectDateOfBirthAction)
+    ][ linearLayout
+      [ width MATCH_PARENT
+        , height MATCH_PARENT
+        , orientation HORIZONTAL
+      ][ textView
+        ([ text (getString SELECT_DATE_OF_BIRTH) -- if state.data.dob == "" then (getString SELECT_DATE_OF_BIRTH) else state.data.dobView
+        , color Color.greyTextColor -- if (state.data.dob == "") then Color.darkGrey else Color.greyTextColor
+        , weight 1.0
+        , padding (PaddingRight 15)
+        ] <> FontStyle.subHeading1 TypoGraphy)
+      , imageView
+        [ width ( V 20 )
+        , height ( V 20 )
+        , imageWithFallback $ "ny_ic_calendar," <> (HU.getCommonAssetStoreLink FunctionCall) <> "ny_ic_calendar.png"
+        ]
+      ]
+    ]
+  ]
+
 
 ------------------------- enterAadhaarOTPView -------------------
 enterAadhaarOTPView :: (Action -> Effect Unit) -> ST.AadhaarVerificationScreenState ->  forall w . PrestoDOM (Effect Unit) w

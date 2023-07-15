@@ -27,7 +27,7 @@ initData =
       { btnActive: false
       , isValid: false
       , resendEnabled: false
-      , currentStage : EnterAadhaar
+      , currentStage : AadhaarDetails
       , showErrorAadhaar : false
       , fromHomeScreen : false
       , showLogoutPopup : false

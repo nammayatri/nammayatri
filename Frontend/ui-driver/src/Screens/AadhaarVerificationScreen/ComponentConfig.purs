@@ -28,14 +28,12 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Types (STR(..))
 import Prelude ((==))
+import Screens.Types (AadhaarStage(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 
 primaryButtonViewConfig :: ST.AadhaarVerificationScreenState -> PrimaryButton.Config
-primaryButtonViewConfig state = let
-    config = PrimaryButton.config
-    primaryButtonConfig' = config 
-      { textConfig{ text = (getString NEXT) }
+primaryButtonViewConfig state =PrimaryButton.config { textConfig{ text = if state.props.currentStage == AadhaarDetails then (getString SUBMIT) else (getString NEXT) }
       , id = "PrimaryButtonMobileNumber"
       , isClickable = state.props.btnActive
       , alpha = if state.props.btnActive then 1.0 else 0.6
@@ -43,7 +41,6 @@ primaryButtonViewConfig state = let
       , cornerRadius = 0.0
       , margin = (Margin 0 0 0 0)
       }
-  in primaryButtonConfig'
 
 aadhaarNumberEditText :: ST.AadhaarVerificationScreenState -> PrimaryEditText.Config
 aadhaarNumberEditText state = PrimaryEditText.config { 
@@ -66,6 +63,42 @@ aadhaarNumberEditText state = PrimaryEditText.config {
       }
       , margin = Margin 0 0 0 0
       , type = "number"
+      }
+
+aadhaarNameEditText :: ST.AadhaarVerificationScreenState -> PrimaryEditText.Config
+aadhaarNameEditText state = PrimaryEditText.config { 
+      id = getNewIDWithTag "EnterAadhaarNameEditText"
+      , editText
+        { placeholder = getString ENTER_AADHAAR_DETAILS
+        , singleLine = true
+        , gravity = CENTER_VERTICAL
+        , textStyle = FontStyle.SubHeading1
+        }
+      , topLabel{
+        visibility = VISIBLE
+      , text = getString NAME
+      , textStyle = FontStyle.Body3
+      , color = Color.black900
+      }
+      , margin = MarginBottom 15
+      }
+
+aadhaarGenderEditText :: ST.AadhaarVerificationScreenState -> PrimaryEditText.Config
+aadhaarGenderEditText state = PrimaryEditText.config { 
+      id = getNewIDWithTag "EnterAadhaarGenderEditText"
+      , editText
+        { placeholder = getString GENDER
+        , singleLine = true
+        , gravity = CENTER_VERTICAL
+        , textStyle = FontStyle.SubHeading1
+        }
+      , topLabel{
+        visibility = VISIBLE
+      , text = getString GENDER
+      , textStyle = FontStyle.Body3
+      , color = Color.black900
+      }
+      , margin = MarginBottom 15
       }
 
 aadhaarOTPEditText :: ST.AadhaarVerificationScreenState -> PrimaryEditText.Config

@@ -102,6 +102,8 @@ baseAppFlow baseFlow = do
     checkVersion versionCode
     cacheAppParameters versionCode
     when baseFlow $ void $ UI.splashScreen state.splashScreen
+    lift $ lift $ doAff do liftEffect hideSplash
+    aadhaarVerificationFlow
     let regToken = getValueToLocalStore REGISTERATION_TOKEN
     _ <- pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
