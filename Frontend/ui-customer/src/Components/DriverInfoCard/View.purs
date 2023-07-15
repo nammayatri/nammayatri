@@ -678,7 +678,7 @@ contactView push state =
               , stroke state.data.config.driverInfoConfig.callButtonStroke
               , onClick push (const MessageDriver)
               ][ imageView
-                  [ imageWithFallback $ if (getValueFromConfig "isChatEnabled") == "true" then if state.props.unReadMessages then "ic_chat_badge_green," <> (getAssetStoreLink FunctionCall) <> "ic_chat_badge_green.png" else "ic_call_msg," <> (getAssetStoreLink FunctionCall) <> "ic_call_msg.png" else "ny_ic_call," <> (getAssetStoreLink FunctionCall) <> "ny_ic_call.png"
+                  [ imageWithFallback $ if (getValueFromConfig "isChatEnabled") == "true" then if state.props.unReadMessages then "ny_ic_chat_badge_green," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chat_badge_green.png" else "ny_ic_call_msg," <> (getAssetStoreLink FunctionCall) <> "ny_ic_call_msg.png" else "ny_ic_call," <> (getAssetStoreLink FunctionCall) <> "ny_ic_call.png"
                   , height $ V state.data.config.driverInfoConfig.callHeight
                   , width $ V state.data.config.driverInfoConfig.callWidth
                   ]

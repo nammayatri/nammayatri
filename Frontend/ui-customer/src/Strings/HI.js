@@ -521,5 +521,7 @@ const hindiStrings = {
   "THIS_FIELD_IS_REQUIRED" : "यह फ़ील्ड आवश्यक है", 
   "EMAIL_EXISTS_ALREADY" : "ईमेल पहले से ही मौजूद है",
   "PLATFORM_FEE" : "प्लेटफ़ॉर्म शुल्क",
-  "SGST" : "एसजीएसटी"
+  "SGST" : "एसजीएसटी",
+  "OTP_EXPIRED" : "ओटीपी समाप्त हो गया",
+  "OTP_EXPIRED_DESCRIPTION" : "आपकी सवारी ओटीपी समाप्त हो गई है। सवारी पाने के लिए कृपया दोबारा बुकिंग करें"
 }

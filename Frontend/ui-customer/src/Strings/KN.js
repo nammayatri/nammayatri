@@ -515,5 +515,7 @@ const kannadaStrings = {
   "THIS_FIELD_IS_REQUIRED" : "ಈ ಜಾಗ ಬೇಕಾಗಿದೆ", 
   "EMAIL_EXISTS_ALREADY" : "ಇಮೇಲ್ ಈಗಾಗಲೇ ಅಸ್ತಿತ್ವದಲ್ಲಿದೆ",
   "PLATFORM_FEE" : "ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಶುಲ್ಕ",
-  "SGST" : "SGST"
+  "SGST" : "SGST",
+  "OTP_EXPIRED" : "OTP ಅವಧಿ ಮುಗಿದಿದೆ",
+  "OTP_EXPIRED_DESCRIPTION" : "ನಿಮ್ಮ ಸವಾರಿಯ OTP ಅವಧಿ ಮುಗಿದಿದೆ. ಸವಾರಿ ಪಡೆಯಲು ದಯವಿಟ್ಟು ಮತ್ತೊಮ್ಮೆ ಬುಕ್ ಮಾಡಿ"
 }

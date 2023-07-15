@@ -71,7 +71,7 @@
         <ImageView
             android:layout_width="match_parent"
             android:layout_height="45dp"
-            android:src="@drawable/ic_logo_name" />
+            android:src="@drawable/ny_ic_logo_name" />
 
     </RelativeLayout>
 </LinearLayout>

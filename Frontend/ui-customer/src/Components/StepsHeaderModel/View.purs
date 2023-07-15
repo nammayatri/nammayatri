@@ -29,7 +29,7 @@ view push state =
         ][  imageView
             [ height $ V 25
             , width $ V 25
-            , imageWithFallback "ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ic_chevron_left_white.png"
+            , imageWithFallback "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ny_ic_chevron_left_white.png"
             , onClick push $ const OnArrowClick
             , visibility case state.backArrowVisibility of 
                 true -> VISIBLE

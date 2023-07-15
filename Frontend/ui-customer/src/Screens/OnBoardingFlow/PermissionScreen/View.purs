@@ -80,7 +80,7 @@ locationAccessPermissionView push state =
       , cornerRadius 8.0
       , background Color.white900
       ][  imageView
-          [ imageWithFallback $ "ic_location_permission_logo," <> (getAssetStoreLink FunctionCall) <> "ic_location_permission_logo.png"
+          [ imageWithFallback $ "ny_ic_location_permission_logo," <> (getAssetStoreLink FunctionCall) <> "ny_ic_location_permission_logo.png"
           , height $ V 213
           , width $ V 240
           , gravity CENTER

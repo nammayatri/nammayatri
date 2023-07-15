@@ -17,7 +17,7 @@
             android:layout_width="match_parent"
             android:layout_height="90dp"
             android:layout_gravity="center"
-            android:src="@drawable/ic_launcher_with_name"/>
+            android:src="@drawable/ny_ic_launcher_with_name"/>
 
     </LinearLayout>
 
@@ -50,7 +50,7 @@
                 android:layout_width="231dp"
                 android:layout_height="32dp"
                 android:layout_gravity="center"
-                android:src="@drawable/ic_powered_by" />
+                android:src="@drawable/ny_ic_powered_by" />
         </LinearLayout>
 
         <com.airbnb.lottie.LottieAnimationView

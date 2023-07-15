@@ -106,7 +106,7 @@ shareAppConfig state = let
       },
       cornerRadius = Corners 15.0 true true true true,
       coverImageConfig {
-        imageUrl = "ic_share_app," <> (getAssetStoreLink FunctionCall) <> "ic_share_app.png"
+        imageUrl = "ny_ic_share_app," <> (getAssetStoreLink FunctionCall) <> "ny_ic_share_app.png"
       , visibility = VISIBLE
       , margin = Margin 16 20 16 24
       , width = MATCH_PARENT
@@ -936,10 +936,10 @@ zoneTimerExpiredConfig state = let
   , cornerRadius = Corners 16.0 true true true true
   , margin = Margin 24 32 24 0
   , primaryText {
-      text = "OTP Expired"
+      text = (getString OTP_EXPIRED)
     }
   , secondaryText {
-      text = "Your ride OTP expired. Please book again to get a ride"
+      text = (getString OTP_EXPIRED_DESCRIPTION)
     , margin = Margin 16 4 16 24
     , color = Color.black700
     }
