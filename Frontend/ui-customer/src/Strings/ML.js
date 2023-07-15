@@ -513,6 +513,7 @@ const malayalamStrings = {
   "DRIVER_HAS_ALREADY_TRAVELLED" : "ഡ്രൈവർ ഇതിനകം ",
   "HAS_TRAVELLED" : " സഞ്ചരിച്ചു",
   "PLEASE_CONTACT_THE_DRIVER_BEFORE_CANCELLING" : "\nറദ്ദാക്കുന്നതിന് മുമ്പ് ഡ്രൈവറെ ബന്ധപ്പെടുക",
-  "WAIT_FOR_DRIVER" : "ഡ്രൈവർക്കായി കാത്തിരിക്കുക"
+  "WAIT_FOR_DRIVER" : "ഡ്രൈവർക്കായി കാത്തിരിക്കുക",
+  "DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ഡ്രൈവർ നിങ്ങളുടെ ലൊക്കേഷനിലേക്കുള്ള വഴിയിലാണ്."
  
 }
