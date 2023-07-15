@@ -87,11 +87,8 @@ getCurrentAndroidVersion merchant =
   case merchant of 
     NAMMAYATRI -> 54
     YATRI -> 47 
-    JATRISAATHI -> 1
-    MOBILITY_PM -> 1
-    MOBILITY_RS -> 1
-    PASSCULTURE -> 1
-    MOBILITY_RS -> 1
+    YATRISATHI -> 1
+    _ -> 1
 
 checkVersionForChat :: Int -> Boolean
 checkVersionForChat reqVersion =
@@ -129,7 +126,6 @@ rideActionViewWithZone push config =
   , orientation VERTICAL
   , padding $ PaddingTop 5
   , gravity CENTER
-  , visibility if config.specialLocationTag == Maybe.Nothing then GONE else VISIBLE
   ][ linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT

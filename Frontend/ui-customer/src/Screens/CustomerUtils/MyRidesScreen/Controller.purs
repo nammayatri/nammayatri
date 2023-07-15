@@ -36,12 +36,12 @@ import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Screens (ScreenName(..), getScreen)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
 import Screens.HomeScreen.Controller (getSpecialTag)
-import Screens.Types (AnimationState(..), FareComponent, Fares, IndividualRideCardState, ItemState, MyRidesScreenState, Stage(..), ZoneType(..))
+import Screens.Types (AnimationState(..), FareComponent, Fares, IndividualRideCardState, ItemState, MyRidesScreenState, Stage(..), ZoneType(..), VehicleVariant(..))
 import Services.API (FareBreakupAPIEntity(..), RideAPIEntity(..), RideBookingListRes, RideBookingRes(..))
 import Storage (isLocalStageOn)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
-import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getFilteredFares, getKmMeter)
+import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getFilteredFares, getKmMeter, fetchVehicleVariant)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Engineering.Helpers.LogEvent (logEvent)
@@ -251,8 +251,8 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
   , nightCharges : nightChargesVal
   , isSpecialZone : (null ride.rideList || isJust (ride.bookingDetails ^._contents^._otpCode))
   , zoneType : specialTags.priorityTag
+  , vehicleVariant : fetchVehicleVariant rideDetails.vehicleVariant
 }) (listRes))
-
 
 dummyFareBreakUp :: FareBreakupAPIEntity
 dummyFareBreakUp = FareBreakupAPIEntity{amount: 0,description: ""}

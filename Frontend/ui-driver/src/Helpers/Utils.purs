@@ -41,7 +41,7 @@ import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Aff (error, killFiber, launchAff, launchAff_, makeAff, nonCanceler)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (parseFloat, setText', getCurrentUTC) as ReExport
+import Engineering.Helpers.Commons (parseFloat, setText, getCurrentUTC) as ReExport
 import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode, decode)
 import Juspay.OTP.Reader (initiateSMSRetriever)
@@ -55,7 +55,7 @@ import Prelude (map, (*), (-), (/))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import Data.Function.Uncurried (Fn4(..), runFn4)
 import Screens.Types (AllocationData, LeaderBoardWeek, YoutubeData, LeaderBoardDay)
-import Engineering.Helpers.Commons (parseFloat, setText', convertUTCtoISC, getCurrentUTC) as ReExport
+import Engineering.Helpers.Commons (parseFloat, setText, convertUTCtoISC, getCurrentUTC) as ReExport
 import Services.APITypes(PaymentPagePayload)
 import Presto.Core.Types.Language.Flow (Flow, doAff)
 import Control.Monad.Except.Trans (lift)
@@ -112,7 +112,7 @@ otpRule :: Reader.OtpRule
 otpRule = Reader.OtpRule {
   matches : {
     sender : [],
-    message : "is your OTP for login to Namma Yatri App"
+    message : (getValueFromConfig "OTP_MESSAGE_REGEX")
   },
   otp : "\\d{4}",
   group : Nothing
@@ -238,7 +238,7 @@ getRequiredTag prop tag = do
 getAssetStoreLink :: LazyCheck -> String
 getAssetStoreLink lazy = case (getMerchant lazy) of
   NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/driver/images/"
-  JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/driver/images/"
+  YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/driver/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/driver/images/"
   MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/driver/"
   PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/driver/images"
@@ -247,7 +247,7 @@ getAssetStoreLink lazy = case (getMerchant lazy) of
 getAssetsBaseUrl :: LazyCheck -> String
 getAssetsBaseUrl lazy = case (getMerchant lazy) of
   NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/driver/"
-  JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/driver/"
+  YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/driver/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/driver/"
   MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/"
   PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/driver"
@@ -256,7 +256,7 @@ getAssetsBaseUrl lazy = case (getMerchant lazy) of
 getCommonAssetStoreLink :: LazyCheck -> String
 getCommonAssetStoreLink lazy = case (getMerchant lazy) of
   NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/"
-  JATRISAATHI -> "https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/"
+  YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/yatricommon/images/"
   MOBILITY_PM -> "https://assets.juspay.in/beckn/mobilitypaytm/mobilitypaytmcommon/"
   PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/passculturecommon/"

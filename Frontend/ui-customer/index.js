@@ -120,7 +120,7 @@ window.onMerchantEvent = function (event, payload) {
     if (clientId == "open-kochi") {
       window.merchantID = "YATRI"
     } else if (clientId == "jatrisaathi" || clientId == "jatrisaathiconsumer"){
-      window.merchantID = "JATRISAATHI"
+      window.merchantID = "YATRISATHI"
     } else if (clientId.includes("mobility")) {
       var merchant = clientId.replace("mobility","")
       merchant = merchant.replace("consumer","")

@@ -86,4 +86,5 @@ type DriverInfoCardData =
   , bookingCreatedAt :: String
   , lastMessage :: ChatView.ChatComponent
   , config :: AppConfig
+  , vehicleVariant :: String
   }

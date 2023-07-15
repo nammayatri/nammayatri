@@ -171,3 +171,8 @@ paymentHistory to from status = case status of
 
 getOrder :: String -> String
 getOrder orderId = (getBaseUrl "37") <> "/payment/" <> orderId
+triggerAadhaarOTP :: String -> String
+triggerAadhaarOTP _ = (getBaseUrl "") <> "/driver/register/generateAadhaarOtp"
+
+verifyAadhaarOTP :: String -> String
+verifyAadhaarOTP _ = (getBaseUrl "") <> "/driver/register/verifyAadhaarOtp"

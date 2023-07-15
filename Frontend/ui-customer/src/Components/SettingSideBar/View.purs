@@ -108,11 +108,11 @@ getPreviousVersion _ =
   if os == "IOS" then 
     case getMerchant FunctionCall of 
       NAMMAYATRI -> "1.2.5"
-      JATRISAATHI -> "0.0.0"
+      YATRISATHI -> "0.0.0"
       _ -> "0.0.0"
     else do 
       case getMerchant FunctionCall of 
-        JATRISAATHI -> "0.0.0"
+        YATRISATHI -> "0.0.0"
         _ -> "0.0.0"
 
 separator :: forall w. PrestoDOM (Effect Unit) w

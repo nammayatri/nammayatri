@@ -30,7 +30,7 @@ import Data.Array (mapWithIndex, length)
 import Engineering.Helpers.Commons (screenWidth)
 import Log (printLog)
 import Effect.Aff (launchAff_)
-import Engineering.Helpers.Commons (flowRunner, os, setText')
+import Engineering.Helpers.Commons (flowRunner, os, setText)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Control.Monad.Trans.Class (lift)
@@ -140,8 +140,8 @@ linearLayout
     , orientation VERTICAL
     , onClick ((\action -> do
         _ <- push action
-        _ <- setText' (getNewIDWithTag "OtherReasonEditText") ""
-        _ <- setText' (getNewIDWithTag "TechGlitchEditText") ""
+        pure $ setText (getNewIDWithTag "OtherReasonEditText") ""
+        pure $ setText (getNewIDWithTag "TechGlitchEditText") ""
         pure unit
     )) ( const ClearOptions)
     , visibility case config.activeReasonCode of
