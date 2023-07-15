@@ -17,7 +17,7 @@ module Screens.Types where
 
 import MerchantConfig.Types
 
-import Common.Types.App (CountryCodeObj, OTPChannel, OptionButtonList, RateCardType, FeedbackAnswer)
+import Common.Types.App (CountryCodeObj, OTPChannel, OptionButtonList, RateCardType, FeedbackAnswer, BannerType)
 import Components.ChatView.Controller (ChatComponent)
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState)
@@ -674,7 +674,7 @@ type HomeScreenStateProps =
   , openChatScreen :: Boolean
   , emergencyHelpModelState :: EmergencyHelpModelState
   , showLiveDashboard :: Boolean
-  , isBanner :: Boolean
+  , banners :: Array BannerType
   , callSupportPopUp :: Boolean
   , defaultPickUpPoint :: String
   , isSpecialZone :: Boolean
@@ -695,6 +695,7 @@ type HomeScreenStateProps =
   , sheetState :: BottomSheetState
   , showDisabilityPopUp :: Boolean
   }
+
 
 type RouteEndPoints = {
     source :: Location

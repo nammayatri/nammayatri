@@ -15,7 +15,7 @@
 
 module Screens.HomeScreen.ScreenData where
 
-import Common.Types.App (RateCardType(..))
+import Common.Types.App (RateCardType(..), BannerType(..))
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller (SearchType(..)) as CV
@@ -191,7 +191,7 @@ initData = {
     , openChatScreen : false
     , emergencyHelpModelState : emergencyHelpModalData
     , showLiveDashboard : false
-    , isBanner : true
+    , banners : []
     , callSupportPopUp : false
     , isMockLocation: false
     , isSpecialZone : false

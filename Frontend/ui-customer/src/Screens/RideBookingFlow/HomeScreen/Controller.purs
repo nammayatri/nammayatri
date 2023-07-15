@@ -16,7 +16,7 @@
 module Screens.HomeScreen.Controller where
 
 import Accessor (_estimatedFare, _estimateId, _vehicleVariant, _status, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _selectedQuotes, _specialLocationTag)
-import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), OptionButtonList, Payload(..), RateCardType(..), FeedbackAnswer(..))
+import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), OptionButtonList, Payload(..), RateCardType(..), FeedbackAnswer(..), BannerType(..))
 import Components.Banner as Banner
 import Components.ChatView as ChatView
 import Components.ChatView.Controller as ChatView
@@ -73,7 +73,7 @@ import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWi
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Foreign.Class (encode)
 import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, saveRecents, setText, terminateApp, updateInputString, withinTimeRange, toString)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, startUpdate, checkUpdate)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
@@ -92,7 +92,7 @@ import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEst
 import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData)
 import Screens.SuccessScreen.Handler as UI
 import Screens.Types (HomeScreenState, Location, SearchResultType(..), LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), CallType(..), ZoneType(..), SpecialTags, TipViewStage(..))
-import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..))
+import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), AppDetails(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
@@ -621,9 +621,15 @@ data Action = NoAction
             | DisabilityBannerAC Banner.Action
             | DisabilityPopUpAC PopUpModal.Action
             | RideCompletedAC RideCompletedCard.Action
+            | UpdateBanner Banner.Action    
+            | ShowAppUpdateBanner
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
+
+eval ShowAppUpdateBanner state = do
+  let newBannerSet = state.props.banners <> [AppUpdateBanner]
+  continue state{props{banners = newBannerSet}} 
 
 eval SearchForSelectedLocation state = do
   let currentStage = if state.props.searchAfterEstimate then TryAgain else FindingEstimate
@@ -1879,6 +1885,10 @@ eval (TriggerPermissionFlow flowType) state = exit $ ExitToPermissionFlow flowTy
 
 eval (GenderBannerModal (Banner.OnClick)) state = exit $ GoToMyProfile state true
 
+eval (UpdateBanner (Banner.OnClick)) state = do
+  _ <- pure $ startUpdate (getValueFromConfig "appId")
+  continue state
+
 eval _ state = continue state
 
 validateSearchInput :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
@@ -2160,6 +2170,11 @@ updateMessagesWithCmd state =
 dummySelectedQuotes :: SelectedQuotes
 dummySelectedQuotes = SelectedQuotes {
   selectedQuotes : []
+}
+
+dummyAppDetail :: AppDetails 
+dummyAppDetail = AppDetails {
+  version : "None"
 }
 
 getSearchExpiryTime :: String -> Int

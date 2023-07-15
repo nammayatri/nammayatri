@@ -893,7 +893,6 @@ type HomeScreenProps =  {
   driverStatusSet :: DriverStatus,
   silentPopUpView :: Boolean,
   zoneRideBooking :: Boolean,
-  showGenderBanner :: Boolean,
   notRemoveBanner :: Boolean,
   showBonusInfo :: Boolean,
   timerRefresh :: Boolean,
@@ -911,7 +910,8 @@ type HomeScreenProps =  {
   showContackSupportPopUp :: Boolean,
   showChatBlockerPopUp :: Boolean,
   driverBlocked :: Boolean,
-  showBlockingPopup :: Boolean
+  showBlockingPopup :: Boolean,
+  banners :: Array Common.BannerType
  }
 
 data DisabilityType = BLIND_AND_LOW_VISION | HEAR_IMPAIRMENT | LOCOMOTOR_DISABILITY | OTHER_DISABILITY

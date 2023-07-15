@@ -103,6 +103,7 @@ data KeyStore = USER_NAME
                 | FREE_TRIAL_DAYS
                 | KIOSK_LOCATIONS
                 | ENABLE_BLOCKING
+                | UPDATE_TYPE
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

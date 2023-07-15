@@ -1991,3 +1991,40 @@ instance showGetDisabilityListResp :: Show GetDisabilityListResp where show = ge
 instance decodeGetDisabilityListResp :: Decode GetDisabilityListResp where decode = defaultDecode
 instance encodeGetDisabilityListResp  :: Encode GetDisabilityListResp where encode = defaultEncode
 
+-------------------------------------------------- AppStore API Types --------------------------------------------
+
+data AppStoreReq = AppStoreReq String
+
+newtype AppStoreRes = AppStoreRes {
+  results :: Array AppDetails
+}
+
+
+newtype AppDetails = AppDetails {
+  version :: String
+}
+
+
+instance makeAppStoreReq  :: RestEndpoint AppStoreReq AppStoreRes where
+ makeRequest reqBody@(AppStoreReq appId) headers = defaultMakeRequest GET (EP.appStoreLink appId) headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericAppStoreReq :: Generic AppStoreReq _
+instance showAppStoreReq :: Show AppStoreReq where show = genericShow
+instance standardEncodeAppStoreReq :: StandardEncode AppStoreReq where standardEncode (AppStoreReq req) = standardEncode req
+instance decodeAppStoreReq :: Decode AppStoreReq where decode = defaultDecode
+instance encodeAppStoreReq :: Encode AppStoreReq where encode = defaultEncode
+
+derive instance genericAppDetails :: Generic AppDetails _
+instance showAppDetails :: Show AppDetails where show = genericShow
+instance standardEncodeAppDetails :: StandardEncode AppDetails where standardEncode (AppDetails res) = standardEncode res
+instance decodeAppDetails :: Decode AppDetails where decode = defaultDecode
+instance encodeAppDetails :: Encode AppDetails where encode = defaultEncode
+
+derive instance genericAppStoreRes :: Generic AppStoreRes _
+derive instance newtypeAppStoreRes :: Newtype AppStoreRes _
+instance standardEncodeAppStoreRes :: StandardEncode AppStoreRes where standardEncode (AppStoreRes res) = standardEncode res
+instance showAppStoreRes :: Show AppStoreRes where show = genericShow
+instance decodeAppStoreRes :: Decode AppStoreRes where decode = defaultDecode
+instance encodeAppStoreRes :: Encode AppStoreRes where encode = defaultEncode

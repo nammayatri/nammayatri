@@ -1909,3 +1909,30 @@ export const scrollViewFocus = function (parentID) {
     return false;
   }
 }
+  
+export const checkUpdate = function () {
+  try {
+    if(JBridge.checkUpdateStatus){
+        return window.JBridge.checkUpdateStatus();
+    }
+  } catch (err) {
+    console.log("Error in checking update" + err);
+  }
+}
+
+export const startUpdate = function (appId) {
+  if (appId == "CHECK_UPDATE_FUNCTION_IN_IOS"){
+    return window.JBridge.openAppStorePage;
+  }
+ 
+  if (window.__OS == "IOS" && window.JBridge.openAppStorePage) {
+      return window.JBridge.openAppStorePage(appId);
+  }
+  else{
+    if(window.JBridge.updateApp){
+      return window.JBridge.updateApp();
+    }
+  }
+  return false;
+
+}

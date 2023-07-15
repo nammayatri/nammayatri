@@ -16,7 +16,7 @@
 module Screens.HomeScreen.Controller where
 
 import Common.Styles.Colors as Color
-import Common.Types.App (OptionButtonList, APIPaymentStatus(..), PaymentStatus(..)) as Common
+import Common.Types.App (OptionButtonList, APIPaymentStatus(..), PaymentStatus(..), BannerType(..)) as Common
 import Components.Banner as Banner
 import Components.BottomNavBar as BottomNavBar
 import Components.ChatView as ChatView
@@ -44,7 +44,7 @@ import Effect.Class (liftEffect)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (clearTimer, getCurrentUTC, getNewIDWithTag, convertUTCtoISC)
 import Helpers.Utils (currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat,setText,getTime, differenceBetweenTwoUTC, getCurrentUTC)
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, waitingCountdownTimer, getChatMessages, cleverTapCustomEvent, metaLogEvent)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, waitingCountdownTimer, getChatMessages, cleverTapCustomEvent, metaLogEvent, checkUpdate, startUpdate)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Language.Strings (getString, getEN)
@@ -135,6 +135,9 @@ instance loggableAction :: Loggable Action where
       -- SelectListModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "cancel_ride" "no_action"
     GenderBannerModal act -> pure unit
     AutoPayBanner act -> pure unit
+    UpdateBanner act -> case act of 
+      Banner.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "update_banner" "on_click"
+      Banner.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "update_banner" "no_action"
     RetryTimeUpdate -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "retry_time_update_onclick"
     RideActiveAction activeRide -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "ride_active_action"
     StatsModelAction act -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "stats_model_action"
@@ -259,6 +262,7 @@ data Action = NoAction
             | TriggerMaps
             | GenderBannerModal Banner.Action
             | PaymentBannerAC Banner.Action
+            | UpdateBanner Banner.Action
             | RemoveGenderBanner
             | RequestInfoCardAction RequestInfoCard.Action
             | ScrollToBottom
@@ -280,7 +284,10 @@ data Action = NoAction
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
 eval AfterRender state = do
-  continue state{props{mapRendered= true}}
+  if checkUpdate unit 
+    then continue state{props{mapRendered= true, banners = state.props.banners <> [Common.AppUpdateBanner] }}
+  else continue state
+  
 eval BackPressed state = do
   if state.props.enterOtpModal then do
     continue state { props = state.props { rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false, rideActionModal = true } }
@@ -686,6 +693,9 @@ eval (GenderBannerModal (Banner.OnClick)) state = exit $ GotoEditGenderScreen
 eval RemovePaymentBanner state = if state.data.paymentState.blockedDueToPayment then
                                                   continue state else continue state {data { paymentState {paymentStatusBanner = false}}}
 eval (LinkAadhaarPopupAC PopUpModal.OnButton1Click) state = exit $ AadhaarVerificationFlow state
+eval (UpdateBanner (Banner.OnClick)) state = do
+  _ <- pure $ startUpdate ""
+  continue state
 
 eval (LinkAadhaarPopupAC PopUpModal.DismissPopup) state = continue state {props{showAadharPopUp = false}}
 eval (PopUpModalAccessibilityAction PopUpModal.OnButton1Click) state = continue state{props{showAccessbilityPopup = false}}
@@ -708,7 +718,8 @@ eval (PopUpModalChatBlockerAction PopUpModal.DismissPopup) state = continue stat
 
 eval RemoveGenderBanner state = do
   _ <- pure $ setValueToLocalStore IS_BANNER_ACTIVE "False"
-  continue state { props = state.props{showGenderBanner = false}}
+  let newBanners = Array.filter (\item -> item /= Common.ProfileUpdateBanner) state.props.banners
+  continue state { props = state.props{banners = newBanners}}
 
 eval (PaymentStatusAction status) state =
   case status of

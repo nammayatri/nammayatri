@@ -299,3 +299,13 @@ type FeedbackAnswer =  {
     questionId :: String,
     answer :: Array String
   }
+  
+data BannerType = AppUpdateBanner 
+                 | ProfileUpdateBanner
+                 | NoBanner
+
+derive instance genericBannerType :: Generic BannerType _
+instance showBannerType :: Show BannerType where show = genericShow
+instance eqBannerType :: Eq BannerType where eq = genericEq
+instance decodeBannerType :: Decode BannerType where decode = defaultDecode
+instance encodeBannerType  :: Encode BannerType where encode = defaultEncode

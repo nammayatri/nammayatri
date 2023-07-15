@@ -20,7 +20,7 @@ import Log
 import Common.Styles.Colors as Color
 import Common.Styles.Colors as Color
 import Common.Types.App (APIPaymentStatus(..)) as PS
-import Common.Types.App (Version(..), LazyCheck(..), PaymentStatus(..), Event)
+import Common.Types.App (Version(..), LazyCheck(..), PaymentStatus(..), Event, BannerType(..))
 import Components.ChatView.Controller (makeChatComponent')
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
@@ -814,6 +814,7 @@ driverProfileFlow = do
   logField_ <- lift $ lift $ getLogFields
   _ <- pure $ delay $ Milliseconds 1.0
   _ <- pure $ printLog "Registration token" (getValueToLocalStore REGISTERATION_TOKEN)
+  (GlobalState allState) <- getState
   action <- UI.driverProfileScreen
   case action of
     GO_TO_HOME_FROM_PROFILE -> homeScreenFlow
@@ -1019,7 +1020,8 @@ driverProfileFlow = do
       (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)
       pure $ toast (getString GENDER_UPDATED)
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state { data {driverGender = genderSelected}})
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props = homeScreen.props {  showGenderBanner = false}})
+      let newBannerSet = filter (\item -> item /= ProfileUpdateBanner) allState.homeScreen.props.banners
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props = homeScreen.props {  banners = newBannerSet}})
       setValueToLocalStore IS_BANNER_ACTIVE "False"
       driverProfileFlow
 
@@ -1108,7 +1110,8 @@ driverProfileFlow = do
       (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)
       pure $ toast (getString GENDER_UPDATED)
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state { data {driverGender = genderSelected}})
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props = homeScreen.props {  showGenderBanner = false}})
+      let newBannerSet = filter (\item -> item /= ProfileUpdateBanner) allState.homeScreen.props.banners
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props = homeScreen.props {  banners = newBannerSet}})
       setValueToLocalStore IS_BANNER_ACTIVE "False"
       driverProfileFlow
     UPDATE_LANGUAGES language -> do
@@ -1122,6 +1125,7 @@ driverProfileFlow = do
 driverDetailsFlow :: FlowBT String Unit
 driverDetailsFlow = do
   action <- UI.driverDetailsScreen
+  (GlobalState allState) <- getState
   case action of
     DRIVER_ALTERNATE_CALL_API updatedState -> do
       let number =  if (updatedState.props.isEditAlternateMobile) then updatedState.data.driverEditAlternateMobile else updatedState.data.driverAlternateMobile
@@ -1220,7 +1224,8 @@ driverDetailsFlow = do
         (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT (UpdateDriverInfoReq requiredData)
         pure $ toast (getString GENDER_UPDATED)
         modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> state { data {driverGender = genderSelected}})
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props = homeScreen.props {  showGenderBanner = false}})
+        let newBanners = filter (\item -> item /= ProfileUpdateBanner) allState.homeScreen.props.banners
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props = homeScreen.props { banners = newBanners}})
         setValueToLocalStore IS_BANNER_ACTIVE "False"
         driverDetailsFlow
 
@@ -1730,7 +1735,9 @@ homeScreenFlow = do
   appConfig <- getAppConfig Constants.appConfig
   when appConfig.subscriptionConfig.enableBlocking $ checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoResp)
   when appConfig.subscriptionConfig.completePaymentPopup $ checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoResp)
-  let showGender = not (isJust (getGenderValue getDriverInfoResp.gender))
+  (GlobalState allState) <- getState
+  let currentBannerSet = allState.homeScreen.props.banners
+  let newBannerSet = if not (isJust (getGenderValue getDriverInfoResp.gender)) then currentBannerSet <> [ProfileUpdateBanner] else currentBannerSet
   let (Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle)
   case getDriverInfoResp.linkedVehicle of
     Nothing -> do 
@@ -1774,7 +1781,7 @@ homeScreenFlow = do
   let currdate = getcurrentdate ""
   (DriverProfileStatsResp resp) <- Remote.getDriverProfileStatsBT (DriverProfileStatsReq currdate)
   lift $ lift $ doAff do liftEffect hideSplash
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{totalRidesOfDay = resp.totalRidesOfDay, totalEarningsOfDay = resp.totalEarningsOfDay, bonusEarned = resp.bonusEarning}, props{showGenderBanner = showGender, autoPayBanner = (isNothing getDriverInfoResp.autoPayStatus) || (getDriverInfoResp.autoPayStatus /= Just "ACTIVE")}})
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{totalRidesOfDay = resp.totalRidesOfDay, totalEarningsOfDay = resp.totalEarningsOfDay, bonusEarned = resp.bonusEarning}, props{banners = newBannerSet, autoPayBanner = (isNothing getDriverInfoResp.autoPayStatus) || (getDriverInfoResp.autoPayStatus /= Just "ACTIVE")}})
   void $ lift $ lift $ toggleLoader false
   isGpsEnabled <- lift $ lift $ liftFlow $ isLocationEnabled unit
   if not isGpsEnabled then noInternetScreenFlow "LOCATION_DISABLED" else pure unit

@@ -17,13 +17,15 @@ module Components.Banner.View where
 
 import Prelude
 import Effect (Effect)
-import PrestoDOM ( Margin(..), Orientation(..), Padding(..), Visibility(..), Length(..), PrestoDOM, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, text, textSize, textView, weight, width, padding, visibility, afterRender, editText, onClick, alignParentBottom, imageWithFallback, stroke, layoutGravity )
+import PrestoDOM ( Margin(..), Orientation(..), Padding(..), Visibility(..), Length(..), PrestoDOM, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, text, textSize, textView, weight, width, padding, visibility, afterRender, editText, onClick, alignParentBottom, imageWithFallback )
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Gravity(..), Corners(..))
 import Font.Style as FontStyle
 import Font.Size as FontSize
 import Components.Banner.Controller
+import Styles.Colors as Color
 import Common.Types.App (LazyCheck(..))
+import Engineering.Helpers.Commons (os, screenWidth)
 
 
 view :: forall w. (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -32,64 +34,54 @@ view push config =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , cornerRadius 12.0
-    , margin $ MarginTop 12
     , background config.backgroundColor
     , visibility if config.isBanner then VISIBLE else GONE
-    , gravity CENTER_VERTICAL
     , onClick push (const OnClick)
-    , stroke config.stroke
     ]
     [  linearLayout
-        [ height WRAP_CONTENT
+        [ height MATCH_PARENT
         , weight 1.0
-        , padding $ Padding 20 0 0 0
+        , padding $ Padding 20 (if os == "IOS" then 16 else 13) 0 18 
         , orientation VERTICAL
-        , layoutGravity "center_vertical"
+        , gravity CENTER_VERTICAL
         ]
-        [ textView $
+        [ textView
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , gravity LEFT
           , text config.title
           , color config.titleColor
-          , padding $ PaddingBottom 2
-          ] <> (FontStyle.getFontStyle config.titleStyle LanguageStyle)
+          , fontStyle $ FontStyle.bold LanguageStyle
+          , textSize if(screenWidth unit < 380) then  FontSize.a_14 else  FontSize.a_15
+          ]
         , linearLayout
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
           , gravity CENTER_VERTICAL
+          , margin $ MarginTop if (os == "IOS") then 4 else 0
           ]
           [
-            textView $
+            textView
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , gravity LEFT
-            , text config.actionText
+            , text $ config.actionText <> " →" 
             , color config.actionTextColor
-            , padding $ PaddingBottom 2
-            ] <> (FontStyle.getFontStyle config.actionTextStyle LanguageStyle)
-          , textView $
-            [ height WRAP_CONTENT
-            , width WRAP_CONTENT
-            , gravity LEFT
-            , text "→"
-            , color config.actionTextColor
-            , padding $ PaddingBottom 3
-            , margin $ MarginLeft 5
-            ] <> (FontStyle.getFontStyle config.actionTextStyle LanguageStyle)
+            , textSize if(screenWidth unit < 380) then  FontSize.a_12 else  FontSize.a_13
+            , fontStyle $ FontStyle.regular LanguageStyle
+            ]
           ]
         ]
     ,   linearLayout
+     [
+        height MATCH_PARENT
+      , width WRAP_CONTENT
+      , gravity CENTER_VERTICAL
+     ][imageView
         [
-            height WRAP_CONTENT
-          , width WRAP_CONTENT
-          , gravity CENTER_VERTICAL
-          , padding $ PaddingVertical 5 5
-        ][imageView
-            [
-              height config.imageHeight
-            , width config.imageWidth
-            , margin $ MarginRight 5
-            , imageWithFallback config.imageUrl
-            ]]
+          height $ V 95
+        , width $ V 108
+        , margin $ MarginRight 5
+        , imageWithFallback config.imageUrl
+        ]]
     ]

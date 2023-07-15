@@ -17,7 +17,7 @@ module Screens.HomeScreen.ComponentConfig where
 
 import Language.Strings
 
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), BannerType(..))
 import Common.Types.App as CommonTypes
 import Components.Banner as Banner
 import Components.ChatView as ChatView
@@ -160,7 +160,7 @@ genderBannerConfig state =
         actionText = (getString UPDATE_NOW),
         actionTextColor = Color.white900,
         imageUrl = "ny_ic_driver_gender_banner,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_driver_gender_banner.png",
-        isBanner = true
+        isBanner = DA.any (\item -> item == ProfileUpdateBanner) state.props.banners
       }
   in config'
 
@@ -267,6 +267,19 @@ offerConfigParams state = PromotionPopupConfig $ {
   buttonText : getString JOIN_NOW,
   heading : getString NAMMA_YATRI_PLANS
 }
+-------------------------------------updateAppConfig------------------------------------
+appUpdateBannerConfig :: ST.HomeScreenState -> Banner.Config
+appUpdateBannerConfig state = 
+   Banner.config
+      { 
+        backgroundColor = Color.blue600
+      , title = (getString APP_UPDATE_AVAILABLE)
+      , titleColor = Color.blue800
+      , actionText = (getString UPDATE_NOW_APP)
+      , actionTextColor = Color.blue800
+      , imageUrl = "ny_ic_app_update, https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_app_update.png" 
+      , isBanner = DA.any (\item -> item == AppUpdateBanner) state.props.banners
+      }
 
 ------------------------------------ cancelConfirmationConfig -----------------------------
 cancelConfirmationConfig :: ST.HomeScreenState -> PopUpModal.Config

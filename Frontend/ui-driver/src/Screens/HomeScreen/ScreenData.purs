@@ -144,7 +144,6 @@ initData = {
         openChatScreen : false,
         silentPopUpView : false,
         zoneRideBooking : true,
-        showGenderBanner : false,
         notRemoveBanner : true,
         showBonusInfo : false,
         timerRefresh : true,
@@ -162,6 +161,7 @@ initData = {
         showContackSupportPopUp : false,
         showChatBlockerPopUp : false,
         driverBlocked : false,
-        showBlockingPopup : false
+        showBlockingPopup : false,
+        banners : []
     }
 }

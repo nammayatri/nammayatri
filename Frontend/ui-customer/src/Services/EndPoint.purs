@@ -147,3 +147,6 @@ bookingFeedback dummy = (getBaseUrl "39") <> "/feedback/submit"
 
 disabilityList :: String -> String
 disabilityList dummy = (getBaseUrl "39") <> "/disability/list"
+
+appStoreLink :: String -> String
+appStoreLink appId = "https://itunes.apple.com/in/lookup?id=" <> appId

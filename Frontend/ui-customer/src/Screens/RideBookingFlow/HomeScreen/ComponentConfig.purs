@@ -316,8 +316,8 @@ genderBannerConfig state =
       , titleColor = Color.elfGreen
       , actionText = (getString UPDATE_NOW)
       , actionTextColor = Color.elfGreen
-      , imageUrl = "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png"
-      , isBanner = state.props.isBanner
+      , imageUrl = "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png" 
+      , isBanner = DA.any (\item -> item == ProfileUpdateBanner) state.props.banners
       }
   in config'
 
@@ -336,6 +336,19 @@ disabilityBannerConfig state =
       , stroke = "1,"<> Color.fadedPurple
       }
   in config'
+  
+appUpdateBannerConfig :: ST.HomeScreenState -> Banner.Config
+appUpdateBannerConfig state = 
+  Banner.config
+      { 
+        backgroundColor = Color.blue600
+      , title = (getString APP_UPDATE_AVAILABLE)
+      , titleColor = Color.blue800
+      , actionText = (getString UPDATE_NOW_APP)
+      , actionTextColor = Color.blue800
+      , imageUrl = "ny_ic_app_update, https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_app_update.png" 
+      , isBanner = DA.any (\item -> item == AppUpdateBanner) state.props.banners
+      }
 
 reportIssuePopUpConfig :: ST.HomeScreenState -> CancelRidePopUpConfig.Config
 reportIssuePopUpConfig state =

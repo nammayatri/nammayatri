@@ -910,3 +910,11 @@ disabilityList = do
   lift $ lift $ withAPIResult (EP.disabilityList "") unwrapResponse $ callAPI headers GetDisabilityListReq
   where
     unwrapResponse x = x
+    
+------------------------------------------------------------------------ AppStoreVersion Function ------------------------------------------------------------------------------------
+
+getAppStoreVersion appId = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.appStoreLink appId) unwrapResponse $ callAPI headers (AppStoreReq appId)
+    where
+        unwrapResponse (x) = x

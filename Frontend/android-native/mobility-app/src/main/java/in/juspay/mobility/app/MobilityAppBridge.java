@@ -500,6 +500,15 @@ public class MobilityAppBridge extends HyperBridge {
         bridgeComponents.getContext().startActivity(intent);
     }
 
+    @JavascriptInterface
+    public boolean checkUpdateStatus (){
+        return Utils.isUpdateAvailable;
+    }
+
+    @JavascriptInterface
+    public void updateApp (){
+        Utils.startUpdate(bridgeComponents.getContext(), bridgeComponents.getActivity());
+    }
 
     @Override
     public boolean onActivityResult(int requestCode, int resultCode, Intent data) {

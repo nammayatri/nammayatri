@@ -34,6 +34,7 @@ window.getMerchantConfig = function () {
     "isChatEnabled": "true",
     "primaryTextColor": "#FCC32C",
     "primaryBackground": "#2C2F3A",
+    "appId" : "1615871038",
     "showCorporateAddress" : false,
     "gradient": [],
     "loaderColor": "",
