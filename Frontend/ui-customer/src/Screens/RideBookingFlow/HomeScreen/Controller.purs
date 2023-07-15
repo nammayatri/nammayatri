@@ -1066,7 +1066,7 @@ eval (CancelSearchAction PopUpModal.OnButton2Click) state = do
   continue state { props { isCancelRide = true, cancellationReasons = cancelReasons "", cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "", cancelSearchCallDriver = false } }
 
 eval (DriverInfoCardActionController (DriverInfoCardController.CancelRide infoCard)) state =
-  if state.data.config.driverInfoConfig.showCancelPrevention then
+  if state.data.config.driverInfoConfig.showCancelPrevention && not state.props.isSpecialZone then
     continue state { props { cancelSearchCallDriver = true } }
       else continueWithCmd state [ pure $ CancelSearchAction PopUpModal.OnButton2Click]
 

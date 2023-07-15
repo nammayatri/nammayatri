@@ -293,7 +293,7 @@ sourceDestinationEditTextView state push =
         , width MATCH_PARENT
         , margin (MarginBottom 5)
         , background if state.isSrcServiceable then "#FDD836" else Color.textDanger
-        , visibility GONE-- if state.isSource == Just true && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
+        , visibility if state.isSource == Just true && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
         ]
         []
     , linearLayout
@@ -357,7 +357,7 @@ sourceDestinationEditTextView state push =
         , width MATCH_PARENT
         , margin (MarginBottom 5)
         , background if state.isDestServiceable then "#FDD836" else Color.textDanger
-        , visibility GONE--if state.isSource == Just false && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
+        , visibility if state.isSource == Just false && state.isSearchLocation /= LocateOnMap then VISIBLE else GONE
         ]
         []
     ]

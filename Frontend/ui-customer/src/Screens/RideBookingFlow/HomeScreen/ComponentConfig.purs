@@ -936,10 +936,10 @@ zoneTimerExpiredConfig state = let
   , cornerRadius = Corners 16.0 true true true true
   , margin = Margin 24 32 24 0
   , primaryText {
-      text = "OTP Expired"
+      text = (getString OTP_EXPIRED) -- "OTP Expired"
     }
   , secondaryText {
-      text = "Your ride OTP expired. Please book again to get a ride"
+      text = (getString OTP_EXPIRED_DESCRIPTION)--"Your ride OTP expired. Please book again to get a ride"
     , margin = Margin 16 4 16 24
     , color = Color.black700
     }

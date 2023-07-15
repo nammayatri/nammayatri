@@ -513,5 +513,7 @@ const malayalamStrings = {
   "EMAIL_EXISTS_ALREADY" : "ഇമെയില് നേരത്തെ ഉള്ളതാണ്",
   "PLATFORM_FEE" : "പ്ലാറ്റ്ഫോം ഫീസ്",
   "SGST" : "SGST",
-  "CGST" : "CGST"
+  "CGST" : "CGST",
+  "OTP_EXPIRED" : "OTP കാലഹരണപ്പെട്ടു",
+  "OTP_EXPIRED_DESCRIPTION" : "നിങ്ങളുടെ റൈഡ് OTP കാലഹരണപ്പെട്ടു. ഒരു സവാരി ലഭിക്കാൻ ദയവായി വീണ്ടും ബുക്ക് ചെയ്യുക"
 }

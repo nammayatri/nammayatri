@@ -515,5 +515,7 @@ const bengaliStrings = {
   "PLATFORM_FEE" : "প্ল্যাটফর্ম ফি",
   "EMAIL_EXISTS_ALREADY" : "ই - মেইল ​​টি আগে থেকেই আছে",
   "PLATFORM_FEE" : "প্ল্যাটফর্ম ফি",
-  "SGST" : "এসজিএসটি"
+  "SGST" : "এসজিএসটি",
+  "OTP_EXPIRED" : "OTP মেয়াদ শেষ",
+  "OTP_EXPIRED_DESCRIPTION" : "আপনার রাইডের OTP মেয়াদ শেষ হয়ে গেছে। একটি রাইড পেতে আবার বুক করুন"
 }
