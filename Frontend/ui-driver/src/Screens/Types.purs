@@ -1334,7 +1334,7 @@ type EnterAadhaarNumberScreenStateProps = {
 , showLogoutPopup :: Boolean
 }
 
-data AadhaarStage = EnterAadhaar | VerifyAadhaar
+data AadhaarStage = EnterAadhaar | VerifyAadhaar | AadhaarDetails
 
 derive instance genericAadhaarStage :: Generic AadhaarStage _
 instance eqAadhaarStage :: Eq AadhaarStage where eq = genericEq

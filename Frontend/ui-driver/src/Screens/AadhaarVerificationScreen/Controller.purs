@@ -48,6 +48,12 @@ instance loggableAction :: Loggable Action where
     AadhaarOtpEditText act -> case act of
       PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_focus_changed" "primary_edit_text"
+    AadhaarNameEditText act -> case act of
+      PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_text_changed" "primary_edit_text"
+      PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_focus_changed" "primary_edit_text"
+    AadhaarGenderEditText act -> case act of
+      PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_text_changed" "primary_edit_text"
+      PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen AADHAAR_VERIFICATION_SCREEN) "mobile_number_focus_changed" "primary_edit_text"
     PrimaryButtonAC act -> case act of
       PrimaryButton.OnClick -> do
         trackAppActionClick appId (getScreen AADHAAR_VERIFICATION_SCREEN) "primary_button" "next_on_click"
@@ -57,6 +63,8 @@ instance loggableAction :: Loggable Action where
     ResendTimer sec -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "timer_action"
     Logout -> trackAppEndScreen appId (getScreen AADHAAR_VERIFICATION_SCREEN)
     PopUpModalAC _ -> pure unit
+    SelectDateOfBirthAction -> pure unit
+    DatePicker _ _ _ _-> pure unit
 
 data ScreenOutput = GoToOtpStage AadhaarVerificationScreenState 
   | VerfiyOTP AadhaarVerificationScreenState
@@ -67,12 +75,16 @@ data ScreenOutput = GoToOtpStage AadhaarVerificationScreenState
 data Action = BackPressed 
             | AadhaarNumberEditText PrimaryEditText.Action
             | AadhaarOtpEditText PrimaryEditText.Action
+            | AadhaarNameEditText PrimaryEditText.Action
+            | AadhaarGenderEditText PrimaryEditText.Action
             | PrimaryButtonAC PrimaryButton.Action
             | ResendOTP
             | AfterRender
             | ResendTimer String
             | Logout
             | PopUpModalAC PopUpModal.Action
+            | SelectDateOfBirthAction
+            | DatePicker String Int Int Int
 
 eval :: Action -> AadhaarVerificationScreenState -> Eval Action ScreenOutput AadhaarVerificationScreenState
 eval action state = case action of 
@@ -86,6 +98,7 @@ eval action state = case action of
         pure $ setText (getNewIDWithTag "EnterAadhaarOTPEditText") ""
         exit $ GoToOtpStage state
       VerifyAadhaar -> exit $ VerfiyOTP state
+      AadhaarDetails -> exit $ VerfiyOTP state
   (AadhaarNumberEditText (PrimaryEditText.TextChanged _ newVal)) -> do
     let aadhaarNumber = (replaceAll (Pattern " ") (Replacement "") newVal)
     let len = length aadhaarNumber
