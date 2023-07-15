@@ -39,6 +39,7 @@ type API =
   "driver"
     :> ( DriverDocumentsInfoAPI
            :<|> DriverAadhaarInfoAPI
+           :<|> DriverAadhaarInfoByPhoneAPI
            :<|> DriverListAPI
            :<|> DriverOutstandingBalanceAPI
            :<|> DriverActivityAPI
@@ -55,12 +56,12 @@ type API =
            :<|> UnlinkAadhaarAPI
            :<|> EndRCAssociationAPI
            :<|> UpdatePhoneNumberAPI
+           :<|> UpdateDriverAadhaarAPI
            :<|> AddVehicleAPI
            :<|> UpdateDriverNameAPI
            :<|> Reg.API
            :<|> ClearOnRideStuckDrivers
-           :<|> DriverAadhaarInfoByPhoneAPI
-           :<|> UpdateDriverAadhaarAPI
+           --
        )
 
 type DriverDocumentsInfoAPI =
@@ -70,6 +71,10 @@ type DriverDocumentsInfoAPI =
 type DriverAadhaarInfoAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'AADHAAR_INFO
     :> Common.DriverAadhaarInfoAPI
+
+type DriverAadhaarInfoByPhoneAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'AADHAAR_INFO_PHONE
+    :> Common.DriverAadhaarInfoByPhoneAPI
 
 type DriverListAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'LIST
@@ -135,6 +140,10 @@ type UpdatePhoneNumberAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UPDATE_PHONE_NUMBER
     :> Common.UpdatePhoneNumberAPI
 
+type UpdateDriverAadhaarAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'AADHAAR_UPDATE
+    :> Common.UpdateDriverAadhaarAPI
+
 type AddVehicleAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'ADD_VEHICLE
     :> Common.AddVehicleAPI
@@ -147,18 +156,11 @@ type ClearOnRideStuckDrivers =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'CLEAR_ON_RIDE_STUCK_DRIVER_IDS
     :> Common.ClearOnRideStuckDrivers
 
-type DriverAadhaarInfoByPhoneAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'AADHAAR_INFO_PONE
-    :> Common.DriverAadhaarInfoByPhoneAPI
-
-type UpdateDriverAadhaarAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'AADHAAR_UPDATE
-    :> Common.UpdateDriverAadhaarAPI
-
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   driverDocuments merchantId
     :<|> driverAadhaarInfo merchantId
+    :<|> driverAadhaarInfoByPhone merchantId
     :<|> listDriver merchantId
     :<|> getDriverDue merchantId
     :<|> driverActivity merchantId
@@ -175,12 +177,11 @@ handler merchantId =
     :<|> unlinkAadhaar merchantId
     :<|> endRCAssociation merchantId
     :<|> updatePhoneNumber merchantId
+    :<|> updateDriverAadhaar merchantId
     :<|> addVehicle merchantId
     :<|> updateDriverName merchantId
     :<|> Reg.handler merchantId
     :<|> clearOnRideStuckDrivers merchantId
-    :<|> driverAadhaarInfoByPhone merchantId
-    :<|> updateDriverAadhaar merchantId
 
 buildTransaction ::
   ( MonadFlow m,
@@ -203,6 +204,11 @@ driverAadhaarInfo :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> 
 driverAadhaarInfo merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.drivers.driverAadhaarInfo) driverId
+
+driverAadhaarInfoByPhone :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> FlowHandler Common.DriverAadhaarInfoRes
+driverAadhaarInfoByPhone merchantShortId apiTokenInfo phoneNo = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.driverAadhaarInfoByPhone) phoneNo
 
 listDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> FlowHandler Common.DriverListRes
 listDriver merchantShortId apiTokenInfo mbLimit mbOffset verified enabled blocked mbSubscribed phone mbVehicleNumberSearchString = withFlowHandlerAPI $ do
@@ -298,6 +304,11 @@ updatePhoneNumber merchantShortId apiTokenInfo driverId req = withFlowHandlerAPI
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.drivers.updatePhoneNumber) driverId req
 
+updateDriverAadhaar :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> Common.UpdateDriverDataReq -> FlowHandler APISuccess
+updateDriverAadhaar merchantShortId apiTokenInfo phoneNo req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.updateDriverAadhaar) phoneNo req
+
 addVehicle :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.AddVehicleReq -> FlowHandler APISuccess
 addVehicle merchantShortId apiTokenInfo driverId req = withFlowHandlerAPI $ do
   runRequestValidation Common.validateAddVehicleReq req
@@ -339,13 +350,3 @@ clearOnRideStuckDrivers :: ShortId DM.Merchant -> ApiTokenInfo -> FlowHandler Co
 clearOnRideStuckDrivers merchantShortId apiTokenInfo = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.drivers.clearOnRideStuckDrivers)
-
-driverAadhaarInfoByPhone :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> FlowHandler Common.DriverAadhaarInfoRes
-driverAadhaarInfoByPhone merchantShortId apiTokenInfo phoneNo = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callDriverOfferBPP checkedMerchantId (.drivers.getAadhaarDetailsByPhoneNumber) phoneNo
-
-updateDriverAadhaar :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> Common.UpdateDriverDataReq -> FlowHandler APISuccess
-updateDriverAadhaar merchantShortId apiTokenInfo phoneNo req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callDriverOfferBPP checkedMerchantId (.drivers.updateAadhaarDetailsByPhoneNumber) phoneNo req

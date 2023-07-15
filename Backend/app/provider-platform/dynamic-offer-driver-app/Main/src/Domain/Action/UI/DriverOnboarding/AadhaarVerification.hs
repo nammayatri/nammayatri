@@ -28,6 +28,7 @@ import Kernel.External.Encryption (DbHash, getDbHash)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -39,7 +40,6 @@ import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as Q
 import qualified Storage.Queries.Person as Person
 import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Error
-import Kernel.Types.APISuccess (APISuccess(..))
 
 data VerifyAadhaarOtpReq = VerifyAadhaarOtpReq
   { otp :: Int,
@@ -47,12 +47,11 @@ data VerifyAadhaarOtpReq = VerifyAadhaarOtpReq
   }
   deriving (Show, Generic, ToSchema, ToJSON, FromJSON)
 
-data UnVerifiedDataReq = UnVerifiedDataReq 
-  {
-    driverName :: Text,
+data UnVerifiedDataReq = UnVerifiedDataReq
+  { driverName :: Text,
     driverGender :: Text,
     driverDob :: Text
-  } 
+  }
   deriving (Show, Generic, ToSchema, ToJSON, FromJSON)
 
 generateAadhaarOtp ::
@@ -131,9 +130,11 @@ verifyAadhaarOtp mbMerchant personId req = do
 
 unVerifiedAadhaarData ::
   Id Person.Person ->
-  UnVerifiedDataReq  ->
+  UnVerifiedDataReq ->
   Flow APISuccess
-unVerifiedAadhaarData personId req = do  
+unVerifiedAadhaarData personId req = do
+  driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+  when (driverInfo.aadhaarVerified) $ throwError AadhaarAlreadyVerified
   aadhaarEntity <- mkAadhaar personId req.driverName req.driverGender req.driverDob Nothing Nothing False
   Esq.runNoTransaction $ Q.create aadhaarEntity
   return Success
@@ -188,9 +189,9 @@ mkAadhaar ::
   Id Person.Person ->
   Text ->
   Text ->
-  Text ->    
+  Text ->
   Maybe DbHash ->
-  Maybe Text ->   
+  Maybe Text ->
   Bool ->
   m VDomain.AadhaarVerification
 mkAadhaar personId name gender dob aadhaarHash img aadhaarVerified = do
@@ -206,5 +207,6 @@ mkAadhaar personId name gender dob aadhaarHash img aadhaarVerified = do
         driverImage = img,
         aadhaarNumberHash = aadhaarHash,
         isVerified = aadhaarVerified,
-        createdAt = now
+        createdAt = now,
+        updatedAt = now
       }
