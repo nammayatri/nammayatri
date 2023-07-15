@@ -121,7 +121,7 @@ fareList push config =
             , textSize FontSize.a_16
             , lineHeight "18"
             , fontStyle $ FontStyle.medium LanguageStyle
-            , color Color.black800
+            , color Color.black700
             , text item.key
             ]
           , textView
@@ -275,7 +275,7 @@ paymentfareBreakup push config =
   , height WRAP_CONTENT
   , orientation VERTICAL
   , padding $ PaddingHorizontal 20 20
-  ][ commonTV push (getStringByKey config "FEE_CORRESPONDING_to_DISTANCE") Color.black700 FontStyle.body3 LEFT 20 NoAction
+  ][ commonTV push (getStringByKey config "FEE_CORRESPONDING_TO_DISTANCE") Color.black700 FontStyle.body3 LEFT 20 NoAction
     , fareList push config
     , imageView
       [ width MATCH_PARENT

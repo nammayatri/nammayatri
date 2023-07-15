@@ -15,7 +15,7 @@ import Halogen.VDom.DOM.Prop (Prop)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (imageView, textView, linearLayout)
 import PrestoDOM.Events (afterRender, onBackPressed, onClick)
-import PrestoDOM.Properties (background, clickable, color, cornerRadii, cornerRadius, gravity, height, imageWithFallback, margin, orientation, padding, text, visibility, weight, width)
+import PrestoDOM.Properties (background, clickable, color, cornerRadii, cornerRadius, gravity, height, imageWithFallback, margin, orientation, padding, text, textFromHtml, visibility, weight, width)
 import PrestoDOM.Types.Core (PrestoDOM)
 import PrestoDOM.Types.DomAttributes (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Corners(..))
 import Styles.Colors as Color
@@ -39,13 +39,13 @@ view push state =
       , background Color.white900
       , padding $ Padding 16 10 16 20
       , gravity CENTER
-      ][ commonTV push state.title Color.black800 FontStyle.h2 CENTER 8 NoAction
-        , commonTV push state.description Color.black800 FontStyle.subHeading1 CENTER 8 NoAction
+      ][ commonTV push state.title Color.black800 FontStyle.h2 CENTER 8 NoAction false
+        , commonTV push state.description Color.black800 FontStyle.subHeading2 CENTER 8 NoAction true
         , paymentReview push state
-        , commonTV push state.description2 Color.black800 FontStyle.subHeading2 CENTER 8 NoAction
+        , commonTV push state.description2 Color.black800 FontStyle.body3 CENTER 8 NoAction false
         , primaryButton push state
         , case state.cancelButtonText of
-            Just text -> commonTV push text Color.black650 FontStyle.subHeading2 CENTER 8 Cancel
+            Just text -> commonTV push text Color.black650 FontStyle.subHeading2 CENTER 8 Cancel false
             Nothing -> linearLayout[][]
       ]
   ]
@@ -105,7 +105,7 @@ feeItem push state item =
       [ height $ V 18
       , width $ V 18
       , margin $ MarginLeft 5
-      , imageWithFallback "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png"
+      , imageWithFallback "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png"
       , visibility if item.feeType == GST_PAYABLE then VISIBLE else GONE
       , onClick push $ const Info
       ]
@@ -116,19 +116,19 @@ feeItem push state item =
       , weight 1.0
       , color Color.black800
       , text $ "₹" <> (show item.val)
-      ] <> FontStyle.body1 TypoGraphy
+      ] <> FontStyle.body6 TypoGraphy
   ]
 
-commonTV :: forall w .  (Action -> Effect Unit) -> String -> String -> (LazyCheck -> forall properties. (Array (Prop properties))) -> Gravity -> Int -> Action -> PrestoDOM (Effect Unit) w
-commonTV push text' color' theme gravity' marginTop action = 
+commonTV :: forall w .  (Action -> Effect Unit) -> String -> String -> (LazyCheck -> forall properties. (Array (Prop properties))) -> Gravity -> Int -> Action -> Boolean-> PrestoDOM (Effect Unit) w
+commonTV push text' color' theme gravity' marginTop action txtFromHtml = 
   textView $
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , text text'
   , color color'
   , gravity gravity'
   , margin $ MarginTop marginTop
   , onClick push $ const action
+  , (if txtFromHtml then textFromHtml else text) text'
   ] <> theme TypoGraphy
 
 buttonConfig :: MakePaymentModalState -> PrimaryButton.Config

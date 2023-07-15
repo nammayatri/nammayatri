@@ -490,5 +490,8 @@ const kannadaStrings = {
   DAILY : "ಪ್ರತಿದಿನ",
   WEEKLY : "ಸಾಪ್ತಾಹಿಕ",
   NEW_ : "ಹೊಸದು",
-  TODAY : "ಇಂದು"
+  TODAY : "ಇಂದು",
+  OKAY : "ಸರಿ ಸರಿ",
+  NO_PAYMENT_HISTORY_AVAILABLE : "ಯಾವುದೇ ಪಾವತಿ ಇತಿಹಾಸ ಲಭ್ಯವಿಲ್ಲ",
+  YOU_DONT_HAVEANY_PAYMENTS : "ನೀವು ಇನ್ನೂ ಯಾವುದೇ ಪಾವತಿ ಮಾಡಿಲ್ಲ"
 }

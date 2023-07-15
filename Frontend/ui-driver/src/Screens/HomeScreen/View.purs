@@ -195,7 +195,7 @@ view push state =
           driverMapsHeaderView push state
         , rideActionModelView push state
         ]
-      , if (getValueToLocalNativeStore PROFILE_DEMO) /= "false" then profileDemoView state push else linearLayout[][]
+      -- , if (getValueToLocalNativeStore PROFILE_DEMO) /= "false" then profileDemoView state push else linearLayout[][]       Disabled ProfileDemoView
       , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
       , if state.data.paymentState.makePaymentModal then makePaymentModal push state else dummyTextView
       , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView

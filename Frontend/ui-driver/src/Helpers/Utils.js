@@ -706,3 +706,15 @@ export const consumeBP = function (unit){
   }
   JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
 }
+
+export const isYesterday = function (dateString){
+  try {
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1);
+    var date = new Date(dateString);
+    return (yesterday.toDateString() == date.toDateString());
+  }catch(error){
+    console.error(error);
+  }
+  return false;
+}

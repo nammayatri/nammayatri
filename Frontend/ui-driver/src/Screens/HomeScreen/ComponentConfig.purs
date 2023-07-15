@@ -35,7 +35,7 @@ import Data.String as DS
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, isYesterday)
 import Helpers.Utils as HU
 import Language.Types (STR(..))
 import Prelude ((<>))
@@ -367,18 +367,13 @@ requestInfoCardConfig _ = let
 makePaymentState :: ST.HomeScreenState -> MakePaymentModal.MakePaymentModalState
 makePaymentState state = {
   title : getString GREAT_JOB,
-  description : ( case getValueToLocalStore LANGUAGE_KEY of
-                        "EN_US" -> "You have completed "<> (show state.data.paymentState.rideCount) <>" Rides yesterday!"
-                        "HI_IN" -> "आपने कल "<> (show state.data.paymentState.rideCount) <> " सवारी पूरी कर लीं!"
-                        "KN_IN" -> "ನೀವು ನಿನ್ನೆ "<> (show state.data.paymentState.rideCount) <>" ರೈಡ್‌ಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದ್ದೀರಿ!"
-                        "TA_IN" -> "நீங்கள் நேற்று "<> (show state.data.paymentState.rideCount) <>" சவாரிகளை முடித்துவிட்டீர்கள்!"
-                        _       -> "You have completed "<> (show state.data.paymentState.rideCount) <>" Rides yesterday!"
-                     ),
+  description : getDescription state,
   description2 : ( case getValueToLocalStore LANGUAGE_KEY of
                         "EN_US" -> "To continue using Yatri Sathi, please complete your payment for " <> state.data.paymentState.date
                         "HI_IN" -> "यात्री साथी का उपयोग जारी रखने के लिए, कृपया "<> state.data.paymentState.date <>" के लिए अपना भुगतान पूरा करें"
                         "KN_IN" -> "ಯಾತ್ರಿ ಸತಿ ಬಳಸುವುದನ್ನು ಮುಂದುವರಿಸಲು, ದಯವಿಟ್ಟು "<> state.data.paymentState.date <> " ಕ್ಕೆ ನಿಮ್ಮ ಪಾವತಿಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ"
                         "TA_IN" -> "யாத்ரி சாத்தியைத் தொடர்ந்து பயன்படுத்த, "<> state.data.paymentState.date <> " க்கு உங்கள் கட்டணத்தைச் செலுத்தவும்"
+                        "BN_IN" -> "Yatri Sathi ব্যবহার চালিয়ে যেতে, অনুগ্রহ করে " <> state.data.paymentState.date <> " -এর জন্য আপনার অর্থপ্রদান সম্পূর্ণ করুন"
                         _       -> "To continue using Yatri Sathi, please complete your payment for " <> state.data.paymentState.date
                      ),
   okButtontext : ( case getValueToLocalStore LANGUAGE_KEY of
@@ -386,6 +381,7 @@ makePaymentState state = {
                         "HI_IN" -> "अभी ₹" <> (show state.data.paymentState.payableAndGST) <>" का भुगतान करें"
                         "KN_IN" -> "ಈಗ ₹"<> (show state.data.paymentState.payableAndGST)<>" ಪಾವತಿಸಿ"
                         "TA_IN" -> "இப்போது ₹" <> (show state.data.paymentState.payableAndGST) <> " செலுத்துங்கள்"
+                        "BN_IN" -> "এখন " <> (show state.data.paymentState.payableAndGST) <> " পে করুন"
                         _       -> "Pay ₹" <> (show state.data.paymentState.payableAndGST) <> " now"
                      ),
   cancelButtonText : if (JB.withinTimeRange "14:00:00" "10:00:00" (EHC.convertUTCtoISC(EHC.getCurrentUTC "") "HH:mm:ss")) then Nothing else Just $ getString LATER,
@@ -403,6 +399,21 @@ makePaymentState state = {
   ]
 }
 
+getDescription :: ST.HomeScreenState -> String
+getDescription state =  case getValueToLocalStore LANGUAGE_KEY of
+                        "EN_US" -> case (isYesterday state.data.paymentState.dateObj) of
+                                  true -> (("You have completed <b>"<> (show state.data.paymentState.rideCount)) <> (if state.data.paymentState.rideCount == 1 then " Ride</b> yesterday!" else " Rides</b> yesterday!"))
+                                  false -> ("You have completed <b>"<> (show state.data.paymentState.rideCount) <> ((if state.data.paymentState.rideCount == 1 then " Ride</b> on " else " Rides</b> on ") <> state.data.paymentState.date))
+                        "HI_IN" -> if (isYesterday state.data.paymentState.dateObj) then "आपने कल <b>"<> (show state.data.paymentState.rideCount) <> " सवारी</b> पूरी कर लीं!" else 
+                                    "आपने " <> state.data.paymentState.date <>  " को "<> (show state.data.paymentState.rideCount) <> " सवारी</b> पूरी कर लीं!"
+                        "BN_IN" -> if (isYesterday state.data.paymentState.dateObj) then "আপনি গতকাল "<> (show state.data.paymentState.rideCount) <>"টি রাইড সম্পূর্ণ করেছেন" else 
+                                    "আপনি " <> state.data.paymentState.date <>" তারিখে " <> (show state.data.paymentState.rideCount) <> "টি রাইড সম্পূর্ণ করেছেন"
+                        "TA_IN" -> "நீங்கள் நேற்று "<> (show state.data.paymentState.rideCount) <>" சவாரிகளை முடித்துவிட்டீர்கள்!"
+                        "KN_IN" -> "ನೀವು ನಿನ್ನೆ "<> (show state.data.paymentState.rideCount) <>" ರೈಡ್‌ಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದ್ದೀರಿ!"
+                        _       -> case (isYesterday state.data.paymentState.dateObj) of
+                                    true -> (("You have completed <b>"<> (show state.data.paymentState.rideCount)) <> (if state.data.paymentState.rideCount == 1 then " Ride</b> yesterday!" else " Rides yesterday!"))
+                                    false -> ("You have completed <b>"<> (show state.data.paymentState.rideCount) <> ((if state.data.paymentState.rideCount == 1 then " Ride</b> on" else " Rides on") <> state.data.paymentState.date))
+
 rateCardState :: ST.HomeScreenState -> RateCard.Config
 rateCardState state =
   let
@@ -410,12 +421,12 @@ rateCardState state =
     rateCardConfig' =
       config'
         { title = getString FEE_BREAKUP
-        , description = getString YATRI_SATHI_FEE_PAYABLE_FOR_DATE
+        , description = getString YATRI_SATHI_FEE_PAYABLE_FOR_DATE <> " " <> state.data.paymentState.date
         , buttonText = Nothing
         , currentRateCardType = CommonTypes.PaymentFareBreakup
         , primaryButtonText = getString GOT_IT
         , additionalStrings = [
-          {key : "FEE_CORRESPONDING_to_DISTANCE", val : getString FEE_CORRESPONDING_TO_THE_DISTANCE},
+          {key : "FEE_CORRESPONDING_TO_DISTANCE", val : getString FEE_CORRESPONDING_TO_THE_DISTANCE},
           {key : "GOT_IT", val : getString GOT_IT},
           {key : "TOTAL_PAYABLE", val : getString TOTAL_PAYABLE},
           {key : "TOTAL_PAYABLE_VAL", val : "₹" <> (show state.data.paymentState.payableAndGST)}]
