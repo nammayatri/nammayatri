@@ -101,6 +101,8 @@ foreign import getVideoID :: String -> String
 foreign import getImageUrl :: String -> String
 foreign import parseNumber :: Int -> String
 
+foreign import isYesterday :: String -> Boolean
+
 -- -- ####### MAP FFI ######## -----
 foreign import currentPosition  :: String -> Effect Unit
 foreign import getPastDays :: Int -> Array LeaderBoardDay

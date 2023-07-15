@@ -79,6 +79,7 @@ initData = {
           payableAndGST : 0,
           platFromFee : 0,
           date : "",
+          dateObj : "",
           makePaymentModal : false,
           showRateCard : false,
           paymentStatusBanner : false,

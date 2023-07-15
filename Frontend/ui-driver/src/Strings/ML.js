@@ -496,5 +496,8 @@ const mlStrings = {
   DAILY : "ദിവസേന",
   WEEKLY : "പ്രതിവാരം",
   NEW_ : "പുതിയത്",
-  TODAY : "ഇന്ന്"
+  TODAY : "ഇന്ന്",
+  OKAY :"ശരി ശരി",
+  NO_PAYMENT_HISTORY_AVAILABLE : "പേയ്‌മെന്റ് ചരിത്രമൊന്നും ലഭ്യമല്ല",
+  YOU_DONT_HAVEANY_PAYMENTS : "നിങ്ങൾ ഇതുവരെ പണമടച്ചിട്ടില്ല"
 }

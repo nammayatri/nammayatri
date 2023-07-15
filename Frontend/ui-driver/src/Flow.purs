@@ -1142,7 +1142,8 @@ checkDriverPaymentStatus paymentPending =
               payableAndGST = paymentDetailsEntity.charges,
               date = convertUTCtoISC paymentDetailsEntity.date "Do MMM YYYY",
               driverFeeId = paymentDetailsEntity.driverFeeId,
-              chargesBreakup = paymentDetailsEntity.chargesBreakup
+              chargesBreakup = paymentDetailsEntity.chargesBreakup,
+              dateObj = paymentDetailsEntity.date
               }}})
           Nothing -> do
             resp1 <- lift $ lift $ Remote.getPaymentHistory "" "" (Just "PAYMENT_OVERDUE")
@@ -1157,7 +1158,8 @@ checkDriverPaymentStatus paymentPending =
                       payableAndGST = paymentDetailsEntity.charges,
                       date = convertUTCtoISC paymentDetailsEntity.date "Do MMM YYYY",
                       driverFeeId = paymentDetailsEntity.driverFeeId,
-                      chargesBreakup = paymentDetailsEntity.chargesBreakup
+                      chargesBreakup = paymentDetailsEntity.chargesBreakup,
+                      dateObj = paymentDetailsEntity.date
                       }}})
                   Nothing -> pure unit
               Left error -> pure unit

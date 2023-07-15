@@ -29,6 +29,8 @@ import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -314,6 +316,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                                 e.printStackTrace();
                             }
                             break;
+
+                        case NotificationTypes.PAYMENT_OVERDUE:
+
+                        case NotificationTypes.PAYMENT_PENDING:
+                            showOverlayMessage(constructOverlayMessage(notification_payload));
+                            break;
+
                         default:
                             if (payload.get("show_notification").equals("true")) {
                                 NotificationUtils.showNotification(this, title, body, payload, imageUrl);
@@ -457,6 +466,25 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         }
     }
 
+    private JSONObject constructOverlayMessage (JSONObject notification_payload) throws JSONException {
+        JSONObject ob = new JSONObject();
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.put("OPEN_APP");
+        ob.put("title", notification_payload.get("title"))
+                .put("description", notification_payload.get("body"))
+                .put("cancelButtonText", "Not now")
+                .put("okButtonText", "Go To Yatri Sathi")
+                .put("imageUrl", "https://firebasestorage.googleapis.com/v0/b/my-re-cycler.appspot.com/o/ic_bill_generated(1).png?alt=media&token=9d9e7a0c-3805-4436-aa0f-95e2461cb787")
+                .put("titleVisibility", true)
+                .put("descriptionVisibility", true)
+                .put("buttonOkVisibility", true)
+                .put("buttonCancelVisibility", true)
+                .put("imageVisibility", true)
+                .putOpt("actions", jsonArray)
+                .put("buttonLayoutVisibility", true);
+        return ob;
+    }
+
     private static class NotificationTypes {
         private static final String TRIGGER_SERVICE = "TRIGGER_SERVICE";
         private static final String NEW_RIDE_AVAILABLE = "NEW_RIDE_AVAILABLE";
@@ -475,5 +503,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         private static final String CHAT_MESSAGE = "CHAT_MESSAGE";
         private static final String DRIVER_NOTIFY = "DRIVER_NOTIFY";
         private static final String REALLOCATE_PRODUCT = "REALLOCATE_PRODUCT";
+        private static final String PAYMENT_OVERDUE = "PAYMENT_OVERDUE";
+        private static final String PAYMENT_PENDING = "PAYMENT_PENDING";
     }
 }
