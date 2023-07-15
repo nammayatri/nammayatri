@@ -41,7 +41,7 @@ import qualified Tools.Call as Call
 -- create callStatus = do
 --   dbConf <- L.getOption KBT.PsqlDbCfg
 --   let modelName = Se.modelTableName @BeamCS.CallStatusT
---   let updatedMeshConfig = setMeshConfig modelName
+--   updatedMeshConfig <- setMeshConfig modelName
 --   case dbConf of
 --     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRideToBeam CallStatus)
 --     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -56,7 +56,7 @@ findById :: L.MonadFlow m => Id CallStatus -> m (Maybe CallStatus)
 findById (Id callStatusId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamCS.CallStatusT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamCS.id $ Se.Eq callStatusId]
     Nothing -> pure Nothing
@@ -72,7 +72,7 @@ findByCallSid :: L.MonadFlow m => Text -> m (Maybe CallStatus)
 findByCallSid callSid = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamCS.CallStatusT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamCS.callId $ Se.Eq callSid]
     Nothing -> pure Nothing
@@ -92,7 +92,7 @@ updateCallStatus :: L.MonadFlow m => Id CallStatus -> Call.CallStatus -> Int -> 
 updateCallStatus (Id callId) status conversationDuration recordingUrl = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamCS.CallStatusT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector

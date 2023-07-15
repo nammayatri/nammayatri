@@ -61,7 +61,7 @@ findById (Id driverInformationId) = findOneWithKV [Se.Is BeamDI.driverId $ Se.Eq
 -- fetchAllByIds merchantId driversIds = do
 --   dbConf <- L.getOption KBT.PsqlDbCfg
 --   let modelName = Se.modelTableName @BeamDI.DriverInformationT
---   let updatedMeshConfig = setMeshConfig modelName
+--   updatedMeshConfig <- setMeshConfig modelName
 --   case dbConf of
 --     Just dbCOnf' -> do
 --       dInfos <- either (pure []) (transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDI.driverId $ Se.In (getId <$> driversIds)]

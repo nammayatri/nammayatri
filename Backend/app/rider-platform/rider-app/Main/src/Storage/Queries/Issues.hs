@@ -38,7 +38,7 @@ insertIssue :: L.MonadFlow m => Issue -> m (MeshResult ())
 insertIssue issue = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamI.IssueT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainIssueToBeam issue)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")

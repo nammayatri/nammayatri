@@ -158,7 +158,7 @@ updateAffectedPhones primaryPhones = do
 -- updateAffectedPhones' primaryPhones = do
 --   dbConf <- L.getOption KBT.PsqlDbCfg
 -- let modelName = Se.modelTableName @BeamE.ExophoneT
--- let updatedMeshConfig = setMeshConfig modelName
+-- updatedMeshConfig <- setMeshConfig modelName
 --   now <- getCurrentTime
 --   let indianMobileCode = "+91"
 --   -- let isPrimaryDown = Se.Or [ Se.Is BeamE.primaryPhone $ Se.In primaryPhones, Se.Is (indianMobileCode ++ BeamE.primaryPhone) $ Se.In primaryPhones ]

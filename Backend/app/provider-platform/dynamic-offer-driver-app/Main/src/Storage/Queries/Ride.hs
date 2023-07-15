@@ -386,7 +386,7 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
 -- findAllRideItems' (Id merchantId) limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now = do
 --   dbConf <- L.getOption KBT.PsqlDbCfg
 -- let modelName = Se.modelTableName @BeamR.RideT
--- let updatedMeshConfig = setMeshConfig modelName
+-- updatedMeshConfig <- setMeshConfig modelName
 --   let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
 --   case dbConf of
 --     Just dbCOnf' -> do

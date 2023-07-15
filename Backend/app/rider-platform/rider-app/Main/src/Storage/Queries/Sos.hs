@@ -17,7 +17,7 @@ create :: L.MonadFlow m => Sos.Sos -> m (MeshResult ())
 create sos = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamS.SosT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainSosToBeam sos)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -38,7 +38,7 @@ updateStatus sosId status = do
   now <- getCurrentTime
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamS.SosT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' ->
       KV.updateWoReturningWithKVConnector
@@ -57,7 +57,7 @@ findById :: L.MonadFlow m => Id Sos.Sos -> m (Maybe Sos)
 findById sosId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamS.SosT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamSosToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamS.id $ Se.Eq (getId sosId)]
     Nothing -> pure Nothing

@@ -41,7 +41,7 @@ findBySubscriberId :: L.MonadFlow m => ShortId Subscriber -> m (Maybe BlackListO
 findBySubscriberId subscriberId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamBLO.BlackListOrgT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> either (pure Nothing) (transformBeamBlackListOrgToDomain <$>) <$> KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamBLO.subscriberId $ Se.Eq $ getShortId subscriberId]
     Nothing -> pure Nothing

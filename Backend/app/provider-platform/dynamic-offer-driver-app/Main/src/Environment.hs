@@ -29,7 +29,7 @@ import Kernel.Streaming.Kafka.Producer.Types
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.App
 import Kernel.Types.Cache
-import Kernel.Types.Common
+import Kernel.Types.Common (HighPrecMeters, Seconds, Tables)
 import Kernel.Types.Credentials (PrivateKey)
 import Kernel.Types.Flow (FlowR)
 import Kernel.Types.Registry
@@ -46,6 +46,11 @@ import Storage.CachedQueries.CacheConfig
 import System.Environment (lookupEnv)
 import Tools.Metrics
 
+-- data Tables = Tables {
+--   kVTables :: [Text],
+--   kVHardKilledTables :: [Text]
+--   }
+--   deriving (Generic, Show, ToJSON, FromJSON, FromDhall)
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,
@@ -104,7 +109,8 @@ data AppCfg = AppCfg
     enablePrometheusMetricLogging :: Bool,
     enableAPILatencyLogging :: Bool,
     enableAPIPrometheusMetricLogging :: Bool,
-    eventStreamMap :: [EventStreamMap]
+    eventStreamMap :: [EventStreamMap],
+    tables :: Tables
   }
   deriving (Generic, FromDhall)
 

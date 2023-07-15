@@ -44,7 +44,7 @@ findAllByMerchantId :: L.MonadFlow m => Id Merchant -> m [DMC.MerchantConfig]
 findAllByMerchantId (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamMC.MerchantConfigT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamMerchantConfigToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamMC.merchantId $ Se.Eq merchantId]
     Nothing -> pure []

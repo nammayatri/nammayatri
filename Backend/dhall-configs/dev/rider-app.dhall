@@ -135,6 +135,8 @@ let hccfg =
       , connectTimeout = None Integer
       }
 
+let tables = { kVTables = [] : List Text, kVHardKilledTables = [] : List Text }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = hcfg
@@ -187,4 +189,5 @@ in  { esqDBCfg
     , enableRedisLatencyLogging = False
     , enablePrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings
+    , tables
     }

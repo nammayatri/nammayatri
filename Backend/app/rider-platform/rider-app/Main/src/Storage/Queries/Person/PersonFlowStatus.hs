@@ -37,7 +37,7 @@ create :: L.MonadFlow m => DPFS.PersonFlowStatus -> m (MeshResult ())
 create personFlowStatus = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamPFS.PersonFlowStatusT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainPersonFlowStatusToBeam personFlowStatus)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -57,7 +57,7 @@ getStatus :: L.MonadFlow m => Id Person -> m (Maybe DPFS.FlowStatus)
 getStatus (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamPFS.PersonFlowStatusT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       personFlowStatus <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamPFS.personId $ Se.Eq personId]
@@ -84,7 +84,7 @@ updateStatus :: (L.MonadFlow m, MonadTime m) => Id Person -> DPFS.FlowStatus -> 
 updateStatus (Id personId) flowStatus = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamPFS.PersonFlowStatusT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -105,7 +105,7 @@ deleteByPersonId :: L.MonadFlow m => Id Person -> m ()
 deleteByPersonId (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamPFS.PersonFlowStatusT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> void $ KV.deleteWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamPFS.personId $ Se.Eq personId]
     Nothing -> pure ()
@@ -124,7 +124,7 @@ updateToIdleMultiple :: L.MonadFlow m => [Id Person] -> UTCTime -> m (MeshResult
 updateToIdleMultiple personIds now = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamPFS.PersonFlowStatusT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector

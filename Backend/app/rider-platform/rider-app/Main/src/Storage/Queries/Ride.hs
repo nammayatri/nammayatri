@@ -42,7 +42,7 @@ create :: L.MonadFlow m => Ride -> m (MeshResult ())
 create ride = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRideToBeam ride)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -65,7 +65,7 @@ updateStatus :: (L.MonadFlow m, MonadTime m) => Id Ride -> RideStatus -> m (Mesh
 updateStatus rideId status = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -96,7 +96,7 @@ updateTrackingUrl :: (L.MonadFlow m, MonadTime m) => Id Ride -> BaseUrl -> m (Me
 updateTrackingUrl rideId url = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -127,7 +127,7 @@ updateRideRating :: (L.MonadFlow m, MonadTime m) => Id Ride -> Int -> m (MeshRes
 updateRideRating rideId rideRating = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -147,7 +147,7 @@ findById :: L.MonadFlow m => Id Ride -> m (Maybe Ride)
 findById (Id rideId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamR.id $ Se.Eq rideId]
@@ -167,7 +167,7 @@ findByBPPRideId :: L.MonadFlow m => Id BPPRide -> m (Maybe Ride)
 findByBPPRideId bppRideId_ = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamR.bppRideId $ Se.Eq $ getId bppRideId_]
@@ -196,7 +196,7 @@ updateMultiple :: (L.MonadFlow m, MonadTime m) => Id Ride -> Ride -> m (MeshResu
 updateMultiple rideId ride = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -227,7 +227,7 @@ findActiveByRBId :: L.MonadFlow m => Id Booking -> m (Maybe Ride)
 findActiveByRBId (Id rbId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Eq Ride.CANCELLED]]
@@ -248,7 +248,7 @@ findAllByRBId :: L.MonadFlow m => Id Booking -> m [Ride]
 findAllByRBId (Id bookingId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       result <- KV.findAllWithOptionsKVConnector dbConf' updatedMeshConfig [Se.Is BeamR.bookingId $ Se.Eq bookingId] (Se.Desc BeamR.createdAt) Nothing Nothing
@@ -272,7 +272,7 @@ updateDriverArrival :: (L.MonadFlow m, MonadTime m) => Id Ride -> m (MeshResult 
 updateDriverArrival rideId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -317,7 +317,7 @@ findStuckRideItems :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id 
 findStuckRideItems (Id merchantId) bookingIds now = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
   case dbConf of
     Just dbCOnf' -> do
@@ -336,7 +336,7 @@ findStuckRideItems (Id merchantId) bookingIds now = do
           Right x -> traverse transformBeamRideToDomain x
       bookings <- do
         let modelNameB = Se.modelTableName @BeamB.BookingT
-        let updatedMeshConfigB = setMeshConfig modelNameB
+        updatedMeshConfigB <- setMeshConfig modelNameB
         res <-
           KV.findAllWithKVConnector
             dbCOnf'
@@ -374,7 +374,7 @@ cancelRides :: (L.MonadFlow m, MonadTime m) => [Id Ride] -> UTCTime -> m ()
 cancelRides rideIds now = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamR.RideT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       void $

@@ -18,11 +18,13 @@ import qualified Domain.Types.DriverOffer as DomainDO
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.KVConnector.Types (MeshConfig (..))
 import qualified EulerHS.Language as L
+import qualified Kernel.Beam.Types as KBT
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Types
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Lib.Mesh as Mesh
 
 fromFieldMoney ::
@@ -194,11 +196,18 @@ setFlagsInMeshConfig meshCfg modelName = do
     isKVEnabled _ = False
     isHardKillEnabled _ = True
 
-kvTables :: [Text]
-kvTables = []
+-- kvTables :: [Text]
+-- kvTables = []
 
-kvHardKilledTables :: [Text]
-kvHardKilledTables = []
+-- kvHardKilledTables :: [Text]
+-- kvHardKilledTables = []
 
-setMeshConfig :: Text -> MeshConfig
-setMeshConfig modelTableName = meshConfig {meshEnabled = modelTableName `elem` kvTables, kvHardKilled = modelTableName `notElem` kvHardKilledTables}
+setMeshConfig :: (L.MonadFlow m, HasCallStack) => Text -> m MeshConfig
+setMeshConfig modelName = do
+  tables <- L.getOption KBT.Tables
+  case tables of
+    Nothing -> L.throwException $ InternalError "Tables not found"
+    Just tables' -> do
+      let kvTables = tables'.kVTables
+      let kvHardKilledTables = tables'.kVHardKilledTables
+      pure $ meshConfig {meshEnabled = modelName `elem` kvTables, kvHardKilled = modelName `notElem` kvHardKilledTables}

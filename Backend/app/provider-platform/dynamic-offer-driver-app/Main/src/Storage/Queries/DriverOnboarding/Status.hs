@@ -121,7 +121,7 @@ baseDriverDocumentsInfoQuery licenseImagesAggTable vehicleRegistrationImagesAggT
 -- fetchDriverDocsInfo' merchantId mbDriverIds = do
 -- dbConf <- L.getOption KmeBT.PsqlDbCfg
 -- let modelName = Se.modelTableName @BeamS.StatusT
--- let updatedMeshConfig = setMeshConfig modelNa
+-- updatedMeshConfig <- setMeshConfig modelNa
 --   case dbConf of
 --     Just dbCOnf' -> do
 --       persons <- either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamIT.language $ Se.Eq language]

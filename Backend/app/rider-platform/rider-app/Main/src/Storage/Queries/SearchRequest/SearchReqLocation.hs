@@ -31,7 +31,7 @@ create :: L.MonadFlow m => SearchReqLocation -> m (MeshResult ())
 create bl = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSRL.SearchReqLocationT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainSearchReqLocationToBeam bl)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -40,7 +40,7 @@ findById :: L.MonadFlow m => Id SearchReqLocation -> m (Maybe SearchReqLocation)
 findById (Id searchReqLocationId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSRL.SearchReqLocationT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamSearchReqLocationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSRL.id $ Se.Eq searchReqLocationId]
     Nothing -> pure Nothing

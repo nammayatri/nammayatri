@@ -63,12 +63,14 @@ runRiderApp' appCfg = do
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     runFlow
       flowRt
-      ( prepareConnection $
-          ConnectionConfig
-            { esqDBCfg = appCfg.esqDBCfg,
-              esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
-              hedisClusterCfg = appCfg.hedisClusterCfg
-            }
+      ( prepareConnection
+          ( ConnectionConfig
+              { esqDBCfg = appCfg.esqDBCfg,
+                esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
+                hedisClusterCfg = appCfg.hedisClusterCfg
+              }
+          )
+          appCfg.tables
       )
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do

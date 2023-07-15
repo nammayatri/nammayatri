@@ -27,13 +27,16 @@ import Domain.Types.Vehicle.Variant (Variant (..))
 import EulerHS.CachedSqlDBQuery (SqlReturning)
 import qualified EulerHS.KVConnector.Flow as KV
 import EulerHS.KVConnector.Types (KVConnector (..), MeshConfig (..), MeshMeta)
+-- import Kernel.External.Encryption
+-- import Kernel.External.Types
+
+-- import Kernel.Storage.Esqueleto.Types
+
 import qualified EulerHS.Language as L
 import EulerHS.Types (BeamRunner, BeamRuntime, DBConfig)
 import Kernel.Beam.Types (PsqlDbCfg (..))
--- import Kernel.External.Encryption
--- import Kernel.External.Types
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
--- import Kernel.Storage.Esqueleto.Types
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -350,17 +353,31 @@ setFlagsInMeshConfig meshCfg modelName = do
     isKVEnabled _ = False
     isHardKillEnabled _ = True
 
-kvTables :: [Text]
-kvTables = [] -- ["registration_token", "search_request", "search_request_for_driver", "search_try", "driver_information", "driver_flow_status", "business_event", "booking", "ride", "estimate", "fare_parameters", "fare_parameters_progressive_details", "booking_location", "ride_details", "rider_details", "driver_stats", "driver_quote", "search_request_location"]
+-- kvTables :: [Text]
+-- kvTables = [] -- ["registration_token", "search_request", "search_request_for_driver", "search_try", "driver_information", "driver_flow_status", "business_event", "booking", "ride", "estimate", "fare_parameters", "fare_parameters_progressive_details", "booking_location", "ride_details", "rider_details", "driver_stats", "driver_quote", "search_request_location"]
 
-kvHardKilledTables :: [Text]
-kvHardKilledTables = [] --["registration_token", "search_request", "search_request_for_driver", "search_try", "driver_information", "driver_flow_status", "business_event", "booking", "ride", "estimate", "fare_parameters", "fare_parameters_progressive_details", "booking_location", "ride_details", "rider_details", "driver_stats", "driver_quote", "search_request_location"]
+-- kvHardKilledTables :: [Text]
+-- kvHardKilledTables = [] --["registration_token", "search_request", "search_request_for_driver", "search_try", "driver_information", "driver_flow_status", "business_event", "booking", "ride", "estimate", "fare_parameters", "fare_parameters_progressive_details", "booking_location", "ride_details", "rider_details", "driver_stats", "driver_quote", "search_request_location"]
 
-setMeshConfig :: Text -> MeshConfig
-setMeshConfig modelName = meshConfig {meshEnabled = modelName `elem` kvTables, kvHardKilled = modelName `notElem` kvHardKilledTables}
+setMeshConfig :: (L.MonadFlow m, HasCallStack) => Text -> m MeshConfig
+setMeshConfig modelName = do
+  tables <- L.getOption KBT.Tables
+  case tables of
+    Nothing -> L.throwException $ InternalError "Tables not found"
+    Just tables' -> do
+      let kvTables = tables'.kVTables
+      let kvHardKilledTables = tables'.kVHardKilledTables
+      pure $ meshConfig {meshEnabled = modelName `elem` kvTables, kvHardKilled = modelName `notElem` kvHardKilledTables}
 
-setMeshConfig' :: Text -> MeshConfig -> MeshConfig
-setMeshConfig' modelName meshConfig' = meshConfig' {meshEnabled = modelName `elem` kvTables, kvHardKilled = modelName `notElem` kvHardKilledTables}
+setMeshConfig' :: (L.MonadFlow m, HasCallStack) => Text -> MeshConfig -> m MeshConfig
+setMeshConfig' modelName meshConfig' = do
+  tables <- L.getOption KBT.Tables
+  case tables of
+    Nothing -> L.throwException $ InternalError "Tables not found"
+    Just tables' -> do
+      let kvTables = tables'.kVTables
+      let kvHardKilledTables = tables'.kVHardKilledTables
+      pure $ meshConfig' {meshEnabled = modelName `elem` kvTables, kvHardKilled = modelName `notElem` kvHardKilledTables}
 
 class
   FromTType' t a
@@ -397,7 +414,7 @@ findOneWithKV ::
   m (Maybe a)
 -- m (Maybe (table Identity))
 findOneWithKV where' = do
-  let updatedMeshConfig = setMeshConfig' (modelTableName @table) meshConfig
+  updatedMeshConfig <- setMeshConfig' (modelTableName @table) meshConfig
   dbConf' <- getMasterDBConfig
   result <- KV.findWithKVConnector dbConf' updatedMeshConfig where'
   case result of
@@ -428,7 +445,7 @@ findAllWithKV ::
   m [a]
 -- m (Maybe (table Identity))
 findAllWithKV where' = do
-  let updatedMeshConfig = setMeshConfig' (modelTableName @table) meshConfig
+  updatedMeshConfig <- setMeshConfig' (modelTableName @table) meshConfig
   dbConf' <- getMasterDBConfig
   result <- KV.findAllWithKVConnector dbConf' updatedMeshConfig where'
   case result of
@@ -463,7 +480,7 @@ findAllWithOptionsKV ::
   m [a]
 -- m (Maybe (table Identity))
 findAllWithOptionsKV where' orderBy mbLimit mbOffset = do
-  let updatedMeshConfig = setMeshConfig' (modelTableName @table) meshConfig
+  updatedMeshConfig <- setMeshConfig' (modelTableName @table) meshConfig
   dbConf <- getMasterDBConfig
   result <- KV.findAllWithOptionsKVConnector dbConf updatedMeshConfig where' orderBy mbLimit mbOffset
   case result of
@@ -497,7 +514,7 @@ updateWithKV ::
   m ()
 -- m (Maybe (table Identity))
 updateWithKV setClause whereClause = do
-  let updatedMeshConfig = setMeshConfig' (modelTableName @table) meshConfig
+  updatedMeshConfig <- setMeshConfig' (modelTableName @table) meshConfig
   dbConf <- getMasterDBConfig
   res <- KV.updateWoReturningWithKVConnector dbConf updatedMeshConfig setClause whereClause
   case res of
@@ -528,7 +545,7 @@ createWithKV ::
   m ()
 createWithKV a = do
   let tType = toTType' a
-      updatedMeshConfig = setMeshConfig' (modelTableName @table) meshConfig
+  updatedMeshConfig <- setMeshConfig' (modelTableName @table) meshConfig
   dbConf' <- getMasterDBConfig
   result <- KV.createWoReturingKVConnector dbConf' updatedMeshConfig tType
   case result of
@@ -558,7 +575,7 @@ deleteWithKV ::
   Where be table ->
   m ()
 deleteWithKV whereClause = do
-  let updatedMeshConfig = setMeshConfig' (modelTableName @table) meshConfig
+  updatedMeshConfig <- setMeshConfig' (modelTableName @table) meshConfig
   dbConf <- getMasterDBConfig
   res <- KV.deleteWithKVConnector dbConf updatedMeshConfig whereClause
   case res of
@@ -588,7 +605,7 @@ deleteAllWithKV ::
   Where be table ->
   m ()
 deleteAllWithKV whereClause = do
-  let updatedMeshConfig = setMeshConfig' (modelTableName @table) meshConfig
+  updatedMeshConfig <- setMeshConfig' (modelTableName @table) meshConfig
   dbConf <- getMasterDBConfig
   res <- KV.deleteAllReturningWithKVConnector dbConf updatedMeshConfig whereClause
   case res of

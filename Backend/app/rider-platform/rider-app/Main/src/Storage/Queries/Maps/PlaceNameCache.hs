@@ -36,7 +36,7 @@ create :: L.MonadFlow m => PlaceNameCache -> m (MeshResult ())
 create placeNameCache = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamPNC.PlaceNameCacheT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainPlaceNameCacheToBeam placeNameCache)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -52,7 +52,7 @@ findPlaceByPlaceId :: L.MonadFlow m => Text -> m [PlaceNameCache]
 findPlaceByPlaceId placeId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamMapsPNC.PlaceNameCacheT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> either (pure []) (transformBeamPlaceNameCacheToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamMapsPNC.placeId $ Se.Eq (Just placeId)]
     Nothing -> pure []
@@ -68,7 +68,7 @@ findPlaceByGeoHash :: L.MonadFlow m => Text -> m [PlaceNameCache]
 findPlaceByGeoHash geoHash = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamMapsPNC.PlaceNameCacheT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> either (pure []) (transformBeamPlaceNameCacheToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamMapsPNC.geoHash $ Se.Eq (Just geoHash)]
     Nothing -> pure []

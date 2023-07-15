@@ -44,7 +44,7 @@ findByMerchantId :: L.MonadFlow m => Id Merchant -> m (Maybe MerchantServiceUsag
 findByMerchantId (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamMSUC.MerchantServiceUsageConfigT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> either (pure Nothing) (transformBeamMerchantServiceUsageConfigToDomain <$>) <$> KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamMSUC.merchantId $ Se.Eq merchantId]
     Nothing -> pure Nothing
@@ -73,7 +73,7 @@ updateMerchantServiceUsageConfig :: (L.MonadFlow m, MonadTime m) => MerchantServ
 updateMerchantServiceUsageConfig MerchantServiceUsageConfig {..} = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamMSUC.MerchantServiceUsageConfigT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->

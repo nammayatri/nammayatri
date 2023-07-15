@@ -45,7 +45,7 @@ findAll cancStage = do
     OnConfirm -> pure $ Se.Is BeamCR.onConfirm $ Se.Eq True
     OnAssign -> pure $ Se.Is BeamCR.onAssign $ Se.Eq True
   let modelName = Se.modelTableName @BeamCR.CancellationReasonT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> either (pure []) (transformBeamCancellationReasonToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamCR.enabled $ Se.Eq True, seCaseCondition]] (Se.Desc BeamCR.priority) Nothing Nothing
     Nothing -> pure []

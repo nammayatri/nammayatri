@@ -136,6 +136,9 @@ let cacheTranslationConfig = { expTranslationTime = +3600 }
 
 let kafkaProducerCfg = { brokers = [ "localhost:29092" ] }
 
+let tables =
+      { kVTables = [ "ride" ] : List Text, kVHardKilledTables = [] : List Text }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , esqLocationDBCfg
@@ -201,4 +204,5 @@ in  { esqDBCfg
     , enableAPILatencyLogging = True
     , enableAPIPrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings
+    , tables
     }

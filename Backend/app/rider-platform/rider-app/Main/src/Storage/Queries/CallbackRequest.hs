@@ -30,7 +30,7 @@ create :: L.MonadFlow m => CallbackRequest -> m (MeshResult ())
 create callbackRequest = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamCR.CallbackRequestT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainCallbackRequestToBeam callbackRequest)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")

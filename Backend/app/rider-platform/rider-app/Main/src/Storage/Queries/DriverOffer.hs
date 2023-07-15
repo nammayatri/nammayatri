@@ -32,7 +32,7 @@ createDriverOffer :: L.MonadFlow m => DriverOffer -> m (MeshResult ())
 createDriverOffer driverOffer = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamDO.DriverOfferT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainDriverOfferToBeam driverOffer)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -41,7 +41,7 @@ findById :: L.MonadFlow m => Id DriverOffer -> m (Maybe DriverOffer)
 findById (Id driverOfferId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamDO.DriverOfferT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamDriverOfferToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDO.id $ Se.Eq driverOfferId]
     Nothing -> pure Nothing
@@ -50,7 +50,7 @@ findByBPPQuoteId :: L.MonadFlow m => Id BPPQuote -> m [DriverOffer]
 findByBPPQuoteId (Id bppQuoteId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamDO.DriverOfferT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamDriverOfferToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDO.bppQuoteId $ Se.Eq bppQuoteId]
     Nothing -> pure []
@@ -70,7 +70,7 @@ updateStatus :: (L.MonadFlow m, MonadTime m) => Id Estimate -> DriverOfferStatus
 updateStatus (Id estimateId) status_ = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamDO.DriverOfferT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
