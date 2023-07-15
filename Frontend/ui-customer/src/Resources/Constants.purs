@@ -200,7 +200,7 @@ getFaresList fares baseDistance =
               "SGST" -> item.amount * 2 
               _ -> item.amount)
           , title : case item.description of
-                      "BASE_FARE" -> (getEN BASE_FARES) <> " (" <> baseDistance <> ")"
+                      "BASE_FARE" -> (getEN BASE_FARES) <> if baseDistance == "0 m" then "" else " (" <> baseDistance <> ")"
                       "EXTRA_DISTANCE_FARE" -> getEN NOMINAL_FARE
                       "DRIVER_SELECTED_FARE" -> getEN DRIVER_ADDITIONS
                       "TOTAL_FARE" -> getEN TOTAL_PAID

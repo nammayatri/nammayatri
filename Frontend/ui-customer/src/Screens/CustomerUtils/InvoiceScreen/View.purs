@@ -128,7 +128,7 @@ amountBreakupView state =
               ]
               [ textView $
                   [ text case item.fareType of
-                      "BASE_FARE" -> (getString BASE_FARES) <> " (" <> state.data.selectedItem.baseDistance <> ")"
+                      "BASE_FARE" -> (getString BASE_FARES) <> if state.data.selectedItem.baseDistance == "0 m" then "" else " (" <> state.data.selectedItem.baseDistance <> ")"
                       "EXTRA_DISTANCE_FARE" -> getString NOMINAL_FARE
                       "DRIVER_SELECTED_FARE" -> getString DRIVER_ADDITIONS
                       "TOTAL_FARE" -> getString TOTAL_PAID
