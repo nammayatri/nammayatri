@@ -501,6 +501,7 @@ const englishStrings = {
   PAY : "Pay",
   LATER : "Later",
   GREAT_JOB : "Great Job!",
+  YOU_HAVE_COMPLETED_RIDES_YESTERDAY : "You have completed X Rides yesterday!",
   FEE_BREAKUP : "Fee breakup",
   YATRI_SATHI_FEE_PAYABLE_FOR_DATE : "Yatri Sathi fee payable for",
   FEE_CORRESPONDING_TO_THE_DISTANCE : "A fee corresponding to the distance travelled per trip, will be calculated as shown below.",
@@ -517,5 +518,9 @@ const englishStrings = {
   WE_WILL_NOTIFY_WHEN_PAYMENT_SUCCESS : "We will notify when your payment is successful",
   CONTINUE_TAKING_RIDES : "Continue taking rides",
   YOUR_PREVIOUS_PAYMENT_IS_PENDING : "Your  previous payment is still pending",
-  GOVERMENT_CHARGES : "Government Charges"
+  GOVERMENT_CHARGES : "Government Charges",
+  TODAY : "Today",
+  OKAY : "Okay",
+  NO_PAYMENT_HISTORY_AVAILABLE : "No payment history available",
+  YOU_DONT_HAVE_ANY_PAYMENTS : "You haven’t done any payment yet"
 }

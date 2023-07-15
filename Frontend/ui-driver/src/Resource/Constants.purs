@@ -59,3 +59,6 @@ decodeAddress ( LocationInfo address) fullAddress =
                     (trim (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
                     else
                     (trim (fromMaybe "" address.street)) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country)
+
+tripDatesCount :: Int
+tripDatesCount = 15

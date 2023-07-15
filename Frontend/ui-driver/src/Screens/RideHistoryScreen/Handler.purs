@@ -31,6 +31,7 @@ import PrestoDOM.Core (getPushFn)
 import Services.APITypes (RidesInfo(..), Status(..))
 import Data.Maybe (Maybe(..))
 import Types.ModifyScreenState (modifyScreenState)
+import Screens.RideHistoryScreen.ScreenData (initData) as RideHistoryScreenData
 
 
 
@@ -43,18 +44,30 @@ rideHistory = do
   case act of
     GoBack -> App.BackT $ pure App.GoBack
     RideHistoryScreen updatedState -> App.BackT $ App.BackPoint <$> (pure $ MY_RIDE updatedState)
-    HomeScreen -> App.BackT $ App.BackPoint <$> (pure $ HOME_SCREEN )
-    ProfileScreen -> App.BackT $ App.BackPoint <$> (pure $ PROFILE_SCREEN )
-    GoToReferralScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_REFERRAL_SCREEN
+    HomeScreen -> do
+      modifyScreenState $ RideHistoryScreenStateType (\_ -> RideHistoryScreenData.initData)
+      App.BackT $ App.BackPoint <$> (pure $ HOME_SCREEN )
+    ProfileScreen -> do
+      modifyScreenState $ RideHistoryScreenStateType (\_ -> RideHistoryScreenData.initData)
+      App.BackT $ App.BackPoint <$> (pure $ PROFILE_SCREEN )
+    GoToReferralScreen -> do
+      modifyScreenState $ RideHistoryScreenStateType (\_ -> RideHistoryScreenData.initData)
+      App.BackT $ App.BackPoint <$> pure GO_TO_REFERRAL_SCREEN
     GoToTripDetails updatedState -> do
-      modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{currentTab = updatedState.currentTab})
+      modifyScreenState $ RideHistoryScreenStateType (\_ -> updatedState{currentTab = updatedState.currentTab})
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_TRIP_DETAILS updatedState.selectedItem)
-    LoaderOutput updatedState -> App.BackT $ App.BackPoint <$> (pure $ LOADER_OUTPUT updatedState)
-    RefreshScreen updatedState -> App.BackT $ App.BackPoint <$> (pure $ REFRESH updatedState)
+    LoaderOutput updatedState -> do
+      modifyScreenState $ RideHistoryScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ LOADER_OUTPUT updatedState)
+    RefreshScreen updatedState -> do
+      modifyScreenState $ RideHistoryScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ REFRESH updatedState)
     GoToFilter currentTab -> App.BackT $ App.BackPoint <$> (pure $ FILTER currentTab)
-    GoToNotification -> App.BackT $ App.BackPoint <$> (pure $ NOTIFICATION_FLOW)
+    GoToNotification -> do 
+      modifyScreenState $ RideHistoryScreenStateType (\_ -> RideHistoryScreenData.initData)
+      App.BackT $ App.BackPoint <$> (pure $ NOTIFICATION_FLOW)
     SelectedTab updatedState -> do
-      modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{currentTab = updatedState.currentTab, offsetValue = 0})
+      modifyScreenState $ RideHistoryScreenStateType (\_ -> updatedState{currentTab = updatedState.currentTab, offsetValue = 0})
       App.BackT $ App.BackPoint <$> (pure $ SELECTED_TAB updatedState)
     OpenPaymentHistoryScreen updatedState -> do
       modifyScreenState $ RideHistoryScreenStateType (\_ -> updatedState)

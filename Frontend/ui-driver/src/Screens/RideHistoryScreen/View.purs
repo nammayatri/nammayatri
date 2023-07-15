@@ -16,8 +16,10 @@
 module Screens.RideHistoryScreen.View where
 
 import Common.Types.App
+import Debug
 import Screens.RideHistoryScreen.ComponentConfig
 
+import Animation (fadeIn, fadeInWithDelay, fadeOut)
 import Animation as Anim
 import Components.BottomNavBar as BottomNavBar
 import Components.BottomNavBar.Controller (navData)
@@ -28,7 +30,7 @@ import Components.PaymentHistoryModel as PaymentHistoryModel
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array ((..))
+import Data.Array (length, (..))
 import Data.Array as DA
 import Data.Function.Uncurried (runFn1)
 import Data.Tuple as DT
@@ -37,22 +39,23 @@ import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn2, runEffectFn3)
 import Engineering.Helpers.BackTrack (liftFlowBT)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag)
+import Engineering.Helpers.Commons (flowRunner, getDateFromObj, getFormattedDate, getNewIDWithTag)
 import Engineering.Helpers.Commons (safeMarginBottom, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getcurrentdate)
-import JBridge (getAllDates, getDateFromObj, horizontalScrollToPos)
+import JBridge (getAllDates, horizontalScrollToPos)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), (<$>), const, (==), (<<<), bind, pure, unit, discard, show, not, map, (&&), ($), (<$>), (<>), (<<<), (==), (/), (>))
+import Prelude (Unit, ($), (<$>), const, (==), (<<<), bind, pure, unit, discard, show, not, map, (&&), ($), (<$>), (<>), (<<<), (==), (/), (>), (-))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, calendar, color, cornerRadius, fontSize, fontStyle, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarX, scrollBarY, stroke, swipeRefreshLayout, text, textSize, textView, visibility, weight, width, clickable)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, calendar, clickable, color, cornerRadius, fontSize, fontStyle, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarX, scrollBarY, stroke, swipeRefreshLayout, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Keyed as Keyed
 import PrestoDOM.Events (globalOnScroll)
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Types.Core (toPropValue)
+import Resource.Constants (tripDatesCount)
 import Screens as ScreenNames
 import Screens.RideHistoryScreen.Controller (Action(..), ScreenOutput, eval, prestoListFilter)
 import Screens.Types as ST
@@ -61,7 +64,6 @@ import Services.Backend as Remote
 import Storage (getValueToLocalStore)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
-import Debug
 
 
 screen :: ST.RideHistoryScreenState -> PrestoList.ListItem -> Screen Action ST.RideHistoryScreenState ScreenOutput
@@ -105,67 +107,70 @@ view rideListItem push state =
         $ relativeLayout
             [ height MATCH_PARENT
             , width WRAP_CONTENT
-            ]
-            [ linearLayout
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                , orientation VERTICAL
-                ]
-                [ linearLayout
-                    [ height WRAP_CONTENT
-                    , width MATCH_PARENT
-                    , orientation VERTICAL
-                    , weight 1.0
-                    ]
-                    [ headerView push state
-                    , ridesView rideListItem push state
-                    ]
-                , linearLayout
-                    [ height WRAP_CONTENT
-                    , width MATCH_PARENT
-                    , orientation VERTICAL
-                    , background Color.white900
-                    , onClick push (const Loader)
-                    , gravity CENTER
-                    , alignParentBottom "true,-1"
-                    , padding (PaddingBottom 5)
-                    , visibility if (state.loaderButtonVisibility && (not state.loadMoreDisabled)) then VISIBLE else GONE --(state.data.totalItemCount == (state.data.firstVisibleItem + state.data.visibleItemCount) && state.data.totalItemCount /= 0 && state.data.totalItemCount /= state.data.visibleItemCount) then VISIBLE else GONE
-                    ]
-                    [ linearLayout
-                        [ height WRAP_CONTENT
-                        , width WRAP_CONTENT
-                        , orientation VERTICAL
-                        , margin $ Margin 0 5 0 5
-                        ]
-                        [ textView
-                            ( [ width WRAP_CONTENT
-                              , height WRAP_CONTENT
-                              , text (getString LOAD_MORE)
-                              , padding (Padding 10 5 10 5)
-                              , color Color.blueTextColor
-                              ]
-                                <> FontStyle.subHeading1 TypoGraphy
-                            )
-                        ]
-                    ]
-                , BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.RIDE_HISTORY_SCREEN)
-                ]
-            , paymentHistoryModel push state
-            ]
+            ]$[rideListView rideListItem push state] <> if state.props.showPaymentHistory then [paymentHistoryModel push state] else []
     ]
+
+rideListView :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w
+rideListView rideListItem push state = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  ]
+  [ linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , weight 1.0
+      ]
+      [ headerView push state
+      , ridesView rideListItem push state
+      ]
+  , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , background Color.white900
+      , onClick push (const Loader)
+      , gravity CENTER
+      , alignParentBottom "true,-1"
+      , padding (PaddingBottom 5)
+      , visibility if (state.loaderButtonVisibility && (not state.loadMoreDisabled)) then VISIBLE else GONE --(state.data.totalItemCount == (state.data.firstVisibleItem + state.data.visibleItemCount) && state.data.totalItemCount /= 0 && state.data.totalItemCount /= state.data.visibleItemCount) then VISIBLE else GONE
+      ]
+      [ linearLayout
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , orientation VERTICAL
+          , margin $ Margin 0 5 0 5
+          ]
+          [ textView
+              ( [ width WRAP_CONTENT
+                , height WRAP_CONTENT
+                , text (getString LOAD_MORE)
+                , padding (Padding 10 5 10 5)
+                , color Color.blueTextColor
+                ]
+                  <> FontStyle.subHeading1 TypoGraphy
+              )
+          ]
+      ]
+  , BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.RIDE_HISTORY_SCREEN)
+  ]
 
 paymentHistoryModel :: forall w . (Action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w
 paymentHistoryModel push state = 
-  linearLayout
+    PrestoAnim.animationSet[
+    fadeIn state.props.showPaymentHistory
+  , fadeOut $ not state.props.showPaymentHistory
+  ] $ linearLayout
   [ width MATCH_PARENT
   , orientation VERTICAL
   , height MATCH_PARENT
   , background Color.white900
   , clickable true
   , visibility $ if state.props.showPaymentHistory then VISIBLE else GONE
-  ][ PaymentHistoryModel.view (push <<< PaymentHistoryModelAC) state.data.paymentHistory
-  , BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.RIDE_HISTORY_SCREEN)
-    ]
+  ]$[ PaymentHistoryModel.view (push <<< PaymentHistoryModelAC) state.data.paymentHistory
+    ] <> if (length state.data.paymentHistory.paymentHistoryList) == 0 then [] else [BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.RIDE_HISTORY_SCREEN)]
 
 headerView :: forall w . (Action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w
 headerView push state =
@@ -176,7 +181,7 @@ headerView push state =
     , gravity CENTER
     , margin $ MarginTop 16
     ][ textView $
-        [ text $ getString RIDES
+        [ text $ getString TRIPS
         , gravity CENTER_VERTICAL
         , color Color.black900
         , margin (MarginBottom 10)
@@ -260,13 +265,11 @@ calendarView push state =
           , width WRAP_CONTENT
           , orientation HORIZONTAL
           , gravity CENTER_VERTICAL
-          , onClick (\action -> do
-              push action
-              runEffectFn3 horizontalScrollToPos (getNewIDWithTag "DatePickerScrollView") (getNewIDWithTag $ "DatePickerScrollView" <> show state.datePickerState.activeIndex) 66) (const ShowDatePicker)
+          , onClick push (const ShowDatePicker)
           ][ textView
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , text $ "TODAY"
+              , text $ if state.datePickerState.activeIndex == (tripDatesCount - 1) then getString TODAY else runFn1 getFormattedDate state.datePickerState.selectedItem
               , color Color.black800
               , margin $ MarginRight 12
               ]
@@ -319,7 +322,7 @@ ridesView rideListItem push state =
   relativeLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
-  ][ linearLayout
+  ]$[ linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       ][ swipeRefreshLayout
@@ -341,7 +344,7 @@ ridesView rideListItem push state =
                 , onScrollStateChange push (ScrollStateChanged)
                 , visibility $ case state.shimmerLoader of
                             ST.AnimatedOut -> VISIBLE
-                            _ -> GONE
+                            _ -> if state.props.showPaymentHistory then VISIBLE else GONE
                 , PrestoList.listItem rideListItem
                 , background Color.bg_grey
                 , PrestoList.listDataV2 (prestoListFilter state.currentTab state.prestoListArrayItems)
@@ -374,7 +377,7 @@ ridesView rideListItem push state =
                     , PrestoList.listDataV2 $ shimmerData <$> (1..5)
                     , visibility $ case state.shimmerLoader of
                             ST.AnimatedOut -> GONE
-                            _ -> VISIBLE
+                            _ -> if state.props.showPaymentHistory then GONE else VISIBLE
                     ]
               , DT.Tuple "NoRides"
                   $ linearLayout
@@ -383,26 +386,25 @@ ridesView rideListItem push state =
                     , padding (PaddingBottom safeMarginBottom)
                     , background Color.white900
                     , visibility $ case state.shimmerLoader of
-                              ST.AnimatedOut ->  if DA.length (prestoListFilter state.currentTab state.prestoListArrayItems) > 0 then GONE else VISIBLE
-                              _ -> GONE
+                              ST.AnimatedOut ->  if (DA.length (prestoListFilter state.currentTab state.prestoListArrayItems) > 0) then GONE else VISIBLE
+                              _ -> if state.props.showPaymentHistory then VISIBLE else GONE
                     ][  ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig state)]
               ])
             ]
       ]
-    , linearLayout
+  ] <> if state.props.showDatePicker then [linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , background Color.blackLessTrans
     , visibility if state.props.showDatePicker then VISIBLE else GONE
     , onClick push $ const ShowDatePicker
-    ][linearLayout
+    ][   linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
       , background Color.white900
-      ][DatePickerModel.view (push <<< DatePickerAC) (DatePickerModel.config{activeIndex = state.datePickerState.activeIndex, dates = getAllDates 15, id = "DatePickerScrollView"})]
-    ]
-  ]
+      ][DatePickerModel.view (push <<< DatePickerAC) (DatePickerModel.config{activeIndex = state.datePickerState.activeIndex, dates = getAllDates tripDatesCount, id = "DatePickerScrollView"})]
+    ]] else []
 
 separatorView :: forall w. PrestoDOM (Effect Unit) w
 separatorView =

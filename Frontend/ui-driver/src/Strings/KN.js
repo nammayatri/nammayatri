@@ -489,5 +489,6 @@ const kannadaStrings = {
   YOU : " (ನೀವು)",
   DAILY : "ಪ್ರತಿದಿನ",
   WEEKLY : "ಸಾಪ್ತಾಹಿಕ",
-  NEW_ : "ಹೊಸದು"
+  NEW_ : "ಹೊಸದು",
+  TODAY : "ಇಂದು"
 }

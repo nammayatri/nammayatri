@@ -1604,6 +1604,7 @@ export const hideLoader = function () {
   JOS.emitEvent("java")("onEvent")(JSON.stringify({event : "hide_loader"}))()()
 }
 
+
 export const getAllDates = function (noOfDays){
   let dateArray = [];
   try {
@@ -1622,17 +1623,10 @@ export const getAllDates = function (noOfDays){
   return dateArray.reverse();
 }
 
-export const getDateFromObj = function (obj){
-  let date = new Date(`${obj.month} ${obj.date}, ${obj.year}`);
-  var dd = String(date.getDate()).padStart(2, '0');
-  var mm = String(date.getMonth() + 1).padStart(2, '0'); //January is 0!
-  var yyyy = date.getFullYear();
-  return  yyyy + '-' + mm + '-' + dd;
-}
 
 export const  horizontalScrollToPos = function (id, childId, focus) {
   if (window.JBridge.horizontalScrollToPos){
-    window.JBridge.horizontalScrollToPos(id,childId);
+    window.JBridge.horizontalScrollToPos(id,childId, focus);
   }
 }
 

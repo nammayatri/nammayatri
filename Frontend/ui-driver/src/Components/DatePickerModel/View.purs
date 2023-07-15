@@ -2,22 +2,31 @@ module Components.DatePickerModel.View where
 
 import Prelude
 
+import Animation (fadeIn, translateInYAnim)
+import Animation.Config (translateYAnimConfig)
 import Common.Types.App (LazyCheck(..))
 import Components.DatePickerModel.Controller (Action(..), Config)
 import Data.Array (mapWithIndex)
+import Debug (spy)
 import Effect (Effect)
-import Effect.Uncurried (runEffectFn2)
+import Effect.Uncurried (runEffectFn2, runEffectFn3)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Font.Style as FontStyle
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), PrestoDOM, afterRender, background, color, cornerRadius, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, scrollBarX, scrollBarY, stroke, text, textView, weight, width)
+import JBridge (horizontalScrollToPos)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), PrestoDOM, afterRender, background, color, cornerRadius, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onClick, orientation, scrollBarX, scrollBarY, stroke, text, textView, weight, width)
+import PrestoDOM.Animation as PrestoAnim
 import Styles.Colors as Color
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
+  PrestoAnim.animationSet [
+    translateInYAnim translateYAnimConfig
+  ] $ 
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , margin $ MarginVertical 18 20
+    , onAnimationEnd (\_ -> runEffectFn3 horizontalScrollToPos (getNewIDWithTag config.id) (getNewIDWithTag (config.id <> show config.activeIndex)) 66) (const unit)
     ]
     [ horizontalScrollView
         [ height WRAP_CONTENT
