@@ -871,7 +871,6 @@ type HomeScreenProps =  {
   driverStatusSet :: DriverStatus,
   silentPopUpView :: Boolean,
   zoneRideBooking :: Boolean,
-  showGenderBanner :: Boolean,
   notRemoveBanner :: Boolean,
   showBonusInfo :: Boolean,
   timerRefresh :: Boolean,
@@ -879,8 +878,10 @@ type HomeScreenProps =  {
   isChatOpened :: Boolean,
   showAadharPopUp :: Boolean,
   canSendSuggestion :: Boolean,
-  showOffer :: Boolean
+  showOffer :: Boolean,
+  banners :: Array Common.BannerType
  }
+
 
 data DriverStatus = Online | Offline | Silent
 

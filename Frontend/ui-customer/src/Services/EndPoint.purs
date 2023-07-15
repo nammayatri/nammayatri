@@ -144,3 +144,5 @@ callbackRequest dummy = (getBaseUrl "38") <> "/support/callbackRequest"
 
 bookingFeedback :: String -> String
 bookingFeedback dummy = (getBaseUrl "39") <> "/feedback/submit"
+appStoreLink :: String -> String
+appStoreLink appId = "https://itunes.apple.com/in/lookup?id=" <> appId

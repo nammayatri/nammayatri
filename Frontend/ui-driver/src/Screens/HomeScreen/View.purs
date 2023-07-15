@@ -17,7 +17,7 @@ module Screens.HomeScreen.View where
 
 import Animation as Anim
 import Animation.Config as AnimConfig
-import Common.Types.App (LazyCheck(..), APIPaymentStatus(..))
+import Common.Types.App (LazyCheck(..), APIPaymentStatus(..), BannerType(..))
 import Types.App (defaultGlobalState)
 import Components.BottomNavBar as BottomNavBar
 import Components.SelectListModal as SelectListModal
@@ -277,8 +277,10 @@ driverMapsHeaderView push state =
                 ]
               ]
             , alternateNumberOrOTPView state push
-            , if(state.props.showGenderBanner && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True") then genderBannerView state push else linearLayout[][]
-            , if state.data.paymentState.paymentStatusBanner then paymentStatusBanner state push else dummyTextView
+            , if state.data.paymentState.paymentStatusBanner then paymentStatusBanner state push
+              else if(DA.any (\item -> item == AppUpdateBanner) state.props.banners && state.props.driverStatusSet /= ST.Offline) then updateAppBannerView state push
+              else if(DA.any (\item -> item == ProfileUpdateBanner) state.props.banners  && state.props.driverStatusSet /= ST.Offline && getValueToLocalStore IS_BANNER_ACTIVE == "True") then genderBannerView state push 
+              else linearLayout[][]
             ]
         ]
         , bottomNavBar push state
@@ -363,8 +365,20 @@ genderBannerView state push =
         , onClick push (const RemoveGenderBanner)
         , imageWithFallback "ny_ic_grey_cross,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_grey_cross_icon.png"
         ]
-        , genderBanner push state
+        , Banner.view (push <<< GenderBannerModal) (genderBannerConfig state)
       ]
+    ]
+
+updateAppBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+updateAppBannerView state push = 
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin (Margin 10 10 10 10)
+    , gravity BOTTOM
+    ][     
+        Banner.view (push <<< UpdateBanner) (appUpdateBannerConfig state)
     ]
 
 otpButtonView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
@@ -1205,7 +1219,3 @@ launchMaps push action = do
     doAff do liftEffect $ push $ action
     else pure unit
   pure unit
-
-genderBanner :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-genderBanner push state =
-  Banner.view (push <<< GenderBannerModal) (genderBannerConfig state)

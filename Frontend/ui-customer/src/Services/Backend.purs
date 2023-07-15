@@ -886,3 +886,10 @@ makeRideFeedBackReq id feedbackList = RideFeedbackReq
     {   "rideId" : id
     ,   "feedback" : feedbackList
     }
+------------------------------------------------------------------------ AppStoreVersion Function ------------------------------------------------------------------------------------
+
+getAppStoreVersion appId = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.appStoreLink appId) unwrapResponse $ callAPI headers (AppStoreReq appId)
+    where
+        unwrapResponse (x) = x

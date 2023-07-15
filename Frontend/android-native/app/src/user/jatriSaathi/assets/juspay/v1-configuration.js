@@ -17,6 +17,7 @@ window.getMerchantConfig = function () {
     "YOUR_FEEDBACK_HELPS_US"
     ],
     "isReferralEnabled": "false",
+    "appId" : "6451491581",
     "showBookingPreference": "false",
     "showRateCard": "false",
     "showDashboard": "false",

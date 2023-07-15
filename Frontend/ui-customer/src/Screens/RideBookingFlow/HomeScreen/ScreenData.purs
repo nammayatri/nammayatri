@@ -28,6 +28,8 @@ import Prelude(negate)
 import Foreign.Object (empty)
 import MerchantConfig.DefaultConfig as DC
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
+import Common.Types.App (BannerType(..))
+
 
 initData :: HomeScreenState
 initData = {
@@ -187,7 +189,7 @@ initData = {
     , openChatScreen : false
     , emergencyHelpModelState : emergencyHelpModalData
     , showLiveDashboard : false
-    , isBanner : true
+    , banners : []
     , callSupportPopUp : false
     , isMockLocation: false
     , isSpecialZone : false

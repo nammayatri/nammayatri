@@ -73,6 +73,6 @@ updateRideDetails state = do
     , currentStage = FindingEstimate
     , rideRequestFlow = true
     , isSpecialZone = state.data.selectedItem.isSpecialZone
-    , isBanner = globalState.homeScreen.props.isBanner
+    , banners = globalState.homeScreen.props.banners
     }
     })

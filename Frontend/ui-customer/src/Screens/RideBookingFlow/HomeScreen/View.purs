@@ -18,7 +18,7 @@ module Screens.HomeScreen.View where
 import Accessor (_lat, _lon, _selectedQuotes, _fareProductType)
 import Animation (fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromTopWithAlpha, fadeIn)
 import Animation.Config (Direction(..), translateFullYAnimWithDurationConfig, translateYAnimHomeConfig)
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), BannerType(..))
 import Components.Banner.Controller as BannerConfig
 import Components.Banner.View as Banner
 import Components.ChatView as ChatView
@@ -45,7 +45,7 @@ import Components.SettingSideBar as SettingSideBar
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (any, length, mapWithIndex, null, (!!))
+import Data.Array (any, length, mapWithIndex, null, (!!), head)
 import Data.Either (Either(..))
 import Data.Int (toNumber, fromString, ceil)
 import Data.Lens ((^.))
@@ -62,7 +62,7 @@ import Engineering.Helpers.LogEvent (logEvent)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (decodeError, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, getCommonAssetStoreLink, getAssetStoreLink, getAssetsBaseUrl, getSearchType)
-import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, startTimerWithTime, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen, scrollOnResume, waitingCountdownTimer, lottieAnimationConfig)
+import JBridge (addMarker, animateCamera, checkUpdate, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, getVersionName, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, startTimerWithTime, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen, scrollOnResume, startUpdate, waitingCountdownTimer, lottieAnimationConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -76,13 +76,13 @@ import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.AddNewAddressScreen.Controller as AddNewAddress
-import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval, flowWithoutOffers, getCurrentCustomerLocation)
+import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval, flowWithoutOffers, getCurrentCustomerLocation, dummyAppDetail)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (transformSavedLocations)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.Types (HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CallType(..), ZoneType(..), SearchResultType(..))
-import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..))
-import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, driverTracking, rideTracking, walkCoordinates, walkCoordinate, getSavedLocationList)
+import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..), AppStoreRes(..), AppDetails(..))
+import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, driverTracking, rideTracking, walkCoordinates, walkCoordinate, getSavedLocationList, getAppStoreVersion)
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage)
 import Styles.Colors as Color
@@ -102,6 +102,7 @@ screen initialState =
             -- push NewUser -- TODO :: Handle the functionality
             _ <- if initialState.data.config.enableMockLocation then isMockLocation push IsMockLocation else pure unit
             _ <- launchAff $ flowRunner defaultGlobalState $ checkForLatLongInSavedLocations push UpdateSavedLoc initialState
+            _ <- launchAff $ flowRunner defaultGlobalState $ checkAppVersion push ShowAppUpdateBanner initialState
             if (not initialState.props.callbackInitiated) then do
               _ <- pure $ printLog "storeCallBackCustomer initiateCallback" "."
               _ <- storeCallBackCustomer push NotificationListener
@@ -708,8 +709,8 @@ buttonLayout state push =
             , padding (PaddingTop 16)
             ]
             [ PrimaryButton.view (push <<< PrimaryButtonActionController) (whereToButtonConfig state)
-            , if (((state.data.savedLocations == []) && state.data.recentSearchs.predictionArray == [] && state.props.isBanner == false) || state.props.isSearchLocation == LocateOnMap) then emptyLayout state else recentSearchesAndFavourites state push
-            ]
+            , if ((state.data.savedLocations == [] && state.data.recentSearchs.predictionArray == [] &&  length state.props.banners == 0) || state.props.isSearchLocation == LocateOnMap) then emptyLayout state else recentSearchesAndFavourites state push
+            ] 
         ]
 
 recentSearchesAndFavourites :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -721,8 +722,10 @@ recentSearchesAndFavourites state push =
   , padding $ Padding 16 0 16 (16+safeMarginBottom)
   , cornerRadii $ Corners (4.0) true true false false
   ]([ savedLocationsView state push
-   , recentSearchesView state push])
-  --  <> if(state.props.isBanner) then [genderBannerView state push] else [])
+   , recentSearchesView state push]
+   <> if(any (\item -> item == AppUpdateBanner) state.props.banners) then [updateAppBannerView state push] 
+      else if(any (\item -> item == ProfileUpdateBanner) state.props.banners) then [genderBannerView state push] else []
+   )
 
 
 genderBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -731,11 +734,17 @@ genderBannerView state push =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , margin $ MarginVertical 10 10
-    , visibility if state.data.config.showGenderBanner then VISIBLE else GONE
-    ][
-        genderBanner push state
-    ]
+    , margin (Margin 0 20 0 10)
+    ][ Banner.view (push <<< GenderBannerModal) (genderBannerConfig state) ]
+
+updateAppBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+updateAppBannerView state push = 
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin (Margin 0 20 0 10)
+    ][ Banner.view (push <<< UpdateBanner) (appUpdateBannerConfig state) ]
 
 
 savedLocationsView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -775,14 +784,14 @@ recentSearchesView state push =
                   [ width MATCH_PARENT
                   , height WRAP_CONTENT
                   , orientation VERTICAL
-                  , visibility if (state.props.isBanner && index >0) then GONE else VISIBLE
+                  , visibility if (length state.props.banners /= 0 && index >0) then GONE else VISIBLE
                   ]
                   [ LocationListItem.view (push <<< PredictionClickedAction) item
                   , linearLayout
                       [ height $ V 1
                       , width MATCH_PARENT
                       , background Color.lightGreyShade
-                      , visibility if (index == (length state.data.recentSearchs.predictionArray) - 1) || (state.props.isBanner) then GONE else VISIBLE
+                      , visibility if (index == (length state.data.recentSearchs.predictionArray) - 1) || (length state.props.banners /= 0) then GONE else VISIBLE
                       ]
                       []
                   ]
@@ -2392,6 +2401,18 @@ confirmingLottieView push state =
           ]
     ]
 
-genderBanner :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-genderBanner push state =
-  Banner.view (push <<< GenderBannerModal) (genderBannerConfig state)
+checkAppVersion :: forall action. (action -> Effect Unit) -> action -> HomeScreenState -> Flow GlobalState Unit
+checkAppVersion push action state = do
+  if os == "IOS" then do 
+      apiResponse <- getAppStoreVersion (getValueFromConfig "appId")
+      versionName <- liftFlow getVersionName
+      case apiResponse of
+            Right (AppStoreRes response) -> do
+              result <- pure $ head response.results
+              (AppDetails app) <- pure $ fromMaybe dummyAppDetail result
+              let showBanner = startUpdate "CHECK_UPDATE_FUNCTION_IN_IOS"
+              if(versionName < app.version && showBanner) then liftFlow $ push $ action else pure unit
+            Left err -> pure unit
+  else do
+      updateAvailable <- pure $ checkUpdate unit
+      if updateAvailable then liftFlow $ push $ action else pure unit

@@ -129,7 +129,6 @@ initData = {
         openChatScreen : false,
         silentPopUpView : false,
         zoneRideBooking : true,
-        showGenderBanner : false,
         notRemoveBanner : true,
         showBonusInfo : false,
         timerRefresh : true,
@@ -137,6 +136,7 @@ initData = {
         isChatOpened : false,
         showAadharPopUp : true,
         canSendSuggestion : true,
-        showOffer : false
+        showOffer : false,
+        banners : []
     }
 }

@@ -268,3 +268,13 @@ data OTPChannel = WHATSAPP | SMS
 derive instance genericOTPChannel :: Generic OTPChannel _
 instance showOTPChannel :: Show OTPChannel where show = genericShow
 instance encodeOTPChannel  :: Encode OTPChannel where encode = defaultEncode
+
+data BannerType = AppUpdateBanner 
+                 | ProfileUpdateBanner
+                 | NoBanner
+
+derive instance genericBannerType :: Generic BannerType _
+instance showBannerType :: Show BannerType where show = genericShow
+instance eqBannerType :: Eq BannerType where eq = genericEq
+instance decodeBannerType :: Decode BannerType where decode = defaultDecode
+instance encodeBannerType  :: Encode BannerType where encode = defaultEncode

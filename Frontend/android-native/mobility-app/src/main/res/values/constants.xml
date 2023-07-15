@@ -32,6 +32,7 @@
     <string name="yatrisathiprovider" translatable="false">yatrisathiprovider</string>
     <string name="LANGUAGE_KEY" translatable="false">LANGUAGE_KEY</string>
     <string name="preference_file_key" translatable="false">godel</string>
+    <string name="UPDATE_TYPE" translatable="false">UPDATE_TYPE</string>
     <string name="location_update" translatable="false">LocationUpdate</string>
     <string name="CLEARED_FARE" translatable="false">CLEARED_FARE</string>
     <string name="entity_ids" translatable="false">entity_ids</string>

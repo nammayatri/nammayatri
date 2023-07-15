@@ -3,6 +3,7 @@ package in.juspay.mobility.app;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
@@ -15,6 +16,11 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.core.content.FileProvider;
 
+import com.google.android.play.core.appupdate.AppUpdateInfo;
+import com.google.android.play.core.appupdate.AppUpdateManager;
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory;
+import com.google.android.play.core.install.model.AppUpdateType;
+import com.google.android.play.core.install.model.UpdateAvailability;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.theartofdev.edmodo.cropper.CropImage;
 
@@ -31,9 +37,11 @@ import in.juspay.mobility.app.callbacks.CallBack;
 public class Utils {
 
     private static final String UTILS = "UTILS";
-
     private static final ArrayList<CallBack> callBack = new ArrayList<>();
 
+    public static boolean isUpdateAvailable = false;
+    public static final int REQUEST_CODE_UPDATE_APP = 587;
+    public static AppUpdateInfo appUpdateInfo;
     public static void registerCallback(CallBack notificationCallback) {
         callBack.add(notificationCallback);
     }
@@ -125,5 +133,38 @@ public class Utils {
 
     public static int getResIdentifier (Context context, String resName, String resType) {
         return context.getResources().getIdentifier(resName,resType,context.getPackageName());
+    }
+
+    public static void startUpdate(Context context, Activity activity){
+        try {
+            SharedPreferences sharedPref = context.getSharedPreferences(
+                    activity.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            AppUpdateManager appUpdateManager = AppUpdateManagerFactory.create(context);
+            int updateType = sharedPref.getString(context.getString(R.string.UPDATE_TYPE), "FLEXIBLE").equals("IMMEDIATE")
+                    ? AppUpdateType.IMMEDIATE : AppUpdateType.FLEXIBLE;
+            if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
+                    && appUpdateInfo.isUpdateTypeAllowed(updateType)) {
+                Log.d(UTILS, "Inside update");
+                try {
+                    appUpdateManager.startUpdateFlowForResult(
+                            // Pass the intent that is returned by 'getAppUpdateInfo()'.
+                            appUpdateInfo,
+                            updateType,
+                            // The current activity making the update request.
+                            activity,
+                            // Include a request code to later monitor this update request.
+                            REQUEST_CODE_UPDATE_APP
+                    );
+                } catch (IntentSender.SendIntentException e) {
+                    e.printStackTrace();
+                }
+                Log.d(UTILS, "Update available");
+            } else {
+                Log.d(UTILS, "No Update available");
+            }
+        }
+        catch(Exception e){
+            Log.d(UTILS, e.toString());
+        }
     }
 }

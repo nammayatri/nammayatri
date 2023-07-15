@@ -53,6 +53,7 @@ import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
 import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.google.android.gms.maps.MapsInitializer;
+import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.play.core.appupdate.AppUpdateInfo;
 import com.google.android.play.core.appupdate.AppUpdateManager;
@@ -82,6 +83,7 @@ import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.MyFirebaseMessagingService;
 import in.juspay.mobility.app.NotificationUtils;
 import in.juspay.mobility.app.RideRequestActivity;
+import in.juspay.mobility.app.Utils;
 import in.juspay.mobility.app.WidgetService;
 import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
 import in.juspay.mobility.common.MobilityCommonBridge;
@@ -91,7 +93,7 @@ import in.juspay.services.HyperServices;
 public class MainActivity extends AppCompatActivity {
 
     private static final String LOG_TAG = "MAIN_ACTIVITY";
-    private static final int REQUEST_CODE_UPDATE_APP = 587;
+
     private static int updateType;
     MyFirebaseMessagingService.BundleUpdateCallBack bundleUpdateCallBack;
     private HyperServices hyperServices;
@@ -152,7 +154,6 @@ public class MainActivity extends AppCompatActivity {
         }
     };
     private Intent widgetService;
-    private AppUpdateManager appUpdateManager;
     private boolean isHideSplashEventCalled = false;
     private boolean isSystemAnimEnabled = true;
     private String GAID;
@@ -315,33 +316,9 @@ public class MainActivity extends AppCompatActivity {
                 isSystemAnimEnabled = false;
             }
         }
-        appUpdateManager = AppUpdateManagerFactory.create(this);
-        // Returns an intent object that you use to check for an update.
-        Task<AppUpdateInfo> appUpdateInfoTask = appUpdateManager.getAppUpdateInfo();
-        updateType = AppUpdateType.IMMEDIATE;
-        appUpdateInfoTask.addOnSuccessListener(appUpdateInfo -> {
-            if (appUpdateInfo.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS
-                    && appUpdateInfo.isUpdateTypeAllowed(updateType)) {
-                Log.d(LOG_TAG, "Inside update");
-                try {
-                    appUpdateManager.startUpdateFlowForResult(
-                            // Pass the intent that is returned by 'getAppUpdateInfo()'.
-                            appUpdateInfo,
-                            // Or 'AppUpdateType.FLEXIBLE' for flexible updates.
-                            updateType,
-                            // The current activity making the update request.
-                            this,
-                            // Include a request code to later monitor this update request.
-                            getResources().getInteger(REQUEST_CODE_UPDATE_APP)
-                    );
-                } catch (IntentSender.SendIntentException e) {
-                    e.printStackTrace();
-                }
-                Log.d(LOG_TAG, "Update available");
-            } else {
-                Log.d(LOG_TAG, "No Update available");
-            }
-        });
+//        mobileNetworkCheck();
+        checkUpdate();
+        Utils.startUpdate(context, activity);
         updateConfigURL();
         initApp();
         inAppNotification = new InAppNotification(this);
@@ -363,6 +340,24 @@ public class MainActivity extends AppCompatActivity {
         MyFirebaseMessagingService.registerBundleUpdateCallback(bundleUpdateCallBack);
         MyFirebaseMessagingService.registerShowNotificationCallBack(inappCallBack);
     }
+    public void checkUpdate(){
+
+        SharedPreferences sharedPref = this.getSharedPreferences(
+                activity.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        int updateType = sharedPref.getString(getString(R.string.UPDATE_TYPE), "IMMEDIATE").equals("IMMEDIATE")
+                ? AppUpdateType.IMMEDIATE : AppUpdateType.FLEXIBLE; ////IMMEDIATE FLEXIBLE
+        AppUpdateManager appUpdateManager = AppUpdateManagerFactory.create(this);
+        appUpdateManager.getAppUpdateInfo().addOnSuccessListener(appUpdateInfo -> {
+            appUpdateInfo = appUpdateInfo;
+            if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
+                    && appUpdateInfo.isUpdateTypeAllowed(updateType)) {
+                Utils.isUpdateAvailable = true;
+            }
+
+        });
+    }
+
+
 
     private void initNotificationChannel() {
         NotificationUtils.createNotificationChannel(this, NotificationUtils.CHANNEL_ID);
@@ -389,7 +384,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         hyperServices.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_CODE_UPDATE_APP) {
+        if (requestCode == Utils.REQUEST_CODE_UPDATE_APP) {
                 if (resultCode != RESULT_OK) {
                     Log.i(LOG_TAG,"Update flow failed! Result code: " + resultCode);
                     if(updateType == AppUpdateType.IMMEDIATE){
@@ -545,6 +540,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        AppUpdateManager appUpdateManager = AppUpdateManagerFactory.create(this);
         if (sharedPref != null) {
             sharedPref.edit().putString(getResources().getString(in.juspay.mobility.app.R.string.ACTIVITY_STATUS), "onResume").apply();
             sharedPref.edit().putString("MAPS_OPENED", "null").apply();
@@ -557,7 +553,7 @@ public class MainActivity extends AppCompatActivity {
                             appUpdateInfo,
                             AppUpdateType.IMMEDIATE,
                             this,
-                            getResources().getInteger(REQUEST_CODE_UPDATE_APP)
+                            getResources().getInteger(Utils.REQUEST_CODE_UPDATE_APP)
                     );
                 } catch (IntentSender.SendIntentException e) {
                     e.printStackTrace();
