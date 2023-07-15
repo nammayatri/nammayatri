@@ -117,7 +117,7 @@ window.getMerchantConfig = function () {
     "profileCompletion" : "#FCC32C",
     "cancelRideColor" : "#E55454",
     "infoIconUrl" : "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png",
-    "merchantLogo" : "ic_launcher,https://assets.juspay.in/beckn/jatrisaathi/user/images/ic_launcher.png",
+    "merchantLogo" : "ny_ic_yatri_sathi_logo,https://assets.juspay.in/beckn/jatrisaathi/user/images/ny_ic_yatri_sathi_logo.png",
     "feedbackBackground": "#2C2F3A",
     "sideBarList": ["MyRides", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "Separator", "ShareApp", "About", "Logout"],
     "rateCardColor": "#2C2F3A",

@@ -139,10 +139,9 @@ amountBreakupView state =
                       "CUSTOMER_SELECTED_FARE" -> getString CUSTOMER_SELECTED_FARE
                       "SERVICE_CHARGE" -> getString SERVICE_CHARGES
                       "FIXED_GOVERNMENT_RATE" -> getString GOVERNMENT_CHAGRES
-                      "WAITING_OR_PICKUP_CHARGES"  -> getString PICKUP_CHARGE
+                      "WAITING_OR_PICKUP_CHARGES"  -> getString MISC_WAITING_CHARGE
                       "PLATFORM_FEE" -> getString PLATFORM_FEE
-                      "SGST" -> getString SGST
-                      "CGST" -> getString CGST
+                      "SGST" -> getString PLATFORM_GST
                       _ -> "BASE_FARE"
                   , color Color.black800
                   , layoutGravity "bottom"
@@ -154,7 +153,7 @@ amountBreakupView state =
                   , orientation HORIZONTAL
                   ]
                   [ textView $
-                      [ text $ item.price
+                      [ text item.price
                       , alignParentRight "true,-1"
                       , color Color.black800
                       , height WRAP_CONTENT

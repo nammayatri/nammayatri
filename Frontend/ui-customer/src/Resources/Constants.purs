@@ -18,7 +18,7 @@ module Resources.Constants where
 import Data.Array (filter, length, null, reverse, (!!), head, all)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), Replacement(..), contains, joinWith, replaceAll, split, trim)
-import Prelude (map, show, (&&), (-), (<>), (==), (>), ($), (+), (/=), (<), (/))
+import Prelude (map, show, (&&), (-), (<>), (==), (>), ($), (+), (/=), (<), (/), (*))
 import Screens.Types as ST 
 import Data.Lens ((^.))
 import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), SavedReqLocationAPIEntity(..), FareBreakupAPIEntity(..))
@@ -194,7 +194,11 @@ getFaresList fares baseDistance =
   map
     ( \(FareBreakupAPIEntity item) ->
           { fareType : item.description
-          , price : (getValueFromConfig "currency") <> " " <> if item.description == "BASE_FARE" then show (item.amount + getFareFromArray fares "EXTRA_DISTANCE_FARE" + getFareFromArray fares "WAITING_OR_PICKUP_CHARGES") else show item.amount
+          , price : (getValueFromConfig "currency") <> " " <> 
+            (show $ case item.description of 
+              "BASE_FARE" -> (item.amount + getFareFromArray fares "EXTRA_DISTANCE_FARE") 
+              "SGST" -> item.amount * 2 
+              _ -> item.amount)
           , title : case item.description of
                       "BASE_FARE" -> (getEN BASE_FARES) <> " (" <> baseDistance <> ")"
                       "EXTRA_DISTANCE_FARE" -> getEN NOMINAL_FARE
@@ -205,12 +209,11 @@ getFaresList fares baseDistance =
                       "CUSTOMER_SELECTED_FARE" -> getEN CUSTOMER_SELECTED_FARE
                       "WAITING_CHARGES" -> getEN WAITING_CHARGE
                       "EARLY_END_RIDE_PENALTY" -> getEN EARLY_END_RIDE_CHARGES
-                      "WAITING_OR_PICKUP_CHARGES" -> getEN PICKUP_CHARGE 
+                      "WAITING_OR_PICKUP_CHARGES" -> getEN MISC_WAITING_CHARGE 
                       "SERVICE_CHARGE" -> getEN SERVICE_CHARGES
                       "FIXED_GOVERNMENT_RATE" -> getEN GOVERNMENT_CHAGRES
                       "PLATFORM_FEE" -> getEN PLATFORM_FEE
-                      "SGST" -> getEN SGST
-                      "CGST" -> getEN CGST
+                      "SGST" -> getEN PLATFORM_GST
                       _ -> getEN BASE_FARES
           }
     )
@@ -223,7 +226,7 @@ dummyFareBreakUp :: FareBreakupAPIEntity
 dummyFareBreakUp = FareBreakupAPIEntity{amount: 0,description: ""}
 
 getFilteredFares :: Array FareBreakupAPIEntity -> Array FareBreakupAPIEntity
-getFilteredFares = filter (\(FareBreakupAPIEntity item) -> (all (_ /=  item.description) ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "WAITING_OR_PICKUP_CHARGES"]) )
+getFilteredFares = filter (\(FareBreakupAPIEntity item) -> (all (_ /=  item.description) ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "CGST"]) )
 
 getKmMeter :: Int -> String
 getKmMeter distance = if (distance < 1000) then toString distance <> " m" else (parseFloat ((toNumber distance)/ 1000.0)) 2 <> " km"

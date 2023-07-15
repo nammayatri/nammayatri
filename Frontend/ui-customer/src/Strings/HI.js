@@ -383,7 +383,7 @@ const hindiStrings = {
   "ECONOMICAL": "किफ़ायती",
   "COMFY": "आरामदायक",
   "NAVIGATE": "नेविगेट",
-  "GOVERNMENT_CHAGRES": "सरकारी शुल्क",
+  "GOVERNMENT_CHAGRES": "सवारी जीएसटी (5%)",
   "SERVICE_CHARGES": "सेवा शुल्क",
   "CONFIRM_AND_BOOK": "पुष्टि करें और बुक करें",
   "PEOPLE": "लोग",
@@ -523,5 +523,7 @@ const hindiStrings = {
   "PLATFORM_FEE" : "प्लेटफ़ॉर्म शुल्क",
   "SGST" : "एसजीएसटी",
   "OTP_EXPIRED" : "ओटीपी समाप्त हो गया",
-  "OTP_EXPIRED_DESCRIPTION" : "आपकी सवारी ओटीपी समाप्त हो गई है। सवारी पाने के लिए कृपया दोबारा बुकिंग करें"
+  "OTP_EXPIRED_DESCRIPTION" : "आपकी सवारी ओटीपी समाप्त हो गई है। सवारी पाने के लिए कृपया दोबारा बुकिंग करें",
+  "PLATFORM_GST" : "प्लेटफार्म जीएसटी (18%)",
+  "MISC_WAITING_CHARGE" : "मिस. प्रतीक्षा शुल्क सहित"
 }

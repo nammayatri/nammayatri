@@ -383,7 +383,7 @@ const bengaliStrings = {
   "ECONOMICAL" : "অর্থনৈতিক",
   "COMFY" : "আরামদায়ক",
   "NAVIGATE" : "নেভিগেট করুন",
-  "GOVERNMENT_CHAGRES" : "সরকারী চার্জ",
+  "GOVERNMENT_CHAGRES" : "রাইড জিএসটি (5%)",
   "SERVICE_CHARGES" : "সেবা মূল্য",
   "CONFIRM_AND_BOOK" : "নিশ্চিত করুন এবং বুক করুন",
   "PEOPLE" : "মানুষ",
@@ -517,5 +517,7 @@ const bengaliStrings = {
   "PLATFORM_FEE" : "প্ল্যাটফর্ম ফি",
   "SGST" : "এসজিএসটি",
   "OTP_EXPIRED" : "OTP মেয়াদ শেষ",
-  "OTP_EXPIRED_DESCRIPTION" : "আপনার রাইডের OTP মেয়াদ শেষ হয়ে গেছে। একটি রাইড পেতে আবার বুক করুন"
+  "OTP_EXPIRED_DESCRIPTION" : "আপনার রাইডের OTP মেয়াদ শেষ হয়ে গেছে। একটি রাইড পেতে আবার বুক করুন",
+  "PLATFORM_GST": "প্ল্যাটফর্ম জিএসটি (18%)",
+  "MISC_WAITING_CHARGE": "মিস ওয়েটিং চার্জ সহ"
 }

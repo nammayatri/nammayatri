@@ -14,7 +14,6 @@ const malayalamStrings = {
   "AMOUNT_PAID": "അടച്ച തുക",
   "TRIP_DETAILS_": "യാത്ര വിശദാംശങ്ങൾ",
   "DOWNLOAD_PDF": "PDF ഡൗൺലോഡുചെയ്യുക",
-  "CGST": "സിജിഎസ്ടി",
   "INVOICE": "ഇൻവോയ്സ്",
   "TRIP_CHARGES": "യാത്ര ചാർജുകൾ",
   "PROMOTION": "പ്രമോഷൻ",
@@ -383,7 +382,7 @@ const malayalamStrings = {
   "BOARD_THE_FIRST_TAXI" : "",
   "COMFY" : "സുഖപ്രദമായ",
   "NAVIGATE" : "നാവിഗേറ്റ് ചെയ്യുക",
-  "GOVERNMENT_CHAGRES" : "സർക്കാർ ചാർജുകൾ",
+  "GOVERNMENT_CHAGRES" : "റൈഡ് ജിഎസ്ടി (5%)",
   "SERVICE_CHARGES" : "സേവന നിരക്കുകൾ",
   "SPACIOUS" : "വിശാലമായത്",
   "EASY_ON_WALLET" : "കുറഞ്ഞ നിരക്ക്",
@@ -515,5 +514,7 @@ const malayalamStrings = {
   "SGST" : "SGST",
   "CGST" : "CGST",
   "OTP_EXPIRED" : "OTP കാലഹരണപ്പെട്ടു",
-  "OTP_EXPIRED_DESCRIPTION" : "നിങ്ങളുടെ റൈഡ് OTP കാലഹരണപ്പെട്ടു. ഒരു സവാരി ലഭിക്കാൻ ദയവായി വീണ്ടും ബുക്ക് ചെയ്യുക"
+  "OTP_EXPIRED_DESCRIPTION" : "നിങ്ങളുടെ റൈഡ് OTP കാലഹരണപ്പെട്ടു. ഒരു സവാരി ലഭിക്കാൻ ദയവായി വീണ്ടും ബുക്ക് ചെയ്യുക",
+  "PLATFORM_GST" : "പ്ലാറ്റ്ഫോം ജി.എസ്.ടി (18%)",
+  "MISC_WAITING_CHARGE" : "മിസ്. വെയിറ്റിംഗ് ചാർജുകൾ ഉൾപ്പെടെ"
 }

@@ -381,7 +381,7 @@ const kannadaStrings = {
   "ECONOMICAL": "ಆರ್ಥಿಕ",
   "COMFY": "ಆರಾಮದಾಯಕ",
   "NAVIGATE": "ನ್ಯಾವಿಗೇಟ್",
-  "GOVERNMENT_CHAGRES": "ಸರ್ಕಾರದ ಶುಲ್ಕಗಳು",
+  "GOVERNMENT_CHAGRES": "ರೈಡ್ GST (5%)",
   "SERVICE_CHARGES": "ಸೇವೆಯ ಶುಲ್ಕ",
   "CONFIRM_AND_BOOK": "ದೃಢೀಕರಿಸಿ ಮತ್ತು ಬುಕ್ ಮಾಡಿ",
   "PEOPLE": "ಜನರು",
@@ -517,5 +517,7 @@ const kannadaStrings = {
   "PLATFORM_FEE" : "ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಶುಲ್ಕ",
   "SGST" : "SGST",
   "OTP_EXPIRED" : "OTP ಅವಧಿ ಮುಗಿದಿದೆ",
-  "OTP_EXPIRED_DESCRIPTION" : "ನಿಮ್ಮ ಸವಾರಿಯ OTP ಅವಧಿ ಮುಗಿದಿದೆ. ಸವಾರಿ ಪಡೆಯಲು ದಯವಿಟ್ಟು ಮತ್ತೊಮ್ಮೆ ಬುಕ್ ಮಾಡಿ"
+  "OTP_EXPIRED_DESCRIPTION" : "ನಿಮ್ಮ ಸವಾರಿಯ OTP ಅವಧಿ ಮುಗಿದಿದೆ. ಸವಾರಿ ಪಡೆಯಲು ದಯವಿಟ್ಟು ಮತ್ತೊಮ್ಮೆ ಬುಕ್ ಮಾಡಿ",
+  "PLATFORM_GST" : "ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಜಿಎಸ್‌ಟಿ (18%)",
+  "MISC_WAITING_CHARGE" : "ಮಿಸ್. ಕಾಯುವ ಶುಲ್ಕಗಳು ಸೇರಿದಂತೆ"
 }
