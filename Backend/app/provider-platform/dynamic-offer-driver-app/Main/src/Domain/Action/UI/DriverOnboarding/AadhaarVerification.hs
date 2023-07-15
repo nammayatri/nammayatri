@@ -66,8 +66,7 @@ generateAadhaarOtp isDashboard mbMerchant personId req = do
   when driverInfo.blocked $ throwError DriverAccountBlocked
   when (driverInfo.aadhaarVerified) $ throwError AadhaarAlreadyVerified
   aadhaarHash <- getDbHash req.aadhaarNumber
-  aadhaarInfo <- Q.findByAadhaarNumberHash aadhaarHash
-  when (isJust aadhaarInfo) $ throwError AadhaarAlreadyLinked
+  checkForDuplicacy aadhaarHash
   whenJust mbMerchant $ \merchant -> do
     -- merchant access checking
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
@@ -210,3 +209,8 @@ mkAadhaar personId name gender dob aadhaarHash img aadhaarVerified = do
         createdAt = now,
         updatedAt = now
       }
+
+checkForDuplicacy :: DbHash -> Flow ()
+checkForDuplicacy aadhaarHash = do
+  aadhaarInfo <- Q.findByAadhaarNumberHash aadhaarHash
+  when (isJust aadhaarInfo) $ throwError AadhaarAlreadyLinked

@@ -59,7 +59,7 @@ data DriverOfferAPIs = DriverOfferAPIs
 data DriversAPIs = DriversAPIs
   { driverDocumentsInfo :: Euler.EulerClient Driver.DriverDocumentsInfoRes,
     driverAadhaarInfo :: Id Driver.Driver -> Euler.EulerClient Driver.DriverAadhaarInfoRes,
-    driverAadhaarInfoByPhone :: Text -> Euler.EulerClient Driver.DriverAadhaarInfoRes,
+    driverAadhaarInfoByPhone :: Text -> Euler.EulerClient Driver.DriverAadhaarInfoByPhoneReq,
     listDrivers :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> Euler.EulerClient Driver.DriverListRes,
     getDriverDue :: Maybe Text -> Text -> Euler.EulerClient [Driver.DriverOutstandingBalanceResp],
     driverActivity :: Euler.EulerClient Driver.DriverActivityRes,
@@ -83,7 +83,7 @@ data DriversAPIs = DriversAPIs
     unlinkAadhaar :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     endRCAssociation :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     updatePhoneNumber :: Id Driver.Driver -> Driver.UpdatePhoneNumberReq -> Euler.EulerClient APISuccess,
-    updateDriverAadhaar :: Text -> Driver.UpdateDriverDataReq -> Euler.EulerClient APISuccess,
+    updateByPhoneNumber :: Text -> Driver.UpdateDriverDataReq -> Euler.EulerClient APISuccess,
     addVehicle :: Id Driver.Driver -> Driver.AddVehicleReq -> Euler.EulerClient APISuccess,
     updateDriverName :: Id Driver.Driver -> Driver.UpdateDriverNameReq -> Euler.EulerClient APISuccess,
     clearOnRideStuckDrivers :: Euler.EulerClient Driver.ClearOnRideStuckDriversRes
@@ -199,7 +199,7 @@ mkDriverOfferAPIs merchantId token = do
       :<|> unlinkAadhaar
       :<|> endRCAssociation
       :<|> updatePhoneNumber
-      :<|> updateDriverAadhaar
+      :<|> updateByPhoneNumber
       :<|> addVehicle
       :<|> updateDriverName
       :<|> ( documentsList
