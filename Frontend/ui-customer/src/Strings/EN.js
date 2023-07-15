@@ -520,5 +520,7 @@ const englishStrings = {
   "FASTER" : "Faster",
   "NEW_" : "New",
   "PLATFORM_FEE" : "Platform Fee",
-  "SGST" : "SGST"
+  "SGST" : "SGST",
+  "OTP_EXPIRED" : "Otp Expired",
+  "OTP_EXPIRED_DESCRIPTION" : "Your ride OTP expired. Please book again to get a ride"
 }
