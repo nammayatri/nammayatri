@@ -514,5 +514,6 @@ const bengaliStrings = {
   "DRIVER_HAS_ALREADY_TRAVELLED" : "ড্রাইভার ইতিমধ্যে ",
   "HAS_TRAVELLED" : " ভ্রমণ করেছেন",
   "PLEASE_CONTACT_THE_DRIVER_BEFORE_CANCELLING" : "\nবাতিল করার আগে ড্রাইভারের সাথে যোগাযোগ করুন",
-  "WAIT_FOR_DRIVER" : "ড্রাইভারের জন্য অপেক্ষা করুন" 
+  "WAIT_FOR_DRIVER" : "ড্রাইভারের জন্য অপেক্ষা করুন",
+  "DRIVER_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION" : "ড্রাইভার ইতিমধ্যে আপনার অবস্থানের পথে আছে."
 }
