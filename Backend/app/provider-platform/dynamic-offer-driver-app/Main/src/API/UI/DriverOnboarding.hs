@@ -25,12 +25,12 @@ import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude
 import Kernel.ServantMultipart
+import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Auth (TokenAuth)
-import Kernel.Types.APISuccess
 
 type API =
   "driver" :> "register"
@@ -60,13 +60,11 @@ type API =
            :<|> "verifyAadhaarOtp"
              :> TokenAuth
              :> ReqBody '[JSON] AV.VerifyAadhaarOtpReq
-             :> Post '[JSON] AadhaarVerification.AadhaarOtpVerifyRes 
-            :<|> "unVerifiedAadhaarData"
-              :> TokenAuth
-              :> ReqBody '[JSON] AV.UnVerifiedDataReq
-              :> Post '[JSON] APISuccess
-
-                
+             :> Post '[JSON] AadhaarVerification.AadhaarOtpVerifyRes
+           :<|> "unVerifiedAadhaarData"
+             :> TokenAuth
+             :> ReqBody '[JSON] AV.UnVerifiedDataReq
+             :> Post '[JSON] APISuccess
        )
     :<|> "driver" :> "referral"
       :> TokenAuth
@@ -107,7 +105,7 @@ generateAadhaarOtp (personId, _) = withFlowHandlerAPI . AV.generateAadhaarOtp Fa
 verifyAadhaarOtp :: (Id DP.Person, Id DM.Merchant) -> AV.VerifyAadhaarOtpReq -> FlowHandler AadhaarVerification.AadhaarOtpVerifyRes
 verifyAadhaarOtp (personId, _) = withFlowHandlerAPI . AV.verifyAadhaarOtp Nothing personId
 
-unVerifiedAadhaarData :: (Id DP.Person, Id DM.Merchant) ->  AV.UnVerifiedDataReq -> FlowHandler APISuccess
+unVerifiedAadhaarData :: (Id DP.Person, Id DM.Merchant) -> AV.UnVerifiedDataReq -> FlowHandler APISuccess
 unVerifiedAadhaarData (personId, _) = withFlowHandlerAPI . AV.unVerifiedAadhaarData personId
 
 addReferral :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.ReferralReq -> FlowHandler DriverOnboarding.ReferralRes

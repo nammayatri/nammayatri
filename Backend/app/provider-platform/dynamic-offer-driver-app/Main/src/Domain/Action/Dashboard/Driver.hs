@@ -36,7 +36,7 @@ module Domain.Action.Dashboard.Driver
     getDriverDue,
     collectCash,
     driverAadhaarInfoByPhone,
-    updateDriverAadhaar,
+    updateByPhoneNumber,
   )
 where
 
@@ -703,7 +703,7 @@ clearOnRideStuckDrivers merchantShortId = do
 
 ---------------------------------------------------------------------
 
-driverAadhaarInfoByPhone :: ShortId DM.Merchant -> Text -> Flow Common.DriverAadhaarInfoRes
+driverAadhaarInfoByPhone :: ShortId DM.Merchant -> Text -> Flow Common.DriverAadhaarInfoByPhoneReq
 driverAadhaarInfoByPhone merchantShortId phoneNumber = do
   merchant <- findMerchantByShortId merchantShortId
   mobileNumberHash <- getDbHash phoneNumber
@@ -723,9 +723,8 @@ driverAadhaarInfoByPhone merchantShortId phoneNumber = do
 ---------------------------------------------------------------------
 
 ---------------------------------------------------------------------
-
-updateDriverAadhaar :: ShortId DM.Merchant -> Text -> Common.UpdateDriverDataReq -> Flow APISuccess
-updateDriverAadhaar merchantShortId phoneNumber req = do
+updateByPhoneNumber :: ShortId DM.Merchant -> Text -> Common.UpdateDriverDataReq -> Flow APISuccess
+updateByPhoneNumber merchantShortId phoneNumber req = do
   mobileNumberHash <- getDbHash phoneNumber
   aadhaarNumberHash <- getDbHash req.driverAadhaarNumber
   aadhaarInfo <- AV.findByAadhaarNumberHash aadhaarNumberHash

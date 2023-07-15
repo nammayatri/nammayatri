@@ -195,7 +195,9 @@ data DriverAadhaarInfoRes = DriverAadhaarInfoRes
 type DriverAadhaarInfoByPhoneAPI =
   Capture "mobileNo" Text
     :> "aadhaarInfobyMobileNumber"
-    :> Get '[JSON] DriverAadhaarInfoRes
+    :> Get '[JSON] DriverAadhaarInfoByPhoneReq
+
+type DriverAadhaarInfoByPhoneReq = DriverAadhaarInfoRes
 
 ---------------------------------------------------------
 
@@ -511,7 +513,7 @@ instance HideSecrets UpdatePhoneNumberReq where
 -- update driver aadhaar  api ----------------------------------------
 type UpdateDriverAadhaarAPI =
   Capture "mobileNo" Text
-    :> "updateDriverAadhaar"
+    :> "updateByPhoneNumber"
     :> ReqBody '[JSON] UpdateDriverDataReq
     :> Post '[JSON] APISuccess
 

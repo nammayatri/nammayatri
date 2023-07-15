@@ -74,7 +74,7 @@ handler merchantId =
     :<|> unlinkAadhaar merchantId
     :<|> endRCAssociation merchantId
     :<|> updatePhoneNumber merchantId
-    :<|> updateDriverAadhaar merchantId
+    :<|> updateByPhoneNumber merchantId
     :<|> addVehicle merchantId
     :<|> updateDriverName merchantId
     :<|> Reg.handler merchantId
@@ -86,7 +86,7 @@ driverDocumentsInfo = withFlowHandlerAPI . DDriver.driverDocumentsInfo
 driverAadhaarInfo :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler Common.DriverAadhaarInfoRes
 driverAadhaarInfo merchantShortId = withFlowHandlerAPI . DDriver.driverAadhaarInfo merchantShortId
 
-driverAadhaarInfoByPhone :: ShortId DM.Merchant -> Text -> FlowHandler Common.DriverAadhaarInfoRes
+driverAadhaarInfoByPhone :: ShortId DM.Merchant -> Text -> FlowHandler Common.DriverAadhaarInfoByPhoneReq
 driverAadhaarInfoByPhone merchantShortId = withFlowHandlerAPI . DDriver.driverAadhaarInfoByPhone merchantShortId
 
 listDrivers :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> FlowHandler Common.DriverListRes
@@ -139,8 +139,8 @@ endRCAssociation merchantShortId = withFlowHandlerAPI . DDriver.endRCAssociation
 updatePhoneNumber :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdatePhoneNumberReq -> FlowHandler APISuccess
 updatePhoneNumber merchantShortId driverId = withFlowHandlerAPI . DDriver.updatePhoneNumber merchantShortId driverId
 
-updateDriverAadhaar :: ShortId DM.Merchant -> Text -> Common.UpdateDriverDataReq -> FlowHandler APISuccess
-updateDriverAadhaar merchantShortId mobileNo = withFlowHandlerAPI . DDriver.updateDriverAadhaar merchantShortId mobileNo
+updateByPhoneNumber :: ShortId DM.Merchant -> Text -> Common.UpdateDriverDataReq -> FlowHandler APISuccess
+updateByPhoneNumber merchantShortId mobileNo = withFlowHandlerAPI . DDriver.updateByPhoneNumber merchantShortId mobileNo
 
 addVehicle :: ShortId DM.Merchant -> Id Common.Driver -> Common.AddVehicleReq -> FlowHandler APISuccess
 addVehicle merchantShortId driverId = withFlowHandlerAPI . DDriver.addVehicle merchantShortId driverId

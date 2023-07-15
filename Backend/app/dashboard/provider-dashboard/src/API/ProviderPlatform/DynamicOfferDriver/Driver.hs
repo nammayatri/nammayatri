@@ -177,7 +177,7 @@ handler merchantId =
     :<|> unlinkAadhaar merchantId
     :<|> endRCAssociation merchantId
     :<|> updatePhoneNumber merchantId
-    :<|> updateDriverAadhaar merchantId
+    :<|> updateByPhoneNumber merchantId
     :<|> addVehicle merchantId
     :<|> updateDriverName merchantId
     :<|> Reg.handler merchantId
@@ -205,7 +205,7 @@ driverAadhaarInfo merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ d
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.drivers.driverAadhaarInfo) driverId
 
-driverAadhaarInfoByPhone :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> FlowHandler Common.DriverAadhaarInfoRes
+driverAadhaarInfoByPhone :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> FlowHandler Common.DriverAadhaarInfoByPhoneReq
 driverAadhaarInfoByPhone merchantShortId apiTokenInfo phoneNo = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.drivers.driverAadhaarInfoByPhone) phoneNo
@@ -304,10 +304,10 @@ updatePhoneNumber merchantShortId apiTokenInfo driverId req = withFlowHandlerAPI
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.drivers.updatePhoneNumber) driverId req
 
-updateDriverAadhaar :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> Common.UpdateDriverDataReq -> FlowHandler APISuccess
-updateDriverAadhaar merchantShortId apiTokenInfo phoneNo req = withFlowHandlerAPI $ do
+updateByPhoneNumber :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> Common.UpdateDriverDataReq -> FlowHandler APISuccess
+updateByPhoneNumber merchantShortId apiTokenInfo phoneNo req = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callDriverOfferBPP checkedMerchantId (.drivers.updateDriverAadhaar) phoneNo req
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.updateByPhoneNumber) phoneNo req
 
 addVehicle :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.AddVehicleReq -> FlowHandler APISuccess
 addVehicle merchantShortId apiTokenInfo driverId req = withFlowHandlerAPI $ do
