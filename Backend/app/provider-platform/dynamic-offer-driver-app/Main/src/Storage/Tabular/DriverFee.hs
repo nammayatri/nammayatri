@@ -25,7 +25,7 @@ import Data.Time (UTCTime)
 import qualified Domain.Types.DriverFee as Domain
 import EulerHS.Prelude (Generic, Int, Text, ($))
 import Kernel.Storage.Esqueleto
-import Kernel.Types.Common (HighPrecMoney, Money)
+import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id
 import Storage.Tabular.Person (PersonTId)
 
@@ -38,9 +38,9 @@ mkPersist
       id Text
       shortId Text
       driverId PersonTId
-      totalEarnings Money
-      govtCharges Money
-      platformFee Money
+      totalEarnings HighPrecMoney
+      govtCharges HighPrecMoney
+      platformFee HighPrecMoney
       cgst HighPrecMoney
       sgst HighPrecMoney
       payBy UTCTime

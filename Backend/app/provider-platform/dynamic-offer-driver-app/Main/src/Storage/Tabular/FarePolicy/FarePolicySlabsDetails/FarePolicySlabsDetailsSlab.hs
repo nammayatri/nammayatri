@@ -23,7 +23,7 @@ module Storage.Tabular.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsS
 import qualified Domain.Types.FarePolicy as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
-import Kernel.Types.Common (Meters, Minutes, Money)
+import Kernel.Types.Common (HighPrecMoney, Meters, Minutes)
 import Kernel.Types.Id
 import Storage.Tabular.FarePolicy.Table (FarePolicyTId)
 
@@ -36,10 +36,10 @@ mkPersist
       Id Int
       farePolicyId FarePolicyTId
       startDistance Meters
-      baseFare Money
+      baseFare HighPrecMoney
       platformFeeCharge Domain.PlatformFeeCharge Maybe
-      platformFeeCgst Double Maybe
-      platformFeeSgst Double Maybe
+      platformFeeCgst HighPrecMoney Maybe
+      platformFeeSgst HighPrecMoney Maybe
       waitingCharge Domain.WaitingCharge Maybe
       freeWatingTime Minutes Maybe
       nightShiftCharge Domain.NightShiftCharge Maybe

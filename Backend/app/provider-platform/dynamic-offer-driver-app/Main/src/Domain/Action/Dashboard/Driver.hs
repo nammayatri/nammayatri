@@ -211,7 +211,7 @@ getDriverDue merchantShortId mbMobileCountryCode phone = do
     mkPaymentDueResp a@DriverFee {..} = do
       let platformFee_ = mkPlatformFee a.platformFee
           status_ = castStatus a.status
-          totalFee = round $ fromIntegral a.govtCharges + fromIntegral platformFee_.fee + platformFee_.cgst + platformFee_.sgst
+          totalFee = a.govtCharges + platformFee_.fee + platformFee_.cgst + platformFee_.sgst
           driverFeeId = cast id
           driverId_ = cast driverId
       Common.DriverOutstandingBalanceResp {platformFee = platformFee_, status = status_, driverId = driverId_, ..}

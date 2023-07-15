@@ -124,7 +124,7 @@ fareEkmEmb2 = buildFare "2" routeEkmEmbId 30
 
 buildFare :: Text -> Text -> HighPrecMoney -> Fare
 buildFare id route_id amount = do
-  let price = Price "INR" $ realToFrac amount
+  let price = Price "INR" amount
   Fare {..}
 
 mockDepartures :: UTCTime -> [Departure]

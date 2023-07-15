@@ -72,7 +72,7 @@ data Booking = Booking
     vehicleVariant :: DVeh.Variant,
     estimatedDistance :: Meters,
     maxEstimatedDistance :: Maybe HighPrecMeters,
-    estimatedFare :: Money,
+    estimatedFare :: HighPrecMoney,
     estimatedDuration :: Seconds,
     fareParams :: FareParameters,
     riderName :: Maybe Text,

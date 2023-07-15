@@ -41,9 +41,9 @@ buildOnInitReq req = do
     let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedFare - estimatedTotalFare
     return $
       DOnInit.OnInitReq
-        { estimatedFare = roundToIntegral estimatedFare,
-          estimatedTotalFare = roundToIntegral estimatedTotalFare,
-          discount = roundToIntegral <$> discount,
+        { estimatedFare = estimatedFare,
+          estimatedTotalFare = estimatedTotalFare,
+          discount = discount,
           paymentUrl = message.order.payment.uri,
           ..
         }

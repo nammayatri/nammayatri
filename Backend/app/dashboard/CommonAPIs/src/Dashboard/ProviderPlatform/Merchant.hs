@@ -594,8 +594,8 @@ type CreateFPDriverExtraFee =
     :> Post '[JSON] APISuccess
 
 data CreateFPDriverExtraFeeReq = CreateFPDriverExtraFeeReq
-  { minFee :: Money,
-    maxFee :: Money
+  { minFee :: HighPrecMoney,
+    maxFee :: HighPrecMoney
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

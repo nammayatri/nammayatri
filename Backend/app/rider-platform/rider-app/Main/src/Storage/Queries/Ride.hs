@@ -91,8 +91,8 @@ updateMultiple rideId ride = do
       tbl
       [ RideUpdatedAt =. val now,
         RideStatus =. val ride.status,
-        RideFare =. val (realToFrac <$> ride.fare),
-        RideTotalFare =. val (realToFrac <$> ride.totalFare),
+        RideFare =. val (ride.fare),
+        RideTotalFare =. val (ride.totalFare),
         RideChargeableDistance =. val ride.chargeableDistance,
         RideRideStartTime =. val ride.rideStartTime,
         RideRideEndTime =. val ride.rideEndTime

@@ -304,14 +304,14 @@ newtype GetNearbySearchRequestsRes = GetNearbySearchRequestsRes
   deriving anyclass (ToJSON, FromJSON, ToSchema, PrettyShow)
 
 data DriverOfferReq = DriverOfferReq
-  { offeredFare :: Maybe Money,
+  { offeredFare :: Maybe HighPrecMoney,
     searchRequestId :: Id DST.SearchTry
   }
   deriving stock (Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 data DriverRespondReq = DriverRespondReq
-  { offeredFare :: Maybe Money,
+  { offeredFare :: Maybe HighPrecMoney,
     searchRequestId :: Maybe (Id DST.SearchTry), -- TODO: Deprecated, to be removed
     searchTryId :: Maybe (Id DST.SearchTry),
     response :: SearchRequestForDriverResponse
@@ -321,8 +321,8 @@ data DriverRespondReq = DriverRespondReq
 
 data DriverStatsRes = DriverStatsRes
   { totalRidesOfDay :: Int,
-    totalEarningsOfDay :: Money,
-    bonusEarning :: Money
+    totalEarningsOfDay :: HighPrecMoney,
+    bonusEarning :: HighPrecMoney
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -353,8 +353,8 @@ data DriverPaymentHistoryResp = DriverPaymentHistoryResp
     driverFeeId :: Id DDF.DriverFee,
     status :: DDF.DriverFeeStatus,
     totalRides :: Int,
-    totalEarnings :: Money,
-    charges :: Money,
+    totalEarnings :: HighPrecMoney,
+    charges :: HighPrecMoney,
     chargesBreakup :: [DriverPaymentBreakup],
     txnInfo :: [DriverTxnInfo]
   }
@@ -805,7 +805,7 @@ getNearbySearchRequests (driverId, merchantId) = do
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
-isAllowedExtraFee :: DriverExtraFeeBounds -> Money -> Bool
+isAllowedExtraFee :: DriverExtraFeeBounds -> HighPrecMoney -> Bool
 isAllowedExtraFee extraFee val = extraFee.minFee <= val && val <= extraFee.maxFee
 
 offerQuoteLockKey :: Id Person -> Text
@@ -991,10 +991,10 @@ getStats (driverId, merchantId) date = do
         totalEarningsOfDay = sum (mapMaybe (.fare) rides),
         bonusEarning =
           let (driverSelFares, customerExtFees) = (mapMaybe (.driverSelectedFare) fareParameters, mapMaybe (.customerExtraFee) fareParameters)
-              driverSelFares' = getMoney <$> driverSelFares
-              customerExtFees' = getMoney <$> customerExtFees
+              driverSelFares' = getHighPrecMoney <$> driverSelFares
+              customerExtFees' = getHighPrecMoney <$> customerExtFees
               deadKmFare' =
-                ( (getMoney <$>)
+                ( (getHighPrecMoney <$>)
                     . mapMaybe
                       ( \x -> case fareParametersDetails x of
                           ProgressiveDetails det -> Just (deadKmFare det)
@@ -1002,7 +1002,7 @@ getStats (driverId, merchantId) date = do
                       )
                 )
                   fareParameters
-           in Money $ GHCL.sum driverSelFares' + GHCL.sum customerExtFees' + GHCL.sum deadKmFare'
+           in HighPrecMoney $ GHCL.sum driverSelFares' + GHCL.sum customerExtFees' + GHCL.sum deadKmFare'
       }
 
 makeAlternatePhoneNumberKey :: Id SP.Person -> Text
@@ -1227,7 +1227,7 @@ getDriverPayments (personId, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset 
       let date = utctDay startTime
           driverFeeId = id
           totalRides = numRides
-          charges = round $ fromIntegral govtCharges + fromIntegral platformFee.fee + platformFee.cgst + platformFee.sgst
+          charges = govtCharges + platformFee.fee + platformFee.cgst + platformFee.sgst
           chargesBreakup = mkChargesBreakup govtCharges platformFee.fee platformFee.cgst platformFee.sgst
       transactionDetails <- findAllByOrderId (cast id)
       let txnInfo = map mkDriverTxnInfo transactionDetails
@@ -1238,11 +1238,11 @@ getDriverPayments (personId, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset 
     mkChargesBreakup govtCharges platformFee cgst sgst =
       [ DriverPaymentBreakup
           { component = "Government Charges",
-            amount = fromIntegral govtCharges
+            amount = govtCharges
           },
         DriverPaymentBreakup
           { component = "Platform Fee",
-            amount = fromIntegral platformFee
+            amount = platformFee
           },
         DriverPaymentBreakup
           { component = "CGST",

@@ -75,10 +75,10 @@ instance ToSchema ItemDescriptor where
 
 data ItemPrice = ItemPrice
   { currency :: Text,
-    value :: DecimalValue,
-    offered_value :: DecimalValue,
-    minimum_value :: DecimalValue,
-    maximum_value :: DecimalValue,
+    value :: HighPrecMoney,
+    offered_value :: HighPrecMoney,
+    minimum_value :: HighPrecMoney,
+    maximum_value :: HighPrecMoney,
     value_breakup :: [BreakupItem]
   }
   deriving (Generic, FromJSON, ToJSON, Show)
@@ -97,7 +97,7 @@ instance ToSchema BreakupItem where
 
 data BreakupPrice = BreakupPrice
   { currency :: Text,
-    value :: DecimalValue
+    value :: HighPrecMoney
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
@@ -106,11 +106,11 @@ instance ToSchema BreakupPrice where
 
 data ItemTags = ItemTags
   { distance_to_nearest_driver :: Maybe DecimalValue,
-    night_shift_charge :: Maybe Money,
-    old_night_shift_charge :: Maybe DecimalValue, -- TODO: Doesn't make sense, to be removed
+    night_shift_charge :: Maybe HighPrecMoney,
+    old_night_shift_charge :: Maybe HighPrecMoney,
     night_shift_start :: Maybe TimeOfDay,
     night_shift_end :: Maybe TimeOfDay,
-    waiting_charge_per_min :: Maybe Money,
+    waiting_charge_per_min :: Maybe HighPrecMoney,
     drivers_location :: [LatLong],
     special_location_tag :: Maybe Text
   }

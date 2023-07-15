@@ -23,7 +23,7 @@ module Storage.Tabular.FareParameters.Table where
 import qualified Domain.Types.FareParameters as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
-import Kernel.Types.Common (Money)
+import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id
 import Storage.Tabular.Vehicle ()
 
@@ -35,14 +35,14 @@ mkPersist
     FareParametersT sql=fare_parameters
       id Text
       fareParametersType Domain.FareParametersType
-      driverSelectedFare Money Maybe
-      customerExtraFee Money Maybe
-      serviceCharge Money Maybe
-      govtCharges Money Maybe
-      baseFare Money
-      waitingCharge Money Maybe
-      nightShiftCharge Money Maybe
-      nightShiftRateIfApplies Double Maybe
+      driverSelectedFare HighPrecMoney Maybe
+      customerExtraFee HighPrecMoney Maybe
+      serviceCharge HighPrecMoney Maybe
+      govtCharges HighPrecMoney Maybe
+      baseFare HighPrecMoney
+      waitingCharge HighPrecMoney Maybe
+      nightShiftCharge HighPrecMoney Maybe
+      nightShiftRateIfApplies HighPrecMoney Maybe
 
       Primary id
       deriving Generic

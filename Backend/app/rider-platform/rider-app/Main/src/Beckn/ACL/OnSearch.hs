@@ -25,7 +25,7 @@ import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import Domain.Types.OnSearchEvent
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (id, state, unpack)
-import Kernel.Prelude
+import Kernel.Prelude ()
 import Kernel.Product.Validation.Context (validateContext)
 import Kernel.Storage.Esqueleto (runTransaction)
 import qualified Kernel.Types.Beckn.Context as Context
@@ -96,8 +96,8 @@ buildEstimateOrQuoteInfo ::
 buildEstimateOrQuoteInfo item = do
   let itemCode = item.descriptor.code
       vehicleVariant = castVehicleVariant itemCode.vehicleVariant
-      estimatedFare = roundToIntegral item.price.value
-      estimatedTotalFare = roundToIntegral item.price.offered_value
+      estimatedFare = item.price.value
+      estimatedTotalFare = item.price.offered_value
       estimateBreakupList = buildEstimateBreakUpList <$> item.price.value_breakup
       descriptions = item.quote_terms
       nightShiftInfo = buildNightShiftInfo =<< item.tags
@@ -107,8 +107,8 @@ buildEstimateOrQuoteInfo item = do
   validatePrices estimatedFare estimatedTotalFare
   let totalFareRange =
         DEstimate.FareRange
-          { minFare = roundToIntegral item.price.minimum_value,
-            maxFare = roundToIntegral item.price.maximum_value
+          { minFare = item.price.minimum_value,
+            maxFare = item.price.maximum_value
           }
   validateFareRange estimatedTotalFare totalFareRange
 
@@ -168,7 +168,7 @@ buildRentalQuoteDetails item = do
   baseDuration <- item.base_duration & fromMaybeM (InvalidRequest "Missing base_duration in rental search item")
   pure DOnSearch.RentalQuoteDetails {..}
 
-validateFareRange :: (MonadThrow m, Log m) => Money -> DEstimate.FareRange -> m ()
+validateFareRange :: (MonadThrow m, Log m) => HighPrecMoney -> DEstimate.FareRange -> m ()
 validateFareRange totalFare DEstimate.FareRange {..} = do
   when (minFare < 0) $ throwError $ InvalidRequest "Minimum discounted price is less than zero"
   when (maxFare < 0) $ throwError $ InvalidRequest "Maximum discounted price is less than zero"
@@ -184,7 +184,7 @@ buildEstimateBreakUpList BreakupItem {..} = do
       price =
         DOnSearch.BreakupPriceInfo
           { currency = price.currency,
-            value = roundToIntegral price.value
+            value = price.value
           }
     }
 

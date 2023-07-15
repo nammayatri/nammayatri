@@ -45,8 +45,8 @@ mkPersist
       merchantId MerchantTId Maybe
       startTime UTCTime
       validTill UTCTime
-      baseFare Money
-      customerExtraFee Money Maybe
+      baseFare HighPrecMoney
+      customerExtraFee HighPrecMoney Maybe
       status Domain.SearchTryStatus
       vehicleVariant Variant.Variant
       searchRepeatCounter Int

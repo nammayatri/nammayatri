@@ -78,9 +78,7 @@ uniteItemAndFulfillment items fulfillments = do
 
 offerInfoToMetroRide :: (MonadTime m, MonadThrow m, Log m) => (Item, NonEmpty Fulfillment) -> m MetroRide
 offerInfoToMetroRide (item, fulfillments) = do
-  price <-
-    roundToIntegral <$> item.price.value
-      & fromMaybeM (InvalidRequest "Missing price.value in item")
+  let price = item.price
   now <- getCurrentTime
   let startTimes = fulfillments <&> (.start.time.timestamp)
   let endTimes = fulfillments <&> (.end.time.timestamp)

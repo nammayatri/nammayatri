@@ -53,7 +53,7 @@ instance FromTType EstimateBreakupT Domain.EstimateBreakup where
           price =
             Domain.EstimateBreakupPrice
               { currency = priceCurrency,
-                value = roundToIntegral priceValue
+                value = priceValue
               },
           estimateId = fromKey estimateId,
           ..
@@ -64,7 +64,7 @@ instance ToTType EstimateBreakupT Domain.EstimateBreakup where
     EstimateBreakupT
       { id = getId id,
         priceCurrency = price.currency,
-        priceValue = realToFrac price.value,
+        priceValue = price.value,
         estimateId = toKey estimateId,
         ..
       }

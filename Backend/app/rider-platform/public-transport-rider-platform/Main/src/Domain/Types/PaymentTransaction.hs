@@ -33,7 +33,7 @@ data PaymentTransaction = PaymentTransaction
     bknTxnId :: Text,
     paymentGatewayTxnId :: Text,
     paymentGatewayTxnStatus :: Text,
-    fare :: Money,
+    fare :: HighPrecMoney,
     status :: PaymentStatus,
     paymentUrl :: BaseUrl,
     updatedAt :: UTCTime,
@@ -44,7 +44,7 @@ data PaymentTransaction = PaymentTransaction
 data PaymentTransactionAPIEntity = PaymentTransactionAPIEntity
   { id :: Id PaymentTransaction,
     paymentGatewayTxnId :: Text,
-    fare :: Money,
+    fare :: HighPrecMoney,
     status :: PaymentStatus,
     paymentUrl :: BaseUrl,
     updatedAt :: UTCTime,

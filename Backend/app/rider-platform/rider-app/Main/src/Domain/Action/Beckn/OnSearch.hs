@@ -89,9 +89,9 @@ data ProviderInfo = ProviderInfo
 data EstimateInfo = EstimateInfo
   { bppEstimateId :: Id DEstimate.BPPEstimate,
     vehicleVariant :: VehicleVariant,
-    estimatedFare :: Money,
-    discount :: Maybe Money,
-    estimatedTotalFare :: Money,
+    estimatedFare :: HighPrecMoney,
+    discount :: Maybe HighPrecMoney,
+    estimatedTotalFare :: HighPrecMoney,
     totalFareRange :: DEstimate.FareRange,
     descriptions :: [Text],
     estimateBreakupList :: [EstimateBreakupInfo],
@@ -102,14 +102,14 @@ data EstimateInfo = EstimateInfo
   }
 
 data NightShiftInfo = NightShiftInfo
-  { nightShiftCharge :: Money,
+  { nightShiftCharge :: HighPrecMoney,
     oldNightShiftCharge :: Centesimal,
     nightShiftStart :: TimeOfDay,
     nightShiftEnd :: TimeOfDay
   }
 
 newtype WaitingChargesInfo = WaitingChargesInfo
-  { waitingChargePerMin :: Maybe Money
+  { waitingChargePerMin :: Maybe HighPrecMoney
   }
 
 data EstimateBreakupInfo = EstimateBreakupInfo
@@ -119,14 +119,14 @@ data EstimateBreakupInfo = EstimateBreakupInfo
 
 data BreakupPriceInfo = BreakupPriceInfo
   { currency :: Text,
-    value :: Money
+    value :: HighPrecMoney
   }
 
 data QuoteInfo = QuoteInfo
   { vehicleVariant :: VehicleVariant,
-    estimatedFare :: Money,
-    discount :: Maybe Money,
-    estimatedTotalFare :: Money,
+    estimatedFare :: HighPrecMoney,
+    discount :: Maybe HighPrecMoney,
+    estimatedTotalFare :: HighPrecMoney,
     quoteDetails :: QuoteDetails,
     descriptions :: [Text],
     specialLocationTag :: Maybe Text

@@ -76,7 +76,7 @@ instance FromTType BookingT Domain.Booking where
           bppUrl = bppUrl_,
           departureStationId = fromKey departureStationId,
           arrivalStationId = fromKey arrivalStationId,
-          fare = roundToIntegral fare,
+          fare = fare,
           ..
         }
 
@@ -90,6 +90,6 @@ instance ToTType BookingT Domain.Booking where
         bppUrl = showBaseUrl bppUrl,
         departureStationId = toKey departureStationId,
         arrivalStationId = toKey arrivalStationId,
-        fare = realToFrac fare,
+        fare = fare,
         ..
       }

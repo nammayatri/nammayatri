@@ -90,13 +90,13 @@ mkLocation DBL.LocationAddress {..} =
           }
     }
 
-mkPayment :: Money -> Confirm.Payment
+mkPayment :: HighPrecMoney -> Confirm.Payment
 mkPayment estimatedTotalFare =
   Confirm.Payment
     { collected_by = "BAP",
       params =
         Confirm.PaymentParams
-          { amount = realToFrac estimatedTotalFare,
+          { amount = estimatedTotalFare,
             currency = "INR"
           },
       time = Confirm.TimeDuration "P2D",

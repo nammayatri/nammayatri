@@ -65,7 +65,7 @@ createOrder (personId, merchantId) rideId = do
   let createOrderReq =
         Payment.CreateOrderReq
           { orderShortId = ride.shortId.getShortId, -- should be Alphanumeric with character length less than 18.
-            amount = totalFare,
+            amount = round totalFare,
             customerId = person.id.getId,
             customerEmail,
             customerPhone,

@@ -148,7 +148,7 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
             computed_value = fare
           }
       breakup =
-        mkBreakupList (OnUpdate.BreakupPrice currency . fromIntegral) OnUpdate.BreakupItem req.fareParams
+        mkBreakupList (OnUpdate.BreakupPrice currency) OnUpdate.BreakupItem req.fareParams
           & filter (filterRequiredBreakups $ DFParams.getFareParametersType req.fareParams) -- TODO: Remove after roll out
   return $
     OnUpdate.OnUpdateMessage $

@@ -15,14 +15,15 @@
 module Beckn.Spec.Common.Quotation where
 
 import Beckn.Spec.Common.Duration
-import Beckn.Spec.Common.Price
+import Beckn.Spec.Common.Price ()
 import Data.OpenApi (ToSchema (declareNamedSchema), defaultSchemaOptions)
 import Kernel.Prelude
+import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Utils.GenericPretty (PrettyShow)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Quotation = Quotation
-  { price :: Price,
+  { price :: HighPrecMoney,
     breakup :: [BreakupItem],
     ttl :: Maybe Duration
   }
@@ -33,7 +34,7 @@ instance ToSchema Quotation where
 
 data BreakupItem = BreakupItem
   { title :: Text,
-    price :: Price
+    price :: HighPrecMoney
   }
   deriving (Generic, Show, ToJSON, FromJSON, PrettyShow)
 
