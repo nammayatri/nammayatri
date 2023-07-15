@@ -55,7 +55,7 @@ mkPersist
       distanceToPickup Meters
       durationToPickup Double
       validTill UTCTime
-      estimatedFare Common.Money
+      estimatedFare Common.HighPrecMoney
       fareParametersId Fare.FareParametersTId
       providerId MerchantTId
       specialLocationTag Text Maybe

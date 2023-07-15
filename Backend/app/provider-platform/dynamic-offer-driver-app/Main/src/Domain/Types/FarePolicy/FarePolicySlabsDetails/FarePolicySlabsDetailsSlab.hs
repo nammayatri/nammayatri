@@ -25,7 +25,7 @@ import Kernel.Types.Common
 
 data FPSlabsDetailsSlabD (s :: UsageSafety) = FPSlabsDetailsSlab
   { startDistance :: Meters,
-    baseFare :: Money,
+    baseFare :: HighPrecMoney,
     waitingChargeInfo :: Maybe WaitingChargeInfo,
     platformFeeInfo :: Maybe PlatformFeeInfo,
     nightShiftCharge :: Maybe NightShiftCharge
@@ -38,13 +38,13 @@ instance FromJSON (FPSlabsDetailsSlabD 'Unsafe)
 
 instance ToJSON (FPSlabsDetailsSlabD 'Unsafe)
 
-data PlatformFeeCharge = ProgressivePlatformFee HighPrecMoney | ConstantPlatformFee Money
+data PlatformFeeCharge = ProgressivePlatformFee HighPrecMoney | ConstantPlatformFee HighPrecMoney
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
 data PlatformFeeInfo = PlatformFeeInfo
   { platformFeeCharge :: PlatformFeeCharge,
-    cgst :: Double,
-    sgst :: Double
+    cgst :: HighPrecMoney,
+    sgst :: HighPrecMoney
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
@@ -54,7 +54,7 @@ data PlatformFeeInfo = PlatformFeeInfo
 
 data FPSlabsDetailsSlabAPIEntity = FPSlabsDetailsSlabAPIEntity
   { startDistance :: Meters,
-    baseFare :: Money,
+    baseFare :: HighPrecMoney,
     waitingChargeInfo :: Maybe WaitingChargeInfo,
     platformFeeInfo :: Maybe PlatformFeeInfo,
     nightShiftCharge :: Maybe NightShiftCharge

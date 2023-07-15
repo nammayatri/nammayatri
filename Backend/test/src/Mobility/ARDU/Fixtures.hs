@@ -16,7 +16,7 @@ module Mobility.ARDU.Fixtures where
 
 import "dynamic-offer-driver-app" Domain.Types.Merchant as DM
 import Kernel.Prelude
-import Kernel.Types.Common (Money)
+import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id
 import Kernel.Types.Time
 import Utils
@@ -42,8 +42,8 @@ arduDriver2 =
     }
 
 -- See restricted_extra_fare
-defaultAllowedDriverFee :: Money
-defaultAllowedDriverFee = 10
+defaultAllowedDriverFee :: HighPrecMOney
+defaultAllowedDriverFee = 10.00
 
 nammaYatriPartnerMerchantId :: Id DM.Merchant
 nammaYatriPartnerMerchantId = "favorit0-0000-0000-0000-00000favorit"

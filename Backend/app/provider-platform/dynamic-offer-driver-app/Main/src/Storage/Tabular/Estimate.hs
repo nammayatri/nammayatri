@@ -39,15 +39,15 @@ mkPersist
       id Text
       requestId SearchRequestTId
       vehicleVariant Variant.Variant
-      minFare Money
-      maxFare Money
+      minFare HighPrecMoney
+      maxFare HighPrecMoney
       estimateBreakupList (PostgresList Text)
-      nightShiftCharge Money Maybe
-      oldNightShiftCharge Centesimal Maybe sql=night_shift_multiplier
+      nightShiftCharge HighPrecMoney Maybe
+      oldNightShiftCharge HighPrecMoney Maybe sql=night_shift_multiplier
       nightShiftStart TimeOfDay Maybe
       nightShiftEnd TimeOfDay Maybe
-      waitingChargePerMin Money Maybe
-      waitingOrPickupCharges Money Maybe
+      waitingChargePerMin HighPrecMoney Maybe
+      waitingOrPickupCharges HighPrecMoney Maybe
       specialLocationTag Text Maybe
       createdAt UTCTime
 

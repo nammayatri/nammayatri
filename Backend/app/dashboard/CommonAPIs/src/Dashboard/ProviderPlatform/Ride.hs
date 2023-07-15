@@ -46,7 +46,7 @@ type RideListAPI =
     :> QueryParam "rideShortId" (ShortId Ride)
     :> QueryParam "customerPhoneNo" Text
     :> QueryParam "driverPhoneNo" Text
-    :> QueryParam "fareDiff" Money
+    :> QueryParam "fareDiff" HighPrecMoney
     :> QueryParam "from" UTCTime
     :> QueryParam "to" UTCTime
     :> Get '[JSON] RideListRes
@@ -67,7 +67,7 @@ data RideListItem = RideListItem
     driverName :: Text,
     driverPhoneNo :: Maybe Text,
     vehicleNo :: Text,
-    fareDiff :: Maybe Money,
+    fareDiff :: Maybe HighPrecMoney,
     bookingStatus :: BookingStatus,
     rideCreatedAt :: UTCTime
   }
@@ -224,9 +224,9 @@ data RideInfoRes = RideInfoRes
     maxEstimatedDistance :: Maybe Meters,
     estimatedRideDuration :: Maybe Minutes,
     pickupDropOutsideOfThreshold :: Maybe Bool,
-    estimatedFare :: Money,
-    actualFare :: Maybe Money,
-    driverOfferedFare :: Maybe Money,
+    estimatedFare :: HighPrecMoney,
+    actualFare :: Maybe HighPrecMoney,
+    driverOfferedFare :: Maybe HighPrecMoney,
     pickupDuration :: Maybe Minutes,
     rideDuration :: Maybe Minutes,
     bookingStatus :: BookingStatus,

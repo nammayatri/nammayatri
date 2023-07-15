@@ -25,7 +25,7 @@ import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess (APISuccess)
-import Kernel.Types.Common (HighPrecMoney, MandatoryQueryParam, Money)
+import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import qualified Kernel.Utils.Predicates as P
@@ -196,12 +196,12 @@ data DriverAadhaarInfoRes = DriverAadhaarInfoRes
 data DriverOutstandingBalanceResp = DriverOutstandingBalanceResp
   { driverFeeId :: Id DriverOutstandingBalanceResp,
     driverId :: Id Driver,
-    govtCharges :: Money,
+    govtCharges :: HighPrecMoney,
     platformFee :: PlatformFee,
     numRides :: Int,
     payBy :: UTCTime,
-    totalFee :: Money,
-    totalEarnings :: Money,
+    totalFee :: HighPrecMoney,
+    totalEarnings :: HighPrecMoney,
     startTime :: UTCTime,
     endTime :: UTCTime,
     status :: DriverFeeStatus
@@ -209,7 +209,7 @@ data DriverOutstandingBalanceResp = DriverOutstandingBalanceResp
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
 data PlatformFee = PlatformFee
-  { fee :: Money,
+  { fee :: HighPrecMoney,
     cgst :: HighPrecMoney,
     sgst :: HighPrecMoney
   }

@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE NumDecimals #-}
 
 module SharedLogic.Estimate
   ( module DEst,
@@ -91,7 +92,7 @@ buildEstimate searchReqId startTime dist specialLocationTag farePolicy = do
             SlabsDetails det -> (findFPSlabsDetailsSlabByDistance dist det.slabs).waitingChargeInfo
             ProgressiveDetails det -> det.waitingChargeInfo
       let (mbWaitingChargePerMin, mbWaitingOrPickupCharges) = case waitingChargeInfo <&> (.waitingCharge) of
-            Just (PerMinuteWaitingCharge charge) -> (Just $ roundToIntegral charge, Nothing)
+            Just (PerMinuteWaitingCharge charge) -> (Just charge, Nothing)
             Just (ConstantWaitingCharge charge) -> (Nothing, Just charge)
             Nothing -> (Nothing, Nothing)
       WaitingCharges
@@ -99,8 +100,8 @@ buildEstimate searchReqId startTime dist specialLocationTag farePolicy = do
           waitingOrPickupCharges = mbWaitingOrPickupCharges
         }
     getOldNightShiftCharge farePolicyDetails = do
-      let getNightShiftChargeValue (DFP.ProgressiveNightShiftCharge a) = realToFrac a --TODO Doesn't make sense, to be removed
-          getNightShiftChargeValue (DFP.ConstantNightShiftCharge a) = fromIntegral a
+      let getNightShiftChargeValue (DFP.ProgressiveNightShiftCharge a) = a --TODO Doesn't make sense, to be removed
+          getNightShiftChargeValue (DFP.ConstantNightShiftCharge a) = a
       case farePolicyDetails of
         DFP.SlabsDetails det -> getNightShiftChargeValue <$> (DFP.findFPSlabsDetailsSlabByDistance dist det.slabs).nightShiftCharge
         DFP.ProgressiveDetails det -> getNightShiftChargeValue <$> det.nightShiftCharge
@@ -122,7 +123,7 @@ buildEstimate searchReqId startTime dist specialLocationTag farePolicy = do
             || breakup.title == "CGST"
             || breakup.title == "FIXED_GOVERNMENT_RATE"
 
-mkAdditionalBreakups :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> Meters -> FullFarePolicy -> [breakupItem]
+mkAdditionalBreakups :: (HighPrecMoney -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> Meters -> FullFarePolicy -> [breakupItem]
 mkAdditionalBreakups mkPrice mkBreakupItem distance farePolicy = do
   let driverExtraFeeBounds = findDriverExtraFeeBoundsByDistance distance <$> farePolicy.driverExtraFeeBounds
   let driverMinExtraFee = driverExtraFeeBounds <&> (.minFee)
@@ -147,12 +148,12 @@ mkAdditionalBreakups mkPrice mkBreakupItem distance farePolicy = do
     mkAdditionalProgressiveBreakups det = do
       let (perExtraKmFareSection :| _) = NE.sortBy (comparing (.startDistance)) det.perExtraKmRateSections
           perExtraKmFareCaption = "EXTRA_PER_KM_FARE"
-          perExtraKmFareItem = mkBreakupItem perExtraKmFareCaption (mkPrice $ roundToIntegral perExtraKmFareSection.perExtraKmRate)
+          perExtraKmFareItem = mkBreakupItem perExtraKmFareCaption (mkPrice perExtraKmFareSection.perExtraKmRate)
 
       let waitingOrPickupChargesCaption = "WAITING_OR_PICKUP_CHARGES"
           mbWatingChargeValue =
             (det.waitingChargeInfo <&> (.waitingCharge)) <&> \case
-              PerMinuteWaitingCharge hpm -> roundToIntegral hpm
+              PerMinuteWaitingCharge hpm -> hpm
               ConstantWaitingCharge mo -> mo
           mbWaitingOrPickupChargesItem = mkBreakupItem waitingOrPickupChargesCaption . mkPrice <$> mbWatingChargeValue
       [perExtraKmFareItem] <> catMaybes [mbWaitingOrPickupChargesItem]
@@ -160,7 +161,7 @@ mkAdditionalBreakups mkPrice mkBreakupItem distance farePolicy = do
       let waitingOrPickupChargesCaption = "WAITING_OR_PICKUP_CHARGES"
           mbWatingChargeValue =
             (det.waitingChargeInfo <&> (.waitingCharge)) <&> \case
-              PerMinuteWaitingCharge hpm -> roundToIntegral hpm
+              PerMinuteWaitingCharge hpm -> hpm
               ConstantWaitingCharge mo -> mo
           mbWaitingOrPickupChargesItem = mkBreakupItem waitingOrPickupChargesCaption . mkPrice <$> mbWatingChargeValue
       catMaybes [mbWaitingOrPickupChargesItem]

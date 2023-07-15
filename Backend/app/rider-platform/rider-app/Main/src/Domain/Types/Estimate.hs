@@ -38,9 +38,9 @@ data Estimate = Estimate
     requestId :: Id DSearchRequest.SearchRequest,
     merchantId :: Maybe (Id DM.Merchant),
     bppEstimateId :: Id BPPEstimate,
-    estimatedFare :: Money,
-    discount :: Maybe Money,
-    estimatedTotalFare :: Money,
+    estimatedFare :: HighPrecMoney,
+    discount :: Maybe HighPrecMoney,
+    estimatedTotalFare :: HighPrecMoney,
     totalFareRange :: FareRange,
     estimatedDuration :: Maybe Seconds,
     estimatedDistance :: Maybe HighPrecMeters,
@@ -68,7 +68,7 @@ data BPPEstimate
 deriving instance Read LatLong
 
 data NightShiftInfo = NightShiftInfo
-  { nightShiftCharge :: Money,
+  { nightShiftCharge :: HighPrecMoney,
     oldNightShiftCharge :: Centesimal, -- TODO: this field works wrong, value in it not always make sense, it have to be removed later
     nightShiftStart :: TimeOfDay,
     nightShiftEnd :: TimeOfDay
@@ -85,27 +85,27 @@ data EstimateBreakup = EstimateBreakup
 
 data EstimateBreakupPrice = EstimateBreakupPrice
   { currency :: Text,
-    value :: Money
+    value :: HighPrecMoney
   }
   deriving (Generic, FromJSON, ToJSON, Show, PrettyShow, ToSchema)
 
 data FareRange = FareRange
-  { minFare :: Money,
-    maxFare :: Money
+  { minFare :: HighPrecMoney,
+    maxFare :: HighPrecMoney
   }
   deriving (Generic, Show, PrettyShow, ToJSON, FromJSON, ToSchema)
 
 newtype WaitingCharges = WaitingCharges
-  { waitingChargePerMin :: Maybe Money
+  { waitingChargePerMin :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data EstimateAPIEntity = EstimateAPIEntity
   { id :: Id Estimate,
     vehicleVariant :: VehicleVariant,
-    estimatedFare :: Money,
-    estimatedTotalFare :: Money,
-    discount :: Maybe Money,
+    estimatedFare :: HighPrecMoney,
+    estimatedTotalFare :: HighPrecMoney,
+    discount :: Maybe HighPrecMoney,
     totalFareRange :: FareRange,
     agencyName :: Text,
     agencyNumber :: Text,
@@ -130,7 +130,7 @@ data NightShiftRateAPIEntity = NightShiftRateAPIEntity
 
 data EstimateBreakupAPIEntity = EstimateBreakupAPIEntity
   { title :: Text,
-    price :: Money
+    price :: HighPrecMoney
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

@@ -28,7 +28,7 @@ data Quote = Quote
     bppId :: Text,
     bppUrl :: BaseUrl,
     description :: Text,
-    fare :: Money,
+    fare :: HighPrecMoney,
     departureTime :: UTCTime,
     arrivalTime :: UTCTime,
     departureStationId :: Id TransportStation,
@@ -41,7 +41,7 @@ data Quote = Quote
 data QuoteAPIEntity = QuoteAPIEntity
   { id :: Id Quote,
     description :: Text,
-    fare :: Money,
+    fare :: HighPrecMoney,
     departureTime :: UTCTime,
     arrivalTime :: UTCTime,
     departureStation :: TransportStationAPIEntity,

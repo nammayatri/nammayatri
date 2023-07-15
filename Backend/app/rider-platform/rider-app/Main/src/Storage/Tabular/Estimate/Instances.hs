@@ -32,8 +32,8 @@ instance FromTType FullEstimateT Domain.Estimate where
     estimateBreakupList <- fromTType `traverse` estimateBreakupListT
     let totalFareRange =
           Domain.FareRange
-            { minFare = roundToIntegral minTotalFare,
-              maxFare = roundToIntegral maxTotalFare
+            { minFare = minTotalFare,
+              maxFare = maxTotalFare
             }
     return $
       Domain.Estimate
@@ -42,9 +42,9 @@ instance FromTType FullEstimateT Domain.Estimate where
           merchantId = fromKey <$> merchantId,
           bppEstimateId = Id bppEstimateId,
           providerUrl = pUrl,
-          estimatedFare = roundToIntegral estimatedFare,
-          discount = roundToIntegral <$> discount,
-          estimatedTotalFare = roundToIntegral estimatedTotalFare,
+          estimatedFare = estimatedFare,
+          discount = discount,
+          estimatedTotalFare = estimatedTotalFare,
           driversLocation = unPostgresList driversLocation,
           nightShiftInfo =
             ((,,,) <$> nightShiftCharge <*> oldNightShiftCharge <*> nightShiftStart <*> nightShiftEnd)
@@ -72,11 +72,11 @@ instance ToTType FullEstimateT Domain.Estimate where
               bppEstimateId = getId bppEstimateId,
               providerUrl = showBaseUrl providerUrl,
               tripTermsId = toKey <$> (tripTerms <&> (.id)),
-              estimatedFare = realToFrac estimatedFare,
-              discount = realToFrac <$> discount,
-              estimatedTotalFare = realToFrac estimatedTotalFare,
-              minTotalFare = realToFrac totalFareRange.minFare,
-              maxTotalFare = realToFrac totalFareRange.maxFare,
+              estimatedFare = estimatedFare,
+              discount = discount,
+              estimatedTotalFare = estimatedTotalFare,
+              minTotalFare = totalFareRange.minFare,
+              maxTotalFare = totalFareRange.maxFare,
               nightShiftCharge = nightShiftInfo <&> (.nightShiftCharge),
               oldNightShiftCharge = nightShiftInfo <&> (.oldNightShiftCharge),
               nightShiftStart = nightShiftInfo <&> (.nightShiftStart),

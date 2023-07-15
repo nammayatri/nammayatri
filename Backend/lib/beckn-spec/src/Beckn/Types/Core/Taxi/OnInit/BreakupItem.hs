@@ -14,9 +14,9 @@
 
 module Beckn.Types.Core.Taxi.OnInit.BreakupItem where
 
-import Beckn.Types.Core.Taxi.Common.DecimalValue
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import Kernel.Prelude
+import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data BreakupItem = BreakupItem
@@ -30,7 +30,7 @@ instance ToSchema BreakupItem where
 
 data BreakupItemPrice = BreakupItemPrice
   { currency :: Text,
-    value :: DecimalValue
+    value :: HighPrecMoney
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 

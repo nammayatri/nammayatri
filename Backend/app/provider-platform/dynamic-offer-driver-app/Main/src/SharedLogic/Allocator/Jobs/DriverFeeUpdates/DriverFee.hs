@@ -65,9 +65,9 @@ sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
         logInfo "Driver Not found. This should not be possible."
         throwError (InternalError "Driver Not Found") -- Unreachable
       Just driver -> do
-        let pendingAmount = driverFee.govtCharges + driverFee.platformFee.fee + round driverFee.platformFee.cgst + round driverFee.platformFee.sgst
+        let pendingAmount = driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst
             paymentTitle = "Payment Pending"
-            paymentMessage = "Payment of " <> show pendingAmount.getMoney <> " is pending for " <> show driverFee.numRides <> " ride(s) with a deadline of " <> show driverFee.payBy <> ". Pay by " <> show driverFee.payBy <> " to avoid being blocked."
+            paymentMessage = "Payment of " <> show pendingAmount <> " is pending for " <> show driverFee.numRides <> " ride(s) with a deadline of " <> show driverFee.payBy <> ". Pay by " <> show driverFee.payBy <> " to avoid being blocked."
         (Notify.sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.PAYMENT_PENDING paymentTitle paymentMessage driver.id driver.deviceToken) `C.catchAll` \e -> C.mask_ $ logError $ "FCM for payment reminder to driver id " <> driver.id.getId <> " failed. Error: " <> show e
   forM_ feeZipDriver $ \(driverFee, mbPerson) -> do
     whenJust mbPerson $ \person -> do
@@ -107,9 +107,9 @@ unsubscribeDriverForPaymentOverdue Job {id, jobInfo} = withLogTag ("JobId-" <> i
         logInfo "Driver Not found. This should not be possible."
         throwError (InternalError "Driver Not Found") -- Unreachable
       Just driver -> do
-        let pendingAmount = driverFee.govtCharges + driverFee.platformFee.fee + round driverFee.platformFee.cgst + round driverFee.platformFee.sgst
+        let pendingAmount = driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst
         let paymentTitle = "Blocked - Payment Overdue"
-            paymentMessage = "Sorry, you are blocked from taking rides as payment of " <> show pendingAmount.getMoney <> " is pending for " <> show driverFee.numRides <> " ride(s) with a deadline of " <> show driverFee.payBy <> ". Please pay the balance amount to get unblocked."
+            paymentMessage = "Sorry, you are blocked from taking rides as payment of " <> show pendingAmount <> " is pending for " <> show driverFee.numRides <> " ride(s) with a deadline of " <> show driverFee.payBy <> ". Please pay the balance amount to get unblocked."
         (Notify.sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.PAYMENT_OVERDUE paymentTitle paymentMessage driver.id driver.deviceToken) `C.catchAll` \e -> C.mask_ $ logError $ "FCM for removing subsciption of driver id " <> driver.id.getId <> " failed. Error: " <> show e
   forM_ feeZipDriver $ \(driverFee, mbPerson) -> do
     Esq.runTransaction $ do

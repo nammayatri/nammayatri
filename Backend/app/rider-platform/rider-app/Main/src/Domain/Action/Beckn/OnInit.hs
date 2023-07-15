@@ -33,9 +33,9 @@ import Tools.Error
 data OnInitReq = OnInitReq
   { bookingId :: Id Booking,
     bppBookingId :: Id BPPBooking,
-    estimatedFare :: Money,
-    discount :: Maybe Money,
-    estimatedTotalFare :: Money,
+    estimatedFare :: HighPrecMoney,
+    discount :: Maybe HighPrecMoney,
+    estimatedTotalFare :: HighPrecMoney,
     paymentUrl :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
@@ -47,7 +47,7 @@ data OnInitRes = OnInitRes
     bppUrl :: BaseUrl,
     fromLocationAddress :: DBL.LocationAddress,
     mbToLocationAddress :: Maybe DBL.LocationAddress,
-    estimatedTotalFare :: Money,
+    estimatedTotalFare :: HighPrecMoney,
     riderPhoneCountryCode :: Text,
     riderPhoneNumber :: Text,
     mbRiderName :: Maybe Text,

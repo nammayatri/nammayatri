@@ -68,11 +68,11 @@ createOrder (driverId, merchantId) driverFeeId = do
   driverPhone <- driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   let driverEmail = fromMaybe "test@juspay.in" driver.email
   pendingFees <- QDF.findPendingFeesByDriverFeeId driverFee.id >>= fromMaybeM (DriverFeeNotFound $ getId driverFeeId)
-  let pendingAmount = fromIntegral pendingFees.govtCharges + fromIntegral pendingFees.platformFee.fee + pendingFees.platformFee.cgst + pendingFees.platformFee.sgst
+  let pendingAmount = pendingFees.govtCharges + pendingFees.platformFee.fee + pendingFees.platformFee.cgst + pendingFees.platformFee.sgst
   let createOrderReq =
         Payment.CreateOrderReq
           { orderShortId = driverFee.shortId.getShortId,
-            amount = round pendingAmount,
+            amount = pendingAmount,
             customerId = driver.id.getId,
             customerEmail = driverEmail,
             customerPhone = driverPhone,

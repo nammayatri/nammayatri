@@ -307,7 +307,7 @@ data RideItem = RideItem
     rideDetails :: RideDetails,
     riderDetails :: RiderDetails,
     customerName :: Maybe Text,
-    fareDiff :: Maybe Money,
+    fareDiff :: Maybe HighPrecMoney,
     bookingStatus :: Common.BookingStatus
   }
 
@@ -320,7 +320,7 @@ findAllRideItems ::
   Maybe (ShortId Ride) ->
   Maybe DbHash ->
   Maybe DbHash ->
-  Maybe Money ->
+  Maybe HighPrecMoney ->
   UTCTime ->
   Maybe UTCTime ->
   Maybe UTCTime ->

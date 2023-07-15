@@ -25,10 +25,10 @@ import Kernel.Prelude
 import Kernel.Types.Common
 
 data FPProgressiveDetailsD (s :: UsageSafety) = FPProgressiveDetails
-  { baseFare :: Money,
+  { baseFare :: HighPrecMoney,
     baseDistance :: Meters,
     perExtraKmRateSections :: NonEmpty (FPProgressiveDetailsPerExtraKmRateSectionD s),
-    deadKmFare :: Money,
+    deadKmFare :: HighPrecMoney,
     waitingChargeInfo :: Maybe WaitingChargeInfo,
     nightShiftCharge :: Maybe NightShiftCharge
   }
@@ -45,10 +45,10 @@ instance ToJSON (FPProgressiveDetailsD 'Unsafe)
 -----------------------------------------------------------------------------------------------------------------------------------------
 
 data FPProgressiveDetailsAPIEntity = FPProgressiveDetailsAPIEntity
-  { baseFare :: Money,
+  { baseFare :: HighPrecMoney,
     baseDistance :: Meters,
     perExtraKmRateSections :: NonEmpty FPProgressiveDetailsPerExtraKmRateSectionAPIEntity,
-    deadKmFare :: Money,
+    deadKmFare :: HighPrecMoney,
     waitingChargeInfo :: Maybe WaitingChargeInfo,
     nightShiftCharge :: Maybe NightShiftCharge
   }

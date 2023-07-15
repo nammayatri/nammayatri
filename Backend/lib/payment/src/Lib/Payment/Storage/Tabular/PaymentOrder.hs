@@ -44,7 +44,7 @@ mkPersist
       description Text Maybe
       returnUrl Text Maybe
       action Text Maybe
-      amount Money
+      amount HighPrecMoney
       currency Payment.Currency
       status Payment.TransactionStatus
       webPaymentLink Text Maybe

@@ -65,7 +65,7 @@ mkPersist
       vehicleVariant Veh.Variant
       estimatedDistance Meters
       maxEstimatedDistance Centesimal Maybe
-      estimatedFare Money
+      estimatedFare HighPrecMoney
       estimatedDuration Seconds
       fareParametersId Fare.FareParametersTId
       riderName Text Maybe

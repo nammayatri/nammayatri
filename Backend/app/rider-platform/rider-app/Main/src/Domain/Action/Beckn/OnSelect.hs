@@ -66,9 +66,9 @@ data ProviderInfo = ProviderInfo
 
 data QuoteInfo = QuoteInfo
   { vehicleVariant :: VehicleVariant,
-    estimatedFare :: Money,
-    discount :: Maybe Money,
-    estimatedTotalFare :: Money,
+    estimatedFare :: HighPrecMoney,
+    discount :: Maybe HighPrecMoney,
+    estimatedTotalFare :: HighPrecMoney,
     quoteDetails :: DriverOfferQuoteDetails,
     descriptions :: [Text],
     specialLocationTag :: Maybe Text

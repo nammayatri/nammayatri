@@ -23,7 +23,7 @@ module Storage.Tabular.Ride.Table where
 import qualified Domain.Types.Ride as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
-import Kernel.Types.Common (HighPrecMeters, Meters, Money)
+import Kernel.Types.Common (HighPrecMeters, HighPrecMoney, Meters)
 import Kernel.Types.Id
 import Storage.Tabular.Booking (BookingTId)
 import qualified Storage.Tabular.FareParameters as Fare
@@ -44,7 +44,7 @@ mkPersist
       driverId PersonTId
       otp Text
       trackingUrl Text
-      fare Money Maybe
+      fare HighPrecMoney Maybe
       traveledDistance HighPrecMeters
       chargeableDistance Meters Maybe
       driverArrivalTime UTCTime Maybe

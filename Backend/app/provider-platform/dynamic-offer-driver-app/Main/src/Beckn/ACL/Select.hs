@@ -46,7 +46,7 @@ buildSelectReq subscriber req = do
   item <- case order.items of
     [item] -> pure item
     _ -> throwError $ InvalidRequest "There should be only one item"
-  let customerExtraFee = listToMaybe order.quote.breakup <&> roundToIntegral . (.price.value)
+  let customerExtraFee = listToMaybe order.quote.breakup <&> (.price.value)
   pure
     DSelect.DSelectReq
       { messageId = messageId,

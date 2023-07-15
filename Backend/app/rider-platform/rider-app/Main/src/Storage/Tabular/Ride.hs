@@ -83,8 +83,8 @@ instance FromTType RideT Domain.Ride where
           shortId = ShortId shortId,
           merchantId = fromKey <$> merchantId,
           trackingUrl = tUrl,
-          fare = roundToIntegral <$> fare,
-          totalFare = roundToIntegral <$> totalFare,
+          fare = fare,
+          totalFare = totalFare,
           ..
         }
 
@@ -97,7 +97,7 @@ instance ToTType RideT Domain.Ride where
         shortId = getShortId shortId,
         merchantId = toKey <$> merchantId,
         trackingUrl = showBaseUrl <$> trackingUrl,
-        fare = realToFrac <$> fare,
-        totalFare = realToFrac <$> totalFare,
+        fare = fare,
+        totalFare = totalFare,
         ..
       }

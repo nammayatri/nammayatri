@@ -39,7 +39,7 @@ data OnSearchQuoteReq = OnSearchQuoteReq
     bppId :: Text,
     bppUrl :: BaseUrl,
     description :: Text,
-    fare :: Money,
+    fare :: HighPrecMoney,
     departureTime :: UTCTime,
     arrivalTime :: UTCTime,
     bppDepartureLocId :: Text,

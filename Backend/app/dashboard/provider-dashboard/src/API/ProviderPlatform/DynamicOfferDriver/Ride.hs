@@ -25,7 +25,7 @@ import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
-import Kernel.Utils.Common (MonadFlow, Money, withFlowHandlerAPI)
+import Kernel.Utils.Common (HighPrecMoney, MonadFlow, withFlowHandlerAPI)
 import qualified ProviderPlatformClient.DynamicOfferDriver as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
@@ -120,7 +120,7 @@ rideList ::
   Maybe (ShortId Common.Ride) ->
   Maybe Text ->
   Maybe Text ->
-  Maybe Money ->
+  Maybe HighPrecMoney ->
   Maybe UTCTime ->
   Maybe UTCTime ->
   FlowHandler Common.RideListRes

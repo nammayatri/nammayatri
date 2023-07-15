@@ -90,8 +90,8 @@ data OnUpdateReq
   | RideCompletedReq
       { bppBookingId :: Id SRB.BPPBooking,
         bppRideId :: Id SRide.BPPRide,
-        fare :: Money,
-        totalFare :: Money,
+        fare :: HighPrecMoney,
+        totalFare :: HighPrecMoney,
         fareBreakups :: [OnUpdateFareBreakup],
         chargeableDistance :: HighPrecMeters,
         traveledDistance :: HighPrecMeters,
@@ -148,8 +148,8 @@ data ValidatedOnUpdateReq
   | ValidatedRideCompletedReq
       { bppBookingId :: Id SRB.BPPBooking,
         bppRideId :: Id SRide.BPPRide,
-        fare :: Money,
-        totalFare :: Money,
+        fare :: HighPrecMoney,
+        totalFare :: HighPrecMoney,
         fareBreakups :: [OnUpdateFareBreakup],
         chargeableDistance :: HighPrecMeters,
         booking :: SRB.Booking,
@@ -203,9 +203,9 @@ data OnUpdateFareBreakup = OnUpdateFareBreakup
 
 data EstimateRepetitionEstimateInfo = EstimateRepetitionEstimateInfo
   { vehicleVariant :: VehicleVariant,
-    estimatedFare :: Money,
-    discount :: Maybe Money,
-    estimatedTotalFare :: Money,
+    estimatedFare :: HighPrecMoney,
+    discount :: Maybe HighPrecMoney,
+    estimatedTotalFare :: HighPrecMoney,
     totalFareRange :: DEstimate.FareRange,
     descriptions :: [Text],
     estimateBreakupList :: [EstimateBreakupInfo],
@@ -215,14 +215,14 @@ data EstimateRepetitionEstimateInfo = EstimateRepetitionEstimateInfo
   }
 
 data NightShiftInfo = NightShiftInfo
-  { nightShiftCharge :: Money,
+  { nightShiftCharge :: HighPrecMoney,
     nightShiftStart :: TimeOfDay,
     nightShiftEnd :: TimeOfDay
   }
 
 data WaitingChargesInfo = WaitingChargesInfo
   { waitingTimeEstimatedThreshold :: Maybe Seconds,
-    waitingChargePerMin :: Maybe Money
+    waitingChargePerMin :: Maybe HighPrecMoney
   }
 
 data EstimateBreakupInfo = EstimateBreakupInfo
@@ -232,7 +232,7 @@ data EstimateBreakupInfo = EstimateBreakupInfo
 
 data BreakupPriceInfo = BreakupPriceInfo
   { currency :: Text,
-    value :: Money
+    value :: HighPrecMoney
   }
 
 onUpdate ::

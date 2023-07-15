@@ -88,7 +88,7 @@ data DriversAPIs = DriversAPIs
   }
 
 data RidesAPIs = RidesAPIs
-  { rideList :: Maybe Int -> Maybe Int -> Maybe Ride.BookingStatus -> Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe Money -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Ride.RideListRes,
+  { rideList :: Maybe Int -> Maybe Int -> Maybe Ride.BookingStatus -> Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe HighPrecMoney -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Ride.RideListRes,
     rideStart :: Id Ride.Ride -> Ride.StartRideReq -> Euler.EulerClient APISuccess,
     rideEnd :: Id Ride.Ride -> Ride.EndRideReq -> Euler.EulerClient APISuccess,
     multipleRideEnd :: Ride.MultipleRideEndReq -> Euler.EulerClient APISuccess,

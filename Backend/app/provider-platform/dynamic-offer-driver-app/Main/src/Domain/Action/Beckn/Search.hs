@@ -94,7 +94,7 @@ data DSearchReq = DSearchReq
 data SpecialZoneQuoteInfo = SpecialZoneQuoteInfo
   { quoteId :: Id DQuoteSpecialZone.QuoteSpecialZone,
     vehicleVariant :: DVeh.Variant,
-    estimatedFare :: Money,
+    estimatedFare :: HighPrecMoney,
     fromLocation :: LatLong,
     toLocation :: LatLong,
     specialLocationTag :: Maybe Text,

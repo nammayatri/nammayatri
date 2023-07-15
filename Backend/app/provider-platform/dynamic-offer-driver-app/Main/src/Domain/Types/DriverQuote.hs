@@ -45,7 +45,7 @@ data DriverQuote = DriverQuote
     distanceToPickup :: Meters,
     durationToPickup :: Seconds,
     validTill :: UTCTime,
-    estimatedFare :: Money,
+    estimatedFare :: HighPrecMoney,
     fareParams :: Params.FareParameters,
     providerId :: Id DMerchant.Merchant,
     specialLocationTag :: Maybe Text,
