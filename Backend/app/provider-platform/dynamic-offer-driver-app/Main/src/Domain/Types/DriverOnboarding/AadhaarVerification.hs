@@ -28,6 +28,7 @@ data AadhaarVerification = AadhaarVerification
     driverImage :: Maybe Text,
     aadhaarNumberHash :: Maybe DbHash,
     isVerified :: Bool,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, Show)

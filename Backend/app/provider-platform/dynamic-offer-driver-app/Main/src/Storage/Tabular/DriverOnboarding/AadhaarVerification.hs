@@ -41,6 +41,7 @@ mkPersist
       aadhaarNumberHash DbHash Maybe
       isVerified Bool
       createdAt  UTCTime
+      updatedAt  UTCTime
       Primary id
       deriving Generic
     |]

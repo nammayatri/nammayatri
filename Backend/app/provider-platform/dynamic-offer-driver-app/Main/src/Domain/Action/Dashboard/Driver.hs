@@ -35,8 +35,8 @@ module Domain.Action.Dashboard.Driver
     clearOnRideStuckDrivers,
     getDriverDue,
     collectCash,
-    getAadhaarDetailsByPhoneNumber,
-    updateAadhaarDetailsByPhoneNumber,
+    driverAadhaarInfoByPhone,
+    updateDriverAadhaar,
   )
 where
 
@@ -703,10 +703,10 @@ clearOnRideStuckDrivers merchantShortId = do
 
 ---------------------------------------------------------------------
 
-getAadhaarDetailsByPhoneNumber :: ShortId DM.Merchant -> Text -> Flow Common.DriverAadhaarInfoRes
-getAadhaarDetailsByPhoneNumber merchantShortId phoneNumber = do
-  mobileNumberHash <- getDbHash phoneNumber
+driverAadhaarInfoByPhone :: ShortId DM.Merchant -> Text -> Flow Common.DriverAadhaarInfoRes
+driverAadhaarInfoByPhone merchantShortId phoneNumber = do
   merchant <- findMerchantByShortId merchantShortId
+  mobileNumberHash <- getDbHash phoneNumber
   driver <- QPerson.findByMobileNumberAndMerchant "+91" mobileNumberHash merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
   res <- AV.findByDriverId driver.id
   case res of
@@ -724,13 +724,16 @@ getAadhaarDetailsByPhoneNumber merchantShortId phoneNumber = do
 
 ---------------------------------------------------------------------
 
-updateAadhaarDetailsByPhoneNumber :: ShortId DM.Merchant -> Text -> Common.UpdateDriverDataReq -> Flow APISuccess
-updateAadhaarDetailsByPhoneNumber merchantShortId phoneNumber req = do
+updateDriverAadhaar :: ShortId DM.Merchant -> Text -> Common.UpdateDriverDataReq -> Flow APISuccess
+updateDriverAadhaar merchantShortId phoneNumber req = do
   mobileNumberHash <- getDbHash phoneNumber
   aadhaarNumberHash <- getDbHash req.driverAadhaarNumber
+  aadhaarInfo <- AV.findByAadhaarNumberHash aadhaarNumberHash
+  when (isJust aadhaarInfo) $ throwError AadhaarAlreadyLinked
   merchant <- findMerchantByShortId merchantShortId
   driver <- QPerson.findByMobileNumberAndMerchant "+91" mobileNumberHash merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
   Esq.runTransaction $ AV.findByPhoneNumberAndUpdate req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) req.isVerified driver.id
+  CQDriverInfo.updateAadhaarVerifiedState (cast driver.id) True
   pure Success
 
 ---------------------------------------------------------------------

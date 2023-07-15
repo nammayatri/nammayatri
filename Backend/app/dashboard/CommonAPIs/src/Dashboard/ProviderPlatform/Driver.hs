@@ -47,7 +47,6 @@ data DriverEndpoint
   | AddVehicleEndpoint
   | UpdateDriverNameEndpoint
   | CollectCashEndpoint
-  | UpdateDriverAadhaarAPI
   deriving (Show, Read)
 
 derivePersistField "DriverEndpoint"
@@ -190,6 +189,15 @@ data DriverAadhaarInfoRes = DriverAadhaarInfoRes
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-- driver aadhaar Info api by mobile Number ----------------------------------------
+
+type DriverAadhaarInfoByPhoneAPI =
+  Capture "mobileNo" Text
+    :> "aadhaarInfobyMobileNumber"
+    :> Get '[JSON] DriverAadhaarInfoRes
+
+---------------------------------------------------------
 
 ---------------------------------------------------------
 -- driver outstanding balance api ----------------------------------------
@@ -500,6 +508,23 @@ validateUpdatePhoneNumberReq UpdatePhoneNumberReq {..} =
 instance HideSecrets UpdatePhoneNumberReq where
   hideSecrets = identity
 
+-- update driver aadhaar  api ----------------------------------------
+type UpdateDriverAadhaarAPI =
+  Capture "mobileNo" Text
+    :> "updateDriverAadhaar"
+    :> ReqBody '[JSON] UpdateDriverDataReq
+    :> Post '[JSON] APISuccess
+
+data UpdateDriverDataReq = UpdateDriverDataReq
+  { driverName :: Text,
+    driverGender :: Text,
+    driverDob :: Text,
+    driverAadhaarNumber :: Text,
+    isVerified :: Bool
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 ---------------------------------------------------------
 -- add vehicle ------------------------------------------
 
@@ -574,32 +599,3 @@ newtype ClearOnRideStuckDriversRes = ClearOnRideStuckDriversRes
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
-
--- driver aadhaar Info api by mobile Number ----------------------------------------
-
-type DriverAadhaarInfoByPhoneAPI =
-  Capture "mobileNo" Text
-    :> "aadhaarInfobyMobileNumber"
-    :> Get '[JSON] DriverAadhaarInfoRes
-
----------------------------------------------------------
-
--- driver aadhaar Info api ----------------------------------------
-
-type UpdateDriverAadhaarAPI =
-  Capture "mobileNo" Text
-    :> "UpdateDriverAadhaar"
-    :> ReqBody '[JSON] UpdateDriverDataReq
-    :> Post '[JSON] APISuccess
-
-data UpdateDriverDataReq = UpdateDriverDataReq
-  { driverName :: Text,
-    driverGender :: Text,
-    driverDob :: Text,
-    driverAadhaarNumber :: Text,
-    isVerified :: Bool
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
----------------------------------------------------------

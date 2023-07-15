@@ -20,6 +20,7 @@ import Kernel.External.Encryption (DbHash)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.Tabular.DriverOnboarding.AadhaarVerification
 
 create :: AadhaarVerification -> Esq.SqlDB ()
@@ -59,6 +60,7 @@ deleteByDriverId driverId =
 
 findByPhoneNumberAndUpdate :: Text -> Text -> Text -> Maybe DbHash -> Bool -> Id Person -> Esq.SqlDB ()
 findByPhoneNumberAndUpdate name gender dob aadhaarNumberHash isVerified personId = do
+  now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
       tbl
@@ -66,6 +68,7 @@ findByPhoneNumberAndUpdate name gender dob aadhaarNumberHash isVerified personId
         AadhaarVerificationDriverGender =. val gender,
         AadhaarVerificationDriverDob =. val dob,
         AadhaarVerificationAadhaarNumberHash =. val aadhaarNumberHash,
-        AadhaarVerificationIsVerified =. val isVerified
+        AadhaarVerificationIsVerified =. val isVerified,
+        AadhaarVerificationUpdatedAt =. val now
       ]
     where_ $ tbl ^. AadhaarVerificationDriverId ==. val (toKey personId)
