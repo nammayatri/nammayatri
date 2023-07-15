@@ -394,6 +394,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , gender                :: Maybe String
     , numberOfRides         :: Maybe Int
     , paymentPending        :: Boolean
+    , aadhaarVerified       :: Boolean
     }
 
 
@@ -404,7 +405,8 @@ newtype  OrganizationInfo = OrganizationInfo
         contactNumber :: String,
         status        :: String,
         enabled       :: Boolean,
-        id            :: String
+        id            :: String,
+        aadhaarVerificationRequired :: Boolean
     }
 
 newtype Vehicle = Vehicle
@@ -1919,3 +1921,69 @@ instance standardEncodeTxnInfo :: StandardEncode TxnInfo where standardEncode (T
 instance showTxnInfo :: Show TxnInfo where show = genericShow
 instance decodeTxnInfo :: Decode TxnInfo where decode = defaultDecode
 instance encodeTxnInfo :: Encode TxnInfo where encode = defaultEncode
+newtype GenerateAadhaarOTPReq = GenerateAadhaarOTPReq {
+  aadhaarNumber :: String,
+  consent :: String
+}
+
+newtype GenerateAadhaarOTPResp = GenerateAadhaarOTPResp {
+  message :: String,
+  requestId :: String,
+  transactionId :: String,
+  statusCode :: String
+}
+
+instance makeGenerateAadhaarOTPReq :: RestEndpoint GenerateAadhaarOTPReq GenerateAadhaarOTPResp where
+    makeRequest reqBody headers = defaultMakeRequest POST (EP.triggerAadhaarOTP "") headers reqBody
+    decodeResponse = decodeJSON
+    encodeRequest req = standardEncode req
+
+derive instance genericGenerateAadhaarOTPReq :: Generic GenerateAadhaarOTPReq _
+derive instance newtypeGenerateAadhaarOTPReq :: Newtype GenerateAadhaarOTPReq _
+instance standardEncodeGenerateAadhaarOTPReq :: StandardEncode GenerateAadhaarOTPReq where standardEncode (GenerateAadhaarOTPReq body) = standardEncode body
+instance showGenerateAadhaarOTPReq :: Show GenerateAadhaarOTPReq where show = genericShow
+instance decodeGenerateAadhaarOTPReq :: Decode GenerateAadhaarOTPReq  where decode = defaultDecode
+instance encodeGenerateAadhaarOTPReq :: Encode GenerateAadhaarOTPReq where encode = defaultEncode
+
+derive instance genericGenerateAadhaarOTPResp :: Generic GenerateAadhaarOTPResp _
+derive instance newtypeGenerateAadhaarOTPResp :: Newtype GenerateAadhaarOTPResp _
+instance standardEncodeGenerateAadhaarOTPResp :: StandardEncode GenerateAadhaarOTPResp where standardEncode (GenerateAadhaarOTPResp body) = standardEncode body
+instance showGenerateAadhaarOTPResp :: Show GenerateAadhaarOTPResp where show = genericShow
+instance decodeGenerateAadhaarOTPResp :: Decode GenerateAadhaarOTPResp  where decode = defaultDecode
+instance encodeGenerateAadhaarOTPResp :: Encode GenerateAadhaarOTPResp where encode = defaultEncode
+
+newtype VerifyAadhaarOTPReq = VerifyAadhaarOTPReq {
+  otp :: Int,
+  shareCode :: String
+}
+
+newtype VerifyAadhaarOTPResp = VerifyAadhaarOTPResp {
+    message :: String
+  , date_of_birth :: String
+  , name :: String
+  , share_code :: String
+  , gender :: String
+  , request_id :: String
+  , transactionId :: String
+  , image :: String
+  , code :: Int
+}
+
+instance makeVerifyAadhaarOTPReq :: RestEndpoint VerifyAadhaarOTPReq VerifyAadhaarOTPResp where
+    makeRequest reqBody headers = defaultMakeRequest POST (EP.verifyAadhaarOTP "") headers reqBody
+    decodeResponse = decodeJSON
+    encodeRequest req = standardEncode req
+
+derive instance genericVerifyAadhaarOTPReq :: Generic VerifyAadhaarOTPReq _
+derive instance newtypeVerifyAadhaarOTPReq :: Newtype VerifyAadhaarOTPReq _
+instance standardEncodeVerifyAadhaarOTPReq :: StandardEncode VerifyAadhaarOTPReq where standardEncode (VerifyAadhaarOTPReq body) = standardEncode body
+instance showVerifyAadhaarOTPReq :: Show VerifyAadhaarOTPReq where show = genericShow
+instance decodeVerifyAadhaarOTPReq :: Decode VerifyAadhaarOTPReq  where decode = defaultDecode
+instance encodeVerifyAadhaarOTPReq :: Encode VerifyAadhaarOTPReq where encode = defaultEncode
+
+derive instance genericVerifyAadhaarOTPResp :: Generic VerifyAadhaarOTPResp _
+derive instance newtypeVerifyAadhaarOTPResp :: Newtype VerifyAadhaarOTPResp _
+instance standardEncodeVerifyAadhaarOTPResp :: StandardEncode VerifyAadhaarOTPResp where standardEncode (VerifyAadhaarOTPResp body) = standardEncode body
+instance showVerifyAadhaarOTPResp :: Show VerifyAadhaarOTPResp where show = genericShow
+instance decodeVerifyAadhaarOTPResp :: Decode VerifyAadhaarOTPResp  where decode = defaultDecode
+instance encodeVerifyAadhaarOTPResp :: Encode VerifyAadhaarOTPResp where encode = defaultEncode

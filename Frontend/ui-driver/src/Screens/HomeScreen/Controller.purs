@@ -19,6 +19,7 @@ import Common.Types.App (OptionButtonList, APIPaymentStatus(..), PaymentStatus(.
 import Components.BottomNavBar as BottomNavBar
 import Components.SelectListModal as SelectListModal
 import Components.Banner as Banner
+import Components.ChatView as ChatView
 import Components.InAppKeyboardModal as InAppKeyboardModal
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButtonController
@@ -37,8 +38,8 @@ import Data.String (Pattern(..), Replacement(..), drop, length, take, trim, repl
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (clearTimer, getCurrentUTC, getNewIDWithTag, convertUTCtoISC)
-import Helpers.Utils (currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat,setText',getTime, differenceBetweenTwoUTC)
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService)
+import Helpers.Utils (currentPosition, differenceBetweenTwoUTC, getDistanceBwCordinates, parseFloat,setText,getTime, differenceBetweenTwoUTC)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -48,7 +49,6 @@ import PrestoDOM.Types.Core (class Loggable)
 import Resource.Constants (decodeAddress)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
--- import Screens.Types(DriverStatus(..))
 import Services.APITypes (GetRidesHistoryResp, RidesInfo(..), Status(..))
 import Services.Accessor (_lat, _lon)
 import Services.Config (getCustomerNumber)
@@ -159,6 +159,7 @@ instance loggableAction :: Loggable Action where
     GoToProfile -> do
       trackAppActionClick appId (getScreen HOME_SCREEN) "bottom_nav_bar" "on_navigate"
       trackAppEndScreen appId (getScreen HOME_SCREEN)
+    LinkAadhaarPopupAC act -> pure unit --case act of
     PopUpModalSilentAction act -> pure unit --case act of
       -- PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_silent_confirmation" "go_offline_onclick"
       -- PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_silent_confirmation" "go_silent_onclick"
@@ -200,6 +201,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | CallCustomer ST.HomeScreenState
                     | GotoEditGenderScreen
                     | OpenPaymentPage ST.HomeScreenState
+                    | AadhaarVerificationFlow ST.HomeScreenState 
 
 data Action = NoAction
             | BackPressed
@@ -236,6 +238,7 @@ data Action = NoAction
             | HelpAndSupportScreen
             | SwitchDriverStatus ST.DriverStatus
             | PopUpModalSilentAction PopUpModal.Action
+            | LinkAadhaarPopupAC PopUpModal.Action
             | GoToProfile
             | ClickAddAlternateButton
             | ZoneOtpAction
@@ -431,7 +434,7 @@ eval (PopUpModalCancelConfirmationAction (PopUpModal.OnButton2Click)) state = do
   _ <- pure $ clearTimer state.data.cancelRideConfirmationPopUp.timerID
   continue state {props{cancelConfirmationPopup = false}, data{cancelRideConfirmationPopUp{timerID = "" , continueEnabled=false, enableTimer=false}}}
 
-eval (PopUpModalCancelConfirmationAction (PopUpModal.OnButton1Click)) state = continue state {props {cancelRideModalShow = true},data {cancelRideConfirmationPopUp{enableTimer = false}, cancelRideModal {activeIndex=Nothing, selectedReasonCode="", selectionOptions = cancellationReasons "" }}}
+eval (PopUpModalCancelConfirmationAction (PopUpModal.OnButton1Click)) state = continue state {props {cancelRideModalShow = true, cancelConfirmationPopup = false},data {cancelRideConfirmationPopUp{enableTimer = false}, cancelRideModal {activeIndex=Nothing, selectedReasonCode="", selectionOptions = cancellationReasons "" }}}
 
 eval (PopUpModalCancelConfirmationAction (PopUpModal.CountDown seconds id status timerID)) state = do
   if status == "EXPIRED" && seconds == 0 then do
@@ -507,7 +510,7 @@ eval (ChatViewActionController (ChatView.SendMessage)) state = do
   then
    continueWithCmd state{data{messageToBeSent = ""},props {sendMessageActive = false}} [do
       _ <- pure $ sendMessage state.data.messageToBeSent
-      _ <- setText' (getNewIDWithTag "ChatInputEditText") ""
+      _ <- pure $ setText (getNewIDWithTag "ChatInputEditText") ""
       pure NoAction
    ]
   else
@@ -591,11 +594,9 @@ eval (RequestInfoCardAction RequestInfoCard.NoAction) state = continue state
 
 eval (GenderBannerModal (Banner.OnClick)) state = exit $ GotoEditGenderScreen
 
--- eval (PaymentBannerAC (Banner.OnClick)) state = if state.data.paymentState.blockedDueToPayment then 
---                                                   continue state else continue state {data { paymentState {paymentStatusBanner = false}}}
-
 eval RemovePaymentBanner state = if state.data.paymentState.blockedDueToPayment then 
                                                   continue state else continue state {data { paymentState {paymentStatusBanner = false}}}
+eval (LinkAadhaarPopupAC PopUpModal.OnButton1Click) state = exit $ AadhaarVerificationFlow state
 
 eval RemoveGenderBanner state = do
   _ <- pure $ setValueToLocalStore IS_BANNER_ACTIVE "False"

@@ -19,9 +19,10 @@ import Control.Transformers.Back.Trans (BackT)
 import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
 import Presto.Core.Types.Language.Flow (FlowWrapper)
-import Screens.Types (AboutUsScreenState, ActiveRide,BookingOptionsScreenState, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, HelpAndSupportScreenState, HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WriteToUsScreenState, AcknowledgementScreenState)
+import Screens.Types (AadhaarVerificationScreenState, AboutUsScreenState, ActiveRide,BookingOptionsScreenState, AddVehicleDetailsScreenState, AppUpdatePopUpScreenState, ApplicationStatusScreenState, BankDetailScreenState, CategoryListType, ChooseLanguageScreenState, DriverDetailsScreenState, DriverProfileScreenState, DriverRideRatingScreenState, DriverStatus, EditAadhaarDetailsScreenState, EditBankDetailsScreenState, EnterMobileNumberScreenState, EnterOTPScreenState, HelpAndSupportScreenState, HomeScreenState, IndividualRideCardState, NoInternetScreenState, NotificationsScreenState, PermissionsScreenState, PopUpScreenState, ReferralScreenState, RegistrationScreenState, ReportIssueChatScreenState, RideDetailScreenState, RideHistoryScreenState, RideSelectionScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, UploadAdhaarScreenState, UploadDrivingLicenseState, VehicleDetailsScreenState, WriteToUsScreenState, AcknowledgementScreenState)
 import Screens.ChooseLanguageScreen.ScreenData as ChooseLanguageScreenData
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
+import Screens.AadhaarVerificationScreen.ScreenData as EnterAadhaarNumberScreenData
 import Screens.EnterOTPScreen.ScreenData as  EnterOTPScreenData
 import Screens.AddVehicleDetailsScreen.ScreenData as AddVehicleDetailsScreenData
 import Screens.UploadDrivingLicenseScreen.ScreenData as UploadDrivingLicenseScreenData
@@ -92,6 +93,7 @@ newtype GlobalState = GlobalState {
   , bookingOptionsScreen :: BookingOptionsScreenState
   , loaderOverlay :: LoaderOverlayScreenData.LoaderOverlayState
   , acknowledgementScreen :: AcknowledgementScreenState
+  , aadhaarVerificationScreen :: AadhaarVerificationScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -131,6 +133,7 @@ defaultGlobalState = GlobalState{
 , bookingOptionsScreen : BookingOptionsScreenData.initData
 , loaderOverlay : LoaderOverlayScreenData.initData
 , acknowledgementScreen : AcknowledgementScreenData.initData
+, aadhaarVerificationScreen : EnterAadhaarNumberScreenData.initData
 }
 
 data ScreenType =
@@ -166,6 +169,7 @@ data ScreenType =
   | ReferralScreenStateType (ReferralScreenState -> ReferralScreenState)
   | BookingOptionsScreenType (BookingOptionsScreenState -> BookingOptionsScreenState)
   | AcknowledgementScreenType (AcknowledgementScreenState -> AcknowledgementScreenState)
+  | AadhaarVerificationScreenType (AadhaarVerificationScreenState -> AadhaarVerificationScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -259,6 +263,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | UPDATE_STAGE HomeScreenStage
                           | GO_TO_NOTIFICATIONS
                           | ADD_ALTERNATE_HOME
+                          | GO_TO_AADHAAR_VERIFICATION
                           | GO_TO_START_ZONE_RIDE {otp :: String, lat :: String, lon :: String}
                           | ON_CALL HomeScreenState
                           | OPEN_PAYMENT_PAGE HomeScreenState
@@ -289,4 +294,11 @@ data NOTIFICATIONS_SCREEN_OUTPUT = REFRESH_SCREEN NotificationsScreenState
                                     | CHECK_RIDE_FLOW_STATUS
 
 data BOOKING_OPTIONS_SCREEN_OUTPUT = SELECT_CAB BookingOptionsScreenState | GO_TO_PROFILE
+
 data ACKNOWLEDGEMENT_SCREEN_OUTPUT = EXIT_TO_HOME_SCREEN | RETRY_PAYMENT
+
+data AADHAAR_VERIFICATION_SCREEN_OUTPUT = ENTER_AADHAAR_OTP AadhaarVerificationScreenState 
+  | VERIFY_AADHAAR_OTP AadhaarVerificationScreenState
+  | RESEND_AADHAAR_OTP AadhaarVerificationScreenState
+  | GO_TO_HOME_FROM_AADHAAR
+  | LOGOUT_FROM_AADHAAR

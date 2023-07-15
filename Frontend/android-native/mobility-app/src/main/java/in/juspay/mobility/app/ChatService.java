@@ -274,14 +274,14 @@ public class ChatService extends Service {
             if (_sentBy.equals("Driver")) {
                 if (appName.equals("Yatri Partner"))
                     sentBy = "yatripartner";
-                else if (appName.equals("Jatri Sathi Driver"))
+                else if(appName.equals("Yatri Sathi Driver"))
                     sentBy = "jatrisaathidriver";
                 else
                     sentBy = "nammayatripartner";
             } else {
                 if (appName.equals("Yatri"))
                     sentBy = "yatri";
-                else if (appName.equals("Jatri Sathi"))
+                else if(appName.equals("Yatri Sathi"))
                     sentBy = "jatrisaathi";
                 else
                     sentBy = "nammayatri";

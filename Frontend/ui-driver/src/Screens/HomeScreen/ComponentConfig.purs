@@ -27,7 +27,6 @@ import Components.InAppKeyboardModal as InAppKeyboardModal
 import Components.PopUpModal as PopUpModal
 import Components.RideActionModal as RideActionModal
 import Components.StatsModel as StatsModel
-import Components.ChatView as ChatView
 import Components.RequestInfoCard as RequestInfoCard
 import Data.Array as DA
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -50,6 +49,7 @@ import Common.Types.App as CommonTypes
 import Services.APITypes ( PaymentBreakUp(..))
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 
+import Styles.Colors as Color
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -155,6 +155,39 @@ genderBannerConfig state =
         isBanner = true
       }
   in config'
+
+------------------------------------ linkAadhaarPopupConfig -----------------------------
+linkAadhaarPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
+linkAadhaarPopupConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    gravity = CENTER,
+    margin = MarginHorizontal 24 24 ,
+    buttonLayoutMargin = Margin 16 0 16 20 ,
+    primaryText {
+      text = (getString AADHAAR_LINKING_REQUIRED)
+    , margin = Margin 16 24 16 4 },
+    secondaryText {
+      text = (getString AADHAAR_LINKING_REQUIRED_DESCRIPTION)
+    , margin = MarginBottom 24},
+    option1 {
+      text = (getString LINK_AADHAAR_ID)
+    , background = Color.black900
+    , color = Color.yellow900
+    },
+    option2 {
+      visibility = false
+    },
+    backgroundClickable = false,
+    cornerRadius = (PTD.Corners 15.0 true true true true),
+    coverImageConfig {
+      imageUrl = "ny_ic_aadhaar_logo,https://assets.juspay.in/nammayatri/images/driver/ny_ic_aadhaar_logo.png"
+    , visibility = VISIBLE
+    , height = V 178
+    , width = V 204
+    }
+  }
+  in popUpConfig'
 
 ------------------------------------ cancelConfirmationConfig -----------------------------
 cancelConfirmationConfig :: ST.HomeScreenState -> PopUpModal.Config

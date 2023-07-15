@@ -15,7 +15,7 @@ const englishStrings = {
   "AMOUNT_PAID": "Amount Paid",
   "TRIP_DETAILS_": "Trip Details",
   "DOWNLOAD_PDF": "Download PDF",
-  "GST": "GST",
+  "CGST": "CGST",
   "INVOICE": "Invoice",
   "TRIP_CHARGES": "Trip Charges",
   "PROMOTION": "Promotion",
@@ -376,10 +376,10 @@ const englishStrings = {
   "PERMISSION_DENIED": "Permission Denied",
   "PERCENTAGE_OF_NOMINAL_FARE": "10% of base fare",
   "PAY_VIA_CASH_OR_UPI": "Pay via Cash / UPI",
-  "BOARD_THE_FIRST_TAXI": "Board the first taxi from Jatri Sathi zone",
+  "BOARD_THE_FIRST_TAXI": "Board the first taxi from Yatri Sathi zone",
   "REQUEST_CALLBACK": "Request Callback",
   "CHOOSE_YOUR_RIDE": "Choose Your Ride",
-  "BOARD_THE_FIRST_TAXI": "Board the first taxi from Jatri Sathi \nzone",
+  "BOARD_THE_FIRST_TAXI": "Board the first taxi from Yatri Sathi \nzone",
   "ECONOMICAL": "Economical",
   "COMFY": "Comfy",
   "NAVIGATE": "Navigate",
@@ -518,5 +518,7 @@ const englishStrings = {
   "FINDING_QUOTES_TEXT": "Searching for cabs around",
   "PLEASE_WAIT": "Please wait!",
   "FASTER" : "Faster",
-  "NEW_" : "New"
+  "NEW_" : "New",
+  "PLATFORM_FEE" : "Platform Fee",
+  "SGST" : "SGST"
 }

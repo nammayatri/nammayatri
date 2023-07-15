@@ -11,7 +11,7 @@ import Components.GenericHeader as GenericHeader
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import JBridge (hideKeyboardOnNavigation, requestKeyboardShow ,firebaseLogEvent)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, pure, unit, ($), discard, bind, not, (<>), (<), (==), (&&), (/=), (||), (>=))
@@ -114,11 +114,11 @@ eval (UserProfile (GetProfileRes profile)) state = do
 eval (NameEditTextAction (PrimaryEditText.TextChanged id value)) state = do
   _ <- pure $ spy "Value changed"  value
   if (value == "" || length value < 3) then continue state {data {editedName = value, nameErrorMessage = checkError "name" (Just state.data.name) value}, props{isNameValid = false, isBtnEnabled = ((length value >=3) && state.props.isEmailValid && state.props.isNameValid) }}
-    else continue state { data { editedName = value, nameErrorMessage = Nothing }, props{isNameValid = true, isBtnEnabled = ((length value >=3) && state.props.isEmailValid)} }
+    else continue state { data { editedName = value, nameErrorMessage = Nothing }, props{isNameValid = true, isBtnEnabled = ((length value >=3) && state.props.isEmailValid) && ((state.props.fromHomeScreen && (isJust state.data.gender)) || (not state.props.fromHomeScreen))} }
 eval (EmailIDEditTextAction (PrimaryEditText.TextChanged id value)) state = do
-  if (state.data.emailId == Nothing) then continue state {data {editedEmailId = Just value, emailErrorMessage = checkError "email" state.data.emailId value}, props{isEmailValid = checkValid state.data.emailId value, isBtnEnabled = checkValid state.data.emailId value}}
+  if (state.data.emailId == Nothing) then continue state {data {editedEmailId = Just value, emailErrorMessage = checkError "email" state.data.emailId value}, props{isEmailValid = checkValid state.data.emailId value, isBtnEnabled = checkValid state.data.emailId value && ((state.props.fromHomeScreen && (isJust state.data.gender)) || (not state.props.fromHomeScreen))}}
     else if (value == "" && state.data.emailErrorMessage == Just EMAIL_EXISTS) then continue state {props{isEmailValid = false, isBtnEnabled = false, genderOptionExpanded = state.props.fromHomeScreen, expandEnabled = state.props.fromHomeScreen}}
-    else continue state {data {editedEmailId = Just value , emailErrorMessage = checkError "email" state.data.emailId value },props{isEmailValid = checkValid state.data.emailId value, isBtnEnabled = ((length state.data.editedName >=3)  && checkValid state.data.emailId value), genderOptionExpanded = false}}
+    else continue state {data {editedEmailId = Just value , emailErrorMessage = checkError "email" state.data.emailId value },props{isEmailValid = checkValid state.data.emailId value, isBtnEnabled = ((length state.data.editedName >=3)  && checkValid state.data.emailId value && ((state.props.fromHomeScreen && (isJust state.data.gender)) || (not state.props.fromHomeScreen))), genderOptionExpanded = false}}
 eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
   if state.data.gender /= state.data.editedGender then do

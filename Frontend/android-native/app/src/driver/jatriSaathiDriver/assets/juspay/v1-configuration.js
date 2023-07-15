@@ -2,7 +2,7 @@ window.getMerchantConfig = function () {
   return JSON.stringify({
     "RC_VALIDATION_TEXT": "WB",
     "DOCUMENT_LINK": "https://docs.google.com/document/d/19pQUgTWXBqcM7bjy4SU1-z33r-iXsdPMfZggBTXbdR4",
-    "APP_LINK": "",
+    "APP_LINK": "https://play.google.com/store/apps/details?id=in.juspay.jatrisaathidriver",
     "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1-bcjLOZ_gR0Rda2BNmkKnqVds8Pm23v1e7JbSDdM70E",
     "SPECIAL_ZONE_OTP_VIEW": "true",
     "StringKeys": ["WELCOME_TEXT", "ABOUT_TEXT", "NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM"],
@@ -64,5 +64,6 @@ window.getMerchantConfig = function () {
     , "allowAllMobileNumber" : false
     , "showGenderBanner" : false
     , "defaultLanguage" : "EN_US"
+    , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
   })
 }

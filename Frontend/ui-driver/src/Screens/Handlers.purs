@@ -49,3 +49,4 @@ import Screens.BookingOptionsScreen.Handler (bookingOptions) as UI
 import Screens.RideSelectionScreen.Handler (rideSelection) as UI
 import Screens.ReportIssueChatScreen.Handler (reportIssueChatScreen) as UI
 import Screens.AcknowledgementScreen.Handler (acknowledgementScreen) as UI
+import Screens.AadhaarVerificationScreen.Handler (aadhaarVerificationScreen) as UI

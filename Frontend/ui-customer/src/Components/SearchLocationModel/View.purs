@@ -29,7 +29,7 @@ import Data.Function (flip)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Debug (spy)
 import Effect (Effect)
-import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenHeight, screenWidth, setText')
+import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenHeight, screenWidth, setText)
 import Engineering.Helpers.LogEvent (logEvent)
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -275,7 +275,7 @@ sourceDestinationEditTextView state push =
             , gravity CENTER
             , padding (Padding 0 10 0 5)
             , onClick (\action -> do
-                        _ <- if state.isSource == Just true then setText' (getNewIDWithTag "SourceEditText") "" else pure unit
+                        _ <- if state.isSource == Just true then pure $ setText (getNewIDWithTag "SourceEditText") "" else pure unit
                         _ <- push action
                         pure unit
                       )(const $ SourceClear)

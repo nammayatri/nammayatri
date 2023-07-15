@@ -21,9 +21,11 @@ import Prelude
 import PrestoDOM
 
 import Animation.Config as AnimConfig
-import Components.Banner as Banner
-import Components.SelectListModal as CancelRidePopUpConfig
 import Animation.Config as AnimConfig
+import Animation.Config as AnimConfig
+import Common.Types.App (LazyCheck(..))
+import Components.Banner as Banner
+import Components.ChatView as ChatView
 import Components.ChatView as ChatView
 import Components.ChooseYourRide as ChooseYourRide
 import Components.DriverInfoCard (DriverInfoCardData)
@@ -33,47 +35,45 @@ import Components.ErrorModal as ErrorModal
 import Components.FareBreakUp as FareBreakUp
 import Components.MenuButton as MenuButton
 import Components.PopUpModal as PopUpModal
-import Components.RequestInfoCard as RequestInfoCard
 import Components.PrimaryButton as PrimaryButton
 import Components.QuoteListModel as QuoteListModel
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
-import Components.ChatView as ChatView
-import PrestoDOM.Types.DomAttributes (Corners(..))
-import Data.String as DS
-import Animation.Config as AnimConfig
+import Components.RequestInfoCard as RequestInfoCard
 import Components.SearchLocationModel as SearchLocationModel
 import Components.SearchLocationModel as SearchLocationModel
+import Components.SelectListModal as CancelRidePopUpConfig
 import Components.SourceToDestination as SourceToDestination
+import Control.Monad.Except (runExcept)
+import Data.Array ((!!))
 import Data.Array as DA
+import Data.Either (Either(..))
+import Data.Int as INT
 import Data.Int as INT
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as DS
 import Data.String as DS
+import Data.String as DS
+import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Foreign.Class (class Encode)
+import Foreign.Generic (decodeJSON, encodeJSON)
+import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
-import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData , TipViewStage(..) , TipViewProps)
-import Screens.Types as ST
-import Styles.Colors as Color
-import Data.Int as INT
-import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn ,setValueToLocalStore)
-import Control.Monad.Except (runExcept)
-import Foreign.Generic (decodeJSON, encodeJSON)
-import Resources.Constants (getKmMeter)
-import Effect (Effect)
-import Data.Either (Either(..))
-import Foreign.Class (class Encode)
-import Data.Array ((!!))
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import MerchantConfig.Utils as MU
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Constants (getKmMeter)
-import Common.Types.App (LazyCheck(..))
-import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
+import Resources.Constants (getKmMeter)
+import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps)
+import Screens.Types as ST
+import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
+import Styles.Colors as Color
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -792,6 +792,7 @@ driverInfoTransformer state =
     , merchantExoPhone : cardState.merchantExoPhone
     , lastMessage : state.data.lastMessage
     , config : state.data.config
+    , vehicleVariant : cardState.vehicleVariant
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
@@ -925,6 +926,33 @@ callSupportConfig state = let
     }
   }
   in popUpConfig'
+
+
+zoneTimerExpiredConfig :: ST.HomeScreenState ->  PopUpModal.Config
+zoneTimerExpiredConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    gravity = CENTER
+  , cornerRadius = Corners 16.0 true true true true
+  , margin = Margin 24 32 24 0
+  , primaryText {
+      text = "OTP Expired"
+    }
+  , secondaryText {
+      text = "Your ride OTP expired. Please book again to get a ride"
+    , margin = Margin 16 4 16 24
+    , color = Color.black700
+    }
+  , option1 {
+      visibility = false
+    }
+  , option2 {
+      text =  getString OK_GOT_IT
+    , margin = (MarginHorizontal 16 16)
+    }
+  }
+  in popUpConfig'
+  
 menuButtonConfig :: ST.HomeScreenState -> ST.Location -> MenuButton.Config
 menuButtonConfig state item = let
     config = MenuButton.config

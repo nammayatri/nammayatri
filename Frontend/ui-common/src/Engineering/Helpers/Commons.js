@@ -269,15 +269,13 @@ export const bundleVersion = function(){
   return window.version;
 }
 
-export const setTextImpl = function (id) {
+export const setText = function (id) {
   return function (text) {
-      return function (){
-          setText(id, text, text.length);
-      }
+          setTextImpl(id, text, text.length);
   }
 }
 
-function setText(id, text, pos) {
+function setTextImpl(id, text, pos) {
   if (__OS === "ANDROID") {
       var cmd = "set_view=ctx->findViewById:i_" + id + ";";
       cmd += "get_view->setText:cs_" + text + ";";

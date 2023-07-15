@@ -150,7 +150,7 @@ emergencyHelpLogoContainer state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , padding $ PaddingVertical 28 32
+    , padding $ Padding 16 28 16 32
     , background Color.blue600
     ][  imageView
         [ height $ V 128

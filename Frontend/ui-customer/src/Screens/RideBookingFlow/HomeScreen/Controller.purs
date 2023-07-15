@@ -16,8 +16,9 @@
 module Screens.HomeScreen.Controller where
 
 import Accessor (_estimatedFare, _estimateId, _vehicleVariant, _status, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _selectedQuotes, _specialLocationTag)
-import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), OptionButtonList, Payload(..),  RateCardType(..))
+import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), OptionButtonList, Payload(..), RateCardType(..))
 import Components.Banner as Banner
+import Components.ChatView as ChatView
 import Components.ChatView.Controller as ChatView
 import Components.ChooseVehicle as ChooseVehicleController
 import Components.ChooseYourRide as ChooseYourRide
@@ -71,13 +72,13 @@ import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os,
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Foreign.Class (encode)
-import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, saveRecents, setText', terminateApp, updateInputString, withinTimeRange)
+import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, saveRecents, setText, terminateApp, updateInputString, withinTimeRange)
 import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey)
 import Language.Strings (getString, getEN)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.DefaultConfig as DC
-import MerchantConfig.Utils (getValueFromConfig, getMerchant, Merchant(..))
+import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+))
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
@@ -600,7 +601,7 @@ data Action = NoAction
             | PopUpModalCancelConfirmationAction PopUpModal.Action
             | TerminateApp
             | DirectSearch
-          
+            | ZoneTimerExpired PopUpModal.Action
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -668,12 +669,10 @@ eval(ChatViewActionController (ChatView.Call)) state = do
 
 eval (ChatViewActionController (ChatView.SendMessage)) state = do
   if state.data.messageToBeSent /= ""
-  then
-   continueWithCmd state{data{messageToBeSent = ""},props {sendMessageActive = false}} [do
-      _ <- pure $ sendMessage state.data.messageToBeSent
-      _ <- setText' (getNewIDWithTag "ChatInputEditText") ""
-      pure NoAction
-   ]
+  then do 
+    pure $ sendMessage state.data.messageToBeSent
+    pure $ setText (getNewIDWithTag "ChatInputEditText") ""
+    continue state{data{messageToBeSent = ""},props {sendMessageActive = false}} 
   else
     continue state
 
@@ -1046,6 +1045,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.ZoneOTPExpiryActi
   if seconds <= 0 then do
     _ <- pure $ toast "expired"
     _ <- pure $ clearTimer timerID
+    -- continue state {props{zoneTimerExpired = true}}
     exit $ NotificationHandler "CANCELLED_PRODUCT" state
     else
     continue state { data { driverInfoCardState { waitingTime = timeInMinutes } }, props { waitingTimeTimerIds = union state.props.waitingTimeTimerIds [timerID] } }
@@ -1176,16 +1176,12 @@ eval (FavouriteLocationModelAC (FavouriteLocationModelController.GenericHeaderAC
 eval (FavouriteLocationModelAC (FavouriteLocationModelController.FavouriteLocationAC (SavedLocationCardController.CardClicked item))) state = do
   if state.props.isSource == Just true then do
     let newState = state {data{ source = item.savedLocation, sourceAddress = item.fullAddress},props{sourcePlaceId = item.placeId,sourceLat = fromMaybe 0.0 item.lat,sourceLong =fromMaybe 0.0  item.lon, sourceSelectedOnMap = true }}
-    continueWithCmd newState [do
-        _ <- (setText' (getNewIDWithTag "SourceEditText") item.savedLocation )
-        pure $ ExitLocationSelected item false
-      ]
+    pure $ setText (getNewIDWithTag "SourceEditText") item.savedLocation
+    exit $ LocationSelected item  false newState
     else do
       let newState = state {data{ destination = item.savedLocation,destinationAddress = item.fullAddress},props{destinationPlaceId = item.placeId, destinationLat = fromMaybe 0.0 item.lat, destinationLong = fromMaybe 0.0 item.lon}}
-      continueWithCmd newState [do
-        _ <- (setText' (getNewIDWithTag "DestinationEditText") item.savedLocation )
-        pure $ ExitLocationSelected item false
-      ]
+      pure $ setText (getNewIDWithTag "DestinationEditText") item.savedLocation
+      exit $ LocationSelected item  false newState
 
 eval (SavedAddressClicked (LocationTagBarController.TagClick savedAddressType arrItem)) state =  tagClickEvent savedAddressType arrItem state{data{source = (getString CURRENT_LOCATION)}, props{isSource = Just false}}
 
@@ -1214,7 +1210,6 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Debounc
     continue state{data{ locationList = state.data.recentSearchs.predictionArray }}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SourceChanged input)) state = do
-  _ <- pure $ (setText' (getNewIDWithTag "SourceEditText") input)
   let
     newState = state {props{sourceSelectedOnMap = if (state.props.locateOnMap) then true else state.props.sourceSelectedOnMap}}
   if (input /= state.data.source) then do
@@ -1231,7 +1226,6 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SourceC
       ]
 
 eval (SearchLocationModelActionController (SearchLocationModelController.DestinationChanged input)) state = do
-  _ <- pure $ (setText' (getNewIDWithTag "DestinationEditText") input)
   if (input /= state.data.destination) then do
     continueWithCmd state { props { isRideServiceable = true } }
       [ do
@@ -1251,7 +1245,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.EditTex
     continueWithCmd state { props { isSource = Just false }}
       [ do
           if state.props.isSearchLocation /= LocateOnMap then do
-            _ <- (setText' (getNewIDWithTag "DestinationEditText") state.data.destination)
+            _ <- (pure $ setText (getNewIDWithTag "DestinationEditText") state.data.destination)
             pure $ NoAction
           else
             pure $ NoAction
@@ -1260,7 +1254,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.EditTex
     continueWithCmd state { props { isSource = Just true}}
       [ do
           if state.props.isSearchLocation /= LocateOnMap && state.props.isSource == Just true then do
-            _ <- (setText' (getNewIDWithTag "SourceEditText") state.data.source)
+            _ <- (pure $ setText (getNewIDWithTag "SourceEditText") state.data.source)
             pure $ NoAction
           else
             pure $ NoAction
@@ -1507,18 +1501,18 @@ eval (StartLocationTracking item) state = do
     _ -> continue state
 
 eval (GetEstimates (GetQuotesRes quotesRes)) state = do
-  case not (null quotesRes.quotes) of
-    true -> specialZoneFlow quotesRes.quotes state
-    false -> case (getMerchant FunctionCall) of
+  case null quotesRes.quotes of
+    false -> specialZoneFlow quotesRes.quotes state
+    true -> case (getMerchant FunctionCall) of
       YATRI -> estimatesListFlow quotesRes.estimates state
-      JATRISAATHI -> estimatesListFlow quotesRes.estimates state
+      YATRISATHI -> estimatesListFlow quotesRes.estimates state
       _ -> estimatesFlow quotesRes.estimates state
 
 
 eval (EstimatesTryAgain (GetQuotesRes quotesRes)) state = do
   case (getMerchant FunctionCall) of
     YATRI -> estimatesListTryAgainFlow (GetQuotesRes quotesRes) state
-    JATRISAATHI -> estimatesListTryAgainFlow (GetQuotesRes quotesRes) state
+    YATRISATHI -> estimatesListTryAgainFlow (GetQuotesRes quotesRes) state
     _ -> do
       let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_estimate_try_again"
       let
@@ -1732,7 +1726,7 @@ eval MapReadyAction state = continueWithCmd state [ do
 
 eval (TriggerPermissionFlow flowType) state = exit $ ExitToPermissionFlow flowType
 
-
+eval (GenderBannerModal (Banner.OnClick)) state = exit $ GoToMyProfile state true
 
 eval _ state = continue state
 
@@ -1883,7 +1877,7 @@ dummyListItem = {
   , placeName : ""
   , isClickable : true
   , alpha : 1.0
-  , fullAddress : dummyAddress
+  , fullAddress : HomeScreenData.dummyAddress
   , locationItemType : Nothing
   , distance : Nothing
   , showDistance : Just false
@@ -1902,19 +1896,16 @@ tagClickEvent savedAddressType arrItem state =
             else updateAndExit state{props{tagType = Just savedAddressType}}  $ CheckFavDistance state{props{tagType = Just savedAddressType}}
         _,Just item  -> do
           if state.props.isSource == Just true then do
-            let newState = state {data{ source = item.description, sourceAddress = item.fullAddress},props{sourcePlaceId = item.placeId,sourceLat = fromMaybe 0.0 item.lat,sourceLong =fromMaybe 0.0  item.lon, sourceSelectedOnMap = true }}
-            continueWithCmd newState [do
-              _ <- (setText' (getNewIDWithTag "SourceEditText") item.description )
-              _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
-              pure $ ExitLocationSelected item false
-            ]
+              let newState = state {data{ source = item.description, sourceAddress = item.fullAddress},props{sourcePlaceId = item.placeId,sourceLat = fromMaybe 0.0 item.lat,sourceLong =fromMaybe 0.0  item.lon, sourceSelectedOnMap = true }}
+              pure $ setText (getNewIDWithTag "SourceEditText") item.description
+              pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
+              exit $ LocationSelected item false newState
             else do
               let newState = state {data{ destination = item.description,destinationAddress = item.fullAddress},props{destinationPlaceId = item.placeId, destinationLat = fromMaybe 0.0 item.lat, destinationLong = fromMaybe 0.0 item.lon}}
-              continueWithCmd newState [do
-                _ <- (setText' (getNewIDWithTag "DestinationEditText") item.description )
-                _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
-                pure $ ExitLocationSelected item false
-                ]
+              pure $ setText (getNewIDWithTag "DestinationEditText") item.description
+              pure $ removeMarker $ getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)
+              exit $ LocationSelected item false newState
+
 flowWithoutOffers :: LazyCheck -> Boolean
 flowWithoutOffers dummy = not $ (getValueToLocalStore FLOW_WITHOUT_OFFERS) == "false"
 
@@ -1937,16 +1928,12 @@ locationSelected item addToRecents state = do
   _ <- pure $ hideKeyboardOnNavigation true
   if state.props.isSource == Just true then do
     let newState = state {data{ source = item.title, sourceAddress = encodeAddress (item.title <> ", " <>item.subTitle) [] item.placeId},props{sourcePlaceId = item.placeId,sourceLat = fromMaybe 0.0 item.lat,sourceLong =fromMaybe 0.0  item.lon, sourceSelectedOnMap = (item.tag /= "") }}
-    continueWithCmd newState [do
-        _ <- (setText' (getNewIDWithTag "SourceEditText") item.title )
-        pure $ ExitLocationSelected item addToRecents
-      ]
+    pure $ setText (getNewIDWithTag "SourceEditText") item.title
+    exit $ LocationSelected item addToRecents newState
     else do
       let newState = state {data{ destination = item.title,destinationAddress = encodeAddress (item.title <> ", " <>item.subTitle) [] item.placeId},props{destinationPlaceId = item.placeId, destinationLat = fromMaybe 0.0 item.lat, destinationLong = fromMaybe 0.0 item.lon}}
-      continueWithCmd newState [do
-        _ <- (setText' (getNewIDWithTag "DestinationEditText") item.title )
-        pure $ ExitLocationSelected item addToRecents
-      ]
+      pure $ setText (getNewIDWithTag "DestinationEditText") item.title
+      exit $ LocationSelected item addToRecents newState
 
 checkCurrentLocation :: Number -> Number -> Array CurrentLocationDetails -> Boolean
 checkCurrentLocation lat lon previousCurrentLocations =  (length (filter (\ (item) -> (filterFunction lat lon item))(previousCurrentLocations)) > 0)
@@ -2155,7 +2142,7 @@ getSpecialTag specialTag =
           destinationTag = getZoneType $ zones !! 1
           priorityTag = if zones !! 2 == Just "PriorityPickup" then sourceTag else destinationTag
       in { sourceTag : sourceTag, destinationTag : destinationTag, priorityTag : priorityTag}
-    Nothing -> dummyZoneType
+    Nothing -> HomeScreenData.dummyZoneType
 
 getZoneType :: Maybe String -> ZoneType
 getZoneType tag =
