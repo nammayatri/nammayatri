@@ -27,10 +27,11 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, setText)
 import JBridge (requestKeyboardShow, hideKeyboardOnNavigation)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, bind, discard, not, pure, unit, when, ($), (&&), (<=), (==), (>), (||))
+import Prelude (class Show, bind, discard, not, pure, unit, when, ($), (&&), (<=), (==), (>), (||), (<>), (+), show)
 import PrestoDOM (Eval, continue, continueWithCmd, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
+import Screens.AddVehicleDetailsScreen.Controller (dateFormat)
 import Screens.Types (AadhaarStage(..), AadhaarVerificationScreenState)
 
 instance showAction :: Show Action where
@@ -71,6 +72,7 @@ data ScreenOutput = GoToOtpStage AadhaarVerificationScreenState
   | ResendAadhaarOTP AadhaarVerificationScreenState
   | GoToHomeScreen AadhaarVerificationScreenState
   | LogOut AadhaarVerificationScreenState
+  | UnVerifiedAadhaarData AadhaarVerificationScreenState
 
 data Action = BackPressed 
             | AadhaarNumberEditText PrimaryEditText.Action
@@ -98,7 +100,7 @@ eval action state = case action of
         pure $ setText (getNewIDWithTag "EnterAadhaarOTPEditText") ""
         exit $ GoToOtpStage state
       VerifyAadhaar -> exit $ VerfiyOTP state
-      AadhaarDetails -> exit $ VerfiyOTP state
+      AadhaarDetails -> exit $ UnVerifiedAadhaarData state
   (AadhaarNumberEditText (PrimaryEditText.TextChanged _ newVal)) -> do
     let aadhaarNumber = (replaceAll (Pattern " ") (Replacement "") newVal)
     let len = length aadhaarNumber
@@ -119,4 +121,11 @@ eval action state = case action of
     continue state{props{showLogoutPopup = true}}
   PopUpModalAC (PopUpModal.OnButton1Click) -> continue $ (state {props {showLogoutPopup = false}})
   PopUpModalAC (PopUpModal.OnButton2Click) -> exit $ LogOut state
+
+  DatePicker _ year month date -> continue state {data { driverDob = (show date) <> "/" <> (show (month+1)) <> "/" <> (show year)}}
+
+  AadhaarNameEditText (PrimaryEditText.TextChanged _ val) -> continue state {data { driverName =  val }}
+
+  AadhaarGenderEditText (PrimaryEditText.TextChanged _ val) -> continue state {data { driverGender =  val }}
+
   _ -> continue state

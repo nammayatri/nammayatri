@@ -102,8 +102,6 @@ baseAppFlow baseFlow = do
     checkVersion versionCode
     cacheAppParameters versionCode
     when baseFlow $ void $ UI.splashScreen state.splashScreen
-    lift $ lift $ doAff do liftEffect hideSplash
-    aadhaarVerificationFlow
     let regToken = getValueToLocalStore REGISTERATION_TOKEN
     _ <- pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
@@ -1468,7 +1466,7 @@ homeScreenFlow = do
       homeScreenFlow
     OPEN_PAYMENT_PAGE state -> startPaymentPageFlow
     GO_TO_AADHAAR_VERIFICATION -> do 
-      modifyScreenState $ AadhaarVerificationScreenType (\aadhaarScreen -> aadhaarScreen { props { fromHomeScreen = true }})
+      modifyScreenState $ AadhaarVerificationScreenType (\aadhaarScreen -> aadhaarScreen { props { fromHomeScreen = true, currentStage = EnterAadhaar}})
       aadhaarVerificationFlow
   pure unit
 
@@ -1709,7 +1707,10 @@ aadhaarVerificationFlow = do
   out <- UI.aadhaarVerificationScreen
   case out of
     ENTER_AADHAAR_OTP state -> do
+      void $ lift $ lift $ loaderText (getString VALIDATING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+      void $ lift $ lift $ toggleLoader true
       res <- lift $ lift $ Remote.triggerAadhaarOtp state.data.aadhaarNumber
+      void $ lift $ lift $ toggleLoader false
       case res of 
         Right (GenerateAadhaarOTPResp resp) -> do
           -- let _ = toast resp.message
@@ -1741,7 +1742,9 @@ aadhaarVerificationFlow = do
             _ -> pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
           aadhaarVerificationFlow
     VERIFY_AADHAAR_OTP state -> do
+      void $ lift $ lift $ toggleLoader true
       res <- lift $ lift $ Remote.verifyAadhaarOtp state.data.otp
+      void $ lift $ lift $ toggleLoader false
       case res of 
         Right (VerifyAadhaarOTPResp resp) -> do
           if resp.code == 200 then if state.props.fromHomeScreen then getDriverInfoFlow else onBoardingFlow 
@@ -1750,8 +1753,9 @@ aadhaarVerificationFlow = do
               modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = EnterAadhaar, btnActive = false}})
               aadhaarVerificationFlow
         Left errorPayload -> do
-          _ <- pure $ toast $ decodeErrorMessage errorPayload.response.errorMessage
-          modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = EnterAadhaar, btnActive = false}})
+          let stage = if (decodeErrorCode errorPayload.response.errorMessage) == "INVALID_OTP" then VerifyAadhaar else AadhaarDetails
+          _ <- pure if (decodeErrorCode errorPayload.response.errorMessage) == "INVALID_OTP" then toast $ getString INVALID_OTP else unit
+          modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = stage, btnActive = false}})
           aadhaarVerificationFlow
     RESEND_AADHAAR_OTP state -> do
       res <- lift $ lift $ Remote.triggerAadhaarOtp state.data.aadhaarNumber
@@ -1793,6 +1797,17 @@ aadhaarVerificationFlow = do
       _ <- pure $ firebaseLogEvent "logout"
       pure $ factoryResetApp ""
       loginFlow
+    SEND_UNVERIFIED_AADHAAR_DATA state -> do 
+      void $ lift $ lift $ toggleLoader true
+      unVerifiedAadhaarDataResp <- lift $ lift $ Remote.unVerifiedAadhaarData state.data.driverName state.data.driverGender state.data.driverDob
+      case unVerifiedAadhaarDataResp of
+        Right resp -> do
+          void $ lift $ lift $ toggleLoader false
+          if state.props.fromHomeScreen then getDriverInfoFlow else onBoardingFlow 
+        Left errorPayload -> do 
+          void $ lift $ lift $ toggleLoader false
+          _ <- pure $ toast $ decodeErrorMessage errorPayload.response.errorMessage
+          aadhaarVerificationFlow
 
 removeChatService :: String -> FlowBT String Unit
 removeChatService _ = do

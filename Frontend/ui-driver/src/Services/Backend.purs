@@ -921,3 +921,16 @@ verifyAadhaarOtp aadhaarNumber = do
     , shareCode : DS.take 4 otp
     }
     unwrapResponse x = x
+
+unVerifiedAadhaarData :: String -> String -> String -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
+unVerifiedAadhaarData driverName driverGender driverDob = do
+  headers <- getHeaders ""
+  withAPIResult (EP.unVerifiedAadhaarData "") unwrapResponse $ callAPI headers $ makeReq driverName driverGender driverDob
+  where
+    makeReq :: String -> String -> String -> UnVerifiedDataReq
+    makeReq driverName driverGender driverDob = UnVerifiedDataReq {
+        driverName : driverName ,
+        driverGender : driverGender,
+        driverDob : driverDob
+    }
+    unwrapResponse x = x

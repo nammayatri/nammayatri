@@ -1987,3 +1987,24 @@ instance standardEncodeVerifyAadhaarOTPResp :: StandardEncode VerifyAadhaarOTPRe
 instance showVerifyAadhaarOTPResp :: Show VerifyAadhaarOTPResp where show = genericShow
 instance decodeVerifyAadhaarOTPResp :: Decode VerifyAadhaarOTPResp  where decode = defaultDecode
 instance encodeVerifyAadhaarOTPResp :: Encode VerifyAadhaarOTPResp where encode = defaultEncode
+
+-----------------------------UnVerifiedData-----------------
+
+newtype UnVerifiedDataReq = UnVerifiedDataReq {
+  driverName :: String,
+  driverGender :: String,
+  driverDob ::  String
+}
+
+
+instance makeUnVerifiedDataReq :: RestEndpoint UnVerifiedDataReq ApiSuccessResult where
+    makeRequest reqBody headers = defaultMakeRequest POST (EP.unVerifiedAadhaarData "") headers reqBody
+    decodeResponse = decodeJSON
+    encodeRequest req = standardEncode req
+
+derive instance genericUnVerifiedDataReq :: Generic UnVerifiedDataReq _
+derive instance newtypeUnVerifiedDataReq :: Newtype UnVerifiedDataReq _
+instance standardEncodeUnVerifiedDataReq :: StandardEncode UnVerifiedDataReq where standardEncode (UnVerifiedDataReq body) = standardEncode body
+instance showUnVerifiedDataReq :: Show UnVerifiedDataReq where show = genericShow
+instance decodeUnVerifiedDataReq :: Decode UnVerifiedDataReq  where decode = defaultDecode
+instance encodeUnVerifiedDataReq :: Encode UnVerifiedDataReq where encode = defaultEncode

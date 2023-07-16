@@ -46,3 +46,6 @@ aadhaarVerificationScreen = do
     LogOut updatedState -> do
       modifyScreenState $ AadhaarVerificationScreenType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ LOGOUT_FROM_AADHAAR)
+    UnVerifiedAadhaarData updatedState -> do
+      modifyScreenState $ AadhaarVerificationScreenType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ SEND_UNVERIFIED_AADHAAR_DATA updatedState)

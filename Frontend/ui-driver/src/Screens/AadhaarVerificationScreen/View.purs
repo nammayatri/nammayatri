@@ -200,6 +200,12 @@ enterAadhaarDetailsView push state =
         , PrestoAnim.animationSet
           [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
           ] $ PrimaryEditText.view (push <<< AadhaarGenderEditText) (aadhaarGenderEditText state)
+        , textView $
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text $ getString GOTO_YOUR_NEAREST_BOOTH
+          , color Color.black900
+          ] <> FontStyle.body1 TypoGraphy
   ]
 
 verificationFailedView :: ST.AadhaarVerificationScreenState ->  forall w . PrestoDOM (Effect Unit) w
@@ -216,6 +222,7 @@ verificationFailedView state =
     ][ textView $
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
+      , margin $ MarginLeft 5
       , text $ getString VERIFICATION_FAILED
       , color Color.white900
       ] <> FontStyle.body1 TypoGraphy
@@ -242,7 +249,7 @@ dateOfBirth push state =
     , cornerRadius 4.0
     , stroke ("1," <> Color.borderGreyColor)
     , onClick (\_ -> do
-                _ <- JB.datePicker "MAXIMUM_PRESENT_DATE" push $ DatePicker "DATE_OF_BIRTH"
+                _ <- JB.datePicker "MINIMUM_EIGHTEEN_YEARS" push $ DatePicker "DATE_OF_BIRTH"
                 pure unit
           ) (const SelectDateOfBirthAction)
     ][ linearLayout
@@ -250,8 +257,8 @@ dateOfBirth push state =
         , height MATCH_PARENT
         , orientation HORIZONTAL
       ][ textView
-        ([ text (getString SELECT_DATE_OF_BIRTH) -- if state.data.dob == "" then (getString SELECT_DATE_OF_BIRTH) else state.data.dobView
-        , color Color.greyTextColor -- if (state.data.dob == "") then Color.darkGrey else Color.greyTextColor
+        ([ text if state.data.driverDob == "" then (getString SELECT_DATE_OF_BIRTH) else state.data.driverDob
+        , color if state.data.driverDob == "" then Color.darkGrey else Color.greyTextColor
         , weight 1.0
         , padding (PaddingRight 15)
         ] <> FontStyle.subHeading1 TypoGraphy)

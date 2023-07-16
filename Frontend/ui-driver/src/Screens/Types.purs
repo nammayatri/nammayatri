@@ -1322,6 +1322,9 @@ type EnterAadhaarNumberScreenStateData = {
     aadhaarNumber :: String
   , timer :: String
   , otp :: String
+  , driverName :: String
+  , driverGender :: String
+  , driverDob :: String
 }
 
 type EnterAadhaarNumberScreenStateProps = {

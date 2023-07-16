@@ -544,5 +544,6 @@ const englishStrings = {
   OTP_ATTEMPT_EXCEEDED : "OTP attempts exceeded. Please start the process again",
   UPSTREAM_INTERNAL_SERVER_ERROR : "Upstream source/Government source internal server error. Please start the process again.",
   TRANSACTION_ALREADY_COMPLETED : "Transaction already completed. Cannot do further operation on this transaction.",
-  ENTER_AADHAAR_DETAILS : "Enter Aadhaar Details"
+  ENTER_AADHAAR_DETAILS : "Enter Aadhaar Details",
+  GOTO_YOUR_NEAREST_BOOTH : "Go to your nearest booth or customer service to get Aadhaar verified."
 }

@@ -22,12 +22,15 @@ initData =
       { aadhaarNumber: ""
       , timer: ""
       , otp : ""
+      , driverName : ""
+      , driverGender : ""
+      , driverDob : ""
       }
   , props:
       { btnActive: false
       , isValid: false
       , resendEnabled: false
-      , currentStage : AadhaarDetails
+      , currentStage : EnterAadhaar
       , showErrorAadhaar : false
       , fromHomeScreen : false
       , showLogoutPopup : false
