@@ -394,12 +394,9 @@ allContactsView state push =
     , stroke ("1," <> Color.borderColorLight)
     , padding $ Padding 13 11 13 11
     , cornerRadius 8.0
-    , gravity CENTER
     ][  linearLayout
-        [ height $ V 24
-        , width $ V 24
-        , background (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 0))
-        , cornerRadius 12.0
+        [ height WRAP_CONTENT
+        , width  MATCH_PARENT
         , gravity CENTER
         ][  linearLayout
             [ height $ V 24
@@ -408,46 +405,42 @@ allContactsView state push =
             , cornerRadius 12.0
             , gravity CENTER
             ][  textView
-                [text (DS.toUpper((<>) (getFirstChar item.name) (getLastChar item.name) ))
+                [ text (DS.toUpper((<>) (getFirstChar item.name) (getLastChar item.name) ))
                 , color (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 1))
                 , textSize FontSize.a_12
                 ]
               ]
-              ,  linearLayout
-                 [ height  WRAP_CONTENT
-                 , width  WRAP_CONTENT
-                 , padding (PaddingLeft 8)
-                 ][  textView
-                   [text (item.name)
-                   , color Color.black800
-                   , textSize FontSize.a_16
-                   , lineHeight "20"
-                   , fontStyle $ FontStyle.semiBold LanguageStyle
-                   ]
-                  ]
-              ,
-              linearLayout
-              [ height WRAP_CONTENT
-              , width MATCH_PARENT
-              , gravity RIGHT
-              ][
-                linearLayout
-                  [ height  WRAP_CONTENT
-                  , width  WRAP_CONTENT
-                  , onClick push $ const $ CallContactPopUp item
-                  ][ textView
-                    [ text $ (getString CALL)
-                    , color Color.green900
-                    , textSize FontSize.a_14
-                    , lineHeight "18"
-                    , fontStyle $ FontStyle.regular LanguageStyle
-                    , margin $ MarginLeft 5
-                    , padding $ Padding 20 10 20 10
-                    ]
-                  ]
+          , linearLayout
+            [ height  WRAP_CONTENT
+            , weight 1.0
+            , padding (PaddingLeft 8)
+            ][  textView
+                [text (item.name)
+                , color Color.black800
+                , textSize FontSize.a_16
+                , lineHeight "20"
+                , ellipsize true
+                , fontStyle $ FontStyle.semiBold LanguageStyle
+                ]
+             ]
+          , linearLayout
+            [ height  WRAP_CONTENT
+            , width  WRAP_CONTENT
+            , onClick push $ const $ CallContactPopUp item
+            ][  textView
+                [ text $ (getString CALL)
+                , color Color.green900
+                , width WRAP_CONTENT
+                , textSize FontSize.a_14
+                , lineHeight "18"
+                , fontStyle $ FontStyle.regular LanguageStyle
+                , margin $ MarginLeft 5
+                , padding $ Padding 20 10 20 10
+                ]
               ]
           ]
        ]) state.emergencyContactData)
+
 
 genericHeaderConfig :: EmergencyHelpModelState -> GenericHeaderConfig.Config
 genericHeaderConfig state = let

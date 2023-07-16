@@ -498,12 +498,12 @@ waitTimeView push state =
   , background Color.grey800
   , gravity CENTER_VERTICAL
   , margin $ MarginLeft 12
-  , padding $ Padding 14 2 14 2
+  , padding $ Padding 10 2 10 2
   , visibility case state.data.isSpecialZone of
       true -> VISIBLE
       false -> if state.data.driverArrived then VISIBLE else GONE
   ][ textView (
-      [ width WRAP_CONTENT
+      [ width MATCH_PARENT
       , height WRAP_CONTENT
       , text $ if state.data.isSpecialZone then getString EXPIRES_IN else  getString WAIT_TIME <> ":"
       , color Color.black700

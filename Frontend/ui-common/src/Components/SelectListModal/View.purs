@@ -248,6 +248,8 @@ someOtherReason config push index =
               , cornerRadius 4.0
               , background Color.grey800
               , singleLine false
+              , textSize FontSize.a_14
+              , padding $ PaddingBottom 0
               , onChange push (TextChanged ( getNewIDWithTag "OtherReasonEditText") )
               , pattern "[A-Za-z0-9 ]*,100"
               ] <> (if os == "ANDROID" then [id (getNewIDWithTag "OtherReasonEditText")] else [] ))
