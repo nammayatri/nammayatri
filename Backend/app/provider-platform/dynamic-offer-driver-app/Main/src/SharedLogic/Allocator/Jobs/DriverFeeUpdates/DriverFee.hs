@@ -108,9 +108,8 @@ unsubscribeDriverForPaymentOverdue Job {id, jobInfo} = withLogTag ("JobId-" <> i
         logInfo "Driver Not found. This should not be possible."
         throwError (InternalError "Driver Not Found") -- Unreachable
       Just driver -> do
-        let pendingAmount = driverFee.govtCharges + driverFee.platformFee.fee + round driverFee.platformFee.cgst + round driverFee.platformFee.sgst
-        let paymentTitle = "Blocked - Payment Overdue"
-            paymentMessage = "Sorry, you are blocked from taking rides as payment of " <> show pendingAmount.getMoney <> " is pending for " <> show driverFee.numRides <> " ride(s) with a deadline of " <> show driverFee.payBy <> ". Please pay the balance amount to get unblocked."
+        let paymentTitle = "Bill generated"
+            paymentMessage = "You have taken " <> show driverFee.numRides <> " ride(s) since the last payment. Complete payment now to get trips seamlessly"
         (Notify.sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.PAYMENT_OVERDUE paymentTitle paymentMessage driver.id driver.deviceToken) `C.catchAll` \e -> C.mask_ $ logError $ "FCM for removing subsciption of driver id " <> driver.id.getId <> " failed. Error: " <> show e
   forM_ feeZipDriver $ \(driverFee, mbPerson) -> do
     Redis.whenWithLockRedis (paymentProcessingLockKey driverFee.driverId.getId) 60 $ do
