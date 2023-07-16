@@ -1,9 +1,9 @@
 module Screens.AcknowledgementScreen.ScreenData where
 
-import Screens.Types (AcknowledgementScreenState, IllustrationType(..))
-import PrestoDOM as PrestoDOM
 import Common.Types.App as Common
 import Data.Maybe as Maybe
+import PrestoDOM as PrestoDOM
+import Screens.Types (AcknowledgementScreenState, IllustrationType(..))
 
 initData :: AcknowledgementScreenState
 initData = {
@@ -12,7 +12,7 @@ initData = {
         title : Maybe.Nothing,
         description : Maybe.Nothing,
         primaryButtonText : Maybe.Nothing,
-        orderId: "",
+        orderId: Maybe.Nothing,
         amount : ""
     },
     props: {

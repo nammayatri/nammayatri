@@ -1470,39 +1470,30 @@ homeScreenFlow = do
       aadhaarVerificationFlow
   pure unit
 
-
--- startPaymentPageFlow :: FlowBT String Unit
--- startPaymentPageFlow = do
---   (GlobalState state) <- getState
---   let homeScreenState = state.homeScreen
---   paymentPageOutput <- startPP dummyPayload
---   setPaymentStatus Success
---   ackScreenFlow
-
--- dummyPayload :: PaymentPagePayload
--- dummyPayload = PaymentPagePayload {
---     requestId: Just "5a920d6688504fbdac7d57cc6d9f6db7",
---     service: Just "in.juspay.hyperpay",
---     payload : PayPayload {
---         clientId: Just "nammayatri",
---         amount:  "33.0",
---         merchantId: Just "nammayatri",
---         clientAuthToken:  "tkn_238122900f284b1ea81393e0b579a9c4",
---         clientAuthTokenExpiry:  "2023-07-06T07:10:07Z",
---         environment: Just "sandbox",
---         lastName: Just "wick",
---         action: Just "paymentPage",
---         customerId: Just "107006461",
---         currency: "INR",
---         firstName: Just "john",
---         customerPhone: Just "9876543201",
---         customerEmail: Just "test@mail.com",
---         orderId: Just "VCwHYlQhJ2",
---         description: Just "Order Description",
---         options_getUpiDeepLinks  : Nothing,
---         returnUrl  : Just ""
---     }
--- }
+dummyPayload :: PaymentPagePayload
+dummyPayload = PaymentPagePayload {
+    requestId: Nothing ,
+    service: Nothing,
+    payload : PayPayload {
+        clientId: Nothing,
+        amount:  "",
+        merchantId: Nothing,
+        clientAuthToken: "",
+        clientAuthTokenExpiry: "",
+        environment: Nothing,
+        lastName: Nothing,
+        action: Nothing,
+        customerId: Nothing,
+        currency: "",
+        firstName: Nothing,
+        customerPhone: Nothing,
+        customerEmail: Nothing,
+        orderId: Nothing,
+        description: Nothing,
+        options_getUpiDeepLinks  : Nothing,
+        returnUrl  : Nothing
+    }
+}
 
 
 startPaymentPageFlow :: FlowBT String Unit
@@ -1529,31 +1520,41 @@ startPaymentPageFlow = do
       case orderStatus of
         Right (OrderStatusRes resp) -> 
           case resp.status of
-            PS.CHARGED -> setPaymentStatus Success
-            PS.AUTHORIZATION_FAILED -> setPaymentStatus Failed
-            PS.AUTHENTICATION_FAILED -> setPaymentStatus Failed
-            PS.JUSPAY_DECLINED -> setPaymentStatus Failed
-            PS.NEW -> setPaymentStatus Pending
-            PS.PENDING_VBV -> setPaymentStatus Pending
-            PS.AUTHORIZING -> setPaymentStatus Pending
-            PS.COD_INITIATED -> setPaymentStatus Pending
-            PS.STARTED -> setPaymentStatus Pending
-            PS.AUTO_REFUNDED -> setPaymentStatus Pending
-        Left error -> setPaymentStatus Failed
-    Left (error) -> setPaymentStatus Failed
+            PS.CHARGED -> setPaymentStatus Success sdk_payload.payload
+            PS.AUTHORIZATION_FAILED -> setPaymentStatus Failed sdk_payload.payload
+            PS.AUTHENTICATION_FAILED -> setPaymentStatus Failed sdk_payload.payload
+            PS.JUSPAY_DECLINED -> setPaymentStatus Failed sdk_payload.payload
+            PS.NEW -> setPaymentStatus Pending sdk_payload.payload
+            PS.PENDING_VBV -> setPaymentStatus Pending sdk_payload.payload
+            PS.AUTHORIZING -> setPaymentStatus Pending sdk_payload.payload
+            PS.COD_INITIATED -> setPaymentStatus Pending sdk_payload.payload
+            PS.STARTED -> setPaymentStatus Pending sdk_payload.payload
+            PS.AUTO_REFUNDED -> setPaymentStatus Pending sdk_payload.payload
+        Left error -> setPaymentStatus Failed sdk_payload.payload
+    Left (error) -> do
+      let (PaymentPagePayload sdk_payload) = dummyPayload
+      setPaymentStatus Failed sdk_payload.payload
   ackScreenFlow
 
 
-setPaymentStatus :: PaymentStatus -> FlowBT String Unit
-setPaymentStatus paymentStatus = do
+setPaymentStatus :: PaymentStatus -> PayPayload -> FlowBT String Unit
+setPaymentStatus paymentStatus (PayPayload payload) = do
     case paymentStatus of
       Success -> do
                 setValueToLocalStore SHOW_PAYMENT_MODAL "false"
                 modifyScreenState $ AcknowledgementScreenType (\a -> a { data { 
-                  title = Just (getString PAYMENT_SUCCESSFUL), 
+                  title = Just ( case getValueToLocalStore LANGUAGE_KEY of
+                        "EN_US" -> "Payment of ₹" <> payload.amount <>" Successful!"
+                        "HI_IN" -> "₹" <> payload.amount <> " का भुगतान सफल!"
+                        "BN_IN" -> "₹"<> payload.amount <> " পেমেন্ট সফল!"
+                        _       -> "Payment of ₹" <> payload.amount <>" Successful!"
+                     ),
                   description = Nothing, 
                   primaryButtonText = Just (getString GO_TO_HOME) , 
-                  illustrationAsset = "success_lottie.json"},
+                  illustrationAsset = "success_lottie.json",
+                  orderId = payload.orderId,
+                  amount = payload.amount
+                  },
                   props{ paymentStatus = paymentStatus}})
                 modifyScreenState $ HomeScreenStateType (\homeScreenState -> homeScreenState { data {paymentState { 
                   paymentStatus = paymentStatus, 

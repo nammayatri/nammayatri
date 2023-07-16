@@ -1,22 +1,23 @@
 module Screens.AcknowledgementScreen.View where
 
 import Animation as Anim
+import Common.Types.App (LazyCheck(..)) as LazyCheck
 import Components.PrimaryButton as PrimaryButton
+import Components.PrimaryButton as PrimaryButton
+import Data.Maybe (Maybe(..))
+import Data.Maybe as Maybe
 import Debug (spy)
 import Effect (Effect)
+import Engineering.Helpers.Commons (getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Prelude (Unit, const, map, ($), (<<<), (<>), bind, pure, unit)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, id, imageUrl, relativeLayout, alignParentBottom, visibility, lottieAnimationView)
-import Screens.AcknowledgementScreen.Controller (Action(..), ScreenOutput, eval)
-import Styles.Colors as Color
-import Screens.Types as ST
-import Engineering.Helpers.Commons (getNewIDWithTag)
-import Components.PrimaryButton as PrimaryButton
-import Common.Types.App (LazyCheck(..)) as LazyCheck
-import Data.Maybe as Maybe
 import Halogen.VDom.DOM.Prop (Prop)
 import JBridge as JB
+import Prelude (Unit, const, map, ($), (<<<), (<>), bind, pure, unit)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width)
+import Screens.AcknowledgementScreen.Controller (Action(..), ScreenOutput, eval)
+import Screens.Types as ST
+import Styles.Colors as Color
 
 
 screen :: ST.AcknowledgementScreenState -> Screen Action ST.AcknowledgementScreenState ScreenOutput
@@ -79,6 +80,9 @@ illustrationView state push =
                       ]
       , commonTV push state.data.title Color.black900 FontStyle.h2 CENTER 10 NoAction
       , commonTV push state.data.description Color.black800 FontStyle.subHeading2 CENTER 10 NoAction
+      , case state.data.orderId of
+          Maybe.Just id -> commonTV push (Just ("Order Id: " <> id)) Color.black800 FontStyle.subHeading2 CENTER 10 NoAction
+          Maybe.Nothing -> linearLayout[][]
     ]
 
 commonTV :: forall w .  (Action -> Effect Unit) -> Maybe.Maybe String -> String -> (LazyCheck.LazyCheck -> forall properties. (Array (Prop properties))) -> Gravity -> Int -> Action -> PrestoDOM (Effect Unit) w

@@ -1293,7 +1293,7 @@ type AcknowledgementScreenData = {
   title :: Maybe String,
   description ::Maybe String,
   primaryButtonText :: Maybe String,
-  orderId  :: String,
+  orderId  :: Maybe String,
   amount :: String
 }
 
