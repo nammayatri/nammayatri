@@ -272,9 +272,10 @@ eval BackPressed state = do
                 continue state { props { showBonusInfo = false } }
                   else if state.data.paymentState.showRateCard then
                     continue state { data { paymentState{ showRateCard = false } } }
-                      else do
-                        _ <- pure $ minimizeApp ""
-                        continue state
+                      else if state.props.endRidePopUp then continue state{props {endRidePopUp = false}}
+                        else do
+                          _ <- pure $ minimizeApp ""
+                          continue state
 
 eval TriggerMaps state = continueWithCmd state[ do
   _ <- pure $ openNavigation 0.0 0.0 state.data.activeRide.dest_lat state.data.activeRide.dest_lon
