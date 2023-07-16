@@ -201,7 +201,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | CallCustomer ST.HomeScreenState
                     | GotoEditGenderScreen
                     | OpenPaymentPage ST.HomeScreenState
-                    | AadhaarVerificationFlow ST.HomeScreenState 
+                    | AadhaarVerificationFlow ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -251,7 +251,7 @@ data Action = NoAction
             | RateCardAC RateCard.Action
             | PaymentStatusAction Common.APIPaymentStatus
             | RemovePaymentBanner
-  
+
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -361,7 +361,7 @@ eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
 eval (RideActionModalAction (RideActionModal.CancelRide)) state = do
   continue state{ data {cancelRideConfirmationPopUp{delayInSeconds = 5,  continueEnabled=false}}, props{cancelConfirmationPopup = true}}
 eval (RideActionModalAction (RideActionModal.CallCustomer)) state = continueWithCmd state [ do
-  _ <- pure $ showDialer (if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone)
+  _ <- pure $ showDialer (if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone) false
   _ <- (logEventWithTwoParams state.data.logField "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID))
   pure NoAction
   ]
@@ -482,9 +482,9 @@ eval RemoveChat state = do
   ]
 
 eval (UpdateMessages message sender timeStamp size) state = do
-  let messages = state.data.messages <> [((ChatView.makeChatComponent (getMessageFromKey message (getValueToLocalStore LANGUAGE_KEY)) sender timeStamp))]  
+  let messages = state.data.messages <> [((ChatView.makeChatComponent (getMessageFromKey message (getValueToLocalStore LANGUAGE_KEY)) sender timeStamp))]
   case (Array.last messages) of
-    Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}} else 
+    Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}} else
                     if value.sentBy == "Driver" then updateMessagesWithCmd state { data { messages = messages, messagesSize = size, suggestionsList = []}}
                     else do
                       let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
@@ -595,7 +595,7 @@ eval (RequestInfoCardAction RequestInfoCard.NoAction) state = continue state
 
 eval (GenderBannerModal (Banner.OnClick)) state = exit $ GotoEditGenderScreen
 
-eval RemovePaymentBanner state = if state.data.paymentState.blockedDueToPayment then 
+eval RemovePaymentBanner state = if state.data.paymentState.blockedDueToPayment then
                                                   continue state else continue state {data { paymentState {paymentStatusBanner = false}}}
 eval (LinkAadhaarPopupAC PopUpModal.OnButton1Click) state = exit $ AadhaarVerificationFlow state
 
@@ -603,18 +603,18 @@ eval RemoveGenderBanner state = do
   _ <- pure $ setValueToLocalStore IS_BANNER_ACTIVE "False"
   continue state { props = state.props{showGenderBanner = false}}
 
-eval (PaymentStatusAction status) state =  
-  case status of 
+eval (PaymentStatusAction status) state =
+  case status of
     Common.CHARGED -> continue state { data { paymentState { paymentStatusBanner = false}}}
-    _ -> continue state { data { paymentState { 
-                  paymentStatus = Common.Failed, 
+    _ -> continue state { data { paymentState {
+                  paymentStatus = Common.Failed,
                   bannerBG = "#FFECED",
                   bannerTitle = getString YOUR_PREVIOUS_PAYMENT_IS_PENDING,
                   bannerTitleColor = "#BF4A4E",
                   banneActionText = getString CONTACT_SUPPORT,
                   bannerImage = "ny_ic_payment_falied_banner," }}} -- failed
 
-eval _ state = continue state 
+eval _ state = continue state
 
 checkPermissionAndUpdateDriverMarker :: ST.HomeScreenState -> Effect Unit
 checkPermissionAndUpdateDriverMarker state = do
