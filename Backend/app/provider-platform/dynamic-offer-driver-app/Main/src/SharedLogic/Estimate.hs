@@ -121,6 +121,7 @@ buildEstimate searchReqId startTime dist specialLocationTag farePolicy = do
             || breakup.title == "SGST"
             || breakup.title == "CGST"
             || breakup.title == "FIXED_GOVERNMENT_RATE"
+            || breakup.title == "NIGHT_SHIFT_CHARGE"
 
 mkAdditionalBreakups :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> Meters -> FullFarePolicy -> [breakupItem]
 mkAdditionalBreakups mkPrice mkBreakupItem distance farePolicy = do
