@@ -35,7 +35,7 @@
                         android:layout_width="32dp"
                         android:layout_height="32dp"
                         android:layout_marginRight="12dp"
-                        android:src="@drawable/ny_logo_dark">
+                        android:src="@drawable/ic_floating_widget">
                     </ImageView>
                     <TextView
                         android:layout_width="wrap_content"

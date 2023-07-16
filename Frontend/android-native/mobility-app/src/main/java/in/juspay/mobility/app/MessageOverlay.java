@@ -129,7 +129,7 @@ public class MessageOverlay implements View.OnClickListener {
 
     private void startMainActivity() {
         SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        if (context.getResources().getString(R.string.service).equals(context.getString(R.string.nammayatripartner)) && !sharedPref.getString(context.getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
+        if ((context.getResources().getString(R.string.service).equals(context.getString(R.string.nammayatripartner))) || (context.getResources().getString(R.string.service).equals(context.getString(R.string.yatrisathiprovider)))  && !sharedPref.getString(context.getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
             Intent intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
             try {

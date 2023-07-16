@@ -229,7 +229,7 @@ const hindiStrings = {
   "MAX_CHAR_LIMIT_REACHED": "अधिकतम वर्ण सीमा पूरी हुई,",
   "DRIVER_WAS_NOT_REACHABLE": "ड्राइवर उपलब्ध नहीं था",
   "SHOW_ALL_OPTIONS": "सभी विकल्प दिखाएं",
-  "EXPIRES_IN": "में समाप्त",
+  "EXPIRES_IN": "  में समाप्त ",
   "PAY_DIRECTLY_TO_YOUR_DRIVER_USING_CASH_UPI": "*Cash/UPI का उपयोग करके सीधे अपने ड्राइवर को भुगतान करें",
   "UPDATE_REQUIRED": "अद्यतन आवश्यक है",
   "PLEASE_UPDATE_APP_TO_CONTINUE_SERVICE": "कृपया सेवा जारी रखने के लिए ऐप को अपडेट करें",
