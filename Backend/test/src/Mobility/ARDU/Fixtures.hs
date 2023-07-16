@@ -42,7 +42,7 @@ arduDriver2 =
     }
 
 -- See restricted_extra_fare
-defaultAllowedDriverFee :: HighPrecMOney
+defaultAllowedDriverFee :: HighPrecMoney
 defaultAllowedDriverFee = 10.00
 
 nammaYatriPartnerMerchantId :: Id DM.Merchant
