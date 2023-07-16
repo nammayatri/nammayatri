@@ -196,7 +196,7 @@ getFaresList fares baseDistance =
           { fareType : item.description
           , price : (getValueFromConfig "currency") <> " " <> 
             (show $ case item.description of 
-              "BASE_FARE" -> (item.amount + getFareFromArray fares "EXTRA_DISTANCE_FARE") 
+              "BASE_FARE" -> (item.amount + getFareFromArray fares "EXTRA_DISTANCE_FARE" + getFareFromArray fares "NIGHT_SHIFT_CHARGE") 
               "SGST" -> item.amount * 2 
               _ -> item.amount)
           , title : case item.description of
@@ -226,7 +226,7 @@ dummyFareBreakUp :: FareBreakupAPIEntity
 dummyFareBreakUp = FareBreakupAPIEntity{amount: 0,description: ""}
 
 getFilteredFares :: Array FareBreakupAPIEntity -> Array FareBreakupAPIEntity
-getFilteredFares = filter (\(FareBreakupAPIEntity item) -> (all (_ /=  item.description) ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "CGST"]) )
+getFilteredFares = filter (\(FareBreakupAPIEntity item) -> (all (_ /=  item.description) ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "CGST", "NIGHT_SHIFT_CHARGE"]) )
 
 getKmMeter :: Int -> String
 getKmMeter distance = if (distance < 1000) then toString distance <> " m" else (parseFloat ((toNumber distance)/ 1000.0)) 2 <> " km"
