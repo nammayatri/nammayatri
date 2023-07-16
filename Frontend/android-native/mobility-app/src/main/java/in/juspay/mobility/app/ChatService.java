@@ -338,7 +338,7 @@ public class ChatService extends Service {
                 new NotificationCompat.Builder(this, "Message")
                         .setContentTitle(getString(R.string.chatting_is_enabled))
                         .setContentText(contentText)
-                        .setSmallIcon(getResources().getIdentifier("ic_launcher", "drawable", getPackageName()))
+                        .setSmallIcon(getResources().getIdentifier("ny_ic_launcher", "drawable", getPackageName()))
                         .setPriority(NotificationCompat.PRIORITY_MIN)
                         .setOngoing(true)
                         .setContentIntent(pendingIntent);
