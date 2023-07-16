@@ -541,5 +541,6 @@ const bengaliStrings = {
 	SESSION_EXPIRED : "সময় মেয়াদ শেষ. আবার প্রক্রিয়া শুরু করুন.",
 	OTP_ATTEMPT_EXCEEDED : "OTP প্রয়াস অতিক্রম করেছে৷ আবার প্রক্রিয়া শুরু করুন",
 	UPSTREAM_INTERNAL_SERVER_ERROR : "আপস্ট্রিম উৎস/সরকারি উৎস অভ্যন্তরীণ সার্ভার ত্রুটি। আবার প্রক্রিয়া শুরু করুন.",
-	TRANSACTION_ALREADY_COMPLETED : "লেনদেন ইতিমধ্যে সম্পন্ন হয়েছে. এই লেনদেনে আর কাজ করা যাবে না."
+	TRANSACTION_ALREADY_COMPLETED : "লেনদেন ইতিমধ্যে সম্পন্ন হয়েছে. এই লেনদেনে আর কাজ করা যাবে না.",
+	GOTO_YOUR_NEAREST_BOOTH : "আপনার Aadhaar যাচাই করতে আপনার নিকটস্থ বুথ বা গ্রাহক পরিষেবাতে যান।"
 	}

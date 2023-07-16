@@ -22,12 +22,13 @@ import Common.Types.App (LazyCheck(..))
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
+import Data.Array (any)
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Types (STR(..))
-import Prelude ((==))
+import Prelude (not, (/=), (==))
 import Screens.Types (AadhaarStage(..))
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -35,8 +36,12 @@ import Styles.Colors as Color
 primaryButtonViewConfig :: ST.AadhaarVerificationScreenState -> PrimaryButton.Config
 primaryButtonViewConfig state =PrimaryButton.config { textConfig{ text = if state.props.currentStage == AadhaarDetails then (getString SUBMIT) else (getString NEXT) }
       , id = "PrimaryButtonMobileNumber"
-      , isClickable = state.props.btnActive
-      , alpha = if state.props.btnActive then 1.0 else 0.6
+      , isClickable = case state.props.currentStage of
+          AadhaarDetails ->not any (_ == "") [state.data.driverName, state.data.driverGender, state.data.driverDob]
+          _ -> state.props.btnActive
+      , alpha = case state.props.currentStage of
+          AadhaarDetails -> if (not any (_ == "") [state.data.driverName, state.data.driverGender, state.data.driverDob]) then 1.0 else 0.6
+          _ -> if state.props.btnActive then 1.0 else 0.6
       , height = (V 60)
       , cornerRadius = 0.0
       , margin = (Margin 0 0 0 0)
@@ -72,6 +77,7 @@ aadhaarNameEditText state = PrimaryEditText.config {
         { placeholder = getString ENTER_AADHAAR_DETAILS
         , singleLine = true
         , gravity = CENTER_VERTICAL
+        , pattern = Just "[a-zA-Z ]*,30"
         , textStyle = FontStyle.SubHeading1
         }
       , topLabel{
@@ -90,6 +96,7 @@ aadhaarGenderEditText state = PrimaryEditText.config {
         { placeholder = getString GENDER
         , singleLine = true
         , gravity = CENTER_VERTICAL
+        , pattern = Just "[a-zA-Z ]*,30"
         , textStyle = FontStyle.SubHeading1
         }
       , topLabel{
