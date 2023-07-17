@@ -19,7 +19,6 @@
 module Storage.Beam.Maps.PlaceNameCache where
 
 import qualified Data.Aeson as A
-import Data.ByteString.Internal (ByteString)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -28,37 +27,28 @@ import qualified Data.Vector as V
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-    ResultError (UnexpectedNull),
-  )
+import Database.Beam.Postgres (Postgres)
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
-import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.Maps.PlaceNameCache as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import Kernel.Utils.Common (encodeToText)
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
-fromFieldAddressResp ::
-  DPSF.Field ->
-  Maybe ByteString ->
-  DPSF.Conversion [Domain.AddressResp]
-fromFieldAddressResp f mbValue = case mbValue of
-  Nothing -> DPSF.returnError UnexpectedNull f mempty
-  Just _ -> V.toList <$> fromField f mbValue
+instance FromField [Domain.AddressResp] where
+  fromField f mbValue = V.toList <$> fromField f mbValue
 
 instance FromField Domain.AddressResp where
-  fromField = fromFieldEnum
+  fromField = fromFieldJSON
 
-instance FromField [Domain.AddressResp] where
-  fromField = fromFieldAddressResp
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be [Domain.AddressResp] where
-  sqlValueSyntax = autoSqlValueSyntax
+instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [Domain.AddressResp] where
+  sqlValueSyntax addressRespList =
+    let x = encodeToText <$> addressRespList
+     in sqlValueSyntax (V.fromList x)
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Domain.AddressResp]
 
