@@ -524,5 +524,5 @@ const englishStrings = {
   "OTP_EXPIRED" : "Otp Expired",
   "OTP_EXPIRED_DESCRIPTION" : "Your ride OTP expired. Please book again to get a ride",
   "PLATFORM_GST" : "Platform GST (18%)",
-  "MISC_WAITING_CHARGE" : "Mis. including Waiting Charges"
+  "MISC_WAITING_CHARGE" : "Misc. (including Waiting Charges)"
 }

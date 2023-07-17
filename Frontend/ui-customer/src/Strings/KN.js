@@ -519,5 +519,5 @@ const kannadaStrings = {
   "OTP_EXPIRED" : "OTP ಅವಧಿ ಮುಗಿದಿದೆ",
   "OTP_EXPIRED_DESCRIPTION" : "ನಿಮ್ಮ ಸವಾರಿಯ OTP ಅವಧಿ ಮುಗಿದಿದೆ. ಸವಾರಿ ಪಡೆಯಲು ದಯವಿಟ್ಟು ಮತ್ತೊಮ್ಮೆ ಬುಕ್ ಮಾಡಿ",
   "PLATFORM_GST" : "ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಜಿಎಸ್‌ಟಿ (18%)",
-  "MISC_WAITING_CHARGE" : "ಮಿಸ್. ಕಾಯುವ ಶುಲ್ಕಗಳು ಸೇರಿದಂತೆ"
+  "MISC_WAITING_CHARGE" : "ಇತರ (ವೇಟಿಂಗ್ ಶುಲ್ಕಗಳು ಸೇರಿದಂತೆ)"
 }
