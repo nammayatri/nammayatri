@@ -53,7 +53,7 @@ import qualified Storage.Queries.Vehicle as VQuery
 -- FAILED is used when verification is failed
 -- INVALID is the state
 --   which the doc switches to when, for example, it's expired.
-data ResponseStatus = NO_DOC_AVAILABLE | PENDING | VALID | FAILED | INVALID | LIMIT_EXCEED
+data ResponseStatus = NO_DOC_AVAILABLE | PENDING | VALID | FAILED | INVALID | LIMIT_EXCEED | MANUAL_VERIFICATION_REQUIRED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
 
 data StatusRes = StatusRes
@@ -78,7 +78,10 @@ getAadhaarStatus _ False = return (VALID, Nothing)
 getAadhaarStatus personId True = do
   mAadhaarCard <- SAV.findByDriverId personId
   case mAadhaarCard of
-    Just aadhaarCard -> return (VALID, Just aadhaarCard)
+    Just aadhaarCard -> do
+      if aadhaarCard.isVerified
+        then return (VALID, Just aadhaarCard)
+        else return (MANUAL_VERIFICATION_REQUIRED, Just aadhaarCard)
     Nothing -> return (INVALID, Nothing)
 
 getDLAndStatus :: Id SP.Person -> Int -> Flow (ResponseStatus, Maybe DL.DriverLicense)

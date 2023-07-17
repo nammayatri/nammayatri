@@ -44,6 +44,7 @@ import Control.Applicative ((<|>))
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import Data.Coerce
 import Data.List.NonEmpty (nonEmpty)
+import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
 import Domain.Action.UI.DriverOnboarding.Status (ResponseStatus (..))
 import qualified Domain.Action.UI.DriverOnboarding.Status as St
 import Domain.Types.DriverFee
@@ -731,7 +732,12 @@ updateByPhoneNumber merchantShortId phoneNumber req = do
   when (isJust aadhaarInfo) $ throwError AadhaarAlreadyLinked
   merchant <- findMerchantByShortId merchantShortId
   driver <- QPerson.findByMobileNumberAndMerchant "+91" mobileNumberHash merchant.id >>= fromMaybeM (InvalidRequest "Person not found")
-  Esq.runTransaction $ AV.findByPhoneNumberAndUpdate req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) req.isVerified driver.id
+  res <- AV.findByDriverId driver.id
+  case res of
+    Just _ -> Esq.runTransaction $ AV.findByPhoneNumberAndUpdate req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) req.isVerified driver.id
+    Nothing -> do
+      aadhaarEntity <- AVD.mkAadhaar driver.id req.driverName req.driverGender req.driverDob (Just aadhaarNumberHash) Nothing True
+      Esq.runTransaction $ AV.create aadhaarEntity
   CQDriverInfo.updateAadhaarVerifiedState (cast driver.id) True
   pure Success
 
