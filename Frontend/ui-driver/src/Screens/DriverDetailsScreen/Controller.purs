@@ -37,7 +37,7 @@ import Debug (spy)
 import Data.String (take, length, drop)
 import Data.String.CodeUnits (charAt)
 import Data.Int (fromString)
-import Helpers.Utils(toString)
+import Helpers.Utils(toString,getGenderIndex)
 import Components.SelectListModal as SelectListModal
 import Components.PrimaryButton as PrimaryButtonController
 import Common.Types.App (OptionButtonList)
@@ -227,7 +227,7 @@ eval (InAppKeyboardModalOtp (InAppKeyboardModal.OnClickDone text)) state = do
 
 
 eval (GenderSelectionModalAction (SelectListModal.UpdateIndex indexValue)) state = continue state { data = state.data { genderSelectionModal  { activeIndex = Just indexValue}}}
-eval (GenderSelectionModalAction (SelectListModal.OnGoBack)) state = continue state { data { genderSelectionModal {activeIndex = if (state.data.driverGender == Nothing) then Nothing else state.data.genderSelectionModal.activeIndex}} ,props{ genderSelectionModalShow = false}}
+eval (GenderSelectionModalAction (SelectListModal.OnGoBack)) state = continue state { data { genderSelectionModal {activeIndex = if (state.data.driverGender == Nothing) then Nothing else getGenderIndex (fromMaybe "UNKNOWN" state.data.driverGender) (genders FunctionCall)}} ,props{ genderSelectionModalShow = false}}
 
 eval GenderSelectionOpen state = do
   continue state{props {genderSelectionModalShow = true},data{genderSelectionModal{selectionOptions = genders FunctionCall}}}
