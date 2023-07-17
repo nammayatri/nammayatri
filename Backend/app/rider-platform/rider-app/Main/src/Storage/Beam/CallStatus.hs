@@ -115,4 +115,4 @@ callStatusToPSModifiers :: M.Map Text (A.Value -> A.Value)
 callStatusToPSModifiers =
   M.empty
 
-$(enableKVPG ''CallStatusT ['id] [])
+$(enableKVPG ''CallStatusT ['id] [['callId]])

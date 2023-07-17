@@ -138,4 +138,4 @@ quoteToPSModifiers :: M.Map Text (A.Value -> A.Value)
 quoteToPSModifiers =
   M.empty
 
-$(enableKVPG ''QuoteT ['id] [])
+$(enableKVPG ''QuoteT ['id] [['providerId], ['requestId]])

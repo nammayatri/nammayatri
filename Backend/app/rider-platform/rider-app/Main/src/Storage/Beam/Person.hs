@@ -209,4 +209,4 @@ personToPSModifiers :: M.Map Text (A.Value -> A.Value)
 personToPSModifiers =
   M.empty
 
-$(enableKVPG ''PersonT ['id] [])
+$(enableKVPG ''PersonT ['id] [['mobileNumberHash], ['emailHash], ['referralCode], ['deviceToken]])

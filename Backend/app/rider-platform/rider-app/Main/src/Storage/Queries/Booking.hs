@@ -282,7 +282,7 @@ findByIdAndMerchantId (Id bookingId) (Id merchantId) = do
   updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamB.id $ Se.Eq bookingId, Se.Is BeamB.merchantId $ Se.Eq merchantId]
+      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamB.id $ Se.Eq bookingId, Se.Is BeamB.merchantId $ Se.Eq merchantId]]
       case result of
         Right (Just result') -> transformBeamBookingToDomain result'
         _ -> pure Nothing

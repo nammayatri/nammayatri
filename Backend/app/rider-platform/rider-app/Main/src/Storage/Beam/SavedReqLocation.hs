@@ -111,4 +111,4 @@ savedReqLocationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 savedReqLocationToPSModifiers =
   M.empty
 
-$(enableKVPG ''SavedReqLocationT ['id] [])
+$(enableKVPG ''SavedReqLocationT ['id] [['riderId]])

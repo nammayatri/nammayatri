@@ -101,4 +101,4 @@ driverOfferToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverOfferToPSModifiers =
   M.empty
 
-$(enableKVPG ''DriverOfferT ['id] [])
+$(enableKVPG ''DriverOfferT ['id] [['bppQuoteId]])

@@ -109,4 +109,4 @@ placeNameCacheToPSModifiers :: M.Map Text (A.Value -> A.Value)
 placeNameCacheToPSModifiers =
   M.empty
 
-$(enableKVPG ''PlaceNameCacheT ['id] [])
+$(enableKVPG ''PlaceNameCacheT ['id] [['placeId], ['geoHash]])

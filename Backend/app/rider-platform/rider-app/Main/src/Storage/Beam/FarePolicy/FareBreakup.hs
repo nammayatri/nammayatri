@@ -85,4 +85,4 @@ fareBreakupToPSModifiers :: M.Map Text (A.Value -> A.Value)
 fareBreakupToPSModifiers =
   M.empty
 
-$(enableKVPG ''FareBreakupT ['id] [])
+$(enableKVPG ''FareBreakupT ['id] [['bookingId]])

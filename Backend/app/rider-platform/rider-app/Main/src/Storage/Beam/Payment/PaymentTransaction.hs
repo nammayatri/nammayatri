@@ -80,7 +80,7 @@ paymentTransactionTMod :: PaymentTransactionT (B.FieldModification (B.TableField
 paymentTransactionTMod =
   B.tableModification
     { id = B.fieldNamed "id",
-      txnUUID = B.fieldNamed "txn_u_u_i_d",
+      txnUUID = B.fieldNamed "txn_uuid",
       paymentMethodType = B.fieldNamed "payment_method_type",
       paymentMethod = B.fieldNamed "payment_method",
       respMessage = B.fieldNamed "resp_message",

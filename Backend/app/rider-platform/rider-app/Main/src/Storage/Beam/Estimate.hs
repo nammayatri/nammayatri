@@ -178,4 +178,4 @@ estimateToPSModifiers :: M.Map Text (A.Value -> A.Value)
 estimateToPSModifiers =
   M.empty
 
-$(enableKVPG ''EstimateT ['id] [])
+$(enableKVPG ''EstimateT ['id] [['requestId], ['bppEstimateId]])

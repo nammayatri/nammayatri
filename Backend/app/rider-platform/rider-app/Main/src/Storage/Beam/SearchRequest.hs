@@ -119,4 +119,4 @@ searchRequestToPSModifiers :: M.Map Text (A.Value -> A.Value)
 searchRequestToPSModifiers =
   M.empty
 
-$(enableKVPG ''SearchRequestT ['id] [])
+$(enableKVPG ''SearchRequestT ['id] [['riderId]])

@@ -153,4 +153,4 @@ registrationTokenToPSModifiers :: M.Map Text (A.Value -> A.Value)
 registrationTokenToPSModifiers =
   M.empty
 
-$(enableKVPG ''RegistrationTokenT ['id] [])
+$(enableKVPG ''RegistrationTokenT ['id] [['token], ['entityId]])

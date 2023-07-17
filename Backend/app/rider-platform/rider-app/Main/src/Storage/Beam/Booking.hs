@@ -170,4 +170,4 @@ bookingToPSModifiers :: M.Map Text (A.Value -> A.Value)
 bookingToPSModifiers =
   M.empty
 
-$(enableKVPG ''BookingT ['id] [])
+$(enableKVPG ''BookingT ['id] [['bppBookingId], ['riderId]])

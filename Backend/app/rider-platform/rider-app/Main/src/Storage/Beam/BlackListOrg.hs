@@ -104,4 +104,4 @@ blackListOrgToPSModifiers :: M.Map Text (A.Value -> A.Value)
 blackListOrgToPSModifiers =
   M.empty
 
-$(enableKVPG ''BlackListOrgT ['id] [])
+$(enableKVPG ''BlackListOrgT ['id] [['subscriberId]])

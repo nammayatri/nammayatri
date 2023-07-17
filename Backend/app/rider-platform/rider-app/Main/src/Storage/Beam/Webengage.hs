@@ -91,4 +91,4 @@ webengageToPSModifiers :: M.Map Text (A.Value -> A.Value)
 webengageToPSModifiers =
   M.empty
 
-$(enableKVPG ''WebengageT ['id] [])
+$(enableKVPG ''WebengageT ['id] [['infoMessageId]])

@@ -29,7 +29,6 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Lib.Utils
 import qualified Sequelize as Se
-import qualified Storage.Beam.Maps.PlaceNameCache as BeamMapsPNC
 import qualified Storage.Beam.Maps.PlaceNameCache as BeamPNC
 
 create :: L.MonadFlow m => PlaceNameCache -> m (MeshResult ())
@@ -51,10 +50,10 @@ create placeNameCache = do
 findPlaceByPlaceId :: L.MonadFlow m => Text -> m [PlaceNameCache]
 findPlaceByPlaceId placeId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamMapsPNC.PlaceNameCacheT
+  let modelName = Se.modelTableName @BeamPNC.PlaceNameCacheT
   updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> either (pure []) (transformBeamPlaceNameCacheToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamMapsPNC.placeId $ Se.Eq (Just placeId)]
+    Just dbConf' -> either (pure []) (transformBeamPlaceNameCacheToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamPNC.placeId $ Se.Eq (Just placeId)]
     Nothing -> pure []
 
 -- findPlaceByGeoHash :: Transactionable m => Text -> m [PlaceNameCache]
@@ -67,10 +66,10 @@ findPlaceByPlaceId placeId = do
 findPlaceByGeoHash :: L.MonadFlow m => Text -> m [PlaceNameCache]
 findPlaceByGeoHash geoHash = do
   dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamMapsPNC.PlaceNameCacheT
+  let modelName = Se.modelTableName @BeamPNC.PlaceNameCacheT
   updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
-    Just dbConf' -> either (pure []) (transformBeamPlaceNameCacheToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamMapsPNC.geoHash $ Se.Eq (Just geoHash)]
+    Just dbConf' -> either (pure []) (transformBeamPlaceNameCacheToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamPNC.geoHash $ Se.Eq (Just geoHash)]
     Nothing -> pure []
 
 transformBeamPlaceNameCacheToDomain :: BeamPNC.PlaceNameCache -> PlaceNameCache

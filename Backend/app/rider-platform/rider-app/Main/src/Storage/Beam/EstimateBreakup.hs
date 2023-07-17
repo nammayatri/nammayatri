@@ -87,4 +87,4 @@ estimateBreakupToPSModifiers :: M.Map Text (A.Value -> A.Value)
 estimateBreakupToPSModifiers =
   M.empty
 
-$(enableKVPG ''EstimateBreakupT ['id] [])
+$(enableKVPG ''EstimateBreakupT ['id] [['estimateId]])
