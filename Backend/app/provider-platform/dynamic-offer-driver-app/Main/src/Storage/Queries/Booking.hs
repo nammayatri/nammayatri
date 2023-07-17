@@ -84,11 +84,14 @@ updateRiderName bookingId riderName = do
   now <- getCurrentTime
   updateOneWithKV [Se.Set BeamB.riderName $ Just riderName, Se.Set BeamB.updatedAt now] [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
-updateSpecialZoneOtpCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> Text -> m ()
-updateSpecialZoneOtpCode bookingId specialZoneOtpCode = do
+updateSpecialZoneOtpCodeAndOtpValidTill :: MonadFlow m => Id Booking -> Text -> UTCTime -> m ()
+updateSpecialZoneOtpCodeAndOtpValidTill bookingId specialZoneOtpCode specialZoneOtpValidTill = do
   now <- getCurrentTime
   updateOneWithKV
-    [Se.Set BeamB.specialZoneOtpCode $ Just specialZoneOtpCode, Se.Set BeamB.updatedAt now]
+    [Se.Set BeamB.specialZoneOtpCode $ Just specialZoneOtpCode,
+     Se.Set BeamB.specialZoneOtpValidTill $ Just specialZoneOtpValidTill,
+     Se.Set BeamB.updatedAt now
+    ]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
 findStuckBookings :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
@@ -170,6 +173,7 @@ instance FromTType' BeamB.Booking Booking where
                 specialLocationTag = specialLocationTag,
                 specialZoneOtpCode = specialZoneOtpCode,
                 disabilityTag = disabilityTag,
+                specialZoneOtpValidTill = specialZoneOtpValidTill,
                 area = area,
                 providerId = Id providerId,
                 merchantOperatingCityId = merchantOpCityId,
@@ -209,6 +213,7 @@ instance ToTType' BeamB.Booking Booking where
         BeamB.specialLocationTag = specialLocationTag,
         BeamB.disabilityTag = disabilityTag,
         BeamB.specialZoneOtpCode = specialZoneOtpCode,
+        BeamB.specialZoneOtpValidTill = specialZoneOtpValidTill,
         BeamB.area = area,
         BeamB.providerId = getId providerId,
         BeamB.merchantOperatingCityId = Just $ getId merchantOperatingCityId,

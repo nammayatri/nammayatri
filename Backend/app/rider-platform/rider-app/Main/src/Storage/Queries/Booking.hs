@@ -95,11 +95,12 @@ updateBPPBookingId rbId bppRbId = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
-updateOtpCodeBookingId :: MonadFlow m => Id Booking -> Text -> m ()
-updateOtpCodeBookingId rbId otp = do
+updateOtpCodeAndOtpValidTillBookingId :: MonadFlow m => Id Booking -> Text -> UTCTime -> m ()
+updateOtpCodeAndOtpValidTillBookingId rbId otp otpValidTill = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamB.otpCode (Just otp),
+      Se.Set BeamB.otpValidTill (Just otpValidTill),
       Se.Set BeamB.updatedAt now
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
@@ -337,11 +338,11 @@ instance FromTType' BeamB.Booking Booking where
 
 instance ToTType' BeamB.Booking Booking where
   toTType' DRB.Booking {..} =
-    let (fareProductType, toLocationId, distance, rentalSlabId, otpCode) = case bookingDetails of
-          DRB.OneWayDetails details -> (DQuote.ONE_WAY, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
-          DRB.RentalDetails rentalSlab -> (DQuote.RENTAL, Nothing, Nothing, Just . getId $ rentalSlab.id, Nothing)
-          DRB.DriverOfferDetails details -> (DQuote.DRIVER_OFFER, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
-          DRB.OneWaySpecialZoneDetails details -> (DQuote.ONE_WAY_SPECIAL_ZONE, Just (getId details.toLocation.id), Just details.distance, Nothing, details.otpCode)
+    let (fareProductType, toLocationId, distance, rentalSlabId, otpCode, otpValidTill) = case bookingDetails of
+          DRB.OneWayDetails details -> (DQuote.ONE_WAY, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing, Nothing)
+          DRB.RentalDetails rentalSlab -> (DQuote.RENTAL, Nothing, Nothing, Just . getId $ rentalSlab.id, Nothing, Nothing)
+          DRB.DriverOfferDetails details -> (DQuote.DRIVER_OFFER, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing, Nothing)
+          DRB.OneWaySpecialZoneDetails details -> (DQuote.ONE_WAY_SPECIAL_ZONE, Just (getId details.toLocation.id), Just details.distance, Nothing, details.otpCode, details.otpValidTill)
      in BeamB.BookingT
           { BeamB.id = getId id,
             BeamB.transactionId = transactionId,
@@ -367,6 +368,7 @@ instance ToTType' BeamB.Booking Booking where
             BeamB.discount = realToFrac <$> discount,
             BeamB.estimatedTotalFare = realToFrac estimatedTotalFare,
             BeamB.otpCode = otpCode,
+            BeamB.otpValidTill = otpValidTill,
             BeamB.vehicleVariant = vehicleVariant,
             BeamB.distance = distance,
             BeamB.tripTermsId = getId <$> (tripTerms <&> (.id)),

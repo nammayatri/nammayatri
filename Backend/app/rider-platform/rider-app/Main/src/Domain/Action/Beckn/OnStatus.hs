@@ -22,6 +22,7 @@ where
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Beam.Functions as B
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id (Id)
@@ -45,8 +46,20 @@ onStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => OnStatusReq -> m ()
 onStatus OnStatusReq {..} = do
   booking <- QBooking.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   case mbRideInfo of
-    Nothing -> QBooking.updateStatus booking.id bookingStatus
+    Nothing -> do
+      case booking.bookingDetails of
+        DBooking.OneWaySpecialZoneDetails _ -> unless (booking.status == DBooking.CANCELLED) $ pure ()
+        _ -> QBooking.updateStatus booking.id bookingStatus
     Just rideInfo -> do
-      ride <- QRide.findByBPPRideId rideInfo.bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId: " <> rideInfo.bppRideId.getId)
-      QBooking.updateStatus booking.id bookingStatus >> QRide.updateStatus ride.id rideInfo.rideStatus
+      ride <- B.runInReplica $ QRide.findByBPPRideId rideInfo.bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId: " <> rideInfo.bppRideId.getId)
+      QBooking.updateStatus booking.id bookingStatus
       QRide.updateStatus ride.id rideInfo.rideStatus
+
+-- mapBookingStatusDomain :: DBooking.BookingStatus -> DBooking.BookingStatus
+-- mapBookingStatusDomain DBooking.NEW = DBooking.CONFIRMED
+-- mapBookingStatusDomain DBooking.TRIP_ASSIGNED = DBooking.TRIP_ASSIGNED
+-- mapBookingStatusDomain DBooking.CONFIRMED = DBooking.CONFIRMED
+-- mapBookingStatusDomain DBooking.COMPLETED = DBooking.COMPLETED
+-- mapBookingStatusDomain DBooking.AWAITING_REASSIGNMENT = DBooking.AWAITING_REASSIGNMENT
+-- mapBookingStatusDomain DBooking.REALLOCATED = DBooking.REALLOCATED
+-- mapBookingStatusDomain DBooking.CANCELLED = DBooking.CANCELLED

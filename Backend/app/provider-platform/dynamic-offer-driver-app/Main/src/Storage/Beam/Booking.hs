@@ -33,6 +33,7 @@ data BookingT f = BookingT
     specialLocationTag :: B.C f (Maybe Text),
     specialZoneOtpCode :: B.C f (Maybe Text),
     disabilityTag :: B.C f (Maybe Text),
+    specialZoneOtpValidTill :: B.C f (Maybe UTCTime),
     area :: B.C f (Maybe FareProductD.Area),
     providerId :: B.C f Text,
     merchantOperatingCityId :: B.C f (Maybe Text),

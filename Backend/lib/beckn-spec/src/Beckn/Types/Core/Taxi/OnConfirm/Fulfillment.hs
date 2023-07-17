@@ -40,9 +40,18 @@ data FulfillmentInfo = FulfillmentInfo
     end :: Maybe StopInfo,
     vehicle :: Vehicle,
     customer :: Customer,
-    agent :: Maybe Agent -- If NormalBooking then Just else Nothing for SpecialZoneBooking
+    agent :: Maybe Agent, -- If NormalBooking then Just else Nothing for SpecialZoneBooking
+    tags :: Maybe Tags
   }
   deriving (Generic, Show)
+
+newtype Tags = Tags
+  { specialZoneOtpValidTill :: UTCTime
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema Tags where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
 instance ToSchema FulfillmentInfo where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

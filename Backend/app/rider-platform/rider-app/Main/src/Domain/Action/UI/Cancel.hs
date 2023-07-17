@@ -18,6 +18,7 @@ module Domain.Action.UI.Cancel
     CancelSearch (..),
     mkDomainCancelSearch,
     cancelSearch,
+    driverDistanceToPickup,
   )
 where
 

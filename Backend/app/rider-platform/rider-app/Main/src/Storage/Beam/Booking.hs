@@ -50,6 +50,7 @@ data BookingT f = BookingT
     estimatedTotalFare :: B.C f HighPrecMoney,
     distance :: B.C f (Maybe HighPrecMeters),
     otpCode :: B.C f (Maybe Text),
+    otpValidTill :: B.C f (Maybe UTCTime),
     vehicleVariant :: B.C f VehVar.VehicleVariant,
     tripTermsId :: B.C f (Maybe Text),
     rentalSlabId :: B.C f (Maybe Text),

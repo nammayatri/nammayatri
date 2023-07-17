@@ -48,11 +48,11 @@ status transporterId (SignatureAuthResult _ subscriber) req =
     logTagInfo "Status API Flow" "Reached"
 
     dStatusReq <- ACL.buildStatusReq subscriber req
-    dStatusRes <- DStatus.handler transporterId dStatusReq
-
     let context = req.context
+    dStatusRes <- DStatus.handler transporterId dStatusReq
     void $
       CallBAP.withCallback dStatusRes.transporter Context.STATUS OnStatus.onStatusAPI context context.bap_uri $
         pure $ ACL.mkOnStatusMessage dStatusRes
+    void $ DStatus.checkforSpecialZoneOtpExpiry transporterId context dStatusReq
 
     pure Ack

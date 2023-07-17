@@ -24,15 +24,18 @@ module SharedLogic.CallBAP
     sendDriverOffer,
     callOnConfirm,
     buildBppUrl,
+    callOnCancel,
   )
 where
 
 import qualified AWS.S3 as S3
 import qualified Beckn.ACL.OnSelect as ACL
 import qualified Beckn.ACL.OnUpdate as ACL
+import qualified Beckn.Types.Core.Taxi.API.OnCancel as API
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as API
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as API
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
+import qualified Beckn.Types.Core.Taxi.OnCancel as OnCancel
 import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import qualified Beckn.Types.Core.Taxi.OnSelect as OnSelect
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
@@ -141,6 +144,28 @@ callOnConfirm transporter contextFromConfirm content = do
   bppUri <- buildBppUrl transporter.id
   context_ <- buildTaxiContext Context.ON_CONFIRM msgId contextFromConfirm.transaction_id bapId bapUri (Just bppSubscriberId) (Just bppUri) city country False
   void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPI bapUri . BecknCallbackReq context_ $ Right content
+
+callOnCancel ::
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    CoreMetrics m
+  ) =>
+  DM.Merchant ->
+  Context.Context ->
+  OnCancel.OnCancelMessage ->
+  m ()
+callOnCancel transporter contextFromCancel content = do
+  let bapUri = contextFromCancel.bap_uri
+      bapId = contextFromCancel.bap_id
+      msgId = contextFromCancel.message_id
+      city = contextFromCancel.city
+      country = contextFromCancel.country
+      bppSubscriberId = getShortId $ transporter.subscriberId
+      authKey = getHttpManagerKey bppSubscriberId
+  bppUri <- buildBppUrl transporter.id
+  context_ <- buildTaxiContext Context.ON_CANCEL msgId contextFromCancel.transaction_id bapId bapUri (Just bppSubscriberId) (Just bppUri) city country False
+  void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CANCEL) API.onCancelAPI bapUri . BecknCallbackReq context_ $ Right content
 
 buildBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl]

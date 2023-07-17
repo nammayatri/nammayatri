@@ -25,7 +25,7 @@ import Beckn.Types.Core.Metro.Search.Vehicle (Vehicle)
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Common (IdObject)
-import Kernel.Utils.Example
+import Kernel.Utils.Example (Example (..))
 
 data Intent = Intent
   { provider :: Maybe ProviderInfo,

@@ -124,7 +124,7 @@ let slackCfg =
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
 let driverLocationUpdateRateLimitOptions =
-      { limit = +100, limitResetTimeInSec = +1 }
+      { limit = +8, limitResetTimeInSec = +100 }
 
 let cacheConfig = { configsExpTime = +86400 }
 
@@ -253,6 +253,7 @@ in  { esqDBCfg
     , smsCfg = smsConfig
     , searchRequestExpirationSeconds = +3600
     , driverQuoteExpirationSeconds = +60
+    , specialZoneOtpExpiryTimeSeconds = +1800
     , driverUnlockDelay = +2
     , dashboardToken = sec.dashboardToken
     , cacheConfig

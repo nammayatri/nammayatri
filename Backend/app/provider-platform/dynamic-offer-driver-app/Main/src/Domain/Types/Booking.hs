@@ -52,6 +52,7 @@ data Booking = Booking
     specialZoneOtpCode :: Maybe Text,
     specialLocationTag :: Maybe Text,
     disabilityTag :: Maybe Text,
+    specialZoneOtpValidTill :: Maybe UTCTime,
     area :: Maybe FareProductD.Area,
     providerId :: Id DM.Merchant, -- FIXME merchantId
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,

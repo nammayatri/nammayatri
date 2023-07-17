@@ -96,6 +96,7 @@ data AppCfg = AppCfg
     appBackendBapInternal :: AppBackendBapInternal,
     searchRequestExpirationSeconds :: Int,
     driverQuoteExpirationSeconds :: Int,
+    specialZoneOtpExpiryTimeSeconds :: Int,
     httpClientOptions :: HttpClientOptions,
     shortDurationRetryCfg :: RetryCfg,
     longDurationRetryCfg :: RetryCfg,
@@ -170,6 +171,7 @@ data AppEnv = AppEnv
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
     searchRequestExpirationSeconds :: NominalDiffTime,
     driverQuoteExpirationSeconds :: NominalDiffTime,
+    specialZoneOtpExpiryTimeSeconds :: NominalDiffTime,
     driverUnlockDelay :: Seconds,
     dashboardToken :: Text,
     cacheConfig :: CacheConfig,
@@ -234,6 +236,7 @@ buildAppEnv cfg@AppCfg {..} = do
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   let searchRequestExpirationSeconds = fromIntegral cfg.searchRequestExpirationSeconds
       driverQuoteExpirationSeconds = fromIntegral cfg.driverQuoteExpirationSeconds
+      specialZoneOtpExpiryTimeSeconds = fromIntegral cfg.specialZoneOtpExpiryTimeSeconds
       s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
   return AppEnv {modelNamesHashMap = HM.fromList $ M.toList modelNamesMap, ..}

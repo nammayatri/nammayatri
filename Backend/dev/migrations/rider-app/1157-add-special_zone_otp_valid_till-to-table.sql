@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.booking ADD COLUMN otp_valid_till timestamp with time zone;

@@ -37,7 +37,8 @@ buildOnConfirmMessage res = do
   fulfillmentDetails <- case booking.bookingType of
     DConfirm.SpecialZoneBooking -> do
       otpCode <- booking.specialZoneOtpCode & fromMaybeM (OtpNotFoundForSpecialZoneBooking booking.id.getId)
-      return $ mkSpecialZoneFulfillmentInfo res.fromLocation res.toLocation otpCode booking.quoteId OnConfirm.RIDE_OTP res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant
+      otpValidTill <- booking.specialZoneOtpValidTill & fromMaybeM (OtpNotFoundForSpecialZoneBooking booking.id.getId)
+      return $ mkSpecialZoneFulfillmentInfo res.fromLocation res.toLocation otpCode otpValidTill booking.quoteId OnConfirm.RIDE_OTP res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant
     DConfirm.NormalBooking -> return $ mkFulfillmentInfo res.fromLocation res.toLocation booking.quoteId OnConfirm.RIDE res.driverName res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant
   return $
     OnConfirm.OnConfirmMessage
@@ -165,11 +166,12 @@ mkFulfillmentInfo fromLoc toLoc fulfillmentId fulfillmentType driverName riderPh
                 tags = Nothing,
                 phone = Nothing,
                 image = Nothing
-              }
+              },
+      tags = Nothing         
     }
 
-mkSpecialZoneFulfillmentInfo :: DL.Location -> DL.Location -> Text -> Text -> OnConfirm.FulfillmentType -> Text -> Text -> Maybe Text -> OnConfirm.VehicleVariant -> OnConfirm.FulfillmentInfo
-mkSpecialZoneFulfillmentInfo fromLoc toLoc otp fulfillmentId fulfillmentType riderPhoneNumber riderMobileCountryCode mbRiderName vehicleVariant = do
+mkSpecialZoneFulfillmentInfo :: DL.Location -> DL.Location -> Text -> UTCTime -> Text -> OnConfirm.FulfillmentType -> Text -> Text -> Maybe Text -> OnConfirm.VehicleVariant -> OnConfirm.FulfillmentInfo
+mkSpecialZoneFulfillmentInfo fromLoc toLoc otp otpValidTill fulfillmentId fulfillmentType riderPhoneNumber riderMobileCountryCode mbRiderName vehicleVariant = do
   let authorization =
         Just $
           OnConfirm.Authorization
@@ -217,5 +219,10 @@ mkSpecialZoneFulfillmentInfo fromLoc toLoc otp fulfillmentId fulfillmentType rid
                   { name = riderName
                   }
           },
-      agent = Nothing
+      agent = Nothing,
+      tags =
+        Just
+          OnConfirm.Tags
+            { specialZoneOtpValidTill = otpValidTill
+            }
     }

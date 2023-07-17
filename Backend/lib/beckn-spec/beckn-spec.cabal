@@ -64,6 +64,7 @@ library
       Beckn.Types.Core.Taxi.API.Cancel
       Beckn.Types.Core.Taxi.API.Confirm
       Beckn.Types.Core.Taxi.API.Init
+      Beckn.Types.Core.Taxi.API.OnCancel
       Beckn.Types.Core.Taxi.API.OnConfirm
       Beckn.Types.Core.Taxi.API.OnInit
       Beckn.Types.Core.Taxi.API.OnSearch
@@ -111,6 +112,9 @@ library
       Beckn.Types.Core.Taxi.Init
       Beckn.Types.Core.Taxi.Init.Fulfillment
       Beckn.Types.Core.Taxi.Init.Order
+      Beckn.Types.Core.Taxi.OnCancel
+      Beckn.Types.Core.Taxi.OnCancel.Fulfillment
+      Beckn.Types.Core.Taxi.OnCancel.Order
       Beckn.Types.Core.Taxi.OnConfirm
       Beckn.Types.Core.Taxi.OnConfirm.Fulfillment
       Beckn.Types.Core.Taxi.OnConfirm.Order

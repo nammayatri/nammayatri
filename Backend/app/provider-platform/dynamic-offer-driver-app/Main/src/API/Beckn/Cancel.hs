@@ -15,8 +15,11 @@
 module API.Beckn.Cancel (API, handler) where
 
 import qualified Beckn.ACL.Cancel as ACL
+import qualified Beckn.ACL.OnCancel as ACL
+import qualified Beckn.Core as CallBAP
 import qualified Beckn.Types.Core.Taxi.API.Cancel as API
 import qualified Beckn.Types.Core.Taxi.API.Cancel as Cancel
+import qualified Beckn.Types.Core.Taxi.API.OnCancel as OnCancel
 import qualified Domain.Action.Beckn.Cancel as DCancel
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DM
@@ -24,6 +27,7 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
@@ -50,8 +54,12 @@ cancel transporterId subscriber req =
       Left cancelReq -> do
         Redis.whenWithLockRedis (cancelLockKey cancelReq.bookingId.getId) 60 $ do
           (merchant, booking) <- DCancel.validateCancelRequest transporterId subscriber cancelReq
-          fork ("cancelBooking:" <> cancelReq.bookingId.getId) $
-            DCancel.cancel cancelReq merchant booking
+          fork ("cancelBooking:" <> cancelReq.bookingId.getId) $ do
+            dCancelRes <- DCancel.cancel cancelReq merchant booking
+            let context = req.context
+            void $
+              CallBAP.withCallback dCancelRes.transporter Context.CANCEL OnCancel.onCancelAPI context context.bap_uri $
+                pure $ ACL.mkOnCancelMessage dCancelRes
       Right cancelSearchReq -> do
         searchTry <- DCancel.validateCancelSearchRequest transporterId subscriber cancelSearchReq
         fork ("cancelSearch:" <> cancelSearchReq.transactionId) $

@@ -200,6 +200,7 @@ handler merchantId req eitherReq = do
             vehicleVariant = driverQuote.vehicleVariant,
             estimatedDistance = driverQuote.distance,
             maxEstimatedDistance = req.maxEstimatedDistance,
+            specialZoneOtpValidTill = Nothing,
             createdAt = now,
             updatedAt = now,
             fromLocation,

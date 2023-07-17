@@ -14,6 +14,7 @@
 
 module API.Beckn (API, APIV2, handler) where
 
+import qualified API.Beckn.OnCancel as OnCancel
 import qualified API.Beckn.OnConfirm as OnConfirm
 import qualified API.Beckn.OnInit as OnInit
 import qualified API.Beckn.OnSearch as OnSearch
@@ -33,6 +34,7 @@ type API =
            :<|> OnSelect.API
            :<|> OnInit.API
            :<|> OnConfirm.API
+           :<|> OnCancel.API
            :<|> OnUpdate.API
            :<|> OnStatus.API
            :<|> OnTrack.API
@@ -46,6 +48,7 @@ type APIV2 =
            :<|> OnSelect.API
            :<|> OnInit.API
            :<|> OnConfirm.API
+           :<|> OnCancel.API
            :<|> OnUpdate.API
            :<|> OnStatus.API
            :<|> OnTrack.API
@@ -57,6 +60,7 @@ handler auth =
     :<|> OnSelect.handler auth
     :<|> OnInit.handler auth
     :<|> OnConfirm.handler auth
+    :<|> OnCancel.handler auth
     :<|> OnUpdate.handler auth
     :<|> OnStatus.handler auth
     :<|> OnTrack.handler auth

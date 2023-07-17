@@ -115,7 +115,7 @@ confirm DConfirmReq {..} = do
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   exophone <- findRandomExophone merchantOperatingCityId
-  booking <- buildBooking searchRequest fulfillmentId quote fromLocation mbToLocation exophone now Nothing paymentMethodId driverId
+  booking <- buildBooking searchRequest fulfillmentId quote fromLocation mbToLocation exophone now Nothing Nothing paymentMethodId driverId
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   riderPhone <- mapM decrypt person.mobileNumber
   let riderName = person.firstName
@@ -174,10 +174,11 @@ buildBooking ::
   DExophone.Exophone ->
   UTCTime ->
   Maybe Text ->
+  Maybe UTCTime ->
   Maybe (Id DMPM.MerchantPaymentMethod) ->
   Maybe Text ->
   m DRB.Booking
-buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now otpCode paymentMethodId driverId = do
+buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now otpCode otpValidTill paymentMethodId driverId = do
   id <- generateGUID
   bookingDetails <- buildBookingDetails
   return $

@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN special_zone_otp_valid_till timestamp with time zone;
