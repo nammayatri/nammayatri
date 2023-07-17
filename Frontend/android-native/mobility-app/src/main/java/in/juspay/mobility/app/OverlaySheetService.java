@@ -195,7 +195,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             }
             updateTipView(holder, model);
 
-            if (key != null && key.equals("jatrisaathidriver")) {
+            if (key != null && key.equals("yatrisathiprovider")) {
                 holder.textIncludesCharges.setVisibility(View.GONE);
             }
             updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), getString(R.string.accept_offer));
@@ -746,7 +746,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         handler.post(() -> {
             if (progressDialog != null) {
                 TextView loaderText = progressDialog.findViewById(R.id.text_waiting_for_customer);
-                if (key != null && key.equals("jatrisaathidriver")) {
+                if (key != null && key.equals("yatrisathiprovider")) {
                     ImageView loader = progressDialog.findViewById(R.id.image_view_waiting);
                     loader.setImageResource(R.drawable.ic_ride_assigned);
                 }

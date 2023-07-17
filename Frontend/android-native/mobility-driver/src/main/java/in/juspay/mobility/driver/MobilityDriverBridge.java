@@ -1037,9 +1037,9 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
         switch (requestCode) {
             case IMAGE_CAPTURE_REQ_CODE:
+                isUploadPopupOpen = false;
                 if (resultCode == RESULT_OK) {
                     if (bridgeComponents.getActivity() != null) {
-                        isUploadPopupOpen = false;
                         Utils.captureImage(data, bridgeComponents.getActivity(), bridgeComponents.getContext());
                     }
                 }

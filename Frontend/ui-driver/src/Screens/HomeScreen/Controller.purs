@@ -501,7 +501,7 @@ eval (ChatViewActionController (ChatView.TextChanged value)) state = do
   continue state{data{messageToBeSent = (trim value)},props{sendMessageActive = sendMessageActive}}
 
 eval(ChatViewActionController (ChatView.Call)) state = continueWithCmd state [ do
-  _ <- pure $ showDialer (if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone)
+  _ <- pure $ showDialer (if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone) false
   _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" state.data.activeRide.id "user_id" (getValueToLocalStore DRIVER_ID)
   pure NoAction
   ]
