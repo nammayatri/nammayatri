@@ -11,51 +11,45 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.OnSearchEvent where
 
 import Domain.Types.OnSearchEvent
 -- import Kernel.Storage.Esqueleto as Esq
 
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
-import Lib.Utils (setMeshConfig)
-import qualified Sequelize as Se
+import Kernel.Types.Logging (Log)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV)
 import qualified Storage.Beam.OnSearchEvent as BeamOSE
 
-create :: L.MonadFlow m => OnSearchEvent -> m (MeshResult ())
-create onSearchEvent = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamOSE.OnSearchEventT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainOnSearchEventToBeam onSearchEvent)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create :: (L.MonadFlow m, Log m) => OnSearchEvent -> m ()
+create = createWithKV
 
-transformBeamOnSearchEventToDomain :: BeamOSE.OnSearchEvent -> OnSearchEvent
-transformBeamOnSearchEventToDomain BeamOSE.OnSearchEventT {..} = do
-  OnSearchEvent
-    { id = Id id,
-      bppId = bppId,
-      messageId = messageId,
-      errorCode = errorCode,
-      errorType = errorType,
-      errorMessage = errorMessage,
-      createdAt = createdAt
-    }
+instance FromTType' BeamOSE.OnSearchEvent OnSearchEvent where
+  fromTType' BeamOSE.OnSearchEventT {..} = do
+    pure $
+      Just
+        OnSearchEvent
+          { id = Id id,
+            bppId = bppId,
+            messageId = messageId,
+            errorCode = errorCode,
+            errorType = errorType,
+            errorMessage = errorMessage,
+            createdAt = createdAt
+          }
 
-transformDomainOnSearchEventToBeam :: OnSearchEvent -> BeamOSE.OnSearchEvent
-transformDomainOnSearchEventToBeam OnSearchEvent {..} =
-  BeamOSE.OnSearchEventT
-    { BeamOSE.id = getId id,
-      BeamOSE.bppId = bppId,
-      BeamOSE.messageId = messageId,
-      BeamOSE.errorCode = errorCode,
-      BeamOSE.errorType = errorType,
-      BeamOSE.errorMessage = errorMessage,
-      BeamOSE.createdAt = createdAt
-    }
+instance ToTType' BeamOSE.OnSearchEvent OnSearchEvent where
+  toTType' OnSearchEvent {..} = do
+    BeamOSE.OnSearchEventT
+      { BeamOSE.id = getId id,
+        BeamOSE.bppId = bppId,
+        BeamOSE.messageId = messageId,
+        BeamOSE.errorCode = errorCode,
+        BeamOSE.errorType = errorType,
+        BeamOSE.errorMessage = errorMessage,
+        BeamOSE.createdAt = createdAt
+      }

@@ -30,10 +30,10 @@ import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Lib.Utils
 import Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.Image as BeamI
 import Storage.Tabular.DriverInformation
@@ -65,19 +65,15 @@ imagesAggTableCTEbyDoctype imageType = with $ do
 
 imagesAggTableCTEbyDoctype' :: L.MonadFlow m => Image.ImageType -> m (Maybe (Text, Int))
 imagesAggTableCTEbyDoctype' imageType' = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  conn <- L.getOrInitSqlConn (fromJust dbConf)
-  case conn of
-    Right c -> do
-      resp <-
-        L.runDB c $
-          L.findRow $
-            B.select $
-              B.aggregate_ (\image' -> (B.group_ (BeamI.personId image'), B.as_ @Int B.countAll_)) $
-                B.filter_' (\(BeamI.ImageT {..}) -> imageType B.==?. B.val_ imageType') $
-                  B.all_ (meshModelTableEntity @BeamI.ImageT @Postgres @(Se.DatabaseWith BeamI.ImageT))
-      pure (either (const Nothing) Prelude.id resp)
-    Left _ -> pure Nothing
+  dbConf <- getMasterBeamConfig
+  resp <-
+    L.runDB dbConf $
+      L.findRow $
+        B.select $
+          B.aggregate_ (\image' -> (B.group_ (BeamI.personId image'), B.as_ @Int B.countAll_)) $
+            B.filter_' (\(BeamI.ImageT {..}) -> imageType B.==?. B.val_ imageType') $
+              B.all_ (meshModelTableEntity @BeamI.ImageT @Postgres @(Se.DatabaseWith BeamI.ImageT))
+  pure (either (const Nothing) Prelude.id resp)
 
 baseDriverDocumentsInfoQuery ::
   From (SqlExpr (Value PersonTId), SqlExpr (Value Int)) ->

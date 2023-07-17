@@ -46,7 +46,7 @@ createEstimate estimate = do
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainEstimateToBeam estimate)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
 
-create :: L.MonadFlow m => Estimate -> m ()
+create :: (L.MonadFlow m, Log m) => Estimate -> m ()
 create estimate = do
   _ <- traverse_ QTT.createTripTerms estimate.tripTerms
   _ <- createEstimate estimate
@@ -70,7 +70,7 @@ create estimate = do
 --     Esq.createMany' estimateTs
 --     traverse_ Esq.createMany' estimateBreakupT
 
-createMany :: L.MonadFlow m => [Estimate] -> m ()
+createMany :: (L.MonadFlow m, Log m) => [Estimate] -> m ()
 createMany estimates = do
   traverse_ create estimates
 
@@ -94,7 +94,7 @@ createMany estimates = do
 --     pure (estimate, mbTripTerms)
 --   mapM buildFullEstimate mbFullEstimateT
 
-findById :: L.MonadFlow m => Id Estimate -> m (Maybe Estimate)
+findById :: (L.MonadFlow m, Log m) => Id Estimate -> m (Maybe Estimate)
 findById (Id estimateId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamE.EstimateT
@@ -115,7 +115,7 @@ findById (Id estimateId) = do
 --     pure (estimate, mbTripTerms)
 --   mapM buildFullEstimate fullEstimateTs
 
-findAllBySRId :: L.MonadFlow m => Id SearchRequest -> m [Estimate]
+findAllBySRId :: (L.MonadFlow m, Log m) => Id SearchRequest -> m [Estimate]
 findAllBySRId (Id searchRequestId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamE.EstimateT
@@ -136,7 +136,7 @@ findAllBySRId (Id searchRequestId) = do
 --     pure (estimate, mbTripTerms)
 --   mapM buildFullEstimate mbFullEstimateT
 
-findByBPPEstimateId :: L.MonadFlow m => Id BPPEstimate -> m (Maybe Estimate)
+findByBPPEstimateId :: (L.MonadFlow m, Log m) => Id BPPEstimate -> m (Maybe Estimate)
 findByBPPEstimateId (Id bppEstimateId_) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamE.EstimateT
@@ -191,7 +191,7 @@ updateStatus (Id estimateId) status_ = do
 --       estimateT ^. EstimateId ==. val (getId estimateId)
 --     return $ estimateT ^. EstimateStatus
 
-getStatus :: L.MonadFlow m => Id Estimate -> m (Maybe EstimateStatus)
+getStatus :: (L.MonadFlow m, Log m) => Id Estimate -> m (Maybe EstimateStatus)
 getStatus (Id estimateId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamE.EstimateT
@@ -237,7 +237,7 @@ updateStatusByRequestId (Id searchId) status_ = do
         [Se.Is BeamE.requestId (Se.Eq searchId)]
     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-transformBeamEstimateToDomain :: L.MonadFlow m => BeamE.Estimate -> m (Maybe Estimate)
+transformBeamEstimateToDomain :: (L.MonadFlow m, Log m) => BeamE.Estimate -> m (Maybe Estimate)
 transformBeamEstimateToDomain e@BeamE.EstimateT {..} = do
   etB <- QEB.findAllByEstimateIdT (Id e.bppEstimateId)
   trip <- if isJust e.tripTermsId then QTT.findById'' (Id (fromJust e.tripTermsId)) else pure Nothing

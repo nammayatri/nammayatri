@@ -33,7 +33,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshConfig (..), MeshMeta)
 -- import Kernel.Storage.Esqueleto.Types
 
 import qualified EulerHS.Language as L
-import EulerHS.Types (BeamRunner, BeamRuntime, DBConfig)
+import EulerHS.Types (BeamRunner, BeamRuntime, DBConfig, SqlConn)
 import Kernel.Beam.Types (PsqlDbCfg (..))
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
@@ -618,3 +618,11 @@ getMasterDBConfig = do
   case dbConf of
     Just dbCnf' -> pure dbCnf'
     Nothing -> L.throwException $ InternalError "DB Config not found"
+
+getMasterBeamConfig :: (HasCallStack, L.MonadFlow m) => m (SqlConn Pg)
+getMasterBeamConfig = do
+  dbConf <- getMasterDBConfig
+  conn <- L.getOrInitSqlConn dbConf
+  case conn of
+    Right conn' -> pure conn'
+    Left _ -> L.throwException $ InternalError "DB Config not found"

@@ -11,7 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.MerchantConfig
   {-# WARNING
@@ -22,11 +22,10 @@ where
 
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.MerchantConfig as DMC
-import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Types.Logging (Log)
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.MerchantConfig as BeamMC
@@ -40,45 +39,41 @@ import qualified Storage.Beam.MerchantConfig as BeamMC
 --         &&. config ^. MerchantConfigEnabled ==. val True
 --     return config
 
-findAllByMerchantId :: L.MonadFlow m => Id Merchant -> m [DMC.MerchantConfig]
-findAllByMerchantId (Id merchantId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamMC.MerchantConfigT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamMerchantConfigToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamMC.merchantId $ Se.Eq merchantId]
-    Nothing -> pure []
+findAllByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [DMC.MerchantConfig]
+findAllByMerchantId (Id merchantId) = findAllWithKV [Se.Is BeamMC.merchantId $ Se.Eq merchantId]
 
-transformBeamMerchantConfigToDomain :: BeamMC.MerchantConfig -> MerchantConfig
-transformBeamMerchantConfigToDomain BeamMC.MerchantConfigT {..} = do
-  MerchantConfig
-    { id = Id id,
-      merchantId = Id merchantId,
-      fraudBookingCancellationCountThreshold = fraudBookingCancellationCountThreshold,
-      fraudBookingCancellationCountWindow = fraudBookingCancellationCountWindow,
-      fraudBookingTotalCountThreshold = fraudBookingTotalCountThreshold,
-      fraudBookingCancelledByDriverCountThreshold = fraudBookingCancelledByDriverCountThreshold,
-      fraudBookingCancelledByDriverCountWindow = fraudBookingCancelledByDriverCountWindow,
-      fraudSearchCountThreshold = fraudSearchCountThreshold,
-      fraudSearchCountWindow = fraudSearchCountWindow,
-      fraudRideCountThreshold = fraudRideCountThreshold,
-      fraudRideCountWindow = fraudRideCountWindow,
-      enabled = enabled
-    }
+instance FromTType' BeamMC.MerchantConfig MerchantConfig where
+  fromTType' BeamMC.MerchantConfigT {..} = do
+    pure $
+      Just
+        MerchantConfig
+          { id = Id id,
+            merchantId = Id merchantId,
+            fraudBookingCancellationCountThreshold = fraudBookingCancellationCountThreshold,
+            fraudBookingCancellationCountWindow = fraudBookingCancellationCountWindow,
+            fraudBookingTotalCountThreshold = fraudBookingTotalCountThreshold,
+            fraudBookingCancelledByDriverCountThreshold = fraudBookingCancelledByDriverCountThreshold,
+            fraudBookingCancelledByDriverCountWindow = fraudBookingCancelledByDriverCountWindow,
+            fraudSearchCountThreshold = fraudSearchCountThreshold,
+            fraudSearchCountWindow = fraudSearchCountWindow,
+            fraudRideCountThreshold = fraudRideCountThreshold,
+            fraudRideCountWindow = fraudRideCountWindow,
+            enabled = enabled
+          }
 
-transformDomainMerchantConfigToBeam :: MerchantConfig -> BeamMC.MerchantConfig
-transformDomainMerchantConfigToBeam MerchantConfig {..} =
-  BeamMC.MerchantConfigT
-    { BeamMC.id = getId id,
-      BeamMC.merchantId = getId merchantId,
-      BeamMC.fraudBookingCancellationCountThreshold = fraudBookingCancellationCountThreshold,
-      BeamMC.fraudBookingCancellationCountWindow = fraudBookingCancellationCountWindow,
-      BeamMC.fraudBookingTotalCountThreshold = fraudBookingTotalCountThreshold,
-      BeamMC.fraudBookingCancelledByDriverCountThreshold = fraudBookingCancelledByDriverCountThreshold,
-      BeamMC.fraudBookingCancelledByDriverCountWindow = fraudBookingCancelledByDriverCountWindow,
-      BeamMC.fraudSearchCountThreshold = fraudSearchCountThreshold,
-      BeamMC.fraudSearchCountWindow = fraudSearchCountWindow,
-      BeamMC.fraudRideCountThreshold = fraudRideCountThreshold,
-      BeamMC.fraudRideCountWindow = fraudRideCountWindow,
-      BeamMC.enabled = enabled
-    }
+instance ToTType' BeamMC.MerchantConfig MerchantConfig where
+  toTType' MerchantConfig {..} = do
+    BeamMC.MerchantConfigT
+      { BeamMC.id = getId id,
+        BeamMC.merchantId = getId merchantId,
+        BeamMC.fraudBookingCancellationCountThreshold = fraudBookingCancellationCountThreshold,
+        BeamMC.fraudBookingCancellationCountWindow = fraudBookingCancellationCountWindow,
+        BeamMC.fraudBookingTotalCountThreshold = fraudBookingTotalCountThreshold,
+        BeamMC.fraudBookingCancelledByDriverCountThreshold = fraudBookingCancelledByDriverCountThreshold,
+        BeamMC.fraudBookingCancelledByDriverCountWindow = fraudBookingCancelledByDriverCountWindow,
+        BeamMC.fraudSearchCountThreshold = fraudSearchCountThreshold,
+        BeamMC.fraudSearchCountWindow = fraudSearchCountWindow,
+        BeamMC.fraudRideCountThreshold = fraudRideCountThreshold,
+        BeamMC.fraudRideCountWindow = fraudRideCountWindow,
+        BeamMC.enabled = enabled
+      }

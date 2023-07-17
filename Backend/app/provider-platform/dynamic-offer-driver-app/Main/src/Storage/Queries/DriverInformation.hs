@@ -319,21 +319,17 @@ addReferralCode (Id personId) code = do
 countDrivers :: (L.MonadFlow m, Log m) => Id Merchant -> m (Int, Int)
 countDrivers merchantID =
   getResults <$> do
-    dbConf <- getMasterDBConfig
-    conn <- L.getOrInitSqlConn dbConf
-    case conn of
-      Right c -> do
-        resp <- L.runDB c $
-          L.findRows $
-            B.select $
-              B.aggregate_ (\(driverInformation, _) -> (B.group_ (BeamDI.active driverInformation), B.as_ @Int B.countAll_)) $
-                B.filter_' (\(_, BeamP.PersonT {..}) -> merchantId B.==?. B.val_ (getId merchantID)) $
-                  do
-                    driverInformation <- B.all_ (meshModelTableEntity @BeamDI.DriverInformationT @Postgres @(DatabaseWith2 BeamDI.DriverInformationT BeamP.PersonT))
-                    person <- B.join_' (meshModelTableEntity @BeamP.PersonT @Postgres @(DatabaseWith2 BeamDI.DriverInformationT BeamP.PersonT)) (\person -> BeamP.id person B.==?. BeamDI.driverId driverInformation)
-                    pure (driverInformation, person)
-        pure (either (const []) Prelude.id resp)
-      Left _ -> pure []
+    dbConf <- getMasterBeamConfig
+    res <- L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.aggregate_ (\(driverInformation, _) -> (B.group_ (BeamDI.active driverInformation), B.as_ @Int B.countAll_)) $
+            B.filter_' (\(_, BeamP.PersonT {..}) -> merchantId B.==?. B.val_ (getId merchantID)) $
+              do
+                driverInformation <- B.all_ (meshModelTableEntity @BeamDI.DriverInformationT @Postgres @(DatabaseWith2 BeamDI.DriverInformationT BeamP.PersonT))
+                person <- B.join_' (meshModelTableEntity @BeamP.PersonT @Postgres @(DatabaseWith2 BeamDI.DriverInformationT BeamP.PersonT)) (\person -> BeamP.id person B.==?. BeamDI.driverId driverInformation)
+                pure (driverInformation, person)
+    pure (either (const []) Prelude.id res)
   where
     getResults :: [(Bool, Int)] -> (Int, Int)
     getResults = foldl func (0, 0)

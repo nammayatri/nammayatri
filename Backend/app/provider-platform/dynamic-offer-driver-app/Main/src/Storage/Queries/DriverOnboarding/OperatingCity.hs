@@ -26,7 +26,7 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV, getMasterDBConfig)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV, getMasterBeamConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.OperatingCity as BeamOC
 
@@ -92,18 +92,14 @@ findEnabledCityByName city =
 
 findEnabledCityByMerchantIdAndName :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> m [OperatingCity]
 findEnabledCityByMerchantIdAndName (Id mId) city = do
-  dbConf <- getMasterDBConfig
-  conn <- L.getOrInitSqlConn dbConf
-  case conn of
-    Right c -> do
-      operatingCities <-
-        L.runDB c $
-          L.findRows $
-            B.select $
-              B.filter_' (\BeamOC.OperatingCityT {..} -> (merchantId B.==?. B.val_ mId) B.&&?. (cityName B.==?. B.val_ city) B.&&?. (enabled B.==?. B.val_ True)) $
-                B.all_ (meshModelTableEntity @BeamOC.OperatingCityT @Postgres @(Se.DatabaseWith BeamOC.OperatingCityT))
-      pure (either (const []) (transformBeamOperatingCityToDomain <$>) operatingCities)
-    Left _ -> pure []
+  dbConf <- getMasterBeamConfig
+  operatingCities <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.filter_' (\BeamOC.OperatingCityT {..} -> (merchantId B.==?. B.val_ mId) B.&&?. (cityName B.==?. B.val_ city) B.&&?. (enabled B.==?. B.val_ True)) $
+            B.all_ (meshModelTableEntity @BeamOC.OperatingCityT @Postgres @(Se.DatabaseWith BeamOC.OperatingCityT))
+  pure (either (const []) (transformBeamOperatingCityToDomain <$>) operatingCities)
 
 transformBeamOperatingCityToDomain :: BeamOC.OperatingCity -> OperatingCity
 transformBeamOperatingCityToDomain BeamOC.OperatingCityT {..} = do

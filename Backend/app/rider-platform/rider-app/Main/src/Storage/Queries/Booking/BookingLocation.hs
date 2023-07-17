@@ -12,15 +12,13 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE PartialTypeSignatures #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Booking.BookingLocation where
 
 import Domain.Types.Booking.BookingLocation
 import Domain.Types.LocationAddress
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -28,76 +26,58 @@ import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking.BookingLocation as BeamBL
 
-create :: L.MonadFlow m => BookingLocation -> m (MeshResult ())
-create bl = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamBL.BookingLocationT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainBookingLocationToBeam bl)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create :: (L.MonadFlow m, Log m) => BookingLocation -> m ()
+create = createWithKV
 
-findById :: L.MonadFlow m => Id BookingLocation -> m (Maybe BookingLocation)
-findById (Id bookingLocationId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamBL.BookingLocationT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamBookingLocationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamBL.id $ Se.Eq bookingLocationId]
-    Nothing -> pure Nothing
+findById :: (L.MonadFlow m, Log m) => Id BookingLocation -> m (Maybe BookingLocation)
+findById (Id bookingLocationId) = findOneWithKV [Se.Is BeamBL.id $ Se.Eq bookingLocationId]
 
-updateAddress :: (L.MonadFlow m, MonadTime m) => Id BookingLocation -> LocationAddress -> m (MeshResult ())
+updateAddress :: (L.MonadFlow m, MonadTime m, Log m) => Id BookingLocation -> LocationAddress -> m ()
 updateAddress (Id blId) LocationAddress {..} = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamBL.BookingLocationT
-  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamBL.street street,
-          Se.Set BeamBL.city city,
-          Se.Set BeamBL.state state,
-          Se.Set BeamBL.country country,
-          Se.Set BeamBL.building building,
-          Se.Set BeamBL.areaCode areaCode,
-          Se.Set BeamBL.area area,
-          Se.Set BeamBL.ward ward,
-          Se.Set BeamBL.placeId placeId,
-          Se.Set BeamBL.updatedAt now
-        ]
-        [Se.Is BeamBL.id (Se.Eq blId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamBL.street street,
+      Se.Set BeamBL.city city,
+      Se.Set BeamBL.state state,
+      Se.Set BeamBL.country country,
+      Se.Set BeamBL.building building,
+      Se.Set BeamBL.areaCode areaCode,
+      Se.Set BeamBL.area area,
+      Se.Set BeamBL.ward ward,
+      Se.Set BeamBL.placeId placeId,
+      Se.Set BeamBL.updatedAt now
+    ]
+    [Se.Is BeamBL.id (Se.Eq blId)]
 
-transformBeamBookingLocationToDomain :: BeamBL.BookingLocation -> BookingLocation
-transformBeamBookingLocationToDomain BeamBL.BookingLocationT {..} = do
-  BookingLocation
-    { id = Id id,
-      lat = lat,
-      lon = lon,
-      address = LocationAddress street door city state country building areaCode area ward placeId,
-      createdAt = createdAt,
-      updatedAt = updatedAt
-    }
+instance FromTType' BeamBL.BookingLocation BookingLocation where
+  fromTType' BeamBL.BookingLocationT {..} = do
+    pure $
+      Just
+        BookingLocation
+          { id = Id id,
+            lat = lat,
+            lon = lon,
+            address = LocationAddress street door city state country building areaCode area ward placeId,
+            createdAt = createdAt,
+            updatedAt = updatedAt
+          }
 
-transformDomainBookingLocationToBeam :: BookingLocation -> BeamBL.BookingLocation
-transformDomainBookingLocationToBeam BookingLocation {..} =
-  BeamBL.BookingLocationT
-    { BeamBL.id = getId id,
-      BeamBL.lat = lat,
-      BeamBL.lon = lon,
-      BeamBL.street = (street :: LocationAddress -> Maybe Text) address,
-      BeamBL.door = (door :: LocationAddress -> Maybe Text) address,
-      BeamBL.city = (city :: LocationAddress -> Maybe Text) address,
-      BeamBL.state = (state :: LocationAddress -> Maybe Text) address,
-      BeamBL.country = (country :: LocationAddress -> Maybe Text) address,
-      BeamBL.building = (building :: LocationAddress -> Maybe Text) address,
-      BeamBL.areaCode = (areaCode :: LocationAddress -> Maybe Text) address,
-      BeamBL.area = (area :: LocationAddress -> Maybe Text) address,
-      BeamBL.ward = (ward :: LocationAddress -> Maybe Text) address,
-      BeamBL.placeId = (placeId :: LocationAddress -> Maybe Text) address,
-      BeamBL.createdAt = createdAt,
-      BeamBL.updatedAt = updatedAt
-    }
+instance ToTType' BeamBL.BookingLocation BookingLocation where
+  toTType' BookingLocation {..} = do
+    BeamBL.BookingLocationT
+      { BeamBL.id = getId id,
+        BeamBL.lat = lat,
+        BeamBL.lon = lon,
+        BeamBL.street = (street :: LocationAddress -> Maybe Text) address,
+        BeamBL.door = (door :: LocationAddress -> Maybe Text) address,
+        BeamBL.city = (city :: LocationAddress -> Maybe Text) address,
+        BeamBL.state = (state :: LocationAddress -> Maybe Text) address,
+        BeamBL.country = (country :: LocationAddress -> Maybe Text) address,
+        BeamBL.building = (building :: LocationAddress -> Maybe Text) address,
+        BeamBL.areaCode = (areaCode :: LocationAddress -> Maybe Text) address,
+        BeamBL.area = (area :: LocationAddress -> Maybe Text) address,
+        BeamBL.ward = (ward :: LocationAddress -> Maybe Text) address,
+        BeamBL.placeId = (placeId :: LocationAddress -> Maybe Text) address,
+        BeamBL.createdAt = createdAt,
+        BeamBL.updatedAt = updatedAt
+      }

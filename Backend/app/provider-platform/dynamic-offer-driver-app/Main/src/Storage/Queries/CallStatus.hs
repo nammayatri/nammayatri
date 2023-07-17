@@ -21,12 +21,11 @@ import Domain.Types.CallStatus
 import Domain.Types.Ride
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV, getMasterBeamConfig, updateWithKV)
 import Sequelize as Se
 import qualified Storage.Beam.CallStatus as BeamCT
 
@@ -59,21 +58,15 @@ updateCallStatus (Id callId) status conversationDuration recordingUrl =
 -- to be discussed if it should be a beam query or not
 countCallsByRideId :: L.MonadFlow m => Id Ride -> m Int
 countCallsByRideId rideID = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  conn <- L.getOrInitSqlConn (fromJust dbConf)
-  case conn of
-    Right c -> do
-      resp <-
-        L.runDB c $
-          L.findRow $
-            B.select $
-              B.aggregate_ (\ride -> (B.group_ (BeamCT.rideId ride), B.as_ @Int B.countAll_)) $
-                B.filter_' (\(BeamCT.CallStatusT {..}) -> rideId B.==?. B.val_ (getId rideID)) $
-                  B.all_ (meshModelTableEntity @BeamCT.CallStatusT @Postgres @(DatabaseWith BeamCT.CallStatusT))
-      case resp of
-        Right (Just resp') -> pure (snd resp')
-        _ -> pure 0
-    Left _ -> pure 0
+  dbConf <- getMasterBeamConfig
+  resp <-
+    L.runDB dbConf $
+      L.findRow $
+        B.select $
+          B.aggregate_ (\ride -> (B.group_ (BeamCT.rideId ride), B.as_ @Int B.countAll_)) $
+            B.filter_' (\(BeamCT.CallStatusT {..}) -> rideId B.==?. B.val_ (getId rideID)) $
+              B.all_ (meshModelTableEntity @BeamCT.CallStatusT @Postgres @(DatabaseWith BeamCT.CallStatusT))
+  pure $ either (const 0) (maybe 0 snd) resp
 
 instance FromTType' BeamCT.CallStatus CallStatus where
   fromTType' BeamCT.CallStatusT {..} = do

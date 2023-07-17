@@ -11,15 +11,15 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.CancellationReason where
 
 import Domain.Types.CancellationReason
 import qualified Domain.Types.CancellationReason as Domain
-import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
+import Kernel.Types.Logging (Log)
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.CancellationReason as BeamCR
@@ -37,39 +37,36 @@ import qualified Storage.Beam.CancellationReason as BeamCR
 --     orderBy [desc $ cancellationReason ^. CancellationReasonPriority]
 --     return cancellationReason
 
-findAll :: L.MonadFlow m => CancellationStage -> m [CancellationReason]
+findAll :: (L.MonadFlow m, Log m) => CancellationStage -> m [CancellationReason]
 findAll cancStage = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
   seCaseCondition <- case cancStage of
     OnSearch -> pure $ Se.Is BeamCR.onSearch $ Se.Eq True
     OnConfirm -> pure $ Se.Is BeamCR.onConfirm $ Se.Eq True
     OnAssign -> pure $ Se.Is BeamCR.onAssign $ Se.Eq True
-  let modelName = Se.modelTableName @BeamCR.CancellationReasonT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> either (pure []) (transformBeamCancellationReasonToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamCR.enabled $ Se.Eq True, seCaseCondition]] (Se.Desc BeamCR.priority) Nothing Nothing
-    Nothing -> pure []
+  findAllWithOptionsKV [Se.And [Se.Is BeamCR.enabled $ Se.Eq True, seCaseCondition]] (Se.Desc BeamCR.priority) Nothing Nothing
 
-transformBeamCancellationReasonToDomain :: BeamCR.CancellationReason -> CancellationReason
-transformBeamCancellationReasonToDomain BeamCR.CancellationReasonT {..} = do
-  CancellationReason
-    { reasonCode = Domain.CancellationReasonCode reasonCode,
-      description = description,
-      enabled = enabled,
-      onSearch = onSearch,
-      onConfirm = onConfirm,
-      onAssign = onAssign,
-      priority = priority
-    }
+instance FromTType' BeamCR.CancellationReason CancellationReason where
+  fromTType' BeamCR.CancellationReasonT {..} = do
+    pure $
+      Just
+        CancellationReason
+          { reasonCode = Domain.CancellationReasonCode reasonCode,
+            description = description,
+            enabled = enabled,
+            onSearch = onSearch,
+            onConfirm = onConfirm,
+            onAssign = onAssign,
+            priority = priority
+          }
 
-transformDomainCancellationReasonToBeam :: CancellationReason -> BeamCR.CancellationReason
-transformDomainCancellationReasonToBeam CancellationReason {..} =
-  BeamCR.CancellationReasonT
-    { BeamCR.reasonCode = let (Domain.CancellationReasonCode rc) = reasonCode in rc,
-      BeamCR.description = description,
-      BeamCR.enabled = enabled,
-      BeamCR.onSearch = onSearch,
-      BeamCR.onConfirm = onConfirm,
-      BeamCR.onAssign = onAssign,
-      BeamCR.priority = priority
-    }
+instance ToTType' BeamCR.CancellationReason CancellationReason where
+  toTType' CancellationReason {..} = do
+    BeamCR.CancellationReasonT
+      { BeamCR.reasonCode = let (Domain.CancellationReasonCode rc) = reasonCode in rc,
+        BeamCR.description = description,
+        BeamCR.enabled = enabled,
+        BeamCR.onSearch = onSearch,
+        BeamCR.onConfirm = onConfirm,
+        BeamCR.onAssign = onAssign,
+        BeamCR.priority = priority
+      }

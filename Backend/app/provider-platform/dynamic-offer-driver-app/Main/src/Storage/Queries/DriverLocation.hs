@@ -29,7 +29,6 @@ import Domain.Types.DriverLocation
 import Domain.Types.Merchant
 import Domain.Types.Person
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -61,32 +60,21 @@ import qualified Storage.Beam.DriverLocation as BeamDL
 
 create :: (L.MonadFlow m, MonadTime m) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m ()
 create drLocationId latLong updateTime merchantId = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
   now <- getCurrentTime
-  conn <- L.getOrInitSqlConn (fromJust dbConf)
-  case conn of
-    Right c -> do
-      let
-      -- void $ L.runDB c $ L.insertRows $ B.insert (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT)) $ B.insertExpressions [BeamDL.toRowExpression (getId drLocationId) latLong updateTime now (getId merchantId)]
-      void $ L.runDB c $ L.insertRows $ B.insert (BeamCommon.driverLocation BeamCommon.atlasDB) $ B.insertExpressions [BeamDL.toRowExpression (getId drLocationId) latLong updateTime now (getId merchantId)]
-    Left _ -> pure ()
+  dbConf <- getMasterBeamConfig
+  void $ L.runDB dbConf $ L.insertRows $ B.insert (BeamCommon.driverLocation BeamCommon.atlasDB) $ B.insertExpressions [BeamDL.toRowExpression (getId drLocationId) latLong updateTime now (getId merchantId)]
 
 findById :: L.MonadFlow m => Id Person -> m (Maybe DriverLocation)
 findById (Id driverLocationId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  conn <- L.getOrInitSqlConn (fromJust dbConf)
-  case conn of
-    Right c -> do
-      geoms <-
-        L.runDB c $
-          L.findRow $
-            B.select $
-              B.limit_ 1 $
-                B.filter_' (\BeamDL.DriverLocationT {..} -> driverId B.==?. B.val_ driverLocationId) $
-                  -- B.all_ (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT))
-                  B.all_ (BeamCommon.driverLocation BeamCommon.atlasDB)
-      pure (either (const Nothing) (transformBeamDriverLocationToDomain <$>) geoms)
-    Left _ -> pure Nothing
+  dbConf <- getMasterBeamConfig
+  geoms <-
+    L.runDB dbConf $
+      L.findRow $
+        B.select $
+          B.limit_ 1 $
+            B.filter_' (\BeamDL.DriverLocationT {..} -> driverId B.==?. B.val_ driverLocationId) $
+              B.all_ (BeamCommon.driverLocation BeamCommon.atlasDB)
+  pure (either (const Nothing) (transformBeamDriverLocationToDomain <$>) geoms)
 
 -- findByIdInReplica ::
 --   (Esq.Transactionable m, EsqLocRepDBFlow m r) =>
@@ -115,44 +103,31 @@ upsertGpsCoord drLocationId latLong calculationTime merchantId' = do
   where
     updateRecords :: L.MonadFlow m => Text -> LatLong -> UTCTime -> UTCTime -> m ()
     updateRecords drLocationId' latLong' calculationTime' now' = do
-      dbConf <- L.getOption KBT.PsqlDbCfg
-      case dbConf of
-        Just dbConf' -> do
-          conn <- L.getOrInitSqlConn dbConf'
-          case conn of
-            Right c -> do
-              void $
-                L.runDB c $
-                  L.updateRows $
-                    B.update
-                      -- (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT))
-                      (BeamCommon.driverLocation BeamCommon.atlasDB)
-                      ( \BeamDL.DriverLocationT {..} ->
-                          (driverId B.<-. B.val_ drLocationId') <> (lat B.<-. B.val_ latLong'.lat)
-                            <> (lon B.<-. (B.val_ latLong'.lon))
-                            <> (coordinatesCalculatedAt B.<-. B.val_ calculationTime')
-                            <> (point B.<-. getPoint (latLong'.lat, latLong'.lon))
-                            <> (updatedAt B.<-. B.val_ now')
-                      )
-                      (\BeamDL.DriverLocationT {..} -> driverId B.==. B.val_ drLocationId')
-            Left _ -> pure ()
-        Nothing -> pure $ error "No db config found"
+      dbConf <- getMasterBeamConfig
+      void $
+        L.runDB dbConf $
+          L.updateRows $
+            B.update
+              (BeamCommon.driverLocation BeamCommon.atlasDB)
+              ( \BeamDL.DriverLocationT {..} ->
+                  (driverId B.<-. B.val_ drLocationId') <> (lat B.<-. B.val_ latLong'.lat)
+                    <> (lon B.<-. (B.val_ latLong'.lon))
+                    <> (coordinatesCalculatedAt B.<-. B.val_ calculationTime')
+                    <> (point B.<-. getPoint (latLong'.lat, latLong'.lon))
+                    <> (updatedAt B.<-. B.val_ now')
+              )
+              (\BeamDL.DriverLocationT {..} -> driverId B.==. B.val_ drLocationId')
 
 deleteById :: L.MonadFlow m => Id Person -> m ()
 deleteById (Id driverId') = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  conn <- L.getOrInitSqlConn (fromJust dbConf)
-  case conn of
-    Right c -> do
-      void $
-        L.runDB c $
-          L.deleteRows
-            ( B.delete
-                -- (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT))
-                (BeamCommon.driverLocation BeamCommon.atlasDB)
-                (\BeamDL.DriverLocationT {..} -> driverId B.==. B.val_ driverId')
-            )
-    Left _ -> pure ()
+  dbConf <- getMasterBeamConfig
+  void $
+    L.runDB dbConf $
+      L.deleteRows
+        ( B.delete
+            (BeamCommon.driverLocation BeamCommon.atlasDB)
+            (\BeamDL.DriverLocationT {..} -> driverId B.==. B.val_ driverId')
+        )
 
 getDriverLocsFromMerchId ::
   (L.MonadFlow m, MonadTime m) =>
@@ -164,27 +139,22 @@ getDriverLocsFromMerchId ::
 getDriverLocsFromMerchId mbDriverPositionInfoExpiry gps radiusMeters merchantId' = do
   let expTime = maybe 0 getSeconds mbDriverPositionInfoExpiry
   now <- getCurrentTime
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  conn <- L.getOrInitSqlConn (fromJust dbConf)
-  case conn of
-    Right c -> do
-      dlocs <-
-        L.runDB c $
-          L.findRows $
-            B.select $
-              B.orderBy_ (\_ -> B.asc_ (byDist (gps.lat, gps.lon))) $
-                B.filter_'
-                  ( \BeamDL.DriverLocationT {..} ->
-                      merchantId B.==?. B.val_ (getId merchantId')
-                        B.&&?. (B.sqlBool_ (B.val_ (Mb.isNothing mbDriverPositionInfoExpiry)) B.||?. B.sqlBool_ (coordinatesCalculatedAt B.>=. B.val_ (addUTCTime (fromIntegral (-1 * expTime)) now)))
-                        B.&&?. buildRadiusWithin'' (gps.lat, gps.lon) radiusMeters
-                  )
-                  $ B.all_ (BeamCommon.driverLocation BeamCommon.atlasDB)
-      pure (either (const []) (transformBeamDriverLocationToDomain <$>) dlocs)
-    Left _ -> pure []
+  dbConf <- getMasterBeamConfig
+  dlocs <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.orderBy_ (\_ -> B.asc_ (byDist (gps.lat, gps.lon))) $
+            B.filter_'
+              ( \BeamDL.DriverLocationT {..} ->
+                  merchantId B.==?. B.val_ (getId merchantId')
+                    B.&&?. (B.sqlBool_ (B.val_ (Mb.isNothing mbDriverPositionInfoExpiry)) B.||?. B.sqlBool_ (coordinatesCalculatedAt B.>=. B.val_ (addUTCTime (fromIntegral (-1 * expTime)) now)))
+                    B.&&?. buildRadiusWithin'' (gps.lat, gps.lon) radiusMeters
+              )
+              $ B.all_ (BeamCommon.driverLocation BeamCommon.atlasDB)
+  pure (either (const []) (transformBeamDriverLocationToDomain <$>) dlocs)
 
 byDist :: (Double, Double) -> BQ.QGenExpr context Postgres s Double
--- getDist (lat, lon) = BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "point <-> ST_SetSRID (ST_Point (" <> show lon <> " , " <> show lat <> "),4326)"))
 byDist (lat, lon) = BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "point <-> 'SRID=4326;POINT(" <> show lon <> " " <> show lat <> ")'"))
 
 findAllDriverLocations ::
@@ -194,49 +164,35 @@ findAllDriverLocations ::
   UTCTime ->
   m [DriverLocation]
 findAllDriverLocations driverIds mbDriverPositionInfoExpiry now = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
   let expTime = maybe 0 getSeconds mbDriverPositionInfoExpiry
-  case dbConf of
-    Just dbConf' -> do
-      conn <- L.getOrInitSqlConn dbConf'
-      case conn of
-        Right c -> do
-          geoms <-
-            L.runDB c $
-              L.findRows $
-                B.select $
-                  B.filter_'
-                    ( \BeamDL.DriverLocationT {..} ->
-                        (B.sqlBool_ (B.val_ (Mb.isNothing mbDriverPositionInfoExpiry)) B.||?. B.sqlBool_ (coordinatesCalculatedAt B.>=. B.val_ (addUTCTime (fromIntegral (-1 * expTime)) now))) B.&&?. B.sqlBool_ (driverId `B.in_` (B.val_ . getId <$> driverIds))
-                    )
-                    $ B.all_ (BeamCommon.driverLocation BeamCommon.atlasDB)
-          pure (either (const []) (transformBeamDriverLocationToDomain <$>) geoms)
-        Left _ -> pure []
-    Nothing -> pure []
+  dbConf <- getMasterBeamConfig
+  geoms <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.filter_'
+            ( \BeamDL.DriverLocationT {..} ->
+                (B.sqlBool_ (B.val_ (Mb.isNothing mbDriverPositionInfoExpiry)) B.||?. B.sqlBool_ (coordinatesCalculatedAt B.>=. B.val_ (addUTCTime (fromIntegral (-1 * expTime)) now))) B.&&?. B.sqlBool_ (driverId `B.in_` (B.val_ . getId <$> driverIds))
+            )
+            $ B.all_ (BeamCommon.driverLocation BeamCommon.atlasDB)
+  pure (either (const []) (transformBeamDriverLocationToDomain <$>) geoms)
 
 getDriverLocations ::
   (L.MonadFlow m, MonadTime m) =>
   UTCTime ->
   m [DriverLocation]
 getDriverLocations before = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  case dbConf of
-    Just dbConf' -> do
-      conn <- L.getOrInitSqlConn dbConf'
-      case conn of
-        Right c -> do
-          geoms <-
-            L.runDB c $
-              L.findRows $
-                B.select $
-                  B.filter_'
-                    ( \BeamDL.DriverLocationT {..} ->
-                        B.sqlBool_ (updatedAt B.<. B.val_ before)
-                    )
-                    $ B.all_ (BeamCommon.driverLocation BeamCommon.atlasDB)
-          pure (either (const []) (transformBeamDriverLocationToDomain <$>) geoms)
-        Left _ -> pure []
-    Nothing -> pure []
+  dbConf <- getMasterBeamConfig
+  geoms <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.filter_'
+            ( \BeamDL.DriverLocationT {..} ->
+                B.sqlBool_ (updatedAt B.<. B.val_ before)
+            )
+            $ B.all_ (BeamCommon.driverLocation BeamCommon.atlasDB)
+  pure (either (const []) (transformBeamDriverLocationToDomain <$>) geoms)
 
 getDriverLocs ::
   L.MonadFlow m =>
@@ -244,25 +200,18 @@ getDriverLocs ::
   Id Merchant ->
   m [DriverLocation]
 getDriverLocs driverIds (Id merchId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  case dbConf of
-    Just dbConf' -> do
-      conn <- L.getOrInitSqlConn dbConf'
-      case conn of
-        Right c -> do
-          geoms <-
-            L.runDB c $
-              L.findRows $
-                B.select $
-                  B.filter_'
-                    ( \BeamDL.DriverLocationT {..} ->
-                        B.sqlBool_ (driverId `B.in_` (B.val_ . getId <$> driverIds))
-                          B.&&?. B.sqlBool_ (merchantId B.==. B.val_ merchId)
-                    )
-                    $ B.all_ (BeamCommon.driverLocation BeamCommon.atlasDB)
-          pure (either (const []) (transformBeamDriverLocationToDomain <$>) geoms)
-        Left _ -> pure []
-    Nothing -> pure []
+  dbConf <- getMasterBeamConfig
+  geoms <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.filter_'
+            ( \BeamDL.DriverLocationT {..} ->
+                B.sqlBool_ (driverId `B.in_` (B.val_ . getId <$> driverIds))
+                  B.&&?. B.sqlBool_ (merchantId B.==. B.val_ merchId)
+            )
+            $ B.all_ (BeamCommon.driverLocation BeamCommon.atlasDB)
+  pure (either (const []) (transformBeamDriverLocationToDomain <$>) geoms)
 
 transformBeamDriverLocationToDomain :: BeamDL.DriverLocation -> DriverLocation
 transformBeamDriverLocationToDomain BeamDL.DriverLocationT {..} = do

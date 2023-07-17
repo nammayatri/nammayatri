@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.BlackListOrg
   {-# WARNING
@@ -20,11 +21,10 @@ module Storage.Queries.BlackListOrg
 where
 
 import Domain.Types.BlackListOrg
-import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Types.Logging (Log)
 import Kernel.Types.Registry.Subscriber (Subscriber)
 import Lib.Utils
 import qualified Sequelize as Se
@@ -37,27 +37,23 @@ import qualified Storage.Beam.BlackListOrg as BeamBLO
 --     where_ $ org ^. BlackListOrgSubscriberId ==. val (getShortId subscriberId)
 --     return org
 
-findBySubscriberId :: L.MonadFlow m => ShortId Subscriber -> m (Maybe BlackListOrg)
-findBySubscriberId subscriberId = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamBLO.BlackListOrgT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> either (pure Nothing) (transformBeamBlackListOrgToDomain <$>) <$> KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamBLO.subscriberId $ Se.Eq $ getShortId subscriberId]
-    Nothing -> pure Nothing
+findBySubscriberId :: (L.MonadFlow m, Log m) => ShortId Subscriber -> m (Maybe BlackListOrg)
+findBySubscriberId subscriberId = findOneWithKV [Se.Is BeamBLO.subscriberId $ Se.Eq $ getShortId subscriberId]
 
-transformBeamBlackListOrgToDomain :: BeamBLO.BlackListOrg -> BlackListOrg
-transformBeamBlackListOrgToDomain BeamBLO.BlackListOrgT {..} = do
-  BlackListOrg
-    { id = Id id,
-      subscriberId = ShortId subscriberId,
-      _type = orgType
-    }
+instance FromTType' BeamBLO.BlackListOrg BlackListOrg where
+  fromTType' BeamBLO.BlackListOrgT {..} = do
+    pure $
+      Just
+        BlackListOrg
+          { id = Id id,
+            subscriberId = ShortId subscriberId,
+            _type = orgType
+          }
 
-transformDomainBlackListOrgToBeam :: BlackListOrg -> BeamBLO.BlackListOrg
-transformDomainBlackListOrgToBeam BlackListOrg {..} =
-  BeamBLO.BlackListOrgT
-    { BeamBLO.id = getId id,
-      BeamBLO.subscriberId = getShortId subscriberId,
-      BeamBLO.orgType = _type
-    }
+instance ToTType' BeamBLO.BlackListOrg BlackListOrg where
+  toTType' BlackListOrg {..} = do
+    BeamBLO.BlackListOrgT
+      { BeamBLO.id = getId id,
+        BeamBLO.subscriberId = getShortId subscriberId,
+        BeamBLO.orgType = _type
+      }
