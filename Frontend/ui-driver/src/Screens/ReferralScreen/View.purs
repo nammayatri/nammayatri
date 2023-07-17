@@ -293,7 +293,7 @@ currentDriverRank state =
   , gravity BOTTOM
   , alignParentBottom "true,-1"
   , cornerRadii $ Corners 18.0 true true false false
-  , visibility if( checkDate state || state.props.currentDriverData.rank > 0 )then VISIBLE else GONE
+  , visibility if( checkDate state || state.props.currentDriverData.rank > 0 ) && not state.props.showShimmer then VISIBLE else GONE
   ][ rankCard state.props.currentDriverData true state
    ]
 
@@ -370,7 +370,7 @@ leaderBoardRanks state =
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , orientation VERTICAL
-    , padding (PaddingBottom if (state.props.currentDriverData.rank > 10 || state.props.currentDriverData.rank < 1)then 68 else 8)
+    , padding (PaddingBottom if (state.props.currentDriverData.rank > 10 ||( checkDate state && state.props.currentDriverData.rank < 1)) then 68 else 8)
     ][ shimmerView state
      , congratsBar state
      , topRankers state
@@ -515,7 +515,7 @@ rankCard item aboveThreshold state =
           , height WRAP_CONTENT
           , gravity CENTER_VERTICAL
           , text $ if checkDriverWithZeroRides item aboveThreshold state then  getString ACCEPT_RIDES_TO_ENTER_RANKINGS else (show item.rides) <> " " <> (getString RIDES)
-          , textSize $ if checkDriverWithZeroRides item aboveThreshold state then FontSize.a_18 else FontSize.a_16
+          , textSize FontSize.a_16
           , fontStyle  $ FontStyle.semiBold LanguageStyle
           , color if aboveThreshold || (item == currentDriverData && currentDriverData.rank > 0) then Color.white900 else Color.black800
           ]
