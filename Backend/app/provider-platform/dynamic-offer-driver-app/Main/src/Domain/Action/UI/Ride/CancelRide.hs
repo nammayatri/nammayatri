@@ -150,8 +150,9 @@ driverDistanceToPickup ::
   tripEndPos ->
   m Meters
 driverDistanceToPickup merchantId tripStartPos tripEndPos = do
+  service <- Maps.pickService merchantId Maps.GetDistancesForCancelRide
   distRes <-
-    Maps.getDistanceForCancelRide merchantId $
+    Maps.getDistanceForCancelRide merchantId service $
       Maps.GetDistanceReq
         { origin = tripStartPos,
           destination = tripEndPos,

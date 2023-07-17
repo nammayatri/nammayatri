@@ -232,8 +232,9 @@ getDistanceBetweenPoints merchantId origin destination interpolatedPoints = do
   -- somehow interpolated points pushed to redis in reversed order, so we need to reverse it back
   let pickedWaypoints = origin :| (pickWaypoints (reverse interpolatedPoints) <> [destination])
   logTagInfo "endRide" $ "pickedWaypoints: " <> show pickedWaypoints
+  service <- Maps.pickService merchantId Maps.GetRoutes
   routeResponse <-
-    Maps.getRoutes merchantId $
+    Maps.getRoutes merchantId service $
       Maps.GetRoutesReq
         { waypoints = pickedWaypoints,
           mode = Just Maps.CAR,

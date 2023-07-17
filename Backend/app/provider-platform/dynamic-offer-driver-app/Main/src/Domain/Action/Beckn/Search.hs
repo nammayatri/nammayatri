@@ -126,8 +126,9 @@ data DistanceAndDuration = DistanceAndDuration
 getDistanceAndDuration :: Id DM.Merchant -> LatLong -> LatLong -> Maybe Meters -> Maybe Seconds -> Flow DistanceAndDuration
 getDistanceAndDuration _ _ _ (Just distance) (Just duration) = return $ DistanceAndDuration {distance, duration}
 getDistanceAndDuration merchantId fromLocation toLocation _ _ = do
+  service <- Maps.pickService merchantId Maps.GetDistances
   response <-
-    Maps.getDistance merchantId $
+    Maps.getDistance merchantId service $
       Maps.GetDistanceReq
         { origin = fromLocation,
           destination = toLocation,

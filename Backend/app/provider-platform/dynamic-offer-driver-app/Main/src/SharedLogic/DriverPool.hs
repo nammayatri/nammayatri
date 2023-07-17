@@ -660,9 +660,11 @@ computeActualDistance ::
   m (NonEmpty DriverPoolWithActualDistResult)
 computeActualDistance orgId pickup driverPoolResults = do
   let pickupLatLong = getCoordinates pickup
+
   transporter <- CTC.findByMerchantId orgId >>= fromMaybeM (TransporterConfigDoesNotExist orgId.getId)
+  service <- Maps.pickService orgId Maps.GetDistances
   getDistanceResults <-
-    Maps.getEstimatedPickupDistances orgId $
+    Maps.getEstimatedPickupDistances orgId service $
       Maps.GetDistancesReq
         { origins = driverPoolResults,
           destinations = pickupLatLong :| [],

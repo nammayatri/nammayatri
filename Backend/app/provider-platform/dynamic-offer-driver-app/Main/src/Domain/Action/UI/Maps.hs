@@ -57,7 +57,8 @@ getPlaceName merchantId req = do
 
 callMapsApi :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DMerchant.Merchant -> Maps.GetPlaceNameReq -> Int -> m Maps.GetPlaceNameResp
 callMapsApi merchantId req geoHashPrecisionValue = do
-  res <- Maps.getPlaceName merchantId req
+  service <- Maps.pickService merchantId Maps.GetPlaceName
+  res <- Maps.getPlaceName merchantId service req
   let firstElement = listToMaybe res
   case firstElement of
     Just element -> do

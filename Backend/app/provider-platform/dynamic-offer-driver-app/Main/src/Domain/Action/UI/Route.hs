@@ -31,12 +31,15 @@ import Tools.Metrics (CoreMetrics)
 
 getRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getRoutes (_, merchantId) req = do
-  Maps.getRoutes merchantId req
+  service <- Maps.pickService merchantId Maps.GetRoutes
+  Maps.getRoutes merchantId service req
 
 getPickupRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getPickupRoutes (_, merchantId) req = do
-  Maps.getPickupRoutes merchantId req
+  service <- Maps.pickService merchantId Maps.GetPickupRoutes
+  Maps.getPickupRoutes merchantId service req
 
 getTripRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getTripRoutes (_, merchantId) req = do
-  Maps.getTripRoutes merchantId req
+  service <- Maps.pickService merchantId Maps.GetTripRoutes
+  Maps.getTripRoutes merchantId service req
