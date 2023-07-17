@@ -30,7 +30,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Components.SourceToDestination as SourceToDestinationController
 import Screens.HelpAndSupportScreen.ScreenData (IssueOptions(..))
 import Language.Strings (getString)
-import Services.APITypes (GetRidesHistoryResp,IssueReportDriverListItem(..),Status(..))
+import Services.API (GetRidesHistoryResp,IssueReportDriverListItem(..),Status(..))
 import Language.Types(STR(..))
 import Services.Config (getSupportNumber)
 import JBridge (showDialer)

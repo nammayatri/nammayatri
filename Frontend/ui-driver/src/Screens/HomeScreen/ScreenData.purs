@@ -17,7 +17,7 @@ module Screens.HomeScreen.ScreenData where
 
 import Screens.Types
 import Prelude(negate)
-import Services.APITypes(Status(..))
+import Services.API(Status(..))
 import Data.Maybe
 
 initData :: HomeScreenState

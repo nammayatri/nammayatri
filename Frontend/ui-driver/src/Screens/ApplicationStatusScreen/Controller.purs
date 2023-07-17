@@ -22,7 +22,7 @@ import JBridge (openWhatsAppSupport, minimizeApp,toast,showDialer, hideKeyboardO
 import Effect.Class (liftEffect)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent,trackAppTextInput)
 import Screens (ScreenName(..), getScreen)
-import Services.APITypes(DriverRegistrationStatusResp(..))
+import Services.API(DriverRegistrationStatusResp(..))
 import Components.PrimaryButton as PrimaryButtonController
 import Data.Array (any)
 import Components.PopUpModal.Controller as PopUpModal

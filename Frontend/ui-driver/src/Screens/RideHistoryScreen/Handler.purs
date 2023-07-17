@@ -28,7 +28,7 @@ import Screens.Types (IndividualRideCardState, AnimationState(..))
 import Components.IndividualRideCard as IndividualRideCard
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Core (getPushFn)
-import Services.APITypes (RidesInfo(..), Status(..))
+import Services.API (RidesInfo(..), Status(..))
 import Data.Maybe (Maybe(..))
 import Types.ModifyScreenState (modifyScreenState)
 

@@ -40,7 +40,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.ReferralScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.ReferralScreen.ScreenData as ReferralScreenData
 import Screens.Types as ST
-import Services.APITypes (LeaderBoardReq(..))
+import Services.API (LeaderBoardReq(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color

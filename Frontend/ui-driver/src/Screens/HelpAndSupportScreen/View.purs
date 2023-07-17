@@ -31,7 +31,7 @@ import PrestoDOM.Events (onClick)
 import PrestoDOM.Properties (cornerRadius, fontStyle, gravity, height, imageWithFallback, layoutGravity, margin, padding, scrollBarY, weight)
 import Screens.HelpAndSupportScreen.Controller (Action(..), ScreenOutput, eval, getIssueTitle)
 import Screens.HelpAndSupportScreen.ScreenData (otherIssueList,IssueOptions(..))
-import Services.APITypes (FetchIssueListResp(..),FetchIssueListReq(..))
+import Services.API (FetchIssueListResp(..),FetchIssueListReq(..))
 import Services.Backend as Remote
 import Effect.Aff (launchAff)
 import Helpers.Utils (toString)

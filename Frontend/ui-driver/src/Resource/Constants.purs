@@ -17,7 +17,7 @@ module Resource.Constants where
 
 import Prelude ((==), (&&), (<>))
 import Data.String (trim)
-import Services.APITypes (LocationInfo(..))
+import Services.API (LocationInfo(..))
 import Data.Maybe (fromMaybe, Maybe(..))
 
 type Language =

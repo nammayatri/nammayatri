@@ -37,7 +37,7 @@ import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC)
 import Data.Array (last, (!!), init, replicate, filter, sortWith, any)
 import Data.Array (length) as DA
 import Data.Maybe (Maybe(..))
-import Services.APITypes (LeaderBoardRes(..), DriversInfo(..))
+import Services.API (LeaderBoardRes(..), DriversInfo(..))
 import Data.Maybe (fromMaybe)
 import Screens.ReferralScreen.ScreenData as RSD
 

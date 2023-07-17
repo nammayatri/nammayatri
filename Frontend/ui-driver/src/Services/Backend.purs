@@ -28,7 +28,7 @@ import JBridge (setKeyInSharedPrefKeys,toast,factoryResetApp, toggleLoader, stop
 import Juspay.OTP.Reader as Readers
 import Types.ModifyScreenState(modifyScreenState)
 import Types.App (GlobalState, FlowBT, ScreenType(..))
-import Services.APITypes
+import Services.API
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (bind, discard, pure, unit, ($), ($>), (&&), (*>), (<<<), (=<<), (==), void, map, show, class Show)

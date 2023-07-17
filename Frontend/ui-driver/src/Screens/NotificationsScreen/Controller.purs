@@ -39,7 +39,7 @@ import Language.Types (STR(..))
 import PrestoDOM (Eval, ScrollState(..), Visibility(..), continue, exit, toPropValue, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (AnimationState(..), NotificationCardState, NotificationDetailModelState, NotificationsScreenState, NotificationCardPropState, YoutubeData, YoutubeVideoStatus(..))
-import Services.APITypes (MediaFileApiResponse(..), MediaType(..), MessageAPIEntityResponse(..), MessageListRes(..), MessageType(..))
+import Services.API (MediaFileApiResponse(..), MediaType(..), MessageAPIEntityResponse(..), MessageListRes(..), MessageType(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), setValueToLocalNativeStore)
 import Debug (spy)
