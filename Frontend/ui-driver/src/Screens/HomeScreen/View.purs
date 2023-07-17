@@ -903,6 +903,7 @@ locationLastUpdatedTextAndTimeView push state =
     , width $ V (JB.getWidthFromPercent 32)
     , gravity LEFT
     , height WRAP_CONTENT
+    , textSize FontSize.a_12
     ] <> FontStyle.paragraphText TypoGraphy
     , textView $
     [ width $ V (JB.getWidthFromPercent 30)
@@ -910,6 +911,7 @@ locationLastUpdatedTextAndTimeView push state =
       , ellipsize true
       , singleLine true
       , gravity CENTER_VERTICAL
+      , textSize FontSize.a_12
       , text if state.data.locationLastUpdatedTime == "" then (if (getValueToLocalStore LOCATION_UPDATE_TIME) == "__failed" then getString(NO_LOCATION_UPDATE) else (getValueToLocalStore LOCATION_UPDATE_TIME) ) else state.data.locationLastUpdatedTime
     ] <> FontStyle.body4 TypoGraphy
   ]
