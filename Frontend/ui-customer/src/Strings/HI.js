@@ -525,5 +525,5 @@ const hindiStrings = {
   "OTP_EXPIRED" : "ओटीपी समाप्त हो गया",
   "OTP_EXPIRED_DESCRIPTION" : "आपकी सवारी ओटीपी समाप्त हो गई है। सवारी पाने के लिए कृपया दोबारा बुकिंग करें",
   "PLATFORM_GST" : "प्लेटफार्म जीएसटी (18%)",
-  "MISC_WAITING_CHARGE" : "मिस. प्रतीक्षा शुल्क सहित"
+  "MISC_WAITING_CHARGE" : "विविध (प्रतीक्षा शुल्क सहित)"
 }

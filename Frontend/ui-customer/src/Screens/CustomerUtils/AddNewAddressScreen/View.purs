@@ -491,7 +491,7 @@ savePlaceView state push =
               , padding (PaddingRight 8)
               , maxLines 1
               , ellipsize true 
-              , width $ V (4 * (EHC.screenWidth unit / 5) - (if EHC.os == "IOS" then 75 else 50))
+              , if EHC.os == "IOS" then  width $ V (4 * (EHC.screenWidth unit / 5) - 75) else weight 1.0
               ] <> FontStyle.body1 LanguageStyle
             , linearLayout([
               height WRAP_CONTENT
