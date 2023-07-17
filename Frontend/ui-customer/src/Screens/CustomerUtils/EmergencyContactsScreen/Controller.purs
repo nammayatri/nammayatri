@@ -194,7 +194,7 @@ eval BackPressed state =
           pure LoadMoreContacts
         ]
   else if (state.props.showInfoPopUp == true) then
-    continue state{props{showInfoPopUp = false}}
+    continue state{props{showInfoPopUp = false, showContactList = false}}
   else
     exit $ GoToHomeScreen
 
@@ -211,6 +211,8 @@ eval (ContactListGenericHeaderActionController GenericHeader.PrefixImgOnClick) s
               pure unit
           pure LoadMoreContacts
         ]
+  else if state.props.showInfoPopUp then
+    continue state{props{showInfoPopUp = false, showContactList = false}}
   else
     exit $ GoToHomeScreen
 
@@ -333,8 +335,10 @@ contactListTransformerProp contactList =(map (\(contact) -> {
   name: toPropValue (contact.name),
   number: toPropValue (contact.number),
   isSelected: toPropValue (contact.isSelected),
-  contactBackgroundColor: toPropValue(if contact.isSelected then Color.grey900 else Color.white900),
-  isSelectImage: toPropValue(if contact.isSelected then "ny_ic_selected_icon,https://assets.juspay.in/nammayatri/images/user/ny_ic_selected_icon.png" else "ny_ic_outer_circle,https://assets.juspay.in/nammayatri/images/user/ny_ic_outer_circle.png") 
+  contactBackgroundColor: toPropValue (if contact.isSelected then Color.grey900 else Color.white900),
+  visibilitySelectedImage: toPropValue (if contact.isSelected then "visible" else "gone"),
+  visibilityUnSelectedImage: toPropValue (if contact.isSelected then "gone" else "visible"),
+  isSelectImage: toPropValue(if contact.isSelected then "ny_ic_selected_icon" else "ny_ic_outer_circle") 
 })(contactList))
 
 contactTransformerProp :: NewContacts -> NewContactsProp 
@@ -342,8 +346,10 @@ contactTransformerProp contact = {
   name: toPropValue (contact.name),
   number: toPropValue (contact.number),
   isSelected: toPropValue (contact.isSelected),
-  contactBackgroundColor : toPropValue(if contact.isSelected then Color.grey900 else Color.white900),
-  isSelectImage: toPropValue(if contact.isSelected then "ny_ic_selected_icon,https://assets.juspay.in/nammayatri/images/user/ny_ic_selected_icon.png" else "ny_ic_outer_circle,https://assets.juspay.in/nammayatri/images/user/ny_ic_outer_circle.png") 
+  contactBackgroundColor : toPropValue (if contact.isSelected then Color.grey900 else Color.white900),
+  visibilitySelectedImage: toPropValue (if contact.isSelected then "visible" else "gone"),
+  visibilityUnSelectedImage: toPropValue (if contact.isSelected then "gone" else "visible"),
+  isSelectImage: toPropValue(if contact.isSelected then "ny_ic_selected_icon" else "ny_ic_outer_circle") 
 }
 
 contactListTransformer :: Array NewContacts -> Array NewContacts 
