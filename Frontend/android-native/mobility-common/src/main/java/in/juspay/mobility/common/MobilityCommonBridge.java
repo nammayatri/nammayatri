@@ -1,6 +1,8 @@
 package in.juspay.mobility.common;
 
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
+import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
+import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 
 import android.Manifest;
 import android.animation.ValueAnimator;
@@ -1662,6 +1664,18 @@ public class MobilityCommonBridge extends HyperBridge {
         }
         JuspayLogger.d(UTILS, "final File name " + file.getName());
         return file;
+    }
+
+    protected boolean checkAndAskStoragePermission (){
+        if (Build.VERSION.SDK_INT < 30) {
+            if (ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ) {
+                ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE}, STORAGE_PERMISSION);
+                return false;
+            } else {
+                return true;
+            }
+        }
+        return true;
     }
 
     public ImageView.ScaleType getScaleTypes(String scale) {

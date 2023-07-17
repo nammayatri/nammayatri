@@ -29,6 +29,7 @@
         android:largeHeap="true"
         android:hardwareAccelerated="true"
         android:roundIcon="${appIconRound}"
+        android:requestLegacyExternalStorage="true"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="${isUsesCleartextTraffic}"

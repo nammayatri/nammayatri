@@ -1,5 +1,4 @@
 require("regenerator-runtime/runtime");
-
 // This will make sure init() is called. It will make available JBridge and Android variables
 require("presto-ui");
 require('core-js');
@@ -76,7 +75,7 @@ function guid() {
 }
 
 window.__FN_INDEX = 0;
-window.__PROXY_FN = top.__PROXY_FN || {};
+window.__PROXY_FN = {};
 
 if (!window.__OS) {
   var getOS = function () { //taken from getOS() in presto-ui
@@ -97,6 +96,7 @@ window.onMerchantEvent = function (event, payload) {
   var clientPaylod = JSON.parse(payload);
   var clientId = clientPaylod.payload.clientId
   if (event == "initiate") {
+    var isInit = "in.juspay.hyperpay" in top.window.mapps;
     if (clientId == "open-kochi") {
       window.merchantID = "YATRI"
     } else if(clientId == "jatrisaathiprovider" || clientId == "jatrisaathidriver" || clientId == "yatrisathiprovider"){
@@ -108,6 +108,9 @@ window.onMerchantEvent = function (event, payload) {
     } else {
       // window.merchantID = clientPaylod.payload.clientId.toUpperCase();
       window.merchantID = "NAMMAYATRI";
+    }
+    if (!isInit) {
+      callInitiateResult();
     }
   } else if (event == "process") {
     window.__payload.sdkVersion = "2.0.1"
@@ -223,22 +226,27 @@ window["onEvent'"] = function (event, args) {
 window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyperPay
   console.log("onEvent Payload", jsonPayload);
   if ((JSON.parse(jsonPayload)).event == "initiate_result"){
-    let payload = {
-      event: "initiate_result"
-      , service: "in.juspay.becknui"
-      , payload: { status: "SUCCESS" }
-      , error: false
-      , errorMessage: ""
-      , errorCode: ""
-    }
-    JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
+    callInitiateResult();
+    
   }
+}
+
+function callInitiateResult () {
+  let payload = {
+    event: "initiate_result"
+    , service: "in.juspay.becknui"
+    , payload: { status: "SUCCESS" }
+    , error: false
+    , errorMessage: ""
+    , errorCode: ""
+  }
+  JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
 }
 
 function refreshFlow(){
   let currentDate = new Date();
   let diff = Math.abs(previousDateObject - currentDate) / 1000;
-  let token = window.JBridge.getKeysInSharedPrefs("REGISTERATION_TOKEN");
+  let token = window.JBridge.getKeysInSharedPref("REGISTERATION_TOKEN");
   if ((diff > refreshThreshold) && (token != "__failed")){
     purescript.onConnectivityEvent("REFRESH")();
   }
