@@ -41,6 +41,7 @@ mkPersist
       id Text
       transactionId Text
       providerId MerchantTId
+      mapsServiceGetDistances Maps.MapsService Maybe
       fromLocationId SearchReqLocationTId
       toLocationId SearchReqLocationTId
       area FareProductD.Area Maybe

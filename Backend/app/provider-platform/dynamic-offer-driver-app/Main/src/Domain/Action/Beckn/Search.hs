@@ -120,11 +120,12 @@ data EstimateInfo = EstimateInfo
 
 data DistanceAndDuration = DistanceAndDuration
   { distance :: Meters,
-    duration :: Seconds
+    duration :: Seconds,
+    mapsServiceGetDistances :: Maybe Maps.MapsService
   }
 
 getDistanceAndDuration :: Id DM.Merchant -> LatLong -> LatLong -> Maybe Meters -> Maybe Seconds -> Flow DistanceAndDuration
-getDistanceAndDuration _ _ _ (Just distance) (Just duration) = return $ DistanceAndDuration {distance, duration}
+getDistanceAndDuration _ _ _ (Just distance) (Just duration) = return $ DistanceAndDuration {distance, duration, mapsServiceGetDistances = Nothing}
 getDistanceAndDuration merchantId fromLocation toLocation _ _ = do
   service <- Maps.pickService merchantId Maps.GetDistances
   response <-
@@ -134,7 +135,7 @@ getDistanceAndDuration merchantId fromLocation toLocation _ _ = do
           destination = toLocation,
           travelMode = Just Maps.CAR
         }
-  return DistanceAndDuration {distance = response.distance, duration = response.duration}
+  return DistanceAndDuration {distance = response.distance, duration = response.duration, mapsServiceGetDistances = Just service}
 
 handler :: DM.Merchant -> DSearchReq -> Flow DSearchRes
 handler merchant sReq = do
@@ -244,7 +245,7 @@ handler merchant sReq = do
           logDebug $ "Search handler: driver pool " <> show driverPool
 
           let onlyFPWithDrivers = filter (\fp -> isJust (find (\dp -> dp.variant == fp.vehicleVariant) driverPool)) farePolicies
-          searchReq <- buildSearchRequest sReq merchantId fromLocation toLocation result.distance result.duration specialLocationTag area
+          searchReq <- buildSearchRequest sReq merchantId fromLocation toLocation result specialLocationTag area
           Redis.hSetExp (searchRequestKey $ getId merchantId) (getId searchReq.id) routeInfo 3600
           estimates <- mapM (SHEst.buildEstimate searchReq.id sReq.pickupTime result.distance specialLocationTag) onlyFPWithDrivers
           triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId}
@@ -299,12 +300,11 @@ buildSearchRequest ::
   Id DM.Merchant ->
   DLoc.SearchReqLocation ->
   DLoc.SearchReqLocation ->
-  Meters ->
-  Seconds ->
+  DistanceAndDuration ->
   Maybe Text ->
   DFareProduct.Area ->
   m DSR.SearchRequest
-buildSearchRequest DSearchReq {..} providerId fromLocation toLocation estimatedDistance estimatedDuration specialLocationTag area = do
+buildSearchRequest DSearchReq {..} providerId fromLocation toLocation distanceAndDuration specialLocationTag area = do
   uuid <- generateGUID
   now <- getCurrentTime
   pure
@@ -315,6 +315,9 @@ buildSearchRequest DSearchReq {..} providerId fromLocation toLocation estimatedD
         bapCity = Just bapCity,
         bapCountry = Just bapCountry,
         autoAssignEnabled = Nothing,
+        estimatedDistance = distanceAndDuration.distance,
+        estimatedDuration = distanceAndDuration.duration,
+        mapsServiceGetDistances = distanceAndDuration.mapsServiceGetDistances,
         ..
       }
 

@@ -38,6 +38,7 @@ data SearchRequest = SearchRequest
     bapCountry :: Maybe Context.Country,
     estimatedDistance :: Meters,
     estimatedDuration :: Seconds,
+    mapsServiceGetDistances :: Maybe Maps.MapsService,
     specialLocationTag :: Maybe Text,
     autoAssignEnabled :: Maybe Bool,
     device :: Maybe Text,
