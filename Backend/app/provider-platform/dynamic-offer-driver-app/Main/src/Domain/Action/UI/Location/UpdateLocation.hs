@@ -181,11 +181,11 @@ updateLocationHandler ::
 updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLocationUpdate" $
   withLogTag ("driverId-" <> driver.id.getId) $ do
     thresholdConfig <- QTConf.findByMerchantId driver.merchantId >>= fromMaybeM (TransporterConfigNotFound driver.merchantId.getId)
+    driverInfo <- DInfo.findById (cast driver.id) >>= fromMaybeM (PersonNotFound driver.id.getId)
     when (thresholdConfig.subscription) $ do
       -- window end time over - still ongoing - sendPaymentReminder
       -- payBy is also over - still ongoing/pending - unsubscribe
-      handleDriverPayments driver.id thresholdConfig.timeDiffFromUtc
-    driverInfo <- DInfo.findById (cast driver.id) >>= fromMaybeM (PersonNotFound driver.id.getId)
+      unless (driverInfo.onRide) $ handleDriverPayments driver.id thresholdConfig.timeDiffFromUtc
     logInfo $ "got location updates: " <> getId driver.id <> " " <> encodeToText waypoints
     checkLocationUpdatesRateLimit driver.id
     let minLocationAccuracy = thresholdConfig.minLocationAccuracy
