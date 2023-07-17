@@ -35,8 +35,8 @@ driverDetailsScreen = do
       modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> updatedState )
       App.BackT $ pure App.GoBack
     ValidateAlternateNumber  updatedState -> App.BackT $ App.NoBack <$> pure (DRIVER_ALTERNATE_CALL_API updatedState)
-    VerifyAlternateNumberOTP updatedState -> App.BackT $ App.BackPoint <$> pure (VERIFY_OTP updatedState)
-    ResendAlternateNumberOTP updatedState -> App.BackT $ App.BackPoint <$> pure (RESEND_ALTERNATE_OTP updatedState)
+    VerifyAlternateNumberOTP updatedState -> App.BackT $ App.NoBack <$> pure (VERIFY_OTP updatedState)
+    ResendAlternateNumberOTP updatedState -> App.BackT $ App.NoBack <$> pure (RESEND_ALTERNATE_OTP updatedState)
     RemoveAlternateNumber    updatedState -> App.BackT $ App.NoBack <$> pure (ALTERNATE_NUMBER_REMOVE updatedState)
     GoToHomeScreen           updatedState -> App.BackT $ App.NoBack <$> pure (GO_TO_HOMESCREEN updatedState)
     UpdateGender             updatedState -> App.BackT $ App.NoBack <$> pure (DRIVER_GENDER updatedState)
