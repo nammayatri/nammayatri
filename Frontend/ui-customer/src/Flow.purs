@@ -489,7 +489,7 @@ enterMobileNumberScreenFlow = do
                     _ <- pure $ toast (getString REQUEST_TIMED_OUT)
                     modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber{data{otp=""}, props{enterOTP = false, wrongOTP = false}})
                 else if ( err.code == 400 && codeMessage == "INVALID_AUTH_DATA") then do
-                    modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber{props{wrongOTP = true}, data{otp=""}})
+                    modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber{props{wrongOTP = true, btnActiveOTP = false}, data{otp=""}})
                     pure $ toast (getString WRONG_OTP)
                 else if ( err.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
                     pure $ toast (getString LIMIT_EXCEEDED)

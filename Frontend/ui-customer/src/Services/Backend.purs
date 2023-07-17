@@ -230,7 +230,7 @@ verifyTokenBT payload token = do
         if ( errorPayload.code == 400 && codeMessage == "TOKEN_EXPIRED") then
             pure $ toast (getString REQUEST_TIMED_OUT)
             else if ( errorPayload.code == 400 && codeMessage == "INVALID_AUTH_DATA") then do
-                modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber{props{wrongOTP = true}})
+                modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber{props{wrongOTP = true, btnActiveOTP = false}})
                 void $ lift $ lift $ toggleLoader false
                 pure $ toast "INVALID_AUTH_DATA"
             else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then
