@@ -76,11 +76,17 @@ view push item =
             , margin (Margin 0 23 16 23)
             , padding (Padding 0 0 0 0)
             , gravity CENTER
-            ]
-            [ imageView
-                [ height if (item.isSelected) then V 24 else V 17
-                , width if (item.isSelected) == true then V 24 else V 17
+            ][ imageView
+                [ height $ V 24 
+                , width $ V 24 
                 , PrestoList.imageUrlHolder "isSelectImage"
+                , PrestoList.visibilityHolder "visibilitySelectedImage"
+                ] 
+            , imageView
+                [ height $ V 17
+                , width $ V 17
+                , PrestoList.imageUrlHolder "isSelectImage"
+                , PrestoList.visibilityHolder "visibilityUnSelectedImage"
                 ]
             ]
         ]
