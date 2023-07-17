@@ -13,7 +13,7 @@ getPaymentHistoryItemList arr = map (\item -> getPaymentHistoryItem item) arr
 
 getPaymentHistoryItem :: PaymentDetailsEntity -> PaymentHistoryListItem.Config
 getPaymentHistoryItem (PaymentDetailsEntity item) =
-  let firstTxnInfo = (item.txnInfo) DA.!! 0
+  let firstTxnInfo = DA.last item.txnInfo
   in  {
     isSelected : false
     , charges : item.charges
