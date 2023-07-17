@@ -34,7 +34,7 @@ chooseLanguage :: FlowBT String ScreenOutput
 chooseLanguage = do
   (GlobalState state) <- getState
   config <- getAppConfig
-  action <- lift $ lift $ runScreen $ ChooseLanguageScreen.screen state.chooseLanguageScreen{data{config = config},props{selectedLanguage = getValueFromConfig "defaultLanguage"}}
+  action <- lift $ lift $ runScreen $ ChooseLanguageScreen.screen state.chooseLanguageScreen{data{config = config},props{selectedLanguage = config.defaultLanguage}}
   case action of
     GoToEnterMobileScreen updateState -> do
       modifyScreenState $ ChooseLanguageScreenStateType (\chooseLanguageScreenScreen -> updateState)
