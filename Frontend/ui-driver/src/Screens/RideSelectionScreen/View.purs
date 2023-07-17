@@ -38,7 +38,7 @@ import PrestoDOM.Types.Core (toPropValue)
 import Screens.RideSelectionScreen.ComponentConfig (cancelButtonConfig, errorModalConfig)
 import Screens.RideSelectionScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (AnimationState(..), ItemState, RideSelectionScreenState)
-import Services.APITypes (GetRidesHistoryResp(..), Status(..))
+import Services.API (GetRidesHistoryResp(..), Status(..))
 import Components.BottomNavBar as BottomNavBar
 import Styles.Colors as Color
 import Components.ErrorModal as ErrorModal

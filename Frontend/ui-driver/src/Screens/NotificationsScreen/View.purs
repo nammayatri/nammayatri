@@ -45,7 +45,7 @@ import PrestoDOM.List as PrestoList
 import PrestoDOM.Types.Core (toPropValue)
 import Screens.NotificationsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (NotificationsScreenState, AnimationState(..), NotificationCardPropState)
-import Services.APITypes (MessageListRes(..))
+import Services.API (MessageListRes(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Components.BottomNavBar.View as BottomNavBar

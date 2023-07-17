@@ -30,7 +30,7 @@ import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Resource.Constants (decodeAddress)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (AnimationState(..), IndividualRideCardState, ItemState, RideSelectionScreenState)
-import Services.APITypes (RidesInfo(..))
+import Services.API (RidesInfo(..))
 import Components.BottomNavBar.Controller (Action(..)) as BottomNavBar
 import Styles.Colors as Color
 import Components.ErrorModal as ErrorModalController

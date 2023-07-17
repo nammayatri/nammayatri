@@ -13,7 +13,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Services.APITypes where
+module Services.API where
 
 import Control.Alt ((<|>))
 import Common.Types.App (Version(..))
