@@ -1313,6 +1313,7 @@ homeScreenFlow = do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false, showDottedRoute = true}, data{ route = [], activeRide{status = INPROGRESS}}})
           void $ lift $ lift $ toggleLoader false
           void $ updateStage $ HomeScreenStage RideStarted
+          _ <- pure $ setValueToLocalStore TRIGGER_MAPS "true"
           currentRideFlow
         Left errorPayload -> do
           let errResp = errorPayload.response
