@@ -50,7 +50,9 @@ type NewContactsProp = {
   number :: PropValue,
   isSelected :: PropValue,
   contactBackgroundColor :: PropValue,
-  isSelectImage :: PropValue
+  isSelectImage :: PropValue,
+  visibilitySelectedImage :: PropValue,
+  visibilityUnSelectedImage :: PropValue
 }
 
 type EditTextInLabelState =

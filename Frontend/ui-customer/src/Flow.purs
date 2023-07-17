@@ -73,6 +73,7 @@ import Screens.ChooseLanguageScreen.Controller (ScreenOutput(..))
 import Screens.EnterMobileNumberScreen.Controller (ScreenOutput(..))
 import Screens.Handlers as UI
 import Screens.HelpAndSupportScreen.ScreenData as HelpAndSupportScreenData
+import Screens.EmergencyContactsScreen.ScreenData as EmergencyContactsScreenData
 import Screens.HomeScreen.Controller (flowWithoutOffers, getSearchExpiryTime, isTipEnabled, getSpecialTag)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList)
@@ -634,7 +635,9 @@ homeScreenFlow = do
       _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_help"
       helpAndSupportScreenFlow
     CHANGE_LANGUAGE ->  selectLanguageScreenFlow
-    GO_TO_EMERGENCY_CONTACTS -> emergencyScreenFlow
+    GO_TO_EMERGENCY_CONTACTS -> do
+      modifyScreenState $  EmergencyContactsScreenStateType (\emergencyContactsScreen -> EmergencyContactsScreenData.initData)
+      emergencyScreenFlow
     GO_TO_ABOUT -> aboutUsScreenFlow
     GO_TO_MY_PROFILE  updateProfile -> do
         _ <- lift $ lift $ liftFlow $ logEvent logField_ (if updateProfile then "safety_banner_clicked" else "ny_user_profile_click")
