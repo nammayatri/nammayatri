@@ -177,12 +177,11 @@ contactListView listItemm push state =
 showEmergencyContact :: forall w. PrestoList.ListItem ->  (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
 showEmergencyContact listitemm push config =
   swipeRefreshLayout
-    [ width MATCH_PARENT
+    ([ width MATCH_PARENT
     , height MATCH_PARENT
     , background Color.blue600
     , weight 1.0
-    , id "2000040"
-    ]
+    ] <> if os == "IOS" then [] else [id $ getNewIDWithTag "EmergencyContactTag"] )
     [ showEmergencyContactData listitemm push config
     ]
 

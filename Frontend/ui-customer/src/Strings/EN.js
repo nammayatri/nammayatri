@@ -431,7 +431,7 @@ const englishStrings = {
   "NO_DONT": "No, Don’t",
   "YES_CANCEL_SEARCH": "Yes, Cancel Search",
   "TRY_LOOKING_FOR_RIDES_AGAIN": "It seems to be a very busy day. You may try looking for rides again",
-  "NO_TIP": "0 Tip",
+  "NO_TIP": "₹0 Tip",
   "CUSTOMER_TIP_DESCRIPTION": "^Extra amount added by the customer to increase the chances of getting a ride.",
   "PLEASE_WAIT_I_WILL_BE_THERE": "Please wait, I'll be there",
   "UNREACHABLE_PLEASE_CALL_BACK": "Unreachable, Please call back",
