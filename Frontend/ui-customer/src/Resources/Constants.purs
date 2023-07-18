@@ -15,7 +15,8 @@
 
 module Resources.Constants where
 
-import Data.Array (filter, length, null, reverse, (!!), head, all)
+import Data.Array (filter, length, null, reverse, (!!), head, all, elem, foldl)
+import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), Replacement(..), contains, joinWith, replaceAll, split, trim)
 import Prelude (map, show, (&&), (-), (<>), (==), (>), ($), (+), (/=), (<), (/), (*))
@@ -28,6 +29,7 @@ import Accessor (_description, _amount)
 import Helpers.Utils (toString, parseFloat)
 import Data.Int (toNumber)
 import MerchantConfig.Utils(getValueFromConfig)
+import Common.Types.App (LazyCheck(..))
 
 type Language
   = { name :: String
@@ -196,8 +198,9 @@ getFaresList fares baseDistance =
           { fareType : item.description
           , price : (getValueFromConfig "currency") <> " " <> 
             (show $ case item.description of 
-              "BASE_FARE" -> (item.amount + getFareFromArray fares "EXTRA_DISTANCE_FARE" + getFareFromArray fares "NIGHT_SHIFT_CHARGE") 
-              "SGST" -> item.amount * 2 
+              "BASE_FARE" -> item.amount + getMerchSpecBaseFare fares
+              "SGST" -> (item.amount * 2) + getFareFromArray fares "FIXED_GOVERNMENT_RATE"
+              "WAITING_OR_PICKUP_CHARGE" -> item.amount + getFareFromArray fares "PLATFORM_FEE"
               _ -> item.amount)
           , title : case item.description of
                       "BASE_FARE" -> (getEN BASE_FARES) <> if baseDistance == "0 m" then "" else " (" <> baseDistance <> ")"
@@ -219,14 +222,34 @@ getFaresList fares baseDistance =
     )
     (getFilteredFares fares)
 
+getMerchSpecBaseFare :: Array FareBreakupAPIEntity -> Int
+getMerchSpecBaseFare fares =
+  case getMerchant FunctionCall of
+    YATRISATHI -> getAllFareFromArray fares ["EXTRA_DISTANCE_FARE", "NIGHT_SHIFT_CHARGE"]
+    _ -> getAllFareFromArray fares ["EXTRA_DISTANCE_FARE"]
+
+
+getAllFareFromArray :: Array FareBreakupAPIEntity -> Array String -> Int
+getAllFareFromArray fares titles =
+  let
+    matchingFares = filter (\fare -> (fare^._description) `elem` titles) fares
+  in
+    foldl (\acc fare -> acc + fare^._amount) 0 matchingFares
+
 getFareFromArray :: Array FareBreakupAPIEntity -> String -> Int
 getFareFromArray fareBreakUp fareType = (fromMaybe dummyFareBreakUp (head (filter (\fare -> fare^._description == (fareType)) fareBreakUp)))^._amount
 
 dummyFareBreakUp :: FareBreakupAPIEntity
 dummyFareBreakUp = FareBreakupAPIEntity{amount: 0,description: ""}
 
+getMerchantSpecificFilteredFares :: Merchant -> Array String
+getMerchantSpecificFilteredFares merchant = 
+  case merchant of
+    YATRISATHI -> ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "NIGHT_SHIFT_CHARGE", "CGST", "PLATFORM_FEE", "FIXED_GOVERNMENT_RATE"]
+    _ -> ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "CGST", "NIGHT_SHIFT_CHARGE"]
+
 getFilteredFares :: Array FareBreakupAPIEntity -> Array FareBreakupAPIEntity
-getFilteredFares = filter (\(FareBreakupAPIEntity item) -> (all (_ /=  item.description) ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "CGST", "NIGHT_SHIFT_CHARGE"]) )
+getFilteredFares = filter (\(FareBreakupAPIEntity item) -> (all (_ /=  item.description) (getMerchantSpecificFilteredFares (getMerchant FunctionCall))))--["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "CGST", "NIGHT_SHIFT_CHARGE"]) )
 
 getKmMeter :: Int -> String
 getKmMeter distance = if (distance < 1000) then toString distance <> " m" else (parseFloat ((toNumber distance)/ 1000.0)) 2 <> " km"
