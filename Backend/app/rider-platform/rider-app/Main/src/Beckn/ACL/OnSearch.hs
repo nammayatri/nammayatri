@@ -17,13 +17,13 @@ module Beckn.ACL.OnSearch where
 import Beckn.ACL.Common (getTag, validatePrices)
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
-import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..))
+-- import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..))
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Types.Estimate as DEstimate
 import Domain.Types.OnSearchEvent
 import qualified Domain.Types.VehicleVariant as VehVar
-import EulerHS.Prelude hiding (find, id, state, unpack)
+import EulerHS.Prelude hiding (find, id, map, state, unpack)
 import GHC.Float (int2Double)
 -- import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
@@ -37,6 +37,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.OnSearchEvent as OnSearchEvent
 import Tools.Error
+
+-- import qualified Beckn.ACL.OnSearch as item.price
 
 -- import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as provider
 
@@ -101,11 +103,13 @@ buildEstimateOrQuoteInfo ::
 buildEstimateOrQuoteInfo provider item = do
   fulfillment <- find (\fulf -> fulf.id == item.fulfillment_id) provider.fulfillments & fromMaybeM (InvalidRequest "Missing fulfillment")
   let itemId = item.id
+  -- (item.tags >>= buildEstimateBreakUpList item.price.currency)
+  -- & fromMaybeM (InvalidRequest "Missing fare breakup item")
+  estimateBreakupList <- buildEstimateBreakUpList item
   -- let itemCode = item.descriptor.code     ----------fulfillment Vehicle
   let vehicleVariant = castVehicleVariant fulfillment.vehicle.category ----------fulfillment Vehicle
       estimatedFare = roundToIntegral item.price.value
       estimatedTotalFare = roundToIntegral item.price.offered_value
-      estimateBreakupList = buildEstimateBreakUpList <$> item.price.value_breakup
       descriptions = []
       nightShiftInfo = buildNightShiftInfo =<< item.tags
       waitingCharges = buildWaitingChargeInfo <$> item.tags
@@ -182,18 +186,58 @@ validateFareRange totalFare DEstimate.FareRange {..} = do
   when (maxFare < minFare) $ throwError $ InvalidRequest "Maximum discounted price is less than minimum discounted price"
   when (totalFare > maxFare || totalFare < minFare) $ throwError $ InvalidRequest "Discounted price outside of range"
 
-buildEstimateBreakUpList ::
-  BreakupItem ->
-  DOnSearch.EstimateBreakupInfo
-buildEstimateBreakUpList BreakupItem {..} = do
-  DOnSearch.EstimateBreakupInfo
-    { title = title,
-      price =
-        DOnSearch.BreakupPriceInfo
-          { currency = price.currency,
-            value = roundToIntegral price.value
-          }
-    }
+-- buildEstimateBreakUpList ::
+--   BreakupItem ->
+--   DOnSearch.EstimateBreakupInfo
+-- buildEstimateBreakUpList BreakupItem {..} = do
+--   DOnSearch.EstimateBreakupInfo
+--     { title = title,
+--       price =
+--         DOnSearch.BreakupPriceInfo
+--           { currency = price.currency,
+--             value = roundToIntegral price.value
+--           }
+--     }
+
+buildEstimateBreakUpItem ::
+  (MonadThrow m, Log m) =>
+  Text ->
+  OnSearch.Tag ->
+  m DOnSearch.EstimateBreakupInfo
+buildEstimateBreakUpItem currency tag = do
+  tagValue <- (readMaybe . T.unpack =<< tag.value) & fromMaybeM (InvalidRequest "Missing fare breakup item")
+  title <- tag.code & fromMaybeM (InvalidRequest "Missing fare breakup item")
+  pure
+    DOnSearch.EstimateBreakupInfo
+      { title = title,
+        price =
+          DOnSearch.BreakupPriceInfo
+            { currency = currency,
+              value = Money tagValue
+            }
+      }
+
+buildEstimateBreakUpList :: (MonadThrow m, Log m) => OnSearch.Item -> m [DOnSearch.EstimateBreakupInfo]
+buildEstimateBreakUpList item = do
+  (OnSearch.TG tagGroups) <- item.tags & fromMaybeM (InvalidRequest "Missing fare breakup item")
+
+  -- tagValue <- getTag "rate_card" "waiting_charge_per_min" tagGroups
+  tagGroup <- find (\tagGroup -> tagGroup.code == "fare_breakup") tagGroups & fromMaybeM (InvalidRequest "Missing fare breakup")
+  mapM (buildEstimateBreakUpItem item.price.currency) tagGroup.list
+
+-- tag <- find (\tag -> tag.code == Just "waiting_charge_per_min") tagGroup.list
+-- tagValue <- tag.value
+-- waitingChargeValue <- readMaybe $ T.unpack tagValue
+-- Just $ Money waitingChargeValue
+
+-- buildEstimateBreakUpItem :: OnSearch.Tag -> Maybe Money
+-- buildEstimateBreakUpItem tag = do
+--   -- tagValue <- getTag "rate_card" "waiting_charge_per_min" tagGroups
+--   -- tagGroup <- find (\tagGroup -> tagGroup.code == "rate_card") tagGroups
+--   -- tag <- find (\tag -> tag.code == Just "waiting_charge_per_min") tagGroup
+--   -- tagValue <- tag.value
+--   waitingChargeValue <- readMaybe $ T.unpack tagValue
+--   Just $ Money waitingChargeValue
 
 buildNightShiftInfo ::
   OnSearch.TagGroups ->
@@ -213,8 +257,8 @@ buildNightShiftInfo itemTags = do
 
 buildWaitingChargeInfo' :: OnSearch.TagGroups -> Maybe Money
 buildWaitingChargeInfo' tagGroups = do
-  tagValue <- getTag "fare_policy" "waiting_charge_per_min" tagGroups
-  -- tagGroup <- find (\tagGroup -> tagGroup.code == "fare_policy") tagGroups
+  tagValue <- getTag "rate_card" "waiting_charge_per_min" tagGroups
+  -- tagGroup <- find (\tagGroup -> tagGroup.code == "rate_card") tagGroups
   -- tag <- find (\tag -> tag.code == Just "waiting_charge_per_min") tagGroup.list
   -- tagValue <- tag.value
   waitingChargeValue <- readMaybe $ T.unpack tagValue
@@ -222,7 +266,7 @@ buildWaitingChargeInfo' tagGroups = do
 
 -- code_1 <- tags.code_1
 -- list4Code <- tags.list_4_code
--- if list4Code == "waiting_charge_per_min" && code_1 == "fare_policy"
+-- if list4Code == "waiting_charge_per_min" && code_1 == "rate_card"
 --   then do
 --     list4Value <- tags.list_4_value
 --     waitingChargeValue <- readMaybe $ T.unpack list4Value
@@ -256,8 +300,8 @@ buildSpecialLocationTag = getTag "general_info" "special_location_tag"
 
 getNightShiftCharge :: OnSearch.TagGroups -> Maybe Money
 getNightShiftCharge tagGroups = do
-  tagValue <- getTag "fare_policy" "night_shift_charge" tagGroups
-  -- tagGroup <- find (\tagGroup -> tagGroup.code == "fare_policy") tagGroups
+  tagValue <- getTag "rate_card" "night_shift_charge" tagGroups
+  -- tagGroup <- find (\tagGroup -> tagGroup.code == "rate_card") tagGroups
   -- tag <- find (\tag -> tag.code == Just "night_shift_charge") tagGroup.list
   -- tagValue <- tag.value
   nightShiftCharge <- readMaybe $ T.unpack tagValue
@@ -265,7 +309,7 @@ getNightShiftCharge tagGroups = do
 
 -- code_1 <- tags.code_1
 -- list1Code <- tags.list_1_code
--- if list1Code == "night_shift_charge" && code_1 == "fare_policy"
+-- if list1Code == "night_shift_charge" && code_1 == "rate_card"
 -- then do
 --   list1Value <- tags.list_1_value
 --   nightShiftCharge <- readMaybe $ T.unpack list1Value
@@ -274,8 +318,8 @@ getNightShiftCharge tagGroups = do
 
 getOldNightShiftCharge :: OnSearch.TagGroups -> Maybe DecimalValue
 getOldNightShiftCharge tagGroups = do
-  tagValue <- getTag "fare_policy" "old_night_shift_charge" tagGroups
-  -- tagGroup <- find (\tagGroup -> tagGroup.code == "fare_policy") tagGroups
+  tagValue <- getTag "rate_card" "old_night_shift_charge" tagGroups
+  -- tagGroup <- find (\tagGroup -> tagGroup.code == "rate_card") tagGroups
   -- tag <- find (\tag -> tag.code == Just "old_night_shift_charge") tagGroup.list
   -- tagValue <- tag.value
   DecimalValue.valueFromString tagValue
@@ -283,7 +327,7 @@ getOldNightShiftCharge tagGroups = do
 -- tags = do
 -- code_1 <- tags.code_1
 -- list2Code <- tags.list_2_code
--- if list2Code == "old_night_shift_charge" && code_1 == "fare_policy"
+-- if list2Code == "old_night_shift_charge" && code_1 == "rate_card"
 --   then do
 --     list2Value <- tags.list_2_value
 --     DecimalValue.valueFromString list2Value
@@ -323,8 +367,8 @@ buildDistanceToNearestDriver tagGroups = do
 
 getNightShiftStart :: OnSearch.TagGroups -> Maybe TimeOfDay
 getNightShiftStart tagGroups = do
-  tagValue <- getTag "fare_policy" "night_shift_start" tagGroups
-  -- tagGroup <- find (\tagGroup -> tagGroup.code == "fare_policy") tagGroups
+  tagValue <- getTag "rate_card" "night_shift_start" tagGroups
+  -- tagGroup <- find (\tagGroup -> tagGroup.code == "rate_card") tagGroups
   -- tag <- find (\tag -> tag.code == Just "night_shift_start") tagGroup.list
   -- tagValue <- tag.value
   readMaybe $ T.unpack tagValue
@@ -335,7 +379,7 @@ getNightShiftStart tagGroups = do
 -- tags = do
 --   code_1 <- tags.code_1
 --   list3Code <- tags.list_3_code
---   if list3Code == "night_shift_start" && code_1 == "fare_policy"
+--   if list3Code == "night_shift_start" && code_1 == "rate_card"
 --     then do
 --       list3Value <- tags.list_3_value
 --       readMaybe $ T.unpack list3Value
@@ -344,8 +388,8 @@ getNightShiftStart tagGroups = do
 
 getNightShiftEnd :: OnSearch.TagGroups -> Maybe TimeOfDay
 getNightShiftEnd tagGroups = do
-  tagValue <- getTag "fare_policy" "night_shift_end" tagGroups
-  -- tagGroup <- find (\tagGroup -> tagGroup.code == "fare_policy") tagGroups
+  tagValue <- getTag "rate_card" "night_shift_end" tagGroups
+  -- tagGroup <- find (\tagGroup -> tagGroup.code == "rate_card") tagGroups
   -- tag <- find (\tag -> tag.code == Just "night_shift_end") tagGroup.list
   -- tagValue <- tag.value
   readMaybe $ T.unpack tagValue
@@ -353,7 +397,7 @@ getNightShiftEnd tagGroups = do
 -- tags = do
 --   code_1 <- tags.code_1
 --   list5Code <- tags.list_5_code
---   if list5Code == "night_shift_start" && code_1 == "fare_policy"
+--   if list5Code == "night_shift_start" && code_1 == "rate_card"
 --     then do
 --       list5Value <- tags.list_5_value
 --       readMaybe $ T.unpack list5Value
