@@ -17,7 +17,10 @@ module Beckn.ACL.Search (buildRentalSearchReq, buildOneWaySearchReq) where
 
 import Beckn.ACL.Common (mkLocation)
 import qualified Beckn.Types.Core.Taxi.Search as Search
+import Data.Aeson (encode)
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as LT
+import qualified Data.Text.Lazy.Encoding as TE
 import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
 import qualified Domain.Action.UI.Search.Rental as DRentalSearch
@@ -77,12 +80,12 @@ buildSearchReq ::
   DM.Merchant ->
   Maybe [Maps.LatLong] ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin destination searchId _ distance duration customerLanguage merchant _ = do
+buildSearchReq origin destination searchId _ distance duration customerLanguage merchant mbPoints = do
   let transactionId = getId searchId
       messageId = transactionId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/cab/v1/" <> T.unpack merchant.id.getId)
   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.city merchant.country False
-  let intent = mkIntent origin destination customerLanguage distance duration
+  let intent = mkIntent origin destination customerLanguage distance duration mbPoints
   -- let mbRouteInfo = Search.RouteInfo {distance, duration, points}
   let searchMessage = Search.SearchMessage intent
 
@@ -94,8 +97,9 @@ mkIntent ::
   Maybe Maps.Language ->
   Maybe Meters ->
   Maybe Seconds ->
+  Maybe [Maps.LatLong] ->
   Search.Intent
-mkIntent origin destination customerLanguage distance duration = do
+mkIntent origin destination customerLanguage distance duration mbPoints = do
   let startLocation =
         Search.StartInfo
           { location = mkLocation origin
@@ -194,6 +198,12 @@ mkIntent origin destination customerLanguage distance duration = do
                   code = (\_ -> Just "duration_info_in_s") =<< duration,
                   name = (\_ -> Just "Duration Information In Seconds") =<< duration,
                   value = (\durationInS -> Just $ show durationInS.getSeconds) =<< duration
+                },
+              Search.Tag
+                { display = (\_ -> Just False) =<< mbPoints,
+                  code = (\_ -> Just "route_points") =<< mbPoints,
+                  name = (\_ -> Just "Route Points") =<< mbPoints,
+                  value = LT.toStrict . TE.decodeUtf8 . encode <$> mbPoints
                 }
             ]
         }

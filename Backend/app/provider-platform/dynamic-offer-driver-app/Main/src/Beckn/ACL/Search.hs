@@ -19,6 +19,9 @@ module Beckn.ACL.Search where
 import Beckn.ACL.Common (getTag)
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import qualified Beckn.Types.Core.Taxi.Search as Search
+-- import EulerHS.Prelude
+
+import Data.Aeson
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Search as DSearch
 import Kernel.External.Maps.Interface (LatLong (..))
@@ -29,6 +32,9 @@ import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
 import Tools.Error
+import qualified Tools.Maps as Maps
+
+-- import Data.ByteString.UTF8 as BS
 
 buildSearchReq ::
   (HasFlowEnv m r '["coreVersion" ::: Text]) =>
@@ -68,7 +74,7 @@ buildSearchReq subscriber req = do
         routeDistance = distance,
         routeDuration = duration,
         device = Nothing,
-        routePoints = Nothing, --------TODO------Take proper input---------
+        routePoints = buildRoutePoints =<< intent.fulfillment.tags, --------TODO------Take proper input---------
         customerLanguage = customerLanguage --intent.fulfillment.tags.customer_language
       }
 
@@ -124,6 +130,12 @@ buildCustomerLanguage Search.Customer {..} = do
   -- tagValue <- tag.value
   readMaybe $ T.unpack tagValue
 
+buildRoutePoints :: Search.TagGroups -> Maybe [Maps.LatLong]
+buildRoutePoints tagGroups = do
+  tagValue <- getTag "route_info" "route_points" tagGroups
+  decode $ encodeUtf8 tagValue
+
+-- route_points
 -- findTagGroup :: Text -> Search.TagGroups -> Maybe Search.TagGroup
 -- findTagGroup code (Search.TG tagGroups) = find (\tagGroup -> tagGroup.code == code) tagGroups
 
