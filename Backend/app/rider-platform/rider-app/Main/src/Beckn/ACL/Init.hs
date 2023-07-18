@@ -56,8 +56,9 @@ buildInitMessage res = do
     Init.InitMessage
       { order =
           Init.Order
-            { items = [mkOrderItem res.itemId],
+            { items = [mkOrderItem res.itemId mbBppFullfillmentId],
               quote = Nothing,
+              billing = mkBilling res.riderPhone res.riderName,
               fulfillment = mkFulfillmentInfo fulfillmentType mbBppFullfillmentId res.fromLoc res.toLoc res.maxEstimatedDistance vehicleVariant,
               payment = mkPayment res.paymentMethodInfo,
               provider = mkProvider mbDriverId
@@ -72,6 +73,9 @@ buildInitMessage res = do
       VehVar.TAXI -> Init.TAXI
       VehVar.TAXI_PLUS -> Init.TAXI_PLUS
 
+mkBilling :: Maybe Text -> Maybe Text -> Init.Billing
+mkBilling phone name = Init.Billing {..}
+
 mkProvider :: Maybe Text -> Maybe Init.Provider
 mkProvider driverId =
   driverId >>= \dId ->
@@ -80,11 +84,11 @@ mkProvider driverId =
         { id = dId
         }
 
-mkOrderItem :: Text -> Init.OrderItem
-mkOrderItem itemId =
+mkOrderItem :: Text -> Maybe Text -> Init.OrderItem
+mkOrderItem itemId mbBppFullfillmentId =
   Init.OrderItem
     { id = itemId,
-      price = Nothing
+      fulfillment_id = mbBppFullfillmentId
     }
 
 mkFulfillmentInfo :: Init.FulfillmentType -> Maybe Text -> DBL.BookingLocation -> Maybe DBL.BookingLocation -> Maybe HighPrecMeters -> Init.VehicleVariant -> Init.FulfillmentInfo
@@ -155,12 +159,11 @@ mkPayment :: Maybe DMPM.PaymentMethodInfo -> Init.Payment
 mkPayment (Just DMPM.PaymentMethodInfo {..}) =
   Init.Payment
     { _type = Common.castDPaymentType paymentType,
-      time = Init.TimeDuration "P2A", -- FIXME: what is this?
       params =
         Init.PaymentParams
           { collected_by = Common.castDPaymentCollector collectedBy,
             instrument = Just $ Common.castDPaymentInstrument paymentInstrument,
-            currency = Nothing,
+            currency = "INR",
             amount = Nothing
           },
       uri = Nothing
@@ -169,12 +172,11 @@ mkPayment (Just DMPM.PaymentMethodInfo {..}) =
 mkPayment Nothing =
   Init.Payment
     { _type = Init.ON_FULFILLMENT,
-      time = Init.TimeDuration "P2A", -- FIXME: what is this?
       params =
         Init.PaymentParams
           { collected_by = Init.BAP,
             instrument = Nothing,
-            currency = Nothing,
+            currency = "INR",
             amount = Nothing
           },
       uri = Nothing

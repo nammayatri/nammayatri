@@ -226,10 +226,15 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
                 },
             payment =
               Just
-                RideCompletedOU.Payment
-                  { collected_by = Common.castDPaymentCollector . (.collectedBy) <$> req.paymentMethodInfo,
-                    _type = Common.castDPaymentType . (.paymentType) <$> req.paymentMethodInfo,
-                    status = "ON-FULFILLMENT",
+                OnUpdate.Payment
+                  { _type = maybe OnUpdate.ON_FULFILLMENT (Common.castDPaymentType . (.paymentType)) req.paymentMethodInfo,
+                    params =
+                      OnUpdate.PaymentParams
+                        { collected_by = maybe OnUpdate.BPP (Common.castDPaymentCollector . (.collectedBy)) req.paymentMethodInfo,
+                          instrument = Nothing,
+                          currency = "INR",
+                          amount = Nothing
+                        },
                     uri = req.paymentUrl
                   },
             fulfillment = fulfillment

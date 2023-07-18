@@ -79,7 +79,7 @@ makeLocation DLoc.SearchReqLocation {..} =
     }
 
 mkItemId :: Text -> Variant.Variant -> Text
-mkItemId providerId variant = providerId <> " " <> show variant
+mkItemId providerId variant = providerId <> "_" <> show variant
 
 type TagGroupCode = Text
 

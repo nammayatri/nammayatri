@@ -15,7 +15,6 @@
 module Beckn.Types.Core.Taxi.Init.Order where
 
 import Beckn.Types.Core.Taxi.Common.Payment
-import Beckn.Types.Core.Taxi.Common.Price
 import Beckn.Types.Core.Taxi.Common.Provider
 import Beckn.Types.Core.Taxi.Common.Quote
 import Beckn.Types.Core.Taxi.Init.Fulfillment
@@ -28,6 +27,7 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 data Order = Order
   { items :: [OrderItem],
     fulfillment :: FulfillmentInfo,
+    billing :: Billing,
     payment :: Payment,
     quote :: Maybe Quote, -- TODO :: Remove Maybe
     provider :: Maybe Provider
@@ -45,7 +45,7 @@ instance ToJSON Order where
 
 data OrderItem = OrderItem
   { id :: Text,
-    price :: Maybe Price
+    fulfillment_id :: Maybe Text
   }
   deriving (Generic, Show)
 
@@ -56,4 +56,19 @@ instance FromJSON OrderItem where
   parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
 
 instance ToJSON OrderItem where
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+data Billing = Billing
+  { name :: Maybe Text,
+    phone :: Maybe Text
+  }
+  deriving (Generic, Show)
+
+instance ToSchema Billing where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON Billing where
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+instance ToJSON Billing where
   toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}

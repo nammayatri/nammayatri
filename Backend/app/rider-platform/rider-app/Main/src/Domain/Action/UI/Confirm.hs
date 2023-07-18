@@ -40,7 +40,8 @@ import qualified Tools.Notifications as Notify
 confirm ::
   ( EsqDBFlow m r,
     CacheFlow m r,
-    EventStreamFlow m r
+    EventStreamFlow m r,
+    EncFlow m r
   ) =>
   Id DP.Person ->
   Id DQuote.Quote ->

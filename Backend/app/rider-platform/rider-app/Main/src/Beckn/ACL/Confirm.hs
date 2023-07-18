@@ -110,14 +110,11 @@ mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountry
                   }
             },
       customer =
-        Confirm.OrderCustomer
+        Confirm.Customer
           { contact =
               Confirm.Contact
-                { phone =
-                    Confirm.Phone
-                      { country_code = riderPhoneCountryCode,
-                        number = riderPhoneNumber
-                      }
+                { phoneNumber = riderPhoneNumber,
+                  phoneCountryCode = riderPhoneCountryCode
                 },
             person =
               mbRiderName <&> \riderName ->
@@ -145,12 +142,11 @@ mkPayment :: Money -> Maybe Text -> Confirm.Payment
 mkPayment estimatedTotalFare uri =
   Confirm.Payment
     { _type = Confirm.ON_FULFILLMENT,
-      time = Confirm.TimeDuration "P2D",
       params =
         Confirm.PaymentParams
-          { collected_by = Confirm.BAP,
+          { collected_by = Confirm.BPP,
             instrument = Nothing,
-            currency = Just "INR",
+            currency = "INR",
             amount = Just $ realToFrac estimatedTotalFare
           },
       uri

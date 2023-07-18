@@ -266,7 +266,7 @@ sendDriverOffer transporter searchReq searchTry driverQuote = do
       logPretty DEBUG "on_select: quotes" quotes
       let transporterInfo =
             ACL.TransporterInfo
-              { subscriberId = org.subscriberId,
+              { merchantShortId = org.shortId,
                 name = org.name,
                 contacts = fromMaybe "" org.mobileNumber,
                 ridesInProgress = 0, -- FIXME

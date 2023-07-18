@@ -49,7 +49,8 @@ mkOnInitMessage res = do
                         },
                     descriptor =
                       OnInit.Descriptor
-                        { short_desc = itemId
+                        { short_desc = Just itemId,
+                          code = Nothing
                         }
                   }
               ],
@@ -120,11 +121,10 @@ mkOnInitMessage res = do
                     OnInit.PaymentParams
                       { collected_by = maybe OnInit.BPP (Common.castDPaymentCollector . (.collectedBy)) res.paymentMethodInfo,
                         instrument = Common.castDPaymentInstrument . (.paymentInstrument) <$> res.paymentMethodInfo,
-                        currency = Just currency,
+                        currency = currency,
                         amount = Just fareDecimalValue
                       },
                   _type = maybe OnInit.ON_FULFILLMENT (Common.castDPaymentType . (.paymentType)) res.paymentMethodInfo,
-                  time = OnInit.TimeDuration "FIXME",
                   uri = res.booking.paymentUrl
                 }
           }
@@ -139,8 +139,8 @@ mkOnInitMessage res = do
       VehVar.TAXI -> OnInit.TAXI
       VehVar.TAXI_PLUS -> OnInit.TAXI_PLUS
     buildFulfillmentType = \case
-      DRB.NormalBooking -> OnInit.RIDE_OTP
-      DRB.SpecialZoneBooking -> OnInit.RIDE
+      DRB.NormalBooking -> OnInit.RIDE
+      DRB.SpecialZoneBooking -> OnInit.RIDE_OTP
     filterRequiredBreakups fParamsType breakup = do
       case fParamsType of
         DFParams.Progressive ->

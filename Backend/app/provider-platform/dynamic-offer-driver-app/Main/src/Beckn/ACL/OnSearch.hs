@@ -464,11 +464,10 @@ mkPayment DMPM.PaymentMethodInfo {..} =
         OS.PaymentParams
           { collected_by = Common.castDPaymentCollector collectedBy,
             instrument = Just $ Common.castDPaymentInstrument paymentInstrument,
-            currency = Nothing,
+            currency = currency',
             amount = Nothing
           },
       _type = Common.castDPaymentType paymentType,
-      time = OS.TimeDuration "P2A",
       uri = Nothing
     }
 
