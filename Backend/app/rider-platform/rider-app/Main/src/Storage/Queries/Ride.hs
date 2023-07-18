@@ -206,6 +206,7 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
         &&. whenJust_ mbDriverPhone (\driverMobileNumber -> ride ^. Ride.RideDriverMobileNumber ==. val driverMobileNumber)
         &&. whenJust_ mbFrom (\defaultFrom -> ride ^. Ride.RideCreatedAt >=. val defaultFrom)
         &&. whenJust_ mbTo (\defaultTo -> ride ^. Ride.RideCreatedAt <=. val defaultTo)
+    orderBy [desc $ ride ^. Ride.RideCreatedAt]
     limit $ fromIntegral limitVal
     offset $ fromIntegral offsetVal
     return
@@ -259,3 +260,9 @@ findRiderIdByRideId rideId = findOne $ do
   where_ $
     ride ^. RideTId ==. val (toKey rideId)
   pure $ booking ^. BookingRiderId
+
+findRideByRideShortId :: Transactionable m => ShortId Ride -> m (Maybe Ride)
+findRideByRideShortId shortId = findOne $ do
+  res <- from $ table @RideT
+  where_ $ res ^. Ride.RideShortId ==. val shortId.getShortId
+  return res

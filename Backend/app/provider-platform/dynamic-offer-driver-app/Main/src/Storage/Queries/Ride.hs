@@ -430,3 +430,9 @@ findLastRideAssigned driverId = do
     orderBy [desc $ lastRide ^. RideCreatedAt]
     limit 1
     return lastRide
+
+findRideByRideShortId :: Transactionable m => ShortId Ride -> m (Maybe Ride)
+findRideByRideShortId shortId = Esq.findOne $ do
+  res <- from $ table @RideT
+  where_ $ res ^. Ride.RideShortId ==. val shortId.getShortId
+  return res

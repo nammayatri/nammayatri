@@ -46,11 +46,16 @@ type API =
            :<|> RideSyncAPI
            :<|> MultipleRideSyncAPI
            :<|> RideRouteAPI
+           :<|> TicketRideListAPI
        )
 
 type RideListAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'RIDE_LIST
     :> Common.RideListAPI
+
+type TicketRideListAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'TICKET_RIDE_LIST_API
+    :> Common.TicketRideListAPI
 
 type RideRouteAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'RIDE_ROUTE
@@ -105,6 +110,7 @@ handler merchantId =
     :<|> rideSync merchantId
     :<|> multipleRideSync merchantId
     :<|> rideRoute merchantId
+    :<|> ticketRideList merchantId
 
 buildTransaction ::
   ( MonadFlow m,
@@ -204,3 +210,10 @@ currentActiveRide :: ShortId DM.Merchant -> ApiTokenInfo -> Text -> FlowHandler 
 currentActiveRide merchantShortId apiTokenInfo vehichleNumber = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.rides.currentActiveRide) vehichleNumber
+
+ticketRideList :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.TicketRideListRes
+ticketRideList merchantShortId apiTokenInfo mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.TicketRideListEndpoint apiTokenInfo Nothing T.emptyRequest
+  T.withResponseTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.rides.ticketRideList) mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber
