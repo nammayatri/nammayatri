@@ -133,7 +133,7 @@ mkQuoteEntities start end provider estInfo = do
       variant = Common.castVariant estimate.vehicleVariant
       minPriceDecimalValue = OS.DecimalValue $ toRational estimate.minFare
       maxPriceDecimalValue = OS.DecimalValue $ toRational estimate.maxFare
-      estimateBreakupList = buildEstimateBreakUpList <$> estimate.estimateBreakupList
+      estimateBreakupList = buildEstimateBreakUpListTags <$> estimate.estimateBreakupList
       fulfillment =
         OS.FulfillmentInfo
           { start,
@@ -144,7 +144,7 @@ mkQuoteEntities start end provider estInfo = do
           }
       item =
         OS.Item
-          { id = Common.mkItemId provider.subscriberId.getShortId estimate.vehicleVariant,
+          { id = Common.mkItemId provider.shortId.getShortId estimate.vehicleVariant,
             -- category_id = autoOneWayCategory.id,
             fulfillment_id = fulfillment.id,
             -- offer_id = Nothing,
@@ -154,8 +154,8 @@ mkQuoteEntities start end provider estInfo = do
                   value = minPriceDecimalValue,
                   offered_value = minPriceDecimalValue,
                   minimum_value = minPriceDecimalValue,
-                  maximum_value = maxPriceDecimalValue,
-                  value_breakup = estimateBreakupList
+                  maximum_value = maxPriceDecimalValue
+                  -- value_breakup = estimateBreakupList
                 },
             -- descriptor =
             --   OS.ItemDescriptor
@@ -167,7 +167,8 @@ mkQuoteEntities start end provider estInfo = do
               Just $
                 OS.TG
                   [ mkGeneralInfoTag estimate,
-                    mkFarePolicyTag estimate
+                    mkFarePolicyTag estimateBreakupList,
+                    mkRateCardTag estimate
                   ]
                   -- OS.TagGroup
                   --   { code_1 = Just "fare_policy",
@@ -258,7 +259,7 @@ mkQuoteEntities start end provider estInfo = do
               name = "General Information",
               list =
                 [ OS.Tag
-                    { display = (\_ -> Just False) =<< specialLocationTag,
+                    { display = (\_ -> Just True) =<< specialLocationTag,
                       code = (\_ -> Just "special_location_tag") =<< specialLocationTag,
                       name = (\_ -> Just "Special Location Tag") =<< specialLocationTag,
                       value = specialLocationTag
@@ -271,7 +272,28 @@ mkQuoteEntities start end provider estInfo = do
                     }
                 ]
             }
-    mkFarePolicyTag estimate =
+    mkFarePolicyTag estimateBreakupList =
+      -- let specialLocationTag = estimate.specialLocationTag
+      OS.TagGroup
+        { display = False,
+          code = "fare_breakup",
+          name = "Fare Breakup",
+          list = estimateBreakupList
+          -- [ OS.Tag
+          --     { display = (\_ -> Just True) =<< specialLocationTag,
+          --       code = (\_ -> Just "special_location_tag") =<< specialLocationTag,
+          --       name = (\_ -> Just "Special Location Tag") =<< specialLocationTag,
+          --       value = specialLocationTag
+          --     },
+          --   OS.Tag
+          --     { display = Just False,
+          --       code = Just "distance_to_nearest_driver",
+          --       name = Just "Distance To Nearest Driver",
+          --       value = Just $ show . double2Int . realToFrac $ estInfo.distanceToNearestDriver
+          --     }
+          -- ]
+        }
+    mkRateCardTag estimate =
       let nightShiftCharges = (estimate.nightShiftInfo <&> (.nightShiftCharge))
           oldNightShiftCharges = (OS.DecimalValue . toRational <$> (estimate.nightShiftInfo <&> (.oldNightShiftCharge)))
           nightShiftStart = (estimate.nightShiftInfo <&> (.nightShiftStart))
@@ -279,8 +301,8 @@ mkQuoteEntities start end provider estInfo = do
           nightShiftEnd = (estimate.nightShiftInfo <&> (.nightShiftEnd))
        in OS.TagGroup
             { display = False,
-              code = "fare_policy",
-              name = "Fare Policy",
+              code = "rate_card",
+              name = "Rate Card",
               list =
                 [ OS.Tag
                     { display = (\_ -> Just False) =<< nightShiftCharges,
@@ -329,7 +351,7 @@ mkQuoteEntitiesSpecialZone start end provider it = do
           }
       item =
         OS.Item
-          { id = Common.mkItemId provider.subscriberId.getShortId it.vehicleVariant,
+          { id = Common.mkItemId provider.shortId.getShortId it.vehicleVariant,
             -- category_id = oneWaySpecialZoneCategory.id,
             fulfillment_id = fulfillment.id,
             -- offer_id = Nothing,
@@ -339,8 +361,8 @@ mkQuoteEntitiesSpecialZone start end provider it = do
                   value = estimatedFare,
                   offered_value = estimatedFare,
                   minimum_value = estimatedFare,
-                  maximum_value = estimatedFare,
-                  value_breakup = []
+                  maximum_value = estimatedFare
+                  -- value_breakup = []
                 },
             -- descriptor =
             --   OS.ItemDescriptor
@@ -394,7 +416,7 @@ mkQuoteEntitiesSpecialZone start end provider it = do
           name = "General Information",
           list =
             [ OS.Tag
-                { display = (\_ -> Just False) =<< specialLocationTag,
+                { display = (\_ -> Just True) =<< specialLocationTag,
                   code = (\_ -> Just "special_location_tag") =<< specialLocationTag,
                   name = (\_ -> Just "Special Location Tag") =<< specialLocationTag,
                   value = specialLocationTag
@@ -414,6 +436,26 @@ buildEstimateBreakUpList DEst.EstimateBreakup {..} = do
             value = realToFrac price.value
           }
     }
+
+buildEstimateBreakUpListTags ::
+  DEst.EstimateBreakup ->
+  OS.Tag
+buildEstimateBreakUpListTags DEst.EstimateBreakup {..} = do
+  OS.Tag
+    { -- { title = title,
+      --   price =
+      --     BreakupPrice
+      --       { currency = price.currency,
+      --         value = realToFrac price.value
+      --       }
+      -- }
+      display = Just False,
+      code = Just title,
+      name = Just title,
+      value = Just $ show price.value.getMoney
+    }
+
+-- buildCurrenyTag ::
 
 mkPayment :: DMPM.PaymentMethodInfo -> OS.Payment
 mkPayment DMPM.PaymentMethodInfo {..} =
