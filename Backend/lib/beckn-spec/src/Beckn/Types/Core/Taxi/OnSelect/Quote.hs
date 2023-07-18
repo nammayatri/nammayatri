@@ -23,6 +23,7 @@ import Beckn.Types.Core.Taxi.OnSelect.Price as Reexport
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude
+import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Quote = Quote
@@ -30,7 +31,13 @@ data Quote = Quote
     ttl :: Maybe Text,
     breakup :: Maybe [PriceBreakup]
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show)
 
 instance ToSchema Quote where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON Quote where
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+instance ToJSON Quote where
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}

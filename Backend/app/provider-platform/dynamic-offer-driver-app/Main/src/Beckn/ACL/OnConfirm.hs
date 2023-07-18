@@ -158,7 +158,7 @@ mkFulfillmentInfo fromLoc toLoc fulfillmentId fulfillmentType driverName riderPh
             OnConfirm.Agent
               { name = dName,
                 rateable = True,
-                tags = OnConfirm.TG [],
+                tags = Nothing,
                 phone = Nothing
               }
     }

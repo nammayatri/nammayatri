@@ -99,7 +99,7 @@ mkFullfillment ::
   DRide.Ride ->
   DRB.Booking ->
   Maybe SVeh.Vehicle ->
-  Tags.TagGroups ->
+  Maybe Tags.TagGroups ->
   m RideFulfillment.FulfillmentInfo
 mkFullfillment mbDriver ride booking mbVehicle tags = do
   agent <-
@@ -122,7 +122,7 @@ mkFullfillment mbDriver ride booking mbVehicle tags = do
           { name = name,
             rateable = True,
             phone = Just mobileNumber,
-            tags = Tags.TG agentTags
+            tags = Just $ Tags.TG agentTags
           }
   let veh =
         mbVehicle <&> \vehicle ->
@@ -132,16 +132,20 @@ mkFullfillment mbDriver ride booking mbVehicle tags = do
               color = vehicle.color,
               registration = vehicle.registrationNo
             }
+  let authorization =
+        RideAssignedOU.Authorization
+          { _type = "OTP",
+            token = ride.otp
+          }
   pure $
     RideAssignedOU.FulfillmentInfo
       { id = ride.id.getId,
         start =
           RideAssignedOU.StartInfo
             { authorization =
-                RideAssignedOU.Authorization
-                  { _type = "OTP",
-                    token = ride.otp
-                  },
+                case booking.bookingType of
+                  DRB.SpecialZoneBooking -> Just authorization
+                  DRB.NormalBooking -> Just authorization, -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
               location =
                 RideAssignedOU.Location
                   { gps = RideAssignedOU.Gps {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
@@ -155,7 +159,7 @@ mkFullfillment mbDriver ride booking mbVehicle tags = do
                   }
             },
         agent,
-        _type = RideAssignedOU.RIDE,
+        _type = if booking.bookingType == DRB.NormalBooking then RideAssignedOU.RIDE else RideAssignedOU.RIDE_OTP,
         vehicle = veh,
         ..
       }
@@ -165,18 +169,18 @@ buildOnUpdateMessage ::
   OnUpdateBuildReq ->
   m OnUpdate.OnUpdateMessage
 buildOnUpdateMessage RideAssignedBuildReq {..} = do
-  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) (Tags.TG [])
+  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) Nothing
   return $
     OnUpdate.OnUpdateMessage $
       OnUpdate.RideAssigned
         RideAssignedOU.RideAssignedEvent
           { id = booking.id.getId,
             state = "ACTIVE",
-            update_target = "order.fufillment.state.code, order.fulfillment.start.authorization, order.fulfillment.agent, order.fulfillment.vehicle",
+            update_target = "order.fufillment.state.code, order.fulfillment.agent, order.fulfillment.vehicle" <> if booking.bookingType == DRB.SpecialZoneBooking then ", order.fulfillment.start.authorization" else ", order.fulfillment.start.authorization", -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
             ..
           }
 buildOnUpdateMessage RideStartedBuildReq {..} = do
-  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) (Tags.TG [])
+  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) Nothing
   return $
     OnUpdate.OnUpdateMessage $
       OnUpdate.RideStarted
@@ -201,7 +205,7 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
                 ]
             }
         ]
-  fulfillment <- mkFullfillment (Just req.driver) req.ride req.booking (Just req.vehicle) (Tags.TG tagGroups)
+  fulfillment <- mkFullfillment (Just req.driver) req.ride req.booking (Just req.vehicle) (Just $ Tags.TG tagGroups)
   fare <- realToFrac <$> req.ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
   let currency = "INR"
       price =
@@ -278,7 +282,7 @@ buildOnUpdateMessage DriverArrivedBuildReq {..} = do
               list = [Tags.Tag (Just False) (Just "arrival_time") (Just "Chargeable Distance") (show <$> arrivalTime) | isJust arrivalTime]
             }
         ]
-  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) (Tags.TG tagGroups)
+  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) (Just $ Tags.TG tagGroups)
   return $
     OnUpdate.OnUpdateMessage $
       OnUpdate.DriverArrived
@@ -296,7 +300,7 @@ buildOnUpdateMessage EstimateRepetitionBuildReq {..} = do
               list = [Tags.Tag (Just False) (Just "cancellation_reason") (Just "Chargeable Distance") (Just . show $ castCancellationSource cancellationSource)]
             }
         ]
-  fulfillment <- mkFullfillment Nothing ride booking Nothing (Tags.TG tagGroups)
+  fulfillment <- mkFullfillment Nothing ride booking Nothing (Just $ Tags.TG tagGroups)
   let item = EstimateRepetitionOU.Item {id = estimateId.getId}
   return $
     OnUpdate.OnUpdateMessage $
@@ -316,7 +320,7 @@ buildOnUpdateMessage NewMessageBuildReq {..} = do
               list = [Tags.Tag (Just False) (Just "message") (Just "New Message") (Just message)]
             }
         ]
-  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) (Tags.TG tagGroups)
+  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) (Just $ Tags.TG tagGroups)
   return $
     OnUpdate.OnUpdateMessage $
       OnUpdate.NewMessage
