@@ -82,8 +82,8 @@ data ItemPrice = ItemPrice
     value :: DecimalValue,
     offered_value :: DecimalValue,
     minimum_value :: DecimalValue,
-    maximum_value :: DecimalValue,
-    value_breakup :: [BreakupItem]
+    maximum_value :: DecimalValue
+    -- value_breakup :: [BreakupItem]
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
