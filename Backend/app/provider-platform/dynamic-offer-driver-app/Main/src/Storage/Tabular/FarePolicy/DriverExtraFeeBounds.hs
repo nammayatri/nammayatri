@@ -38,6 +38,7 @@ mkPersist
       startDistance Meters
       minFee Money
       maxFee Money
+      incFactor Money
       deriving Generic
     |]
 

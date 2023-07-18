@@ -612,7 +612,8 @@ createFPDriverExtraFee _ farePolicyId startDistance req = do
             DFPEFB.DriverExtraFeeBounds
               { startDistance = strtDistance,
                 minFee = request.minFee,
-                maxFee = request.maxFee
+                maxFee = request.maxFee,
+                incFactor = request.incFactor
               }
       return (fpId, driverExtraFeeBounds)
 
@@ -620,6 +621,6 @@ createFPDriverExtraFee _ farePolicyId startDistance req = do
 updateFPDriverExtraFee :: ShortId DM.Merchant -> Id FarePolicy.FarePolicy -> Meters -> Common.CreateFPDriverExtraFeeReq -> Flow APISuccess
 updateFPDriverExtraFee _ farePolicyId startDistance req = do
   _ <- QFPEFB.findByFarePolicyIdAndStartDistance farePolicyId startDistance >>= fromMaybeM (InvalidRequest "Fare Policy with given id and startDistance not found")
-  Esq.runTransaction $ QFPEFB.update farePolicyId startDistance req.minFee req.maxFee
+  Esq.runTransaction $ QFPEFB.update farePolicyId startDistance req.minFee req.maxFee req.incFactor
   CQFP.clearCacheById farePolicyId
   pure Success

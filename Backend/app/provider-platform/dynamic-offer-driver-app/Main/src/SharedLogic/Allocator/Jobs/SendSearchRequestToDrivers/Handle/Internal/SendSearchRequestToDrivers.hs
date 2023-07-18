@@ -128,6 +128,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
                 response = Nothing,
                 driverMinExtraFee = driverExtraFeeBounds <&> (.minFee),
                 driverMaxExtraFee = driverExtraFeeBounds <&> (.maxFee),
+                incFactor = driverExtraFeeBounds <&> (.incFactor),
                 rideRequestPopupDelayDuration = dpwRes.intelligentScores.rideRequestPopupDelayDuration,
                 isPartOfIntelligentPool = dpwRes.isPartOfIntelligentPool,
                 acceptanceRatio = dpwRes.intelligentScores.acceptanceRatio,

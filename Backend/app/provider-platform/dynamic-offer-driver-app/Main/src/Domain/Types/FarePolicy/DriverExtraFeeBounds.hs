@@ -22,7 +22,8 @@ import Kernel.Types.Common
 data DriverExtraFeeBounds = DriverExtraFeeBounds
   { startDistance :: Meters,
     minFee :: Money,
-    maxFee :: Money
+    maxFee :: Money,
+    incFactor :: Money
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 

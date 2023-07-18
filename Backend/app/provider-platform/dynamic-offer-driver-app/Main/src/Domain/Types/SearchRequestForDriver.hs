@@ -60,6 +60,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     response :: Maybe SearchRequestForDriverResponse,
     driverMinExtraFee :: Maybe Money,
     driverMaxExtraFee :: Maybe Money,
+    incFactor :: Maybe Money,
     rideRequestPopupDelayDuration :: Seconds,
     isPartOfIntelligentPool :: Bool,
     cancellationRatio :: Maybe Double,
@@ -89,6 +90,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     driverLatLong :: LatLong,
     driverMinExtraFee :: Maybe Money,
     driverMaxExtraFee :: Maybe Money,
+    incFactor :: Maybe Money,
     rideRequestPopupDelayDuration :: Seconds,
     specialLocationTag :: Maybe Text,
     keepHiddenForSeconds :: Seconds
@@ -118,6 +120,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           },
       driverMinExtraFee = nearbyReq.driverMinExtraFee,
       driverMaxExtraFee = nearbyReq.driverMaxExtraFee,
+      incFactor = nearbyReq.incFactor,
       rideRequestPopupDelayDuration = delayDuration,
       specialLocationTag = searchRequest.specialLocationTag,
       keepHiddenForSeconds = keepHiddenForSeconds

@@ -35,6 +35,8 @@ import Storage.Tabular.SearchRequest (SearchRequestTId)
 import Storage.Tabular.SearchTry (SearchTryTId)
 import Storage.Tabular.Vehicle ()
 
+-- import Dashboard.ProviderPlatform.Merchant (CreateFPDriverExtraFeeReq(incFactor))
+
 derivePersistField "Domain.DriverSearchRequestStatus"
 derivePersistField "Domain.SearchRequestForDriverResponse"
 
@@ -60,6 +62,7 @@ mkPersist
       response Domain.SearchRequestForDriverResponse Maybe
       driverMinExtraFee Money Maybe
       driverMaxExtraFee Money Maybe
+      incFactor Money Maybe
       rideRequestPopupDelayDuration Seconds
       isPartOfIntelligentPool Bool
       cancellationRatio Double Maybe
