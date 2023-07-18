@@ -499,7 +499,8 @@ public class LocationUpdateService extends Service {
                 if (resultIndex == -1) {
                     devCount = devCount + 1;
                     updateStorage("RIDE_WAYPOINT_DEVIATION_COUNT", String.valueOf(devCount));
-                    Log.d("ride deviation count" , String.valueOf(devCount));
+                    Integer storage_dev_count = Integer.parseInt(getValueFromStorage("RIDE_WAYPOINT_DEVIATION_COUNT"));
+                    Log.d("ride deviation count" , String.valueOf(storage_dev_count));
                 }
                 else {
                     updateStorage("RIDE_WAYPOINT_DEVIATION_COUNT", String.valueOf(0));
@@ -520,6 +521,7 @@ public class LocationUpdateService extends Service {
 
             if (localStage.equals("RideStarted")) {
                 if (rideWaypoints == null) {
+                    updateStorage("RIDE_WAYPOINT_DEVIATION_COUNT", String.valueOf(0));
                     ExecutorService executor1 = Executors.newSingleThreadExecutor();
                     executor1.execute(() -> {
                         try {
