@@ -36,6 +36,7 @@ type API =
            :<|> Common.RideInfoAPI
            :<|> MultipleRideCancelAPI
            :<|> Common.MultipleRideSyncAPI
+           :<|> Common.TicketRideListAPI
        )
 
 type ShareRideInfoAPI = Common.ShareRideInfoAPI
@@ -53,6 +54,7 @@ handler merchantId =
     :<|> callRideInfo merchantId
     :<|> multipleRideCancel -- FIXME merchantId ?
     :<|> multipleRideSync merchantId
+    :<|> ticketRideList merchantId
 
 shareRideInfo ::
   ShortId DM.Merchant ->
@@ -102,3 +104,6 @@ multipleRideSync merchantShortId req = withFlowHandlerAPI $ do
       pure Common.SuccessItem
     pure $ Common.MultipleRideSyncRespItem {rideId = reqItem.rideId, info}
   pure $ Common.MultipleRideSyncResp {list = respItems}
+
+ticketRideList :: ShortId DM.Merchant -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.TicketRideListRes
+ticketRideList merchantShortId mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber = withFlowHandlerAPI $ DRide.ticketRideList merchantShortId mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber

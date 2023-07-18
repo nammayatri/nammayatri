@@ -529,6 +529,9 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
 --     ride ^. RideTId ==. val (toKey rideId)
 --   pure $ booking ^. BookingRiderId
 
+findRideByRideShortId :: MonadFlow m => ShortId Ride -> m (Maybe Ride)
+findRideByRideShortId (ShortId shortId) = findOneWithKV [Se.Is BeamR.shortId $ Se.Eq shortId]
+
 instance FromTType' BeamR.Ride Ride where
   fromTType' BeamR.RideT {..} = do
     tUrl <- parseBaseUrl `mapM` trackingUrl

@@ -29,6 +29,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Kernel.External.Maps
 import qualified Kernel.External.Maps as Maps
+import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Centesimal
@@ -229,3 +230,42 @@ instance HideSecrets MultipleRideSyncReq where
 validateMultipleRideSyncReq :: Validate MultipleRideSyncReq
 validateMultipleRideSyncReq MultipleRideSyncReq {..} = do
   validateField "rides" rides $ UniqueField @"rideId"
+
+---------------------------------------------------------
+-- Ticket Ride List--------------------------------------
+
+type TicketRideListAPI =
+  "kapture"
+    :> "list"
+    :> QueryParam "rideShortId" (ShortId Ride)
+    :> QueryParam "countryCode" Text
+    :> QueryParam "phoneNumber" Text
+    :> QueryParam "supportPhoneNumber" Text
+    :> Get '[JSON] TicketRideListRes
+
+newtype TicketRideListRes = TicketRideListRes
+  { rides :: [RideInfo]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets TicketRideListRes where
+  hideSecrets = identity
+
+data RideInfo = RideInfo
+  { rideShortId :: ShortId Ride,
+    customerName :: Maybe Text,
+    customerPhoneNo :: Maybe Text,
+    driverName :: Text,
+    driverPhoneNo :: Maybe Text,
+    vehicleNo :: Text,
+    status :: BookingStatus,
+    rideCreatedAt :: UTCTime,
+    pickupLocation :: BookingLocation,
+    dropLocation :: Maybe BookingLocation,
+    fare :: Maybe Money,
+    personId :: Id Customer,
+    classification :: Ticket.Classification
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
