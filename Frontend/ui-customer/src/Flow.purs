@@ -458,7 +458,8 @@ enterMobileNumberScreenFlow = do
     GoToAccountSetUp state -> do
             void $ lift $ lift $ loaderText (getString VERIFYING_OTP) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)  -- TODO : Handlde Loader in IOS Side
             void $ lift $ lift $ toggleLoader true
-            (resp) <- lift $ lift $  Remote.verifyToken (Remote.makeVerifyOTPReq state.data.otp) state.data.tokenId
+            id <- (getDeviceUUID "generated_")
+            (resp) <- lift $ lift $  Remote.verifyToken (Remote.makeVerifyOTPReq state.data.otp id) state.data.tokenId
             case resp of
               Right resp -> do
                     _ <- pure $ firebaseLogEvent "ny_user_verify_otp"
@@ -502,6 +503,15 @@ enterMobileNumberScreenFlow = do
             modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen { data {timer = 30 }, props {enterOTP = false,resendEnable = false}})
             enterMobileNumberScreenFlow
     GoToWelcomeScreen state -> welcomeScreenFlow
+
+getDeviceUUID :: String -> FlowBT String String  
+getDeviceUUID prefix = 
+    if ( getValueToLocalStore DEVICE_UUID == "__failed" || getValueToLocalStore DEVICE_UUID == "NULL") 
+        then do
+            let id = prefix <> (generateSessionId unit)
+            setValueToLocalStore DEVICE_UUID id 
+            pure id
+        else pure $ getValueToLocalStore DEVICE_UUID 
 
 welcomeScreenFlow :: FlowBT String Unit
 welcomeScreenFlow = do

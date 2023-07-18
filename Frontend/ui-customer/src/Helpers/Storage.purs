@@ -75,6 +75,7 @@ data KeyStore
   | PERMISSION_POPUP_TIRGGERED
   | TIP_VIEW_DATA
   | FARE_ESTIMATE_DATA
+  | DEVICE_UUID
 
 derive instance genericKeyStore :: Generic KeyStore _
 
