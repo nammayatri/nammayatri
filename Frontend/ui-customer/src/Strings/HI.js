@@ -420,7 +420,7 @@ const hindiStrings = {
   "NO_DONT": "नहीं",
   "YES_CANCEL_SEARCH": "हाँ, खोज रद्द करें",
   "TRY_LOOKING_FOR_RIDES_AGAIN": "ऐसा लगता है कि यह बहुत ही व्यस्त दिन है। आप फिर से राइड खोजने की कोशिश कर सकते हैं",
-  "NO_TIP": "0 टिप",
+  "NO_TIP": "₹0 टिप",
   "CUSTOMER_SELECTED_FARE": "ग्राहक टिप^",
   "CUSTOMER_TIP_DESCRIPTION": "^राइड मिलने की संभावना बढ़ाने के लिए ग्राहक द्वारा जोड़ी गई अतिरिक्त राशि।",
   "PLACE_CALL": "फोन करें",

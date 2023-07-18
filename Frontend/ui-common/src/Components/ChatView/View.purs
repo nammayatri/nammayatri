@@ -187,7 +187,7 @@ chatView config push =
   , weight 1.0
   , orientation VERTICAL
   ] ([ scrollView
-      [ height if config.spanParent then MATCH_PARENT else if (os == "IOS" && (length config.messages == 1)) then (V (((screenHeight unit)-188)-(safeMarginTop + 32) - length config.suggestionsList * 52)) else WRAP_CONTENT
+      [ height MATCH_PARENT
       , width MATCH_PARENT
       , id (getNewIDWithTag "ChatScrollView")
       , adjustViewWithKeyboard "true"

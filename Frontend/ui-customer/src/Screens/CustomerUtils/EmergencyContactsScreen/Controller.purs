@@ -101,8 +101,8 @@ data ScreenOutput = GoToHomeScreen
 eval :: Action -> EmergencyContactsScreenState -> Eval Action ScreenOutput EmergencyContactsScreenState
 eval (PrimaryButtonActionControll PrimaryButton.OnClick) state = continueWithCmd state
       [do
-        _ <- pure $ setRefreshing "2000040" false
-        pure $ setEnabled "2000040" false
+        _ <- pure $ setRefreshing (getNewIDWithTag "EmergencyContactTag")false
+        pure $ setEnabled (getNewIDWithTag "EmergencyContactTag") false
         _ <- launchAff $ flowRunner defaultGlobalState $ do
                 _ <- loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
                 _ <- toggleLoader true
