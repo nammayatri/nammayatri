@@ -14,14 +14,23 @@
 
 module Beckn.Types.Core.Taxi.Common.Descriptor where
 
+import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (exp, id)
+import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
-newtype Descriptor = Descriptor
-  { short_desc :: Text
+data Descriptor = Descriptor
+  { short_desc :: Maybe Text,
+    code :: Maybe Text
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, Show)
 
 instance ToSchema Descriptor where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON Descriptor where
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+instance ToJSON Descriptor where
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}

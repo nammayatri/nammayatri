@@ -32,7 +32,6 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 data Payment = Payment
   { params :: PaymentParams,
     _type :: PaymentType,
-    time :: TimeDuration,
     uri :: Maybe Text
   }
   deriving (Generic, Show, ToSchema)
@@ -45,8 +44,8 @@ instance ToJSON Payment where
 
 data PaymentParams = PaymentParams
   { collected_by :: PaymentCollector,
+    currency :: Text,
     instrument :: Maybe PaymentInstrument,
-    currency :: Maybe Text,
     amount :: Maybe DecimalValue
   }
   deriving (Generic, Show)

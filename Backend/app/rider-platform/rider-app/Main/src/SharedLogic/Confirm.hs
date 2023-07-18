@@ -27,6 +27,7 @@ import Domain.Types.RentalSlab
 import qualified Domain.Types.SearchRequest as DSReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DSRLoc
 import Domain.Types.VehicleVariant (VehicleVariant)
+import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
 import qualified Kernel.Storage.Esqueleto as DB
@@ -41,6 +42,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSReq
 import Tools.Error
@@ -61,6 +63,8 @@ data DConfirmRes = DConfirmRes
     vehicleVariant :: VehicleVariant,
     quoteDetails :: ConfirmQuoteDetails,
     booking :: DRB.Booking,
+    riderPhone :: Maybe Text,
+    riderName :: Maybe Text,
     searchRequestId :: Id DSReq.SearchRequest,
     merchant :: DM.Merchant,
     maxEstimatedDistance :: Maybe HighPrecMeters,
@@ -78,7 +82,8 @@ data ConfirmQuoteDetails
 confirm ::
   ( EsqDBFlow m r,
     CacheFlow m r,
-    EventStreamFlow m r
+    EventStreamFlow m r,
+    EncFlow m r
   ) =>
   DConfirmReq ->
   m DConfirmRes
@@ -107,6 +112,9 @@ confirm DConfirmReq {..} = do
   mbBToLocation <- traverse (buildBookingLocation now) mbToLocation
   exophone <- findRandomExophone searchRequest.merchantId
   booking <- buildBooking searchRequest quote bFromLocation mbBToLocation exophone now Nothing paymentMethodId driverId
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  riderPhone <- mapM decrypt person.mobileNumber
+  let riderName = person.firstName
   triggerBookingCreatedEvent BookingEventData {booking = booking}
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   details <- mkConfirmQuoteDetails quote.quoteDetails
