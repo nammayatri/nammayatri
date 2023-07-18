@@ -259,7 +259,6 @@ public class RideRequestActivity extends AppCompatActivity {
                     startTimer();
                 }
                 SharedPreferences sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                int negotiationUnit = Integer.parseInt(sharedPref.getString("NEGOTIATION_UNIT", "10"));
                 SheetModel sheetModel = new SheetModel((df.format(distanceToPickup/1000)),
                         (df.format(distanceTobeCovered/1000)),
                         rideRequestBundle.getString(getResources().getString(R.string.ADDRESS_PICKUP)),
@@ -273,7 +272,7 @@ public class RideRequestActivity extends AppCompatActivity {
                         rideRequestBundle.getInt("driverMinExtraFee"),
                         rideRequestBundle.getInt("driverMaxExtraFee"),
                         rideRequestBundle.getInt("rideRequestPopupDelayDuration"),
-                        negotiationUnit,
+                        rideRequestBundle.getInt("negotiationUnit"),
                         rideRequestBundle.getInt("customerTip"),
                         rideRequestBundle.getString("specialLocationTag"),
                         rideRequestBundle.getString("sourcePinCode"),

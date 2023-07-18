@@ -227,6 +227,7 @@ public class NotificationUtils extends AppCompatActivity {
                     sheetData.putString("addressDrop", addressDrop.getString("full_address"));
                     sheetData.putInt("driverMinExtraFee", entity_payload.has("driverMinExtraFee")?entity_payload.getInt("driverMinExtraFee"):10);
                     sheetData.putInt("driverMaxExtraFee", entity_payload.has("driverMaxExtraFee")?entity_payload.getInt("driverMaxExtraFee"):20);
+                    sheetData.putInt("negotiationUnit", entity_payload.has("incFactor")?entity_payload.getInt("incFactor") : Integer.parseInt(sharedPref.getString("NEGOTIATION_UNIT", "10")));
                     sheetData.putString("specialLocationTag", entity_payload.has("specialLocationTag")?entity_payload.getString("specialLocationTag"):null);//null "SureAirport - Pickup"
                     sheetData.putInt("rideRequestPopupDelayDuration",entity_payload.has("rideRequestPopupDelayDuration")?entity_payload.getInt("rideRequestPopupDelayDuration"):0);
                     sheetData.putInt("customerExtraFee",(entity_payload.has("customerExtraFee") && !entity_payload.isNull("customerExtraFee") ? entity_payload.getInt("customerExtraFee") : 0));
