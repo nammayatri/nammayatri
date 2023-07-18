@@ -11,6 +11,7 @@ let esqDBCfg =
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
       , connectSchemaName = "atlas_driver_offer_bpp"
+      , connectionPoolSize = 10
       }
 
 let esqDBReplicaCfg =
@@ -20,6 +21,7 @@ let esqDBReplicaCfg =
       , connectPassword = esqDBCfg.connectPassword
       , connectDatabase = esqDBCfg.connectDatabase
       , connectSchemaName = esqDBCfg.connectSchemaName
+      , connectionPoolSize = 10
       }
 
 let esqLocationDBCfg =
@@ -29,6 +31,7 @@ let esqLocationDBCfg =
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev_loc"
       , connectSchemaName = "atlas_person_location"
+      , connectionPoolSize = 10
       }
 
 let esqLocationDBRepCfg =
@@ -38,6 +41,7 @@ let esqLocationDBRepCfg =
       , connectPassword = esqLocationDBCfg.connectPassword
       , connectDatabase = esqLocationDBCfg.connectDatabase
       , connectSchemaName = esqLocationDBCfg.connectSchemaName
+      , connectionPoolSize = 10
       }
 
 let clickhouseCfg =

@@ -53,7 +53,8 @@ defaultConfig =
             connectUser = "atlas_scheduler_example_user",
             connectPassword = "atlas",
             connectDatabase = "atlas_dev",
-            connectSchemaName = "atlas_scheduler_example"
+            connectSchemaName = "atlas_scheduler_example",
+            connectionPoolSize = 10
           },
       port = 8050,
       loggerConfig =
