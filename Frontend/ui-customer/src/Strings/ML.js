@@ -515,6 +515,6 @@ const malayalamStrings = {
   "CGST" : "CGST",
   "OTP_EXPIRED" : "OTP കാലഹരണപ്പെട്ടു",
   "OTP_EXPIRED_DESCRIPTION" : "നിങ്ങളുടെ റൈഡ് OTP കാലഹരണപ്പെട്ടു. ഒരു സവാരി ലഭിക്കാൻ ദയവായി വീണ്ടും ബുക്ക് ചെയ്യുക",
-  "PLATFORM_GST" : "പ്ലാറ്റ്ഫോം ജി.എസ്.ടി (18%)",
+  "PLATFORM_GST" : "നികുതികൾ (ജിഎസ്ടി)",
   "MISC_WAITING_CHARGE" : "മറ്റ്. (വെയിറ്റിംഗ് ചാർജുകൾ ഉൾപ്പെടെ)"
 }

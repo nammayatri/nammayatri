@@ -518,6 +518,6 @@ const bengaliStrings = {
   "SGST" : "এসজিএসটি",
   "OTP_EXPIRED" : "OTP মেয়াদ শেষ",
   "OTP_EXPIRED_DESCRIPTION" : "আপনার রাইডের OTP মেয়াদ শেষ হয়ে গেছে। একটি রাইড পেতে আবার বুক করুন",
-  "PLATFORM_GST": "প্ল্যাটফর্ম জিএসটি (18%)",
+  "PLATFORM_GST": "কর (GST)",
   "MISC_WAITING_CHARGE": "বিবিধ (ওয়েটিং চার্জ সহ)"
 }

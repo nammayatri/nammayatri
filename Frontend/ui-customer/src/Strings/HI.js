@@ -524,6 +524,6 @@ const hindiStrings = {
   "SGST" : "एसजीएसटी",
   "OTP_EXPIRED" : "ओटीपी समाप्त हो गया",
   "OTP_EXPIRED_DESCRIPTION" : "आपकी सवारी ओटीपी समाप्त हो गई है। सवारी पाने के लिए कृपया दोबारा बुकिंग करें",
-  "PLATFORM_GST" : "प्लेटफार्म जीएसटी (18%)",
+  "PLATFORM_GST" : "कर (जीएसटी)",
   "MISC_WAITING_CHARGE" : "विविध (प्रतीक्षा शुल्क सहित)"
 }
