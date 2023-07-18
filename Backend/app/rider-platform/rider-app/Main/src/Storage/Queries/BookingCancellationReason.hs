@@ -41,8 +41,10 @@ create bookingCancellationReason = do
 --     return rideBookingCancellationReason
 
 findByRideBookingId :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe BookingCancellationReason)
-findByRideBookingId (Id bookingId) = do
-  findOneWithKV [Se.Is BeamBCR.bookingId $ Se.Eq bookingId]
+findByRideBookingId (Id bookingId) = findOneWithKV [Se.Is BeamBCR.bookingId $ Se.Eq bookingId]
+
+findByRideBookingIdInReplica :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe BookingCancellationReason)
+findByRideBookingIdInReplica (Id bookingId) = findOneWithKvInReplica [Se.Is BeamBCR.bookingId $ Se.Eq bookingId]
 
 -- upsert :: BookingCancellationReason -> SqlDB ()
 -- upsert cancellationReason =

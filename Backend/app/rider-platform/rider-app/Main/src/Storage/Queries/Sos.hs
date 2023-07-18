@@ -41,6 +41,9 @@ updateStatus sosId status = do
 findById :: (L.MonadFlow m, Log m) => Id Sos.Sos -> m (Maybe Sos)
 findById sosId = findOneWithKV [Se.Is BeamS.id $ Se.Eq (getId sosId)]
 
+findByIdInReplica :: (L.MonadFlow m, Log m) => Id Sos.Sos -> m (Maybe Sos)
+findByIdInReplica sosId = findOneWithKvInReplica [Se.Is BeamS.id $ Se.Eq (getId sosId)]
+
 instance FromTType' BeamS.Sos Sos where
   fromTType' BeamS.SosT {..} = do
     pure $

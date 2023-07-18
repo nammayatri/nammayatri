@@ -35,8 +35,10 @@ findById (Id driverOfferId) = do
   findOneWithKV [Se.Is BeamDO.id $ Se.Eq driverOfferId]
 
 findByBPPQuoteId :: (L.MonadFlow m, Log m) => Id BPPQuote -> m [DriverOffer]
-findByBPPQuoteId (Id bppQuoteId) = do
-  findAllWithKV [Se.Is BeamDO.bppQuoteId $ Se.Eq bppQuoteId]
+findByBPPQuoteId (Id bppQuoteId) = findAllWithKV [Se.Is BeamDO.bppQuoteId $ Se.Eq bppQuoteId]
+
+findByBPPQuoteIdInReplica :: (L.MonadFlow m, Log m) => Id BPPQuote -> m [DriverOffer]
+findByBPPQuoteIdInReplica (Id bppQuoteId) = findAllWithKvInReplica [Se.Is BeamDO.bppQuoteId $ Se.Eq bppQuoteId]
 
 -- updateStatus :: Id Estimate -> DriverOfferStatus -> SqlDB ()
 -- updateStatus estimateId status = do

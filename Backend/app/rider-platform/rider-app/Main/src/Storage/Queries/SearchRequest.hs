@@ -84,6 +84,9 @@ create dsReq = do
 findById :: (L.MonadFlow m, Log m) => Id SearchRequest -> m (Maybe SearchRequest)
 findById (Id searchRequestId) = findOneWithKV [Se.Is BeamSR.id $ Se.Eq searchRequestId]
 
+findByIdInReplica :: (L.MonadFlow m, Log m) => Id SearchRequest -> m (Maybe SearchRequest)
+findByIdInReplica (Id searchRequestId) = findOneWithKvInReplica [Se.Is BeamSR.id $ Se.Eq searchRequestId]
+
 -- findByPersonId :: Transactionable m => Id Person -> Id SearchRequest -> m (Maybe SearchRequest)
 -- findByPersonId personId searchRequestId = Esq.buildDType $ do
 --   mbFullSearchReqT <- Esq.findOne' $ do

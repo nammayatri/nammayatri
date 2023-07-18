@@ -48,6 +48,9 @@ findById (Id merchantId) = do
 findByShortId :: (L.MonadFlow m, Log m) => ShortId Merchant -> m (Maybe Merchant)
 findByShortId shortId_ = findOneWithKV [Se.Is BeamM.shortId $ Se.Eq $ getShortId shortId_]
 
+findByShortIdInReplica :: (L.MonadFlow m, Log m) => ShortId Merchant -> m (Maybe Merchant)
+findByShortIdInReplica shortId_ = findOneWithKvInReplica [Se.Is BeamM.shortId $ Se.Eq $ getShortId shortId_]
+
 -- findBySubscriberId :: Transactionable m => ShortId Subscriber -> m (Maybe Merchant)
 -- findBySubscriberId subscriberId = do
 --   findOne $ do

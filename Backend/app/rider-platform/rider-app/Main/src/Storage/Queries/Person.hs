@@ -49,6 +49,9 @@ create = createWithKV
 findById :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Person)
 findById (Id personId) = findOneWithKV [Se.Is BeamP.id $ Se.Eq personId]
 
+findByIdInReplica :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Person)
+findByIdInReplica (Id personId) = findOneWithKvInReplica [Se.Is BeamP.id $ Se.Eq personId]
+
 -- findByMobileNumberAndMerchantId ::
 --   Transactionable m =>
 --   Text ->
@@ -66,6 +69,9 @@ findById (Id personId) = findOneWithKV [Se.Is BeamP.id $ Se.Eq personId]
 
 findByMobileNumberAndMerchantId :: (L.MonadFlow m, Log m) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
 findByMobileNumberAndMerchantId countryCode mobileNumberHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
+
+findByMobileNumberAndMerchantIdInReplica :: (L.MonadFlow m, Log m) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
+findByMobileNumberAndMerchantIdInReplica countryCode mobileNumberHash (Id merchantId) = findOneWithKvInReplica [Se.And [Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
 -- findByEmailAndPassword ::
 --   (Transactionable m, EncFlow m r) =>
@@ -125,6 +131,9 @@ findByEmail email_ = do
 findByRoleAndMobileNumberAndMerchantId :: (L.MonadFlow m, Log m) => Role -> Text -> DbHash -> Id Merchant -> m (Maybe Person)
 findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumberHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
+findByRoleAndMobileNumberAndMerchantIdInReplica :: (L.MonadFlow m, Log m) => Role -> Text -> DbHash -> Id Merchant -> m (Maybe Person)
+findByRoleAndMobileNumberAndMerchantIdInReplica role_ countryCode mobileNumberHash (Id merchantId) = findOneWithKvInReplica [Se.And [Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
+
 -- findByRoleAndMobileNumberAndMerchantIdWithoutCC :: Transactionable m => Role -> DbHash -> Id Merchant -> m (Maybe Person)
 -- findByRoleAndMobileNumberAndMerchantIdWithoutCC role_ mobileNumberHash merchantId = do
 --   findOne $ do
@@ -137,6 +146,9 @@ findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumberHash (Id me
 
 findByRoleAndMobileNumberAndMerchantIdWithoutCC :: (L.MonadFlow m, Log m) => Role -> DbHash -> Id Merchant -> m (Maybe Person)
 findByRoleAndMobileNumberAndMerchantIdWithoutCC role_ mobileNumberHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
+
+findByRoleAndMobileNumberAndMerchantIdWithoutCCInReplica :: (L.MonadFlow m, Log m) => Role -> DbHash -> Id Merchant -> m (Maybe Person)
+findByRoleAndMobileNumberAndMerchantIdWithoutCCInReplica role_ mobileNumberHash (Id merchantId) = findOneWithKvInReplica [Se.And [Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
 -- updateMultiple :: Id Person -> Person -> SqlDB ()
 -- updateMultiple personId person = do
@@ -460,6 +472,9 @@ findByReferralCode referralCode = findOneWithKV [Se.Is BeamP.referralCode (Se.Eq
 findBlockedByDeviceToken :: (L.MonadFlow m, EncFlow m r) => Maybe Text -> m [Person]
 findBlockedByDeviceToken deviceToken = findAllWithKV [Se.And [Se.Is BeamP.deviceToken (Se.Eq deviceToken), Se.Is BeamP.blocked (Se.Eq True)]]
 
+findBlockedByDeviceTokenInReplica :: (L.MonadFlow m, EncFlow m r) => Maybe Text -> m [Person]
+findBlockedByDeviceTokenInReplica deviceToken = findAllWithKvInReplica [Se.And [Se.Is BeamP.deviceToken (Se.Eq deviceToken), Se.Is BeamP.blocked (Se.Eq True)]]
+
 -- updateBlockedState :: Id Person -> Bool -> SqlDB ()
 -- updateBlockedState personId isBlocked = do
 --   now <- getCurrentTime
@@ -546,6 +561,22 @@ findAllCustomers merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhone
     (Just limitVal)
     (Just offsetVal)
 
+findAllCustomersInReplica :: (L.MonadFlow m, Log m) => Id Merchant -> Int -> Int -> Maybe Bool -> Maybe Bool -> Maybe DbHash -> m [Person]
+findAllCustomersInReplica merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash = do
+  findAllWithOptionsKvInReplica
+    [ Se.And
+        ( [ Se.Is BeamP.merchantId (Se.Eq (getId merchantId)),
+            Se.Is BeamP.role (Se.Eq USER),
+            Se.Is BeamP.enabled (maybe (Se.Eq True) Se.Eq mbEnabled),
+            Se.Is BeamP.blocked (maybe (Se.Eq True) Se.Eq mbBlocked)
+          ]
+            <> ([Se.Is BeamP.mobileNumberHash $ Se.Eq mbSearchPhoneDBHash | isJust mbSearchPhoneDBHash])
+        )
+    ]
+    (Se.Asc BeamP.firstName)
+    (Just limitVal)
+    (Just offsetVal)
+
 -- countCustomers :: Transactionable m => Id Merchant -> m Int
 -- countCustomers merchantId =
 --   mkCount <$> do
@@ -561,6 +592,9 @@ findAllCustomers merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhone
 
 countCustomers :: (L.MonadFlow m, Log m) => Id Merchant -> m Int
 countCustomers merchantId = findAllWithKV [Se.And [Se.Is BeamP.merchantId (Se.Eq (getId merchantId)), Se.Is BeamP.role (Se.Eq USER)]] <&> length
+
+countCustomersInReplica :: (L.MonadFlow m, Log m) => Id Merchant -> m Int
+countCustomersInReplica merchantId = findAllWithKvInReplica [Se.And [Se.Is BeamP.merchantId (Se.Eq (getId merchantId)), Se.Is BeamP.role (Se.Eq USER)]] <&> length
 
 ridesCountAggTable :: SqlQuery (From (SqlExpr (Esq.Value PersonTId), SqlExpr (Esq.Value Int)))
 ridesCountAggTable = with $ do

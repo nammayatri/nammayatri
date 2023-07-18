@@ -22,7 +22,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findAllWithKvInReplica)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Person.PersonDefaultEmergencyNumber as BeamPDEN
 
@@ -56,8 +56,10 @@ replaceAll (Id personId) pdenList = do
 --     return personENT
 
 findAllByPersonId :: (L.MonadFlow m, Log m) => Id Person -> m [PersonDefaultEmergencyNumber]
-findAllByPersonId (Id personId) = do
-  findAllWithKV [Se.Is BeamPDEN.personId $ Se.Eq personId]
+findAllByPersonId (Id personId) = findAllWithKV [Se.Is BeamPDEN.personId $ Se.Eq personId]
+
+findAllByPersonIdInReplica :: (L.MonadFlow m, Log m) => Id Person -> m [PersonDefaultEmergencyNumber]
+findAllByPersonIdInReplica (Id personId) = findAllWithKvInReplica [Se.Is BeamPDEN.personId $ Se.Eq personId]
 
 instance FromTType' BeamPDEN.PersonDefaultEmergencyNumber PersonDefaultEmergencyNumber where
   fromTType' BeamPDEN.PersonDefaultEmergencyNumberT {..} = do

@@ -476,3 +476,202 @@ getMasterBeamConfig = do
   case conn of
     Right conn' -> pure conn'
     Left _ -> L.throwException $ InternalError "DB Config not found"
+
+----- replica db funcitons---------------
+
+getReplicaDbConfig :: (HasCallStack, L.MonadFlow m) => m (DBConfig Pg)
+getReplicaDbConfig = do
+  dbConf <- L.getOption PsqlDbCfgR1
+  case dbConf of
+    Just dbCnf' -> pure dbCnf'
+    Nothing -> L.throwException $ InternalError "DB Config not found"
+
+getReplicaBeamConfig :: (HasCallStack, L.MonadFlow m) => m (SqlConn Pg)
+getReplicaBeamConfig = do
+  dbConf <- getReplicaDbConfig
+  conn <- L.getOrInitSqlConn dbConf
+  case conn of
+    Right conn' -> pure conn'
+    Left _ -> L.throwException $ InternalError "DB Config not found"
+
+deleteAllWithKvInReplica ::
+  forall be table beM m.
+  ( HasCallStack,
+    BeamRuntime be beM,
+    SqlReturning beM be,
+    B.HasQBuilder be,
+    BeamRunner beM,
+    Model be table,
+    MeshMeta be table,
+    KVConnector (table Identity),
+    FromJSON (table Identity),
+    ToJSON (table Identity),
+    Serialize.Serialize (table Identity),
+    L.MonadFlow m,
+    Log m,
+    Show (table Identity),
+    MonadThrow m,
+    SqlReturning Pg be,
+    BeamRuntime be Pg
+  ) =>
+  Where be table ->
+  m ()
+deleteAllWithKvInReplica whereClause = do
+  updatedMeshConfig <- setMeshConfig' (modelTableName @table) meshConfig
+  dbConf <- getReplicaDbConfig
+  res <- KV.deleteAllReturningWithKVConnector dbConf updatedMeshConfig whereClause
+  case res of
+    Right _ -> pure ()
+    Left err -> throwError $ InternalError $ show err
+
+findAllWithKvInReplica ::
+  forall table m a.
+  ( HasCallStack,
+    FromTType' (table Identity) a,
+    BeamRuntime Postgres Pg,
+    B.HasQBuilder Postgres,
+    BeamRunner Pg,
+    Model Postgres table,
+    MeshMeta Postgres table,
+    KVConnector (table Identity),
+    FromJSON (table Identity),
+    ToJSON (table Identity),
+    Serialize.Serialize (table Identity),
+    L.MonadFlow m,
+    Show (table Identity),
+    Log m,
+    MonadThrow m
+  ) =>
+  Where Postgres table ->
+  m [a]
+findAllWithKvInReplica where' = do
+  updatedMeshConfig <- setMeshConfig' (modelTableName @table) meshConfig
+  dbConf <- getReplicaDbConfig
+  result <- KV.findAllWithKVConnector dbConf updatedMeshConfig where'
+  case result of
+    Right res -> do
+      res' <- mapM fromTType' res
+      pure $ catMaybes res'
+    Left err -> throwError $ InternalError $ show err
+
+findAllWithOptionsKvInReplica ::
+  forall table m a.
+  ( HasCallStack,
+    FromTType' (table Identity) a,
+    BeamRuntime Postgres Pg,
+    B.HasQBuilder Postgres,
+    BeamRunner Pg,
+    Model Postgres table,
+    MeshMeta Postgres table,
+    KVConnector (table Identity),
+    FromJSON (table Identity),
+    ToJSON (table Identity),
+    Serialize.Serialize (table Identity),
+    L.MonadFlow m,
+    Show (table Identity),
+    Log m,
+    MonadThrow m
+  ) =>
+  Where Postgres table ->
+  OrderBy table ->
+  Maybe Int ->
+  Maybe Int ->
+  m [a]
+findAllWithOptionsKvInReplica where' orderBy mbLimit mbOffset = do
+  updatedMeshConfig <- setMeshConfig' (modelTableName @table) meshConfig
+  dbConf <- getReplicaDbConfig
+  result <- KV.findAllWithOptionsKVConnector dbConf updatedMeshConfig where' orderBy mbLimit mbOffset
+  case result of
+    Right res -> do
+      res' <- mapM fromTType' res
+      pure $ catMaybes res'
+    Left err -> throwError $ InternalError $ show err
+
+findOneWithKvInReplica ::
+  forall table m a.
+  ( HasCallStack,
+    FromTType' (table Identity) a,
+    BeamRuntime Postgres Pg,
+    B.HasQBuilder Postgres,
+    BeamRunner Pg,
+    Model Postgres table,
+    MeshMeta Postgres table,
+    KVConnector (table Identity),
+    FromJSON (table Identity),
+    ToJSON (table Identity),
+    Serialize.Serialize (table Identity),
+    L.MonadFlow m,
+    Show (table Identity),
+    Log m,
+    MonadThrow m
+  ) =>
+  Where Postgres table ->
+  m (Maybe a)
+findOneWithKvInReplica where' = do
+  updatedMeshConfig <- setMeshConfig' (modelTableName @table) meshConfig
+  dbConf' <- getReplicaDbConfig
+  result <- KV.findWithKVConnector dbConf' updatedMeshConfig where'
+  case result of
+    Right (Just res) -> fromTType' res
+    Right Nothing -> pure Nothing
+    Left err -> throwError $ InternalError $ show err
+
+updateWithKvInReplica ::
+  forall table m.
+  ( HasCallStack,
+    -- FromTType' (table Identity) a,
+    BeamRuntime Postgres Pg,
+    SqlReturning Pg Postgres,
+    B.HasQBuilder Postgres,
+    BeamRunner Pg,
+    Model Postgres table,
+    MeshMeta Postgres table,
+    KVConnector (table Identity),
+    FromJSON (table Identity),
+    ToJSON (table Identity),
+    Serialize.Serialize (table Identity),
+    L.MonadFlow m,
+    Show (table Identity),
+    Log m,
+    MonadThrow m
+  ) =>
+  [Set Postgres table] ->
+  Where Postgres table ->
+  m ()
+updateWithKvInReplica setClause whereClause = do
+  updatedMeshConfig <- setMeshConfig' (modelTableName @table) meshConfig
+  dbConf <- getReplicaDbConfig
+  res <- KV.updateWoReturningWithKVConnector dbConf updatedMeshConfig setClause whereClause
+  case res of
+    Right _ -> pure ()
+    Left err -> throwError $ InternalError $ show err
+
+createWithKvInReplica ::
+  forall table m a.
+  ( HasCallStack,
+    ToTType' (table Identity) a,
+    SqlReturning Pg Postgres,
+    BeamRuntime Postgres Pg,
+    B.HasQBuilder Postgres,
+    BeamRunner Pg,
+    Model Postgres table,
+    MeshMeta Postgres table,
+    KVConnector (table Identity),
+    FromJSON (table Identity),
+    ToJSON (table Identity),
+    Serialize.Serialize (table Identity),
+    L.MonadFlow m,
+    Show (table Identity),
+    Log m,
+    MonadThrow m
+  ) =>
+  a ->
+  m ()
+createWithKvInReplica a = do
+  let tType = toTType' a
+  updatedMeshConfig <- setMeshConfig' (modelTableName @table) meshConfig
+  dbConf' <- getReplicaDbConfig
+  result <- KV.createWoReturingKVConnector dbConf' updatedMeshConfig tType
+  case result of
+    Right _ -> pure ()
+    Left err -> throwError $ InternalError $ show err

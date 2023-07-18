@@ -55,6 +55,9 @@ create = createWithKV
 findById :: (L.MonadFlow m, Log m) => Id CallStatus -> m (Maybe CallStatus)
 findById (Id callStatusId) = findOneWithKV [Se.Is BeamCS.id $ Se.Eq callStatusId]
 
+findByIdInReplica :: (L.MonadFlow m, Log m) => Id CallStatus -> m (Maybe CallStatus)
+findByIdInReplica (Id callStatusId) = findOneWithKvInReplica [Se.Is BeamCS.id $ Se.Eq callStatusId]
+
 -- findByCallSid :: Transactionable m => Text -> m (Maybe CallStatus)
 -- findByCallSid callSid =
 --   Esq.findOne $ do

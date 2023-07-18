@@ -112,8 +112,10 @@ updateRideRating rideId rideRating = do
 -- findById = Esq.findById
 
 findById :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe Ride)
-findById (Id rideId) = do
-  findOneWithKV [Se.Is BeamR.id $ Se.Eq rideId]
+findById (Id rideId) = findOneWithKV [Se.Is BeamR.id $ Se.Eq rideId]
+
+findByIdInReplica :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe Ride)
+findByIdInReplica (Id rideId) = findOneWithKvInReplica [Se.Is BeamR.id $ Se.Eq rideId]
 
 -- findByBPPRideId :: Transactionable m => Id BPPRide -> m (Maybe Ride)
 -- findByBPPRideId bppRideId_ =
@@ -167,6 +169,9 @@ updateMultiple rideId ride = do
 findActiveByRBId :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Ride)
 findActiveByRBId (Id rbId) = findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Eq Ride.CANCELLED]]
 
+findActiveByRBIdInReplica :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Ride)
+findActiveByRBIdInReplica (Id rbId) = findOneWithKvInReplica [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Eq Ride.CANCELLED]]
+
 -- findAllByRBId :: Transactionable m => Id Booking -> m [Ride]
 -- findAllByRBId bookingId =
 --   findAll $ do
@@ -177,6 +182,9 @@ findActiveByRBId (Id rbId) = findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.E
 
 findAllByRBId :: (L.MonadFlow m, Log m) => Id Booking -> m [Ride]
 findAllByRBId (Id bookingId) = findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.Eq bookingId] (Se.Desc BeamR.createdAt) Nothing Nothing
+
+findAllByRBIdInReplica :: (L.MonadFlow m, Log m) => Id Booking -> m [Ride]
+findAllByRBIdInReplica (Id bookingId) = findAllWithOptionsKvInReplica [Se.Is BeamR.bookingId $ Se.Eq bookingId] (Se.Desc BeamR.createdAt) Nothing Nothing
 
 -- updateDriverArrival :: Id Ride -> SqlDB ()
 -- updateDriverArrival rideId = do
@@ -238,6 +246,33 @@ findStuckRideItems (Id merchantId) bookingIds now = do
       ]
   bookings <-
     findAllWithKV
+      [ Se.And
+          [ Se.Is BeamB.providerId $ Se.Eq merchantId,
+            Se.Is BeamB.id $ Se.In $ getId <$> bookingIds
+          ]
+      ]
+
+  let rideBooking = foldl' (getRideWithBooking bookings) [] rides
+  pure $ mkStuckRideItem <$> rideBooking
+  where
+    getRideWithBooking bookings acc ride' =
+      let bookings' = filter (\x -> x.id == ride'.bookingId) bookings
+       in acc <> ((\x -> (ride'.id, x.id, x.riderId)) <$> bookings')
+
+    mkStuckRideItem (rideId, bookingId, riderId) = StuckRideItem {..}
+
+findStuckRideItemsInReplica :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
+findStuckRideItemsInReplica (Id merchantId) bookingIds now = do
+  let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
+  rides <-
+    findAllWithKvInReplica
+      [ Se.And
+          [ Se.Is BeamR.status $ Se.Eq Ride.NEW,
+            Se.Is BeamR.createdAt $ Se.LessThanOrEq now6HrBefore
+          ]
+      ]
+  bookings <-
+    findAllWithKvInReplica
       [ Se.And
           [ Se.Is BeamB.providerId $ Se.Eq merchantId,
             Se.Is BeamB.id $ Se.In $ getId <$> bookingIds

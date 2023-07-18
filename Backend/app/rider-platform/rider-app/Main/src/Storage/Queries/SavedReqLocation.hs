@@ -40,6 +40,9 @@ create = createWithKV
 findAllByRiderId :: (L.MonadFlow m, Log m) => Id Person -> m [SavedReqLocation]
 findAllByRiderId perId = findAllWithKV [Se.Is BeamSRL.riderId $ Se.Eq (getId perId)]
 
+findAllByRiderIdInReplica :: (L.MonadFlow m, Log m) => Id Person -> m [SavedReqLocation]
+findAllByRiderIdInReplica perId = findAllWithKvInReplica [Se.Is BeamSRL.riderId $ Se.Eq (getId perId)]
+
 -- deleteByRiderIdAndTag :: Id Person -> Text -> SqlDB ()
 -- deleteByRiderIdAndTag perId addressTag = do
 --   Esq.delete $ do

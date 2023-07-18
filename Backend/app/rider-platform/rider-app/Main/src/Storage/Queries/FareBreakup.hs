@@ -44,6 +44,9 @@ createMany = traverse_ create
 findAllByBookingId :: (L.MonadFlow m, Log m) => Id Booking -> m [FareBreakup]
 findAllByBookingId bookingId = findAllWithKV [Se.Is BeamFB.bookingId $ Se.Eq $ getId bookingId]
 
+findAllByBookingIdInReplica :: (L.MonadFlow m, Log m) => Id Booking -> m [FareBreakup]
+findAllByBookingIdInReplica bookingId = findAllWithKvInReplica [Se.Is BeamFB.bookingId $ Se.Eq $ getId bookingId]
+
 instance FromTType' BeamFB.FareBreakup FareBreakup where
   fromTType' BeamFB.FareBreakupT {..} = do
     pure $

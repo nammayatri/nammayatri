@@ -120,6 +120,9 @@ createMany = traverse_ create
 findById :: (L.MonadFlow m, Log m) => Id Quote -> m (Maybe Quote)
 findById quoteId = findOneWithKV [Se.Is BeamQ.id $ Se.Eq (getId quoteId)]
 
+findByIdInReplica :: (L.MonadFlow m, Log m) => Id Quote -> m (Maybe Quote)
+findByIdInReplica quoteId = findOneWithKvInReplica [Se.Is BeamQ.id $ Se.Eq (getId quoteId)]
+
 -- findByBppIdAndBPPQuoteId :: Transactionable m => Text -> Id BPPQuote -> m (Maybe Quote)
 -- findByBppIdAndBPPQuoteId bppId bppQuoteId = buildDType $ do
 --   mbFullQuoteT <- Esq.findOne' $ do
@@ -134,6 +137,20 @@ findByBppIdAndBPPQuoteId :: (L.MonadFlow m, Log m) => Text -> Id BPPQuote -> m (
 findByBppIdAndBPPQuoteId bppId bppQuoteId = do
   quoteList <- findAllWithKV [Se.Is BeamQ.providerId $ Se.Eq bppId]
   dOffer <- QueryDO.findByBPPQuoteId bppQuoteId
+  let quoteWithDoOfferId = foldl' (getQuoteWithDOffer dOffer) [] quoteList
+  pure $ listToMaybe quoteWithDoOfferId
+  where
+    getQuoteWithDOffer dOffer res quote = do
+      let doId = case quote.quoteDetails of
+            DQ.DriverOfferDetails driverOffer -> Just $ getId driverOffer.id
+            _ -> Nothing
+      let doffer' = filter (\d -> getId (d.id) == fromJust doId) dOffer
+       in res <> (quote <$ doffer')
+
+findByBppIdAndBPPQuoteIdInReplica :: (L.MonadFlow m, Log m) => Text -> Id BPPQuote -> m (Maybe Quote)
+findByBppIdAndBPPQuoteIdInReplica bppId bppQuoteId = do
+  quoteList <- findAllWithKvInReplica [Se.Is BeamQ.providerId $ Se.Eq bppId]
+  dOffer <- QueryDO.findByBPPQuoteIdInReplica bppQuoteId
   let quoteWithDoOfferId = foldl' (getQuoteWithDOffer dOffer) [] quoteList
   pure $ listToMaybe quoteWithDoOfferId
   where
@@ -170,6 +187,9 @@ findByBppIdAndBPPQuoteId bppId bppQuoteId = do
 findAllBySRId :: (L.MonadFlow m, Log m) => Id SearchRequest -> m [Quote]
 findAllBySRId searchRequestId = findAllWithKV [Se.Is BeamQ.requestId $ Se.Eq (getId searchRequestId)]
 
+findAllBySRIdInReplica :: (L.MonadFlow m, Log m) => Id SearchRequest -> m [Quote]
+findAllBySRIdInReplica searchRequestId = findAllWithKvInReplica [Se.Is BeamQ.requestId $ Se.Eq (getId searchRequestId)]
+
 -- findAllByEstimateId :: Transactionable m => Id Estimate -> m [Quote]
 -- findAllByEstimateId estimateId = buildDType $ do
 --   driverOfferTs <- findDOfferByEstimateId' estimateId
@@ -200,6 +220,12 @@ findAllByEstimateId estimateId status = do
   let offerIds = map (Just . getId . DDO.id) driverOffers
   findAllWithKV [Se.Is BeamQ.driverOfferId (Se.In offerIds)]
 
+findAllByEstimateIdInReplica :: (L.MonadFlow m, Log m) => Id Estimate -> DriverOfferStatus -> m [Quote]
+findAllByEstimateIdInReplica estimateId status = do
+  driverOffers <- findDOfferByEstimateIdInReplica estimateId status
+  let offerIds = map (Just . getId . DDO.id) driverOffers
+  findAllWithKvInReplica [Se.Is BeamQ.driverOfferId (Se.In offerIds)]
+
 -- findDOfferByEstimateId' :: Transactionable m => Id Estimate -> DTypeBuilder m [DriverOfferT]
 -- findDOfferByEstimateId' estimateId =
 --   Esq.findAll' $ do
@@ -209,6 +235,9 @@ findAllByEstimateId estimateId status = do
 
 findDOfferByEstimateId :: (L.MonadFlow m, Log m) => Id Estimate -> DriverOfferStatus -> m [DriverOffer]
 findDOfferByEstimateId (Id estimateId) status = findAllWithKV [Se.And [Se.Is BeamDO.estimateId $ Se.Eq estimateId, Se.Is BeamDO.status $ Se.Eq status]]
+
+findDOfferByEstimateIdInReplica :: (L.MonadFlow m, Log m) => Id Estimate -> DriverOfferStatus -> m [DriverOffer]
+findDOfferByEstimateIdInReplica (Id estimateId) status = findAllWithKvInReplica [Se.And [Se.Is BeamDO.estimateId $ Se.Eq estimateId, Se.Is BeamDO.status $ Se.Eq status]]
 
 -- findQuotesByDriverOfferId' :: Transactionable m => Id DriverOffer -> DTypeBuilder m (Maybe QuoteT)
 -- findQuotesByDriverOfferId' driverOfferId = Esq.findOne' $ do
