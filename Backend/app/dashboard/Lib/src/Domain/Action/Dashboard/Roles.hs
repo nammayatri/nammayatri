@@ -131,5 +131,5 @@ listRoles _ mbSearchString mbLimit mbOffset = do
   res <- forM personAndRoleList $ \role -> do
     pure $ mkRoleAPIEntity role
   let count = length res
-  let summary = Summary {totalCount = count, count}
+  let summary = Summary {totalCount = 10000, count}
   pure $ ListRoleRes {list = res, summary = summary}
