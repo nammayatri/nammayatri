@@ -19,6 +19,7 @@ module Domain.Action.Dashboard.Ride
     multipleRideSync,
     rideRoute,
     currentActiveRide,
+    ticketRideList,
   )
 where
 
@@ -40,6 +41,7 @@ import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.External.Maps.HasCoordinates
+import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Operators
 import qualified Kernel.Storage.Clickhouse.Queries as CH
@@ -53,6 +55,7 @@ import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverLocation as QDrLoc
 import qualified Storage.Queries.DriverQuote as DQ
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRiderDetails
@@ -112,7 +115,47 @@ buildRideListItem QRide.RideItem {..} = do
       }
 
 ---------------------------------------------------------------------------------------------------
+ticketRideList :: ShortId DM.Merchant -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.TicketRideListRes
+ticketRideList merchantShortId mbRideShortId countryCode mbPhoneNumber _ = do
+  merchant <- findMerchantByShortId merchantShortId
+  let totalRides = 5
+  let mbShortId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) <$> mbRideShortId
+  case mbShortId of
+    Just shortId -> do
+      ride <- QRide.findRideByRideShortId shortId >>= fromMaybeM (InvalidRequest "Ride ShortId Not Found")
+      rideDetail <- rideInfo merchantShortId (cast ride.id)
+      let ticketRideDetail = makeRequiredRideDetail ride.driverId (ride, rideDetail)
+      return Common.TicketRideListRes {rides = [ticketRideDetail]}
+    Nothing -> case mbPhoneNumber of
+      Just number -> do
+        no <- getDbHash number
+        let code = fromMaybe "+91" countryCode
+        person <- runInReplica $ QPerson.findByMobileNumberAndMerchant code no merchant.id >>= fromMaybeM (PersonWithPhoneNotFound number)
+        ridesAndBooking <- QRide.findAllByDriverId person.id (Just totalRides) (Just 0) Nothing Nothing Nothing
+        let lastNRides = map fst ridesAndBooking
+        ridesDetail <- mapM (\ride -> rideInfo merchantShortId (cast ride.id)) lastNRides
+        let rdList = zipWith (curry (makeRequiredRideDetail person.id)) lastNRides ridesDetail
+        return Common.TicketRideListRes {rides = rdList}
+      Nothing -> throwError $ InvalidRequest "Invalid Request"
+  where
+    makeRequiredRideDetail personId (ride, detail) =
+      Common.RideInfo
+        { rideShortId = coerce @(ShortId DRide.Ride) @(ShortId Common.Ride) ride.shortId,
+          customerName = detail.customerName,
+          customerPhoneNo = detail.customerPhoneNo,
+          driverName = detail.driverName,
+          driverPhoneNo = detail.driverPhoneNo,
+          vehicleNo = detail.vehicleNo,
+          status = detail.bookingStatus,
+          rideCreatedAt = ride.createdAt,
+          pickupLocation = detail.customerPickupLocation,
+          dropLocation = detail.customerDropLocation,
+          fare = detail.actualFare,
+          personId = cast personId,
+          classification = Ticket.DRIVER
+        }
 
+---------------------------------------------------------------------------------------------------
 getActualRoute :: MonadFlow m => Common.DriverEdaKafka -> m Common.ActualRoute
 getActualRoute Common.DriverEdaKafka {..} =
   case (lat, lon, ts, acc, rideStatus) of

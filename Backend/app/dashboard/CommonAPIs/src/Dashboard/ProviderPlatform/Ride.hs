@@ -28,6 +28,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Kernel.External.Maps.Types
+import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.APISuccess (APISuccess)
@@ -397,3 +398,42 @@ data DriverEdaKafka = DriverEdaKafka
 
 instance HideSecrets RideRouteRes where
   hideSecrets = identity
+
+---------------------------------------------------------
+-- ticket ride list --------------------------------------------
+
+type TicketRideListAPI =
+  "kapture"
+    :> "list"
+    :> QueryParam "rideShortId" (ShortId Ride)
+    :> QueryParam "countryCode" Text
+    :> QueryParam "phoneNumber" Text
+    :> QueryParam "supportPhoneNumber" Text
+    :> Get '[JSON] TicketRideListRes
+
+newtype TicketRideListRes = TicketRideListRes
+  { rides :: [RideInfo]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets TicketRideListRes where
+  hideSecrets = identity
+
+data RideInfo = RideInfo
+  { rideShortId :: ShortId Ride,
+    customerName :: Maybe Text,
+    customerPhoneNo :: Text,
+    driverName :: Text,
+    driverPhoneNo :: Maybe Text,
+    vehicleNo :: Text,
+    status :: BookingStatus,
+    rideCreatedAt :: UTCTime,
+    pickupLocation :: LocationAPIEntity,
+    dropLocation :: Maybe LocationAPIEntity,
+    fare :: Maybe Money,
+    personId :: Id Driver,
+    classification :: Ticket.Classification
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
