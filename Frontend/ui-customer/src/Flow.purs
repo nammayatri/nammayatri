@@ -609,16 +609,21 @@ homeScreenFlow = do
         modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState ->  MyProfileScreenData.initData{props{updateProfile = updateProfile , fromHomeScreen = updateProfile , isBtnEnabled = not updateProfile , genderOptionExpanded = false , showOptions = false, expandEnabled = true }})
         myProfileScreenFlow
     GO_TO_FIND_ESTIMATES state-> do
-      PlaceName address <- getPlaceName state.props.sourceLat state.props.sourceLong
-      _ <- lift $ lift $ liftFlow $ firebaseLogEventWithTwoParams "ny_user_source_and_destination" "ny_user_enter_source" (take 99 (state.data.source)) "ny_user_enter_destination" (take 99 (state.data.destination))
+      if (state.data.source == "Current Location") then do
+        PlaceName address <- getPlaceName state.props.sourceLat state.props.sourceLong
+        let newState = state { data{ source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] state.props.sourcePlaceId } }
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> newState)
+        else pure unit
+      (GlobalState updatedState) <- getState
+      _ <- lift $ lift $ liftFlow $ firebaseLogEventWithTwoParams "ny_user_source_and_destination" "ny_user_enter_source" (take 99 (updatedState.homeScreen.data.source)) "ny_user_enter_destination" (take 99 (state.data.destination))
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq state.props.sourceLat state.props.sourceLong)
       if (not sourceServiceabilityResp.serviceable) then do
         updateLocalStage SearchLocationModel
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = SearchLocationModel ,rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = false, isSource = Just true, isRideServiceable = false}})
         homeScreenFlow
         else pure unit
-      (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong (encodeAddress address.formattedAddress [] state.props.sourcePlaceId) state.data.destinationAddress)
-      routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong (Remote.normalRoute "") "NORMAL" address.formattedAddress state.data.destination rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "")
+      (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong updatedState.homeScreen.data.sourceAddress state.data.destinationAddress)
+      routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong (Remote.normalRoute "") "NORMAL" updatedState.homeScreen.data.source state.data.destination rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "")
       case rideSearchRes.routeInfo of
         Just (Route response) -> do
           let distance = if response.distance < 1000 then toString(response.distance)  <> " m" else parseFloat(INT.toNumber(response.distance) / 1000.0) 2 <> " km"
@@ -627,9 +632,9 @@ homeScreenFlow = do
               Snapped points = response.points
           case head points, last points of
             Just (LatLong source), Just (LatLong dest) -> do
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ routeEndPoints = Just ({ source : { lat : source.lat, lng : source.lon, place : address.formattedAddress }, destination : { lat : dest.lat, lng : dest.lon, place : state.data.destination } }) } })
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ routeEndPoints = Just ({ source : { lat : source.lat, lng : source.lon, place : updatedState.homeScreen.data.source }, destination : { lat : dest.lat, lng : dest.lon, place : state.data.destination } }) } })
             _ , _ -> pure unit
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration, source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] state.props.sourcePlaceId}, props{customerTip{enableTips = tipEnabled}}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration}, props{customerTip{enableTips = tipEnabled}}})
           _ <- setValueToLocalStore ENABLE_TIPS $ show tipEnabled
           if ((getMerchant FunctionCall) /= YATRI && response.distance >= 50000) then do
             updateLocalStage DistanceOutsideLimits
@@ -642,9 +647,9 @@ homeScreenFlow = do
               else pure unit
           pure unit
         Nothing -> pure unit
-      void $ pure $ setFlowStatusData (FlowStatusData { source : {lat : state.props.sourceLat, lng : state.props.sourceLong, place : address.formattedAddress}
+      void $ pure $ setFlowStatusData (FlowStatusData { source : {lat : state.props.sourceLat, lng : state.props.sourceLong, place : updatedState.homeScreen.data.source}
                                                       , destination : {lat : state.props.destinationLat, lng : state.props.destinationLong, place : state.data.destination}
-                                                      , sourceAddress : (encodeAddress address.formattedAddress [] state.props.sourcePlaceId)
+                                                      , sourceAddress : updatedState.homeScreen.data.sourceAddress
                                                       , destinationAddress : state.data.destinationAddress })
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing}})
       updateLocalStage FindingEstimate
@@ -1253,11 +1258,15 @@ rideSearchFlow flowType = do
           _ <- pure $ updateLocalStage ConfirmingLocation
           void $ lift $ lift $ toggleLoader false
         true -> do
-          PlaceName address <- getPlaceName finalState.props.sourceLat finalState.props.sourceLong
-          (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong (encodeAddress address.formattedAddress [] finalState.props.sourcePlaceId) finalState.data.destinationAddress)
-          void $ pure $ setFlowStatusData (FlowStatusData { source : {lat : finalState.props.sourceLat, lng : finalState.props.sourceLong, place : address.formattedAddress}
+          if (finalState.data.source == "Current Location") then do
+            PlaceName address <- getPlaceName finalState.props.sourceLat finalState.props.sourceLong
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{source = address.formattedAddress, sourceAddress = (encodeAddress address.formattedAddress [] finalState.props.sourcePlaceId)}})
+            else pure unit
+          (GlobalState updatedState) <- getState
+          (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong updatedState.homeScreen.data.sourceAddress finalState.data.destinationAddress)
+          void $ pure $ setFlowStatusData (FlowStatusData { source : {lat : finalState.props.sourceLat, lng : finalState.props.sourceLong, place : updatedState.homeScreen.data.source}
                                                           , destination : {lat : finalState.props.destinationLat, lng : finalState.props.destinationLong, place : finalState.data.destination}
-                                                          , sourceAddress : (encodeAddress address.formattedAddress [] finalState.props.sourcePlaceId)
+                                                          , sourceAddress : updatedState.homeScreen.data.sourceAddress
                                                           , destinationAddress : finalState.data.destinationAddress })
           case finalState.props.currentStage of
             TryAgain -> do
@@ -1268,7 +1277,7 @@ rideSearchFlow flowType = do
             _        -> do
               let sourceSpecialTagIcon = specialLocationIcons finalState.props.zoneType.sourceTag
                   destSpecialTagIcon = specialLocationIcons finalState.props.zoneType.destinationTag
-              routeResponse <- Remote.drawMapRoute finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong (Remote.normalRoute "") "NORMAL" address.formattedAddress finalState.data.destination rideSearchRes.routeInfo "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon)
+              routeResponse <- Remote.drawMapRoute finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong (Remote.normalRoute "") "NORMAL" updatedState.homeScreen.data.source finalState.data.destination rideSearchRes.routeInfo "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon)
               case rideSearchRes.routeInfo of
                 Just (Route response) -> do
                   let distance = if response.distance < 1000 then toString(response.distance)  <> " m" else parseFloat(INT.toNumber(response.distance) / 1000.0) 2 <> " km"
@@ -1277,9 +1286,9 @@ rideSearchFlow flowType = do
                       Snapped points = response.points
                   case head points, last points of
                     Just (LatLong source), Just (LatLong dest) -> do
-                      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ routeEndPoints = Just ({ source : { lat : source.lat, lng : source.lon, place : address.formattedAddress }, destination : { lat : dest.lat, lng : dest.lon, place : finalState.data.destination } }) } })
+                      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ routeEndPoints = Just ({ source : { lat : source.lat, lng : source.lon, place : updatedState.homeScreen.data.source }, destination : { lat : dest.lat, lng : dest.lon, place : finalState.data.destination } }) } })
                     _ , _ -> pure unit
-                  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration,source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] finalState.props.sourcePlaceId}, props{customerTip{enableTips = tipEnabled}}})
+                  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration}, props{customerTip{enableTips = tipEnabled}}})
                   _ <- setValueToLocalStore ENABLE_TIPS $ show tipEnabled
                   if ((getMerchant FunctionCall) /= YATRI && response.distance >= 50000 )then do
                     _ <- pure $ updateLocalStage DistanceOutsideLimits
@@ -1291,7 +1300,7 @@ rideSearchFlow flowType = do
                       void $ lift $ lift $ toggleLoader false
                       else do
                         if flowType == "REPEAT_RIDE_FLOW" then lift $ lift $ liftFlow $ firebaseLogEventWithParams "ny_user_repeat_ride_flow" "searchId" rideSearchRes.searchId else pure unit
-                        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing}, data {source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] finalState.props.sourcePlaceId}})
+                        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing}})
                         _ <- pure $ updateLocalStage FindingEstimate
                         void $ lift $ lift $ toggleLoader false
 
