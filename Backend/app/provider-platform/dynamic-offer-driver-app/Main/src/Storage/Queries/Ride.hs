@@ -529,6 +529,9 @@ findRidesByBookingId bookingIds = findAllWithKV [Se.Is BeamR.bookingId $ Se.In $
 findCancelledBookingId :: MonadFlow m => Id Person -> m [Id Booking]
 findCancelledBookingId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq driverId, Se.Is BeamR.status $ Se.Eq Ride.CANCELLED]] <&> (Ride.bookingId <$>)
 
+findRideByRideShortId :: MonadFlow m => ShortId Ride -> m (Maybe Ride)
+findRideByRideShortId (ShortId shortId) = findOneWithKV [Se.Is BeamR.shortId $ Se.Eq shortId]
+
 instance FromTType' BeamR.Ride Ride where
   fromTType' BeamR.RideT {..} = do
     tUrl <- parseBaseUrl trackingUrl

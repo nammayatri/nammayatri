@@ -46,6 +46,7 @@ type API =
            :<|> Common.MultipleRideSyncAPI
            :<|> Common.RideRouteAPI
            :<|> Common.BookingWithVehicleNumberAndPhoneAPI
+           :<|> Common.TicketRideListAPI
        )
 
 handler :: ShortId DM.Merchant -> FlowServer API
@@ -62,6 +63,7 @@ handler merchantId =
     :<|> multipleRideSync merchantId
     :<|> rideRoute merchantId
     :<|> bookingWithVehicleNumberAndPhone merchantId
+    :<|> ticketRideList merchantId
 
 rideList ::
   ShortId DM.Merchant ->
@@ -161,3 +163,6 @@ rideRoute merchantShortId rideId = withFlowHandlerAPI $ DRide.rideRoute merchant
 
 bookingWithVehicleNumberAndPhone :: ShortId DM.Merchant -> Common.BookingWithVehicleAndPhoneReq -> FlowHandler APISuccess
 bookingWithVehicleNumberAndPhone merchantShortId = withFlowHandlerAPI . DRide.bookingWithVehicleNumberAndPhone merchantShortId
+
+ticketRideList :: ShortId DM.Merchant -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.TicketRideListRes
+ticketRideList merchantShortId mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber = withFlowHandlerAPI $ DRide.ticketRideList merchantShortId mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber
