@@ -53,7 +53,7 @@ handler transporterId req = do
     CQM.findById transporterId
       >>= fromMaybeM (MerchantNotFound transporterId.getId)
   booking <- Esq.runInReplica $ QRB.findById req.bookingId >>= fromMaybeM (BookingNotFound req.bookingId.getId)
-  mbRide <- Esq.runInReplica $ QRide.findActiveByRBId booking.id
+  mbRide <- Esq.runInReplica $ QRide.findOneByBookingId booking.id
   let transporterId' = booking.providerId
   unless (transporterId' == transporterId) $ throwError AccessDenied
 
