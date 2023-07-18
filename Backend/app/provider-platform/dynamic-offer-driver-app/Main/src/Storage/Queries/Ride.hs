@@ -63,6 +63,15 @@ findActiveByRBId rbId = Esq.findOne $ do
       &&. ride ^. RideStatus !=. val Ride.CANCELLED
   pure ride
 
+findOneByBookingId :: Transactionable m => Id Booking -> m (Maybe Ride)
+findOneByBookingId bookingId = Esq.findOne $ do
+  ride <- from $ table @RideT
+  where_ $
+    ride ^. Ride.RideBookingId ==. val (toKey bookingId)
+  orderBy [desc $ ride ^. RideCreatedAt]
+  limit 1
+  pure ride
+
 findAllByDriverId ::
   Transactionable m =>
   Id Person ->
