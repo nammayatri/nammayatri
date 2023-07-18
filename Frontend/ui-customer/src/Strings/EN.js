@@ -518,5 +518,8 @@ const englishStrings = {
   "DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS" : "Driver addition limits are in increments of ₹10",
   "HATCHBACK" : "Hatchback", 
   "SUV" : "SUV",
-  "SEDAN" : "Sedan" 
+  "SEDAN" : "Sedan" ,
+  "AND_HAS_TRAVELLED": " km.",
+  "INTERNET_ISSUE_AT_DRIVERS_END" : "Internet issues at Driver's end",
+  "YOU_MAY_CONTACT_DRIVER_TO_TRACK_YOUR_RIDE" : "You may contact the driver to track your ride"
 }

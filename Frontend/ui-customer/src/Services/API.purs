@@ -1396,12 +1396,25 @@ instance encodeGetEmergContactsResp  :: Encode GetEmergContactsResp where encode
 
 data GetDriverLocationReq = GetDriverLocationReq String
 
-newtype GetDriverLocationResp = GetDriverLocationResp LatLong
+newtype Location = Location 
+  {
+    lat :: Number,
+    lon :: Number,
+    lastUpdate :: String
+  }
+newtype GetDriverLocationResp = GetDriverLocationResp Location
 
 instance makeGetDriverLocationReq :: RestEndpoint GetDriverLocationReq GetDriverLocationResp where
   makeRequest reqBody@(GetDriverLocationReq rideId) headers = defaultMakeRequest POST (EP.getCurrentLocation rideId) headers reqBody
   decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
+
+derive instance genericLocation :: Generic Location _
+derive instance newtypeLocation :: Newtype Location _
+instance standardEncodeLocation :: StandardEncode Location where standardEncode (Location body) = standardEncode body
+instance showLocation :: Show Location where show = genericShow
+instance decodeLocation :: Decode Location where decode = defaultDecode
+instance encodeLocation  :: Encode Location where encode = defaultEncode
 
 derive instance genericGetDriverLocationResp :: Generic GetDriverLocationResp _
 derive instance newtypeGetDriverLocationResp :: Newtype GetDriverLocationResp _

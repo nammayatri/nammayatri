@@ -145,3 +145,5 @@ _fareProductType = lens (unwrap >>> _.fareProductType) (\oldRec newVal -> wrap (
 
 _specialLocationTag :: forall a b c. Newtype a { specialLocationTag :: b | c } => Lens' a b
 _specialLocationTag = lens (unwrap >>> _.specialLocationTag) (\oldRec newVal -> wrap ((unwrap oldRec) { specialLocationTag = newVal }))
+_lastUpdate :: forall a b c. Newtype a { lastUpdate :: b | c } => Lens' a b
+_lastUpdate = lens (unwrap >>> _.lastUpdate) (\oldRec newVal -> wrap ((unwrap oldRec) { lastUpdate = newVal }))

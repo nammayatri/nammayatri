@@ -512,6 +512,8 @@ const kannadaStrings = {
   "SEATS" : "ಆಸನಗಳು",
   "HATCHBACK" : "ಹ್ಯಾಚ್ಬ್ಯಾಕ್", 
   "SUV" : "ಎಸ್ ಯು ವಿ",
-  "SEDAN" : "ಸೆಡಾನ್" 
-
+  "SEDAN" : "ಸೆಡಾನ್", 
+  "AND_HAS_TRAVELLED": " ಕಿಮೀ ಪ್ರಯಾಣಿಸಿದ್ದಾರೆ.",
+  "INTERNET_ISSUE_AT_DRIVERS_END" : "ಚಾಲಕನ ಕೊನೆಯಲ್ಲಿ ಇಂಟರ್ನೆಟ್ ಸಮಸ್ಯೆಗಳು",
+  "YOU_MAY_CONTACT_DRIVER_TO_TRACK_YOUR_RIDE" : "ನಿಮ್ಮ ಸವಾರಿಯನ್ನು ಟ್ರ್ಯಾಕ್ ಮಾಡಲು ನೀವು ಚಾಲಕನನ್ನು ಸಂಪರ್ಕಿಸಬಹುದು"
 }

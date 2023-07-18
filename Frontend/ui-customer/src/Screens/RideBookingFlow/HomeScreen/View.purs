@@ -16,7 +16,7 @@
 module Screens.HomeScreen.View where
 
 import Screens.RideBookingFlow.HomeScreen.Config (autoAnimConfig,chooseYourRideConfig, menuButtonConfig, cancelRidePopUpConfig, distanceOusideLimitsConfig, driverInfoCardViewState, emergencyHelpModelViewState, estimateChangedPopupConfig, fareBreakUpConfig, logOutPopUpModelConfig, previousRideRatingViewState, primaryButtonConfirmPickupConfig, primaryButtonRequestRideConfig, quoteListModelViewState, rateCardConfig, rateRideButtonConfig, ratingCardViewState, searchLocationModelViewState, shareAppConfig, shortDistanceConfig, skipButtonConfig, sourceUnserviceableConfig, whereToButtonConfig, chatViewConfig, metersToKm, callSupportConfig,genderBannerConfig,cancelAppConfig, specialLocationIcons, specialLocationConfig, requestInfoCardConfig)
-import Accessor (_lat, _lon, _selectedQuotes, _fareProductType)
+import Accessor (_lat, _lon, _selectedQuotes, _fareProductType, _lastUpdate)
 import Animation (fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromTopWithAlpha, fadeIn)
 import Animation.Config (Direction(..), translateFullYAnimWithDurationConfig, translateYAnimHomeConfig)
 import Components.Banner.View as Banner
@@ -60,7 +60,7 @@ import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, lift
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (Merchant(..), decodeErrorMessage, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getMerchant, getNewTrackingId, getPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, waitingCountdownTimer)
-import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, startTimerWithTime, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen, scrollOnResume)
+import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, startTimerWithTime, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen, scrollOnResume, showInAppNotification)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -85,6 +85,7 @@ import Services.Backend as Remote
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Control.Monad.Trans.Class (lift)
 import Types.App (GlobalState, defaultGlobalState)
+import Engineering.Helpers.Commons (getExpiryTime, getCurrentUTC)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -1864,6 +1865,11 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                                       specialLocationConfig destSpecialTagIcon sourceSpecialTagIcon
                                     else
                                       specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon
+            let lastUpdate = getExpiryTime (resp^. _lastUpdate) true
+            if lastUpdate > 20 && state.props.currentStage == RideAccepted then do
+              _ <- liftFlow $ showInAppNotification (getString INTERNET_ISSUE_AT_DRIVERS_END) (getString YOU_MAY_CONTACT_DRIVER_TO_TRACK_YOUR_RIDE) "" "" "" "" "" "driver_location_error" 5000 true false
+              pure unit
+            else pure unit
             if (getValueToLocalStore TRACKING_ENABLED) == "False" then do
               _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
               _ <- pure $ removeAllPolylines ""

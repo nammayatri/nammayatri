@@ -19,6 +19,22 @@
         android:layout_marginRight="12dp"
         android:layout_marginBottom="15dp">
 
+
+        <ProgressBar
+            android:id="@+id/loader"
+            android:layout_width="19dp"
+            android:layout_height="19dp"
+            android:layout_alignParentLeft="true"
+            android:layout_marginRight="5dp"
+            android:layout_marginTop="3dp"
+            android:layout_gravity="center"
+            android:progress="0"
+            android:indeterminate="true"
+            android:indeterminateDrawable="@drawable/loader_blue"
+            style="?android:attr/progressBarStyleLarge"
+            />
+
+
         <ImageView
             android:id="@+id/cross"
             android:layout_width="19dp"
@@ -31,8 +47,8 @@
             android:id="@+id/title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_alignParentLeft="true"
             android:layout_toLeftOf="@id/cross"
+            android:layout_toRightOf="@id/loader"
             android:fontFamily="@font/plus_jakartasans_semibold"
             android:text="Testing"
             android:textColor="#454545"
@@ -43,7 +59,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_below="@id/title"
-            android:layout_alignParentLeft="true"
+            android:layout_toRightOf="@id/loader"
             android:layout_marginTop="6dp"
             android:layout_toLeftOf="@id/cross"
             android:fontFamily="@font/plus_jakartasans_regular"

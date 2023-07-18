@@ -11,6 +11,7 @@ import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
@@ -36,7 +37,7 @@ public class InAppNotification extends AppCompatActivity {
         this.context = activity.getApplicationContext();
         mainLayout = (ConstraintLayout) activity.findViewById(R.id.main_layout);
     }
-    public  void generateNotification(String title , String message , String onTapAction, String action1Text , String action2Text , String action1Image , String action2Image , String channelId , int durationInMilliSeconds) throws JSONException {
+    public  void generateNotification(String title , String message , String onTapAction, String action1Text , String action2Text , String action1Image , String action2Image , String channelId , int durationInMilliSeconds, Boolean showLoaderImage, Boolean ring) throws JSONException {
         Notification notification;
         // if channel id is not in our channels then we will create new channelId and attach layout for this channelId
         if( !notificationChannels.has(channelId)){
@@ -77,9 +78,11 @@ public class InAppNotification extends AppCompatActivity {
                     }
                 });
             }
-            notification.setContent(title,message,onTapAction,action1Text,action2Text, action1Image,action2Image);
+            notification.setContent(title,message,onTapAction,action1Text,action2Text, action1Image,action2Image, showLoaderImage);
             notification.handleNotificationHandler(durationInMilliSeconds);
-            notification.ring();
+            if(ring){
+                notification.ring();
+            }
         }
     }
 
@@ -121,7 +124,13 @@ public class InAppNotification extends AppCompatActivity {
             counterView.setVisibility(View.GONE);
         }
 
-        private void setContent(String title , String message , String onTapEvent, String action1Text , String action2Text , String action1Image , String action2Image){
+        private void setContent(String title , String message , String onTapEvent, String action1Text , String action2Text , String action1Image , String action2Image , Boolean showLoaderImage){
+            ProgressBar loaderImage = view.findViewById(R.id.loader);
+            if(showLoaderImage){
+                loaderImage.setVisibility(View.VISIBLE);
+            }else{
+                loaderImage.setVisibility(View.GONE);
+            }
             TextView titleView = view.findViewById(R.id.title);
             TextView descriptionView = view.findViewById(R.id.desc);
             TextView action1TextView = view.findViewById(R.id.action1_text);

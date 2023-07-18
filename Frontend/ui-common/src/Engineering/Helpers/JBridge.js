@@ -1361,7 +1361,11 @@ export const showInAppNotification = function(title){
             return function(action2Image){
               return function(channelId){
                 return function(duration){
-                  return window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"in_app_notification" , title:title ,message:message ,onTapAction:onTapAction, action1Text:action1Text,action2Text:action2Text , action1Image : action1Image ,action2Image :action2Image , channelId:channelId , durationInMilliSeconds:duration}))()
+                  return function(showLoaderImage){
+                    return function(ring){
+                      return window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"in_app_notification" , title:title ,message:message ,onTapAction:onTapAction, action1Text:action1Text,action2Text:action2Text , action1Image : action1Image ,action2Image :action2Image , channelId:channelId , durationInMilliSeconds:duration , showLoaderImage:showLoaderImage , ring:ring}))()
+                    }
+                  }
                 }
               }
             }

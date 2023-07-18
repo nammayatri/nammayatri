@@ -72,7 +72,7 @@ foreign import locateOnMap :: Boolean -> Number -> Number -> String-> Array Loca
 foreign import exitLocateOnMap :: String -> Unit
 foreign import shareTextMessage :: String -> String -> Unit
 foreign import shareImageMessage :: String -> String -> Unit
-foreign import showInAppNotification :: String -> String -> String -> String -> String -> String -> String -> String -> Int -> Effect Unit
+foreign import showInAppNotification :: String -> String -> String -> String -> String -> String -> String -> String -> Int -> Boolean -> Boolean -> Effect Unit
 foreign import enableMyLocation :: Boolean -> Unit
 foreign import isLocationPermissionEnabled :: Unit -> Effect Boolean
 foreign import isMicrophonePermissionEnabled :: Unit -> Effect Boolean

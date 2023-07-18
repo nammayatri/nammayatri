@@ -277,7 +277,7 @@ public class ChatService extends Service {
                     else startOverlayService(message, _dateFormatted);
                 }else if (appState.equals("onResume") && !(stage.equals("ChatWithCustomer"))) {
                     String notificationId = String.valueOf(random.nextInt(1000000));
-                    MainActivity.showInAppNotification(_sentBy, message, CommonJsInterface.storeCallBackOpenChatScreen,"", "", "", "", notificationId, 5000, context);
+                    MainActivity.showInAppNotification(_sentBy, message, CommonJsInterface.storeCallBackOpenChatScreen,"", "", "", "", notificationId, 5000, false, true, context);
                 }
             }
         } catch (Exception e) {

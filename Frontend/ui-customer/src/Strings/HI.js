@@ -518,5 +518,8 @@ const hindiStrings = {
   "DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS" :"ड्राइवर जोड़ने की सीमा ₹10 की वृद्धि में है",
   "HATCHBACK" : "हैचबैक", 
   "SUV" : "एसयूवी",
-  "SEDAN" : "सेडान" 
+  "SEDAN" : "सेडान", 
+  "AND_HAS_TRAVELLED": " किमी की यात्रा कर चुका है।",
+  "INTERNET_ISSUE_AT_DRIVERS_END" : "ड्राइवर की ओर से इंटरनेट संबंधी समस्याएँ",
+  "YOU_MAY_CONTACT_DRIVER_TO_TRACK_YOUR_RIDE" : "आप अपनी सवारी को ट्रैक करने के लिए ड्राइवर से संपर्क कर सकते हैं"
 }
