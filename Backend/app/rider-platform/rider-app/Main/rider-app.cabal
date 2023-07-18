@@ -213,6 +213,7 @@ library
       Storage.Beam.FarePolicy.FareBreakup
       Storage.Beam.Geometry
       Storage.Beam.Issue
+      Storage.Beam.Maps.DirectionsCache
       Storage.Beam.Maps.PlaceNameCache
       Storage.Beam.Merchant
       Storage.Beam.Merchant.MerchantMessage
