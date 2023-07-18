@@ -94,7 +94,7 @@ mkOnInitMessage res = do
                         OnInit.Agent
                           { name = driverName,
                             rateable = True,
-                            tags = OnInit.TG [],
+                            tags = Nothing,
                             phone = Nothing
                           }
                 },

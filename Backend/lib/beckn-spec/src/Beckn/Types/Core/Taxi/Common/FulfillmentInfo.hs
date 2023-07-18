@@ -28,7 +28,7 @@ import Kernel.Utils.JSON (stripPrefixUnderscoreIfAny)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data StartInfo = StartInfo
-  { authorization :: Authorization,
+  { authorization :: Maybe Authorization,
     location :: Location
   }
   deriving (Generic, Show, FromJSON, ToJSON)
@@ -64,7 +64,7 @@ data FulfillmentInfo = FulfillmentInfo
     agent :: Maybe Agent,
     _type :: FulfillmentType,
     vehicle :: Maybe Vehicle,
-    tags :: T.TagGroups
+    tags :: Maybe T.TagGroups
   }
   deriving (Generic, Show)
 

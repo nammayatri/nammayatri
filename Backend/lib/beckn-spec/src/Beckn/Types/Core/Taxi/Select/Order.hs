@@ -18,8 +18,10 @@ module Beckn.Types.Core.Taxi.Select.Order where
 
 import Beckn.Types.Core.Taxi.Common.Tags
 import Beckn.Types.Core.Taxi.OnSearch.Fulfillment
+import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (State, id, state)
+import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Order = Order
@@ -37,10 +39,16 @@ data OrderItem = OrderItem
     price :: Price,
     tags :: Maybe TagGroups
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, Show)
 
 instance ToSchema OrderItem where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON OrderItem where
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+instance ToJSON OrderItem where
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
 
 data Price = Price
   { currency :: Text,
