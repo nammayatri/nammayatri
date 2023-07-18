@@ -14,9 +14,10 @@
 module Beckn.Types.Core.Taxi.Common.Agent where
 
 import Beckn.Types.Core.Taxi.Common.Tags
-import Data.Aeson as A
+import Data.Aeson
 import Data.OpenApi hiding (Example, example, name, tags)
 import Kernel.Prelude
+import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Agent = Agent
@@ -25,7 +26,13 @@ data Agent = Agent
     phone :: Maybe Text,
     tags :: TagGroups
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show)
 
 instance ToSchema Agent where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON Agent where
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+instance ToJSON Agent where
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}

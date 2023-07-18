@@ -12,51 +12,62 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnConfirm.Fulfillment
-  ( module Beckn.Types.Core.Taxi.OnConfirm.Fulfillment,
-  )
-where
+module Beckn.Types.Core.Taxi.Common.Customer where
 
-import Beckn.Types.Core.Taxi.Common.Agent
-import Beckn.Types.Core.Taxi.Common.Customer
-import Beckn.Types.Core.Taxi.Common.Descriptor
-import Beckn.Types.Core.Taxi.Common.FulfillmentType
-import Beckn.Types.Core.Taxi.Common.StartInfo
-import Beckn.Types.Core.Taxi.Common.StopInfo
-import Beckn.Types.Core.Taxi.Common.Vehicle
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
+import qualified Data.Text as T
 import Kernel.Prelude
 import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
+import qualified Text.Show
 
--- If end = Nothing, then bpp sends quotes only for RENTAL
--- If end is Just, then bpp sends quotes both for RENTAL and ONE_WAY
-data FulfillmentInfo = FulfillmentInfo
-  { id :: Text,
-    _type :: FulfillmentType,
-    state :: FulfillmentState,
-    start :: StartInfo,
-    end :: Maybe StopInfo,
-    vehicle :: Vehicle,
-    customer :: Customer,
-    agent :: Maybe Agent -- If NormalBooking then Just else Nothing for SpecialZoneBooking
+data Customer = Customer
+  { contact :: Contact,
+    person :: Maybe OrderPerson
   }
   deriving (Generic, Show)
 
-instance ToSchema FulfillmentInfo where
+instance ToSchema Customer where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
-instance FromJSON FulfillmentInfo where
+instance FromJSON Customer where
   parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
 
-instance ToJSON FulfillmentInfo where
+instance ToJSON Customer where
   toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
 
-newtype FulfillmentState = FulfillmentState
-  { descriptor :: Descriptor
+data Contact = Contact
+  { phoneCountryCode :: Text,
+    phoneNumber :: Text
+  }
+  deriving (Generic)
+
+instance Show Contact where
+  show (Contact phoneCountryCode phoneNumber) = T.unpack phoneCountryCode <> "-" <> T.unpack phoneNumber
+
+instance Read Contact where
+  readsPrec _ str =
+    case T.splitOn "-" $ T.pack str of
+      phoneCountryCode : phoneNumber : _ -> [(Contact phoneCountryCode phoneNumber, "")]
+      _ -> []
+
+instance ToJSON Contact where
+  toJSON = String . T.pack . show
+
+instance FromJSON Contact where
+  parseJSON = withText "Contact" $ \s -> do
+    case readMaybe $ T.unpack s of
+      Nothing -> fail "Unable to parse Contact"
+      Just ic -> return ic
+
+instance ToSchema Contact where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+newtype OrderPerson = OrderPerson
+  { name :: Text
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
-instance ToSchema FulfillmentState where
+instance ToSchema OrderPerson where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

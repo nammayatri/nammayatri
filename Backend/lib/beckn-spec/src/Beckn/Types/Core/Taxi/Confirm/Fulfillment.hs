@@ -14,6 +14,7 @@
 
 module Beckn.Types.Core.Taxi.Confirm.Fulfillment where
 
+import Beckn.Types.Core.Taxi.Common.Customer
 import Beckn.Types.Core.Taxi.Common.FulfillmentType
 import Beckn.Types.Core.Taxi.Common.StartInfo
 import Beckn.Types.Core.Taxi.Common.StopInfo
@@ -32,7 +33,7 @@ data FulfillmentInfo = FulfillmentInfo
     start :: StartInfo,
     end :: Maybe StopInfo,
     vehicle :: Vehicle,
-    customer :: OrderCustomer
+    customer :: Customer
   }
   deriving (Generic, Show)
 
@@ -44,37 +45,3 @@ instance FromJSON FulfillmentInfo where
 
 instance ToJSON FulfillmentInfo where
   toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
-
-data OrderCustomer = OrderCustomer
-  { contact :: Contact,
-    person :: Maybe OrderPerson
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema OrderCustomer where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-newtype Contact = Contact
-  { phone :: Phone
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema Contact where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-data Phone = Phone
-  { country_code :: Text,
-    number :: Text
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema Phone where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-newtype OrderPerson = OrderPerson
-  { name :: Text
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema OrderPerson where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

@@ -40,7 +40,7 @@ data DOnSelectReq = DOnSelectReq
   }
 
 data TransporterInfo = TransporterInfo
-  { subscriberId :: ShortId DM.Subscriber,
+  { merchantShortId :: ShortId DM.Merchant,
     name :: Text,
     contacts :: Text,
     ridesInProgress :: Int,
@@ -78,11 +78,10 @@ mkOnSelectMessage req@DOnSelectReq {..} = do
               OS.PaymentParams
                 { collected_by = OS.BPP,
                   instrument = Nothing,
-                  currency = Nothing,
+                  currency = "INR",
                   amount = Nothing
                 },
             _type = OS.ON_FULFILLMENT,
-            time = OS.TimeDuration "P2A",
             uri = Nothing
           }
   let provider =
@@ -198,7 +197,7 @@ mkFulfillment dReq quote = do
 mkItem :: Text -> DQuote.DriverQuote -> TransporterInfo -> OS.Item
 mkItem fulfillmentId q provider =
   OS.Item
-    { id = mkItemId provider.subscriberId.getShortId q.vehicleVariant,
+    { id = mkItemId provider.merchantShortId.getShortId q.vehicleVariant,
       -- category_id = driverOfferCategory.id,
       fulfillment_id = fulfillmentId,
       -- offer_id = Nothing,
