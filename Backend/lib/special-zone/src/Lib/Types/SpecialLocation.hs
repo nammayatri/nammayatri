@@ -44,6 +44,7 @@ data SpecialLocation = SpecialLocation
 
 data GatesInfo = GatesInfo
   { point :: LatLong,
-    name :: Text
+    name :: Text,
+    address :: Maybe String
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
