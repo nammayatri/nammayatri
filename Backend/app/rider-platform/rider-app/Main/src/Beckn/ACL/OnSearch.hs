@@ -105,7 +105,6 @@ buildEstimateOrQuoteInfo provider item = do
   let itemId = item.id
   -- (item.tags >>= buildEstimateBreakUpList item.price.currency)
   -- & fromMaybeM (InvalidRequest "Missing fare breakup item")
-  estimateBreakupList <- buildEstimateBreakUpList item
   -- let itemCode = item.descriptor.code     ----------fulfillment Vehicle
   let vehicleVariant = castVehicleVariant fulfillment.vehicle.category ----------fulfillment Vehicle
       estimatedFare = roundToIntegral item.price.value
@@ -132,7 +131,9 @@ buildEstimateOrQuoteInfo provider item = do
     -- OnSearch.RENTAL_TRIP -> do
     --   quoteDetails <- DOnSearch.RentalDetails <$> buildRentalQuoteDetails item
     --   pure $ Right DOnSearch.QuoteInfo {..}
-    OnSearch.RIDE -> pure $ Left DOnSearch.EstimateInfo {bppEstimateId = Id fulfillment.id, ..}
+    OnSearch.RIDE -> do
+      estimateBreakupList <- buildEstimateBreakUpList item
+      pure $ Left DOnSearch.EstimateInfo {bppEstimateId = Id fulfillment.id, ..}
     -- OnSearch.DRIVER_OFFER -> throwError $ InvalidRequest "DRIVER_OFFER supported in on_select, use DRIVER_OFFER_ESTIMATE"
     OnSearch.RIDE_OTP -> do
       quoteDetails <- DOnSearch.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneQuoteDetails fulfillment
