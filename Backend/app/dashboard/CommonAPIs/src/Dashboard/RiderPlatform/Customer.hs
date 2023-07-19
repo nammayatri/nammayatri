@@ -107,3 +107,29 @@ data CustomerListItem = CustomerListItem
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+---------------------------------------------------------
+-- customer Numbers ----------------------------------------
+
+type CustomerNumberListAPI =
+  "number"
+    :> "list"
+    :> ReqBody '[JSON] CustomerIdList
+    :> Get '[JSON] CustomersNumberList
+
+type CustomerIdList = [Text]
+
+data CustomersNumberList = CustomersNumberList
+  { totalItems :: Int, -- for backward compatibility
+    summary :: Summary,
+    customersNumberList :: [CustomerNumberRes]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data CustomerNumberRes = CustomerNumberRes
+  { id :: Text, -- for backward compatibility
+    number :: Maybe Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

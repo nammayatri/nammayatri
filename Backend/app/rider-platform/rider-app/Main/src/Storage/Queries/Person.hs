@@ -293,6 +293,19 @@ updatingEnabledAndBlockedState personId blockedByRule isBlocked = do
         <> [PersonBlockedAt =. val (Just now) | isBlocked]
     where_ $ tbl ^. PersonId ==. val (getId personId)
 
+findAllCustomersById ::
+  Transactionable m =>
+  Id Merchant ->
+  [Text] ->
+  m [Person]
+findAllCustomersById merchantId customerIdList = do
+  Esq.findAll $ do
+    person <- from $ table @PersonT
+    where_ $
+      person ^. PersonMerchantId ==. (val . toKey $ merchantId)
+        &&. person ^. PersonId `in_` valList customerIdList
+    pure person
+
 findAllCustomers ::
   Transactionable m =>
   Id Merchant ->

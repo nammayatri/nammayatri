@@ -31,6 +31,7 @@ type API =
            :<|> Common.CustomerBlockAPI
            :<|> Common.CustomerUnblockAPI
            :<|> Common.CustomerInfoAPI
+           :<|> Common.CustomerNumberListAPI
        )
 
 handler :: ShortId DM.Merchant -> FlowServer API
@@ -40,6 +41,7 @@ handler merchantId =
     :<|> blockCustomer merchantId
     :<|> unblockCustomer merchantId
     :<|> customerInfo merchantId
+    :<|> getCustomersPhoneNumber merchantId
 
 listCustomers ::
   ShortId DM.Merchant ->
@@ -75,3 +77,9 @@ customerInfo ::
   Id Common.Customer ->
   FlowHandler Common.CustomerInfoRes
 customerInfo merchantShortId personId = withFlowHandlerAPI $ DCustomer.customerInfo merchantShortId personId
+
+getCustomersPhoneNumber ::
+  ShortId DM.Merchant ->
+  Common.CustomerIdList ->
+  FlowHandler Common.CustomersNumberList
+getCustomersPhoneNumber merchantShortId = withFlowHandlerAPI . DCustomer.getCustomersPhoneNumber merchantShortId

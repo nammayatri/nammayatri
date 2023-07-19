@@ -18,6 +18,7 @@ module Domain.Action.Dashboard.Customer
     unblockCustomer,
     listCustomers,
     customerInfo,
+    getCustomersPhoneNumber,
   )
 where
 
@@ -124,6 +125,18 @@ customerInfo merchantShortId customerId = do
 
   numberOfRides <- fromMaybe 0 <$> runInReplica (QP.fetchRidesCount personId)
   pure Common.CustomerInfoRes {numberOfRides}
+
+---------------------------------------------------------------------
+getCustomersPhoneNumber :: ShortId DM.Merchant -> Common.CustomerIdList -> Flow Common.CustomersNumberList
+getCustomersPhoneNumber merchantShortId customerIdList = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  customers <- runInReplica $ QP.findAllCustomersById merchant.id customerIdList
+  customerNumbers :: [Maybe Text] <- mapM (\cust -> mapM decrypt cust.mobileNumber) customers
+  let items = zipWith Common.CustomerNumberRes customerIdList customerNumbers
+  let count = length items
+  let totalCount = count + 1
+  let summary = Common.Summary {totalCount, count}
+  pure $ Common.CustomersNumberList {totalItems = count, summary, customersNumberList = items}
 
 ---------------------------------------------------------------------
 listCustomers :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Flow Common.CustomerListRes

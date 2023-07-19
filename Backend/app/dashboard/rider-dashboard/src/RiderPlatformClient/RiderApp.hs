@@ -72,7 +72,8 @@ data CustomerAPIs = CustomerAPIs
     customerDelete :: Id Customer.Customer -> Euler.EulerClient APISuccess,
     customerBlock :: Id Customer.Customer -> Euler.EulerClient APISuccess,
     customerUnblock :: Id Customer.Customer -> Euler.EulerClient APISuccess,
-    customerInfo :: Id Customer.Customer -> Euler.EulerClient Customer.CustomerInfoRes
+    customerInfo :: Id Customer.Customer -> Euler.EulerClient Customer.CustomerInfoRes,
+    customersNumberList :: Customer.CustomerIdList -> Euler.EulerClient Customer.CustomersNumberList
   }
 
 data BookingsAPIs = BookingsAPIs
@@ -197,7 +198,8 @@ mkAppBackendAPIs merchantId token = do
       :<|> customerDelete
       :<|> customerBlock
       :<|> customerUnblock
-      :<|> customerInfo = customersClient
+      :<|> customerInfo
+      :<|> customersNumberList = customersClient
 
     stuckBookingsCancel
       :<|> multipleBookingSync = bookingsClient
