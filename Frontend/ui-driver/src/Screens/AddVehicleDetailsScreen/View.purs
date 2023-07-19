@@ -370,13 +370,13 @@ uploadRC state push =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , padding (Padding 20 30 20 10)
-  , onClick push (const UploadFile)
-  , clickable $ not state.props.rcAvailable
   , visibility if state.data.dateOfRegistration /= Nothing then GONE else VISIBLE
   ][  linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation VERTICAL
+      , onClick push (const UploadFile)
+      , clickable $ not state.props.rcAvailable
       ][  linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT

@@ -45,7 +45,10 @@ import Effect (Effect)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Utils(loaderText, toggleLoader)
-import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime, stringToVersion, setText,convertUTCtoISC, getCurrentUTC, getCurrentTimeStamp)
+import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os, getExpiryTime, stringToVersion,setText,convertUTCtoISC, getCurrentUTC, getCurrentTimeStamp)
+import Foreign.Class (class Encode, encode, decode)
+import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks,getGenderIndex)
+import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Foreign.Class (class Encode, encode, decode)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Helpers.Utils (hideSplash, getTime, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getcurrentdate, getDowngradeOptions, getPastDays, getPastWeeks, getGenderIndex, paymentPageUI, consumeBP, getDatebyCount)
@@ -681,6 +684,8 @@ applicationSubmittedFlow screenType = do
   case action of
     GO_TO_HOME_FROM_APPLICATION_STATUS -> permissionsScreenFlow
     GO_TO_UPLOAD_DL_SCREEN -> do
+      _ <- pure $ setText (getNewIDWithTag "EnterDrivingLicenseEditText") ""
+      _ <- pure $ setText (getNewIDWithTag "ReEnterDrivingLicenseEditText") ""
       let (GlobalState defaultEpassState') = defaultGlobalState
       modifyScreenState $ UploadDrivingLicenseScreenStateType (\_ -> defaultEpassState'.uploadDrivingLicenseScreen)
       modifyScreenState $ AddVehicleDetailsScreenStateType (\_ -> defaultEpassState'.addVehicleDetailsScreen)

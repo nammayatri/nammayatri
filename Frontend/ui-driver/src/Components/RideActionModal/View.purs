@@ -375,7 +375,7 @@ cancelRide :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect 
 cancelRide push config = 
   linearLayout 
   [ width MATCH_PARENT
-  , height (V 34)
+  , height (V 36)
   , gravity CENTER
   , visibility if config.startRideActive then VISIBLE else GONE
   , margin $ MarginVertical 16 16
