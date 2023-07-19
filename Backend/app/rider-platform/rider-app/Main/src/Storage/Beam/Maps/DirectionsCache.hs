@@ -20,9 +20,12 @@ module Storage.Beam.Maps.DirectionsCache where
 
 import Data.Aeson
 import qualified Data.Aeson as A
+import Data.ByteString.Lazy (fromStrict)
+import Data.ByteString.Lazy.Char8 (toStrict)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
+import qualified Data.Text.Encoding as TE
 import qualified Data.Time as Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
@@ -30,24 +33,36 @@ import Database.Beam.MySQL ()
 import Database.Beam.Postgres
   ( Postgres,
   )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+import Database.PostgreSQL.Simple.FromField
+import qualified Database.PostgreSQL.Simple.FromField as DPSF
+import Debug.Trace as T
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.External.Maps (BoundingBoxWithoutCRS (..), LatLong (..), PointXY (..), PointXYZ (..), PointXYZM (..), RouteInfo (..))
 import Kernel.Prelude hiding (Generic)
-import Kernel.Types.Common hiding (id)
 import Lib.UtilsTH
 import Sequelize
 
 instance FromField RouteInfo where
-  fromField = fromFieldEnum
+  fromField f mbValue = case mbValue of
+    Nothing -> DPSF.returnError UnexpectedNull f mempty
+    Just value' ->
+      case T.trace ("text val" <> show value') $ A.eitherDecode $ fromStrict value' of
+        Right jsonVal -> case T.trace ("text val" <> show value') $ A.eitherDecode (fromStrict $ TE.encodeUtf8 jsonVal) of
+          Right val -> pure val
+          _ -> DPSF.returnError ConversionFailed f ("Could not 'read'" <> show value')
+        _ -> DPSF.returnError ConversionFailed f ("Could not 'read'" <> show value')
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be RouteInfo where
-  sqlValueSyntax = autoSqlValueSyntax
+instance FromBackendRow Postgres RouteInfo
+
+instance HasSqlValueSyntax be Text => HasSqlValueSyntax be RouteInfo where
+  sqlValueSyntax = sqlValueSyntax . (stringify . A.String . stringify . A.toJSON)
+    where
+      stringify = TE.decodeUtf8 . toStrict . A.encode
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be RouteInfo
 
-instance FromBackendRow Postgres RouteInfo
+-- instance FromBackendRow Postgres RouteInfo
 
 instance IsString RouteInfo where
   fromString = show
