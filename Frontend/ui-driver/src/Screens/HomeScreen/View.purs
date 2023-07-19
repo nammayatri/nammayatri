@@ -48,7 +48,7 @@ import Language.Types (STR(..))
 import Log (printLog)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
-import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback,adjustViewWithKeyboard,lottieAnimationView,relativeLayout)
+import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback,adjustViewWithKeyboard,lottieAnimationView,relativeLayout, ellipsize, singleLine)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
 import PrestoDOM.Properties as PP
@@ -901,16 +901,22 @@ locationLastUpdatedTextAndTimeView push state =
   linearLayout
   [ height MATCH_PARENT
     , width WRAP_CONTENT
+    , gravity CENTER_VERTICAL
   ][
     textView $
     [ text $ (getString UPDATED_AT) <> ": "
     , lineHeight "15"
     , color Color.brownishGrey
+    , width $ V (JB.getWidthFromPercent 32)
     , gravity LEFT
+    , height WRAP_CONTENT
     ] <> FontStyle.paragraphText TypoGraphy
     , textView $
-    [ width WRAP_CONTENT
+    [ width $ V (JB.getWidthFromPercent 30)
       , height WRAP_CONTENT
+      , ellipsize true
+      , singleLine true
+      , gravity CENTER_VERTICAL
       , text if state.data.locationLastUpdatedTime == "" then (if (getValueToLocalStore LOCATION_UPDATE_TIME) == "__failed" then getString(NO_LOCATION_UPDATE) else (getValueToLocalStore LOCATION_UPDATE_TIME) ) else state.data.locationLastUpdatedTime
     ] <> FontStyle.body4 TypoGraphy
   ]

@@ -404,3 +404,5 @@ fromMetersToKm distanceInMeters
   | distanceInMeters >= 1000 = parseFloat (toNumber distanceInMeters / 1000.0) 1 <> " km"
   | otherwise = show distanceInMeters <> " m"
 
+getArray :: Int ->Array Int
+getArray count = if count == 0 then [count] else [count] <> (getArray (count - 1))

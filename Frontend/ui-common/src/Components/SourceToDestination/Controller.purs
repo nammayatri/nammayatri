@@ -82,7 +82,7 @@ config = {
     margin : (Margin 0 0 0 0)
   , width : MATCH_PARENT
   , lineMargin : (Margin 5 4 0 0)
-  , sourceMargin : (Margin 0 0 0 25)
+  , sourceMargin : (Margin 0 0 0 0)
   , sourceBackground : Color.white900
   , sourceImageConfig : {
       width : V 10
