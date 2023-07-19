@@ -29,7 +29,7 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 data Quote = Quote
   { price :: Price,
     ttl :: Maybe Text,
-    breakup :: Maybe [PriceBreakup]
+    breakup :: [PriceBreakup]
   }
   deriving (Generic, Show)
 
