@@ -35,7 +35,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
 import MerchantConfig.Utils (getValueFromConfig)
-import Prelude (Unit, bind, const, discard, not, pure, unit, ($), (<<<), (<>), (==), (&&))
+import Prelude (Unit, bind, const, discard, not, pure, unit, ($), (<<<), (<>), (==), (&&), (/=))
 import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textFromHtml, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.AadhaarVerificationScreen.Controller (Action(..), ScreenOutput, eval)
@@ -116,6 +116,7 @@ backArrow state push =
       , height ( V 25 )
       , imageWithFallback "ny_ic_back,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
       , onClick push (const BackPressed)
+      , visibility if state.props.currentStage /= EnterAadhaar then VISIBLE else GONE
       ]
     , linearLayout
       [ height WRAP_CONTENT

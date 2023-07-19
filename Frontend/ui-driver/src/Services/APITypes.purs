@@ -394,7 +394,6 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , gender                :: Maybe String
     , numberOfRides         :: Maybe Int
     , paymentPending        :: Boolean
-    , aadhaarVerified       :: Boolean
     }
 
 
@@ -850,6 +849,7 @@ data DriverRegistrationStatusReq = DriverRegistrationStatusReq { }
 newtype DriverRegistrationStatusResp = DriverRegistrationStatusResp
     { dlVerificationStatus :: String
     , rcVerificationStatus :: String
+    , aadhaarVerificationStatus :: String
     }
 
 instance makeDriverRegistrationStatusReq :: RestEndpoint DriverRegistrationStatusReq DriverRegistrationStatusResp where

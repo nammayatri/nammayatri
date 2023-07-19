@@ -21,7 +21,7 @@ import Components.ChatView.Controller (makeChatComponent')
 import Control.Monad.Except.Trans (lift)
 import Common.Types.App (Version(..),LazyCheck(..), PaymentStatus(..))
 import Common.Types.App (APIPaymentStatus(..)) as PS
-import Data.Array (concat, filter, cons, elemIndex, head, length, mapWithIndex, null, snoc, sortBy, (!!), any, last)
+import Data.Array (concat, filter, cons, elemIndex, head, length, mapWithIndex, null, snoc, sortBy, (!!), any, last, all)
 import Data.Either (Either(..))
 import Data.Functor (map)
 import Data.Int (round, toNumber, ceil, fromString)
@@ -240,7 +240,6 @@ getDriverInfoFlow = do
                                                                            , props {statusOnline =  if (isJust getDriverInfoResp.mode) then
                                                                                                         (any( _ == (updateDriverStatus getDriverInfoResp.active))[Online, Silent])
                                                                                                     else getDriverInfoResp.active
-                                                                                  , showlinkAadhaarPopup = organization.aadhaarVerificationRequired && (not getDriverInfoResp.aadhaarVerified)
                                                                                     }
                                                                             }
                                                 )
@@ -260,14 +259,13 @@ getDriverInfoFlow = do
           else permissionsScreenFlow
         else do
           setValueToLocalStore IS_DRIVER_ENABLED "false"
-          if organization.aadhaarVerificationRequired && (not getDriverInfoResp.aadhaarVerified) then aadhaarVerificationFlow 
-            else
-              if getDriverInfoResp.verified then do
-                setValueToLocalStore IS_DRIVER_VERIFIED "true"
-                applicationSubmittedFlow "ApprovedScreen"
-                else do
-                  setValueToLocalStore IS_DRIVER_VERIFIED "false"
-                  onBoardingFlow
+          modifyScreenState $ GlobalPropsType (\globalPropsType -> globalPropsType {aadhaarVerificationRequired = organization.aadhaarVerificationRequired})
+          if getDriverInfoResp.verified then do
+            setValueToLocalStore IS_DRIVER_VERIFIED "true"
+            applicationSubmittedFlow "ApprovedScreen"
+            else do
+              setValueToLocalStore IS_DRIVER_VERIFIED "false"
+              onBoardingFlow
     Left errorPayload -> do
       if ((decodeErrorCode errorPayload.response.errorMessage) == "VEHICLE_NOT_FOUND" || (decodeErrorCode errorPayload.response.errorMessage) == "DRIVER_INFORMATON_NOT_FOUND")
         then onBoardingFlow
@@ -290,17 +288,19 @@ onBoardingFlow = do
   _ <- pure $ hideKeyboardOnNavigation true
   (DriverRegistrationStatusResp resp ) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })
   lift $ lift $ doAff do liftEffect hideSplash
-  if (resp.dlVerificationStatus == "NO_DOC_AVAILABLE" && resp.rcVerificationStatus == "NO_DOC_AVAILABLE") then do
+  GlobalState globalState <- getState
+  if ((resp.aadhaarVerificationStatus == "INVALID" || resp.aadhaarVerificationStatus == "NO_DOC_AVAILABLE") && globalState.globalProps.aadhaarVerificationRequired) then aadhaarVerificationFlow
+  else if (resp.dlVerificationStatus == "NO_DOC_AVAILABLE" && resp.rcVerificationStatus == "NO_DOC_AVAILABLE") then do
     flow <- UI.registration
     case flow of
       UPLOAD_DRIVER_LICENSE -> do
         modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { data {rcVerificationStatus = resp.rcVerificationStatus}}
         uploadDrivingLicenseFlow
-    else if(resp.dlVerificationStatus == "NO_DOC_AVAILABLE") then do
-      modifyScreenState $ UploadDrivingLicenseScreenStateType (\uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { data {rcVerificationStatus = resp.rcVerificationStatus}})
-      uploadDrivingLicenseFlow
-      else if (resp.rcVerificationStatus == "NO_DOC_AVAILABLE") then addVehicleDetailsflow
-        else applicationSubmittedFlow "StatusScreen"
+  else if(resp.dlVerificationStatus == "NO_DOC_AVAILABLE") then do
+    modifyScreenState $ UploadDrivingLicenseScreenStateType (\uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { data {rcVerificationStatus = resp.rcVerificationStatus}})
+    uploadDrivingLicenseFlow
+  else if (resp.rcVerificationStatus == "NO_DOC_AVAILABLE") then addVehicleDetailsflow
+  else applicationSubmittedFlow "StatusScreen"
 
 updateDriverVersion :: Maybe Version -> Maybe Version -> FlowBT String Unit
 updateDriverVersion dbClientVersion dbBundleVersion = do
@@ -319,6 +319,105 @@ updateDriverVersion dbClientVersion dbBundleVersion = do
       pure unit
     else pure unit
   else pure unit
+
+
+aadhaarVerificationFlow :: FlowBT String Unit
+aadhaarVerificationFlow = do
+  lift $ lift $ doAff do liftEffect hideSplash
+  out <- UI.aadhaarVerificationScreen
+  case out of
+    ENTER_AADHAAR_OTP state -> do
+      void $ lift $ lift $ loaderText (getString VALIDATING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+      void $ lift $ lift $ toggleLoader true
+      res <- lift $ lift $ Remote.triggerAadhaarOtp state.data.aadhaarNumber
+      void $ lift $ lift $ toggleLoader false
+      case res of 
+        Right (GenerateAadhaarOTPResp resp) -> do
+          -- let _ = toast resp.message
+          case resp.statusCode of
+            "1001" -> do
+              modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = VerifyAadhaar, btnActive = false}})
+              aadhaarVerificationFlow
+            _ -> aadhaarVerificationFlow
+        Left errorPayload -> do
+          let errorCode = decodeErrorCode errorPayload.response.errorMessage
+          case errorCode of 
+            "AADHAAR_NUMBER_NOT_EXIST" -> pure $ toast $ getString AADHAAR_NUMBER_NOT_EXIST
+            "AADHAAR_ALREADY_LINKED" -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
+            "INVALID_AADHAAR" -> do
+              _ <- pure $ toast $ decodeErrorMessage errorPayload.response.errorMessage
+              modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{showErrorAadhaar = true, btnActive = false}})
+            _ -> do
+              pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
+              modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = AadhaarDetails, btnActive = false}})
+          aadhaarVerificationFlow
+    VERIFY_AADHAAR_OTP state -> do
+      void $ lift $ lift $ toggleLoader true
+      res <- lift $ lift $ Remote.verifyAadhaarOtp state.data.otp
+      void $ lift $ lift $ toggleLoader false
+      case res of 
+        Right (VerifyAadhaarOTPResp resp) -> do
+          if resp.code == 200 then if state.props.fromHomeScreen then getDriverInfoFlow else onBoardingFlow 
+            else do
+              _ <- pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+              modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = EnterAadhaar, btnActive = false}})
+              aadhaarVerificationFlow
+        Left errorPayload -> do
+          let stage = if (decodeErrorCode errorPayload.response.errorMessage) == "INVALID_OTP" then VerifyAadhaar else AadhaarDetails
+          _ <- pure if (decodeErrorCode errorPayload.response.errorMessage) == "INVALID_OTP" then toast $ getString INVALID_OTP else unit
+          modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = stage, btnActive = false}})
+          aadhaarVerificationFlow
+    RESEND_AADHAAR_OTP state -> do
+      res <- lift $ lift $ Remote.triggerAadhaarOtp state.data.aadhaarNumber
+      case res of 
+        Right (GenerateAadhaarOTPResp resp) -> do
+          case resp.statusCode of
+            "1001" -> do
+              modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = VerifyAadhaar}})
+              aadhaarVerificationFlow
+            _ -> do
+              _ <- pure $ toast $ getString VERIFICATION_FAILED
+              modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = EnterAadhaar}})
+              aadhaarVerificationFlow
+        Left errorPayload -> do
+          let errorCode = decodeErrorCode errorPayload.response.errorMessage
+          case errorCode of 
+            "INVALID_AADHAAR" -> do
+              _ <- pure $ toast $ getString VERIFICATION_FAILED
+              modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = EnterAadhaar,showErrorAadhaar = true, btnActive = false}})
+            "GENERATE_AADHAAR_OTP_EXCEED_LIMIT" -> pure $ toast $ getString OTP_RESEND_LIMIT_EXCEEDED
+            _ -> pure $ toast $ decodeErrorMessage errorPayload.response.errorMessage
+          modifyScreenState $ AadhaarVerificationScreenType (\aadhaarVerification -> aadhaarVerification{props{currentStage = EnterAadhaar, btnActive = false}})
+          aadhaarVerificationFlow
+    GO_TO_HOME_FROM_AADHAAR -> do 
+      (GlobalState state) <- getState
+      modifyScreenState $ AadhaarVerificationScreenType (\_ -> state.aadhaarVerificationScreen)
+      getDriverInfoFlow
+    LOGOUT_FROM_AADHAAR -> do
+      (LogOutRes resp) <- Remote.logOutBT LogOutReq
+      deleteValueFromLocalStore REGISTERATION_TOKEN
+      deleteValueFromLocalStore LANGUAGE_KEY
+      deleteValueFromLocalStore VERSION_NAME
+      deleteValueFromLocalStore BASE_URL
+      deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
+      deleteValueFromLocalStore IS_DRIVER_ENABLED
+      deleteValueFromLocalStore BUNDLE_VERSION
+      deleteValueFromLocalStore DRIVER_ID
+      deleteValueFromLocalStore SET_ALTERNATE_TIME
+      _ <- pure $ firebaseLogEvent "logout"
+      pure $ factoryResetApp ""
+      loginFlow
+    SEND_UNVERIFIED_AADHAAR_DATA state -> do 
+      void $ lift $ lift $ toggleLoader true
+      unVerifiedAadhaarDataResp <- lift $ lift $ Remote.unVerifiedAadhaarData state.data.driverName state.data.driverGender state.data.driverDob
+      case unVerifiedAadhaarDataResp of
+        Right resp -> do
+          void $ lift $ lift $ toggleLoader false
+          if state.props.fromHomeScreen then getDriverInfoFlow else onBoardingFlow 
+        Left errorPayload -> do 
+          void $ lift $ lift $ toggleLoader false
+          _ <- pure $ toast $ decodeErrorMessage errorPayload.response.errorMessage
+          aadhaarVerificationFlow
 
 
 uploadDrivingLicenseFlow :: FlowBT String Unit
@@ -344,7 +443,7 @@ uploadDrivingLicenseFlow = do
               void $ lift $ lift $ toggleLoader false
               modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { data {dateOfIssue = Just ""}}
               if errorPayload.code == 400 || (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage) == "UNPROCESSABLE_ENTITY") then do
-                let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage $ decodeErrorCode errorPayload.response.errorMessage
+                let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage errorPayload
                 modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { props {errorVisibility = true}, data {errorMessage = correspondingErrorMessage}}
                 uploadDrivingLicenseFlow
                 else do
@@ -386,7 +485,7 @@ uploadDrivingLicenseFlow = do
           modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { props { openGenericMessageModal = true}}
           uploadDrivingLicenseFlow
           else if errorPayload.code == 400 || (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage) == "UNPROCESSABLE_ENTITY") then do
-            let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage $ decodeErrorCode errorPayload.response.errorMessage
+            let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage errorPayload
             modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { props {errorVisibility = true}, data {errorMessage = correspondingErrorMessage, imageFrontUrl = state.data.imageFront, imageFront = "IMAGE_NOT_VALIDATED"}}
             uploadDrivingLicenseFlow
             else do
@@ -420,7 +519,7 @@ addVehicleDetailsflow = do
               void $ lift $ lift $ toggleLoader false
               modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data { dateOfRegistration = Just ""}}
               if errorPayload.code == 400 || (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage) == "UNPROCESSABLE_ENTITY") then do
-                let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage $ decodeErrorCode errorPayload.response.errorMessage
+                let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage errorPayload
                 modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {errorVisibility = true}, data {errorMessage = correspondingErrorMessage}}
                 addVehicleDetailsflow
                 else do
@@ -443,7 +542,7 @@ addVehicleDetailsflow = do
           modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> addVehicleDetailsScreen {props { limitExceedModal = true}})
           addVehicleDetailsflow
           else if errorPayload.code == 400 || (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage) == "UNPROCESSABLE_ENTITY") then do
-            let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage $ decodeErrorCode errorPayload.response.errorMessage
+            let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage errorPayload
             modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {errorVisibility = true}, data {errorMessage = correspondingErrorMessage , rcImageID = "IMAGE_NOT_VALIDATED" }}
             addVehicleDetailsflow
             else do
@@ -1131,8 +1230,11 @@ updateDriverStatus status = do
       else Offline
 
 checkDriverPaymentStatus :: Boolean -> FlowBT String Unit
-checkDriverPaymentStatus paymentPending = 
-  when (paymentPending && (getValueToLocalStore SHOW_PAYMENT_MODAL) /= "false") do
+checkDriverPaymentStatus paymentPending = when 
+  (paymentPending && 
+    (getValueToLocalStore SHOW_PAYMENT_MODAL) /= "false" &&
+    not all ( _ == true )[isLocalStageOn RideAccepted, isLocalStageOn RideStarted, isLocalStageOn ChatWithCustomer]
+    ) do
     resp <- lift $ lift $ Remote.getPaymentHistory "" "" (Just "PAYMENT_PENDING")
     case resp of 
       Right (GetPaymentHistoryResp resopnse) -> 
@@ -1215,8 +1317,7 @@ homeScreenFlow = do
   _  <- pure $ spy "DRIVERRRR___STATUS LOCAL" (getValueToLocalStore DRIVER_STATUS)
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {statusOnline = if (isJust getDriverInfoResp.mode) then
                                                                                                 (any( _ == (updateDriverStatus (getDriverInfoResp.active)))[Online, Silent])
-                                                                                             else getDriverInfoResp.active
-                                                                            , showlinkAadhaarPopup = organization.aadhaarVerificationRequired && (not getDriverInfoResp.aadhaarVerified)                 
+                                                                                             else getDriverInfoResp.active           
                                                                             , driverStatusSet = getDriverStatus "" }
                                                                       , data{vehicleType = linkedVehicle.variant, driverAlternateMobile =getDriverInfoResp.alternateNumber}})
 
@@ -1702,114 +1803,6 @@ notificationFlow = do
     GO_RIDE_HISTORY_SCREEN -> myRidesScreenFlow
     GO_PROFILE_SCREEN -> driverProfileFlow
     CHECK_RIDE_FLOW_STATUS -> currentRideFlow
-
-aadhaarVerificationFlow :: FlowBT String Unit
-aadhaarVerificationFlow = do
-  lift $ lift $ doAff do liftEffect hideSplash
-  out <- UI.aadhaarVerificationScreen
-  case out of
-    ENTER_AADHAAR_OTP state -> do
-      void $ lift $ lift $ loaderText (getString VALIDATING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
-      void $ lift $ lift $ toggleLoader true
-      res <- lift $ lift $ Remote.triggerAadhaarOtp state.data.aadhaarNumber
-      void $ lift $ lift $ toggleLoader false
-      case res of 
-        Right (GenerateAadhaarOTPResp resp) -> do
-          -- let _ = toast resp.message
-          case resp.statusCode of
-            "1001" -> do
-              modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = VerifyAadhaar, btnActive = false}})
-              aadhaarVerificationFlow
-            _ -> aadhaarVerificationFlow
-        Left errorPayload -> do
-          let errorCode = decodeErrorCode errorPayload.response.errorMessage
-          case errorCode of 
-            "INVALID_AADHAAR" -> do
-              _ <- pure $ toast $ decodeErrorMessage errorPayload.response.errorMessage
-              modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{showErrorAadhaar = true, btnActive = false}})
-            "GENERATE_AADHAAR_OTP_EXCEED_LIMIT" -> do
-              _ <- pure $ toast $ getString OTP_LIMIT_EXCEEDED
-              modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{btnActive = false}})
-            "NO_MOBILE_NUMBER_REGISTERED" -> pure $ toast $ getString NO_MOBILE_NUMBER_REGISTERED
-            "EXCEED_OTP_GENERATION_LIMIT" -> pure $ toast $ getString EXCEED_OTP_GENERATION_LIMIT
-            "AADHAAR_NUMBER_NOT_EXIST" -> pure $ toast $ getString AADHAAR_NUMBER_NOT_EXIST
-            "INVALID_OTP" -> pure $ toast $ getString INVALID_OTP
-            "NO_SHARE_CODE" -> pure $ toast $ getString NO_SHARE_CODE
-            "WRONG_SHARE_CODE" -> pure $ toast $ getString WRONG_SHARE_CODE
-            "INVALID_SHARE_CODE" -> pure $ toast $ getString INVALID_SHARE_CODE
-            "SESSION_EXPIRED" -> pure $ toast $ getString SESSION_EXPIRED
-            "OTP_ATTEMPT_EXCEEDED" -> pure $ toast $ getString OTP_ATTEMPT_EXCEEDED
-            "UPSTREAM_INTERNAL_SERVER_ERROR" -> pure $ toast $ getString UPSTREAM_INTERNAL_SERVER_ERROR
-            "TRANSACTION_ALREADY_COMPLETED" -> pure $ toast $ getString TRANSACTION_ALREADY_COMPLETED
-            _ -> pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
-          aadhaarVerificationFlow
-    VERIFY_AADHAAR_OTP state -> do
-      void $ lift $ lift $ toggleLoader true
-      res <- lift $ lift $ Remote.verifyAadhaarOtp state.data.otp
-      void $ lift $ lift $ toggleLoader false
-      case res of 
-        Right (VerifyAadhaarOTPResp resp) -> do
-          if resp.code == 200 then if state.props.fromHomeScreen then getDriverInfoFlow else onBoardingFlow 
-            else do
-              _ <- pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
-              modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = EnterAadhaar, btnActive = false}})
-              aadhaarVerificationFlow
-        Left errorPayload -> do
-          let stage = if (decodeErrorCode errorPayload.response.errorMessage) == "INVALID_OTP" then VerifyAadhaar else AadhaarDetails
-          _ <- pure if (decodeErrorCode errorPayload.response.errorMessage) == "INVALID_OTP" then toast $ getString INVALID_OTP else unit
-          modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = stage, btnActive = false}})
-          aadhaarVerificationFlow
-    RESEND_AADHAAR_OTP state -> do
-      res <- lift $ lift $ Remote.triggerAadhaarOtp state.data.aadhaarNumber
-      case res of 
-        Right (GenerateAadhaarOTPResp resp) -> do
-          case resp.statusCode of
-            "1001" -> do
-              modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = VerifyAadhaar}})
-              aadhaarVerificationFlow
-            _ -> do
-              _ <- pure $ toast $ getString VERIFICATION_FAILED
-              modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = EnterAadhaar}})
-              aadhaarVerificationFlow
-        Left errorPayload -> do
-          let errorCode = decodeErrorCode errorPayload.response.errorMessage
-          case errorCode of 
-            "INVALID_AADHAAR" -> do
-              _ <- pure $ toast $ getString VERIFICATION_FAILED
-              modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = EnterAadhaar,showErrorAadhaar = true, btnActive = false}})
-            "GENERATE_AADHAAR_OTP_EXCEED_LIMIT" -> pure $ toast $ getString OTP_RESEND_LIMIT_EXCEEDED
-            _ -> pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
-          modifyScreenState $ AadhaarVerificationScreenType (\aadhaarVerification -> aadhaarVerification{props{currentStage = EnterAadhaar, btnActive = false}})
-          aadhaarVerificationFlow
-    GO_TO_HOME_FROM_AADHAAR -> do 
-      (GlobalState state) <- getState
-      modifyScreenState $ AadhaarVerificationScreenType (\_ -> state.aadhaarVerificationScreen)
-      getDriverInfoFlow
-    LOGOUT_FROM_AADHAAR -> do
-      (LogOutRes resp) <- Remote.logOutBT LogOutReq
-      deleteValueFromLocalStore REGISTERATION_TOKEN
-      deleteValueFromLocalStore LANGUAGE_KEY
-      deleteValueFromLocalStore VERSION_NAME
-      deleteValueFromLocalStore BASE_URL
-      deleteValueFromLocalStore TEST_FLOW_FOR_REGISTRATOION
-      deleteValueFromLocalStore IS_DRIVER_ENABLED
-      deleteValueFromLocalStore BUNDLE_VERSION
-      deleteValueFromLocalStore DRIVER_ID
-      deleteValueFromLocalStore SET_ALTERNATE_TIME
-      _ <- pure $ firebaseLogEvent "logout"
-      pure $ factoryResetApp ""
-      loginFlow
-    SEND_UNVERIFIED_AADHAAR_DATA state -> do 
-      void $ lift $ lift $ toggleLoader true
-      unVerifiedAadhaarDataResp <- lift $ lift $ Remote.unVerifiedAadhaarData state.data.driverName state.data.driverGender state.data.driverDob
-      case unVerifiedAadhaarDataResp of
-        Right resp -> do
-          void $ lift $ lift $ toggleLoader false
-          if state.props.fromHomeScreen then getDriverInfoFlow else onBoardingFlow 
-        Left errorPayload -> do 
-          void $ lift $ lift $ toggleLoader false
-          _ <- pure $ toast $ decodeErrorMessage errorPayload.response.errorMessage
-          aadhaarVerificationFlow
 
 removeChatService :: String -> FlowBT String Unit
 removeChatService _ = do

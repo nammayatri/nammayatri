@@ -25,7 +25,7 @@ import Data.String (Pattern(..), Replacement(..), length, replace, replaceAll)
 import Data.String.CodeUnits (charAt)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, setText)
-import JBridge (requestKeyboardShow, hideKeyboardOnNavigation)
+import JBridge (requestKeyboardShow, hideKeyboardOnNavigation, minimizeApp)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, bind, discard, not, pure, unit, when, ($), (&&), (<=), (==), (>), (||), (<>), (+), show)
 import PrestoDOM (Eval, continue, continueWithCmd, exit)
@@ -91,9 +91,11 @@ data Action = BackPressed
 eval :: Action -> AadhaarVerificationScreenState -> Eval Action ScreenOutput AadhaarVerificationScreenState
 eval action state = case action of 
   AfterRender -> continue state
-  BackPressed -> if state.props.fromHomeScreen then
-    exit $ GoToHomeScreen state 
-    else continue state{props{currentStage = if state.props.currentStage == VerifyAadhaar then EnterAadhaar else state.props.currentStage }}
+  BackPressed ->  if state.props.currentStage == VerifyAadhaar then continue state{props{currentStage = EnterAadhaar}}
+                  else do
+                      _ <- pure $ minimizeApp ""
+                      continue state 
+
   (PrimaryButtonAC (PrimaryButton.OnClick)) -> 
     case state.props.currentStage of
       EnterAadhaar -> do

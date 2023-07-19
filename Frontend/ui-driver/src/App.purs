@@ -53,7 +53,7 @@ import Screens.ReferralScreen.ScreenData as ReferralScreenData
 import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
 import LoaderOverlay.ScreenData as LoaderOverlayScreenData
 import Screens.AcknowledgementScreen.ScreenData as AcknowledgementScreenData
-import Screens.Types (HomeScreenStage(..))
+import Screens.Types (HomeScreenStage(..), GlobalProps)
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -94,6 +94,7 @@ newtype GlobalState = GlobalState {
   , loaderOverlay :: LoaderOverlayScreenData.LoaderOverlayState
   , acknowledgementScreen :: AcknowledgementScreenState
   , aadhaarVerificationScreen :: AadhaarVerificationScreenState
+  , globalProps :: GlobalProps
   }
 
 defaultGlobalState :: GlobalState
@@ -134,6 +135,12 @@ defaultGlobalState = GlobalState{
 , loaderOverlay : LoaderOverlayScreenData.initData
 , acknowledgementScreen : AcknowledgementScreenData.initData
 , aadhaarVerificationScreen : EnterAadhaarNumberScreenData.initData
+, globalProps : defaultGlobalProps
+}
+
+defaultGlobalProps :: GlobalProps
+defaultGlobalProps = {
+  aadhaarVerificationRequired : false
 }
 
 data ScreenType =
@@ -170,6 +177,7 @@ data ScreenType =
   | BookingOptionsScreenType (BookingOptionsScreenState -> BookingOptionsScreenState)
   | AcknowledgementScreenType (AcknowledgementScreenState -> AcknowledgementScreenState)
   | AadhaarVerificationScreenType (AadhaarVerificationScreenState -> AadhaarVerificationScreenState)
+  | GlobalPropsType (GlobalProps -> GlobalProps)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 

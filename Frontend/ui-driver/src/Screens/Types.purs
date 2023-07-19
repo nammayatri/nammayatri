@@ -747,8 +747,7 @@ type HomeScreenProps =  {
   zoneRideBooking :: Boolean,
   showGenderBanner :: Boolean,
   notRemoveBanner :: Boolean,
-  showBonusInfo :: Boolean,
-  showlinkAadhaarPopup :: Boolean
+  showBonusInfo :: Boolean
  }
 
 data DriverStatus = Online | Offline | Silent
@@ -1341,3 +1340,7 @@ data AadhaarStage = EnterAadhaar | VerifyAadhaar | AadhaarDetails
 
 derive instance genericAadhaarStage :: Generic AadhaarStage _
 instance eqAadhaarStage :: Eq AadhaarStage where eq = genericEq
+
+type GlobalProps = {
+  aadhaarVerificationRequired :: Boolean
+}
