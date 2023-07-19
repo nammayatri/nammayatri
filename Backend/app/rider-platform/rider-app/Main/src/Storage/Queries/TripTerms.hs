@@ -11,51 +11,40 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.TripTerms where
 
 import Domain.Types.TripTerms as DTT
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Types.Logging (Log)
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.TripTerms as BeamTT
 
-createTripTerms :: L.MonadFlow m => TripTerms -> m (MeshResult ())
-createTripTerms tripTerms = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamTT.TripTermsT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainTripTermsToBeam tripTerms)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+createTripTerms :: (L.MonadFlow m, Log m) => TripTerms -> m ()
+createTripTerms = createWithKV
 
 -- findById' :: (MonadThrow m, Log m, Transactionable m) => Id TripTerms -> DTypeBuilder m (Maybe TripTermsT)
 -- findById' = Esq.findById'
 
-findById'' :: L.MonadFlow m => Id TripTerms -> m (Maybe TripTerms)
-findById'' tripTermsId = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamTT.TripTermsT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamTripTermsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamTT.id $ Se.Eq (getId tripTermsId)]
-    Nothing -> pure Nothing
+findById'' :: (L.MonadFlow m, Log m) => Id TripTerms -> m (Maybe TripTerms)
+findById'' tripTermsId = findOneWithKV [Se.Is BeamTT.id $ Se.Eq (getId tripTermsId)]
 
-transformBeamTripTermsToDomain :: BeamTT.TripTerms -> TripTerms
-transformBeamTripTermsToDomain BeamTT.TripTermsT {..} = do
-  TripTerms
-    { id = Id id,
-      descriptions = DTT.splitDescriptions descriptions
-    }
+instance FromTType' BeamTT.TripTerms TripTerms where
+  fromTType' BeamTT.TripTermsT {..} = do
+    pure $
+      Just
+        TripTerms
+          { id = Id id,
+            descriptions = DTT.splitDescriptions descriptions
+          }
 
-transformDomainTripTermsToBeam :: TripTerms -> BeamTT.TripTerms
-transformDomainTripTermsToBeam TripTerms {..} =
-  BeamTT.TripTermsT
-    { BeamTT.id = getId id,
-      BeamTT.descriptions = DTT.intercalateDescriptions descriptions
-    }
+instance ToTType' BeamTT.TripTerms TripTerms where
+  toTType' TripTerms {..} = do
+    BeamTT.TripTermsT
+      { BeamTT.id = getId id,
+        BeamTT.descriptions = DTT.intercalateDescriptions descriptions
+      }

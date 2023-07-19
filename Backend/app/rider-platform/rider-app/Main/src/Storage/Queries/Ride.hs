@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Ride where
 
@@ -19,10 +20,7 @@ import Domain.Types.Booking.Type (Booking)
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -33,19 +31,13 @@ import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Ride as BeamR
-import Storage.Queries.Booking (transformBeamBookingToDomain)
+import Storage.Queries.Booking ()
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.Person as Person
 import Storage.Tabular.Ride as Ride
 
-create :: L.MonadFlow m => Ride -> m (MeshResult ())
-create ride = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamR.RideT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRideToBeam ride)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create :: (L.MonadFlow m, Log m) => Ride -> m ()
+create = createWithKV
 
 -- updateStatus ::
 --   Id Ride ->
@@ -61,22 +53,14 @@ create ride = do
 --       ]
 --     where_ $ tbl ^. RideId ==. val (getId rideId)
 
-updateStatus :: (L.MonadFlow m, MonadTime m) => Id Ride -> RideStatus -> m (MeshResult ())
+updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> RideStatus -> m ()
 updateStatus rideId status = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamR.RideT
-  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamR.status status,
-          Se.Set BeamR.updatedAt now
-        ]
-        [Se.Is BeamR.id (Se.Eq $ getId rideId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamR.status status,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
 -- updateTrackingUrl ::
 --   Id Ride ->
@@ -92,22 +76,14 @@ updateStatus rideId status = do
 --       ]
 --     where_ $ tbl ^. RideId ==. val (getId rideId)
 
-updateTrackingUrl :: (L.MonadFlow m, MonadTime m) => Id Ride -> BaseUrl -> m (MeshResult ())
+updateTrackingUrl :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> BaseUrl -> m ()
 updateTrackingUrl rideId url = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamR.RideT
-  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamR.trackingUrl (Just $ showBaseUrl url),
-          Se.Set BeamR.updatedAt now
-        ]
-        [Se.Is BeamR.id (Se.Eq $ getId rideId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamR.trackingUrl (Just $ showBaseUrl url),
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
 -- updateRideRating ::
 --   Id Ride ->
@@ -123,38 +99,23 @@ updateTrackingUrl rideId url = do
 --       ]
 --     where_ $ tbl ^. RideId ==. val (getId rideId)
 
-updateRideRating :: (L.MonadFlow m, MonadTime m) => Id Ride -> Int -> m (MeshResult ())
+updateRideRating :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> Int -> m ()
 updateRideRating rideId rideRating = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamR.RideT
-  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamR.rideRating (Just rideRating),
-          Se.Set BeamR.updatedAt now
-        ]
-        [Se.Is BeamR.id (Se.Eq $ getId rideId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamR.rideRating (Just rideRating),
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
 -- findById :: Transactionable m => Id Ride -> m (Maybe Ride)
 -- findById = Esq.findById
 
-findById :: L.MonadFlow m => Id Ride -> m (Maybe Ride)
-findById (Id rideId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamR.RideT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamR.id $ Se.Eq rideId]
-      case result of
-        Right ride -> traverse transformBeamRideToDomain ride
-        Left _ -> pure Nothing
-    Nothing -> pure Nothing
+findById :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe Ride)
+findById (Id rideId) = findOneWithKV [Se.Is BeamR.id $ Se.Eq rideId]
+
+findByIdInReplica :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe Ride)
+findByIdInReplica (Id rideId) = findOneWithKvInReplica [Se.Is BeamR.id $ Se.Eq rideId]
 
 -- findByBPPRideId :: Transactionable m => Id BPPRide -> m (Maybe Ride)
 -- findByBPPRideId bppRideId_ =
@@ -163,18 +124,8 @@ findById (Id rideId) = do
 --     where_ $ ride ^. RideBppRideId ==. val (getId bppRideId_)
 --     return ride
 
-findByBPPRideId :: L.MonadFlow m => Id BPPRide -> m (Maybe Ride)
-findByBPPRideId bppRideId_ = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamR.RideT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamR.bppRideId $ Se.Eq $ getId bppRideId_]
-      case result of
-        Right ride -> traverse transformBeamRideToDomain ride
-        Left _ -> pure Nothing
-    Nothing -> pure Nothing
+findByBPPRideId :: (L.MonadFlow m, Log m) => Id BPPRide -> m (Maybe Ride)
+findByBPPRideId bppRideId_ = findOneWithKV [Se.Is BeamR.bppRideId $ Se.Eq $ getId bppRideId_]
 
 -- updateMultiple :: Id Ride -> Ride -> SqlDB ()
 -- updateMultiple rideId ride = do
@@ -192,27 +143,19 @@ findByBPPRideId bppRideId_ = do
 --       ]
 --     where_ $ tbl ^. RideId ==. val (getId rideId)
 
-updateMultiple :: (L.MonadFlow m, MonadTime m) => Id Ride -> Ride -> m (MeshResult ())
+updateMultiple :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> Ride -> m ()
 updateMultiple rideId ride = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamR.RideT
-  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamR.status ride.status,
-          Se.Set BeamR.fare (realToFrac <$> ride.fare),
-          Se.Set BeamR.totalFare (realToFrac <$> ride.totalFare),
-          Se.Set BeamR.chargeableDistance ride.chargeableDistance,
-          Se.Set BeamR.rideStartTime ride.rideStartTime,
-          Se.Set BeamR.rideEndTime ride.rideEndTime,
-          Se.Set BeamR.updatedAt now
-        ]
-        [Se.Is BeamR.id (Se.Eq $ getId rideId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamR.status ride.status,
+      Se.Set BeamR.fare (realToFrac <$> ride.fare),
+      Se.Set BeamR.totalFare (realToFrac <$> ride.totalFare),
+      Se.Set BeamR.chargeableDistance ride.chargeableDistance,
+      Se.Set BeamR.rideStartTime ride.rideStartTime,
+      Se.Set BeamR.rideEndTime ride.rideEndTime,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
 -- findActiveByRBId :: Transactionable m => Id Booking -> m (Maybe Ride)
 -- findActiveByRBId rbId =
@@ -223,18 +166,11 @@ updateMultiple rideId ride = do
 --         &&. ride ^. RideStatus !=. val CANCELLED
 --     return ride
 
-findActiveByRBId :: L.MonadFlow m => Id Booking -> m (Maybe Ride)
-findActiveByRBId (Id rbId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamR.RideT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Eq Ride.CANCELLED]]
-      case result of
-        Right ride -> traverse transformBeamRideToDomain ride
-        Left _ -> pure Nothing
-    Nothing -> pure Nothing
+findActiveByRBId :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Ride)
+findActiveByRBId (Id rbId) = findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Not $ Se.Eq Ride.CANCELLED]]
+
+findActiveByRBIdInReplica :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Ride)
+findActiveByRBIdInReplica (Id rbId) = findOneWithKvInReplica [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Not $ Se.Eq Ride.CANCELLED]]
 
 -- findAllByRBId :: Transactionable m => Id Booking -> m [Ride]
 -- findAllByRBId bookingId =
@@ -244,18 +180,11 @@ findActiveByRBId (Id rbId) = do
 --     orderBy [desc $ ride ^. RideCreatedAt]
 --     return ride
 
-findAllByRBId :: L.MonadFlow m => Id Booking -> m [Ride]
-findAllByRBId (Id bookingId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamR.RideT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findAllWithOptionsKVConnector dbConf' updatedMeshConfig [Se.Is BeamR.bookingId $ Se.Eq bookingId] (Se.Desc BeamR.createdAt) Nothing Nothing
-      case result of
-        Right rides -> traverse transformBeamRideToDomain rides
-        Left _ -> pure []
-    Nothing -> pure []
+findAllByRBId :: (L.MonadFlow m, Log m) => Id Booking -> m [Ride]
+findAllByRBId (Id bookingId) = findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.Eq bookingId] (Se.Desc BeamR.createdAt) Nothing Nothing
+
+findAllByRBIdInReplica :: (L.MonadFlow m, Log m) => Id Booking -> m [Ride]
+findAllByRBIdInReplica (Id bookingId) = findAllWithOptionsKvInReplica [Se.Is BeamR.bookingId $ Se.Eq bookingId] (Se.Desc BeamR.createdAt) Nothing Nothing
 
 -- updateDriverArrival :: Id Ride -> SqlDB ()
 -- updateDriverArrival rideId = do
@@ -268,22 +197,14 @@ findAllByRBId (Id bookingId) = do
 --       ]
 --     where_ $ tbl ^. RideTId ==. val (toKey rideId)
 
-updateDriverArrival :: (L.MonadFlow m, MonadTime m) => Id Ride -> m (MeshResult ())
+updateDriverArrival :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> m ()
 updateDriverArrival rideId = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamR.RideT
-  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamR.driverArrivalTime (Just now),
-          Se.Set BeamR.updatedAt now
-        ]
-        [Se.Is BeamR.id (Se.Eq $ getId rideId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamR.driverArrivalTime (Just now),
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
 upcoming6HrsCond :: SqlExpr (Entity RideT) -> UTCTime -> SqlExpr (Esq.Value Bool)
 upcoming6HrsCond ride now = ride ^. RideCreatedAt +. Esq.interval [Esq.HOUR 6] <=. val now
@@ -315,44 +236,51 @@ data StuckRideItem = StuckRideItem
 
 findStuckRideItems :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
 findStuckRideItems (Id merchantId) bookingIds now = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamR.RideT
-  updatedMeshConfig <- setMeshConfig modelName
   let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
-  case dbConf of
-    Just dbCOnf' -> do
-      rides <- do
-        res <-
-          KV.findAllWithKVConnector
-            dbCOnf'
-            updatedMeshConfig
-            [ Se.And
-                [ Se.Is BeamR.status $ Se.Eq Ride.NEW,
-                  Se.Is BeamR.createdAt $ Se.LessThanOrEq now6HrBefore
-                ]
-            ]
-        case res of
-          Left _ -> pure []
-          Right x -> traverse transformBeamRideToDomain x
-      bookings <- do
-        let modelNameB = Se.modelTableName @BeamB.BookingT
-        updatedMeshConfigB <- setMeshConfig modelNameB
-        res <-
-          KV.findAllWithKVConnector
-            dbCOnf'
-            updatedMeshConfigB
-            [ Se.And
-                [ Se.Is BeamB.providerId $ Se.Eq merchantId,
-                  Se.Is BeamB.id $ Se.In $ getId <$> bookingIds
-                ]
-            ]
-        case res of
-          Left _ -> pure []
-          Right x -> catMaybes <$> traverse transformBeamBookingToDomain x
-      let rideBooking = foldl' (getRideWithBooking bookings) [] rides
+  rides <-
+    findAllWithKV
+      [ Se.And
+          [ Se.Is BeamR.status $ Se.Eq Ride.NEW,
+            Se.Is BeamR.createdAt $ Se.LessThanOrEq now6HrBefore
+          ]
+      ]
+  bookings <-
+    findAllWithKV
+      [ Se.And
+          [ Se.Is BeamB.providerId $ Se.Eq merchantId,
+            Se.Is BeamB.id $ Se.In $ getId <$> bookingIds
+          ]
+      ]
 
-      pure $ mkStuckRideItem <$> rideBooking
-    Nothing -> pure []
+  let rideBooking = foldl' (getRideWithBooking bookings) [] rides
+  pure $ mkStuckRideItem <$> rideBooking
+  where
+    getRideWithBooking bookings acc ride' =
+      let bookings' = filter (\x -> x.id == ride'.bookingId) bookings
+       in acc <> ((\x -> (ride'.id, x.id, x.riderId)) <$> bookings')
+
+    mkStuckRideItem (rideId, bookingId, riderId) = StuckRideItem {..}
+
+findStuckRideItemsInReplica :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
+findStuckRideItemsInReplica (Id merchantId) bookingIds now = do
+  let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
+  rides <-
+    findAllWithKvInReplica
+      [ Se.And
+          [ Se.Is BeamR.status $ Se.Eq Ride.NEW,
+            Se.Is BeamR.createdAt $ Se.LessThanOrEq now6HrBefore
+          ]
+      ]
+  bookings <-
+    findAllWithKvInReplica
+      [ Se.And
+          [ Se.Is BeamB.providerId $ Se.Eq merchantId,
+            Se.Is BeamB.id $ Se.In $ getId <$> bookingIds
+          ]
+      ]
+
+  let rideBooking = foldl' (getRideWithBooking bookings) [] rides
+  pure $ mkStuckRideItem <$> rideBooking
   where
     getRideWithBooking bookings acc ride' =
       let bookings' = filter (\x -> x.id == ride'.bookingId) bookings
@@ -370,22 +298,13 @@ findStuckRideItems (Id merchantId) bookingIds now = do
 --       ]
 --     where_ $ tbl ^. RideTId `in_` valList (toKey <$> rideIds)
 
-cancelRides :: (L.MonadFlow m, MonadTime m) => [Id Ride] -> UTCTime -> m ()
+cancelRides :: (L.MonadFlow m, MonadTime m, Log m) => [Id Ride] -> UTCTime -> m ()
 cancelRides rideIds now = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamR.RideT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      void $
-        KV.updateWoReturningWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [ Se.Set BeamR.status Ride.CANCELLED,
-            Se.Set BeamR.updatedAt now
-          ]
-          [Se.Is BeamR.id (Se.In $ getId <$> rideIds)]
-    Nothing -> pure ()
+  updateWithKV
+    [ Se.Set BeamR.status Ride.CANCELLED,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.In $ getId <$> rideIds)]
 
 data RideItem = RideItem
   { person :: Person,
@@ -482,68 +401,69 @@ findRiderIdByRideId rideId = findOne $ do
     ride ^. RideTId ==. val (toKey rideId)
   pure $ booking ^. BookingRiderId
 
-transformBeamRideToDomain :: L.MonadFlow m => BeamR.Ride -> m Ride
-transformBeamRideToDomain BeamR.RideT {..} = do
-  tUrl <- parseBaseUrl `mapM` trackingUrl
-  pure $
-    Ride
-      { id = Id id,
-        bppRideId = Id bppRideId,
-        bookingId = Id bookingId,
-        shortId = ShortId shortId,
-        merchantId = Id <$> merchantId,
-        status = status,
-        driverName = driverName,
-        driverRating = driverRating,
-        driverMobileNumber = driverMobileNumber,
-        driverRegisteredAt = driverRegisteredAt,
-        vehicleNumber = vehicleNumber,
-        vehicleModel = vehicleModel,
-        vehicleColor = vehicleColor,
-        vehicleVariant = vehicleVariant,
-        otp = otp,
-        trackingUrl = tUrl,
-        fare = roundToIntegral <$> fare,
-        totalFare = roundToIntegral <$> totalFare,
-        chargeableDistance = chargeableDistance,
-        traveledDistance = traveledDistance,
-        driverArrivalTime = driverArrivalTime,
-        rideStartTime = rideStartTime,
-        rideEndTime = rideEndTime,
-        rideRating = rideRating,
-        createdAt = createdAt,
-        updatedAt = updatedAt,
-        driverMobileCountryCode = driverMobileCountryCode
-      }
+instance FromTType' BeamR.Ride Ride where
+  fromTType' BeamR.RideT {..} = do
+    tUrl <- parseBaseUrl `mapM` trackingUrl
+    pure $
+      Just
+        Ride
+          { id = Id id,
+            bppRideId = Id bppRideId,
+            bookingId = Id bookingId,
+            shortId = ShortId shortId,
+            merchantId = Id <$> merchantId,
+            status = status,
+            driverName = driverName,
+            driverRating = driverRating,
+            driverMobileNumber = driverMobileNumber,
+            driverRegisteredAt = driverRegisteredAt,
+            vehicleNumber = vehicleNumber,
+            vehicleModel = vehicleModel,
+            vehicleColor = vehicleColor,
+            vehicleVariant = vehicleVariant,
+            otp = otp,
+            trackingUrl = tUrl,
+            fare = roundToIntegral <$> fare,
+            totalFare = roundToIntegral <$> totalFare,
+            chargeableDistance = chargeableDistance,
+            traveledDistance = traveledDistance,
+            driverArrivalTime = driverArrivalTime,
+            rideStartTime = rideStartTime,
+            rideEndTime = rideEndTime,
+            rideRating = rideRating,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            driverMobileCountryCode = driverMobileCountryCode
+          }
 
-transformDomainRideToBeam :: Ride -> BeamR.Ride
-transformDomainRideToBeam Ride {..} =
-  BeamR.RideT
-    { BeamR.id = getId id,
-      BeamR.bppRideId = getId bppRideId,
-      BeamR.bookingId = getId bookingId,
-      BeamR.shortId = getShortId shortId,
-      BeamR.merchantId = getId <$> merchantId,
-      BeamR.status = status,
-      BeamR.driverName = driverName,
-      BeamR.driverRating = driverRating,
-      BeamR.driverMobileNumber = driverMobileNumber,
-      BeamR.driverRegisteredAt = driverRegisteredAt,
-      BeamR.vehicleNumber = vehicleNumber,
-      BeamR.vehicleModel = vehicleModel,
-      BeamR.vehicleColor = vehicleColor,
-      BeamR.vehicleVariant = vehicleVariant,
-      BeamR.otp = otp,
-      BeamR.trackingUrl = showBaseUrl <$> trackingUrl,
-      BeamR.fare = realToFrac <$> fare,
-      BeamR.totalFare = realToFrac <$> totalFare,
-      BeamR.chargeableDistance = chargeableDistance,
-      BeamR.traveledDistance = traveledDistance,
-      BeamR.driverArrivalTime = driverArrivalTime,
-      BeamR.rideStartTime = rideStartTime,
-      BeamR.rideEndTime = rideEndTime,
-      BeamR.rideRating = rideRating,
-      BeamR.createdAt = createdAt,
-      BeamR.updatedAt = updatedAt,
-      BeamR.driverMobileCountryCode = driverMobileCountryCode
-    }
+instance ToTType' BeamR.Ride Ride where
+  toTType' Ride {..} = do
+    BeamR.RideT
+      { BeamR.id = getId id,
+        BeamR.bppRideId = getId bppRideId,
+        BeamR.bookingId = getId bookingId,
+        BeamR.shortId = getShortId shortId,
+        BeamR.merchantId = getId <$> merchantId,
+        BeamR.status = status,
+        BeamR.driverName = driverName,
+        BeamR.driverRating = driverRating,
+        BeamR.driverMobileNumber = driverMobileNumber,
+        BeamR.driverRegisteredAt = driverRegisteredAt,
+        BeamR.vehicleNumber = vehicleNumber,
+        BeamR.vehicleModel = vehicleModel,
+        BeamR.vehicleColor = vehicleColor,
+        BeamR.vehicleVariant = vehicleVariant,
+        BeamR.otp = otp,
+        BeamR.trackingUrl = showBaseUrl <$> trackingUrl,
+        BeamR.fare = realToFrac <$> fare,
+        BeamR.totalFare = realToFrac <$> totalFare,
+        BeamR.chargeableDistance = chargeableDistance,
+        BeamR.traveledDistance = traveledDistance,
+        BeamR.driverArrivalTime = driverArrivalTime,
+        BeamR.rideStartTime = rideStartTime,
+        BeamR.rideEndTime = rideEndTime,
+        BeamR.rideRating = rideRating,
+        BeamR.createdAt = createdAt,
+        BeamR.updatedAt = updatedAt,
+        BeamR.driverMobileCountryCode = driverMobileCountryCode
+      }

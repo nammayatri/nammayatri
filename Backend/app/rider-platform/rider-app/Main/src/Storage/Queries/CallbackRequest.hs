@@ -11,53 +11,47 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.CallbackRequest where
 
 import Domain.Types.CallbackRequest
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption (Encrypted (..), EncryptedHashed (..))
 import Kernel.Prelude
 import Kernel.Types.Id
-import Lib.Utils (setMeshConfig)
-import qualified Sequelize as Se
+import Kernel.Types.Logging (Log)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV)
 import qualified Storage.Beam.CallbackRequest as BeamCR
 
-create :: L.MonadFlow m => CallbackRequest -> m (MeshResult ())
-create callbackRequest = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamCR.CallbackRequestT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainCallbackRequestToBeam callbackRequest)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create :: (L.MonadFlow m, Log m) => CallbackRequest -> m ()
+create = createWithKV
 
-transformBeamCallbackRequestToDomain :: BeamCR.CallbackRequest -> CallbackRequest
-transformBeamCallbackRequestToDomain BeamCR.CallbackRequestT {..} = do
-  CallbackRequest
-    { id = Id id,
-      merchantId = Id merchantId,
-      customerName = customerName,
-      customerPhone = EncryptedHashed (Encrypted customerPhoneEncrypted) customerPhoneHash,
-      customerMobileCountryCode = customerMobileCountryCode,
-      status = status,
-      createdAt = createdAt,
-      updatedAt = updatedAt
-    }
+instance FromTType' BeamCR.CallbackRequest CallbackRequest where
+  fromTType' BeamCR.CallbackRequestT {..} = do
+    pure $
+      Just
+        CallbackRequest
+          { id = Id id,
+            merchantId = Id merchantId,
+            customerName = customerName,
+            customerPhone = EncryptedHashed (Encrypted customerPhoneEncrypted) customerPhoneHash,
+            customerMobileCountryCode = customerMobileCountryCode,
+            status = status,
+            createdAt = createdAt,
+            updatedAt = updatedAt
+          }
 
-transformDomainCallbackRequestToBeam :: CallbackRequest -> BeamCR.CallbackRequest
-transformDomainCallbackRequestToBeam CallbackRequest {..} =
-  BeamCR.CallbackRequestT
-    { BeamCR.id = getId id,
-      BeamCR.merchantId = getId merchantId,
-      BeamCR.customerName = customerName,
-      BeamCR.customerPhoneEncrypted = customerPhone & unEncrypted . (.encrypted),
-      BeamCR.customerPhoneHash = customerPhone & (.hash),
-      BeamCR.customerMobileCountryCode = customerMobileCountryCode,
-      BeamCR.status = status,
-      BeamCR.createdAt = createdAt,
-      BeamCR.updatedAt = updatedAt
-    }
+instance ToTType' BeamCR.CallbackRequest CallbackRequest where
+  toTType' CallbackRequest {..} = do
+    BeamCR.CallbackRequestT
+      { BeamCR.id = getId id,
+        BeamCR.merchantId = getId merchantId,
+        BeamCR.customerName = customerName,
+        BeamCR.customerPhoneEncrypted = customerPhone & unEncrypted . (.encrypted),
+        BeamCR.customerPhoneHash = customerPhone & (.hash),
+        BeamCR.customerMobileCountryCode = customerMobileCountryCode,
+        BeamCR.status = status,
+        BeamCR.createdAt = createdAt,
+        BeamCR.updatedAt = updatedAt
+      }

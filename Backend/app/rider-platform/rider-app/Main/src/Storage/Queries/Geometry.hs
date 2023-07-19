@@ -17,12 +17,11 @@ module Storage.Queries.Geometry where
 import qualified Database.Beam as B
 import Domain.Types.Geometry
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id (Id (..))
-import Lib.Utils ()
+import Lib.Utils (getMasterBeamConfig, getReplicaBeamConfig)
 import Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Geometry as BeamG
 
@@ -37,13 +36,9 @@ import qualified Storage.Beam.Geometry as BeamG
 
 findGeometriesContaining :: L.MonadFlow m => LatLong -> [Text] -> m [Geometry]
 findGeometriesContaining gps regions = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  conn <- L.getOrInitSqlConn (fromJust dbConf)
-  case conn of
-    Right c -> do
-      geoms <- L.runDB c $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lon, gps.lat) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
-      pure (either (const []) (transformBeamGeometryToDomain <$>) geoms)
-    Left _ -> pure []
+  dbConf <- getMasterBeamConfig
+  geoms <- L.runDB dbConf $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lon, gps.lat) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
+  pure (either (const []) (transformBeamGeometryToDomain <$>) geoms)
 
 -- someGeometriesContain :: Transactionable m => LatLong -> [Text] -> m Bool
 -- someGeometriesContain gps regions = do
@@ -54,6 +49,12 @@ someGeometriesContain :: L.MonadFlow m => LatLong -> [Text] -> m Bool
 someGeometriesContain gps regions = do
   geometries <- findGeometriesContaining gps regions
   pure $ not $ null geometries
+
+someGeometriesContainInReplica :: L.MonadFlow m => LatLong -> [Text] -> m Bool
+someGeometriesContainInReplica gps regions = do
+  dbConf <- getReplicaBeamConfig
+  geoms <- L.runDB dbConf $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lon, gps.lat) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
+  pure $ either (const False) (not . null) geoms
 
 transformBeamGeometryToDomain :: BeamG.Geometry -> Geometry
 transformBeamGeometryToDomain BeamG.GeometryT {..} = do

@@ -42,7 +42,6 @@ import qualified Kernel.External.Call.Interface.Types as Call
 import qualified Kernel.External.Call.Interface.Types as CallTypes
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto (runTransaction)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Common
@@ -102,7 +101,8 @@ initiateCallToDriver rideId = do
   exotelResponse <- Call.initiateCall booking.merchantId callReq
   logTagInfo ("RideId: " <> getId rideId) "Call initiated from customer to driver."
   callStatus <- buildCallStatus callStatusId exotelResponse
-  runTransaction $ QCallStatus.create callStatus
+  -- runTransaction $ QCallStatus.create callStatus
+  QCallStatus.create callStatus
   return $ CallRes callStatusId
   where
     buildCallStatus callStatusId exotelResponse = do
@@ -170,7 +170,8 @@ getDriverMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus = do
   ride <- QRide.findActiveByRBId booking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId booking.id)
   callId <- generateGUID
   callStatusObj <- buildCallStatus ride.id callId callSid (exotelStatusToInterfaceStatus callStatus) dtmfNumberUsed
-  runTransaction $ QCallStatus.create callStatusObj
+  -- runTransaction $ QCallStatus.create callStatusObj
+  QCallStatus.create callStatusObj
   return ride.driverMobileNumber
   where
     dropFirstZero = T.dropWhile (== '0')

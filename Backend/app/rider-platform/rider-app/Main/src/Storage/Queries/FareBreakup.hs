@@ -11,17 +11,16 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.FareBreakup where
 
 import Domain.Types.Booking.Type
 import Domain.Types.FarePolicy.FareBreakup
-import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Types.Logging (Log)
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FareBreakup as BeamFB
@@ -29,16 +28,10 @@ import qualified Storage.Beam.FarePolicy.FareBreakup as BeamFB
 -- createMany :: [FareBreakup] -> SqlDB ()
 -- createMany = Esq.createMany
 
-create :: L.MonadFlow m => FareBreakup -> m ()
-create fareBreakup = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamFB.FareBreakupT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainFareBreakupToBeam fareBreakup)
-    Nothing -> pure ()
+create :: (L.MonadFlow m, Log m) => FareBreakup -> m ()
+create = createWithKV
 
-createMany :: L.MonadFlow m => [FareBreakup] -> m ()
+createMany :: (L.MonadFlow m, Log m) => [FareBreakup] -> m ()
 createMany = traverse_ create
 
 -- findAllByBookingId :: (MonadThrow m, Log m, Transactionable m) => Id Booking -> m [FareBreakup]
@@ -48,29 +41,28 @@ createMany = traverse_ create
 --     where_ $ fareBreakup ^. FareBreakupBookingId ==. val (toKey bookingId)
 --     return fareBreakup
 
-findAllByBookingId :: L.MonadFlow m => Id Booking -> m [FareBreakup]
-findAllByBookingId bookingId = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamFB.FareBreakupT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> either (pure []) (transformBeamFareBreakupToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamFB.bookingId $ Se.Eq $ getId bookingId]
-    Nothing -> pure []
+findAllByBookingId :: (L.MonadFlow m, Log m) => Id Booking -> m [FareBreakup]
+findAllByBookingId bookingId = findAllWithKV [Se.Is BeamFB.bookingId $ Se.Eq $ getId bookingId]
 
-transformBeamFareBreakupToDomain :: BeamFB.FareBreakup -> FareBreakup
-transformBeamFareBreakupToDomain BeamFB.FareBreakupT {..} = do
-  FareBreakup
-    { id = Id id,
-      bookingId = Id bookingId,
-      description = description,
-      amount = amount
-    }
+findAllByBookingIdInReplica :: (L.MonadFlow m, Log m) => Id Booking -> m [FareBreakup]
+findAllByBookingIdInReplica bookingId = findAllWithKvInReplica [Se.Is BeamFB.bookingId $ Se.Eq $ getId bookingId]
 
-transformDomainFareBreakupToBeam :: FareBreakup -> BeamFB.FareBreakup
-transformDomainFareBreakupToBeam FareBreakup {..} =
-  BeamFB.FareBreakupT
-    { BeamFB.id = getId id,
-      BeamFB.bookingId = getId bookingId,
-      BeamFB.description = description,
-      BeamFB.amount = amount
-    }
+instance FromTType' BeamFB.FareBreakup FareBreakup where
+  fromTType' BeamFB.FareBreakupT {..} = do
+    pure $
+      Just
+        FareBreakup
+          { id = Id id,
+            bookingId = Id bookingId,
+            description = description,
+            amount = amount
+          }
+
+instance ToTType' BeamFB.FareBreakup FareBreakup where
+  toTType' FareBreakup {..} = do
+    BeamFB.FareBreakupT
+      { BeamFB.id = getId id,
+        BeamFB.bookingId = getId bookingId,
+        BeamFB.description = description,
+        BeamFB.amount = amount
+      }

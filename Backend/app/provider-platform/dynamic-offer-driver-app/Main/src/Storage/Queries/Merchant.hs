@@ -26,7 +26,7 @@ import Kernel.Prelude
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findAllWithKV, findOneWithKV, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findAllWithKV, findOneWithKV, findOneWithKvInReplica, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant as BeamM
 
@@ -53,6 +53,9 @@ findBySubscriberId (ShortId subscriberId) = findOneWithKV [Se.Is BeamM.subscribe
 
 findByShortId :: (L.MonadFlow m, Log m) => ShortId Merchant -> m (Maybe Merchant)
 findByShortId (ShortId shortId) = findOneWithKV [Se.Is BeamM.shortId $ Se.Eq shortId]
+
+findByShortIdInReplica :: (L.MonadFlow m, Log m) => ShortId Merchant -> m (Maybe Merchant)
+findByShortIdInReplica (ShortId shortId) = findOneWithKvInReplica [Se.Is BeamM.shortId $ Se.Eq shortId]
 
 -- loadAllProviders :: Transactionable m => m [Merchant]
 -- loadAllProviders =

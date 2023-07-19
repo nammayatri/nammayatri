@@ -22,11 +22,10 @@ import Domain.Types.QuoteSpecialZone
 import Domain.Types.SearchRequestSpecialZone
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV, getMasterBeamConfig)
 import Sequelize
 import qualified Sequelize as Se
 import qualified Storage.Beam.QuoteSpecialZone as BeamQSZ
@@ -45,19 +44,15 @@ create = createWithKV
 
 countAllByRequestId :: (L.MonadFlow m, Log m) => Id SearchRequestSpecialZone -> m Int
 countAllByRequestId searchReqID = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  conn <- L.getOrInitSqlConn (fromJust dbConf)
-  case conn of
-    Right c -> do
-      resp <-
-        L.runDB c $
-          L.findRow $
-            B.select $
-              B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
-                B.filter_' (\(BeamQSZ.QuoteSpecialZoneT {..}) -> searchRequestId B.==?. B.val_ (getId searchReqID)) $
-                  B.all_ (meshModelTableEntity @BeamQSZ.QuoteSpecialZoneT @Postgres @(DatabaseWith BeamQSZ.QuoteSpecialZoneT))
-      pure (either (const 0) (fromMaybe 0) resp)
-    Left _ -> pure 0
+  dbConf <- getMasterBeamConfig
+  resp <-
+    L.runDB dbConf $
+      L.findRow $
+        B.select $
+          B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+            B.filter_' (\(BeamQSZ.QuoteSpecialZoneT {..}) -> searchRequestId B.==?. B.val_ (getId searchReqID)) $
+              B.all_ (meshModelTableEntity @BeamQSZ.QuoteSpecialZoneT @Postgres @(DatabaseWith BeamQSZ.QuoteSpecialZoneT))
+  pure (either (const 0) (fromMaybe 0) resp)
 
 findById :: (L.MonadFlow m, Log m) => Id QuoteSpecialZone -> m (Maybe QuoteSpecialZone)
 findById (Id dQuoteId) = findOneWithKV [Se.Is BeamQSZ.id $ Se.Eq dQuoteId]

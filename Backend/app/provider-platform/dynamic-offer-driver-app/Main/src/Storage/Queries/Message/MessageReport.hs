@@ -42,7 +42,7 @@ import Lib.Utils
     findAllWithKV,
     findAllWithOptionsKV,
     findOneWithKV,
-    getMasterDBConfig,
+    getMasterBeamConfig,
     updateWithKV,
   )
 import Sequelize
@@ -199,35 +199,27 @@ findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset (Id messageID) mbDel
 
 getMessageCountByStatus :: L.MonadFlow m => Id Msg.Message -> DeliveryStatus -> m Int
 getMessageCountByStatus (Id messageID) status = do
-  dbConf <- getMasterDBConfig
-  conn <- L.getOrInitSqlConn dbConf
-  case conn of
-    Right c -> do
-      resp <-
-        L.runDB c $
-          L.findRow $
-            B.select $
-              B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
-                B.filter_' (\(BeamMR.MessageReportT {..}) -> messageId B.==?. B.val_ messageID B.&&?. (deliveryStatus B.==?. B.val_ status)) $
-                  B.all_ (meshModelTableEntity @BeamMR.MessageReportT @Postgres @(DatabaseWith BeamMR.MessageReportT))
-      pure (either (const 0) (fromMaybe 0) resp)
-    Left _ -> pure 0
+  dbConf <- getMasterBeamConfig
+  resp <-
+    L.runDB dbConf $
+      L.findRow $
+        B.select $
+          B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+            B.filter_' (\(BeamMR.MessageReportT {..}) -> messageId B.==?. B.val_ messageID B.&&?. (deliveryStatus B.==?. B.val_ status)) $
+              B.all_ (meshModelTableEntity @BeamMR.MessageReportT @Postgres @(DatabaseWith BeamMR.MessageReportT))
+  pure (either (const 0) (fromMaybe 0) resp)
 
 getMessageCountByReadStatus :: L.MonadFlow m => Id Msg.Message -> m Int
 getMessageCountByReadStatus (Id messageID) = do
-  dbConf <- getMasterDBConfig
-  conn <- L.getOrInitSqlConn dbConf
-  case conn of
-    Right c -> do
-      resp <-
-        L.runDB c $
-          L.findRow $
-            B.select $
-              B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
-                B.filter_' (\(BeamMR.MessageReportT {..}) -> messageId B.==?. B.val_ messageID B.&&?. readStatus B.==?. B.val_ True) $
-                  B.all_ (meshModelTableEntity @BeamMR.MessageReportT @Postgres @(DatabaseWith BeamMR.MessageReportT))
-      pure (either (const 0) (fromMaybe 0) resp)
-    Left _ -> pure 0
+  dbConf <- getMasterBeamConfig
+  resp <-
+    L.runDB dbConf $
+      L.findRow $
+        B.select $
+          B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+            B.filter_' (\(BeamMR.MessageReportT {..}) -> messageId B.==?. B.val_ messageID B.&&?. readStatus B.==?. B.val_ True) $
+              B.all_ (meshModelTableEntity @BeamMR.MessageReportT @Postgres @(DatabaseWith BeamMR.MessageReportT))
+  pure (either (const 0) (fromMaybe 0) resp)
 
 updateSeenAndReplyByMessageIdAndDriverId :: (L.MonadFlow m, MonadTime m, Log m) => Id Msg.Message -> Id P.Driver -> Bool -> Maybe Text -> m ()
 updateSeenAndReplyByMessageIdAndDriverId messageId driverId readStatus reply = do
@@ -237,7 +229,7 @@ updateSeenAndReplyByMessageIdAndDriverId messageId driverId readStatus reply = d
       Se.Set BeamMR.reply reply,
       Se.Set BeamMR.updatedAt now
     ]
-    [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]
+    [Se.And [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]]
 
 updateMessageLikeByMessageIdAndDriverIdAndReadStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Msg.Message -> Id P.Driver -> m ()
 updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId driverId = do
@@ -259,7 +251,7 @@ updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = d
     [ Se.Set BeamMR.deliveryStatus deliveryStatus,
       Se.Set BeamMR.updatedAt now
     ]
-    [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]
+    [Se.And [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]]
 
 deleteByPersonId :: (L.MonadFlow m, Log m) => Id P.Person -> m ()
 deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamMR.driverId (Se.Eq personId)]

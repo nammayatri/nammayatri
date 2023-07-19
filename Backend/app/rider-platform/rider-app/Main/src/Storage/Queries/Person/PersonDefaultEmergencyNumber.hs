@@ -11,18 +11,18 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Person.PersonDefaultEmergencyNumber where
 
 import Domain.Types.Person
 import Domain.Types.Person.PersonDefaultEmergencyNumber
-import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
-import Lib.Utils (setMeshConfig)
+import Kernel.Types.Logging (Log)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findAllWithKvInReplica)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Person.PersonDefaultEmergencyNumber as BeamPDEN
 
@@ -33,26 +33,15 @@ import qualified Storage.Beam.Person.PersonDefaultEmergencyNumber as BeamPDEN
 --     where_ $ personENT ^. PersonDefaultEmergencyNumberTId ==. val (toKey personId)
 --   Esq.createMany pdenList
 
-create :: L.MonadFlow m => PersonDefaultEmergencyNumber -> m ()
-create pden = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamPDEN.PersonDefaultEmergencyNumberT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainPersonDefaultEmergencyNumberToBeam pden)
-    Nothing -> pure ()
+create :: (L.MonadFlow m, Log m) => PersonDefaultEmergencyNumber -> m ()
+create = createWithKV
 
-createMany :: L.MonadFlow m => [PersonDefaultEmergencyNumber] -> m ()
+createMany :: (L.MonadFlow m, Log m) => [PersonDefaultEmergencyNumber] -> m ()
 createMany = traverse_ create
 
-replaceAll :: L.MonadFlow m => Id Person -> [PersonDefaultEmergencyNumber] -> m ()
+replaceAll :: (L.MonadFlow m, Log m) => Id Person -> [PersonDefaultEmergencyNumber] -> m ()
 replaceAll (Id personId) pdenList = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamPDEN.PersonDefaultEmergencyNumberT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> void $ KV.deleteWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamPDEN.personId $ Se.Eq personId]
-    Nothing -> pure ()
+  deleteWithKV [Se.Is BeamPDEN.personId $ Se.Eq personId]
   createMany pdenList
 
 -- findAllByPersonId ::
@@ -66,36 +55,31 @@ replaceAll (Id personId) pdenList = do
 --       personENT ^. PersonDefaultEmergencyNumberTId ==. val (toKey personId)
 --     return personENT
 
-findAllByPersonId :: L.MonadFlow m => Id Person -> m [PersonDefaultEmergencyNumber]
-findAllByPersonId (Id personId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamPDEN.PersonDefaultEmergencyNumberT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      pden <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamPDEN.personId $ Se.Eq personId]
-      case pden of
-        Right result -> pure $ transformBeamPersonDefaultEmergencyNumberToDomain <$> result
-        Left _ -> pure []
-    Nothing -> pure []
+findAllByPersonId :: (L.MonadFlow m, Log m) => Id Person -> m [PersonDefaultEmergencyNumber]
+findAllByPersonId (Id personId) = findAllWithKV [Se.Is BeamPDEN.personId $ Se.Eq personId]
 
-transformBeamPersonDefaultEmergencyNumberToDomain :: BeamPDEN.PersonDefaultEmergencyNumber -> PersonDefaultEmergencyNumber
-transformBeamPersonDefaultEmergencyNumberToDomain BeamPDEN.PersonDefaultEmergencyNumberT {..} = do
-  PersonDefaultEmergencyNumber
-    { personId = Id personId,
-      name = name,
-      mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
-      mobileCountryCode = mobileCountryCode,
-      createdAt = createdAt
-    }
+findAllByPersonIdInReplica :: (L.MonadFlow m, Log m) => Id Person -> m [PersonDefaultEmergencyNumber]
+findAllByPersonIdInReplica (Id personId) = findAllWithKvInReplica [Se.Is BeamPDEN.personId $ Se.Eq personId]
 
-transformDomainPersonDefaultEmergencyNumberToBeam :: PersonDefaultEmergencyNumber -> BeamPDEN.PersonDefaultEmergencyNumber
-transformDomainPersonDefaultEmergencyNumberToBeam PersonDefaultEmergencyNumber {..} =
-  BeamPDEN.PersonDefaultEmergencyNumberT
-    { BeamPDEN.personId = getId personId,
-      BeamPDEN.name = name,
-      BeamPDEN.mobileCountryCode = mobileCountryCode,
-      BeamPDEN.mobileNumberHash = mobileNumber.hash,
-      BeamPDEN.mobileNumberEncrypted = unEncrypted (mobileNumber.encrypted),
-      BeamPDEN.createdAt = createdAt
-    }
+instance FromTType' BeamPDEN.PersonDefaultEmergencyNumber PersonDefaultEmergencyNumber where
+  fromTType' BeamPDEN.PersonDefaultEmergencyNumberT {..} = do
+    pure $
+      Just
+        PersonDefaultEmergencyNumber
+          { personId = Id personId,
+            name = name,
+            mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
+            mobileCountryCode = mobileCountryCode,
+            createdAt = createdAt
+          }
+
+instance ToTType' BeamPDEN.PersonDefaultEmergencyNumber PersonDefaultEmergencyNumber where
+  toTType' PersonDefaultEmergencyNumber {..} = do
+    BeamPDEN.PersonDefaultEmergencyNumberT
+      { BeamPDEN.personId = getId personId,
+        BeamPDEN.name = name,
+        BeamPDEN.mobileCountryCode = mobileCountryCode,
+        BeamPDEN.mobileNumberHash = mobileNumber.hash,
+        BeamPDEN.mobileNumberEncrypted = unEncrypted (mobileNumber.encrypted),
+        BeamPDEN.createdAt = createdAt
+      }

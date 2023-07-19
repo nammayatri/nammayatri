@@ -12,67 +12,56 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE PartialTypeSignatures #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.SearchRequest.SearchReqLocation where
 
 import qualified Domain.Types.LocationAddress as DL
 import Domain.Types.SearchRequest.SearchReqLocation as DSRL
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
-import Lib.Utils (setMeshConfig)
+import Kernel.Types.Logging (Log)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest.SearchReqLocation as BeamSRL
 
-create :: L.MonadFlow m => SearchReqLocation -> m (MeshResult ())
-create bl = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamSRL.SearchReqLocationT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainSearchReqLocationToBeam bl)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create :: (L.MonadFlow m, Log m) => SearchReqLocation -> m ()
+create = createWithKV
 
-findById :: L.MonadFlow m => Id SearchReqLocation -> m (Maybe SearchReqLocation)
-findById (Id searchReqLocationId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamSRL.SearchReqLocationT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamSearchReqLocationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSRL.id $ Se.Eq searchReqLocationId]
-    Nothing -> pure Nothing
+findById :: (L.MonadFlow m, Log m) => Id SearchReqLocation -> m (Maybe SearchReqLocation)
+findById (Id searchReqLocationId) = findOneWithKV [Se.Is BeamSRL.id $ Se.Eq searchReqLocationId]
 
-transformBeamSearchReqLocationToDomain :: BeamSRL.SearchReqLocation -> SearchReqLocation
-transformBeamSearchReqLocationToDomain BeamSRL.SearchReqLocationT {..} = do
-  let address = DL.LocationAddress {..}
-  SearchReqLocation
-    { id = Id id,
-      lat = lat,
-      lon = lon,
-      address = address,
-      updatedAt = updatedAt,
-      createdAt = createdAt
-    }
+instance FromTType' BeamSRL.SearchReqLocation SearchReqLocation where
+  fromTType' BeamSRL.SearchReqLocationT {..} = do
+    let address = DL.LocationAddress {..}
+    pure $
+      Just
+        SearchReqLocation
+          { id = Id id,
+            lat = lat,
+            lon = lon,
+            address = address,
+            updatedAt = updatedAt,
+            createdAt = createdAt
+          }
 
-transformDomainSearchReqLocationToBeam :: SearchReqLocation -> BeamSRL.SearchReqLocation
-transformDomainSearchReqLocationToBeam SearchReqLocation {..} =
-  BeamSRL.SearchReqLocationT
-    { BeamSRL.id = getId id,
-      BeamSRL.lat = lat,
-      BeamSRL.lon = lon,
-      BeamSRL.street = DL.street address,
-      BeamSRL.door = DL.door address,
-      BeamSRL.city = DL.city address,
-      BeamSRL.state = DL.state address,
-      BeamSRL.country = DL.country address,
-      BeamSRL.building = DL.building address,
-      BeamSRL.areaCode = DL.areaCode address,
-      BeamSRL.area = DL.area address,
-      BeamSRL.ward = DL.ward address,
-      BeamSRL.placeId = DL.placeId address,
-      BeamSRL.createdAt = createdAt,
-      BeamSRL.updatedAt = updatedAt
-    }
+instance ToTType' BeamSRL.SearchReqLocation SearchReqLocation where
+  toTType' SearchReqLocation {..} = do
+    BeamSRL.SearchReqLocationT
+      { BeamSRL.id = getId id,
+        BeamSRL.lat = lat,
+        BeamSRL.lon = lon,
+        BeamSRL.street = DL.street address,
+        BeamSRL.door = DL.door address,
+        BeamSRL.city = DL.city address,
+        BeamSRL.state = DL.state address,
+        BeamSRL.country = DL.country address,
+        BeamSRL.building = DL.building address,
+        BeamSRL.areaCode = DL.areaCode address,
+        BeamSRL.area = DL.area address,
+        BeamSRL.ward = DL.ward address,
+        BeamSRL.placeId = DL.placeId address,
+        BeamSRL.createdAt = createdAt,
+        BeamSRL.updatedAt = updatedAt
+      }

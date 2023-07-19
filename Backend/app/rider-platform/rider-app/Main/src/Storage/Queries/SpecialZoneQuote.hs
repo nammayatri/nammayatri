@@ -11,51 +11,40 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.SpecialZoneQuote where
 
 import Domain.Types.SpecialZoneQuote
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Types.Logging (Log)
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.SpecialZoneQuote as BeamSZQ
 
-createSpecialZoneQuote :: L.MonadFlow m => SpecialZoneQuote -> m (MeshResult ())
-createSpecialZoneQuote specialZoneQuote = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamSZQ.SpecialZoneQuoteT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainSpecialZoneQuoteToBeam specialZoneQuote)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+createSpecialZoneQuote :: (L.MonadFlow m, Log m) => SpecialZoneQuote -> m ()
+createSpecialZoneQuote = createWithKV
 
 -- findById' :: (MonadThrow m, Log m, Transactionable m) => Id SpecialZoneQuote -> DTypeBuilder m (Maybe SpecialZoneQuoteT)
 -- findById' = Esq.findById'
 
-findById :: (L.MonadFlow m) => Id SpecialZoneQuote -> m (Maybe SpecialZoneQuote)
-findById specialZoneQuoteId = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamSZQ.SpecialZoneQuoteT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamSpecialZoneQuoteToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSZQ.id $ Se.Eq (getId specialZoneQuoteId)]
-    Nothing -> pure Nothing
+findById :: (L.MonadFlow m, Log m) => Id SpecialZoneQuote -> m (Maybe SpecialZoneQuote)
+findById specialZoneQuoteId = findOneWithKV [Se.Is BeamSZQ.id $ Se.Eq (getId specialZoneQuoteId)]
 
-transformBeamSpecialZoneQuoteToDomain :: BeamSZQ.SpecialZoneQuote -> SpecialZoneQuote
-transformBeamSpecialZoneQuoteToDomain BeamSZQ.SpecialZoneQuoteT {..} = do
-  SpecialZoneQuote
-    { id = Id id,
-      quoteId = quoteId
-    }
+instance FromTType' BeamSZQ.SpecialZoneQuote SpecialZoneQuote where
+  fromTType' BeamSZQ.SpecialZoneQuoteT {..} = do
+    pure $
+      Just
+        SpecialZoneQuote
+          { id = Id id,
+            quoteId = quoteId
+          }
 
-transformDomainSpecialZoneQuoteToBeam :: SpecialZoneQuote -> BeamSZQ.SpecialZoneQuote
-transformDomainSpecialZoneQuoteToBeam SpecialZoneQuote {..} =
-  BeamSZQ.SpecialZoneQuoteT
-    { BeamSZQ.id = getId id,
-      BeamSZQ.quoteId = quoteId
-    }
+instance ToTType' BeamSZQ.SpecialZoneQuote SpecialZoneQuote where
+  toTType' SpecialZoneQuote {..} = do
+    BeamSZQ.SpecialZoneQuoteT
+      { BeamSZQ.id = getId id,
+        BeamSZQ.quoteId = quoteId
+      }

@@ -44,11 +44,18 @@ instance FromTType' BeamE.Estimate Estimate where
             minFare = minFare,
             maxFare = maxFare,
             estimateBreakupList = estimateBreakupList,
-            nightShiftInfo = NightShiftInfo <$> nightShiftCharge <*> oldNightShiftCharge <*> nightShiftStart <*> nightShiftEnd,
+            nightShiftInfo = NightShiftInfo <$> nightShiftCharge <*> oldNightShiftCharge <*> nightShiftStart' <*> nightShiftEnd',
             waitingCharges = WaitingCharges waitingChargePerMin waitingOrPickupCharges,
             specialLocationTag = specialLocationTag,
             createdAt = createdAt
           }
+    where
+      nightShiftStart' = case nightShiftStart of
+        (Just (BeamE.TimeOfDayText nightShiftStart'')) -> Just nightShiftStart''
+        Nothing -> Nothing
+      nightShiftEnd' = case nightShiftEnd of
+        (Just (BeamE.TimeOfDayText nightShiftEnd'')) -> Just nightShiftEnd''
+        Nothing -> Nothing
 
 instance ToTType' BeamE.Estimate Estimate where
   toTType' Estimate {..} = do
@@ -61,8 +68,8 @@ instance ToTType' BeamE.Estimate Estimate where
         estimateBreakupList = estimateBreakupList,
         nightShiftCharge = nightShiftCharge <$> nightShiftInfo,
         oldNightShiftCharge = oldNightShiftCharge <$> nightShiftInfo,
-        nightShiftStart = nightShiftStart <$> nightShiftInfo,
-        nightShiftEnd = nightShiftEnd <$> nightShiftInfo,
+        nightShiftStart = BeamE.TimeOfDayText . nightShiftStart <$> nightShiftInfo,
+        nightShiftEnd = BeamE.TimeOfDayText . nightShiftEnd <$> nightShiftInfo,
         waitingChargePerMin = waitingChargePerMin waitingCharges,
         waitingOrPickupCharges = waitingOrPickupCharges waitingCharges,
         specialLocationTag = specialLocationTag,

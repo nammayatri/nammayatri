@@ -57,6 +57,7 @@ import Lib.Utils
     findAllWithKV,
     findAllWithOptionsKV,
     findOneWithKV,
+    findOneWithKvInReplica,
     updateWithKV,
   )
 import qualified Sequelize as Se
@@ -86,6 +87,9 @@ create = createWithKV
 
 findById :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Person)
 findById (Id personId) = findOneWithKV [Se.Is BeamP.id $ Se.Eq personId]
+
+findByIdInReplica :: (L.MonadFlow m, Log m, EsqDBReplicaFlow m r) => Id Person -> m (Maybe Person)
+findByIdInReplica (Id personId) = findOneWithKvInReplica [Se.Is BeamP.id $ Se.Eq personId]
 
 data FullDriver = FullDriver
   { person :: Person,

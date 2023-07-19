@@ -27,7 +27,7 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, getMasterDBConfig)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, getMasterBeamConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Exophone as BeamE
@@ -95,50 +95,38 @@ findAllExophones = findAllWithKV [Se.Is BeamE.id $ Se.Not $ Se.Eq $ getId ""]
 
 updateAffectedPhonesHelper :: (L.MonadFlow m, MonadTime m) => [Text] -> m Bool
 updateAffectedPhonesHelper primaryNumbers = do
-  dbConf <- getMasterDBConfig
+  dbConf <- getMasterBeamConfig
   let indianMobileCode = "+91"
-  conn <- L.getOrInitSqlConn dbConf
-  case conn of
-    Right c -> do
-      geoms <-
-        L.runDB c $
-          L.findRow $
-            B.select $
-              B.limit_ 1 $
-                B.filter_'
-                  ( \BeamE.ExophoneT {..} ->
-                      B.sqlBool_ (primaryPhone `B.in_` (B.val_ <$> primaryNumbers))
-                        B.||?. B.sqlBool_ (B.concat_ [indianMobileCode, primaryPhone] `B.in_` (B.val_ <$> primaryNumbers))
-                  )
-                  $
-                  -- B.all_ (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT))
-                  B.all_ (BeamCommon.exophone BeamCommon.atlasDB)
-      case geoms of
-        Right (Just _) -> do
-          pure True
-        _ -> pure False
-    Left _ -> pure (error "DB Config not found")
+  geoms <-
+    L.runDB dbConf $
+      L.findRow $
+        B.select $
+          B.limit_ 1 $
+            B.filter_'
+              ( \BeamE.ExophoneT {..} ->
+                  B.sqlBool_ (primaryPhone `B.in_` (B.val_ <$> primaryNumbers))
+                    B.||?. B.sqlBool_ (B.concat_ [indianMobileCode, primaryPhone] `B.in_` (B.val_ <$> primaryNumbers))
+              )
+              $
+              -- B.all_ (meshModelTableEntity @BeamDL.DriverLocationT @Postgres @(Se.DatabaseWith BeamDL.DriverLocationT))
+              B.all_ (BeamCommon.exophone BeamCommon.atlasDB)
+  either (const (pure False)) (pure . isJust) geoms
 
 updateAffectedPhones :: (L.MonadFlow m, MonadTime m) => [Text] -> m ()
 updateAffectedPhones primaryPhones = do
   now <- getCurrentTime
   isPrimary <- updateAffectedPhonesHelper primaryPhones
-  dbConf <- getMasterDBConfig
-  conn <- L.getOrInitSqlConn dbConf
-  case conn of
-    Right c -> do
-      _ <-
-        L.runDB c $
-          L.updateRows $
-            B.update
-              (BeamCommon.exophone BeamCommon.atlasDB)
-              ( \BeamE.ExophoneT {..} ->
-                  (isPrimaryDown B.<-. B.val_ isPrimary)
-                    <> (updatedAt B.<-. B.val_ now)
-              )
-              (\BeamE.ExophoneT {..} -> isPrimaryDown B.==. B.val_ isPrimary)
-      void $ pure Nothing
-    Left _ -> pure (error "DB Config not found")
+  dbConf <- getMasterBeamConfig
+  void $
+    L.runDB dbConf $
+      L.updateRows $
+        B.update
+          (BeamCommon.exophone BeamCommon.atlasDB)
+          ( \BeamE.ExophoneT {..} ->
+              (isPrimaryDown B.<-. B.val_ isPrimary)
+                <> (updatedAt B.<-. B.val_ now)
+          )
+          (\BeamE.ExophoneT {..} -> isPrimaryDown B.==. B.val_ isPrimary)
 
 -- updateAffectedPhones' :: (L.MonadFlow m, MonadTime m) => [Text] -> m (MeshResult ())
 -- updateAffectedPhones' primaryPhones = do

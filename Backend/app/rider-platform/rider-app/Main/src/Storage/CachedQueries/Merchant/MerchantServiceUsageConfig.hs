@@ -27,7 +27,6 @@ import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.MerchantServiceUsageConfig
 -- import qualified Kernel.Storage.Esqueleto as Esq
 
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -57,5 +56,5 @@ clearCache merchantId = do
   Hedis.del (makeMerchantIdKey merchantId)
 
 --updateMerchantServiceUsageConfig :: MerchantServiceUsageConfig -> Esq.SqlDB ()
-updateMerchantServiceUsageConfig :: (L.MonadFlow m, MonadTime m) => MerchantServiceUsageConfig -> m (MeshResult ())
+updateMerchantServiceUsageConfig :: (L.MonadFlow m, MonadTime m, Log m) => MerchantServiceUsageConfig -> m ()
 updateMerchantServiceUsageConfig = Queries.updateMerchantServiceUsageConfig

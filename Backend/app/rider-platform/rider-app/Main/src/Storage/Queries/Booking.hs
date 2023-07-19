@@ -12,6 +12,8 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Booking where
 
@@ -24,17 +26,14 @@ import Domain.Types.FarePolicy.FareProductType as DFF
 import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Error
-import Lib.Utils (setMeshConfig)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithKvInReplica, findAllWithOptionsKV, findAllWithOptionsKvInReplica, findOneWithKV, findOneWithKvInReplica, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Queries.Booking.BookingLocation as QBBL
@@ -63,16 +62,10 @@ import qualified Storage.Tabular.TripTerms as TripTerms
 --       OneWaySpecialZoneDetailsT toLocT -> Esq.create' toLocT
 --     Esq.create' bookingT
 
-createBooking :: L.MonadFlow m => Booking -> m (MeshResult ())
-createBooking booking = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamB.BookingT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainBookingToBeam booking)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+createBooking :: (L.MonadFlow m, Log m) => Booking -> m ()
+createBooking = createWithKV
 
-create :: L.MonadFlow m => Booking -> m ()
+create :: (L.MonadFlow m, Log m) => Booking -> m ()
 create dBooking = do
   _ <- QBBL.create (dBooking.fromLocation)
   _ <- case dBooking.bookingDetails of
@@ -93,22 +86,14 @@ create dBooking = do
 --       ]
 --     where_ $ tbl ^. RB.BookingId ==. val (getId rbId)
 
-updateStatus :: (L.MonadFlow m, MonadTime m) => Id Booking -> BookingStatus -> m (MeshResult ())
+updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> BookingStatus -> m ()
 updateStatus rbId rbStatus = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamB.BookingT
-  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamB.status rbStatus,
-          Se.Set BeamB.updatedAt now
-        ]
-        [Se.Is BeamB.id (Se.Eq $ getId rbId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamB.status rbStatus,
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
 -- updateBPPBookingId :: Id Booking -> Id BPPBooking -> SqlDB ()
 -- updateBPPBookingId rbId bppRbId = do
@@ -121,22 +106,14 @@ updateStatus rbId rbStatus = do
 --       ]
 --     where_ $ tbl ^. RB.BookingId ==. val (getId rbId)
 
-updateBPPBookingId :: (L.MonadFlow m, MonadTime m) => Id Booking -> Id BPPBooking -> m (MeshResult ())
+updateBPPBookingId :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Id BPPBooking -> m ()
 updateBPPBookingId rbId bppRbId = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamB.BookingT
-  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamB.bppBookingId (Just $ getId bppRbId),
-          Se.Set BeamB.updatedAt now
-        ]
-        [Se.Is BeamB.id (Se.Eq $ getId rbId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamB.bppBookingId (Just $ getId bppRbId),
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
 -- updateOtpCodeBookingId :: Id Booking -> Text -> SqlDB ()
 -- updateOtpCodeBookingId rbId otp = do
@@ -149,22 +126,14 @@ updateBPPBookingId rbId bppRbId = do
 --       ]
 --     where_ $ tbl ^. RB.BookingId ==. val (getId rbId)
 
-updateOtpCodeBookingId :: (L.MonadFlow m, MonadTime m) => Id Booking -> Text -> m (MeshResult ())
+updateOtpCodeBookingId :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Text -> m ()
 updateOtpCodeBookingId rbId otp = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamB.BookingT
-  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamB.otpCode (Just otp),
-          Se.Set BeamB.updatedAt now
-        ]
-        [Se.Is BeamB.id (Se.Eq $ getId rbId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamB.otpCode (Just otp),
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
 fullBookingTable ::
   From
@@ -205,23 +174,24 @@ fullBookingTable =
 --     pure $ booking ^. RB.BookingStatus
 
 findLatestByRiderIdAndStatus :: (L.MonadFlow m, Log m) => Id Person -> [BookingStatus] -> m (Maybe BookingStatus)
-findLatestByRiderIdAndStatus (Id bookingId) bookingStatus = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  case dbConf of
-    Just dbConf' -> do
-      let modelName = Se.modelTableName @BeamB.BookingT
-      updatedMeshConfig <- setMeshConfig modelName
-      let options = [Se.Is BeamB.id $ Se.Eq bookingId, Se.Is BeamB.status $ Se.In bookingStatus]
-          sortBy = Se.Desc BeamB.createdAt
-          limit' = Just 1
-      result <- KV.findAllWithOptionsKVConnector dbConf' updatedMeshConfig options sortBy limit' Nothing
-      case result of
-        Right (x : _) ->
-          transformBeamBookingToDomain x >>= \case
-            Just b -> pure (Just (DRB.status b))
-            Nothing -> pure Nothing
-        _ -> pure Nothing
-    _ -> pure Nothing
+findLatestByRiderIdAndStatus (Id bookingId) bookingStatus =
+  do
+    let options = [Se.And [Se.Is BeamB.id $ Se.Eq bookingId, Se.Is BeamB.status $ Se.In bookingStatus]]
+        sortBy = Se.Desc BeamB.createdAt
+        limit' = Just 1
+    findAllWithOptionsKV options sortBy limit' Nothing
+    <&> listToMaybe
+    <&> (Domain.status <$>)
+
+findLatestByRiderIdAndStatusInReplica :: (L.MonadFlow m, Log m) => Id Person -> [BookingStatus] -> m (Maybe BookingStatus)
+findLatestByRiderIdAndStatusInReplica (Id bookingId) bookingStatus =
+  do
+    let options = [Se.And [Se.Is BeamB.id $ Se.Eq bookingId, Se.Is BeamB.status $ Se.In bookingStatus]]
+        sortBy = Se.Desc BeamB.createdAt
+        limit' = Just 1
+    findAllWithOptionsKvInReplica options sortBy limit' Nothing
+    <&> listToMaybe
+    <&> (Domain.status <$>)
 
 -- findById :: Transactionable m => Id Booking -> m (Maybe Booking)
 -- findById bookingId = Esq.buildDType $ do
@@ -232,17 +202,10 @@ findLatestByRiderIdAndStatus (Id bookingId) bookingStatus = do
 --   join <$> mapM buildFullBooking mbFullBookingT
 
 findById :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Booking)
-findById (Id bookingId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamB.BookingT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamB.id $ Se.Eq bookingId]
-      case result of
-        Right (Just result') -> transformBeamBookingToDomain result'
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+findById (Id bookingId) = findOneWithKV [Se.Is BeamB.id $ Se.Eq bookingId]
+
+findByIdInReplica :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Booking)
+findByIdInReplica (Id bookingId) = findOneWithKvInReplica [Se.Is BeamB.id $ Se.Eq bookingId]
 
 -- findByBPPBookingId :: Transactionable m => Id BPPBooking -> m (Maybe Booking)
 -- findByBPPBookingId bppRbId = Esq.buildDType $ do
@@ -253,17 +216,10 @@ findById (Id bookingId) = do
 --   join <$> mapM buildFullBooking mbFullBookingT
 
 findByBPPBookingId :: (L.MonadFlow m, Log m) => Id BPPBooking -> m (Maybe Booking)
-findByBPPBookingId (Id bppRbId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamB.BookingT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamB.bppBookingId $ Se.Eq $ Just bppRbId]
-      case result of
-        Right (Just result') -> transformBeamBookingToDomain result'
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+findByBPPBookingId (Id bppRbId) = findOneWithKV [Se.Is BeamB.bppBookingId $ Se.Eq $ Just bppRbId]
+
+findByBPPBookingIdInReplica :: (L.MonadFlow m, Log m) => Id BPPBooking -> m (Maybe Booking)
+findByBPPBookingIdInReplica (Id bppRbId) = findOneWithKvInReplica [Se.Is BeamB.bppBookingId $ Se.Eq $ Just bppRbId]
 
 -- findByIdAndMerchantId :: Transactionable m => Id Booking -> Id Merchant -> m (Maybe Booking)
 -- findByIdAndMerchantId bookingId merchantId = Esq.buildDType $ do
@@ -276,17 +232,10 @@ findByBPPBookingId (Id bppRbId) = do
 --   join <$> mapM buildFullBooking mbFullBookingT
 
 findByIdAndMerchantId :: (L.MonadFlow m, Log m) => Id Booking -> Id Merchant -> m (Maybe Booking)
-findByIdAndMerchantId (Id bookingId) (Id merchantId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamB.BookingT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamB.id $ Se.Eq bookingId, Se.Is BeamB.merchantId $ Se.Eq merchantId]]
-      case result of
-        Right (Just result') -> transformBeamBookingToDomain result'
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+findByIdAndMerchantId (Id bookingId) (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamB.id $ Se.Eq bookingId, Se.Is BeamB.merchantId $ Se.Eq merchantId]]
+
+findByIdAndMerchantIdInReplica :: (L.MonadFlow m, Log m) => Id Booking -> Id Merchant -> m (Maybe Booking)
+findByIdAndMerchantIdInReplica (Id bookingId) (Id merchantId) = findOneWithKvInReplica [Se.And [Se.Is BeamB.id $ Se.Eq bookingId, Se.Is BeamB.merchantId $ Se.Eq merchantId]]
 
 -- findAllByRiderId :: Transactionable m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Booking]
 -- findAllByRiderId personId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
@@ -304,18 +253,9 @@ findByIdAndMerchantId (Id bookingId) (Id merchantId) = do
 
 findAllByRiderId :: (L.MonadFlow m, Log m) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Booking]
 findAllByRiderId (Id personId) mbLimit mbOffset mbOnlyActive = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamB.BookingT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      let limit' = fmap fromIntegral $ mbLimit <|> Just 10
-          offset' = fmap fromIntegral $ mbOffset <|> Just 0
-      result <- KV.findAllWithOptionsKVConnector dbConf' updatedMeshConfig [Se.And ([Se.Is BeamB.riderId $ Se.Eq personId] <> ([Se.Is BeamB.status $ Se.Not $ Se.In [DRB.COMPLETED, DRB.CANCELLED] | mbOnlyActive == Just True]))] (Se.Desc BeamB.createdAt) limit' offset'
-      case result of
-        Right result' -> catMaybes <$> traverse transformBeamBookingToDomain result'
-        _ -> pure []
-    Nothing -> pure []
+  let limit' = fmap fromIntegral $ mbLimit <|> Just 10
+      offset' = fmap fromIntegral $ mbOffset <|> Just 0
+  findAllWithOptionsKV [Se.And ([Se.Is BeamB.riderId $ Se.Eq personId] <> ([Se.Is BeamB.status $ Se.Not $ Se.In [DRB.COMPLETED, DRB.CANCELLED] | mbOnlyActive == Just True]))] (Se.Desc BeamB.createdAt) limit' offset'
 
 -- findCountByRideIdAndStatus :: Transactionable m => Id Person -> BookingStatus -> m Int
 -- findCountByRideIdAndStatus personId status = do
@@ -331,17 +271,10 @@ findAllByRiderId (Id personId) mbLimit mbOffset mbOnlyActive = do
 --     mkCount _ = 0
 
 findCountByRideIdAndStatus :: (L.MonadFlow m, Log m) => Id Person -> BookingStatus -> m Int
-findCountByRideIdAndStatus (Id personId) status = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamB.BookingT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq status]]
-      case result of
-        Right result' -> pure $ length result'
-        _ -> pure 0
-    Nothing -> pure 0
+findCountByRideIdAndStatus (Id personId) status = findAllWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq status]] <&> length
+
+findCountByRideIdAndStatusInReplica :: (L.MonadFlow m, Log m) => Id Person -> BookingStatus -> m Int
+findCountByRideIdAndStatusInReplica (Id personId) status = findAllWithKvInReplica [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq status]] <&> length
 
 -- findCountByRideIdStatusAndTime :: Transactionable m => Id Person -> BookingStatus -> UTCTime -> UTCTime -> m Int
 -- findCountByRideIdStatusAndTime personId status startTime endTime = do
@@ -358,17 +291,10 @@ findCountByRideIdAndStatus (Id personId) status = do
 --     mkCount _ = 0
 
 findCountByRideIdStatusAndTime :: (L.MonadFlow m, Log m) => Id Person -> BookingStatus -> UTCTime -> UTCTime -> m Int
-findCountByRideIdStatusAndTime (Id personId) status startTime endTime = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamB.BookingT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq status, Se.Is BeamB.createdAt $ Se.GreaterThanOrEq startTime, Se.Is BeamB.createdAt $ Se.LessThan endTime]]
-      case result of
-        Right result' -> pure $ length result'
-        _ -> pure 0
-    Nothing -> pure 0
+findCountByRideIdStatusAndTime (Id personId) status startTime endTime = findAllWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq status, Se.Is BeamB.createdAt $ Se.GreaterThanOrEq startTime, Se.Is BeamB.createdAt $ Se.LessThan endTime]] <&> length
+
+findCountByRideIdStatusAndTimeInReplica :: (L.MonadFlow m, Log m) => Id Person -> BookingStatus -> UTCTime -> UTCTime -> m Int
+findCountByRideIdStatusAndTimeInReplica (Id personId) status startTime endTime = findAllWithKvInReplica [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq status, Se.Is BeamB.createdAt $ Se.GreaterThanOrEq startTime, Se.Is BeamB.createdAt $ Se.LessThan endTime]] <&> length
 
 -- findByRiderIdAndStatus :: Transactionable m => Id Person -> [BookingStatus] -> m [Booking]
 -- findByRiderIdAndStatus personId statusList = Esq.buildDType $ do
@@ -381,17 +307,10 @@ findCountByRideIdStatusAndTime (Id personId) status startTime endTime = do
 --   catMaybes <$> mapM buildFullBooking fullBookingsT
 
 findByRiderIdAndStatus :: (L.MonadFlow m, Log m) => Id Person -> [BookingStatus] -> m [Booking]
-findByRiderIdAndStatus (Id personId) statusList = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamB.BookingT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.In statusList]]
-      case result of
-        Right result' -> catMaybes <$> traverse transformBeamBookingToDomain result'
-        _ -> pure []
-    Nothing -> pure []
+findByRiderIdAndStatus (Id personId) statusList = findAllWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.In statusList]]
+
+findByRiderIdAndStatusInReplica :: (L.MonadFlow m, Log m) => Id Person -> [BookingStatus] -> m [Booking]
+findByRiderIdAndStatusInReplica (Id personId) statusList = findAllWithKvInReplica [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.In statusList]]
 
 -- findAssignedByRiderId :: Transactionable m => Id Person -> m (Maybe Booking)
 -- findAssignedByRiderId personId = Esq.buildDType $ do
@@ -404,19 +323,10 @@ findByRiderIdAndStatus (Id personId) statusList = do
 --   join <$> mapM buildFullBooking fullBookingsT
 
 findAssignedByRiderId :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Booking)
-findAssignedByRiderId (Id personId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamB.BookingT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq TRIP_ASSIGNED]]
-      case result of
-        Right result' -> case result' of
-          Just result'' -> transformBeamBookingToDomain result''
-          Nothing -> pure Nothing
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+findAssignedByRiderId (Id personId) = findOneWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq TRIP_ASSIGNED]]
+
+findAssignedByRiderIdInReplica :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Booking)
+findAssignedByRiderIdInReplica (Id personId) = findOneWithKvInReplica [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.Eq TRIP_ASSIGNED]]
 
 findBookingIdAssignedByEstimateId :: Transactionable m => Id Estimate -> m (Maybe (Id Booking))
 findBookingIdAssignedByEstimateId estimateId =
@@ -473,25 +383,17 @@ findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus =
 --       ]
 --     where_ $ tbl ^. RB.BookingId ==. val (getId rbId)
 
-updatePaymentInfo :: (L.MonadFlow m, MonadTime m) => Id Booking -> Money -> Maybe Money -> Money -> Maybe Text -> m (MeshResult ())
+updatePaymentInfo :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Money -> Maybe Money -> Money -> Maybe Text -> m ()
 updatePaymentInfo rbId estimatedFare discount estimatedTotalFare mbPaymentUrl = do
   now <- getCurrentTime
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamB.BookingT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamB.estimatedFare (realToFrac estimatedFare),
-          Se.Set BeamB.discount (realToFrac <$> discount),
-          Se.Set BeamB.estimatedTotalFare (realToFrac estimatedTotalFare),
-          Se.Set BeamB.paymentUrl mbPaymentUrl,
-          Se.Set BeamB.updatedAt now
-        ]
-        [Se.Is BeamB.id (Se.Eq $ getId rbId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamB.estimatedFare (realToFrac estimatedFare),
+      Se.Set BeamB.discount (realToFrac <$> discount),
+      Se.Set BeamB.estimatedTotalFare (realToFrac estimatedTotalFare),
+      Se.Set BeamB.paymentUrl mbPaymentUrl,
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
 -- updatePaymentUrl :: Id Booking -> Text -> SqlDB ()
 -- updatePaymentUrl bookingId paymentUrl = do
@@ -504,23 +406,14 @@ updatePaymentInfo rbId estimatedFare discount estimatedTotalFare mbPaymentUrl = 
 --       ]
 --     where_ $ tbl ^. RB.BookingId ==. val (getId bookingId)
 
-updatePaymentUrl :: (L.MonadFlow m, MonadTime m) => Id Booking -> Text -> m ()
+updatePaymentUrl :: (L.MonadFlow m, MonadTime m, Log m) => Id Booking -> Text -> m ()
 updatePaymentUrl bookingId paymentUrl = do
   now <- getCurrentTime
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamB.BookingT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      void $
-        KV.updateWoReturningWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [ Se.Set BeamB.paymentUrl (Just paymentUrl),
-            Se.Set BeamB.updatedAt now
-          ]
-          [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
-    Nothing -> pure ()
+  updateWithKV
+    [ Se.Set BeamB.paymentUrl (Just paymentUrl),
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
 -- findAllByPersonIdLimitOffset ::
 --   Transactionable m =>
@@ -541,18 +434,15 @@ updatePaymentUrl bookingId paymentUrl = do
 
 findAllByPersonIdLimitOffset :: (L.MonadFlow m, Log m) => Id Person -> Maybe Integer -> Maybe Integer -> m [Booking]
 findAllByPersonIdLimitOffset (Id personId) mlimit moffset = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamB.BookingT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      let limit' = fmap fromIntegral $ mlimit <|> Just 100
-          offset' = fmap fromIntegral $ moffset <|> Just 0
-      result <- KV.findAllWithOptionsKVConnector dbConf' updatedMeshConfig [Se.Is BeamB.riderId $ Se.Eq personId] (Se.Desc BeamB.createdAt) limit' offset'
-      case result of
-        Right result' -> catMaybes <$> traverse transformBeamBookingToDomain result'
-        _ -> pure []
-    Nothing -> pure []
+  let limit' = fmap fromIntegral $ mlimit <|> Just 100
+      offset' = fmap fromIntegral $ moffset <|> Just 0
+  findAllWithOptionsKV [Se.Is BeamB.riderId $ Se.Eq personId] (Se.Desc BeamB.createdAt) limit' offset'
+
+findAllByPersonIdLimitOffsetInReplica :: (L.MonadFlow m, Log m) => Id Person -> Maybe Integer -> Maybe Integer -> m [Booking]
+findAllByPersonIdLimitOffsetInReplica (Id personId) mlimit moffset = do
+  let limit' = fmap fromIntegral $ mlimit <|> Just 100
+      offset' = fmap fromIntegral $ moffset <|> Just 0
+  findAllWithOptionsKvInReplica [Se.Is BeamB.riderId $ Se.Eq personId] (Se.Desc BeamB.createdAt) limit' offset'
 
 -- findStuckBookings :: Transactionable m => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
 -- findStuckBookings merchantId bookingIds now = do
@@ -567,30 +457,32 @@ findAllByPersonIdLimitOffset (Id personId) mlimit moffset = do
 --     pure $ booking ^. BookingTId
 
 findStuckBookings :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
-findStuckBookings (Id merchantId) bookingIds now = do
-  let updatedTimestamp = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamB.BookingT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <-
-        KV.findAllWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [ Se.And
-              [ Se.Is BeamB.merchantId $ Se.Eq merchantId,
-                Se.Is BeamB.id (Se.In $ getId <$> bookingIds),
-                Se.Is BeamB.status $ Se.Eq NEW,
-                Se.Is BeamB.createdAt $ Se.LessThanOrEq updatedTimestamp
-              ]
+findStuckBookings (Id merchantId) bookingIds now =
+  do
+    let updatedTimestamp = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
+    findAllWithKV
+      [ Se.And
+          [ Se.Is BeamB.merchantId $ Se.Eq merchantId,
+            Se.Is BeamB.id (Se.In $ getId <$> bookingIds),
+            Se.Is BeamB.status $ Se.Eq NEW,
+            Se.Is BeamB.createdAt $ Se.LessThanOrEq updatedTimestamp
           ]
-      case result of
-        Right booking -> do
-          bookings <- mapM transformBeamBookingToDomain booking
-          pure $ Domain.id <$> catMaybes bookings
-        _ -> pure []
-    Nothing -> pure []
+      ]
+    <&> (Domain.id <$>)
+
+findStuckBookingsInReplica :: (L.MonadFlow m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
+findStuckBookingsInReplica (Id merchantId) bookingIds now =
+  do
+    let updatedTimestamp = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
+    findAllWithKvInReplica
+      [ Se.And
+          [ Se.Is BeamB.merchantId $ Se.Eq merchantId,
+            Se.Is BeamB.id (Se.In $ getId <$> bookingIds),
+            Se.Is BeamB.status $ Se.Eq NEW,
+            Se.Is BeamB.createdAt $ Se.LessThanOrEq updatedTimestamp
+          ]
+      ]
+    <&> (Domain.id <$>)
 
 -- cancelBookings :: [Id Booking] -> UTCTime -> SqlDB ()
 -- cancelBookings bookingIds now = do
@@ -602,127 +494,118 @@ findStuckBookings (Id merchantId) bookingIds now = do
 --       ]
 --     where_ $ tbl ^. BookingTId `in_` valList (toKey <$> bookingIds)
 
-cancelBookings :: (L.MonadFlow m, MonadTime m) => [Id Booking] -> UTCTime -> m ()
-cancelBookings bookingIds now = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamB.BookingT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      void $
-        KV.updateWoReturningWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [ Se.Set BeamB.status CANCELLED,
-            Se.Set BeamB.updatedAt now
-          ]
-          [Se.Is BeamB.id (Se.In $ getId <$> bookingIds)]
-    Nothing -> pure ()
+cancelBookings :: (L.MonadFlow m, MonadTime m, Log m) => [Id Booking] -> UTCTime -> m ()
+cancelBookings bookingIds now =
+  updateWithKV
+    [ Se.Set BeamB.status CANCELLED,
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.In $ getId <$> bookingIds)]
 
-transformBeamBookingToDomain :: (L.MonadFlow m, Log m) => BeamB.Booking -> m (Maybe Booking)
-transformBeamBookingToDomain BeamB.BookingT {..} = do
-  fl <- QBBL.findById (Id fromLocationId)
-  tt <- if isJust tripTermsId then QTT.findById'' (Id (fromJust tripTermsId)) else pure Nothing
-  pUrl <- parseBaseUrl providerUrl
-  bookingDetails <- case fareProductType of
-    DFF.ONE_WAY -> DRB.OneWayDetails <$> buildOneWayDetails toLocationId
-    DFF.RENTAL -> do
-      qd <- getRentalDetails rentalSlabId
-      case qd of
-        Nothing -> throwError (InternalError "No Rental Details present")
-        Just a -> pure a
-    DFF.DRIVER_OFFER -> DRB.OneWayDetails <$> buildOneWayDetails toLocationId
-    DFF.ONE_WAY_SPECIAL_ZONE -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId
-  if isJust fl
-    then
-      pure $
-        Just
-          Booking
-            { id = Id id,
-              transactionId = transactionId,
-              bppBookingId = Id <$> bppBookingId,
-              quoteId = Id <$> quoteId,
-              paymentMethodId = Id <$> paymentMethodId,
-              paymentUrl = paymentUrl,
-              status = status,
-              providerId = providerId,
-              providerUrl = pUrl,
-              providerName = providerName,
-              providerMobileNumber = providerMobileNumber,
-              primaryExophone = primaryExophone,
-              startTime = startTime,
-              riderId = Id riderId,
-              fromLocation = fromJust fl,
-              estimatedFare = roundToIntegral estimatedFare,
-              discount = roundToIntegral <$> discount,
-              estimatedTotalFare = roundToIntegral estimatedTotalFare,
-              vehicleVariant = vehicleVariant,
-              bookingDetails = bookingDetails,
-              tripTerms = tt,
-              merchantId = Id merchantId,
-              specialLocationTag = specialLocationTag,
-              createdAt = createdAt,
-              updatedAt = updatedAt
+instance FromTType' BeamB.Booking Booking where
+  fromTType' BeamB.BookingT {..} = do
+    fl <- QBBL.findById (Id fromLocationId)
+    tt <- if isJust tripTermsId then QTT.findById'' (Id (fromJust tripTermsId)) else pure Nothing
+    pUrl <- parseBaseUrl providerUrl
+    bookingDetails <- case fareProductType of
+      DFF.ONE_WAY -> DRB.OneWayDetails <$> buildOneWayDetails toLocationId
+      DFF.RENTAL -> do
+        qd <- getRentalDetails rentalSlabId
+        case qd of
+          Nothing -> throwError (InternalError "No Rental Details present")
+          Just a -> pure a
+      DFF.DRIVER_OFFER -> DRB.OneWayDetails <$> buildOneWayDetails toLocationId
+      DFF.ONE_WAY_SPECIAL_ZONE -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId
+    if isJust fl
+      then
+        pure $
+          Just
+            Booking
+              { id = Id id,
+                transactionId = transactionId,
+                bppBookingId = Id <$> bppBookingId,
+                quoteId = Id <$> quoteId,
+                paymentMethodId = Id <$> paymentMethodId,
+                paymentUrl = paymentUrl,
+                status = status,
+                providerId = providerId,
+                providerUrl = pUrl,
+                providerName = providerName,
+                providerMobileNumber = providerMobileNumber,
+                primaryExophone = primaryExophone,
+                startTime = startTime,
+                riderId = Id riderId,
+                fromLocation = fromJust fl,
+                estimatedFare = roundToIntegral estimatedFare,
+                discount = roundToIntegral <$> discount,
+                estimatedTotalFare = roundToIntegral estimatedTotalFare,
+                vehicleVariant = vehicleVariant,
+                bookingDetails = bookingDetails,
+                tripTerms = tt,
+                merchantId = Id merchantId,
+                specialLocationTag = specialLocationTag,
+                createdAt = createdAt,
+                updatedAt = updatedAt
+              }
+      else pure Nothing
+    where
+      buildOneWayDetails _ = do
+        toLocation <- maybe (pure Nothing) (QBBL.findById . Id) toLocationId
+        distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
+        pure
+          DRB.OneWayBookingDetails
+            { toLocation = fromJust toLocation,
+              distance = distance'
             }
-    else pure Nothing
-  where
-    buildOneWayDetails _ = do
-      toLocation <- maybe (pure Nothing) (QBBL.findById . Id) toLocationId
-      distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
-      pure
-        DRB.OneWayBookingDetails
-          { toLocation = fromJust toLocation,
-            distance = distance'
-          }
-    buildOneWaySpecialZoneDetails _ = do
-      toLocation <- error ""
-      distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
-      pure
-        DRB.OneWaySpecialZoneBookingDetails
-          { distance = distance',
-            ..
-          }
-    getRentalDetails rentalSlabId' = do
-      res <- maybe (pure Nothing) (QueryRS.findById . Id) rentalSlabId'
-      case res of
-        Just rentalSlab -> pure $ Just $ DRB.RentalDetails rentalSlab
-        Nothing -> pure Nothing
+      buildOneWaySpecialZoneDetails _ = do
+        toLocation <- error ""
+        distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
+        pure
+          DRB.OneWaySpecialZoneBookingDetails
+            { distance = distance',
+              ..
+            }
+      getRentalDetails rentalSlabId' = do
+        res <- maybe (pure Nothing) (QueryRS.findById . Id) rentalSlabId'
+        case res of
+          Just rentalSlab -> pure $ Just $ DRB.RentalDetails rentalSlab
+          Nothing -> pure Nothing
 
-transformDomainBookingToBeam :: Booking -> BeamB.Booking
-transformDomainBookingToBeam DRB.Booking {..} =
-  let (fareProductType, toLocationId, distance, rentalSlabId, otpCode) = case bookingDetails of
-        DRB.OneWayDetails details -> (DQuote.ONE_WAY, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
-        DRB.RentalDetails rentalSlab -> (DQuote.RENTAL, Nothing, Nothing, Just . getId $ rentalSlab.id, Nothing)
-        DRB.DriverOfferDetails details -> (DQuote.DRIVER_OFFER, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
-        DRB.OneWaySpecialZoneDetails details -> (DQuote.ONE_WAY_SPECIAL_ZONE, Just (getId details.toLocation.id), Just details.distance, Nothing, details.otpCode)
-   in BeamB.BookingT
-        { BeamB.id = getId id,
-          BeamB.transactionId = transactionId,
-          BeamB.fareProductType = fareProductType,
-          BeamB.bppBookingId = getId <$> bppBookingId,
-          BeamB.quoteId = getId <$> quoteId,
-          BeamB.paymentMethodId = getId <$> paymentMethodId,
-          BeamB.paymentUrl = paymentUrl,
-          BeamB.status = status,
-          BeamB.providerId = providerId,
-          BeamB.providerUrl = showBaseUrl providerUrl,
-          BeamB.providerName = providerName,
-          BeamB.providerMobileNumber = providerMobileNumber,
-          BeamB.primaryExophone = primaryExophone,
-          BeamB.startTime = startTime,
-          BeamB.riderId = getId riderId,
-          BeamB.fromLocationId = getId fromLocation.id,
-          BeamB.toLocationId = toLocationId,
-          BeamB.estimatedFare = realToFrac estimatedFare,
-          BeamB.discount = realToFrac <$> discount,
-          BeamB.estimatedTotalFare = realToFrac estimatedTotalFare,
-          BeamB.otpCode = otpCode,
-          BeamB.vehicleVariant = vehicleVariant,
-          BeamB.distance = distance,
-          BeamB.tripTermsId = getId <$> (tripTerms <&> (.id)),
-          BeamB.rentalSlabId = rentalSlabId,
-          BeamB.merchantId = getId merchantId,
-          BeamB.specialLocationTag = specialLocationTag,
-          BeamB.createdAt = createdAt,
-          BeamB.updatedAt = updatedAt
-        }
+instance ToTType' BeamB.Booking Booking where
+  toTType' DRB.Booking {..} =
+    let (fareProductType, toLocationId, distance, rentalSlabId, otpCode) = case bookingDetails of
+          DRB.OneWayDetails details -> (DQuote.ONE_WAY, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
+          DRB.RentalDetails rentalSlab -> (DQuote.RENTAL, Nothing, Nothing, Just . getId $ rentalSlab.id, Nothing)
+          DRB.DriverOfferDetails details -> (DQuote.DRIVER_OFFER, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
+          DRB.OneWaySpecialZoneDetails details -> (DQuote.ONE_WAY_SPECIAL_ZONE, Just (getId details.toLocation.id), Just details.distance, Nothing, details.otpCode)
+     in BeamB.BookingT
+          { BeamB.id = getId id,
+            BeamB.transactionId = transactionId,
+            BeamB.fareProductType = fareProductType,
+            BeamB.bppBookingId = getId <$> bppBookingId,
+            BeamB.quoteId = getId <$> quoteId,
+            BeamB.paymentMethodId = getId <$> paymentMethodId,
+            BeamB.paymentUrl = paymentUrl,
+            BeamB.status = status,
+            BeamB.providerId = providerId,
+            BeamB.providerUrl = showBaseUrl providerUrl,
+            BeamB.providerName = providerName,
+            BeamB.providerMobileNumber = providerMobileNumber,
+            BeamB.primaryExophone = primaryExophone,
+            BeamB.startTime = startTime,
+            BeamB.riderId = getId riderId,
+            BeamB.fromLocationId = getId fromLocation.id,
+            BeamB.toLocationId = toLocationId,
+            BeamB.estimatedFare = realToFrac estimatedFare,
+            BeamB.discount = realToFrac <$> discount,
+            BeamB.estimatedTotalFare = realToFrac estimatedTotalFare,
+            BeamB.otpCode = otpCode,
+            BeamB.vehicleVariant = vehicleVariant,
+            BeamB.distance = distance,
+            BeamB.tripTermsId = getId <$> (tripTerms <&> (.id)),
+            BeamB.rentalSlabId = rentalSlabId,
+            BeamB.merchantId = getId merchantId,
+            BeamB.specialLocationTag = specialLocationTag,
+            BeamB.createdAt = createdAt,
+            BeamB.updatedAt = updatedAt
+          }

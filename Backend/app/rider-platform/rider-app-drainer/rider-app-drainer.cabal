@@ -107,7 +107,7 @@ library
     , pcg-random
     , record-dot-preprocessor
     , record-hasfield
-    , rider-app-app
+    , rider-app
     , sequelize
     , servant-server
     , text

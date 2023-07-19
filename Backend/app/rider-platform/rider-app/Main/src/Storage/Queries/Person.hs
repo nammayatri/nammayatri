@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Person where
 
@@ -18,11 +19,8 @@ import Control.Applicative ((<|>))
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.MerchantConfig as DMC
 import Domain.Types.Person
-import Domain.Types.Ride as Ride
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
+import qualified Domain.Types.Ride as Ride
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import Kernel.External.Maps (Language)
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
@@ -39,14 +37,8 @@ import Storage.Tabular.Booking
 import Storage.Tabular.Person
 import Storage.Tabular.Ride
 
-create :: L.MonadFlow m => Person -> m (MeshResult ())
-create person = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainPersonToBeam person)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create :: (L.MonadFlow m, Log m) => Person -> m ()
+create = createWithKV
 
 -- findById ::
 --   Transactionable m =>
@@ -55,17 +47,10 @@ create person = do
 -- findById = Esq.findById
 
 findById :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Person)
-findById (Id personId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamP.id $ Se.Eq personId]
-      case result of
-        Right (Just p) -> transformBeamPersonToDomain p
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+findById (Id personId) = findOneWithKV [Se.Is BeamP.id $ Se.Eq personId]
+
+findByIdInReplica :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Person)
+findByIdInReplica (Id personId) = findOneWithKvInReplica [Se.Is BeamP.id $ Se.Eq personId]
 
 -- findByMobileNumberAndMerchantId ::
 --   Transactionable m =>
@@ -83,17 +68,10 @@ findById (Id personId) = do
 --     return person
 
 findByMobileNumberAndMerchantId :: (L.MonadFlow m, Log m) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
-findByMobileNumberAndMerchantId countryCode mobileNumberHash (Id merchantId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
-      case result of
-        Right (Just p) -> transformBeamPersonToDomain p
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+findByMobileNumberAndMerchantId countryCode mobileNumberHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
+
+findByMobileNumberAndMerchantIdInReplica :: (L.MonadFlow m, Log m) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
+findByMobileNumberAndMerchantIdInReplica countryCode mobileNumberHash (Id merchantId) = findOneWithKvInReplica [Se.And [Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
 -- findByEmailAndPassword ::
 --   (Transactionable m, EncFlow m r) =>
@@ -112,18 +90,9 @@ findByMobileNumberAndMerchantId countryCode mobileNumberHash (Id merchantId) = d
 
 findByEmailAndPassword :: (L.MonadFlow m, Log m, EncFlow m r) => Text -> Text -> m (Maybe Person)
 findByEmailAndPassword email_ password = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      emailDbHash <- getDbHash email_
-      passwordDbHash <- getDbHash password
-      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamP.emailHash $ Se.Eq (Just emailDbHash), Se.Is BeamP.passwordHash $ Se.Eq (Just passwordDbHash)]]
-      case result of
-        Right (Just p) -> transformBeamPersonToDomain p
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+  emailDbHash <- getDbHash email_
+  passwordDbHash <- getDbHash password
+  findOneWithKV [Se.And [Se.Is BeamP.emailHash $ Se.Eq (Just emailDbHash), Se.Is BeamP.passwordHash $ Se.Eq (Just passwordDbHash)]]
 
 -- findByEmail ::
 --   (Transactionable m, EncFlow m r) =>
@@ -139,17 +108,8 @@ findByEmailAndPassword email_ password = do
 
 findByEmail :: (L.MonadFlow m, Log m, EncFlow m r) => Text -> m (Maybe Person)
 findByEmail email_ = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      emailDbHash <- getDbHash email_
-      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamP.emailHash $ Se.Eq (Just emailDbHash)]
-      case result of
-        Right (Just p) -> transformBeamPersonToDomain p
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+  emailDbHash <- getDbHash email_
+  findOneWithKV [Se.Is BeamP.emailHash $ Se.Eq (Just emailDbHash)]
 
 -- findByRoleAndMobileNumberAndMerchantId ::
 --   Transactionable m =>
@@ -169,17 +129,10 @@ findByEmail email_ = do
 --     return person
 
 findByRoleAndMobileNumberAndMerchantId :: (L.MonadFlow m, Log m) => Role -> Text -> DbHash -> Id Merchant -> m (Maybe Person)
-findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumberHash (Id merchantId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
-      case result of
-        Right (Just p) -> transformBeamPersonToDomain p
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumberHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
+
+findByRoleAndMobileNumberAndMerchantIdInReplica :: (L.MonadFlow m, Log m) => Role -> Text -> DbHash -> Id Merchant -> m (Maybe Person)
+findByRoleAndMobileNumberAndMerchantIdInReplica role_ countryCode mobileNumberHash (Id merchantId) = findOneWithKvInReplica [Se.And [Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
 -- findByRoleAndMobileNumberAndMerchantIdWithoutCC :: Transactionable m => Role -> DbHash -> Id Merchant -> m (Maybe Person)
 -- findByRoleAndMobileNumberAndMerchantIdWithoutCC role_ mobileNumberHash merchantId = do
@@ -192,17 +145,10 @@ findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumberHash (Id me
 --     return person
 
 findByRoleAndMobileNumberAndMerchantIdWithoutCC :: (L.MonadFlow m, Log m) => Role -> DbHash -> Id Merchant -> m (Maybe Person)
-findByRoleAndMobileNumberAndMerchantIdWithoutCC role_ mobileNumberHash (Id merchantId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
-      case result of
-        Right (Just p) -> transformBeamPersonToDomain p
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+findByRoleAndMobileNumberAndMerchantIdWithoutCC role_ mobileNumberHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
+
+findByRoleAndMobileNumberAndMerchantIdWithoutCCInReplica :: (L.MonadFlow m, Log m) => Role -> DbHash -> Id Merchant -> m (Maybe Person)
+findByRoleAndMobileNumberAndMerchantIdWithoutCCInReplica role_ mobileNumberHash (Id merchantId) = findOneWithKvInReplica [Se.And [Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
 -- updateMultiple :: Id Person -> Person -> SqlDB ()
 -- updateMultiple personId person = do
@@ -225,32 +171,24 @@ findByRoleAndMobileNumberAndMerchantIdWithoutCC role_ mobileNumberHash (Id merch
 --       ]
 --     where_ $ tbl ^. PersonId ==. val (getId personId)
 
-updateMultiple :: (L.MonadFlow m, MonadTime m) => Id Person -> Person -> m (MeshResult ())
+updateMultiple :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Person -> m ()
 updateMultiple (Id personId) person = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamP.updatedAt now,
-          Se.Set BeamP.firstName $ person.firstName,
-          Se.Set BeamP.middleName $ person.middleName,
-          Se.Set BeamP.lastName $ person.lastName,
-          Se.Set BeamP.gender $ person.gender,
-          Se.Set BeamP.description $ person.description,
-          Se.Set BeamP.role $ person.role,
-          Se.Set BeamP.identifier $ person.identifier,
-          Se.Set BeamP.rating $ person.rating,
-          Se.Set BeamP.deviceToken $ person.deviceToken,
-          Se.Set BeamP.clientVersion (versionToText <$> person.clientVersion),
-          Se.Set BeamP.bundleVersion (versionToText <$> person.bundleVersion)
-        ]
-        [Se.Is BeamP.id (Se.Eq personId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamP.updatedAt now,
+      Se.Set BeamP.firstName $ person.firstName,
+      Se.Set BeamP.middleName $ person.middleName,
+      Se.Set BeamP.lastName $ person.lastName,
+      Se.Set BeamP.gender $ person.gender,
+      Se.Set BeamP.description $ person.description,
+      Se.Set BeamP.role $ person.role,
+      Se.Set BeamP.identifier $ person.identifier,
+      Se.Set BeamP.rating $ person.rating,
+      Se.Set BeamP.deviceToken $ person.deviceToken,
+      Se.Set BeamP.clientVersion (versionToText <$> person.clientVersion),
+      Se.Set BeamP.bundleVersion (versionToText <$> person.bundleVersion)
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
 
 -- updatePersonVersions :: Person -> Maybe Version -> Maybe Version -> SqlDB ()
 -- updatePersonVersions person mbBundleVersion mbClientVersion =
@@ -270,29 +208,20 @@ updateMultiple (Id personId) person = do
 --         where_ $
 --           tbl ^. PersonTId ==. val (toKey person.id)
 
-updatePersonVersions :: (L.MonadFlow m, MonadTime m) => Person -> Maybe Version -> Maybe Version -> m ()
+updatePersonVersions :: (L.MonadFlow m, MonadTime m, Log m) => Person -> Maybe Version -> Maybe Version -> m ()
 updatePersonVersions person mbBundleVersion mbClientVersion =
   when
     ((isJust mbBundleVersion || isJust mbClientVersion) && (person.bundleVersion /= mbBundleVersion || person.clientVersion /= mbClientVersion))
     do
-      dbConf <- L.getOption KBT.PsqlDbCfg
-      let modelName = Se.modelTableName @BeamP.PersonT
-      updatedMeshConfig <- setMeshConfig modelName
       now <- getCurrentTime
       let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.bundleVersion)
           mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientVersion)
-      case dbConf of
-        Just dbConf' ->
-          void $
-            KV.updateWoReturningWithKVConnector
-              dbConf'
-              updatedMeshConfig
-              [ Se.Set BeamP.updatedAt now,
-                Se.Set BeamP.clientVersion mbClientVersionText,
-                Se.Set BeamP.bundleVersion mbBundleVersionText
-              ]
-              [Se.Is BeamP.id (Se.Eq (getId (person.id)))]
-        Nothing -> pure ()
+      updateWithKV
+        [ Se.Set BeamP.updatedAt now,
+          Se.Set BeamP.clientVersion mbClientVersionText,
+          Se.Set BeamP.bundleVersion mbBundleVersionText
+        ]
+        [Se.Is BeamP.id (Se.Eq (getId (person.id)))]
 
 -- updateDeviceToken :: Id Person -> Maybe Text -> SqlDB ()
 -- updateDeviceToken personId mbDeviceToken = do
@@ -305,22 +234,14 @@ updatePersonVersions person mbBundleVersion mbClientVersion =
 --       ]
 --     where_ $ tbl ^. PersonId ==. val (getId personId)
 
-updateDeviceToken :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe Text -> m (MeshResult ())
+updateDeviceToken :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Maybe Text -> m ()
 updateDeviceToken (Id personId) mbDeviceToken = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamP.deviceToken mbDeviceToken,
-          Se.Set BeamP.updatedAt now
-        ]
-        [Se.Is BeamP.id (Se.Eq personId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamP.deviceToken mbDeviceToken,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
 
 -- updateWhatsappNotificationEnrollStatus :: Id Person -> Maybe Whatsapp.OptApiMethods -> SqlDB ()
 -- updateWhatsappNotificationEnrollStatus personId enrollStatus = do
@@ -333,22 +254,14 @@ updateDeviceToken (Id personId) mbDeviceToken = do
 --       ]
 --     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
-updateWhatsappNotificationEnrollStatus :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe Whatsapp.OptApiMethods -> m (MeshResult ())
+updateWhatsappNotificationEnrollStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Maybe Whatsapp.OptApiMethods -> m ()
 updateWhatsappNotificationEnrollStatus (Id personId) enrollStatus = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamP.whatsappNotificationEnrollStatus enrollStatus,
-          Se.Set BeamP.updatedAt now
-        ]
-        [Se.Is BeamP.id (Se.Eq personId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamP.whatsappNotificationEnrollStatus enrollStatus,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
 
 -- setIsNewFalse :: Id Person -> SqlDB ()
 -- setIsNewFalse personId = do
@@ -361,22 +274,14 @@ updateWhatsappNotificationEnrollStatus (Id personId) enrollStatus = do
 --       ]
 --     where_ $ tbl ^. PersonId ==. val (getId personId)
 
-setIsNewFalse :: (L.MonadFlow m, MonadTime m) => Id Person -> m (MeshResult ())
+setIsNewFalse :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> m ()
 setIsNewFalse (Id personId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamP.isNew False,
-          Se.Set BeamP.updatedAt now
-        ]
-        [Se.Is BeamP.id (Se.Eq personId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamP.isNew False,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
 
 -- updatePersonalInfo ::
 --   Id Person ->
@@ -417,7 +322,7 @@ setIsNewFalse (Id personId) = do
 --     where_ $ tbl ^. PersonId ==. val (getId personId)
 
 updatePersonalInfo ::
-  (L.MonadFlow m, MonadTime m) =>
+  (L.MonadFlow m, MonadTime m, Log m) =>
   Id Person ->
   Maybe Text ->
   Maybe Text ->
@@ -430,70 +335,62 @@ updatePersonalInfo ::
   Maybe Gender ->
   Maybe Version ->
   Maybe Version ->
-  m (MeshResult ())
+  m ()
 updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbCVersion mbBVersion = do
-  let modelName = Se.modelTableName @BeamP.PersonT
-  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
   let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
   let mbEmailHash = mbEncEmail <&> (.hash)
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  case dbConf of
-    Just dbConf' -> do
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        ( [ Se.Set BeamP.updatedAt now
-          ]
-            <> if isJust mbFirstName
-              then [Se.Set BeamP.firstName mbFirstName]
-              else
-                []
-                  <> if isJust mbMiddleName
-                    then [Se.Set BeamP.middleName mbMiddleName]
-                    else
-                      []
-                        <> if isJust mbLastName
-                          then [Se.Set BeamP.lastName mbLastName]
-                          else
-                            []
-                              <> if isJust mbEmailEncrypted
-                                then [Se.Set BeamP.emailEncrypted mbEmailEncrypted]
-                                else
-                                  []
-                                    <> if isJust mbEmailHash
-                                      then [Se.Set BeamP.emailHash mbEmailHash]
-                                      else
-                                        []
-                                          <> if isJust mbDeviceToken
-                                            then [Se.Set BeamP.deviceToken mbDeviceToken]
-                                            else
-                                              []
-                                                <> if isJust mbNotificationToken
-                                                  then [Se.Set BeamP.notificationToken mbNotificationToken]
-                                                  else
-                                                    []
-                                                      <> if isJust mbReferralCode
-                                                        then [Se.Set BeamP.referralCode mbReferralCode]
-                                                        else
-                                                          []
-                                                            <> if isJust mbReferralCode
-                                                              then [Se.Set BeamP.referredAt $ Just now]
-                                                              else
-                                                                []
-                                                                  <> if isJust mbLanguage
-                                                                    then [Se.Set BeamP.language mbLanguage]
-                                                                    else
-                                                                      []
-                                                                        <> maybe [] (\gender -> [Se.Set BeamP.gender gender]) mbGender
-                                                                        <> if isJust mbCVersion
-                                                                          then [Se.Set BeamP.clientVersion $ versionToText <$> mbCVersion]
-                                                                          else
-                                                                            []
-                                                                              <> ([Se.Set BeamP.bundleVersion $ versionToText <$> mbBVersion | isJust mbBVersion])
-        )
-        [Se.Is BeamP.id (Se.Eq personId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    ( [ Se.Set BeamP.updatedAt now
+      ]
+        <> if isJust mbFirstName
+          then [Se.Set BeamP.firstName mbFirstName]
+          else
+            []
+              <> if isJust mbMiddleName
+                then [Se.Set BeamP.middleName mbMiddleName]
+                else
+                  []
+                    <> if isJust mbLastName
+                      then [Se.Set BeamP.lastName mbLastName]
+                      else
+                        []
+                          <> if isJust mbEmailEncrypted
+                            then [Se.Set BeamP.emailEncrypted mbEmailEncrypted]
+                            else
+                              []
+                                <> if isJust mbEmailHash
+                                  then [Se.Set BeamP.emailHash mbEmailHash]
+                                  else
+                                    []
+                                      <> if isJust mbDeviceToken
+                                        then [Se.Set BeamP.deviceToken mbDeviceToken]
+                                        else
+                                          []
+                                            <> if isJust mbNotificationToken
+                                              then [Se.Set BeamP.notificationToken mbNotificationToken]
+                                              else
+                                                []
+                                                  <> if isJust mbReferralCode
+                                                    then [Se.Set BeamP.referralCode mbReferralCode]
+                                                    else
+                                                      []
+                                                        <> if isJust mbReferralCode
+                                                          then [Se.Set BeamP.referredAt $ Just now]
+                                                          else
+                                                            []
+                                                              <> if isJust mbLanguage
+                                                                then [Se.Set BeamP.language mbLanguage]
+                                                                else
+                                                                  []
+                                                                    <> maybe [] (\gender -> [Se.Set BeamP.gender gender]) mbGender
+                                                                    <> if isJust mbCVersion
+                                                                      then [Se.Set BeamP.clientVersion $ versionToText <$> mbCVersion]
+                                                                      else
+                                                                        []
+                                                                          <> ([Se.Set BeamP.bundleVersion $ versionToText <$> mbBVersion | isJust mbBVersion])
+    )
+    [Se.Is BeamP.id (Se.Eq personId)]
 
 -- deleteById :: Id Person -> SqlDB ()
 -- deleteById personId = do
@@ -501,19 +398,8 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralC
 --     person <- from $ table @PersonT
 --     where_ (person ^. PersonId ==. val (getId personId))
 
-deleteById :: L.MonadFlow m => Id Person -> m ()
-deleteById (Id personId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      void $
-        KV.deleteWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [Se.Is BeamP.id (Se.Eq personId)]
-    Nothing -> pure ()
+deleteById :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteById (Id personId) = deleteWithKV [Se.Is BeamP.id (Se.Eq personId)]
 
 -- updateHasTakenValidRide :: Id Person -> SqlDB ()
 -- updateHasTakenValidRide personId = do
@@ -526,22 +412,14 @@ deleteById (Id personId) = do
 --       ]
 --     where_ $ tbl ^. PersonId ==. val (getId personId)
 
-updateHasTakenValidRide :: (L.MonadFlow m, MonadTime m) => Id Person -> m (MeshResult ())
+updateHasTakenValidRide :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> m ()
 updateHasTakenValidRide (Id personId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamP.hasTakenValidRide True,
-          Se.Set BeamP.updatedAt now
-        ]
-        [Se.Is BeamP.id (Se.Eq personId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamP.hasTakenValidRide True,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
 
 -- updateReferralCodeAndReferredAt :: Id Person -> Maybe Text -> SqlDB ()
 -- updateReferralCodeAndReferredAt personId referralCode = do
@@ -555,23 +433,15 @@ updateHasTakenValidRide (Id personId) = do
 --       ]
 --     where_ $ tbl ^. PersonId ==. val (getId personId)
 
-updateReferralCodeAndReferredAt :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe Text -> m (MeshResult ())
+updateReferralCodeAndReferredAt :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Maybe Text -> m ()
 updateReferralCodeAndReferredAt (Id personId) referralCode = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamP.referredAt (Just now),
-          Se.Set BeamP.referralCode referralCode,
-          Se.Set BeamP.updatedAt now
-        ]
-        [Se.Is BeamP.id (Se.Eq personId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamP.referredAt (Just now),
+      Se.Set BeamP.referralCode referralCode,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
 
 -- findByReferralCode ::
 --   (Transactionable m, EncFlow m r) =>
@@ -588,21 +458,7 @@ findByReferralCode ::
   (L.MonadFlow m, EncFlow m r) =>
   Text ->
   m (Maybe Person)
-findByReferralCode referralCode = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      res <-
-        KV.findWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [Se.Is BeamP.referralCode (Se.Eq (Just referralCode))]
-      case res of
-        Right (Just person) -> transformBeamPersonToDomain person
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+findByReferralCode referralCode = findOneWithKV [Se.Is BeamP.referralCode (Se.Eq (Just referralCode))]
 
 -- findBlockedByDeviceToken :: Transactionable m => Maybe Text -> m [Person]
 -- findBlockedByDeviceToken deviceToken = do
@@ -614,21 +470,10 @@ findByReferralCode referralCode = do
 --     return person
 
 findBlockedByDeviceToken :: (L.MonadFlow m, EncFlow m r) => Maybe Text -> m [Person]
-findBlockedByDeviceToken deviceToken = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      res <-
-        KV.findAllWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [Se.And [Se.Is BeamP.deviceToken (Se.Eq deviceToken), Se.Is BeamP.blocked (Se.Eq True)]]
-      case res of
-        Right persons -> catMaybes <$> traverse transformBeamPersonToDomain persons
-        _ -> pure []
-    Nothing -> pure []
+findBlockedByDeviceToken deviceToken = findAllWithKV [Se.And [Se.Is BeamP.deviceToken (Se.Eq deviceToken), Se.Is BeamP.blocked (Se.Eq True)]]
+
+findBlockedByDeviceTokenInReplica :: (L.MonadFlow m, EncFlow m r) => Maybe Text -> m [Person]
+findBlockedByDeviceTokenInReplica deviceToken = findAllWithKvInReplica [Se.And [Se.Is BeamP.deviceToken (Se.Eq deviceToken), Se.Is BeamP.blocked (Se.Eq True)]]
 
 -- updateBlockedState :: Id Person -> Bool -> SqlDB ()
 -- updateBlockedState personId isBlocked = do
@@ -641,22 +486,14 @@ findBlockedByDeviceToken deviceToken = do
 --       ]
 --     where_ $ tbl ^. PersonId ==. val (getId personId)
 
-updateBlockedState :: (L.MonadFlow m, MonadTime m) => Id Person -> Bool -> m (MeshResult ())
+updateBlockedState :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Bool -> m ()
 updateBlockedState (Id personId) isBlocked = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamP.blocked isBlocked,
-          Se.Set BeamP.updatedAt now
-        ]
-        [Se.Is BeamP.id (Se.Eq personId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamP.blocked isBlocked,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
 
 -- updatingEnabledAndBlockedState :: Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> SqlDB ()
 -- updatingEnabledAndBlockedState personId blockedByRule isBlocked = do
@@ -672,26 +509,18 @@ updateBlockedState (Id personId) isBlocked = do
 --         <> [PersonBlockedAt =. val (Just now) | isBlocked]
 --     where_ $ tbl ^. PersonId ==. val (getId personId)
 
-updatingEnabledAndBlockedState :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> m (MeshResult ())
+updatingEnabledAndBlockedState :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Maybe (Id DMC.MerchantConfig) -> Bool -> m ()
 updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        ( [ Se.Set BeamP.enabled (not isBlocked),
-            Se.Set BeamP.blocked isBlocked,
-            Se.Set BeamP.blockedByRuleId $ getId <$> blockedByRule,
-            Se.Set BeamP.updatedAt now
-          ]
-            <> [Se.Set BeamP.blockedAt (Just now) | isBlocked]
-        )
-        [Se.Is BeamP.id (Se.Eq personId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    ( [ Se.Set BeamP.enabled (not isBlocked),
+        Se.Set BeamP.blocked isBlocked,
+        Se.Set BeamP.blockedByRuleId $ getId <$> blockedByRule,
+        Se.Set BeamP.updatedAt now
+      ]
+        <> [Se.Set BeamP.blockedAt (Just now) | isBlocked]
+    )
+    [Se.Is BeamP.id (Se.Eq personId)]
 
 -- findAllCustomers ::
 --   Transactionable m =>
@@ -718,31 +547,35 @@ updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked = do
 
 findAllCustomers :: (L.MonadFlow m, Log m) => Id Merchant -> Int -> Int -> Maybe Bool -> Maybe Bool -> Maybe DbHash -> m [Person]
 findAllCustomers merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      res <-
-        KV.findAllWithOptionsKVConnector
-          dbConf'
-          updatedMeshConfig
-          [ Se.And
-              ( [ Se.Is BeamP.merchantId (Se.Eq (getId merchantId)),
-                  Se.Is BeamP.role (Se.Eq USER),
-                  Se.Is BeamP.enabled (maybe (Se.Eq True) Se.Eq mbEnabled),
-                  Se.Is BeamP.blocked (maybe (Se.Eq True) Se.Eq mbBlocked)
-                ]
-                  <> ([Se.Is BeamP.mobileNumberHash $ Se.Eq mbSearchPhoneDBHash | isJust mbSearchPhoneDBHash])
-              )
+  findAllWithOptionsKV
+    [ Se.And
+        ( [ Se.Is BeamP.merchantId (Se.Eq (getId merchantId)),
+            Se.Is BeamP.role (Se.Eq USER),
+            Se.Is BeamP.enabled (maybe (Se.Eq True) Se.Eq mbEnabled),
+            Se.Is BeamP.blocked (maybe (Se.Eq True) Se.Eq mbBlocked)
           ]
-          (Se.Asc BeamP.firstName)
-          (Just limitVal)
-          (Just offsetVal)
-      case res of
-        Right persons -> catMaybes <$> traverse transformBeamPersonToDomain persons
-        _ -> pure []
-    Nothing -> pure []
+            <> ([Se.Is BeamP.mobileNumberHash $ Se.Eq mbSearchPhoneDBHash | isJust mbSearchPhoneDBHash])
+        )
+    ]
+    (Se.Asc BeamP.firstName)
+    (Just limitVal)
+    (Just offsetVal)
+
+findAllCustomersInReplica :: (L.MonadFlow m, Log m) => Id Merchant -> Int -> Int -> Maybe Bool -> Maybe Bool -> Maybe DbHash -> m [Person]
+findAllCustomersInReplica merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash = do
+  findAllWithOptionsKvInReplica
+    [ Se.And
+        ( [ Se.Is BeamP.merchantId (Se.Eq (getId merchantId)),
+            Se.Is BeamP.role (Se.Eq USER),
+            Se.Is BeamP.enabled (maybe (Se.Eq True) Se.Eq mbEnabled),
+            Se.Is BeamP.blocked (maybe (Se.Eq True) Se.Eq mbBlocked)
+          ]
+            <> ([Se.Is BeamP.mobileNumberHash $ Se.Eq mbSearchPhoneDBHash | isJust mbSearchPhoneDBHash])
+        )
+    ]
+    (Se.Asc BeamP.firstName)
+    (Just limitVal)
+    (Just offsetVal)
 
 -- countCustomers :: Transactionable m => Id Merchant -> m Int
 -- countCustomers merchantId =
@@ -758,21 +591,10 @@ findAllCustomers merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhone
 --     mkCount _ = 0
 
 countCustomers :: (L.MonadFlow m, Log m) => Id Merchant -> m Int
-countCustomers merchantId = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      res <-
-        KV.findAllWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [Se.And [Se.Is BeamP.merchantId (Se.Eq (getId merchantId)), Se.Is BeamP.role (Se.Eq USER)]]
-      case res of
-        Right persons -> pure $ length persons
-        _ -> pure 0
-    Nothing -> pure 0
+countCustomers merchantId = findAllWithKV [Se.And [Se.Is BeamP.merchantId (Se.Eq (getId merchantId)), Se.Is BeamP.role (Se.Eq USER)]] <&> length
+
+countCustomersInReplica :: (L.MonadFlow m, Log m) => Id Merchant -> m Int
+countCustomersInReplica merchantId = findAllWithKvInReplica [Se.And [Se.Is BeamP.merchantId (Se.Eq (getId merchantId)), Se.Is BeamP.role (Se.Eq USER)]] <&> length
 
 ridesCountAggTable :: SqlQuery (From (SqlExpr (Esq.Value PersonTId), SqlExpr (Esq.Value Int)))
 ridesCountAggTable = with $ do
@@ -804,82 +626,82 @@ fetchRidesCount personId =
           &&. person ^. PersonRole ==. val USER
       pure mbRidesCount
 
-transformBeamPersonToDomain :: (L.MonadFlow m, Log m) => BeamP.Person -> m (Maybe Person)
-transformBeamPersonToDomain BeamP.PersonT {..} = do
-  bundleVersion' <- forM bundleVersion readVersion
-  clientVersion' <- forM clientVersion readVersion
-  pure $
-    Just $
-      Person
-        { id = Id id,
-          firstName = firstName,
-          middleName = middleName,
-          lastName = lastName,
-          role = role,
-          gender = gender,
-          identifierType = identifierType,
-          email = EncryptedHashed <$> (Encrypted <$> emailEncrypted) <*> emailHash,
-          unencryptedMobileNumber = unencryptedMobileNumber,
-          mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
-          mobileCountryCode = mobileCountryCode,
-          passwordHash = passwordHash,
-          identifier = identifier,
-          rating = rating,
-          language = language,
-          isNew = isNew,
-          enabled = enabled,
-          blocked = blocked,
-          deviceToken = deviceToken,
-          notificationToken = notificationToken,
-          description = description,
-          merchantId = Id merchantId,
-          whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
-          referralCode = referralCode,
-          referredAt = referredAt,
-          hasTakenValidRide = hasTakenValidRide,
-          blockedAt = blockedAt,
-          blockedByRuleId = Id <$> blockedByRuleId,
-          createdAt = createdAt,
-          updatedAt = updatedAt,
-          bundleVersion = bundleVersion',
-          clientVersion = clientVersion'
-        }
+instance FromTType' BeamP.Person Person where
+  fromTType' BeamP.PersonT {..} = do
+    bundleVersion' <- forM bundleVersion readVersion
+    clientVersion' <- forM clientVersion readVersion
+    pure $
+      Just $
+        Person
+          { id = Id id,
+            firstName = firstName,
+            middleName = middleName,
+            lastName = lastName,
+            role = role,
+            gender = gender,
+            identifierType = identifierType,
+            email = EncryptedHashed <$> (Encrypted <$> emailEncrypted) <*> emailHash,
+            unencryptedMobileNumber = unencryptedMobileNumber,
+            mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
+            mobileCountryCode = mobileCountryCode,
+            passwordHash = passwordHash,
+            identifier = identifier,
+            rating = rating,
+            language = language,
+            isNew = isNew,
+            enabled = enabled,
+            blocked = blocked,
+            deviceToken = deviceToken,
+            notificationToken = notificationToken,
+            description = description,
+            merchantId = Id merchantId,
+            whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
+            referralCode = referralCode,
+            referredAt = referredAt,
+            hasTakenValidRide = hasTakenValidRide,
+            blockedAt = blockedAt,
+            blockedByRuleId = Id <$> blockedByRuleId,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            bundleVersion = bundleVersion',
+            clientVersion = clientVersion'
+          }
 
-transformDomainPersonToBeam :: Person -> BeamP.Person
-transformDomainPersonToBeam Person {..} =
-  BeamP.PersonT
-    { BeamP.id = getId id,
-      BeamP.firstName = firstName,
-      BeamP.middleName = middleName,
-      BeamP.lastName = lastName,
-      BeamP.role = role,
-      BeamP.gender = gender,
-      BeamP.identifierType = identifierType,
-      BeamP.emailEncrypted = email <&> unEncrypted . (.encrypted),
-      BeamP.emailHash = email <&> (.hash),
-      BeamP.unencryptedMobileNumber = unencryptedMobileNumber,
-      BeamP.mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
-      BeamP.mobileNumberHash = mobileNumber <&> (.hash),
-      BeamP.mobileCountryCode = mobileCountryCode,
-      BeamP.passwordHash = passwordHash,
-      BeamP.identifier = identifier,
-      BeamP.rating = rating,
-      BeamP.language = language,
-      BeamP.isNew = isNew,
-      BeamP.enabled = enabled,
-      BeamP.blocked = blocked,
-      BeamP.deviceToken = deviceToken,
-      BeamP.notificationToken = notificationToken,
-      BeamP.description = description,
-      BeamP.merchantId = getId merchantId,
-      BeamP.whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
-      BeamP.referralCode = referralCode,
-      BeamP.referredAt = referredAt,
-      BeamP.hasTakenValidRide = hasTakenValidRide,
-      BeamP.blockedAt = blockedAt,
-      BeamP.blockedByRuleId = getId <$> blockedByRuleId,
-      BeamP.createdAt = createdAt,
-      BeamP.updatedAt = updatedAt,
-      BeamP.bundleVersion = versionToText <$> bundleVersion,
-      BeamP.clientVersion = versionToText <$> clientVersion
-    }
+instance ToTType' BeamP.Person Person where
+  toTType' Person {..} = do
+    BeamP.PersonT
+      { BeamP.id = getId id,
+        BeamP.firstName = firstName,
+        BeamP.middleName = middleName,
+        BeamP.lastName = lastName,
+        BeamP.role = role,
+        BeamP.gender = gender,
+        BeamP.identifierType = identifierType,
+        BeamP.emailEncrypted = email <&> unEncrypted . (.encrypted),
+        BeamP.emailHash = email <&> (.hash),
+        BeamP.unencryptedMobileNumber = unencryptedMobileNumber,
+        BeamP.mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
+        BeamP.mobileNumberHash = mobileNumber <&> (.hash),
+        BeamP.mobileCountryCode = mobileCountryCode,
+        BeamP.passwordHash = passwordHash,
+        BeamP.identifier = identifier,
+        BeamP.rating = rating,
+        BeamP.language = language,
+        BeamP.isNew = isNew,
+        BeamP.enabled = enabled,
+        BeamP.blocked = blocked,
+        BeamP.deviceToken = deviceToken,
+        BeamP.notificationToken = notificationToken,
+        BeamP.description = description,
+        BeamP.merchantId = getId merchantId,
+        BeamP.whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
+        BeamP.referralCode = referralCode,
+        BeamP.referredAt = referredAt,
+        BeamP.hasTakenValidRide = hasTakenValidRide,
+        BeamP.blockedAt = blockedAt,
+        BeamP.blockedByRuleId = getId <$> blockedByRuleId,
+        BeamP.createdAt = createdAt,
+        BeamP.updatedAt = updatedAt,
+        BeamP.bundleVersion = versionToText <$> bundleVersion,
+        BeamP.clientVersion = versionToText <$> clientVersion
+      }

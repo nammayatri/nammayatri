@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-
   Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -11,7 +12,7 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -45,6 +46,8 @@ import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Vehicle ()
 
+-- import Data.Aeson (FromJSON, ToJSON)
+
 instance FromBackendRow Postgres [Domain.EstimateBreakup]
 
 instance FromField [Domain.EstimateBreakup] where
@@ -71,6 +74,19 @@ instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [Domain.
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Domain.EstimateBreakup]
 
+newtype TimeOfDayText = TimeOfDayText TimeOfDay
+  deriving newtype (Eq, Read, Show, Ord, A.FromJSON, A.ToJSON)
+
+instance FromField TimeOfDayText where
+  fromField = fromFieldEnum
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be TimeOfDayText where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance FromBackendRow Postgres TimeOfDayText
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be TimeOfDayText
+
 data EstimateT f = EstimateT
   { id :: B.C f Text,
     requestId :: B.C f Text,
@@ -80,8 +96,8 @@ data EstimateT f = EstimateT
     estimateBreakupList :: B.C f [Domain.EstimateBreakup],
     nightShiftCharge :: B.C f (Maybe Money),
     oldNightShiftCharge :: B.C f (Maybe Centesimal),
-    nightShiftStart :: B.C f (Maybe TimeOfDay),
-    nightShiftEnd :: B.C f (Maybe TimeOfDay),
+    nightShiftStart :: B.C f (Maybe TimeOfDayText),
+    nightShiftEnd :: B.C f (Maybe TimeOfDayText),
     waitingChargePerMin :: B.C f (Maybe Money),
     waitingOrPickupCharges :: B.C f (Maybe Money),
     specialLocationTag :: B.C f (Maybe Text),

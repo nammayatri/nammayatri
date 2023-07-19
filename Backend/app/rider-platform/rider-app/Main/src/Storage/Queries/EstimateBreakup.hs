@@ -11,30 +11,23 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.EstimateBreakup where
 
 import Domain.Types.Estimate
 import qualified Domain.Types.Estimate as DEB
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Types.Logging (Log)
 import Lib.Utils
 import qualified Sequelize as Se
 import qualified Storage.Beam.EstimateBreakup as BeamEB
 
-create :: L.MonadFlow m => EstimateBreakup -> m (MeshResult ())
+create :: (L.MonadFlow m, Log m) => EstimateBreakup -> m ()
 create estimate = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamEB.EstimateBreakupT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainEstimateBreakupToBeam estimate)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+  createWithKV estimate
 
 -- findAllByEstimateIdT :: (Transactionable m) => EstimateTId -> MaybeT (DTypeBuilder m) [EstimateBreakupT]
 -- findAllByEstimateIdT = lift . findAllByEstimateId'
@@ -42,38 +35,34 @@ create estimate = do
 -- findAllByEstimateId' :: (Transactionable m) => EstimateTId -> DTypeBuilder m [EstimateBreakupT]
 -- findAllByEstimateId' estimateTId = Esq.findAll' $ do
 --   estimateBreakup <- from $ table @SEB.EstimateBreakupT
---   where_ $ estimateBreakup ^. EstimateBreakupEstimateId ==. val estimateTId
 --   return estimateBreakup
 
-findAllByEstimateIdT :: L.MonadFlow m => Id Estimate -> m [EstimateBreakup]
+findAllByEstimateIdT :: (L.MonadFlow m, Log m) => Id Estimate -> m [EstimateBreakup]
 findAllByEstimateIdT (Id estimateId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamEB.EstimateBreakupT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> either (pure []) (transformBeamEstimateBreakupToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamEB.estimateId $ Se.Eq estimateId]
-    Nothing -> pure []
+  findAllWithKV [Se.Is BeamEB.estimateId $ Se.Eq estimateId]
 
-transformBeamEstimateBreakupToDomain :: BeamEB.EstimateBreakup -> EstimateBreakup
-transformBeamEstimateBreakupToDomain BeamEB.EstimateBreakupT {..} = do
-  let price =
-        DEB.EstimateBreakupPrice
-          { currency = priceCurrency,
-            value = roundToIntegral priceValue
+instance FromTType' BeamEB.EstimateBreakup EstimateBreakup where
+  fromTType' BeamEB.EstimateBreakupT {..} = do
+    let price =
+          DEB.EstimateBreakupPrice
+            { currency = priceCurrency,
+              value = roundToIntegral priceValue
+            }
+    pure $
+      Just
+        EstimateBreakup
+          { id = Id id,
+            estimateId = Id estimateId,
+            title = title,
+            price = price
           }
-  EstimateBreakup
-    { id = Id id,
-      estimateId = Id estimateId,
-      title = title,
-      price = price
-    }
 
-transformDomainEstimateBreakupToBeam :: EstimateBreakup -> BeamEB.EstimateBreakup
-transformDomainEstimateBreakupToBeam EstimateBreakup {..} =
-  BeamEB.EstimateBreakupT
-    { BeamEB.id = getId id,
-      BeamEB.estimateId = getId estimateId,
-      BeamEB.title = title,
-      BeamEB.priceCurrency = price.currency,
-      BeamEB.priceValue = realToFrac price.value
-    }
+instance ToTType' BeamEB.EstimateBreakup EstimateBreakup where
+  toTType' EstimateBreakup {..} = do
+    BeamEB.EstimateBreakupT
+      { BeamEB.id = getId id,
+        BeamEB.estimateId = getId estimateId,
+        BeamEB.title = title,
+        BeamEB.priceCurrency = price.currency,
+        BeamEB.priceValue = realToFrac price.value
+      }

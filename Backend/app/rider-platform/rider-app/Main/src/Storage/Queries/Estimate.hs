@@ -11,17 +11,14 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Estimate where
 
 -- import Data.Tuple.Extra
 import Domain.Types.Estimate as DE
 import Domain.Types.SearchRequest
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id (Id (Id, getId))
@@ -37,16 +34,10 @@ import qualified Storage.Queries.TripTerms as QTT
 -- import EulerHS.KVConnector.Types
 -- import Lib.Utils (setMeshConfig)
 
-createEstimate :: L.MonadFlow m => Estimate -> m (MeshResult ())
-createEstimate estimate = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamE.EstimateT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainEstimateToBeam estimate)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+createEstimate :: (L.MonadFlow m, Log m) => Estimate -> m ()
+createEstimate = createWithKV
 
-create :: L.MonadFlow m => Estimate -> m ()
+create :: (L.MonadFlow m, Log m) => Estimate -> m ()
 create estimate = do
   _ <- traverse_ QTT.createTripTerms estimate.tripTerms
   _ <- createEstimate estimate
@@ -70,9 +61,8 @@ create estimate = do
 --     Esq.createMany' estimateTs
 --     traverse_ Esq.createMany' estimateBreakupT
 
-createMany :: L.MonadFlow m => [Estimate] -> m ()
-createMany estimates = do
-  traverse_ create estimates
+createMany :: (L.MonadFlow m, Log m) => [Estimate] -> m ()
+createMany = traverse_ create
 
 -- fullEstimateTable ::
 --   From
@@ -94,18 +84,11 @@ createMany estimates = do
 --     pure (estimate, mbTripTerms)
 --   mapM buildFullEstimate mbFullEstimateT
 
-findById :: L.MonadFlow m => Id Estimate -> m (Maybe Estimate)
-findById (Id estimateId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamE.EstimateT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> do
-      res <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamE.id $ Se.Eq estimateId]
-      case res of
-        Right (Just x) -> transformBeamEstimateToDomain x
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+findById :: (L.MonadFlow m, Log m) => Id Estimate -> m (Maybe Estimate)
+findById (Id estimateId) = findOneWithKV [Se.Is BeamE.id $ Se.Eq estimateId]
+
+findByIdInReplica :: (L.MonadFlow m, Log m) => Id Estimate -> m (Maybe Estimate)
+findByIdInReplica (Id estimateId) = findOneWithKvInReplica [Se.Is BeamE.id $ Se.Eq estimateId]
 
 -- findAllBySRId :: Transactionable m => Id SearchRequest -> m [Estimate]
 -- findAllBySRId searchRequestId = Esq.buildDType $ do
@@ -115,18 +98,11 @@ findById (Id estimateId) = do
 --     pure (estimate, mbTripTerms)
 --   mapM buildFullEstimate fullEstimateTs
 
-findAllBySRId :: L.MonadFlow m => Id SearchRequest -> m [Estimate]
-findAllBySRId (Id searchRequestId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamE.EstimateT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> do
-      res <- KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamE.requestId $ Se.Eq searchRequestId]
-      case res of
-        Right x -> catMaybes <$> traverse transformBeamEstimateToDomain x
-        _ -> pure []
-    Nothing -> pure []
+findAllBySRId :: (L.MonadFlow m, Log m) => Id SearchRequest -> m [Estimate]
+findAllBySRId (Id searchRequestId) = findAllWithKV [Se.Is BeamE.requestId $ Se.Eq searchRequestId]
+
+findAllBySRIdInReplica :: (L.MonadFlow m, Log m) => Id SearchRequest -> m [Estimate]
+findAllBySRIdInReplica (Id searchRequestId) = findAllWithKvInReplica [Se.Is BeamE.requestId $ Se.Eq searchRequestId]
 
 -- findByBPPEstimateId :: Transactionable m => Id BPPEstimate -> m (Maybe Estimate)
 -- findByBPPEstimateId bppEstimateId_ = Esq.buildDType $ do
@@ -136,18 +112,8 @@ findAllBySRId (Id searchRequestId) = do
 --     pure (estimate, mbTripTerms)
 --   mapM buildFullEstimate mbFullEstimateT
 
-findByBPPEstimateId :: L.MonadFlow m => Id BPPEstimate -> m (Maybe Estimate)
-findByBPPEstimateId (Id bppEstimateId_) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamE.EstimateT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> do
-      res <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamE.bppEstimateId $ Se.Eq bppEstimateId_]
-      case res of
-        Right (Just x) -> transformBeamEstimateToDomain x
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+findByBPPEstimateId :: (L.MonadFlow m, Log m) => Id BPPEstimate -> m (Maybe Estimate)
+findByBPPEstimateId (Id bppEstimateId_) = findOneWithKV [Se.Is BeamE.bppEstimateId $ Se.Eq bppEstimateId_]
 
 -- updateStatus ::
 --   Id Estimate ->
@@ -163,22 +129,14 @@ findByBPPEstimateId (Id bppEstimateId_) = do
 --       ]
 --     where_ $ tbl ^. EstimateId ==. val (getId estimateId)
 
-updateStatus :: (L.MonadFlow m, MonadTime m) => Id Estimate -> EstimateStatus -> m (MeshResult ())
+updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Estimate -> EstimateStatus -> m ()
 updateStatus (Id estimateId) status_ = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamE.EstimateT
-  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamE.updatedAt now,
-          Se.Set BeamE.status status_
-        ]
-        [Se.Is BeamE.id (Se.Eq estimateId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamE.updatedAt now,
+      Se.Set BeamE.status status_
+    ]
+    [Se.Is BeamE.id (Se.Eq estimateId)]
 
 -- getStatus ::
 --   (Transactionable m) =>
@@ -191,20 +149,8 @@ updateStatus (Id estimateId) status_ = do
 --       estimateT ^. EstimateId ==. val (getId estimateId)
 --     return $ estimateT ^. EstimateStatus
 
-getStatus :: L.MonadFlow m => Id Estimate -> m (Maybe EstimateStatus)
-getStatus (Id estimateId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamE.EstimateT
-  updatedMeshConfig <- setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> do
-      res <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamE.id $ Se.Eq estimateId]
-      case res of
-        Right (Just x) -> do
-          eStatus <- transformBeamEstimateToDomain x
-          pure $ DE.status <$> eStatus
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+getStatus :: (L.MonadFlow m, Log m) => Id Estimate -> m (Maybe EstimateStatus)
+getStatus (Id estimateId) = findOneWithKV [Se.Is BeamE.id $ Se.Eq estimateId] <&> (DE.status <$>)
 
 -- updateStatusByRequestId ::
 --   Id SearchRequest ->
@@ -220,102 +166,94 @@ getStatus (Id estimateId) = do
 --       ]
 --     where_ $ tbl ^. EstimateRequestId ==. val (toKey searchId)
 
-updateStatusByRequestId :: (L.MonadFlow m, MonadTime m) => Id SearchRequest -> EstimateStatus -> m (MeshResult ())
+updateStatusByRequestId :: (L.MonadFlow m, MonadTime m, Log m) => Id SearchRequest -> EstimateStatus -> m ()
 updateStatusByRequestId (Id searchId) status_ = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamE.EstimateT
-  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamE.updatedAt now,
-          Se.Set BeamE.status status_
-        ]
-        [Se.Is BeamE.requestId (Se.Eq searchId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamE.updatedAt now,
+      Se.Set BeamE.status status_
+    ]
+    [Se.Is BeamE.requestId (Se.Eq searchId)]
 
-transformBeamEstimateToDomain :: L.MonadFlow m => BeamE.Estimate -> m (Maybe Estimate)
-transformBeamEstimateToDomain e@BeamE.EstimateT {..} = do
-  etB <- QEB.findAllByEstimateIdT (Id e.bppEstimateId)
-  trip <- if isJust e.tripTermsId then QTT.findById'' (Id (fromJust e.tripTermsId)) else pure Nothing
-  pUrl <- parseBaseUrl providerUrl
-  let totalFareRange =
-        DE.FareRange
-          { minFare = roundToIntegral minTotalFare,
-            maxFare = roundToIntegral maxTotalFare
+instance FromTType' BeamE.Estimate Estimate where
+  fromTType' BeamE.EstimateT {..} = do
+    etB <- QEB.findAllByEstimateIdT (Id bppEstimateId)
+    trip <- if isJust tripTermsId then QTT.findById'' (Id (fromJust tripTermsId)) else pure Nothing
+    pUrl <- parseBaseUrl providerUrl
+    let totalFareRange =
+          DE.FareRange
+            { minFare = roundToIntegral minTotalFare,
+              maxFare = roundToIntegral maxTotalFare
+            }
+    pure $
+      Just $
+        Estimate
+          { id = Id id,
+            requestId = Id requestId,
+            merchantId = Id <$> merchantId,
+            bppEstimateId = Id bppEstimateId,
+            discount = roundToIntegral <$> discount,
+            estimatedFare = roundToIntegral estimatedFare,
+            estimatedTotalFare = roundToIntegral estimatedTotalFare,
+            totalFareRange = totalFareRange,
+            estimatedDuration = estimatedDuration,
+            estimatedDistance = estimatedDistance,
+            device = device,
+            providerId = providerId,
+            providerUrl = pUrl,
+            providerName = providerName,
+            providerMobileNumber = providerMobileNumber,
+            providerCompletedRidesCount = providerCompletedRidesCount,
+            vehicleVariant = vehicleVariant,
+            tripTerms = trip,
+            estimateBreakupList = etB,
+            nightShiftInfo =
+              ((,,,) <$> nightShiftCharge <*> oldNightShiftCharge <*> nightShiftStart <*> nightShiftEnd)
+                <&> \(nightShiftCharge', oldNightShiftCharge', nightShiftStart', nightShiftEnd') ->
+                  DE.NightShiftInfo
+                    { nightShiftCharge = nightShiftCharge',
+                      oldNightShiftCharge = oldNightShiftCharge',
+                      nightShiftStart = nightShiftStart',
+                      nightShiftEnd = nightShiftEnd'
+                    },
+            status = status,
+            waitingCharges = DE.WaitingCharges waitingChargePerMin,
+            driversLocation = driversLocation,
+            specialLocationTag = specialLocationTag,
+            updatedAt = updatedAt,
+            createdAt = createdAt
           }
-  pure $
-    Just $
-      Estimate
-        { id = Id id,
-          requestId = Id requestId,
-          merchantId = Id <$> merchantId,
-          bppEstimateId = Id bppEstimateId,
-          discount = roundToIntegral <$> discount,
-          estimatedFare = roundToIntegral estimatedFare,
-          estimatedTotalFare = roundToIntegral estimatedTotalFare,
-          totalFareRange = totalFareRange,
-          estimatedDuration = estimatedDuration,
-          estimatedDistance = estimatedDistance,
-          device = device,
-          providerId = providerId,
-          providerUrl = pUrl,
-          providerName = providerName,
-          providerMobileNumber = providerMobileNumber,
-          providerCompletedRidesCount = providerCompletedRidesCount,
-          vehicleVariant = vehicleVariant,
-          tripTerms = trip,
-          estimateBreakupList = etB,
-          nightShiftInfo =
-            ((,,,) <$> nightShiftCharge <*> oldNightShiftCharge <*> nightShiftStart <*> nightShiftEnd)
-              <&> \(nightShiftCharge', oldNightShiftCharge', nightShiftStart', nightShiftEnd') ->
-                DE.NightShiftInfo
-                  { nightShiftCharge = nightShiftCharge',
-                    oldNightShiftCharge = oldNightShiftCharge',
-                    nightShiftStart = nightShiftStart',
-                    nightShiftEnd = nightShiftEnd'
-                  },
-          status = status,
-          waitingCharges = DE.WaitingCharges waitingChargePerMin,
-          driversLocation = driversLocation,
-          specialLocationTag = specialLocationTag,
-          updatedAt = updatedAt,
-          createdAt = createdAt
-        }
 
-transformDomainEstimateToBeam :: Estimate -> BeamE.Estimate
-transformDomainEstimateToBeam Estimate {..} =
-  BeamE.EstimateT
-    { BeamE.id = getId id,
-      BeamE.requestId = getId requestId,
-      BeamE.merchantId = getId <$> merchantId,
-      BeamE.bppEstimateId = getId bppEstimateId,
-      BeamE.estimatedFare = realToFrac estimatedFare,
-      BeamE.discount = realToFrac <$> discount,
-      BeamE.estimatedTotalFare = realToFrac estimatedTotalFare,
-      BeamE.minTotalFare = realToFrac totalFareRange.minFare,
-      BeamE.maxTotalFare = realToFrac totalFareRange.maxFare,
-      BeamE.estimatedDuration = estimatedDuration,
-      BeamE.estimatedDistance = estimatedDistance,
-      BeamE.device = device,
-      BeamE.providerId = providerId,
-      BeamE.providerUrl = showBaseUrl providerUrl,
-      BeamE.providerName = providerName,
-      BeamE.providerMobileNumber = providerMobileNumber,
-      BeamE.providerCompletedRidesCount = providerCompletedRidesCount,
-      BeamE.vehicleVariant = vehicleVariant,
-      BeamE.driversLocation = driversLocation,
-      BeamE.tripTermsId = getId <$> (tripTerms <&> (.id)),
-      BeamE.nightShiftCharge = nightShiftInfo <&> (.nightShiftCharge),
-      BeamE.oldNightShiftCharge = nightShiftInfo <&> (.oldNightShiftCharge),
-      BeamE.nightShiftStart = nightShiftInfo <&> (.nightShiftStart),
-      BeamE.nightShiftEnd = nightShiftInfo <&> (.nightShiftEnd),
-      BeamE.status = status,
-      BeamE.waitingChargePerMin = waitingCharges.waitingChargePerMin,
-      BeamE.specialLocationTag = specialLocationTag,
-      BeamE.updatedAt = updatedAt,
-      BeamE.createdAt = createdAt
-    }
+instance ToTType' BeamE.Estimate Estimate where
+  toTType' Estimate {..} = do
+    BeamE.EstimateT
+      { BeamE.id = getId id,
+        BeamE.requestId = getId requestId,
+        BeamE.merchantId = getId <$> merchantId,
+        BeamE.bppEstimateId = getId bppEstimateId,
+        BeamE.estimatedFare = realToFrac estimatedFare,
+        BeamE.discount = realToFrac <$> discount,
+        BeamE.estimatedTotalFare = realToFrac estimatedTotalFare,
+        BeamE.minTotalFare = realToFrac totalFareRange.minFare,
+        BeamE.maxTotalFare = realToFrac totalFareRange.maxFare,
+        BeamE.estimatedDuration = estimatedDuration,
+        BeamE.estimatedDistance = estimatedDistance,
+        BeamE.device = device,
+        BeamE.providerId = providerId,
+        BeamE.providerUrl = showBaseUrl providerUrl,
+        BeamE.providerName = providerName,
+        BeamE.providerMobileNumber = providerMobileNumber,
+        BeamE.providerCompletedRidesCount = providerCompletedRidesCount,
+        BeamE.vehicleVariant = vehicleVariant,
+        BeamE.driversLocation = driversLocation,
+        BeamE.tripTermsId = getId <$> (tripTerms <&> (.id)),
+        BeamE.nightShiftCharge = nightShiftInfo <&> (.nightShiftCharge),
+        BeamE.oldNightShiftCharge = nightShiftInfo <&> (.oldNightShiftCharge),
+        BeamE.nightShiftStart = nightShiftInfo <&> (.nightShiftStart),
+        BeamE.nightShiftEnd = nightShiftInfo <&> (.nightShiftEnd),
+        BeamE.status = status,
+        BeamE.waitingChargePerMin = waitingCharges.waitingChargePerMin,
+        BeamE.specialLocationTag = specialLocationTag,
+        BeamE.updatedAt = updatedAt,
+        BeamE.createdAt = createdAt
+      }

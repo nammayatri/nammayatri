@@ -48,7 +48,7 @@ import Lib.Utils
     findAllWithKV,
     findAllWithOptionsKV,
     findOneWithKV,
-    getMasterDBConfig,
+    getMasterBeamConfig,
     updateWithKV,
   )
 import qualified Sequelize as Se
@@ -262,21 +262,17 @@ updateAll rideId ride = do
 getCountByStatus :: (L.MonadFlow m) => Id Merchant -> m [(RideStatus, Int)]
 getCountByStatus merchantId = do
   -- Tricky query to be able to insert meaningful Point
-  dbConf <- getMasterDBConfig
-  conn <- L.getOrInitSqlConn dbConf
-  case conn of
-    Right c -> do
-      resp <- L.runDB c $
-        L.findRows $
-          B.select $
-            B.aggregate_ (\(ride, _) -> (B.group_ (BeamR.status ride), B.as_ @Int B.countAll_)) $
-              B.filter_' (\(_, BeamB.BookingT {..}) -> providerId B.==?. B.val_ (getId merchantId)) $
-                do
-                  ride <- B.all_ (meshModelTableEntity @BeamR.RideT @Postgres @(DatabaseWith2 BeamR.RideT BeamB.BookingT))
-                  booking <- B.join_' (meshModelTableEntity @BeamB.BookingT @Postgres @(DatabaseWith2 BeamR.RideT BeamB.BookingT)) (\booking -> BeamB.id booking B.==?. BeamR.bookingId ride)
-                  pure (ride, booking)
-      pure (fromRight [] resp)
-    Left _ -> pure []
+  dbConf <- getMasterBeamConfig
+  resp <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.aggregate_ (\(ride, _) -> (B.group_ (BeamR.status ride), B.as_ @Int B.countAll_)) $
+          B.filter_' (\(_, BeamB.BookingT {..}) -> providerId B.==?. B.val_ (getId merchantId)) $
+            do
+              ride <- B.all_ (meshModelTableEntity @BeamR.RideT @Postgres @(DatabaseWith2 BeamR.RideT BeamB.BookingT))
+              booking <- B.join_' (meshModelTableEntity @BeamB.BookingT @Postgres @(DatabaseWith2 BeamR.RideT BeamB.BookingT)) (\booking -> BeamB.id booking B.==?. BeamR.bookingId ride)
+              pure (ride, booking)
+  pure (fromRight [] resp)
 
 getRidesForDate :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Day -> Seconds -> m [Ride]
 getRidesForDate driverId date diffTime = do
