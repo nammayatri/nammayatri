@@ -468,5 +468,6 @@ const frenchStrings = {
   NEW_ : "Nouvelle",
   WITH : "avec",
   CHOOSE_LANGUAGE :"Choisissez la langue",
-  TODAY : "আজ"
+  TODAY : "আজ",
+  AADHAAR_ALREADY_LINKED : "déjà lié"
 }

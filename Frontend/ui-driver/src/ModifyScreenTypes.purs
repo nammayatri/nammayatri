@@ -61,7 +61,7 @@ modifyScreenState st =
     BookingOptionsScreenType a -> modifyState (\(GlobalState state) -> GlobalState $ state { bookingOptionsScreen = a state.bookingOptionsScreen })
     AcknowledgementScreenType a -> modifyState (\(GlobalState state) -> GlobalState $ state { acknowledgementScreen = a state.acknowledgementScreen })
     AadhaarVerificationScreenType a -> modifyState (\(GlobalState state) -> GlobalState $ state { aadhaarVerificationScreen = a state.aadhaarVerificationScreen })
-
+    GlobalPropsType a -> modifyState (\(GlobalState state) -> GlobalState $ state { globalProps = a state.globalProps })
 
 updateStage :: ScreenStage -> FlowBT String Unit
 updateStage stage = do

@@ -125,7 +125,6 @@ initData = {
         zoneRideBooking : true,
         showGenderBanner : false,
         notRemoveBanner : true,
-        showBonusInfo : false,
-        showlinkAadhaarPopup : true
+        showBonusInfo : false
     }
 }
