@@ -35,6 +35,7 @@ import Styles.Colors as Color
 import Screens.Types (RateCardType(..))
 import PrestoDOM.Animation as PrestoAnim
 import Animation.Config as AnimConfig
+import Engineering.Helpers.Commons (os)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -127,7 +128,7 @@ defaultRateCardView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM 
 defaultRateCardView push config = 
   scrollView
   [ width MATCH_PARENT
-  , height WRAP_CONTENT
+  , height if os == "IOS" then (V 330) else WRAP_CONTENT
   ][
   linearLayout
   [ width MATCH_PARENT
