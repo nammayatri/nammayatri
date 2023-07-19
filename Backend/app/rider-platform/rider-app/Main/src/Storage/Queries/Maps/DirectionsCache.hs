@@ -28,6 +28,9 @@ create = createWithKV
 --     where_ $ directionsCache ^. DirectionsCacheOriginHash ==. val originHash &&. directionsCache ^. DirectionsCacheDestHash ==. val destHash &&. directionsCache ^. DirectionsCacheSlot ==. val slot
 --     return directionsCache
 
+findById :: (L.MonadFlow m, Log m) => Id DirectionsCache -> m (Maybe DirectionsCache)
+findById (Id directionsCacheId) = findOneWithKV [Se.Is BeamDC.id $ Se.Eq directionsCacheId]
+
 findRoute :: (L.MonadFlow m, Log m) => Text -> Text -> Int -> m (Maybe DirectionsCache)
 findRoute originHash destHash slot = findOneWithKV [Se.And [Se.Is BeamDC.originHash $ Se.Eq originHash, Se.Is BeamDC.destHash $ Se.Eq destHash, Se.Is BeamDC.slot $ Se.Eq slot]]
 

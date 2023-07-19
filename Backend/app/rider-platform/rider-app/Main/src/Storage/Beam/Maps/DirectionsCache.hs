@@ -40,7 +40,7 @@ import Lib.UtilsTH
 import Sequelize
 
 instance FromField RouteInfo where
-  fromField = fromFieldJSON
+  fromField = fromFieldEnum
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be RouteInfo where
   sqlValueSyntax = autoSqlValueSyntax
@@ -54,6 +54,8 @@ instance IsString RouteInfo where
 
 deriving stock instance Eq RouteInfo
 
+deriving stock instance Read RouteInfo
+
 deriving stock instance Ord RouteInfo
 
 deriving stock instance Ord LatLong
@@ -65,6 +67,16 @@ deriving stock instance Ord PointXY
 deriving stock instance Ord PointXYZ
 
 deriving stock instance Ord PointXYZM
+
+deriving stock instance Read LatLong
+
+deriving stock instance Read BoundingBoxWithoutCRS
+
+deriving stock instance Read PointXY
+
+deriving stock instance Read PointXYZ
+
+deriving stock instance Read PointXYZM
 
 data DirectionsCacheT f = DirectionsCacheT
   { id :: B.C f Text,
