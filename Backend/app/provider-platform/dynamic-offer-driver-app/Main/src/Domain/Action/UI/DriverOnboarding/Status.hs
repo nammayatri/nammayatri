@@ -82,7 +82,7 @@ getAadhaarStatus personId True = do
       if aadhaarCard.isVerified
         then return (VALID, Just aadhaarCard)
         else return (MANUAL_VERIFICATION_REQUIRED, Just aadhaarCard)
-    Nothing -> return (INVALID, Nothing)
+    Nothing -> return (NO_DOC_AVAILABLE, Nothing)
 
 getDLAndStatus :: Id SP.Person -> Int -> Flow (ResponseStatus, Maybe DL.DriverLicense)
 getDLAndStatus driverId onboardingTryLimit = do

@@ -15,12 +15,27 @@
 module Storage.Queries.DriverOnboarding.AadhaarOtp where
 
 import Domain.Types.DriverOnboarding.AadhaarOtp
+import Domain.Types.Person (Person)
+import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
-import Storage.Tabular.DriverOnboarding.AadhaarOtpReq ()
-import Storage.Tabular.DriverOnboarding.AadhaarOtpVerify ()
+import Kernel.Types.Id
+import Storage.Tabular.DriverOnboarding.AadhaarOtpReq
+import Storage.Tabular.DriverOnboarding.AadhaarOtpVerify
 
 createForGenerate :: AadhaarOtpReq -> Esq.SqlDB ()
 createForGenerate = Esq.create
 
 createForVerify :: AadhaarOtpVerify -> Esq.SqlDB ()
 createForVerify = Esq.create
+
+deleteByPersonIdForGenerate :: Id Person -> SqlDB ()
+deleteByPersonIdForGenerate personId =
+  Esq.delete $ do
+    verifications <- from $ table @AadhaarOtpReqT
+    where_ $ verifications ^. AadhaarOtpReqDriverId ==. val (toKey personId)
+
+deleteByPersonIdForVerify :: Id Person -> SqlDB ()
+deleteByPersonIdForVerify personId =
+  Esq.delete $ do
+    verifications <- from $ table @AadhaarOtpVerifyT
+    where_ $ verifications ^. AadhaarOtpVerifyDriverId ==. val (toKey personId)

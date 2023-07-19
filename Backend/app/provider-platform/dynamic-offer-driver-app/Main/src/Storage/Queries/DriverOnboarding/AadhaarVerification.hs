@@ -72,3 +72,9 @@ findByPhoneNumberAndUpdate name gender dob aadhaarNumberHash isVerified personId
         AadhaarVerificationUpdatedAt =. val now
       ]
     where_ $ tbl ^. AadhaarVerificationDriverId ==. val (toKey personId)
+
+deleteByPersonId :: Id Person -> SqlDB ()
+deleteByPersonId personId =
+  Esq.delete $ do
+    verifications <- from $ table @AadhaarVerificationT
+    where_ $ verifications ^. AadhaarVerificationDriverId ==. val (toKey personId)

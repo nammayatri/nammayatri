@@ -372,7 +372,6 @@ data DriverInfoRes = DriverInfoRes
     enabled :: Bool,
     blocked :: Bool,
     verified :: Bool,
-    aadhaarVerified :: Bool,
     subscribed :: Bool,
     canDowngradeToSedan :: Bool,
     canDowngradeToHatchback :: Bool,

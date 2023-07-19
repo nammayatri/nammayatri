@@ -445,7 +445,6 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         blocked = info.blocked,
         verified = info.verified,
         subscribed = info.subscribed,
-        aadhaarVerified = info.aadhaarVerified,
         onboardingDate = info.lastEnabledOn,
         canDowngradeToSedan = info.canDowngradeToSedan,
         canDowngradeToHatchback = info.canDowngradeToHatchback,
@@ -657,7 +656,7 @@ unlinkDL merchantShortId driverId = do
 unlinkAadhaar :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
 unlinkAadhaar merchantShortId driverId = do
   merchant <- findMerchantByShortId merchantShortId
-
+  transporterConfig <- SCT.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
   let driverId_ = cast @Common.Driver @DP.Driver driverId
   let personId = cast @Common.Driver @DP.Person driverId
 
@@ -666,7 +665,7 @@ unlinkAadhaar merchantShortId driverId = do
   Esq.runTransaction $ do
     AV.deleteByDriverId personId
   CQDriverInfo.updateAadhaarVerifiedState driverId_ False
-  unless (merchant.aadhaarVerificationRequired) $ CQDriverInfo.updateEnabledVerifiedState driverId_ False False
+  unless (transporterConfig.aadhaarVerificationRequired) $ CQDriverInfo.updateEnabledVerifiedState driverId_ False False
   logTagInfo "dashboard -> unlinkAadhaar : " (show personId)
   pure Success
 
