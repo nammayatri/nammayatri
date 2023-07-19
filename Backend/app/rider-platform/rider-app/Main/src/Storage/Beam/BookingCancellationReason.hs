@@ -96,7 +96,7 @@ instance B.Table BookingCancellationReasonT where
 instance ModelMeta BookingCancellationReasonT where
   modelFieldModification = bookingCancellationReasonTMod
   modelTableName = "booking_cancellation_reason"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
+  modelSchemaName = Just "atlas_app"
 
 type BookingCancellationReason = BookingCancellationReasonT Identity
 

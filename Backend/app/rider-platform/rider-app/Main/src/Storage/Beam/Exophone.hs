@@ -67,7 +67,7 @@ deriving stock instance Show Exophone
 
 dExophone :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity ExophoneT)
 dExophone =
-  B.setEntitySchema (Just "atlas_driver_offer_bpp")
+  B.setEntitySchema (Just "atlas_app")
     <> B.setEntityName "exophone"
     <> B.modifyTableFields exophoneTMod
 

@@ -46,7 +46,7 @@ instance B.Table GeometryT where
 instance ModelMeta GeometryT where
   modelFieldModification = geometryTMod
   modelTableName = "geometry"
-  modelSchemaName = Just "atlas_driver_offer_bpp"
+  modelSchemaName = Just "atlas_app"
 
 type Geometry = GeometryT Identity
 
