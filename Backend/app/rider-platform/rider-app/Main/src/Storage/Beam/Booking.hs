@@ -37,7 +37,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -52,19 +52,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.BookingStatus
 instance FromBackendRow Postgres Domain.BookingStatus
 
 instance IsString Domain.BookingStatus where
-  fromString = show
-
-instance FromField DQuote.FareProductType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be DQuote.FareProductType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be DQuote.FareProductType
-
-instance FromBackendRow Postgres DQuote.FareProductType
-
-instance IsString DQuote.FareProductType where
   fromString = show
 
 data BookingT f = BookingT
@@ -155,40 +142,6 @@ bookingTMod =
       updatedAt = B.fieldNamed "updated_at"
     }
 
-defaultBooking :: Booking
-defaultBooking =
-  BookingT
-    { id = "",
-      transactionId = "",
-      fareProductType = "",
-      bppBookingId = Nothing,
-      quoteId = Nothing,
-      riderId = "",
-      paymentMethodId = Nothing,
-      paymentUrl = Nothing,
-      status = "",
-      providerId = "",
-      providerUrl = "",
-      providerName = "",
-      providerMobileNumber = "",
-      primaryExophone = "",
-      startTime = defaultUTCDate,
-      fromLocationId = "",
-      toLocationId = Nothing,
-      estimatedFare = "",
-      discount = Nothing,
-      estimatedTotalFare = "",
-      distance = Nothing,
-      otpCode = Nothing,
-      vehicleVariant = "",
-      tripTermsId = Nothing,
-      rentalSlabId = Nothing,
-      merchantId = "",
-      specialLocationTag = Nothing,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
-
 instance Serialize Booking where
   put = error "undefined"
   get = error "undefined"
@@ -204,4 +157,4 @@ bookingToPSModifiers :: M.Map Text (A.Value -> A.Value)
 bookingToPSModifiers =
   M.empty
 
-$(enableKVPG ''BookingT ['id] [])
+$(enableKVPG ''BookingT ['id] [['bppBookingId], ['riderId]])

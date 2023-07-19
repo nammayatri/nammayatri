@@ -39,7 +39,7 @@ import Kernel.External.Types (Language)
 import Kernel.External.Whatsapp.Interface.Types (OptApiMethods (..))
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 

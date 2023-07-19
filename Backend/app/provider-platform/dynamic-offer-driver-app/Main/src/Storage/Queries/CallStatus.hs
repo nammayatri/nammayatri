@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.CallStatus where
 
@@ -18,61 +19,34 @@ import qualified Database.Beam as B
 import Database.Beam.Postgres
 import Domain.Types.CallStatus
 import Domain.Types.Ride
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.Prelude
 import Kernel.Types.Id
-import Lib.Utils (setMeshConfig)
+import Kernel.Types.Logging (Log)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV, updateWithKV)
 import Sequelize as Se
 import qualified Storage.Beam.CallStatus as BeamCT
 
-create :: L.MonadFlow m => CallStatus -> m (MeshResult ())
-create callStatus = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamCT.CallStatusT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainCallStatusToBeam callStatus)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create :: (L.MonadFlow m, Log m) => CallStatus -> m ()
+create = createWithKV
 
-findById :: L.MonadFlow m => Id CallStatus -> m (Maybe CallStatus)
-findById (Id callStatusId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamCT.CallStatusT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamCT.id $ Se.Eq callStatusId]
-    Nothing -> pure Nothing
+findById :: (L.MonadFlow m, Log m) => Id CallStatus -> m (Maybe CallStatus)
+findById (Id callStatusId) = findOneWithKV [Se.Is BeamCT.id $ Se.Eq callStatusId]
 
-findByCallSid :: L.MonadFlow m => Text -> m (Maybe CallStatus)
-findByCallSid callSid = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamCT.CallStatusT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamCallStatusToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamCT.callId $ Se.Eq callSid]
-    Nothing -> pure Nothing
+findByCallSid :: (L.MonadFlow m, Log m) => Text -> m (Maybe CallStatus)
+findByCallSid callSid = findOneWithKV [Se.Is BeamCT.callId $ Se.Eq callSid]
 
-updateCallStatus :: L.MonadFlow m => Id CallStatus -> Call.CallStatus -> Int -> Maybe BaseUrl -> m (MeshResult ())
-updateCallStatus (Id callId) status conversationDuration recordingUrl = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamCT.CallStatusT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Set BeamCT.conversationDuration conversationDuration,
-          Set BeamCT.recordingUrl $ showBaseUrl <$> recordingUrl,
-          Set BeamCT.status status
-        ]
-        [Is BeamCT.callId (Se.Eq callId)]
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+updateCallStatus :: (L.MonadFlow m, Log m) => Id CallStatus -> Call.CallStatus -> Int -> Maybe BaseUrl -> m ()
+updateCallStatus (Id callId) status conversationDuration recordingUrl =
+  updateWithKV
+    [ Set BeamCT.conversationDuration conversationDuration,
+      Set BeamCT.recordingUrl $ showBaseUrl <$> recordingUrl,
+      Set BeamCT.status status
+    ]
+    [Is BeamCT.callId (Se.Eq callId)]
 
 -- countCallsByRideId :: Transactionable m => Id Ride -> m Int
 -- countCallsByRideId rideId = (fromMaybe 0 <$>) $
@@ -82,6 +56,7 @@ updateCallStatus (Id callId) status conversationDuration recordingUrl = do
 --     groupBy $ callStatus ^. CallStatusRideId
 --     pure $ count @Int $ callStatus ^. CallStatusTId
 
+-- to be discussed if it should be a beam query or not
 countCallsByRideId :: L.MonadFlow m => Id Ride -> m Int
 countCallsByRideId rideID = do
   dbConf <- L.getOption KBT.PsqlDbCfg
@@ -100,28 +75,30 @@ countCallsByRideId rideID = do
         _ -> pure 0
     Left _ -> pure 0
 
-transformBeamCallStatusToDomain :: BeamCT.CallStatus -> CallStatus
-transformBeamCallStatusToDomain BeamCT.CallStatusT {..} = do
-  CallStatus
-    { id = Id id,
-      callId = callId,
-      rideId = Id rideId,
-      dtmfNumberUsed = dtmfNumberUsed,
-      status = status,
-      recordingUrl = recordingUrl,
-      conversationDuration = conversationDuration,
-      createdAt = createdAt
-    }
+instance FromTType' BeamCT.CallStatus CallStatus where
+  fromTType' BeamCT.CallStatusT {..} = do
+    pure $
+      Just
+        CallStatus
+          { id = Id id,
+            callId = callId,
+            rideId = Id rideId,
+            dtmfNumberUsed = dtmfNumberUsed,
+            status = status,
+            recordingUrl = recordingUrl,
+            conversationDuration = conversationDuration,
+            createdAt = createdAt
+          }
 
-transformDomainCallStatusToBeam :: CallStatus -> BeamCT.CallStatus
-transformDomainCallStatusToBeam CallStatus {..} =
-  BeamCT.CallStatusT
-    { BeamCT.id = getId id,
-      BeamCT.callId = callId,
-      BeamCT.rideId = getId rideId,
-      BeamCT.dtmfNumberUsed = dtmfNumberUsed,
-      BeamCT.status = status,
-      BeamCT.recordingUrl = recordingUrl,
-      BeamCT.conversationDuration = conversationDuration,
-      BeamCT.createdAt = createdAt
-    }
+instance ToTType' BeamCT.CallStatus CallStatus where
+  toTType' CallStatus {..} = do
+    BeamCT.CallStatusT
+      { BeamCT.id = getId id,
+        BeamCT.callId = callId,
+        BeamCT.rideId = getId rideId,
+        BeamCT.dtmfNumberUsed = dtmfNumberUsed,
+        BeamCT.status = status,
+        BeamCT.recordingUrl = recordingUrl,
+        BeamCT.conversationDuration = conversationDuration,
+        BeamCT.createdAt = createdAt
+      }

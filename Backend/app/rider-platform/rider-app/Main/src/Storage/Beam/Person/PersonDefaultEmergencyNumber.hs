@@ -29,7 +29,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.External.Encryption (DbHash)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -73,17 +73,6 @@ personDefaultEmergencyNumberTMod =
       mobileNumberEncrypted = B.fieldNamed "mobile_number_encrypted",
       mobileNumberHash = B.fieldNamed "mobile_number_hash",
       createdAt = B.fieldNamed "created_at"
-    }
-
-defaultPersonDefaultEmergencyNumber :: PersonDefaultEmergencyNumber
-defaultPersonDefaultEmergencyNumber =
-  PersonDefaultEmergencyNumberT
-    { personId = "",
-      name = "",
-      mobileCountryCode = "",
-      mobileNumberEncrypted = "",
-      mobileNumberHash = "",
-      createdAt = defaultUTCDate
     }
 
 instance Serialize PersonDefaultEmergencyNumber where

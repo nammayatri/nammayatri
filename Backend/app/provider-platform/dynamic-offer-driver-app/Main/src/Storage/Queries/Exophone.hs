@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Exophone
   {-# WARNING
@@ -22,14 +23,11 @@ where
 import qualified Database.Beam as B
 import Domain.Types.Exophone as DE (Exophone (..))
 import qualified Domain.Types.Merchant as DM
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils (setMeshConfig)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, getMasterDBConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Exophone as BeamE
@@ -37,14 +35,8 @@ import qualified Storage.Beam.Exophone as BeamE
 -- create :: Exophone -> SqlDB ()
 -- create = Esq.create
 
-create :: L.MonadFlow m => DE.Exophone -> m (MeshResult ())
-create exophone = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamE.ExophoneT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainExophoneToBeam exophone)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create :: (L.MonadFlow m, Log m) => DE.Exophone -> m ()
+create = createWithKV
 
 -- findAllByPhone :: Transactionable m => Text -> m [Exophone]
 -- findAllByPhone phone = do
@@ -60,26 +52,13 @@ create exophone = do
 --           ||. exophone1 ^. ExophoneBackupPhone ==. val phone
 --       return (exophone1 ^. ExophoneMerchantId)
 
-findAllMerchantIdsByPhone :: L.MonadFlow m => Text -> m [Id DM.Merchant]
-findAllMerchantIdsByPhone phone = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamE.ExophoneT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      res <- either (pure []) (transformBeamExophoneToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Or [Se.Is BeamE.primaryPhone $ Se.Eq phone, Se.Is BeamE.backupPhone $ Se.Eq phone]]
-      pure $ DE.merchantId <$> res
-    Nothing -> pure []
+findAllMerchantIdsByPhone :: (L.MonadFlow m, Log m) => Text -> m [Id DM.Merchant]
+findAllMerchantIdsByPhone phone = findAllWithKV [Se.Or [Se.Is BeamE.primaryPhone $ Se.Eq phone, Se.Is BeamE.backupPhone $ Se.Eq phone]] <&> (DE.merchantId <$>)
 
-findAllByPhone :: L.MonadFlow m => Text -> m [Exophone]
+findAllByPhone :: (L.MonadFlow m, Log m) => Text -> m [Exophone]
 findAllByPhone phone = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamE.ExophoneT
-  let updatedMeshConfig = setMeshConfig modelName
   merchIds <- findAllMerchantIdsByPhone phone
-  case dbConf of
-    Just dbConf' -> either (pure []) (transformBeamExophoneToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamE.merchantId $ Se.In $ getId <$> merchIds]
-    Nothing -> pure []
+  findAllWithKV [Se.Is BeamE.merchantId $ Se.In $ getId <$> merchIds]
 
 -- findAllByMerchantId :: Transactionable m => Id DM.Merchant -> m [Exophone]
 -- findAllByMerchantId merchantId = do
@@ -88,26 +67,15 @@ findAllByPhone phone = do
 --     where_ $ exophone ^. ExophoneMerchantId ==. val (toKey merchantId)
 --     return exophone
 
-findAllByMerchantId :: L.MonadFlow m => Id DM.Merchant -> m [Exophone]
+findAllByMerchantId :: (L.MonadFlow m, Log m) => Id DM.Merchant -> m [Exophone]
 findAllByMerchantId (Id merchantId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamE.ExophoneT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamExophoneToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamE.merchantId $ Se.Eq merchantId]
-    Nothing -> pure []
+  findAllWithKV [Se.Is BeamE.merchantId $ Se.Eq merchantId]
 
 -- findAllExophones :: Transactionable m => m [Exophone]
 -- findAllExophones = findAll $ from $ table @ExophoneT
 
-findAllExophones :: L.MonadFlow m => m [Exophone]
-findAllExophones = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamE.ExophoneT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamExophoneToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig []
-    Nothing -> pure []
+findAllExophones :: (L.MonadFlow m, Log m) => m [Exophone]
+findAllExophones = findAllWithKV [Se.Is BeamE.id $ Se.Not $ Se.Eq $ getId ""]
 
 -- updateAffectedPhones :: [Text] -> SqlDB ()
 -- updateAffectedPhones primaryPhones = do
@@ -127,9 +95,9 @@ findAllExophones = do
 
 updateAffectedPhonesHelper :: (L.MonadFlow m, MonadTime m) => [Text] -> m Bool
 updateAffectedPhonesHelper primaryNumbers = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
+  dbConf <- getMasterDBConfig
   let indianMobileCode = "+91"
-  conn <- L.getOrInitSqlConn (fromJust dbConf)
+  conn <- L.getOrInitSqlConn dbConf
   case conn of
     Right c -> do
       geoms <-
@@ -155,25 +123,22 @@ updateAffectedPhones :: (L.MonadFlow m, MonadTime m) => [Text] -> m ()
 updateAffectedPhones primaryPhones = do
   now <- getCurrentTime
   isPrimary <- updateAffectedPhonesHelper primaryPhones
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  case dbConf of
-    Just dbConf' -> do
-      conn <- L.getOrInitSqlConn dbConf'
-      case conn of
-        Right c -> do
-          _ <-
-            L.runDB c $
-              L.updateRows $
-                B.update
-                  (BeamCommon.exophone BeamCommon.atlasDB)
-                  ( \BeamE.ExophoneT {..} ->
-                      (isPrimaryDown B.<-. B.val_ isPrimary)
-                        <> (updatedAt B.<-. B.val_ now)
-                  )
-                  (\BeamE.ExophoneT {..} -> isPrimaryDown B.==. B.val_ isPrimary)
-          void $ pure Nothing
-        Left _ -> pure (error "DB Config not found")
-    Nothing -> pure (error "DB Config not found")
+  dbConf <- getMasterDBConfig
+  conn <- L.getOrInitSqlConn dbConf
+  case conn of
+    Right c -> do
+      _ <-
+        L.runDB c $
+          L.updateRows $
+            B.update
+              (BeamCommon.exophone BeamCommon.atlasDB)
+              ( \BeamE.ExophoneT {..} ->
+                  (isPrimaryDown B.<-. B.val_ isPrimary)
+                    <> (updatedAt B.<-. B.val_ now)
+              )
+              (\BeamE.ExophoneT {..} -> isPrimaryDown B.==. B.val_ isPrimary)
+      void $ pure Nothing
+    Left _ -> pure (error "DB Config not found")
 
 -- updateAffectedPhones' :: (L.MonadFlow m, MonadTime m) => [Text] -> m (MeshResult ())
 -- updateAffectedPhones' primaryPhones = do
@@ -193,7 +158,7 @@ updateAffectedPhones primaryPhones = do
 -- updateAffectedPhones' primaryPhones = do
 --   dbConf <- L.getOption KBT.PsqlDbCfg
 -- let modelName = Se.modelTableName @BeamE.ExophoneT
--- let updatedMeshConfig = setMeshConfig modelName
+-- updatedMeshConfig <- setMeshConfig modelName
 --   now <- getCurrentTime
 --   let indianMobileCode = "+91"
 --   -- let isPrimaryDown = Se.Or [ Se.Is BeamE.primaryPhone $ Se.In primaryPhones, Se.Is (indianMobileCode ++ BeamE.primaryPhone) $ Se.In primaryPhones ]
@@ -215,40 +180,31 @@ updateAffectedPhones primaryPhones = do
 --     exophone <- from $ table @ExophoneT
 --     where_ $ exophone ^. ExophoneMerchantId ==. val (toKey merchantId)
 
-deleteByMerchantId :: L.MonadFlow m => Id DM.Merchant -> m ()
-deleteByMerchantId (Id merchantId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamE.ExophoneT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      void $
-        KV.deleteWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [Se.Is BeamE.merchantId (Se.Eq merchantId)]
-    Nothing -> pure ()
+deleteByMerchantId :: (L.MonadFlow m, Log m) => Id DM.Merchant -> m ()
+deleteByMerchantId (Id merchantId) = deleteWithKV [Se.Is BeamE.merchantId (Se.Eq merchantId)]
 
-transformBeamExophoneToDomain :: BeamE.Exophone -> Exophone
-transformBeamExophoneToDomain BeamE.ExophoneT {..} = do
-  Exophone
-    { id = Id id,
-      merchantId = Id merchantId,
-      primaryPhone = primaryPhone,
-      backupPhone = backupPhone,
-      isPrimaryDown = isPrimaryDown,
-      createdAt = createdAt,
-      updatedAt = updatedAt
-    }
+instance FromTType' BeamE.Exophone Exophone where
+  fromTType' BeamE.ExophoneT {..} = do
+    pure $
+      Just
+        Exophone
+          { id = Id id,
+            merchantId = Id merchantId,
+            primaryPhone = primaryPhone,
+            backupPhone = backupPhone,
+            isPrimaryDown = isPrimaryDown,
+            createdAt = createdAt,
+            updatedAt = updatedAt
+          }
 
-transformDomainExophoneToBeam :: Exophone -> BeamE.Exophone
-transformDomainExophoneToBeam Exophone {..} =
-  BeamE.ExophoneT
-    { BeamE.id = getId id,
-      BeamE.merchantId = getId merchantId,
-      BeamE.primaryPhone = primaryPhone,
-      BeamE.backupPhone = backupPhone,
-      BeamE.isPrimaryDown = isPrimaryDown,
-      BeamE.createdAt = createdAt,
-      BeamE.updatedAt = updatedAt
-    }
+instance ToTType' BeamE.Exophone Exophone where
+  toTType' Exophone {..} = do
+    BeamE.ExophoneT
+      { BeamE.id = getId id,
+        BeamE.merchantId = getId merchantId,
+        BeamE.primaryPhone = primaryPhone,
+        BeamE.backupPhone = backupPhone,
+        BeamE.isPrimaryDown = isPrimaryDown,
+        BeamE.createdAt = createdAt,
+        BeamE.updatedAt = updatedAt
+      }

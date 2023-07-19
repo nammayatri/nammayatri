@@ -51,7 +51,7 @@ instance B.Table AadhaarOtpReqT where
 instance ModelMeta AadhaarOtpReqT where
   modelFieldModification = aadhaarOtpReqTMod
   modelTableName = "aadhaar_otp_req"
-  modelSchemaName = Just "atlas_app"
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type AadhaarOtpReq = AadhaarOtpReqT Identity
 

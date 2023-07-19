@@ -76,19 +76,6 @@ webengageTMod =
       status = B.fieldNamed "status"
     }
 
-defaultWebengage :: Webengage
-defaultWebengage =
-  WebengageT
-    { id = "",
-      version = "",
-      contentTemplateId = "",
-      principalEntityId = "",
-      infoMessageId = "",
-      webMessageId = "",
-      toNumber = "",
-      status = Nothing
-    }
-
 instance Serialize Webengage where
   put = error "undefined"
   get = error "undefined"
@@ -104,4 +91,4 @@ webengageToPSModifiers :: M.Map Text (A.Value -> A.Value)
 webengageToPSModifiers =
   M.empty
 
-$(enableKVPG ''WebengageT ['id] [])
+$(enableKVPG ''WebengageT ['id] [['infoMessageId]])

@@ -30,6 +30,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
+import qualified Kernel.Types.Id as KTI
 import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize as Se
@@ -64,6 +65,8 @@ instance ModelMeta FarePolicySlabsDetailsSlabT where
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type FarePolicySlabsDetailsSlab = FarePolicySlabsDetailsSlabT Identity
+
+type FullFarePolicySlabsDetailsSlab = (KTI.Id Domain.FarePolicy, Domain.FPSlabsDetailsSlab)
 
 instance FromJSON FarePolicySlabsDetailsSlab where
   parseJSON = A.genericParseJSON A.defaultOptions

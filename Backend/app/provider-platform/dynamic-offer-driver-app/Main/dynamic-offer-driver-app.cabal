@@ -252,6 +252,7 @@ library
       SharedLogic.Person
       SharedLogic.Ride
       SharedLogic.SearchTryLocker
+      Storage.Beam.BapMetadata
       Storage.Beam.Booking
       Storage.Beam.Booking.BookingLocation
       Storage.Beam.BookingCancellationReason
@@ -309,6 +310,7 @@ library
       Storage.Beam.Message.Message
       Storage.Beam.Message.MessageReport
       Storage.Beam.Message.MessageTranslation
+      Storage.Beam.MetaData
       Storage.Beam.OnboardingDocumentConfig
       Storage.Beam.Person
       Storage.Beam.QuoteSpecialZone
@@ -380,6 +382,7 @@ library
       Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Storage.Queries.FareProduct
       Storage.Queries.Geometry
+      Storage.Queries.Instances.DriverInformation
       Storage.Queries.Issue.Comment
       Storage.Queries.Issue.IssueCategory
       Storage.Queries.Issue.IssueOption

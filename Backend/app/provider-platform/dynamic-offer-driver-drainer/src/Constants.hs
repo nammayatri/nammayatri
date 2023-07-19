@@ -13,23 +13,23 @@ kvRedis = "KVRedis"
 
 --                                  |
 dbsyncConfigKey :: Text
-dbsyncConfigKey = "dbsync-config"
+dbsyncConfigKey = "driver-dbsync-config"
 
 --                                  |
 ecRedisDBStream :: [Char]
-ecRedisDBStream = "db-sync-stream"
+ecRedisDBStream = "driver-db-sync-stream"
 
 --                                  |
 ecRedisDBStreamCounter :: [Char]
-ecRedisDBStreamCounter = "db-sync-stream-counter"
+ecRedisDBStreamCounter = "driver-db-sync-stream-counter"
 
 --                                  |
 ecRedisErrorStream :: [Char]
-ecRedisErrorStream = "db-sync-error-stream"
+ecRedisErrorStream = "driver-db-sync-error-stream"
 
 --                                  |
 ecRedisFailedStream :: [Char]
-ecRedisFailedStream = "db-sync-failed-stream"
+ecRedisFailedStream = "driver-db-sync-failed-stream"
 
 --                                  |
 numberOfStreamsForKV :: Integer
@@ -41,7 +41,7 @@ emptyHistory = []
 
 --                                  |
 drainerStopKey :: Text
-drainerStopKey = "DRAINER_STOP"
+drainerStopKey = "DRIVER_DRAINER_STOP"
 
 --                                  |
 forceDrainEnabledKey :: Text

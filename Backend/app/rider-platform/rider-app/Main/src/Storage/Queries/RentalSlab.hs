@@ -29,7 +29,7 @@ createRentalSlab :: L.MonadFlow m => RentalSlab -> m (MeshResult ())
 createRentalSlab rentalSlab = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamRS.RentalSlabT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRentalSlabToBeam rentalSlab)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -41,7 +41,7 @@ findById :: (L.MonadFlow m) => Id RentalSlab -> m (Maybe RentalSlab)
 findById rentalSlabId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamRS.RentalSlabT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       either (pure Nothing) (transformBeamRentalSlabToDomain <$>) <$> KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamRS.id $ Se.Eq (getId rentalSlabId)]
@@ -57,7 +57,7 @@ transformBeamRentalSlabToDomain BeamRS.RentalSlabT {..} = do
 
 transformDomainRentalSlabToBeam :: RentalSlab -> BeamRS.RentalSlab
 transformDomainRentalSlabToBeam RentalSlab {..} =
-  BeamRS.defaultRentalSlab
+  BeamRS.RentalSlabT
     { BeamRS.id = getId id,
       BeamRS.baseDistance = baseDistance,
       BeamRS.baseDuration = baseDuration

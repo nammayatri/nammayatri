@@ -60,7 +60,7 @@ findByMerchantIdAndService :: (L.MonadFlow m, Log m) => Id Merchant -> ServiceNa
 findByMerchantIdAndService (Id merchantId) serviceName = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamMSC.MerchantServiceConfigT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamMSC.merchantId $ Se.Eq merchantId, Se.Is BeamMSC.serviceName $ Se.Eq serviceName]]
@@ -83,7 +83,7 @@ upsertMerchantServiceConfig :: (L.MonadFlow m, Log m, MonadTime m) => MerchantSe
 upsertMerchantServiceConfig merchantServiceConfig = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamMSC.MerchantServiceConfigT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
   let (_serviceName, configJSON) = BeamMSC.getServiceNameConfigJSON merchantServiceConfig.serviceConfig
   case dbConf of

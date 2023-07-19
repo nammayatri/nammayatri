@@ -36,7 +36,7 @@ import Storage.Queries.SearchRequest.SearchReqLocation as QSRL
 -- create SearchRequest = do
 --   dbConf <- L.getOption KBT.PsqlDbCfg
 --   let modelName = Se.modelTableName @BeamR.RideT
---   let updatedMeshConfig = setMeshConfig modelName
+--   updatedMeshConfig <- setMeshConfig modelName
 --   case dbConf of
 --     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRideToBeam SearchRequest)
 --     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -54,7 +54,7 @@ createDSReq :: L.MonadFlow m => SearchRequest -> m (MeshResult ())
 createDSReq sReq = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSR.SearchRequestT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainSearchRequestToBeam sReq)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -97,7 +97,7 @@ findById :: (L.MonadFlow m, Log m) => Id SearchRequest -> m (Maybe SearchRequest
 findById (Id searchRequestId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSR.SearchRequestT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
       sR <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSR.id $ Se.Eq searchRequestId]
@@ -120,7 +120,7 @@ findByPersonId :: (L.MonadFlow m, Log m) => Id Person -> Id SearchRequest -> m (
 findByPersonId (Id personId) (Id searchRequestId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSR.SearchRequestT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
       sR <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamSR.id $ Se.Eq searchRequestId, Se.Is BeamSR.riderId $ Se.Eq personId]]
@@ -142,7 +142,7 @@ findAllByPerson :: (L.MonadFlow m, Log m) => Id Person -> m [SearchRequest]
 findAllByPerson (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSR.SearchRequestT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
       sR <- KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSR.riderId $ Se.Eq personId]
@@ -165,7 +165,7 @@ updateCustomerExtraFeeAndPaymentMethod :: L.MonadFlow m => Id SearchRequest -> M
 updateCustomerExtraFeeAndPaymentMethod (Id searchReqId) customerExtraFee paymentMethodId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSR.SearchRequestT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
@@ -195,7 +195,7 @@ updateAutoAssign :: L.MonadFlow m => Id SearchRequest -> Bool -> Bool -> m (Mesh
 updateAutoAssign (Id searchRequestId) autoAssignedEnabled autoAssignedEnabledV2 = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSR.SearchRequestT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
@@ -220,7 +220,7 @@ updatePaymentMethods :: L.MonadFlow m => Id SearchRequest -> [Id MerchantPayment
 updatePaymentMethods (Id searchReqId) availablePaymentMethods = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSR.SearchRequestT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       KV.updateWoReturningWithKVConnector
@@ -267,7 +267,7 @@ transformBeamSearchRequestToDomain BeamSR.SearchRequestT {..} = do
 
 transformDomainSearchRequestToBeam :: SearchRequest -> BeamSR.SearchRequest
 transformDomainSearchRequestToBeam SearchRequest {..} =
-  BeamSR.defaultSearchRequest
+  BeamSR.SearchRequestT
     { BeamSR.id = getId id,
       BeamSR.startTime = startTime,
       BeamSR.validTill = validTill,

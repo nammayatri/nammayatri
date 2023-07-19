@@ -70,7 +70,7 @@ createQuote :: L.MonadFlow m => Quote -> m (MeshResult ())
 createQuote quote = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamQ.QuoteT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainQuoteToBeam quote)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -133,7 +133,7 @@ findById :: (L.MonadFlow m, Log m) => Id Quote -> m (Maybe Quote)
 findById quoteId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamQ.QuoteT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamQ.id $ Se.Eq (getId quoteId)]
@@ -156,7 +156,7 @@ findByBppIdAndBPPQuoteId :: (L.MonadFlow m, Log m) => Text -> Id BPPQuote -> m (
 findByBppIdAndBPPQuoteId bppId bppQuoteId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamQ.QuoteT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       quoteList <- do
@@ -185,7 +185,7 @@ findByBppIdAndBPPQuoteId bppId bppQuoteId = do
 -- findByBppIdAndBPPQuoteId' bppId bppQuoteId = do
 --   dbConf <- L.getOption KBT.PsqlDbCfg
 --   let modelName = Se.modelTableName @BeamQ.QuoteT
---   let updatedMeshConfig = setMeshConfig modelName
+--   updatedMeshConfig <- setMeshConfig modelName
 --   case dbConf of
 --     Just dbConf' -> do
 --       result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamQ.providerId $ Se.Eq bppId]]
@@ -206,7 +206,7 @@ findAllBySRId :: (L.MonadFlow m, Log m) => Id SearchRequest -> m [Quote]
 findAllBySRId searchRequestId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamQ.QuoteT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       result <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamQ.requestId $ Se.Eq (getId searchRequestId)]]
@@ -244,8 +244,8 @@ findAllByEstimateId estimateId status = do
   driverOffers <- findDOfferByEstimateId estimateId status
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamDO.DriverOfferT
-      updatedMeshConfig = setMeshConfig modelName
-      offerIds = map (Just . getId . DDO.id) driverOffers
+  updatedMeshConfig <- setMeshConfig modelName
+  let offerIds = map (Just . getId . DDO.id) driverOffers
       quoteFilter = Se.Is BeamQ.driverOfferId (Se.In offerIds)
   case dbConf of
     Just dbConf' -> do
@@ -266,7 +266,7 @@ findDOfferByEstimateId :: (L.MonadFlow m, Log m) => Id Estimate -> DriverOfferSt
 findDOfferByEstimateId (Id estimateId) status = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamDO.DriverOfferT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' ->
       either (pure []) (QueryDO.transformBeamDriverOfferToDomain <$>)
@@ -345,7 +345,7 @@ transformDomainQuoteToBeam Quote {..} =
         DQ.RentalDetails rentalSlab -> (DFFP.RENTAL, Nothing, Just $ getId rentalSlab.id, Nothing, Nothing)
         DQ.DriverOfferDetails driverOffer -> (DFFP.DRIVER_OFFER, Nothing, Nothing, Just $ getId driverOffer.id, Nothing)
         DQ.OneWaySpecialZoneDetails specialZoneQuote -> (DFFP.ONE_WAY_SPECIAL_ZONE, Nothing, Nothing, Nothing, Just $ getId specialZoneQuote.id)
-   in BeamQ.defaultQuote
+   in BeamQ.QuoteT
         { BeamQ.id = getId id,
           BeamQ.fareProductType = fareProductType,
           BeamQ.requestId = getId requestId,

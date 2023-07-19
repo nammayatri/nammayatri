@@ -72,16 +72,6 @@ estimateBreakupTMod =
       priceValue = B.fieldNamed "price_value"
     }
 
-defaultEstimateBreakup :: EstimateBreakup
-defaultEstimateBreakup =
-  EstimateBreakupT
-    { id = "",
-      estimateId = "",
-      title = "",
-      priceCurrency = "",
-      priceValue = ""
-    }
-
 instance Serialize EstimateBreakup where
   put = error "undefined"
   get = error "undefined"
@@ -97,4 +87,4 @@ estimateBreakupToPSModifiers :: M.Map Text (A.Value -> A.Value)
 estimateBreakupToPSModifiers =
   M.empty
 
-$(enableKVPG ''EstimateBreakupT ['id] [])
+$(enableKVPG ''EstimateBreakupT ['id] [['estimateId]])

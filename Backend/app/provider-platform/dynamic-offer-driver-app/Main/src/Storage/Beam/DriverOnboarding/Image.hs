@@ -34,22 +34,10 @@ import qualified Domain.Types.DriverOnboarding.Image as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
+import Kernel.Types.Common hiding (id)
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
-
-instance FromField Domain.ImageType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.ImageType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.ImageType
-
-instance FromBackendRow Postgres Domain.ImageType
-
-instance IsString Domain.ImageType where
-  fromString = show
 
 instance FromField Domain.DriverOnboardingError where
   fromField = fromFieldEnum

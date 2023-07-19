@@ -29,7 +29,7 @@ import qualified Database.Beam.Schema.Tables as B
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -93,18 +93,6 @@ exophoneToHSModifiers =
 exophoneToPSModifiers :: M.Map Text (A.Value -> A.Value)
 exophoneToPSModifiers =
   M.empty
-
-defaultExophone :: Exophone
-defaultExophone =
-  ExophoneT
-    { id = "",
-      merchantId = "",
-      primaryPhone = "",
-      backupPhone = "",
-      isPrimaryDown = False,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
-    }
 
 instance Serialize Exophone where
   put = error "undefined"

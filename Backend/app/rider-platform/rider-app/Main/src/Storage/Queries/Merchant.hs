@@ -41,7 +41,7 @@ findById :: L.MonadFlow m => Id Merchant -> m (Maybe Merchant)
 findById (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamM.MerchantT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
       res <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamM.id $ Se.Eq merchantId]
@@ -61,7 +61,7 @@ findByShortId :: L.MonadFlow m => ShortId Merchant -> m (Maybe Merchant)
 findByShortId shortId_ = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamM.MerchantT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
       res <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamM.shortId $ Se.Eq $ getShortId shortId_]
@@ -81,7 +81,7 @@ findBySubscriberId :: L.MonadFlow m => ShortId Subscriber -> m (Maybe Merchant)
 findBySubscriberId subscriberId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamM.MerchantT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
       res <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamM.subscriberId $ Se.Eq $ getShortId subscriberId]
@@ -98,7 +98,7 @@ findAll :: L.MonadFlow m => m [Merchant]
 findAll = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamM.MerchantT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
       res <- KV.findAllWithKVConnector dbCOnf' updatedMeshConfig []
@@ -124,7 +124,7 @@ update :: (L.MonadFlow m, MonadTime m) => Merchant -> m (MeshResult ())
 update org = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamM.MerchantT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -178,7 +178,7 @@ transformBeamMerchantToDomain BeamM.MerchantT {..} = do
 transformDomainMerchantToBeam :: Merchant -> BeamM.Merchant
 transformDomainMerchantToBeam Merchant {..} = do
   let Geo.GeofencingConfig {..} = geofencingConfig
-  BeamM.defaultMerchant
+  BeamM.MerchantT
     { BeamM.id = getId id,
       BeamM.subscriberId = getShortId subscriberId,
       BeamM.shortId = getShortId shortId,

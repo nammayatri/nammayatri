@@ -82,13 +82,6 @@ geometryToPSModifiers :: M.Map Text (A.Value -> A.Value)
 geometryToPSModifiers =
   M.empty
 
-defaultGeometry :: Geometry
-defaultGeometry =
-  GeometryT
-    { id = "",
-      region = ""
-    }
-
 instance Serialize Geometry where
   put = error "undefined"
   get = error "undefined"

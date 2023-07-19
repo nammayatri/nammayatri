@@ -1,0 +1,124 @@
+name: rider-app-drainer
+version: 0.1.0.0
+github: 'nammayatri/nammayatri'
+license: AllRightsReserved
+author: 'nammayatri'
+maintainer: 'nammayatri'
+copyright: '2023 Juspay Technologies Private Limited'
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description: Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
+
+default-extensions:
+  - NoImplicitPrelude
+  - ConstraintKinds
+  - DataKinds
+  - DefaultSignatures
+  - DeriveFunctor
+  - DeriveGeneric
+  - DuplicateRecordFields
+  - ExplicitNamespaces
+  - FlexibleContexts
+  - FlexibleInstances
+  - FunctionalDependencies
+  - GADTs
+  - LambdaCase
+  - MultiParamTypeClasses
+  - MultiWayIf
+  - NamedFieldPuns
+  - OverloadedStrings
+  - PackageImports
+  - PatternSynonyms
+  - PolyKinds
+  - RankNTypes
+  - RecordWildCards
+  - ScopedTypeVariables
+  - TupleSections
+  - TypeApplications
+  - TypeFamilies
+  - TypeOperators
+  - ViewPatterns
+  - UndecidableInstances
+  - LambdaCase
+
+dependencies:
+  - base >=4.7 && <5
+  - aeson
+  - aeson-pretty
+  - async
+  - beam-core
+  - beam-mysql
+  - beam-postgres
+  - bytestring
+  - casing
+  - connection
+  - containers
+  - directory
+  - errors
+  - record-dot-preprocessor
+  - record-hasfield
+  # - euler-webservice
+  - euler-events-hs >=2.0.0 && <2.1
+  - euler-hs
+  - juspay-extra
+  - extra
+  - formatting
+  - hedis
+  - http-client
+  - http-client-tls
+  - http-types
+  - lens
+  - pcg-random
+  - servant-server
+  - sequelize
+  - text
+  - time
+  - transformers
+  - tinylog
+  - unordered-containers
+  - utf8-string
+  - unix
+  - uuid
+  - vector
+  - wai
+  - wai-extra
+  - wai-middleware-prometheus
+  - warp
+  - warp-tls
+
+ghc-options:
+  - -fwrite-ide-info
+  - -hiedir=.hie
+  - -fplugin=RecordDotPreprocessor
+
+library:
+  source-dirs: src
+  ghc-options:
+    - -Wall
+    - -Wcompat
+    - -Widentities
+    - -fhide-source-paths
+    - -Werror
+  dependencies:
+    - rider-app-app
+    - mobility-core
+
+executables:
+  rider-app-drainer-exe:
+    main: Main.hs
+    source-dirs: server
+    other-modules: []
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - '"-with-rtsopts=-N -T"'
+    dependencies:
+      - rider-app-drainer
+      - rider-app
+      - mobility-core

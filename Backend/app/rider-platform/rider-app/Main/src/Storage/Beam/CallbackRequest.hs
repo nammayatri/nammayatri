@@ -35,7 +35,8 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.External.Encryption (DbHash)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
+import Kernel.Types.Common hiding (id)
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -98,20 +99,6 @@ callbackRequestTMod =
       status = B.fieldNamed "status",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
-    }
-
-defaultCallbackRequest :: CallbackRequest
-defaultCallbackRequest =
-  CallbackRequestT
-    { id = "",
-      merchantId = "",
-      customerName = Nothing,
-      customerPhoneEncrypted = "",
-      customerPhoneHash = "",
-      customerMobileCountryCode = "",
-      status = "",
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
     }
 
 instance Serialize CallbackRequest where

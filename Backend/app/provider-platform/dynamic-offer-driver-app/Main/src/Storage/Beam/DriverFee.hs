@@ -35,7 +35,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import EulerHS.Prelude (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -80,7 +80,7 @@ instance B.Table DriverFeeT where
 instance ModelMeta DriverFeeT where
   modelFieldModification = driverFeeTMod
   modelTableName = "driver_fee"
-  modelSchemaName = Just "atlas_app"
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type DriverFee = DriverFeeT Identity
 

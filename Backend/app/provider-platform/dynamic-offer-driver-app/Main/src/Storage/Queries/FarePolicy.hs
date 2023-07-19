@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.FarePolicy
   {-# WARNING
@@ -21,13 +22,17 @@ where
 
 import Data.List.NonEmpty
 import Domain.Types.FarePolicy as Domain
-import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude hiding (toList)
 import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
-import Lib.Utils (setMeshConfig)
+import Lib.Utils
+  ( FromTType' (fromTType'),
+    ToTType' (toTType'),
+    createWithKV,
+    findOneWithKV,
+    updateWithKV,
+  )
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy as BeamFP
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as BeamFPPD
@@ -35,108 +40,79 @@ import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QueriesDEFB
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as QueriesFPPD
 import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as QueriesFPSDS
 
-findById :: (L.MonadFlow m) => Id FarePolicy -> m (Maybe FarePolicy)
-findById (Id farePolicyId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamFP.FarePolicyT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamFP.id $ Se.Eq farePolicyId]
-      case result of
-        Right (Just x) -> transformBeamFarePolicyToDomain x
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+findById :: (L.MonadFlow m, Log m) => Id FarePolicy -> m (Maybe FarePolicy)
+findById (Id farePolicyId) = findOneWithKV [Se.Is BeamFP.id $ Se.Eq farePolicyId]
 
-update :: (L.MonadFlow m, MonadTime m) => FarePolicy -> m ()
+update :: (L.MonadFlow m, MonadTime m, Log m) => FarePolicy -> m ()
 update farePolicy = do
   now <- getCurrentTime
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamFP.FarePolicyT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      _ <-
-        KV.updateWoReturningWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [ Se.Set BeamFP.nightShiftStart $ Domain.nightShiftStart <$> farePolicy.nightShiftBounds,
-            Se.Set BeamFP.nightShiftEnd $ Domain.nightShiftStart <$> farePolicy.nightShiftBounds,
-            Se.Set BeamFP.updatedAt now
-          ]
-          [Se.Is BeamFP.id (Se.Eq $ getId farePolicy.id)]
-      case farePolicy.farePolicyDetails of
-        ProgressiveDetails fPPD -> do
-          void $
-            KV.updateWoReturningWithKVConnector
-              dbConf'
-              updatedMeshConfig
-              [ Se.Set BeamFPPD.baseFare $ fPPD.baseFare,
-                Se.Set BeamFPPD.baseDistance $ fPPD.baseDistance,
-                Se.Set BeamFPPD.deadKmFare $ fPPD.deadKmFare,
-                Se.Set BeamFPPD.nightShiftCharge $ fPPD.nightShiftCharge
-              ]
-              [Se.Is BeamFPPD.farePolicyId (Se.Eq $ getId farePolicy.id)]
-        SlabsDetails (FPSlabsDetails slabs) -> do
-          _ <- QueriesFPSDS.deleteAll' farePolicy.id
-          mapM_ (create'' farePolicy.id) slabs
-    Nothing -> pure ()
+  updateWithKV
+    [ Se.Set BeamFP.nightShiftStart $ Domain.nightShiftStart <$> farePolicy.nightShiftBounds,
+      Se.Set BeamFP.nightShiftEnd $ Domain.nightShiftStart <$> farePolicy.nightShiftBounds,
+      Se.Set BeamFP.updatedAt now
+    ]
+    [Se.Is BeamFP.id (Se.Eq $ getId farePolicy.id)]
+  case farePolicy.farePolicyDetails of
+    ProgressiveDetails fPPD ->
+      updateWithKV
+        [ Se.Set BeamFPPD.baseFare $ fPPD.baseFare,
+          Se.Set BeamFPPD.baseDistance $ fPPD.baseDistance,
+          Se.Set BeamFPPD.deadKmFare $ fPPD.deadKmFare,
+          Se.Set BeamFPPD.nightShiftCharge $ fPPD.nightShiftCharge
+        ]
+        [Se.Is BeamFPPD.farePolicyId (Se.Eq $ getId farePolicy.id)]
+    SlabsDetails (FPSlabsDetails slabs) -> do
+      _ <- QueriesFPSDS.deleteAll' farePolicy.id
+      mapM_ (create'' farePolicy.id) slabs
   where
-    create'' :: L.MonadFlow m => Id FarePolicy -> FPSlabsDetailsSlab -> m ()
-    create'' id' slab = do
-      dbConf <- L.getOption KBT.PsqlDbCfg
-      let modelName = Se.modelTableName @BeamFP.FarePolicyT
-      let updatedMeshConfig = setMeshConfig modelName
-      case dbConf of
-        Just dbConf' ->
-          void $ KV.createWoReturingKVConnector dbConf' updatedMeshConfig (QueriesFPSDS.transformDomainFarePolicySlabsDetailsSlabToBeam (id', slab))
-        Nothing -> pure ()
+    create'' :: (L.MonadFlow m, Log m) => Id FarePolicy -> FPSlabsDetailsSlab -> m ()
+    create'' id' slab = createWithKV (id', slab)
 
-transformDomainFarePolicyToBeam :: Domain.FarePolicy -> BeamFP.FarePolicy
-transformDomainFarePolicyToBeam FarePolicy {..} =
-  BeamFP.FarePolicyT
-    { BeamFP.id = getId id,
-      BeamFP.serviceCharge = serviceCharge,
-      BeamFP.nightShiftStart = Domain.nightShiftStart <$> nightShiftBounds,
-      BeamFP.nightShiftEnd = Domain.nightShiftEnd <$> nightShiftBounds,
-      BeamFP.maxAllowedTripDistance = Domain.maxAllowedTripDistance <$> allowedTripDistanceBounds,
-      BeamFP.minAllowedTripDistance = Domain.minAllowedTripDistance <$> allowedTripDistanceBounds,
-      BeamFP.govtCharges = govtCharges,
-      BeamFP.farePolicyType = getFarePolicyType $ FarePolicy {..},
-      BeamFP.description = description,
-      BeamFP.createdAt = createdAt,
-      BeamFP.updatedAt = updatedAt
-    }
+instance ToTType' BeamFP.FarePolicy FarePolicy where
+  toTType' FarePolicy {..} = do
+    BeamFP.FarePolicyT
+      { BeamFP.id = getId id,
+        BeamFP.serviceCharge = serviceCharge,
+        BeamFP.nightShiftStart = Domain.nightShiftStart <$> nightShiftBounds,
+        BeamFP.nightShiftEnd = Domain.nightShiftEnd <$> nightShiftBounds,
+        BeamFP.maxAllowedTripDistance = Domain.maxAllowedTripDistance <$> allowedTripDistanceBounds,
+        BeamFP.minAllowedTripDistance = Domain.minAllowedTripDistance <$> allowedTripDistanceBounds,
+        BeamFP.govtCharges = govtCharges,
+        BeamFP.farePolicyType = getFarePolicyType $ FarePolicy {..},
+        BeamFP.description = description,
+        BeamFP.createdAt = createdAt,
+        BeamFP.updatedAt = updatedAt
+      }
 
-transformBeamFarePolicyToDomain :: L.MonadFlow m => BeamFP.FarePolicy -> m (Maybe Domain.FarePolicy)
-transformBeamFarePolicyToDomain BeamFP.FarePolicyT {..} = do
-  fullDEFB <- QueriesDEFB.findAll' (KTI.Id id)
-  let fDEFB = snd <$> fullDEFB
-  fullFPPD <- QueriesFPPD.findById' (Id id)
-  if isJust fullFPPD
-    then do
-      fullslabs <- QueriesFPSDS.findAll' (Id id)
-      let fPPD = snd $ fromJust fullFPPD
-      let slabs = snd <$> fullslabs
-      pure $
-        Just
-          Domain.FarePolicy
-            { id = Id id,
-              serviceCharge = serviceCharge,
-              nightShiftBounds = NightShiftBounds <$> nightShiftStart <*> nightShiftEnd,
-              allowedTripDistanceBounds =
-                ((,) <$> minAllowedTripDistance <*> maxAllowedTripDistance) <&> \(minAllowedTripDistance', maxAllowedTripDistance') ->
-                  Domain.AllowedTripDistanceBounds
-                    { minAllowedTripDistance = minAllowedTripDistance',
-                      maxAllowedTripDistance = maxAllowedTripDistance'
-                    },
-              govtCharges = govtCharges,
-              driverExtraFeeBounds = nonEmpty fDEFB,
-              farePolicyDetails = case farePolicyType of
-                Progressive -> ProgressiveDetails fPPD
-                Slabs -> SlabsDetails (FPSlabsDetails (fromJust $ nonEmpty slabs)),
-              description = description,
-              createdAt = createdAt,
-              updatedAt = updatedAt
-            }
-    else pure Nothing
+instance FromTType' BeamFP.FarePolicy Domain.FarePolicy where
+  fromTType' BeamFP.FarePolicyT {..} = do
+    fullDEFB <- QueriesDEFB.findAll' (KTI.Id id)
+    let fDEFB = snd <$> fullDEFB
+    fullFPPD <- QueriesFPPD.findById' (Id id)
+    if isJust fullFPPD
+      then do
+        fullslabs <- QueriesFPSDS.findAll' (Id id)
+        let fPPD = snd $ fromJust fullFPPD
+        let slabs = snd <$> fullslabs
+        pure $
+          Just
+            Domain.FarePolicy
+              { id = Id id,
+                serviceCharge = serviceCharge,
+                nightShiftBounds = NightShiftBounds <$> nightShiftStart <*> nightShiftEnd,
+                allowedTripDistanceBounds =
+                  ((,) <$> minAllowedTripDistance <*> maxAllowedTripDistance) <&> \(minAllowedTripDistance', maxAllowedTripDistance') ->
+                    Domain.AllowedTripDistanceBounds
+                      { minAllowedTripDistance = minAllowedTripDistance',
+                        maxAllowedTripDistance = maxAllowedTripDistance'
+                      },
+                govtCharges = govtCharges,
+                driverExtraFeeBounds = nonEmpty fDEFB,
+                farePolicyDetails = case farePolicyType of
+                  Progressive -> ProgressiveDetails fPPD
+                  Slabs -> SlabsDetails (FPSlabsDetails (fromJust $ nonEmpty slabs)),
+                description = description,
+                createdAt = createdAt,
+                updatedAt = updatedAt
+              }
+      else pure Nothing

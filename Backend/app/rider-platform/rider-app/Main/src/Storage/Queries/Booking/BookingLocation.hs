@@ -32,7 +32,7 @@ create :: L.MonadFlow m => BookingLocation -> m (MeshResult ())
 create bl = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamBL.BookingLocationT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainBookingLocationToBeam bl)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -41,7 +41,7 @@ findById :: L.MonadFlow m => Id BookingLocation -> m (Maybe BookingLocation)
 findById (Id bookingLocationId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamBL.BookingLocationT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamBookingLocationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamBL.id $ Se.Eq bookingLocationId]
     Nothing -> pure Nothing
@@ -50,7 +50,7 @@ updateAddress :: (L.MonadFlow m, MonadTime m) => Id BookingLocation -> LocationA
 updateAddress (Id blId) LocationAddress {..} = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamBL.BookingLocationT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->

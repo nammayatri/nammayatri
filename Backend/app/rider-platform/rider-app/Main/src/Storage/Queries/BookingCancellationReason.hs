@@ -31,7 +31,7 @@ create :: L.MonadFlow m => BookingCancellationReason -> m (MeshResult ())
 create bookingCancellationReason = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamBCR.BookingCancellationReasonT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainBookingCancellationReasonToBeam bookingCancellationReason)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -50,7 +50,7 @@ findByRideBookingId :: L.MonadFlow m => Id Booking -> m (Maybe BookingCancellati
 findByRideBookingId (Id bookingId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamBCR.BookingCancellationReasonT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamBookingCancellationReasonToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamBCR.bookingId $ Se.Eq bookingId]
     Nothing -> pure Nothing
@@ -71,7 +71,7 @@ upsert :: L.MonadFlow m => BookingCancellationReason -> m ()
 upsert cancellationReason = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamBCR.BookingCancellationReasonT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
       res <- either (pure Nothing) (transformBeamBookingCancellationReasonToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamBCR.bookingId $ Se.Eq (getId cancellationReason.bookingId)]

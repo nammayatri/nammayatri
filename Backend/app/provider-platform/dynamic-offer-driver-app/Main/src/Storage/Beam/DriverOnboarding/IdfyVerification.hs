@@ -35,19 +35,11 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.External.Encryption
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
+import Kernel.Types.Common hiding (id)
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
-
-instance FromField Image.ImageType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Image.ImageType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Image.ImageType
-
-instance FromBackendRow Postgres Image.ImageType
+import Storage.Beam.DriverOnboarding.Image ()
 
 instance FromField Domain.ImageExtractionValidation where
   fromField = fromFieldEnum
@@ -99,8 +91,6 @@ instance ToJSON IdfyVerification where
 
 deriving stock instance Show IdfyVerification
 
-deriving stock instance Ord Image.ImageType
-
 deriving stock instance Ord Domain.ImageExtractionValidation
 
 idfyVerificationTMod :: IdfyVerificationT (B.FieldModification (B.TableField IdfyVerificationT))
@@ -133,9 +123,6 @@ idfyVerificationToHSModifiers =
 idfyVerificationToPSModifiers :: M.Map Text (A.Value -> A.Value)
 idfyVerificationToPSModifiers =
   M.empty
-
-instance IsString Image.ImageType where
-  fromString = show
 
 instance IsString Domain.ImageExtractionValidation where
   fromString = show

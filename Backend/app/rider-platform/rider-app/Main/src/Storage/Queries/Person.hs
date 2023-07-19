@@ -43,7 +43,7 @@ create :: L.MonadFlow m => Person -> m (MeshResult ())
 create person = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainPersonToBeam person)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -58,7 +58,7 @@ findById :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Person)
 findById (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamP.id $ Se.Eq personId]
@@ -86,7 +86,7 @@ findByMobileNumberAndMerchantId :: (L.MonadFlow m, Log m) => Text -> DbHash -> I
 findByMobileNumberAndMerchantId countryCode mobileNumberHash (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
@@ -114,7 +114,7 @@ findByEmailAndPassword :: (L.MonadFlow m, Log m, EncFlow m r) => Text -> Text ->
 findByEmailAndPassword email_ password = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       emailDbHash <- getDbHash email_
@@ -141,7 +141,7 @@ findByEmail :: (L.MonadFlow m, Log m, EncFlow m r) => Text -> m (Maybe Person)
 findByEmail email_ = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       emailDbHash <- getDbHash email_
@@ -172,7 +172,7 @@ findByRoleAndMobileNumberAndMerchantId :: (L.MonadFlow m, Log m) => Role -> Text
 findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumberHash (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
@@ -195,7 +195,7 @@ findByRoleAndMobileNumberAndMerchantIdWithoutCC :: (L.MonadFlow m, Log m) => Rol
 findByRoleAndMobileNumberAndMerchantIdWithoutCC role_ mobileNumberHash (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
@@ -229,7 +229,7 @@ updateMultiple :: (L.MonadFlow m, MonadTime m) => Id Person -> Person -> m (Mesh
 updateMultiple (Id personId) person = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -277,7 +277,7 @@ updatePersonVersions person mbBundleVersion mbClientVersion =
     do
       dbConf <- L.getOption KBT.PsqlDbCfg
       let modelName = Se.modelTableName @BeamP.PersonT
-      let updatedMeshConfig = setMeshConfig modelName
+      updatedMeshConfig <- setMeshConfig modelName
       now <- getCurrentTime
       let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.bundleVersion)
           mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientVersion)
@@ -309,7 +309,7 @@ updateDeviceToken :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe Text -> 
 updateDeviceToken (Id personId) mbDeviceToken = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -337,7 +337,7 @@ updateWhatsappNotificationEnrollStatus :: (L.MonadFlow m, MonadTime m) => Id Per
 updateWhatsappNotificationEnrollStatus (Id personId) enrollStatus = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -365,7 +365,7 @@ setIsNewFalse :: (L.MonadFlow m, MonadTime m) => Id Person -> m (MeshResult ())
 setIsNewFalse (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -433,7 +433,7 @@ updatePersonalInfo ::
   m (MeshResult ())
 updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbCVersion mbBVersion = do
   let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
   let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
   let mbEmailHash = mbEncEmail <&> (.hash)
@@ -505,7 +505,7 @@ deleteById :: L.MonadFlow m => Id Person -> m ()
 deleteById (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       void $
@@ -530,7 +530,7 @@ updateHasTakenValidRide :: (L.MonadFlow m, MonadTime m) => Id Person -> m (MeshR
 updateHasTakenValidRide (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -559,7 +559,7 @@ updateReferralCodeAndReferredAt :: (L.MonadFlow m, MonadTime m) => Id Person -> 
 updateReferralCodeAndReferredAt (Id personId) referralCode = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -591,7 +591,7 @@ findByReferralCode ::
 findByReferralCode referralCode = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       res <-
@@ -617,7 +617,7 @@ findBlockedByDeviceToken :: (L.MonadFlow m, EncFlow m r) => Maybe Text -> m [Per
 findBlockedByDeviceToken deviceToken = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       res <-
@@ -645,7 +645,7 @@ updateBlockedState :: (L.MonadFlow m, MonadTime m) => Id Person -> Bool -> m (Me
 updateBlockedState (Id personId) isBlocked = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -676,7 +676,7 @@ updatingEnabledAndBlockedState :: (L.MonadFlow m, MonadTime m) => Id Person -> M
 updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   now <- getCurrentTime
   case dbConf of
     Just dbConf' ->
@@ -720,7 +720,7 @@ findAllCustomers :: (L.MonadFlow m, Log m) => Id Merchant -> Int -> Int -> Maybe
 findAllCustomers merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       res <-
@@ -761,7 +761,7 @@ countCustomers :: (L.MonadFlow m, Log m) => Id Merchant -> m Int
 countCustomers merchantId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       res <-
@@ -847,7 +847,7 @@ transformBeamPersonToDomain BeamP.PersonT {..} = do
 
 transformDomainPersonToBeam :: Person -> BeamP.Person
 transformDomainPersonToBeam Person {..} =
-  BeamP.defaultPerson
+  BeamP.PersonT
     { BeamP.id = getId id,
       BeamP.firstName = firstName,
       BeamP.middleName = middleName,

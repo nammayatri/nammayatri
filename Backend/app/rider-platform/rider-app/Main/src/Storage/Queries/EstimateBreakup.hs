@@ -31,7 +31,7 @@ create :: L.MonadFlow m => EstimateBreakup -> m (MeshResult ())
 create estimate = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamEB.EstimateBreakupT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainEstimateBreakupToBeam estimate)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -49,7 +49,7 @@ findAllByEstimateIdT :: L.MonadFlow m => Id Estimate -> m [EstimateBreakup]
 findAllByEstimateIdT (Id estimateId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamEB.EstimateBreakupT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> either (pure []) (transformBeamEstimateBreakupToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamEB.estimateId $ Se.Eq estimateId]
     Nothing -> pure []
@@ -70,7 +70,7 @@ transformBeamEstimateBreakupToDomain BeamEB.EstimateBreakupT {..} = do
 
 transformDomainEstimateBreakupToBeam :: EstimateBreakup -> BeamEB.EstimateBreakup
 transformDomainEstimateBreakupToBeam EstimateBreakup {..} =
-  BeamEB.defaultEstimateBreakup
+  BeamEB.EstimateBreakupT
     { BeamEB.id = getId id,
       BeamEB.estimateId = getId estimateId,
       BeamEB.title = title,

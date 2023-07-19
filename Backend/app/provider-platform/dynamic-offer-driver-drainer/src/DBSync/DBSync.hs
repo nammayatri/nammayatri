@@ -89,7 +89,7 @@ parseDBCommand dbStreamKey entries =
     logParseError err = EL.logError ("PARSE_DB_COMMAND_ERROR" :: Text) $ "Error while parsing " <> err
 
     getActionAndModelName dbCommandByteString = do
-      case A.decode $ BL.fromStrict $ dbCommandByteString of
+      case A.decode $ BL.fromStrict dbCommandByteString of
         Just decodedDBCommandObject@(A.Object o) ->
           let mbAction = case HM.lookup "tag" o of
                 Just (A.String actionTag) -> return actionTag

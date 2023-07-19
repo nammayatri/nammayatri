@@ -11,174 +11,99 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.RegistrationToken where
 
 import Domain.Types.Person
 import Domain.Types.RegistrationToken as DRT
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils (setMeshConfig)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.RegistrationToken as BeamRT
 
-create :: L.MonadFlow m => DRT.RegistrationToken -> m (MeshResult ())
-create registrationToken = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRegistrationTokenToBeam registrationToken)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create :: (L.MonadFlow m, Log m) => DRT.RegistrationToken -> m ()
+create = createWithKV
 
-findById :: L.MonadFlow m => Id RegistrationToken -> m (Maybe RegistrationToken)
-findById (Id registrationTokenId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamRT.id $ Se.Eq registrationTokenId]
-    Nothing -> pure Nothing
+findById :: (L.MonadFlow m, Log m) => Id RegistrationToken -> m (Maybe RegistrationToken)
+findById (Id registrationTokenId) = findOneWithKV [Se.Is BeamRT.id $ Se.Eq registrationTokenId]
 
-setVerified :: (L.MonadFlow m, MonadTime m) => Id RegistrationToken -> m (MeshResult ())
+setVerified :: (L.MonadFlow m, MonadTime m, Log m) => Id RegistrationToken -> m ()
 setVerified (Id rtId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
-  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamRT.verified True,
-          Se.Set BeamRT.updatedAt now
-        ]
-        [Se.Is BeamRT.id (Se.Eq rtId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamRT.verified True,
+      Se.Set BeamRT.updatedAt now
+    ]
+    [Se.Is BeamRT.id (Se.Eq rtId)]
 
-findByToken :: L.MonadFlow m => RegToken -> m (Maybe RegistrationToken)
-findByToken token = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamRT.token $ Se.Eq token]
-    Nothing -> pure Nothing
+findByToken :: (L.MonadFlow m, Log m) => RegToken -> m (Maybe RegistrationToken)
+findByToken token = findOneWithKV [Se.Is BeamRT.token $ Se.Eq token]
 
-updateAttempts :: (L.MonadFlow m, MonadTime m) => Int -> Id RegistrationToken -> m (MeshResult ())
+updateAttempts :: (L.MonadFlow m, MonadTime m, Log m) => Int -> Id RegistrationToken -> m ()
 updateAttempts attempts (Id rtId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
-  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamRT.attempts attempts,
-          Se.Set BeamRT.updatedAt now
-        ]
-        [Se.Is BeamRT.id (Se.Eq rtId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamRT.attempts attempts,
+      Se.Set BeamRT.updatedAt now
+    ]
+    [Se.Is BeamRT.id (Se.Eq rtId)]
 
-deleteByPersonId :: L.MonadFlow m => Id Person -> m ()
-deleteByPersonId (Id personId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      void $
-        KV.deleteWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [Se.Is BeamRT.entityId (Se.Eq personId)]
-    Nothing -> pure ()
+deleteByPersonId :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamRT.entityId (Se.Eq personId)]
 
-deleteByPersonIdExceptNew :: L.MonadFlow m => Id Person -> Id RegistrationToken -> m ()
-deleteByPersonIdExceptNew (Id personId) (Id newRT) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      void $
-        KV.deleteWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [Se.And [Se.Is BeamRT.entityId (Se.Eq personId), Se.Is BeamRT.id (Se.Not $ Se.Eq newRT)]]
-    Nothing -> pure ()
+deleteByPersonIdExceptNew :: (L.MonadFlow m, Log m) => Id Person -> Id RegistrationToken -> m ()
+deleteByPersonIdExceptNew (Id personId) (Id newRT) = deleteWithKV [Se.And [Se.Is BeamRT.entityId (Se.Eq personId), Se.Is BeamRT.id (Se.Not $ Se.Eq newRT)]]
 
-findAllByPersonId :: L.MonadFlow m => Id Person -> m [RegistrationToken]
-findAllByPersonId personId = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamRegistrationTokenToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamRT.entityId $ Se.Eq $ getId personId]
-    Nothing -> pure []
+findAllByPersonId :: (L.MonadFlow m, Log m) => Id Person -> m [RegistrationToken]
+findAllByPersonId personId = findAllWithKV [Se.Is BeamRT.entityId $ Se.Eq $ getId personId]
 
-getAlternateNumberAttempts :: L.MonadFlow m => Id Person -> m Int
-getAlternateNumberAttempts (Id personId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamRT.RegistrationTokenT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      rt <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamRT.entityId $ Se.Eq personId]
-      case rt of
-        Right (Just x) -> do
-          let rt' = transformBeamRegistrationTokenToDomain x
-          let attempts = DRT.attempts rt'
-          pure attempts
-        _ -> pure 0
-    Nothing -> pure 0
+getAlternateNumberAttempts :: (L.MonadFlow m, Log m) => Id Person -> m Int
+getAlternateNumberAttempts (Id personId) = findOneWithKV [Se.Is BeamRT.entityId $ Se.Eq personId] <&> maybe 0 DRT.attempts
 
-transformBeamRegistrationTokenToDomain :: BeamRT.RegistrationToken -> RegistrationToken
-transformBeamRegistrationTokenToDomain BeamRT.RegistrationTokenT {..} = do
-  RegistrationToken
-    { id = Id id,
-      token = token,
-      attempts = attempts,
-      authMedium = authMedium,
-      authType = authType,
-      authValueHash = authValueHash,
-      verified = verified,
-      authExpiry = authExpiry,
-      tokenExpiry = tokenExpiry,
-      entityId = entityId,
-      merchantId = merchantId,
-      entityType = entityType,
-      createdAt = createdAt,
-      updatedAt = updatedAt,
-      info = info,
-      alternateNumberAttempts = alternateNumberAttempts
-    }
+instance FromTType' BeamRT.RegistrationToken RegistrationToken where
+  fromTType' BeamRT.RegistrationTokenT {..} = do
+    pure $
+      Just
+        RegistrationToken
+          { id = Id id,
+            token = token,
+            attempts = attempts,
+            authMedium = authMedium,
+            authType = authType,
+            authValueHash = authValueHash,
+            verified = verified,
+            authExpiry = authExpiry,
+            tokenExpiry = tokenExpiry,
+            entityId = entityId,
+            merchantId = merchantId,
+            entityType = entityType,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            info = info,
+            alternateNumberAttempts = alternateNumberAttempts
+          }
 
-transformDomainRegistrationTokenToBeam :: RegistrationToken -> BeamRT.RegistrationToken
-transformDomainRegistrationTokenToBeam RegistrationToken {..} =
-  BeamRT.RegistrationTokenT
-    { BeamRT.id = getId id,
-      BeamRT.token = token,
-      BeamRT.attempts = attempts,
-      BeamRT.authMedium = authMedium,
-      BeamRT.authType = authType,
-      BeamRT.authValueHash = authValueHash,
-      BeamRT.verified = verified,
-      BeamRT.authExpiry = authExpiry,
-      BeamRT.tokenExpiry = tokenExpiry,
-      BeamRT.entityId = entityId,
-      BeamRT.merchantId = merchantId,
-      BeamRT.entityType = entityType,
-      BeamRT.createdAt = createdAt,
-      BeamRT.updatedAt = updatedAt,
-      BeamRT.info = info,
-      BeamRT.alternateNumberAttempts = alternateNumberAttempts
-    }
+instance ToTType' BeamRT.RegistrationToken RegistrationToken where
+  toTType' RegistrationToken {..} = do
+    BeamRT.RegistrationTokenT
+      { BeamRT.id = getId id,
+        BeamRT.token = token,
+        BeamRT.attempts = attempts,
+        BeamRT.authMedium = authMedium,
+        BeamRT.authType = authType,
+        BeamRT.authValueHash = authValueHash,
+        BeamRT.verified = verified,
+        BeamRT.authExpiry = authExpiry,
+        BeamRT.tokenExpiry = tokenExpiry,
+        BeamRT.entityId = entityId,
+        BeamRT.merchantId = merchantId,
+        BeamRT.entityType = entityType,
+        BeamRT.createdAt = createdAt,
+        BeamRT.updatedAt = updatedAt,
+        BeamRT.info = info,
+        BeamRT.alternateNumberAttempts = alternateNumberAttempts
+      }

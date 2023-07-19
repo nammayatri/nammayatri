@@ -34,12 +34,9 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
-
-instance IsString Money where
-  fromString = show
 
 instance FromField Domain.RideStatus where
   fromField = fromFieldEnum
@@ -130,35 +127,6 @@ rideTMod =
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at",
       numberOfDeviation = B.fieldNamed "number_of_deviation"
-    }
-
-defaultRide :: Ride
-defaultRide =
-  RideT
-    { id = "",
-      bookingId = "",
-      shortId = "",
-      merchantId = Nothing,
-      status = "",
-      driverId = "",
-      otp = "",
-      trackingUrl = "",
-      fare = Nothing,
-      traveledDistance = "",
-      chargeableDistance = Nothing,
-      driverArrivalTime = Nothing,
-      tripStartTime = Nothing,
-      tripEndTime = Nothing,
-      tripStartLat = Nothing,
-      tripStartLon = Nothing,
-      tripEndLat = Nothing,
-      tripEndLon = Nothing,
-      pickupDropOutsideOfThreshold = Nothing,
-      fareParametersId = Nothing,
-      distanceCalculationFailed = Nothing,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate,
-      numberOfDeviation = Nothing
     }
 
 instance Serialize Ride where

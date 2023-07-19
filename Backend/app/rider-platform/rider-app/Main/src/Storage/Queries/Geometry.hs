@@ -20,8 +20,9 @@ import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
+import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id (Id (..))
-import Lib.Utils
+import Lib.Utils ()
 import Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Geometry as BeamG
 

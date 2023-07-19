@@ -31,7 +31,7 @@ import Kernel.External.Encryption (DbHash)
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -97,28 +97,6 @@ paymentOrderTMod =
       environment = B.fieldNamed "environment",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
-    }
-
-defaultPaymentOrder :: PaymentOrder
-defaultPaymentOrder =
-  PaymentOrderT
-    { id = "",
-      shortId = "",
-      customerId = "",
-      merchantId = "",
-      amount = "",
-      currency = "",
-      status = "",
-      webPaymentLink = Nothing,
-      iframePaymentLink = Nothing,
-      mobilePaymentLink = Nothing,
-      clientAuthTokenEncrypted = "",
-      clientAuthTokenHash = "",
-      clientAuthTokenExpiry = defaultUTCDate,
-      getUpiDeepLinksOption = Nothing,
-      environment = Nothing,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
     }
 
 instance Serialize PaymentOrder where

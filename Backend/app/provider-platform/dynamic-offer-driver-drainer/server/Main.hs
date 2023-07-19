@@ -94,12 +94,13 @@ main = do
           putStrLn @String "Initializing DB and KV Connections..."
           runFlow
             flowRt
-            ( prepareConnection $
+            ( prepareConnection
                 ConnectionConfig
                   { esqDBCfg = appCfg.esqDBCfg,
                     esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
                     hedisClusterCfg = appCfg.hedisClusterCfg
                   }
+                appCfg.tables
             )
           -- Left (e :: SomeException) -> putStrLn @String ("Exception thrown while running dbConfig: " <> show e)
           -- Right _ -> do

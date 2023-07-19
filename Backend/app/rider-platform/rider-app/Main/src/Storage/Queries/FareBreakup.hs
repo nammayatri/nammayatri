@@ -33,7 +33,7 @@ create :: L.MonadFlow m => FareBreakup -> m ()
 create fareBreakup = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamFB.FareBreakupT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainFareBreakupToBeam fareBreakup)
     Nothing -> pure ()
@@ -52,7 +52,7 @@ findAllByBookingId :: L.MonadFlow m => Id Booking -> m [FareBreakup]
 findAllByBookingId bookingId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamFB.FareBreakupT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> either (pure []) (transformBeamFareBreakupToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamFB.bookingId $ Se.Eq $ getId bookingId]
     Nothing -> pure []
@@ -68,7 +68,7 @@ transformBeamFareBreakupToDomain BeamFB.FareBreakupT {..} = do
 
 transformDomainFareBreakupToBeam :: FareBreakup -> BeamFB.FareBreakup
 transformDomainFareBreakupToBeam FareBreakup {..} =
-  BeamFB.defaultFareBreakup
+  BeamFB.FareBreakupT
     { BeamFB.id = getId id,
       BeamFB.bookingId = getId bookingId,
       BeamFB.description = description,

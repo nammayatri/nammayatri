@@ -29,7 +29,7 @@ createSpecialZoneQuote :: L.MonadFlow m => SpecialZoneQuote -> m (MeshResult ())
 createSpecialZoneQuote specialZoneQuote = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSZQ.SpecialZoneQuoteT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainSpecialZoneQuoteToBeam specialZoneQuote)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -41,7 +41,7 @@ findById :: (L.MonadFlow m) => Id SpecialZoneQuote -> m (Maybe SpecialZoneQuote)
 findById specialZoneQuoteId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSZQ.SpecialZoneQuoteT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamSpecialZoneQuoteToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSZQ.id $ Se.Eq (getId specialZoneQuoteId)]
     Nothing -> pure Nothing
@@ -55,7 +55,7 @@ transformBeamSpecialZoneQuoteToDomain BeamSZQ.SpecialZoneQuoteT {..} = do
 
 transformDomainSpecialZoneQuoteToBeam :: SpecialZoneQuote -> BeamSZQ.SpecialZoneQuote
 transformDomainSpecialZoneQuoteToBeam SpecialZoneQuote {..} =
-  BeamSZQ.defaultSpecialZoneQuote
+  BeamSZQ.SpecialZoneQuoteT
     { BeamSZQ.id = getId id,
       BeamSZQ.quoteId = quoteId
     }

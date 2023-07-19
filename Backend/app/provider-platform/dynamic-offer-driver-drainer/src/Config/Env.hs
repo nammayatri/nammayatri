@@ -30,7 +30,7 @@ getDatabasePassword :: IO [Char]
 getDatabasePassword = fromMaybe "nodefaultvalue" <$> SE.lookupEnv dbPasswordEnvKey
 
 getDBSyncStream :: IO [Char]
-getDBSyncStream = fromMaybe "db-sync-stream" <$> SE.lookupEnv dbSyncStreamEnvKey
+getDBSyncStream = fromMaybe "driver-db-sync-stream" <$> SE.lookupEnv dbSyncStreamEnvKey
 
 getDbPool :: IO Int
 getDbPool = fromMaybe 1 . (>>= readMaybe) <$> SE.lookupEnv dbPoolEnvKey

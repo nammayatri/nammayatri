@@ -33,7 +33,8 @@ import qualified Domain.Types.Maps.PlaceNameCache as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
+import Kernel.Types.Common hiding (id)
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -93,19 +94,6 @@ placeNameCacheTMod =
       addressComponents = B.fieldNamed "address_components"
     }
 
-defaultPlaceNameCache :: PlaceNameCache
-defaultPlaceNameCache =
-  PlaceNameCacheT
-    { id = "",
-      formattedAddress = Nothing,
-      plusCode = Nothing,
-      lat = 0.0,
-      lon = 0.0,
-      placeId = Nothing,
-      geoHash = Nothing,
-      addressComponents = []
-    }
-
 instance Serialize PlaceNameCache where
   put = error "undefined"
   get = error "undefined"
@@ -121,4 +109,4 @@ placeNameCacheToPSModifiers :: M.Map Text (A.Value -> A.Value)
 placeNameCacheToPSModifiers =
   M.empty
 
-$(enableKVPG ''PlaceNameCacheT ['id] [])
+$(enableKVPG ''PlaceNameCacheT ['id] [['placeId], ['geoHash]])

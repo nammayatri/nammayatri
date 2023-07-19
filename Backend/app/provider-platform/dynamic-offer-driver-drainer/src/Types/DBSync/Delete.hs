@@ -357,6 +357,7 @@ data DeleteModel
   | SearchRequestSpecialZoneDelete
   | SearchTryDelete
   | VehicleDelete
+  deriving (Generic, Show)
 
 -- getTagDelete :: DeleteModel -> Text
 -- getTagDelete TxnOfferInfoDelete = "TxnOfferInfoOptions"

@@ -1,3 +1,4 @@
+{-# LANGUAGE InstanceSigs #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -12,9 +13,9 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use tuple-section" #-}
-{-# OPTIONS_GHC -Wno-unused-record-wildcards #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Storage.Queries.Person where
 
@@ -33,10 +34,7 @@ import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.Ride as Ride
 import Domain.Types.Vehicle as DV
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import Kernel.External.Maps as Maps
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
@@ -51,24 +49,30 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Value)
 import Kernel.Utils.GenericPretty
 import Kernel.Utils.Version
-import Lib.Utils (setMeshConfig)
+import Lib.Utils
+  ( FromTType' (fromTType'),
+    ToTType' (toTType'),
+    createWithKV,
+    deleteWithKV,
+    findAllWithKV,
+    findAllWithOptionsKV,
+    findOneWithKV,
+    updateWithKV,
+  )
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Booking.BookingLocation as BeamBL
 import qualified Storage.Beam.DriverInformation as BeamDI
-import qualified Storage.Beam.DriverLocation as BeamDL
 import qualified Storage.Beam.DriverQuote as BeamDQ
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Vehicle as BeamV
-import qualified Storage.Queries.Booking as QB
-import qualified Storage.Queries.Booking.BookingLocation as QueriesBL
-import qualified Storage.Queries.DriverInformation as QueriesDI
-import qualified Storage.Queries.DriverLocation as QDL
+-- import qualified Storage.Queries.DriverInformation as QueriesDI
+
+import Storage.Queries.Booking ()
 import qualified Storage.Queries.DriverLocation as QueriesDL
-import qualified Storage.Queries.DriverQuote as QDQ
-import qualified Storage.Queries.DriverQuote as QueriesDQ
-import qualified Storage.Queries.Vehicle as QV
-import qualified Storage.Queries.Vehicle as QueriesV
+import Storage.Queries.DriverQuote ()
+import Storage.Queries.Instances.DriverInformation ()
+import Storage.Queries.Vehicle ()
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverOnboarding.DriverLicense
 import Storage.Tabular.DriverOnboarding.DriverRCAssociation
@@ -77,27 +81,11 @@ import Storage.Tabular.Person as TPerson
 import Storage.Tabular.Ride
 import Storage.Tabular.Vehicle as Vehicle
 
-create :: L.MonadFlow m => Person.Person -> m (MeshResult BeamP.Person)
-create person = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWithKVConnector dbConf' updatedMeshConfig (transformDomainPersonToBeam person)
-    Nothing -> pure $ Left $ MKeyNotFound "DB Config not found"
+create :: (L.MonadFlow m, Log m) => Person.Person -> m ()
+create = createWithKV
 
 findById :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Person)
-findById (Id personId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamP.id $ Se.Eq personId]
-      case result of
-        Right (Just p) -> transformBeamPersonToDomain p
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+findById (Id personId) = findOneWithKV [Se.Is BeamP.id $ Se.Eq personId]
 
 data FullDriver = FullDriver
   { person :: Person,
@@ -151,74 +139,26 @@ getDriversList ::
   (L.MonadFlow m, Log m) =>
   [DriverInformation] ->
   m [Person]
-getDriversList driverInfos = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamP.id $ Se.In personsKeys]
-      case result of
-        Right result' -> catMaybes <$> mapM transformBeamPersonToDomain result'
-        _ -> pure []
-    Nothing -> pure []
+getDriversList driverInfos = findAllWithKV [Se.Is BeamP.id $ Se.In personsKeys]
   where
     personsKeys = getId <$> fetchDriverIDsFromInfo driverInfos
 
 getDriversByIdIn :: (L.MonadFlow m, Log m) => [Id Person] -> m [Person]
-getDriversByIdIn personIds = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamP.id $ Se.In $ getId <$> personIds]
-      case result of
-        Right result' -> catMaybes <$> mapM transformBeamPersonToDomain result'
-        _ -> pure []
-    Nothing -> pure []
+getDriversByIdIn personIds = findAllWithKV [Se.Is BeamP.id $ Se.In $ getId <$> personIds]
 
 getDriverInformations ::
-  L.MonadFlow m =>
+  (L.MonadFlow m, Log m) =>
   [DriverLocation] ->
   m [DriverInformation]
-getDriverInformations driverLocations = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <-
-        KV.findAllWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [ Se.And
-              ( [Se.Is BeamDI.active $ Se.Eq True]
-                  <> [Se.Is BeamDI.driverId $ Se.In personKeys]
-              )
-          ]
-      case result of
-        Left _ -> pure []
-        Right result' -> pure $ QueriesDI.transformBeamDriverInformationToDomain <$> result'
-    Nothing -> pure []
+getDriverInformations driverLocations =
+  findAllWithKV
+    [ Se.And
+        ( [Se.Is BeamDI.active $ Se.Eq True]
+            <> [Se.Is BeamDI.driverId $ Se.In personKeys]
+        )
+    ]
   where
     personKeys = getId <$> fetchDriverIDsFromLocations driverLocations
-
-getDriverLocations ::
-  L.MonadFlow m =>
-  UTCTime ->
-  m [DriverLocation]
-getDriverLocations before = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamDL.updatedAt $ Se.LessThan before]
-      case result of
-        Left _ -> pure []
-        Right result' -> pure $ QueriesDL.transformBeamDriverLocationToDomain <$> result'
-    Nothing -> pure []
 
 getDriversWithOutdatedLocationsToMakeInactive :: (L.MonadFlow m, Log m, MonadTime m) => UTCTime -> m [Person]
 getDriversWithOutdatedLocationsToMakeInactive before = do
@@ -280,48 +220,12 @@ buildFullDriver personHashMap vehicleHashMap driverInfoHashMap location = do
   info <- HashMap.lookup driverId' driverInfoHashMap
   Just $ mkFullDriver (person, location, info, vehicle)
 
-getDriverLocs ::
-  L.MonadFlow m =>
-  [Id Person] ->
-  Id Merchant ->
-  m [DriverLocation]
-getDriverLocs driverIds (Id merchantId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      driverLocs <-
-        KV.findAllWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [ Se.And
-              ( [Se.Is BeamDL.merchantId $ Se.Eq merchantId]
-                  <> [Se.Is BeamDL.driverId $ Se.In personKeys]
-              )
-          ]
-      case driverLocs of
-        Left _ -> pure []
-        Right driverLocs' -> pure $ QDL.transformBeamDriverLocationToDomain <$> driverLocs'
-    Nothing -> pure []
-  where
-    personKeys = getId <$> driverIds
-
 getDriverInfos ::
-  L.MonadFlow m =>
+  (L.MonadFlow m, Log m) =>
   [DriverLocation] ->
   m [DriverInformation]
 getDriverInfos driverLocs = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      driverInfos <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamDI.driverId $ Se.In personKeys]
-      case driverInfos of
-        Left _ -> pure []
-        Right driverInfos' -> pure $ QueriesDI.transformBeamDriverInformationToDomain <$> driverInfos'
-    Nothing -> pure []
+  findAllWithKV [Se.Is BeamDI.driverId $ Se.In personKeys]
   where
     personKeys = getId <$> fetchDriverIDsFromLocations driverLocs
 
@@ -340,20 +244,10 @@ getOnRideStuckDriverIds = do
       pure (r ^. RideDriverId)
 
 getVehicles ::
-  L.MonadFlow m =>
+  (L.MonadFlow m, Log m) =>
   [DriverInformation] ->
   m [Vehicle]
-getVehicles driverInfo = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamV.VehicleT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      vehicles <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamV.driverId $ Se.In personKeys]
-      case vehicles of
-        Left _ -> pure []
-        Right vehicles' -> pure $ QueriesV.transformBeamVehicleToDomain <$> vehicles'
-    Nothing -> pure []
+getVehicles driverInfo = findAllWithKV [Se.Is BeamV.driverId $ Se.In personKeys]
   where
     personKeys = getId <$> fetchDriverIDsFromInfo driverInfo
 
@@ -361,17 +255,7 @@ getDrivers ::
   (L.MonadFlow m, Log m) =>
   [Vehicle] ->
   m [Person]
-getDrivers vehicles = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      persons <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamP.id $ Se.In personKeys]
-      case persons of
-        Left _ -> pure []
-        Right persons' -> catMaybes <$> mapM transformBeamPersonToDomain persons'
-    Nothing -> pure []
+getDrivers vehicles = findAllWithKV [Se.Is BeamP.id $ Se.In personKeys]
   where
     personKeys = getId <$> fetchDriverIDsFromVehicle vehicles
 
@@ -379,47 +263,22 @@ getDriversWithMerchID ::
   (L.MonadFlow m, Log m) =>
   Id Merchant ->
   m [Person]
-getDriversWithMerchID (Id merchantId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      persons <-
-        KV.findAllWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [ Se.And
-              ( [Se.Is BeamP.merchantId $ Se.Eq merchantId]
-                  <> [Se.Is BeamP.role $ Se.Eq Person.DRIVER]
-              )
-          ]
-      case persons of
-        Left _ -> pure []
-        Right persons' -> catMaybes <$> mapM transformBeamPersonToDomain persons'
-    Nothing -> pure []
+getDriversWithMerchID (Id merchantId) =
+  findAllWithKV
+    [ Se.And
+        ( [Se.Is BeamP.merchantId $ Se.Eq merchantId]
+            <> [Se.Is BeamP.role $ Se.Eq Person.DRIVER]
+        )
+    ]
 
 getDriverQuote ::
   (L.MonadFlow m, Log m) =>
   [Person] ->
   m [DriverQuote]
-getDriverQuote persons = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDQ.DriverQuoteT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      do
-        res <-
-          KV.findAllWithKVConnector
-            dbConf'
-            updatedMeshConfig
-            [ Se.And [Se.Is BeamDQ.driverId $ Se.In personKeys, Se.Is BeamDQ.status $ Se.Eq DriverQuote.Active]
-            ]
-        case res of
-          Right res' -> catMaybes <$> traverse QueriesDQ.transformBeamDriverQuoteToDomain res'
-          _ -> pure []
-    Nothing -> pure []
+getDriverQuote persons =
+  findAllWithKV
+    [ Se.And [Se.Is BeamDQ.driverId $ Se.In personKeys, Se.Is BeamDQ.status $ Se.Eq DriverQuote.Active]
+    ]
   where
     personKeys = getId <$> fetchDriverIDsFromPersons persons
 
@@ -427,46 +286,18 @@ getBookingInfo ::
   (L.MonadFlow m, Log m) =>
   [DriverQuote] ->
   m [Booking.Booking]
-getBookingInfo driverQuote = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamB.BookingT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      res <-
-        KV.findAllWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [ Se.And [Se.Is BeamB.quoteId $ Se.In personsKeys, Se.Is BeamB.status $ Se.Eq Booking.TRIP_ASSIGNED]
-          ]
-      case res of
-        Right res' -> do
-          x <- mapM QB.transformBeamBookingToDomain res'
-          pure $ catMaybes x
-        _ -> pure []
-    Nothing -> pure []
+getBookingInfo driverQuote =
+  findAllWithKV
+    [ Se.And [Se.Is BeamB.quoteId $ Se.In personsKeys, Se.Is BeamB.status $ Se.Eq Booking.TRIP_ASSIGNED]
+    ]
   where
     personsKeys = fetchDriverIDsTextFromQuote driverQuote
 
 getBookingLocs ::
-  L.MonadFlow m =>
+  (L.MonadFlow m, Log m) =>
   [Booking.Booking] ->
   m [BookingLocation]
-getBookingLocs bookings = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      res <-
-        KV.findAllWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [Se.Is BeamBL.id $ Se.In bookingKeys]
-      case res of
-        Left _ -> pure []
-        Right res' -> pure $ QueriesBL.transformBeamBookingLocationToDomain <$> res'
-    Nothing -> pure []
+getBookingLocs bookings = findAllWithKV [Se.Is BeamBL.id $ Se.In bookingKeys]
   where
     bookingKeys = getId <$> fetchToLocationIDFromBooking bookings
 
@@ -494,103 +325,23 @@ fetchDriverIDsFromVehicle = map (.driverId)
 fetchDriverIDsTextFromQuote :: [DriverQuote] -> [Text]
 fetchDriverIDsTextFromQuote = map (.driverId.getId)
 
-findAllDriverLocationWithSeConditions :: L.MonadFlow m => [Se.Clause Postgres BeamDL.DriverLocationT] -> m [DriverLocation]
-findAllDriverLocationWithSeConditions conditions = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDL.DriverLocationT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> either (pure []) (QDL.transformBeamDriverLocationToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig conditions
-    Nothing -> pure []
+findAllDriverInformationWithSeConditions :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamDI.DriverInformationT] -> m [DriverInformation]
+findAllDriverInformationWithSeConditions = findAllWithKV
 
-findAllDriverInformationWithSeConditions :: L.MonadFlow m => [Se.Clause Postgres BeamDI.DriverInformationT] -> m [DriverInformation]
-findAllDriverInformationWithSeConditions conditions = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDI.DriverInformationT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> either (pure []) (QueriesDI.transformBeamDriverInformationToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig conditions
-    Nothing -> pure []
+findAllVehiclesWithSeConditions :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamV.VehicleT] -> m [Vehicle]
+findAllVehiclesWithSeConditions = findAllWithKV
 
-findAllVehiclesWithSeConditions :: L.MonadFlow m => [Se.Clause Postgres BeamV.VehicleT] -> m [Vehicle]
-findAllVehiclesWithSeConditions conditions = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamV.VehicleT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> either (pure []) (QV.transformBeamVehicleToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig conditions
-    Nothing -> pure []
+findAllBookingsWithSeConditions :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamB.BookingT] -> m [Booking.Booking]
+findAllBookingsWithSeConditions = findAllWithKV
 
-findAllBookingsWithSeConditions :: L.MonadFlow m => [Se.Clause Postgres BeamB.BookingT] -> m [Booking.Booking]
-findAllBookingsWithSeConditions conditions = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamB.BookingT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      bookingL <-
-        KV.findAllWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          conditions
-      case bookingL of
-        Right x -> catMaybes <$> traverse QB.transformBeamBookingToDomain x
-        _ -> pure []
-    Nothing -> pure []
-
-findAllDriverQuoteWithSeConditions :: L.MonadFlow m => [Se.Clause Postgres BeamDQ.DriverQuoteT] -> m [DriverQuote]
-findAllDriverQuoteWithSeConditions conditions = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDQ.DriverQuoteT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      driverQuoteL <-
-        KV.findAllWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          conditions
-      case driverQuoteL of
-        Right x -> catMaybes <$> traverse QDQ.transformBeamDriverQuoteToDomain x
-        _ -> pure []
-    Nothing -> pure []
+findAllDriverQuoteWithSeConditions :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamDQ.DriverQuoteT] -> m [DriverQuote]
+findAllDriverQuoteWithSeConditions = findAllWithKV
 
 findAllPersonWithSeConditionsNameAsc :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamP.PersonT] -> m [Person]
-findAllPersonWithSeConditionsNameAsc conditions = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> do
-      p <-
-        KV.findAllWithOptionsKVConnector
-          dbCOnf'
-          updatedMeshConfig
-          conditions
-          (Se.Asc BeamP.firstName)
-          Nothing
-          Nothing
-      case p of
-        Right x -> catMaybes <$> traverse transformBeamPersonToDomain x
-        _ -> pure []
-    Nothing -> pure []
+findAllPersonWithSeConditionsNameAsc conditions = findAllWithOptionsKV conditions (Se.Asc BeamP.firstName) Nothing Nothing
 
 findAllPersonWithSeConditions :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamP.PersonT] -> m [Person]
-findAllPersonWithSeConditions conditions = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> do
-      p <-
-        KV.findAllWithKVConnector
-          dbCOnf'
-          updatedMeshConfig
-          conditions
-      case p of
-        Right x -> catMaybes <$> traverse transformBeamPersonToDomain x
-        _ -> pure []
-    Nothing -> pure []
+findAllPersonWithSeConditions = findAllWithKV
 
 -- findAllDriversByIdsFirstNameAsc' ::
 --   (L.MonadFlow m, Log m) =>
@@ -706,115 +457,41 @@ fetchDriverInfo merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumb
     joinOnlyWhenJust mbFilter cond = maybe (val False) (const cond) mbFilter
 
 findByIdAndRoleAndMerchantId :: (L.MonadFlow m, Log m) => Id Person -> Person.Role -> Id Merchant -> m (Maybe Person)
-findByIdAndRoleAndMerchantId (Id pid) role_ (Id merchantId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamP.id $ Se.Eq pid, Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
-      case result of
-        Right (Just p) -> transformBeamPersonToDomain p
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+findByIdAndRoleAndMerchantId (Id pid) role_ (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.id $ Se.Eq pid, Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
 findAllByMerchantId :: (L.MonadFlow m, Log m) => [Person.Role] -> Id Merchant -> m [Person]
-findAllByMerchantId roles (Id merchantId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.In roles]]
-      case result of
-        Right p -> catMaybes <$> traverse transformBeamPersonToDomain p
-        _ -> pure []
-    Nothing -> pure []
+findAllByMerchantId roles (Id merchantId) = findAllWithKV [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.In roles]]
 
 findAdminsByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [Person]
-findAdminsByMerchantId (Id merchantId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.Eq Person.ADMIN]]
-      case result of
-        Right p -> catMaybes <$> traverse transformBeamPersonToDomain p
-        _ -> pure []
-    Nothing -> pure []
+findAdminsByMerchantId (Id merchantId) = findAllWithKV [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.role $ Se.Eq Person.ADMIN]]
 
 findByMobileNumberAndMerchant :: (L.MonadFlow m, Log m) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
-findByMobileNumberAndMerchant countryCode mobileNumberHash (Id merchantId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <-
-        KV.findWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [ Se.And
-              [ Se.Is BeamP.mobileCountryCode $ Se.Eq $ Just countryCode,
-                Se.Is BeamP.merchantId $ Se.Eq merchantId,
-                Se.Or [Se.Is BeamP.mobileNumberHash $ Se.Eq $ Just mobileNumberHash, Se.Is BeamP.alternateMobileNumberHash $ Se.Eq $ Just mobileNumberHash]
-              ]
-          ]
-      case result of
-        Right (Just p) -> transformBeamPersonToDomain p
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+findByMobileNumberAndMerchant countryCode mobileNumberHash (Id merchantId) =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamP.mobileCountryCode $ Se.Eq $ Just countryCode,
+          Se.Is BeamP.merchantId $ Se.Eq merchantId,
+          Se.Or [Se.Is BeamP.mobileNumberHash $ Se.Eq $ Just mobileNumberHash, Se.Is BeamP.alternateMobileNumberHash $ Se.Eq $ Just mobileNumberHash]
+        ]
+    ]
 
 findByIdentifierAndMerchant :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> m (Maybe Person)
-findByIdentifierAndMerchant (Id merchantId) identifier_ = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamP.identifier $ Se.Eq $ Just identifier_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
-      case result of
-        Right (Just p) -> transformBeamPersonToDomain p
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+findByIdentifierAndMerchant (Id merchantId) identifier_ = findOneWithKV [Se.And [Se.Is BeamP.identifier $ Se.Eq $ Just identifier_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
 findByEmailAndMerchant :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> m (Maybe Person)
-findByEmailAndMerchant (Id merchantId) email_ = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamP.email $ Se.Eq $ Just email_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
-      case result of
-        Right (Just p) -> transformBeamPersonToDomain p
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+findByEmailAndMerchant (Id merchantId) email_ = findOneWithKV [Se.And [Se.Is BeamP.email $ Se.Eq $ Just email_, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
 findByRoleAndMobileNumberAndMerchantId :: (L.MonadFlow m, Log m, EncFlow m r) => Role -> Text -> Text -> Id Merchant -> m (Maybe Person)
-findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber_ (Id merchantId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
-  mobileNumberDbHash <- getDbHash mobileNumber_
-  case dbConf of
-    Just dbConf' -> do
-      result <-
-        KV.findWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [ Se.And
-              [ Se.Is BeamP.role $ Se.Eq role_,
-                Se.Is BeamP.mobileCountryCode $ Se.Eq $ Just countryCode,
-                Se.Is BeamP.mobileNumberHash $ Se.Eq $ Just mobileNumberDbHash,
-                Se.Is BeamP.merchantId $ Se.Eq merchantId
-              ]
-          ]
-      case result of
-        Right (Just p) -> transformBeamPersonToDomain p
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber (Id merchantId) = do
+  mobileNumberDbHash <- getDbHash mobileNumber
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamP.role $ Se.Eq role_,
+          Se.Is BeamP.mobileCountryCode $ Se.Eq $ Just countryCode,
+          Se.Is BeamP.mobileNumberHash $ Se.Eq $ Just mobileNumberDbHash,
+          Se.Is BeamP.merchantId $ Se.Eq merchantId
+        ]
+    ]
 
 -- personDriverTable ::
 --   From
@@ -847,71 +524,47 @@ findAllDriverIdExceptProvided (Id merchantId) driverIdsToBeExcluded = do
     personIdToDrivrId :: Id Person -> Id Driver
     personIdToDrivrId = cast
 
-updateMerchantIdAndMakeAdmin :: (L.MonadFlow m, MonadTime m) => Id Person -> Id Merchant -> m (MeshResult ())
+updateMerchantIdAndMakeAdmin :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Id Merchant -> m ()
 updateMerchantIdAndMakeAdmin (Id personId) (Id merchantId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamP.merchantId merchantId,
-          Se.Set BeamP.role Person.ADMIN,
-          Se.Set BeamP.updatedAt now
-        ]
-        [Se.Is BeamP.id (Se.Eq personId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamP.merchantId merchantId,
+      Se.Set BeamP.role Person.ADMIN,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
 
-updateName :: (L.MonadFlow m, MonadTime m) => Id Person -> Text -> m (MeshResult ())
+updateName :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Text -> m ()
 updateName (Id personId) name = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamP.firstName name,
-          Se.Set BeamP.updatedAt now
-        ]
-        [Se.Is BeamP.id (Se.Eq personId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamP.firstName name,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
 
-updatePersonRec :: (L.MonadFlow m, MonadTime m) => Id Person -> Person -> m (MeshResult ())
+updatePersonRec :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Person -> m ()
 updatePersonRec (Id personId) person = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamP.firstName $ person.firstName,
-          Se.Set BeamP.middleName $ person.middleName,
-          Se.Set BeamP.lastName $ person.lastName,
-          Se.Set BeamP.gender $ person.gender,
-          Se.Set BeamP.email $ person.email,
-          Se.Set BeamP.identifier $ person.identifier,
-          Se.Set BeamP.rating $ person.rating,
-          Se.Set BeamP.language $ person.language,
-          Se.Set BeamP.deviceToken $ person.deviceToken,
-          Se.Set BeamP.merchantId $ getId person.merchantId,
-          Se.Set BeamP.description $ person.description,
-          Se.Set BeamP.updatedAt now,
-          Se.Set BeamP.clientVersion (versionToText <$> person.clientVersion),
-          Se.Set BeamP.bundleVersion (versionToText <$> person.bundleVersion)
-        ]
-        [Se.Is BeamP.id (Se.Eq personId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamP.firstName $ person.firstName,
+      Se.Set BeamP.middleName $ person.middleName,
+      Se.Set BeamP.lastName $ person.lastName,
+      Se.Set BeamP.gender $ person.gender,
+      Se.Set BeamP.email $ person.email,
+      Se.Set BeamP.identifier $ person.identifier,
+      Se.Set BeamP.rating $ person.rating,
+      Se.Set BeamP.language $ person.language,
+      Se.Set BeamP.deviceToken $ person.deviceToken,
+      Se.Set BeamP.merchantId $ getId person.merchantId,
+      Se.Set BeamP.description $ person.description,
+      Se.Set BeamP.updatedAt now,
+      Se.Set BeamP.clientVersion (versionToText <$> person.clientVersion),
+      Se.Set BeamP.bundleVersion (versionToText <$> person.bundleVersion)
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
 
-updatePersonVersions :: (L.MonadFlow m, MonadTime m) => Person -> Maybe Version -> Maybe Version -> m ()
+updatePersonVersions :: (L.MonadFlow m, MonadTime m, Log m) => Person -> Maybe Version -> Maybe Version -> m ()
 updatePersonVersions person mbBundleVersion mbClientVersion =
   when
     ((isJust mbBundleVersion || isJust mbClientVersion) && (person.bundleVersion /= mbBundleVersion || person.clientVersion /= mbClientVersion))
@@ -919,125 +572,63 @@ updatePersonVersions person mbBundleVersion mbClientVersion =
       now <- getCurrentTime
       let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.bundleVersion)
           mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientVersion)
-      dbConf <- L.getOption KBT.PsqlDbCfg
-      let modelName = Se.modelTableName @BeamP.PersonT
-      let updatedMeshConfig = setMeshConfig modelName
-      case dbConf of
-        Just dbConf' ->
-          void $
-            KV.updateWoReturningWithKVConnector
-              dbConf'
-              updatedMeshConfig
-              [ Se.Set BeamP.clientVersion mbClientVersionText,
-                Se.Set BeamP.bundleVersion mbBundleVersionText,
-                Se.Set BeamP.updatedAt now
-              ]
-              [Se.Is BeamP.id (Se.Eq $ getId person.id)]
-        Nothing -> pure ()
-
-updateDeviceToken :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe FCMRecipientToken -> m (MeshResult ())
-updateDeviceToken (Id personId) mbDeviceToken = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
-  now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamP.deviceToken mbDeviceToken,
-          Se.Set BeamP.updatedAt now
-        ]
-        [Se.Is BeamP.id (Se.Eq personId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
-
-updateWhatsappNotificationEnrollStatus :: (L.MonadFlow m, MonadTime m) => Id Person -> Maybe Whatsapp.OptApiMethods -> m ()
-updateWhatsappNotificationEnrollStatus (Id personId) enrollStatus = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
-  now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      void $
-        KV.updateWoReturningWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [ Se.Set BeamP.whatsappNotificationEnrollStatus enrollStatus,
-            Se.Set BeamP.updatedAt now
-          ]
-          [Se.Is BeamP.id (Se.Eq personId)]
-    Nothing -> pure ()
-
-updateMobileNumberAndCode :: (L.MonadFlow m, MonadTime m, Log m, EncFlow m r) => Person -> m (MeshResult ())
-updateMobileNumberAndCode person = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
-  now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamP.mobileCountryCode $ person.mobileCountryCode,
-          Se.Set BeamP.mobileNumberEncrypted $ person.mobileNumber <&> unEncrypted . (.encrypted),
-          Se.Set BeamP.mobileNumberHash $ person.mobileNumber <&> (.hash),
-          Se.Set BeamP.unencryptedMobileNumber $ person.unencryptedMobileNumber,
+      updateWithKV
+        [ Se.Set BeamP.clientVersion mbClientVersionText,
+          Se.Set BeamP.bundleVersion mbBundleVersionText,
           Se.Set BeamP.updatedAt now
         ]
         [Se.Is BeamP.id (Se.Eq $ getId person.id)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-setIsNewFalse :: (L.MonadFlow m, MonadTime m) => Id Person -> m ()
+updateDeviceToken :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Maybe FCMRecipientToken -> m ()
+updateDeviceToken (Id personId) mbDeviceToken = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.deviceToken mbDeviceToken,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
+updateWhatsappNotificationEnrollStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Maybe Whatsapp.OptApiMethods -> m ()
+updateWhatsappNotificationEnrollStatus (Id personId) enrollStatus = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.whatsappNotificationEnrollStatus enrollStatus,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
+updateMobileNumberAndCode :: (L.MonadFlow m, MonadTime m, Log m, EncFlow m r) => Person -> m ()
+updateMobileNumberAndCode person = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.mobileCountryCode $ person.mobileCountryCode,
+      Se.Set BeamP.mobileNumberEncrypted $ person.mobileNumber <&> unEncrypted . (.encrypted),
+      Se.Set BeamP.mobileNumberHash $ person.mobileNumber <&> (.hash),
+      Se.Set BeamP.unencryptedMobileNumber $ person.unencryptedMobileNumber,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq $ getId person.id)]
+
+setIsNewFalse :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> m ()
 setIsNewFalse (Id personId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      void $
-        KV.updateWoReturningWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [ Se.Set BeamP.isNew False,
-            Se.Set BeamP.updatedAt now
-          ]
-          [Se.Is BeamP.id (Se.Eq personId)]
-    Nothing -> pure ()
+  updateWithKV
+    [ Se.Set BeamP.isNew False,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
 
-deleteById :: L.MonadFlow m => Id Person -> m ()
-deleteById (Id personId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      void $
-        KV.deleteWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [Se.Is BeamP.id (Se.Eq personId)]
-    Nothing -> pure ()
+deleteById :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteById (Id personId) = deleteWithKV [Se.Is BeamP.id (Se.Eq personId)]
 
-updateAverageRating :: (L.MonadFlow m, MonadTime m) => Id Person -> Centesimal -> m (MeshResult ())
+updateAverageRating :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Centesimal -> m ()
 updateAverageRating (Id personId) newAverageRating = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamP.rating (Just newAverageRating),
-          Se.Set BeamP.updatedAt now
-        ]
-        [Se.Is BeamP.id (Se.Eq personId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamP.rating (Just newAverageRating),
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
 
 data NearestDriversResult = NearestDriversResult
   { driverId :: Id Driver,
@@ -1118,56 +709,37 @@ getDriverLocsWithCond ::
   m [DriverLocation]
 getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry LatLong {..} radiusMeters = QueriesDL.getDriverLocsFromMerchId mbDriverPositionInfoExpiry LatLong {..} radiusMeters merchantId
 
-getDriverInfosWithCond :: L.MonadFlow m => [DriverLocation] -> Bool -> Bool -> m [DriverInformation]
-getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide = do
-  dbCOnf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDI.DriverInformationT
-      updatedMeshConfig = setMeshConfig modelName
-  case dbCOnf of
-    Just dbCOnf' -> do
-      either (pure []) (QueriesDI.transformBeamDriverInformationToDomain <$>)
-        <$> KV.findAllWithKVConnector
-          dbCOnf'
-          updatedMeshConfig
-          [ Se.And
-              ( [ Se.Is BeamDI.driverId $ Se.In personsKeys,
-                  Se.Or
-                    [ Se.And
-                        [ Se.Is BeamDI.mode $ Se.Eq Nothing,
-                          Se.Is BeamDI.active $ Se.Eq True
-                        ],
-                      Se.And
-                        [ Se.Is BeamDI.mode $ Se.Not $ Se.Eq Nothing,
-                          Se.Or
-                            [ Se.Is BeamDI.mode $ Se.Eq $ Just DriverInfo.SILENT,
-                              Se.Is BeamDI.mode $ Se.Eq $ Just DriverInfo.ONLINE
-                            ]
-                        ]
-                    ],
-                  Se.Is BeamDI.blocked $ Se.Eq False
-                ]
-                  <> if onlyNotOnRide then [Se.Is BeamDI.onRide $ Se.Eq False] else ([Se.Is BeamDI.onRide $ Se.Eq True | onlyOnRide])
-              )
+getDriverInfosWithCond :: (L.MonadFlow m, Log m) => [DriverLocation] -> Bool -> Bool -> m [DriverInformation]
+getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide =
+  findAllWithKV
+    [ Se.And
+        ( [ Se.Is BeamDI.driverId $ Se.In personsKeys,
+            Se.Or
+              [ Se.And
+                  [ Se.Is BeamDI.mode $ Se.Eq Nothing,
+                    Se.Is BeamDI.active $ Se.Eq True
+                  ],
+                Se.And
+                  [ Se.Is BeamDI.mode $ Se.Not $ Se.Eq Nothing,
+                    Se.Or
+                      [ Se.Is BeamDI.mode $ Se.Eq $ Just DriverInfo.SILENT,
+                        Se.Is BeamDI.mode $ Se.Eq $ Just DriverInfo.ONLINE
+                      ]
+                  ]
+              ],
+            Se.Is BeamDI.blocked $ Se.Eq False
           ]
-    Nothing -> pure []
+            <> if onlyNotOnRide then [Se.Is BeamDI.onRide $ Se.Eq False] else ([Se.Is BeamDI.onRide $ Se.Eq True | onlyOnRide])
+        )
+    ]
   where
     personsKeys = getId . cast <$> fetchDriverIDsFromLocations driverLocs
 
 getVehiclesWithCond ::
-  L.MonadFlow m =>
+  (L.MonadFlow m, Log m) =>
   [DriverInformation] ->
   m [Vehicle]
-getVehiclesWithCond driverInfo = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> do
-      vehicles <- KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamV.driverId $ Se.In personsKeys]
-      case vehicles of
-        Right val' -> pure $ QueriesV.transformBeamVehicleToDomain <$> val'
-        Left _ -> pure []
-    Nothing -> pure []
+getVehiclesWithCond driverInfo = findAllWithKV [Se.Is BeamV.driverId $ Se.In personsKeys]
   where
     personsKeys = getId <$> fetchDriverIDsFromInfo driverInfo
 
@@ -1236,116 +808,6 @@ linkArrayListForOnRide driverQuotes bookings bookingLocs driverLocations driverI
       driverInfoHashMap = buildDriverInfoHashMap driverInformations
    in mapMaybe (buildFullDriverListOnRide quotesHashMap bookingHashMap bookingLocsHashMap locationHashMap driverInfoHashMap personHashMap LatLong {..} onRideRadius mbVariant) vehicles
 
--- getNearestDriversCurrentlyOnRide' :: (L.MonadFlow m, Log m, MonadTime m) => Maybe Variant -> Int -> Id Merchant -> Maybe Seconds -> Int -> m [NearestDriversResultCurrentlyOnRide]
--- getNearestDriversCurrentlyOnRide' mbVariant radiusMeters (Id merchantId') mbDriverPositionInfoExpiry reduceRadiusValue = do
---   now <- getCurrentTime
-
---   let onRideRadius = (fromIntegral (radiusMeters - reduceRadiusValue) :: Double)
---   let personSeCondition =
---         [ Se.And
---             [ Se.Is BeamP.role $ Se.Eq Person.DRIVER,
---               Se.Is BeamP.merchantId $ Se.Eq merchantId'
---             ]
---         ]
---   personList <- findAllPersonWithSeConditionsNameAsc personSeCondition
---   dlList <- QueriesDL.findAllDriverLocations ((Person.id :: PersonE e -> Id Person) <$> personList) mbDriverPositionInfoExpiry now
-
---   let diConditions =
---         [ Se.And
---             [ Se.Is BeamDI.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList,
---               Se.Or
---                 [ Se.And
---                     [ Se.Is BeamDI.mode $ Se.Eq Nothing,
---                       Se.Is BeamDI.active $ Se.Eq True
---                     ],
---                   Se.And
---                     [ Se.Is BeamDI.mode $ Se.Not $ Se.Eq Nothing,
---                       Se.Or
---                         [ Se.Is BeamDI.mode $ Se.Eq $ Just DriverInfo.SILENT,
---                           Se.Is BeamDI.mode $ Se.Eq $ Just DriverInfo.ONLINE
---                         ]
---                     ]
---                 ],
---               Se.Is BeamDI.onRide $ Se.Eq True,
---               Se.Is BeamDI.blocked $ Se.Eq False
---             ]
---         ]
---   driverInfoList <- findAllDriverInformationWithSeConditions diConditions
-
---   let vehicleSeCondition = [Se.Is BeamV.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
---   vehicleList <- findAllVehiclesWithSeConditions vehicleSeCondition
-
---   let dqSeConditions = [Se.Is BeamDQ.driverId $ Se.In $ getId . (Person.id :: PersonE e -> Id Person) <$> personList]
---   driverQuoteList <- findAllDriverQuoteWithSeConditions dqSeConditions
-
---   let bookingSeConditions =
---         [ Se.And
---             [ Se.Is BeamB.quoteId $ Se.In $ getId . DriverQuote.id <$> driverQuoteList,
---               Se.Is BeamB.status $ Se.Eq Booking.TRIP_ASSIGNED
---             ]
---         ]
---   bookingList <- findAllBookingsWithSeConditions bookingSeConditions
-
---   let pDl = foldl' (getPersonWithlocation dlList) [] personList
---   let pDlInfo = foldl' (getPersonWithInfo driverInfoList) [] pDl
---   let pDlInfoVeh = foldl' (getPersonDInfoDLVehicle mbVariant vehicleList) [] pDlInfo
---   let pDlInfoVehQuote = foldl' (getPersonDInfoDLVehQuote driverQuoteList) [] pDlInfoVeh
---   let pDlInfoVehQuoteBooking = foldl' (getPersonDInfoDLVehQuoteBooking bookingList) [] pDlInfoVehQuote
---   let pDlInfoVehQuoteBooking' = map (\(person', dl', info', vehicle', _, booking') -> (person'.id, person'.deviceToken, person'.language, info'.onRide, info'.canDowngradeToSedan, info'.canDowngradeToHatchback, info'.canDowngradeToTaxi, dl'.lat, dl'.lon, vehicle'.variant, booking'.toLocation.lat, booking'.toLocation.lat, onRideRadius, onRideRadius, info'.mode)) pDlInfoVehQuoteBooking
---   pure $ makeNearestDriversResult =<< pDlInfoVehQuoteBooking'
---   where
---     getPersonWithlocation dlList acc person' =
---       let dlList' = filter (\dl -> dl.driverId == person'.id) dlList
---        in acc <> ((\dl -> (person', dl)) <$> dlList')
-
---     getPersonWithInfo driverInfoList acc (person', dl') =
---       let driverInfoList' = filter (\info -> info.driverId == person'.id) driverInfoList
---        in acc <> ((\info -> (person', dl', info)) <$> driverInfoList')
-
---     getPersonDInfoDLVehicle mbVariant' vehicleList acc (person', dl', info') =
---       let vehicleList' =
---             filter
---               ( \vehicle ->
---                   ( Kernel.Prelude.isNothing mbVariant'
---                       || ( Kernel.Prelude.isNothing mbVariant
---                              || ( Just vehicle.variant == mbVariant'
---                                     || ( case mbVariant' of
---                                            Just SEDAN -> info'.canDowngradeToSedan && vehicle.variant == SUV
---                                            Just HATCHBACK -> info'.canDowngradeToHatchback && (vehicle.variant == SEDAN || vehicle.variant == SUV)
---                                            Just TAXI -> info'.canDowngradeToTaxi && vehicle.variant == TAXI_PLUS
---                                            _ -> False
---                                        )
---                                 )
---                          )
---                   )
---                     && (vehicle.driverId == person'.id)
---               )
---               vehicleList
---        in acc <> ((\vehicle -> (person', dl', info', vehicle)) <$> vehicleList')
-
---     getPersonDInfoDLVehQuote driverQuoteList acc (person', dl', info', vehicle') =
---       let driverQuoteList' = filter (\quote -> quote.driverId == person'.id) driverQuoteList
---        in acc <> ((\quote -> (person', dl', info', vehicle', quote)) <$> driverQuoteList')
-
---     getPersonDInfoDLVehQuoteBooking bookingList acc (person', dl', info', vehicle', quote') =
---       let bookingList' = filter (\booking -> booking.quoteId == getId quote'.id) bookingList
---        in acc <> ((\booking -> (person', dl', info', vehicle', quote', booking)) <$> bookingList')
-
---     makeNearestDriversResult :: (Id Person, Maybe FCM.FCMRecipientToken, Maybe Maps.Language, Bool, Bool, Bool, Bool, Double, Double, Variant, Double, Double, Double, Double, Maybe DriverInfo.DriverMode) -> [NearestDriversResultCurrentlyOnRide]
---     makeNearestDriversResult (personId, mbDeviceToken, mblang, onRide, canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, dlat, dlon, variant, destinationEndLat, destinationEndLon, dist :: Double, distanceFromDriverToDestination :: Double, mode) =
---       case mbVariant of
---         Nothing -> do
---           let autoResult = getResult AUTO_RICKSHAW $ variant == AUTO_RICKSHAW
---               suvResult = getResult SUV $ variant == SUV
---               sedanResult = getResult SEDAN $ variant == SEDAN || (variant == SUV && canDowngradeToSedan)
---               hatchbackResult = getResult HATCHBACK $ variant == HATCHBACK || ((variant == SUV || variant == SEDAN) && canDowngradeToHatchback)
---               taxiPlusResult = getResult TAXI_PLUS $ variant == TAXI_PLUS
---               taxiResult = getResult TAXI $ variant == TAXI || (variant == TAXI_PLUS && canDowngradeToTaxi)
---           autoResult <> suvResult <> sedanResult <> hatchbackResult <> taxiResult <> taxiPlusResult
---         Just poolVariant -> getResult poolVariant True
---       where
---         getResult var cond = [NearestDriversResultCurrentlyOnRide (cast personId) mbDeviceToken mblang onRide dlat dlon var destinationEndLat destinationEndLon (roundToIntegral dist) (roundToIntegral distanceFromDriverToDestination) mode | cond]
-
 buildDriverInfoHashMap :: [DriverInformation] -> HashMap.HashMap Text DriverInformation
 buildDriverInfoHashMap driverInfo =
   HashMap.fromList $ map (\info -> (info.driverId.getId, info)) driverInfo
@@ -1394,88 +856,84 @@ buildFullDriverListOnRide quotesHashMap bookingHashMap bookingLocsHashMap locati
     then Just (person.id, person.deviceToken, person.language, info.onRide, info.canDowngradeToSedan, info.canDowngradeToHatchback, info.canDowngradeToTaxi, location.lat, location.lon, vehicle.variant, bookingLocation.lat, bookingLocation.lon, distanceFromDriverToDestination + distanceFromDestinationToPickup, distanceFromDriverToDestination, info.mode)
     else Nothing
 
-updateAlternateMobileNumberAndCode :: (L.MonadFlow m, MonadTime m) => Person -> m (MeshResult ())
+updateAlternateMobileNumberAndCode :: (L.MonadFlow m, MonadTime m, Log m) => Person -> m ()
 updateAlternateMobileNumberAndCode person = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamP.PersonT
-  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamP.alternateMobileNumberEncrypted (person.alternateMobileNumber <&> unEncrypted . (.encrypted)),
-          Se.Set BeamP.unencryptedAlternateMobileNumber person.unencryptedAlternateMobileNumber,
-          Se.Set BeamP.updatedAt now
-        ]
-        [Se.Is BeamP.id (Se.Eq $ getId person.id)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamP.alternateMobileNumberEncrypted (person.alternateMobileNumber <&> unEncrypted . (.encrypted)),
+      Se.Set BeamP.unencryptedAlternateMobileNumber person.unencryptedAlternateMobileNumber,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq $ getId person.id)]
 
-transformBeamPersonToDomain :: (L.MonadFlow m, Log m) => BeamP.Person -> m (Maybe Person)
-transformBeamPersonToDomain BeamP.PersonT {..} = do
-  bundleVersion' <- forM bundleVersion readVersion
-  clientVersion' <- forM clientVersion readVersion
-  pure $
-    Just
-      Person
-        { id = Id id,
-          firstName = firstName,
-          middleName = middleName,
-          lastName = lastName,
-          role = role,
-          gender = gender,
-          identifierType = identifierType,
-          email = email,
-          unencryptedMobileNumber = unencryptedMobileNumber,
-          mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
-          mobileCountryCode = mobileCountryCode,
-          passwordHash = passwordHash,
-          identifier = identifier,
-          rating = rating,
-          isNew = isNew,
-          merchantId = Id merchantId,
-          deviceToken = deviceToken,
-          whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
-          language = language,
-          description = description,
-          createdAt = createdAt,
-          updatedAt = updatedAt,
-          bundleVersion = bundleVersion',
-          clientVersion = clientVersion',
-          unencryptedAlternateMobileNumber = unencryptedAlternateMobileNumber,
-          alternateMobileNumber = EncryptedHashed <$> (Encrypted <$> alternateMobileNumberEncrypted) <*> alternateMobileNumberHash
-        }
+findAllPersonWithDriverInfos :: (L.MonadFlow m, Log m) => [DriverInformation] -> Id Merchant -> m [Person]
+findAllPersonWithDriverInfos dInfos merchantId = findAllWithKV [Se.And [Se.Is BeamP.id $ Se.In (getId . DriverInfo.driverId <$> dInfos), Se.Is BeamP.merchantId $ Se.Eq (getId merchantId)]]
 
-transformDomainPersonToBeam :: Person -> BeamP.Person
-transformDomainPersonToBeam Person {..} =
-  BeamP.PersonT
-    { BeamP.id = getId id,
-      BeamP.firstName = firstName,
-      BeamP.middleName = middleName,
-      BeamP.lastName = lastName,
-      BeamP.role = role,
-      BeamP.gender = gender,
-      BeamP.identifierType = identifierType,
-      BeamP.email = email,
-      BeamP.unencryptedMobileNumber = unencryptedMobileNumber,
-      BeamP.mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
-      BeamP.mobileNumberHash = mobileNumber <&> (.hash),
-      BeamP.mobileCountryCode = mobileCountryCode,
-      BeamP.passwordHash = passwordHash,
-      BeamP.identifier = identifier,
-      BeamP.rating = rating,
-      BeamP.isNew = isNew,
-      BeamP.merchantId = getId merchantId,
-      BeamP.deviceToken = deviceToken,
-      BeamP.whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
-      BeamP.language = language,
-      BeamP.description = description,
-      BeamP.createdAt = createdAt,
-      BeamP.updatedAt = updatedAt,
-      BeamP.bundleVersion = versionToText <$> bundleVersion,
-      BeamP.clientVersion = versionToText <$> clientVersion,
-      BeamP.unencryptedAlternateMobileNumber = unencryptedAlternateMobileNumber,
-      BeamP.alternateMobileNumberHash = alternateMobileNumber <&> (.hash),
-      BeamP.alternateMobileNumberEncrypted = alternateMobileNumber <&> unEncrypted . (.encrypted)
-    }
+instance FromTType' BeamP.Person Person where
+  fromTType' :: (MonadThrow m, L.MonadFlow m, Log m) => BeamP.Person -> m (Maybe Person)
+  fromTType' BeamP.PersonT {..} = do
+    bundleVersion' <- forM bundleVersion readVersion
+    clientVersion' <- forM clientVersion readVersion
+    pure $
+      Just
+        Person
+          { id = Id id,
+            firstName = firstName,
+            middleName = middleName,
+            lastName = lastName,
+            role = role,
+            gender = gender,
+            identifierType = identifierType,
+            email = email,
+            unencryptedMobileNumber = unencryptedMobileNumber,
+            mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
+            mobileCountryCode = mobileCountryCode,
+            passwordHash = passwordHash,
+            identifier = identifier,
+            rating = rating,
+            isNew = isNew,
+            merchantId = Id merchantId,
+            deviceToken = deviceToken,
+            whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
+            language = language,
+            description = description,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            bundleVersion = bundleVersion',
+            clientVersion = clientVersion',
+            unencryptedAlternateMobileNumber = unencryptedAlternateMobileNumber,
+            alternateMobileNumber = EncryptedHashed <$> (Encrypted <$> alternateMobileNumberEncrypted) <*> alternateMobileNumberHash
+          }
+
+instance ToTType' BeamP.Person Person where
+  toTType' Person {..} = do
+    BeamP.PersonT
+      { BeamP.id = getId id,
+        BeamP.firstName = firstName,
+        BeamP.middleName = middleName,
+        BeamP.lastName = lastName,
+        BeamP.role = role,
+        BeamP.gender = gender,
+        BeamP.identifierType = identifierType,
+        BeamP.email = email,
+        BeamP.unencryptedMobileNumber = unencryptedMobileNumber,
+        BeamP.mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
+        BeamP.mobileNumberHash = mobileNumber <&> (.hash),
+        BeamP.mobileCountryCode = mobileCountryCode,
+        BeamP.passwordHash = passwordHash,
+        BeamP.identifier = identifier,
+        BeamP.rating = rating,
+        BeamP.isNew = isNew,
+        BeamP.merchantId = getId merchantId,
+        BeamP.deviceToken = deviceToken,
+        BeamP.whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus,
+        BeamP.language = language,
+        BeamP.description = description,
+        BeamP.createdAt = createdAt,
+        BeamP.updatedAt = updatedAt,
+        BeamP.bundleVersion = versionToText <$> bundleVersion,
+        BeamP.clientVersion = versionToText <$> clientVersion,
+        BeamP.unencryptedAlternateMobileNumber = unencryptedAlternateMobileNumber,
+        BeamP.alternateMobileNumberHash = alternateMobileNumber <&> (.hash),
+        BeamP.alternateMobileNumberEncrypted = alternateMobileNumber <&> unEncrypted . (.encrypted)
+      }

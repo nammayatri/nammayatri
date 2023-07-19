@@ -34,7 +34,8 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import qualified Kernel.External.Call.Interface as CallTypes
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
+import Kernel.Types.Common hiding (id)
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -99,19 +100,6 @@ callStatusTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-defaultCallStatus :: CallStatus
-defaultCallStatus =
-  CallStatusT
-    { id = "",
-      callId = "",
-      rideId = "",
-      dtmfNumberUsed = Nothing,
-      status = "",
-      recordingUrl = Nothing,
-      conversationDuration = 0,
-      createdAt = defaultUTCDate
-    }
-
 instance Serialize CallStatus where
   put = error "undefined"
   get = error "undefined"
@@ -127,4 +115,4 @@ callStatusToPSModifiers :: M.Map Text (A.Value -> A.Value)
 callStatusToPSModifiers =
   M.empty
 
-$(enableKVPG ''CallStatusT ['id] [])
+$(enableKVPG ''CallStatusT ['id] [['callId]])

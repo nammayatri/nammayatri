@@ -34,7 +34,8 @@ import qualified Domain.Types.Merchant.MerchantMessage as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
+import Kernel.Types.Common hiding (id)
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -91,16 +92,6 @@ merchantMessageTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-defaultMerchantMessage :: MerchantMessage
-defaultMerchantMessage =
-  MerchantMessageT
-    { merchantId = "",
-      messageKey = "",
-      message = "",
-      updatedAt = defaultUTCDate,
-      createdAt = defaultUTCDate
-    }
-
 instance Serialize MerchantMessage where
   put = error "undefined"
   get = error "undefined"
@@ -116,4 +107,4 @@ merchantMessageToPSModifiers :: M.Map Text (A.Value -> A.Value)
 merchantMessageToPSModifiers =
   M.empty
 
-$(enableKVPG ''MerchantMessageT ['messageKey] [])
+$(enableKVPG ''MerchantMessageT ['merchantId] [])

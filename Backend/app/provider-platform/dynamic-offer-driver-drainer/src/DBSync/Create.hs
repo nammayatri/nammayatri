@@ -91,7 +91,6 @@ runCreateCommands cmds = do
     |::| runCreate dbConf ("SearchRequestSpecialZone" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (SearchRequestSpecialZoneObject obj), val) <- cmds]
     |::| runCreate dbConf ("SearchTry" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (SearchTryObject obj), val) <- cmds]
     |::| runCreate dbConf ("Vehicle" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (VehicleObject obj), val) <- cmds]
-    |::| runCreate dbConf ("RegistrationToken" :: Text) [(obj, val, entryId) | (CreateDBCommand entryId _ _ _ _ (RegistrationTokenObject obj), val) <- cmds]
   where
     runCreate dbConf model object = do
       let dbObjects = map (\(dbObject, _, _) -> dbObject) object

@@ -11,9 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-{-# HLINT ignore "Use tuple-section" #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.DriverOnboarding.DriverRCAssociation where
 
@@ -21,45 +19,28 @@ import qualified Data.HashMap.Strict as HashMap
 import Domain.Types.DriverOnboarding.DriverRCAssociation as DRCA
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
 import Domain.Types.Person (Person)
-import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude hiding (on)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils (setMeshConfig)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findAllWithOptionsKV, findOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.DriverRCAssociation as BeamDRCA
 import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as BeamVRC
-import Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as QVRC
+import Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate ()
 
-create :: L.MonadFlow m => DriverRCAssociation -> m ()
+create :: (L.MonadFlow m, Log m) => DriverRCAssociation -> m ()
 create driverRCAssociation = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDRCA.DriverRCAssociationT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainDriverRCAssociationToBeam driverRCAssociation)
-    Nothing -> pure ()
+  createWithKV driverRCAssociation
 
-findById :: L.MonadFlow m => Id DriverRCAssociation -> m (Maybe DriverRCAssociation)
+findById :: (L.MonadFlow m, Log m) => Id DriverRCAssociation -> m (Maybe DriverRCAssociation)
 findById (Id drcaId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDRCA.DriverRCAssociationT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverRCAssociationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDRCA.id $ Se.Eq drcaId]
-    Nothing -> pure Nothing
+  findOneWithKV [Se.Is BeamDRCA.id $ Se.Eq drcaId]
 
-getActiveAssociationByDriver :: (L.MonadFlow m, MonadTime m) => Id Person -> m (Maybe DriverRCAssociation)
+getActiveAssociationByDriver :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> m (Maybe DriverRCAssociation)
 getActiveAssociationByDriver (Id personId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDRCA.DriverRCAssociationT
-  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverRCAssociationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamDRCA.driverId $ Se.Eq personId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now]]
-    Nothing -> pure Nothing
+  findOneWithKV [Se.And [Se.Is BeamDRCA.driverId $ Se.Eq personId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now]]
 
 -- findAllByDriverId ::
 --   Transactionable m =>
@@ -71,7 +52,7 @@ getActiveAssociationByDriver (Id personId) = do
 --   return $ linkDriversRC rcAssocs regCerts
 
 findAllByDriverId ::
-  L.MonadFlow m =>
+  (L.MonadFlow m, Log m) =>
   Id Person ->
   m [(DriverRCAssociation, VehicleRegistrationCertificate)]
 findAllByDriverId driverId = do
@@ -105,28 +86,12 @@ buildCertHM regCerts =
 -- getRegCerts rcAssocs = do
 --   Esq.findAll $ do
 --     regCerts <- from $ table @VehicleRegistrationCertificateT
---     where_ $
---       regCerts ^. VehicleRegistrationCertificateTId `in_` valList rcAssocsKeys
 --     return regCerts
 --   where
 --     rcAssocsKeys = toKey . cast <$> fetchRcIdFromAssocs rcAssocs
 
-getRegCerts :: L.MonadFlow m => [DriverRCAssociation] -> m [VehicleRegistrationCertificate]
-getRegCerts rcAssocs = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamVRC.VehicleRegistrationCertificateT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <-
-        KV.findAllWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [Se.Is BeamVRC.id $ Se.In $ getId <$> rcAssocsKeys]
-      case result of
-        Left _ -> pure []
-        Right result' -> pure $ QVRC.transformBeamVehicleRegistrationCertificateToDomain <$> result'
-    Nothing -> pure []
+getRegCerts :: (L.MonadFlow m, Log m) => [DriverRCAssociation] -> m [VehicleRegistrationCertificate]
+getRegCerts rcAssocs = findAllWithKV [Se.Is BeamVRC.id $ Se.In $ getId <$> rcAssocsKeys]
   where
     rcAssocsKeys = fetchRcIdFromAssocs rcAssocs
 
@@ -145,87 +110,52 @@ fetchRcIdFromAssocs = map (.rcId)
 --     orderBy [desc $ rcAssoc ^. DriverRCAssociationAssociatedOn]
 --     return rcAssoc
 
-getRcAssocs :: L.MonadFlow m => Id Person -> m [DriverRCAssociation]
-getRcAssocs (Id driverId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDRCA.DriverRCAssociationT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <-
-        KV.findAllWithOptionsKVConnector
-          dbConf'
-          updatedMeshConfig
-          [Se.Is BeamDRCA.driverId $ Se.Eq driverId]
-          (Se.Desc BeamDRCA.associatedOn)
-          Nothing
-          Nothing
-      case result of
-        Left _ -> pure []
-        Right result' -> pure $ transformBeamDriverRCAssociationToDomain <$> result'
-    Nothing -> pure []
+getRcAssocs :: (L.MonadFlow m, Log m) => Id Person -> m [DriverRCAssociation]
+getRcAssocs (Id driverId) =
+  findAllWithOptionsKV
+    [Se.Is BeamDRCA.driverId $ Se.Eq driverId]
+    (Se.Desc BeamDRCA.associatedOn)
+    Nothing
+    Nothing
 
-getActiveAssociationByRC :: (L.MonadFlow m, MonadTime m) => Id VehicleRegistrationCertificate -> m (Maybe DriverRCAssociation)
+getActiveAssociationByRC :: (L.MonadFlow m, MonadTime m, Log m) => Id VehicleRegistrationCertificate -> m (Maybe DriverRCAssociation)
 getActiveAssociationByRC (Id rcId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDRCA.DriverRCAssociationT
-  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverRCAssociationToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamDRCA.driverId $ Se.Eq rcId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now]]
-    Nothing -> pure Nothing
+  findOneWithKV [Se.And [Se.Is BeamDRCA.driverId $ Se.Eq rcId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now]]
 
-endAssociation :: (L.MonadFlow m, MonadTime m) => Id Person -> m ()
+endAssociation :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> m ()
 endAssociation (Id driverId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDRCA.DriverRCAssociationT
-  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      void $
-        KV.updateWoReturningWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [ Se.Set BeamDRCA.associatedTill $ Just now
-          ]
-          [Se.And [Se.Is BeamDRCA.id (Se.Eq driverId), Se.Is BeamDRCA.associatedTill (Se.GreaterThan $ Just now)]]
-    Nothing -> pure ()
+  updateWithKV
+    [ Se.Set BeamDRCA.associatedTill $ Just now
+    ]
+    [Se.And [Se.Is BeamDRCA.id (Se.Eq driverId), Se.Is BeamDRCA.associatedTill (Se.GreaterThan $ Just now)]]
 
-deleteByDriverId :: L.MonadFlow m => Id Person -> m ()
-deleteByDriverId (Id driverId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDRCA.DriverRCAssociationT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      void $
-        KV.deleteWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [Se.Is BeamDRCA.driverId (Se.Eq driverId)]
-    Nothing -> pure ()
+deleteByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteByDriverId (Id driverId) = deleteWithKV [Se.Is BeamDRCA.driverId (Se.Eq driverId)]
 
-transformBeamDriverRCAssociationToDomain :: BeamDRCA.DriverRCAssociation -> DriverRCAssociation
-transformBeamDriverRCAssociationToDomain BeamDRCA.DriverRCAssociationT {..} = do
-  DriverRCAssociation
-    { id = Id id,
-      driverId = Id driverId,
-      rcId = Id rcId,
-      associatedOn = associatedOn,
-      associatedTill = associatedTill,
-      consent = consent,
-      consentTimestamp = consentTimestamp
-    }
+instance FromTType' BeamDRCA.DriverRCAssociation DriverRCAssociation where
+  fromTType' BeamDRCA.DriverRCAssociationT {..} = do
+    pure $
+      Just
+        DriverRCAssociation
+          { id = Id id,
+            driverId = Id driverId,
+            rcId = Id rcId,
+            associatedOn = associatedOn,
+            associatedTill = associatedTill,
+            consent = consent,
+            consentTimestamp = consentTimestamp
+          }
 
-transformDomainDriverRCAssociationToBeam :: DriverRCAssociation -> BeamDRCA.DriverRCAssociation
-transformDomainDriverRCAssociationToBeam DriverRCAssociation {..} =
-  BeamDRCA.DriverRCAssociationT
-    { BeamDRCA.id = getId id,
-      BeamDRCA.driverId = getId driverId,
-      BeamDRCA.rcId = getId rcId,
-      BeamDRCA.associatedOn = associatedOn,
-      BeamDRCA.associatedTill = associatedTill,
-      BeamDRCA.consent = consent,
-      BeamDRCA.consentTimestamp = consentTimestamp
-    }
+instance ToTType' BeamDRCA.DriverRCAssociation DriverRCAssociation where
+  toTType' DriverRCAssociation {..} = do
+    BeamDRCA.DriverRCAssociationT
+      { BeamDRCA.id = getId id,
+        BeamDRCA.driverId = getId driverId,
+        BeamDRCA.rcId = getId rcId,
+        BeamDRCA.associatedOn = associatedOn,
+        BeamDRCA.associatedTill = associatedTill,
+        BeamDRCA.consent = consent,
+        BeamDRCA.consentTimestamp = consentTimestamp
+      }

@@ -11,6 +11,9 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use fromRight" #-}
 
 module Storage.Queries.DriverOnboarding.Status where
 
@@ -118,7 +121,7 @@ baseDriverDocumentsInfoQuery licenseImagesAggTable vehicleRegistrationImagesAggT
 -- fetchDriverDocsInfo' merchantId mbDriverIds = do
 -- dbConf <- L.getOption KmeBT.PsqlDbCfg
 -- let modelName = Se.modelTableName @BeamS.StatusT
--- let updatedMeshConfig = setMeshConfig modelNa
+-- updatedMeshConfig <- setMeshConfig modelNa
 --   case dbConf of
 --     Just dbCOnf' -> do
 --       persons <- either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamIT.language $ Se.Eq language]

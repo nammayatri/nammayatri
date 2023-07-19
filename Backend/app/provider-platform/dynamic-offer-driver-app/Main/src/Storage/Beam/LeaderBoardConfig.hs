@@ -34,7 +34,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -72,7 +72,7 @@ instance B.Table LeaderBoardConfigsT where
 instance ModelMeta LeaderBoardConfigsT where
   modelFieldModification = leaderBoardConfigsTMod
   modelTableName = "leader_board_configs"
-  modelSchemaName = Just "atlas_app"
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type LeaderBoardConfigs = LeaderBoardConfigsT Identity
 

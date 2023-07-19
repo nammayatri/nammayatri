@@ -27,7 +27,6 @@ import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.TransporterConfig
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -55,11 +54,11 @@ makeMerchantIdKey id = "driver-offer:CachedQueries:TransporterConfig:MerchantId-
 clearCache :: Hedis.HedisFlow m r => Id Merchant -> m ()
 clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantIdKey
 
-updateFCMConfig :: (L.MonadFlow m, MonadTime m) => Id Merchant -> BaseUrl -> Text -> m ()
+updateFCMConfig :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> BaseUrl -> Text -> m ()
 updateFCMConfig = Queries.updateFCMConfig
 
-updateReferralLinkPassword :: (L.MonadFlow m, MonadTime m) => Id Merchant -> Text -> m (MeshResult ())
+updateReferralLinkPassword :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> Text -> m ()
 updateReferralLinkPassword = Queries.updateReferralLinkPassword
 
-update :: (L.MonadFlow m, MonadTime m) => TransporterConfig -> m (MeshResult ())
+update :: (L.MonadFlow m, MonadTime m, Log m) => TransporterConfig -> m ()
 update = Queries.update

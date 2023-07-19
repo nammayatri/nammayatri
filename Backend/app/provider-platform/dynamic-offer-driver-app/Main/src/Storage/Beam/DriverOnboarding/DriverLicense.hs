@@ -23,30 +23,18 @@ import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
+-- import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+-- import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.External.Encryption
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
+-- import Kernel.Types.Common hiding (id)
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
-
-instance FromField Domain.VerificationStatus where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.VerificationStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.VerificationStatus
-
-instance FromBackendRow Postgres Domain.VerificationStatus
 
 data DriverLicenseT f = DriverLicenseT
   { id :: B.C f Text,
@@ -122,9 +110,6 @@ driverLicenseToHSModifiers =
 driverLicenseToPSModifiers :: M.Map Text (A.Value -> A.Value)
 driverLicenseToPSModifiers =
   M.empty
-
-instance IsString Domain.VerificationStatus where
-  fromString = show
 
 instance Serialize DriverLicense where
   put = error "undefined"

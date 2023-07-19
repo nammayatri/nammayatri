@@ -44,7 +44,7 @@ findAllByMerchantId :: L.MonadFlow m => Id Merchant -> m [MerchantPaymentMethod]
 findAllByMerchantId (Id merchantId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamMPM.MerchantPaymentMethodT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       either (pure []) (transformBeamMerchantPaymentMethodToDomain <$>)
@@ -72,7 +72,7 @@ transformBeamMerchantPaymentMethodToDomain BeamMPM.MerchantPaymentMethodT {..} =
 
 transformDomainMerchantPaymentMethodToBeam :: MerchantPaymentMethod -> BeamMPM.MerchantPaymentMethod
 transformDomainMerchantPaymentMethodToBeam MerchantPaymentMethod {..} =
-  BeamMPM.defaultMerchantPaymentMethod
+  BeamMPM.MerchantPaymentMethodT
     { BeamMPM.id = getId id,
       BeamMPM.merchantId = getId merchantId,
       BeamMPM.paymentType = paymentType,

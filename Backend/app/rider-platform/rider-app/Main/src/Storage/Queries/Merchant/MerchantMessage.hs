@@ -38,7 +38,7 @@ findByMerchantIdAndMessageKey :: L.MonadFlow m => Id Merchant -> MessageKey -> m
 findByMerchantIdAndMessageKey (Id merchantId) messageKey = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamMM.MerchantMessageT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       either (pure Nothing) (transformBeamMerchantMessageToDomain <$>)
@@ -60,7 +60,7 @@ transformBeamMerchantMessageToDomain BeamMM.MerchantMessageT {..} = do
 
 transformDomainMerchantMessageToBeam :: MerchantMessage -> BeamMM.MerchantMessage
 transformDomainMerchantMessageToBeam MerchantMessage {..} =
-  BeamMM.defaultMerchantMessage
+  BeamMM.MerchantMessageT
     { BeamMM.merchantId = getId merchantId,
       BeamMM.messageKey = messageKey,
       BeamMM.message = message,

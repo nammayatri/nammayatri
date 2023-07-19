@@ -45,7 +45,7 @@ import Kernel.Types.Base64
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing (GeoRestriction)
 import qualified Kernel.Types.Geofencing as Geo
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -173,31 +173,20 @@ fromFieldJSON' ::
   Maybe ByteString ->
   DPSF.Conversion [Domain.Slot]
 fromFieldJSON' f mbValue = case mbValue of
-  Nothing -> T.trace "Returned nothing in fromFieldJSON" $ DPSF.returnError DPSF.UnexpectedNull f mempty
-  Just value' -> T.trace ("Returned from fromFieldJSON" <> show value') $ case ((A.decode $ fromStrict value' :: Maybe (V.Vector Domain.Slot))) of
-    Just res -> T.trace ("Inside just" <> show res) $ pure $ V.toList res
-    Nothing -> T.trace ("Inside nothing") $ DPSF.returnError DPSF.ConversionFailed f ("Could not 'read'" <> show value')
+  Nothing -> DPSF.returnError DPSF.UnexpectedNull f mempty
+  Just value' -> case (A.decode $ fromStrict value' :: Maybe (V.Vector Domain.Slot)) of
+    Just res -> pure $ V.toList res
+    Nothing -> DPSF.returnError DPSF.ConversionFailed f ("Could not 'read'" <> show value')
 
 fromFieldSlots ::
   DPSF.Field ->
   Maybe ByteString ->
   DPSF.Conversion [Domain.Slot]
 fromFieldSlots f mbValue = do
-  value <- T.trace ("Check value is" <> show mbValue) $ fromField f mbValue
-  T.trace ("fromFieldSlots value is" <> show value) $ case (A.fromJSON value :: A.Result (V.Vector Domain.Slot)) of
-    A.Success a -> T.trace ("Inside json success") $ pure $ V.toList a
-    _ -> T.trace ("Inside json failure") $ DPSF.returnError DPSF.ConversionFailed f ("Conversion failed for")
-
--- instance FromField Domain.Slot where
---   fromField = fromFieldJSON
-
--- instance ToField Domain.Slot where
---   fromField = fromFieldJSON
-
--- instance FromField [Domain.Slot] where
---   fromField f b = do
---     v <- fromField f b
---     pure (Data.Vector.toList v)
+  value <- fromField f mbValue
+  case (A.fromJSON value :: A.Result (V.Vector Domain.Slot)) of
+    A.Success a -> pure $ V.toList a
+    _ -> DPSF.returnError DPSF.ConversionFailed f "Conversion failed for"
 
 instance HasSqlValueSyntax be A.Value => HasSqlValueSyntax be [Domain.Slot] where
   sqlValueSyntax = sqlValueSyntax . (A.String . TE.decodeUtf8 . toStrict . A.encode . A.toJSON)
@@ -242,33 +231,6 @@ merchantTMod =
       dirCacheSlot = B.fieldNamed "dir_cache_slot"
     }
 
-defaultMerchant :: Merchant
-defaultMerchant =
-  MerchantT
-    { id = "",
-      shortId = "",
-      subscriberId = "",
-      name = "",
-      city = "",
-      country = "",
-      bapId = "",
-      bapUniqueKeyId = "",
-      originRestriction = "",
-      destinationRestriction = "",
-      gatewayUrl = "",
-      registryUrl = "",
-      driverOfferBaseUrl = "",
-      driverOfferApiKey = "",
-      driverOfferMerchantId = "",
-      geoHashPrecisionValue = 0,
-      signingPublicKey = "",
-      cipherText = Nothing,
-      signatureExpiry = 0,
-      updatedAt = defaultUTCDate,
-      createdAt = defaultUTCDate,
-      dirCacheSlot = []
-    }
-
 instance Serialize Merchant where
   put = error "undefined"
   get = error "undefined"
@@ -284,4 +246,4 @@ merchantToPSModifiers :: M.Map Text (A.Value -> A.Value)
 merchantToPSModifiers =
   M.empty
 
-$(enableKVPG ''MerchantT ['id] [])
+$(enableKVPG ''MerchantT ['id] [['shortId], ['subscriberId]])

@@ -11,57 +11,37 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.DriverFee where
 
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverFee as Domain
 import Domain.Types.Person
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types (MeshError (MKeyNotFound), MeshResult)
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 -- import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common (HighPrecMoney, Money)
 import Kernel.Types.Id
-import Lib.Utils
+import Kernel.Types.Logging (Log)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithOptionsKV, findOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverFee as BeamDF
 
 -- create :: DriverFee -> SqlDB ()
 -- create = Esq.create
 
-create :: L.MonadFlow m => DriverFee -> m (MeshResult ())
-create driverFee = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDF.DriverFeeT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainDriverFeeToBeam driverFee)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create :: (L.MonadFlow m, Log m) => DriverFee -> m ()
+create = createWithKV
 
 -- findById :: Transactionable m => Id DriverFee -> m (Maybe DriverFee)
 -- findById = Esq.findById
 
-findById :: L.MonadFlow m => Id DriverFee -> m (Maybe DriverFee)
-findById (Id driverFeeId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDF.DriverFeeT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> either (pure Nothing) (transformBeamDriverFeeToDomain <$>) <$> KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamDF.id $ Se.Eq driverFeeId]
-    Nothing -> pure Nothing
+findById :: (L.MonadFlow m, Log m) => Id DriverFee -> m (Maybe DriverFee)
+findById (Id driverFeeId) = findOneWithKV [Se.Is BeamDF.id $ Se.Eq driverFeeId]
 
-findByIdBeam :: L.MonadFlow m => Id DriverFee -> m (Maybe DriverFee)
-findByIdBeam (Id driverFeeId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDF.DriverFeeT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> either (pure Nothing) (transformBeamDriverFeeToDomain <$>) <$> KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamDF.id $ Se.Eq driverFeeId]
-    Nothing -> pure Nothing
+findByIdBeam :: (L.MonadFlow m, Log m) => Id DriverFee -> m (Maybe DriverFee)
+findByIdBeam (Id driverFeeId) = findOneWithKV [Se.Is BeamDF.id $ Se.Eq driverFeeId]
 
 -- findByShortId :: Transactionable m => ShortId DriverFee -> m (Maybe DriverFee)
 -- findByShortId shortId = do
@@ -70,14 +50,8 @@ findByIdBeam (Id driverFeeId) = do
 --     where_ $ driverFee ^. DriverFeeShortId ==. val (getShortId shortId)
 --     return driverFee
 
-findByShortId :: L.MonadFlow m => ShortId DriverFee -> m (Maybe DriverFee)
-findByShortId shortId = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDF.DriverFeeT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> either (pure Nothing) (transformBeamDriverFeeToDomain <$>) <$> KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamDF.shortId $ Se.Eq $ getShortId shortId]
-    Nothing -> pure Nothing
+findByShortId :: (L.MonadFlow m, Log m) => ShortId DriverFee -> m (Maybe DriverFee)
+findByShortId shortId = findOneWithKV [Se.Is BeamDF.shortId $ Se.Eq $ getShortId shortId]
 
 -- findPendingFeesByDriverFeeId :: Transactionable m => Id DriverFee -> m (Maybe DriverFee)
 -- findPendingFeesByDriverFeeId driverFeeId = do
@@ -88,14 +62,8 @@ findByShortId shortId = do
 --         &&. driverFee ^. DriverFeeStatus `in_` valList [PAYMENT_PENDING, PAYMENT_OVERDUE]
 --     return driverFee
 
-findPendingFeesByDriverFeeId :: L.MonadFlow m => Id DriverFee -> m (Maybe DriverFee)
-findPendingFeesByDriverFeeId (Id driverFeeId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDF.DriverFeeT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> either (pure Nothing) (transformBeamDriverFeeToDomain <$>) <$> KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamDF.id $ Se.Eq driverFeeId, Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE]]]
-    Nothing -> pure Nothing
+findPendingFeesByDriverFeeId :: (L.MonadFlow m, Log m) => Id DriverFee -> m (Maybe DriverFee)
+findPendingFeesByDriverFeeId (Id driverFeeId) = findOneWithKV [Se.And [Se.Is BeamDF.id $ Se.Eq driverFeeId, Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE]]]
 
 -- findPendingFeesByDriverId :: Transactionable m => Id Driver -> m (Maybe DriverFee)
 -- findPendingFeesByDriverId driverId = do
@@ -106,14 +74,8 @@ findPendingFeesByDriverFeeId (Id driverFeeId) = do
 --         &&. driverFee ^. DriverFeeStatus `in_` valList [PAYMENT_PENDING, PAYMENT_OVERDUE]
 --     return driverFee
 
-findPendingFeesByDriverId :: L.MonadFlow m => Id Driver -> m (Maybe DriverFee)
-findPendingFeesByDriverId (Id driverId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDF.DriverFeeT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> either (pure Nothing) (transformBeamDriverFeeToDomain <$>) <$> KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE]]]
-    Nothing -> pure Nothing
+findPendingFeesByDriverId :: (L.MonadFlow m, Log m) => Id Driver -> m (Maybe DriverFee)
+findPendingFeesByDriverId (Id driverId) = findOneWithKV [Se.And [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE]]]
 
 -- findLatestFeeByDriverId :: Transactionable m => Id Driver -> m (Maybe DriverFee)
 -- findLatestFeeByDriverId driverId = do
@@ -125,18 +87,12 @@ findPendingFeesByDriverId (Id driverId) = do
 --     limit 1
 --     return driverFee
 
-findLatestFeeByDriverId :: L.MonadFlow m => Id Driver -> m (Maybe DriverFee)
+findLatestFeeByDriverId :: (L.MonadFlow m, Log m) => Id Driver -> m (Maybe DriverFee)
 findLatestFeeByDriverId (Id driverId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDF.DriverFeeT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      res <- KV.findAllWithOptionsKVConnector dbConf' updatedMeshConfig [Se.Is BeamDF.driverId $ Se.Eq driverId] (Se.Desc BeamDF.createdAt) (Just 1) Nothing
-      case res of
-        Right (x : _) -> pure $ Just $ transformBeamDriverFeeToDomain x
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+  res <- findAllWithOptionsKV [Se.Is BeamDF.driverId $ Se.Eq driverId] (Se.Desc BeamDF.createdAt) (Just 1) Nothing
+  pure $ case res of
+    (x : _) -> Just x
+    _ -> Nothing
 
 -- findOldestFeeByStatus :: Transactionable m => Id Driver -> DriverFeeStatus -> m (Maybe DriverFee)
 -- findOldestFeeByStatus driverId status = do
@@ -149,18 +105,11 @@ findLatestFeeByDriverId (Id driverId) = do
 --     limit 1
 --     return driverFee
 
-findOldestFeeByStatus :: L.MonadFlow m => Id Driver -> DriverFeeStatus -> m (Maybe DriverFee)
+findOldestFeeByStatus :: (L.MonadFlow m, Log m) => Id Driver -> DriverFeeStatus -> m (Maybe DriverFee)
 findOldestFeeByStatus (Id driverId) status = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDF.DriverFeeT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      res <- KV.findAllWithOptionsKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.status $ Se.Eq status]] (Se.Asc BeamDF.createdAt) (Just 1) Nothing
-      case res of
-        Right (x : _) -> pure $ Just $ transformBeamDriverFeeToDomain x
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+  findAllWithOptionsKV [Se.And [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.status $ Se.Eq status]] (Se.Asc BeamDF.createdAt) (Just 1) Nothing >>= \case
+    (x : _) -> pure $ Just x
+    _ -> pure Nothing
 
 -- findFeesInRangeWithStatus :: Transactionable m => UTCTime -> UTCTime -> DriverFeeStatus -> m [DriverFee]
 -- findFeesInRangeWithStatus startTime endTime status = do
@@ -172,14 +121,8 @@ findOldestFeeByStatus (Id driverId) status = do
 --         &&. driverFee ^. DriverFeeStatus ==. val status
 --     return driverFee
 
-findFeesInRangeWithStatus :: L.MonadFlow m => UTCTime -> UTCTime -> DriverFeeStatus -> m [DriverFee]
-findFeesInRangeWithStatus startTime endTime status = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDF.DriverFeeT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> either (pure []) (transformBeamDriverFeeToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime, Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime, Se.Is BeamDF.status $ Se.Eq status]]
-    Nothing -> pure []
+findFeesInRangeWithStatus :: (L.MonadFlow m, Log m) => UTCTime -> UTCTime -> DriverFeeStatus -> m [DriverFee]
+findFeesInRangeWithStatus startTime endTime status = findAllWithKV [Se.And [Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime, Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime, Se.Is BeamDF.status $ Se.Eq status]]
 
 -- findWindowsWithStatus :: Transactionable m => Id Person -> UTCTime -> UTCTime -> Maybe DriverFeeStatus -> Int -> Int -> m [DriverFee]
 -- findWindowsWithStatus driverId startTime endTime mbStatus limitVal offsetVal = do
@@ -194,22 +137,13 @@ findFeesInRangeWithStatus startTime endTime status = do
 --     offset $ fromIntegral offsetVal
 --     return driverFee
 
-findWindowsWithStatus :: L.MonadFlow m => Id Person -> UTCTime -> UTCTime -> Maybe DriverFeeStatus -> Int -> Int -> m [DriverFee]
-findWindowsWithStatus (Id driverId) startTime endTime mbStatus limitVal offsetVal = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDF.DriverFeeT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      either (pure []) (transformBeamDriverFeeToDomain <$>)
-        <$> KV.findAllWithOptionsKVConnector
-          dbConf'
-          updatedMeshConfig
-          [Se.And $ [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime, Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime] <> [Se.Is BeamDF.status $ Se.Eq $ fromJust mbStatus | isJust mbStatus]]
-          (Se.Asc BeamDF.createdAt)
-          (Just limitVal)
-          (Just offsetVal)
-    Nothing -> pure []
+findWindowsWithStatus :: (L.MonadFlow m, Log m) => Id Person -> UTCTime -> UTCTime -> Maybe DriverFeeStatus -> Int -> Int -> m [DriverFee]
+findWindowsWithStatus (Id driverId) startTime endTime mbStatus limitVal offsetVal =
+  findAllWithOptionsKV
+    [Se.And $ [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime, Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime] <> [Se.Is BeamDF.status $ Se.Eq $ fromJust mbStatus | isJust mbStatus]]
+    (Se.Asc BeamDF.createdAt)
+    (Just limitVal)
+    (Just offsetVal)
 
 -- findOngoingAfterEndTime :: Transactionable m => Id Person -> UTCTime -> m (Maybe DriverFee)
 -- findOngoingAfterEndTime driverId now = do
@@ -222,18 +156,8 @@ findWindowsWithStatus (Id driverId) startTime endTime mbStatus limitVal offsetVa
 --         &&. driverFee ^. DriverFeeEndTime <=. val now
 --     return driverFee
 
-findOngoingAfterEndTime :: L.MonadFlow m => Id Person -> UTCTime -> m (Maybe DriverFee)
-findOngoingAfterEndTime (Id driverId) now = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDF.DriverFeeT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      res <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.status $ Se.Eq ONGOING, Se.Is BeamDF.endTime $ Se.LessThanOrEq now]]
-      case res of
-        Right (x : _) -> pure $ Just $ transformBeamDriverFeeToDomain x
-        _ -> pure Nothing
-    Nothing -> pure Nothing
+findOngoingAfterEndTime :: (L.MonadFlow m, Log m) => Id Person -> UTCTime -> m (Maybe DriverFee)
+findOngoingAfterEndTime (Id driverId) now = findOneWithKV [Se.And [Se.Is BeamDF.driverId $ Se.Eq driverId, Se.Is BeamDF.status $ Se.Eq ONGOING, Se.Is BeamDF.endTime $ Se.LessThanOrEq now]]
 
 -- findUnpaidAfterPayBy :: Transactionable m => Id Person -> UTCTime -> m (Maybe DriverFee)
 -- findUnpaidAfterPayBy driverId now = do
@@ -246,24 +170,15 @@ findOngoingAfterEndTime (Id driverId) now = do
 --         &&. driverFee ^. DriverFeePayBy <=. val now
 --     return driverFee
 
-findUnpaidAfterPayBy :: L.MonadFlow m => Id Person -> UTCTime -> m (Maybe DriverFee)
-findUnpaidAfterPayBy (Id driverId) now = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDF.DriverFeeT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      either (pure Nothing) (transformBeamDriverFeeToDomain <$>)
-        <$> KV.findWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [ Se.And
-              [ Se.Is BeamDF.driverId $ Se.Eq driverId,
-                Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE],
-                Se.Is BeamDF.payBy $ Se.LessThanOrEq now
-              ]
-          ]
-    Nothing -> pure Nothing
+findUnpaidAfterPayBy :: (L.MonadFlow m, Log m) => Id Person -> UTCTime -> m (Maybe DriverFee)
+findUnpaidAfterPayBy (Id driverId) now =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamDF.driverId $ Se.Eq driverId,
+          Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE],
+          Se.Is BeamDF.payBy $ Se.LessThanOrEq now
+        ]
+    ]
 
 -- updateFee :: Id DriverFee -> Maybe Money -> Money -> Money -> HighPrecMoney -> HighPrecMoney -> UTCTime -> SqlDB ()
 -- updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now = do
@@ -282,7 +197,7 @@ findUnpaidAfterPayBy (Id driverId) now = do
 --       ]
 --     where_ $ tbl ^. DriverFeeId ==. val (getId driverFeeId)
 
-updateFee :: L.MonadFlow m => Id DriverFee -> Maybe Money -> Money -> Money -> HighPrecMoney -> HighPrecMoney -> UTCTime -> m (MeshResult ())
+updateFee :: (L.MonadFlow m, Log m) => Id DriverFee -> Maybe Money -> Money -> Money -> HighPrecMoney -> HighPrecMoney -> UTCTime -> m ()
 updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now = do
   driverFeeObject <- findByIdBeam driverFeeId
   case driverFeeObject of
@@ -294,26 +209,18 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now = do
       let totalEarnings = df.totalEarnings
       let numRides = df.numRides
       let fare = fromMaybe 0 mbFare
-      dbConf <- L.getOption KBT.PsqlDbCfg
-      let modelName = Se.modelTableName @BeamDF.DriverFeeT
-      let updatedMeshConfig = setMeshConfig modelName
-      case dbConf of
-        Just dbConf' ->
-          KV.updateWoReturningWithKVConnector
-            dbConf'
-            updatedMeshConfig
-            [ Se.Set BeamDF.govtCharges $ govtCharges' + govtCharges,
-              Se.Set BeamDF.platformFee $ platformFee' + platformFee,
-              Se.Set BeamDF.cgst $ cgst' + cgst,
-              Se.Set BeamDF.sgst $ sgst' + sgst,
-              Se.Set BeamDF.status ONGOING,
-              Se.Set BeamDF.totalEarnings $ totalEarnings + fare,
-              Se.Set BeamDF.numRides $ numRides + 1, -- in the api, num_rides needed without cost contribution?
-              Se.Set BeamDF.updatedAt now
-            ]
-            [Se.Is BeamDF.id (Se.Eq (getId driverFeeId))]
-        Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
-    Nothing -> pure (Left (MKeyNotFound "Could not retrieve driver fee object"))
+      updateWithKV
+        [ Se.Set BeamDF.govtCharges $ govtCharges' + govtCharges,
+          Se.Set BeamDF.platformFee $ platformFee' + platformFee,
+          Se.Set BeamDF.cgst $ cgst' + cgst,
+          Se.Set BeamDF.sgst $ sgst' + sgst,
+          Se.Set BeamDF.status ONGOING,
+          Se.Set BeamDF.totalEarnings $ totalEarnings + fare,
+          Se.Set BeamDF.numRides $ numRides + 1, -- in the api, num_rides needed without cost contribution?
+          Se.Set BeamDF.updatedAt now
+        ]
+        [Se.Is BeamDF.id (Se.Eq (getId driverFeeId))]
+    Nothing -> pure ()
 
 -- updateStatus :: DriverFeeStatus -> Id DriverFee -> UTCTime -> SqlDB ()
 -- updateStatus status driverFeeId now = do
@@ -324,74 +231,51 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now = do
 --         DriverFeeUpdatedAt =. val now
 --       ]
 --     where_ $ tbl ^. DriverFeeId ==. val (getId driverFeeId)
--- updateActivity :: (L.MonadFlow m, MonadTime m) => Id Person.Driver -> Bool -> Maybe DriverMode -> m (MeshResult ())
--- updateActivity (Id driverId) isActive mode = do
---   dbConf <- L.getOption KBT.PsqlDbCfg
---   let modelName = Se.modelTableName @BeamDI.DriverInformationT
---   let updatedMeshConfig = setMeshConfig modelName
---   now <- getCurrentTime
---   case dbConf of
---     Just dbConf' ->
---       KV.updateWoReturningWithKVConnector
---         dbConf'
---         updatedMeshConfig
---         [ Se.Set BeamDI.active isActive,
---           Se.Set BeamDI.mode mode,
---           Se.Set BeamDI.updatedAt now
---         ]
---         [Se.Is BeamDI.driverId (Se.Eq driverId)]
---     Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
 
-updateStatus :: L.MonadFlow m => DriverFeeStatus -> Id DriverFee -> UTCTime -> m (MeshResult ())
-updateStatus status (Id driverFeeId) now = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDF.DriverFeeT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamDF.status status,
-          Se.Set BeamDF.updatedAt now
-        ]
-        [Se.Is BeamDF.id (Se.Eq driverFeeId)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+updateStatus :: (L.MonadFlow m, Log m) => DriverFeeStatus -> Id DriverFee -> UTCTime -> m ()
+updateStatus status (Id driverFeeId) now =
+  updateWithKV
+    [ Se.Set BeamDF.status status,
+      Se.Set BeamDF.updatedAt now
+    ]
+    [Se.Is BeamDF.id (Se.Eq driverFeeId)]
 
-transformBeamDriverFeeToDomain :: BeamDF.DriverFee -> DriverFee
-transformBeamDriverFeeToDomain BeamDF.DriverFeeT {..} = do
-  DriverFee
-    { id = Id id,
-      shortId = ShortId shortId,
-      driverId = Id driverId,
-      govtCharges = govtCharges,
-      platformFee = Domain.PlatformFee platformFee cgst sgst,
-      numRides = numRides,
-      payBy = payBy,
-      totalEarnings = totalEarnings,
-      startTime = startTime,
-      endTime = endTime,
-      status = status,
-      createdAt = createdAt,
-      updatedAt = updatedAt
-    }
+instance FromTType' BeamDF.DriverFee DriverFee where
+  fromTType' BeamDF.DriverFeeT {..} = do
+    pure $
+      Just
+        DriverFee
+          { id = Id id,
+            shortId = ShortId shortId,
+            driverId = Id driverId,
+            govtCharges = govtCharges,
+            platformFee = Domain.PlatformFee platformFee cgst sgst,
+            numRides = numRides,
+            payBy = payBy,
+            totalEarnings = totalEarnings,
+            startTime = startTime,
+            endTime = endTime,
+            status = status,
+            createdAt = createdAt,
+            updatedAt = updatedAt
+          }
 
-transformDomainDriverFeeToBeam :: DriverFee -> BeamDF.DriverFee
-transformDomainDriverFeeToBeam DriverFee {..} =
-  BeamDF.DriverFeeT
-    { BeamDF.id = getId id,
-      BeamDF.shortId = getShortId shortId,
-      BeamDF.driverId = getId driverId,
-      BeamDF.govtCharges = govtCharges,
-      BeamDF.platformFee = platformFee.fee,
-      BeamDF.cgst = platformFee.cgst,
-      BeamDF.sgst = platformFee.sgst,
-      BeamDF.numRides = numRides,
-      BeamDF.payBy = payBy,
-      BeamDF.totalEarnings = totalEarnings,
-      BeamDF.startTime = startTime,
-      BeamDF.endTime = endTime,
-      BeamDF.status = status,
-      BeamDF.createdAt = createdAt,
-      BeamDF.updatedAt = updatedAt
-    }
+instance ToTType' BeamDF.DriverFee DriverFee where
+  toTType' DriverFee {..} = do
+    BeamDF.DriverFeeT
+      { BeamDF.id = getId id,
+        BeamDF.shortId = getShortId shortId,
+        BeamDF.driverId = getId driverId,
+        BeamDF.govtCharges = govtCharges,
+        BeamDF.platformFee = platformFee.fee,
+        BeamDF.cgst = platformFee.cgst,
+        BeamDF.sgst = platformFee.sgst,
+        BeamDF.numRides = numRides,
+        BeamDF.payBy = payBy,
+        BeamDF.totalEarnings = totalEarnings,
+        BeamDF.startTime = startTime,
+        BeamDF.endTime = endTime,
+        BeamDF.status = status,
+        BeamDF.createdAt = createdAt,
+        BeamDF.updatedAt = updatedAt
+      }

@@ -42,7 +42,8 @@ import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.SMS.Interface as Sms
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
+import Kernel.Types.Common hiding (id)
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -99,16 +100,6 @@ merchantServiceConfigTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-defaultMerchantServiceConfig :: MerchantServiceConfig
-defaultMerchantServiceConfig =
-  MerchantServiceConfigT
-    { merchantId = "",
-      serviceName = "",
-      configJSON = "",
-      updatedAt = defaultUTCDate,
-      createdAt = defaultUTCDate
-    }
-
 getServiceNameConfigJSON :: Domain.ServiceConfig -> (Domain.ServiceName, A.Value)
 getServiceNameConfigJSON = \case
   Domain.MapsServiceConfig mapsCfg -> case mapsCfg of
@@ -143,4 +134,4 @@ merchantServiceConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
 merchantServiceConfigToPSModifiers =
   M.empty
 
-$(enableKVPG ''MerchantServiceConfigT ['serviceName] [])
+$(enableKVPG ''MerchantServiceConfigT ['merchantId] [])

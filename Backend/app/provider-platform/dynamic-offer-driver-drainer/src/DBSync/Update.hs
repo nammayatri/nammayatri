@@ -1,9 +1,14 @@
 module DBSync.Update where
 
-import Config.Config as Config
+-- import Config.Config as Config
 import Config.Env
 import Data.Aeson as A
 import Data.Either.Extra (mapLeft)
+-- import           Utils.Logging
+
+-- import System.CPUTime
+
+import Data.Maybe (fromJust)
 import Data.Text as T
 import Database.Beam as B hiding (runUpdate)
 import EulerHS.CachedSqlDBQuery as CDB
@@ -12,10 +17,8 @@ import EulerHS.KVConnector.Utils as EKU
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (id)
 import EulerHS.Types as ET
--- import           Utils.Logging
-
+import qualified Kernel.Beam.Types as KBT
 import Sequelize (Model, Set, Where)
--- import System.CPUTime
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
@@ -39,7 +42,7 @@ updateDB ::
   ByteString ->
   m (Either MeshError [A.Value])
 updateDB dbConf _ setClause whereClause bts = do
-  either (pure . Left) ((Right <$>) . (sequence . (updateModel' <$>))) . mapLeft MDBError
+  either (pure . Left) ((Right <$>) . mapM updateModel') . mapLeft MDBError
     =<< runExceptT
       ( do
           updateObj <- ExceptT $ CDB.findAll dbConf Nothing whereClause
@@ -57,6 +60,7 @@ updateDB dbConf _ setClause whereClause bts = do
 
 runUpdateCommands :: (UpdateDBCommand, ByteString) -> Flow (Either (MeshError, EL.KVDBStreamEntryID) EL.KVDBStreamEntryID)
 runUpdateCommands (cmd, val) = do
+  let dbConf = fromJust <$> EL.getOption KBT.PsqlDbCfg
   case cmd of
     -- UpdateDBCommand id _ _ _ _ (TxnOfferInfoOptions                  _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("TxnOfferInfo"                  :: Text) =<< Config.getEulerDbConf
     -- UpdateDBCommand id _ _ _ _ (JuspayEventOptions                   _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("JuspayEvent"                   :: Text) =<< Config.getEulerDbConf
@@ -132,82 +136,82 @@ runUpdateCommands (cmd, val) = do
     -- UpdateDBCommand id _ _ _ _ (PaymentLinksOptions                  _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("PaymentLinks"                  :: Text) =<< Config.getEulerDbConf
     -- UpdateDBCommand id _ _ _ _ (CustomerAccountOptions               _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("CustomerAccount"               :: Text) =<< Config.getEulerDbConf
     -- UpdateDBCommand id _ _ _ _ (AuthMappingOptions                   _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("AuthMapping"                   :: Text) =<< Config.getEulerDbConf
-    -- UpdateDBCommand id _ _ _ _ (RuleOptions                          _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Rule"                          :: Text) =<< Config.getEulerPgDbConf
-    -- UpdateDBCommand id _ _ _ _ (OfferRedemptionOptions               _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("OfferRedemption"               :: Text) =<< Config.getEulerPgDbConf
-    -- UpdateDBCommand id _ _ _ _ (ExternalMerchantCustomerOptions      _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("ExternalMerchantCustomer"      :: Text) =<< Config.getEulerPgDbConf
-    -- UpdateDBCommand id _ _ _ _ (AgencyOptions                        _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Agency"                        :: Text) =<< Config.getEulerPgDbConf
-    -- UpdateDBCommand id _ _ _ _ (OffersOptions                        _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Offers"                        :: Text) =<< Config.getEulerPgDbConf
-    -- UpdateDBCommand id _ _ _ _ (SavedPaymentMethodOptions            _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("SavedPaymentMethod"            :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (RegistrationTokenOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("RegistrationToken" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (BookingOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Booking" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (BookingLocationOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("BookingLocation" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (BookingCancellationReasonOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("BookingCancellationReason" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (BusinessEventOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("BusinessEvent" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (CallStatusOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("CallStatus" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (CancellationReasonOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("CancellationReason" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (DriverFlowStatusOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("DriverFlowStatus" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (DriverFeeOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("DriverFee" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (DriverInformationOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("DriverInformation" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (DriverLocationOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("DriverLocation" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (AadhaarOtpReqOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("AadhaarOtpReq" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (AadhaarOtpVerifyOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("AadhaarOtpVerify" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (AadhaarVerificationOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("AadhaarVerification" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (DriverLicenseOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("DriverLicense" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (DriverRCAssociationOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("DriverRCAssociation" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (IdfyVerificationOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("IdfyVerification" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (ImageOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Image" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (OperatingCityOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("OperatingCity" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (VehicleRegistrationCertificateOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("VehicleRegistrationCertificate" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (DriverQuoteOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("DriverQuote" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (DriverReferralOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("DriverReferral" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (DriverStatsOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("DriverStats" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (EstimateOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Estimate" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (ExophoneOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Exophone" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (FareParametersOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("FareParameters" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (FareParametersProgressiveDetailsOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("FareParametersProgressiveDetails" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (FareParametersSlabDetailsOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("FareParametersSlabDetails" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (FarePolicyOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("FarePolicy" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (DriverExtraFeeBoundsOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("DriverExtraFeeBounds" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (FarePolicyProgressiveDetailsOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("FarePolicyProgressiveDetails" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (FarePolicyProgressiveDetailsPerExtraKmRateSectionOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("FarePolicyProgressiveDetailsPerExtraKmRateSection" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (FarePolicySlabDetailsSlabOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("FarePolicySlabDetailsSlab" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (RestrictedExtraFareOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("RestrictedExtraFare" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (FareProductOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("FareProduct" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (GeometryOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Geometry" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (CommentOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Comment" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (IssueCategoryOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("IssueCategory" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (IssueOptionOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("IssueOption" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (IssueReportOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("IssueReport" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (IssueTranslationOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("IssueTranslation" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (LeaderBoardConfigOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("LeaderBoardConfig" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (PlaceNameCacheOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("PlaceNameCache" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (MediaFileOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("MediaFile" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (MerchantOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Merchant" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (DriverIntelligentPoolConfigOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("DriverIntelligentPoolConfig" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (DriverPoolConfigOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("DriverPoolConfig" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (MerchantLeaderBoardConfigOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("MerchantLeaderBoardConfig" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (MerchantMessageOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("MerchantMessage" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (MerchantPaymentMethodOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("MerchantPaymentMethod" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (MerchantServiceConfigOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("MerchantServiceConfig" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (MerchantServiceUsageConfigOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("MerchantServiceUsageConfig" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (MerchantOnboardingDocumentConfigOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("MerchantOnboardingDocumentConfig" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (TransporterConfigOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("TransporterConfig" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (MessageOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Message" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (MessageReportOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("MessageReport" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (MessageTranslationOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("MessageTranslation" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (OnboardingDocumentConfigOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("OnboardingDocumentConfig" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (PersonOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Person" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (QuoteSpecialZoneOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("QuoteSpecialZone" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (RatingOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Rating" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (RideOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Ride" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (RideDetailsOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("RideDetails" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (RiderDetailsOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("RiderDetails" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (SearchRequestOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("SearchRequest" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (SearchReqLocationOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("SearchReqLocation" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (SearchRequestForDriverOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("SearchRequestForDriver" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (SearchRequestSpecialZoneOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("SearchRequestSpecialZone" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (SearchTryOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("SearchTry" :: Text) =<< Config.getEulerPgDbConf
-    UpdateDBCommand id _ _ _ _ (VehicleOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Vehicle" :: Text) =<< Config.getEulerPgDbConf
+    -- UpdateDBCommand id _ _ _ _ (RuleOptions                          _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Rule"                          :: Text) =<< dbConf
+    -- UpdateDBCommand id _ _ _ _ (OfferRedemptionOptions               _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("OfferRedemption"               :: Text) =<< dbConf
+    -- UpdateDBCommand id _ _ _ _ (ExternalMerchantCustomerOptions      _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("ExternalMerchantCustomer"      :: Text) =<< dbConf
+    -- UpdateDBCommand id _ _ _ _ (AgencyOptions                        _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Agency"                        :: Text) =<< dbConf
+    -- UpdateDBCommand id _ _ _ _ (OffersOptions                        _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Offers"                        :: Text) =<< dbConf
+    -- UpdateDBCommand id _ _ _ _ (SavedPaymentMethodOptions            _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("SavedPaymentMethod"            :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (RegistrationTokenOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("RegistrationToken" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (BookingOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Booking" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (BookingLocationOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("BookingLocation" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (BookingCancellationReasonOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("BookingCancellationReason" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (BusinessEventOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("BusinessEvent" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (CallStatusOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("CallStatus" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (CancellationReasonOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("CancellationReason" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (DriverFlowStatusOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("DriverFlowStatus" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (DriverFeeOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("DriverFee" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (DriverInformationOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("DriverInformation" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (DriverLocationOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("DriverLocation" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (AadhaarOtpReqOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("AadhaarOtpReq" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (AadhaarOtpVerifyOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("AadhaarOtpVerify" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (AadhaarVerificationOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("AadhaarVerification" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (DriverLicenseOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("DriverLicense" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (DriverRCAssociationOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("DriverRCAssociation" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (IdfyVerificationOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("IdfyVerification" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (ImageOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Image" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (OperatingCityOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("OperatingCity" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (VehicleRegistrationCertificateOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("VehicleRegistrationCertificate" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (DriverQuoteOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("DriverQuote" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (DriverReferralOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("DriverReferral" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (DriverStatsOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("DriverStats" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (EstimateOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Estimate" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (ExophoneOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Exophone" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (FareParametersOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("FareParameters" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (FareParametersProgressiveDetailsOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("FareParametersProgressiveDetails" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (FareParametersSlabDetailsOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("FareParametersSlabDetails" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (FarePolicyOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("FarePolicy" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (DriverExtraFeeBoundsOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("DriverExtraFeeBounds" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (FarePolicyProgressiveDetailsOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("FarePolicyProgressiveDetails" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (FarePolicyProgressiveDetailsPerExtraKmRateSectionOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("FarePolicyProgressiveDetailsPerExtraKmRateSection" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (FarePolicySlabDetailsSlabOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("FarePolicySlabDetailsSlab" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (RestrictedExtraFareOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("RestrictedExtraFare" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (FareProductOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("FareProduct" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (GeometryOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Geometry" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (CommentOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Comment" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (IssueCategoryOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("IssueCategory" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (IssueOptionOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("IssueOption" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (IssueReportOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("IssueReport" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (IssueTranslationOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("IssueTranslation" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (LeaderBoardConfigOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("LeaderBoardConfig" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (PlaceNameCacheOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("PlaceNameCache" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (MediaFileOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("MediaFile" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (MerchantOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Merchant" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (DriverIntelligentPoolConfigOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("DriverIntelligentPoolConfig" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (DriverPoolConfigOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("DriverPoolConfig" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (MerchantLeaderBoardConfigOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("MerchantLeaderBoardConfig" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (MerchantMessageOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("MerchantMessage" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (MerchantPaymentMethodOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("MerchantPaymentMethod" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (MerchantServiceConfigOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("MerchantServiceConfig" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (MerchantServiceUsageConfigOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("MerchantServiceUsageConfig" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (MerchantOnboardingDocumentConfigOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("MerchantOnboardingDocumentConfig" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (TransporterConfigOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("TransporterConfig" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (MessageOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Message" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (MessageReportOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("MessageReport" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (MessageTranslationOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("MessageTranslation" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (OnboardingDocumentConfigOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("OnboardingDocumentConfig" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (PersonOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Person" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (QuoteSpecialZoneOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("QuoteSpecialZone" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (RatingOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Rating" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (RideOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Ride" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (RideDetailsOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("RideDetails" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (RiderDetailsOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("RiderDetails" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (SearchRequestOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("SearchRequest" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (SearchReqLocationOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("SearchReqLocation" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (SearchRequestForDriverOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("SearchRequestForDriver" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (SearchRequestSpecialZoneOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("SearchRequestSpecialZone" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (SearchTryOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("SearchTry" :: Text) =<< dbConf
+    UpdateDBCommand id _ _ _ _ (VehicleOptions _ setClauses whereClause) -> runUpdate id val setClauses whereClause ("Vehicle" :: Text) =<< dbConf
   where
     runUpdate id value setClause whereClause model dbConf = do
       maxRetries <- EL.runIO getMaxRetries

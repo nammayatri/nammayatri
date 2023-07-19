@@ -64,13 +64,6 @@ tripTermsTMod =
       descriptions = B.fieldNamed "descriptions"
     }
 
-defaultTripTerms :: TripTerms
-defaultTripTerms =
-  TripTermsT
-    { id = "",
-      descriptions = ""
-    }
-
 instance Serialize TripTerms where
   put = error "undefined"
   get = error "undefined"

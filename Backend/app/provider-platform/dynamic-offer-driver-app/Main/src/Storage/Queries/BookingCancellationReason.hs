@@ -1,4 +1,5 @@
-{-# LANGUAGE InstanceSigs #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -12,7 +13,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.BookingCancellationReason where
 
@@ -21,26 +21,24 @@ import Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
 import Domain.Types.Person
 import Domain.Types.Ride
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
 import EulerHS.Prelude as P hiding ((^.))
-import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Maps.Types (LatLong (..), lat, lon)
 import Kernel.Types.Common (Log)
 import Kernel.Types.Id
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findAllWithKV, findOneWithKV, setMeshConfig)
+import Lib.Utils
+  ( FromTType' (fromTType'),
+    ToTType' (toTType'),
+    createWithKV,
+    findAllWithKV,
+    findOneWithKV,
+    updateWithKV,
+  )
 import qualified Sequelize as Se
 import qualified Storage.Beam.BookingCancellationReason as BeamBCR
 
-create :: L.MonadFlow m => DBCR.BookingCancellationReason -> m (MeshResult ())
-create bookingCancellationReason = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamBCR.BookingCancellationReasonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainBookingCancellationReasonToBeam bookingCancellationReason)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create :: (L.MonadFlow m, Log m) => DBCR.BookingCancellationReason -> m ()
+create = createWithKV
 
 -- TODO: Convert this function
 -- findAllCancelledByDriverId ::
@@ -51,109 +49,35 @@ create bookingCancellationReason = do
 --   mkCount <$> do
 --     Esq.findAll $ do
 --       rideBookingCancellationReason <- from $ table @BookingCancellationReasonT
---       where_ $
 --         rideBookingCancellationReason ^. BookingCancellationReasonDriverId ==. val (Just $ toKey driverId)
 --           &&. rideBookingCancellationReason ^. BookingCancellationReasonSource ==. val ByDriver
 --       return (countRows :: SqlExpr (Esq.Value Int))
 --   where
 --     mkCount [counter] = counter
---     mkCount _ = 0
 
-findAllCancelledByDriverId :: L.MonadFlow m => Id Person -> m Int
-findAllCancelledByDriverId driverId = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamBCR.BookingCancellationReasonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      res <-
-        KV.findAllWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [ Se.And [Se.Is BeamBCR.driverId $ Se.Eq (Just $ getId driverId)],
-            Se.Is BeamBCR.source $ Se.Eq ByDriver
-          ]
-      pure $ either (const 0) length res
-    Nothing -> pure 0
+findAllCancelledByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m Int
+findAllCancelledByDriverId driverId = findAllWithKV [Se.And [Se.Is BeamBCR.driverId $ Se.Eq (Just $ getId driverId), Se.Is BeamBCR.source $ Se.Eq ByDriver]] <&> length
 
-findAllCancelledByDriverId' :: (L.MonadFlow m, Log m) => Id Person -> m Int
-findAllCancelledByDriverId' driverId =
-  findAllWithKV [Se.And [Se.Is BeamBCR.driverId $ Se.Eq (Just $ getId driverId), Se.Is BeamBCR.source $ Se.Eq ByDriver]] <&> length
+findByBookingId :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe BookingCancellationReason)
+findByBookingId (Id bookingId) = findOneWithKV [Se.Is BeamBCR.bookingId $ Se.Eq bookingId]
 
-findByBookingId :: L.MonadFlow m => Id Booking -> m (Maybe BookingCancellationReason)
-findByBookingId (Id bookingId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamBCR.BookingCancellationReasonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamBookingCancellationReasonToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamBCR.bookingId $ Se.Eq bookingId]
-    Nothing -> pure Nothing
+findByRideId :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe BookingCancellationReason)
+findByRideId (Id rideId) = findOneWithKV [Se.Is BeamBCR.rideId $ Se.Eq (Just rideId)]
 
-findByRideId :: L.MonadFlow m => Id Ride -> m (Maybe BookingCancellationReason)
-findByRideId (Id rideId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamBCR.BookingCancellationReasonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamBookingCancellationReasonToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamBCR.rideId $ Se.Eq (Just rideId)]
-    Nothing -> pure Nothing
-
-findByRideId' :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe BookingCancellationReason)
-findByRideId' (Id rideId) = findOneWithKV [Se.Is BeamBCR.rideId $ Se.Eq (Just rideId)]
-
-upsert :: L.MonadFlow m => BookingCancellationReason -> m ()
+upsert :: (L.MonadFlow m, Log m) => BookingCancellationReason -> m ()
 upsert cancellationReason = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamBCR.BookingCancellationReasonT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> do
-      res <- either (pure Nothing) (transformBeamBookingCancellationReasonToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamBCR.bookingId $ Se.Eq (getId cancellationReason.bookingId)]
-      if isJust res
-        then
-          void $
-            KV.updateWoReturningWithKVConnector
-              dbCOnf'
-              updatedMeshConfig
-              [ Se.Set BeamBCR.rideId (getId <$> cancellationReason.rideId),
-                Se.Set BeamBCR.reasonCode ((\(CancellationReasonCode x) -> x) <$> cancellationReason.reasonCode),
-                Se.Set BeamBCR.additionalInfo cancellationReason.additionalInfo
-              ]
-              [Se.Is BeamBCR.bookingId (Se.Eq $ getId cancellationReason.bookingId)]
-        else void $ KV.createWoReturingKVConnector dbCOnf' updatedMeshConfig (transformDomainBookingCancellationReasonToBeam cancellationReason)
-    Nothing -> pure ()
-
-transformBeamBookingCancellationReasonToDomain :: BeamBCR.BookingCancellationReason -> BookingCancellationReason
-transformBeamBookingCancellationReasonToDomain BeamBCR.BookingCancellationReasonT {..} = do
-  BookingCancellationReason
-    { driverId = Id <$> driverId,
-      bookingId = Id bookingId,
-      rideId = Id <$> rideId,
-      merchantId = Id <$> merchantId,
-      source = source,
-      reasonCode = CancellationReasonCode <$> reasonCode,
-      additionalInfo = additionalInfo,
-      driverCancellationLocation = LatLong <$> driverCancellationLocationLat <*> driverCancellationLocationLon,
-      driverDistToPickup = driverDistToPickup
-    }
-
-transformDomainBookingCancellationReasonToBeam :: BookingCancellationReason -> BeamBCR.BookingCancellationReason
-transformDomainBookingCancellationReasonToBeam BookingCancellationReason {..} =
-  BeamBCR.BookingCancellationReasonT
-    { BeamBCR.driverId = getId <$> driverId,
-      BeamBCR.bookingId = getId bookingId,
-      BeamBCR.rideId = getId <$> rideId,
-      BeamBCR.merchantId = getId <$> merchantId,
-      BeamBCR.source = source,
-      BeamBCR.reasonCode = (\(CancellationReasonCode x) -> x) <$> reasonCode,
-      BeamBCR.additionalInfo = additionalInfo,
-      BeamBCR.driverCancellationLocationLat = lat <$> driverCancellationLocation,
-      BeamBCR.driverCancellationLocationLon = lon <$> driverCancellationLocation,
-      BeamBCR.driverDistToPickup = driverDistToPickup
-    }
+  res <- findOneWithKV [Se.Is BeamBCR.bookingId $ Se.Eq (getId cancellationReason.bookingId)]
+  if isJust res
+    then
+      updateWithKV
+        [ Se.Set BeamBCR.rideId (getId <$> cancellationReason.rideId),
+          Se.Set BeamBCR.reasonCode ((\(CancellationReasonCode x) -> x) <$> cancellationReason.reasonCode),
+          Se.Set BeamBCR.additionalInfo cancellationReason.additionalInfo
+        ]
+        [Se.Is BeamBCR.bookingId (Se.Eq $ getId cancellationReason.bookingId)]
+    else createWithKV cancellationReason
 
 instance FromTType' (BeamBCR.BookingCancellationReasonT Identity) BookingCancellationReason where
-  fromTType' :: (MonadThrow m, Log m, L.MonadFlow m) => BeamBCR.BookingCancellationReason -> m (Maybe BookingCancellationReason)
   fromTType' BeamBCR.BookingCancellationReasonT {..} = do
     pure $
       Just
@@ -170,7 +94,6 @@ instance FromTType' (BeamBCR.BookingCancellationReasonT Identity) BookingCancell
           }
 
 instance ToTType' BeamBCR.BookingCancellationReason BookingCancellationReason where
-  toTType' :: BookingCancellationReason -> BeamBCR.BookingCancellationReason
   toTType' BookingCancellationReason {..} = do
     BeamBCR.BookingCancellationReasonT
       { BeamBCR.driverId = getId <$> driverId,

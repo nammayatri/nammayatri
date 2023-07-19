@@ -29,7 +29,7 @@ createTripTerms :: L.MonadFlow m => TripTerms -> m (MeshResult ())
 createTripTerms tripTerms = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamTT.TripTermsT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainTripTermsToBeam tripTerms)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -41,7 +41,7 @@ findById'' :: L.MonadFlow m => Id TripTerms -> m (Maybe TripTerms)
 findById'' tripTermsId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamTT.TripTermsT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamTripTermsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamTT.id $ Se.Eq (getId tripTermsId)]
     Nothing -> pure Nothing
@@ -55,7 +55,7 @@ transformBeamTripTermsToDomain BeamTT.TripTermsT {..} = do
 
 transformDomainTripTermsToBeam :: TripTerms -> BeamTT.TripTerms
 transformDomainTripTermsToBeam TripTerms {..} =
-  BeamTT.defaultTripTerms
+  BeamTT.TripTermsT
     { BeamTT.id = getId id,
       BeamTT.descriptions = DTT.intercalateDescriptions descriptions
     }

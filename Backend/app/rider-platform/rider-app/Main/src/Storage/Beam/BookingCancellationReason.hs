@@ -33,7 +33,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -138,21 +138,6 @@ bookingCancellationReasonToHSModifiers =
 bookingCancellationReasonToPSModifiers :: M.Map Text (A.Value -> A.Value)
 bookingCancellationReasonToPSModifiers =
   M.empty
-
-defaultBookingCancellationReason :: BookingCancellationReason
-defaultBookingCancellationReason =
-  BookingCancellationReasonT
-    { bookingId = "",
-      rideId = Nothing,
-      merchantId = Nothing,
-      source = "",
-      reasonCode = Nothing,
-      reasonStage = Nothing,
-      additionalInfo = Nothing,
-      driverCancellationLocationLat = Nothing,
-      driverCancellationLocationLon = Nothing,
-      driverDistToPickup = Nothing
-    }
 
 instance Serialize BookingCancellationReason where
   put = error "undefined"

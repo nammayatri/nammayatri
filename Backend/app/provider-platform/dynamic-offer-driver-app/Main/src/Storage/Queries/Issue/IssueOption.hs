@@ -1,20 +1,21 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Storage.Queries.Issue.IssueOption where
 
 import Database.Beam.Postgres (Postgres)
 import Domain.Types.Issue.IssueCategory
 import Domain.Types.Issue.IssueOption as DomainIO
 import Domain.Types.Issue.IssueTranslation
-import qualified EulerHS.KVConnector.Flow as KV
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Id
-import Lib.Utils (setMeshConfig)
+import Kernel.Types.Logging (Log)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findAllWithKV, findOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.IssueOption as BeamIO
 import qualified Storage.Beam.Issue.IssueTranslation as BeamIT
-import qualified Storage.Queries.Issue.IssueTranslation as QueriesIT
+import qualified Storage.Queries.Issue.IssueTranslation ()
 
 -- findByIdAndCategoryId :: Transactionable m => Id IssueOption -> Id IssueCategory -> m (Maybe IssueOption)
 -- findByIdAndCategoryId issueOptionId issueCategoryId = Esq.findOne $ do
@@ -24,14 +25,8 @@ import qualified Storage.Queries.Issue.IssueTranslation as QueriesIT
 --       &&. issueOption ^. IssueOptionIssueCategoryId ==. val (toKey issueCategoryId)
 --   pure issueOption
 
-findByIdAndCategoryId :: L.MonadFlow m => Id IssueOption -> Id IssueCategory -> m (Maybe IssueOption)
-findByIdAndCategoryId issueOptionId issueCategoryId = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamIO.IssueOptionT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> either (pure Nothing) (transformBeamIssueOptionToDomain <$>) <$> KV.findWithKVConnector dbConf' updatedMeshConfig [Se.And [Se.Is BeamIO.id $ Se.Eq $ getId issueOptionId, Se.Is BeamIO.issueCategoryId $ Se.Eq $ getId issueCategoryId]]
-    Nothing -> pure Nothing
+findByIdAndCategoryId :: (L.MonadFlow m, Log m) => Id IssueOption -> Id IssueCategory -> m (Maybe IssueOption)
+findByIdAndCategoryId issueOptionId issueCategoryId = findOneWithKV [Se.And [Se.Is BeamIO.id $ Se.Eq $ getId issueOptionId, Se.Is BeamIO.issueCategoryId $ Se.Eq $ getId issueCategoryId]]
 
 -- fullOptionTable ::
 --   Language ->
@@ -54,25 +49,13 @@ findByIdAndCategoryId issueOptionId issueCategoryId = do
 --     issueOption ^. IssueOptionIssueCategoryId ==. val (toKey issueCategoryId)
 --   pure (issueOption, mbIssueTranslation)
 
-findAllIssueOptionWithSeCondition :: L.MonadFlow m => [Se.Clause Postgres BeamIO.IssueOptionT] -> m [IssueOption]
-findAllIssueOptionWithSeCondition seCondition = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamIO.IssueOptionT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> either (pure []) (transformBeamIssueOptionToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig seCondition
-    Nothing -> pure []
+findAllIssueOptionWithSeCondition :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamIO.IssueOptionT] -> m [IssueOption]
+findAllIssueOptionWithSeCondition = findAllWithKV
 
-findAllIssueTranslationWithSeCondition :: L.MonadFlow m => [Se.Clause Postgres BeamIT.IssueTranslationT] -> m [IssueTranslation]
-findAllIssueTranslationWithSeCondition seCondition = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamIT.IssueTranslationT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> either (pure []) (QueriesIT.transformBeamIssueTranslationToDomain <$>) <$> KV.findAllWithKVConnector dbConf' updatedMeshConfig seCondition
-    Nothing -> pure []
+findAllIssueTranslationWithSeCondition :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamIT.IssueTranslationT] -> m [IssueTranslation]
+findAllIssueTranslationWithSeCondition = findAllWithKV
 
-findAllByCategoryAndLanguage :: L.MonadFlow m => Id IssueCategory -> Language -> m [(IssueOption, Maybe IssueTranslation)]
+findAllByCategoryAndLanguage :: (L.MonadFlow m, Log m) => Id IssueCategory -> Language -> m [(IssueOption, Maybe IssueTranslation)]
 findAllByCategoryAndLanguage (Id issueCategoryId) language = do
   let iOptionsSeCondition = [Se.Is BeamIO.issueCategoryId $ Se.Eq issueCategoryId]
   iOptions <- findAllIssueOptionWithSeCondition iOptionsSeCondition
@@ -96,7 +79,7 @@ findAllByCategoryAndLanguage (Id issueCategoryId) language = do
 --     issueOption ^. IssueOptionTId ==. val (toKey issueOptionId)
 --   pure (issueOption, mbIssueTranslation)
 
-findByIdAndLanguage :: L.MonadFlow m => Id IssueOption -> Language -> m (Maybe (IssueOption, Maybe IssueTranslation))
+findByIdAndLanguage :: (L.MonadFlow m, Log m) => Id IssueOption -> Language -> m (Maybe (IssueOption, Maybe IssueTranslation))
 findByIdAndLanguage issueOptionId language = do
   let iOptionsSeCondition = [Se.Is BeamIO.id $ Se.Eq (getId issueOptionId)]
   iOptions <- findAllIssueOptionWithSeCondition iOptionsSeCondition
@@ -118,31 +101,23 @@ findByIdAndLanguage issueOptionId language = do
 --     issueOption ^. IssueOptionTId ==. val (toKey issueOptionId)
 --   pure issueOption
 
-findById :: L.MonadFlow m => Id IssueOption -> m (Maybe IssueOption)
-findById (Id issueOptionId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamIO.IssueOptionT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      result <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamIO.id $ Se.Eq issueOptionId]
-      case result of
-        Right issueOption -> pure $ transformBeamIssueOptionToDomain <$> issueOption
-        Left _ -> pure Nothing
-    Nothing -> pure Nothing
+findById :: (L.MonadFlow m, Log m) => Id IssueOption -> m (Maybe IssueOption)
+findById (Id issueOptionId) = findOneWithKV [Se.Is BeamIO.id $ Se.Eq issueOptionId]
 
-transformBeamIssueOptionToDomain :: BeamIO.IssueOption -> IssueOption
-transformBeamIssueOptionToDomain BeamIO.IssueOptionT {..} = do
-  IssueOption
-    { id = Id id,
-      issueCategoryId = Id issueCategoryId,
-      option = option
-    }
+instance FromTType' BeamIO.IssueOption IssueOption where
+  fromTType' BeamIO.IssueOptionT {..} = do
+    pure $
+      Just
+        IssueOption
+          { id = Id id,
+            issueCategoryId = Id issueCategoryId,
+            option = option
+          }
 
-transformDomainIssueOptionToBeam :: IssueOption -> BeamIO.IssueOption
-transformDomainIssueOptionToBeam IssueOption {..} =
-  BeamIO.IssueOptionT
-    { BeamIO.id = getId id,
-      BeamIO.issueCategoryId = getId issueCategoryId,
-      BeamIO.option = option
-    }
+instance ToTType' BeamIO.IssueOption IssueOption where
+  toTType' IssueOption {..} = do
+    BeamIO.IssueOptionT
+      { BeamIO.id = getId id,
+        BeamIO.issueCategoryId = getId issueCategoryId,
+        BeamIO.option = option
+      }

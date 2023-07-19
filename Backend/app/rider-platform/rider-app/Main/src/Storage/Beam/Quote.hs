@@ -24,34 +24,21 @@ import qualified Data.Map.Strict as M
 import Data.Serialize
 import qualified Data.Time as Time
 import qualified Database.Beam as B
-import Database.Beam.Backend
+-- import Database.Beam.Backend
 import Database.Beam.MySQL ()
-import Database.Beam.Postgres
-  ( Postgres,
-  )
-import Database.PostgreSQL.Simple.FromField (FromField, fromField)
+-- import Database.Beam.Postgres
+--   ( Postgres,
+--   )
+-- import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.FarePolicy.FareProductType as Domain
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
-
-instance FromField Domain.FareProductType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Domain.FareProductType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Domain.FareProductType
-
-instance FromBackendRow Postgres Domain.FareProductType
-
-instance IsString Domain.FareProductType where
-  fromString = show
 
 data QuoteT f = QuoteT
   { id :: B.C f Text,
@@ -123,31 +110,6 @@ quoteTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-defaultQuote :: Quote
-defaultQuote =
-  QuoteT
-    { id = "",
-      fareProductType = "",
-      requestId = "",
-      estimatedFare = "",
-      discount = Nothing,
-      estimatedTotalFare = "",
-      providerId = "",
-      providerUrl = "",
-      providerName = "",
-      providerMobileNumber = "",
-      providerCompletedRidesCount = 0,
-      distanceToNearestDriver = Nothing,
-      vehicleVariant = "",
-      tripTermsId = Nothing,
-      rentalSlabId = Nothing,
-      driverOfferId = Nothing,
-      merchantId = "",
-      specialZoneQuoteId = Nothing,
-      specialLocationTag = Nothing,
-      createdAt = defaultUTCDate
-    }
-
 instance Serialize Quote where
   put = error "undefined"
   get = error "undefined"
@@ -163,4 +125,4 @@ quoteToPSModifiers :: M.Map Text (A.Value -> A.Value)
 quoteToPSModifiers =
   M.empty
 
-$(enableKVPG ''QuoteT ['id] [])
+$(enableKVPG ''QuoteT ['id] [['providerId], ['requestId]])

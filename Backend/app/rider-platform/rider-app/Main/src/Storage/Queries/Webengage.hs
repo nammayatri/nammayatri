@@ -30,7 +30,7 @@ create :: L.MonadFlow m => Webengage -> m (MeshResult ())
 create webengage = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamW.WebengageT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainWebengageToBeam webengage)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -42,7 +42,7 @@ findById :: L.MonadFlow m => Id Webengage -> m (Maybe Webengage)
 findById webengageId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamW.WebengageT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamWebengageToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamW.id $ Se.Eq (getId webengageId)]
     Nothing -> pure Nothing
@@ -58,7 +58,7 @@ findByInfoMsgId :: L.MonadFlow m => Text -> m (Maybe Webengage)
 findByInfoMsgId infoMessageId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamW.WebengageT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> either (pure Nothing) (transformBeamWebengageToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamW.infoMessageId $ Se.Eq infoMessageId]
     Nothing -> pure Nothing
@@ -78,7 +78,7 @@ transformBeamWebengageToDomain BeamW.WebengageT {..} = do
 
 transformDomainWebengageToBeam :: Webengage -> BeamW.Webengage
 transformDomainWebengageToBeam Webengage {..} =
-  BeamW.defaultWebengage
+  BeamW.WebengageT
     { BeamW.id = getId id,
       BeamW.version = version,
       BeamW.contentTemplateId = contentTemplateId,

@@ -70,15 +70,6 @@ fareBreakupTMod =
       amount = B.fieldNamed "amount"
     }
 
-defaultFareBreakup :: FareBreakup
-defaultFareBreakup =
-  FareBreakupT
-    { id = "",
-      bookingId = "",
-      description = "",
-      amount = ""
-    }
-
 instance Serialize FareBreakup where
   put = error "undefined"
   get = error "undefined"
@@ -94,4 +85,4 @@ fareBreakupToPSModifiers :: M.Map Text (A.Value -> A.Value)
 fareBreakupToPSModifiers =
   M.empty
 
-$(enableKVPG ''FareBreakupT ['id] [])
+$(enableKVPG ''FareBreakupT ['id] [['bookingId]])

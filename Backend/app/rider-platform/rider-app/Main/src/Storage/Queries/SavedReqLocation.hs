@@ -30,7 +30,7 @@ create :: L.MonadFlow m => SavedReqLocation -> m (MeshResult ())
 create savedReqLocation = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSRL.SavedReqLocationT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainSavedReqLocationToBeam savedReqLocation)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -48,7 +48,7 @@ findAllByRiderId :: L.MonadFlow m => Id Person -> m [SavedReqLocation]
 findAllByRiderId perId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSRL.SavedReqLocationT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamSavedReqLocationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamSRL.riderId $ Se.Eq (getId perId)]
     Nothing -> pure []
@@ -65,7 +65,7 @@ deleteByRiderIdAndTag :: L.MonadFlow m => Id Person -> Text -> m ()
 deleteByRiderIdAndTag perId addressTag = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSRL.SavedReqLocationT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       void $
@@ -88,7 +88,7 @@ findAllByRiderIdAndTag :: L.MonadFlow m => Id Person -> Text -> m [SavedReqLocat
 findAllByRiderIdAndTag perId addressTag = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSRL.SavedReqLocationT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> either (pure []) (transformBeamSavedReqLocationToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamSRL.riderId (Se.Eq (getId perId)), Se.Is BeamSRL.tag (Se.Eq addressTag)]]
     Nothing -> pure []
@@ -103,7 +103,7 @@ deleteAllByRiderId :: L.MonadFlow m => Id Person -> m ()
 deleteAllByRiderId personId = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamSRL.SavedReqLocationT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' ->
       void $
@@ -137,7 +137,7 @@ transformBeamSavedReqLocationToDomain BeamSRL.SavedReqLocationT {..} = do
 
 transformDomainSavedReqLocationToBeam :: SavedReqLocation -> BeamSRL.SavedReqLocation
 transformDomainSavedReqLocationToBeam SavedReqLocation {..} =
-  BeamSRL.defaultSavedReqLocation
+  BeamSRL.SavedReqLocationT
     { BeamSRL.id = getId id,
       BeamSRL.lat = lat,
       BeamSRL.lon = lon,

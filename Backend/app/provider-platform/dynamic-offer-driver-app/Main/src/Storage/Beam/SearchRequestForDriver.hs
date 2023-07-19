@@ -36,20 +36,10 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Vehicle ()
-
-instance FromField D.DriverMode where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be D.DriverMode where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be D.DriverMode
-
-instance FromBackendRow Postgres D.DriverMode
 
 instance FromField Domain.DriverSearchRequestStatus where
   fromField = fromFieldEnum
@@ -103,8 +93,8 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
   }
   deriving (Generic, B.Beamable)
 
-instance IsString Money where
-  fromString = show
+-- instance IsString Money where
+--   fromString = show
 
 instance IsString Domain.DriverSearchRequestStatus where
   fromString = show

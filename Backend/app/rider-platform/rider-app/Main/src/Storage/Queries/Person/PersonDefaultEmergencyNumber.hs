@@ -37,7 +37,7 @@ create :: L.MonadFlow m => PersonDefaultEmergencyNumber -> m ()
 create pden = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamPDEN.PersonDefaultEmergencyNumberT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainPersonDefaultEmergencyNumberToBeam pden)
     Nothing -> pure ()
@@ -49,7 +49,7 @@ replaceAll :: L.MonadFlow m => Id Person -> [PersonDefaultEmergencyNumber] -> m 
 replaceAll (Id personId) pdenList = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamPDEN.PersonDefaultEmergencyNumberT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> void $ KV.deleteWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamPDEN.personId $ Se.Eq personId]
     Nothing -> pure ()
@@ -70,7 +70,7 @@ findAllByPersonId :: L.MonadFlow m => Id Person -> m [PersonDefaultEmergencyNumb
 findAllByPersonId (Id personId) = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamPDEN.PersonDefaultEmergencyNumberT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> do
       pden <- KV.findAllWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamPDEN.personId $ Se.Eq personId]
@@ -91,7 +91,7 @@ transformBeamPersonDefaultEmergencyNumberToDomain BeamPDEN.PersonDefaultEmergenc
 
 transformDomainPersonDefaultEmergencyNumberToBeam :: PersonDefaultEmergencyNumber -> BeamPDEN.PersonDefaultEmergencyNumber
 transformDomainPersonDefaultEmergencyNumberToBeam PersonDefaultEmergencyNumber {..} =
-  BeamPDEN.defaultPersonDefaultEmergencyNumber
+  BeamPDEN.PersonDefaultEmergencyNumberT
     { BeamPDEN.personId = getId personId,
       BeamPDEN.name = name,
       BeamPDEN.mobileCountryCode = mobileCountryCode,

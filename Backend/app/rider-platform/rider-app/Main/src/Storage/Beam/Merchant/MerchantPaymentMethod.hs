@@ -34,7 +34,8 @@ import qualified Domain.Types.Merchant.MerchantPaymentMethod as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
+import Kernel.Types.Common hiding (id)
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -123,19 +124,6 @@ merchantPaymentMethodTMod =
       createdAt = B.fieldNamed "created_at"
     }
 
-defaultMerchantPaymentMethod :: MerchantPaymentMethod
-defaultMerchantPaymentMethod =
-  MerchantPaymentMethodT
-    { id = "",
-      merchantId = "",
-      paymentType = "",
-      paymentInstrument = "",
-      collectedBy = "",
-      priority = 0,
-      updatedAt = defaultUTCDate,
-      createdAt = defaultUTCDate
-    }
-
 instance Serialize MerchantPaymentMethod where
   put = error "undefined"
   get = error "undefined"
@@ -151,4 +139,4 @@ merchantPaymentMethodToPSModifiers :: M.Map Text (A.Value -> A.Value)
 merchantPaymentMethodToPSModifiers =
   M.empty
 
-$(enableKVPG ''MerchantPaymentMethodT ['id] [])
+$(enableKVPG ''MerchantPaymentMethodT ['id] [['merchantId]])

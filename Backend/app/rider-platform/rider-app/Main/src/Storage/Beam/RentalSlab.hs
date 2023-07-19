@@ -33,7 +33,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -97,14 +97,6 @@ rentalSlabTMod =
     { id = B.fieldNamed "id",
       baseDistance = B.fieldNamed "base_distance",
       baseDuration = B.fieldNamed "base_duration"
-    }
-
-defaultRentalSlab :: RentalSlab
-defaultRentalSlab =
-  RentalSlabT
-    { id = "",
-      baseDistance = "",
-      baseDuration = ""
     }
 
 instance Serialize RentalSlab where

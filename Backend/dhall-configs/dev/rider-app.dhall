@@ -135,6 +135,93 @@ let hccfg =
       , connectTimeout = None Integer
       }
 
+let tables =
+      { kVTables =
+            [ "app_installs"
+            , "black_list_org"
+            , "booking"
+            , "booking_cancellation_reason"
+            , "callback_request"
+            , "call_status"
+            , "cancellation_reason"
+            , "driver_offer"
+            , "estimate"
+            , "estimate_breakup"
+            , "exophone"
+            , "geometry"
+            , "issue"
+            , "merchant"
+            , "merchant_config"
+            , "on_search_event"
+            , "person"
+            , "quote"
+            , "registration_token"
+            , "rental_slab"
+            , "ride"
+            , "saved_location"
+            , "search_request"
+            , "sos"
+            , "special_zone_quote"
+            , "trip_terms"
+            , "webengage"
+            , "booking_location"
+            , "fare_breakup"
+            , "place_name_cache"
+            , "merchant_message"
+            , "merchant_payment_method"
+            , "merchant_service_config"
+            , "merchant_service_usage_config"
+            , "payment_order"
+            , "payment_transaction"
+            , "person_default_emergency_number"
+            , "person_flow_status"
+            , "search_request_location"
+            ]
+          : List Text
+      , kVHardKilledTables =
+            [ "app_installs"
+            , "black_list_org"
+            , "booking"
+            , "booking_cancellation_reason"
+            , "callback_request"
+            , "call_status"
+            , "cancellation_reason"
+            , "driver_offer"
+            , "estimate"
+            , "estimate_breakup"
+            , "exophone"
+            , "geometry"
+            , "issue"
+            , "merchant"
+            , "merchant_config"
+            , "on_search_event"
+            , "person"
+            , "quote"
+            , "registration_token"
+            , "rental_slab"
+            , "ride"
+            , "saved_location"
+            , "search_request"
+            , "sos"
+            , "special_zone_quote"
+            , "trip_terms"
+            , "webengage"
+            , "booking_location"
+            , "fare_breakup"
+            , "place_name_cache"
+            , "merchant_message"
+            , "merchant_payment_method"
+            , "merchant_service_config"
+            , "merchant_service_usage_config"
+            , "payment_order"
+            , "payment_transaction"
+            , "person_default_emergency_number"
+            , "person_flow_status"
+            , "search_request_location"
+            ]
+          : List Text
+      }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = hcfg
@@ -187,4 +274,5 @@ in  { esqDBCfg
     , enableRedisLatencyLogging = False
     , enablePrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings
+    , tables
     }

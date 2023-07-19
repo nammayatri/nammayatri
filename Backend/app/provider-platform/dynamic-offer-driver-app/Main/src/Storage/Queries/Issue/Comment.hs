@@ -1,28 +1,22 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Storage.Queries.Issue.Comment where
 
 import Domain.Types.Issue.Comment as Comment
 import Domain.Types.Issue.IssueReport (IssueReport)
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
-import Lib.Utils (setMeshConfig)
+import Kernel.Types.Logging (Log)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithOptionsKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.Comment as BeamC
 
 -- create :: Comment -> SqlDB ()
 -- create = Esq.create
 
-create :: L.MonadFlow m => Comment.Comment -> m (MeshResult ())
-create comment = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamC.CommentT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainCommentToBeam comment)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create :: (L.MonadFlow m, Log m) => Comment.Comment -> m ()
+create = createWithKV
 
 -- findAllByIssueReportId :: Transactionable m => Id IssueReport -> m [Comment]
 -- findAllByIssueReportId issueReportId = findAll $ do
@@ -31,31 +25,27 @@ create comment = do
 --   orderBy [desc $ comment ^. CommentCreatedAt]
 --   return comment
 
-findAllByIssueReportId :: L.MonadFlow m => Id IssueReport -> m [Comment]
-findAllByIssueReportId (Id issueReportId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamC.CommentT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamCommentToDomain <$>) <$> KV.findAllWithOptionsKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamC.issueReportId $ Se.Eq issueReportId] (Se.Desc BeamC.createdAt) Nothing Nothing
-    Nothing -> pure []
+findAllByIssueReportId :: (L.MonadFlow m, Log m) => Id IssueReport -> m [Comment]
+findAllByIssueReportId (Id issueReportId) = findAllWithOptionsKV [Se.Is BeamC.issueReportId $ Se.Eq issueReportId] (Se.Desc BeamC.createdAt) Nothing Nothing
 
-transformBeamCommentToDomain :: BeamC.Comment -> Comment
-transformBeamCommentToDomain BeamC.CommentT {..} = do
-  Comment
-    { id = Id id,
-      issueReportId = Id issueReportId,
-      authorId = Id authorId,
-      comment = comment,
-      createdAt = createdAt
-    }
+instance FromTType' BeamC.Comment Comment where
+  fromTType' BeamC.CommentT {..} = do
+    pure $
+      Just
+        Comment
+          { id = Id id,
+            issueReportId = Id issueReportId,
+            authorId = Id authorId,
+            comment = comment,
+            createdAt = createdAt
+          }
 
-transformDomainCommentToBeam :: Comment -> BeamC.Comment
-transformDomainCommentToBeam Comment {..} =
-  BeamC.CommentT
-    { BeamC.id = getId id,
-      BeamC.issueReportId = getId issueReportId,
-      BeamC.authorId = getId authorId,
-      BeamC.comment = comment,
-      BeamC.createdAt = createdAt
-    }
+instance ToTType' BeamC.Comment Comment where
+  toTType' Comment {..} = do
+    BeamC.CommentT
+      { BeamC.id = getId id,
+        BeamC.issueReportId = getId issueReportId,
+        BeamC.authorId = getId authorId,
+        BeamC.comment = comment,
+        BeamC.createdAt = createdAt
+      }

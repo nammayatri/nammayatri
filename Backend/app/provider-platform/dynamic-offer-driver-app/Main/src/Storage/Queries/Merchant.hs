@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Merchant
   {-# WARNING
@@ -20,92 +21,57 @@ module Storage.Queries.Merchant
 where
 
 import Domain.Types.Merchant as DM
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils (setMeshConfig)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findAllWithKV, findOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant as BeamM
 
 -- findById :: Transactionable m => Id Merchant -> m (Maybe Merchant)
 -- findById = Esq.findById
 
-findById :: L.MonadFlow m => Id Merchant -> m (Maybe Merchant)
-findById (Id merchantId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamM.MerchantT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamM.id $ Se.Eq merchantId]
-    Nothing -> pure Nothing
+findById :: (L.MonadFlow m, Log m) => Id Merchant -> m (Maybe Merchant)
+findById (Id merchantId) = findOneWithKV [Se.Is BeamM.id $ Se.Eq merchantId]
 
 -- findBySubscriberId :: Transactionable m => ShortId Subscriber -> m (Maybe Merchant)
 -- findBySubscriberId subscriberId = Esq.findOne $ do
 --   org <- from $ table @MerchantT
---   where_ $
 --     org ^. MerchantSubscriberId ==. val (subscriberId.getShortId)
 --   return org
 
-findBySubscriberId :: L.MonadFlow m => ShortId Subscriber -> m (Maybe Merchant)
-findBySubscriberId (ShortId subscriberId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamM.MerchantT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamM.subscriberId $ Se.Eq subscriberId]
-    Nothing -> pure Nothing
+findBySubscriberId :: (L.MonadFlow m, Log m) => ShortId Subscriber -> m (Maybe Merchant)
+findBySubscriberId (ShortId subscriberId) = findOneWithKV [Se.Is BeamM.subscriberId $ Se.Eq subscriberId]
 
 -- findByShortId :: Transactionable m => ShortId Merchant -> m (Maybe Merchant)
 -- findByShortId shortId = Esq.findOne $ do
 --   org <- from $ table @MerchantT
---   where_ $
 --     org ^. MerchantShortId ==. val (shortId.getShortId)
 --   return org
 
-findByShortId :: L.MonadFlow m => ShortId Merchant -> m (Maybe Merchant)
-findByShortId (ShortId shortId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamM.MerchantT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamMerchantToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamM.shortId $ Se.Eq shortId]
-    Nothing -> pure Nothing
+findByShortId :: (L.MonadFlow m, Log m) => ShortId Merchant -> m (Maybe Merchant)
+findByShortId (ShortId shortId) = findOneWithKV [Se.Is BeamM.shortId $ Se.Eq shortId]
 
 -- loadAllProviders :: Transactionable m => m [Merchant]
 -- loadAllProviders =
 --   Esq.findAll $ do
 --     org <- from $ table @MerchantT
---     where_ $
 --       org ^. MerchantStatus ==. val DM.APPROVED
 --         &&. org ^. MerchantEnabled
 --     return org
 
-loadAllProviders :: L.MonadFlow m => m [Merchant]
+loadAllProviders :: (L.MonadFlow m, Log m) => m [Merchant]
 loadAllProviders = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamM.MerchantT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamMerchantToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamM.status $ Se.Eq DM.APPROVED, Se.Is BeamM.enabled $ Se.Eq True]]
-    Nothing -> pure []
+  findAllWithKV [Se.And [Se.Is BeamM.status $ Se.Eq DM.APPROVED, Se.Is BeamM.enabled $ Se.Eq True]]
 
 -- findAll :: Transactionable m => m [Merchant]
 -- findAll =
 --   Esq.findAll $ do from $ table @MerchantT
 
-findAll :: L.MonadFlow m => m [Merchant]
-findAll = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamM.MerchantT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamMerchantToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig []
-    Nothing -> pure []
+findAll :: (L.MonadFlow m, Log m) => m [Merchant]
+findAll = findAllWithKV [Se.Is BeamM.id $ Se.Not $ Se.Eq $ getId ""]
 
 -- update :: Merchant -> SqlDB ()
 -- update org = do
@@ -120,82 +86,75 @@ findAll = do
 --         MerchantUpdatedAt =. val now,
 --         MerchantFromTime =. val org.fromTime
 --       ]
---     where_ $ tbl ^. MerchantTId ==. val (toKey org.id)
 
-update :: (L.MonadFlow m, MonadTime m) => Merchant -> m (MeshResult ())
+update :: (L.MonadFlow m, MonadTime m, Log m) => Merchant -> m ()
 update org = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamM.MerchantT
-  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamM.name org.name,
-          Se.Set BeamM.description org.description,
-          Se.Set BeamM.headCount org.headCount,
-          Se.Set BeamM.enabled org.enabled,
-          Se.Set BeamM.updatedAt now,
-          Se.Set BeamM.fromTime org.fromTime
-        ]
-        [Se.Is BeamM.id (Se.Eq (getId org.id))]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamM.name org.name,
+      Se.Set BeamM.description org.description,
+      Se.Set BeamM.headCount org.headCount,
+      Se.Set BeamM.enabled org.enabled,
+      Se.Set BeamM.updatedAt now,
+      Se.Set BeamM.fromTime org.fromTime
+    ]
+    [Se.Is BeamM.id (Se.Eq (getId org.id))]
 
-transformBeamMerchantToDomain :: BeamM.Merchant -> Merchant
-transformBeamMerchantToDomain BeamM.MerchantT {..} = do
-  Merchant
-    { id = Id id,
-      name = name,
-      description = description,
-      subscriberId = ShortId subscriberId,
-      uniqueKeyId = uniqueKeyId,
-      shortId = ShortId shortId,
-      city = city,
-      mobileNumber = mobileNumber,
-      mobileCountryCode = mobileCountryCode,
-      gstin = gstin,
-      fromTime = fromTime,
-      toTime = toTime,
-      headCount = headCount,
-      geoHashPrecisionValue = geoHashPrecisionValue,
-      aadhaarVerificationRequired = aadhaarVerificationRequired,
-      status = status,
-      verified = verified,
-      enabled = enabled,
-      internalApiKey = internalApiKey,
-      createdAt = createdAt,
-      updatedAt = updatedAt,
-      geofencingConfig = GeofencingConfig originRestriction destinationRestriction,
-      info = info
-    }
+instance FromTType' BeamM.Merchant Merchant where
+  fromTType' BeamM.MerchantT {..} = do
+    pure $
+      Just
+        Merchant
+          { id = Id id,
+            name = name,
+            description = description,
+            subscriberId = ShortId subscriberId,
+            uniqueKeyId = uniqueKeyId,
+            shortId = ShortId shortId,
+            city = city,
+            mobileNumber = mobileNumber,
+            mobileCountryCode = mobileCountryCode,
+            gstin = gstin,
+            fromTime = fromTime,
+            toTime = toTime,
+            headCount = headCount,
+            geoHashPrecisionValue = geoHashPrecisionValue,
+            aadhaarVerificationRequired = aadhaarVerificationRequired,
+            status = status,
+            verified = verified,
+            enabled = enabled,
+            internalApiKey = internalApiKey,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            geofencingConfig = GeofencingConfig originRestriction destinationRestriction,
+            info = info
+          }
 
-transformDomainMerchantToBeam :: Merchant -> BeamM.Merchant
-transformDomainMerchantToBeam Merchant {..} =
-  BeamM.MerchantT
-    { BeamM.id = getId id,
-      BeamM.name = name,
-      BeamM.description = description,
-      BeamM.subscriberId = getShortId subscriberId,
-      BeamM.uniqueKeyId = uniqueKeyId,
-      BeamM.shortId = getShortId shortId,
-      BeamM.city = city,
-      BeamM.mobileNumber = mobileNumber,
-      BeamM.mobileCountryCode = mobileCountryCode,
-      BeamM.gstin = gstin,
-      BeamM.fromTime = fromTime,
-      BeamM.toTime = toTime,
-      BeamM.headCount = headCount,
-      BeamM.geoHashPrecisionValue = geoHashPrecisionValue,
-      BeamM.aadhaarVerificationRequired = aadhaarVerificationRequired,
-      BeamM.status = status,
-      BeamM.verified = verified,
-      BeamM.enabled = enabled,
-      BeamM.internalApiKey = internalApiKey,
-      BeamM.createdAt = createdAt,
-      BeamM.updatedAt = updatedAt,
-      BeamM.originRestriction = origin geofencingConfig,
-      BeamM.destinationRestriction = destination geofencingConfig,
-      BeamM.info = info
-    }
+instance ToTType' BeamM.Merchant Merchant where
+  toTType' Merchant {..} = do
+    BeamM.MerchantT
+      { BeamM.id = getId id,
+        BeamM.name = name,
+        BeamM.description = description,
+        BeamM.subscriberId = getShortId subscriberId,
+        BeamM.uniqueKeyId = uniqueKeyId,
+        BeamM.shortId = getShortId shortId,
+        BeamM.city = city,
+        BeamM.mobileNumber = mobileNumber,
+        BeamM.mobileCountryCode = mobileCountryCode,
+        BeamM.gstin = gstin,
+        BeamM.fromTime = fromTime,
+        BeamM.toTime = toTime,
+        BeamM.headCount = headCount,
+        BeamM.geoHashPrecisionValue = geoHashPrecisionValue,
+        BeamM.aadhaarVerificationRequired = aadhaarVerificationRequired,
+        BeamM.status = status,
+        BeamM.verified = verified,
+        BeamM.enabled = enabled,
+        BeamM.internalApiKey = internalApiKey,
+        BeamM.createdAt = createdAt,
+        BeamM.updatedAt = updatedAt,
+        BeamM.originRestriction = origin geofencingConfig,
+        BeamM.destinationRestriction = destination geofencingConfig,
+        BeamM.info = info
+      }

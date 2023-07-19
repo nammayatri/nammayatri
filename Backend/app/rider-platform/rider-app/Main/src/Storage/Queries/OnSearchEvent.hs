@@ -31,7 +31,7 @@ create :: L.MonadFlow m => OnSearchEvent -> m (MeshResult ())
 create onSearchEvent = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamOSE.OnSearchEventT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainOnSearchEventToBeam onSearchEvent)
     Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
@@ -50,7 +50,7 @@ transformBeamOnSearchEventToDomain BeamOSE.OnSearchEventT {..} = do
 
 transformDomainOnSearchEventToBeam :: OnSearchEvent -> BeamOSE.OnSearchEvent
 transformDomainOnSearchEventToBeam OnSearchEvent {..} =
-  BeamOSE.defaultOnSearchEvent
+  BeamOSE.OnSearchEventT
     { BeamOSE.id = getId id,
       BeamOSE.bppId = bppId,
       BeamOSE.messageId = messageId,

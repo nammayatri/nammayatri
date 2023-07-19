@@ -51,7 +51,7 @@ instance B.Table AadhaarOtpVerifyT where
 instance ModelMeta AadhaarOtpVerifyT where
   modelFieldModification = aadhaarOtpVerifyTMod
   modelTableName = "aadhaar_otp_verify"
-  modelSchemaName = Just "atlas_app"
+  modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type AadhaarOtpVerify = AadhaarOtpVerifyT Identity
 

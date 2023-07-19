@@ -13,9 +13,9 @@
 -}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-identities #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
 {-# HLINT ignore "Use tuple-section" #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Storage.Queries.Message.MessageReport where
 
@@ -26,8 +26,6 @@ import qualified Domain.Types.Message.Message as Msg (Message (id))
 import Domain.Types.Message.MessageReport as DTMR
 import qualified Domain.Types.Message.MessageTranslation as MTD
 import qualified Domain.Types.Person as P
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Types as KBT
@@ -36,7 +34,17 @@ import Kernel.Prelude
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Kernel.Types.Logging
-import Lib.Utils (setMeshConfig)
+import Lib.Utils
+  ( FromTType' (fromTType'),
+    ToTType' (toTType'),
+    createWithKV,
+    deleteWithKV,
+    findAllWithKV,
+    findAllWithOptionsKV,
+    findOneWithKV,
+    getMasterDBConfig,
+    updateWithKV,
+  )
 import Sequelize
 import qualified Sequelize as Se
 import qualified Storage.Beam.Message.Message as BeamM
@@ -45,19 +53,13 @@ import qualified Storage.Beam.Message.MessageTranslation as BeamMT
 import Storage.Beam.Person as BeamP (PersonT (createdAt, id))
 import Storage.Queries.Message.Message as QMM hiding (create)
 import Storage.Queries.Message.MessageTranslation as QMMT hiding (create)
-import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Person ()
 
-createMany :: L.MonadFlow m => [MessageReport] -> m ()
+createMany :: (L.MonadFlow m, Log m) => [MessageReport] -> m ()
 createMany = traverse_ create
 
-create :: L.MonadFlow m => MessageReport -> m (MeshResult ())
-create messageReport = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamMR.MessageReportT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainMessageReportToBeam messageReport)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create :: (L.MonadFlow m, Log m) => MessageReport -> m ()
+create = createWithKV
 
 -- fullMessage ::
 --   Language ->
@@ -92,60 +94,16 @@ create messageReport = do
 --     offset $ fromIntegral offsetVal
 --     return (messageReport, message, mbMessageTranslation)
 
-findAllMessageWithSeConditionCreatedAtdesc :: (L.MonadFlow m) => [Se.Clause Postgres BeamM.MessageT] -> m [Message]
-findAllMessageWithSeConditionCreatedAtdesc conditions = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamM.MessageT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      message' <-
-        KV.findAllWithOptionsKVConnector
-          dbConf'
-          updatedMeshConfig
-          conditions
-          (Se.Desc BeamM.createdAt)
-          Nothing
-          Nothing
-      case message' of
-        Left _ -> pure []
-        Right result -> traverse QMM.transformBeamMessageToDomain result
-    Nothing -> pure []
+findAllMessageWithSeConditionCreatedAtdesc :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamM.MessageT] -> m [Message]
+findAllMessageWithSeConditionCreatedAtdesc conditions = findAllWithOptionsKV conditions (Se.Desc BeamM.createdAt) Nothing Nothing
 
-findAllMessageTranslationWithSeConditionCreatedAtdesc :: (L.MonadFlow m) => [Se.Clause Postgres BeamMT.MessageTranslationT] -> m [MTD.MessageTranslation]
-findAllMessageTranslationWithSeConditionCreatedAtdesc conditions = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamMT.MessageTranslationT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      messageTranslation' <-
-        KV.findAllWithOptionsKVConnector
-          dbConf'
-          updatedMeshConfig
-          conditions
-          (Se.Desc BeamMT.createdAt)
-          Nothing
-          Nothing
-      case messageTranslation' of
-        Left _ -> pure []
-        Right result -> pure $ QMMT.transformBeamMessageTranslationToDomain <$> result
-    Nothing -> pure []
+findAllMessageTranslationWithSeConditionCreatedAtdesc :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamMT.MessageTranslationT] -> m [MTD.MessageTranslation]
+findAllMessageTranslationWithSeConditionCreatedAtdesc conditions = findAllWithOptionsKV conditions (Se.Desc BeamMT.createdAt) Nothing Nothing
 
-findAllMessageReportWithSeCondition :: (L.MonadFlow m) => [Se.Clause Postgres BeamMR.MessageReportT] -> m [MessageReport]
-findAllMessageReportWithSeCondition conditions = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamMR.MessageReportT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      messageReport' <- KV.findAllWithKVConnector dbConf' updatedMeshConfig conditions
-      case messageReport' of
-        Left _ -> pure []
-        Right result -> pure $ transformBeamMessageReportToDomain <$> result
-    Nothing -> pure []
+findAllMessageReportWithSeCondition :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamMR.MessageReportT] -> m [MessageReport]
+findAllMessageReportWithSeCondition = findAllWithKV
 
-findByDriverIdAndLanguage :: (L.MonadFlow m) => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
+findByDriverIdAndLanguage :: (L.MonadFlow m, Log m) => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
 findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
   let limitVal = min (fromMaybe 10 mbLimit) 10
       offsetVal = fromMaybe 0 mbOffset
@@ -184,7 +142,7 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
       let messageTranslations' = filter (\messageTranslation' -> messageTranslation'.messageId == msg.id) messageTranslations
        in acc <> ((\messageTranslation' -> (msgRep, rawMessageFromMessage msg, messageTranslation')) <$> messageTranslations')
 
-findByDriverIdMessageIdAndLanguage :: L.MonadFlow m => Id P.Driver -> Id Msg.Message -> Language -> m (Maybe (MessageReport, RawMessage, Maybe MTD.MessageTranslation))
+findByDriverIdMessageIdAndLanguage :: (L.MonadFlow m, Log m) => Id P.Driver -> Id Msg.Message -> Language -> m (Maybe (MessageReport, RawMessage, Maybe MTD.MessageTranslation))
 findByDriverIdMessageIdAndLanguage driverId messageId language = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   case dbConf of
@@ -201,14 +159,9 @@ findByDriverIdMessageIdAndLanguage driverId messageId language = do
         Nothing -> pure Nothing
     Nothing -> pure Nothing
 
-findByMessageIdAndDriverId :: L.MonadFlow m => Id Msg.Message -> Id P.Driver -> m (Maybe MessageReport)
+findByMessageIdAndDriverId :: (L.MonadFlow m, Log m) => Id Msg.Message -> Id P.Driver -> m (Maybe MessageReport)
 findByMessageIdAndDriverId (Id messageId) (Id driverId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamMR.MessageReportT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamMessageReportToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.And [Se.Is BeamMR.messageId $ Se.Eq messageId, Se.Is BeamMR.driverId $ Se.Eq driverId]]
-    Nothing -> pure Nothing
+  findOneWithKV [Se.And [Se.Is BeamMR.messageId $ Se.Eq messageId, Se.Is BeamMR.driverId $ Se.Eq driverId]]
 
 findByMessageIdAndStatusWithLimitAndOffset ::
   (L.MonadFlow m, Log m) =>
@@ -218,45 +171,27 @@ findByMessageIdAndStatusWithLimitAndOffset ::
   Maybe DeliveryStatus ->
   m [(MessageReport, P.Person)]
 findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset (Id messageID) mbDeliveryStatus = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamMR.MessageReportT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      let limitVal = min (maybe 10 fromIntegral mbLimit) 20
-          offsetVal = maybe 0 fromIntegral mbOffset
-      messageReport <- do
-        messageReport' <-
-          KV.findAllWithOptionsKVConnector
-            dbConf'
-            updatedMeshConfig
-            [ Se.And
-                ( [Se.Is BeamMR.messageId $ Se.Eq messageID]
-                    <> ([Se.Is BeamMR.deliveryStatus $ Se.Eq (fromJust mbDeliveryStatus) | isJust mbDeliveryStatus])
-                )
-            ]
-            (Se.Desc BeamMR.createdAt)
-            Nothing
-            Nothing
-        case messageReport' of
-          Left _ -> pure []
-          Right result -> pure $ transformBeamMessageReportToDomain <$> result
-      person <- do
-        person' <-
-          KV.findAllWithOptionsKVConnector
-            dbConf'
-            updatedMeshConfig
-            [Se.Is BeamP.id $ Se.In $ getId . DTMR.driverId <$> messageReport]
-            (Se.Desc BeamP.createdAt)
-            Nothing
-            Nothing
-        case person' of
-          Left _ -> pure []
-          Right result -> mapM QP.transformBeamPersonToDomain result
-      let personValues = catMaybes person
-      let messageOfPerson = foldl' (getMessageOfPerson messageReport) [] personValues
-      pure $ take limitVal (drop offsetVal messageOfPerson)
-    Nothing -> pure []
+  let limitVal = min (maybe 10 fromIntegral mbLimit) 20
+      offsetVal = maybe 0 fromIntegral mbOffset
+  messageReport <-
+    findAllWithOptionsKV
+      [ Se.And
+          ( [Se.Is BeamMR.messageId $ Se.Eq messageID]
+              <> ([Se.Is BeamMR.deliveryStatus $ Se.Eq (fromJust mbDeliveryStatus) | isJust mbDeliveryStatus])
+          )
+      ]
+      (Se.Desc BeamMR.createdAt)
+      Nothing
+      Nothing
+  person <-
+    findAllWithOptionsKV
+      [Se.Is BeamP.id $ Se.In $ getId . DTMR.driverId <$> messageReport]
+      (Se.Desc BeamP.createdAt)
+      Nothing
+      Nothing
+
+  let messageOfPerson = foldl' (getMessageOfPerson messageReport) [] person
+  pure $ take limitVal (drop offsetVal messageOfPerson)
   where
     getMessageOfPerson messageReports acc person' =
       let messageReports' = filter (\messageReport -> getId messageReport.driverId == getId person'.id) messageReports
@@ -264,8 +199,8 @@ findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset (Id messageID) mbDel
 
 getMessageCountByStatus :: L.MonadFlow m => Id Msg.Message -> DeliveryStatus -> m Int
 getMessageCountByStatus (Id messageID) status = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  conn <- L.getOrInitSqlConn (fromJust dbConf)
+  dbConf <- getMasterDBConfig
+  conn <- L.getOrInitSqlConn dbConf
   case conn of
     Right c -> do
       resp <-
@@ -280,8 +215,8 @@ getMessageCountByStatus (Id messageID) status = do
 
 getMessageCountByReadStatus :: L.MonadFlow m => Id Msg.Message -> m Int
 getMessageCountByReadStatus (Id messageID) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  conn <- L.getOrInitSqlConn (fromJust dbConf)
+  dbConf <- getMasterDBConfig
+  conn <- L.getOrInitSqlConn dbConf
   case conn of
     Right c -> do
       resp <-
@@ -294,102 +229,67 @@ getMessageCountByReadStatus (Id messageID) = do
       pure (either (const 0) (fromMaybe 0) resp)
     Left _ -> pure 0
 
-updateSeenAndReplyByMessageIdAndDriverId :: (L.MonadFlow m, MonadTime m) => Id Msg.Message -> Id P.Driver -> Bool -> Maybe Text -> m (MeshResult ())
+updateSeenAndReplyByMessageIdAndDriverId :: (L.MonadFlow m, MonadTime m, Log m) => Id Msg.Message -> Id P.Driver -> Bool -> Maybe Text -> m ()
 updateSeenAndReplyByMessageIdAndDriverId messageId driverId readStatus reply = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamMR.MessageReportT
-  let updatedMeshConfig = setMeshConfig modelName
   now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamMR.readStatus readStatus,
-          Se.Set BeamMR.reply reply,
-          Se.Set BeamMR.updatedAt now
-        ]
-        [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+  updateWithKV
+    [ Se.Set BeamMR.readStatus readStatus,
+      Se.Set BeamMR.reply reply,
+      Se.Set BeamMR.updatedAt now
+    ]
+    [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]
 
-updateMessageLikeByMessageIdAndDriverIdAndReadStatus :: (L.MonadFlow m, MonadTime m) => Id Msg.Message -> Id P.Driver -> m ()
+updateMessageLikeByMessageIdAndDriverIdAndReadStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Msg.Message -> Id P.Driver -> m ()
 updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId driverId = do
-  messageReport <- findByMessageIdAndDriverId messageId driverId
-  case messageReport of
+  findByMessageIdAndDriverId messageId driverId >>= \case
     Just report -> do
       let likeStatus = not report.likeStatus
-      dbConf <- L.getOption KBT.PsqlDbCfg
-      let modelName = Se.modelTableName @BeamMR.MessageReportT
-      let updatedMeshConfig = setMeshConfig modelName
       now <- getCurrentTime
-      case dbConf of
-        Just dbConf' ->
-          void $
-            KV.updateWoReturningWithKVConnector
-              dbConf'
-              updatedMeshConfig
-              [ Se.Set BeamMR.likeStatus likeStatus,
-                Se.Set BeamMR.updatedAt now
-              ]
-              [Se.And [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId, Se.Is BeamMR.readStatus $ Se.Eq True]]
-        Nothing -> pure ()
-    Nothing -> pure ()
-
-updateDeliveryStatusByMessageIdAndDriverId :: (L.MonadFlow m, MonadTime m) => Id Msg.Message -> Id P.Driver -> DeliveryStatus -> m (MeshResult ())
-updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamMR.MessageReportT
-  let updatedMeshConfig = setMeshConfig modelName
-  now <- getCurrentTime
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamMR.deliveryStatus deliveryStatus,
+      updateWithKV
+        [ Se.Set BeamMR.likeStatus likeStatus,
           Se.Set BeamMR.updatedAt now
         ]
-        [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
-
-deleteByPersonId :: L.MonadFlow m => Id P.Person -> m ()
-deleteByPersonId (Id personId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamMR.MessageReportT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      void $
-        KV.deleteWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [Se.Is BeamMR.driverId (Se.Eq personId)]
+        [Se.And [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId, Se.Is BeamMR.readStatus $ Se.Eq True]]
     Nothing -> pure ()
 
-transformBeamMessageReportToDomain :: BeamMR.MessageReport -> MessageReport
-transformBeamMessageReportToDomain BeamMR.MessageReportT {..} = do
-  MessageReport
-    { messageId = Id messageId,
-      driverId = Id driverId,
-      deliveryStatus = deliveryStatus,
-      readStatus = readStatus,
-      likeStatus = likeStatus,
-      reply = reply,
-      messageDynamicFields = messageDynamicFields,
-      createdAt = createdAt,
-      updatedAt = updatedAt
-    }
+updateDeliveryStatusByMessageIdAndDriverId :: (L.MonadFlow m, MonadTime m, Log m) => Id Msg.Message -> Id P.Driver -> DeliveryStatus -> m ()
+updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamMR.deliveryStatus deliveryStatus,
+      Se.Set BeamMR.updatedAt now
+    ]
+    [Se.Is BeamMR.messageId $ Se.Eq $ getId messageId, Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]
 
-transformDomainMessageReportToBeam :: MessageReport -> BeamMR.MessageReport
-transformDomainMessageReportToBeam MessageReport {..} =
-  BeamMR.MessageReportT
-    { BeamMR.messageId = getId messageId,
-      BeamMR.driverId = getId driverId,
-      BeamMR.deliveryStatus = deliveryStatus,
-      BeamMR.readStatus = readStatus,
-      BeamMR.likeStatus = likeStatus,
-      BeamMR.reply = reply,
-      BeamMR.messageDynamicFields = messageDynamicFields,
-      BeamMR.createdAt = createdAt,
-      BeamMR.updatedAt = updatedAt
-    }
+deleteByPersonId :: (L.MonadFlow m, Log m) => Id P.Person -> m ()
+deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamMR.driverId (Se.Eq personId)]
+
+instance FromTType' BeamMR.MessageReport MessageReport where
+  fromTType' BeamMR.MessageReportT {..} = do
+    pure $
+      Just
+        MessageReport
+          { messageId = Id messageId,
+            driverId = Id driverId,
+            deliveryStatus = deliveryStatus,
+            readStatus = readStatus,
+            likeStatus = likeStatus,
+            reply = reply,
+            messageDynamicFields = messageDynamicFields,
+            createdAt = createdAt,
+            updatedAt = updatedAt
+          }
+
+instance ToTType' BeamMR.MessageReport MessageReport where
+  toTType' MessageReport {..} = do
+    BeamMR.MessageReportT
+      { BeamMR.messageId = getId messageId,
+        BeamMR.driverId = getId driverId,
+        BeamMR.deliveryStatus = deliveryStatus,
+        BeamMR.readStatus = readStatus,
+        BeamMR.likeStatus = likeStatus,
+        BeamMR.reply = reply,
+        BeamMR.messageDynamicFields = messageDynamicFields,
+        BeamMR.createdAt = createdAt,
+        BeamMR.updatedAt = updatedAt
+      }

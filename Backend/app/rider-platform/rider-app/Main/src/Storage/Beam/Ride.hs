@@ -36,7 +36,7 @@ import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, s
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -137,38 +137,6 @@ rideTMod =
       driverMobileCountryCode = B.fieldNamed "driver_mobile_country_code"
     }
 
-defaultRide :: Ride
-defaultRide =
-  RideT
-    { id = "",
-      bppRideId = "",
-      bookingId = "",
-      shortId = "",
-      merchantId = Nothing,
-      status = "",
-      driverName = "",
-      driverRating = Nothing,
-      driverMobileNumber = "",
-      driverRegisteredAt = defaultUTCDate,
-      vehicleNumber = "",
-      vehicleModel = "",
-      vehicleColor = "",
-      vehicleVariant = "",
-      otp = "",
-      trackingUrl = Nothing,
-      fare = Nothing,
-      totalFare = Nothing,
-      chargeableDistance = Nothing,
-      traveledDistance = Nothing,
-      driverArrivalTime = Nothing,
-      rideStartTime = Nothing,
-      rideEndTime = Nothing,
-      rideRating = Nothing,
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate,
-      driverMobileCountryCode = Nothing
-    }
-
 instance Serialize Ride where
   put = error "undefined"
   get = error "undefined"
@@ -184,4 +152,4 @@ rideToPSModifiers :: M.Map Text (A.Value -> A.Value)
 rideToPSModifiers =
   M.empty
 
-$(enableKVPG ''RideT ['id] [])
+$(enableKVPG ''RideT ['id] [['bppRideId], ['bookingId]])

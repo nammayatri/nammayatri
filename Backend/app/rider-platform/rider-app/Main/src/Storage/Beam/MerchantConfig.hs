@@ -32,8 +32,9 @@ import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
+import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.SlidingWindowCounters as SWC
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -110,23 +111,6 @@ merchantConfigTMod =
       enabled = B.fieldNamed "enabled"
     }
 
-defaultMerchantConfig :: MerchantConfig
-defaultMerchantConfig =
-  MerchantConfigT
-    { id = "",
-      merchantId = "",
-      fraudBookingCancellationCountThreshold = 0,
-      fraudBookingCancellationCountWindow = "",
-      fraudBookingTotalCountThreshold = 0,
-      fraudBookingCancelledByDriverCountThreshold = 0,
-      fraudBookingCancelledByDriverCountWindow = "",
-      fraudSearchCountThreshold = 0,
-      fraudSearchCountWindow = "",
-      fraudRideCountThreshold = 0,
-      fraudRideCountWindow = "",
-      enabled = False
-    }
-
 instance Serialize MerchantConfig where
   put = error "undefined"
   get = error "undefined"
@@ -142,4 +126,4 @@ merchantConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
 merchantConfigToPSModifiers =
   M.empty
 
-$(enableKVPG ''MerchantConfigT ['id] [])
+$(enableKVPG ''MerchantConfigT ['id] [['merchantId]])

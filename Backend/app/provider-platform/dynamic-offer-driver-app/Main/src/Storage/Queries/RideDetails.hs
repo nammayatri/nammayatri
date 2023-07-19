@@ -11,65 +11,54 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.RideDetails where
 
 import qualified Domain.Types.Ride as SR
 import Domain.Types.RideDetails as DRD
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
-import Lib.Utils (setMeshConfig)
+import Kernel.Types.Logging (Log)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.RideDetails as BeamRD
 
-create :: L.MonadFlow m => DRD.RideDetails -> m (MeshResult ())
-create rideDetails = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamRD.RideDetailsT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainRideDetailsToBeam rideDetails)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create :: (L.MonadFlow m, Log m) => DRD.RideDetails -> m ()
+create = createWithKV
 
-findById :: L.MonadFlow m => Id SR.Ride -> m (Maybe RideDetails)
-findById (Id rideDetailsId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamRD.RideDetailsT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamRideDetailsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamRD.id $ Se.Eq rideDetailsId]
-    Nothing -> pure Nothing
+findById :: (L.MonadFlow m, Log m) => Id SR.Ride -> m (Maybe RideDetails)
+findById (Id rideDetailsId) = findOneWithKV [Se.Is BeamRD.id $ Se.Eq rideDetailsId]
 
-transformBeamRideDetailsToDomain :: BeamRD.RideDetails -> RideDetails
-transformBeamRideDetailsToDomain BeamRD.RideDetailsT {..} = do
-  RideDetails
-    { id = Id id,
-      driverName = driverName,
-      driverNumber = EncryptedHashed <$> (Encrypted <$> driverNumberEncrypted) <*> driverNumberHash,
-      driverCountryCode = driverCountryCode,
-      vehicleNumber = vehicleNumber,
-      vehicleColor = vehicleColor,
-      vehicleVariant = vehicleVariant,
-      vehicleModel = vehicleModel,
-      vehicleClass = vehicleClass
-    }
+instance FromTType' BeamRD.RideDetails RideDetails where
+  fromTType' BeamRD.RideDetailsT {..} = do
+    pure $
+      Just
+        RideDetails
+          { id = Id id,
+            driverName = driverName,
+            driverNumber = EncryptedHashed <$> (Encrypted <$> driverNumberEncrypted) <*> driverNumberHash,
+            driverCountryCode = driverCountryCode,
+            vehicleNumber = vehicleNumber,
+            vehicleColor = vehicleColor,
+            vehicleVariant = vehicleVariant,
+            vehicleModel = vehicleModel,
+            vehicleClass = vehicleClass
+          }
 
-transformDomainRideDetailsToBeam :: RideDetails -> BeamRD.RideDetails
-transformDomainRideDetailsToBeam RideDetails {..} =
-  BeamRD.RideDetailsT
-    { BeamRD.id = getId id,
-      BeamRD.driverName = driverName,
-      BeamRD.driverNumberEncrypted = driverNumber <&> unEncrypted . (.encrypted),
-      BeamRD.driverNumberHash = driverNumber <&> (.hash),
-      BeamRD.driverCountryCode = driverCountryCode,
-      BeamRD.vehicleNumber = vehicleNumber,
-      BeamRD.vehicleColor = vehicleColor,
-      BeamRD.vehicleVariant = vehicleVariant,
-      BeamRD.vehicleModel = vehicleModel,
-      BeamRD.vehicleClass = vehicleClass
-    }
+instance ToTType' BeamRD.RideDetails RideDetails where
+  toTType' RideDetails {..} = do
+    BeamRD.RideDetailsT
+      { BeamRD.id = getId id,
+        BeamRD.driverName = driverName,
+        BeamRD.driverNumberEncrypted = driverNumber <&> unEncrypted . (.encrypted),
+        BeamRD.driverNumberHash = driverNumber <&> (.hash),
+        BeamRD.driverCountryCode = driverCountryCode,
+        BeamRD.vehicleNumber = vehicleNumber,
+        BeamRD.vehicleColor = vehicleColor,
+        BeamRD.vehicleVariant = vehicleVariant,
+        BeamRD.vehicleModel = vehicleModel,
+        BeamRD.vehicleClass = vehicleClass
+      }

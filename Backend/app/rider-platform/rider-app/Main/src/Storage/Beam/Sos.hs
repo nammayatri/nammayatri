@@ -34,7 +34,8 @@ import qualified Domain.Types.Sos as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
+import Kernel.Types.Common hiding (id)
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -106,18 +107,6 @@ sosTMod =
       status = B.fieldNamed "status",
       createdAt = B.fieldNamed "created_at",
       updatedAt = B.fieldNamed "updated_at"
-    }
-
-defaultSos :: Sos
-defaultSos =
-  SosT
-    { id = "",
-      personId = "",
-      rideId = "",
-      flow = "",
-      status = "",
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate
     }
 
 instance Serialize Sos where

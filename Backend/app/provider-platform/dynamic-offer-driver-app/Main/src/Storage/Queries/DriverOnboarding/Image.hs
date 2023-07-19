@@ -11,7 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.DriverOnboarding.Image where
 
@@ -20,17 +20,14 @@ import Domain.Types.DriverOnboarding.Error
 import Domain.Types.DriverOnboarding.Image
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Error.Throwing
-import Lib.Utils (setMeshConfig)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.Image as BeamI
 import Storage.CachedQueries.CacheConfig
@@ -40,14 +37,8 @@ import qualified Storage.Queries.Person as QP
 -- create :: Image -> SqlDB ()
 -- create = Esq.create
 
-create :: L.MonadFlow m => Image -> m (MeshResult ())
-create image = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamI.ImageT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainImageToBeam image)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create :: (L.MonadFlow m, Log m) => Image -> m ()
+create = createWithKV
 
 -- findById ::
 --   Transactionable m =>
@@ -55,14 +46,8 @@ create image = do
 --   m (Maybe Image)
 -- findById = Esq.findById
 
-findById :: L.MonadFlow m => Id Image -> m (Maybe Image)
-findById (Id imageid) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamI.ImageT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamImageToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamI.id $ Se.Eq imageid]
-    Nothing -> pure Nothing
+findById :: (L.MonadFlow m, Log m) => Id Image -> m (Maybe Image)
+findById (Id imageid) = findOneWithKV [Se.Is BeamI.id $ Se.Eq imageid]
 
 -- findImagesByPersonAndType ::
 --   (Transactionable m) =>
@@ -73,30 +58,20 @@ findById (Id imageid) = do
 -- findImagesByPersonAndType merchantId personId imgType = do
 --   findAll $ do
 --     images <- from $ table @ImageT
---     where_ $
 --       images ^. ImagePersonId ==. val (toKey personId)
 --         &&. images ^. ImageImageType ==. val imgType
 --         &&. images ^. ImageMerchantId ==. val (toKey merchantId)
 --     return images
 
-findImagesByPersonAndType :: L.MonadFlow m => Id Merchant -> Id Person -> ImageType -> m [Image]
-findImagesByPersonAndType (Id merchantId) (Id personId) imgType = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamI.ImageT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' ->
-      either (pure []) (transformBeamImageToDomain <$>)
-        <$> KV.findAllWithKVConnector
-          dbCOnf'
-          updatedMeshConfig
-          [ Se.And
-              [ Se.Is BeamI.personId $ Se.Eq personId,
-                Se.Is BeamI.merchantId $ Se.Eq merchantId,
-                Se.Is BeamI.imageType $ Se.Eq imgType
-              ]
-          ]
-    Nothing -> pure []
+findImagesByPersonAndType :: (L.MonadFlow m, Log m) => Id Merchant -> Id Person -> ImageType -> m [Image]
+findImagesByPersonAndType (Id merchantId) (Id personId) imgType =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamI.personId $ Se.Eq personId,
+          Se.Is BeamI.merchantId $ Se.Eq merchantId,
+          Se.Is BeamI.imageType $ Se.Eq imgType
+        ]
+    ]
 
 -- findRecentByPersonIdAndImageType ::
 --   ( Transactionable m,
@@ -132,22 +107,13 @@ findRecentByPersonIdAndImageType personId imgtype = do
   let onboardingRetryTimeInHours = transporterConfig.onboardingRetryTimeInHours
   let onBoardingRetryTimeInHours = intToNominalDiffTime onboardingRetryTimeInHours
   now <- getCurrentTime
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamI.ImageT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' ->
-      either (pure []) (transformBeamImageToDomain <$>)
-        <$> KV.findAllWithKVConnector
-          dbCOnf'
-          updatedMeshConfig
-          [ Se.And
-              [ Se.Is BeamI.personId $ Se.Eq $ getId personId,
-                Se.Is BeamI.imageType $ Se.Eq imgtype,
-                Se.Is BeamI.createdAt $ Se.GreaterThanOrEq (hoursAgo onBoardingRetryTimeInHours now)
-              ]
-          ]
-    Nothing -> pure []
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamI.personId $ Se.Eq $ getId personId,
+          Se.Is BeamI.imageType $ Se.Eq imgtype,
+          Se.Is BeamI.createdAt $ Se.GreaterThanOrEq (hoursAgo onBoardingRetryTimeInHours now)
+        ]
+    ]
   where
     hoursAgo i now = negate (3600 * i) `DT.addUTCTime` now
 
@@ -157,22 +123,13 @@ findRecentByPersonIdAndImageType personId imgtype = do
 --     set
 --       tbl
 --       [ImageIsValid =. val True]
---     where_ $ tbl ^. ImageTId ==. val (toKey id)
 
-updateToValid :: L.MonadFlow m => Id Image -> m (MeshResult ())
-updateToValid (Id id) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamI.ImageT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamI.isValid True
-        ]
-        [Se.Is BeamI.id (Se.Eq id)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+updateToValid :: (L.MonadFlow m, Log m) => Id Image -> m ()
+updateToValid (Id id) =
+  updateWithKV
+    [ Se.Set BeamI.isValid True
+    ]
+    [Se.Is BeamI.id (Se.Eq id)]
 
 -- findByMerchantId ::
 --   Transactionable m =>
@@ -184,20 +141,11 @@ updateToValid (Id id) = do
 --     where_ $ images ^. ImageMerchantId ==. val (toKey merchantId)
 --     return images
 
-findByMerchantId :: L.MonadFlow m => Id Merchant -> m [Image]
-findByMerchantId (Id merchantId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamI.ImageT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' ->
-      either (pure []) (transformBeamImageToDomain <$>)
-        <$> KV.findAllWithKVConnector
-          dbCOnf'
-          updatedMeshConfig
-          [ Se.Is BeamI.merchantId $ Se.Eq merchantId
-          ]
-    Nothing -> pure []
+findByMerchantId :: (L.MonadFlow m, Log m) => Id Merchant -> m [Image]
+findByMerchantId (Id merchantId) =
+  findAllWithKV
+    [ Se.Is BeamI.merchantId $ Se.Eq merchantId
+    ]
 
 -- addFailureReason :: Id Image -> DriverOnboardingError -> SqlDB ()
 -- addFailureReason id reason = do
@@ -207,63 +155,45 @@ findByMerchantId (Id merchantId) = do
 --       [ImageFailureReason =. val (Just reason)]
 --     where_ $ tbl ^. ImageTId ==. val (toKey id)
 
-addFailureReason :: L.MonadFlow m => Id Image -> DriverOnboardingError -> m (MeshResult ())
-addFailureReason (Id id) reason = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamI.ImageT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [ Se.Set BeamI.failureReason $ Just reason
-        ]
-        [Se.Is BeamI.id (Se.Eq id)]
-    Nothing -> pure (Left (MKeyNotFound "DB Config not found"))
+addFailureReason :: (L.MonadFlow m, Log m) => Id Image -> DriverOnboardingError -> m ()
+addFailureReason (Id id) reason =
+  updateWithKV
+    [ Se.Set BeamI.failureReason $ Just reason
+    ]
+    [Se.Is BeamI.id (Se.Eq id)]
 
 -- deleteByPersonId :: Id Person -> SqlDB ()
 -- deleteByPersonId personId =
 --   Esq.delete $ do
 --     images <- from $ table @ImageT
---     where_ $ images ^. ImagePersonId ==. val (toKey personId)
 
-deleteByPersonId :: L.MonadFlow m => Id Person -> m ()
-deleteByPersonId (Id personId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamI.ImageT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      void $
-        KV.deleteWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [Se.Is BeamI.personId (Se.Eq personId)]
-    Nothing -> pure ()
+deleteByPersonId :: (L.MonadFlow m, Log m) => Id Person -> m ()
+deleteByPersonId (Id personId) = deleteWithKV [Se.Is BeamI.personId (Se.Eq personId)]
 
-transformBeamImageToDomain :: BeamI.Image -> Image
-transformBeamImageToDomain BeamI.ImageT {..} = do
-  Image
-    { id = Id id,
-      personId = Id personId,
-      merchantId = Id merchantId,
-      s3Path = s3Path,
-      imageType = imageType,
-      isValid = isValid,
-      failureReason = failureReason,
-      createdAt = createdAt
-    }
+instance FromTType' BeamI.Image Image where
+  fromTType' BeamI.ImageT {..} = do
+    pure $
+      Just
+        Image
+          { id = Id id,
+            personId = Id personId,
+            merchantId = Id merchantId,
+            s3Path = s3Path,
+            imageType = imageType,
+            isValid = isValid,
+            failureReason = failureReason,
+            createdAt = createdAt
+          }
 
-transformDomainImageToBeam :: Image -> BeamI.Image
-transformDomainImageToBeam Image {..} =
-  BeamI.ImageT
-    { BeamI.id = getId id,
-      BeamI.personId = getId personId,
-      BeamI.merchantId = getId merchantId,
-      BeamI.s3Path = s3Path,
-      BeamI.imageType = imageType,
-      BeamI.isValid = isValid,
-      BeamI.failureReason = failureReason,
-      BeamI.createdAt = createdAt
-    }
+instance ToTType' BeamI.Image Image where
+  toTType' Image {..} = do
+    BeamI.ImageT
+      { BeamI.id = getId id,
+        BeamI.personId = getId personId,
+        BeamI.merchantId = getId merchantId,
+        BeamI.s3Path = s3Path,
+        BeamI.imageType = imageType,
+        BeamI.isValid = isValid,
+        BeamI.failureReason = failureReason,
+        BeamI.createdAt = createdAt
+      }

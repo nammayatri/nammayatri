@@ -17,7 +17,7 @@ upsert :: (L.MonadFlow m, Log m) => AppInstalls.AppInstalls -> m ()
 upsert a@AppInstalls {..} = do
   dbConf <- L.getOption KBT.PsqlDbCfg
   let modelName = Se.modelTableName @BeamAI.AppInstallsT
-  let updatedMeshConfig = setMeshConfig modelName
+  updatedMeshConfig <- setMeshConfig modelName
   case dbConf of
     Just dbCOnf' -> do
       res <- do
@@ -63,7 +63,7 @@ transformBeamAppInstallsToDomain BeamAI.AppInstallsT {..} = do
 
 transformDomainAppInstallsToBeam :: AppInstalls -> BeamAI.AppInstalls
 transformDomainAppInstallsToBeam AppInstalls {..} =
-  BeamAI.defaultAppInstalls
+  BeamAI.AppInstallsT
     { BeamAI.id = getId id,
       BeamAI.deviceToken = deviceToken,
       BeamAI.source = source,

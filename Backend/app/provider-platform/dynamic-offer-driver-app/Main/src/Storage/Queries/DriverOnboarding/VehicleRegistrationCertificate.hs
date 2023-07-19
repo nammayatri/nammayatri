@@ -11,32 +11,26 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate where
 
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
-import Lib.Utils (setMeshConfig)
+import Kernel.Types.Logging (Log)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithOptionsKV, findOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as BeamVRC
 
 -- create :: VehicleRegistrationCertificate -> SqlDB ()
 -- create = Esq.create
 
-create :: L.MonadFlow m => VehicleRegistrationCertificate -> m (MeshResult ())
+create :: (L.MonadFlow m, Log m) => VehicleRegistrationCertificate -> m ()
 create vehicleRegistrationCertificate = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamVRC.VehicleRegistrationCertificateT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainVehicleRegistrationCertificateToBeam vehicleRegistrationCertificate)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+  createWithKV vehicleRegistrationCertificate
 
 -- upsert :: VehicleRegistrationCertificate -> SqlDB ()
 -- upsert a@VehicleRegistrationCertificate {..} =
@@ -56,37 +50,28 @@ create vehicleRegistrationCertificate = do
 --       VehicleRegistrationCertificateUpdatedAt =. val updatedAt
 --     ]
 
-upsert :: L.MonadFlow m => VehicleRegistrationCertificate -> m ()
+upsert :: (L.MonadFlow m, Log m) => VehicleRegistrationCertificate -> m ()
 upsert a@VehicleRegistrationCertificate {..} = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamVRC.VehicleRegistrationCertificateT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> do
-      res <- either (pure Nothing) (transformBeamVehicleRegistrationCertificateToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamVRC.id $ Se.Eq (getId a.id)]
-      if isJust res
-        then
-          void $
-            KV.updateWoReturningWithKVConnector
-              dbCOnf'
-              updatedMeshConfig
-              [ Se.Set BeamVRC.permitExpiry permitExpiry,
-                Se.Set BeamVRC.pucExpiry pucExpiry,
-                Se.Set BeamVRC.insuranceValidity insuranceValidity,
-                Se.Set BeamVRC.vehicleClass vehicleClass,
-                Se.Set BeamVRC.vehicleVariant vehicleVariant,
-                Se.Set BeamVRC.vehicleManufacturer vehicleManufacturer,
-                Se.Set BeamVRC.vehicleCapacity vehicleCapacity,
-                Se.Set BeamVRC.vehicleModel vehicleModel,
-                Se.Set BeamVRC.vehicleColor vehicleColor,
-                Se.Set BeamVRC.vehicleEnergyType vehicleEnergyType,
-                Se.Set BeamVRC.verificationStatus verificationStatus,
-                Se.Set BeamVRC.failedRules failedRules,
-                Se.Set BeamVRC.updatedAt updatedAt
-              ]
-              [Se.Is BeamVRC.id (Se.Eq $ getId a.id)]
-        else void $ KV.createWoReturingKVConnector dbCOnf' updatedMeshConfig (transformDomainVehicleRegistrationCertificateToBeam a)
-    Nothing -> pure ()
+  res <- findOneWithKV [Se.Is BeamVRC.id $ Se.Eq (getId a.id)]
+  if isJust res
+    then
+      updateWithKV
+        [ Se.Set BeamVRC.permitExpiry permitExpiry,
+          Se.Set BeamVRC.pucExpiry pucExpiry,
+          Se.Set BeamVRC.insuranceValidity insuranceValidity,
+          Se.Set BeamVRC.vehicleClass vehicleClass,
+          Se.Set BeamVRC.vehicleVariant vehicleVariant,
+          Se.Set BeamVRC.vehicleManufacturer vehicleManufacturer,
+          Se.Set BeamVRC.vehicleCapacity vehicleCapacity,
+          Se.Set BeamVRC.vehicleModel vehicleModel,
+          Se.Set BeamVRC.vehicleColor vehicleColor,
+          Se.Set BeamVRC.vehicleEnergyType vehicleEnergyType,
+          Se.Set BeamVRC.verificationStatus verificationStatus,
+          Se.Set BeamVRC.failedRules failedRules,
+          Se.Set BeamVRC.updatedAt updatedAt
+        ]
+        [Se.Is BeamVRC.id (Se.Eq $ getId a.id)]
+    else createWithKV a
 
 -- findById ::
 --   Transactionable m =>
@@ -94,14 +79,8 @@ upsert a@VehicleRegistrationCertificate {..} = do
 --   m (Maybe VehicleRegistrationCertificate)
 -- findById = Esq.findById
 
-findById :: L.MonadFlow m => Id VehicleRegistrationCertificate -> m (Maybe VehicleRegistrationCertificate)
-findById (Id vrcID) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamVRC.VehicleRegistrationCertificateT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamVehicleRegistrationCertificateToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamVRC.id $ Se.Eq vrcID]
-    Nothing -> pure Nothing
+findById :: (L.MonadFlow m, Log m) => Id VehicleRegistrationCertificate -> m (Maybe VehicleRegistrationCertificate)
+findById (Id vrcID) = findOneWithKV [Se.Is BeamVRC.id $ Se.Eq vrcID]
 
 -- findLastVehicleRC ::
 --   (Transactionable m, EncFlow m r) =>
@@ -111,30 +90,16 @@ findById (Id vrcID) = do
 --   certNumberHash <- getDbHash certNumber
 --   rcs <- findAll $ do
 --     rc <- from $ table @VehicleRegistrationCertificateT
---     where_ $ rc ^. VehicleRegistrationCertificateCertificateNumberHash ==. val certNumberHash
 --     orderBy [desc $ rc ^. VehicleRegistrationCertificateFitnessExpiry]
 --     return rc
 --   pure $ headMaybe rcs
 --   where
 --     headMaybe [] = Nothing
---     headMaybe (x : _) = Just x
 
 findLastVehicleRC :: (L.MonadFlow m, EncFlow m r) => Text -> m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRC certNumber = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamVRC.VehicleRegistrationCertificateT
-  let updatedMeshConfig = setMeshConfig modelName
   certNumberHash <- getDbHash certNumber
-  case dbConf of
-    Just dbConf' -> do
-      vrcData <- KV.findAllWithOptionsKVConnector dbConf' updatedMeshConfig [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash] (Se.Desc BeamVRC.fitnessExpiry) Nothing Nothing
-      case vrcData of
-        Left _ -> pure Nothing
-        Right x -> pure $ transformBeamVehicleRegistrationCertificateToDomain <$> headMaybe x
-    Nothing -> pure Nothing
-  where
-    headMaybe [] = Nothing
-    headMaybe (x : _) = Just x
+  findAllWithOptionsKV [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash] (Se.Desc BeamVRC.fitnessExpiry) Nothing Nothing <&> listToMaybe
 
 -- findByRCAndExpiry ::
 --   Transactionable m =>
@@ -145,69 +110,60 @@ findLastVehicleRC certNumber = do
 --   let certNumberHash = certNumber & (.hash)
 --   findOne $ do
 --     rc <- from $ table @VehicleRegistrationCertificateT
---     where_ $
 --       rc ^. VehicleRegistrationCertificateCertificateNumberHash ==. val certNumberHash
 --         &&. rc ^. VehicleRegistrationCertificateFitnessExpiry ==. val expiry
 --     return rc
 
-findByRCAndExpiry :: L.MonadFlow m => EncryptedHashedField 'AsEncrypted Text -> UTCTime -> m (Maybe VehicleRegistrationCertificate)
+findByRCAndExpiry :: (L.MonadFlow m, Log m) => EncryptedHashedField 'AsEncrypted Text -> UTCTime -> m (Maybe VehicleRegistrationCertificate)
 findByRCAndExpiry certNumber expiry = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamVRC.VehicleRegistrationCertificateT
-  let updatedMeshConfig = setMeshConfig modelName
   let certNumberHash = certNumber & (.hash)
-  case dbConf of
-    Just dbCOnf' ->
-      either (pure Nothing) (transformBeamVehicleRegistrationCertificateToDomain <$>)
-        <$> KV.findWithKVConnector
-          dbCOnf'
-          updatedMeshConfig
-          [Se.And [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash, Se.Is BeamVRC.fitnessExpiry $ Se.Eq expiry]]
-    Nothing -> pure Nothing
+  findOneWithKV [Se.And [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash, Se.Is BeamVRC.fitnessExpiry $ Se.Eq expiry]]
 
-transformBeamVehicleRegistrationCertificateToDomain :: BeamVRC.VehicleRegistrationCertificate -> VehicleRegistrationCertificate
-transformBeamVehicleRegistrationCertificateToDomain BeamVRC.VehicleRegistrationCertificateT {..} = do
-  VehicleRegistrationCertificate
-    { id = Id id,
-      documentImageId = Id documentImageId,
-      certificateNumber = EncryptedHashed (Encrypted certificateNumberEncrypted) certificateNumberHash,
-      fitnessExpiry = fitnessExpiry,
-      permitExpiry = permitExpiry,
-      pucExpiry = pucExpiry,
-      insuranceValidity = insuranceValidity,
-      vehicleClass = vehicleClass,
-      vehicleVariant = vehicleVariant,
-      failedRules = failedRules,
-      vehicleManufacturer = vehicleManufacturer,
-      vehicleCapacity = vehicleCapacity,
-      vehicleModel = vehicleModel,
-      vehicleColor = vehicleColor,
-      vehicleEnergyType = vehicleEnergyType,
-      verificationStatus = verificationStatus,
-      createdAt = createdAt,
-      updatedAt = updatedAt
-    }
+instance FromTType' BeamVRC.VehicleRegistrationCertificate VehicleRegistrationCertificate where
+  fromTType' BeamVRC.VehicleRegistrationCertificateT {..} = do
+    pure $
+      Just
+        VehicleRegistrationCertificate
+          { id = Id id,
+            documentImageId = Id documentImageId,
+            certificateNumber = EncryptedHashed (Encrypted certificateNumberEncrypted) certificateNumberHash,
+            fitnessExpiry = fitnessExpiry,
+            permitExpiry = permitExpiry,
+            pucExpiry = pucExpiry,
+            insuranceValidity = insuranceValidity,
+            vehicleClass = vehicleClass,
+            vehicleVariant = vehicleVariant,
+            failedRules = failedRules,
+            vehicleManufacturer = vehicleManufacturer,
+            vehicleCapacity = vehicleCapacity,
+            vehicleModel = vehicleModel,
+            vehicleColor = vehicleColor,
+            vehicleEnergyType = vehicleEnergyType,
+            verificationStatus = verificationStatus,
+            createdAt = createdAt,
+            updatedAt = updatedAt
+          }
 
-transformDomainVehicleRegistrationCertificateToBeam :: VehicleRegistrationCertificate -> BeamVRC.VehicleRegistrationCertificate
-transformDomainVehicleRegistrationCertificateToBeam VehicleRegistrationCertificate {..} =
-  BeamVRC.VehicleRegistrationCertificateT
-    { BeamVRC.id = getId id,
-      BeamVRC.documentImageId = getId documentImageId,
-      BeamVRC.certificateNumberEncrypted = certificateNumber & unEncrypted . (.encrypted),
-      BeamVRC.certificateNumberHash = certificateNumber & (.hash),
-      BeamVRC.fitnessExpiry = fitnessExpiry,
-      BeamVRC.permitExpiry = permitExpiry,
-      BeamVRC.pucExpiry = pucExpiry,
-      BeamVRC.insuranceValidity = insuranceValidity,
-      BeamVRC.vehicleClass = vehicleClass,
-      BeamVRC.vehicleVariant = vehicleVariant,
-      BeamVRC.failedRules = failedRules,
-      BeamVRC.vehicleManufacturer = vehicleManufacturer,
-      BeamVRC.vehicleCapacity = vehicleCapacity,
-      BeamVRC.vehicleModel = vehicleModel,
-      BeamVRC.vehicleColor = vehicleColor,
-      BeamVRC.vehicleEnergyType = vehicleEnergyType,
-      BeamVRC.verificationStatus = verificationStatus,
-      BeamVRC.createdAt = createdAt,
-      BeamVRC.updatedAt = updatedAt
-    }
+instance ToTType' BeamVRC.VehicleRegistrationCertificate VehicleRegistrationCertificate where
+  toTType' VehicleRegistrationCertificate {..} = do
+    BeamVRC.VehicleRegistrationCertificateT
+      { BeamVRC.id = getId id,
+        BeamVRC.documentImageId = getId documentImageId,
+        BeamVRC.certificateNumberEncrypted = certificateNumber & unEncrypted . (.encrypted),
+        BeamVRC.certificateNumberHash = certificateNumber & (.hash),
+        BeamVRC.fitnessExpiry = fitnessExpiry,
+        BeamVRC.permitExpiry = permitExpiry,
+        BeamVRC.pucExpiry = pucExpiry,
+        BeamVRC.insuranceValidity = insuranceValidity,
+        BeamVRC.vehicleClass = vehicleClass,
+        BeamVRC.vehicleVariant = vehicleVariant,
+        BeamVRC.failedRules = failedRules,
+        BeamVRC.vehicleManufacturer = vehicleManufacturer,
+        BeamVRC.vehicleCapacity = vehicleCapacity,
+        BeamVRC.vehicleModel = vehicleModel,
+        BeamVRC.vehicleColor = vehicleColor,
+        BeamVRC.vehicleEnergyType = vehicleEnergyType,
+        BeamVRC.verificationStatus = verificationStatus,
+        BeamVRC.createdAt = createdAt,
+        BeamVRC.updatedAt = updatedAt
+      }

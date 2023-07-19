@@ -34,7 +34,8 @@ import qualified Domain.Types.RegistrationToken as Domain
 import EulerHS.KVConnector.Types (KVConnector (..), MeshMeta (..), primaryKey, secondaryKeys, tableName)
 import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
-import Lib.Utils
+import Kernel.Types.Common hiding (id)
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
@@ -137,26 +138,6 @@ registrationTokenTMod =
       info = B.fieldNamed "info"
     }
 
-defaultRegistrationToken :: RegistrationToken
-defaultRegistrationToken =
-  RegistrationTokenT
-    { id = "",
-      token = "",
-      attempts = 0,
-      authMedium = "",
-      authType = "",
-      authValueHash = "",
-      verified = False,
-      authExpiry = 0,
-      tokenExpiry = 0,
-      entityId = "",
-      merchantId = "",
-      entityType = "",
-      createdAt = defaultUTCDate,
-      updatedAt = defaultUTCDate,
-      info = Nothing
-    }
-
 instance Serialize RegistrationToken where
   put = error "undefined"
   get = error "undefined"
@@ -172,4 +153,4 @@ registrationTokenToPSModifiers :: M.Map Text (A.Value -> A.Value)
 registrationTokenToPSModifiers =
   M.empty
 
-$(enableKVPG ''RegistrationTokenT ['id] [])
+$(enableKVPG ''RegistrationTokenT ['id] [['token], ['entityId]])

@@ -35,7 +35,7 @@ import GHC.Generics (Generic)
 import Kernel.Prelude hiding (Generic)
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
-import Lib.Utils
+import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 import Storage.Tabular.Vehicle ()
@@ -101,8 +101,8 @@ instance IsString Domain.BookingType where
 instance IsString Veh.Variant where
   fromString = show
 
-instance IsString Money where
-  fromString = show
+-- instance IsString Money where
+--   fromString = show
 
 instance B.Table BookingT where
   data PrimaryKey BookingT f

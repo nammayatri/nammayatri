@@ -11,19 +11,26 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.DriverStats where
 
 import Domain.Types.DriverStats as Domain
 import Domain.Types.Person (Driver)
-import qualified EulerHS.KVConnector.Flow as KV
-import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils (setMeshConfig)
+import Lib.Utils
+  ( FromTType' (fromTType'),
+    ToTType' (toTType'),
+    createWithKV,
+    deleteWithKV,
+    findAllWithKV,
+    findAllWithOptionsKV,
+    findOneWithKV,
+    updateWithKV,
+  )
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverStats as BeamDS
 
@@ -41,16 +48,10 @@ import qualified Storage.Beam.DriverStats as BeamDS
 -- create :: DriverStats -> SqlDB ()
 -- create = Esq.create
 
-create :: L.MonadFlow m => DriverStats -> m (MeshResult ())
-create driverStats = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDS.DriverStatsT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainDriverStatsToBeam driverStats)
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+create :: (L.MonadFlow m, Log m) => DriverStats -> m ()
+create = createWithKV
 
-createInitialDriverStats :: (L.MonadFlow m, MonadTime m) => Id Driver -> m ()
+createInitialDriverStats :: (L.MonadFlow m, MonadTime m, Log m) => Id Driver -> m ()
 createInitialDriverStats driverId = do
   now <- getCurrentTime
   let dStats =
@@ -62,12 +63,7 @@ createInitialDriverStats driverId = do
             ridesCancelled = Just 0,
             totalRidesAssigned = Just 0
           }
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDS.DriverStatsT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> void $ KV.createWoReturingKVConnector dbConf' updatedMeshConfig (transformDomainDriverStatsToBeam dStats)
-    Nothing -> pure ()
+  createWithKV dStats
 
 -- getTopDriversByIdleTime :: Transactionable m => Int -> [Id Driver] -> m [Id Driver]
 -- getTopDriversByIdleTime count_ ids =
@@ -78,23 +74,13 @@ createInitialDriverStats driverId = do
 --     limit $ fromIntegral count_
 --     return $ driverStats ^. DriverStatsTId
 
-getTopDriversByIdleTime :: L.MonadFlow m => Int -> [Id Driver] -> m [Id Driver]
-getTopDriversByIdleTime count_ ids = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDS.DriverStatsT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> do
-      srsz <- KV.findAllWithOptionsKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDS.driverId $ Se.In (getId <$> ids)] (Se.Asc BeamDS.idleSince) (Just count_) Nothing
-      case srsz of
-        Left _ -> pure []
-        Right x -> pure $ Domain.driverId . transformBeamDriverStatsToDomain <$> x
-    Nothing -> pure []
+getTopDriversByIdleTime :: (L.MonadFlow m, Log m) => Int -> [Id Driver] -> m [Id Driver]
+getTopDriversByIdleTime count_ ids = findAllWithOptionsKV [Se.Is BeamDS.driverId $ Se.In (getId <$> ids)] (Se.Asc BeamDS.idleSince) (Just count_) Nothing <&> (Domain.driverId <$>)
 
 -- updateIdleTime :: Id Driver -> SqlDB ()
 -- updateIdleTime driverId = updateIdleTimes [driverId]
 
-updateIdleTime :: (L.MonadFlow m, MonadTime m) => Id Driver -> m ()
+updateIdleTime :: (L.MonadFlow m, MonadTime m, Log m) => Id Driver -> m ()
 updateIdleTime driverId = updateIdleTimes [driverId]
 
 -- updateIdleTimes :: [Id Driver] -> SqlDB ()
@@ -107,63 +93,31 @@ updateIdleTime driverId = updateIdleTimes [driverId]
 --       ]
 --     where_ $ tbl ^. DriverStatsDriverId `in_` valList (toKey . cast <$> driverIds)
 
-updateIdleTimes :: (L.MonadFlow m, MonadTime m) => [Id Driver] -> m ()
+updateIdleTimes :: (L.MonadFlow m, MonadTime m, Log m) => [Id Driver] -> m ()
 updateIdleTimes driverIds = do
   now <- getCurrentTime
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDS.DriverStatsT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      void $
-        KV.updateWoReturningWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [ Se.Set BeamDS.idleSince now
-          ]
-          [Se.Is BeamDS.driverId (Se.In (getId <$> driverIds))]
-    Nothing -> pure ()
+  updateWithKV
+    [ Se.Set BeamDS.idleSince now
+    ]
+    [Se.Is BeamDS.driverId (Se.In (getId <$> driverIds))]
 
 -- fetchAll :: Transactionable m => m [DriverStats]
 -- fetchAll = Esq.findAll $ from $ table @DriverStatsT
 
-fetchAll :: L.MonadFlow m => m [DriverStats]
-fetchAll = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDS.DriverStatsT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure []) (transformBeamDriverStatsToDomain <$>) <$> KV.findAllWithKVConnector dbCOnf' updatedMeshConfig []
-    Nothing -> pure []
+fetchAll :: (L.MonadFlow m, Log m) => m [DriverStats]
+fetchAll = findAllWithKV [Se.Is BeamDS.driverId $ Se.Not $ Se.Eq $ getId ""]
 
 -- findById :: Transactionable m => Id Driver -> m (Maybe DriverStats)
 -- findById = Esq.findById
 
-findById :: L.MonadFlow m => Id Driver -> m (Maybe DriverStats)
-findById (Id driverId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDS.DriverStatsT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> either (pure Nothing) (transformBeamDriverStatsToDomain <$>) <$> KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDS.driverId $ Se.Eq driverId]
-    Nothing -> pure Nothing
+findById :: (L.MonadFlow m, Log m) => Id Driver -> m (Maybe DriverStats)
+findById (Id driverId) = findOneWithKV [Se.Is BeamDS.driverId $ Se.Eq driverId]
 
 -- deleteById :: Id Driver -> SqlDB ()
 -- deleteById = Esq.deleteByKey @DriverStatsT
 
-deleteById :: L.MonadFlow m => Id Driver -> m ()
-deleteById (Id driverId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDS.DriverStatsT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      void $
-        KV.deleteWithKVConnector
-          dbConf'
-          updatedMeshConfig
-          [Se.Is BeamDS.driverId (Se.Eq driverId)]
-    Nothing -> pure ()
+deleteById :: (L.MonadFlow m, Log m) => Id Driver -> m ()
+deleteById (Id driverId) = deleteWithKV [Se.Is BeamDS.driverId (Se.Eq driverId)]
 
 -- incrementTotalRidesAndTotalDist :: Id Driver -> Meters -> SqlDB ()
 -- incrementTotalRidesAndTotalDist driverId rideDist = do
@@ -174,42 +128,18 @@ deleteById (Id driverId) = do
 --         DriverStatsTotalDistance =. (tbl ^. DriverStatsTotalDistance) +. val rideDist
 --       ]
 --     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
-findTotalRides :: L.MonadFlow m => Id Driver -> m (Int, Meters)
-findTotalRides (Id driverId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDS.DriverStatsT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' -> do
-      res <- KV.findWithKVConnector dbConf' updatedMeshConfig [Se.Is BeamDS.driverId (Se.Eq driverId)]
-      case res of
-        Left _ -> pure (0, 0)
-        Right x -> do
-          case x of
-            Nothing -> pure (0, 0)
-            Just x' -> do
-              let x'' = Domain.totalRides $ transformBeamDriverStatsToDomain x'
-              let y' = Domain.totalDistance $ transformBeamDriverStatsToDomain x'
-              pure (x'', y')
-    Nothing -> pure $ error "DB Config not found"
 
-incrementTotalRidesAndTotalDist :: (L.MonadFlow m) => Id Driver -> Meters -> m (MeshResult ())
+findTotalRides :: (L.MonadFlow m, Log m) => Id Driver -> m (Int, Meters)
+findTotalRides (Id driverId) = maybe (pure (0, 0)) (pure . (Domain.totalRides &&& Domain.totalDistance)) =<< findOneWithKV [Se.Is BeamDS.driverId (Se.Eq driverId)]
+
+incrementTotalRidesAndTotalDist :: (L.MonadFlow m, Log m) => Id Driver -> Meters -> m ()
 incrementTotalRidesAndTotalDist (Id driverId') rideDist = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDS.DriverStatsT
-  let updatedMeshConfig = setMeshConfig modelName
-  (x, y) <- findTotalRides (Id driverId')
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        --[ Se.Set BeamDS.totalRides $ 1,
-        [ Se.Set (\BeamDS.DriverStatsT {..} -> totalRides) (x + 1),
-          Se.Set BeamDS.totalDistance (rideDist + y)
-        ]
-        [Se.Is BeamDS.driverId (Se.Eq driverId')]
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+  findTotalRides (Id driverId') >>= \(rides, distance) ->
+    updateWithKV
+      [ Se.Set (\BeamDS.DriverStatsT {..} -> totalRides) (rides + 1),
+        Se.Set BeamDS.totalDistance (rideDist + distance)
+      ]
+      [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
 -- incrementTotalRidesAssigned :: Id Driver -> Int -> SqlDB ()
 -- incrementTotalRidesAssigned driverId number = do
@@ -220,46 +150,15 @@ incrementTotalRidesAndTotalDist (Id driverId') rideDist = do
 --       ]
 --     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
 
-findTotalRidesAssigned :: (L.MonadFlow m) => Id Driver -> m (Maybe Int)
-findTotalRidesAssigned (Id driverId) = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDS.DriverStatsT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> do
-      res <- KV.findWithKVConnector dbCOnf' updatedMeshConfig [Se.Is BeamDS.driverId $ Se.Eq driverId]
-      case res of
-        Left _ -> pure Nothing
-        Right (Just x) -> do
-          let rides = transformBeamDriverStatsToDomain x
-              ans = Domain.totalRidesAssigned rides
-          pure ans
-        Right Nothing -> pure Nothing
-    Nothing -> pure Nothing
+findTotalRidesAssigned :: (L.MonadFlow m, Log m) => Id Driver -> m (Maybe Int)
+findTotalRidesAssigned (Id driverId) = (Domain.totalRidesAssigned =<<) <$> findOneWithKV [Se.Is BeamDS.driverId (Se.Eq driverId)]
 
-incrementTotalRidesAssigned :: (L.MonadFlow m) => Id Driver -> Int -> m (MeshResult ())
+incrementTotalRidesAssigned :: (L.MonadFlow m, Log m) => Id Driver -> Int -> m ()
 incrementTotalRidesAssigned (Id driverId') number = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDS.DriverStatsT
-  let updatedMeshConfig = setMeshConfig modelName
-  rideAssigned <- findTotalRidesAssigned (Id driverId')
-  case dbConf of
-    Just dbConf' ->
-      case rideAssigned of
-        Just rides -> do
-          let newRides = rides + number
-          KV.updateWoReturningWithKVConnector
-            dbConf'
-            updatedMeshConfig
-            [Se.Set BeamDS.totalRidesAssigned (Just newRides)]
-            [Se.Is BeamDS.driverId (Se.Eq driverId')]
-        Nothing -> do
-          KV.updateWoReturningWithKVConnector
-            dbConf'
-            updatedMeshConfig
-            [Se.Set BeamDS.totalRidesAssigned (Just number)]
-            [Se.Is BeamDS.driverId (Se.Eq driverId')]
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+  findTotalRidesAssigned (Id driverId') >>= \case
+    Nothing -> updateWithKV [Se.Set BeamDS.totalRidesAssigned (Just number)] [Se.Is BeamDS.driverId (Se.Eq driverId')]
+    Just newRides -> do
+      updateWithKV [Se.Set BeamDS.totalRidesAssigned (Just (newRides + number))] [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
 -- setCancelledRidesCount :: Id Driver -> Int -> SqlDB ()
 -- setCancelledRidesCount driverId cancelledCount = do
@@ -270,19 +169,8 @@ incrementTotalRidesAssigned (Id driverId') number = do
 --       ]
 --     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
 
-setCancelledRidesCount :: (L.MonadFlow m) => Id Driver -> Int -> m (MeshResult ())
-setCancelledRidesCount (Id driverId') cancelledCount = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDS.DriverStatsT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbConf' ->
-      KV.updateWoReturningWithKVConnector
-        dbConf'
-        updatedMeshConfig
-        [Se.Set BeamDS.ridesCancelled (Just cancelledCount)]
-        [Se.Is BeamDS.driverId (Se.Eq driverId')]
-    Nothing -> pure (Left $ MKeyNotFound "DB Config not found")
+setCancelledRidesCount :: (L.MonadFlow m, Log m) => Id Driver -> Int -> m ()
+setCancelledRidesCount (Id driverId') cancelledCount = updateWithKV [Se.Set BeamDS.ridesCancelled (Just cancelledCount)] [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
 -- getDriversSortedOrder :: Transactionable m => Maybe Integer -> m [DriverStats]
 -- getDriversSortedOrder mbLimitVal =
@@ -292,37 +180,29 @@ setCancelledRidesCount (Id driverId') cancelledCount = do
 --     limit $ maybe 10 fromIntegral mbLimitVal
 --     return driverStats
 
-getDriversSortedOrder :: L.MonadFlow m => Maybe Integer -> m [DriverStats]
-getDriversSortedOrder mbLimitVal = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  let modelName = Se.modelTableName @BeamDS.DriverStatsT
-  let updatedMeshConfig = setMeshConfig modelName
-  case dbConf of
-    Just dbCOnf' -> do
-      srsz <- KV.findAllWithOptionsKVConnector dbCOnf' updatedMeshConfig [] (Se.Desc BeamDS.totalRides) (Just $ maybe 10 fromInteger mbLimitVal) Nothing
-      case srsz of
-        Left _ -> pure []
-        Right x -> pure $ transformBeamDriverStatsToDomain <$> x
-    Nothing -> pure []
+getDriversSortedOrder :: (L.MonadFlow m, Log m) => Maybe Integer -> m [DriverStats]
+getDriversSortedOrder mbLimitVal = findAllWithOptionsKV [] (Se.Desc BeamDS.totalRides) (Just $ maybe 10 fromInteger mbLimitVal) Nothing
 
-transformBeamDriverStatsToDomain :: BeamDS.DriverStats -> DriverStats
-transformBeamDriverStatsToDomain BeamDS.DriverStatsT {..} = do
-  DriverStats
-    { driverId = Id driverId,
-      idleSince = idleSince,
-      totalRides = totalRides,
-      totalDistance = totalDistance,
-      ridesCancelled = ridesCancelled,
-      totalRidesAssigned = totalRidesAssigned
-    }
+instance FromTType' BeamDS.DriverStats DriverStats where
+  fromTType' BeamDS.DriverStatsT {..} = do
+    pure $
+      Just
+        DriverStats
+          { driverId = Id driverId,
+            idleSince = idleSince,
+            totalRides = totalRides,
+            totalDistance = totalDistance,
+            ridesCancelled = ridesCancelled,
+            totalRidesAssigned = totalRidesAssigned
+          }
 
-transformDomainDriverStatsToBeam :: DriverStats -> BeamDS.DriverStats
-transformDomainDriverStatsToBeam DriverStats {..} =
-  BeamDS.DriverStatsT
-    { BeamDS.driverId = getId driverId,
-      BeamDS.idleSince = idleSince,
-      BeamDS.totalRides = totalRides,
-      BeamDS.totalDistance = totalDistance,
-      BeamDS.ridesCancelled = ridesCancelled,
-      BeamDS.totalRidesAssigned = totalRidesAssigned
-    }
+instance ToTType' BeamDS.DriverStats DriverStats where
+  toTType' DriverStats {..} = do
+    BeamDS.DriverStatsT
+      { BeamDS.driverId = getId driverId,
+        BeamDS.idleSince = idleSince,
+        BeamDS.totalRides = totalRides,
+        BeamDS.totalDistance = totalDistance,
+        BeamDS.ridesCancelled = ridesCancelled,
+        BeamDS.totalRidesAssigned = totalRidesAssigned
+      }
