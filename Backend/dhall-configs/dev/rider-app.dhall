@@ -160,7 +160,7 @@ in  { esqDBCfg
     , migrationPath = Some
         (env:RIDER_APP_MIGRATION_PATH as Text ? "dev/migrations/rider-app")
     , autoMigrate = True
-    , coreVersion = "0.9.3"
+    , coreVersion = "0.9.4"
     , loggerConfig =
         common.loggerConfig // { logFilePath = "/tmp/rider-app.log" }
     , googleTranslateUrl = common.googleTranslateUrl
