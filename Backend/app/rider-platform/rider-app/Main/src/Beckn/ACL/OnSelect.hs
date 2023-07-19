@@ -89,7 +89,7 @@ buildQuoteInfo driverId fulfillment quote item = do
   -- let itemCode = item.descriptor.code
   let vehicleVariant = fulfillment.vehicle.category
       estimatedFare = roundToIntegral item.price.value
-      estimatedTotalFare = roundToIntegral item.price.offered_value
+      estimatedTotalFare = roundToIntegral item.price.value
       descriptions = []
       specialLocationTag = getTag "general_info" "special_location_tag" =<< item.tags
   validatePrices estimatedFare estimatedTotalFare

@@ -29,7 +29,7 @@ data PriceBreakup = PriceBreakup
 
 data Price = Price
   { currency :: Text,
-    value :: DecimalValue,
-    offered_value :: DecimalValue
+    value :: DecimalValue
+    -- offered_value :: DecimalValue
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

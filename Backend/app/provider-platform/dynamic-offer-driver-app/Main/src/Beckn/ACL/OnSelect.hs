@@ -29,6 +29,8 @@ import qualified Domain.Types.Merchant as DM
 import Domain.Types.SearchRequest (SearchRequest)
 import Kernel.Prelude
 import Kernel.Types.Id (ShortId)
+-- import qualified Domain.Types.FareParameters as DFParams
+import SharedLogic.FareCalculator (mkBreakupList)
 
 -- import qualified Kernel.Utils.Common
 
@@ -269,21 +271,94 @@ mkPrice quote =
   let value_ = fromIntegral quote.estimatedFare
    in OS.Price
         { currency = "INR",
-          value = value_,
-          offered_value = value_
+          value = value_
+          -- offered_value = value_
         }
 
 mkQuote :: DQuote.DriverQuote -> UTCTime -> OS.Quote
 mkQuote driverQuote _ = do
+  let currency = "INR"
+      breakup_ =
+        mkBreakupList (OS.Price currency . fromIntegral) OS.PriceBreakup driverQuote.fareParams
+          & filter filterRequiredBreakups
   -- let nominalDifferenceTime = diffUTCTime now driverQuote.validTill
   -- let diffDuration = calendarTimeTime nominalDifferenceTime
   -- let iso8601Duration = formatShow iso8601Format diffDuration
   OS.Quote
     { price = mkPrice driverQuote,
       ttl = Just $ show driverQuote.validTill, --------- todo
-      breakup = Nothing
+      breakup = breakup_
     }
+  where
+    filterRequiredBreakups breakup =
+      breakup.title == "BASE_FARE"
+        || breakup.title == "DEAD_KILOMETER_FARE"
+        || breakup.title == "EXTRA_DISTANCE_FARE"
+        || breakup.title == "DRIVER_SELECTED_FARE"
+        || breakup.title == "CUSTOMER_SELECTED_FARE"
+        || breakup.title == "TOTAL_FARE"
 
--- (fromIntegral $ div (fromEnum . nominalDiffTimeToSeconds $ latency) 1000000000000)
--- let Duration =
--- calendarTimeTime
+-- mkQuoteBreakupList :: DQuote.DriverQuote -> [Maybe OS.PriceBreakup]
+-- mkQuoteBreakupList driverQuote =
+--   mkBreakupList
+--   let parameters = driverQuote.fareParams
+--   in
+--   [
+--     Just $ OS.PriceBreakup {
+--         title = "BASE_FARE",
+--         price = OS.Price
+--           { currency = "INR",
+--             value = OS.DecimalValue $ toRational parameters.baseFare.getMoney,
+--             offered_value = OS.DecimalValue $ toRational parameters.baseFare.getMoney
+--           }
+--       },
+--     if isJust parameters.customerExtraFee then Just $ OS.PriceBreakup {
+--         title = "BASE_FARE",
+--         price = OS.Price
+--           { currency = "INR",
+--             value = OS.DecimalValue $ toRational parameters.baseFare.getMoney,
+--             offered_value = OS.DecimalValue $ toRational parameters.baseFare.getMoney
+--           }
+--       } else Nothing,
+--   ]
+
+-- fareParams :: Params.FareParameters,
+
+-- data FareParameters = FareParameters
+--   { id :: Id FareParameters,
+--     driverSelectedFare :: Maybe Money,
+--     customerExtraFee :: Maybe Money,
+--     serviceCharge :: Maybe Money,
+--     govtCharges :: Maybe Money,
+--     baseFare :: Money,
+--     waitingCharge :: Maybe Money,
+--     nightShiftCharge :: Maybe Money,
+--     nightShiftRateIfApplies :: Maybe Double,
+--     fareParametersDetails :: FareParametersDetails
+--   }
+
+-- data PriceBreakup = PriceBreakup
+--   { title :: Text,
+--     price :: Price
+--   }
+--   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+-- data Price = Price
+--   { currency :: Text,
+--     value :: DecimalValue,
+--     offered_value :: DecimalValue
+--   }
+--   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+-- -- (fromIntegral $ div (fromEnum . nominalDiffTimeToSeconds $ latency) 1000000000000)
+-- -- let Duration =
+-- -- calendarTimeTime
+
+--       baseFareCaption = "BASE_FARE"
+--       serviceChargeCaption = "SERVICE_CHARGE"
+--       mkSelectedFareCaption = "DRIVER_SELECTED_FARE"
+--       customerExtraFareCaption = "CUSTOMER_SELECTED_FARE"
+--       totalFareCaption = "TOTAL_FARE"
+--       nightShiftCaption = "NIGHT_SHIFT_CHARGE"
+--       waitingChargesCaption = "WAITING_OR_PICKUP_CHARGES"
+--       mbFixedGovtRateCaption = "FIXED_GOVERNMENT_RATE"
