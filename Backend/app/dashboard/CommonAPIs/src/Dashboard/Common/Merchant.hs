@@ -274,11 +274,13 @@ type SmsServiceConfigUpdateAPI =
 data SmsServiceConfigUpdateReq
   = MyValueFirstConfigUpdateReq MyValueFirstCfgUpdateReq
   | ExotelSmsConfigUpdateReq ExotelSmsCfgUpdateReq
+  | WBSmsConfigUpdateReq WBSmsCfgUpdateReq
   deriving stock (Show, Generic)
 
 data SmsServiceConfigUpdateTReq
   = MyValueFirstConfigUpdateTReq MyValueFirstCfgUpdateTReq
   | ExotelSmsConfigUpdateTReq ExotelSmsCfgUpdateTReq
+  | WBSmsConfigUpdateTReq WBSmsCfgUpdateTReq
   deriving stock (Generic)
 
 instance HideSecrets SmsServiceConfigUpdateReq where
@@ -286,11 +288,13 @@ instance HideSecrets SmsServiceConfigUpdateReq where
   hideSecrets = \case
     MyValueFirstConfigUpdateReq req -> MyValueFirstConfigUpdateTReq $ hideSecrets req
     ExotelSmsConfigUpdateReq req -> ExotelSmsConfigUpdateTReq $ hideSecrets req
+    WBSmsConfigUpdateReq req -> WBSmsConfigUpdateTReq $ hideSecrets req
 
 getSmsServiceFromReq :: SmsServiceConfigUpdateReq -> SMS.SmsService
 getSmsServiceFromReq = \case
   MyValueFirstConfigUpdateReq _ -> SMS.MyValueFirst
   ExotelSmsConfigUpdateReq _ -> SMS.ExotelSms
+  WBSmsConfigUpdateReq _ -> SMS.WBSms
 
 buildSmsServiceConfig ::
   EncFlow m r =>
@@ -305,6 +309,9 @@ buildSmsServiceConfig = \case
     apiKey' <- encrypt apiKey
     apiToken' <- encrypt apiToken
     pure . SMS.ExotelSmsConfig $ SMS.ExotelSmsCfg {apiKey = apiKey', apiToken = apiToken', ..}
+  WBSmsConfigUpdateReq WBSmsCfgUpdateReq {..} -> do
+    passkey' <- encrypt passkey
+    pure . SMS.WBSmsConfig $ SMS.WBSmsCfg {passkey = passkey', ..}
 
 instance ToJSON SmsServiceConfigUpdateReq where
   toJSON = genericToJSON (updateSmsReqOptions updateSmsReqConstructorModifier)
@@ -339,12 +346,14 @@ updateSmsReqConstructorModifier :: String -> String
 updateSmsReqConstructorModifier = \case
   "MyValueFirstConfigUpdateReq" -> show SMS.MyValueFirst
   "ExotelSmsConfigUpdateReq" -> show SMS.ExotelSms
+  "WBSmsConfigUpdateReq" -> show SMS.WBSms
   x -> x
 
 updateSmsTReqConstructorModifier :: String -> String
 updateSmsTReqConstructorModifier = \case
   "MyValueFirstConfigUpdateTReq" -> show SMS.MyValueFirst
   "ExotelSmsConfigUpdateTReq" -> show SMS.ExotelSms
+  "WBSmsConfigUpdateTReq" -> show SMS.WBSms
   x -> x
 
 -- SMS services
@@ -389,6 +398,31 @@ data ExotelSmsCfgUpdateTReq = ExotelSmsCfgUpdateTReq
 instance HideSecrets ExotelSmsCfgUpdateReq where
   type ReqWithoutSecrets ExotelSmsCfgUpdateReq = ExotelSmsCfgUpdateTReq
   hideSecrets ExotelSmsCfgUpdateReq {..} = ExotelSmsCfgUpdateTReq {..}
+
+-- WBSms
+
+data WBSmsCfgUpdateReq = WBSmsCfgUpdateReq
+  { passkey :: Text,
+    templSendOtp :: Text,
+    templAltNo :: Text,
+    templWelcome :: Text,
+    url :: BaseUrl
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data WBSmsCfgUpdateTReq = WBSmsCfgUpdateTReq
+  { templSendOtp :: Text,
+    templAltNo :: Text,
+    templWelcome :: Text,
+    url :: BaseUrl
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON)
+
+instance HideSecrets WBSmsCfgUpdateReq where
+  type ReqWithoutSecrets WBSmsCfgUpdateReq = WBSmsCfgUpdateTReq
+  hideSecrets WBSmsCfgUpdateReq {..} = WBSmsCfgUpdateTReq {..}
 
 ---------------------------------------------------------
 -- merchant verification service config update ----------

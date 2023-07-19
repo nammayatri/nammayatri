@@ -67,6 +67,7 @@ instance FromTType MerchantServiceConfigT Domain.MerchantServiceConfig where
       Domain.MapsService Maps.MMI -> Domain.MapsServiceConfig . Maps.MMIConfig <$> decodeFromText configJSON
       Domain.SmsService Sms.ExotelSms -> Domain.SmsServiceConfig . Sms.ExotelSmsConfig <$> decodeFromText configJSON
       Domain.SmsService Sms.MyValueFirst -> Domain.SmsServiceConfig . Sms.MyValueFirstConfig <$> decodeFromText configJSON
+      Domain.SmsService Sms.WBSms -> Domain.SmsServiceConfig . Sms.WBSmsConfig <$> decodeFromText configJSON
       Domain.WhatsappService Whatsapp.GupShup -> Domain.WhatsappServiceConfig . Whatsapp.GupShupConfig <$> decodeFromText configJSON
       Domain.VerificationService Verification.Idfy -> Domain.VerificationServiceConfig . Verification.IdfyConfig <$> decodeFromText configJSON
       Domain.AadhaarVerificationService AadhaarVerification.Gridline -> Domain.AadhaarVerificationServiceConfig . AadhaarVerification.GridlineConfig <$> decodeFromText configJSON
@@ -95,6 +96,7 @@ getServiceNameConfigJSON = \case
   Domain.SmsServiceConfig smsCfg -> case smsCfg of
     Sms.ExotelSmsConfig cfg -> (Domain.SmsService Sms.ExotelSms, encodeToText cfg)
     Sms.MyValueFirstConfig cfg -> (Domain.SmsService Sms.MyValueFirst, encodeToText cfg)
+    Sms.WBSmsConfig cfg -> (Domain.SmsService Sms.WBSms, encodeToText cfg)
   Domain.WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
     Whatsapp.GupShupConfig cfg -> (Domain.WhatsappService Whatsapp.GupShup, encodeToText cfg)
   Domain.VerificationServiceConfig verificationCfg -> case verificationCfg of

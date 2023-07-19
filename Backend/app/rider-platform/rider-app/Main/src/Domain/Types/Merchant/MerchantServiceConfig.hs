@@ -122,6 +122,7 @@ getServiceName msc = case msc.serviceConfig of
   SmsServiceConfig smsCfg -> case smsCfg of
     Sms.ExotelSmsConfig _ -> SmsService Sms.ExotelSms
     Sms.MyValueFirstConfig _ -> SmsService Sms.MyValueFirst
+    Sms.WBSmsConfig _ -> SmsService Sms.WBSms
   WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
     Whatsapp.GupShupConfig _ -> WhatsappService Whatsapp.GupShup
   CallServiceConfig callCfg -> case callCfg of
