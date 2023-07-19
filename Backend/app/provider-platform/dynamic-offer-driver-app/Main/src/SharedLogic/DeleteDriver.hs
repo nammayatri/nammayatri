@@ -32,6 +32,8 @@ import qualified Storage.CachedQueries.Issue.IssueReport as CQIR
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDriverFlowStatus
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLocation as QDriverLocation
+import qualified Storage.Queries.DriverOnboarding.AadhaarOtp as AadhaarOtp
+import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as AV
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as QIV
@@ -76,6 +78,9 @@ deleteDriver merchantShortId reqDriverId = do
     QDriverFlowStatus.deleteById reqDriverId
     QMessage.deleteByPersonId reqDriverId
     QIssueReport.deleteByPersonId reqDriverId
+    AadhaarOtp.deleteByPersonIdForGenerate reqDriverId
+    AadhaarOtp.deleteByPersonIdForVerify reqDriverId
+    AV.deleteByPersonId reqDriverId
     QPerson.deleteById reqDriverId
   runInLocationDB $ QDriverLocation.deleteById reqDriverId
   CQDriverInfo.clearDriverInfoCache (cast reqDriverId)
