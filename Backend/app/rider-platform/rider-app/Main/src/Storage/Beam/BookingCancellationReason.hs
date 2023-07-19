@@ -123,6 +123,7 @@ bookingCancellationReasonTMod =
       source = B.fieldNamed "source",
       reasonCode = B.fieldNamed "reason_code",
       additionalInfo = B.fieldNamed "additional_info",
+      reasonStage = B.fieldNamed "reason_stage",
       driverCancellationLocationLat = B.fieldNamed "driver_cancellation_location_lat",
       driverCancellationLocationLon = B.fieldNamed "driver_cancellation_location_lon",
       driverDistToPickup = B.fieldNamed "driver_dist_to_pickup"
