@@ -1,10 +1,7 @@
 <resources>
-    <string name="app_name" translatable="false">Ma le Taxi</string>
+    <string name="app_name" translatable="false">Alliance Taxis</string>
     <string name="client_id" translatable="false">passcultureprovider</string>
     <string name="service" translatable="false">passcultureprovider</string>
-    <string name="navigationApp" translatable="false">waze</string>
-    <string name="navigationURI" translatable="false">https://waze.com/ul?ll=</string>
-    <string name="navigationAppPackage" translatable="false">com.waze</string>
     <string name="bodyText" translatable="false">Yatri Partner collects location data to enable share your location to monitor driver current location, even when the app is closed or not in use.</string>
     <string name="dev_port" translatable="false">8083</string>
     <string name="tip_included"> tip included!</string>

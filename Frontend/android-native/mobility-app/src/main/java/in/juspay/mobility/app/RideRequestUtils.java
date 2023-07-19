@@ -212,19 +212,12 @@ public class RideRequestUtils {
                 Handler handler = new Handler();
                 handler.postDelayed(() -> {
                     context.startActivity(restartIntent);
-                    minimizeApp(context);
+                    Utils.minimizeApp(context);
                 }, 5000);
             } catch (Exception e) {
                 Log.e("BootUpReceiver", "Unable to Start Widget Service");
             }
         }
-    }
-
-    public static void minimizeApp(Context context) {
-        Intent startMain = new Intent(Intent.ACTION_MAIN);
-        startMain.addCategory(Intent.CATEGORY_HOME);
-        startMain.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        context.startActivity(startMain);
     }
 
     public static void callAPIViaFCM(String orderUrl, JSONObject requestBody, String method, Context context) {

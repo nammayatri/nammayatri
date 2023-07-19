@@ -190,6 +190,10 @@ window.getMerchantConfig = function () {
   , "enableMockLocation" : false
   , "defaultLanguage" : "EN_US"
   , "specialLocationView" : true
+  , "navigationAppConfig" : {
+    "query" : "google.navigation:q=%f,%f"
+  , "packageName" : "com.google.android.apps.maps"
+}
   })
 }
 

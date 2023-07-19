@@ -41,6 +41,7 @@ import Types.App (defaultGlobalState)
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Prelude ((<>))
 import MerchantConfig.Utils(getValueFromConfig)
+import Components.SeparatorView.View as SeparatorView
 
 screen :: ST.RideDetailScreenState -> Screen Action ST.RideDetailScreenState ScreenOutput
 screen initialState =
@@ -162,7 +163,7 @@ totalAmount state =
 
 address :: forall w . ST.RideDetailScreenState -> PrestoDOM (Effect Unit) w
 address state =
-  frameLayout
+  linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
@@ -172,8 +173,8 @@ address state =
       , orientation HORIZONTAL
       , gravity CENTER_VERTICAL
       ][ imageView
-         [ width (V 19)
-         , height (V 20)
+         [ width (V 15)
+         , height (V 15)
          , imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_source_dot.png"
          ]
        , textView (
@@ -187,31 +188,27 @@ address state =
          ] <> FontStyle.body1 TypoGraphy
          )
       ]
-    , textView (
+    , linearLayout
+      [][
+      SeparatorView.view separatorConfig
+      , textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text state.data.rideStartTime
-      , margin (Margin 25 22 20 5)
+      , margin (Margin 10 5 20 5)
       ] <> FontStyle.body3 TypoGraphy
-      )
-    , imageView
-      [ width (V 5)
-      , height (V ((EHC.screenHeight unit)/13))
-      , imageUrl "ic_line"
-      , margin (Margin 6 20 0 0)
       ]
     , linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation HORIZONTAL
-      , margin (MarginTop ((EHC.screenHeight unit)/12))
       , gravity CENTER_VERTICAL
       ][ imageView
          [ width (V 15)
          , height (V 15)
          , imageWithFallback $ "ny_ic_destination," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_destination.png"
          ]
-       , textView (
+       , textView $
          [ width WRAP_CONTENT
          , height WRAP_CONTENT
          , margin (MarginLeft 10)
@@ -220,15 +217,13 @@ address state =
          , text state.data.destAddress.place  -- function for long text
          , color Color.black800
          ] <> FontStyle.body1 TypoGraphy
-         )
       ]
-    , textView (
+    , textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text state.data.rideEndTime
-      , margin (Margin 25 (((EHC.screenHeight unit)/12) + 22) 20 5)
+      , margin (Margin 25 5 20 5)
       ] <> FontStyle.body3 TypoGraphy
-      )
   ]
 
 routeMap :: forall w . ST.RideDetailScreenState -> PrestoDOM (Effect Unit) w
@@ -265,3 +260,13 @@ cashCollected state push =
       ] <> FontStyle.subHeading1 TypoGraphy
   )
   ]
+
+separatorConfig :: SeparatorView.Config
+separatorConfig = 
+  { orientation : VERTICAL
+  , count : 4
+  , height : V 4
+  , width : V 2
+  , layoutWidth : V 14
+  , layoutHeight : V 16
+  }

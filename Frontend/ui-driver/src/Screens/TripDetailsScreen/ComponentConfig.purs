@@ -28,7 +28,8 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
-import Prelude ((<>))
+import Prelude ((<>), ($))
+import Data.Maybe (Maybe(..))
 
 ---------------- genericHeaderConfig ----------------
 genericHeaderConfig :: ST.TripDetailsScreenState -> GenericHeader.Config 
@@ -62,8 +63,7 @@ sourceToDestinationConfig state = let
   sourceToDestinationConfig' = config
     {
       margin = (Margin 0 13 0 0)
-    , sourceMargin = (Margin 0 10 0 25)
-    , lineMargin = (Margin 4 12 0 0)
+    , id = Just $ "TripDetailsScreenSTDC_" <> state.data.tripId
     , sourceImageConfig {
         imageUrl = "ny_ic_green_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_green_circle.png"
       , margin = (MarginTop 3)
@@ -72,8 +72,6 @@ sourceToDestinationConfig state = let
         text = state.data.source
       , padding = (Padding 2 0 2 2)
       , margin = (Margin 12 0 15 0)
-      , ellipsize = false
-      , maxLines = 2
       }
     , destinationImageConfig {
         imageUrl = "ny_ic_red_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_red_circle.png"
@@ -85,7 +83,6 @@ sourceToDestinationConfig state = let
       , padding = (Padding 2 0 2 2)
       , margin = (Margin 12 0 15 0)
       , ellipsize = false
-      , maxLines = 2
       }
     }
   in sourceToDestinationConfig'

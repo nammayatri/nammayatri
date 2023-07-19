@@ -23,7 +23,7 @@ import Effect.Aff (Fiber)
 import Presto.Core.Flow (Flow)
 import Engineering.Helpers.Commons (liftFlow)
 import Data.Maybe (Maybe(..))
-import Common.Types.App (EventPayload(..))
+import Common.Types.App (EventPayload(..), LayoutBound)
 -- import Types.APIv2 (Address)
 import Foreign (Foreign)
 import Control.Monad.Except (runExcept)
@@ -50,7 +50,7 @@ import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Foreign.Generic (encodeJSON)
 import Data.Either (Either(..), hush)
 import Effect.Uncurried (EffectFn3, EffectFn2)
-import Data.Function.Uncurried (Fn3, runFn3)
+import Data.Function.Uncurried (Fn3, runFn3, Fn1)
 import Foreign.Class (encode)
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
@@ -214,6 +214,7 @@ foreign import saveSuggestionDefs :: String -> SuggestionDefinitions -> Unit
 
 foreign import hideLoader :: Effect Unit
 foreign import emitJOSEvent :: Fn3 String String Foreign Unit
+foreign import getLayoutBounds :: Fn1 String LayoutBound
 
 -- -- keyStoreEntryPresent :: String -> Flow Boolean
 -- -- keyStoreEntryPresent = liftFlow <<< _keyStoreEntryPresent
@@ -404,3 +405,5 @@ fromMetersToKm distanceInMeters
   | distanceInMeters >= 1000 = parseFloat (toNumber distanceInMeters / 1000.0) 1 <> " km"
   | otherwise = show distanceInMeters <> " m"
 
+getArray :: Int ->Array Int
+getArray count = if count == 0 then [count] else [count] <> (getArray (count - 1))

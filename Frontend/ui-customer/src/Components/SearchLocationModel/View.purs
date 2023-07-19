@@ -198,8 +198,8 @@ sourceDestinationImageView state =
         , gravity CENTER
         , margin $ Margin 0 10 2 0
         ][  imageView
-            [ height $ V 25
-            , width $ V 25
+            [ height $ V 20
+            , width $ V 20
             , imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
             ]
           ]

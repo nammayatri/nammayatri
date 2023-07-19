@@ -159,5 +159,9 @@ window.getMerchantConfig = function () {
       "defaultLanguage": "EN_US",
       "fontKannada": "Roboto",
       "fontName": "Roboto"
+    , "navigationAppConfig" : {
+        "query" : "google.navigation:q=%f,%f"
+      , "packageName" : "com.google.android.apps.maps"
+    }
   })
 }

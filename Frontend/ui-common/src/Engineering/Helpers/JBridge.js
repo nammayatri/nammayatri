@@ -899,7 +899,13 @@ export const openNavigation = function (slat) {
   return function (slong) {
     return function (dlat) {
       return function (dlong) {
-        return window.JBridge.openNavigation(slat, slong, dlat, dlong);
+        if (window.appConfig && window.appConfig.navigationAppConfig && window.JBridge.openNavigationWithQuery && window.__OS != "IOS") {
+          var query = window.appConfig.navigationAppConfig.query;
+          var packageName = window.appConfig.navigationAppConfig.packageName;
+          return window.JBridge.openNavigationWithQuery(dlat, dlong, query, packageName);
+        } else {
+          return window.JBridge.openNavigation(slat, slong, dlat, dlong);
+        }
       };
     };
   };
@@ -1602,4 +1608,11 @@ export const emitJOSEvent = function (mapp,eventType,payload) {
 
 export const hideLoader = function () {
   JOS.emitEvent("java")("onEvent")(JSON.stringify({event : "hide_loader"}))()()
+}
+
+export const getLayoutBounds = function (id) {
+  if (JBridge.getLayoutBounds) {
+    var bounds = JSON.parse(JBridge.getLayoutBounds(id));
+    return bounds;
+  }
 }

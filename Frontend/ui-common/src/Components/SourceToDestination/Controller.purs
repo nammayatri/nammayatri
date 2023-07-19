@@ -20,6 +20,7 @@ import Font.Size as FontSize
 import Font.Style (Style(..))
 import Common.Styles.Colors as Color
 import Common.Types.App
+import Data.Maybe (Maybe(..))
 
 data Action = Dummy
 type Config =
@@ -38,6 +39,9 @@ type Config =
   , rideEndedAtConfig :: TimeConfig
   , lineMargin :: Margin
   , distanceConfig :: DistanceConfig
+  , separatorMargin :: Int
+  , id :: Maybe String
+  , overrideSeparatorCount :: Int
   }
 
 type DistanceConfig = {
@@ -82,8 +86,9 @@ config = {
     margin : (Margin 0 0 0 0)
   , width : MATCH_PARENT
   , lineMargin : (Margin 5 4 0 0)
-  , sourceMargin : (Margin 0 0 0 25)
+  , sourceMargin : (Margin 0 0 0 0)
   , sourceBackground : Color.white900
+  , separatorMargin : 15
   , sourceImageConfig : {
       width : V 10
     , height : V 10
@@ -140,6 +145,8 @@ config = {
       distanceVisibility : GONE
     , distanceValue : ""
     , background : ""
-    , margin : Margin 10 27 0 0
+    , margin : Margin 0 0 0 0
   }
-}
+  , id : Nothing
+  , overrideSeparatorCount : 0
+  }

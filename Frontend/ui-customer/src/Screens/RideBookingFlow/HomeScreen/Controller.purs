@@ -1051,7 +1051,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.ZoneOTPExpiryActi
     continue state { data { driverInfoCardState { waitingTime = timeInMinutes } }, props { waitingTimeTimerIds = union state.props.waitingTimeTimerIds [timerID] } }
 
 eval (DriverInfoCardActionController (DriverInfoCardController.OnNavigate)) state = do
-  void $ pure $ openNavigation 0.0 0.0 state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng
+  void $ pure $ openNavigation 0.0 0.0 state.data.driverInfoCardState.destinationLat state.data.driverInfoCardState.destinationLng
   continue state
 
 eval (DriverInfoCardActionController (DriverInfoCardController.Support)) state = do

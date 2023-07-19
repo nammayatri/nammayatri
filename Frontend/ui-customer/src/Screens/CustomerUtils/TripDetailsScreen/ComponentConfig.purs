@@ -30,6 +30,7 @@ import Styles.Colors as Color
 import Common.Types.App
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Prelude ((<>))
+import Data.Maybe (Maybe(..))
 
 genericHeaderConfig :: ST.TripDetailsScreenState -> GenericHeader.Config 
 genericHeaderConfig state= let 
@@ -83,10 +84,7 @@ sourceToDestinationConfig :: ST.TripDetailsScreenState -> SourceToDestination.Co
 sourceToDestinationConfig state = let 
   config = SourceToDestination.config
   sourceToDestinationConfig' = config
-    {
-      margin = (Margin 0 0 0 0)
-    , sourceMargin = (Margin 0 0 0 25)
-    , lineMargin = (Margin 4 4 0 0)
+    { id = Just $ "TripDetailsSTDC_" <> state.data.tripId
     , sourceImageConfig {
         imageUrl = "ny_ic_green_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_green_circle.png"
       , margin = (MarginTop 3)

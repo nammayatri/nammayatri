@@ -48,7 +48,7 @@ public class BootUpReceiver extends BroadcastReceiver {
                         Handler handler = new Handler();
                         handler.postDelayed(() -> {
                             context.startActivity(restartIntent);
-                            RideRequestUtils.minimizeApp(context);
+                            Utils.minimizeApp(context);
                         }, 5000);
                     } catch (Exception e) {
                         Log.e("BootUpReceiver", "Unable to Start Widget Service");

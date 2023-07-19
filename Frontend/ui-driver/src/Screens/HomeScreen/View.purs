@@ -48,7 +48,7 @@ import Language.Types (STR(..))
 import Log (printLog)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
-import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback,adjustViewWithKeyboard,lottieAnimationView,relativeLayout)
+import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback,adjustViewWithKeyboard,lottieAnimationView,relativeLayout, ellipsize, singleLine)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
 import PrestoDOM.Properties as PP
@@ -508,13 +508,14 @@ driverDetail push state =
       [ width MATCH_PARENT
       , height MATCH_PARENT
       , orientation HORIZONTAL
+      , gravity CENTER_HORIZONTAL
       , stroke if state.props.driverStatusSet == Offline then ("2," <> Color.red)
                else if (((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true")&& ((state.props.driverStatusSet == Online) || state.props.driverStatusSet == Silent )) then ("2," <> Color.yellow900)
                else if state.props.driverStatusSet == Online then ("2," <> Color.darkMint)
                else ("2," <> Color.blue800)
       , cornerRadius 50.0
       , alpha if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer])then 0.5 else 1.0
-      , margin (Margin 20 10 20 10)--padding (Padding 10 10 10 10)
+      , margin (Margin 0 10 10 10)
       ](DA.mapWithIndex (\index item ->
           driverStatusPill item push state index
         ) driverStatusIndicators
@@ -545,7 +546,7 @@ driverStatusPill pillConfig push state index =
       ][ imageView
         [ width $ V 15
         , height $ V 15
-        , margin (MarginRight 5)
+        , margin (Margin 3 0 5 0)
         , visibility $ case (getDriverStatusResult index state.props.driverStatusSet pillConfig.status) of
                     ACTIVE -> VISIBLE
                     DEMO_ -> VISIBLE
@@ -558,6 +559,7 @@ driverStatusPill pillConfig push state index =
       , textView(
         [ width WRAP_CONTENT
           , height WRAP_CONTENT
+          , padding (Padding 0 0 4 0)
           , text $ case pillConfig.status of
               Online -> if ((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") then (getString DEMO) else (getString ONLINE_)
               Offline -> (getString OFFLINE)
@@ -901,16 +903,22 @@ locationLastUpdatedTextAndTimeView push state =
   linearLayout
   [ height MATCH_PARENT
     , width WRAP_CONTENT
+    , gravity CENTER_VERTICAL
   ][
     textView $
     [ text $ (getString UPDATED_AT) <> ": "
     , lineHeight "15"
     , color Color.brownishGrey
+    , width $ V (JB.getWidthFromPercent 32)
     , gravity LEFT
+    , height WRAP_CONTENT
     ] <> FontStyle.paragraphText TypoGraphy
     , textView $
-    [ width WRAP_CONTENT
+    [ width $ V (JB.getWidthFromPercent 30)
       , height WRAP_CONTENT
+      , ellipsize true
+      , singleLine true
+      , gravity CENTER_VERTICAL
       , text if state.data.locationLastUpdatedTime == "" then (if (getValueToLocalStore LOCATION_UPDATE_TIME) == "__failed" then getString(NO_LOCATION_UPDATE) else (getValueToLocalStore LOCATION_UPDATE_TIME) ) else state.data.locationLastUpdatedTime
     ] <> FontStyle.body4 TypoGraphy
   ]

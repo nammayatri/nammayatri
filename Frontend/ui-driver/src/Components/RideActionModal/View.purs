@@ -40,6 +40,7 @@ import JBridge (getVersionCode)
 import Helpers.Utils (getCommonAssetStoreLink)
 import Styles.Colors as Color
 import MerchantConfig.Utils(getValueFromConfig)
+import Components.SeparatorView.View as SeparatorView
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -426,12 +427,12 @@ sourceDestinationImageView  config =
     , width WRAP_CONTENT
     , orientation VERTICAL
     ][ imageView
-        [ height $ V 21
-        , width $ V 17
+        [ height $ V 14
+        , width $ V 14
         , margin $ MarginTop 2
         , imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_source_dot.png"
         ]
-      , lineImageView 53
+      , SeparatorView.view separatorConfig
       , imageView
         [ height $ V 14
         , width $ V 14
@@ -461,7 +462,7 @@ sourceDestinationTextView push config =
         , width WRAP_CONTENT
         , text config.sourceAddress.detailText
         , color Color.black650
-        , margin (MarginBottom 30)
+        , margin (MarginBottom 25)
         , ellipsize true
         , singleLine true
         ] <> FontStyle.body1 TypoGraphy
@@ -560,3 +561,15 @@ getTitle config = case config.startRideActive of
       "TA_IN" -> config.customerName <> (getString WAITING_FOR_CUSTOMER)
       "HI_IN" -> "आप" <> config.customerName <> "की प्रतीक्षा कर रहे हैं"
       _       -> (getString WAITING_FOR_CUSTOMER) <> config.customerName
+
+
+separatorConfig :: SeparatorView.Config
+separatorConfig = 
+  {
+    orientation : VERTICAL
+  , count : 4
+  , height : V 4
+  , width : V 2
+  , layoutWidth : V 14
+  , layoutHeight : V 16
+  }

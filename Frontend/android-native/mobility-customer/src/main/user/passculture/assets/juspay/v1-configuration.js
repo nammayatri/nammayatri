@@ -166,5 +166,9 @@ window.getMerchantConfig = function () {
   , "autoSelectBackground" : "#320096"
   , "defaultLanguage" : "FR_FR"
   , "enableMockLocation" : false
+  , "navigationAppConfig" : {
+    "query" : "https://waze.com/ul?ll=%f,%f"
+  , "packageName" : "com.waze"
+}
   })
 }

@@ -16,11 +16,13 @@
 module Screens.MyRidesScreen.View where
 
 import Common.Types.App
+import Screens.CustomerUtils.MyRidesScreen.ComponentConfig
+
 import Animation as Anim
 import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
-import Data.Array as DA
 import Data.Array ((..))
+import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
@@ -29,6 +31,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import JBridge (getArray)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), (<$>), (<>), (&&), (<<<), (==), (||), const, show, discard, bind, not, pure, unit, when)
@@ -45,7 +48,6 @@ import Services.API (RideBookingListRes(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
-import Screens.CustomerUtils.MyRidesScreen.ComponentConfig
 
 screen :: ST.MyRidesScreenState -> PrestoList.ListItem -> Screen Action ST.MyRidesScreenState ScreenOutput
 screen initialState listItemm =
@@ -206,7 +208,7 @@ ridesView listItemm push state =
             , width MATCH_PARENT
             , onAnimationEnd push OnFadeComplete
             , PrestoList.listItem listItemm
-            , PrestoList.listDataV2 $ shimmerData <$> (1..5)
+            , PrestoList.listDataV2 $ shimmerData <$> (getArray 5)
             , visibility $ case state.shimmerLoader of
                     ST.AnimatedOut -> GONE
                     _ -> VISIBLE
