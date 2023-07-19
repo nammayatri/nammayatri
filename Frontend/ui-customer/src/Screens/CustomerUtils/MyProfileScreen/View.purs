@@ -20,7 +20,7 @@ import Components.GenericHeader as GenericHeader
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
-import Control.Monad.Except (runExceptT)
+import Control.Monad.Except (lift, runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Effect (Effect)
@@ -46,6 +46,8 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Screens.CustomerUtils.MyProfileScreen.ComponentConfig
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants as RSRC
+import JBridge (toggleLoader)
+
 
 screen :: ST.MyProfileScreenState -> Screen Action ST.MyProfileScreenState ScreenOutput
 screen initialState =
@@ -54,7 +56,9 @@ screen initialState =
   , name : "MyProfileScreen"
   , globalEvents : [(\push -> do
                       _ <- launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
+                        lift $ lift $ toggleLoader true
                         response <- Remote.getProfileBT ""
+                        lift $ lift $ toggleLoader false
                         if initialState.props.isEmailValid then
                           lift $ lift $ doAff do liftEffect $ push $ UserProfile response
                           else pure unit
