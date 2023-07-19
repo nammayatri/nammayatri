@@ -161,7 +161,7 @@ in  { esqDBCfg
           ? "dev/migrations/dynamic-offer-driver-app"
         )
     , autoMigrate = True
-    , coreVersion = "0.9.3"
+    , coreVersion = "0.9.4"
     , loggerConfig =
             common.loggerConfig
         //  { logFilePath = "/tmp/dynamic-offer-driver-app.log"
