@@ -531,7 +531,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         String getCurrTime = f.format(new Date());
                         int calculatedTime = rideRequestUtils.calculateExpireTimer(searchRequestValidTill,getCurrTime);
                         if (sharedPref == null) sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                        // int negotiationUnit = Integer.parseInt(sharedPref.getString("NEGOTIATION_UNIT", "10"));
                         int rideRequestedBuffer =  Integer.parseInt(sharedPref.getString("RIDE_REQUEST_BUFFER", "2"));
                         int customerExtraFee = rideRequestBundle.getInt("customerExtraFee");
                         if (calculatedTime > rideRequestedBuffer){
