@@ -23,6 +23,7 @@ import Common.Styles.Colors as Color
 import Font.Style as FontStyle
 import Font.Size as FontSize
 import Common.Types.App (LazyCheck(..))
+import Components.SeparatorView.View as SeparatorView
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -31,18 +32,13 @@ view push config =
   , width config.width
   , gravity LEFT
   , margin config.margin
-  ][  imageView
-        [ imageUrl "ic_line"
-        , height MATCH_PARENT
-        , margin config.lineMargin
-        , width (V 1)
-        ]
-    , distanceLayout config
+  ][ distanceLayout config
     , linearLayout
       [ height WRAP_CONTENT
       , orientation VERTICAL
       , width MATCH_PARENT
       ][ sourceLayout config
+      , SeparatorView.view $ separatorConfig config
       , destinationLayout config
       ]
     ]
@@ -85,7 +81,6 @@ sourceLayout config =
           , ellipsize config.rideStartedAtConfig.ellipsize
           ] <> (FontStyle.getFontStyle config.rideStartedAtConfig.textStyle LanguageStyle)
         ]
-
     ]
 
 destinationLayout :: forall w. Config -> PrestoDOM (Effect Unit) w
@@ -152,3 +147,14 @@ distanceLayout config =
       , padding $ Padding 6 4 6 4
       ] <> FontStyle.tags LanguageStyle
   ]
+
+
+separatorConfig :: Config -> SeparatorView.Config
+separatorConfig config = {
+        orientation : VERTICAL
+      , count : 4
+      , height : V 4
+      , width : V 2
+      , layoutWidth : config.destinationImageConfig.width
+      , layoutHeight : config.destinationImageConfig.height
+      }

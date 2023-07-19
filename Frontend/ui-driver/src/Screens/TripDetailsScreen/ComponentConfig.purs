@@ -62,7 +62,7 @@ sourceToDestinationConfig state = let
   sourceToDestinationConfig' = config
     {
       margin = (Margin 0 13 0 0)
-    , sourceMargin = (Margin 0 10 0 25)
+    , sourceMargin = (Margin 0 10 0 0)
     , lineMargin = (Margin 4 12 0 0)
     , sourceImageConfig {
         imageUrl = "ny_ic_green_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_green_circle.png"
@@ -72,8 +72,8 @@ sourceToDestinationConfig state = let
         text = state.data.source
       , padding = (Padding 2 0 2 2)
       , margin = (Margin 12 0 15 0)
-      , ellipsize = false
-      , maxLines = 2
+      , ellipsize = true
+      , maxLines = 1
       }
     , destinationImageConfig {
         imageUrl = "ny_ic_red_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_red_circle.png"

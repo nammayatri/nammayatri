@@ -42,39 +42,6 @@ public class Utils {
         callBack.remove(notificationCallback);
     }
 
-    public static void updateLocaleResource(String languageKey, Context context) {
-        Locale locale;
-        switch (languageKey) {
-            case "HI_IN":
-                locale = new Locale("hi");
-                break;
-            case "KN_IN":
-                locale = new Locale("kn");
-                break;
-            case "EN_US":
-                locale = new Locale("en");
-                break;
-            case "TA_IN":
-                locale = new Locale("ta");
-                break;
-            case "BN_IN":
-                locale = new Locale("bn");
-                break;
-            case "ML_IN":
-                locale = new Locale("ml");
-                break;
-            case "FR_FR":
-                locale = new Locale("fr");
-                break;
-            default:
-                return;
-        }
-        Locale.setDefault(locale);
-        Configuration configuration = context.getResources().getConfiguration();
-        configuration.setLocale(locale);
-        context.getResources().updateConfiguration(configuration, context.getResources().getDisplayMetrics());
-    }
-
     public static void captureImage(@Nullable Intent data, Activity activity, Context context) {
         try {
             Uri imageUri;
