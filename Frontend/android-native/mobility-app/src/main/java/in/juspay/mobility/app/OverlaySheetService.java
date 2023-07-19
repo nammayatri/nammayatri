@@ -55,6 +55,7 @@ import java.net.HttpURLConnection;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -449,7 +450,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     int driverMinExtraFee = rideRequestBundle.getInt("driverMinExtraFee");
                     int rideRequestPopupDelayDuration = rideRequestBundle.getInt("rideRequestPopupDelayDuration");
                     String specialLocationTag = rideRequestBundle.getString("specialLocationTag");
-                    DecimalFormat df = new DecimalFormat();
+                    DecimalFormat df = new DecimalFormat("###.##",new DecimalFormatSymbols(new Locale("en","us")));
                     df.setMaximumFractionDigits(2);
                     final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "us"));
                     f.setTimeZone(TimeZone.getTimeZone("UTC"));
@@ -540,7 +541,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         } else if (key != null && key.equals("yatripartner")) {
             merchantLogo.setText("Yatri Partner");
         } else if (key != null && key.equals("passcultureprovider")) {
-            merchantLogo.setText("Ma le Taxi");
+            merchantLogo.setText("Alliance Taxis");
         }
         progressDialog = inflater.inflate(R.layout.loading_screen_overlay, null);
         apiLoader = inflater.inflate(R.layout.api_loader, null);

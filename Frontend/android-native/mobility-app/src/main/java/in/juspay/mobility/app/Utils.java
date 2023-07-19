@@ -42,39 +42,6 @@ public class Utils {
         callBack.remove(notificationCallback);
     }
 
-    public static void updateLocaleResource(String languageKey, Context context) {
-        Locale locale;
-        switch (languageKey) {
-            case "HI_IN":
-                locale = new Locale("hi");
-                break;
-            case "KN_IN":
-                locale = new Locale("kn");
-                break;
-            case "EN_US":
-                locale = new Locale("en");
-                break;
-            case "TA_IN":
-                locale = new Locale("ta");
-                break;
-            case "BN_IN":
-                locale = new Locale("bn");
-                break;
-            case "ML_IN":
-                locale = new Locale("ml");
-                break;
-            case "FR_FR":
-                locale = new Locale("fr");
-                break;
-            default:
-                return;
-        }
-        Locale.setDefault(locale);
-        Configuration configuration = context.getResources().getConfiguration();
-        configuration.setLocale(locale);
-        context.getResources().updateConfiguration(configuration, context.getResources().getDisplayMetrics());
-    }
-
     public static void captureImage(@Nullable Intent data, Activity activity, Context context) {
         try {
             Uri imageUri;
@@ -154,22 +121,5 @@ public class Utils {
         startMain.addCategory(Intent.CATEGORY_HOME);
         startMain.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         context.startActivity(startMain);
-    }
-
-    public static Intent getNavigationIntent(Context context, double lat , double lon) {
-        int navAppId = context.getResources().getIdentifier("navigationApp","string",context.getPackageName());
-        int navUriId = context.getResources().getIdentifier("navigationURI","string",context.getPackageName());
-        int navPackage = context.getResources().getIdentifier("navigationAppPackage","string",context.getPackageName());
-        String query;
-        if (context.getString(navAppId).equals("waze")) {
-            query = context.getString(navUriId) + lat + "," + lon + "&navigate=yes";
-        } else {
-            query = context.getString(navUriId) + lat + "," + lon;
-        }
-        Uri mapsURI = Uri.parse(query);
-        Intent mapIntent = new Intent(Intent.ACTION_VIEW, mapsURI);
-        mapIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        mapIntent.setPackage(context.getString(navPackage));
-        return mapIntent;
     }
 }

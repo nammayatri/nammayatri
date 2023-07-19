@@ -171,6 +171,10 @@ window.getMerchantConfig = function () {
   , "defaultLanguage" : "EN_US"
   , "isEmergencyContacts": "true"
   , "specialLocationView" : true
+  , "navigationAppConfig" : {
+    "query" : "google.navigation:q=%f,%f"
+  , "packageName" : "com.google.android.apps.maps"
+}
   })
 }
 

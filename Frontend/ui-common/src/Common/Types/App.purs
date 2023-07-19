@@ -175,6 +175,10 @@ type InnerPayload = {
 derive instance genericEventPayload :: Generic EventPayload _
 instance encodeEventPayload  :: Encode EventPayload where encode = defaultEncode
 
+type LayoutBound = 
+  { height :: Int
+  , width :: Int
+}
 -- newtype LocationLatLong = LocationLatLong
 --   { lat :: String
 --   , long :: String

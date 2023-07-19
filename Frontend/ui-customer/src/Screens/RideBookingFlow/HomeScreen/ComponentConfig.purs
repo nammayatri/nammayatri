@@ -194,62 +194,6 @@ skipButtonConfig state =
   in
     skipButtonConfig'
 
-sourceToDestinationConfig :: ST.HomeScreenState -> SourceToDestination.Config
-sourceToDestinationConfig state =
-  let
-    config = SourceToDestination.config
-    sourceToDestinationConfig' =
-      config
-        { margin = (Margin 0 0 0 0)
-        , width = V (EHC.screenWidth unit - 70)
-        , sourceMargin = (Margin 0 0 0 14)
-        , lineMargin = (Margin 20 10 0 0)
-        , sourceImageConfig
-          { imageUrl = "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
-          , height = V 13
-          , width = V 13
-          , margin = (Margin 14 2 0 0)
-          }
-        , rideStartedAtConfig
-          { text = state.data.startedAt
-          , visibility = VISIBLE
-          , padding = (Padding 1 1 1 1)
-          , margin = (Margin 12 2 0 0)
-          }
-        , sourceTextConfig
-          { text = state.data.driverInfoCardState.source
-          , textStyle = FontStyle.Body1
-          , padding = (Padding 0 0 0 0)
-          , margin = (Margin 11 0 15 0)
-          , color = Color.black800
-          , ellipsize = true
-          , maxLines = 1
-          }
-        , destinationImageConfig
-          { imageUrl = "ny_ic_loc_red," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_loc_red.png"
-          , height = V 17
-          , width = V 14
-          , margin = (Margin 13 3 0 0)
-          }
-        , destinationTextConfig
-          { text = state.data.driverInfoCardState.destination
-          , padding = (Padding 2 0 2 2)
-          , margin = (Margin 10 0 15 0)
-          , maxLines = 1
-          , color = Color.black800
-          , ellipsize = true
-          , textStyle = FontStyle.Body1
-          }
-        , rideEndedAtConfig
-          { text = state.data.endedAt
-          , visibility = VISIBLE
-          , padding = (Padding 1 1 1 1)
-          , margin = (Margin 13 2 0 0)
-          }
-        }
-  in
-    sourceToDestinationConfig'
-
 fareBreakUpConfig :: ST.HomeScreenState -> FareBreakUp.Config
 fareBreakUpConfig state =
   let

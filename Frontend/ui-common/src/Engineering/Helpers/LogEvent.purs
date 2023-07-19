@@ -16,7 +16,6 @@ import Presto.Core.Types.Language.Flow (Flow , doAff)
 import JBridge (firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams)
 import Log (rootLevelKeyWithRefId)
 import Effect.Class (liftEffect)
-import Debug
 
 foreign import getLogDestination :: Effect (Array String)
 
@@ -32,7 +31,6 @@ triggerLog event logField logDestination = case logDestination of
     let 
       eventObject = insert "event" (encode event) empty
       foreignObject = rootLevelKeyWithRefId logField
-    _ <-pure $ spy "JUSPAY" event
     _ <- trackActionObject Tracker.User Tracker.Info ON_EVENT eventObject foreignObject
     pure unit 
   _ -> do  
@@ -46,10 +44,10 @@ logEvent logField event = do
 
 triggerLogWithParams :: String -> Object Foreign -> String -> String -> String -> Effect Unit 
 triggerLogWithParams  event logField key value logDestination = case logDestination of  
-  "JUSPAY" -> do 
+  "FIREBASE" -> do 
     _ <- firebaseLogEventWithParams event key value  
     pure unit 
-  "FIREBASE" -> do 
+  "JUSPAY" -> do 
     let 
       eventObject = insert "event" (encode event) $ insert key (encode value) empty 
       foreignObject = rootLevelKeyWithRefId logField
@@ -66,10 +64,10 @@ logEventWithParams logField event key value = do
 
 triggerLogWithTwoParams :: String -> Object Foreign -> String -> String -> String -> String -> String -> Effect Unit 
 triggerLogWithTwoParams  event logField key1 value1 key2 value2 logDestination = case logDestination of  
-  "JUSPAY" -> do 
+  "FIREBASE" -> do 
     _ <- firebaseLogEventWithTwoParams event key1 value1 key2 value2   
     pure unit 
-  "FIREBASE" -> do 
+  "JUSPAY" -> do 
     let 
       eventObject = insert "event" (encode event)  $ insert key1 (encode value1) $ insert key2 (encode value2) empty
       foreignObject = rootLevelKeyWithRefId logField

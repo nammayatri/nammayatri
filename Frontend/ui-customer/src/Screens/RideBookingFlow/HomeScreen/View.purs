@@ -880,8 +880,8 @@ homeScreenTopIconView push state =
                 []
             , imageView
                 [ imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
-                , height $ V 20
-                , width $ V 20
+                , height $ V 16
+                , width $ V 16
                 , margin (Margin 5 5 5 5)
                 , onClick push (const $ OpenSearchLocation)
                 , gravity BOTTOM
@@ -2122,8 +2122,8 @@ currentLocationView push state =
             ]
             [ imageView
                 [ imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
-                , height $ V 20
-                , width $ V 20
+                , height $ V 16
+                , width $ V 16
                 , gravity CENTER_VERTICAL
                 ]
             , textView

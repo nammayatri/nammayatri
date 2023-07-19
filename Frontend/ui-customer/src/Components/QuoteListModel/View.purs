@@ -16,13 +16,15 @@
 module Components.QuoteListModel.View where
 
 import Common.Types.App
+import Common.Types.App
 
 import Animation (translateYAnimFromTop)
 import Animation.Config (translateFullYAnimWithDurationConfig)
 import Components.PrimaryButton as PrimaryButton
 import Components.QuoteListItem as QuoteListItem
 import Components.QuoteListModel.Controller (Action(..), QuoteListModelState)
-import Data.Array (filter, head, null, (!!) , mapWithIndex )
+import Components.SeparatorView.View as SeparatorView
+import Data.Array (filter, head, null, (!!), mapWithIndex)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenWidth)
@@ -35,13 +37,12 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, bind, const, map, pure, unit, not, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, clickable, color, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, text, textSize, textView, visibility, weight, width, stroke, cornerRadius)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
-import Storage (KeyStore(..), getValueToLocalStore)
-import Styles.Colors as Color
-import Common.Types.App
-import Storage (isLocalStageOn)
 import Screens.Types (Stage(..))
+import Storage (KeyStore(..), getValueToLocalStore)
+import Storage (isLocalStageOn)
+import Styles.Colors as Color
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -129,7 +130,7 @@ imageData =
 sourceDestinationImageView :: forall w . QuoteListModelState -> PrestoDOM (Effect Unit) w
 sourceDestinationImageView state =
   linearLayout
-    [ height MATCH_PARENT
+    [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , margin $ MarginTop 7
     , gravity CENTER
@@ -139,12 +140,7 @@ sourceDestinationImageView state =
         , width $ V 15
         , imageWithFallback $ "ny_ic_pickup," <> (getAssetStoreLink FunctionCall) <> "ny_ic_pickup.png"
         ]
-      , imageView
-        [ height $ V 27
-        , width $ V 15
-        , imageUrl if os == "IOS" then (if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_line_img" else "ny_ic_line_img") else state.appConfig.quoteListModel.lineImage
-        , margin if os == "IOS" then (Margin 0 0 0 0) else (Margin 7 0 0 0)
-        ]
+      , SeparatorView.view separatorConfig
       , imageView
         [ height $ V 15
         , width $ V 15
@@ -153,34 +149,54 @@ sourceDestinationImageView state =
       ]
 
 ---------------------------- sourceDestinationEditTextView ---------------------------------
-sourceDestinationTextView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-sourceDestinationTextView state push =
+sourceDestinationView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
+sourceDestinationView state push =
   linearLayout
     [ width MATCH_PARENT
     , orientation VERTICAL
     , height WRAP_CONTENT
-    , margin (MarginTop 5)
-    ][   
-      textView (
+    , margin $ MarginTop 7
+    ][ linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , gravity CENTER_VERTICAL
+      ][ 
+      imageView
+        [ height $ V 15
+        , width $ V 15
+        , imageWithFallback $ "ny_ic_pickup," <> (getAssetStoreLink FunctionCall) <> "ny_ic_pickup.png"
+        ] 
+      , textView $
         [ height WRAP_CONTENT
+        , margin $ MarginLeft 12
         , weight 1.0
         , text state.source
         , color state.appConfig.quoteListModel.textColor
-        , padding (PaddingHorizontal 5 5)
-        , margin (MarginBottom 12)
         , ellipsize true
         , singleLine true
-        ] <> FontStyle.paragraphText TypoGraphy)
-      , textView (
+        ] <> FontStyle.paragraphText TypoGraphy
+      ]
+      , SeparatorView.view separatorConfig
+      , linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , gravity CENTER_VERTICAL
+      ][ 
+        imageView
+        [ height $ V 15
+        , width $ V 15
+        , imageWithFallback $ "ny_ic_drop," <> (getAssetStoreLink FunctionCall) <> "ny_ic_drop.png"  
+        ]
+        , textView $
         [ height WRAP_CONTENT
         , weight 1.0
         , text state.destination
+        , margin $ MarginLeft 12
         , color state.appConfig.quoteListModel.textColor
-        , padding (PaddingHorizontal 5 5)
-        , margin (MarginTop 12)
         , ellipsize true
         , singleLine true
-        ] <> FontStyle.paragraphText TypoGraphy)
+        ] <> FontStyle.paragraphText TypoGraphy
+      ]
     ]   
       
 ---------------------------- quotesView ---------------------------------
@@ -419,7 +435,7 @@ quoteListTopSheetView state push =
       , background state.appConfig.quoteListModel.backgroundColor
       , padding $ PaddingTop safeMarginTop
       ][  linearLayout
-          [ height MATCH_PARENT
+          [ height WRAP_CONTENT
           , width MATCH_PARENT
           , orientation HORIZONTAL
           , gravity CENTER_VERTICAL
@@ -439,8 +455,7 @@ quoteListTopSheetView state push =
                       , margin $ MarginTop 7
                       ]
                   ]
-                , sourceDestinationImageView state
-                , sourceDestinationTextView state push
+                , sourceDestinationView state push
                 ]
             ]
         ]
@@ -634,3 +649,14 @@ getSelectedItemTimer state =
   let selectQuoteArray = (filter (\x -> state.selectedQuote == Just x.id) state.quoteListModel)
       timer = (fromMaybe dummyQuoteList (head selectQuoteArray)).timer
     in timer
+
+separatorConfig :: SeparatorView.Config
+separatorConfig = 
+  {
+    orientation : VERTICAL
+  , count : 3
+  , height : V 4
+  , width : V 2
+  , layoutWidth : V 12
+  , layoutHeight : V 15
+  }

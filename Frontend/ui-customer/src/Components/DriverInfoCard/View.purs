@@ -47,6 +47,7 @@ import Screens.Types (Stage(..), ZoneType(..))
 import Storage (isLocalStageOn, getValueToLocalStore)
 import Styles.Colors as Color
 import Storage (KeyStore(..))
+import Data.Maybe (Maybe(..))
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -932,42 +933,38 @@ sourceToDestinationConfig state = let
   config = SourceToDestination.config
   sourceToDestinationConfig' = config
     {
-      margin = Margin 2 0 40 0
-    , lineMargin = Margin 19 7 0 0
-    , destinationMargin = MarginTop 16
+      margin = Margin 16 0 40 0
+    , id = Just "DriverInfoCardSTDC"
+    , overrideSeparatorCount = 6
+    , separatorMargin = 19
     , sourceImageConfig {
         imageUrl = "ny_ic_pickup," <> (getAssetStoreLink FunctionCall) <> "ny_ic_pickup.png"
       , height = V 14
       , width = V 14
-      , margin = Margin 13 4 0 0
       }
     , sourceTextConfig {
         text = state.data.source
       , textStyle = FontStyle.Body1
-      , padding = Padding 2 0 2 2
-      , margin = Margin 12 0 15 0
       , ellipsize = true
+      , margin = MarginLeft 10
       , maxLines = 1
       }
     , destinationImageConfig {
         imageUrl = "ny_ic_drop," <> (getAssetStoreLink FunctionCall) <> "ny_ic_drop.png"
-      , height = V 17
+      , height = V 14
       , width = V 14
-      , margin = Margin 13 2 0 0
       }
     , destinationTextConfig {
         text = state.data.destination
-      , padding = Padding 2 0 2 2
-      , margin = MarginVertical 12 15
       , maxLines = 1
       , textStyle = FontStyle.Body1
+      , margin = MarginLeft 10
       , ellipsize = true
       }
     , distanceConfig {
         distanceVisibility = VISIBLE
       , distanceValue = state.data.estimatedDistance <> " km"
       , background = Color.grey700
-      , margin = Margin 12 28 0 0
   }
     }
   in sourceToDestinationConfig'

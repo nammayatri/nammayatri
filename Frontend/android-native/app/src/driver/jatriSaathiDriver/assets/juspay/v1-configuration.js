@@ -62,5 +62,11 @@ window.getMerchantConfig = function () {
     , "fontName" : "PlusJakartaSans"
     , "fontKannada" : "NotoSansKannada"
     , "allowAllMobileNumber" : false
+    , "showGenderBanner" : false
+    , "defaultLanguage" : "EN_US"
+    , "navigationAppConfig" : {
+      "query" : "google.navigation:q=%f,%f"
+    , "packageName" : "com.google.android.apps.maps"
+    }
   })
 }

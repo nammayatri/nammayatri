@@ -5,7 +5,7 @@ import Prelude
 import Data.Maybe (Maybe(..))
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (flowRunner, liftFlow)
+import Engineering.Helpers.Commons (flowRunner, liftFlow, os)
 import LoaderOverlay.Handler as UI
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState, modifyState)
 import PrestoDOM.Core (terminateUI)
@@ -26,3 +26,9 @@ loaderText :: String -> String -> Flow GlobalState Unit
 loaderText mainTxt subTxt = do 
   _ <- modifyState (\(GlobalState state) -> GlobalState state{loaderOverlay{data{title = mainTxt, subTitle = subTxt}}})
   pure unit
+
+getSeparatorFactor :: Int
+getSeparatorFactor = if os == "IOS" then 8 else 25
+
+defaultSeparatorCount :: Int
+defaultSeparatorCount = 4

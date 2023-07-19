@@ -47,6 +47,7 @@ sourceToDestinationConfig state = let
       margin = (Margin 0 13 16 0)
     , width = MATCH_PARENT
     , lineMargin = (Margin 4 6 0 0)
+    , id = Just $ "HelpAndSupportSTDC_" <> state.data.bookingId
     , sourceMargin = (Margin 0 0 0 14)
     , sourceImageConfig {
         imageUrl = "ny_ic_green_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_green_circle.png"

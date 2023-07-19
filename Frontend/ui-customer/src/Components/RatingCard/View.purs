@@ -40,6 +40,7 @@ import Styles.Colors as Color
 import Screens.Types(Stage(..), ZoneType(..))
 import Common.Types.App
 import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Data.Maybe (Maybe(..))
 
 view :: forall w. (Action -> Effect Unit) -> RatingCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -331,11 +332,12 @@ sourceToDestinationConfig state = let
     {
       margin = (Margin 2 0 40 0)
     , sourceMargin = (Margin 0 0 0 14)
-    , lineMargin = (Margin 19 7 0 0)
+    , separatorMargin = 17
+    , id = Just "RatingCardSTDC"
     , sourceImageConfig {
         imageUrl = "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
-      , height = V 33 
-      , width = V 33 
+      , height = V 17 
+      , width = V 14
       , margin = (Margin 4 0 0 0)
       }
     , rideStartedAtConfig {

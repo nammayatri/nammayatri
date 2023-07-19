@@ -21,6 +21,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -130,7 +131,6 @@ import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JsCallback;
 import in.juspay.hyper.core.JuspayLogger;
-import in.juspay.mobility.app.Utils;
 
 public class MobilityCommonBridge extends HyperBridge {
 
@@ -528,13 +528,35 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public void openNavigation(double slat, double slong, double dlat, double dlong) {
-        setKeysInSharedPrefs("MAPS_OPENED", "true");
-        String query = "google.navigation:q=" + dlat + "," + dlong;
-        Uri mapsURI = Uri.parse(query);
-        Intent mapIntent = new Intent(Intent.ACTION_VIEW, mapsURI);
-        mapIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        mapIntent.setPackage("com.google.android.apps.maps");
-        bridgeComponents.getContext().startActivity(mapIntent);
+        try {
+            setKeysInSharedPrefs("MAPS_OPENED", "true");
+            String query = "google.navigation:q=" + dlat + "," + dlong;
+            Uri mapsURI = Uri.parse(query);
+            Intent mapIntent = new Intent(Intent.ACTION_VIEW, mapsURI);
+            mapIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            mapIntent.setPackage("com.google.android.apps.maps");
+            bridgeComponents.getContext().startActivity(mapIntent);
+        } catch (Exception e){
+            JuspayLogger.d(MAPS,"Unable to open navigation");
+        }
+    }
+
+    @JavascriptInterface
+    public void openNavigationWithQuery(double lat, double lon, String query, String packageName) {
+        try{
+            setKeysInSharedPrefs("MAPS_OPENED", "true");
+            String mapsQuery = String.format(query, lat, lon);
+            Uri mapsURI = Uri.parse(mapsQuery);
+            Intent mapIntent = new Intent(Intent.ACTION_VIEW, mapsURI);
+            mapIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            mapIntent.setPackage(packageName);
+            bridgeComponents.getContext().startActivity(mapIntent);
+        } catch (ActivityNotFoundException e) {
+            JuspayLogger.d(MAPS,"Trying Fallback");
+            openNavigation(0.0,0.0,lat,lon);
+        } catch (Exception e){
+            JuspayLogger.d(MAPS,"Unable to open navigation");
+        }
     }
 
     @JavascriptInterface
@@ -998,7 +1020,7 @@ public class MobilityCommonBridge extends HyperBridge {
         SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getSdkName(), Context.MODE_PRIVATE);
         sharedPref.edit().putString(key, value).apply();
         if (key.equals(bridgeComponents.getContext().getString(R.string.LANGUAGE_KEY))) {
-            Utils.updateLocaleResource(value,bridgeComponents.getContext());
+            updateLocaleResource(value,bridgeComponents.getContext());
         }
     }
 
@@ -1210,6 +1232,24 @@ public class MobilityCommonBridge extends HyperBridge {
             Log.e(OTHERS, "Exception in get version name" + e);
         }
         return info.versionName;
+    }
+
+    @JavascriptInterface
+    public String getLayoutBounds(String id) throws JSONException {
+        Activity activity = bridgeComponents.getActivity();
+        int height = 0;
+        int width = 0;
+        if (activity != null) {
+           View view = activity.findViewById(Integer.parseInt(id));
+           if (view != null){
+               height = view.getHeight();
+               width = view.getWidth();
+           }
+        }
+        JSONObject bounds = new JSONObject();
+        bounds.put("height", height);
+        bounds.put("width", width);
+        return bounds.toString();
     }
     //endregion
 
@@ -1696,6 +1736,39 @@ public class MobilityCommonBridge extends HyperBridge {
                 vibrator.vibrate(effect);
             }
         }
+    }
+
+    public static void updateLocaleResource(String languageKey, Context context) {
+        Locale locale;
+        switch (languageKey) {
+            case "HI_IN":
+                locale = new Locale("hi");
+                break;
+            case "KN_IN":
+                locale = new Locale("kn");
+                break;
+            case "EN_US":
+                locale = new Locale("en");
+                break;
+            case "TA_IN":
+                locale = new Locale("ta");
+                break;
+            case "BN_IN":
+                locale = new Locale("bn");
+                break;
+            case "ML_IN":
+                locale = new Locale("ml");
+                break;
+            case "FR_FR":
+                locale = new Locale("fr");
+                break;
+            default:
+                return;
+        }
+        Locale.setDefault(locale);
+        Configuration configuration = context.getResources().getConfiguration();
+        configuration.setLocale(locale);
+        context.getResources().updateConfiguration(configuration, context.getResources().getDisplayMetrics());
     }
     // endregion
 

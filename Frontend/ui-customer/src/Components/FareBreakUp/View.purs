@@ -103,46 +103,41 @@ rideStartTimeView config =
   ]
 
 sourceToDestinationConfig :: Config -> SourceToDestinationConfig.Config
-sourceToDestinationConfig state = let
-  config = SourceToDestinationConfig.config
-  sourceToDestinationConfig' = config
-    {
-      margin = (Margin 0 0 0 0)
-    , sourceMargin = (Margin 0 0 0 24)
-    , lineMargin = (Margin 7 4 0 0)
+sourceToDestinationConfig state = SourceToDestinationConfig.config
+    { 
+      sourceMargin = Margin 0 0 0 24
+    , separatorMargin = 21
     , sourceImageConfig {
         imageUrl = "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
-      , margin = (MarginTop 2)
-      , height = (V 16)
-      , width = (V 16)
+      , height = V 16
+      , width = V 16
       }
     , sourceTextConfig {
         text = state.rideDetails.sourceTitle
-      , padding = (Padding 2 0 2 2)
-      , margin = (Margin 12 0 15 0)
+      , padding = Padding 2 0 2 2
+      , margin = Margin 12 0 15 0
       , textStyle = FontStyle.Body9
       , color = Color.black700
-      , ellipsize = false
+      , ellipsize = true
       }
     , destinationImageConfig {
         imageUrl = "ny_ic_loc_red," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_loc_red.png"
-      , margin = (MarginTop 3)
-      , height = (V 16)
-      , width = (V 16)
+      , height = V 16
+      , width = V 16
       }
     , destinationTextConfig {
         text = state.rideDetails.destinationTitle
-      , padding = (Padding 2 0 2 2)
-      , margin = (Margin 12 0 15 0)
+      , padding = Padding 2 0 2 2
+      , margin = Margin 12 0 15 0
       , color = Color.black700
       , textStyle = FontStyle.Body9
-      , ellipsize = false
+      , ellipsize = true
       }
     , rideEndedAtConfig {
         text = state.rideDetails.destination
       , visibility = VISIBLE
-      , padding = (Padding 1 0 1 1)
-      , margin = (Margin 12 1 0 0)
+      , padding = Padding 1 0 1 1
+      , margin = Margin 12 1 0 0
       , maxLines = 1
       , color = Color.black700
       , textStyle = FontStyle.Body9
@@ -152,14 +147,14 @@ sourceToDestinationConfig state = let
         text = state.rideDetails.source
       , visibility = VISIBLE
       , textStyle = FontStyle.Body9
-      , padding = (Padding 1 0 1 1)
-      , margin = (Margin 12 1 0 0)
+      , padding = Padding 1 0 1 1
+      , margin = Margin 12 1 0 0
       , color = Color.black700
       , maxLines = 1
       , ellipsize = true
     }
     }
-  in sourceToDestinationConfig'
+  -- in sourceToDestinationConfig'
 
 ----------------------------------- horizontalLine -------------------------------------
 horizontalLine :: forall w. Margin ->  Config -> PrestoDOM (Effect Unit) w
