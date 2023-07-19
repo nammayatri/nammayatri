@@ -167,10 +167,10 @@ updateMultiple rideId ride = do
 --     return ride
 
 findActiveByRBId :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Ride)
-findActiveByRBId (Id rbId) = findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Eq Ride.CANCELLED]]
+findActiveByRBId (Id rbId) = findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Not $ Se.Eq Ride.CANCELLED]]
 
 findActiveByRBIdInReplica :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Ride)
-findActiveByRBIdInReplica (Id rbId) = findOneWithKvInReplica [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Eq Ride.CANCELLED]]
+findActiveByRBIdInReplica (Id rbId) = findOneWithKvInReplica [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Not $ Se.Eq Ride.CANCELLED]]
 
 -- findAllByRBId :: Transactionable m => Id Booking -> m [Ride]
 -- findAllByRBId bookingId =
