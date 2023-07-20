@@ -26,7 +26,7 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Tracking = Tracking
   { url :: BaseUrl,
-    content_type :: Text,
+    -- content_type :: Text,
     status :: TrackingStatus
   }
   deriving (Generic, Show)

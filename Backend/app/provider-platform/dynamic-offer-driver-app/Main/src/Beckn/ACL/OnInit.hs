@@ -107,7 +107,7 @@ mkOnInitMessage res = do
                         value = fareDecimalValue,
                         offered_value = fareDecimalValue
                       },
-                  breakup = breakup_
+                  breakup = Just breakup_
                 },
             provider =
               res.driverId >>= \dId ->
@@ -119,7 +119,7 @@ mkOnInitMessage res = do
               OnInit.Payment
                 { params =
                     OnInit.PaymentParams
-                      { collected_by = maybe OnInit.BPP (Common.castDPaymentCollector . (.collectedBy)) res.paymentMethodInfo,
+                      { collected_by = OnInit.BPP, --maybe OnInit.BPP (Common.castDPaymentCollector . (.collectedBy)) res.paymentMethodInfo,
                         instrument = Common.castDPaymentInstrument . (.paymentInstrument) <$> res.paymentMethodInfo,
                         currency = currency,
                         amount = Just fareDecimalValue

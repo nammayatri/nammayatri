@@ -24,6 +24,7 @@ module Domain.Action.Beckn.Search
 where
 
 import qualified Beckn.Types.Core.Taxi.Search as BA
+import Control.Applicative ((<|>))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as M
 import qualified Data.Text as T
@@ -401,7 +402,7 @@ validateRequest merchantId sReq = do
 
 buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.SearchReqLocation
 buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@Maps.LatLong {..} = do
-  Address {..} <- case address of
+  updAddress <- case address of
     Just loc
       | customerLanguage == Just Maps.ENGLISH && isJust loc.ward ->
         pure $
@@ -421,7 +422,19 @@ buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@
   now <- getCurrentTime
   let createdAt = now
       updatedAt = now
-  pure DLoc.SearchReqLocation {..}
+  pure $
+    DLoc.SearchReqLocation
+      { areaCode = (address >>= (.area_code)) <|> updAddress.areaCode,
+        street = (address >>= (.street)) <|> updAddress.street,
+        door = (address >>= (.door)) <|> updAddress.door,
+        city = (address >>= (.city)) <|> updAddress.city,
+        state = (address >>= (.state)) <|> updAddress.state,
+        country = (address >>= (.country)) <|> updAddress.country,
+        building = (address >>= (.building)) <|> updAddress.building,
+        area = (address >>= (.ward)) <|> updAddress.area,
+        full_address = (address >>= decodeAddress) <|> updAddress.full_address,
+        ..
+      }
 
 getAddressByGetPlaceName :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> LatLong -> m Address
 getAddressByGetPlaceName merchantId sessionToken latLong = do

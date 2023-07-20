@@ -38,30 +38,35 @@ instance ToJSON Customer where
   toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
 
 data Contact = Contact
+  { phone :: Phone
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data Phone = Phone
   { phoneCountryCode :: Text,
     phoneNumber :: Text
   }
   deriving (Generic)
 
-instance Show Contact where
-  show (Contact phoneCountryCode phoneNumber) = T.unpack phoneCountryCode <> "-" <> T.unpack phoneNumber
+instance Show Phone where
+  show (Phone phoneCountryCode phoneNumber) = T.unpack phoneCountryCode <> "-" <> T.unpack phoneNumber
 
-instance Read Contact where
+instance Read Phone where
   readsPrec _ str =
     case T.splitOn "-" $ T.pack str of
-      phoneCountryCode : phoneNumber : _ -> [(Contact phoneCountryCode phoneNumber, "")]
+      phoneCountryCode : phoneNumber : _ -> [(Phone phoneCountryCode phoneNumber, "")]
       _ -> []
 
-instance ToJSON Contact where
+instance ToJSON Phone where
   toJSON = String . T.pack . show
 
-instance FromJSON Contact where
-  parseJSON = withText "Contact" $ \s -> do
+instance FromJSON Phone where
+  parseJSON = withText "Phone" $ \s -> do
     case readMaybe $ T.unpack s of
-      Nothing -> fail "Unable to parse Contact"
+      Nothing -> fail "Unable to parse Phone"
       Just ic -> return ic
 
-instance ToSchema Contact where
+instance ToSchema Phone where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
 newtype OrderPerson = OrderPerson

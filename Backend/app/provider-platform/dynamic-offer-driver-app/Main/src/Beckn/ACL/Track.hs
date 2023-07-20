@@ -34,7 +34,7 @@ buildTrackReq subscriber req = do
   validateContext Context.TRACK req.context
   unless (subscriber.subscriber_id == req.context.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
-  let rideId = Id req.message.order.id
+  let bookingId = Id req.message.order_id
   return $
     DTrack.TrackReq
       { ..

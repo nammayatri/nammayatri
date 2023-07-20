@@ -57,7 +57,16 @@ buildInitMessage res = do
       { order =
           Init.Order
             { items = [mkOrderItem res.itemId mbBppFullfillmentId],
-              quote = Nothing,
+              quote =
+                Init.Quote
+                  { price =
+                      Init.QuotePrice
+                        { value = fromIntegral res.booking.estimatedFare,
+                          offered_value = fromIntegral res.booking.estimatedTotalFare,
+                          currency = "INR"
+                        },
+                    breakup = Nothing
+                  },
               billing = mkBilling res.riderPhone res.riderName,
               fulfillment = mkFulfillmentInfo fulfillmentType mbBppFullfillmentId res.fromLoc res.toLoc res.maxEstimatedDistance vehicleVariant,
               payment = mkPayment res.paymentMethodInfo,
@@ -161,7 +170,7 @@ mkPayment (Just DMPM.PaymentMethodInfo {..}) =
     { _type = Common.castDPaymentType paymentType,
       params =
         Init.PaymentParams
-          { collected_by = Common.castDPaymentCollector collectedBy,
+          { collected_by = Init.BPP, --Common.castDPaymentCollector collectedBy,
             instrument = Just $ Common.castDPaymentInstrument paymentInstrument,
             currency = "INR",
             amount = Nothing
@@ -174,7 +183,7 @@ mkPayment Nothing =
     { _type = Init.ON_FULFILLMENT,
       params =
         Init.PaymentParams
-          { collected_by = Init.BAP,
+          { collected_by = Init.BPP,
             instrument = Nothing,
             currency = "INR",
             amount = Nothing

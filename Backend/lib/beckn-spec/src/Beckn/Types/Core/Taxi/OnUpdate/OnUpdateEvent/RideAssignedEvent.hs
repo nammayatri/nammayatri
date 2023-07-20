@@ -30,7 +30,7 @@ import Kernel.Prelude
 data RideAssignedEvent = RideAssignedEvent
   { id :: Text,
     state :: Text,
-    update_target :: Text,
+    -- update_target :: Text,
     fulfillment :: FulfillmentInfo
   }
   deriving (Generic, Show)
@@ -41,7 +41,7 @@ instance ToJSON RideAssignedEvent where
     A.Object $
       "id" .= id
         <> "state" .= state
-        <> "update_target" .= update_target
+        -- <> "update_target" .= update_target
         <> "fulfillment" .= (fulfJSON <> ("state" .= ("descriptor" .= (("code" .= RIDE_ASSIGNED <> "name" .= A.String "Ride Assigned") :: A.Object) :: A.Object)))
 
 instance FromJSON RideAssignedEvent where
@@ -51,7 +51,7 @@ instance FromJSON RideAssignedEvent where
     RideAssignedEvent
       <$> obj .: "id"
       <*> obj .: "state"
-      <*> obj .: "update_target"
+      -- <*> obj .: "update_target"
       <*> obj .: "fulfillment"
 
 instance ToSchema RideAssignedEvent where
@@ -85,12 +85,12 @@ instance ToSchema RideAssignedEvent where
             L..~ fromList
               [ ("id", txt),
                 ("state", txt),
-                ("update_target", txt),
+                -- ("update_target", txt),
                 ("fulfillment", Inline fulfillment)
               ]
           & required
             L..~ [ "id",
                    "state",
-                   "update_target",
+                   --  "update_target",
                    "fulfillment"
                  ]

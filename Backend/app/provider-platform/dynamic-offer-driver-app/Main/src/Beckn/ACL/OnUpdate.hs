@@ -171,24 +171,32 @@ buildOnUpdateMessage ::
 buildOnUpdateMessage RideAssignedBuildReq {..} = do
   fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) Nothing
   return $
-    OnUpdate.OnUpdateMessage $
-      OnUpdate.RideAssigned
-        RideAssignedOU.RideAssignedEvent
-          { id = booking.id.getId,
-            state = "ACTIVE",
-            update_target = "order.fufillment.state.code, order.fulfillment.agent, order.fulfillment.vehicle" <> if booking.bookingType == DRB.SpecialZoneBooking then ", order.fulfillment.start.authorization" else ", order.fulfillment.start.authorization", -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
-            ..
-          }
+    OnUpdate.OnUpdateMessage
+      { order =
+          OnUpdate.RideAssigned $
+            RideAssignedOU.RideAssignedEvent
+              { id = booking.id.getId,
+                state = "ACTIVE",
+                ..
+              },
+        -- update_target = "order.fufillment.state.code, order.fulfillment.agent, order.fulfillment.vehicle" <> if booking.bookingType == DRB.SpecialZoneBooking then ", order.fulfillment.start.authorization" else ", order.fulfillment.start.authorization", -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
+
+        update_target = "order.fufillment.state.code, order.fulfillment.agent, order.fulfillment.vehicle" <> if booking.bookingType == DRB.SpecialZoneBooking then ", order.fulfillment.start.authorization" else ", order.fulfillment.start.authorization" -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
+      }
 buildOnUpdateMessage RideStartedBuildReq {..} = do
   fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) Nothing
   return $
-    OnUpdate.OnUpdateMessage $
-      OnUpdate.RideStarted
-        RideStartedOU.RideStartedEvent
-          { id = booking.id.getId,
-            update_target = "order.fufillment.state.code",
-            ..
-          }
+    OnUpdate.OnUpdateMessage
+      { order =
+          OnUpdate.RideStarted $
+            RideStartedOU.RideStartedEvent
+              { id = booking.id.getId,
+                ..
+              },
+        -- update_target = "order.fufillment.state.code",
+
+        update_target = "order.fufillment.state.code"
+      }
 buildOnUpdateMessage req@RideCompletedBuildReq {} = do
   chargeableDistance :: HighPrecMeters <-
     realToFrac <$> req.ride.chargeableDistance
@@ -218,31 +226,34 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
         mkBreakupList (OnUpdate.BreakupPrice currency . fromIntegral) OnUpdate.BreakupItem req.fareParams
           & filter (filterRequiredBreakups $ DFParams.getFareParametersType req.fareParams) -- TODO: Remove after roll out
   return $
-    OnUpdate.OnUpdateMessage $
-      OnUpdate.RideCompleted
-        RideCompletedOU.RideCompletedEvent
-          { id = req.booking.id.getId,
-            update_target = "order.payment, order.quote, order.fulfillment.tags, order.fulfillment.state.tags",
-            quote =
-              RideCompletedOU.RideCompletedQuote
-                { price,
-                  breakup
-                },
-            payment =
-              Just
-                OnUpdate.Payment
-                  { _type = maybe OnUpdate.ON_FULFILLMENT (Common.castDPaymentType . (.paymentType)) req.paymentMethodInfo,
-                    params =
-                      OnUpdate.PaymentParams
-                        { collected_by = maybe OnUpdate.BPP (Common.castDPaymentCollector . (.collectedBy)) req.paymentMethodInfo,
-                          instrument = Nothing,
-                          currency = "INR",
-                          amount = Nothing
-                        },
-                    uri = req.paymentUrl
-                  },
-            fulfillment = fulfillment
-          }
+    OnUpdate.OnUpdateMessage
+      { order =
+          OnUpdate.RideCompleted
+            RideCompletedOU.RideCompletedEvent
+              { id = req.booking.id.getId,
+                -- update_target = "order.payment, order.quote, order.fulfillment.tags, order.fulfillment.state.tags",
+                quote =
+                  RideCompletedOU.RideCompletedQuote
+                    { price,
+                      breakup
+                    },
+                payment =
+                  Just
+                    OnUpdate.Payment
+                      { _type = maybe OnUpdate.ON_FULFILLMENT (Common.castDPaymentType . (.paymentType)) req.paymentMethodInfo,
+                        params =
+                          OnUpdate.PaymentParams
+                            { collected_by = maybe OnUpdate.BPP (Common.castDPaymentCollector . (.collectedBy)) req.paymentMethodInfo,
+                              instrument = Nothing,
+                              currency = "INR",
+                              amount = Nothing
+                            },
+                        uri = req.paymentUrl
+                      },
+                fulfillment = fulfillment
+              },
+        update_target = "order.payment, order.quote, order.fulfillment.tags, order.fulfillment.state.tags"
+      }
   where
     filterRequiredBreakups fParamsType breakup = do
       case fParamsType of
@@ -265,14 +276,17 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
             || breakup.title == "NIGHT_SHIFT_CHARGE"
 buildOnUpdateMessage BookingCancelledBuildReq {..} = do
   return $
-    OnUpdate.OnUpdateMessage $
-      OnUpdate.BookingCancelled
-        BookingCancelledOU.BookingCancelledEvent
-          { id = booking.id.getId,
-            state = "CANCELLED",
-            update_target = "state,fufillment.state.code",
-            cancellation_reason = castCancellationSource cancellationSource
-          }
+    OnUpdate.OnUpdateMessage
+      { order =
+          OnUpdate.BookingCancelled $
+            BookingCancelledOU.BookingCancelledEvent
+              { id = booking.id.getId,
+                state = "CANCELLED",
+                -- update_target = "state,fufillment.state.code",
+                cancellation_reason = castCancellationSource cancellationSource
+              },
+        update_target = "state,fufillment.state.code"
+      }
 buildOnUpdateMessage DriverArrivedBuildReq {..} = do
   let tagGroups =
         [ Tags.TagGroup
@@ -284,13 +298,16 @@ buildOnUpdateMessage DriverArrivedBuildReq {..} = do
         ]
   fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) (Just $ Tags.TG tagGroups)
   return $
-    OnUpdate.OnUpdateMessage $
-      OnUpdate.DriverArrived
-        DriverArrivedOU.DriverArrivedEvent
-          { id = ride.bookingId.getId,
-            update_target = "order.fufillment.state.code, order.fulfillment.tags",
-            fulfillment
-          }
+    OnUpdate.OnUpdateMessage
+      { order =
+          OnUpdate.DriverArrived $
+            DriverArrivedOU.DriverArrivedEvent
+              { id = ride.bookingId.getId,
+                -- update_target = "order.fufillment.state.code, order.fulfillment.tags",
+                fulfillment
+              },
+        update_target = "order.fufillment.state.code, order.fulfillment.tags"
+      }
 buildOnUpdateMessage EstimateRepetitionBuildReq {..} = do
   let tagGroups =
         [ Tags.TagGroup
@@ -303,14 +320,17 @@ buildOnUpdateMessage EstimateRepetitionBuildReq {..} = do
   fulfillment <- mkFullfillment Nothing ride booking Nothing (Just $ Tags.TG tagGroups)
   let item = EstimateRepetitionOU.Item {id = estimateId.getId}
   return $
-    OnUpdate.OnUpdateMessage $
-      OnUpdate.EstimateRepetition
-        EstimateRepetitionOU.EstimateRepetitionEvent
-          { id = booking.id.getId,
-            update_target = "order.fufillment.state.code, order.tags",
-            item = item,
-            fulfillment
-          }
+    OnUpdate.OnUpdateMessage
+      { order =
+          OnUpdate.EstimateRepetition $
+            EstimateRepetitionOU.EstimateRepetitionEvent
+              { id = booking.id.getId,
+                -- update_target = "order.fufillment.state.code, order.tags",
+                item = item,
+                fulfillment
+              },
+        update_target = "order.fufillment.state.code, order.tags"
+      }
 buildOnUpdateMessage NewMessageBuildReq {..} = do
   let tagGroups =
         [ Tags.TagGroup
@@ -322,13 +342,17 @@ buildOnUpdateMessage NewMessageBuildReq {..} = do
         ]
   fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) (Just $ Tags.TG tagGroups)
   return $
-    OnUpdate.OnUpdateMessage $
-      OnUpdate.NewMessage
-        NewMessageOU.NewMessageEvent
-          { id = ride.bookingId.getId,
-            update_target = "order.fufillment.state.code, order.fulfillment.tags",
-            fulfillment = fulfillment
-          }
+    OnUpdate.OnUpdateMessage
+      { update_target = "order.fufillment.state.code, order.fulfillment.tags",
+        order =
+          OnUpdate.NewMessage $
+            NewMessageOU.NewMessageEvent
+              { id = ride.bookingId.getId,
+                -- update_target = "order.fufillment.state.code, order.fulfillment.tags",
+                fulfillment = fulfillment
+              }
+              -- update_target = "order.fufillment.state.code, order.fulfillment.tags"
+      }
 
 castCancellationSource :: SBCR.CancellationSource -> BookingCancelledOU.CancellationSource
 castCancellationSource = \case

@@ -24,7 +24,7 @@ import GHC.Exts (fromList)
 
 data RideStartedEvent = RideStartedEvent
   { id :: Text,
-    update_target :: Text,
+    -- update_target :: Text,
     fulfillment :: FulfillmentInfo
   }
   deriving (Generic, Show)
@@ -34,7 +34,7 @@ instance ToJSON RideStartedEvent where
     let (A.Object fulfJSON) = toJSON fulfillment
     A.Object $
       "id" .= id
-        <> "update_target" .= update_target
+        -- <> "update_target" .= update_target
         <> "fulfillment" .= (fulfJSON <> ("state" .= ("descriptor" .= (("code" .= RIDE_STARTED <> "name" .= A.String "Ride Started") :: A.Object) :: A.Object)))
 
 instance FromJSON RideStartedEvent where
@@ -43,7 +43,7 @@ instance FromJSON RideStartedEvent where
     unless (update_type == RIDE_STARTED) $ fail "Wrong update_type."
     RideStartedEvent
       <$> obj .: "id"
-      <*> obj .: "update_target"
+      -- <*> obj .: "update_target"
       <*> obj .: "fulfillment"
 
 instance ToSchema RideStartedEvent where
@@ -76,7 +76,7 @@ instance ToSchema RideStartedEvent where
           & properties
             L..~ fromList
               [ ("id", txt),
-                ("update_target", txt),
+                -- ("update_target", txt),
                 ("fulfillment", Inline fulfillment)
               ]
-          & required L..~ ["id", "update_target", "fulfillment"]
+          & required L..~ ["id", "fulfillment"]

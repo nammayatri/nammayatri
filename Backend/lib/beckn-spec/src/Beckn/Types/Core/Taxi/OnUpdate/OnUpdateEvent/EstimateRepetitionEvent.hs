@@ -30,7 +30,7 @@ import Kernel.Utils.Schema
 
 data EstimateRepetitionEvent = EstimateRepetitionEvent
   { id :: Text, -- bppBookingId
-    update_target :: Text,
+  -- update_target :: Text,
     fulfillment :: FulfillmentInfo,
     item :: Item
   }
@@ -41,7 +41,7 @@ instance ToJSON EstimateRepetitionEvent where
     let (A.Object fulfJSON) = toJSON fulfillment
     A.Object $
       "id" .= id
-        <> "update_target" .= update_target
+        -- <> "update_target" .= update_target
         <> "fulfillment" .= (fulfJSON <> ("state" .= ("descriptor" .= (("code" .= ESTIMATE_REPETITION <> "name" .= A.String "Estimate Repetition") :: A.Object) :: A.Object)))
         <> "item" .= item
 
@@ -51,7 +51,7 @@ instance FromJSON EstimateRepetitionEvent where
     unless (update_type == ESTIMATE_REPETITION) $ fail "Wrong update_type."
     EstimateRepetitionEvent
       <$> obj .: "id"
-      <*> obj .: "update_target"
+      -- <*> obj .: "update_target"
       <*> obj .: "fulfillment"
       <*> obj .: "item"
 
@@ -80,12 +80,12 @@ instance ToSchema EstimateRepetitionEvent where
           & properties
             L..~ fromList
               [ ("id", txt),
-                ("update_target", txt),
+                -- ("update_target", txt),
                 ("cancellation_reason", reallocationSource),
                 ("fulfillment", Inline fulfillment),
                 ("item", item)
               ]
-          & required L..~ ["id", "update_target", "cancellation_reason", "fulfillment", "item"]
+          & required L..~ ["id", "cancellation_reason", "fulfillment", "item"]
 
 newtype Item = Item
   { id :: Text

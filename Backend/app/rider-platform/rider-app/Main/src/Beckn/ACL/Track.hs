@@ -22,8 +22,9 @@ where
 import qualified Beckn.Types.Core.Taxi.Track as Track
 import Control.Lens ((%~))
 import qualified Data.Text as T
+-- import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Ride as DRide
 import Kernel.Prelude
 import Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
@@ -32,7 +33,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 
 data TrackBuildReq = TrackBuildReq
-  { bppRideId :: Id DRide.BPPRide,
+  { bppBookingId :: Id DBooking.BPPBooking,
     bppId :: Text,
     bppUrl :: BaseUrl,
     transactionId :: Text,
@@ -48,12 +49,12 @@ buildTrackReq ::
   m (BecknReq Track.TrackMessage)
 buildTrackReq res = do
   messageId <- generateGUID
-  Redis.setExp (key messageId) res.bppRideId 1800 --30 mins
+  Redis.setExp (key messageId) res.bppBookingId 1800 --30 mins
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/cab/v1/" <> T.unpack res.merchant.id.getId)
   context <- buildTaxiContext Context.TRACK messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchant.city res.merchant.country False
   pure $ BecknReq context $ mkTrackMessage res
   where
-    key messageId = "Track:bppRideId:" <> messageId
+    key messageId = "Track:bppBookingId:" <> messageId
 
 mkTrackMessage :: TrackBuildReq -> Track.TrackMessage
-mkTrackMessage res = Track.TrackMessage $ Track.Order res.bppRideId.getId
+mkTrackMessage res = Track.TrackMessage res.bppBookingId.getId

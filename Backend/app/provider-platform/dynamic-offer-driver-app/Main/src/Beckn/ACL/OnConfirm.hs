@@ -56,10 +56,11 @@ buildOnConfirmMessage res = do
                           offered_value = totalFareDecimal
                         },
                     breakup =
-                      mkBreakupList
-                        (OnConfirm.BreakupItemPrice currency . fromIntegral)
-                        OnConfirm.BreakupItem
-                        fareParams
+                      Just $
+                        mkBreakupList
+                          (OnConfirm.BreakupItemPrice currency . fromIntegral)
+                          OnConfirm.BreakupItem
+                          fareParams
                   },
               provider =
                 res.driverId >>= \dId ->
@@ -143,8 +144,11 @@ mkFulfillmentInfo fromLoc toLoc fulfillmentId fulfillmentType driverName riderPh
         OnConfirm.Customer
           { contact =
               OnConfirm.Contact
-                { phoneNumber = riderPhoneNumber,
-                  phoneCountryCode = riderMobileCountryCode
+                { phone =
+                    OnConfirm.Phone
+                      { phoneNumber = riderPhoneNumber,
+                        phoneCountryCode = riderMobileCountryCode
+                      }
                 },
             person =
               mbRiderName <&> \riderName ->
@@ -200,8 +204,11 @@ mkSpecialZoneFulfillmentInfo fromLoc toLoc otp fulfillmentId fulfillmentType rid
         OnConfirm.Customer
           { contact =
               OnConfirm.Contact
-                { phoneNumber = riderPhoneNumber,
-                  phoneCountryCode = riderMobileCountryCode
+                { phone =
+                    OnConfirm.Phone
+                      { phoneNumber = riderPhoneNumber,
+                        phoneCountryCode = riderMobileCountryCode
+                      }
                 },
             person =
               mbRiderName <&> \riderName ->

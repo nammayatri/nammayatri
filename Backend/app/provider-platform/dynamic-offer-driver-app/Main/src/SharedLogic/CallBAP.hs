@@ -252,6 +252,7 @@ sendDriverOffer ::
   DDQ.DriverQuote ->
   m ()
 sendDriverOffer transporter searchReq searchTry driverQuote = do
+  logDebug $ "on_select ttl request driver: " <> show driverQuote.validTill
   callOnSelect transporter searchReq searchTry =<< (buildOnSelectReq transporter searchReq driverQuote <&> ACL.mkOnSelectMessage)
   where
     buildOnSelectReq ::

@@ -20,8 +20,8 @@ module Beckn.ACL.OnSelect where
 
 import Beckn.ACL.Common
 import qualified Beckn.Types.Core.Taxi.OnSelect as OS
--- import qualified Data.Text as T
--- import Data.Time (diffUTCTime)
+import qualified Data.Text as T
+import Data.Time (diffUTCTime, nominalDiffTimeToSeconds)
 -- import Data.Time.Format.ISO8601
 -- import Data.Time.LocalTime (calendarTimeTime)
 import qualified Domain.Types.DriverQuote as DQuote
@@ -31,6 +31,8 @@ import Kernel.Prelude
 import Kernel.Types.Id (ShortId)
 -- import qualified Domain.Types.FareParameters as DFParams
 import SharedLogic.FareCalculator (mkBreakupList)
+
+-- import Data.Fixed
 
 -- import qualified Kernel.Utils.Common
 
@@ -276,17 +278,17 @@ mkPrice quote =
         }
 
 mkQuote :: DQuote.DriverQuote -> UTCTime -> OS.Quote
-mkQuote driverQuote _ = do
+mkQuote driverQuote now = do
   let currency = "INR"
       breakup_ =
         mkBreakupList (OS.Price currency . fromIntegral) OS.PriceBreakup driverQuote.fareParams
           & filter filterRequiredBreakups
-  -- let nominalDifferenceTime = diffUTCTime now driverQuote.validTill
+  let nominalDifferenceTime = diffUTCTime driverQuote.validTill now
   -- let diffDuration = calendarTimeTime nominalDifferenceTime
   -- let iso8601Duration = formatShow iso8601Format diffDuration
   OS.Quote
     { price = mkPrice driverQuote,
-      ttl = Just $ show driverQuote.validTill, --------- todo
+      ttl = Just $ T.pack $ formatTimeDifference nominalDifferenceTime, --------- todo
       breakup = breakup_
     }
   where
@@ -297,6 +299,22 @@ mkQuote driverQuote _ = do
         || breakup.title == "DRIVER_SELECTED_FARE"
         || breakup.title == "CUSTOMER_SELECTED_FARE"
         || breakup.title == "TOTAL_FARE"
+    formatTimeDifference duration =
+      let secondsDiff = div (fromEnum . nominalDiffTimeToSeconds $ duration) 1000000000000
+          -- (nominalDiffTimeToSeconds duration) / 1000000000000
+          (hours, remainingSeconds) = divMod secondsDiff (3600 :: Int)
+          -- (hours, remainingSeconds) = divMod (round duration) (3600 :: Int)
+          (minutes, seconds) = divMod remainingSeconds 60
+       in "PT" <> show hours <> "H" <> show minutes <> "M" <> show seconds <> "S"
+
+-- formatTimeDifferenceTest :: NominalDiffTime -> Text
+-- formatTimeDifferenceTest duration =
+--       let secondsDiff = div (fromEnum . nominalDiffTimeToSeconds $ duration) 1000000000000
+--         -- (nominalDiffTimeToSeconds duration) / 1000000000000
+--           (hours, remainingSeconds) = divMod secondsDiff (3600 :: Int)
+--           -- (hours, remainingSeconds) = divMod (round duration) (3600 :: Int)
+--           (minutes, seconds) = divMod remainingSeconds 60
+--       in "PT" <> show hours <> "H" <> show minutes <> "M" <> show seconds <> "S"
 
 -- mkQuoteBreakupList :: DQuote.DriverQuote -> [Maybe OS.PriceBreakup]
 -- mkQuoteBreakupList driverQuote =
@@ -362,3 +380,39 @@ mkQuote driverQuote _ = do
 --       nightShiftCaption = "NIGHT_SHIFT_CHARGE"
 --       waitingChargesCaption = "WAITING_OR_PICKUP_CHARGES"
 --       mbFixedGovtRateCaption = "FIXED_GOVERNMENT_RATE"
+-- import Data.Time
+
+-- formatTimeDifference :: NominalDiffTime -> String
+-- formatTimeDifference duration =
+--     let (hours, remainingSeconds) = divMod (round duration) 3600
+--         (minutes, seconds) = divMod remainingSeconds 60
+--     in "P" ++ show hours ++ "H" ++ show minutes ++ "M" ++ show seconds ++ "S"
+
+-- main :: IO ()
+-- main = do
+--     currentTime <- getCurrentTime
+--     let targetTime = read "2023-07-13 18:19:51 UTC" :: UTCTime
+--         duration = diffUTCTime currentTime targetTime
+--         iso8601Duration = formatTimeDifference duration
+--     putStrLn iso8601Duration
+
+-- import Data.Time
+-- import Data.Time.Format.ISO8601 (iso8601ParseM)
+
+-- -- Parse ISO8601 duration and return the number of seconds
+-- parseISO8601Duration :: String -> Maybe NominalDiffTime
+-- parseISO8601Duration durationStr = do
+--     (d, t) <- iso8601ParseM $ "P" ++ durationStr
+--     return $ diffTimeToPicoseconds d / 10^12 + diffTimeToPicoseconds t / 10^12
+
+-- -- Add the parsed duration to a given UTCTime
+-- addDurationToUTCTime :: UTCTime -> NominalDiffTime -> UTCTime
+-- addDurationToUTCTime time duration = addUTCTime duration time
+
+-- main :: IO ()
+-- main = do
+--     currentTime <- getCurrentTime
+--     let iso8601DurationStr = "0DT1H15M30S"  -- Replace this with your desired ISO8601 duration
+--         Just duration = parseISO8601Duration iso8601DurationStr
+--         updatedTime = addDurationToUTCTime currentTime duration
+--     print updatedTime

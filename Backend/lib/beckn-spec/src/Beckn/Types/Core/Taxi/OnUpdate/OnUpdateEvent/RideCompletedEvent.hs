@@ -32,7 +32,7 @@ import Kernel.Utils.Schema
 
 data RideCompletedEvent = RideCompletedEvent
   { id :: Text,
-    update_target :: Text,
+    -- update_target :: Text,
     quote :: RideCompletedQuote,
     fulfillment :: FulfillmentInfo,
     payment :: Maybe Payment
@@ -44,7 +44,7 @@ instance ToJSON RideCompletedEvent where
     let (A.Object fulfJSON) = toJSON fulfillment
     A.Object $
       "id" .= id
-        <> "update_target" .= update_target
+        -- <> "update_target" .= update_target
         <> "quote" .= quote
         <> "payment" .= payment
         <> "fulfillment" .= (fulfJSON <> ("state" .= ("descriptor" .= (("code" .= RIDE_COMPLETED <> "name" .= A.String "Ride Completed") :: A.Object) :: A.Object)))
@@ -55,7 +55,7 @@ instance FromJSON RideCompletedEvent where
     unless (update_type == RIDE_COMPLETED) $ fail "Wrong update_type."
     RideCompletedEvent
       <$> obj .: "id"
-      <*> obj .: "update_target"
+      -- <*> obj .: "update_target"
       <*> obj .: "quote"
       <*> obj .: "fulfillment"
       <*> obj .: "payment"
@@ -92,14 +92,14 @@ instance ToSchema RideCompletedEvent where
           & properties
             L..~ fromList
               [ ("id", txt),
-                ("update_target", txt),
+                -- ("update_target", txt),
                 ("quote", quote),
                 ("payment", payment),
                 ("fulfillment", Inline fulfillment)
               ]
           & required
             L..~ [ "id",
-                   "update_target",
+                   --  "update_target",
                    "quote",
                    "fulfillment",
                    "payment"

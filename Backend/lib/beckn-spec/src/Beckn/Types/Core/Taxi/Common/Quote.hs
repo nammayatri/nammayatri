@@ -16,18 +16,26 @@ module Beckn.Types.Core.Taxi.Common.Quote where
 
 import Beckn.Types.Core.Taxi.Common.BreakupItem
 import Beckn.Types.Core.Taxi.Common.DecimalValue
+import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import Kernel.Prelude
+import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Quote = Quote
   { price :: QuotePrice,
-    breakup :: [BreakupItem]
+    breakup :: Maybe [BreakupItem]
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, Show)
 
 instance ToSchema Quote where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON Quote where
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+instance ToJSON Quote where
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
 
 data QuotePrice = QuotePrice
   { currency :: Text,

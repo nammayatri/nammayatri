@@ -29,7 +29,7 @@ data Order = Order
     fulfillment :: FulfillmentInfo,
     billing :: Billing,
     payment :: Payment,
-    quote :: Maybe Quote, -- TODO :: Remove Maybe
+    quote :: Quote,
     provider :: Maybe Provider
   }
   deriving (Generic, Show)

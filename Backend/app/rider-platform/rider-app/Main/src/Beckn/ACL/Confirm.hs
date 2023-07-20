@@ -22,7 +22,6 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.LocationAddress as DLA
 import qualified Domain.Types.VehicleVariant as VehVar
--- import Environment
 import EulerHS.Prelude hiding (id, state)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
@@ -57,7 +56,16 @@ mkConfirmMessage res = do
                 ],
               fulfillment = mkFulfillment res.fulfillmentId fulfillmentType res.fromLocation res.mbToLocation res.riderPhoneCountryCode res.riderPhoneNumber res.mbRiderName vehicleVariant,
               payment = mkPayment res.estimatedTotalFare res.paymentUrl,
-              quote = Nothing,
+              quote =
+                Confirm.Quote
+                  { price =
+                      Confirm.QuotePrice
+                        { value = fromIntegral res.estimatedFare,
+                          offered_value = fromIntegral res.estimatedTotalFare,
+                          currency = "INR"
+                        },
+                    breakup = Nothing
+                  },
               provider =
                 res.driverId >>= \dId ->
                   Just
@@ -113,8 +121,11 @@ mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountry
         Confirm.Customer
           { contact =
               Confirm.Contact
-                { phoneNumber = riderPhoneNumber,
-                  phoneCountryCode = riderPhoneCountryCode
+                { phone =
+                    Confirm.Phone
+                      { phoneNumber = riderPhoneNumber,
+                        phoneCountryCode = riderPhoneCountryCode
+                      }
                 },
             person =
               mbRiderName <&> \riderName ->

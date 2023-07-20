@@ -18,6 +18,9 @@ import Beckn.ACL.Common
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as OnSelect
 import qualified Beckn.Types.Core.Taxi.OnSelect as OnSelect
 import qualified Data.Text as T
+import Data.Time.Format.ISO8601 (iso8601ParseM)
+-- import Data.Time.Clock(diffTimeToPicoseconds,secondsToDiffTime)
+import Data.Time.LocalTime (CalendarDiffTime, ctTime)
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
 import Domain.Types.VehicleVariant
 import Kernel.Prelude
@@ -25,8 +28,13 @@ import Kernel.Product.Validation.Context
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
 import Tools.Error
+
+-- import qualified Beckn.Spec.Common as context
+-- import Beckn.Spec.Search.Fulfillment (StartInfo(time))
+-- import Data.Time (getCurrentTime)
 
 -- import qualified Beckn.Types.Core.Taxi.Common.FulfillmentType as OnSelect
 
@@ -37,13 +45,14 @@ buildOnSelectReq ::
 buildOnSelectReq req = do
   logDebug $ "on_select request: " <> show req
   let context = req.context
+  let timestamp = context.timestamp
   validateContext Context.ON_SELECT context
   handleError req.contents $ \message -> do
     providerId <- context.bpp_id & fromMaybeM (InvalidRequest "Missing bpp_id")
     providerUrl <- context.bpp_uri & fromMaybeM (InvalidRequest "Missing bpp_uri")
     -- let provider = message.order.provider
     let items = message.order.items
-    quotesInfo <- traverse (buildQuoteInfo message.order.provider.id message.order.fulfillment message.order.quote) items
+    quotesInfo <- traverse (buildQuoteInfo message.order.provider.id message.order.fulfillment message.order.quote timestamp) items
     let providerInfo =
           DOnSelect.ProviderInfo
             { providerId = providerId,
@@ -72,17 +81,18 @@ handleError etr action =
       pure Nothing
 
 buildQuoteInfo ::
-  (MonadThrow m, Log m) =>
+  (MonadThrow m, Log m, MonadTime m) =>
   Text ->
   OnSelect.FulfillmentInfo ->
   OnSelect.Quote ->
+  UTCTimeRFC3339 ->
   OnSelect.Item ->
   m DOnSelect.QuoteInfo
-buildQuoteInfo driverId fulfillment quote item = do
+buildQuoteInfo driverId fulfillment quote contextTime item = do
   quoteDetails <- case fulfillment._type of
     -- OnSelect.ONE_WAY_TRIP -> throwError $ InvalidRequest "select not supported for one way trip"
     -- OnSelect.RENTAL_TRIP -> throwError $ InvalidRequest "select not supported for rental trip"
-    OnSelect.RIDE -> buildDriverOfferQuoteDetails item fulfillment quote driverId
+    OnSelect.RIDE -> buildDriverOfferQuoteDetails item fulfillment quote contextTime driverId
     -- OnSelect.DRIVER_OFFER -> buildDriverOfferQuoteDetails item
     -- OnSelect.DRIVER_OFFER_ESTIMATE -> throwError $ InvalidRequest "Estimates are only supported in on_search"
     OnSelect.RIDE_OTP -> throwError $ InvalidRequest "select not supported for ride otp trip"
@@ -110,19 +120,22 @@ buildQuoteInfo driverId fulfillment quote item = do
       OnSelect.TAXI_PLUS -> TAXI_PLUS
 
 buildDriverOfferQuoteDetails ::
-  (MonadThrow m, Log m) =>
+  (MonadThrow m, Log m, MonadTime m) =>
   OnSelect.Item ->
   OnSelect.FulfillmentInfo ->
   OnSelect.Quote ->
+  UTCTimeRFC3339 ->
   Text ->
   m DOnSelect.DriverOfferQuoteDetails
-buildDriverOfferQuoteDetails item fulfillment quote driverId = do
+buildDriverOfferQuoteDetails item fulfillment quote timestamp driverId = do
   driverName <- fulfillment.agent.name & fromMaybeM (InvalidRequest "Missing driver_name in driver offer select item")
   durationToPickup <- getDurationToPickup fulfillment.agent.tags & fromMaybeM (InvalidRequest "Missing duration_to_pickup in driver offer select item")
   distanceToPickup' <- (getDistanceToNearestDriver =<< item.tags) & fromMaybeM (InvalidRequest "Trip type is DRIVER_OFFER, but distance_to_nearest_driver is Nothing")
   -- (item.tags <&> (.distance_to_nearest_driver))
   --   & fromMaybeM (InvalidRequest "Trip type is DRIVER_OFFER, but distance_to_nearest_driver is Nothing")
-  validTill <- (getQuoteValidTill =<< quote.ttl) & fromMaybeM (InvalidRequest "Missing valid_till in driver offer select item")
+  -- validTill <- getCurrentTime
+  validTill <- (getQuoteValidTill (convertRFC3339ToUTC timestamp) =<< quote.ttl) & fromMaybeM (InvalidRequest "Missing valid_till in driver offer select item")
+  logDebug $ "on_select ttl request rider: " <> show validTill
   let rating = getDriverRating fulfillment.agent.tags
   bppQuoteId <- (getTag "general_info" "bpp_quote_id" =<< item.tags) & fromMaybeM (InvalidRequest "Missing bpp quoteId select item")
   pure $
@@ -143,8 +156,11 @@ getDriverRating tagGroups = do
   driverRating <- readMaybe $ T.unpack tagValue
   Just $ Centesimal driverRating
 
-getQuoteValidTill :: Text -> Maybe UTCTime
-getQuoteValidTill time = readMaybe $ T.unpack time
+getQuoteValidTill :: UTCTime -> Text -> Maybe UTCTime
+getQuoteValidTill contextTime time = do
+  valid <- parseISO8601Duration time
+  Just $ addDurationToUTCTime contextTime valid -- >>= parseISO8601Duration time
+  -- readMaybe $ T.unpack time
 
 -- -- tagGroup <- find (\tagGroup -> tagGroup.code == "agent_info") tagGroups
 -- -- tag <- find (\tag -> tag.code == Just "rating") tagGroup.list
@@ -176,3 +192,15 @@ getDistanceToNearestDriver tagGroups = do
 --   tagGroup <- find (\tagGroup -> tagGroup.code == "general_info") tagGroups
 --   tag <- find (\tag -> tag.code == Just "bpp_quote_id") tagGroup.list
 --   tag.value
+
+-- Parse ISO8601 duration and return the number of seconds
+parseISO8601Duration :: Text -> Maybe NominalDiffTime
+parseISO8601Duration durationStr = do
+  (calenderDiffernceTime :: CalendarDiffTime) <- iso8601ParseM $ T.unpack durationStr
+  Just $ ctTime calenderDiffernceTime
+
+-- return $ realToFrac $ secondsToDiffTime $ diffTimeToPicoseconds d / 10^12 + diffTimeToPicoseconds t / 10^12
+
+-- Add the parsed duration to a given UTCTime
+addDurationToUTCTime :: UTCTime -> NominalDiffTime -> UTCTime
+addDurationToUTCTime time duration = addUTCTime duration time

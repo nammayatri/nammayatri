@@ -136,6 +136,16 @@ let cacheTranslationConfig = { expTranslationTime = +3600 }
 
 let kafkaProducerCfg = { brokers = [ "localhost:29092" ] }
 
+let registryMap =
+      [ { mapKey = "localhost/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a51"
+        , mapValue = "http://localhost:8020/"
+        }
+      , { mapKey = "localhost/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52"
+        , mapValue = "http://localhost:8020/"
+        }
+      , { mapKey = "JUSPAY.BG.1", mapValue = "http://localhost:8020/" }
+      ]
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , esqLocationDBCfg
@@ -165,12 +175,12 @@ in  { esqDBCfg
     , loggerConfig =
             common.loggerConfig
         //  { logFilePath = "/tmp/dynamic-offer-driver-app.log"
-            , logRawSql = False
+            , logRawSql = True
             }
     , googleTranslateUrl = common.googleTranslateUrl
     , googleTranslateKey = common.googleTranslateKey
     , graceTerminationPeriod = +90
-    , registryUrl = common.registryUrl
+    , registryMap
     , encTools
     , authTokenCacheExpiry = +600
     , minimumDriverRatesCount = +5

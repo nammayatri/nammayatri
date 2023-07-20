@@ -18,9 +18,6 @@ module Beckn.Types.Core.Taxi.Common.Tags
 where
 
 import Data.Aeson
--- import qualified Data.ByteString.Lazy.Char8 as BSL
-
--- import qualified Data.ByteString.Lazy.Char8 as BSL
 import Data.Char (isDigit)
 import qualified Data.HashMap.Strict as HashMap
 import Data.List (nub)
@@ -74,7 +71,7 @@ convertToList tagGroups = P.concatMap processTagGroup (zip [1 ..] tagGroups)
   where
     processTagGroup :: (Int, TagGroup) -> [(String, Value)]
     processTagGroup (groupIndex, tagGroup) =
-      [ ("groups/" ++ show groupIndex ++ "/display", show tagGroup.display),
+      [ ("groups/" ++ show groupIndex ++ "/display", parseDisplay tagGroup.display),
         ("groups/" ++ show groupIndex ++ "/code", toJSON tagGroup.code),
         ("groups/" ++ show groupIndex ++ "/name", toJSON tagGroup.name)
       ]
@@ -83,9 +80,17 @@ convertToList tagGroups = P.concatMap processTagGroup (zip [1 ..] tagGroups)
     processTags :: Int -> [Tag] -> [(String, Value)]
     processTags groupIndex tags = P.concatMap (processTag groupIndex) (zip [1 ..] tags)
 
+    parseMaybeDisplay :: Maybe Bool -> Value
+    parseMaybeDisplay Nothing = String ""
+    parseMaybeDisplay (Just val) = parseDisplay val
+
+    parseDisplay :: Bool -> Value
+    parseDisplay True = String "true"
+    parseDisplay False = String "false"
+
     processTag :: Int -> (Int, Tag) -> [(String, Value)]
     processTag groupIndex (listIndex, tag) =
-      [ ("groups/" ++ show groupIndex ++ "/list/" ++ show listIndex ++ "/display", toJSON $ T.unpack $ T.toLower $ T.pack $ show tag.display),
+      [ ("groups/" ++ show groupIndex ++ "/list/" ++ show listIndex ++ "/display", parseMaybeDisplay tag.display),
         ("groups/" ++ show groupIndex ++ "/list/" ++ show listIndex ++ "/code", toJSON tag.code),
         ("groups/" ++ show groupIndex ++ "/list/" ++ show listIndex ++ "/name", toJSON tag.name),
         ("groups/" ++ show groupIndex ++ "/list/" ++ show listIndex ++ "/value", toJSON tag.value)
