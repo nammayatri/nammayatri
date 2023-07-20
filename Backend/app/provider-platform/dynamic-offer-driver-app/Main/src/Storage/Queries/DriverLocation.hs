@@ -13,12 +13,13 @@
 -}
 {-# LANGUAGE NamedWildCards #-}
 {-# LANGUAGE PartialTypeSignatures #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
 {-# HLINT ignore "Use newtype instead of data" #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Storage.Queries.DriverLocation where
 
+import Data.Either
 import Data.Maybe as Mb
 import Data.Time (addUTCTime)
 import qualified Database.Beam as B
@@ -33,7 +34,7 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Lib.Utils
+import Lib.Utils (FromTType' (fromTType'), buildRadiusWithin'', getMasterBeamConfig)
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverLocation as BeamDL
 
@@ -64,7 +65,7 @@ create drLocationId latLong updateTime merchantId = do
   dbConf <- getMasterBeamConfig
   void $ L.runDB dbConf $ L.insertRows $ B.insert (BeamCommon.driverLocation BeamCommon.atlasDB) $ B.insertExpressions [BeamDL.toRowExpression (getId drLocationId) latLong updateTime now (getId merchantId)]
 
-findById :: L.MonadFlow m => Id Person -> m (Maybe DriverLocation)
+findById :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe DriverLocation)
 findById (Id driverLocationId) = do
   dbConf <- getMasterBeamConfig
   geoms <-
@@ -74,7 +75,9 @@ findById (Id driverLocationId) = do
           B.limit_ 1 $
             B.filter_' (\BeamDL.DriverLocationT {..} -> driverId B.==?. B.val_ driverLocationId) $
               B.all_ (BeamCommon.driverLocation BeamCommon.atlasDB)
-  pure (either (const Nothing) (transformBeamDriverLocationToDomain <$>) geoms)
+  case geoms of
+    Right (Just geom) -> fromTType' geom
+    _ -> return Nothing
 
 -- findByIdInReplica ::
 --   (Esq.Transactionable m, EsqLocRepDBFlow m r) =>
@@ -82,7 +85,7 @@ findById (Id driverLocationId) = do
 --   m (Maybe DriverLocation)
 -- findByIdInReplica id = Esq.runInLocReplica $ Esq.findById id
 
-upsertGpsCoord :: (L.MonadFlow m, MonadTime m) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m DriverLocation
+upsertGpsCoord :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> LatLong -> UTCTime -> Id Merchant -> m DriverLocation
 upsertGpsCoord drLocationId latLong calculationTime merchantId' = do
   now <- getCurrentTime
   res <- findById drLocationId
@@ -130,7 +133,7 @@ deleteById (Id driverId') = do
         )
 
 getDriverLocsFromMerchId ::
-  (L.MonadFlow m, MonadTime m) =>
+  (L.MonadFlow m, MonadTime m, Log m) =>
   Maybe Seconds ->
   LatLong ->
   Int ->
@@ -152,13 +155,13 @@ getDriverLocsFromMerchId mbDriverPositionInfoExpiry gps radiusMeters merchantId'
                     B.&&?. buildRadiusWithin'' (gps.lat, gps.lon) radiusMeters
               )
               $ B.all_ (BeamCommon.driverLocation BeamCommon.atlasDB)
-  pure (either (const []) (transformBeamDriverLocationToDomain <$>) dlocs)
+  catMaybes <$> mapM fromTType' (fromRight [] dlocs)
 
 byDist :: (Double, Double) -> BQ.QGenExpr context Postgres s Double
 byDist (lat, lon) = BQ.QExpr (\_ -> PgExpressionSyntax (emit $ "point <-> 'SRID=4326;POINT(" <> show lon <> " " <> show lat <> ")'"))
 
 findAllDriverLocations ::
-  (L.MonadFlow m, MonadTime m) =>
+  (L.MonadFlow m, MonadTime m, Log m) =>
   [Id Person] ->
   Maybe Seconds ->
   UTCTime ->
@@ -175,10 +178,10 @@ findAllDriverLocations driverIds mbDriverPositionInfoExpiry now = do
                 (B.sqlBool_ (B.val_ (Mb.isNothing mbDriverPositionInfoExpiry)) B.||?. B.sqlBool_ (coordinatesCalculatedAt B.>=. B.val_ (addUTCTime (fromIntegral (-1 * expTime)) now))) B.&&?. B.sqlBool_ (driverId `B.in_` (B.val_ . getId <$> driverIds))
             )
             $ B.all_ (BeamCommon.driverLocation BeamCommon.atlasDB)
-  pure (either (const []) (transformBeamDriverLocationToDomain <$>) geoms)
+  catMaybes <$> mapM fromTType' (fromRight [] geoms)
 
 getDriverLocations ::
-  (L.MonadFlow m, MonadTime m) =>
+  (L.MonadFlow m, MonadTime m, Log m) =>
   UTCTime ->
   m [DriverLocation]
 getDriverLocations before = do
@@ -192,10 +195,10 @@ getDriverLocations before = do
                 B.sqlBool_ (updatedAt B.<. B.val_ before)
             )
             $ B.all_ (BeamCommon.driverLocation BeamCommon.atlasDB)
-  pure (either (const []) (transformBeamDriverLocationToDomain <$>) geoms)
+  catMaybes <$> mapM fromTType' (fromRight [] geoms)
 
 getDriverLocs ::
-  L.MonadFlow m =>
+  (L.MonadFlow m, Log m) =>
   [Id Person] ->
   Id Merchant ->
   m [DriverLocation]
@@ -211,28 +214,18 @@ getDriverLocs driverIds (Id merchId) = do
                   B.&&?. B.sqlBool_ (merchantId B.==. B.val_ merchId)
             )
             $ B.all_ (BeamCommon.driverLocation BeamCommon.atlasDB)
-  pure (either (const []) (transformBeamDriverLocationToDomain <$>) geoms)
+  catMaybes <$> mapM fromTType' (fromRight [] geoms)
 
-transformBeamDriverLocationToDomain :: BeamDL.DriverLocation -> DriverLocation
-transformBeamDriverLocationToDomain BeamDL.DriverLocationT {..} = do
-  DriverLocation
-    { driverId = Id driverId,
-      lat = lat,
-      lon = lon,
-      coordinatesCalculatedAt = coordinatesCalculatedAt,
-      createdAt = createdAt,
-      updatedAt = updatedAt,
-      merchantId = Id merchantId
-    }
-
--- transformDomainDriverLocationToBeam :: DriverLocation -> BeamDL.DriverLocation
--- transformDomainDriverLocationToBeam DriverLocation {..} =
---   BeamDL.defaultDriverLocation
---     { BeamDL.driverId = getId driverId,
---       BeamDL.lat = lat,
---       BeamDL.lon = lon,
---       BeamDL.point = getPoint (lat, lon),
---       BeamDL.coordinatesCalculatedAt = coordinatesCalculatedAt,
---       BeamDL.createdAt = createdAt,
---       BeamDL.updatedAt = updatedAt
---     }
+instance FromTType' BeamDL.DriverLocation DriverLocation where
+  fromTType' BeamDL.DriverLocationT {..} = do
+    pure $
+      Just
+        DriverLocation
+          { driverId = Id driverId,
+            lat = lat,
+            lon = lon,
+            coordinatesCalculatedAt = coordinatesCalculatedAt,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            merchantId = Id merchantId
+          }

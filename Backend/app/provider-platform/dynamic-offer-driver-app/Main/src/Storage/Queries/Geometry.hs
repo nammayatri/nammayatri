@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -15,18 +16,23 @@
 
 module Storage.Queries.Geometry where
 
-import qualified Database.Beam as B
 -- import Database.Beam.Postgres
 -- import qualified Database.Beam.Schema.Tables as B
-import Domain.Types.Geometry
+
 -- import EulerHS.KVConnector.Utils (meshModelTableEntity)
+
+-- import Sequelize
+
+import Data.Either
+import qualified Database.Beam as B
+import Domain.Types.Geometry
 import qualified EulerHS.Language as L
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Types.Logging
 import Lib.Utils
 import qualified Storage.Beam.Common as BeamCommon
--- import Sequelize
 import qualified Storage.Beam.Geometry as BeamG
 
 -- data AtlasDB f = AtlasDB
@@ -57,28 +63,22 @@ import qualified Storage.Beam.Geometry as BeamG
 --         -- containsPoint (gps.lon, gps.lat)
 --     return geometry
 
-findGeometriesContaining :: forall m. (L.MonadFlow m) => LatLong -> [Text] -> m [Geometry]
+findGeometriesContaining :: forall m. (L.MonadFlow m, Log m) => LatLong -> [Text] -> m [Geometry]
 findGeometriesContaining gps regions = do
   dbConf <- getMasterBeamConfig
   geoms <- L.runDB dbConf $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lon, gps.lat) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
-  -- geoms <- L.runDB c $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (geometry atlasDB)
-  pure (either (const []) (transformBeamGeometryToDomain <$>) geoms)
+  catMaybes <$> mapM fromTType' (fromRight [] geoms)
 
-someGeometriesContain :: forall m. (L.MonadFlow m) => LatLong -> [Text] -> m Bool
+someGeometriesContain :: forall m. (L.MonadFlow m, Log m) => LatLong -> [Text] -> m Bool
 someGeometriesContain gps regions = do
   geometries <- findGeometriesContaining gps regions
   pure $ not $ null geometries
 
-transformBeamGeometryToDomain :: BeamG.Geometry -> Geometry
-transformBeamGeometryToDomain BeamG.GeometryT {..} = do
-  Geometry
-    { id = Id id,
-      region = region
-    }
-
-transformDomainGeometryToBeam :: Geometry -> BeamG.Geometry
-transformDomainGeometryToBeam Geometry {..} =
-  BeamG.GeometryT
-    { BeamG.id = getId id,
-      BeamG.region = region
-    }
+instance FromTType' BeamG.Geometry Geometry where
+  fromTType' BeamG.GeometryT {..} = do
+    pure $
+      Just
+        Geometry
+          { id = Id id,
+            region = region
+          }
