@@ -1,6 +1,7 @@
 module Components.PaymentHistoryModel.View where
 
 import Prelude
+
 import Animation (translateInXAnim, translateInXForwardAnim)
 import Animation.Config (animConfig, translateYAnimConfig)
 import Common.Types.App (LazyCheck(..))
@@ -11,6 +12,7 @@ import Components.PaymentHistoryModel.Controller (Action(..))
 import Data.Array (length)
 import Effect (Effect)
 import Font.Style as FontStyle
+import Helpers.Utils (getAssetStoreLink)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, height, imageView, imageWithFallback, linearLayout, margin, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textView, visibility, weight, width)
@@ -117,7 +119,7 @@ errorModalConfig :: PaymentHistoryModelState -> ErrorModal.Config
 errorModalConfig state =
   ErrorModal.config
     { imageConfig
-      { imageUrl = "ny_ic_no_past_rides,ny_ic_no_past_rides.png"
+      { imageUrl = "ny_ic_no_payments," <> getAssetStoreLink FunctionCall <> "ny_ic_no_past_rides.png"
       , height = V 110
       , width = V 124
       , margin = (MarginBottom 61)
