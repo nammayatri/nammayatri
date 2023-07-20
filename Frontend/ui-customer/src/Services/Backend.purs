@@ -245,10 +245,10 @@ verifyToken payload token = do
     where
         unwrapResponse (x) = x
 
-makeVerifyOTPReq :: String -> VerifyTokenReq
-makeVerifyOTPReq otp = VerifyTokenReq {
+makeVerifyOTPReq :: String -> String -> VerifyTokenReq
+makeVerifyOTPReq otp defaultId = VerifyTokenReq {
       "otp": otp,
-      "deviceToken": if getValueToLocalNativeStore FCM_TOKEN == "__failed" then "generated_xxxx_xxxx_xxxx" else (getValueToLocalNativeStore FCM_TOKEN),
+      "deviceToken": if getValueToLocalNativeStore FCM_TOKEN == "__failed" then defaultId else (getValueToLocalNativeStore FCM_TOKEN),
       "whatsappNotificationEnroll": OPT_IN
     }
 
