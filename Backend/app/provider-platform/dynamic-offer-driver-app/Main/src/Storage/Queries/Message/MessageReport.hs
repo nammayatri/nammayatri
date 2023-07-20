@@ -29,7 +29,6 @@ import qualified Domain.Types.Message.MessageTranslation as MTD
 import qualified Domain.Types.Person as P
 import EulerHS.KVConnector.Utils (meshModelTableEntity)
 import qualified EulerHS.Language as L
-import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Types.Common (MonadTime (getCurrentTime))
@@ -41,9 +40,13 @@ import Lib.Utils
     createWithKV,
     deleteWithKV,
     findAllWithKV,
+    findAllWithKvInReplica,
     findAllWithOptionsKV,
+    findAllWithOptionsKvInReplica,
     findOneWithKV,
+    findOneWithKvInReplica,
     getMasterBeamConfig,
+    getReplicaBeamConfig,
     updateWithKV,
   )
 import Sequelize
@@ -98,8 +101,14 @@ create = createWithKV
 findAllMessageWithSeConditionCreatedAtdesc :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamM.MessageT] -> m [Message]
 findAllMessageWithSeConditionCreatedAtdesc conditions = findAllWithOptionsKV conditions (Se.Desc BeamM.createdAt) Nothing Nothing
 
+findAllMessageWithSeConditionCreatedAtdescInReplica :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamM.MessageT] -> m [Message]
+findAllMessageWithSeConditionCreatedAtdescInReplica conditions = findAllWithOptionsKvInReplica conditions (Se.Desc BeamM.createdAt) Nothing Nothing
+
 findAllMessageTranslationWithSeConditionCreatedAtdesc :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamMT.MessageTranslationT] -> m [MTD.MessageTranslation]
 findAllMessageTranslationWithSeConditionCreatedAtdesc conditions = findAllWithOptionsKV conditions (Se.Desc BeamMT.createdAt) Nothing Nothing
+
+findAllMessageTranslationWithSeConditionCreatedAtdescInReplica :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamMT.MessageTranslationT] -> m [MTD.MessageTranslation]
+findAllMessageTranslationWithSeConditionCreatedAtdescInReplica conditions = findAllWithOptionsKvInReplica conditions (Se.Desc BeamMT.createdAt) Nothing Nothing
 
 findAllMessageReportWithSeCondition :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamMR.MessageReportT] -> m [MessageReport]
 findAllMessageReportWithSeCondition = findAllWithKV
@@ -146,6 +155,9 @@ findAllMessageReportWithSeCondition = findAllWithKV
 
 --     messageTranslationMap messageTranslations = Map.toList $ Map.fromList [(mt.messageId, mt) | mt <- messageTranslations]
 
+findAllMessageReportWithSeConditionInReplica :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamMR.MessageReportT] -> m [MessageReport]
+findAllMessageReportWithSeConditionInReplica = findAllWithKvInReplica
+
 findByDriverIdAndLanguage :: (L.MonadFlow m, Log m) => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
 findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
   let limitVal = fromMaybe 10 mbLimit `min` 10
@@ -181,26 +193,107 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
     messageTranslationMap :: [MTD.MessageTranslation] -> Map.Map (Id Message) MTD.MessageTranslation
     messageTranslationMap messageTranslations = Map.fromList [(mt.messageId, mt) | mt <- messageTranslations]
 
+findByDriverIdAndLanguageInReplica :: (L.MonadFlow m, Log m) => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
+findByDriverIdAndLanguageInReplica driverId language mbLimit mbOffset = do
+  let limitVal = min (fromMaybe 10 mbLimit) 10
+      offsetVal = fromMaybe 0 mbOffset
+  messageReport <- findAllMessageReportWithSeConditionInReplica [Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]
+  message <- findAllMessageWithSeConditionCreatedAtdescInReplica [Se.Is BeamM.id $ Se.In $ getId . DTMR.messageId <$> messageReport]
+  let rawMessageFromMessage Message {..} =
+        RawMessage
+          { id = id,
+            _type = _type,
+            title = title,
+            description = description,
+            shortDescription = shortDescription,
+            label = label,
+            likeCount = likeCount,
+            viewCount = viewCount,
+            mediaFiles = mediaFiles,
+            merchantId = merchantId,
+            createdAt = createdAt
+          }
+  let mtSeCondition =
+        [ Se.And
+            [Se.Is BeamMT.messageId $ Se.In $ getId . Msg.id <$> message, Se.Is BeamMT.language $ Se.Eq language]
+        ]
+  messageTranslation <- findAllMessageTranslationWithSeConditionCreatedAtdescInReplica mtSeCondition
+
+  let messageReportAndMessage = [(mr, msg) | mr <- messageReport, msg <- message, mr.messageId == msg.id]
+      messageTranslationM = messageTranslationMap messageTranslation
+      finalResult' = [(mr, rawMessageFromMessage msg, Map.lookup msg.id messageTranslationM) | (mr, msg) <- messageReportAndMessage]
+
+  pure $ take limitVal (drop offsetVal finalResult')
+  where
+    messageTranslationMap :: [MTD.MessageTranslation] -> Map.Map (Id Message) MTD.MessageTranslation
+    messageTranslationMap messageTranslations = Map.fromList [(mt.messageId, mt) | mt <- messageTranslations]
+
+-- findByDriverIdAndLanguageInReplica :: (L.MonadFlow m, Log m) => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
+-- findByDriverIdAndLanguageInReplica driverId language mbLimit mbOffset = do
+--   let limitVal = min (fromMaybe 10 mbLimit) 10
+--       offsetVal = fromMaybe 0 mbOffset
+--   messageReport <- findAllMessageReportWithSeConditionInReplica [Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]
+--   message <- findAllMessageWithSeConditionCreatedAtdescInReplica [Se.Is BeamM.id $ Se.In $ getId . DTMR.messageId <$> messageReport]
+--   let rawMessageFromMessage Message {..} =
+--         RawMessage
+--           { id = id,
+--             _type = _type,
+--             title = title,
+--             description = description,
+--             shortDescription = shortDescription,
+--             label = label,
+--             likeCount = likeCount,
+--             viewCount = viewCount,
+--             mediaFiles = mediaFiles,
+--             merchantId = merchantId,
+--             createdAt = createdAt
+--           }
+--   let mtSeCondition =
+--         [ Se.And
+--             [Se.Is BeamMT.messageId $ Se.In $ getId . Msg.id <$> message, Se.Is BeamMT.language $ Se.Eq language]
+--         ]
+--   messageTranslation <- findAllMessageTranslationWithSeConditionCreatedAtdescInReplica mtSeCondition
+
+--   let messageReportAndMessage = foldl' (getMessageReportAndMessage messageReport) [] message
+--   let finalResult' = foldl' (getMessageTranslationAndMessage messageTranslation rawMessageFromMessage) [] messageReportAndMessage
+--   let finalResult = map (\(mr, rm, mt) -> (mr, rm, Just mt)) finalResult'
+--   pure $ take limitVal (drop offsetVal finalResult)
+--   where
+--     getMessageReportAndMessage messageReports acc message' =
+--       let messageeReports' = filter (\messageReport -> messageReport.messageId == message'.id) messageReports
+--        in acc <> ((\messageReport' -> (messageReport', message')) <$> messageeReports')
+
+--     getMessageTranslationAndMessage messageTranslations rawMessageFromMessage acc (msgRep, msg) =
+--       let messageTranslations' = filter (\messageTranslation' -> messageTranslation'.messageId == msg.id) messageTranslations
+--        in acc <> ((\messageTranslation' -> (msgRep, rawMessageFromMessage msg, messageTranslation')) <$> messageTranslations')
+
 findByDriverIdMessageIdAndLanguage :: (L.MonadFlow m, Log m) => Id P.Driver -> Id Msg.Message -> Language -> m (Maybe (MessageReport, RawMessage, Maybe MTD.MessageTranslation))
 findByDriverIdMessageIdAndLanguage driverId messageId language = do
-  dbConf <- L.getOption KBT.PsqlDbCfg
-  case dbConf of
-    Just _ -> do
-      messageReport <- findByMessageIdAndDriverId messageId driverId
-      case messageReport of
-        Just report -> do
-          rawMessage <- QMM.findById messageId
-          case rawMessage of
-            Just message -> do
-              messageTranslation <- QMMT.findByMessageIdAndLanguage messageId language
-              pure $ Just (report, message, messageTranslation)
-            Nothing -> pure Nothing
-        Nothing -> pure Nothing
-    Nothing -> pure Nothing
+  maybeMessageReport <- findByMessageIdAndDriverId messageId driverId
+  maybeRawMessage <- QMM.findById messageId
+  maybeMessageTranslation <- QMMT.findByMessageIdAndLanguage messageId language
+  case (maybeMessageReport, maybeRawMessage) of
+    (Just messageReport, Just rawMessage) ->
+      pure $ Just (messageReport, rawMessage, maybeMessageTranslation)
+    _ ->
+      pure Nothing
+
+findByDriverIdMessageIdAndLanguageInReplica :: (L.MonadFlow m, Log m) => Id P.Driver -> Id Msg.Message -> Language -> m (Maybe (MessageReport, RawMessage, Maybe MTD.MessageTranslation))
+findByDriverIdMessageIdAndLanguageInReplica driverId messageId language = do
+  maybeMessageReport <- findByMessageIdAndDriverIdInReplica messageId driverId
+  maybeRawMessage <- QMM.findByIdInReplica messageId
+  maybeMessageTranslation <- QMMT.findByMessageIdAndLanguageInReplica messageId language
+  case (maybeMessageReport, maybeRawMessage) of
+    (Just messageReport, Just rawMessage) ->
+      pure $ Just (messageReport, rawMessage, maybeMessageTranslation)
+    _ ->
+      pure Nothing
 
 findByMessageIdAndDriverId :: (L.MonadFlow m, Log m) => Id Msg.Message -> Id P.Driver -> m (Maybe MessageReport)
-findByMessageIdAndDriverId (Id messageId) (Id driverId) = do
-  findOneWithKV [Se.And [Se.Is BeamMR.messageId $ Se.Eq messageId, Se.Is BeamMR.driverId $ Se.Eq driverId]]
+findByMessageIdAndDriverId (Id messageId) (Id driverId) = findOneWithKV [Se.And [Se.Is BeamMR.messageId $ Se.Eq messageId, Se.Is BeamMR.driverId $ Se.Eq driverId]]
+
+findByMessageIdAndDriverIdInReplica :: (L.MonadFlow m, Log m) => Id Msg.Message -> Id P.Driver -> m (Maybe MessageReport)
+findByMessageIdAndDriverIdInReplica (Id messageId) (Id driverId) = findOneWithKvInReplica [Se.And [Se.Is BeamMR.messageId $ Se.Eq messageId, Se.Is BeamMR.driverId $ Se.Eq driverId]]
 
 findByMessageIdAndStatusWithLimitAndOffset ::
   (L.MonadFlow m, Log m) =>
@@ -236,6 +329,40 @@ findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset (Id messageID) mbDel
       let messageReports' = filter (\messageReport -> getId messageReport.driverId == getId person'.id) messageReports
        in acc <> ((\messageReport -> (messageReport, person')) <$> messageReports')
 
+findByMessageIdAndStatusWithLimitAndOffsetInReplica ::
+  (L.MonadFlow m, Log m) =>
+  Maybe Int ->
+  Maybe Int ->
+  Id Msg.Message ->
+  Maybe DeliveryStatus ->
+  m [(MessageReport, P.Person)]
+findByMessageIdAndStatusWithLimitAndOffsetInReplica mbLimit mbOffset (Id messageID) mbDeliveryStatus = do
+  let limitVal = min (maybe 10 fromIntegral mbLimit) 20
+      offsetVal = maybe 0 fromIntegral mbOffset
+  messageReport <-
+    findAllWithOptionsKvInReplica
+      [ Se.And
+          ( [Se.Is BeamMR.messageId $ Se.Eq messageID]
+              <> ([Se.Is BeamMR.deliveryStatus $ Se.Eq (fromJust mbDeliveryStatus) | isJust mbDeliveryStatus])
+          )
+      ]
+      (Se.Desc BeamMR.createdAt)
+      Nothing
+      Nothing
+  person <-
+    findAllWithOptionsKvInReplica
+      [Se.Is BeamP.id $ Se.In $ getId . DTMR.driverId <$> messageReport]
+      (Se.Desc BeamP.createdAt)
+      Nothing
+      Nothing
+
+  let messageOfPerson = foldl' (getMessageOfPerson messageReport) [] person
+  pure $ take limitVal (drop offsetVal messageOfPerson)
+  where
+    getMessageOfPerson messageReports acc person' =
+      let messageReports' = filter (\messageReport -> getId messageReport.driverId == getId person'.id) messageReports
+       in acc <> ((\messageReport -> (messageReport, person')) <$> messageReports')
+
 getMessageCountByStatus :: L.MonadFlow m => Id Msg.Message -> DeliveryStatus -> m Int
 getMessageCountByStatus (Id messageID) status = do
   dbConf <- getMasterBeamConfig
@@ -248,9 +375,33 @@ getMessageCountByStatus (Id messageID) status = do
               B.all_ (meshModelTableEntity @BeamMR.MessageReportT @Postgres @(DatabaseWith BeamMR.MessageReportT))
   pure (either (const 0) (fromMaybe 0) resp)
 
+getMessageCountStatusInReplica :: L.MonadFlow m => Id Msg.Message -> DeliveryStatus -> m Int
+getMessageCountStatusInReplica (Id messageID) status = do
+  dbConf <- getReplicaBeamConfig
+  resp <-
+    L.runDB dbConf $
+      L.findRow $
+        B.select $
+          B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+            B.filter_' (\(BeamMR.MessageReportT {..}) -> messageId B.==?. B.val_ messageID B.&&?. (deliveryStatus B.==?. B.val_ status)) $
+              B.all_ (meshModelTableEntity @BeamMR.MessageReportT @Postgres @(DatabaseWith BeamMR.MessageReportT))
+  pure (either (const 0) (fromMaybe 0) resp)
+
 getMessageCountByReadStatus :: L.MonadFlow m => Id Msg.Message -> m Int
 getMessageCountByReadStatus (Id messageID) = do
   dbConf <- getMasterBeamConfig
+  resp <-
+    L.runDB dbConf $
+      L.findRow $
+        B.select $
+          B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+            B.filter_' (\(BeamMR.MessageReportT {..}) -> messageId B.==?. B.val_ messageID B.&&?. readStatus B.==?. B.val_ True) $
+              B.all_ (meshModelTableEntity @BeamMR.MessageReportT @Postgres @(DatabaseWith BeamMR.MessageReportT))
+  pure (either (const 0) (fromMaybe 0) resp)
+
+getMessageCountByReadStatusInReplica :: L.MonadFlow m => Id Msg.Message -> m Int
+getMessageCountByReadStatusInReplica (Id messageID) = do
+  dbConf <- getReplicaBeamConfig
   resp <-
     L.runDB dbConf $
       L.findRow $

@@ -23,7 +23,7 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithOptionsKV, findOneWithKV, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithOptionsKV, findOneWithKV, findOneWithKvInReplica, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Message.Message as BeamM
 import qualified Storage.Queries.Message.MessageTranslation as MT
@@ -41,6 +41,27 @@ create = createWithKV
 findById :: (L.MonadFlow m, Log m) => Id Message -> m (Maybe RawMessage)
 findById (Id messageId) = do
   message <- findOneWithKV [Se.Is BeamM.id $ Se.Eq messageId]
+  pure $
+    ( \Message {..} ->
+        RawMessage
+          { id = id,
+            _type = _type,
+            title = title,
+            description = description,
+            shortDescription = shortDescription,
+            label = label,
+            likeCount = likeCount,
+            viewCount = viewCount,
+            mediaFiles = mediaFiles,
+            merchantId = merchantId,
+            createdAt = createdAt
+          }
+    )
+      <$> message
+
+findByIdInReplica :: (L.MonadFlow m, Log m) => Id Message -> m (Maybe RawMessage)
+findByIdInReplica (Id messageId) = do
+  message <- findOneWithKvInReplica [Se.Is BeamM.id $ Se.Eq messageId]
   pure $
     ( \Message {..} ->
         RawMessage

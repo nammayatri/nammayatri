@@ -8,7 +8,7 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV, findOneWithKvInReplica)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverReferral as BeamDR
 
@@ -27,6 +27,12 @@ findByRefferalCode ::
   m (Maybe DriverReferral)
 findByRefferalCode (Id referralId) = findOneWithKV [Se.Is BeamDR.referralCode $ Se.Eq referralId]
 
+findByRefferalCodeInReplica ::
+  (L.MonadFlow m, Log m) =>
+  Id DriverReferral ->
+  m (Maybe DriverReferral)
+findByRefferalCodeInReplica (Id referralId) = findOneWithKvInReplica [Se.Is BeamDR.referralCode $ Se.Eq referralId]
+
 -- findById ::
 --   Transactionable m =>
 --   Id SP.Person ->
@@ -42,6 +48,12 @@ findById ::
   Id SP.Person ->
   m (Maybe DriverReferral)
 findById (Id driverId) = findOneWithKV [Se.Is BeamDR.driverId $ Se.Eq driverId]
+
+findByIdInReplica ::
+  (L.MonadFlow m, Log m) =>
+  Id SP.Person ->
+  m (Maybe DriverReferral)
+findByIdInReplica (Id driverId) = findOneWithKvInReplica [Se.Is BeamDR.driverId $ Se.Eq driverId]
 
 instance FromTType' BeamDR.DriverReferral DriverReferral where
   fromTType' BeamDR.DriverReferralT {..} = do

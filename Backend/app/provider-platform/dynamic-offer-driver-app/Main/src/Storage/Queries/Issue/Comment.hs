@@ -8,7 +8,7 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithOptionsKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithOptionsKV, findAllWithOptionsKvInReplica)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Issue.Comment as BeamC
 
@@ -27,6 +27,9 @@ create = createWithKV
 
 findAllByIssueReportId :: (L.MonadFlow m, Log m) => Id IssueReport -> m [Comment]
 findAllByIssueReportId (Id issueReportId) = findAllWithOptionsKV [Se.Is BeamC.issueReportId $ Se.Eq issueReportId] (Se.Desc BeamC.createdAt) Nothing Nothing
+
+findAllByIssueReportIdInReplica :: (L.MonadFlow m, Log m) => Id IssueReport -> m [Comment]
+findAllByIssueReportIdInReplica (Id issueReportId) = findAllWithOptionsKvInReplica [Se.Is BeamC.issueReportId $ Se.Eq issueReportId] (Se.Desc BeamC.createdAt) Nothing Nothing
 
 instance FromTType' BeamC.Comment Comment where
   fromTType' BeamC.CommentT {..} = do

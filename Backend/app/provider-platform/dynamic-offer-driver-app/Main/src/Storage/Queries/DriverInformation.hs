@@ -337,6 +337,27 @@ countDrivers merchantID =
     func (active, inactive) (activity, counter) =
       if activity then (active + counter, inactive) else (active, inactive + counter)
 
+countDriversInReplica :: (L.MonadFlow m, Log m) => Id Merchant -> m (Int, Int)
+countDriversInReplica merchantID =
+  getResults <$> do
+    dbConf <- getReplicaBeamConfig
+    res <- L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.aggregate_ (\(driverInformation, _) -> (B.group_ (BeamDI.active driverInformation), B.as_ @Int B.countAll_)) $
+            B.filter_' (\(_, BeamP.PersonT {..}) -> merchantId B.==?. B.val_ (getId merchantID)) $
+              do
+                driverInformation <- B.all_ (meshModelTableEntity @BeamDI.DriverInformationT @Postgres @(DatabaseWith2 BeamDI.DriverInformationT BeamP.PersonT))
+                person <- B.join_' (meshModelTableEntity @BeamP.PersonT @Postgres @(DatabaseWith2 BeamDI.DriverInformationT BeamP.PersonT)) (\person -> BeamP.id person B.==?. BeamDI.driverId driverInformation)
+                pure (driverInformation, person)
+    pure (either (const []) Prelude.id res)
+  where
+    getResults :: [(Bool, Int)] -> (Int, Int)
+    getResults = foldl func (0, 0)
+
+    func (active, inactive) (activity, counter) =
+      if activity then (active + counter, inactive) else (active, inactive + counter)
+
 updateDowngradingOptions :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Bool -> Bool -> Bool -> m ()
 updateDowngradingOptions (Id driverId) canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi = do
   now <- getCurrentTime

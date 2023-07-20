@@ -21,7 +21,7 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithKvInReplica, findOneWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.MediaFile as BeamMF
 
@@ -33,6 +33,9 @@ findById (Id mediaFileId) = findOneWithKV [Se.Is BeamMF.id $ Se.Eq mediaFileId]
 
 findAllIn :: (L.MonadFlow m, Log m) => [Id MediaFile] -> m [MediaFile]
 findAllIn mfList = findAllWithKV [Se.Is BeamMF.id $ Se.In $ getId <$> mfList]
+
+findAllInInReplica :: (L.MonadFlow m, Log m) => [Id MediaFile] -> m [MediaFile]
+findAllInInReplica mfList = findAllWithKvInReplica [Se.Is BeamMF.id $ Se.In $ getId <$> mfList]
 
 instance FromTType' BeamMF.MediaFile MediaFile where
   fromTType' BeamMF.MediaFileT {..} = do

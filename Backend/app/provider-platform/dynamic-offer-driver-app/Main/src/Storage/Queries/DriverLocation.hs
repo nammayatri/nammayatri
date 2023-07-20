@@ -34,7 +34,7 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Lib.Utils (FromTType' (fromTType'), buildRadiusWithin'', getMasterBeamConfig)
+import Lib.Utils (FromTType' (fromTType'), buildRadiusWithin'', getMasterBeamConfig, getReplicaBeamConfig)
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverLocation as BeamDL
 
@@ -143,6 +143,31 @@ getDriverLocsFromMerchId mbDriverPositionInfoExpiry gps radiusMeters merchantId'
   let expTime = maybe 0 getSeconds mbDriverPositionInfoExpiry
   now <- getCurrentTime
   dbConf <- getMasterBeamConfig
+  dlocs <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.orderBy_ (\_ -> B.asc_ (byDist (gps.lat, gps.lon))) $
+            B.filter_'
+              ( \BeamDL.DriverLocationT {..} ->
+                  merchantId B.==?. B.val_ (getId merchantId')
+                    B.&&?. (B.sqlBool_ (B.val_ (Mb.isNothing mbDriverPositionInfoExpiry)) B.||?. B.sqlBool_ (coordinatesCalculatedAt B.>=. B.val_ (addUTCTime (fromIntegral (-1 * expTime)) now)))
+                    B.&&?. buildRadiusWithin'' (gps.lat, gps.lon) radiusMeters
+              )
+              $ B.all_ (BeamCommon.driverLocation BeamCommon.atlasDB)
+  catMaybes <$> mapM fromTType' (fromRight [] dlocs)
+
+getDriverLocsFromMerchIdInReplica ::
+  (L.MonadFlow m, MonadTime m, Log m) =>
+  Maybe Seconds ->
+  LatLong ->
+  Int ->
+  Id Merchant ->
+  m [DriverLocation]
+getDriverLocsFromMerchIdInReplica mbDriverPositionInfoExpiry gps radiusMeters merchantId' = do
+  let expTime = maybe 0 getSeconds mbDriverPositionInfoExpiry
+  now <- getCurrentTime
+  dbConf <- getReplicaBeamConfig
   dlocs <-
     L.runDB dbConf $
       L.findRows $

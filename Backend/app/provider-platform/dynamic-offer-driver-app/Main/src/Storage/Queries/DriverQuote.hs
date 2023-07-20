@@ -26,7 +26,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (addUTCTime, secondsToNominalDiffTime)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findOneWithKV, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findAllWithKvInReplica, findOneWithKV, findOneWithKvInReplica, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverQuote as BeamDQ
 import Storage.Queries.FareParameters as BeamQFP
@@ -59,6 +59,9 @@ create dQuote = SQFP.create dQuote.fareParams >> createWithKV dQuote
 findById :: (L.MonadFlow m, Log m) => Id Domain.DriverQuote -> m (Maybe Domain.DriverQuote)
 findById (Id driverQuoteId) = findOneWithKV [Se.Is BeamDQ.id $ Se.Eq driverQuoteId]
 
+findByIdInReplica :: (L.MonadFlow m, Log m) => Id Domain.DriverQuote -> m (Maybe Domain.DriverQuote)
+findByIdInReplica (Id driverQuoteId) = findOneWithKvInReplica [Se.Is BeamDQ.id $ Se.Eq driverQuoteId]
+
 setInactiveBySTId :: (L.MonadFlow m, Log m) => Id DST.SearchTry -> m ()
 setInactiveBySTId (Id searchTryId) = updateWithKV [Se.Set BeamDQ.status Domain.Inactive] [Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId]
 
@@ -86,8 +89,10 @@ findAllBySTId :: (L.MonadFlow m, Log m) => Id DST.SearchTry -> m [Domain.DriverQ
 findAllBySTId (Id searchTryId) = findAllWithKV [Se.And [Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId, Se.Is BeamDQ.status $ Se.Eq Domain.Active]]
 
 countAllBySTId :: (L.MonadFlow m, Log m) => Id DST.SearchTry -> m Int
-countAllBySTId searchTId = do
-  findAllWithKV [Se.And [Se.Is BeamDQ.searchTryId $ Se.Eq (getId searchTId)]] <&> length
+countAllBySTId searchTId = findAllWithKV [Se.And [Se.Is BeamDQ.searchTryId $ Se.Eq (getId searchTId)]] <&> length
+
+countAllBySTIdInReplica :: (L.MonadFlow m, Log m) => Id DST.SearchTry -> m Int
+countAllBySTIdInReplica searchTId = findAllWithKvInReplica [Se.And [Se.Is BeamDQ.searchTryId $ Se.Eq (getId searchTId)]] <&> length
 
 instance FromTType' BeamDQ.DriverQuote DriverQuote where
   fromTType' BeamDQ.DriverQuoteT {..} = do

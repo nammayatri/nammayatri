@@ -29,7 +29,9 @@ import Lib.Utils
     findAllWithKV,
     findAllWithOptionsKV,
     findOneWithKV,
+    findOneWithKvInReplica,
     updateWithKV,
+    updateWithKvInReplica,
   )
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverStats as BeamDS
@@ -113,6 +115,9 @@ fetchAll = findAllWithKV [Se.Is BeamDS.driverId $ Se.Not $ Se.Eq $ getId ""]
 findById :: (L.MonadFlow m, Log m) => Id Driver -> m (Maybe DriverStats)
 findById (Id driverId) = findOneWithKV [Se.Is BeamDS.driverId $ Se.Eq driverId]
 
+findByIdInReplica :: (L.MonadFlow m, Log m) => Id Driver -> m (Maybe DriverStats)
+findByIdInReplica (Id driverId) = findOneWithKvInReplica [Se.Is BeamDS.driverId $ Se.Eq driverId]
+
 -- deleteById :: Id Driver -> SqlDB ()
 -- deleteById = Esq.deleteByKey @DriverStatsT
 
@@ -171,6 +176,9 @@ incrementTotalRidesAssigned (Id driverId') number = do
 
 setCancelledRidesCount :: (L.MonadFlow m, Log m) => Id Driver -> Int -> m ()
 setCancelledRidesCount (Id driverId') cancelledCount = updateWithKV [Se.Set BeamDS.ridesCancelled (Just cancelledCount)] [Se.Is BeamDS.driverId (Se.Eq driverId')]
+
+setCancelledRidesCountInReplica :: (L.MonadFlow m, Log m) => Id Driver -> Int -> m ()
+setCancelledRidesCountInReplica (Id driverId') cancelledCount = updateWithKvInReplica [Se.Set BeamDS.ridesCancelled (Just cancelledCount)] [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
 -- getDriversSortedOrder :: Transactionable m => Maybe Integer -> m [DriverStats]
 -- getDriversSortedOrder mbLimitVal =

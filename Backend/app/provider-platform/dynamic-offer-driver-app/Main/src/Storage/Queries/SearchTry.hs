@@ -22,7 +22,7 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithOptionsKV, findOneWithKV, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithOptionsKV, findOneWithKV, findOneWithKvInReplica, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchTry as BeamST
 
@@ -31,6 +31,9 @@ create = createWithKV
 
 findById :: (L.MonadFlow m, Log m) => Id SearchTry -> m (Maybe SearchTry)
 findById (Id searchTry) = findOneWithKV [Se.Is BeamST.id $ Se.Eq searchTry]
+
+findByIdInReplica :: (L.MonadFlow m, Log m) => Id SearchTry -> m (Maybe SearchTry)
+findByIdInReplica (Id searchTry) = findOneWithKvInReplica [Se.Is BeamST.id $ Se.Eq searchTry]
 
 findLastByRequestId ::
   (L.MonadFlow m, Log m) =>

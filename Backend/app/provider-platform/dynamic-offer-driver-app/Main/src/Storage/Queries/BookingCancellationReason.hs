@@ -31,7 +31,9 @@ import Lib.Utils
     ToTType' (toTType'),
     createWithKV,
     findAllWithKV,
+    findAllWithKvInReplica,
     findOneWithKV,
+    findOneWithKvInReplica,
     updateWithKV,
   )
 import qualified Sequelize as Se
@@ -58,11 +60,20 @@ create = createWithKV
 findAllCancelledByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m Int
 findAllCancelledByDriverId driverId = findAllWithKV [Se.And [Se.Is BeamBCR.driverId $ Se.Eq (Just $ getId driverId), Se.Is BeamBCR.source $ Se.Eq ByDriver]] <&> length
 
+findAllCancelledByDriverIdInReplica :: (L.MonadFlow m, Log m) => Id Person -> m Int
+findAllCancelledByDriverIdInReplica driverId = findAllWithKvInReplica [Se.And [Se.Is BeamBCR.driverId $ Se.Eq (Just $ getId driverId), Se.Is BeamBCR.source $ Se.Eq ByDriver]] <&> length
+
 findByBookingId :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe BookingCancellationReason)
 findByBookingId (Id bookingId) = findOneWithKV [Se.Is BeamBCR.bookingId $ Se.Eq bookingId]
 
+findByBookingIdInReplica :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe BookingCancellationReason)
+findByBookingIdInReplica (Id bookingId) = findOneWithKvInReplica [Se.Is BeamBCR.bookingId $ Se.Eq bookingId]
+
 findByRideId :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe BookingCancellationReason)
 findByRideId (Id rideId) = findOneWithKV [Se.Is BeamBCR.rideId $ Se.Eq (Just rideId)]
+
+findByRideIdInReplica :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe BookingCancellationReason)
+findByRideIdInReplica (Id rideId) = findOneWithKvInReplica [Se.Is BeamBCR.rideId $ Se.Eq (Just rideId)]
 
 upsert :: (L.MonadFlow m, Log m) => BookingCancellationReason -> m ()
 upsert cancellationReason = do

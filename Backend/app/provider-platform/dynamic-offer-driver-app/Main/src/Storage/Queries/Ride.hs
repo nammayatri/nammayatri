@@ -46,8 +46,11 @@ import Lib.Utils
     ToTType' (toTType'),
     createWithKV,
     findAllWithKV,
+    findAllWithKvInReplica,
     findAllWithOptionsKV,
+    findAllWithOptionsKvInReplica,
     findOneWithKV,
+    findOneWithKvInReplica,
     getMasterBeamConfig,
     updateWithKV,
   )
@@ -74,11 +77,20 @@ create = createWithKV
 findById :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe Ride)
 findById (Id rideId) = findOneWithKV [Se.Is BeamR.id $ Se.Eq rideId]
 
+findByIdInReplica :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe Ride)
+findByIdInReplica (Id rideId) = findOneWithKvInReplica [Se.Is BeamR.id $ Se.Eq rideId]
+
 findAllRidesByDriverId ::
   (L.MonadFlow m, Log m) =>
   Id Person ->
   m [Ride]
 findAllRidesByDriverId (Id driverId) = findAllWithKV [Se.Is BeamR.driverId $ Se.Eq driverId]
+
+findAllRidesByDriverIdInReplica ::
+  (L.MonadFlow m, Log m) =>
+  Id Person ->
+  m [Ride]
+findAllRidesByDriverIdInReplica (Id driverId) = findAllWithKvInReplica [Se.Is BeamR.driverId $ Se.Eq driverId]
 
 findActiveByRBId :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Ride)
 findActiveByRBId (Id rbId) = findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Not $ Se.Eq Ride.CANCELLED]]
@@ -89,8 +101,14 @@ findAllRidesWithSeConditionsCreatedAtDesc conditions = findAllWithOptionsKV cond
 findAllDriverInfromationFromRides :: (L.MonadFlow m, Log m) => [Ride] -> m [DriverInformation]
 findAllDriverInfromationFromRides rides = findAllWithKV [Se.And [Se.Is BeamDI.driverId $ Se.In $ getId . DR.driverId <$> rides]]
 
+findAllDriverInfromationFromRidesInReplica :: (L.MonadFlow m, Log m) => [Ride] -> m [DriverInformation]
+findAllDriverInfromationFromRidesInReplica rides = findAllWithKvInReplica [Se.And [Se.Is BeamDI.driverId $ Se.In $ getId . DR.driverId <$> rides]]
+
 findAllBookingsWithSeConditions :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamB.BookingT] -> m [Booking]
 findAllBookingsWithSeConditions = findAllWithKV
+
+findAllBookingsWithSeConditionsInReplica :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamB.BookingT] -> m [Booking]
+findAllBookingsWithSeConditionsInReplica = findAllWithKvInReplica
 
 findAllBookingsWithSeConditionsCreatedAtDesc :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamB.BookingT] -> m [Booking]
 findAllBookingsWithSeConditionsCreatedAtDesc conditions = findAllWithOptionsKV conditions (Se.Desc BeamB.createdAt) Nothing Nothing
@@ -136,6 +154,37 @@ findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
       Nothing
       Nothing
   bookings <- findAllWithOptionsKV [Se.And [Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <$> rides]] (Se.Desc BeamB.createdAt) Nothing Nothing
+
+  let rideWithBooking = foldl' (getRideWithBooking bookings) [] rides
+  pure $ take limitVal (drop offsetVal rideWithBooking)
+  where
+    getRideWithBooking bookings acc ride =
+      let bookings' = filter (\b -> b.id == ride.bookingId) bookings
+       in acc <> ((\b -> (ride, b)) <$> bookings')
+    minDayTime date = UTCTime (addDays (-1) date) 66600
+    maxDayTime date = UTCTime date 66600
+
+findAllByDriverIdInReplica :: (L.MonadFlow m, Log m) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe Ride.RideStatus -> Maybe Day -> m [(Ride, Booking)]
+findAllByDriverIdInReplica (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = do
+  let limitVal = maybe 10 fromInteger mbLimit
+      offsetVal = maybe 0 fromInteger mbOffset
+      isOnlyActive = Just True == mbOnlyActive
+  rides <-
+    findAllWithOptionsKvInReplica
+      [ Se.And
+          ( [Se.Is BeamR.driverId $ Se.Eq driverId]
+              <> if isOnlyActive
+                then [Se.Is BeamR.status $ Se.Not $ Se.In [Ride.COMPLETED, Ride.CANCELLED]]
+                else
+                  []
+                    <> ([Se.Is BeamR.status $ Se.Eq (fromJust mbRideStatus) | isJust mbRideStatus])
+                    <> ([Se.And [Se.Is BeamR.tripEndTime $ Se.GreaterThanOrEq (Just (minDayTime (fromJust mbDay))), Se.Is BeamR.tripEndTime $ Se.LessThanOrEq (Just (maxDayTime (fromJust mbDay)))] | isJust mbDay])
+          )
+      ]
+      (Se.Desc BeamR.createdAt)
+      Nothing
+      Nothing
+  bookings <- findAllWithOptionsKvInReplica [Se.And [Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <$> rides]] (Se.Desc BeamB.createdAt) Nothing Nothing
 
   let rideWithBooking = foldl' (getRideWithBooking bookings) [] rides
   pure $ take limitVal (drop offsetVal rideWithBooking)
@@ -200,9 +249,19 @@ getInProgressOrNewRideIdAndStatusByDriverId (Id driverId) = do
   let rideData = (,) <$> (DR.id <$> ride') <*> (DR.status <$> ride')
   pure rideData
 
+getInProgressOrNewRideIdAndStatusByDriverIdInReplica :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe (Id Ride, RideStatus))
+getInProgressOrNewRideIdAndStatusByDriverIdInReplica (Id driverId) = do
+  ride' <- findOneWithKvInReplica [Se.And [Se.Is BeamR.driverId $ Se.Eq driverId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]]
+  let rideData = (,) <$> (DR.id <$> ride') <*> (DR.status <$> ride')
+  pure rideData
+
 getActiveByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Ride)
 getActiveByDriverId (Id personId) =
   findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]]
+
+getActiveByDriverIdInReplica :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe Ride)
+getActiveByDriverIdInReplica (Id personId) =
+  findOneWithKvInReplica [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]]
 
 updateStatus :: (L.MonadFlow m, MonadTime m, Log m) => Id Ride -> RideStatus -> m ()
 updateStatus rideId status = do
@@ -279,6 +338,19 @@ getRidesForDate driverId date diffTime = do
   let minDayTime = UTCTime (addDays (-1) date) (86400 - secondsToDiffTime (toInteger diffTime.getSeconds))
   let maxDayTime = UTCTime date (secondsToDiffTime $ toInteger diffTime.getSeconds)
   findAllWithKV
+    [ Se.And
+        [ Se.Is BeamR.driverId $ Se.Eq $ getId driverId,
+          Se.Is BeamR.tripEndTime $ Se.GreaterThanOrEq $ Just minDayTime,
+          Se.Is BeamR.tripEndTime $ Se.LessThan $ Just maxDayTime,
+          Se.Is BeamR.status $ Se.Eq Ride.COMPLETED
+        ]
+    ]
+
+getRidesForDateInReplica :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> Day -> Seconds -> m [Ride]
+getRidesForDateInReplica driverId date diffTime = do
+  let minDayTime = UTCTime (addDays (-1) date) (86400 - secondsToDiffTime (toInteger diffTime.getSeconds))
+  let maxDayTime = UTCTime date (secondsToDiffTime $ toInteger diffTime.getSeconds)
+  findAllWithKvInReplica
     [ Se.And
         [ Se.Is BeamR.driverId $ Se.Eq $ getId driverId,
           Se.Is BeamR.tripEndTime $ Se.GreaterThanOrEq $ Just minDayTime,
@@ -454,6 +526,39 @@ findStuckRideItems (Id merchantId) bookingIds now = do
         ]
   bookings <- findAllBookingsWithSeConditions bookingSeCondition
   driverInfos <- findAllDriverInfromationFromRides rides
+  let rideBooking = foldl' (getRideWithBooking bookings) [] rides
+  let rideBookingDriverInfo = foldl' (getRideWithBookingDriverInfo driverInfos) [] rideBooking
+  pure $ mkStuckRideItem <$> rideBookingDriverInfo
+  where
+    getRideWithBooking bookings acc ride' =
+      let bookings' = filter (\x -> x.id == ride'.bookingId) bookings
+       in acc <> ((\x -> (ride', x.id)) <$> bookings')
+
+    getRideWithBookingDriverInfo driverInfos acc (ride', booking') =
+      let driverInfos' = filter (\x -> x.driverId == ride'.driverId) driverInfos
+       in acc <> ((\x -> (ride'.id, booking', x.driverId, x.active)) <$> driverInfos')
+
+    mkStuckRideItem (rideId, bookingId, driverId, driverActive) = StuckRideItem {..}
+
+findStuckRideItemsInReplica :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
+findStuckRideItemsInReplica (Id merchantId) bookingIds now = do
+  let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
+  rides <-
+    findAllWithKvInReplica
+      [ Se.And
+          [ Se.Is BeamR.status $ Se.Eq Ride.NEW,
+            Se.Is BeamR.createdAt $ Se.LessThanOrEq now6HrBefore
+          ]
+      ]
+  let bookingSeCondition =
+        [ Se.And
+            [ Se.Is BeamB.id $ Se.In $ getId . DR.bookingId <$> rides,
+              Se.Is BeamB.providerId $ Se.Eq merchantId,
+              Se.Is BeamB.id $ Se.In $ getId <$> bookingIds
+            ]
+        ]
+  bookings <- findAllBookingsWithSeConditionsInReplica bookingSeCondition
+  driverInfos <- findAllDriverInfromationFromRidesInReplica rides
   let rideBooking = foldl' (getRideWithBooking bookings) [] rides
   let rideBookingDriverInfo = foldl' (getRideWithBookingDriverInfo driverInfos) [] rideBooking
   pure $ mkStuckRideItem <$> rideBookingDriverInfo

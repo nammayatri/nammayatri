@@ -53,6 +53,9 @@ findById (Id aadhaarVerification) = findOneWithKV [Se.Is BeamAV.id $ Se.Eq aadha
 findByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe AadhaarVerification)
 findByDriverId (Id driverId) = findOneWithKV [Se.Is BeamAV.driverId $ Se.Eq driverId]
 
+findByDriverIdInReplica :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe AadhaarVerification)
+findByDriverIdInReplica (Id driverId) = findOneWithKvInReplica [Se.Is BeamAV.driverId $ Se.Eq driverId]
+
 -- deleteByDriverId :: Id Person -> SqlDB ()
 -- deleteByDriverId driverId =
 --   Esq.delete $ do

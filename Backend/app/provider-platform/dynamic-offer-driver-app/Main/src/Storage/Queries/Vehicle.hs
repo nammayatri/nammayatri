@@ -26,7 +26,17 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findOneWithKV, getMasterBeamConfig, updateWithKV)
+import Lib.Utils
+  ( FromTType' (fromTType'),
+    ToTType' (toTType'),
+    createWithKV,
+    deleteWithKV,
+    findOneWithKV,
+    findOneWithKvInReplica,
+    getMasterBeamConfig,
+    getReplicaBeamConfig,
+    updateWithKV,
+  )
 import Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Vehicle as BeamV
@@ -91,6 +101,19 @@ findByAnyOf registrationNoM vehicleIdM =
         )
     ]
 
+findByAnyOfInReplica :: (L.MonadFlow m, Log m) => Maybe Text -> Maybe (Id Person) -> m (Maybe Vehicle)
+findByAnyOfInReplica registrationNoM vehicleIdM =
+  findOneWithKvInReplica
+    [ Se.And
+        ( []
+            <> if isJust vehicleIdM
+              then [Se.Is BeamV.driverId $ Se.Eq (getId (fromJust vehicleIdM))]
+              else
+                []
+                  <> ([Se.Is BeamV.registrationNo $ Se.Eq (fromJust registrationNoM) | isJust registrationNoM])
+        )
+    ]
+
 -- findAllByVariantRegNumMerchantId ::
 --   Transactionable m =>
 --   Maybe Variant.Variant ->
@@ -134,15 +157,26 @@ findAllByVariantRegNumMerchantId variantM mbRegNum limit' offset' (Id merchantId
                   $ B.all_ (BeamCommon.vehicle BeamCommon.atlasDB)
   catMaybes <$> mapM fromTType' (fromRight [] vehicles)
 
--- findAllByVariantRegNumMerchantId :: (L.MonadFlow m, Log m) => Maybe Variant.Variant -> Maybe Text -> Integer -> Integer -> Id Merchant -> m [Vehicle]
--- findAllByVariantRegNumMerchantId variantM mbRegNum limit' offset' (Id merchantId) = do
---   let limitVal = fromIntegral limit'
---       offsetVal = fromIntegral offset'
---   findAllWithOptionsKV
---     [Se.And ([Se.Is BeamV.merchantId $ Se.Eq merchantId] <> if isJust variantM then [Se.Is BeamV.variant $ Se.Eq (fromJust variantM)] else [] <> ([Se.Is BeamV.registrationNo $ Se.Eq (fromJust mbRegNum) | isJust mbRegNum]))]
---     (Se.Desc BeamV.createdAt)
---     (Just limitVal)
---     (Just offsetVal)
+findAllByVariantRegNumMerchantIdInReplica :: (L.MonadFlow m, Log m) => Maybe Variant.Variant -> Maybe Text -> Integer -> Integer -> Id Merchant -> m [Vehicle]
+findAllByVariantRegNumMerchantIdInReplica variantM mbRegNum limit' offset' (Id merchantId') = do
+  let limitVal = fromIntegral limit'
+      offsetVal = fromIntegral offset'
+  dbConf <- getReplicaBeamConfig
+  vehicles <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.orderBy_ (\vehicle -> B.desc_ vehicle.createdAt) $
+            B.limit_ limitVal $
+              B.offset_ offsetVal $
+                B.filter_'
+                  ( \BeamV.VehicleT {..} ->
+                      merchantId B.==?. B.val_ merchantId'
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\variant' -> B.sqlBool_ (variant B.==. B.val_ variant')) variantM
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\regNoStr -> B.sqlBool_ (registrationNo `B.like_` B.val_ regNoStr)) mbRegNum
+                  )
+                  $ B.all_ (BeamCommon.vehicle BeamCommon.atlasDB)
+  catMaybes <$> mapM fromTType' (fromRight [] vehicles)
 
 findByRegistrationNo :: (MonadFlow m) => Text -> m (Maybe Vehicle)
 findByRegistrationNo registrationNo = findOneWithKV [Se.Is BeamV.registrationNo $ Se.Eq registrationNo]

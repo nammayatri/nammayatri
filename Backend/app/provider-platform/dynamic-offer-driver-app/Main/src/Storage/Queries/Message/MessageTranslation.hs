@@ -23,7 +23,7 @@ import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithKvInReplica, findOneWithKV, findOneWithKvInReplica)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Message.MessageTranslation as BeamMT
 
@@ -33,8 +33,14 @@ create = createWithKV
 findByMessageIdAndLanguage :: (L.MonadFlow m, Log m) => Id Msg.Message -> Language -> m (Maybe MessageTranslation)
 findByMessageIdAndLanguage (Id messageId) language = findOneWithKV [Se.And [Se.Is BeamMT.messageId $ Se.Eq messageId, Se.Is BeamMT.language $ Se.Eq language]]
 
+findByMessageIdAndLanguageInReplica :: (L.MonadFlow m, Log m) => Id Msg.Message -> Language -> m (Maybe MessageTranslation)
+findByMessageIdAndLanguageInReplica (Id messageId) language = findOneWithKvInReplica [Se.And [Se.Is BeamMT.messageId $ Se.Eq messageId, Se.Is BeamMT.language $ Se.Eq language]]
+
 findByMessageId :: (L.MonadFlow m, Log m) => Id Msg.Message -> m [MessageTranslation]
 findByMessageId (Id messageId) = findAllWithKV [Se.Is BeamMT.messageId $ Se.Eq messageId]
+
+findByMessageIdInReplica :: (L.MonadFlow m, Log m) => Id Msg.Message -> m [MessageTranslation]
+findByMessageIdInReplica (Id messageId) = findAllWithKvInReplica [Se.Is BeamMT.messageId $ Se.Eq messageId]
 
 instance FromTType' BeamMT.MessageTranslation MessageTranslation where
   fromTType' BeamMT.MessageTranslationT {..} = do
