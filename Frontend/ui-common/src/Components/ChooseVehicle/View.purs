@@ -1,4 +1,7 @@
-module Components.ChooseVehicle.View where
+module Components.ChooseVehicle.View
+  ( view
+  )
+  where
 
 import Common.Types.App
 
@@ -8,7 +11,7 @@ import Font.Style as FontStyle
 import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width)
 import Common.Styles.Colors as Color
-import Merchant.Utils (getValueFromConfig)
+
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
