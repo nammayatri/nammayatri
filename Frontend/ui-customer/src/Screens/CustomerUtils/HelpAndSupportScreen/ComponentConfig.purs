@@ -119,6 +119,7 @@ callConfirmationPopup state = let
     popUpConfig' = config {
       primaryText {
           text = (getString CONTACT_SUPPORT)
+        , fontStyle = FontStyle.semiBold LanguageStyle
       , margin = (Margin 0 20 0 20)
         },
       secondaryText {
