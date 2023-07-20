@@ -525,7 +525,7 @@ enterMobileNumberScreenFlow = do
 
 getDeviceUUID :: String -> FlowBT String String
 getDeviceUUID prefix =
-    if ( getValueToLocalStore DEVICE_UUID == "__failed" || getValueToLocalStore DEVICE_UUID == "NULL")
+    if ( getValueToLocalStore DEVICE_UUID == "__failed" || getValueToLocalStore DEVICE_UUID == "(null)")
         then do
             let id = prefix <> (generateSessionId unit)
             setValueToLocalStore DEVICE_UUID id
@@ -1957,7 +1957,7 @@ updateFlowStatus eventType = do
               codeMessage = decodeErrorCode errResp.errorMessage
           when ( err.code == 400 && codeMessage == "ACTIVE_BOOKING_EXISTS") $ do
             void $ pure $ toast $ getString IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_
-            currentRideFlow true
+            currentRideFlow false
 
 cancelEstimate :: String -> FlowBT String Unit
 cancelEstimate bookingId = do
