@@ -274,13 +274,13 @@ emptyContactsView push state =
         ]
     , textView
         [ height $ WRAP_CONTENT
-        , width if os == "IOS" then V (screenWidth unit - 20) else WRAP_CONTENT
+        , width WRAP_CONTENT
         , gravity CENTER
         , text (getString EMERGENCY_CONTACTS_SCREEN_DESCRIPTION)
         , color Color.black700
         , textSize 14
         , fontStyle $ FontStyle.regular LanguageStyle
-        , padding (Padding 0 10 0 10)
+        , padding (Padding 16 10 16 10)
         ]
     ]
 

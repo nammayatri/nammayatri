@@ -51,7 +51,9 @@ menuButtonConfig state language = let
     menuButtonConfig' = config {
       titleConfig{
           text = language.name
-      }
+        , selectedFontStyle = FontStyle.fontByOS "PlusJakartaSans-Regular" "PlusJakartaSans-Regular" "Arial"
+        , unselectedFontStyle = FontStyle.fontByOS "PlusJakartaSans-Regular" "PlusJakartaSans-Regular" "Arial"
+       }
       ,subTitleConfig
       {
         text = language.subTitle

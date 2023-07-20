@@ -865,7 +865,7 @@ homeScreenFlow = do
                                         setValueToLocalStore SHARE_APP_COUNT (show ((INT.round $ (fromMaybe 0.0 (fromString (shareAppCount))))+1))
                                       else pure unit
                                       _ <- pure $ clearWaitingTimer <$> state.props.waitingTimeTimerIds
-                                      let newState = state{data{route = Nothing},props{isCancelRide = false,waitingTimeTimerIds = [], currentStage = RideStarted, forFirst = true , showShareAppPopUp = (INT.round $ (fromMaybe 0.0 (fromString (getValueToLocalStore SHARE_APP_COUNT)))) `mod` 4 == 0, showChatNotification = false }}
+                                      let newState = state{data{route = Nothing},props{isCancelRide = false,waitingTimeTimerIds = [], currentStage = RideStarted, forFirst = true , showShareAppPopUp = (INT.round $ (fromMaybe 0.0 (fromString (getValueToLocalStore SHARE_APP_COUNT)))) `mod` 4 == 0, showChatNotification = false, cancelSearchCallDriver = false  }}
                                       _ <- updateLocalStage RideStarted
                                       modifyScreenState $ HomeScreenStateType (\homeScreen -> newState)
                                       when state.props.isSpecialZone $ currentRideFlow true
@@ -1488,7 +1488,7 @@ permissionScreenFlow triggertype = do
                       currentFlowStatus
     TURN_ON_INTERNET -> case (getValueToLocalStore USER_NAME == "__failed") of
                             true -> pure unit
-                            _ -> if (os == "IOS") then pure unit
+                            _ -> if (os == "IOS") then currentFlowStatus
                                  else if (not (permissionConditionA && permissionConditionB) )then permissionScreenFlow "LOCATION_DISABLED"
                                  else currentFlowStatus
   pure unit

@@ -358,6 +358,7 @@ radioButton config push index item =
           , width if os == "IOS" then V $ (screenWidth unit) - 80 else WRAP_CONTENT
           , color Color.black650
           , visibility cancelValues.visibility
+          , fontStyle $ FontStyle.regular LanguageStyle
           ]
       ]
   ] where cancelValues = getCancelValues config.activeIndex item index
