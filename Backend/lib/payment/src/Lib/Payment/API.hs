@@ -13,7 +13,8 @@
 -}
 
 module Lib.Payment.API
-  ( API,
+  ( OrderAPI,
+    MandateAPI,
   )
 where
 
@@ -22,10 +23,11 @@ import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Types.App (MandatoryQueryParam)
 import Kernel.Types.Id
 import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.Types.Mandate as DMandate
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Servant
 
-type API (entityId :: Symbol) entity =
+type OrderAPI (entityId :: Symbol) entity =
   "payment"
     :> ( Capture entityId (Id entity)
            :> "createOrder"
@@ -36,3 +38,8 @@ type API (entityId :: Symbol) entity =
            :<|> MandatoryQueryParam "orderId" (Id DOrder.PaymentOrder)
              :> Get '[JSON] DOrder.PaymentOrderAPIEntity
        )
+
+type MandateAPI =
+  "txns"
+    :> ReqBody '[FormUrlEncoded] DMandate.MandateRequest
+    :> Post '[JSON] DMandate.MandateResponse

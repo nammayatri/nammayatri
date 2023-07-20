@@ -13,8 +13,10 @@
 -}
 
 module API.UI.Payment
-  ( API,
-    handler,
+  ( OrderAPI,
+    MandateAPI,
+    orderHandler,
+    mandateHandler,
   )
 where
 
@@ -28,19 +30,27 @@ import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.API as Payment
+import qualified Lib.Payment.Domain.Types.Mandate as DMandate
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Servant
 import Tools.Auth
 
-type API =
+type OrderAPI =
   TokenAuth
-    :> Payment.API "driverFeeId" DriverFee
+    :> Payment.OrderAPI "driverFeeId" DriverFee
 
-handler :: FlowServer API
-handler authInfo =
+type MandateAPI =
+  TokenAuth
+    :> Payment.MandateAPI
+
+orderHandler :: FlowServer OrderAPI
+orderHandler authInfo =
   createOrder authInfo
     :<|> getStatus authInfo
     :<|> getOrder authInfo
+
+mandateHandler :: FlowServer MandateAPI
+mandateHandler = registerMandate
 
 createOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DriverFee -> FlowHandler Payment.CreateOrderResp
 createOrder tokenDetails driverFeeId = withFlowHandlerAPI $ DPayment.createOrder tokenDetails driverFeeId
@@ -50,3 +60,6 @@ getStatus tokenDetails orderId = withFlowHandlerAPI $ DPayment.getStatus tokenDe
 
 getOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DOrder.PaymentOrder -> FlowHandler DOrder.PaymentOrderAPIEntity
 getOrder tokenDetails orderId = withFlowHandlerAPI $ DPayment.getOrder tokenDetails orderId
+
+registerMandate :: (Id DP.Person, Id Merchant.Merchant) -> DMandate.MandateRequest -> FlowHandler DMandate.MandateResponse
+registerMandate tokenDetails req = withFlowHandlerAPI $ DPayment.registerMandate tokenDetails req

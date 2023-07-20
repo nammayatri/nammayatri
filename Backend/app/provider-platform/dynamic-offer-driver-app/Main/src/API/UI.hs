@@ -52,7 +52,8 @@ type API =
            :<|> Registration.API
            :<|> DriverOnboarding.API
            :<|> OrgAdmin.API
-           :<|> Payment.API
+           :<|> Payment.OrderAPI
+           :<|> Payment.MandateAPI
            :<|> Driver.API
            :<|> Vehicle.API
            :<|> Frontend.API
@@ -79,7 +80,8 @@ handler =
     :<|> Registration.handler
     :<|> DriverOnboarding.handler
     :<|> OrgAdmin.handler
-    :<|> Payment.handler
+    :<|> Payment.orderHandler
+    :<|> Payment.mandateHandler
     :<|> Driver.handler
     :<|> Vehicle.handler
     :<|> Frontend.handler

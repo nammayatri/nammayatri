@@ -18,6 +18,7 @@ module Domain.Action.UI.Payment
     getStatus,
     getOrder,
     juspayWebhookHandler,
+    registerMandate,
   )
 where
 
@@ -39,6 +40,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
+import Lib.Payment.Domain.Types.Mandate
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Servant (BasicAuthData)
@@ -163,3 +165,15 @@ processPayment merchantId orderStatus driverFeeId = do
       Esq.runTransaction $ do
         QDF.updateStatus DF.CLEARED driverFeeId now
         QDFS.clearPaymentStatus (cast driverFee.driverId) driverInfo.active
+
+registerMandate :: (EsqDBFlow m r, CacheFlow m r) => (Id DP.Person, Id DM.Merchant) -> MandateRequest -> m MandateResponse
+registerMandate (_, _) _ = do
+  --req
+  let response =
+        MandateResponse
+          { status = "",
+            paymentAuthenticationMethod = Just "",
+            paymentAuthenticationUrl = Just "",
+            paymentAuthenticationParams = Just ""
+          }
+  return response
