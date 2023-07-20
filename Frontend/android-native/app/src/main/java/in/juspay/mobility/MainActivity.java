@@ -697,6 +697,7 @@ public class MainActivity extends AppCompatActivity {
                 currentSharedPref.edit().putBoolean(entry.getKey(),(boolean) current).apply();
             }
         }
+        oldSharedPref.edit().clear().apply();
         return true;
     }
 }

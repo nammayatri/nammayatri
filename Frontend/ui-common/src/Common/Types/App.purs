@@ -111,8 +111,8 @@ instance decodeGlobalPayload :: Decode GlobalPayload where decode = defaultDecod
 instance encodeGlobalPayload :: Encode GlobalPayload where encode = defaultEncode
 
 newtype Payload = Payload
-  { service :: String
-  , environment :: String
+  { service :: Maybe String
+  , environment :: Maybe String
   , notificationData :: Maybe NotificationData
   , signatureAuthData :: Maybe SignatureAuthData
   , search_type :: Maybe String

@@ -3,6 +3,7 @@ package in.juspay.mobility.common;
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
+import static android.content.Context.MODE_PRIVATE;
 
 import android.Manifest;
 import android.animation.ValueAnimator;
@@ -997,7 +998,7 @@ public class MobilityCommonBridge extends HyperBridge {
     // region Shared Preference Utils
     @JavascriptInterface
     public void setKeysInSharedPrefs(String key, String value) {
-        SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getSdkName(), Context.MODE_PRIVATE);
+        SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getSdkName(), MODE_PRIVATE);
         sharedPref.edit().putString(key, value).apply();
         if (key.equals(bridgeComponents.getContext().getString(R.string.LANGUAGE_KEY))) {
             Utils.updateLocaleResource(value,bridgeComponents.getContext());
@@ -1006,7 +1007,7 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public String getKeysInSharedPref(String key) {
-        SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getSdkName(), Context.MODE_PRIVATE);
+        SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getSdkName(), MODE_PRIVATE);
         return sharedPref.getString(key, "__failed");
     }
 
@@ -1732,6 +1733,12 @@ public class MobilityCommonBridge extends HyperBridge {
                 }
            }
         }
+    }
+
+    @JavascriptInterface
+    public void clearStorageFile(String fileName){
+        SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(fileName,MODE_PRIVATE);
+        sharedPref.edit().clear().apply();
     }
     // endregion
 
