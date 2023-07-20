@@ -54,19 +54,6 @@ instance FromBackendRow Postgres Domain.BookingStatus
 instance IsString Domain.BookingStatus where
   fromString = show
 
-instance FromField DQuote.FareProductType where
-  fromField = fromFieldEnum
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be DQuote.FareProductType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be DQuote.FareProductType
-
-instance FromBackendRow Postgres DQuote.FareProductType
-
-instance IsString DQuote.FareProductType where
-  fromString = show
-
 data BookingT f = BookingT
   { id :: B.C f Text,
     transactionId :: B.C f Text,

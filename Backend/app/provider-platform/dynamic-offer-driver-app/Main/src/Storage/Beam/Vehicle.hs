@@ -26,6 +26,7 @@ import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.MySQL ()
 import Database.Beam.Postgres (Postgres)
+import qualified Database.Beam.Schema.Tables as BST
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Domain.Types.Vehicle as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
@@ -97,6 +98,12 @@ instance ModelMeta VehicleT where
   modelSchemaName = Just "atlas_driver_offer_bpp"
 
 type Vehicle = VehicleT Identity
+
+vehicleTable :: B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity VehicleT)
+vehicleTable =
+  BST.setEntitySchema (Just "atlas_driver_offer_bpp")
+    <> B.setEntityName "vehicle"
+    <> B.modifyTableFields vehicleTMod
 
 instance FromJSON Vehicle where
   parseJSON = A.genericParseJSON A.defaultOptions

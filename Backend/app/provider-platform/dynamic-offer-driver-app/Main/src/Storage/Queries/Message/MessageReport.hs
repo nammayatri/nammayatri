@@ -19,6 +19,7 @@
 
 module Storage.Queries.Message.MessageReport where
 
+import qualified Data.Map as Map
 import qualified Database.Beam as B
 import Database.Beam.Postgres
 import Domain.Types.Message.Message
@@ -103,9 +104,51 @@ findAllMessageTranslationWithSeConditionCreatedAtdesc conditions = findAllWithOp
 findAllMessageReportWithSeCondition :: (L.MonadFlow m, Log m) => [Se.Clause Postgres BeamMR.MessageReportT] -> m [MessageReport]
 findAllMessageReportWithSeCondition = findAllWithKV
 
+-- findByDriverIdAndLanguage :: (L.MonadFlow m, Log m) => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
+-- findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
+--   let limitVal = min (fromMaybe 10 mbLimit) 10
+--       offsetVal = fromMaybe 0 mbOffset
+--   messageReport <- findAllMessageReportWithSeCondition [Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]
+--   message <- findAllMessageWithSeConditionCreatedAtdesc [Se.Is BeamM.id $ Se.In $ getId . DTMR.messageId <$> messageReport]
+--   let rawMessageFromMessage Message {..} =
+--         RawMessage
+--           { id = id,
+--             _type = _type,
+--             title = title,
+--             description = description,
+--             shortDescription = shortDescription,
+--             label = label,
+--             likeCount = likeCount,
+--             viewCount = viewCount,
+--             mediaFiles = mediaFiles,
+--             merchantId = merchantId,
+--             createdAt = createdAt
+--           }
+--   let mtSeCondition =
+--         [ Se.And
+--             [Se.Is BeamMT.messageId $ Se.In $ getId . Msg.id <$> message, Se.Is BeamMT.language $ Se.Eq language]
+--         ]
+--   messageTranslation <- findAllMessageTranslationWithSeConditionCreatedAtdesc mtSeCondition
+
+--   let messageReportAndMessage = foldl' (getMessageReportAndMessage messageReport) [] message
+--       messageTranslationM = messageTranslationMap messageTranslation
+--   let finalResult' = foldl' (getMessageTranslationAndMessage rawMessageFromMessage messageTranslationM) [] messageReportAndMessage
+
+--   pure $ take limitVal (drop offsetVal finalResult')
+--   where
+--     getMessageReportAndMessage messageReports acc message' =
+--         let messageReports' = filter (\messageReport -> messageReport.messageId == message'.id) messageReports
+--         in acc <> ((\messageReport' -> (messageReport', message')) <$> messageReports')
+
+--     getMessageTranslationAndMessage rawMessageFromMessage translations acc (msgRep, msg) =
+--         let maybeTranslation = lookup (msg.id) translations
+--         in acc <> [(msgRep, rawMessageFromMessage msg, maybeTranslation)]
+
+--     messageTranslationMap messageTranslations = Map.toList $ Map.fromList [(mt.messageId, mt) | mt <- messageTranslations]
+
 findByDriverIdAndLanguage :: (L.MonadFlow m, Log m) => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, RawMessage, Maybe MTD.MessageTranslation)]
 findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
-  let limitVal = min (fromMaybe 10 mbLimit) 10
+  let limitVal = fromMaybe 10 mbLimit `min` 10
       offsetVal = fromMaybe 0 mbOffset
   messageReport <- findAllMessageReportWithSeCondition [Se.Is BeamMR.driverId $ Se.Eq $ getId driverId]
   message <- findAllMessageWithSeConditionCreatedAtdesc [Se.Is BeamM.id $ Se.In $ getId . DTMR.messageId <$> messageReport]
@@ -129,18 +172,14 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
         ]
   messageTranslation <- findAllMessageTranslationWithSeConditionCreatedAtdesc mtSeCondition
 
-  let messageReportAndMessage = foldl' (getMessageReportAndMessage messageReport) [] message
-  let finalResult' = foldl' (getMessageTranslationAndMessage messageTranslation rawMessageFromMessage) [] messageReportAndMessage
-  let finalResult = map (\(mr, rm, mt) -> (mr, rm, Just mt)) finalResult'
-  pure $ take limitVal (drop offsetVal finalResult)
-  where
-    getMessageReportAndMessage messageReports acc message' =
-      let messageeReports' = filter (\messageReport -> messageReport.messageId == message'.id) messageReports
-       in acc <> ((\messageReport' -> (messageReport', message')) <$> messageeReports')
+  let messageReportAndMessage = [(mr, msg) | mr <- messageReport, msg <- message, mr.messageId == msg.id]
+      messageTranslationM = messageTranslationMap messageTranslation
+      finalResult' = [(mr, rawMessageFromMessage msg, Map.lookup msg.id messageTranslationM) | (mr, msg) <- messageReportAndMessage]
 
-    getMessageTranslationAndMessage messageTranslations rawMessageFromMessage acc (msgRep, msg) =
-      let messageTranslations' = filter (\messageTranslation' -> messageTranslation'.messageId == msg.id) messageTranslations
-       in acc <> ((\messageTranslation' -> (msgRep, rawMessageFromMessage msg, messageTranslation')) <$> messageTranslations')
+  pure $ take limitVal (drop offsetVal finalResult')
+  where
+    messageTranslationMap :: [MTD.MessageTranslation] -> Map.Map (Id Message) MTD.MessageTranslation
+    messageTranslationMap messageTranslations = Map.fromList [(mt.messageId, mt) | mt <- messageTranslations]
 
 findByDriverIdMessageIdAndLanguage :: (L.MonadFlow m, Log m) => Id P.Driver -> Id Msg.Message -> Language -> m (Maybe (MessageReport, RawMessage, Maybe MTD.MessageTranslation))
 findByDriverIdMessageIdAndLanguage driverId messageId language = do
