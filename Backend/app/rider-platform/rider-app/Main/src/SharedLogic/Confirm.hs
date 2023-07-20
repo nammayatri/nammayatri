@@ -90,15 +90,17 @@ confirm ::
 confirm DConfirmReq {..} = do
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
   now <- getCurrentTime
-  case quote.quoteDetails of
-    DQuote.OneWayDetails _ -> pure ()
-    DQuote.RentalDetails _ -> pure ()
-    DQuote.DriverOfferDetails driverOffer -> do
-      estimate <- QEstimate.findById driverOffer.estimateId >>= fromMaybeM EstimateNotFound
-      when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
-      when (driverOffer.validTill < now) $
-        throwError $ QuoteExpired quote.id.getId
-    DQuote.OneWaySpecialZoneDetails _ -> pure ()
+  fulfillmentId <-
+    case quote.quoteDetails of
+      DQuote.OneWayDetails _ -> pure (Nothing)
+      DQuote.RentalDetails _ -> pure (Nothing)
+      DQuote.DriverOfferDetails driverOffer -> do
+        estimate <- QEstimate.findById driverOffer.estimateId >>= fromMaybeM EstimateNotFound
+        when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
+        when (driverOffer.validTill < now) $
+          throwError $ QuoteExpired quote.id.getId
+        pure (Just estimate.bppEstimateId.getId)
+      DQuote.OneWaySpecialZoneDetails details -> pure (Just details.quoteId)
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
   activeBooking <- QRideB.findByRiderIdAndStatus personId DRB.activeBookingStatus
   unless (null activeBooking) $ throwError $ InvalidRequest "ACTIVE_BOOKING_PRESENT"
@@ -111,13 +113,13 @@ confirm DConfirmReq {..} = do
   bFromLocation <- buildBookingLocation now fromLocation
   mbBToLocation <- traverse (buildBookingLocation now) mbToLocation
   exophone <- findRandomExophone searchRequest.merchantId
-  booking <- buildBooking searchRequest quote bFromLocation mbBToLocation exophone now Nothing paymentMethodId driverId
+  booking <- buildBooking searchRequest fulfillmentId quote bFromLocation mbBToLocation exophone now Nothing paymentMethodId driverId
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   riderPhone <- mapM decrypt person.mobileNumber
   let riderName = person.firstName
   triggerBookingCreatedEvent BookingEventData {booking = booking}
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
-  details <- mkConfirmQuoteDetails quote.quoteDetails
+  details <- mkConfirmQuoteDetails quote.quoteDetails fulfillmentId
   paymentMethod <- forM paymentMethodId $ \paymentMethodId' -> do
     paymentMethod <-
       CQMPM.findByIdAndMerchantId paymentMethodId' searchRequest.merchantId
@@ -147,13 +149,13 @@ confirm DConfirmReq {..} = do
         ..
       }
   where
-    mkConfirmQuoteDetails quoteDetails = do
+    mkConfirmQuoteDetails quoteDetails fulfillmentId = do
       case quoteDetails of
         DQuote.OneWayDetails _ -> pure ConfirmOneWayDetails
         DQuote.RentalDetails RentalSlab {..} -> pure $ ConfirmRentalDetails $ RentalSlabAPIEntity {..}
         DQuote.DriverOfferDetails driverOffer -> do
-          estimate <- QEstimate.findById driverOffer.estimateId >>= fromMaybeM EstimateNotFound
-          pure $ ConfirmAutoDetails estimate.bppEstimateId.getId driverOffer.driverId
+          bppEstimateId <- fulfillmentId & fromMaybeM (InternalError "FulfillmentId not found in Init. this error should never come.")
+          pure $ ConfirmAutoDetails bppEstimateId driverOffer.driverId
         DQuote.OneWaySpecialZoneDetails details -> pure $ ConfirmOneWaySpecialZoneDetails details.quoteId
     getDriverId :: DQuote.QuoteDetails -> Maybe Text
     getDriverId = \case
@@ -163,6 +165,7 @@ confirm DConfirmReq {..} = do
 buildBooking ::
   MonadFlow m =>
   DSReq.SearchRequest ->
+  Maybe Text ->
   DQuote.Quote ->
   DBL.BookingLocation ->
   Maybe DBL.BookingLocation ->
@@ -172,7 +175,7 @@ buildBooking ::
   Maybe (Id DMPM.MerchantPaymentMethod) ->
   Maybe Text ->
   m DRB.Booking
-buildBooking searchRequest quote fromLoc mbToLoc exophone now otpCode paymentMethodId driverId = do
+buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now otpCode paymentMethodId driverId = do
   id <- generateGUID
   bookingDetails <- buildBookingDetails
   return $
@@ -181,7 +184,7 @@ buildBooking searchRequest quote fromLoc mbToLoc exophone now otpCode paymentMet
         transactionId = searchRequest.id.getId,
         bppBookingId = Nothing,
         driverId,
-        fulfillmentId = mkFulfillmentId,
+        fulfillmentId = mbFulfillmentId,
         quoteId = Just quote.id,
         paymentMethodId,
         paymentUrl = Nothing,
@@ -207,10 +210,6 @@ buildBooking searchRequest quote fromLoc mbToLoc exophone now otpCode paymentMet
         updatedAt = now
       }
   where
-    mkFulfillmentId = case quote.quoteDetails of
-      DQuote.DriverOfferDetails driverOffer -> Just driverOffer.estimateId.getId
-      DQuote.OneWaySpecialZoneDetails details -> Just details.quoteId
-      _ -> Nothing
     buildBookingDetails = case quote.quoteDetails of
       DQuote.OneWayDetails _ -> DRB.OneWayDetails <$> buildOneWayDetails
       DQuote.RentalDetails rentalSlab -> pure $ DRB.RentalDetails rentalSlab

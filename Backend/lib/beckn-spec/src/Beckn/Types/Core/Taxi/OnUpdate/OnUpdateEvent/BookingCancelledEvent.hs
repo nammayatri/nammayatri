@@ -28,7 +28,7 @@ import Kernel.Prelude
 
 data BookingCancelledEvent = BookingCancelledEvent
   { id :: Text,
-    update_target :: Text,
+    -- update_target :: Text,
     state :: Text,
     cancellation_reason :: CancellationSource
   }
@@ -38,7 +38,7 @@ instance ToJSON BookingCancelledEvent where
   toJSON BookingCancelledEvent {..} =
     A.Object $
       "id" .= id
-        <> "update_target" .= update_target
+        -- <> "update_target" .= update_target
         <> "state" .= state
         <> "cancellation_reason" .= cancellation_reason
         <> "fulfillment" .= (("state" .= ("descriptor" .= (("code" .= RIDE_BOOKING_CANCELLED <> "name" .= A.String "Ride Cancelled") :: A.Object) :: A.Object)) :: A.Object)
@@ -51,7 +51,7 @@ instance FromJSON BookingCancelledEvent where
     unless (update_type == RIDE_BOOKING_CANCELLED) $ fail "Wrong update_type."
     BookingCancelledEvent
       <$> obj .: "id"
-      <*> obj .: "update_target"
+      -- <*> obj .: "update_target"
       <*> obj .: "state"
       <*> obj .: "cancellation_reason"
 
@@ -87,14 +87,14 @@ instance ToSchema BookingCancelledEvent where
           & properties
             L..~ fromList
               [ ("id", txt),
-                ("update_target", txt),
+                -- ("update_target", txt),
                 ("state", txt),
                 ("cancellation_reason", cancellationSource),
                 ("fulfillment", Inline fulfillment)
               ]
           & required
             L..~ [ "id",
-                   "update_target",
+                   --  "update_target",
                    "state",
                    "cancellation_reason",
                    "fulfillment"

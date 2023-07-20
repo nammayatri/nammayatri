@@ -30,7 +30,7 @@ import Kernel.Prelude (UTCTime)
 
 data DriverArrivedEvent = DriverArrivedEvent
   { id :: Text,
-    update_target :: Text,
+    -- update_target :: Text,
     fulfillment :: FulfillmentInfo
   }
   deriving (Generic, Show)
@@ -40,7 +40,7 @@ instance ToJSON DriverArrivedEvent where
     let (A.Object fulfJSON) = toJSON fulfillment
     A.Object $
       "id" .= id
-        <> "update_target" .= update_target
+        -- <> "update_target" .= update_target
         <> "fulfillment" .= (fulfJSON <> ("state" .= ("descriptor" .= (("code" .= DRIVER_ARRIVED <> "name" .= A.String "Driver Arrived") :: A.Object) :: A.Object)))
 
 instance FromJSON DriverArrivedEvent where
@@ -49,7 +49,7 @@ instance FromJSON DriverArrivedEvent where
     unless (update_type == DRIVER_ARRIVED) $ fail "Wrong update_type."
     DriverArrivedEvent
       <$> obj .: "id"
-      <*> obj .: "update_target"
+      -- <*> obj .: "update_target"
       <*> obj .: "fulfillment"
 
 instance ToSchema DriverArrivedEvent where
@@ -83,13 +83,13 @@ instance ToSchema DriverArrivedEvent where
           & properties
             L..~ fromList
               [ ("id", txt),
-                ("update_target", txt),
+                -- ("update_target", txt),
                 ("fulfillment", Inline fulfillment),
                 ("arrival_time", arrival_time)
               ]
           & required
             L..~ [ "id",
-                   "update_target",
+                   --  "update_target",
                    "fulfillment",
                    "arrival_time"
                  ]

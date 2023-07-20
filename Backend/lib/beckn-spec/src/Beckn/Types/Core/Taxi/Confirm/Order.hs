@@ -32,7 +32,7 @@ data Order = Order
   { id :: Text,
     items :: [OrderItem],
     fulfillment :: FulfillmentInfo,
-    quote :: Maybe Quote, -- TODO :: Remove Maybe
+    quote :: Quote,
     payment :: Payment,
     provider :: Maybe Provider
   }

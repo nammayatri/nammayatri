@@ -18,6 +18,7 @@ import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
 import Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.Booking.BookingLocation as DBL
+import qualified Domain.Types.Vehicle.Variant as VehVar
 import Kernel.Prelude
 import Kernel.Product.Validation.Context
 import Kernel.Types.App
@@ -35,11 +36,13 @@ buildConfirmReq req = do
   validateContext Context.CONFIRM req.context
   let bookingId = Id req.message.order.id
       fulfillment = req.message.order.fulfillment
-      phone = fulfillment.customer.contact
+      phone = fulfillment.customer.contact.phone
       customerMobileCountryCode = phone.phoneCountryCode
       customerPhoneNumber = phone.phoneNumber
       fromAddress = castAddress fulfillment.start.location.address
       mbRiderName = fulfillment.customer.person <&> (.name)
+      vehicleVariant = castVehicleVariant fulfillment.vehicle.category
+      driverId = req.message.order.provider <&> (.id)
   toAddress <- (castAddress . (.location.address) <$> fulfillment.end) & fromMaybeM (InvalidRequest "end location missing")
 
   return $
@@ -48,3 +51,10 @@ buildConfirmReq req = do
       }
   where
     castAddress Confirm.Address {..} = DBL.LocationAddress {areaCode = area_code, area = locality, ..}
+    castVehicleVariant = \case
+      Confirm.SEDAN -> VehVar.SEDAN
+      Confirm.SUV -> VehVar.SUV
+      Confirm.HATCHBACK -> VehVar.HATCHBACK
+      Confirm.AUTO_RICKSHAW -> VehVar.AUTO_RICKSHAW
+      Confirm.TAXI -> VehVar.TAXI
+      Confirm.TAXI_PLUS -> VehVar.TAXI_PLUS

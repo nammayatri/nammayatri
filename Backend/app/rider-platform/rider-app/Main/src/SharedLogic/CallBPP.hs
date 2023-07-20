@@ -120,12 +120,12 @@ callTrack ::
   DB.Booking ->
   DRide.Ride ->
   m ()
-callTrack booking ride = do
+callTrack booking _ = do
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
+  bppBookingId <- booking.bppBookingId & fromMaybeM (InvalidRequest "Bpp Booking is missing")
   let trackBUildReq =
         TrackACL.TrackBuildReq
-          { bppRideId = ride.bppRideId,
-            bppId = booking.providerId,
+          { bppId = booking.providerId,
             bppUrl = booking.providerUrl,
             transactionId = booking.transactionId,
             ..

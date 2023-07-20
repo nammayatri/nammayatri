@@ -26,6 +26,7 @@ import Beckn.Types.Core.Taxi.Common.Location as Reexport
 import Beckn.Types.Core.Taxi.Common.Payment as Reexport
 import Beckn.Types.Core.Taxi.Common.Price as Reexport
 import Beckn.Types.Core.Taxi.Common.Provider as Reexport
+import Beckn.Types.Core.Taxi.Common.Quote as Reexport
 import Beckn.Types.Core.Taxi.Common.StartInfo as Reexport
 import Beckn.Types.Core.Taxi.Common.StopInfo as Reexport
 import Beckn.Types.Core.Taxi.Common.Vehicle as Reexport
