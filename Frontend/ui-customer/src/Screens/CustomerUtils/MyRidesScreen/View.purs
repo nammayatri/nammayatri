@@ -206,7 +206,7 @@ ridesView listItemm push state =
             , width MATCH_PARENT
             , onAnimationEnd push OnFadeComplete
             , PrestoList.listItem listItemm
-            , PrestoList.listDataV2 $ shimmerData <$> (1..5)
+            , PrestoList.listDataV2 $ shimmerData <$> [1,2,3,4,5]
             , visibility $ case state.shimmerLoader of
                     ST.AnimatedOut -> GONE
                     _ -> VISIBLE

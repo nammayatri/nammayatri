@@ -1568,7 +1568,7 @@ permissionScreenFlow triggertype = do
                       currentFlowStatus
     TURN_ON_INTERNET -> case (getValueToLocalStore USER_NAME == "__failed") of
                             true -> pure unit
-                            _ -> if (os == "IOS") then pure unit
+                            _ -> if (os == "IOS") then currentFlowStatus
                                  else if (not (permissionConditionA && permissionConditionB) )then permissionScreenFlow "LOCATION_DISABLED"
                                  else currentFlowStatus
   pure unit
