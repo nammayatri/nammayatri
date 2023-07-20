@@ -226,7 +226,7 @@ handler merchant sReq = do
       let merchantId = merchant.id
       if null farePolicies
         then do
-          logDebug "Trip doesnot match any fare policy constraints."
+          logInfo "Trip doesnot match any fare policy constraints."
           return []
         else do
           driverPoolNotOnRide <- calculateDriverPool Estimate driverPoolCfg Nothing fromLocation merchantId True Nothing

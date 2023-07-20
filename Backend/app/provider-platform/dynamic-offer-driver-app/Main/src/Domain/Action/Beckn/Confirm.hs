@@ -123,7 +123,7 @@ handler transporter req quote = do
           routeInfo :: Maybe RouteInfo <- safeGet (searchRequestKey $ getId driverQuote.requestId)
           case routeInfo of
             Just route -> setExp (searchRequestKey $ getId ride.id) route 14400
-            Nothing -> logDebug "Unable to get the key"
+            Nothing -> logInfo "Unable to get the key"
           Esq.runTransaction $ do
             when isNewRider $ QRD.create riderDetails
             QRB.updateRiderId booking.id riderDetails.id

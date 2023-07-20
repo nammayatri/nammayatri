@@ -373,7 +373,7 @@ onUpdate ValidatedBookingCancelledReq {..} = do
     Just ride -> do
       triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = booking.riderId, merchantId = booking.merchantId}
     Nothing -> do
-      logDebug "No ride found for the booking."
+      logInfo "No ride found for the booking."
   triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}}
   DB.runTransaction $ do
     unless (booking.status == SRB.CANCELLED) $ QRB.updateStatus booking.id SRB.CANCELLED

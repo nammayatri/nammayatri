@@ -505,7 +505,7 @@ setActivity (personId, _) isActive mode = do
     unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
   QDriverInformation.updateActivity driverId isActive mode
   driverStatus <- QDFS.getStatus personId >>= fromMaybeM (PersonNotFound personId.getId)
-  logInfo $ "driverStatus " <> show driverStatus
+  logDebug $ "driverStatus " <> show driverStatus
   unless (driverStatus `notElem` [DDFS.IDLE, DDFS.ACTIVE, DDFS.SILENT]) $ do
     Esq.runNoTransaction $ QDFS.updateStatus personId (DMode.getDriverStatus mode isActive)
   pure APISuccess.Success

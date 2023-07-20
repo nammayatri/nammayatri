@@ -61,7 +61,7 @@ whenWithLocationUpdatesLock driverId f = do
             logDebug $ "DriverId: " <> show driverId <> " Unlocked"
         )
     else do
-      logDebug $ lockKey <> " unable to get lock"
+      logInfo $ lockKey <> " unable to get lock"
       throwError (HitsLimitError 5)
   where
     lockKey = "DriverLocationUpdate:DriverId-" <> driverId.getId
