@@ -14,8 +14,8 @@
 
 module Main (main) where
 
-import App
+-- import App
 import Prelude
 
 main :: IO ()
-main = startProducer
+main = putStrLn "aaa"

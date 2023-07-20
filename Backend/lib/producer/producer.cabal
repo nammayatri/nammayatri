@@ -66,10 +66,13 @@ library
   build-depends:
       aeson
     , base >=4.7 && <5
-    , beckn-spec
     , bytestring
     , esqueleto
+    , euler-hs
+    , hashmap
+    , hedis
     , mobility-core
+    , monad-control
     , persistent
     , persistent-postgresql
     , record-dot-preprocessor
@@ -83,9 +86,12 @@ library
 executable producer-exe
   main-is: Main.hs
   other-modules:
+      App
+      Environment
+      Producer.Flow
       Paths_producer
   hs-source-dirs:
-      server
+      src
   default-extensions:
       ConstraintKinds
       DataKinds
@@ -124,10 +130,13 @@ executable producer-exe
   build-depends:
       aeson
     , base >=4.7 && <5
-    , beckn-spec
     , bytestring
     , esqueleto
+    , euler-hs
+    , hashmap
+    , hedis
     , mobility-core
+    , monad-control
     , persistent
     , persistent-postgresql
     , producer

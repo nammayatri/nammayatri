@@ -54,7 +54,10 @@ dependencies:
   - aeson
   - base >= 4.7 && < 5
   - mobility-core
-  - beckn-spec
+  - hedis
+  - hashmap
+  - monad-control
+  - euler-hs
   - bytestring
   - record-dot-preprocessor
   - record-hasfield
@@ -84,7 +87,7 @@ library:
 executables:
   producer-exe:
     main: Main.hs
-    source-dirs: server
+    source-dirs: src
     ghc-options:
       - -threaded
       - -rtsopts
@@ -93,4 +96,3 @@ executables:
     dependencies:
       - producer
       - mobility-core
-      - beckn-spec

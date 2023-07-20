@@ -2092,17 +2092,14 @@
         "prometheus-haskell": "prometheus-haskell"
       },
       "locked": {
-        "lastModified": 1689668029,
-        "narHash": "sha256-SsFpb83nf0X0jEad9oW6JbXNGCb08nSh7hNsQaykKbg=",
-        "owner": "nammayatri",
-        "repo": "shared-kernel",
-        "rev": "b87dcc28f7f21a75683f8f6d12c4262c275ba361",
-        "type": "github"
+        "lastModified": 1689748792,
+        "narHash": "sha256-ToosXFRs4PUoFEh6/SXbxvcysirrMmn2tnhjpItOp1A=",
+        "path": "/Users/aman.dwivedi/Desktop/shared-kernel",
+        "type": "path"
       },
       "original": {
-        "owner": "nammayatri",
-        "repo": "shared-kernel",
-        "type": "github"
+        "path": "/Users/aman.dwivedi/Desktop/shared-kernel",
+        "type": "path"
       }
     },
     "systems": {

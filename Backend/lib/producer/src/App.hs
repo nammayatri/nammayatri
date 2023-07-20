@@ -12,25 +12,25 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module App (startProducer) where
+-- module App (startProducer) where
 
-import Data.Function
-import Environment
-import qualified EulerHS.Runtime as L
-import Kernel.Prelude
-import Kernel.Utils.Common hiding (id)
-import Kernel.Utils.Dhall (readDhallConfigDefault)
-import qualified Kernel.Utils.FlowLogging as L
-import System.Environment (lookupEnv)
+-- import Data.Function
+-- import Environment
+-- import qualified EulerHS.Runtime as L
+-- import Kernel.Prelude
+-- import Kernel.Utils.Common hiding (id)
+-- import Kernel.Utils.Dhall (readDhallConfigDefault)
+-- import qualified Kernel.Utils.FlowLogging as L
+-- import System.Environment (lookupEnv)
 
-startproducer :: IO ()
-startproducer = do
-  appCfg :: AppCfg <- readDhallConfigDefault configFile
-  appEnv <- buildAppEnv appCfg producerType
-  flowRt' <- L.createFlowRuntime' (Just $ L.getEulerLoggerRuntime appEnv.hostname appEnv.loggerConfig)
-  managers <- managersFromManagersSettings appCfg.httpClientOptions.timeoutMs mempty
-  let flowRt = flowRt' {L._httpClientManagers = managers}
-  startProducerWithEnv flowRt appEnv
+-- startproducer :: IO ()
+-- startproducer = do
+--   appCfg :: AppCfg <- readDhallConfigDefault configFile
+--   appEnv <- buildAppEnv appCfg producerType
+--   flowRt' <- L.createFlowRuntime' (Just $ L.getEulerLoggerRuntime appEnv.hostname appEnv.loggerConfig)
+--   managers <- managersFromManagersSettings appCfg.httpClientOptions.timeoutMs mempty
+--   let flowRt = flowRt' {L._httpClientManagers = managers}
+--   startProducerWithEnv flowRt appEnv
 
-startProducerWithEnv :: L.FlowRuntime -> AppEnv -> IO ()
-startProducerWithEnv flowRt appEnv@AppEnv {..} = do
+-- startProducerWithEnv :: L.FlowRuntime -> AppEnv -> IO ()
+-- startProducerWithEnv flowRt appEnv@AppEnv {..} = do
