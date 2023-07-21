@@ -498,8 +498,6 @@ getInformation ::
 getInformation (personId, merchantId) = do
   let driverId = cast personId
   -- person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  logDebug $ "[Apoorv] personId: " <> show personId
-  logDebug $ "[Apoorv] driverId: " <> show driverId
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   -- driverStats <- runInReplica $ QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverStats <- QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
@@ -885,8 +883,6 @@ respondQuote ::
   DriverRespondReq ->
   m APISuccess
 respondQuote (driverId, _) req = do
-  logDebug $ "[Apoorv] SearchRequestId: " <> show req.searchRequestId
-  logDebug $ "[Apoorv] SearchTryId: " <> show req.searchTryId
   Redis.whenWithLockRedis (offerQuoteLockKey driverId) 60 $ do
     searchTryId <- req.searchRequestId <|> req.searchTryId & fromMaybeM (InvalidRequest "searchTryId field is not present.")
     searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)

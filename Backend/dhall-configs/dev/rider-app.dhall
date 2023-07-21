@@ -247,7 +247,8 @@ in  { esqDBCfg
     , autoMigrate = True
     , coreVersion = "0.9.3"
     , loggerConfig =
-        common.loggerConfig // { logFilePath = "/tmp/rider-app.log" }
+            common.loggerConfig
+        //  { logFilePath = "/tmp/rider-app.log", logRawSql = True }
     , googleTranslateUrl = common.googleTranslateUrl
     , googleTranslateKey = common.googleTranslateKey
     , metricsSearchDurationTimeout = +45
