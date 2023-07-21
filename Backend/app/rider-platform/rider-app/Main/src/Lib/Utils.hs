@@ -16,7 +16,7 @@ import qualified Database.Beam.Query as BQ
 import Database.PostgreSQL.Simple.FromField (FromField, fromField)
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.DriverOffer as DomainDO
-import qualified Domain.Types.FarePolicy.FareProductType as DomainFPT
+-- import qualified Domain.Types.FarePolicy.FareProductType as DomainFPT
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.CachedSqlDBQuery
 import qualified EulerHS.KVConnector.Flow as KV
@@ -78,18 +78,18 @@ instance IsString DomainDO.DriverOfferStatus where
 
 deriving stock instance Ord DomainDO.DriverOfferStatus
 
-instance FromField DomainFPT.FareProductType where
-  fromField = fromFieldEnum
+-- instance FromField DomainFPT.FareProductType where
+--   fromField = fromFieldEnum
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be DomainFPT.FareProductType where
-  sqlValueSyntax = autoSqlValueSyntax
+-- instance HasSqlValueSyntax be String => HasSqlValueSyntax be DomainFPT.FareProductType where
+--   sqlValueSyntax = autoSqlValueSyntax
 
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainFPT.FareProductType
+-- instance BeamSqlBackend be => B.HasSqlEqualityCheck be DomainFPT.FareProductType
 
-instance FromBackendRow Postgres DomainFPT.FareProductType
+-- instance FromBackendRow Postgres DomainFPT.FareProductType
 
-instance IsString DomainFPT.FareProductType where
-  fromString = show
+-- instance IsString DomainFPT.FareProductType where
+--   fromString = show
 
 -- instance FromField DomainDO.DriverOfferStatus where
 --   fromField = fromFieldEnum

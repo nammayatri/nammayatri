@@ -586,6 +586,38 @@ updateWithKV setClause whereClause = do
     Right _ -> pure ()
     Left err -> throwError $ InternalError $ show err
 
+updateAllWithKV ::
+  forall table m.
+  ( HasCallStack,
+    -- FromTType' (table Identity) a,
+    BeamRuntime Postgres Pg,
+    SqlReturning Pg Postgres,
+    B.HasQBuilder Postgres,
+    BeamRunner Pg,
+    Model Postgres table,
+    MeshMeta Postgres table,
+    KVConnector (table Identity),
+    FromJSON (table Identity),
+    ToJSON (table Identity),
+    Serialize.Serialize (table Identity),
+    L.MonadFlow m,
+    Show (table Identity),
+    Log m,
+    MonadThrow m
+  ) =>
+  -- DBConfig beM ->throwError
+  [Set Postgres table] ->
+  Where Postgres table ->
+  m ()
+-- m (Maybe (table Identity))
+updateAllWithKV setClause whereClause = do
+  updatedMeshConfig <- setMeshConfig' (modelTableName @table) meshConfig
+  dbConf <- getMasterDBConfig
+  res <- KV.updateAllWithKVConnector dbConf updatedMeshConfig setClause whereClause
+  case res of
+    Right _ -> pure ()
+    Left err -> throwError $ InternalError $ show err
+
 createWithKV ::
   forall table m a.
   ( HasCallStack,
