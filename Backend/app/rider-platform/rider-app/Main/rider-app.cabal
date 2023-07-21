@@ -142,6 +142,7 @@ library
       Domain.Action.UI.Webengage.InfoBIPWebhook
       Domain.Action.UI.Webengage.Webengage
       Domain.Action.UI.Whatsapp
+      Domain.Constants.ChatSuggestions
       Domain.Types.AppInstalls
       Domain.Types.BlackListOrg
       Domain.Types.Booking
@@ -152,6 +153,7 @@ library
       Domain.Types.CallbackRequest
       Domain.Types.CallStatus
       Domain.Types.CancellationReason
+      Domain.Types.ChatSuggestions
       Domain.Types.Common
       Domain.Types.DriverOffer
       Domain.Types.Estimate

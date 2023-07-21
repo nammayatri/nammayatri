@@ -16,9 +16,12 @@ module Tools.Notifications where
 
 import Data.Aeson (object)
 import Data.Default.Class
+import qualified Data.Map as Map
 import qualified Data.Text as T
+import Domain.Constants.ChatSuggestions as MSG
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import Domain.Types.ChatSuggestions as DChatSuggestions
 import Domain.Types.Estimate (Estimate)
 import qualified Domain.Types.Estimate as DEst
 import Domain.Types.Merchant
@@ -31,8 +34,9 @@ import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as SRide
 import Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude
+import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification as Notification
-import Kernel.Storage.Esqueleto
+import Kernel.Storage.Esqueleto hiding (isNothing)
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -557,7 +561,8 @@ notifyOnNewMessage ::
   m ()
 notifyOnNewMessage booking message = do
   person <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-  let notificationData =
+  let decodedMessage = decodeLanguage message person.language
+      notificationData =
         Notification.NotificationReq
           { category = Notification.CHAT_MESSAGE,
             subCategory = Nothing,
@@ -572,6 +577,29 @@ notifyOnNewMessage booking message = do
       title = T.pack "Driver"
       body =
         unwords
-          [ message
+          [ decodedMessage
           ]
   notifyPerson person.merchantId notificationData
+
+decodeLanguage :: Text -> Maybe Maps.Language -> Text
+decodeLanguage msg language =
+  case Map.lookup msg dataMap of
+    Just messages -> do
+      let message = getField (Just Maps.ENGLISH) messages ""
+      if isNothing language
+        then message
+        else getField language messages message
+    Nothing -> msg
+
+getField :: Maybe Maps.Language -> DChatSuggestions.Messages -> Text -> Text
+getField language DChatSuggestions.Messages {..} message = case language of
+  Just lan ->
+    case lan of
+      Maps.ENGLISH -> en_us
+      Maps.HINDI -> hi_in
+      Maps.KANNADA -> kn_in
+      Maps.TAMIL -> ta_in
+      Maps.MALAYALAM -> ml_in
+      Maps.BENGALI -> bn_in
+      Maps.FRENCH -> message
+  Nothing -> message
