@@ -16,6 +16,7 @@
 module Storage.Queries.DriverInformation where
 
 import Control.Applicative (liftA2)
+import Data.Time.Clock (addUTCTime)
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverLocation as DriverLocation
 import Domain.Types.Merchant (Merchant)
@@ -99,6 +100,22 @@ updateEnabledVerifiedState driverId isEnabled isVerified = do
           DriverInformationUpdatedAt =. val now
         ]
         <> [DriverInformationLastEnabledOn =. val (Just now) | isEnabled]
+    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
+
+updateDynamicBlockedState :: Id Person.Driver -> Maybe Text -> Maybe Int -> Bool -> SqlDB ()
+updateDynamicBlockedState driverId blockedReason blockedExpiryTime isBlocked = do
+  now <- getCurrentTime
+  let expiryTime = (\secs -> addUTCTime (fromIntegral secs * 3600) now) <$> blockedExpiryTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      ( [ DriverInformationBlocked =. val isBlocked,
+          DriverInformationBlockedReason =. val blockedReason,
+          DriverInformationBlockExpiryTime =. val expiryTime,
+          DriverInformationUpdatedAt =. val now
+        ]
+          <> [DriverInformationNumOfLocks +=. val 1 | isBlocked]
+      )
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
 updateBlockedState :: Id Person.Driver -> Bool -> SqlDB ()

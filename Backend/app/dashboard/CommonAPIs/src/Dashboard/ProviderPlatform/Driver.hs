@@ -36,6 +36,7 @@ import Servant hiding (Summary, throwError)
 data DriverEndpoint
   = EnableDriverEndpoint
   | DisableDriverEndpoint
+  | BlockDriverWithReasonEndpoint
   | BlockDriverEndpoint
   | UnblockDriverEndpoint
   | DeleteDriverEndpoint
@@ -302,12 +303,43 @@ type DisableDriverAPI =
     :> Post '[JSON] APISuccess
 
 ---------------------------------------------------------
+-- block driver with reason ----------------------------------------
+
+type BlockDriverWithReasonAPI =
+  Capture "driverId" (Id Driver)
+    :> "blockWithReason"
+    :> ReqBody '[JSON] BlockDriverWithReasonReq
+    :> Post '[JSON] APISuccess
+
+data BlockDriverWithReasonReq = BlockDriverWithReasonReq
+  { code :: Text,
+    blockReason :: Maybe Text,
+    blockTimeInHours :: Maybe Int
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+----------------------------------------------------------
 -- block driver ----------------------------------------
 
 type BlockDriverAPI =
   Capture "driverId" (Id Driver)
     :> "block"
     :> Post '[JSON] APISuccess
+
+----------------------------------------------------------
+-- block driver reason list ----------------------------------------
+
+type DriverBlockReasonListAPI =
+  "blockReasonList"
+    :> Get '[JSON] [BlockReason]
+
+data BlockReason = BlockReason
+  { reasonCode :: Id BlockReason,
+    blockReason :: Maybe Text,
+    blockTimeInHours :: Maybe Int
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
 ---------------------------------------------------------
 -- unblock driver ---------------------------------------

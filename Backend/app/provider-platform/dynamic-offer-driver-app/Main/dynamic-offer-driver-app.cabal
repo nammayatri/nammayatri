@@ -155,6 +155,7 @@ library
       Domain.Types.CancellationReason
       Domain.Types.Common
       Domain.Types.Driver.DriverFlowStatus
+      Domain.Types.DriverBlockReason
       Domain.Types.DriverFee
       Domain.Types.DriverInformation
       Domain.Types.DriverLocation
@@ -232,6 +233,7 @@ library
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers
+      SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
       SharedLogic.CallBAP
       SharedLogic.DeleteDriver
       SharedLogic.DriverFee
@@ -255,6 +257,7 @@ library
       SharedLogic.SyncRide
       Storage.CachedQueries.BapMetadata
       Storage.CachedQueries.CacheConfig
+      Storage.CachedQueries.DriverBlockReason
       Storage.CachedQueries.DriverInformation
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FarePolicy
@@ -282,6 +285,7 @@ library
       Storage.Queries.CallStatus
       Storage.Queries.CancellationReason
       Storage.Queries.Driver.DriverFlowStatus
+      Storage.Queries.DriverBlockReason
       Storage.Queries.DriverFee
       Storage.Queries.DriverInformation
       Storage.Queries.DriverLocation
@@ -350,6 +354,7 @@ library
       Storage.Tabular.CallStatus
       Storage.Tabular.CancellationReason
       Storage.Tabular.Driver.DriverFlowStatus
+      Storage.Tabular.DriverBlockReason
       Storage.Tabular.DriverFee
       Storage.Tabular.DriverInformation
       Storage.Tabular.DriverLocation

@@ -45,7 +45,9 @@ type API =
            :<|> DriverActivityAPI
            :<|> EnableDriverAPI
            :<|> DisableDriverAPI
+           :<|> BlockDriverWithReasonAPI
            :<|> BlockDriverAPI
+           :<|> BlockReasonListAPI
            :<|> DriverCashCollectionAPI
            :<|> UnblockDriverAPI
            :<|> DriverLocationAPI
@@ -100,9 +102,17 @@ type DisableDriverAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'DISABLE
     :> Common.DisableDriverAPI
 
+type BlockDriverWithReasonAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'BLOCK_WITH_REASON
+    :> Common.BlockDriverWithReasonAPI
+
 type BlockDriverAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'BLOCK
     :> Common.BlockDriverAPI
+
+type BlockReasonListAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'BLOCK_REASON_LIST
+    :> Common.DriverBlockReasonListAPI
 
 type UnblockDriverAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UNBLOCK
@@ -166,7 +176,9 @@ handler merchantId =
     :<|> driverActivity merchantId
     :<|> enableDriver merchantId
     :<|> disableDriver merchantId
+    :<|> blockDriverWithReason merchantId
     :<|> blockDriver merchantId
+    :<|> blockReasonList merchantId
     :<|> collectCash merchantId
     :<|> unblockDriver merchantId
     :<|> driverLocation merchantId
@@ -246,12 +258,24 @@ disableDriver merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.drivers.disableDriver) driverId
 
+blockDriverWithReason :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.BlockDriverWithReasonReq -> FlowHandler APISuccess
+blockDriverWithReason merchantShortId apiTokenInfo driverId req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.BlockDriverWithReasonEndpoint apiTokenInfo driverId T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.drivers.blockDriverWithReason) driverId req
+
 blockDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 blockDriver merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   transaction <- buildTransaction Common.BlockDriverEndpoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.drivers.blockDriver) driverId
+
+blockReasonList :: ShortId DM.Merchant -> ApiTokenInfo -> FlowHandler [Common.BlockReason]
+blockReasonList merchantShortId apiTokenInfo = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.blockReasonList)
 
 unblockDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 unblockDriver merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do

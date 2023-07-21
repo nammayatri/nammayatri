@@ -36,6 +36,8 @@ data UserActionType
   | ENABLE
   | DISABLE
   | BLOCK
+  | BLOCK_WITH_REASON
+  | BLOCK_REASON_LIST
   | UNBLOCK
   | LOCATION
   | INFO
