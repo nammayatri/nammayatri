@@ -52,7 +52,7 @@ findAllByRiderIdInReplica perId = findAllWithKvInReplica [Se.Is BeamSRL.riderId 
 --         &&. (saveReqLocation ^. SavedReqLocationTag ==. val addressTag)
 
 deleteByRiderIdAndTag :: (L.MonadFlow m, Log m) => Id Person -> Text -> m ()
-deleteByRiderIdAndTag perId addressTag = deleteAllWithKV [Se.And [Se.Is BeamSRL.riderId (Se.Eq (getId perId)), Se.Is BeamSRL.tag (Se.Eq addressTag)]]
+deleteByRiderIdAndTag perId addressTag = deleteWithKV [Se.And [Se.Is BeamSRL.riderId (Se.Eq (getId perId)), Se.Is BeamSRL.tag (Se.Eq addressTag)]]
 
 -- findAllByRiderIdAndTag :: Transactionable m => Id Person -> Text -> m [SavedReqLocation]
 -- findAllByRiderIdAndTag perId addressTag =
@@ -73,7 +73,7 @@ findAllByRiderIdAndTag perId addressTag = findAllWithKV [Se.And [Se.Is BeamSRL.r
 --     where_ (saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey personId))
 
 deleteAllByRiderId :: (L.MonadFlow m, Log m) => Id Person -> m ()
-deleteAllByRiderId personId = deleteAllWithKV [Se.Is BeamSRL.riderId (Se.Eq (getId personId))]
+deleteAllByRiderId personId = deleteWithKV [Se.Is BeamSRL.riderId (Se.Eq (getId personId))]
 
 instance FromTType' BeamSRL.SavedReqLocation SavedReqLocation where
   fromTType' BeamSRL.SavedReqLocationT {..} = do

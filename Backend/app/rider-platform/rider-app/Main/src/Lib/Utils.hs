@@ -366,7 +366,7 @@ updateWithKV ::
 updateWithKV setClause whereClause = do
   updatedMeshConfig <- setMeshConfig' (modelTableName @table) meshConfig
   dbConf <- getMasterDBConfig
-  res <- KV.updateWoReturningWithKVConnector dbConf updatedMeshConfig setClause whereClause
+  res <- KV.updateAllWithKVConnector dbConf updatedMeshConfig setClause whereClause
   case res of
     Right _ -> pure ()
     Left err -> throwError $ InternalError $ show err
@@ -427,36 +427,6 @@ deleteWithKV ::
 deleteWithKV whereClause = do
   updatedMeshConfig <- setMeshConfig' (modelTableName @table) meshConfig
   dbConf <- getMasterDBConfig
-  res <- KV.deleteWithKVConnector dbConf updatedMeshConfig whereClause
-  case res of
-    Right _ -> pure ()
-    Left err -> throwError $ InternalError $ show err
-
-deleteAllWithKV ::
-  forall be table beM m.
-  ( HasCallStack,
-    BeamRuntime be beM,
-    SqlReturning beM be,
-    B.HasQBuilder be,
-    BeamRunner beM,
-    Model be table,
-    MeshMeta be table,
-    KVConnector (table Identity),
-    FromJSON (table Identity),
-    ToJSON (table Identity),
-    Serialize.Serialize (table Identity),
-    L.MonadFlow m,
-    Log m,
-    Show (table Identity),
-    MonadThrow m,
-    SqlReturning Pg be,
-    BeamRuntime be Pg
-  ) =>
-  Where be table ->
-  m ()
-deleteAllWithKV whereClause = do
-  updatedMeshConfig <- setMeshConfig' (modelTableName @table) meshConfig
-  dbConf <- getMasterDBConfig
   res <- KV.deleteAllReturningWithKVConnector dbConf updatedMeshConfig whereClause
   case res of
     Right _ -> pure ()
@@ -493,36 +463,6 @@ getReplicaBeamConfig = do
   case conn of
     Right conn' -> pure conn'
     Left _ -> L.throwException $ InternalError "DB Config not found"
-
-deleteAllWithKvInReplica ::
-  forall be table beM m.
-  ( HasCallStack,
-    BeamRuntime be beM,
-    SqlReturning beM be,
-    B.HasQBuilder be,
-    BeamRunner beM,
-    Model be table,
-    MeshMeta be table,
-    KVConnector (table Identity),
-    FromJSON (table Identity),
-    ToJSON (table Identity),
-    Serialize.Serialize (table Identity),
-    L.MonadFlow m,
-    Log m,
-    Show (table Identity),
-    MonadThrow m,
-    SqlReturning Pg be,
-    BeamRuntime be Pg
-  ) =>
-  Where be table ->
-  m ()
-deleteAllWithKvInReplica whereClause = do
-  updatedMeshConfig <- setMeshConfig' (modelTableName @table) meshConfig
-  dbConf <- getReplicaDbConfig
-  res <- KV.deleteAllReturningWithKVConnector dbConf updatedMeshConfig whereClause
-  case res of
-    Right _ -> pure ()
-    Left err -> throwError $ InternalError $ show err
 
 findAllWithKvInReplica ::
   forall table m a.
@@ -641,7 +581,7 @@ updateWithKvInReplica ::
 updateWithKvInReplica setClause whereClause = do
   updatedMeshConfig <- setMeshConfig' (modelTableName @table) meshConfig
   dbConf <- getReplicaDbConfig
-  res <- KV.updateWoReturningWithKVConnector dbConf updatedMeshConfig setClause whereClause
+  res <- KV.updateAllWithKVConnector dbConf updatedMeshConfig setClause whereClause
   case res of
     Right _ -> pure ()
     Left err -> throwError $ InternalError $ show err
@@ -673,5 +613,35 @@ createWithKvInReplica a = do
   dbConf' <- getReplicaDbConfig
   result <- KV.createWoReturingKVConnector dbConf' updatedMeshConfig tType
   case result of
+    Right _ -> pure ()
+    Left err -> throwError $ InternalError $ show err
+
+deleteWithKvInReplica ::
+  forall be table beM m.
+  ( HasCallStack,
+    BeamRuntime be beM,
+    SqlReturning beM be,
+    B.HasQBuilder be,
+    BeamRunner beM,
+    Model be table,
+    MeshMeta be table,
+    KVConnector (table Identity),
+    FromJSON (table Identity),
+    ToJSON (table Identity),
+    Serialize.Serialize (table Identity),
+    L.MonadFlow m,
+    Log m,
+    Show (table Identity),
+    MonadThrow m,
+    SqlReturning Pg be,
+    BeamRuntime be Pg
+  ) =>
+  Where be table ->
+  m ()
+deleteWithKvInReplica whereClause = do
+  updatedMeshConfig <- setMeshConfig' (modelTableName @table) meshConfig
+  dbConf <- getReplicaDbConfig
+  res <- KV.deleteAllReturningWithKVConnector dbConf updatedMeshConfig whereClause
+  case res of
     Right _ -> pure ()
     Left err -> throwError $ InternalError $ show err
