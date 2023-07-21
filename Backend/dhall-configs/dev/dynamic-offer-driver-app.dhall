@@ -201,4 +201,5 @@ in  { esqDBCfg
     , enableAPILatencyLogging = True
     , enableAPIPrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings
+    , locationTrackingServiceKey = sec.locationTrackingServiceKey
     }
