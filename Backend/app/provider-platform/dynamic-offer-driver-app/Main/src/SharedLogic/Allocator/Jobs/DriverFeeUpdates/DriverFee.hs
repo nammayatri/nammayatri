@@ -26,7 +26,7 @@ import Domain.Types.Person
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Storage.Hedis (CacheFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Error
@@ -35,7 +35,6 @@ import Kernel.Utils.Common (EsqDBFlow, Log (withLogTag), MonadFlow, MonadTime (g
 import Lib.Scheduler
 import SharedLogic.Allocator
 import SharedLogic.DriverFee
-import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import Storage.CachedQueries.DriverInformation (updatePendingPayment, updateSubscription)
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
@@ -45,9 +44,8 @@ import qualified Tools.Notifications as Notify
 
 sendPaymentReminderToDriver ::
   ( MonadFlow m,
-    HedisFlow m r,
+    CacheFlow m r,
     CoreMetrics m,
-    HasCacheConfig r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r
   ) =>
@@ -88,9 +86,8 @@ sendPaymentReminderToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
 
 unsubscribeDriverForPaymentOverdue ::
   ( MonadFlow m,
-    HedisFlow m r,
+    CacheFlow m r,
     CoreMetrics m,
-    HasCacheConfig r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r
   ) =>

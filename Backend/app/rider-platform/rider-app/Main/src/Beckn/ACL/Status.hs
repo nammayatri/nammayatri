@@ -51,6 +51,7 @@ buildStatusReq DStatusReq {..} = do
       (Just booking.providerUrl)
       merchant.city
       merchant.country
+      False -- FIXME
   pure $
     BecknReq context $
       Status.StatusMessage

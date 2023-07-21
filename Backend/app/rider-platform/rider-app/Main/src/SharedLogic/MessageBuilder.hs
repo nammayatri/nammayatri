@@ -22,9 +22,9 @@ import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantMessage as DMM
 import Kernel.Prelude
+import Kernel.Storage.Hedis (CacheFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import Tools.Error
 

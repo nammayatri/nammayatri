@@ -22,7 +22,7 @@ import Domain.Types.SearchTry (SearchTry)
 import Kernel.Prelude hiding (handle)
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
-import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Storage.Hedis (CacheFlow)
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import Lib.Scheduler
@@ -31,7 +31,6 @@ import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal as I
 import SharedLogic.DriverPool
 import SharedLogic.GoogleTranslate (TranslateFlow)
-import Storage.CachedQueries.CacheConfig (CacheFlow, HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchTry as QST
@@ -44,8 +43,7 @@ sendSearchRequestToDrivers ::
     EsqDBReplicaFlow m r,
     Metrics.HasSendSearchRequestToDriverMetrics m r,
     Metrics.CoreMetrics m,
-    HasCacheConfig r,
-    HedisFlow m r,
+    CacheFlow m r,
     EsqDBFlow m r,
     EsqLocDBFlow m r,
     EsqLocRepDBFlow m r,

@@ -26,19 +26,17 @@ import Domain.Types.SearchTry
 import EulerHS.Prelude
 import qualified Kernel.External.Notification.FCM.Flow as FCM
 import Kernel.External.Notification.FCM.Types as FCM
-import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Storage.Hedis (CacheFlow)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import Storage.CachedQueries.Merchant.TransporterConfig
 
 notifyOnNewSearchRequestAvailable ::
   ( MonadFlow m,
-    HedisFlow m r,
+    CacheFlow m r,
     CoreMetrics m,
-    HasCacheConfig r,
     EsqDBFlow m r
   ) =>
   Id Merchant ->
@@ -77,9 +75,8 @@ notifyOnNewSearchRequestAvailable merchantId personId mbDeviceToken entityData =
 -- | Send FCM "cancel" notification to driver
 notifyOnCancel ::
   ( MonadFlow m,
-    HedisFlow m r,
+    CacheFlow m r,
     CoreMetrics m,
-    HasCacheConfig r,
     EsqDBFlow m r
   ) =>
   Id Merchant ->
@@ -138,9 +135,8 @@ notifyOnCancel merchantId booking personId mbDeviceToken cancellationSource = do
 
 notifyOnRegistration ::
   ( MonadFlow m,
-    HedisFlow m r,
+    CacheFlow m r,
     CoreMetrics m,
-    HasCacheConfig r,
     EsqDBFlow m r
   ) =>
   Id Merchant ->
@@ -172,9 +168,8 @@ notifyOnRegistration merchantId regToken personId mbToken = do
 
 notifyDriver ::
   ( MonadFlow m,
-    HedisFlow m r,
+    CacheFlow m r,
     CoreMetrics m,
-    HasCacheConfig r,
     EsqDBFlow m r
   ) =>
   Id Merchant ->
@@ -190,9 +185,8 @@ notifyDriver merchantId = sendNotificationToDriver merchantId FCM.SHOW Nothing
 -- but contains payload used by the app
 notifyDevice ::
   ( MonadFlow m,
-    HedisFlow m r,
+    CacheFlow m r,
     CoreMetrics m,
-    HasCacheConfig r,
     EsqDBFlow m r
   ) =>
   Id Merchant ->
@@ -206,9 +200,8 @@ notifyDevice merchantId = sendNotificationToDriver merchantId FCM.DO_NOT_SHOW (J
 
 sendNotificationToDriver ::
   ( MonadFlow m,
-    HedisFlow m r,
+    CacheFlow m r,
     CoreMetrics m,
-    HasCacheConfig r,
     EsqDBFlow m r
   ) =>
   Id Merchant ->
@@ -239,9 +232,8 @@ sendNotificationToDriver merchantId displayOption priority notificationType noti
 
 sendMessageToDriver ::
   ( MonadFlow m,
-    HedisFlow m r,
+    CacheFlow m r,
     CoreMetrics m,
-    HasCacheConfig r,
     EsqDBFlow m r
   ) =>
   Id Merchant ->
@@ -273,9 +265,8 @@ sendMessageToDriver merchantId displayOption priority notificationType notificat
 
 notifyDriverNewAllocation ::
   ( MonadFlow m,
-    HedisFlow m r,
+    CacheFlow m r,
     CoreMetrics m,
-    HasCacheConfig r,
     EsqDBFlow m r
   ) =>
   Id Merchant ->
@@ -306,9 +297,8 @@ notifyDriverNewAllocation merchantId bookingId personId mbToken = do
 
 notifyFarePolicyChange ::
   ( MonadFlow m,
-    HedisFlow m r,
+    CacheFlow m r,
     CoreMetrics m,
-    HasCacheConfig r,
     EsqDBFlow m r
   ) =>
   Id Merchant ->
@@ -337,9 +327,8 @@ notifyFarePolicyChange merchantId coordinatorId mbToken = do
 
 notifyDiscountChange ::
   ( MonadFlow m,
-    HedisFlow m r,
+    CacheFlow m r,
     CoreMetrics m,
-    HasCacheConfig r,
     EsqDBFlow m r
   ) =>
   Id Merchant ->
@@ -368,9 +357,8 @@ notifyDiscountChange merchantId coordinatorId mbToken = do
 
 notifyDriverClearedFare ::
   ( MonadFlow m,
-    HedisFlow m r,
+    CacheFlow m r,
     CoreMetrics m,
-    HasCacheConfig r,
     EsqDBFlow m r
   ) =>
   Id Merchant ->
@@ -402,9 +390,8 @@ notifyDriverClearedFare merchantId driverId sReqId fare mbToken = do
 
 notifyOnCancelSearchRequest ::
   ( MonadFlow m,
-    HedisFlow m r,
+    CacheFlow m r,
     CoreMetrics m,
-    HasCacheConfig r,
     EsqDBFlow m r
   ) =>
   Id Merchant ->

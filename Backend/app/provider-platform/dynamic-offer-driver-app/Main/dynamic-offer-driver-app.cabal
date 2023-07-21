@@ -254,7 +254,6 @@ library
       SharedLogic.SearchTryLocker
       SharedLogic.SyncRide
       Storage.CachedQueries.BapMetadata
-      Storage.CachedQueries.CacheConfig
       Storage.CachedQueries.DriverInformation
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FarePolicy

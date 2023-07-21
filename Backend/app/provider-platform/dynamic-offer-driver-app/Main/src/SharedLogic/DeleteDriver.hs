@@ -26,7 +26,6 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as CQDriverInfo
 import qualified Storage.CachedQueries.Issue.IssueReport as CQIR
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDriverFlowStatus
@@ -89,7 +88,7 @@ deleteDriver merchantShortId reqDriverId = do
   logTagInfo "deleteDriver : " (show reqDriverId)
   return Success
 
-validateDriver :: (EsqDBFlow m r, EncFlow m r, HasCacheConfig r, Redis.HedisFlow m r) => DM.Merchant -> DP.Person -> m Bool
+validateDriver :: (EsqDBFlow m r, EncFlow m r, Redis.CacheFlow m r) => DM.Merchant -> DP.Person -> m Bool
 validateDriver merchant driver = do
   let personId = driver.id
   ride <- QRide.findOneByDriverId personId

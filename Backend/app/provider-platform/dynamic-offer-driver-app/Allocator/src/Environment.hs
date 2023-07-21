@@ -27,7 +27,7 @@ import "dynamic-offer-driver-app" Environment (AppCfg (..))
 import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
-import Kernel.Storage.Hedis (HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
+import Kernel.Storage.Hedis (CacheConfig, HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
 import Kernel.Types.Base64 (Base64)
 import Kernel.Types.Common
 import Kernel.Types.Flow
@@ -38,7 +38,6 @@ import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler.Environment (SchedulerConfig (..))
 import SharedLogic.GoogleTranslate
-import Storage.CachedQueries.CacheConfig (CacheConfig)
 import System.Environment (lookupEnv)
 import Tools.Metrics
 

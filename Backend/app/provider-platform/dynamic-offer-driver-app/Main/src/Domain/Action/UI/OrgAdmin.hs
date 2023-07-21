@@ -28,9 +28,9 @@ import Kernel.External.Encryption (decrypt)
 import Kernel.External.Notification.FCM.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Hedis (CacheFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error

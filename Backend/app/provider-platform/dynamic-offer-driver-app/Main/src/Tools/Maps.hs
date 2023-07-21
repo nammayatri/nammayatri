@@ -42,9 +42,9 @@ import Kernel.External.Maps as Reexport hiding
   )
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
+import Kernel.Storage.Hedis (CacheFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QOMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QOMC
 import Tools.Error

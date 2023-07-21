@@ -42,7 +42,6 @@ import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.SignatureAuth
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.GoogleTranslate
-import Storage.CachedQueries.CacheConfig
 import System.Environment (lookupEnv)
 import Tools.Metrics
 

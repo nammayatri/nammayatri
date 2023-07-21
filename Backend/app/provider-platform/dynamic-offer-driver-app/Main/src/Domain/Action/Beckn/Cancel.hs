@@ -31,7 +31,7 @@ import EulerHS.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
-import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Storage.Hedis (CacheFlow)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -41,7 +41,6 @@ import qualified SharedLogic.DriverLocation as DLoc
 import qualified SharedLogic.DriverMode as DMode
 import qualified SharedLogic.Ride as SRide
 import qualified SharedLogic.SearchTryLocker as CS
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -67,13 +66,10 @@ newtype CancelSearchReq = CancelSearchReq
   }
 
 cancel ::
-  ( HasCacheConfig r,
-    HedisFlow m r,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EsqLocDBFlow m r,
     EsqLocRepDBFlow m r,
-    HedisFlow m r,
     CacheFlow m r,
     HasHttpClientOptions r c,
     EncFlow m r,
@@ -133,8 +129,7 @@ cancel req merchant booking = do
           }
 
 cancelSearch ::
-  ( HasCacheConfig r,
-    HedisFlow m r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     CoreMetrics m
@@ -168,8 +163,7 @@ validateCancelSearchRequest _ _ req = do
   QSR.findByTransactionId transactionId >>= fromMaybeM (SearchRequestNotFound $ "transactionId-" <> transactionId)
 
 validateCancelRequest ::
-  ( HasCacheConfig r,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     CacheFlow m r
   ) =>
   Id DM.Merchant ->

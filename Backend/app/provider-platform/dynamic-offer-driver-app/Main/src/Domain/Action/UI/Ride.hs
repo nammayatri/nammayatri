@@ -44,7 +44,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow, EsqLocDBFlow)
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
-import Kernel.Storage.Hedis as Redis (HedisFlow)
+import Kernel.Storage.Hedis (CacheFlow)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.APISuccess
 import Kernel.Types.Common
@@ -58,7 +58,6 @@ import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
 import SharedLogic.FareCalculator (fareSum)
 import qualified Storage.CachedQueries.BapMetadata as CQSM
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import Storage.CachedQueries.Merchant as QM
@@ -204,11 +203,10 @@ arrivedAtPickup rideId req = do
     isValidRideStatus status = status == DRide.NEW
 
 otpRideCreate ::
-  ( HasCacheConfig r,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EsqLocDBFlow m r,
-    Redis.HedisFlow m r,
+    CacheFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
     HasHttpClientOptions r c,

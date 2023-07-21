@@ -15,12 +15,12 @@ import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config
+import Kernel.Storage.Hedis (CacheFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Queries.SpecialLocationPriority as QSpecialLocationPriority
 import qualified Lib.Types.SpecialLocation as DSpecialLocation
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FareProduct as QFareProduct
 
 data FareProducts = FareProducts

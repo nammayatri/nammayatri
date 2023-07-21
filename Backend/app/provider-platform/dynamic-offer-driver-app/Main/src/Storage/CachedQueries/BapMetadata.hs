@@ -21,19 +21,18 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.BapMetadata as Queries
 
-findById :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id BapMetadata -> m (Maybe BapMetadata)
+findById :: (Hedis.CacheFlow m r, Esq.EsqDBFlow m r) => Id BapMetadata -> m (Maybe BapMetadata)
 findById bapMetadataId =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeBapMetadataByIdKey bapMetadataId) >>= \case
     Just a -> pure a
     Nothing -> flip whenJust (cacheBapMetadataById bapMetadataId) /=<< Queries.findById bapMetadataId
 
-clearBapMetadataByIdCache :: (CacheFlow m r) => Id BapMetadata -> m ()
+clearBapMetadataByIdCache :: (Hedis.CacheFlow m r) => Id BapMetadata -> m ()
 clearBapMetadataByIdCache = Hedis.withCrossAppRedis . Hedis.del . makeBapMetadataByIdKey
 
-cacheBapMetadataById :: (CacheFlow m r) => Id BapMetadata -> BapMetadata -> m ()
+cacheBapMetadataById :: (Hedis.CacheFlow m r) => Id BapMetadata -> BapMetadata -> m ()
 cacheBapMetadataById bapMetadataId bapMetadata = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp (makeBapMetadataByIdKey bapMetadataId) bapMetadata expTime

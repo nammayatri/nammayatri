@@ -27,20 +27,18 @@ import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.SearchTry as DST
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Storage.Hedis (CacheFlow, HedisFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool as Reexport
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers as Reexport
-import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 
 isSearchTryValid ::
-  ( HasCacheConfig r,
-    HedisFlow m r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     Log m
   ) =>
@@ -52,8 +50,7 @@ isSearchTryValid searchTryId = do
   pure $ status == DST.ACTIVE && validTill > now
 
 isReceivedMaxDriverQuotes ::
-  ( HasCacheConfig r,
-    HedisFlow m r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     Log m
   ) =>
@@ -65,8 +62,7 @@ isReceivedMaxDriverQuotes driverPoolCfg searchTryId = do
   pure (totalQuotesRecieved >= driverPoolCfg.maxDriverQuotesRequired)
 
 getRescheduleTime ::
-  ( HasCacheConfig r,
-    HedisFlow m r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     Log m
   ) =>

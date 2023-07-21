@@ -7,13 +7,13 @@ import qualified Domain.Types.RiderDetails as DRD
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (encrypt, getDbHash)
 import qualified Kernel.Storage.Esqueleto as ESQ
+import Kernel.Storage.Hedis (CacheFlow)
 import Kernel.Types.APISuccess
 import Kernel.Types.App
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.RiderDetails as QRD

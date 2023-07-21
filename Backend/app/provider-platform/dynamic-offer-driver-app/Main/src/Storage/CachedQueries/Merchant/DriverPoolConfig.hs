@@ -31,22 +31,21 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant.DriverPoolConfig as Queries
 
 create :: DriverPoolConfig -> Esq.SqlDB ()
 create = Queries.create
 
-findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [DriverPoolConfig]
+findAllByMerchantId :: (Hedis.CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [DriverPoolConfig]
 findAllByMerchantId id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdKey id) >>= \case
     Just a -> return $ fmap (coerce @(DriverPoolConfigD 'Unsafe) @DriverPoolConfig) a
     Nothing -> cacheDriverPoolConfigs id /=<< Queries.findAllByMerchantId id
 
-findByMerchantIdAndTripDistance :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Meters -> m (Maybe DriverPoolConfig)
+findByMerchantIdAndTripDistance :: (Hedis.CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Meters -> m (Maybe DriverPoolConfig)
 findByMerchantIdAndTripDistance merchantId tripDistance = find (\config -> config.tripDistance == tripDistance) <$> findAllByMerchantId merchantId
 
-cacheDriverPoolConfigs :: (CacheFlow m r) => Id Merchant -> [DriverPoolConfig] -> m ()
+cacheDriverPoolConfigs :: (Hedis.CacheFlow m r) => Id Merchant -> [DriverPoolConfig] -> m ()
 cacheDriverPoolConfigs merchantId cfg = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let merchantIdKey = makeMerchantIdKey merchantId

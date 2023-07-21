@@ -27,16 +27,15 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant.MerchantMessage as Queries
 
-findByMerchantIdAndMessageKey :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> MessageKey -> m (Maybe MerchantMessage)
+findByMerchantIdAndMessageKey :: (Hedis.CacheFlow m r, EsqDBFlow m r) => Id Merchant -> MessageKey -> m (Maybe MerchantMessage)
 findByMerchantIdAndMessageKey id messageKey =
   Hedis.get (makeMerchantIdAndMessageKey id messageKey) >>= \case
     Just a -> return . Just $ coerce @(MerchantMessageD 'Unsafe) @MerchantMessage a
     Nothing -> flip whenJust cacheMerchantMessage /=<< Queries.findByMerchantIdAndMessageKey id messageKey
 
-cacheMerchantMessage :: CacheFlow m r => MerchantMessage -> m ()
+cacheMerchantMessage :: Hedis.CacheFlow m r => MerchantMessage -> m ()
 cacheMerchantMessage merchantMessage = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeMerchantIdAndMessageKey merchantMessage.merchantId merchantMessage.messageKey

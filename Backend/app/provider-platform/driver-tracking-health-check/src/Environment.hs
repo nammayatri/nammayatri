@@ -26,7 +26,6 @@ import Kernel.Utils.Dhall
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
 import Kernel.Utils.Shutdown
-import Storage.CachedQueries.CacheConfig
 import Tools.Metrics
 
 type Flow = FlowR AppEnv
@@ -56,7 +55,7 @@ data AppCfg = AppCfg
     driverLocationHealthCheckIntervalInSec :: Seconds,
     smsCfg :: SmsConfig,
     driverInactiveSmsTemplate :: Text,
-    cacheConfig :: CacheConfig,
+    cacheConfig :: Redis.CacheConfig,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool
   }
@@ -88,7 +87,7 @@ data AppEnv = AppEnv
     isShuttingDown :: Shutdown,
     coreMetrics :: CoreMetricsContainer,
     loggerEnv :: LoggerEnv,
-    cacheConfig :: CacheConfig,
+    cacheConfig :: Redis.CacheConfig,
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool

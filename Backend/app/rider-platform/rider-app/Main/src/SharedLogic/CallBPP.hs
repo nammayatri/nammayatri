@@ -32,7 +32,7 @@ import qualified EulerHS.Types as Euler
 import GHC.Records.Extra
 import qualified Kernel.External.Maps.Types as MapSearch
 import Kernel.Prelude
-import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Storage.Hedis (CacheFlow)
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Error
 import Kernel.Utils.Common
@@ -40,7 +40,6 @@ import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl)
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
-import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
@@ -115,8 +114,7 @@ callTrack ::
     MonadFlow m,
     CoreMetrics m,
     EsqDBFlow m r,
-    HasCacheConfig r,
-    HedisFlow m r
+    CacheFlow m r
   ) =>
   DB.Booking ->
   DRide.Ride ->

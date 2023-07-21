@@ -33,19 +33,18 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant as Queries
 
 loadAllBaps :: Esq.Transactionable m => m [Merchant]
 loadAllBaps = Queries.findAll
 
-findById :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe Merchant)
+findById :: (Hedis.CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe Merchant)
 findById id =
   Hedis.safeGet (makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
     Nothing -> flip whenJust cacheMerchant /=<< Queries.findById id
 
-findByShortId :: (CacheFlow m r, EsqDBFlow m r) => ShortId Merchant -> m (Maybe Merchant)
+findByShortId :: (Hedis.CacheFlow m r, EsqDBFlow m r) => ShortId Merchant -> m (Maybe Merchant)
 findByShortId shortId_ =
   Hedis.safeGet (makeShortIdKey shortId_) >>= \case
     Nothing -> findAndCache
@@ -56,7 +55,7 @@ findByShortId shortId_ =
   where
     findAndCache = flip whenJust cacheMerchant /=<< Queries.findByShortId shortId_
 
-findBySubscriberId :: (CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m (Maybe Merchant)
+findBySubscriberId :: (Hedis.CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m (Maybe Merchant)
 findBySubscriberId subscriberId =
   Hedis.get (makeSubscriberIdKey subscriberId) >>= \case
     Nothing -> findAndCache
@@ -73,7 +72,7 @@ clearCache merchant = do
   Hedis.del (makeIdKey merchant.id)
   Hedis.del (makeShortIdKey merchant.shortId)
 
-cacheMerchant :: (CacheFlow m r) => Merchant -> m ()
+cacheMerchant :: (Hedis.CacheFlow m r) => Merchant -> m ()
 cacheMerchant merchant = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeIdKey merchant.id

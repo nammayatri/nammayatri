@@ -27,7 +27,6 @@ import Kernel.Utils.App (lookupDeploymentVersion)
 import Kernel.Utils.Dhall
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client
-import Storage.CachedQueries.CacheConfig
 import System.Environment (lookupEnv)
 import Prelude (show)
 

@@ -22,11 +22,11 @@ where
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude
+import Kernel.Storage.Hedis (CacheFlow)
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide

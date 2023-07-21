@@ -25,16 +25,15 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.MerchantConfig as Queries
 
-findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [MerchantConfig]
+findAllByMerchantId :: (Hedis.CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [MerchantConfig]
 findAllByMerchantId id =
   Hedis.safeGet (makeIdKey id) >>= \case
     Just a -> return a
     Nothing -> cacheMerchant id /=<< Queries.findAllByMerchantId id
 
-cacheMerchant :: (CacheFlow m r) => Id Merchant -> [MerchantConfig] -> m ()
+cacheMerchant :: (Hedis.CacheFlow m r) => Id Merchant -> [MerchantConfig] -> m ()
 cacheMerchant merchantId merchantConfig = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.setExp (makeIdKey merchantId) merchantConfig expTime

@@ -53,7 +53,6 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import qualified SharedLogic.MessageBuilder as MessageBuilder
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QD
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
@@ -114,11 +113,10 @@ authHitsCountKey person = "BPP:Registration:auth:" <> getId person.id <> ":hitsC
 
 auth ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
-    HasCacheConfig r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EsqLocDBFlow m r,
-    Redis.HedisFlow m r,
+    Redis.CacheFlow m r,
     EncFlow m r,
     CoreMetrics m
   ) =>
@@ -292,10 +290,9 @@ createDriverWithDetails req mbBundleVersion mbClientVersion merchantId = do
 verify ::
   ( HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
     EsqDBFlow m r,
-    Redis.HedisFlow m r,
+    Redis.CacheFlow m r,
     EncFlow m r,
-    CoreMetrics m,
-    CacheFlow m r
+    CoreMetrics m
   ) =>
   Id SR.RegistrationToken ->
   AuthVerifyReq ->
@@ -335,7 +332,7 @@ callWhatsappOptApi ::
   ( EsqDBFlow m r,
     CoreMetrics m,
     EncFlow m r,
-    CacheFlow m r
+    Redis.CacheFlow m r
   ) =>
   Text ->
   Id DO.Merchant ->
@@ -360,7 +357,7 @@ resend ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
     EncFlow m r,
-    CacheFlow m r,
+    Redis.CacheFlow m r,
     CoreMetrics m
   ) =>
   Id SR.RegistrationToken ->
@@ -397,8 +394,7 @@ cleanCachedTokens personId = do
 
 logout ::
   ( EsqDBFlow m r,
-    CacheFlow m r,
-    Redis.HedisFlow m r
+    Redis.CacheFlow m r
   ) =>
   (Id SP.Person, Id DO.Merchant) ->
   m APISuccess

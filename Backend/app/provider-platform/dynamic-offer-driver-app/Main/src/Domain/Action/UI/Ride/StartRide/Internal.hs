@@ -24,11 +24,11 @@ import Kernel.External.Maps.Types (LatLong)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow)
 import Kernel.Storage.Esqueleto.Transactionable (runInLocationDB)
+import Kernel.Storage.Hedis (CacheFlow)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.Ride as CQRide
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverLocation as DrLoc

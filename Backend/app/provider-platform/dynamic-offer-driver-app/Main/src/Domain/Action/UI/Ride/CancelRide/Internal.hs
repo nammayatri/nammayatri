@@ -45,7 +45,6 @@ import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified SharedLogic.Ride as SRide
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
@@ -75,7 +74,7 @@ cancelRideImpl ::
     HasLongDurationRetryCfg r c,
     HasShortDurationRetryCfg r c,
     HasField "maxShards" r Int,
-    HasCacheConfig r,
+    Redis.HasCacheConfig r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     EventStreamFlow m r,
     HasField "searchRequestExpirationSeconds" r NominalDiffTime
@@ -137,7 +136,7 @@ cancelRideImpl rideId bookingCReason = do
 
 cancelRideTransaction ::
   ( EsqDBFlow m r,
-    CacheFlow m r,
+    Redis.CacheFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EsqLocDBFlow m r,
     EsqLocRepDBFlow m r
@@ -171,7 +170,7 @@ repeatSearch ::
     HasHttpClientOptions r c,
     HasField "maxShards" r Int,
     HasShortDurationRetryCfg r c,
-    CacheFlow m r
+    Redis.CacheFlow m r
   ) =>
   DMerc.Merchant ->
   DFP.FullFarePolicy ->

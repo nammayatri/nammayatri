@@ -30,22 +30,21 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant.OnboardingDocumentConfig as Queries
 
 create :: OnboardingDocumentConfig -> Esq.SqlDB ()
 create = Queries.create
 
-findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [DTO.OnboardingDocumentConfig]
+findAllByMerchantId :: (Hedis.CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [DTO.OnboardingDocumentConfig]
 findAllByMerchantId id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdKey id) >>= \case
     Just a -> return a
     Nothing -> cacheOnboardingDocumentConfigs id /=<< Queries.findAllByMerchantId id
 
-findByMerchantIdAndDocumentType :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> DocumentType -> m (Maybe DTO.OnboardingDocumentConfig)
+findByMerchantIdAndDocumentType :: (Hedis.CacheFlow m r, EsqDBFlow m r) => Id Merchant -> DocumentType -> m (Maybe DTO.OnboardingDocumentConfig)
 findByMerchantIdAndDocumentType merchantId documentType = find (\config -> config.documentType == documentType) <$> findAllByMerchantId merchantId
 
-cacheOnboardingDocumentConfigs :: (CacheFlow m r) => Id Merchant -> [DTO.OnboardingDocumentConfig] -> m ()
+cacheOnboardingDocumentConfigs :: (Hedis.CacheFlow m r) => Id Merchant -> [DTO.OnboardingDocumentConfig] -> m ()
 cacheOnboardingDocumentConfigs merchantId configs = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let key = makeMerchantIdKey merchantId

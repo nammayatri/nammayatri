@@ -33,22 +33,21 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Exophone as Queries
 
-findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m [Exophone]
+findAllByMerchantId :: (Hedis.CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m [Exophone]
 findAllByMerchantId merchantId =
   Hedis.safeGet (makeMerchantIdKey merchantId) >>= \case
     Just a -> return a
     Nothing -> cacheExophones merchantId /=<< Queries.findAllByMerchantId merchantId
 
-findByPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Exophone)
+findByPhone :: (Hedis.CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Exophone)
 findByPhone phone = find (\exophone -> exophone.primaryPhone == phone || exophone.backupPhone == phone) <$> findAllByPhone phone
 
-findByPrimaryPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Exophone)
+findByPrimaryPhone :: (Hedis.CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Exophone)
 findByPrimaryPhone phone = find (\exophone -> exophone.primaryPhone == phone) <$> findAllByPhone phone
 
-findAllByPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m [Exophone]
+findAllByPhone :: (Hedis.CacheFlow m r, EsqDBFlow m r) => Text -> m [Exophone]
 findAllByPhone phone =
   Hedis.safeGet (makePhoneKey phone) >>= \case
     Nothing -> do
@@ -77,7 +76,7 @@ clearAllCache :: Hedis.HedisFlow m r => m ()
 clearAllCache = Hedis.delByPattern patternKey
 
 -- test with empty list
-cacheExophones :: CacheFlow m r => Id DM.Merchant -> [Exophone] -> m ()
+cacheExophones :: Hedis.CacheFlow m r => Id DM.Merchant -> [Exophone] -> m ()
 cacheExophones merchantId exophones = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let merchantIdKey = makeMerchantIdKey merchantId

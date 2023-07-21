@@ -34,10 +34,10 @@ import qualified EulerHS.Language as L
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Storage.Hedis (CacheFlow)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Booking as QRB
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
@@ -144,7 +144,7 @@ listOrder personId mRequestId mMobile mlimit moffset = do
   traverse (buildBookingToOrder person) bookings
   where
     getByMobileNumber number merchantId = do
-      let limit_ = maybe 10 (\x -> if x <= 10 then x else 10) mlimit
+      let limit_ = maybe 10 (`min` 10) mlimit
       mobileNumberHash <- getDbHash number
       person <-
         runInReplica $

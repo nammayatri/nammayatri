@@ -23,9 +23,9 @@ where
 
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DP
+import Kernel.Storage.Hedis (CacheFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Tools.Maps as Maps
 import Tools.Metrics (CoreMetrics)
 

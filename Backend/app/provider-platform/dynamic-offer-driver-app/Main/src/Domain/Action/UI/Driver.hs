@@ -123,7 +123,6 @@ import SharedLogic.FarePolicy
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified Storage.CachedQueries.BapMetadata as CQSM
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
@@ -379,12 +378,11 @@ data MetaDataReq = MetaDataReq
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 createDriver ::
-  ( HasCacheConfig r,
-    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+  ( HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
     EsqLocDBFlow m r,
     EncFlow m r,
-    Redis.HedisFlow m r,
+    Redis.CacheFlow m r,
     CoreMetrics m
   ) =>
   SP.Person ->
@@ -471,8 +469,7 @@ createDriverDetails personId adminId merchantId = do
     driverId = cast personId
 
 getInformation ::
-  ( HasCacheConfig r,
-    Redis.HedisFlow m r,
+  ( Redis.CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r
@@ -492,7 +489,7 @@ getInformation (personId, merchantId) = do
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   pure $ makeDriverInformationRes driverEntity organization driverReferralCode driverStats
 
-setActivity :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
+setActivity :: (Redis.CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
 setActivity (personId, _) isActive mode = do
   _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
@@ -550,9 +547,8 @@ buildDriverEntityRes (person, driverInfo) = do
 
 changeDriverEnableState ::
   ( EsqDBFlow m r,
-    Redis.HedisFlow m r,
-    CoreMetrics m,
-    HasCacheConfig r
+    Redis.CacheFlow m r,
+    CoreMetrics m
   ) =>
   SP.Person ->
   Id SP.Person ->
@@ -574,7 +570,7 @@ changeDriverEnableState admin personId isEnabled = do
     notificationTitle = "Account is disabled."
     notificationMessage = "Your account has been disabled. Contact support for more info."
 
-deleteDriver :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, EsqLocDBFlow m r) => SP.Person -> Id SP.Person -> m APISuccess
+deleteDriver :: (Redis.CacheFlow m r, EsqDBFlow m r, EsqLocDBFlow m r) => SP.Person -> Id SP.Person -> m APISuccess
 deleteDriver admin driverId = do
   driver <-
     QPerson.findById driverId
@@ -594,8 +590,7 @@ deleteDriver admin driverId = do
   return Success
 
 updateDriver ::
-  ( HasCacheConfig r,
-    Redis.HedisFlow m r,
+  ( Redis.CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r
@@ -779,8 +774,7 @@ makeDriverInformationRes DriverEntityRes {..} org referralCode driverStats =
 getNearbySearchRequests ::
   ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    Redis.HedisFlow m r,
-    HasCacheConfig r
+    Redis.CacheFlow m r
   ) =>
   (Id SP.Person, Id DM.Merchant) ->
   m GetNearbySearchRequestsRes
@@ -810,10 +804,9 @@ offerQuoteLockKey driverId = "Driver:OfferQuote:DriverId-" <> driverId.getId
 
 -- DEPRECATED
 offerQuote ::
-  ( HasCacheConfig r,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    Redis.HedisFlow m r,
+    Redis.CacheFlow m r,
     HasPrettyLogger m r,
     HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
     HasField "coreVersion" r Text,
@@ -834,10 +827,9 @@ offerQuote (driverId, merchantId) DriverOfferReq {..} = do
   respondQuote (driverId, merchantId) DriverRespondReq {searchRequestId = Nothing, searchTryId = Just searchRequestId, ..}
 
 respondQuote ::
-  ( HasCacheConfig r,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    Redis.HedisFlow m r,
+    Redis.CacheFlow m r,
     HasPrettyLogger m r,
     HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
     HasField "coreVersion" r Text,
@@ -973,7 +965,7 @@ respondQuote (driverId, _) req = do
         Notify.notifyDriverClearedFare orgId driverReq.driverId driverReq.searchTryId driverQuote.estimatedFare driver_.deviceToken
 
 getStats ::
-  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>
+  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, Redis.CacheFlow m r) =>
   (Id SP.Person, Id DM.Merchant) ->
   Day ->
   m DriverStatsRes
@@ -1014,7 +1006,7 @@ makeAlternateNumberAttemptsKey id = "DriverAlternateNumberAttempts:PersonId-" <>
 makeAlternateNumberVerifiedKey :: Id SP.Person -> Text
 makeAlternateNumberVerifiedKey id = "DriverAlternateNumberVerified:PersonId-" <> id.getId
 
-cacheAlternateNumberInfo :: (CacheFlow m r) => Id SP.Person -> Text -> Text -> Int -> Bool -> m ()
+cacheAlternateNumberInfo :: Redis.CacheFlow m r => Id SP.Person -> Text -> Text -> Int -> Bool -> m ()
 cacheAlternateNumberInfo personId phoneNumber otp attemptsLeft verified = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let alternatePhoneNumberKey = makeAlternatePhoneNumberKey personId
@@ -1027,7 +1019,7 @@ cacheAlternateNumberInfo personId phoneNumber otp attemptsLeft verified = do
   Redis.setExp alternateNumberAttemptsKey attemptsLeft expTime
   Redis.setExp alternateNumberVerifiedKey verified expTime
 
-invalidateAlternateNoCache :: (CacheFlow m r) => Id SP.Person -> m ()
+invalidateAlternateNoCache :: Redis.CacheFlow m r => Id SP.Person -> m ()
 invalidateAlternateNoCache personId = do
   let alternatePhoneNumberKey = makeAlternatePhoneNumberKey personId
       alternateNumberOtpKey = makeAlternateNumberOtpKey personId
@@ -1048,8 +1040,7 @@ validate ::
   ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
-    Redis.HedisFlow m r,
-    HasCacheConfig r,
+    Redis.CacheFlow m r,
     CoreMetrics m,
     HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig]
   ) =>
@@ -1140,9 +1131,8 @@ resendOtp ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
-    CacheFlow m r,
     CoreMetrics m,
-    Redis.HedisFlow m r
+    Redis.CacheFlow m r
   ) =>
   (Id SP.Person, Id DM.Merchant) ->
   DriverAlternateNumberReq ->
@@ -1185,8 +1175,7 @@ remove ::
   ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,
-    Redis.HedisFlow m r,
-    HasCacheConfig r,
+    Redis.CacheFlow m r,
     CoreMetrics m
   ) =>
   (Id SP.Person, Id DM.Merchant) ->
@@ -1202,7 +1191,7 @@ remove (personId, _) = do
     QPerson.updateAlternateMobileNumberAndCode driver
   return Success
 
-getDriverPayments :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Maybe Day -> Maybe Day -> Maybe DDF.DriverFeeStatus -> Maybe Int -> Maybe Int -> m [DriverPaymentHistoryResp]
+getDriverPayments :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, Redis.CacheFlow m r) => (Id SP.Person, Id DM.Merchant) -> Maybe Day -> Maybe Day -> Maybe DDF.DriverFeeStatus -> Maybe Int -> Maybe Int -> m [DriverPaymentHistoryResp]
 getDriverPayments (personId, merchantId_) mbFrom mbTo mbStatus mbLimit mbOffset = do
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit -- TODO move to common code
       offset = fromMaybe 0 mbOffset

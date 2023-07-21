@@ -30,7 +30,7 @@ import Kernel.Prelude
 import Kernel.Serviceability
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Storage.Hedis (CacheFlow)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Types.Version (Version)
@@ -38,7 +38,6 @@ import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.DirectionsCache as SDC
 import qualified SharedLogic.MerchantConfig as SMC
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerc
 import qualified Storage.CachedQueries.MerchantConfig as QMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -71,13 +70,11 @@ data OneWaySearchRes = OneWaySearchRes
   }
 
 oneWaySearch ::
-  ( HasCacheConfig r,
-    EncFlow m r,
+  ( EncFlow m r,
     EsqDBReplicaFlow m r,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
-    HedisFlow m r,
+    CacheFlow m r,
     EsqDBFlow m r,
-    HedisFlow m r,
     CoreMetrics m,
     HasBAPMetrics m r,
     EventStreamFlow m r

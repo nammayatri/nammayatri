@@ -27,19 +27,18 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant.MerchantPaymentMethod as Queries
 
-findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [MerchantPaymentMethod]
+findAllByMerchantId :: (Hedis.CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [MerchantPaymentMethod]
 findAllByMerchantId id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdKey id) >>= \case
     Just a -> return $ fmap (coerce @(MerchantPaymentMethodD 'Unsafe) @MerchantPaymentMethod) a
     Nothing -> cacheMerchantPaymentMethods id /=<< Queries.findAllByMerchantId id
 
-findByIdAndMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantPaymentMethod -> Id Merchant -> m (Maybe MerchantPaymentMethod)
+findByIdAndMerchantId :: (Hedis.CacheFlow m r, EsqDBFlow m r) => Id MerchantPaymentMethod -> Id Merchant -> m (Maybe MerchantPaymentMethod)
 findByIdAndMerchantId id merchantId = find (\mpm -> mpm.id == id) <$> findAllByMerchantId merchantId
 
-cacheMerchantPaymentMethods :: (CacheFlow m r) => Id Merchant -> [MerchantPaymentMethod] -> m ()
+cacheMerchantPaymentMethods :: (Hedis.CacheFlow m r) => Id Merchant -> [MerchantPaymentMethod] -> m ()
 cacheMerchantPaymentMethods merchantId cfg = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let merchantIdKey = makeMerchantIdKey merchantId

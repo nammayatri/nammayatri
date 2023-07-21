@@ -28,7 +28,6 @@ import Kernel.Types.Id (Id, cast)
 import Kernel.Utils.Common (Forkable (fork), fromMaybeM, getCurrentTime, highPrecMetersToMeters, logDebug)
 import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.DriverPool as DP
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CTCQ
 import qualified Storage.Queries.BookingCancellationReason as BCRQ
@@ -36,12 +35,12 @@ import qualified Storage.Queries.DriverStats as DSQ
 import qualified Storage.Queries.Ride as RQ
 import Tools.Error
 
-driverScoreEventHandler :: (Redis.HedisFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => DST.DriverRideRequeset -> m ()
+driverScoreEventHandler :: (Redis.CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => DST.DriverRideRequeset -> m ()
 driverScoreEventHandler payload = fork "DRIVER_SCORE_EVENT_HANDLER" do
   logDebug $ "driverScoreEventHandler with payload: " <> show payload
   eventPayloadHandler payload
 
-eventPayloadHandler :: (Redis.HedisFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => DST.DriverRideRequeset -> m ()
+eventPayloadHandler :: (Redis.CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => DST.DriverRideRequeset -> m ()
 eventPayloadHandler DST.OnDriverAcceptingSearchRequest {..} = do
   DP.removeSearchReqIdFromMap merchantId driverId searchTryId
   case response of

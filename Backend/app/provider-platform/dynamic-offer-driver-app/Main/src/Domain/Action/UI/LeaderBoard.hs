@@ -30,7 +30,6 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Error
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.Queries.Person as QPerson
 
@@ -50,7 +49,7 @@ data LeaderBoardRes = LeaderBoardRes
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 getDailyDriverLeaderBoard ::
-  (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, Redis.HedisFlow m r, CacheFlow m r) =>
+  (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, Redis.CacheFlow m r) =>
   (Id Person, Id DM.Merchant) ->
   Day ->
   m LeaderBoardRes
@@ -102,7 +101,7 @@ getDailyDriverLeaderBoard (personId, merchantId) day = do
     else return $ LeaderBoardRes drivers' (Just now)
 
 getWeeklyDriverLeaderBoard ::
-  (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, Redis.HedisFlow m r, CacheFlow m r) =>
+  (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, Redis.CacheFlow m r) =>
   (Id Person, Id DM.Merchant) ->
   Day ->
   Day ->

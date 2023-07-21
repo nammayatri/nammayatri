@@ -36,7 +36,6 @@ import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Ride as QRide
@@ -83,7 +82,7 @@ getPersonFlowStatus personId mIsPolling = do
           Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
           return $ GetPersonFlowStatusRes (Just personStatus) DPFS.IDLE
 
-notifyEvent :: (CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m) => Id DP.Person -> NotifyEventReq -> m NotifyEventResp
+notifyEvent :: (Redis.CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m) => Id DP.Person -> NotifyEventReq -> m NotifyEventResp
 notifyEvent personId req = do
   case req.event of
     RATE_DRIVER_SKIPPED -> backToIDLE
@@ -97,7 +96,7 @@ notifyEvent personId req = do
     backToIDLE = Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
 
 handleRideTracking ::
-  ( CacheFlow m r,
+  ( Redis.CacheFlow m r,
     EncFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
@@ -160,7 +159,7 @@ handleRideTracking personId (Just isPolling) DPFS.DRIVER_ARRIVED {..} = do
   return $ GetPersonFlowStatusRes Nothing updatedStatus
 handleRideTracking _ _ status = return $ GetPersonFlowStatusRes Nothing status
 
-updateStatus :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id DP.Person -> DPFS.FlowStatus -> m ()
+updateStatus :: (Redis.CacheFlow m r, Esq.EsqDBFlow m r) => Id DP.Person -> DPFS.FlowStatus -> m ()
 updateStatus personId updatedStatus = do
   Esq.runTransaction $ QPFS.updateStatus personId updatedStatus
   QPFS.clearCache personId

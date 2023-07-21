@@ -27,10 +27,9 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.BlackListOrg as Queries
 
-findBySubscriberId :: (CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m (Maybe BlackListOrg)
+findBySubscriberId :: (Hedis.CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m (Maybe BlackListOrg)
 findBySubscriberId subscriberId =
   Hedis.safeGet (makeShortIdKey subscriberId) >>= \case
     Just a -> return . Just $ coerce @(BlackListOrgD 'Unsafe) @BlackListOrg a
@@ -38,7 +37,7 @@ findBySubscriberId subscriberId =
   where
     findAndCache = flip whenJust cacheOrganization /=<< Queries.findBySubscriberId subscriberId
 
-cacheOrganization :: (CacheFlow m r) => BlackListOrg -> m ()
+cacheOrganization :: (Hedis.CacheFlow m r) => BlackListOrg -> m ()
 cacheOrganization org = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.setExp (makeShortIdKey org.subscriberId) (coerce @BlackListOrg @(BlackListOrgD 'Unsafe) org) expTime

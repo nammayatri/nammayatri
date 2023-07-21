@@ -18,16 +18,15 @@ import Domain.Types.FeedbackForm
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common
-import Storage.CachedQueries.CacheConfig
 import Storage.Queries.FeedbackForm as Queries
 
-findAllFeedback :: (CacheFlow m r, EsqDBFlow m r, HasCacheFeedbackFormConfig r) => m [FeedbackFormRes]
+findAllFeedback :: (Hedis.CacheFlow m r, EsqDBFlow m r, HasCacheFeedbackFormConfig r) => m [FeedbackFormRes]
 findAllFeedback =
   Hedis.safeGet "CachedQueries:FeedbackForm" >>= \case
     Just a -> return a
     Nothing -> cacheFeedback "CachedQueries:FeedbackForm" /=<< Queries.findAllFeedback
 
-findAllFeedbackByRating :: (CacheFlow m r, EsqDBFlow m r, HasCacheFeedbackFormConfig r) => Int -> m [FeedbackFormRes]
+findAllFeedbackByRating :: (Hedis.CacheFlow m r, EsqDBFlow m r, HasCacheFeedbackFormConfig r) => Int -> m [FeedbackFormRes]
 findAllFeedbackByRating rating =
   Hedis.safeGet (makefeedbackRatingKey rating) >>= \case
     Just a -> return a
@@ -36,7 +35,7 @@ findAllFeedbackByRating rating =
 makefeedbackRatingKey :: Int -> Text
 makefeedbackRatingKey rating = "CachedQueries:FeedbackForm" <> ":Rating" <> show rating
 
-cacheFeedback :: (CacheFlow m r, HasCacheFeedbackFormConfig r) => Text -> [FeedbackFormRes] -> m ()
+cacheFeedback :: (Hedis.CacheFlow m r, HasCacheFeedbackFormConfig r) => Text -> [FeedbackFormRes] -> m ()
 cacheFeedback key feedbacks = do
   expTime <- fromIntegral <$> asks (.cacheFeedbackFormConfig.configsExpTime)
   Hedis.setExp key feedbacks expTime

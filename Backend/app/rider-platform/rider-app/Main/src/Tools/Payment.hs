@@ -27,10 +27,10 @@ import Kernel.External.Payment.Interface as Reexport hiding
   )
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
+import Kernel.Storage.Hedis (CacheFlow)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Tools.Metrics (CoreMetrics)
 

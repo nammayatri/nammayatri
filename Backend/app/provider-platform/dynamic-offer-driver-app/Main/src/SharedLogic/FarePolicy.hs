@@ -15,10 +15,10 @@ import Domain.Types.Merchant
 import Domain.Types.Vehicle.Variant (Variant (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import Kernel.Storage.Hedis (CacheFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.FareProduct as FareProduct
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy as QFP
 import qualified Storage.CachedQueries.FareProduct as QFareProduct
 import Tools.Error

@@ -31,29 +31,28 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant.MerchantServiceConfig as Queries
 
-findByMerchantIdAndService :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)
+findByMerchantIdAndService :: (Hedis.CacheFlow m r, EsqDBFlow m r) => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)
 findByMerchantIdAndService id serviceName =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdAndServiceKey id serviceName) >>= \case
     Just a -> return . Just $ coerce @(MerchantServiceConfigD 'Unsafe) @MerchantServiceConfig a
     Nothing -> flip whenJust cacheMerchantServiceConfig /=<< Queries.findByMerchantIdAndService id serviceName
 
 -- FIXME this is temprorary solution for backward compatibility
-findOne :: (CacheFlow m r, EsqDBFlow m r) => ServiceName -> m (Maybe MerchantServiceConfig)
+findOne :: (Hedis.CacheFlow m r, EsqDBFlow m r) => ServiceName -> m (Maybe MerchantServiceConfig)
 findOne serviceName = do
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeServiceNameKey serviceName) >>= \case
     Just a -> return . Just $ coerce @(MerchantServiceConfigD 'Unsafe) @MerchantServiceConfig a
     Nothing -> flip whenJust cacheOneServiceConfig /=<< Queries.findOne serviceName
 
-cacheOneServiceConfig :: CacheFlow m r => MerchantServiceConfig -> m ()
+cacheOneServiceConfig :: Hedis.CacheFlow m r => MerchantServiceConfig -> m ()
 cacheOneServiceConfig orgServiceConfig = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let serviceNameKey = makeServiceNameKey (getServiceName orgServiceConfig)
   Hedis.withCrossAppRedis $ Hedis.setExp serviceNameKey (coerce @MerchantServiceConfig @(MerchantServiceConfigD 'Unsafe) orgServiceConfig) expTime
 
-cacheMerchantServiceConfig :: CacheFlow m r => MerchantServiceConfig -> m ()
+cacheMerchantServiceConfig :: Hedis.CacheFlow m r => MerchantServiceConfig -> m ()
 cacheMerchantServiceConfig orgServiceConfig = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeMerchantIdAndServiceKey orgServiceConfig.merchantId (getServiceName orgServiceConfig)

@@ -43,7 +43,6 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Servant (BasicAuthData)
 import SharedLogic.Merchant
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
@@ -89,7 +88,7 @@ createOrder (driverId, merchantId) driverFeeId = do
   DPayment.createOrderService commonMerchantId commonPersonId orderId createOrderReq createOrderCall
 
 getOrder ::
-  ( CacheFlow m r,
+  ( Redis.CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
@@ -111,7 +110,7 @@ mkOrderAPIEntity DOrder.PaymentOrder {..} = do
 -- order status -----------------------------------------------------
 
 getStatus ::
-  ( CacheFlow m r,
+  ( Redis.CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
@@ -150,7 +149,7 @@ juspayWebhookHandler merchantShortId authData value = do
           pure Ack
     _ -> throwError $ InternalError "Unknown Service Config"
 
-processPayment :: (EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> TransactionStatus -> Id DriverFee -> m ()
+processPayment :: (EsqDBFlow m r, Redis.CacheFlow m r) => Id DM.Merchant -> TransactionStatus -> Id DriverFee -> m ()
 processPayment merchantId orderStatus driverFeeId = do
   driverFee <- QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound driverFeeId.getId)
   driverInfo <- CDI.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound driverFee.driverId.getId)

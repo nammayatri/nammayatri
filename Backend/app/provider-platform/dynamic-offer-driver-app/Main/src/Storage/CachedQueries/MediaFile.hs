@@ -22,16 +22,15 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.MediaFile as Queries
 
-findById :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MediaFile -> m (Maybe MediaFile)
+findById :: (Hedis.CacheFlow m r, Esq.EsqDBFlow m r) => Id MediaFile -> m (Maybe MediaFile)
 findById mediaFileId =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMediaFileByIdKey mediaFileId) >>= \case
     Just a -> pure a
     Nothing -> cacheMediaFileById mediaFileId /=<< Queries.findById mediaFileId
 
-findAllInForIssueReportId :: (CacheFlow m r, Esq.EsqDBFlow m r) => [Id MediaFile] -> Id IssueReport -> m [MediaFile]
+findAllInForIssueReportId :: (Hedis.CacheFlow m r, Esq.EsqDBFlow m r) => [Id MediaFile] -> Id IssueReport -> m [MediaFile]
 findAllInForIssueReportId mediaFileIds issueReportId =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMediaFileByIssueReportIdKey issueReportId) >>= \case
     Just a -> pure a
@@ -39,10 +38,10 @@ findAllInForIssueReportId mediaFileIds issueReportId =
 
 --------- Caching logic for media file by id -------------------
 
-clearMediaFileByIdCache :: (CacheFlow m r) => Id MediaFile -> m ()
+clearMediaFileByIdCache :: (Hedis.CacheFlow m r) => Id MediaFile -> m ()
 clearMediaFileByIdCache = Hedis.withCrossAppRedis . Hedis.del . makeMediaFileByIdKey
 
-cacheMediaFileById :: (CacheFlow m r) => Id MediaFile -> Maybe MediaFile -> m ()
+cacheMediaFileById :: (Hedis.CacheFlow m r) => Id MediaFile -> Maybe MediaFile -> m ()
 cacheMediaFileById mediaFileId mediaFile = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp (makeMediaFileByIdKey mediaFileId) mediaFile expTime
@@ -52,10 +51,10 @@ makeMediaFileByIdKey id = "driver-offer:CachedQueries:MediaFile:Id-" <> show id
 
 --------- Caching logic for media files by issue report id -------------------
 
-clearMediaFileByIssueReportIdCache :: (CacheFlow m r) => Id IssueReport -> m ()
+clearMediaFileByIssueReportIdCache :: (Hedis.CacheFlow m r) => Id IssueReport -> m ()
 clearMediaFileByIssueReportIdCache = Hedis.withCrossAppRedis . Hedis.del . makeMediaFileByIssueReportIdKey
 
-cacheMediaFileByIssueReportId :: (CacheFlow m r) => Id IssueReport -> [MediaFile] -> m ()
+cacheMediaFileByIssueReportId :: (Hedis.CacheFlow m r) => Id IssueReport -> [MediaFile] -> m ()
 cacheMediaFileByIssueReportId issueReportId mediaFiles = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp (makeMediaFileByIssueReportIdKey issueReportId) mediaFiles expTime
@@ -63,7 +62,7 @@ cacheMediaFileByIssueReportId issueReportId mediaFiles = do
 makeMediaFileByIssueReportIdKey :: Id IssueReport -> Text
 makeMediaFileByIssueReportIdKey issueReportId = "driver-offer:CachedQueries:MediaFile:IssueReport:Id-" <> show issueReportId
 
-invalidateMediaFileCache :: (CacheFlow m r) => [Id MediaFile] -> Maybe (Id IssueReport) -> m ()
+invalidateMediaFileCache :: (Hedis.CacheFlow m r) => [Id MediaFile] -> Maybe (Id IssueReport) -> m ()
 invalidateMediaFileCache mediaFileIds mbIssueReportId = do
   mapM_ clearMediaFileByIdCache mediaFileIds
   whenJust mbIssueReportId clearMediaFileByIssueReportIdCache

@@ -42,13 +42,12 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
-import Kernel.Storage.Hedis.Config (HedisFlow)
+import Kernel.Storage.Hedis.Config (CacheFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.MerchantConfig as SMC
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
@@ -237,7 +236,6 @@ data BreakupPriceInfo = BreakupPriceInfo
 
 onUpdate ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasCacheConfig r,
     EsqDBFlow m r,
     EncFlow m r,
     EsqDBReplicaFlow m r,
@@ -245,7 +243,7 @@ onUpdate ::
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     -- HasShortDurationRetryCfg r c, -- uncomment for test update api
-    HedisFlow m r,
+    CacheFlow m r,
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
     EventStreamFlow m r
   ) =>
@@ -417,15 +415,14 @@ onUpdate ValidatedEstimateRepetitionReq {..} = do
   Notify.notifyOnEstimatedReallocated booking estimate.id
 
 validateRequest ::
-  ( HasCacheConfig r,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     CoreMetrics m,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     MonadFlow m,
     MonadReader r m,
-    HedisFlow m r,
+    CacheFlow m r,
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
   ) =>
   OnUpdateReq ->
@@ -492,7 +489,7 @@ validateRequest EstimateRepetitionReq {..} = do
   return $ ValidatedEstimateRepetitionReq {..}
 
 buildBookingCancellationReason ::
-  (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r, CoreMetrics m) =>
+  (EsqDBFlow m r, CacheFlow m r, CoreMetrics m) =>
   Id SRB.Booking ->
   Maybe (Id SRide.Ride) ->
   SBCR.CancellationSource ->

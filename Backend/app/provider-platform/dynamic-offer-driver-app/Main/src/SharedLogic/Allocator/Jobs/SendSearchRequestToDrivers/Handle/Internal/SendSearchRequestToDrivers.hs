@@ -37,7 +37,6 @@ import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Dri
 import SharedLogic.DriverPool
 import SharedLogic.GoogleTranslate
 import qualified Storage.CachedQueries.BapMetadata as CQSM
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Tools.Maps as Maps
@@ -50,9 +49,8 @@ sendSearchRequestToDrivers ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     TranslateFlow m r,
-    CacheFlow m r,
     EncFlow m r,
-    Redis.HedisFlow m r
+    Redis.CacheFlow m r
   ) =>
   DSR.SearchRequest ->
   DST.SearchTry ->
@@ -140,7 +138,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
               }
       pure searchRequestForDriver
 
-buildTranslatedSearchReqLocation :: (TranslateFlow m r, EsqDBFlow m r, CacheFlow m r) => DLoc.SearchReqLocation -> Maybe Maps.Language -> m DLoc.SearchReqLocation
+buildTranslatedSearchReqLocation :: (TranslateFlow m r, EsqDBFlow m r, Redis.CacheFlow m r) => DLoc.SearchReqLocation -> Maybe Maps.Language -> m DLoc.SearchReqLocation
 buildTranslatedSearchReqLocation DLoc.SearchReqLocation {..} mbLanguage = do
   areaRegional <- case mbLanguage of
     Nothing -> return area
@@ -157,7 +155,7 @@ buildTranslatedSearchReqLocation DLoc.SearchReqLocation {..} mbLanguage = do
 translateSearchReq ::
   ( TranslateFlow m r,
     EsqDBFlow m r,
-    CacheFlow m r
+    Redis.CacheFlow m r
   ) =>
   DSR.SearchRequest ->
   Maps.Language ->
@@ -174,7 +172,7 @@ translateSearchReq DSR.SearchRequest {..} language = do
 
 addLanguageToDictionary ::
   ( TranslateFlow m r,
-    CacheFlow m r,
+    Redis.CacheFlow m r,
     EsqDBFlow m r
   ) =>
   DSR.SearchRequest ->

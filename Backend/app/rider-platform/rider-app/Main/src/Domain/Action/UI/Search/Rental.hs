@@ -33,7 +33,6 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import Storage.Queries.Geometry
 import qualified Storage.Queries.Person as QPerson
@@ -59,9 +58,8 @@ data RentalSearchRes = RentalSearchRes
   }
 
 rentalSearch ::
-  ( HasCacheConfig r,
-    EsqDBFlow m r,
-    Redis.HedisFlow m r,
+  ( EsqDBFlow m r,
+    Redis.CacheFlow m r,
     EsqDBReplicaFlow m r,
     CoreMetrics m,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],

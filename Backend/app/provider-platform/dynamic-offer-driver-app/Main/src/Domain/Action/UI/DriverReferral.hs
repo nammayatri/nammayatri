@@ -15,7 +15,6 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
-import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.DriverReferral as QRD
 import Tools.Error
@@ -27,8 +26,7 @@ data ReferralLinkReq = ReferralLinkReq
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 createDriverReferral ::
-  ( HasCacheConfig r,
-    Redis.HedisFlow m r,
+  ( Redis.CacheFlow m r,
     MonadFlow m,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r

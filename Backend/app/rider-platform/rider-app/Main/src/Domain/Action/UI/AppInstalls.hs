@@ -23,7 +23,7 @@ import qualified Domain.Types.Merchant as DMerchant
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (runTransaction)
--- import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Hedis (CacheFlow)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -31,7 +31,6 @@ import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.AppInstalls as QAppInstalls
 

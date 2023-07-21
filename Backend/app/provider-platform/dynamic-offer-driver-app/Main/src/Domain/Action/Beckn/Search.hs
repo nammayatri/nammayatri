@@ -57,7 +57,6 @@ import qualified SharedLogic.Estimate as SHEst
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleMaps
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import Storage.CachedQueries.Merchant.TransporterConfig as CTC
@@ -398,7 +397,7 @@ validateRequest merchantId sReq = do
     throwError RideNotServiceable
   return merchant
 
-buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.SearchReqLocation
+buildSearchReqLocation :: (EncFlow m r, Redis.CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.SearchReqLocation
 buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@Maps.LatLong {..} = do
   Address {..} <- case address of
     Just loc
@@ -422,7 +421,7 @@ buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@
       updatedAt = now
   pure DLoc.SearchReqLocation {..}
 
-getAddressByGetPlaceName :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> LatLong -> m Address
+getAddressByGetPlaceName :: (EncFlow m r, Redis.CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> LatLong -> m Address
 getAddressByGetPlaceName merchantId sessionToken latLong = do
   pickupRes <-
     DMaps.getPlaceName merchantId $

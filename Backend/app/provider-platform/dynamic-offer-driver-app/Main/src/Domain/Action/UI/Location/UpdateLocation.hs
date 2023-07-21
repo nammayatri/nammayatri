@@ -53,7 +53,6 @@ import SharedLogic.DriverFee (mergeDriverFee)
 import qualified SharedLogic.DriverLocation as DrLoc
 import SharedLogic.DriverPool (updateDriverSpeedInRedis)
 import qualified SharedLogic.Ride as SRide
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import Storage.CachedQueries.DriverInformation (updatePendingPayment, updateSubscription)
 import qualified Storage.CachedQueries.DriverInformation as DInfo
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
@@ -141,7 +140,7 @@ streamLocationUpdates mbRideId merchantId driverId point timestamp accuracy stat
     (topicName, Just (encodeUtf8 $ getId driverId))
     (DriverLocationUpdateStreamData (getId <$> mbRideId) (getId merchantId) timestamp now point accuracy status isDriverActive mbDriverMode)
 
-handleDriverPayments :: (Esq.EsqDBReplicaFlow m r, Esq.EsqDBFlow m r, CacheFlow m r) => Id Person.Person -> Seconds -> m ()
+handleDriverPayments :: (Esq.EsqDBReplicaFlow m r, Esq.EsqDBFlow m r, Redis.CacheFlow m r) => Id Person.Person -> Seconds -> m ()
 handleDriverPayments driverId diffUtc = do
   now <- getLocalCurrentTime diffUtc
   ongoingAfterEndTime <- Esq.runInReplica $ findOngoingAfterEndTime driverId now
@@ -171,7 +170,7 @@ updateLocationHandler ::
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["driverLocationUpdateTopic" ::: Text],
     MonadTime m,
-    CacheFlow m r,
+    Redis.CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r
   ) =>

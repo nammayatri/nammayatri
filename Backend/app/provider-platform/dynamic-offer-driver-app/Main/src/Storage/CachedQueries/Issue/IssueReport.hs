@@ -22,16 +22,15 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Issue.IssueReport as Queries
 
-findAllByDriver :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id SP.Person -> m [IssueReport]
+findAllByDriver :: (Hedis.CacheFlow m r, Esq.EsqDBFlow m r) => Id SP.Person -> m [IssueReport]
 findAllByDriver driverId =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueReportByDriverKey driverId) >>= \case
     Just a -> pure a
     Nothing -> cacheAllIssueReportByDriver driverId /=<< Queries.findAllByDriver driverId
 
-findById :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id IssueReport -> m (Maybe IssueReport)
+findById :: (Hedis.CacheFlow m r, Esq.EsqDBFlow m r) => Id IssueReport -> m (Maybe IssueReport)
 findById issueReportId =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueReportByIdKey issueReportId) >>= \case
     Just a -> pure a
@@ -39,10 +38,10 @@ findById issueReportId =
 
 --------- Caching logic for issue Report by DriverId -------------------
 
-clearIssueReportByDriverCache :: (CacheFlow m r) => Id SP.Person -> m ()
+clearIssueReportByDriverCache :: (Hedis.CacheFlow m r) => Id SP.Person -> m ()
 clearIssueReportByDriverCache = Hedis.withCrossAppRedis . Hedis.del . makeIssueReportByDriverKey
 
-cacheAllIssueReportByDriver :: (CacheFlow m r) => Id SP.Person -> [IssueReport] -> m ()
+cacheAllIssueReportByDriver :: (Hedis.CacheFlow m r) => Id SP.Person -> [IssueReport] -> m ()
 cacheAllIssueReportByDriver driverId issueReport = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueReportByDriverKey driverId) issueReport expTime
@@ -52,10 +51,10 @@ makeIssueReportByDriverKey driverId = "driver-offer:CachedQueries:IssueReport:Dr
 
 --------- Caching logic for issue Report by id -------------------
 
-clearIssueReportByIdCache :: (CacheFlow m r) => Id IssueReport -> m ()
+clearIssueReportByIdCache :: (Hedis.CacheFlow m r) => Id IssueReport -> m ()
 clearIssueReportByIdCache = Hedis.withCrossAppRedis . Hedis.del . makeIssueReportByIdKey
 
-cacheIssueReportById :: (CacheFlow m r) => Id IssueReport -> Maybe IssueReport -> m ()
+cacheIssueReportById :: (Hedis.CacheFlow m r) => Id IssueReport -> Maybe IssueReport -> m ()
 cacheIssueReportById issueReportId issueReport = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueReportByIdKey issueReportId) issueReport expTime
@@ -63,7 +62,7 @@ cacheIssueReportById issueReportId issueReport = do
 makeIssueReportByIdKey :: Id IssueReport -> Text
 makeIssueReportByIdKey id = "driver-offer:CachedQueries:IssueReport:Id-" <> show id
 
-invalidateIssueReportCache :: (CacheFlow m r) => Maybe (Id IssueReport) -> Maybe (Id SP.Person) -> m ()
+invalidateIssueReportCache :: (Hedis.CacheFlow m r) => Maybe (Id IssueReport) -> Maybe (Id SP.Person) -> m ()
 invalidateIssueReportCache issueReportId driverId = do
   whenJust issueReportId clearIssueReportByIdCache
   whenJust driverId clearIssueReportByDriverCache

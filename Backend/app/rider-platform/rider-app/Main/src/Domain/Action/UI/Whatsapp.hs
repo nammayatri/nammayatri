@@ -19,11 +19,11 @@ import Kernel.External.Encryption (decrypt)
 import Kernel.External.Whatsapp.Interface.Types as Reexport
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
+import Kernel.Storage.Hedis (CacheFlow)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Person as QP
 import Tools.Metrics (CoreMetrics)
 import Tools.Whatsapp as Whatsapp

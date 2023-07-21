@@ -21,13 +21,12 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Person.PersonFlowStatus as Queries
 
 create :: PersonFlowStatus -> Esq.SqlDB ()
 create = Queries.create
 
-getStatus :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person -> m (Maybe FlowStatus)
+getStatus :: (Hedis.CacheFlow m r, Esq.EsqDBFlow m r) => Id Person -> m (Maybe FlowStatus)
 getStatus personId =
   Hedis.safeGet (makeFlowStatusKey personId) >>= \case
     Just a -> return a
@@ -42,7 +41,7 @@ deleteByPersonId = Queries.deleteByPersonId
 updateToIdleMultiple :: [Id Person] -> UTCTime -> Esq.SqlDB ()
 updateToIdleMultiple = Queries.updateToIdleMultiple
 
-cachedStatus :: CacheFlow m r => Id Person -> FlowStatus -> m ()
+cachedStatus :: Hedis.CacheFlow m r => Id Person -> FlowStatus -> m ()
 cachedStatus personId flowStatus = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let personIdKey = makeFlowStatusKey personId
@@ -51,6 +50,6 @@ cachedStatus personId flowStatus = do
 makeFlowStatusKey :: Id Person -> Text
 makeFlowStatusKey personId = "CachedQueries:Person:FlowStatus-" <> personId.getId
 
-clearCache :: CacheFlow m r => Id Person -> m ()
+clearCache :: Hedis.CacheFlow m r => Id Person -> m ()
 clearCache personId = do
   Hedis.del (makeFlowStatusKey personId)

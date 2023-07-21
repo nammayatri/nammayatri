@@ -25,6 +25,7 @@ import Kernel.External.SMS as Reexport hiding
   )
 import qualified Kernel.External.SMS as Sms
 import Kernel.Prelude
+import Kernel.Storage.Hedis (CacheFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
   ( EncFlow,
@@ -32,7 +33,6 @@ import Kernel.Utils.Common
     fromMaybeM,
     throwError,
   )
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import Tools.Error

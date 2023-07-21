@@ -21,10 +21,9 @@ import qualified Domain.Types.Merchant as DM
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
-import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Storage.Hedis (CacheFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Person as QP
@@ -56,7 +55,7 @@ data OnInitRes = OnInitRes
   }
   deriving (Generic, Show)
 
-onInit :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HedisFlow m r) => OnInitReq -> m OnInitRes
+onInit :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => OnInitReq -> m OnInitRes
 onInit req = do
   DB.runTransaction $ do
     QRideB.updateBPPBookingId req.bookingId req.bppBookingId

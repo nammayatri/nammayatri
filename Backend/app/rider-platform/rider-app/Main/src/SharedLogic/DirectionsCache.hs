@@ -23,10 +23,10 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
+import Kernel.Storage.Hedis (CacheFlow)
 import Kernel.Types.Error (MerchantError (MerchantNotFound))
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import Storage.CachedQueries.Maps.DirectionsCache as DCC
 import qualified Storage.CachedQueries.Maps.DirectionsCache as DQ
 import Storage.CachedQueries.Merchant as M

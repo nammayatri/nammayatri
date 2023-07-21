@@ -42,8 +42,7 @@ import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Kernel.Storage.Hedis (HedisFlow)
-import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Storage.Hedis (CacheFlow, HedisFlow)
 import Kernel.Streaming.Kafka.Topic.PublicTransportSearch
 import Kernel.Streaming.MonadProducer
 import Kernel.Types.Common hiding (id)
@@ -57,7 +56,6 @@ import Lib.SessionizerMetrics.Types.Event
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.PublicTransport as PublicTransport
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Person as Person
 import Tools.Auth
 import qualified Tools.JSON as J
@@ -127,11 +125,10 @@ search (personId, _) req mbBundleVersion mbClientVersion mbDevice = withFlowHand
   return $ SearchRes searchId searchExpiry routeInfo
 
 oneWaySearch ::
-  ( HasCacheConfig r,
-    EncFlow m r,
+  ( EncFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    HedisFlow m r,
+    CacheFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     CoreMetrics m,
@@ -158,10 +155,9 @@ oneWaySearch personId bundleVersion clientVersion device req = do
   return (dSearchRes.searchId, dSearchRes.searchRequestExpiry, dSearchRes.shortestRouteInfo)
 
 rentalSearch ::
-  ( HasCacheConfig r,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    HedisFlow m r,
+    CacheFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     CoreMetrics m,
@@ -183,7 +179,7 @@ rentalSearch personId bundleVersion clientVersion device req = do
   pure (dSearchRes.searchId, dSearchRes.searchRequestExpiry, Nothing)
 
 checkSearchRateLimit ::
-  ( Redis.HedisFlow m r,
+  ( HedisFlow m r,
     CoreMetrics m,
     HasFlowEnv m r '["slackCfg" ::: SlackConfig],
     HasFlowEnv m r '["searchRateLimitOptions" ::: APIRateLimitOptions],

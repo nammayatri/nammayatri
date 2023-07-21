@@ -61,7 +61,6 @@ import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QDFS
@@ -168,10 +167,9 @@ authHitsCountKey person = "BAP:Registration:auth" <> getId person.id <> ":hitsCo
 
 auth ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
-    HasCacheConfig r,
     DB.EsqDBReplicaFlow m r,
     EsqDBFlow m r,
-    Redis.HedisFlow m r,
+    Redis.CacheFlow m r,
     EncFlow m r,
     CoreMetrics m
   ) =>
@@ -223,10 +221,9 @@ auth req mbBundleVersion mbClientVersion = do
 
 signatureAuth ::
   ( HasFlowEnv m r '["smsCfg" ::: SmsConfig],
-    HasCacheConfig r,
     DB.EsqDBReplicaFlow m r,
     EsqDBFlow m r,
-    Redis.HedisFlow m r,
+    Redis.CacheFlow m r,
     EncFlow m r,
     CoreMetrics m
   ) =>
@@ -265,7 +262,7 @@ signatureAuth req mbBundleVersion mbClientVersion = do
       return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity)
     else return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing
 
-buildPerson :: (EncFlow m r, DB.EsqDBReplicaFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, CacheFlow m r) => AuthReq -> Text -> Maybe Text -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> m SP.Person
+buildPerson :: (EncFlow m r, DB.EsqDBReplicaFlow m r, EsqDBFlow m r, Redis.CacheFlow m r) => AuthReq -> Text -> Maybe Text -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> m SP.Person
 buildPerson req mobileNumber notificationToken bundleVersion clientVersion merchantId = do
   pid <- BC.generateGUID
   now <- getCurrentTime
@@ -350,7 +347,7 @@ makeSession SmsSessionConfig {..} entityId merchantId fakeOtp = do
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BAP:Registration:verify:" <> getId id <> ":hitsCount"
 
-verifyFlow :: (EsqDBFlow m r, EncFlow m r, CoreMetrics m, CacheFlow m r) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe Text -> m PersonAPIEntity
+verifyFlow :: (EsqDBFlow m r, EncFlow m r, CoreMetrics m, Redis.CacheFlow m r) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe Text -> m PersonAPIEntity
 verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
   let isNewPerson = person.isNew
   DB.runTransaction $ do
@@ -370,14 +367,12 @@ verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
   return personAPIEntity
 
 verify ::
-  ( HasCacheConfig r,
-    HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
+  ( HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
     EsqDBFlow m r,
     DB.EsqDBReplicaFlow m r,
-    Redis.HedisFlow m r,
+    Redis.CacheFlow m r,
     EncFlow m r,
-    CoreMetrics m,
-    CacheFlow m r
+    CoreMetrics m
   ) =>
   Id SR.RegistrationToken ->
   AuthVerifyReq ->
@@ -408,11 +403,10 @@ verify tokenId req = do
         throwError TokenExpired
 
 callWhatsappOptApi ::
-  ( HasCacheConfig r,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     CoreMetrics m,
     EncFlow m r,
-    CacheFlow m r
+    Redis.CacheFlow m r
   ) =>
   Text ->
   Id SP.Person ->
@@ -429,7 +423,7 @@ getRegistrationTokenE :: EsqDBFlow m r => Id SR.RegistrationToken -> m SR.Regist
 getRegistrationTokenE tokenId =
   RegistrationToken.findById tokenId >>= fromMaybeM (TokenNotFound $ getId tokenId)
 
-createPerson :: (EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, Redis.HedisFlow m r, CacheFlow m r) => AuthReq -> Text -> Maybe Text -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> m SP.Person
+createPerson :: (EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, Redis.CacheFlow m r) => AuthReq -> Text -> Maybe Text -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> m SP.Person
 createPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion merchantId = do
   person <- buildPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion merchantId
   DB.runTransaction $ do
@@ -452,7 +446,7 @@ resend ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
     EncFlow m r,
-    CacheFlow m r,
+    Redis.CacheFlow m r,
     CoreMetrics m
   ) =>
   Id SR.RegistrationToken ->

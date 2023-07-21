@@ -25,11 +25,11 @@ import Kernel.External.Whatsapp.Interface as Reexport hiding
   )
 import qualified Kernel.External.Whatsapp.Interface as GupShup
 import Kernel.Prelude
+import Kernel.Storage.Hedis (CacheFlow)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import Tools.Metrics (CoreMetrics)

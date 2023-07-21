@@ -20,10 +20,9 @@ import Domain.Types.Maps.DirectionsCache (DirectionsCache)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Maps.DirectionsCache as Queries
 
-cacheDirectionsResponse :: CacheFlow m r => DirectionsCache -> m ()
+cacheDirectionsResponse :: Hedis.CacheFlow m r => DirectionsCache -> m ()
 cacheDirectionsResponse dirCache = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let dirKey = makeDirKey (dirCache.originHash) (dirCache.destHash) dirCache.slot
@@ -35,7 +34,7 @@ makeDirKey originHash destHash slot = pack "CachedQueries:Maps:origin-" <> origi
 create :: DirectionsCache -> Esq.SqlDB ()
 create = Queries.create
 
-findRoute :: (CacheFlow m r, Esq.EsqDBFlow m r) => Text -> Text -> Int -> m (Maybe DirectionsCache)
+findRoute :: (Hedis.CacheFlow m r, Esq.EsqDBFlow m r) => Text -> Text -> Int -> m (Maybe DirectionsCache)
 findRoute originHash destHash slot =
   Hedis.safeGet (makeDirKey originHash destHash slot) >>= \case
     Just x -> return $ Just x

@@ -28,10 +28,10 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
+import Kernel.Storage.Hedis (CacheFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DirectionsCache as SDC
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Tools.Maps as Maps
 import Tools.Metrics (CoreMetrics)
 

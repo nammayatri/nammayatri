@@ -33,11 +33,10 @@ import Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude
 import qualified Kernel.External.Notification as Notification
 import Kernel.Storage.Esqueleto
-import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Storage.Hedis (CacheFlow)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.Queries.Person as Person
@@ -80,10 +79,9 @@ runWithServiceConfig func getCfg merchantId req = do
     _ -> throwError $ InternalError "Unknown ServiceConfig"
 
 notifyOnDriverOfferIncoming ::
-  ( HasCacheConfig r,
-    EncFlow m r,
+  ( EncFlow m r,
     EsqDBFlow m r,
-    HedisFlow m r,
+    CacheFlow m r,
     CoreMetrics m
   ) =>
   Id Estimate ->
@@ -117,10 +115,9 @@ newtype RideAssignedParam = RideAssignedParam
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 notifyOnRideAssigned ::
-  ( HasCacheConfig r,
-    EncFlow m r,
+  ( EncFlow m r,
     EsqDBFlow m r,
-    HedisFlow m r,
+    CacheFlow m r,
     CoreMetrics m
   ) =>
   SRB.Booking ->
@@ -157,10 +154,9 @@ newtype RideStartedParam = RideStartedParam
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 notifyOnRideStarted ::
-  ( HasCacheConfig r,
-    EncFlow m r,
+  ( EncFlow m r,
     EsqDBFlow m r,
-    HedisFlow m r,
+    CacheFlow m r,
     CoreMetrics m
   ) =>
   SRB.Booking ->
@@ -198,10 +194,9 @@ data RideCompleteParam = RideCompleteParam
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 notifyOnRideCompleted ::
-  ( HasCacheConfig r,
-    EncFlow m r,
+  ( EncFlow m r,
     EsqDBFlow m r,
-    HedisFlow m r,
+    CacheFlow m r,
     CoreMetrics m
   ) =>
   SRB.Booking ->
@@ -235,10 +230,9 @@ notifyOnRideCompleted booking ride = do
   notifyPerson person.merchantId notificationData
 
 notifyOnExpiration ::
-  ( HasCacheConfig r,
-    EncFlow m r,
+  ( EncFlow m r,
     EsqDBFlow m r,
-    HedisFlow m r,
+    CacheFlow m r,
     CoreMetrics m
   ) =>
   SearchRequest ->
@@ -271,10 +265,9 @@ notifyOnExpiration searchReq = do
     _ -> pure ()
 
 notifyOnRegistration ::
-  ( HasCacheConfig r,
-    EncFlow m r,
+  ( EncFlow m r,
     CoreMetrics m,
-    HedisFlow m r,
+    CacheFlow m r,
     EsqDBFlow m r
   ) =>
   RegistrationToken ->
@@ -309,10 +302,9 @@ newtype RideCancelParam = RideCancelParam
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 notifyOnBookingCancelled ::
-  ( HasCacheConfig r,
-    EncFlow m r,
+  ( EncFlow m r,
     CoreMetrics m,
-    HedisFlow m r,
+    CacheFlow m r,
     EsqDBFlow m r
   ) =>
   SRB.Booking ->
@@ -376,10 +368,9 @@ notifyOnBookingCancelled booking cancellationSource = do
           ]
 
 notifyOnBookingReallocated ::
-  ( HasCacheConfig r,
-    EncFlow m r,
+  ( EncFlow m r,
     CoreMetrics m,
-    HedisFlow m r,
+    CacheFlow m r,
     EsqDBFlow m r
   ) =>
   SRB.Booking ->
@@ -409,10 +400,9 @@ notifyOnBookingReallocated booking = do
         ]
 
 notifyOnEstimatedReallocated ::
-  ( HasCacheConfig r,
-    EncFlow m r,
+  ( EncFlow m r,
     CoreMetrics m,
-    HedisFlow m r,
+    CacheFlow m r,
     EsqDBFlow m r
   ) =>
   SRB.Booking ->
@@ -443,10 +433,9 @@ notifyOnEstimatedReallocated booking estimateId = do
         ]
 
 notifyOnQuoteReceived ::
-  ( HasCacheConfig r,
-    EncFlow m r,
+  ( EncFlow m r,
     CoreMetrics m,
-    HedisFlow m r,
+    CacheFlow m r,
     EsqDBFlow m r
   ) =>
   DQuote.Quote ->
@@ -477,10 +466,9 @@ notifyOnQuoteReceived quote = do
         }
 
 notifyDriverOnTheWay ::
-  ( HasCacheConfig r,
-    EncFlow m r,
+  ( EncFlow m r,
     EsqDBFlow m r,
-    HedisFlow m r,
+    CacheFlow m r,
     CoreMetrics m
   ) =>
   Id Person ->
@@ -513,10 +501,9 @@ data DriverReachedParam = DriverReachedParam
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 notifyDriverHasReached ::
-  ( HasCacheConfig r,
-    EncFlow m r,
+  ( EncFlow m r,
     EsqDBFlow m r,
-    HedisFlow m r,
+    CacheFlow m r,
     CoreMetrics m
   ) =>
   Id Person ->
@@ -545,10 +532,9 @@ notifyDriverHasReached personId otp vehicleNumber = do
   notifyPerson person.merchantId notificationData
 
 notifyOnNewMessage ::
-  ( HasCacheConfig r,
-    EncFlow m r,
+  ( EncFlow m r,
     CoreMetrics m,
-    HedisFlow m r,
+    CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r
   ) =>
