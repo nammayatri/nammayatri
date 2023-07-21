@@ -416,10 +416,6 @@ export const getTime = function (unit){
   return Date.now();
 }
 
-export const toInt = function (val) {
-  return parseInt(val);
-}
-
 export const secondsLeft = function (time){
   var validity = new Date(time).getTime();
   var now = new Date().getTime();

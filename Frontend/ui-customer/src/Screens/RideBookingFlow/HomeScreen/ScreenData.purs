@@ -20,7 +20,7 @@ import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Maybe (Maybe(..))
 import Styles.Colors as Color
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location,RateCardType(..), ZoneType(..), SpecialTags, TipViewStage(..))
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location,RateCardType(..), ZoneType(..), SpecialTags, TipViewStage(..), QuotesOrEstimates(..))
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
@@ -33,6 +33,7 @@ initData = {
       suggestedAmount : 0
     , finalAmount : 0
     , startedAt : ""
+    , quotesOrEstimates : ESTIMATES
     , endedAt : ""
     , source : ""
     , destination : ""
@@ -88,6 +89,7 @@ initData = {
       , index: 0
       , id: ""
       , maxPrice : ""
+      , base_price : 0
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
@@ -291,6 +293,7 @@ dummyDriverInfo =
   , driverName : ""
   , eta : 0
   , vehicleDetails : ""
+  , quotesOrEstimates : ESTIMATES
   , registrationNumber : ""
   , rating : 0.0
   , startedAt : ""

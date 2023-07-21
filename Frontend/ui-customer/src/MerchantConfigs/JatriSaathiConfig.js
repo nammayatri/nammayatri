@@ -65,7 +65,6 @@ const config = {
   "showRateCard" : "false",
   "showDashboard" : "false",
   "enableShareRide" : "false",
-  "specialLocationView" : "true",
   "shareAppTitle" : "Share Jatri Sathi!",
   "shareAppContent" : "Hey there!\n\n Jatri Sathi is Coming Soon",
   "DOCUMENT_LINK" : "https://docs.google.com/document/d/19pQUgTWXBqcM7bjy4SU1-z33r-iXsdPMfZggBTXbdR4",

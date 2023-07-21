@@ -78,7 +78,7 @@ import Screens.AddNewAddressScreen.Controller (validTag, getSavedTagsFromHome)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity, dummyZoneType)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList)
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (HomeScreenState, Location, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), RateCardType(..), CallType(..), ZoneType(..), SpecialTags, TipViewStage(..))
+import Screens.Types (HomeScreenState, Location, QuotesOrEstimates(..), LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), RateCardType(..), CallType(..), ZoneType(..), SpecialTags, TipViewStage(..))
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
@@ -1728,7 +1728,7 @@ eval (MenuButtonActionController (MenuButtonController.OnClick config)) state = 
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.OnSelect config))) state = do
   let updatedQuotes = map (\item -> item{activeIndex = config.index}) state.data.specialZoneQuoteList
       newState = state{data{specialZoneQuoteList = updatedQuotes}}
-  continue $ if state.props.isSpecialZone then newState{data{specialZoneSelectedQuote = Just config.id }}
+  continue $ if state.data.quotesOrEstimates == QUOTES then newState{data{specialZoneSelectedQuote = Just config.id }}
               else newState{props{estimateId = config.id }, data {selectedEstimatesObject = config}}
 
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard vehicleType))) state = 
@@ -1740,14 +1740,14 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
                                     , driverAdditionsLogic = if (getMerchant FunctionCall == NAMMAYATRI) then (getString DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE) else (getString DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS)
                                     , driverAdditionsImage = if (getMerchant FunctionCall == YATRI) then "ny_ic_driver_additions_yatri,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_driver_additions_yatri.png" else "ny_ic_driver_addition_table2,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_addition_table2.png"}}}
 
-eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state =
-  if state.props.isSpecialZone then do
+eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = do
+  if state.data.quotesOrEstimates == QUOTES then  do   
     _ <- pure $ updateLocalStage ConfirmingRide
     exit $ ConfirmRide state{props{currentStage = ConfirmingRide}}
-    else do
-      _ <- pure $ updateLocalStage FindingQuotes
-      let updatedState = state{props{currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck")}}
-      updateAndExit (updatedState) (GetQuotes updatedState)
+  else do
+    _ <- pure $ updateLocalStage FindingQuotes
+    let updatedState = state{props{currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck")}}
+    updateAndExit (updatedState) (GetQuotes updatedState)
 
 eval MapReadyAction state = continueWithCmd state [ do
       permissionConditionA <- isLocationPermissionEnabled unit
@@ -2078,6 +2078,7 @@ estimatesFlow estimatedQuotes state = do
       $ SelectEstimate
           state
             { data  { suggestedAmount = estimatedPrice, 
+                      quotesOrEstimates = ESTIMATES,
                       rateCard =  { additionalFare: additionalFare
                                   , nightShiftMultiplier: nightShiftMultiplier
                                   , nightCharges: nightCharges
@@ -2097,7 +2098,7 @@ estimatesFlow estimatedQuotes state = do
     continue
       state
         { props { currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true, showRateCardIcon = showRateCardIcon }
-        , data { rateCard = { additionalFare: additionalFare
+        , data { quotesOrEstimates = ESTIMATES, rateCard = { additionalFare: additionalFare
                             , nightShiftMultiplier: nightShiftMultiplier
                             , nightCharges: nightCharges
                             , currentRateCardType: DefaultRateCard
@@ -2116,12 +2117,12 @@ specialZoneFlow estimatedQuotes state = do
   if ((not (null quoteList)) && (isLocalStageOn FindingEstimate)) then do
     _ <- pure $ firebaseLogEvent "ny_user_quote"
     _ <- pure $ updateLocalStage SettingPrice
-    continue state { data {specialZoneQuoteList = quoteList, specialZoneSelectedQuote = Just defaultQuote.id}, props {currentStage = SettingPrice}}
+    continue state { data {specialZoneQuoteList = quoteList, quotesOrEstimates = QUOTES, specialZoneSelectedQuote = Just defaultQuote.id}, props {currentStage = SettingPrice}}
   else do
     _ <- pure $ hideKeyboardOnNavigation true
     _ <- pure $ updateLocalStage SearchLocationModel
     _ <- pure $ toast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN)
-    continue state { props {currentStage = SearchLocationModel}}
+    continue state { props {currentStage = SearchLocationModel}, data{quotesOrEstimates = QUOTES}}
 
 estimatesListFlow :: Array EstimateAPIEntity -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 estimatesListFlow estimates state = do
@@ -2139,12 +2140,12 @@ estimatesListFlow estimates state = do
   if ((not (null quoteList)) && (isLocalStageOn FindingEstimate)) then do
     _ <- pure $ firebaseLogEvent "ny_user_quote"
     _ <- pure $ updateLocalStage SettingPrice
-    continue state { data {specialZoneQuoteList = quoteList, selectedEstimatesObject = defaultQuote, pickUpCharges = pickUpCharges}, props {currentStage = SettingPrice, estimateId = defaultQuote.id}}
+    continue state { data {specialZoneQuoteList = quoteList, quotesOrEstimates = ESTIMATES, selectedEstimatesObject = defaultQuote, pickUpCharges = pickUpCharges}, props {currentStage = SettingPrice, estimateId = defaultQuote.id}}
   else do
     _ <- pure $ hideKeyboardOnNavigation true
     _ <- pure $ updateLocalStage SearchLocationModel
     _ <- pure $ toast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN)
-    continue state { props {currentStage = SearchLocationModel}}
+    continue state { props {currentStage = SearchLocationModel}, data{quotesOrEstimates = ESTIMATES}}
 
 
 estimatesListTryAgainFlow :: GetQuotesRes -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -2182,7 +2183,7 @@ normalRideFlow  (RideBookingRes response) state = do
           , isSearchLocation = NoView
           }
         , data
-          { driverInfoCardState = getDriverInfo (RideBookingRes response) state.props.isSpecialZone
+          { driverInfoCardState = getDriverInfo (RideBookingRes response) (state.data.quotesOrEstimates == QUOTES)
           }}
   exit $ RideConfirmed newState { props { isInApp = true } }
 
@@ -2196,7 +2197,7 @@ specialZoneRideFlow  (RideBookingRes response) state = do
           , isSearchLocation = NoView
           }
         , data
-          { driverInfoCardState = getDriverInfo (RideBookingRes response) state.props.isSpecialZone
+          { driverInfoCardState = getDriverInfo (RideBookingRes response) (state.data.quotesOrEstimates == QUOTES)
           }
         }
   exit $ RideConfirmed newState { props { isInApp = true } }
