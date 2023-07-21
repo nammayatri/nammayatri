@@ -90,7 +90,7 @@ rideEnd merchantShortId reqRideId Common.EndRideReq {point} = withFlowHandlerAPI
   let merchantId = merchant.id
   let dashboardReq = EHandler.DashboardEndRideReq {point, merchantId}
   shandle <- EHandler.buildEndRideHandle merchantId rideId
-  EHandler.dashboardEndRide shandle rideId dashboardReq
+  EHandler.dashboardEndRide shandle dashboardReq
 
 endMultipleRide :: ShortId DM.Merchant -> Id Common.Ride -> Common.EndRideReq -> FlowHandler APISuccess
 endMultipleRide merchantShortId reqRideId Common.EndRideReq {point} = withFlowHandlerAPI $ do
@@ -100,7 +100,7 @@ endMultipleRide merchantShortId reqRideId Common.EndRideReq {point} = withFlowHa
     let merchantId = merchant.id
     let dashboardReq = EHandler.DashboardEndRideReq {point, merchantId}
     shandle <- EHandler.buildEndRideHandle merchantId rideId
-    void $ EHandler.dashboardEndRide shandle rideId dashboardReq
+    void $ EHandler.dashboardEndRide shandle dashboardReq
   return Success
 
 multipleRideEnd :: ShortId DM.Merchant -> Common.MultipleRideEndReq -> FlowHandler APISuccess

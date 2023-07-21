@@ -20,6 +20,7 @@ module Domain.Action.UI.Ride.EndRide
     DashboardEndRideReq (..),
     callBasedEndRide,
     buildEndRideHandle,
+    buildCommonEndRideHandler,
     driverEndRide,
     dashboardEndRide,
   )
@@ -42,6 +43,7 @@ import Environment (Flow)
 import EulerHS.Prelude hiding (id, pi)
 import Kernel.External.Maps
 import Kernel.Prelude (roundToIntegral)
+import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
@@ -102,8 +104,12 @@ data ServiceHandle m = ServiceHandle
 
 buildEndRideHandle :: Id DM.Merchant -> Id DRide.Ride -> Flow (ServiceHandle Flow)
 buildEndRideHandle merchantId rideId = do
-  rideOld <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId True rideId rideOld.mapsServices.snapToRoad
+  rideOld <- Esq.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  buildCommonEndRideHandler merchantId rideOld
+
+buildCommonEndRideHandler :: Id DM.Merchant -> DRide.Ride -> Flow (ServiceHandle Flow)
+buildCommonEndRideHandler merchantId rideOld = do
+  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId True rideOld.id rideOld.mapsServices.snapToRoad
   return $
     ServiceHandle
       { rideOld,
@@ -140,40 +146,37 @@ type EndRideFlow m r =
 driverEndRide ::
   EndRideFlow m r =>
   ServiceHandle m ->
-  Id DRide.Ride ->
   DriverEndRideReq ->
   m APISuccess.APISuccess
-driverEndRide handle rideId req = do
+driverEndRide handle req = do
   withLogTag ("requestorId-" <> req.requestor.id.getId)
-    . endRide handle rideId
+    . endRide handle
     $ DriverReq req
 
 callBasedEndRide ::
   EndRideFlow m r =>
   ServiceHandle m ->
-  Id DRide.Ride ->
   CallBasedEndRideReq ->
   m APISuccess.APISuccess
-callBasedEndRide handle rideId = endRide handle rideId . CallBasedReq
+callBasedEndRide handle = endRide handle . CallBasedReq
 
 dashboardEndRide ::
   EndRideFlow m r =>
   ServiceHandle m ->
-  Id DRide.Ride ->
   DashboardEndRideReq ->
   m APISuccess.APISuccess
-dashboardEndRide handle rideId req =
+dashboardEndRide handle req =
   withLogTag ("merchantId-" <> req.merchantId.getId)
-    . endRide handle rideId
+    . endRide handle
     $ DashboardReq req
 
 endRide ::
   EndRideFlow m r =>
   ServiceHandle m ->
-  Id DRide.Ride ->
   EndRideReq ->
   m APISuccess.APISuccess
-endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId) do
+endRide handle@ServiceHandle {..} req = withLogTag ("rideId-" <> rideOld.id.getId) do
+  let rideId = rideOld.id
   let driverId = rideOld.driverId
   booking <- findBookingById rideOld.bookingId >>= fromMaybeM (BookingNotFound rideOld.bookingId.getId)
   case req of

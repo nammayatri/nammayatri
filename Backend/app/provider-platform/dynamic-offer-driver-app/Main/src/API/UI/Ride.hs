@@ -141,7 +141,7 @@ endRide (requestorId, merchantId) rideId EndRideReq {point, numberOfDeviation} =
   requestor <- findPerson requestorId
   let driverReq = RideEnd.DriverEndRideReq {point, requestor, numberOfDeviation}
   shandle <- withTimeAPI "endRide" "buildEndRideHandle" $ RideEnd.buildEndRideHandle merchantId rideId
-  withTimeAPI "endRide" "driverEndRide" $ RideEnd.driverEndRide shandle rideId driverReq
+  withTimeAPI "endRide" "driverEndRide" $ RideEnd.driverEndRide shandle driverReq
 
 cancelRide :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> CancelRideReq -> FlowHandler APISuccess
 cancelRide (personId, _) rideId CancelRideReq {reasonCode, additionalInfo} = withFlowHandlerAPI $ do

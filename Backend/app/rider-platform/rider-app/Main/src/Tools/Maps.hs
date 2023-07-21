@@ -155,7 +155,7 @@ pickService merchantId = do
         Left err -> do
           logWarning $ "Fail to pick random service: " <> show err <> "; use configured service instead: " <> show mapsService
           pure mapsService
-        Right pickedService -> pure $ pickedService
+        Right pickedService -> pure pickedService
     else pure mapsService
 
 getMapsServiceUsage ::
