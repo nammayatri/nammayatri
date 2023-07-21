@@ -579,7 +579,7 @@ validateServiceUsageConfig field = do
     [ validateField (show mapsServiceUsageMethod) field $
         InMaybe $
           PredicateFunc mkIncorrectSumMessage (incorrectSumPredicate @msum)
-            `And` PredicateFunc mkNotAllowedMessage (mkNotAllowedPredicate @msum),
+            `And` PredicateFunc mkNotAllowedMessage (notAllowedPredicate @msum),
       whenJust field \mapsServiceUsage ->
         sequenceA_
           [ validateField "googlePercentage" mapsServiceUsage.googlePercentage $ InMaybe $ InRange @Int 0 100,
@@ -588,8 +588,8 @@ validateServiceUsageConfig field = do
           ]
     ]
 
-mkNotAllowedPredicate :: forall (msum :: Maps.MapsServiceUsageMethod). (SingI msum) => Maps.MapsServiceUsage msum -> Bool
-mkNotAllowedPredicate mapsServiceUsage =
+notAllowedPredicate :: forall (msum :: Maps.MapsServiceUsageMethod). (SingI msum) => Maps.MapsServiceUsage msum -> Bool
+notAllowedPredicate mapsServiceUsage =
   Maps.mapsMethodProvided @msum mapsServiceUsage.mapsService
     && (isNothing mapsServiceUsage.googlePercentage || Maps.mapsMethodProvided @msum (Maps.SMapsService Maps.Google))
     && (isNothing mapsServiceUsage.osrmPercentage || Maps.mapsMethodProvided @msum (Maps.SMapsService Maps.OSRM))

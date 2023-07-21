@@ -38,12 +38,7 @@ import qualified Tools.Maps as Maps
 
 buildRideInterpolationHandler :: Id Merchant -> Bool -> Id DRide.Ride -> Maybe (Maps.SMapsService 'Maps.SnapToRoad) -> Flow (RideInterpolationHandler Person.Person Flow)
 buildRideInterpolationHandler orgId isEndRide rideId mbMapsService = do
-  mapsService <- case mbMapsService of
-    Nothing -> do
-      -- only for old rides
-      logWarning $ "Could not find ride.mapsServices.snapToRoad: " <> show rideId <> "; pick new service"
-      Maps.pickService @'Maps.SnapToRoad orgId
-    Just service -> pure service
+  mapsService <- Maps.pickServiceWithDefault @'Maps.SnapToRoad mbMapsService orgId rideId
   orgMapsServiceConfig <-
     QOMSC.findByMerchantIdAndService orgId (DOSC.MapsService mapsService.getStrictMapsService)
       >>= fromMaybeM (MerchantServiceConfigNotFound orgId.getId "Maps" (show mapsService))

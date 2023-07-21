@@ -412,12 +412,8 @@ getNextDriverPoolBatch ::
   DST.SearchTry ->
   m [DriverPoolWithActualDistResult]
 getNextDriverPoolBatch driverPoolConfig searchReq searchTry = withLogTag "getNextDriverPoolBatch" do
-  mapsService <- case searchReq.mapsServices.getEstimatedPickupDistances of
-    Nothing -> do
-      -- only for old search requests
-      logWarning $ "Could not find searchReq.mapsServices.getEstimatedPickupDistances: " <> show searchReq.id <> "; pick new service"
-      Maps.pickService @'Maps.GetEstimatedPickupDistances searchReq.providerId
-    Just service -> pure service
+  let mbMapsService = searchReq.mapsServices.getEstimatedPickupDistances
+  mapsService <- Maps.pickServiceWithDefault @'Maps.GetEstimatedPickupDistances mbMapsService searchReq.providerId searchReq.id
   batchNum <- getPoolBatchNum searchTry.id
   incrementBatchNum searchTry.id
   prepareDriverPoolBatch driverPoolConfig searchReq searchTry mapsService batchNum

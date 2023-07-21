@@ -26,12 +26,14 @@ module Tools.Maps
     getTripRoutes,
     getDistanceForCancelRide,
     pickService,
+    pickServiceWithDefault,
     MapsFlow,
   )
 where
 
 import Data.Coerce (coerce)
 import Data.Singletons.TH
+import Data.Typeable (typeRep)
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as DMSUC
@@ -157,6 +159,29 @@ pickService merchantId = do
           pure mapsService
         Right pickedService -> pure pickedService
     else pure mapsService
+
+pickServiceWithDefault ::
+  forall (msum :: Maps.MapsServiceUsageMethod) m r (entity :: Type).
+  (CacheFlow m r, EsqDBFlow m r, SingI msum, Typeable entity) =>
+  Maybe (Maps.SMapsService msum) ->
+  Id Merchant ->
+  Id entity ->
+  m (Maps.SMapsService msum)
+pickServiceWithDefault mbMapsService merchantId entityId = do
+  let mapsServiceUsageMethod = fromSing (sing @msum)
+  let entityName = show $ typeRep (Proxy @entity)
+  case mbMapsService of
+    Nothing -> do
+      -- only for old rides
+      merchantServiceUsageConfig <- CQMSUC.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+      let mapsServiceUsage = getMapsServiceUsage @msum merchantServiceUsageConfig
+      let defaultService = mapsServiceUsage.mapsService
+      logWarning $
+        "Could not find " <> entityName <> ".mapsServices." <> show mapsServiceUsageMethod <> ": " <> entityName <> "Id: " <> entityId.getId <> "; pick configured service: " <> show defaultService
+      pure defaultService
+    Just service -> do
+      logDebug $ "Use already picked service: " <> entityName <> "Id: " <> entityId.getId <> "; method: " <> show mapsServiceUsageMethod <> "; service: " <> show service
+      pure service
 
 getMapsServiceUsage ::
   forall (msum :: Maps.MapsServiceUsageMethod).
