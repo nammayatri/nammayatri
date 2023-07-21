@@ -12,22 +12,25 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 module Lib.DriverScore.Types
-  ( DriverRideRequeset (..),
+  ( DriverRideRequest (..),
   )
 where
 
 import Data.Time
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequestForDriver as SRD
 import qualified Domain.Types.SearchTry as DST
+import EulerHS.Prelude hiding (Show)
 import Kernel.Prelude (Show)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Common
 import Kernel.Types.Id (Id)
 import qualified SharedLogic.DriverPool as DP
 
-data DriverRideRequeset
+data DriverRideRequest
   = OnDriverAcceptingSearchRequest
       { merchantId :: Id DM.Merchant,
         driverId :: Id DP.Person,
@@ -49,6 +52,12 @@ data DriverRideRequeset
       }
   | OnDriverCancellation
       { merchantId :: Id DM.Merchant,
-        driverId :: Id DP.Person
+        driverId :: Id DP.Person,
+        rideFare :: Maybe Money
+      }
+  | OnRideCompletion
+      { merchantId :: Id DM.Merchant,
+        driverId :: Id DP.Person,
+        ride :: DR.Ride
       }
   deriving (Show)

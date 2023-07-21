@@ -44,3 +44,9 @@ updateFeedbackBadge feedbackBadge newBadgeCount = do
     where_ $
       tbl ^. FeedbackBadgeTId ==. val (toKey feedbackBadge.id)
         &&. tbl ^. FeedbackBadgeDriverId ==. val (toKey feedbackBadge.driverId)
+
+findAllFeedbackBadgeForDriver :: Transactionable m => Id Person -> m [FeedbackBadge]
+findAllFeedbackBadgeForDriver driverId = findAll $ do
+  feedbackBadges <- from $ table @FeedbackBadgeT
+  where_ $ feedbackBadges ^. FeedbackBadgeDriverId ==. val (toKey driverId)
+  pure feedbackBadges

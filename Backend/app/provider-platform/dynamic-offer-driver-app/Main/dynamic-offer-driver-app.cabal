@@ -52,6 +52,7 @@ library
       API.UI.CancellationReason
       API.UI.Driver
       API.UI.DriverOnboarding
+      API.UI.DriverProfileSummary
       API.UI.DriverReferral
       API.UI.ExotelEndRide
       API.UI.Frontend
@@ -122,6 +123,7 @@ library
       Domain.Action.UI.DriverOnboarding.Referral
       Domain.Action.UI.DriverOnboarding.Status
       Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
+      Domain.Action.UI.DriverProfileSummary
       Domain.Action.UI.DriverReferral
       Domain.Action.UI.ExotelEndRide
       Domain.Action.UI.Frontend

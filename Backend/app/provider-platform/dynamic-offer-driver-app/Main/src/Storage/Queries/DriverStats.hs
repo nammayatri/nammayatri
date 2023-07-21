@@ -33,9 +33,14 @@ createInitialDriverStats driverId = do
       { driverId = driverId,
         idleSince = now,
         totalRides = 0,
+        totalEarnings = 0,
+        bonusEarned = 0,
+        lateNightTrips = 0,
+        earningsMissed = 0,
         totalDistance = 0,
         ridesCancelled = Just 0,
-        totalRidesAssigned = Just 0
+        totalRidesAssigned = Just 0,
+        updatedAt = now
       }
 
 getTopDriversByIdleTime :: Transactionable m => Int -> [Id Driver] -> m [Id Driver]
@@ -71,29 +76,49 @@ deleteById = Esq.deleteByKey @DriverStatsT
 
 incrementTotalRidesAndTotalDist :: Id Driver -> Meters -> SqlDB ()
 incrementTotalRidesAndTotalDist driverId rideDist = do
+  now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
       tbl
-      [ DriverStatsTotalRides =. (tbl ^. DriverStatsTotalRides) +. val 1,
+      [ DriverStatsUpdatedAt =. val now,
+        DriverStatsTotalRides =. (tbl ^. DriverStatsTotalRides) +. val 1,
         DriverStatsTotalDistance =. (tbl ^. DriverStatsTotalDistance) +. val rideDist
       ]
     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
 
 incrementTotalRidesAssigned :: Id Driver -> Int -> SqlDB ()
 incrementTotalRidesAssigned driverId number = do
+  now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
       tbl
-      [ DriverStatsTotalRidesAssigned =. just (Esq.coalesceDefault [tbl ^. DriverStatsTotalRidesAssigned] (val 0) +. val number)
+      [ DriverStatsUpdatedAt =. val now,
+        DriverStatsTotalRidesAssigned =. just (Esq.coalesceDefault [tbl ^. DriverStatsTotalRidesAssigned] (val 0) +. val number)
       ]
     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
 
-setCancelledRidesCount :: Id Driver -> Int -> SqlDB ()
-setCancelledRidesCount driverId cancelledCount = do
+setDriverStats :: Id Driver -> Int -> Int -> Money -> SqlDB ()
+setDriverStats driverId totalRides cancelledCount missedEarning = do
+  now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
       tbl
-      [ DriverStatsRidesCancelled =. val (Just cancelledCount)
+      [ DriverStatsUpdatedAt =. val now,
+        DriverStatsTotalRidesAssigned =. just (Esq.coalesceDefault [tbl ^. DriverStatsTotalRidesAssigned] (val 0) +. val totalRides),
+        DriverStatsRidesCancelled =. val (Just cancelledCount),
+        DriverStatsEarningsMissed =. (tbl ^. DriverStatsEarningsMissed) +. val missedEarning
+      ]
+    where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
+
+setCancelledRidesCountAndIncrementEarningsMissed :: Id Driver -> Int -> Money -> SqlDB ()
+setCancelledRidesCountAndIncrementEarningsMissed driverId cancelledCount missedEarning = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverStatsUpdatedAt =. val now,
+        DriverStatsRidesCancelled =. val (Just cancelledCount),
+        DriverStatsEarningsMissed =. (tbl ^. DriverStatsEarningsMissed) +. val missedEarning
       ]
     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
 
@@ -104,3 +129,16 @@ getDriversSortedOrder mbLimitVal =
     orderBy [desc (driverStats ^. DriverStatsTotalRides), desc (driverStats ^. DriverStatsTotalDistance)]
     limit $ maybe 10 fromIntegral mbLimitVal
     return driverStats
+
+incrementTotalEarningsAndBonusEarnedAndLateNightTrip :: Id Driver -> Money -> Money -> Int -> SqlDB ()
+incrementTotalEarningsAndBonusEarnedAndLateNightTrip driverId increasedEarning increasedBonus tripCount = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverStatsUpdatedAt =. val now,
+        DriverStatsTotalEarnings =. (tbl ^. DriverStatsTotalEarnings) +. val increasedEarning,
+        DriverStatsBonusEarned =. (tbl ^. DriverStatsBonusEarned) +. val increasedBonus,
+        DriverStatsLateNightTrips =. (tbl ^. DriverStatsLateNightTrips) +. val tripCount
+      ]
+    where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)

@@ -52,3 +52,14 @@ findRatingForRide rideId = findOne $ do
   rating <- from $ table @RatingT
   where_ $ rating ^. RatingRideId ==. val (toKey rideId)
   pure rating
+
+findAllRatingUsersCountByPerson :: Transactionable m => Id Person -> m Int
+findAllRatingUsersCountByPerson driverId =
+  mkCount <$> do
+    findAll $ do
+      rating <- from $ table @RatingT
+      where_ $ rating ^. RatingDriverId ==. val (toKey driverId)
+      return (countRows :: SqlExpr (Esq.Value Int))
+  where
+    mkCount [counter] = counter
+    mkCount _ = 0
