@@ -22,7 +22,7 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV, findOneWithKvInReplica, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Rating as BeamR
 
@@ -44,6 +44,9 @@ findAllRatingsForPerson driverId = findAllWithKV [Se.Is BeamR.driverId $ Se.Eq $
 
 findRatingForRide :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe Rating)
 findRatingForRide (Id rideId) = findOneWithKV [Se.Is BeamR.id $ Se.Eq rideId]
+
+findRatingForRideInReplica :: (L.MonadFlow m, Log m) => Id Ride -> m (Maybe Rating)
+findRatingForRideInReplica (Id rideId) = findOneWithKvInReplica [Se.Is BeamR.id $ Se.Eq rideId]
 
 instance FromTType' BeamR.Rating Rating where
   fromTType' BeamR.RatingT {..} = do

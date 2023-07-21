@@ -24,7 +24,7 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findOneWithKV, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findAllWithKvInReplica, findOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequestForDriver as BeamSRFD
 
@@ -76,6 +76,11 @@ findByDriver :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> m [SearchReq
 findByDriver (Id driverId) = do
   now <- getCurrentTime
   findAllWithKV [Se.And [Se.Is BeamSRFD.driverId $ Se.Eq driverId, Se.Is BeamSRFD.status $ Se.Eq Domain.Active, Se.Is BeamSRFD.searchRequestValidTill $ Se.GreaterThan (T.utcToLocalTime T.utc now)]]
+
+findByDriverInReplica :: (L.MonadFlow m, MonadTime m, Log m) => Id Person -> m [SearchRequestForDriver]
+findByDriverInReplica (Id driverId) = do
+  now <- getCurrentTime
+  findAllWithKvInReplica [Se.And [Se.Is BeamSRFD.driverId $ Se.Eq driverId, Se.Is BeamSRFD.status $ Se.Eq Domain.Active, Se.Is BeamSRFD.searchRequestValidTill $ Se.GreaterThan (T.utcToLocalTime T.utc now)]]
 
 deleteByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m ()
 deleteByDriverId (Id personId) =

@@ -27,7 +27,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Error.Throwing
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findOneWithKV, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findAllWithKvInReplica, findOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.Image as BeamI
 import Storage.CachedQueries.CacheConfig
@@ -66,6 +66,16 @@ findById (Id imageid) = findOneWithKV [Se.Is BeamI.id $ Se.Eq imageid]
 findImagesByPersonAndType :: (L.MonadFlow m, Log m) => Id Merchant -> Id Person -> ImageType -> m [Image]
 findImagesByPersonAndType (Id merchantId) (Id personId) imgType =
   findAllWithKV
+    [ Se.And
+        [ Se.Is BeamI.personId $ Se.Eq personId,
+          Se.Is BeamI.merchantId $ Se.Eq merchantId,
+          Se.Is BeamI.imageType $ Se.Eq imgType
+        ]
+    ]
+
+findImagesByPersonAndTypeInReplica :: (L.MonadFlow m, Log m) => Id Merchant -> Id Person -> ImageType -> m [Image]
+findImagesByPersonAndTypeInReplica (Id merchantId) (Id personId) imgType =
+  findAllWithKvInReplica
     [ Se.And
         [ Se.Is BeamI.personId $ Se.Eq personId,
           Se.Is BeamI.merchantId $ Se.Eq merchantId,

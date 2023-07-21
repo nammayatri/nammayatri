@@ -36,8 +36,12 @@ import Kernel.Utils.Error
 import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithKvInReplica, findAllWithOptionsKV, findAllWithOptionsKvInReplica, findOneWithKV, findOneWithKvInReplica, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
+import qualified Storage.Beam.DriverOffer as BeamDO
+import qualified Storage.Beam.Quote as BeamQ
 import qualified Storage.Queries.Booking.BookingLocation as QBBL
+import qualified Storage.Queries.DriverOffer ()
 import Storage.Queries.FullEntityBuilders (buildFullBooking)
+import qualified Storage.Queries.Quote ()
 import Storage.Queries.RentalSlab as QueryRS
 import qualified Storage.Queries.TripTerms as QTT
 import Storage.Tabular.Booking
@@ -346,6 +350,13 @@ findBookingIdAssignedByEstimateId estimateId =
       driverOffer ^. DrOff.DriverOfferEstimateId ==. val (toKey estimateId)
         &&. booking ^. RB.BookingStatus ==. val TRIP_ASSIGNED
     pure (booking ^. BookingTId)
+
+findBookingIdAssignedByEstimateId' :: (L.MonadFlow m, Log m) => Id Estimate -> m (Maybe (Id Booking))
+findBookingIdAssignedByEstimateId' (Id estimateId) = do
+  driverOffer <- findAllWithKV [Se.Is BeamDO.estimateId $ Se.Eq estimateId]
+  quote <- findAllWithKV [Se.Is BeamQ.driverOfferId $ Se.In $ map (\x -> Just (getId x.id)) driverOffer]
+  booking <- findAllWithKV [Se.Is BeamB.quoteId $ Se.In $ map (\x -> Just (getId x.id)) quote]
+  return $ listToMaybe $ Domain.id <$> booking
 
 findAllByRiderIdAndRide :: Transactionable m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> m [Booking]
 findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus = Esq.buildDType $ do

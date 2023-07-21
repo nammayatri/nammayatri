@@ -25,7 +25,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Time
 import Kernel.Utils.Common
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithKvInReplica, findOneWithKV, findOneWithKvInReplica, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Queries.Booking.BookingLocation as QBBL
@@ -40,6 +40,9 @@ create dBooking = QBBL.create dBooking.fromLocation >> QBBL.create dBooking.toLo
 
 findById :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Booking)
 findById (Id bookingId) = findOneWithKV [Se.Is BeamB.id $ Se.Eq bookingId]
+
+findByIdInReplica :: (L.MonadFlow m, Log m) => Id Booking -> m (Maybe Booking)
+findByIdInReplica (Id bookingId) = findOneWithKvInReplica [Se.Is BeamB.id $ Se.Eq bookingId]
 
 findBySTId :: (L.MonadFlow m, Log m) => Id DST.SearchTry -> m (Maybe Booking)
 findBySTId searchTryId = do
@@ -91,6 +94,19 @@ findStuckBookings (Id merchantId) bookingIds now = do
           ]
       ]
 
+findStuckBookingsInReplica :: (L.MonadFlow m, MonadTime m, Log m) => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
+findStuckBookingsInReplica (Id merchantId) bookingIds now = do
+  let updatedTimestamp = addUTCTime (- (6 * 60 * 60)) now
+  (Domain.Types.Booking.id <$>)
+    <$> findAllWithKvInReplica
+      [ Se.And
+          [ Se.Is BeamB.providerId (Se.Eq merchantId),
+            Se.Is BeamB.id (Se.In (getId <$> bookingIds)),
+            Se.Is BeamB.status (Se.In [NEW, TRIP_ASSIGNED]),
+            Se.Is BeamB.createdAt (Se.LessThanOrEq updatedTimestamp)
+          ]
+      ]
+
 findBookingBySpecialZoneOTP :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> UTCTime -> m (Maybe Booking)
 findBookingBySpecialZoneOTP merchantId otpCode now = do
   bookingId <- findBookingIdBySpecialZoneOTP merchantId otpCode now
@@ -99,10 +115,23 @@ findBookingBySpecialZoneOTP merchantId otpCode now = do
     findById
     bookingId
 
+findBookingBySpecialZoneOTPInReplica :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> UTCTime -> m (Maybe Booking)
+findBookingBySpecialZoneOTPInReplica merchantId otpCode now = do
+  bookingId <- findBookingIdBySpecialZoneOTPInReplica merchantId otpCode now
+  maybe
+    (return Nothing)
+    findByIdInReplica
+    bookingId
+
 findBookingIdBySpecialZoneOTP :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> UTCTime -> m (Maybe (Id Booking))
 findBookingIdBySpecialZoneOTP (Id merchantId) otpCode now = do
-  let otpExpiryCondition = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
+  let otpExpiryCondition = addUTCTime (- (30 * 60) :: NominalDiffTime) now
   (Domain.Types.Booking.id <$>) <$> findOneWithKV [Se.And [Se.Is BeamB.specialZoneOtpCode $ Se.Eq (Just otpCode), Se.Is BeamB.providerId $ Se.Eq merchantId, Se.Is BeamB.createdAt $ Se.LessThanOrEq otpExpiryCondition]]
+
+findBookingIdBySpecialZoneOTPInReplica :: (L.MonadFlow m, Log m) => Id Merchant -> Text -> UTCTime -> m (Maybe (Id Booking))
+findBookingIdBySpecialZoneOTPInReplica (Id merchantId) otpCode now = do
+  let otpExpiryCondition = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
+  (Domain.Types.Booking.id <$>) <$> findOneWithKvInReplica [Se.And [Se.Is BeamB.specialZoneOtpCode $ Se.Eq (Just otpCode), Se.Is BeamB.providerId $ Se.Eq merchantId, Se.Is BeamB.createdAt $ Se.LessThanOrEq otpExpiryCondition]]
 
 cancelBookings :: (L.MonadFlow m, Log m) => [Id Booking] -> UTCTime -> m ()
 cancelBookings bookingIds now =

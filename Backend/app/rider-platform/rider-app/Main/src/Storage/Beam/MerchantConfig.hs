@@ -19,6 +19,8 @@
 module Storage.Beam.MerchantConfig where
 
 import qualified Data.Aeson as A
+import Data.ByteString.Internal (ByteString)
+import Data.ByteString.Lazy (toStrict)
 import qualified Data.HashMap.Internal as HM
 import qualified Data.Map.Strict as M
 import Data.Serialize
@@ -38,11 +40,14 @@ import Lib.Utils ()
 import Lib.UtilsTH
 import Sequelize
 
-instance FromField SWC.SlidingWindowOptions where
-  fromField = fromFieldEnum
+instance IsString Minutes where
+  fromString = show
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be SWC.SlidingWindowOptions where
-  sqlValueSyntax = autoSqlValueSyntax
+instance FromField SWC.SlidingWindowOptions where
+  fromField = fromFieldJSON
+
+instance HasSqlValueSyntax be ByteString => HasSqlValueSyntax be SWC.SlidingWindowOptions where
+  sqlValueSyntax = sqlValueSyntax . toStrict . A.encode
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be SWC.SlidingWindowOptions
 

@@ -23,7 +23,7 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude hiding (on)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findAllWithOptionsKV, findOneWithKV, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findAllWithKV, findAllWithKvInReplica, findAllWithOptionsKV, findAllWithOptionsKvInReplica, findOneWithKV, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.DriverRCAssociation as BeamDRCA
 import qualified Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as BeamVRC
@@ -58,6 +58,15 @@ findAllByDriverId ::
 findAllByDriverId driverId = do
   rcAssocs <- getRcAssocs driverId
   regCerts <- getRegCerts rcAssocs
+  return $ linkDriversRC rcAssocs regCerts
+
+findAllByDriverIdInReplica ::
+  (L.MonadFlow m, Log m) =>
+  Id Person ->
+  m [(DriverRCAssociation, VehicleRegistrationCertificate)]
+findAllByDriverIdInReplica driverId = do
+  rcAssocs <- getRcAssocsInReplica driverId
+  regCerts <- getRegCertsInReplica rcAssocs
   return $ linkDriversRC rcAssocs regCerts
 
 linkDriversRC :: [DriverRCAssociation] -> [VehicleRegistrationCertificate] -> [(DriverRCAssociation, VehicleRegistrationCertificate)]
@@ -95,6 +104,11 @@ getRegCerts rcAssocs = findAllWithKV [Se.Is BeamVRC.id $ Se.In $ getId <$> rcAss
   where
     rcAssocsKeys = fetchRcIdFromAssocs rcAssocs
 
+getRegCertsInReplica :: (L.MonadFlow m, Log m) => [DriverRCAssociation] -> m [VehicleRegistrationCertificate]
+getRegCertsInReplica rcAssocs = findAllWithKvInReplica [Se.Is BeamVRC.id $ Se.In $ getId <$> rcAssocsKeys]
+  where
+    rcAssocsKeys = fetchRcIdFromAssocs rcAssocs
+
 fetchRcIdFromAssocs :: [DriverRCAssociation] -> [Id VehicleRegistrationCertificate]
 fetchRcIdFromAssocs = map (.rcId)
 
@@ -113,6 +127,14 @@ fetchRcIdFromAssocs = map (.rcId)
 getRcAssocs :: (L.MonadFlow m, Log m) => Id Person -> m [DriverRCAssociation]
 getRcAssocs (Id driverId) =
   findAllWithOptionsKV
+    [Se.Is BeamDRCA.driverId $ Se.Eq driverId]
+    (Se.Desc BeamDRCA.associatedOn)
+    Nothing
+    Nothing
+
+getRcAssocsInReplica :: (L.MonadFlow m, Log m) => Id Person -> m [DriverRCAssociation]
+getRcAssocsInReplica (Id driverId) =
+  findAllWithOptionsKvInReplica
     [Se.Is BeamDRCA.driverId $ Se.Eq driverId]
     (Se.Desc BeamDRCA.associatedOn)
     Nothing

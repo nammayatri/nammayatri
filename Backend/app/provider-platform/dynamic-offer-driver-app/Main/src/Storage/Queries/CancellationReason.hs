@@ -19,12 +19,15 @@ import Domain.Types.CancellationReason
 import qualified EulerHS.Language as L
 import Kernel.Prelude hiding (isNothing)
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findAllWithOptionsKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), findAllWithOptionsKV, findAllWithOptionsKvInReplica)
 import qualified Sequelize as Se
 import qualified Storage.Beam.CancellationReason as BeamCR
 
 findAll :: (L.MonadFlow m, Log m) => m [CancellationReason]
 findAll = findAllWithOptionsKV [Se.Is BeamCR.enabled $ Se.Eq True] (Se.Desc BeamCR.priority) Nothing Nothing
+
+findAllInReplica :: (L.MonadFlow m, Log m) => m [CancellationReason]
+findAllInReplica = findAllWithOptionsKvInReplica [Se.Is BeamCR.enabled $ Se.Eq True] (Se.Desc BeamCR.priority) Nothing Nothing
 
 instance FromTType' BeamCR.CancellationReason CancellationReason where
   fromTType' BeamCR.CancellationReasonT {..} = do

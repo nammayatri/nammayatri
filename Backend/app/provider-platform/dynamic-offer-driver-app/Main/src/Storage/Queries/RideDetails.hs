@@ -22,7 +22,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV, findOneWithKvInReplica)
 import qualified Sequelize as Se
 import qualified Storage.Beam.RideDetails as BeamRD
 
@@ -31,6 +31,9 @@ create = createWithKV
 
 findById :: (L.MonadFlow m, Log m) => Id SR.Ride -> m (Maybe RideDetails)
 findById (Id rideDetailsId) = findOneWithKV [Se.Is BeamRD.id $ Se.Eq rideDetailsId]
+
+findByIdInReplica :: (L.MonadFlow m, Log m) => Id SR.Ride -> m (Maybe RideDetails)
+findByIdInReplica (Id rideDetailsId) = findOneWithKvInReplica [Se.Is BeamRD.id $ Se.Eq rideDetailsId]
 
 instance FromTType' BeamRD.RideDetails RideDetails where
   fromTType' BeamRD.RideDetailsT {..} = do

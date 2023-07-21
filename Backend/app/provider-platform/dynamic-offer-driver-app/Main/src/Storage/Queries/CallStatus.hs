@@ -25,7 +25,7 @@ import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV, getMasterBeamConfig, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV, findOneWithKvInReplica, getMasterBeamConfig, getReplicaBeamConfig, updateWithKV)
 import Sequelize as Se
 import qualified Storage.Beam.CallStatus as BeamCT
 
@@ -34,6 +34,9 @@ create = createWithKV
 
 findById :: (L.MonadFlow m, Log m) => Id CallStatus -> m (Maybe CallStatus)
 findById (Id callStatusId) = findOneWithKV [Se.Is BeamCT.id $ Se.Eq callStatusId]
+
+findByIdInReplica :: (L.MonadFlow m, Log m) => Id CallStatus -> m (Maybe CallStatus)
+findByIdInReplica (Id callStatusId) = findOneWithKvInReplica [Se.Is BeamCT.id $ Se.Eq callStatusId]
 
 findByCallSid :: (L.MonadFlow m, Log m) => Text -> m (Maybe CallStatus)
 findByCallSid callSid = findOneWithKV [Se.Is BeamCT.callId $ Se.Eq callSid]
@@ -59,6 +62,18 @@ updateCallStatus (Id callId) status conversationDuration recordingUrl =
 countCallsByRideId :: L.MonadFlow m => Id Ride -> m Int
 countCallsByRideId rideID = do
   dbConf <- getMasterBeamConfig
+  resp <-
+    L.runDB dbConf $
+      L.findRow $
+        B.select $
+          B.aggregate_ (\ride -> (B.group_ (BeamCT.rideId ride), B.as_ @Int B.countAll_)) $
+            B.filter_' (\(BeamCT.CallStatusT {..}) -> rideId B.==?. B.val_ (getId rideID)) $
+              B.all_ (meshModelTableEntity @BeamCT.CallStatusT @Postgres @(DatabaseWith BeamCT.CallStatusT))
+  pure $ either (const 0) (maybe 0 snd) resp
+
+countCallsByRideIdInReplica :: L.MonadFlow m => Id Ride -> m Int
+countCallsByRideIdInReplica rideID = do
+  dbConf <- getReplicaBeamConfig
   resp <-
     L.runDB dbConf $
       L.findRow $

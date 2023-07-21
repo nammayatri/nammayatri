@@ -20,7 +20,7 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithKvInReplica, findOneWithKV, findOneWithKvInReplica)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FareParameters as BeamFP
 import Storage.Queries.FareParameters.FareParametersProgressiveDetails as QFPPD
@@ -38,8 +38,14 @@ create fareParameters = do
 findById :: (L.MonadFlow m, Log m) => Id FareParameters -> m (Maybe FareParameters)
 findById (Id fareParametersId) = findOneWithKV [Se.Is BeamFP.id $ Se.Eq fareParametersId]
 
+findByIdInReplica :: (L.MonadFlow m, Log m) => Id FareParameters -> m (Maybe FareParameters)
+findByIdInReplica (Id fareParametersId) = findOneWithKvInReplica [Se.Is BeamFP.id $ Se.Eq fareParametersId]
+
 findAllIn :: (L.MonadFlow m, Log m) => [Id FareParameters] -> m [FareParameters]
 findAllIn fareParametersIds = findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParametersIds]
+
+findAllInInReplica :: (L.MonadFlow m, Log m) => [Id FareParameters] -> m [FareParameters]
+findAllInInReplica fareParametersIds = findAllWithKvInReplica [Se.Is BeamFP.id $ Se.In $ getId <$> fareParametersIds]
 
 -- findAllIn :: Transactionable m => [Id FareParameters] -> m [FareParameters]
 -- findAllIn fareParamIds =

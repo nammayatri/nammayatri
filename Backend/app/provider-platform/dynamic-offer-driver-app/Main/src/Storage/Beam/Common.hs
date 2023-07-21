@@ -11,6 +11,7 @@ import GHC.Generics (Generic)
 import Storage.Beam.DriverLocation
 import Storage.Beam.Exophone
 import Storage.Beam.Geometry
+import Storage.Beam.Vehicle
 
 atlasDB :: B.DatabaseSettings be AtlasDB
 atlasDB =
@@ -18,12 +19,14 @@ atlasDB =
     `B.withDbModification` B.dbModification
       { driverLocation = dLocationTable,
         exophone = dExophone,
-        geometry = geometryTable
+        geometry = geometryTable,
+        vehicle = vehicleTable
       }
 
 data AtlasDB f = AtlasDB
   { driverLocation :: f (B.TableEntity DriverLocationT),
     exophone :: f (B.TableEntity ExophoneT),
-    geometry :: f (B.TableEntity GeometryT)
+    geometry :: f (B.TableEntity GeometryT),
+    vehicle :: f (B.TableEntity VehicleT)
   }
   deriving (Generic, B.Database be)

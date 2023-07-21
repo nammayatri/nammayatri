@@ -22,7 +22,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findOneWithKV, updateWithKV)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, deleteWithKV, findOneWithKV, findOneWithKvInReplica, updateWithKV)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOnboarding.DriverLicense as BeamDL
 
@@ -51,6 +51,9 @@ findById (Id dlId) = findOneWithKV [Se.Is BeamDL.id $ Se.Eq dlId]
 
 findByDriverId :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe DriverLicense)
 findByDriverId (Id personId) = findOneWithKV [Se.Is BeamDL.driverId $ Se.Eq personId]
+
+findByDriverIdInReplica :: (L.MonadFlow m, Log m) => Id Person -> m (Maybe DriverLicense)
+findByDriverIdInReplica (Id personId) = findOneWithKvInReplica [Se.Is BeamDL.driverId $ Se.Eq personId]
 
 findByDLNumber :: (L.MonadFlow m, EncFlow m r) => Text -> m (Maybe DriverLicense)
 findByDLNumber dlNumber = do
