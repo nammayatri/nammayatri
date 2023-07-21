@@ -138,6 +138,7 @@ linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
+    , margin $ MarginTop 10
     , onClick ((\action -> do
         _ <- push action
         pure $ setText (getNewIDWithTag "OtherReasonEditText") ""
@@ -364,6 +365,8 @@ radioButton config push index item =
         , textView $
           [ text $ fromMaybe "" item.subtext
           , color Color.black650
+          , padding $ PaddingBottom 10
+          , width if os == "IOS" then V $ (screenWidth unit) - 80 else WRAP_CONTENT
           , visibility $ case config.activeIndex of 
                             Just activeIndex' -> if (activeIndex' == index) then if item.subtext == Nothing then GONE else VISIBLE else GONE
                             Nothing -> GONE

@@ -53,7 +53,7 @@ view listItemm push state =
         , orientation VERTICAL
         , onBackPressed push (const BackPressed)
         , background Color.white900
-        , padding if os == "IOS" then (Padding 0 safeMarginTop 0 (if safeMarginBottom == 0 && os == "IOS" then 24 else safeMarginBottom)) else (Padding 0 0 0 0)
+        , padding if os == "IOS" then (Padding 0 safeMarginTop 0 (if safeMarginBottom == 0 && os == "IOS" then 16 else safeMarginBottom)) else (Padding 0 0 0 0)
         , gravity CENTER
         , afterRender
             ( \action -> do
@@ -178,12 +178,11 @@ contactListView listItemm push state =
 showEmergencyContact :: forall w. PrestoList.ListItem ->  (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
 showEmergencyContact listitemm push config =
   swipeRefreshLayout
-    [ width MATCH_PARENT
+    ([ width MATCH_PARENT
     , height MATCH_PARENT
     , background Color.blue600
     , weight 1.0
-    , id "2000040"
-    ]
+    ]<> if os == "IOS" then [] else [id "2000040"])
     [ showEmergencyContactData listitemm push config
     ]
 

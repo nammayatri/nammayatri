@@ -266,13 +266,13 @@ fetchVehicleVariant variant = case variant of
 
 getVehicleImage :: String -> String
 getVehicleImage variant = case fetchVehicleVariant variant of 
-          Just ST.TAXI -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
-          Just ST.TAXI_PLUS -> "ic_sedan_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_ac.png"
-          Just ST.SEDAN -> "ic_sedan,https://assets.juspay.in/nammayatri/images/user/ic_sedan.png"
-          Just ST.SUV -> "ic_suv,https://assets.juspay.in/nammayatri/images/user/ic_suv.png"
-          Just ST.HATCHBACK -> "ic_hatchback,https://assets.juspay.in/nammayatri/images/user/ic_hatchback.png"
+          Just ST.TAXI -> "ic_sedan_non_ac,https://assets.juspay.in/beckn/yatri/user/images/ic_sedan_non_ac.png"
+          Just ST.TAXI_PLUS -> "ic_sedan_ac,https://assets.juspay.in/beckn/yatri/user/images/ic_sedan_ac.png"
+          Just ST.SEDAN -> "ic_sedan,https://assets.juspay.in/beckn/yatri/user/images/ic_sedan.png"
+          Just ST.SUV -> "ic_suv,https://assets.juspay.in/beckn/yatri/user/images/ic_suv.png"
+          Just ST.HATCHBACK -> "ic_hatchback,https://assets.juspay.in/beckn/yatri/user/images/ic_hatchback.png"
           Just ST.AUTO_RICKSHAW -> "ic_vehicle_side,https://assets.juspay.in/beckn/merchantcommon/images/ic_auto_side_view.png"
-          _ -> "ic_sedan_non_ac,https://assets.juspay.in/nammayatri/images/user/ic_sedan_non_ac.png"
+          _ -> "ic_sedan_non_ac,,https://assets.juspay.in/beckn/yatri/user/images/ic_sedan_non_ac.png"
 
 getVehicleCapacity :: String -> String 
 getVehicleCapacity variant = case fetchVehicleVariant variant of

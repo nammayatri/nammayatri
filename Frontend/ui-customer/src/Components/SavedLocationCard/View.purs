@@ -93,6 +93,7 @@ savedLocationView state push =
                     Nothing -> state.tagName
               , ellipsize true
               , maxLines 2
+              , weight 1.0
               , color Color.black800
               ] <> FontStyle.subHeading1 LanguageStyle
             ]
@@ -112,6 +113,7 @@ savedLocationView state push =
             ][  textView $
                 [ text (getString EDIT)
                 , color Color.blue900
+                , width WRAP_CONTENT
                 ] <> FontStyle.body1 LanguageStyle
               ]
           , linearLayout
@@ -123,6 +125,7 @@ savedLocationView state push =
             ][  textView $
                 [ text (getString REMOVE)
                 , color Color.blue900
+                , width WRAP_CONTENT
                 ] <> FontStyle.body1 LanguageStyle
               ]
           ]

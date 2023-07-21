@@ -12,7 +12,7 @@ import Language.Strings (getString)
 import Helpers.Utils (parseFloat)
 import Data.Int (toNumber)
 import Storage (getValueToLocalStore, KeyStore(..))
-import PrestoDOM (Length(..) , Margin(..), Orientation(..), Padding(..) , Visibility(..), Gravity(..), PrestoDOM,Gradient(..), gradient, weight, cornerRadius, height, width, margin, padding, linearLayout, gravity, orientation, fontStyle, textSize, textView, text, background, clickable, color, imageView, imageUrl, ellipsize, maxLines, lineHeight, visibility, textFromHtml, layoutGravity, imageWithFallback)
+import PrestoDOM (Length(..) , Margin(..), Orientation(..), Padding(..) , Visibility(..), Gravity(..), PrestoDOM,Gradient(..), gradient, weight, cornerRadius, height, width, margin, padding, linearLayout, gravity, orientation, fontStyle, textSize, textView, text, background, clickable, color, imageView, imageUrl, ellipsize, maxLines, lineHeight, visibility, textFromHtml, layoutGravity, imageWithFallback, relativeLayout)
 import Common.Types.App
 import Data.Maybe
 import Screens.Types(NewContacts)
@@ -70,7 +70,7 @@ view push item =
                 , fontStyle $ FontStyle.regular LanguageStyle
                 ]
             ]
-        , linearLayout
+        , relativeLayout
             [ height $ V 24
             , width $ V 24
             , margin (Margin 0 23 16 23)

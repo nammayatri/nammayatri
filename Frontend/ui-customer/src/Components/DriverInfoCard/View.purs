@@ -246,7 +246,7 @@ mapOptionsView push state =
       , orientation VERTICAL
       , margin $ MarginVertical 5 5
       ][ supportButton push state
-       , locationTrackButton push state
+       , if state.data.isSpecialZone && state.props.currentStage == RideAccepted then textView[] else locationTrackButton push state
       ]
     ]
 
@@ -650,7 +650,7 @@ contactView push state =
             , singleLine true
             ] <> FontStyle.subHeading1 TypoGraphy)
           , textView (
-            [ text $"is " <> secondsToHms state.data.eta
+            [ text $ if (getValueToLocalStore LANGUAGE_KEY == "EN_US") then "is " else " " <> secondsToHms state.data.eta
             , color Color.black800
             , visibility if state.data.distance > 1000 then VISIBLE else GONE
             ] <> FontStyle.subHeading1 TypoGraphy)

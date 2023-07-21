@@ -49,6 +49,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Services.Config as SC
 import Engineering.Helpers.Utils as EHU
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 
 getHeaders :: String -> Flow GlobalState Headers
 getHeaders _ = do
@@ -735,13 +736,13 @@ type Markers = {
 
 driverTracking :: String -> Markers
 driverTracking _ = {
-    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else "ny_ic_vehicle_nav_on_map",
+    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else if (getMerchant FunctionCall == YATRISATHI) then "ic_vehicle_nav_on_map" else "ny_ic_vehicle_nav_on_map",
     destMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "src_marker" else "ny_ic_src_marker"
 }
 
 rideTracking :: String -> Markers
 rideTracking _ = {
-    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else "ny_ic_vehicle_nav_on_map",
+    srcMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "ic_auto_map" else if (getMerchant FunctionCall == YATRISATHI) then "ic_vehicle_nav_on_map" else "ny_ic_vehicle_nav_on_map",
     destMarker : if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then "dest_marker" else "ny_ic_dest_marker"
 }
 
