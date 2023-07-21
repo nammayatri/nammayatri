@@ -24,7 +24,7 @@ import Kernel.Types.Logging (Log)
 import Lib.Utils
   ( FromTType' (fromTType'),
     ToTType' (toTType'),
-    deleteAllWithKV,
+    deleteWithKV,
     findAllWithKV,
     findOneWithKV,
   )
@@ -44,7 +44,7 @@ findById'' ::
 findById'' (Id farePolicyId) = findOneWithKV [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]
 
 deleteAll' :: (L.MonadFlow m, Log m) => Id DFP.FarePolicy -> m ()
-deleteAll' (Id farePolicyId) = deleteAllWithKV [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]
+deleteAll' (Id farePolicyId) = deleteWithKV [Se.Is BeamFPSS.farePolicyId $ Se.Eq farePolicyId]
 
 instance FromTType' BeamFPSS.FarePolicySlabsDetailsSlab BeamFPSS.FullFarePolicySlabsDetailsSlab where
   fromTType' BeamFPSS.FarePolicySlabsDetailsSlabT {..} = do
