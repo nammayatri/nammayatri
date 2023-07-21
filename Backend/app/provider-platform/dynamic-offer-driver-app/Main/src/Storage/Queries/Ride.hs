@@ -35,6 +35,7 @@ import Storage.Tabular.DriverInformation as DriverInfo
 import Storage.Tabular.Ride as Ride
 import Storage.Tabular.RideDetails as RideDetails
 import Storage.Tabular.RiderDetails as RiderDetails
+import qualified Tools.Maps as Maps
 
 create :: Ride -> SqlDB ()
 create = Esq.create
@@ -61,6 +62,15 @@ findActiveByRBId rbId = Esq.findOne $ do
   where_ $
     ride ^. Ride.RideBookingId ==. val (toKey rbId)
       &&. ride ^. RideStatus !=. val Ride.CANCELLED
+  pure ride
+
+findOneByBookingId :: Transactionable m => Id Booking -> m (Maybe Ride)
+findOneByBookingId bookingId = Esq.findOne $ do
+  ride <- from $ table @RideT
+  where_ $
+    ride ^. Ride.RideBookingId ==. val (toKey bookingId)
+  orderBy [desc $ ride ^. RideCreatedAt]
+  limit 1
   pure ride
 
 findAllByDriverId ::
@@ -144,15 +154,18 @@ getInProgressByDriverId driverId = Esq.findOne $ do
       &&. ride ^. RideStatus ==. val Ride.INPROGRESS
   pure ride
 
-getInProgressOrNewRideIdAndStatusByDriverId :: Transactionable m => Id Person -> m (Maybe (Id Ride, RideStatus))
+getInProgressOrNewRideIdAndStatusByDriverId ::
+  Transactionable m =>
+  Id Person ->
+  m (Maybe (Id Ride, RideStatus, Maybe (Maps.SMapsService 'Maps.SnapToRoad)))
 getInProgressOrNewRideIdAndStatusByDriverId driverId = do
-  mbTuple :: Maybe (Text, RideStatus) <- Esq.findOne $ do
+  mbTuple :: Maybe (Text, RideStatus, Maybe (Maps.SMapsService 'Maps.SnapToRoad)) <- Esq.findOne $ do
     ride <- from $ table @RideT
     where_ $
       ride ^. RideDriverId ==. val (toKey driverId)
         &&. ride ^. RideStatus `in_` valList [Ride.INPROGRESS, Ride.NEW]
-    pure (ride ^. RideId, ride ^. RideStatus)
-  pure $ first Id <$> mbTuple
+    pure (ride ^. RideId, ride ^. RideStatus, ride ^. RideMapsServiceSnapToRoad)
+  pure $ (\(rideId, rs, ms) -> (Id rideId, rs, ms)) <$> mbTuple
 
 getActiveByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
 getActiveByDriverId driverId = Esq.findOne $ do
@@ -174,6 +187,20 @@ updateStatus rideId status = do
     set
       tbl
       [ RideStatus =. val status,
+        RideUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. RideTId ==. val (toKey rideId)
+
+updateMapsServices ::
+  Id Ride ->
+  RideMapsServices ->
+  SqlDB ()
+updateMapsServices rideId rideMapsServices = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ RideMapsServiceGetDistancesForCancelRide =. val rideMapsServices.getDistancesForCancelRide,
         RideUpdatedAt =. val now
       ]
     where_ $ tbl ^. RideTId ==. val (toKey rideId)
@@ -241,8 +268,9 @@ updateAll rideId ride = do
         RideFareParametersId =. val (toKey <$> ride.fareParametersId),
         RideDistanceCalculationFailed =. val ride.distanceCalculationFailed,
         RidePickupDropOutsideOfThreshold =. val ride.pickupDropOutsideOfThreshold,
-        RideUpdatedAt =. val now,
-        RideNumberOfDeviation =. val ride.numberOfDeviation
+        RideNumberOfDeviation =. val ride.numberOfDeviation,
+        RideMapsServiceGetRoutes =. val ride.mapsServices.getRoutes,
+        RideUpdatedAt =. val now
       ]
     where_ $ tbl ^. RideTId ==. val (toKey rideId)
 

@@ -15,25 +15,29 @@
 module Tools.Maps
   ( module Reexport,
     autoComplete,
-    getDistance,
-    getDistances,
+    -- getDistance,
+    -- getDistances,
     getPlaceDetails,
     getPlaceName,
     getRoutes,
-    snapToRoad,
+    -- snapToRoad,
     getPickupRoutes,
     getTripRoutes,
     getDistanceForCancelRide,
+    pickService,
+    MapsFlow,
   )
 where
 
+import Data.Coerce (coerce)
+import Data.Singletons.TH
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
-import Domain.Types.Merchant.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
+import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as DMSUC
 import Kernel.External.Maps as Reexport hiding
   ( autoComplete,
     getDistance,
-    getDistances,
+    -- getDistances,
     getPlaceDetails,
     getPlaceName,
     getRoutes,
@@ -45,111 +49,138 @@ import qualified Kernel.Randomizer as Random
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig (CacheFlow)
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import Tools.Error
 import Tools.Metrics
 
-getDistance ::
-  ( EncFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    CoreMetrics m,
-    HasCoordinates a,
-    HasCoordinates b
-  ) =>
-  Id Merchant ->
-  GetDistanceReq a b ->
-  m (GetDistanceResp a b)
-getDistance = runWithServiceConfig Maps.getDistance "getDistances" (.getDistances)
+type MapsFlow m r = (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m)
+
+-- not used
+-- getDistance ::
+--   ( MapsFlow m r,
+--     HasCoordinates a,
+--     HasCoordinates b
+--   ) =>
+--   Id Merchant ->
+--   Maps.SMapsService 'Maps.GetDistances ->
+--   GetDistanceReq a b ->
+--   m (GetDistanceResp a b)
+-- getDistance = runWithServiceConfig Maps.getDistance
 
 getDistanceForCancelRide ::
-  ( EncFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    CoreMetrics m,
+  ( MapsFlow m r,
     HasCoordinates a,
     HasCoordinates b
   ) =>
   Id Merchant ->
+  Maps.SMapsService 'Maps.GetDistancesForCancelRide ->
   GetDistanceReq a b ->
   m (GetDistanceResp a b)
-getDistanceForCancelRide = runWithServiceConfig Maps.getDistance "getDistancesForCancelRide" (.getDistancesForCancelRide)
+getDistanceForCancelRide = runWithServiceConfig Maps.getDistance
 
-getDistances ::
-  ( EncFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    CoreMetrics m,
-    HasCoordinates a,
-    HasCoordinates b
-  ) =>
-  Id Merchant ->
-  GetDistancesReq a b ->
-  m (GetDistancesResp a b)
-getDistances = runWithServiceConfig Maps.getDistances "getDistances" (.getDistances)
+-- not used
+-- getDistances ::
+--   ( MapsFlow m r,
+--     HasCoordinates a,
+--     HasCoordinates b
+--   ) =>
+--   Id Merchant ->
+--   Maps.SMapsService 'Maps.GetDistances ->
+--   GetDistancesReq a b ->
+--   m (GetDistancesResp a b)
+-- getDistances = runWithServiceConfig Maps.getDistances
 
-getRoutes :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> GetRoutesReq -> m GetRoutesResp
-getRoutes = runWithServiceConfig Maps.getRoutes "getRoutes" (.getRoutes)
+getRoutes :: MapsFlow m r => Id Merchant -> Maps.SMapsService 'Maps.GetRoutes -> GetRoutesReq -> m GetRoutesResp
+getRoutes = runWithServiceConfig Maps.getRoutes
 
-getPickupRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id Merchant -> GetRoutesReq -> m GetRoutesResp
-getPickupRoutes = runWithServiceConfig Maps.getRoutes "getPickupRoutes" (.getPickupRoutes)
+getPickupRoutes :: MapsFlow m r => Id Merchant -> Maps.SMapsService 'Maps.GetPickupRoutes -> GetRoutesReq -> m GetRoutesResp
+getPickupRoutes = runWithServiceConfig Maps.getRoutes
 
-getTripRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id Merchant -> GetRoutesReq -> m GetRoutesResp
-getTripRoutes = runWithServiceConfig Maps.getRoutes "getTripRoutes" (.getTripRoutes)
+getTripRoutes :: MapsFlow m r => Id Merchant -> Maps.SMapsService 'Maps.GetTripRoutes -> GetRoutesReq -> m GetRoutesResp
+getTripRoutes = runWithServiceConfig Maps.getRoutes
 
-snapToRoad ::
-  ( EncFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    CoreMetrics m,
-    HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters]
-  ) =>
-  Id Merchant ->
-  SnapToRoadReq ->
-  m SnapToRoadResp
-snapToRoad = runWithServiceConfig Maps.snapToRoad "snapToRoad" (.snapToRoad)
+-- not used
+-- snapToRoad ::
+--   ( MapsFlow m r,
+--     HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters]
+--   ) =>
+--   Id Merchant ->
+--   Maps.SMapsService 'Maps.SnapToRoad ->
+--   SnapToRoadReq ->
+--   m SnapToRoadResp
+-- snapToRoad = runWithServiceConfig Maps.snapToRoad
 
-autoComplete :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> AutoCompleteReq -> m AutoCompleteResp
-autoComplete = runWithServiceConfig Maps.autoComplete "autoComplete" (.autoComplete)
+autoComplete :: MapsFlow m r => Id Merchant -> Maps.SMapsService 'Maps.AutoComplete -> AutoCompleteReq -> m AutoCompleteResp
+autoComplete = runWithServiceConfig Maps.autoComplete
 
-getPlaceName :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> GetPlaceNameReq -> m GetPlaceNameResp
-getPlaceName = runWithServiceConfig Maps.getPlaceName "getPlaceName" (.getPlaceName)
+getPlaceName :: MapsFlow m r => Id Merchant -> Maps.SMapsService 'Maps.GetPlaceName -> GetPlaceNameReq -> m GetPlaceNameResp
+getPlaceName = runWithServiceConfig Maps.getPlaceName
 
-getPlaceDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> GetPlaceDetailsReq -> m GetPlaceDetailsResp
-getPlaceDetails = runWithServiceConfig Maps.getPlaceDetails "getPlaceDetails" (.getPlaceDetails)
+getPlaceDetails :: MapsFlow m r => Id Merchant -> Maps.SMapsService 'Maps.GetPlaceDetails -> GetPlaceDetailsReq -> m GetPlaceDetailsResp
+getPlaceDetails = runWithServiceConfig Maps.getPlaceDetails
 
 runWithServiceConfig ::
-  (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) =>
+  MapsFlow m r =>
   (MapsServiceConfig -> req -> m resp) ->
-  Text ->
-  (MerchantServiceUsageConfig -> MapsServiceUsage) ->
   Id Merchant ->
+  Maps.SMapsService msuc ->
   req ->
   m resp
-runWithServiceConfig func fieldName getMapsServiceUsage merchantId req = do
-  merchantConfig <- QMSUC.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
-  let mapsServiceUsage = getMapsServiceUsage merchantConfig
-  service <- pickService merchantId fieldName mapsServiceUsage
-  merchantMapsServiceConfig <-
-    QMSC.findByMerchantIdAndService merchantId (DMSC.MapsService service)
+runWithServiceConfig func merchantId service req = do
+  orgMapsServiceConfig <-
+    CQMSC.findByMerchantIdAndService merchantId (DMSC.MapsService service.getStrictMapsService)
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Maps" (show service))
-  case merchantMapsServiceConfig.serviceConfig of
+  case orgMapsServiceConfig.serviceConfig of
     DMSC.MapsServiceConfig msc -> func msc req
     _ -> throwError $ InternalError "Unknown Service Config"
 
-pickService :: (MonadIO m, Log m) => Id Merchant -> Text -> MapsServiceUsage -> m MapsService
-pickService merchantId fieldName MapsServiceUsage {..} = do
+pickService ::
+  forall (msum :: Maps.MapsServiceUsageMethod) m r.
+  (CacheFlow m r, EsqDBFlow m r, SingI msum) =>
+  Id Merchant ->
+  m (Maps.SMapsService msum)
+pickService merchantId = do
+  let mapsServiceUsageMethod = fromSing (sing @msum)
+  orgMapsConfig <- CQMSUC.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+  MapsServiceUsage {..} <- getMapsServiceUsage @msum orgMapsConfig
   let percentages =
-        [(Google, googlePercentage), (OSRM, osrmPercentage), (MMI, mmiPercentage)] <&> \(element, percentage) -> do
-          Random.Percentage {element, percentage = fromMaybe 0 percentage}
+        [(Maps.Google, googlePercentage), (Maps.OSRM, osrmPercentage), (Maps.MMI, mmiPercentage)] <&> \(element, percentage) -> do
+          Random.Percentage {element = Maps.SMapsService element, percentage = fromMaybe 0 percentage}
   if usePercentage
     then do
       result <- Random.getRandomElementUsingPercentages percentages
-      logDebug $ "Pick maps service: " <> fieldName <> "; merchantId: " <> merchantId.getId <> "; result: " <> show result
+      logDebug $ "Pick maps service: " <> show mapsServiceUsageMethod <> "; merchantId: " <> merchantId.getId <> "; result: " <> show result
       case result.pickedElement of
         Left err -> do
           logWarning $ "Fail to pick random service: " <> show err <> "; use configured service instead: " <> show mapsService
           pure mapsService
-        Right pickedService -> pure pickedService
+        Right pickedService -> pure $ pickedService
     else pure mapsService
+
+getMapsServiceUsage ::
+  forall (msum :: Maps.MapsServiceUsageMethod) m.
+  (SingI msum, MonadThrow m, Log m) =>
+  DMSUC.MerchantServiceUsageConfig ->
+  m (Maps.MapsServiceUsage msum)
+getMapsServiceUsage cfg = do
+  let mapsServiceUsageMethod = fromSing (sing @msum)
+  case mapsServiceUsageMethod of
+    GetDistances -> pure $ castMapsServiceUsage @'GetDistances cfg.getDistances
+    GetEstimatedPickupDistances -> do
+      -- not used in rider-app
+      throwError (InternalError $ show mapsServiceUsageMethod <> " not configured.")
+    GetRoutes -> pure $ castMapsServiceUsage @'GetRoutes cfg.getRoutes
+    GetPickupRoutes -> pure $ castMapsServiceUsage @'GetPickupRoutes cfg.getPickupRoutes
+    GetTripRoutes -> pure $ castMapsServiceUsage @'GetTripRoutes cfg.getTripRoutes
+    SnapToRoad -> pure $ castMapsServiceUsage @'SnapToRoad cfg.snapToRoad
+    GetPlaceName -> pure $ castMapsServiceUsage @'GetPlaceName cfg.getPlaceName
+    GetPlaceDetails -> pure $ castMapsServiceUsage @'GetPlaceDetails cfg.getPlaceDetails
+    AutoComplete -> pure $ castMapsServiceUsage @'AutoComplete cfg.autoComplete
+    GetDistancesForCancelRide -> pure $ castMapsServiceUsage @'GetDistancesForCancelRide cfg.getDistancesForCancelRide
+
+castMapsServiceUsage ::
+  forall (msum1 :: Maps.MapsServiceUsageMethod) (msum2 :: Maps.MapsServiceUsageMethod).
+  Maps.MapsServiceUsage msum1 ->
+  Maps.MapsServiceUsage msum2
+castMapsServiceUsage = coerce

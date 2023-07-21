@@ -39,6 +39,12 @@ instance FromTType RideT Domain.Ride where
           tripStartPos = mbTripStartLoc,
           tripEndPos = mbTripEndLoc,
           fareParametersId = fromKey <$> fareParametersId,
+          mapsServices =
+            Domain.RideMapsServices
+              { getDistancesForCancelRide = mapsServiceGetDistancesForCancelRide,
+                getRoutes = mapsServiceGetRoutes,
+                snapToRoad = mapsServiceSnapToRoad
+              },
           ..
         }
 
@@ -56,5 +62,8 @@ instance ToTType RideT Domain.Ride where
         tripEndLat = tripEndPos <&> (.lat),
         tripEndLon = tripEndPos <&> (.lon),
         fareParametersId = toKey <$> fareParametersId,
+        mapsServiceGetDistancesForCancelRide = mapsServices.getDistancesForCancelRide,
+        mapsServiceGetRoutes = mapsServices.getRoutes,
+        mapsServiceSnapToRoad = mapsServices.snapToRoad,
         ..
       }

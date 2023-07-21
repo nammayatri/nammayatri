@@ -20,6 +20,7 @@
 
 module Storage.Tabular.Merchant.MerchantServiceUsageConfig where
 
+import Data.Singletons.TH
 import qualified Domain.Types.Merchant as Domain
 import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as Domain
 import Kernel.External.AadhaarVerification.Types
@@ -31,7 +32,7 @@ import Kernel.External.Whatsapp.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
-import Kernel.Utils.Common (decodeFromText, encodeToText)
+import Kernel.Utils.Common (Log, decodeFromText, encodeToText)
 import Kernel.Utils.Error
 import Storage.Tabular.Merchant (MerchantTId)
 import Tools.Error
@@ -42,25 +43,25 @@ mkPersist
     MerchantServiceUsageConfigT sql=merchant_service_usage_config
       merchantId MerchantTId
       initiateCall CallService
-      getDistances MapsService
+      getDistances (SMapsService 'GetDistances)
       getDistancesPercentage Text
-      getEstimatedPickupDistances MapsService
+      getEstimatedPickupDistances (SMapsService 'GetEstimatedPickupDistances)
       getEstimatedPickupDistancesPercentage Text
-      getRoutes MapsService
+      getRoutes (SMapsService 'GetRoutes)
       getRoutesPercentage Text
-      getPickupRoutes MapsService
+      getPickupRoutes (SMapsService 'GetPickupRoutes)
       getPickupRoutesPercentage Text
-      getTripRoutes MapsService
+      getTripRoutes (SMapsService 'GetTripRoutes)
       getTripRoutesPercentage Text
-      snapToRoad MapsService
+      snapToRoad (SMapsService 'SnapToRoad)
       snapToRoadPercentage Text
-      getPlaceName MapsService
+      getPlaceName (SMapsService 'GetPlaceName)
       getPlaceNamePercentage Text
-      getPlaceDetails MapsService
+      getPlaceDetails (SMapsService 'GetPlaceDetails)
       getPlaceDetailsPercentage Text
-      autoComplete MapsService
+      autoComplete (SMapsService 'AutoComplete)
       autoCompletePercentage Text
-      getDistancesForCancelRide MapsService
+      getDistancesForCancelRide (SMapsService 'GetDistancesForCancelRide)
       getDistancesForCancelRidePercentage Text
       smsProvidersPriorityList (PostgresList SmsService)
       whatsappProvidersPriorityList (PostgresList WhatsappService)
@@ -79,16 +80,16 @@ instance TEntityKey MerchantServiceUsageConfigT where
 
 instance FromTType MerchantServiceUsageConfigT Domain.MerchantServiceUsageConfig where
   fromTType MerchantServiceUsageConfigT {..} = do
-    getDistances' <- parseField "getDistances" getDistances getDistancesPercentage
-    getEstimatedPickupDistances' <- parseField "getEstimatedPickupDistances" getEstimatedPickupDistances getEstimatedPickupDistancesPercentage
-    getRoutes' <- parseField "getRoutes" getRoutes getRoutesPercentage
-    getPickupRoutes' <- parseField "getPickupRoutes" getPickupRoutes getPickupRoutesPercentage
-    getTripRoutes' <- parseField "getTripRoutes" getTripRoutes getTripRoutesPercentage
-    snapToRoad' <- parseField "snapToRoad" snapToRoad snapToRoadPercentage
-    getPlaceName' <- parseField "getPlaceName" getPlaceName getPlaceNamePercentage
-    getPlaceDetails' <- parseField "getPlaceDetails" getPlaceDetails getPlaceDetailsPercentage
-    autoComplete' <- parseField "autoComplete" autoComplete autoCompletePercentage
-    getDistancesForCancelRide' <- parseField "getDistancesForCancelRide" getDistancesForCancelRide getDistancesForCancelRidePercentage
+    getDistances' <- parseField getDistances getDistancesPercentage
+    getEstimatedPickupDistances' <- parseField getEstimatedPickupDistances getEstimatedPickupDistancesPercentage
+    getRoutes' <- parseField getRoutes getRoutesPercentage
+    getPickupRoutes' <- parseField getPickupRoutes getPickupRoutesPercentage
+    getTripRoutes' <- parseField getTripRoutes getTripRoutesPercentage
+    snapToRoad' <- parseField snapToRoad snapToRoadPercentage
+    getPlaceName' <- parseField getPlaceName getPlaceNamePercentage
+    getPlaceDetails' <- parseField getPlaceDetails getPlaceDetailsPercentage
+    autoComplete' <- parseField autoComplete autoCompletePercentage
+    getDistancesForCancelRide' <- parseField getDistancesForCancelRide getDistancesForCancelRidePercentage
     return $
       Domain.MerchantServiceUsageConfig
         { merchantId = fromKey merchantId,
@@ -107,8 +108,18 @@ instance FromTType MerchantServiceUsageConfigT Domain.MerchantServiceUsageConfig
           ..
         }
     where
-      parseField fieldName field fieldPercentage = do
-        mapsServiceUsagePercentage <- decodeFromText fieldPercentage & fromMaybeM (InternalError $ "Unable to decode MerchantServiceUsageConfigT." <> fieldName <> "Percentage")
+      parseField ::
+        forall (msum :: MapsServiceUsageMethod) m.
+        (SingI msum, MonadThrow m, Log m) =>
+        SMapsService msum ->
+        Text ->
+        m (MapsServiceUsage msum)
+      parseField field fieldPercentage = do
+        let mapsServiceUsageMethod = fromSing (sing @msum)
+        let fieldName = show mapsServiceUsageMethod
+        mapsServiceUsagePercentage <-
+          decodeFromText fieldPercentage
+            & fromMaybeM (InternalError $ "Unable to decode MerchantServiceUsageConfigT." <> fieldName <> "Percentage")
         pure $ mkMapsServiceUsage field mapsServiceUsagePercentage
 
 -- should we create separate table for percentage instead of using json?

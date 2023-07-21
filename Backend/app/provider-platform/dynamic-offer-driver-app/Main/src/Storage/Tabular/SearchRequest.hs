@@ -41,7 +41,6 @@ mkPersist
       id Text
       transactionId Text
       providerId MerchantTId
-      mapsServiceGetDistances Maps.MapsService Maybe
       fromLocationId SearchReqLocationTId
       toLocationId SearchReqLocationTId
       area FareProductD.Area Maybe
@@ -51,6 +50,9 @@ mkPersist
       bapCountry Context.Country Maybe
       estimatedDistance Meters
       estimatedDuration Seconds
+      mapsServiceGetDistances (Maps.SMapsService 'Maps.GetDistances) Maybe
+      mapsServiceGetEstimatedPickupDistances (Maps.SMapsService 'Maps.GetEstimatedPickupDistances) Maybe
+      mapsServiceGetPlaceName (Maps.SMapsService 'Maps.GetPlaceName) Maybe
       device Text Maybe
       autoAssignEnabled Bool Maybe
       customerLanguage Maps.Language Maybe
@@ -81,6 +83,12 @@ instance FromTType FullSearchRequestT Domain.SearchRequest where
           fromLocation = fromLoc_,
           toLocation = toLoc_,
           bapUri = pUrl,
+          mapsServices =
+            Domain.SearchRequestMapsServices
+              { getDistances = mapsServiceGetDistances,
+                getEstimatedPickupDistances = mapsServiceGetEstimatedPickupDistances,
+                getPlaceName = mapsServiceGetPlaceName
+              },
           ..
         }
 
@@ -92,6 +100,9 @@ instance ToTType FullSearchRequestT Domain.SearchRequest where
           fromLocationId = toKey fromLocation.id,
           toLocationId = toKey toLocation.id,
           bapUri = showBaseUrl bapUri,
+          mapsServiceGetDistances = mapsServices.getDistances,
+          mapsServiceGetEstimatedPickupDistances = mapsServices.getEstimatedPickupDistances,
+          mapsServiceGetPlaceName = mapsServices.getPlaceName,
           ..
         },
       mkTabularSearchReqLocation fromLocation,

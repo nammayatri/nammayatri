@@ -29,6 +29,7 @@ import Kernel.Utils.Common hiding (id)
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId, mkDomainSearchReqLocation, mkTabularSearchReqLocation)
 import Storage.Tabular.Vehicle ()
+import qualified Tools.Maps as Maps
 
 derivePersistField "FareProductD.Area"
 
@@ -49,6 +50,8 @@ mkPersist
       bapUri Text
       estimatedDistance Meters
       estimatedDuration Seconds
+      mapsServiceGetDistances (Maps.SMapsService 'Maps.GetDistances) Maybe
+      mapsServiceGetPlaceName (Maps.SMapsService 'Maps.GetPlaceName) Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
@@ -73,6 +76,11 @@ instance FromTType (SearchRequestSpecialZoneT, SearchReqLocationT, SearchReqLoca
           fromLocation = fromLoc_,
           toLocation = toLoc_,
           bapUri = pUrl,
+          mapsServices =
+            Domain.SearchRequestMapsServices
+              { getDistances = mapsServiceGetDistances,
+                getPlaceName = mapsServiceGetPlaceName
+              },
           ..
         }
 
@@ -84,6 +92,8 @@ instance ToTType (SearchRequestSpecialZoneT, SearchReqLocationT, SearchReqLocati
           fromLocationId = toKey fromLocation.id,
           toLocationId = toKey toLocation.id,
           bapUri = showBaseUrl bapUri,
+          mapsServiceGetDistances = mapsServices.getDistances,
+          mapsServiceGetPlaceName = mapsServices.getPlaceName,
           ..
         },
       mkTabularSearchReqLocation fromLocation,

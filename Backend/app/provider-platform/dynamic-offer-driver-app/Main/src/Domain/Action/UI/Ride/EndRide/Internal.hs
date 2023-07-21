@@ -90,13 +90,12 @@ endRideTransaction ::
   Id DP.Driver ->
   SRB.Booking ->
   Ride.Ride ->
-  Maybe DFare.FareParameters ->
   Maybe (Id RD.RiderDetails) ->
   DFare.FareParameters ->
   TransporterConfig ->
   Id Merchant ->
   m ()
-endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig merchantId = do
+endRideTransaction driverId booking ride mbRiderDetailsId newFareParams thresholdConfig merchantId = do
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = merchantId}
   driverInfo <- CDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
@@ -123,7 +122,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   Esq.runTransaction $ do
     whenJust mbRiderDetails $ \riderDetails ->
       when shouldUpdateRideComplete (QRD.updateHasTakenValidRide riderDetails.id)
-    whenJust mbFareParams QFare.create
+    QFare.create newFareParams
     QRide.updateAll ride.id ride
     QRide.updateStatus ride.id Ride.COMPLETED
     QRB.updateStatus booking.id SRB.COMPLETED
@@ -146,7 +145,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   DLoc.updateOnRideCacheForCancelledOrEndRide driverId merchantId
   SRide.clearCache $ cast driverId
 
-updateDriverDailyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, Metrics.CoreMetrics m, CacheFlow m r, Hedis.HedisFlow m r, MonadFlow m) => Ride.Ride -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> m ()
+updateDriverDailyZscore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, Metrics.CoreMetrics m, CacheFlow m r) => Ride.Ride -> Day -> Maybe Double -> Maybe Meters -> Id Merchant -> m ()
 updateDriverDailyZscore ride rideDate driverZscore chargeableDistance merchantId = do
   mbdDailyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.DAILY merchantId
   whenJust mbdDailyLeaderBoardConfig $ \dailyLeaderBoardConfig -> do
@@ -218,23 +217,19 @@ putDiffMetric merchantId money mtrs = do
   Metrics.putFareAndDistanceDeviations org.name money mtrs
 
 getDistanceBetweenPoints ::
-  ( EncFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    Metrics.CoreMetrics m
-  ) =>
+  (Maps.MapsFlow m r) =>
   Id Merchant ->
   LatLong ->
   LatLong ->
   [LatLong] ->
-  m Meters
+  m (Meters, Maps.SMapsService 'Maps.GetRoutes)
 getDistanceBetweenPoints merchantId origin destination interpolatedPoints = do
   -- somehow interpolated points pushed to redis in reversed order, so we need to reverse it back
   let pickedWaypoints = origin :| (pickWaypoints (reverse interpolatedPoints) <> [destination])
   logTagInfo "endRide" $ "pickedWaypoints: " <> show pickedWaypoints
-  service <- Maps.pickService merchantId Maps.GetRoutes
+  mapsService <- Maps.pickService @'Maps.GetRoutes merchantId
   routeResponse <-
-    Maps.getRoutes merchantId service $
+    Maps.getRoutes merchantId mapsService $
       Maps.GetRoutesReq
         { waypoints = pickedWaypoints,
           mode = Just Maps.CAR,
@@ -242,7 +237,8 @@ getDistanceBetweenPoints merchantId origin destination interpolatedPoints = do
         }
   let mbShortestRouteDistance = (.distance) =<< getRouteInfoWithShortestDuration routeResponse
   -- Next error is impossible, because we never receive empty list from directions api
-  mbShortestRouteDistance & fromMaybeM (InvalidRequest "Couldn't calculate route distance")
+  distance <- mbShortestRouteDistance & fromMaybeM (InvalidRequest "Couldn't calculate route distance")
+  pure (distance, mapsService)
 
 -- TODO reuse code from rider-app
 getRouteInfoWithShortestDuration :: [Maps.RouteInfo] -> Maybe Maps.RouteInfo

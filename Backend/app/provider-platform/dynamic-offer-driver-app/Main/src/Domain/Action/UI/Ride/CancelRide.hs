@@ -53,9 +53,9 @@ data ServiceHandle m = ServiceHandle
   { findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     findById :: Id DP.Person -> m (Maybe DP.Person),
     findDriverLocationId :: Id Merchant -> Id DP.Person -> m (Maybe DDriverLocation.DriverLocation),
-    cancelRide :: Id DRide.Ride -> DBCR.BookingCancellationReason -> m (),
+    cancelRide :: Id DRide.Ride -> DBCR.BookingCancellationReason -> Maybe (Maps.SMapsService 'Maps.GetDistancesForCancelRide) -> m (),
     findBookingByIdInReplica :: Id SRB.Booking -> m (Maybe SRB.Booking),
-    pickUpDistance :: Id DM.Merchant -> LatLong -> LatLong -> m Meters
+    pickUpDistance :: Id DM.Merchant -> LatLong -> LatLong -> m (Meters, Maps.SMapsService 'Maps.GetDistancesForCancelRide)
   }
 
 cancelRideHandle :: ServiceHandle Flow
@@ -92,7 +92,7 @@ cancelRideHandler ServiceHandle {..} requestorId rideId req = withLogTag ("rideI
   unless (isValidRide ride) $ throwError $ RideInvalidStatus "This ride cannot be canceled"
   let driverId = ride.driverId
 
-  rideCancelationReason <- case requestorId of
+  (rideCancellationReason, mapsServiceGetDistancesForCancelRide) <- case requestorId of
     PersonRequestorId personId -> do
       authPerson <-
         findById personId
@@ -102,22 +102,26 @@ cancelRideHandler ServiceHandle {..} requestorId rideId req = withLogTag ("rideI
         DP.ADMIN -> do
           unless (authPerson.merchantId == driver.merchantId) $ throwError (RideDoesNotExist rideId.getId)
           logTagInfo "admin -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-          buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId)
+          cancellationReason <- buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId)
+          pure (cancellationReason, Nothing)
         DP.DRIVER -> do
           unless (authPerson.id == driverId) $ throwError NotAnExecutor
           logTagInfo "driver -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
           mbLocation <- findDriverLocationId driver.merchantId driverId
           booking <- findBookingByIdInReplica ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-          disToPickup <- forM mbLocation $ \location -> do
-            pickUpDistance booking.providerId (getCoordinates location) (getCoordinates booking.fromLocation)
+          (disToPickup, mbMapsService) <- (unzipMaybe <$>) $
+            forM mbLocation $ \location -> do
+              pickUpDistance booking.providerId (getCoordinates location) (getCoordinates booking.fromLocation)
           let currentDriverLocation = getCoordinates <$> mbLocation
-          buildRideCancelationReason currentDriverLocation disToPickup (Just driverId) DBCR.ByDriver ride (Just driver.merchantId)
+          cancellationReason <- buildRideCancelationReason currentDriverLocation disToPickup (Just driverId) DBCR.ByDriver ride (Just driver.merchantId)
+          pure (cancellationReason, mbMapsService)
     DashboardRequestorId reqMerchantId -> do
       driver <- findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       unless (driver.merchantId == reqMerchantId) $ throwError (RideDoesNotExist rideId.getId)
       logTagInfo "dashboard -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-      buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) -- is it correct DBCR.ByMerchant?
-  cancelRide rideId rideCancelationReason
+      cancellationReason <- buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) -- is it correct DBCR.ByMerchant?
+      pure (cancellationReason, Nothing)
+  cancelRide rideId rideCancellationReason mapsServiceGetDistancesForCancelRide
   pure APISuccess.Success
   where
     isValidRide ride =
@@ -136,6 +140,8 @@ cancelRideHandler ServiceHandle {..} requestorId rideId req = withLogTag ("rideI
             driverDistToPickup = disToPickup,
             ..
           }
+    unzipMaybe (Just (a, b)) = (Just a, Just b)
+    unzipMaybe Nothing = (Nothing, Nothing)
 
 driverDistanceToPickup ::
   ( EncFlow m r,
@@ -148,9 +154,9 @@ driverDistanceToPickup ::
   Id Merchant ->
   tripStartPos ->
   tripEndPos ->
-  m Meters
+  m (Meters, Maps.SMapsService 'Maps.GetDistancesForCancelRide)
 driverDistanceToPickup merchantId tripStartPos tripEndPos = do
-  service <- Maps.pickService merchantId Maps.GetDistancesForCancelRide
+  service <- Maps.pickService @'Maps.GetDistancesForCancelRide merchantId
   distRes <-
     Maps.getDistanceForCancelRide merchantId service $
       Maps.GetDistanceReq
@@ -158,4 +164,4 @@ driverDistanceToPickup merchantId tripStartPos tripEndPos = do
           destination = tripEndPos,
           travelMode = Just Maps.CAR
         }
-  return $ distRes.distance
+  return (distRes.distance, service)

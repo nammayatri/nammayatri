@@ -28,6 +28,7 @@ import Kernel.Types.Common (Centesimal, HighPrecMeters, HighPrecMoney)
 import Kernel.Types.Id
 import qualified Storage.Tabular.Booking as SRB
 import Storage.Tabular.Merchant (MerchantTId)
+import qualified Tools.Maps as Maps
 
 derivePersistField "Domain.RideStatus"
 
@@ -56,6 +57,8 @@ mkPersist
       totalFare HighPrecMoney Maybe
       chargeableDistance HighPrecMeters Maybe
       traveledDistance HighPrecMeters Maybe
+      mapsServiceGetDistancesForCancelRide (Maps.SMapsService 'Maps.GetDistancesForCancelRide) Maybe
+      mapsServiceGetTripRoutes (Maps.SMapsService 'Maps.GetTripRoutes) Maybe
       driverArrivalTime UTCTime Maybe
       rideStartTime UTCTime Maybe
       rideEndTime UTCTime Maybe
@@ -85,6 +88,11 @@ instance FromTType RideT Domain.Ride where
           trackingUrl = tUrl,
           fare = roundToIntegral <$> fare,
           totalFare = roundToIntegral <$> totalFare,
+          mapsServices =
+            Domain.RideMapsServices
+              { getDistancesForCancelRide = mapsServiceGetDistancesForCancelRide,
+                getTripRoutes = mapsServiceGetTripRoutes
+              },
           ..
         }
 
@@ -99,5 +107,7 @@ instance ToTType RideT Domain.Ride where
         trackingUrl = showBaseUrl <$> trackingUrl,
         fare = realToFrac <$> fare,
         totalFare = realToFrac <$> totalFare,
+        mapsServiceGetDistancesForCancelRide = mapsServices.getDistancesForCancelRide,
+        mapsServiceGetTripRoutes = mapsServices.getTripRoutes,
         ..
       }

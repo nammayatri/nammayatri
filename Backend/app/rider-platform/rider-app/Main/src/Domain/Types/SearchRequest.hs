@@ -24,6 +24,7 @@ import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMeters, Money, Seconds)
 import Kernel.Types.Id
 import Kernel.Types.Version
+import Kernel.Utils.GenericPretty
 
 data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
@@ -38,6 +39,7 @@ data SearchRequest = SearchRequest
     distance :: Maybe HighPrecMeters,
     maxDistance :: Maybe HighPrecMeters,
     estimatedRideDuration :: Maybe Seconds,
+    mapsServices :: SearchRequestMapsServices,
     device :: Maybe Text,
     merchantId :: Id DMerchant.Merchant, -- remove when searchRequest will not be used in CustomerSupport
     bundleVersion :: Maybe Version,
@@ -51,3 +53,8 @@ data SearchRequest = SearchRequest
     createdAt :: UTCTime
   }
   deriving (Generic, Show)
+
+newtype SearchRequestMapsServices = SearchRequestMapsServices
+  { getRoutes :: Maybe (Maps.SMapsService 'Maps.GetRoutes)
+  }
+  deriving (Generic, PrettyShow, Show)

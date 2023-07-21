@@ -30,6 +30,7 @@ import qualified Kernel.Prelude as BP
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant.API
+import qualified Tools.Maps as Maps
 
 data RideStatus
   = NEW
@@ -53,6 +54,7 @@ data Ride = Ride
     bookingId :: Id DRB.Booking,
     shortId :: ShortId Ride,
     merchantId :: Maybe (Id DM.Merchant),
+    mapsServices :: RideMapsServices,
     status :: RideStatus,
     driverId :: Id DPers.Person,
     otp :: Text,
@@ -71,5 +73,12 @@ data Ride = Ride
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     numberOfDeviation :: Maybe Double
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+
+data RideMapsServices = RideMapsServices
+  { getDistancesForCancelRide :: Maybe (Maps.SMapsService 'Maps.GetDistancesForCancelRide),
+    getRoutes :: Maybe (Maps.SMapsService 'Maps.GetRoutes),
+    snapToRoad :: Maybe (Maps.SMapsService 'Maps.SnapToRoad)
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)

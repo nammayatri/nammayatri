@@ -31,6 +31,7 @@ import qualified Storage.Tabular.Merchant as SMerchant
 import qualified Storage.Tabular.Merchant.MerchantPaymentMethod as SMPM
 import qualified Storage.Tabular.Person as SP
 import qualified Storage.Tabular.SearchRequest.SearchReqLocation as SLoc
+import qualified Tools.Maps as Maps
 
 mkPersist
   defaultSqlSettings
@@ -45,6 +46,7 @@ mkPersist
       distance Centesimal Maybe
       maxDistance Centesimal Maybe
       estimatedRideDuration Seconds Maybe
+      mapsServiceGetRoutes (Maps.SMapsService 'Maps.GetRoutes) Maybe
       device Text Maybe
       merchantId SMerchant.MerchantTId
       language Language Maybe
@@ -85,6 +87,10 @@ instance FromTType FullSearchRequestT Domain.SearchRequest where
           clientVersion = clientVersion',
           availablePaymentMethods = fromKey <$> unPostgresList availablePaymentMethods,
           selectedPaymentMethodId = fromKey <$> selectedPaymentMethodId,
+          mapsServices =
+            Domain.SearchRequestMapsServices
+              { getRoutes = mapsServiceGetRoutes
+              },
           ..
         }
 
@@ -105,6 +111,7 @@ instance ToTType FullSearchRequestT Domain.SearchRequest where
               clientVersion = versionToText <$> clientVersion,
               availablePaymentMethods = PostgresList $ toKey <$> availablePaymentMethods,
               selectedPaymentMethodId = toKey <$> selectedPaymentMethodId,
+              mapsServiceGetRoutes = mapsServices.getRoutes,
               ..
             }
     (searchReq, fromLoc, mbToLoc)

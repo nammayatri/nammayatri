@@ -71,6 +71,7 @@ dependencies:
   - servant-client
   - servant-client-core
   - servant-server
+  - singletons
   - http-media
   - text
   - wai

@@ -91,3 +91,14 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ALTER COLUMN ge
 ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ALTER COLUMN get_place_details_percentage SET NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ALTER COLUMN auto_complete_percentage SET NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ALTER COLUMN get_distances_for_cancel_ride_percentage SET NOT NULL;
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN maps_service_get_distances character varying(30);
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN maps_service_get_estimated_pickup_distances character varying(30);
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN maps_service_get_place_name character varying(30);
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_special_zone ADD COLUMN maps_service_get_distances character varying(30);
+ALTER TABLE atlas_driver_offer_bpp.search_request_special_zone ADD COLUMN maps_service_get_place_name character varying(30);
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN maps_service_get_distances_for_cancel_ride character varying(30);
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN maps_service_get_routes character varying(30);
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN maps_service_snap_to_road character varying(30);

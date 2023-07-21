@@ -61,7 +61,7 @@ data DashboardStartRideReq = DashboardStartRideReq
   }
 
 data ServiceHandle m = ServiceHandle
-  { findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
+  { ride :: DRide.Ride,
     findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findLocationByDriverId :: Id DP.Person -> m (Maybe DDrLoc.DriverLocation),
     startRideAndUpdateLocation :: Id DP.Person -> DRide.Ride -> Id SRB.Booking -> LatLong -> Id DM.Merchant -> m (),
@@ -71,12 +71,13 @@ data ServiceHandle m = ServiceHandle
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m ()
   }
 
-buildStartRideHandle :: Id DM.Merchant -> Flow (ServiceHandle Flow)
-buildStartRideHandle merchantId = do
-  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId False
+buildStartRideHandle :: Id DM.Merchant -> Id DRide.Ride -> Flow (ServiceHandle Flow)
+buildStartRideHandle merchantId rideId = do
+  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId False ride.id ride.mapsServices.snapToRoad
   pure
     ServiceHandle
-      { findRideById = QRide.findById,
+      { ride,
         findBookingById = QRB.findById,
         findLocationByDriverId = QDrLoc.findById,
         startRideAndUpdateLocation = SInternal.startRideTransaction,
@@ -115,7 +116,6 @@ startRide ::
   StartRideReq ->
   m APISuccess.APISuccess
 startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId) $ do
-  ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = ride.driverId
   rateLimitStartRide driverId ride.id -- do we need it for dashboard?
   booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)

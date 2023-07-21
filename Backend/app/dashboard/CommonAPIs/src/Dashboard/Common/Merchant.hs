@@ -23,9 +23,11 @@ where
 
 import Dashboard.Common as Reexport
 import Data.Aeson
+import Data.Coerce (coerce)
 import Data.Either (isRight)
 import Data.List.Extra (anySame)
 import Data.OpenApi hiding (description, name, password, url)
+import Data.Singletons.TH
 import Kernel.External.Encryption (encrypt)
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Flow as FCM
@@ -498,15 +500,15 @@ type ServiceUsageConfigAPI =
 
 -- Fields with one possible value (verificationService, initiateCall, whatsappProvidersPriorityList) not included here
 data ServiceUsageConfigRes = ServiceUsageConfigRes
-  { getDistances :: Maps.MapsServiceUsage,
-    getEstimatedPickupDistances :: Maybe Maps.MapsServiceUsage,
-    getRoutes :: Maps.MapsServiceUsage,
-    getPickupRoutes :: Maybe Maps.MapsServiceUsage,
-    getTripRoutes :: Maybe Maps.MapsServiceUsage,
-    snapToRoad :: Maps.MapsServiceUsage,
-    getPlaceName :: Maps.MapsServiceUsage,
-    getPlaceDetails :: Maps.MapsServiceUsage,
-    autoComplete :: Maps.MapsServiceUsage,
+  { getDistances :: Maps.MapsServiceUsage 'Maps.GetDistances,
+    getEstimatedPickupDistances :: Maybe (Maps.MapsServiceUsage 'Maps.GetEstimatedPickupDistances),
+    getRoutes :: Maps.MapsServiceUsage 'Maps.GetRoutes,
+    getPickupRoutes :: Maybe (Maps.MapsServiceUsage 'Maps.GetPickupRoutes),
+    getTripRoutes :: Maybe (Maps.MapsServiceUsage 'Maps.GetTripRoutes),
+    snapToRoad :: Maps.MapsServiceUsage 'Maps.SnapToRoad,
+    getPlaceName :: Maps.MapsServiceUsage 'Maps.GetPlaceName,
+    getPlaceDetails :: Maps.MapsServiceUsage 'Maps.GetPlaceDetails,
+    autoComplete :: Maps.MapsServiceUsage 'Maps.AutoComplete,
     smsProvidersPriorityList :: [SMS.SmsService],
     updatedAt :: UTCTime,
     createdAt :: UTCTime
@@ -525,26 +527,27 @@ type MapsServiceUsageConfigUpdateAPI =
     :> Post '[JSON] APISuccess
 
 data MapsServiceUsageConfigUpdateReq = MapsServiceUsageConfigUpdateReq
-  { getDistances :: Maybe Maps.MapsServiceUsage,
-    getEstimatedPickupDistances :: Maybe Maps.MapsServiceUsage,
-    getRoutes :: Maybe Maps.MapsServiceUsage,
-    getPickupRoutes :: Maybe Maps.MapsServiceUsage,
-    getTripRoutes :: Maybe Maps.MapsServiceUsage,
-    snapToRoad :: Maybe Maps.MapsServiceUsage,
-    getPlaceName :: Maybe Maps.MapsServiceUsage,
-    getPlaceDetails :: Maybe Maps.MapsServiceUsage,
-    autoComplete :: Maybe Maps.MapsServiceUsage,
-    getDistancesForCancelRide :: Maybe Maps.MapsServiceUsage
+  { getDistances :: Maybe (Maps.MapsServiceUsage 'Maps.GetDistances),
+    getEstimatedPickupDistances :: Maybe (Maps.MapsServiceUsage 'Maps.GetEstimatedPickupDistances),
+    getRoutes :: Maybe (Maps.MapsServiceUsage 'Maps.GetRoutes),
+    getPickupRoutes :: Maybe (Maps.MapsServiceUsage 'Maps.GetPickupRoutes),
+    getTripRoutes :: Maybe (Maps.MapsServiceUsage 'Maps.GetTripRoutes),
+    snapToRoad :: Maybe (Maps.MapsServiceUsage 'Maps.SnapToRoad),
+    getPlaceName :: Maybe (Maps.MapsServiceUsage 'Maps.GetPlaceName),
+    getPlaceDetails :: Maybe (Maps.MapsServiceUsage 'Maps.GetPlaceDetails),
+    autoComplete :: Maybe (Maps.MapsServiceUsage 'Maps.AutoComplete),
+    getDistancesForCancelRide :: Maybe (Maps.MapsServiceUsage 'Maps.GetDistancesForCancelRide)
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 mapsServiceUsedInReq :: MapsServiceUsageConfigUpdateReq -> Maps.MapsService -> Bool
-mapsServiceUsedInReq (MapsServiceUsageConfigUpdateReq a b c d e f g h i j) service = any (mapsServiceUsedInReqItem service) $ catMaybes [a, b, c, d, e, f, g, h, i, j]
+mapsServiceUsedInReq (MapsServiceUsageConfigUpdateReq a b c d e f g h i j) service =
+  any (mapsServiceUsedInReqItem service) $ catMaybes [a, coerce b, coerce c, coerce d, coerce e, coerce f, coerce g, coerce h, coerce i, coerce j]
 
-mapsServiceUsedInReqItem :: Maps.MapsService -> Maps.MapsServiceUsage -> Bool
+mapsServiceUsedInReqItem :: Maps.MapsService -> Maps.MapsServiceUsage msum -> Bool
 mapsServiceUsedInReqItem service req =
-  service == req.mapsService || case service of
+  service == req.mapsService.getStrictMapsService || case service of
     Maps.Google -> isJust req.googlePercentage
     Maps.OSRM -> isJust req.osrmPercentage
     Maps.MMI -> isJust req.mmiPercentage
@@ -555,27 +558,28 @@ instance HideSecrets MapsServiceUsageConfigUpdateReq where
 validateMapsServiceUsageConfigUpdateReq :: Validate MapsServiceUsageConfigUpdateReq
 validateMapsServiceUsageConfigUpdateReq MapsServiceUsageConfigUpdateReq {..} =
   sequenceA_
-    [ validateServiceUsageConfig "getDistances" getDistances Maps.getDistancesProvided,
-      validateServiceUsageConfig "getEstimatedPickupDistances" getEstimatedPickupDistances Maps.getDistancesProvided,
-      validateServiceUsageConfig "getRoutes" getRoutes Maps.getRoutesProvided,
-      validateServiceUsageConfig "getPickupRoutes" getPickupRoutes Maps.getRoutesProvided,
-      validateServiceUsageConfig "getTripRoutes" getTripRoutes Maps.getRoutesProvided,
-      validateServiceUsageConfig "snapToRoad" snapToRoad Maps.snapToRoadProvided,
-      validateServiceUsageConfig "getPlaceName" getPlaceName Maps.getPlaceNameProvided,
-      validateServiceUsageConfig "getPlaceDetails" getPlaceDetails Maps.getPlaceDetailsProvided,
-      validateServiceUsageConfig "autoComplete" autoComplete Maps.autoCompleteProvided,
-      validateServiceUsageConfig "getDistancesForCancelRide" getDistancesForCancelRide Maps.getDistancesProvided
+    [ validateServiceUsageConfig @'Maps.GetDistances getDistances,
+      validateServiceUsageConfig @'Maps.GetEstimatedPickupDistances getEstimatedPickupDistances,
+      validateServiceUsageConfig @'Maps.GetRoutes getRoutes,
+      validateServiceUsageConfig @'Maps.GetPickupRoutes getPickupRoutes,
+      validateServiceUsageConfig @'Maps.GetTripRoutes getTripRoutes,
+      validateServiceUsageConfig @'Maps.SnapToRoad snapToRoad,
+      validateServiceUsageConfig @'Maps.GetPlaceName getPlaceName,
+      validateServiceUsageConfig @'Maps.GetPlaceDetails getPlaceDetails,
+      validateServiceUsageConfig @'Maps.AutoComplete autoComplete,
+      validateServiceUsageConfig @'Maps.GetDistancesForCancelRide getDistancesForCancelRide
     ]
 
-validateServiceUsageConfig :: Text -> Maybe Maps.MapsServiceUsage -> (Maps.MapsService -> Bool) -> Validation
-validateServiceUsageConfig fieldName field fieldProvided = do
+validateServiceUsageConfig :: forall (msum :: Maps.MapsServiceUsageMethod). (SingI msum) => Maybe (Maps.MapsServiceUsage msum) -> Validation
+validateServiceUsageConfig field = do
+  let mapsServiceUsageMethod = fromSing (sing @msum)
   let mkNotAllowedMessage f = f <> " value is not allowed"
   let mkIncorrectSumMessage f = "sum of percentages should be 100 for field: " <> f
   sequenceA_
-    [ validateField fieldName field $
+    [ validateField (show mapsServiceUsageMethod) field $
         InMaybe $
-          PredicateFunc mkIncorrectSumMessage incorrectSumPredicate
-            `And` PredicateFunc mkNotAllowedMessage (mkNotAllowedPredicate fieldProvided),
+          PredicateFunc mkIncorrectSumMessage (incorrectSumPredicate @msum)
+            `And` PredicateFunc mkNotAllowedMessage (mkNotAllowedPredicate @msum),
       whenJust field \mapsServiceUsage ->
         sequenceA_
           [ validateField "googlePercentage" mapsServiceUsage.googlePercentage $ InMaybe $ InRange @Int 0 100,
@@ -584,14 +588,14 @@ validateServiceUsageConfig fieldName field fieldProvided = do
           ]
     ]
 
-mkNotAllowedPredicate :: (Maps.MapsService -> Bool) -> Maps.MapsServiceUsage -> Bool
-mkNotAllowedPredicate fieldProvided mapsServiceUsage =
-  fieldProvided mapsServiceUsage.mapsService
-    && (isNothing mapsServiceUsage.googlePercentage || fieldProvided Maps.Google)
-    && (isNothing mapsServiceUsage.osrmPercentage || fieldProvided Maps.OSRM)
-    && (isNothing mapsServiceUsage.mmiPercentage || fieldProvided Maps.MMI)
+mkNotAllowedPredicate :: forall (msum :: Maps.MapsServiceUsageMethod). (SingI msum) => Maps.MapsServiceUsage msum -> Bool
+mkNotAllowedPredicate mapsServiceUsage =
+  Maps.mapsMethodProvided @msum mapsServiceUsage.mapsService
+    && (isNothing mapsServiceUsage.googlePercentage || Maps.mapsMethodProvided @msum (Maps.SMapsService Maps.Google))
+    && (isNothing mapsServiceUsage.osrmPercentage || Maps.mapsMethodProvided @msum (Maps.SMapsService Maps.OSRM))
+    && (isNothing mapsServiceUsage.mmiPercentage || Maps.mapsMethodProvided @msum (Maps.SMapsService Maps.MMI))
 
-incorrectSumPredicate :: Maps.MapsServiceUsage -> Bool
+incorrectSumPredicate :: forall (msum :: Maps.MapsServiceUsageMethod). Maps.MapsServiceUsage msum -> Bool
 incorrectSumPredicate Maps.MapsServiceUsage {..} = do
   let percentages = catMaybes [googlePercentage, osrmPercentage, mmiPercentage]
   null percentages || sum percentages == 100

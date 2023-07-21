@@ -69,6 +69,6 @@ assignCreateAndStartOtpRide _ Common.AssignCreateAndStartOtpRideAPIReq {..} = do
 
   ride <- DRide.otpRideCreate requestor rideOtp booking
   let driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor}
-  shandle <- RideStart.buildStartRideHandle requestor.merchantId
+  shandle <- RideStart.buildStartRideHandle requestor.merchantId ride.id
   void $ RideStart.driverStartRide shandle ride.id driverReq
   return Success

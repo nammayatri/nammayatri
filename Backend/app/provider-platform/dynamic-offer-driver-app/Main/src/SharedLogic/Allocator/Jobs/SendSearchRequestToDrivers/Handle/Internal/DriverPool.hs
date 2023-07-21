@@ -77,9 +77,10 @@ prepareDriverPoolBatch ::
   DriverPoolConfig ->
   DSR.SearchRequest ->
   DST.SearchTry ->
+  Maps.SMapsService 'Maps.GetEstimatedPickupDistances ->
   PoolBatchNum ->
   m [DriverPoolWithActualDistResult]
-prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag ("BatchNum-" <> show batchNum) $ do
+prepareDriverPoolBatch driverPoolCfg searchReq searchTry mapsService batchNum = withLogTag ("BatchNum-" <> show batchNum) $ do
   previousBatchesDrivers <- getPreviousBatchesDrivers
   logDebug $ "PreviousBatchesDrivers-" <> show previousBatchesDrivers
   prepareDriverPoolBatch' previousBatchesDrivers
@@ -175,7 +176,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
           merchantId = searchReq.providerId
       let pickupLoc = searchReq.fromLocation
       let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
-      calculateDriverPoolWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId True (Just radiusStep)
+      calculateDriverPoolWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId mapsService True (Just radiusStep)
     calcDriverCurrentlyOnRidePool radiusStep reduceRadiusValue transporterConfig = do
       let merchantId = searchReq.providerId
       if transporterConfig.includeDriverCurrentlyOnRide && (radiusStep - 1) > 0
@@ -183,7 +184,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum = withLogTag (
           let vehicleVariant = searchTry.vehicleVariant
           let pickupLoc = searchReq.fromLocation
           let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
-          calculateDriverCurrentlyOnRideWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId (Just $ radiusStep - 1) reduceRadiusValue
+          calculateDriverCurrentlyOnRideWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId mapsService (Just $ radiusStep - 1) reduceRadiusValue
         else pure []
     fillBatch merchantId sortingType batchSize allNearbyDrivers batch intelligentPoolConfig = do
       let batchDriverIds = batch <&> (.driverPoolResult.driverId)
@@ -411,9 +412,15 @@ getNextDriverPoolBatch ::
   DST.SearchTry ->
   m [DriverPoolWithActualDistResult]
 getNextDriverPoolBatch driverPoolConfig searchReq searchTry = withLogTag "getNextDriverPoolBatch" do
+  mapsService <- case searchReq.mapsServices.getEstimatedPickupDistances of
+    Nothing -> do
+      -- only for old search requests
+      logWarning $ "Could not find searchReq.mapsServices.getEstimatedPickupDistances: " <> show searchReq.id <> "; pick new service"
+      Maps.pickService @'Maps.GetEstimatedPickupDistances searchReq.providerId
+    Just service -> pure service
   batchNum <- getPoolBatchNum searchTry.id
   incrementBatchNum searchTry.id
-  prepareDriverPoolBatch driverPoolConfig searchReq searchTry batchNum
+  prepareDriverPoolBatch driverPoolConfig searchReq searchTry mapsService batchNum
 
 getPoolBatchNum :: (Redis.HedisFlow m r) => Id DST.SearchTry -> m PoolBatchNum
 getPoolBatchNum searchTryId = do

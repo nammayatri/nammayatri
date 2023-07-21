@@ -121,7 +121,7 @@ startRide :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> StartRideRe
 startRide (requestorId, merchantId) rideId StartRideReq {rideOtp, point} = withFlowHandlerAPI $ do
   requestor <- findPerson requestorId
   let driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor}
-  shandle <- withTimeAPI "startRide" "buildStartRideHandle" $ RideStart.buildStartRideHandle merchantId
+  shandle <- withTimeAPI "startRide" "buildStartRideHandle" $ RideStart.buildStartRideHandle merchantId rideId
   withTimeAPI "startRide" "driverStartRide" $ RideStart.driverStartRide shandle rideId driverReq
 
 otpRideCreateAndStart :: (Id SP.Person, Id Merchant.Merchant) -> DRide.OTPRideReq -> FlowHandler DRide.DriverRideRes
@@ -132,7 +132,7 @@ otpRideCreateAndStart (requestorId, merchantId) req@DRide.OTPRideReq {..} = with
   booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP requestor.merchantId rideOtp now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
   ride <- DRide.otpRideCreate requestor rideOtp booking
   let driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor}
-  shandle <- RideStart.buildStartRideHandle merchantId
+  shandle <- RideStart.buildStartRideHandle merchantId ride.id
   void $ RideStart.driverStartRide shandle ride.id driverReq
   return ride
 
@@ -140,7 +140,7 @@ endRide :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> EndRideReq ->
 endRide (requestorId, merchantId) rideId EndRideReq {point, numberOfDeviation} = withFlowHandlerAPI $ do
   requestor <- findPerson requestorId
   let driverReq = RideEnd.DriverEndRideReq {point, requestor, numberOfDeviation}
-  shandle <- withTimeAPI "endRide" "buildEndRideHandle" $ RideEnd.buildEndRideHandle merchantId
+  shandle <- withTimeAPI "endRide" "buildEndRideHandle" $ RideEnd.buildEndRideHandle merchantId rideId
   withTimeAPI "endRide" "driverEndRide" $ RideEnd.driverEndRide shandle rideId driverReq
 
 cancelRide :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> CancelRideReq -> FlowHandler APISuccess

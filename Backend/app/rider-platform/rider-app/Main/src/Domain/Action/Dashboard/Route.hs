@@ -31,7 +31,7 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
-import Tools.Maps (getTripRoutes)
+import Tools.Maps (getTripRoutes, pickService)
 
 mkGetLocation :: ShortId DM.Merchant -> Id Common.Ride -> Double -> Double -> Flow GetRoutesResp
 mkGetLocation shortMerchantId rideId pickupLocationLat pickupLocationLon = do
@@ -55,4 +55,10 @@ mkGetLocation shortMerchantId rideId pickupLocationLat pickupLocationLon = do
             mode = Just CAR,
             calcPoints = True
           }
-  getTripRoutes merchant.id mkGetRoutesResp
+  mapsService <- case ride.mapsServices.getTripRoutes of
+    Nothing -> do
+      -- only for old search requests
+      logWarning $ "Could not find ride.mapsServices.GetTripRoutes: " <> show rideId <> "; pick new service"
+      pickService @'Maps.GetTripRoutes merchant.id
+    Just service -> pure service
+  getTripRoutes merchant.id mapsService mkGetRoutesResp

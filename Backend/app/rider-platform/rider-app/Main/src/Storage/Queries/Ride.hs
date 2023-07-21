@@ -99,6 +99,17 @@ updateMultiple rideId ride = do
       ]
     where_ $ tbl ^. RideId ==. val (getId rideId)
 
+updateMapsServices :: Ride -> SqlDB ()
+updateMapsServices ride = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ RideUpdatedAt =. val now,
+        RideMapsServiceGetDistancesForCancelRide =. val ride.mapsServices.getDistancesForCancelRide
+      ]
+    where_ $ tbl ^. RideId ==. val (getId ride.id)
+
 findActiveByRBId :: Transactionable m => Id Booking -> m (Maybe Ride)
 findActiveByRBId rbId =
   findOne $ do

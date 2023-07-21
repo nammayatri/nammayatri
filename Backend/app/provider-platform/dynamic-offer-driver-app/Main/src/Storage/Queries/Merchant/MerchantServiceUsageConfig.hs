@@ -45,7 +45,7 @@ updateMerchantServiceUsageConfig MerchantServiceUsageConfig {..} = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
     let updUsage dbField dbFieldPercentage dField =
-          [ dbField =. val (Maps.mapsService dField),
+          [ dbField =. val dField.mapsService,
             dbFieldPercentage =. (val . encodeToText . Maps.mkMapsServiceUsagePercentage $ dField)
           ]
     set

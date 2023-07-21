@@ -364,6 +364,7 @@ library
     , servant-openapi3
     , servant-server
     , sessionizer-metrics
+    , singletons
     , special-zone
     , special-zone-a
     , text
@@ -450,6 +451,7 @@ executable rider-app-exe
     , servant-client-core
     , servant-openapi3
     , servant-server
+    , singletons
     , text
     , text-conversions
     , time

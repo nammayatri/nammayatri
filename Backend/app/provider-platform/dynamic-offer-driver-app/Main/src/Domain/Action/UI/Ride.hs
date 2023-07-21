@@ -72,6 +72,7 @@ import qualified Storage.Queries.RideDetails as QRD
 import qualified Storage.Queries.RideDetails as QRideD
 import Storage.Queries.Vehicle as QVeh
 import Tools.Error
+import qualified Tools.Maps as Maps
 import qualified Tools.Notifications as Notify
 
 data DriverRideRes = DriverRideRes
@@ -263,6 +264,7 @@ otpRideCreate driver otpCode booking = do
       shortId <- generateShortId
       now <- getCurrentTime
       trackingUrl <- buildTrackingUrl guid
+      mapsService <- forM merchantId (Maps.pickService @'Maps.SnapToRoad)
       return
         DRide.Ride
           { id = guid,
@@ -270,6 +272,12 @@ otpRideCreate driver otpCode booking = do
             bookingId = booking.id,
             shortId = shortId,
             merchantId = merchantId,
+            mapsServices =
+              DRide.RideMapsServices
+                { getDistancesForCancelRide = Nothing,
+                  getRoutes = Nothing,
+                  snapToRoad = mapsService
+                },
             status = DRide.NEW,
             driverId = cast driverId,
             otp = otp,

@@ -60,6 +60,7 @@ import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import Storage.Queries.DriverFee (findOldestFeeByStatus, findOngoingAfterEndTime, findUnpaidAfterPayBy, updateStatus)
 import qualified Storage.Queries.Person as QP
+import qualified Tools.Maps as Maps
 import Tools.Metrics (CoreMetrics)
 
 type UpdateLocationReq = NonEmpty Waypoint
@@ -83,8 +84,8 @@ data UpdateLocationHandle m = UpdateLocationHandle
   { driver :: Person.Person,
     findDriverLocation :: m (Maybe DriverLocation),
     upsertDriverLocation :: LatLong -> UTCTime -> Id DM.Merchant -> m (),
-    getAssignedRide :: m (Maybe (Id DRide.Ride, DRide.RideStatus)),
-    addIntermediateRoutePoints :: Id DRide.Ride -> NonEmpty LatLong -> m ()
+    getAssignedRide :: m (Maybe (Id DRide.Ride, DRide.RideStatus, Maybe (Maps.SMapsService 'Maps.SnapToRoad))),
+    addIntermediateRoutePoints :: Id DRide.Ride -> Maybe (Maps.SMapsService 'Maps.SnapToRoad) -> NonEmpty LatLong -> m ()
   }
 
 data DriverLocationUpdateStreamData = DriverLocationUpdateStreamData
@@ -108,15 +109,16 @@ buildUpdateLocationHandle driverId = do
     runInReplica $
       QP.findById driverId
         >>= fromMaybeM (PersonNotFound driverId.getId)
-  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler driver.merchantId False
+  let addIntermediateRoutePoints rideId mapsService waypoints = do
+        defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler driver.merchantId False rideId mapsService
+        LocUpd.addIntermediateRoutePoints defaultRideInterpolationHandler rideId driverId waypoints
   pure $
     UpdateLocationHandle
       { driver,
         findDriverLocation = DrLoc.findById driver.merchantId driverId,
         upsertDriverLocation = DrLoc.upsertGpsCoord driverId,
         getAssignedRide = SRide.getInProgressOrNewRideIdAndStatusByDriverId driverId,
-        addIntermediateRoutePoints = \rideId ->
-          LocUpd.addIntermediateRoutePoints defaultRideInterpolationHandler rideId driverId
+        addIntermediateRoutePoints
       }
 
 streamLocationUpdates ::
@@ -205,10 +207,10 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
           fork "updating in kafka" $
             forM_ (a : ax) $ \point -> do
               status <- case mbRideIdAndStatus of
-                Just (_, DRide.INPROGRESS) -> pure ON_RIDE
-                Just (_, DRide.NEW) -> pure ON_PICKUP
+                Just (_, DRide.INPROGRESS, _) -> pure ON_RIDE
+                Just (_, DRide.NEW, _) -> pure ON_PICKUP
                 _ -> pure IDLE
-              streamLocationUpdates (fst <$> mbRideIdAndStatus) driver.merchantId driver.id point.pt point.ts point.acc status driverInfo.active driverInfo.mode
+              streamLocationUpdates ((\(rideId, _, _) -> rideId) <$> mbRideIdAndStatus) driver.merchantId driver.id point.pt point.ts point.acc status driverInfo.active driverInfo.mode
 
       let filteredWaypointWithAccuracy = filter (\val -> fromMaybe 0.0 val.acc <= minLocationAccuracy) filteredWaypoint
       case filteredWaypointWithAccuracy of
@@ -220,7 +222,7 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
               updateDriverSpeedInRedis driver.merchantId driver.id point.pt point.ts
           maybe
             (logInfo "No ride is assigned to driver, ignoring")
-            (\(rideId, rideStatus) -> when (rideStatus == DRide.INPROGRESS) $ addIntermediateRoutePoints rideId $ NE.map (.pt) newWaypoints)
+            (\(rideId, rideStatus, mbMapsService) -> when (rideStatus == DRide.INPROGRESS) $ addIntermediateRoutePoints rideId mbMapsService $ NE.map (.pt) newWaypoints)
             mbRideIdAndStatus
 
     pure Success

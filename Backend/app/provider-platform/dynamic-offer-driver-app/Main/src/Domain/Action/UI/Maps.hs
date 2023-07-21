@@ -30,14 +30,17 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.CachedQueries.CacheConfig as SCC
 import qualified Storage.CachedQueries.Maps.PlaceNameCache as CM
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Tools.Maps as Maps
-import Tools.Metrics (CoreMetrics)
 
-getPlaceName :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DMerchant.Merchant -> Maps.GetPlaceNameReq -> m Maps.GetPlaceNameResp
-getPlaceName merchantId req = do
+getPlaceName ::
+  Maps.MapsFlow m r =>
+  Id DMerchant.Merchant ->
+  Maps.SMapsService 'Maps.GetPlaceName ->
+  Maps.GetPlaceNameReq ->
+  m Maps.GetPlaceNameResp
+getPlaceName merchantId mapsService req = do
   merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   case req.getBy of
     MIT.ByLatLong (Maps.LatLong lat lon) -> do
@@ -46,19 +49,24 @@ getPlaceName merchantId req = do
         Just geoHash -> do
           placeNameCache <- CM.findPlaceByGeoHash (pack geoHash)
           if null placeNameCache
-            then callMapsApi merchantId req merchant.geoHashPrecisionValue
+            then callMapsApi merchantId mapsService req merchant.geoHashPrecisionValue
             else pure $ map convertToGetPlaceNameResp placeNameCache
-        Nothing -> callMapsApi merchantId req merchant.geoHashPrecisionValue
+        Nothing -> callMapsApi merchantId mapsService req merchant.geoHashPrecisionValue
     MIT.ByPlaceId placeId -> do
       placeNameCache <- CM.findPlaceByPlaceId placeId
       if null placeNameCache
-        then callMapsApi merchantId req merchant.geoHashPrecisionValue
+        then callMapsApi merchantId mapsService req merchant.geoHashPrecisionValue
         else pure $ map convertToGetPlaceNameResp placeNameCache
 
-callMapsApi :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DMerchant.Merchant -> Maps.GetPlaceNameReq -> Int -> m Maps.GetPlaceNameResp
-callMapsApi merchantId req geoHashPrecisionValue = do
-  service <- Maps.pickService merchantId Maps.GetPlaceName
-  res <- Maps.getPlaceName merchantId service req
+callMapsApi ::
+  Maps.MapsFlow m r =>
+  Id DMerchant.Merchant ->
+  Maps.SMapsService 'Maps.GetPlaceName ->
+  Maps.GetPlaceNameReq ->
+  Int ->
+  m Maps.GetPlaceNameResp
+callMapsApi merchantId mapsService req geoHashPrecisionValue = do
+  res <- Maps.getPlaceName merchantId mapsService req
   let firstElement = listToMaybe res
   case firstElement of
     Just element -> do

@@ -28,6 +28,7 @@ import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.Version
 import Kernel.Utils.Common
+import qualified Tools.Maps as Maps
 import Tools.Metrics (CoreMetrics)
 
 buildSearchRequest ::
@@ -45,8 +46,9 @@ buildSearchRequest ::
   Maybe Version ->
   Maybe Text ->
   Maybe Seconds ->
+  Maybe (Maps.SMapsService 'Maps.GetRoutes) ->
   m SearchRequest.SearchRequest
-buildSearchRequest person pickup mbDrop mbMaxDistance mbDistance now bundleVersion clientVersion device duration = do
+buildSearchRequest person pickup mbDrop mbMaxDistance mbDistance now bundleVersion clientVersion device duration getRoutes = do
   searchRequestId <- generateGUID
   validTill <- getSearchRequestExpiry now
   return
@@ -70,7 +72,8 @@ buildSearchRequest person pickup mbDrop mbMaxDistance mbDistance now bundleVersi
         autoAssignEnabled = Nothing,
         autoAssignEnabledV2 = Nothing,
         availablePaymentMethods = [],
-        selectedPaymentMethodId = Nothing
+        selectedPaymentMethodId = Nothing,
+        mapsServices = SearchRequest.SearchRequestMapsServices {getRoutes}
       }
   where
     getSearchRequestExpiry :: (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]) => UTCTime -> m UTCTime

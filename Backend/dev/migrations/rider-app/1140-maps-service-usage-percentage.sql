@@ -82,3 +82,8 @@ ALTER TABLE atlas_app.merchant_service_usage_config ALTER COLUMN get_place_name_
 ALTER TABLE atlas_app.merchant_service_usage_config ALTER COLUMN get_place_details_percentage SET NOT NULL;
 ALTER TABLE atlas_app.merchant_service_usage_config ALTER COLUMN auto_complete_percentage SET NOT NULL;
 ALTER TABLE atlas_app.merchant_service_usage_config ALTER COLUMN get_distances_for_cancel_ride_percentage SET NOT NULL;
+
+ALTER TABLE atlas_app.search_request ADD COLUMN maps_service_get_routes character varying(30);
+
+ALTER TABLE atlas_app.ride ADD COLUMN maps_service_get_distances_for_cancel_ride character varying(30);
+ALTER TABLE atlas_app.ride ADD COLUMN maps_service_get_trip_routes character varying(30);

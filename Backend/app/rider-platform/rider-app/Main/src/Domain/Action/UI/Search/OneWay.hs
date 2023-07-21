@@ -101,7 +101,8 @@ oneWaySearch personId req bundleVersion clientVersion device = do
             calcPoints = True,
             mode = Just Maps.CAR
           }
-  routeResponse <- Maps.getRoutes person.merchantId request
+  mapsService <- Maps.pickService @'Maps.GetRoutes person.merchantId
+  routeResponse <- Maps.getRoutes person.merchantId mapsService request
   let shortestRouteInfo = getRouteInfoWithShortestDuration routeResponse
   let longestRouteDistance = (.distance) =<< getLongestRouteDistance routeResponse
   let shortestRouteDistance = (.distance) =<< shortestRouteInfo
@@ -122,6 +123,7 @@ oneWaySearch personId req bundleVersion clientVersion device = do
       clientVersion
       device
       shortestRouteDuration
+      (Just mapsService)
   Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId

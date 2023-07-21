@@ -29,6 +29,7 @@ import Storage.Tabular.Booking (BookingTId)
 import qualified Storage.Tabular.FareParameters as Fare
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Person (PersonTId)
+import qualified Tools.Maps as Maps
 
 derivePersistField "Domain.RideStatus"
 
@@ -40,6 +41,9 @@ mkPersist
       bookingId BookingTId
       shortId Text
       merchantId MerchantTId Maybe
+      mapsServiceGetDistancesForCancelRide (Maps.SMapsService 'Maps.GetDistancesForCancelRide) Maybe
+      mapsServiceGetRoutes (Maps.SMapsService 'Maps.GetRoutes) Maybe
+      mapsServiceSnapToRoad (Maps.SMapsService 'Maps.SnapToRoad) Maybe
       status Domain.RideStatus
       driverId PersonTId
       otp Text

@@ -23,6 +23,7 @@ import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DOSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Ride as DRide
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -31,18 +32,21 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import "location-updates" Lib.LocationUpdates as Reexport
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QOMSC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QOMC
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
-import Tools.Maps as Maps
+import qualified Tools.Maps as Maps
 
-buildRideInterpolationHandler :: Id Merchant -> Bool -> Flow (RideInterpolationHandler Person.Person Flow)
-buildRideInterpolationHandler orgId isEndRide = do
-  orgMapsConfig <- QOMC.findByMerchantId orgId >>= fromMaybeM (MerchantServiceUsageConfigNotFound orgId.getId)
-  service <- Maps.pickService orgId Maps.SnapToRoad
+buildRideInterpolationHandler :: Id Merchant -> Bool -> Id DRide.Ride -> Maybe (Maps.SMapsService 'Maps.SnapToRoad) -> Flow (RideInterpolationHandler Person.Person Flow)
+buildRideInterpolationHandler orgId isEndRide rideId mbMapsService = do
+  mapsService <- case mbMapsService of
+    Nothing -> do
+      -- only for old rides
+      logWarning $ "Could not find ride.mapsServices.snapToRoad: " <> show rideId <> "; pick new service"
+      Maps.pickService @'Maps.SnapToRoad orgId
+    Just service -> pure service
   orgMapsServiceConfig <-
-    QOMSC.findByMerchantIdAndService orgId (DOSC.MapsService service)
-      >>= fromMaybeM (MerchantServiceConfigNotFound orgId.getId "Maps" (show orgMapsConfig.snapToRoad))
+    QOMSC.findByMerchantIdAndService orgId (DOSC.MapsService mapsService.getStrictMapsService)
+      >>= fromMaybeM (MerchantServiceConfigNotFound orgId.getId "Maps" (show mapsService))
   case orgMapsServiceConfig.serviceConfig of
     DOSC.MapsServiceConfig cfg ->
       return $
