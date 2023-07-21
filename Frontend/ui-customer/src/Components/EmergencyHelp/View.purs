@@ -439,9 +439,9 @@ allContactsView state push =
                     , fontStyle $ FontStyle.regular LanguageStyle
                     , margin $ MarginHorizontal 10 10
                     ]
-                  ]
                 ]
             ]
+          ]
        ]) state.emergencyContactData)
 
 genericHeaderConfig :: EmergencyHelpModelState -> GenericHeaderConfig.Config
