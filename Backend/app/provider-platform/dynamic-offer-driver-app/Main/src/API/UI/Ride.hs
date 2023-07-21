@@ -42,8 +42,9 @@ import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
-import Servant
+import Servant hiding (throwError)
 import SharedLogic.Person (findPerson)
+import qualified Storage.CachedQueries.DriverInformation as QDI
 import qualified Storage.Queries.Booking as QBooking
 import Tools.Auth
 import Tools.Error
@@ -127,6 +128,8 @@ startRide (requestorId, merchantId) rideId StartRideReq {rideOtp, point} = withF
 otpRideCreateAndStart :: (Id SP.Person, Id Merchant.Merchant) -> DRide.OTPRideReq -> FlowHandler DRide.DriverRideRes
 otpRideCreateAndStart (requestorId, merchantId) req@DRide.OTPRideReq {..} = withFlowHandlerAPI $ do
   requestor <- findPerson requestorId
+  driverInfo <- QDI.findById (cast requestor.id) >>= fromMaybeM (PersonNotFound requestor.id.getId)
+  unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
   now <- getCurrentTime
   let rideOtp = req.specialZoneOtpCode
   booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP requestor.merchantId rideOtp now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
