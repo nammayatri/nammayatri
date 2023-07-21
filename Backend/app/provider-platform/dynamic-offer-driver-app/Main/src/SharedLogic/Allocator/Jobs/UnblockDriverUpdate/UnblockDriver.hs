@@ -19,7 +19,6 @@ where
 
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
-import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
@@ -30,16 +29,10 @@ import qualified Storage.CachedQueries.DriverInformation as CQDriverInfo
 import qualified Tools.Metrics as Metrics
 
 unblockDriver ::
-  ( EncFlow m r,
-    TranslateFlow m r,
-    EsqDBReplicaFlow m r,
-    Metrics.HasSendSearchRequestToDriverMetrics m r,
-    Metrics.CoreMetrics m,
+  ( Metrics.CoreMetrics m,
     HasCacheConfig r,
-    HedisFlow m r,
+    TranslateFlow m r,
     EsqDBFlow m r,
-    EsqLocDBFlow m r,
-    EsqLocRepDBFlow m r,
     Log m
   ) =>
   Job 'UnblockDriver ->
