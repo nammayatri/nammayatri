@@ -42,6 +42,7 @@ mkPersist
       variant Variant.Variant
       model Text
       color Text
+      vehicleName Text Maybe
       registrationNo Text
       capacity Int Maybe
       category Domain.Category Maybe

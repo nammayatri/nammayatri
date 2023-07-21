@@ -170,7 +170,8 @@ handler merchant sReq = do
                     rideTime = sReq.pickupTime,
                     waitingTime = Nothing,
                     driverSelectedFare = Nothing,
-                    customerExtraFee = Nothing
+                    customerExtraFee = Nothing,
+                    nightShiftCharge = Nothing
                   }
             buildSpecialZoneQuote
               searchRequestSpecialZone

@@ -96,7 +96,8 @@ handler merchant sReq estimate = do
               rideTime = sReq.pickupTime,
               waitingTime = Nothing,
               driverSelectedFare = Nothing,
-              customerExtraFee = sReq.customerExtraFee
+              customerExtraFee = sReq.customerExtraFee,
+              nightShiftCharge = Nothing
             }
       let estimatedFare = fareSum fareParams
           pureEstimatedFare = pureFareSum fareParams

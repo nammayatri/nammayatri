@@ -33,6 +33,10 @@ createInitialDriverStats driverId = do
       { driverId = driverId,
         idleSince = now,
         totalRides = 0,
+        totalEarnings = 0,
+        bonusEarned = 0,
+        lateNightTrips = 0,
+        earningsMissed = 0,
         totalDistance = 0,
         ridesCancelled = Just 0,
         totalRidesAssigned = Just 0
@@ -88,12 +92,24 @@ incrementTotalRidesAssigned driverId number = do
       ]
     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
 
-setCancelledRidesCount :: Id Driver -> Int -> SqlDB ()
-setCancelledRidesCount driverId cancelledCount = do
+setDriverStats :: Id Driver -> Int -> Int -> Money -> SqlDB ()
+setDriverStats driverId totalRides cancelledCount missedEarning = do
   Esq.update $ \tbl -> do
     set
       tbl
-      [ DriverStatsRidesCancelled =. val (Just cancelledCount)
+      [ DriverStatsTotalRidesAssigned =. just (Esq.coalesceDefault [tbl ^. DriverStatsTotalRidesAssigned] (val 0) +. val totalRides),
+        DriverStatsRidesCancelled =. val (Just cancelledCount),
+        DriverStatsEarningsMissed =. (tbl ^. DriverStatsEarningsMissed) +. val missedEarning
+      ]
+    where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
+
+setCancelledRidesCountAndIncrementEarningsMissed :: Id Driver -> Int -> Money -> SqlDB () -- check this
+setCancelledRidesCountAndIncrementEarningsMissed driverId cancelledCount missedEarning = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverStatsRidesCancelled =. val (Just cancelledCount),
+        DriverStatsEarningsMissed =. (tbl ^. DriverStatsEarningsMissed) +. val missedEarning
       ]
     where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
 
@@ -104,3 +120,22 @@ getDriversSortedOrder mbLimitVal =
     orderBy [desc (driverStats ^. DriverStatsTotalRides), desc (driverStats ^. DriverStatsTotalDistance)]
     limit $ maybe 10 fromIntegral mbLimitVal
     return driverStats
+
+incrementTotalEarningsAndBonusEarned :: Id Driver -> Money -> Money -> SqlDB () -- name them set
+incrementTotalEarningsAndBonusEarned driverId increasedEarning increasedBonus = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverStatsTotalEarnings =. (tbl ^. DriverStatsTotalEarnings) +. val increasedEarning,
+        DriverStatsBonusEarned =. (tbl ^. DriverStatsBonusEarned) +. val increasedBonus
+      ]
+    where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)
+
+incrementLateNightTrips :: Id Driver -> Int -> SqlDB ()
+incrementLateNightTrips driverId tripCount = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverStatsLateNightTrips =. (tbl ^. DriverStatsLateNightTrips) +. val tripCount
+      ]
+    where_ $ tbl ^. DriverStatsDriverId ==. val (toKey $ cast driverId)

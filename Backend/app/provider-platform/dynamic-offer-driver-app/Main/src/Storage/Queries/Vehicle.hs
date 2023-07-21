@@ -59,6 +59,7 @@ updateVehicleRec vehicle = do
       [ VehicleCapacity =. val vehicle.capacity,
         VehicleCategory =. val vehicle.category,
         VehicleMake =. val vehicle.make,
+        VehicleVehicleName =. val vehicle.vehicleName,
         VehicleModel =. val vehicle.model,
         VehicleSize =. val vehicle.size,
         VehicleVariant =. val vehicle.variant,
@@ -69,6 +70,15 @@ updateVehicleRec vehicle = do
         VehicleUpdatedAt =. val now
       ]
     where_ $ tbl ^. VehicleTId ==. val (toKey vehicle.driverId)
+
+updateVehicleName :: Maybe Text -> Id Person -> SqlDB ()
+updateVehicleName vehicleName driverId = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ VehicleVehicleName =. val vehicleName
+      ]
+    where_ $ tbl ^. VehicleTId ==. val (toKey driverId)
 
 deleteById :: Id Person -> SqlDB ()
 deleteById = Esq.deleteByKey @VehicleT

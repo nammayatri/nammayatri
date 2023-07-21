@@ -251,7 +251,8 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance = do
           rideTime = booking.startTime,
           waitingTime = secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> ride.tripStartTime <*> ride.driverArrivalTime),
           driverSelectedFare = booking.fareParams.driverSelectedFare,
-          customerExtraFee = booking.fareParams.customerExtraFee
+          customerExtraFee = booking.fareParams.customerExtraFee,
+          nightShiftCharge = booking.fareParams.nightShiftCharge
         }
   let finalFare = Fare.fareSum fareParams
       distanceDiff = recalcDistance - oldDistance

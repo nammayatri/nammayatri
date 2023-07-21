@@ -12,23 +12,29 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.DriverStats where
+module API.UI.DriverProfileSummary where
 
-import Domain.Types.Person
-import Kernel.Prelude
+import qualified Domain.Action.UI.DriverProfileSummary as Domain
+import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Person as SP
+import Environment
+import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Servant
+import Tools.Auth
 
-data DriverStats = DriverStats
-  { driverId :: Id Driver,
-    idleSince :: UTCTime,
-    totalRides :: Int,
-    totalEarnings :: Money,
-    bonusEarned :: Money,
-    lateNightTrips :: Int,
-    earningsMissed :: Money,
-    totalDistance :: Meters,
-    ridesCancelled :: Maybe Int,
-    totalRidesAssigned :: Maybe Int
-  }
-  deriving (Generic)
+type API =
+  "driver"
+    :> "profile"
+    :> ( "summary"
+           :> TokenAuth
+           :> Get '[JSON] Domain.DriverProfleSummaryRes
+       )
+
+handler :: FlowServer API
+handler =
+  getDriverProfileSummary
+
+getDriverProfileSummary :: (Id SP.Person, Id DM.Merchant) -> FlowHandler Domain.DriverProfleSummaryRes
+getDriverProfileSummary = withFlowHandlerAPI . Domain.getDriverProfileSummary

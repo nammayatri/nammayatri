@@ -645,6 +645,7 @@ buildVehicle merchantId personId req = do
         variant = castVehicleVariant req.variant,
         model = req.model,
         color = req.colour,
+        vehicleName = Nothing,
         registrationNo = req.registrationNo,
         capacity = req.capacity,
         category = Nothing,
