@@ -1071,7 +1071,7 @@ validate (personId, _) phoneNumber = do
     Just oldPerson -> do
       when (oldPerson.id == person.id) $ throwError $ InvalidRequest "Alternate number already linked"
       DeleteDriverOnCheck.validateDriver merchant oldPerson
-  logDebug $ "Delete Driver Check" <> show deleteOldPersonCheck
+  logInfo $ "Delete Driver Check" <> show deleteOldPersonCheck
   when deleteOldPersonCheck $ throwError $ InvalidRequest "Alternate number can't be validated"
   smsCfg <- asks (.smsCfg)
   let useFakeOtpM = useFakeSms smsCfg

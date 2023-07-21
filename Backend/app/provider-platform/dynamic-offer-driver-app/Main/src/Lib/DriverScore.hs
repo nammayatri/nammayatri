@@ -25,7 +25,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id (Id, cast)
-import Kernel.Utils.Common (Forkable (fork), fromMaybeM, getCurrentTime, highPrecMetersToMeters, logDebug)
+import Kernel.Utils.Common (Forkable (fork), fromMaybeM, getCurrentTime, highPrecMetersToMeters, logDebug, logInfo)
 import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.DriverPool as DP
 import Storage.CachedQueries.CacheConfig (CacheFlow)
@@ -78,7 +78,7 @@ eventPayloadHandler DST.OnDriverCancellation {..} = do
       Nothing -> createDriverStat driverId
   cancellationRateExcedded <- overallCancellationRate driverStats merchantConfig
   when (driverStats.totalRidesAssigned > merchantConfig.minRidesToUnlist && cancellationRateExcedded) $ do
-    logDebug $ "Blocking Driver: " <> driverId.getId
+    logInfo $ "Blocking Driver: " <> driverId.getId
     CDI.updateBlockedState (cast driverId) True
   DP.incrementCancellationCount merchantId driverId
   where

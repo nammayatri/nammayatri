@@ -186,7 +186,7 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
       -- payBy is also over - still ongoing/pending - unsubscribe
       handleDriverPayments driver.id thresholdConfig.timeDiffFromUtc
     driverInfo <- DInfo.findById (cast driver.id) >>= fromMaybeM (PersonNotFound driver.id.getId)
-    logInfo $ "got location updates: " <> getId driver.id <> " " <> encodeToText waypoints
+    logDebug $ "got location updates: " <> getId driver.id <> " " <> encodeToText waypoints
     checkLocationUpdatesRateLimit driver.id
     let minLocationAccuracy = thresholdConfig.minLocationAccuracy
     unless (driver.role == Person.DRIVER) $ throwError AccessDenied

@@ -53,12 +53,12 @@ whenWithLocationUpdatesLock driverId f = do
   redisLockDriverId <- Redis.tryLockRedis lockKey 60
   if redisLockDriverId
     then do
-      logDebug $ lockKey <> " Locked"
+      logInfo $ lockKey <> " Locked"
       finally
         f
         ( do
             Redis.unlockRedis lockKey
-            logDebug $ "DriverId: " <> show driverId <> " Unlocked"
+            logInfo $ "DriverId: " <> show driverId <> " Unlocked"
         )
     else do
       logInfo $ lockKey <> " unable to get lock"

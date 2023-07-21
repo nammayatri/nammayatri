@@ -128,8 +128,8 @@ recalcDistanceBatchStep RideInterpolationHandler {..} driverId = do
   (distance, interpolatedWps) <- interpolatePointsAndCalculateDistance batchWaypoints
   whenJust (nonEmpty interpolatedWps) $ \nonEmptyInterpolatedWps -> do
     addInterpolatedPoints driverId nonEmptyInterpolatedWps
-  logInfo $ mconcat ["points interpolation: input=", show batchWaypoints, "; output=", show interpolatedWps]
-  logInfo $ mconcat ["calculated distance for ", show (length interpolatedWps), " points, ", "distance is ", show distance]
+  logDebug $ mconcat ["points interpolation: input=", show batchWaypoints, "; output=", show interpolatedWps]
+  logDebug $ mconcat ["calculated distance for ", show (length interpolatedWps), " points, ", "distance is ", show distance]
   deleteFirstNwaypoints driverId batchSize
   pure distance
 
@@ -172,13 +172,13 @@ addPointsImplementation driverId waypoints = do
   let key = makeWaypointsRedisKey driverId
       numPoints = length waypoints
   rPush key waypoints
-  logInfo $ mconcat ["added ", show numPoints, " points for driverId = ", driverId.getId]
+  logDebug $ mconcat ["added ", show numPoints, " points for driverId = ", driverId.getId]
 
 clearLocationUpdatesImplementation :: (HedisFlow m env) => Id person -> m ()
 clearLocationUpdatesImplementation driverId = do
   let key = makeWaypointsRedisKey driverId
   clearList key
-  logInfo $ mconcat ["cleared location updates for driverId = ", driverId.getId]
+  logDebug $ mconcat ["cleared location updates for driverId = ", driverId.getId]
   resetFailedDistanceCalculationFlag driverId
 
 getWaypointsNumberImplementation :: (HedisFlow m env) => Id person -> m Integer
@@ -198,13 +198,13 @@ addInterpolatedPointsImplementation driverId waypoints = do
   let key = makeInterpolatedPointsRedisKey driverId
       numPoints = length waypoints
   rPush key waypoints
-  logInfo $ mconcat ["added ", show numPoints, " interpolated points for driverId = ", driverId.getId]
+  logDebug $ mconcat ["added ", show numPoints, " interpolated points for driverId = ", driverId.getId]
 
 clearInterpolatedPointsImplementation :: HedisFlow m env => Id person -> m ()
 clearInterpolatedPointsImplementation driverId = do
   let key = makeInterpolatedPointsRedisKey driverId
   clearList key
-  logInfo $ mconcat ["cleared interpolated location updates for driverId = ", driverId.getId]
+  logDebug $ mconcat ["cleared interpolated location updates for driverId = ", driverId.getId]
 
 getInterpolatedPointsImplementation :: HedisFlow m env => Id person -> m [LatLong]
 getInterpolatedPointsImplementation = Hedis.getList . makeInterpolatedPointsRedisKey

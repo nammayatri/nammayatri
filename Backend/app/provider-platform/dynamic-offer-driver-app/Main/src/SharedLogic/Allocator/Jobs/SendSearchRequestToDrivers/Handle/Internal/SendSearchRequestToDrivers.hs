@@ -30,7 +30,7 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common (addUTCTime, logInfo)
+import Kernel.Utils.Common (addUTCTime, logDebug, logInfo)
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
@@ -61,7 +61,7 @@ sendSearchRequestToDrivers ::
   [DriverPoolWithActualDistResult] ->
   m ()
 sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolConfig driverPool = do
-  logInfo $ "Send search requests to driver pool batch-" <> show driverPool
+  logDebug $ "Send search requests to driver pool batch-" <> show driverPool
   bapMetadata <- CQSM.findById (Id searchReq.bapId)
   validTill <- getSearchRequestValidTill
   batchNumber <- getPoolBatchNum searchTry.id
