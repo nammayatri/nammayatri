@@ -157,6 +157,7 @@ createVehicle personId merchantId (Just rc) = do
           Vehicle.merchantId = merchantId_,
           Vehicle.variant = fromMaybe AUTO_RICKSHAW rc.vehicleVariant, -- Value will be always Just if reaching here
           Vehicle.color = fromMaybe "Unkown" rc.vehicleColor,
+          Vehicle.vehicleName = Nothing,
           Vehicle.energyType = rc.vehicleEnergyType,
           Vehicle.registrationNo = certificateNumber,
           Vehicle.registrationCategory = Nothing,

@@ -81,6 +81,8 @@ data PersonE e = Person
     lastName :: Maybe Text,
     role :: Role,
     gender :: Gender,
+    hometown :: Maybe Text,
+    languagesSpoken :: Maybe [Text],
     identifierType :: IdentifierType,
     email :: Maybe Text,
     unencryptedMobileNumber :: Maybe Text,

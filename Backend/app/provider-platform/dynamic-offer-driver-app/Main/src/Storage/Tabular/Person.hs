@@ -48,6 +48,8 @@ mkPersist
       lastName Text Maybe
       role Domain.Role
       gender Domain.Gender
+      hometown Text Maybe
+      languagesSpoken (PostgresList Text) Maybe
       identifierType Domain.IdentifierType
       email Text Maybe
       unencryptedMobileNumber Text Maybe
@@ -92,6 +94,7 @@ instance FromTType PersonT Domain.Person where
           bundleVersion = bundleVersion',
           clientVersion = clientVersion',
           alternateMobileNumber = EncryptedHashed <$> (Encrypted <$> alternateMobileNumberEncrypted) <*> alternateMobileNumberHash,
+          languagesSpoken = unPostgresList <$> languagesSpoken,
           ..
         }
 
@@ -106,5 +109,6 @@ instance ToTType PersonT Domain.Person where
         clientVersion = versionToText <$> clientVersion,
         alternateMobileNumberEncrypted = alternateMobileNumber <&> unEncrypted . (.encrypted),
         alternateMobileNumberHash = alternateMobileNumber <&> (.hash),
+        languagesSpoken = PostgresList <$> languagesSpoken,
         ..
       }

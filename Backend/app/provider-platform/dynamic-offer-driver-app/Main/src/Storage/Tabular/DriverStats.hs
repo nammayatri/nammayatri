@@ -35,9 +35,14 @@ mkPersist
       driverId PersonTId
       idleSince UTCTime
       totalRides Int
+      totalEarnings Money
+      bonusEarned Money
+      lateNightTrips Int
+      earningsMissed Money
       totalDistance Meters
       ridesCancelled Int Maybe
       totalRidesAssigned Int Maybe
+      updatedAt UTCTime
       Primary driverId
       deriving Generic
     |]

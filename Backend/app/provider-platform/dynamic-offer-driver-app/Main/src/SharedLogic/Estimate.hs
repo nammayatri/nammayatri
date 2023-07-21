@@ -50,7 +50,8 @@ buildEstimate searchReqId startTime dist specialLocationTag farePolicy = do
           rideTime = startTime,
           waitingTime = Nothing,
           driverSelectedFare = Nothing,
-          customerExtraFee = Nothing
+          customerExtraFee = Nothing,
+          nightShiftCharge = Nothing
         }
   let baseFare = fareSum fareParams
       estimateBreakups = mkBreakupList mkPrice mkBreakupItem fareParams

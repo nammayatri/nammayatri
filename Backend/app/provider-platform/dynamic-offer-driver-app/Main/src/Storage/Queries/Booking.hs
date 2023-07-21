@@ -24,6 +24,7 @@ import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (findById, isNothing)
+import Kernel.Types.Common (Money)
 import Kernel.Types.Id
 import Kernel.Types.Time
 import qualified Storage.Queries.DriverQuote as QDQuote
@@ -172,3 +173,14 @@ findRidesByBookingId bookingIds = Esq.findAll $ do
   where_ $
     ride ^. RideBookingId `in_` valList (toKey <$> bookingIds)
   return ride
+
+findFareForCancelledBookings :: Transactionable m => m Money
+findFareForCancelledBookings =
+  mkSum
+    <$> Esq.findAll do
+      booking <- from $ table @BookingT
+      where_ $ booking ^. BookingStatus ==. val CANCELLED
+      pure (sum_ $ booking ^. BookingEstimatedFare :: SqlExpr (Esq.Value (Maybe Money)))
+  where
+    mkSum [Just value] = value
+    mkSum _ = 0

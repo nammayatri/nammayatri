@@ -281,9 +281,12 @@ data UpdateDriverReq = UpdateDriverReq
     canDowngradeToTaxi :: Maybe Bool,
     clientVersion :: Maybe Version,
     bundleVersion :: Maybe Version,
-    gender :: Maybe SP.Gender
+    gender :: Maybe SP.Gender,
+    languagesSpoken :: Maybe [Text],
+    hometown :: Maybe Text,
+    vehicleName :: Maybe Text
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 validateUpdateDriverReq :: Validate UpdateDriverReq
 validateUpdateDriverReq UpdateDriverReq {..} =
@@ -616,9 +619,10 @@ updateDriver (personId, _) req = do
                language = req.language <|> person.language,
                clientVersion = req.clientVersion <|> person.clientVersion,
                bundleVersion = req.bundleVersion <|> person.bundleVersion,
-               gender = fromMaybe person.gender req.gender
+               gender = fromMaybe person.gender req.gender,
+               hometown = req.hometown <|> person.hometown,
+               languagesSpoken = req.languagesSpoken <|> person.languagesSpoken
               }
-
   mVehicle <- QVehicle.findById personId
   checkIfCanDowngrade mVehicle
   driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
@@ -629,6 +633,7 @@ updateDriver (personId, _) req = do
                   }
 
   Esq.runTransaction $ do
+    when (isJust req.vehicleName) $ QVehicle.updateVehicleName req.vehicleName personId
     QPerson.updatePersonRec personId updPerson
     QDriverInformation.updateDowngradingOptions person.id updDriverInfo.canDowngradeToSedan updDriverInfo.canDowngradeToHatchback updDriverInfo.canDowngradeToTaxi
   QDriverInformation.clearDriverInfoCache (cast personId)
@@ -711,6 +716,8 @@ buildDriver req merchantId = do
         SP.lastName = req.lastName,
         SP.role = SP.DRIVER,
         SP.gender = SP.UNKNOWN,
+        SP.hometown = Nothing,
+        SP.languagesSpoken = Nothing,
         SP.email = Nothing,
         SP.passwordHash = Nothing,
         SP.identifier = Nothing,
@@ -748,6 +755,7 @@ buildVehicle req personId merchantId = do
         SV.merchantId = merchantId,
         SV.variant = req.variant,
         SV.color = req.color,
+        SV.vehicleName = Nothing,
         SV.energyType = Nothing,
         SV.registrationNo = req.registrationNo,
         SV.registrationCategory = Nothing,
@@ -899,7 +907,8 @@ respondQuote (driverId, _) req = do
                   rideTime = sReqFD.startTime,
                   waitingTime = Nothing,
                   driverSelectedFare = mbOfferedFare,
-                  customerExtraFee = searchTry.customerExtraFee
+                  customerExtraFee = searchTry.customerExtraFee,
+                  nightShiftCharge = Nothing
                 }
           driverQuote <- buildDriverQuote driver searchReq sReqFD fareParams
           triggerQuoteEvent QuoteEventData {quote = driverQuote}
