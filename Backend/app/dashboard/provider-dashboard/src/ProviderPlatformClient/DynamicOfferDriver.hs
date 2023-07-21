@@ -65,7 +65,9 @@ data DriversAPIs = DriversAPIs
     driverActivity :: Euler.EulerClient Driver.DriverActivityRes,
     enableDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     disableDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
+    blockDriverWithReason :: Id Driver.Driver -> Driver.BlockDriverWithReasonReq -> Euler.EulerClient APISuccess,
     blockDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
+    blockReasonList :: Euler.EulerClient [Driver.BlockReason],
     collectCash :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     unblockDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     driverLocation :: Maybe Int -> Maybe Int -> Driver.DriverIds -> Euler.EulerClient Driver.DriverLocationRes,
@@ -190,7 +192,9 @@ mkDriverOfferAPIs merchantId token = do
       :<|> driverActivity
       :<|> enableDriver
       :<|> disableDriver
+      :<|> blockDriverWithReason
       :<|> blockDriver
+      :<|> blockReasonList
       :<|> collectCash
       :<|> unblockDriver
       :<|> driverLocation

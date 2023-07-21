@@ -52,6 +52,8 @@ mkPersist
       canDowngradeToTaxi Bool
       mode Domain.DriverMode Maybe
       aadhaarVerified Bool
+      blockedReason Text Maybe
+      blockExpiryTime UTCTime Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary driverId
