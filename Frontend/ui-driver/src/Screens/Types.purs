@@ -391,11 +391,11 @@ type DatePickerState = {
 type RideHistoryScreenStateProps = {
     showDatePicker :: Boolean
  , showPaymentHistory :: Boolean
-} 
+}
 type RideHistoryScreenStateData = {
     pastDays :: Int
   , paymentHistory :: PaymentHistoryModelState
-} 
+}
 
 type RideSelectionScreenState =
   {
@@ -747,7 +747,8 @@ type HomeScreenProps =  {
   zoneRideBooking :: Boolean,
   showGenderBanner :: Boolean,
   notRemoveBanner :: Boolean,
-  showBonusInfo :: Boolean
+  showBonusInfo :: Boolean,
+  showlinkAadhaarPopup :: Boolean
  }
 
 data DriverStatus = Online | Offline | Silent
