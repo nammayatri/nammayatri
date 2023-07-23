@@ -1,15 +1,15 @@
 {-
- 
+
   Copyright 2022-23, Juspay India Pvt Ltd
- 
+
   This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
- 
+
   as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
- 
+
   is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- 
+
   or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
- 
+
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
@@ -61,20 +61,21 @@ instance loggableAction :: Loggable Action where
         trackAppEndScreen appId (getScreen AADHAAR_VERIFICATION_SCREEN)
       PrimaryButton.NoAction -> trackAppActionClick appId (getScreen AADHAAR_VERIFICATION_SCREEN) "primary_button" "no_action"
     ResendOTP -> trackAppActionClick appId (getScreen AADHAAR_VERIFICATION_SCREEN) "in_screen" "resend"
-    ResendTimer sec -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "timer_action"
+    ResendTimer sec -> trackAppScreenEvent appId (getScreen AADHAAR_VERIFICATION_SCREEN) "in_screen" "timer_action"
     Logout -> trackAppEndScreen appId (getScreen AADHAAR_VERIFICATION_SCREEN)
     PopUpModalAC _ -> pure unit
     SelectDateOfBirthAction -> pure unit
     DatePicker _ _ _ _-> pure unit
 
-data ScreenOutput = GoToOtpStage AadhaarVerificationScreenState 
+data ScreenOutput = GoToOtpStage AadhaarVerificationScreenState
   | VerfiyOTP AadhaarVerificationScreenState
   | ResendAadhaarOTP AadhaarVerificationScreenState
   | GoToHomeScreen AadhaarVerificationScreenState
   | LogOut AadhaarVerificationScreenState
   | UnVerifiedAadhaarData AadhaarVerificationScreenState
+  | GoBack
 
-data Action = BackPressed 
+data Action = BackPressed
             | AadhaarNumberEditText PrimaryEditText.Action
             | AadhaarOtpEditText PrimaryEditText.Action
             | AadhaarNameEditText PrimaryEditText.Action
@@ -89,14 +90,12 @@ data Action = BackPressed
             | DatePicker String Int Int Int
 
 eval :: Action -> AadhaarVerificationScreenState -> Eval Action ScreenOutput AadhaarVerificationScreenState
-eval action state = case action of 
+eval action state = case action of
   AfterRender -> continue state
   BackPressed ->  if state.props.currentStage == VerifyAadhaar then continue state{props{currentStage = EnterAadhaar}}
-                  else do
-                      _ <- pure $ minimizeApp ""
-                      continue state 
+                  else exit $ GoBack
 
-  (PrimaryButtonAC (PrimaryButton.OnClick)) -> 
+  (PrimaryButtonAC (PrimaryButton.OnClick)) ->
     case state.props.currentStage of
       EnterAadhaar -> do
         pure $ setText (getNewIDWithTag "EnterAadhaarOTPEditText") ""
@@ -118,7 +117,7 @@ eval action state = case action of
       continue state{props{resendEnabled = true}, data{timer ="60s"}}
       else continue state{data{timer = time}}
   ResendOTP -> exit $ ResendAadhaarOTP state {props{resendEnabled = false}}
-  Logout -> do 
+  Logout -> do
     pure $ hideKeyboardOnNavigation true
     continue state{props{showLogoutPopup = true}}
   PopUpModalAC (PopUpModal.OnButton1Click) -> continue $ (state {props {showLogoutPopup = false}})

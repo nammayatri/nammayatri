@@ -77,7 +77,7 @@ view push state =
     , orientation VERTICAL
     , background Color.white900
     , clickable true
-    , afterRender (\_ -> JB.requestKeyboardShow $ case state.props.currentStage of 
+    , afterRender (\_ -> JB.requestKeyboardShow $ case state.props.currentStage of
           EnterAadhaar -> (EHC.getNewIDWithTag "EnterAadhaarNumberEditText")
           VerifyAadhaar -> (EHC.getNewIDWithTag "EnterAadhaarOTPEditText")
           AadhaarDetails -> (EHC.getNewIDWithTag "EnterAadhaarNameEditText")
@@ -86,7 +86,7 @@ view push state =
     ][    PrestoAnim.animationSet
           [ Anim.fadeIn true
           ] $ backArrow state push
-        , verificationFailedView state 
+        , verificationFailedView state
         , enterAadhaarNumberView push state
         , enterAadhaarOTPView push state
         , enterAadhaarDetailsView push state
@@ -116,13 +116,12 @@ backArrow state push =
       , height ( V 25 )
       , imageWithFallback "ny_ic_back,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
       , onClick push (const BackPressed)
-      , visibility if state.props.currentStage /= EnterAadhaar then VISIBLE else GONE
       ]
     , linearLayout
       [ height WRAP_CONTENT
       , weight 1.0
       ][]
-    ,  textView $ 
+    ,  textView $
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , text $ getString LOGOUT
@@ -135,7 +134,7 @@ backArrow state push =
 ------------------------- enterAadhaarNumberTextView -------------------
 enterAadhaarNumberTextView :: ST.AadhaarVerificationScreenState ->  forall w . PrestoDOM (Effect Unit) w
 enterAadhaarNumberTextView _ =
- textView $ 
+ textView $
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
   , text $ getString ENTER_AADHAAR_NUMBER
@@ -145,7 +144,7 @@ enterAadhaarNumberTextView _ =
 ------------------------- enterAadhaarDetailsTextView -------------------
 enterAadhaarDetailsTextView :: ST.AadhaarVerificationScreenState ->  forall w . PrestoDOM (Effect Unit) w
 enterAadhaarDetailsTextView _ =
- textView $ 
+ textView $
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
   , text $ getString ENTER_AADHAAR_DETAILS
@@ -156,7 +155,7 @@ enterAadhaarDetailsTextView _ =
 ------------------------- enterAadhaarOTPTextView -------------------
 enterAadhaarOTPTextView :: ST.AadhaarVerificationScreenState ->  forall w . PrestoDOM (Effect Unit) w
 enterAadhaarOTPTextView _ =
- textView $ 
+ textView $
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
   , text $ getString ENTER_AADHAAR_OTP_
@@ -210,7 +209,7 @@ enterAadhaarDetailsView push state =
   ]
 
 verificationFailedView :: ST.AadhaarVerificationScreenState ->  forall w . PrestoDOM (Effect Unit) w
-verificationFailedView state = 
+verificationFailedView state =
   PrestoAnim.animationSet
   [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
   ] $ linearLayout
@@ -231,7 +230,7 @@ verificationFailedView state =
 
 
 dateOfBirth :: (Action -> Effect Unit) -> ST.AadhaarVerificationScreenState -> forall w . PrestoDOM (Effect Unit) w
-dateOfBirth push state = 
+dateOfBirth push state =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT

@@ -268,7 +268,7 @@ driverMapsHeaderView push state =
 
 rateCardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rateCardView push state =
-  PrestoAnim.animationSet [ Anim.fadeIn true ] $ 
+  PrestoAnim.animationSet [ Anim.fadeIn true ] $
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -295,7 +295,7 @@ paymentStatusBanner state push =
             , onClick push $ const RemovePaymentBanner
             , imageWithFallback "ny_ic_grey_cross,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_grey_cross_icon.png"
             , visibility if state.data.paymentState.blockedDueToPayment then GONE else VISIBLE
-            ] 
+            ]
           , Banner.view (push <<< PaymentBannerAC) (paymentStatusConfig state)
         ]
     ]
@@ -362,7 +362,7 @@ otpButtonView state push =
     , margin $ MarginLeft 8
     , gravity CENTER_VERTICAL
     , onClick push $ const $ ZoneOtpAction
-    ][ imageView 
+    ][ imageView
         [ imageWithFallback $ "ic_mode_standby," <> (getAssetStoreLink FunctionCall) <> "ic_mode_standby.png"
         , width $ V 20
         , height $ V 20
@@ -936,14 +936,17 @@ addAlternateNumber push state =
   ][  imageView
       [ width $ V 20
       , height $ V 15
-      , imageWithFallback $ "ic_call_plus," <> (getCommonAssetStoreLink FunctionCall) <> "ic_call_plus.png"
+      , imageWithFallback if state.props.showlinkAadhaarPopup then
+                            "ny_ic_aadhaar_logo,https://assets.juspay.in/nammayatri/images/driver/ny_ic_aadhaar_logo.png"
+                          else
+                            "ic_call_plus," <> (getCommonAssetStoreLink FunctionCall) <> "ic_call_plus.png"
       , margin (MarginRight 5)
-      ] 
+      ]
     , textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , gravity CENTER
-      , text (getString ADD_ALTERNATE_NUMBER)
+      , text $ getString if state.props.showlinkAadhaarPopup then ENTER_AADHAAR_DETAILS else ADD_ALTERNATE_NUMBER
       , color Color.black900
       ] <> FontStyle.paragraphText TypoGraphy
    ]
