@@ -384,7 +384,7 @@ uploadRC state push =
           ][ textView
             ([ width WRAP_CONTENT
             , height WRAP_CONTENT
-            , text (getString UPLOAD_REGISTRATION_CERTIFICATE)
+            , text $ (getString UPLOAD_REGISTRATION_CERTIFICATE) <> if getValueFromConfig "imageUploadOptional" then (getString OPTIONAL) else ""
             , color Color.greyTextColor
             , margin (MarginBottom 10)
             ] <> FontStyle.body3 TypoGraphy)

@@ -543,5 +543,6 @@ const hindiStrings = {
   UPSTREAM_INTERNAL_SERVER_ERROR : "अपस्ट्रीम स्रोत/सरकारी स्रोत आंतरिक सर्वर त्रुटि। कृपया प्रक्रिया दोबारा शुरू करें।",
   TRANSACTION_ALREADY_COMPLETED : "लेन-देन पहले ही पूरा हो चुका है। इस लेन-देन पर आगे कार्रवाई नहीं की जा सकती।",
   GOTO_YOUR_NEAREST_BOOTH : "कृपया अपना आधार सत्यापित कराने के लिए अपने नजदीकी बूथ पर पहुंचें.",
-  AADHAAR_ALREADY_LINKED : "आधार पहले से ही लिंक है"
+  AADHAAR_ALREADY_LINKED : "आधार पहले से ही लिंक है",
+  OPTIONAL : " (वैकल्पिक)"
 }
