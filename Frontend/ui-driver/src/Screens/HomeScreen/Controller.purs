@@ -566,14 +566,17 @@ eval GoToProfile state =  do
   _ <- pure $ hideKeyboardOnNavigation true
   exit $ GoToProfileScreen state
 eval ClickAddAlternateButton state = do
-  let curr_time = getCurrentUTC ""
-  let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
-  let time_diff = differenceBetweenTwoUTC curr_time last_attempt_time
-  if(time_diff <= 600) then do
-    pure $ toast (getString LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
-    continue state
-  else do
-    exit $ AddAlternateNumber state
+    if state.props.showlinkAadhaarPopup then
+      exit $ AadhaarVerificationFlow state
+    else do
+      let curr_time = getCurrentUTC ""
+      let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
+      let time_diff = differenceBetweenTwoUTC curr_time last_attempt_time
+      if(time_diff <= 600) then do
+        pure $ toast (getString LIMIT_EXCEEDED_FOR_ALTERNATE_NUMBER)
+        continue state
+      else do
+        exit $ AddAlternateNumber state
 
 
 eval ZoneOtpAction state = do
