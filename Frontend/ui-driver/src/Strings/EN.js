@@ -546,5 +546,6 @@ const englishStrings = {
   TRANSACTION_ALREADY_COMPLETED : "Transaction already completed. Cannot do further operation on this transaction.",
   ENTER_AADHAAR_DETAILS : "Enter Aadhaar Details",
   GOTO_YOUR_NEAREST_BOOTH : "Please reach out to your nearest booth to get your Aadhaar verified",
-  AADHAAR_ALREADY_LINKED : "Aadhaar already linked"
+  AADHAAR_ALREADY_LINKED : "Aadhaar already linked",
+  OPTIONAL : " (Optional)"
 }

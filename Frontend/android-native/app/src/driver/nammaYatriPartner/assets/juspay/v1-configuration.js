@@ -17,6 +17,7 @@ window.getMerchantConfig = function () {
     "primaryTextColor": "#FCC32C",
     "primaryBackground": "#2C2F3A",
     "showCorporateAddress" : true,
+    "imageUploadOptional" : false,
     "BONUS_EARNED" : "true",
     "languageList" : [
       {"name":"English","value":"EN_US", "subtitle": ""}, 
