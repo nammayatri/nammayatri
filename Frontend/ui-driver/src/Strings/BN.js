@@ -543,5 +543,6 @@ const bengaliStrings = {
 	UPSTREAM_INTERNAL_SERVER_ERROR : "আপস্ট্রিম উৎস/সরকারি উৎস অভ্যন্তরীণ সার্ভার ত্রুটি। আবার প্রক্রিয়া শুরু করুন.",
 	TRANSACTION_ALREADY_COMPLETED : "লেনদেন ইতিমধ্যে সম্পন্ন হয়েছে. এই লেনদেনে আর কাজ করা যাবে না.",
 	GOTO_YOUR_NEAREST_BOOTH : "আপনার আধার যাচাই করার জন্য অনুগ্রহ করে আপনার নিকটস্থ বুথে যোগাযোগ করুন",
-	AADHAAR_ALREADY_LINKED : "আধার ইতিমধ্যেই লিঙ্ক করা হয়েছে"
+	AADHAAR_ALREADY_LINKED : "আধার ইতিমধ্যেই লিঙ্ক করা হয়েছে",
+	OPTIONAL : " (ঐচ্ছিক)"
 	}

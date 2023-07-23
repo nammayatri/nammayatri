@@ -510,5 +510,6 @@ const mlStrings = {
   OTP_SENT_TO_AADHAAR_NUMBER: "നിങ്ങളുടെ ആധാറുമായി ലിങ്ക് ചെയ്‌തിരിക്കുന്ന മൊബൈൽ നമ്പറിലേക്ക് OTP അയച്ചു",
   ENTER_SIX_DIGIT_OTP : "ആറക്ക OTP നൽകുക",
   LINK_AADHAAR_ID : "ലിങ്ക് ആധാർ ഐഡി",
-  AADHAAR_ALREADY_LINKED : "ആധാർ ഇതിനകം ലിങ്ക് ചെയ്തിട്ടുണ്ട്"
+  AADHAAR_ALREADY_LINKED : "ആധാർ ഇതിനകം ലിങ്ക് ചെയ്തിട്ടുണ്ട്",
+  OPTIONAL : " (ഓപ്ഷണൽ)"
 }

@@ -469,5 +469,6 @@ const frenchStrings = {
   WITH : "avec",
   CHOOSE_LANGUAGE :"Choisissez la langue",
   TODAY : "আজ",
-  AADHAAR_ALREADY_LINKED : "déjà lié"
+  AADHAAR_ALREADY_LINKED : "déjà lié",
+  OPTIONAL : " (Facultatif)"
 }
