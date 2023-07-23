@@ -71,7 +71,7 @@ data OnboardingDocumentConfigT f = OnboardingDocumentConfigT
     documentType :: B.C f Domain.DocumentType,
     checkExtraction :: B.C f Bool,
     checkExpiry :: B.C f Bool,
-    supportedVehicleClassesJSON :: B.C f Text,
+    supportedVehicleClassesJSON :: B.C f A.Value,
     rcNumberPrefix :: B.C f Text,
     vehicleClassCheckType :: B.C f Domain.VehicleClassCheckType,
     createdAt :: B.C f Time.UTCTime,

@@ -20,6 +20,10 @@ module Storage.Queries.Merchant.OnboardingDocumentConfig
     #-}
 where
 
+-- import qualified Data.Text as T
+
+import Data.Aeson (fromJSON)
+import qualified Data.Aeson as A
 import qualified Data.List
 import Domain.Types.Merchant
 import Domain.Types.Merchant.OnboardingDocumentConfig
@@ -85,7 +89,7 @@ update config = do
   updateWithKV
     [ Se.Set BeamODC.checkExtraction (config.checkExtraction),
       Se.Set BeamODC.checkExpiry (config.checkExpiry),
-      Se.Set BeamODC.supportedVehicleClassesJSON supportedClassJson,
+      Se.Set BeamODC.supportedVehicleClassesJSON $ toJSON supportedClassJson,
       Se.Set BeamODC.vehicleClassCheckType (config.vehicleClassCheckType),
       Se.Set BeamODC.rcNumberPrefix (config.rcNumberPrefix),
       Se.Set BeamODC.updatedAt now
@@ -95,8 +99,9 @@ update config = do
 instance FromTType' BeamODC.OnboardingDocumentConfig OnboardingDocumentConfig where
   fromTType' BeamODC.OnboardingDocumentConfigT {..} = do
     supportedVehicleClasses' <- maybe (throwError $ InternalError "Unable to decode OnboardingDocumentConfigT.supportedVehicleClasses") return $ case documentType of
-      Domain.DL -> Domain.DLValidClasses <$> decodeFromText supportedVehicleClassesJSON
-      Domain.RC -> Domain.RCValidClasses . sortOnCapcity <$> decodeFromText supportedVehicleClassesJSON
+      -- Domain.DL -> Domain.DLValidClasses <$> decodeFromText (T.pack (show supportedVehicleClassesJSON))
+      Domain.DL -> Domain.DLValidClasses <$> valueToMaybe supportedVehicleClassesJSON
+      Domain.RC -> Domain.RCValidClasses . sortOnCapcity <$> valueToVehicleClassMap supportedVehicleClassesJSON
       _ -> Just $ Domain.RCValidClasses []
     pure $
       Just
@@ -113,6 +118,15 @@ instance FromTType' BeamODC.OnboardingDocumentConfig OnboardingDocumentConfig wh
           }
     where
       sortOnCapcity = Data.List.sortBy (\a b -> compare b.vehicleCapacity a.vehicleCapacity)
+      valueToMaybe :: A.Value -> Maybe [Text]
+      valueToMaybe value = case fromJSON value of
+        A.Error _ -> Nothing
+        A.Success a -> Just a
+
+      valueToVehicleClassMap :: A.Value -> Maybe [VehicleClassVariantMap]
+      valueToVehicleClassMap value = case fromJSON value of
+        A.Error _ -> Nothing
+        A.Success a -> Just a
 
 instance ToTType' BeamODC.OnboardingDocumentConfig OnboardingDocumentConfig where
   toTType' OnboardingDocumentConfig {..} = do
@@ -121,7 +135,7 @@ instance ToTType' BeamODC.OnboardingDocumentConfig OnboardingDocumentConfig wher
         BeamODC.documentType = documentType,
         BeamODC.checkExtraction = checkExtraction,
         BeamODC.checkExpiry = checkExpiry,
-        BeamODC.supportedVehicleClassesJSON = BeamODC.getConfigJSON supportedVehicleClasses,
+        BeamODC.supportedVehicleClassesJSON = toJSON supportedVehicleClasses,
         BeamODC.vehicleClassCheckType = vehicleClassCheckType,
         BeamODC.rcNumberPrefix = rcNumberPrefix,
         BeamODC.createdAt = createdAt,

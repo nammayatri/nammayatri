@@ -9,6 +9,7 @@ module Storage.Beam.Common where
 import qualified Database.Beam as B
 import GHC.Generics (Generic)
 import Storage.Beam.DriverLocation
+import Storage.Beam.DriverOnboarding.OperatingCity
 import Storage.Beam.Exophone
 import Storage.Beam.Geometry
 import Storage.Beam.Vehicle
@@ -20,13 +21,15 @@ atlasDB =
       { driverLocation = dLocationTable,
         exophone = dExophone,
         geometry = geometryTable,
-        vehicle = vehicleTable
+        vehicle = vehicleTable,
+        operatingCity = operatingCityTable
       }
 
 data AtlasDB f = AtlasDB
   { driverLocation :: f (B.TableEntity DriverLocationT),
     exophone :: f (B.TableEntity ExophoneT),
     geometry :: f (B.TableEntity GeometryT),
-    vehicle :: f (B.TableEntity VehicleT)
+    vehicle :: f (B.TableEntity VehicleT),
+    operatingCity :: f (B.TableEntity OperatingCityT)
   }
   deriving (Generic, B.Database be)

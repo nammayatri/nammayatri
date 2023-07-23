@@ -26,8 +26,9 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Logging (Log)
-import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findOneWithKV, getMasterBeamConfig)
+import Lib.Utils (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findOneWithKV, getMasterBeamConfig)
 import qualified Sequelize as Se
+import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverOnboarding.OperatingCity as BeamOC
 
 -- create :: OperatingCity -> SqlDB ()
@@ -69,12 +70,22 @@ findByMerchantId (Id merchantId) = findOneWithKV [Se.Is BeamOC.merchantId $ Se.E
 --         &&. operatingCity ^. OperatingCityEnabled
 --     return operatingCity
 
+-- findEnabledCityByName :: (L.MonadFlow m, Log m) => Text -> m [OperatingCity]
+-- findEnabledCityByName city =
+--   findAllWithKV
+--     [ Se.And
+--         [Se.Is BeamOC.cityName $ Se.Eq city, Se.Is BeamOC.enabled $ Se.Eq True]
+--     ]
 findEnabledCityByName :: (L.MonadFlow m, Log m) => Text -> m [OperatingCity]
-findEnabledCityByName city =
-  findAllWithKV
-    [ Se.And
-        [Se.Is BeamOC.cityName $ Se.Eq city, Se.Is BeamOC.enabled $ Se.Eq True]
-    ]
+findEnabledCityByName city = do
+  dbConf <- getMasterBeamConfig
+  operatingCities <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.filter_' (\BeamOC.OperatingCityT {..} -> (B.lower_ cityName B.==?. B.val_ city) B.&&?. (enabled B.==?. B.val_ True)) $
+            B.all_ (BeamCommon.operatingCity BeamCommon.atlasDB)
+  pure (either (const []) (transformBeamOperatingCityToDomain <$>) operatingCities)
 
 -- findEnabledCityByMerchantIdAndName ::
 --   Transactionable m =>
@@ -97,7 +108,7 @@ findEnabledCityByMerchantIdAndName (Id mId) city = do
     L.runDB dbConf $
       L.findRows $
         B.select $
-          B.filter_' (\BeamOC.OperatingCityT {..} -> (merchantId B.==?. B.val_ mId) B.&&?. (cityName B.==?. B.val_ city) B.&&?. (enabled B.==?. B.val_ True)) $
+          B.filter_' (\BeamOC.OperatingCityT {..} -> (merchantId B.==?. B.val_ mId) B.&&?. (B.lower_ cityName B.==?. B.val_ city) B.&&?. (enabled B.==?. B.val_ True)) $
             B.all_ (meshModelTableEntity @BeamOC.OperatingCityT @Postgres @(Se.DatabaseWith BeamOC.OperatingCityT))
   pure (either (const []) (transformBeamOperatingCityToDomain <$>) operatingCities)
 
