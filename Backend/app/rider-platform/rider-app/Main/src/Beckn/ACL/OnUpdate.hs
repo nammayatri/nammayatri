@@ -140,10 +140,9 @@ parseEvent _ (OnUpdate.BookingReallocation rbrEvent) = do
 parseEvent _ (OnUpdate.DriverArrived daEvent) = do
   let tagsGroup = daEvent.fulfillment.tags
   -- driverArrivalGroup = find (\tagGroup -> tagGroup.code == "driver_arrived_info") tagsGroup
-  arrival_time <-
-    fromMaybeM (InvalidRequest "arrival_time is not present.") $
-      readMaybe . T.unpack
-        =<< getTag "driver_arrived_info" "arrival_time" tagsGroup
+  let arrival_time =
+        readMaybe . T.unpack
+          =<< getTag "driver_arrived_info" "arrival_time" tagsGroup
   -- =<< find (\tag -> tag.code == Just "arrival_time") . (.list)
   -- =<< driverArrivalGroup
   return $

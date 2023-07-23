@@ -226,7 +226,7 @@ otpRideCreate driver otpCode booking = do
     QM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
-  when (booking.vehicleVariant /= vehicle.variant) $ throwError $ InvalidRequest "Wrong Vehcile Variant"
+  when (isAllowedVehicleVariant vehicle.variant booking.vehicleVariant) $ throwError $ InvalidRequest "Wrong Vehcile Variant"
 
   driverInfo <- QDriverInformation.findById (cast driver.id) >>= fromMaybeM DriverInfoNotFound
   when driverInfo.onRide $ throwError DriverOnRide
@@ -313,3 +313,4 @@ otpRideCreate driver otpCode booking = do
             vehicleModel = Just vehicle.model,
             vehicleClass = Nothing
           }
+    isAllowedVehicleVariant driverVehicle bookingVehicle = not (bookingVehicle == DVeh.TAXI_PLUS && driverVehicle == DVeh.TAXI)
