@@ -227,6 +227,7 @@ getDriverInfoFlow = do
       let dbClientVersion = getDriverInfoResp.clientVersion
       let dbBundleVersion = getDriverInfoResp.bundleVersion
       updateDriverVersion dbClientVersion dbBundleVersion
+      modifyScreenState $ GlobalPropsType (\globalPropsType -> globalPropsType {aadhaarVerificationRequired = organization.aadhaarVerificationRequired})
       if getDriverInfoResp.enabled then do
         if(getValueToLocalStore IS_DRIVER_ENABLED == "false") then do
           _ <- pure $ firebaseLogEvent "ny_driver_enabled"
@@ -259,7 +260,6 @@ getDriverInfoFlow = do
           else permissionsScreenFlow
         else do
           setValueToLocalStore IS_DRIVER_ENABLED "false"
-          modifyScreenState $ GlobalPropsType (\globalPropsType -> globalPropsType {aadhaarVerificationRequired = organization.aadhaarVerificationRequired})
           if getDriverInfoResp.verified then do
             setValueToLocalStore IS_DRIVER_VERIFIED "true"
             applicationSubmittedFlow "ApprovedScreen"
