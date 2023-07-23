@@ -68,6 +68,7 @@ autoComplete (_, merchantId) AutoCompleteReq {..} = do
     toInterfaceCountry = \case
       Context.India -> Maps.India
       Context.France -> Maps.France
+      Context.AnyCountry -> Maps.India -- TODO: fix this
 
 getPlaceDetails :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => (Id DP.Person, Id DMerchant.Merchant) -> Maps.GetPlaceDetailsReq -> m Maps.GetPlaceDetailsResp
 getPlaceDetails (_, merchantId) req = do
